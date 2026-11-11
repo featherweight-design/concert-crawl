@@ -7,6 +7,7 @@ import type {
   EventWatcher,
   EventWatchersResponse,
 } from '@concert-crawl/types';
+import { AVATAR_COLORS } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
 
 const eventWatchersQueryKeyBase = ['event-watchers'] as const;
@@ -27,13 +28,6 @@ export const eventWatchersQueryKey = (
 
 // apps/web has no zod dependency, so the response is narrowed with hand-written
 // guards rather than introducing one for a single call site.
-const AVATAR_COLORS: readonly AvatarColor[] = [
-  'signal',
-  'accent',
-  'success',
-  'warning',
-];
-
 function isAvatarColor(value: unknown): value is AvatarColor {
   return AVATAR_COLORS.some((color) => color === value);
 }
@@ -83,7 +77,15 @@ export function useEventWatchers(eventId: string) {
       if (!isEventWatchersResponse(raw)) {
         throw new Error('Unexpected /watchers response shape');
       }
-      return raw;
+      // An API older than the avatar pair omits the second colour; make it
+      // the null that means solid, so no consumer sees undefined.
+      return {
+        ...raw,
+        named: raw.named.map((watcher) => ({
+          ...watcher,
+          avatarSecondColor: watcher.avatarSecondColor ?? null,
+        })),
+      };
     },
     enabled: !!isSignedIn,
     staleTime: 60_000,

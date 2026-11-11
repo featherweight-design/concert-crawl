@@ -285,54 +285,63 @@ usersRouter.patch(
       updateValues.avatarColor = body.avatarColor;
     if (body.theme !== undefined) updateValues.theme = body.theme;
 
-    const [existingProfile] = await db
-      .select({ id: userProfiles.id, ...avatarColumns() })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, auth.userId))
-      .limit(1);
+    // Read and write in one transaction, the row locked, so two PATCHes in
+    // flight (two tabs) can't each resolve the pair against the same stale
+    // read and store a second colour with no first.
+    const refused = await db.transaction(async (tx) => {
+      const [existingProfile] = await tx
+        .select({ id: userProfiles.id, ...avatarColumns() })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, auth.userId))
+        .for('update')
+        .limit(1);
 
-    // The avatar pair, resolved against what is stored: a second colour needs
-    // a first, clearing the first clears the pair, and a second that matches
-    // the first is just a solid avatar, so it is stored as null.
-    const firstColor =
-      body.avatarColor !== undefined
-        ? body.avatarColor
-        : (existingProfile?.avatarColor ?? null);
-    let secondColor =
-      body.avatarSecondColor !== undefined
-        ? body.avatarSecondColor
-        : (existingProfile?.avatarSecondColor ?? null);
-    if (firstColor === null && secondColor !== null) {
-      if (body.avatarSecondColor !== undefined) {
-        return ctx.json(
-          {
-            success: false,
-            error: 'A second avatar colour needs a first',
-            code: 'second_without_first',
-          },
-          400,
-        );
+      // The avatar pair, resolved against what is stored: a second colour
+      // needs a first, clearing the first clears the pair, and a second that
+      // matches the first is just a solid avatar, so it is stored as null.
+      const firstColor =
+        body.avatarColor !== undefined
+          ? body.avatarColor
+          : (existingProfile?.avatarColor ?? null);
+      let secondColor =
+        body.avatarSecondColor !== undefined
+          ? body.avatarSecondColor
+          : (existingProfile?.avatarSecondColor ?? null);
+      if (firstColor === null && secondColor !== null) {
+        if (body.avatarSecondColor !== undefined) return true;
+        secondColor = null;
       }
-      secondColor = null;
-    }
-    if (secondColor === firstColor) secondColor = null;
-    if (secondColor !== (existingProfile?.avatarSecondColor ?? null))
-      updateValues.avatarSecondColor = secondColor;
+      if (secondColor === firstColor) secondColor = null;
+      if (secondColor !== (existingProfile?.avatarSecondColor ?? null))
+        updateValues.avatarSecondColor = secondColor;
 
-    if (existingProfile) {
-      await db
-        .update(userProfiles)
-        .set(updateValues)
-        .where(eq(userProfiles.userId, auth.userId));
-    } else {
-      await db.insert(userProfiles).values({
-        userId: auth.userId,
-        handle: body.handle ?? null,
-        city: body.city ?? null,
-        avatarColor: body.avatarColor ?? null,
-        avatarSecondColor: secondColor,
-        theme: body.theme ?? 'electric',
-      });
+      if (existingProfile) {
+        await tx
+          .update(userProfiles)
+          .set(updateValues)
+          .where(eq(userProfiles.userId, auth.userId));
+      } else {
+        await tx.insert(userProfiles).values({
+          userId: auth.userId,
+          handle: body.handle ?? null,
+          city: body.city ?? null,
+          avatarColor: body.avatarColor ?? null,
+          avatarSecondColor: secondColor,
+          theme: body.theme ?? 'electric',
+        });
+      }
+      return false;
+    });
+
+    if (refused) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A second avatar colour needs a first',
+          code: 'second_without_first',
+        },
+        400,
+      );
     }
 
     return ctx.json({ success: true });

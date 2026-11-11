@@ -706,8 +706,16 @@ describe('PATCH /v1/users/me', () => {
       avatarSecondColor: null,
     });
 
-    // Clearing the first colour clears the pair.
+    // Changing the first to match a stored second collapses to solid too.
     await patch({ avatarSecondColor: 'success' });
+    expect((await patch({ avatarColor: 'success' })).status).toBe(200);
+    expect(await stored()).toEqual({
+      avatarColor: 'success',
+      avatarSecondColor: null,
+    });
+
+    // Clearing the first colour clears the pair.
+    await patch({ avatarColor: 'signal', avatarSecondColor: 'success' });
     expect((await patch({ avatarColor: null })).status).toBe(200);
     expect(await stored()).toEqual({
       avatarColor: null,
