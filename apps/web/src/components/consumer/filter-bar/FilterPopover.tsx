@@ -67,6 +67,12 @@ interface FilterPopoverProps {
   children?: ReactNode | undefined;
   onSelect: (nextValue: string) => void;
   onClose: () => void;
+  /**
+   * The control that opened the popover. A pointerdown on it is not an
+   * outside press, so its own click can toggle the popover closed rather than
+   * close-then-reopen; and focus returns to it when the popover closes.
+   */
+  opener?: HTMLElement | null | undefined;
 }
 
 export function FilterPopover({
@@ -82,8 +88,30 @@ export function FilterPopover({
   children,
   onSelect,
   onClose,
+  opener = null,
 }: FilterPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(opener);
+
+  useEffect(() => {
+    openerRef.current = opener;
+  }, [opener]);
+
+  // Closing (a pick, Clear, Escape, an outside press) or unmounting hands
+  // focus back to the opener, unless the press already put it somewhere else.
+  useEffect(() => {
+    if (!open) return;
+    const popover = popoverRef.current;
+    return () => {
+      const active = document.activeElement;
+      const stranded =
+        active === null ||
+        active === document.body ||
+        !active.isConnected ||
+        (popover?.contains(active) ?? false);
+      if (stranded) openerRef.current?.focus();
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,6 +124,7 @@ export function FilterPopover({
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (popoverRef.current?.contains(target)) return;
+      if (openerRef.current?.contains(target)) return;
       onClose();
     };
 

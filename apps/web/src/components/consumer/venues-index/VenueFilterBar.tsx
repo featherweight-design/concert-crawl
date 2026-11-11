@@ -44,6 +44,7 @@ function IconChevDown({ size = 11 }: { size?: number }) {
 export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
   const [openKey, setOpenKey] = useState<VenueFilterKey | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [opener, setOpener] = useState<HTMLElement | null>(null);
   const chipRefs = useRef<
     Partial<Record<VenueFilterKey, HTMLButtonElement | null>>
   >({});
@@ -53,9 +54,16 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
   );
   const anyActive = clearable.some((key) => state[key]);
 
+  // The open chip's own click closes its popover (FilterPopover leaves a press
+  // on its opener to that click).
   function openFilter(key: VenueFilterKey) {
+    if (openKey === key) {
+      setOpenKey(null);
+      return;
+    }
     const rect = chipRefs.current[key]?.getBoundingClientRect() ?? null;
     setAnchorRect(rect);
+    setOpener(chipRefs.current[key] ?? null);
     setOpenKey(key);
   }
 
@@ -196,6 +204,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
           options={VENUE_FILTER_DEFS[openKey]?.options ?? []}
           value={state[openKey] ?? ''}
           anchorRect={anchorRect}
+          opener={opener}
           alwaysOn={VENUE_FILTER_DEFS[openKey]?.alwaysOn ?? false}
           onSelect={handleSelect}
           onClose={() => setOpenKey(null)}

@@ -78,7 +78,9 @@ export function VenueOptionGrid({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={copy.whereSearch}
           aria-label={copy.whereSearch}
-          className="min-w-0 flex-1 bg-transparent text-[13.5px] text-fg outline-none placeholder:text-fg-subtle"
+          // 16px: iOS Safari zooms a focused field under it, and a landscape
+          // phone is wide enough to get this popover.
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-fg outline-none placeholder:text-fg-subtle"
         />
       </label>
 
@@ -94,6 +96,7 @@ export function VenueOptionGrid({
               <button
                 key={venue.slug}
                 type="button"
+                data-testid="venue-option"
                 onClick={() => onPick(venue.slug)}
                 aria-pressed={active}
                 className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2"
@@ -102,6 +105,7 @@ export function VenueOptionGrid({
                 <VenueTile slug={venue.slug} name={venue.name} size={28} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span
+                    data-testid="venue-option-name"
                     className="truncate text-[13.5px] text-fg"
                     style={{ fontWeight: active ? 700 : 600 }}
                   >

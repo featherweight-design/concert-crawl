@@ -41,6 +41,7 @@ interface FilterSegmentProps {
   clearLabel: string;
   testId?: string;
   anchorRef: Ref<HTMLDivElement>;
+  openerRef: Ref<HTMLButtonElement>;
   onToggle: () => void;
   onClear: () => void;
 }
@@ -54,6 +55,7 @@ export function FilterSegment({
   clearLabel,
   testId,
   anchorRef,
+  openerRef,
   onToggle,
   onClear,
 }: FilterSegmentProps) {
@@ -65,6 +67,7 @@ export function FilterSegment({
       style={open ? { background: 'var(--surface-2)' } : undefined}
     >
       <button
+        ref={openerRef}
         type="button"
         onClick={onToggle}
         aria-expanded={open}

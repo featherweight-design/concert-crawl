@@ -246,10 +246,26 @@ describe('FilterBar desktop segmented bar', () => {
     expect(query.get('filterFollowing')).toBe('1');
   });
 
-  it('drops the old "Clear filters" chip', () => {
+  it('offers no clear control beyond Clear all, the mobile ✕ and the segment ✕', () => {
     searchParams.current = new URLSearchParams('filterVibe=indie');
     renderBar();
-    expect(screen.queryByText(/Clear filters/)).toBeNull();
+    // Every button whose name or text mentions clearing. The old desktop
+    // "× Clear filters" chip coming back would add a name to this list.
+    const clearNames = screen
+      .getAllByRole('button')
+      .map(
+        (button) =>
+          button.getAttribute('aria-label') ?? button.textContent ?? '',
+      )
+      .filter((name) => /clear/i.test(name))
+      .sort();
+    expect(clearNames).toEqual(
+      [
+        copy.clearAll,
+        copy.clearAllFiltersAriaLabel,
+        copy.segment.clearAria(copy.vibeLabel),
+      ].sort(),
+    );
   });
 
   it('carries exactly one venue-chip, on the Where segment', () => {
@@ -314,9 +330,9 @@ describe('FilterBar desktop segmented bar', () => {
     const who = screen.getByTestId('filter-segment-who');
     expect(who.textContent).toContain(CREWS_COPY.lens.pickerNone);
     // The heading's pill is mobile only from here up.
-    expect(
-      document.querySelector('.sm\\:hidden [aria-haspopup="dialog"]'),
-    ).not.toBeNull();
+    const pillSlot = screen.getByTestId('crew-lens-pill-slot');
+    expect(pillSlot.classList.contains('sm:hidden')).toBe(true);
+    expect(pillSlot.querySelector('button')).not.toBeNull();
 
     fireEvent.click(who);
     const dialog = screen.getByRole('dialog', {
@@ -343,5 +359,73 @@ describe('FilterBar desktop segmented bar', () => {
   it('leaves Who out without crews', () => {
     renderBar({ crews: [] });
     expect(screen.queryByTestId('filter-segment-who')).toBeNull();
+  });
+
+  it("an open segment's own trigger closes it rather than reopening", () => {
+    renderBar();
+    const trigger = screen.getByTestId('filter-segment-price');
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    // A real press: pointerdown reaches the window listener before the click.
+    fireEvent.pointerDown(trigger);
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('an outside press still closes the popover', () => {
+    renderBar();
+    fireEvent.click(screen.getByTestId('filter-segment-price'));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('returns focus to the opener when a pick closes the popover', () => {
+    renderBar();
+    const trigger = screen.getByTestId('filter-segment-price');
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: /filter$/ });
+    const option = within(dialog).getByRole('button', {
+      name: copy.priceUnder25,
+    });
+    option.focus();
+    fireEvent.click(option);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('returns focus to the opener on Escape', () => {
+    renderBar();
+    const trigger = screen.getByTestId('venue-chip');
+    fireEvent.click(trigger);
+    // The Where search field takes focus on open.
+    expect(document.activeElement?.getAttribute('type')).toBe('search');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("moves focus to the segment's opener when its ✕ clears it", () => {
+    searchParams.current = new URLSearchParams('filterPrice=under-25');
+    renderBar();
+    const clear = screen.getByRole('button', {
+      name: copy.segment.clearAria(copy.segment.priceEyebrow),
+    });
+    clear.focus();
+    fireEvent.click(clear);
+    expect(document.activeElement).toBe(
+      screen.getByTestId('filter-segment-price'),
+    );
+  });
+
+  it("moves focus to the bar's first segment when Clear all is used", () => {
+    searchParams.current = new URLSearchParams('filterPrice=under-25');
+    renderBar();
+    const clearAll = screen.getByRole('button', { name: copy.clearAll });
+    clearAll.focus();
+    fireEvent.click(clearAll);
+    expect(document.activeElement).toBe(
+      screen.getByTestId('filter-segment-who'),
+    );
   });
 });

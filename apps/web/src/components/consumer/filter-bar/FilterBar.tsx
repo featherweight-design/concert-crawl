@@ -172,6 +172,12 @@ export function FilterBar({
   const segmentRefs = useRef<
     Partial<Record<SegmentKey, HTMLDivElement | null>>
   >({});
+  // Each segment's opener button: where focus goes back after a popover or a
+  // segment's ✕ closes, and the press FilterPopover ignores as "outside".
+  const openerRefs = useRef<
+    Partial<Record<SegmentKey, HTMLButtonElement | null>>
+  >({});
+  const [opener, setOpener] = useState<HTMLElement | null>(null);
 
   const filterValues: Partial<Record<FilterKey, string>> = {
     when: searchParams.get('filterWhen') ?? '',
@@ -349,7 +355,10 @@ export function FilterBar({
 
         {/* Mobile only: from sm up the lens is the bar's Who segment. */}
         {crews.length > 0 && (
-          <div className="flex shrink-0 items-center sm:hidden">
+          <div
+            data-testid="crew-lens-pill-slot"
+            className="flex shrink-0 items-center sm:hidden"
+          >
             <CrewLensPill
               crews={crews}
               activeCrew={lensCrew}
@@ -471,6 +480,7 @@ export function FilterBar({
                 setOpenFilterKey(nextOpen);
                 if (nextOpen) {
                   setAnchorRect(event.currentTarget.getBoundingClientRect());
+                  setOpener(event.currentTarget);
                 }
               }}
               // One `venue-chip` in the DOM at a time: the desktop segment
@@ -524,6 +534,9 @@ export function FilterBar({
                 anchorRef={(element) => {
                   segmentRefs.current[segment.key] = element;
                 }}
+                openerRef={(element) => {
+                  openerRefs.current[segment.key] = element;
+                }}
                 onToggle={() => {
                   const nextOpen =
                     openFilterKey === segment.key ? null : segment.key;
@@ -534,11 +547,14 @@ export function FilterBar({
                         segment.key
                       ]?.getBoundingClientRect() ?? null,
                     );
+                    setOpener(openerRefs.current[segment.key] ?? null);
                   }
                 }}
                 onClear={() => {
                   segment.clear();
                   setOpenFilterKey(null);
+                  // The ✕ unmounts with the filter it cleared.
+                  openerRefs.current[segment.key]?.focus();
                 }}
               />
             </Fragment>
@@ -566,7 +582,12 @@ export function FilterBar({
           {activeFilterCount > 0 && (
             <button
               type="button"
-              onClick={clearAllFilters}
+              onClick={() => {
+                clearAllFilters();
+                // Clear all unmounts itself, so focus lands on the bar.
+                const first = segments[0];
+                if (first) openerRefs.current[first.key]?.focus();
+              }}
               className="cursor-pointer text-[12.5px] font-semibold text-signal underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               {copy.clearAll}
@@ -607,6 +628,7 @@ export function FilterBar({
           options={activeOptions}
           value={activeValue}
           anchorRect={anchorRect}
+          opener={opener}
           renderLeading={
             openDimension === 'vibe'
               ? (option) => <GenreDot genre={option.value} />
@@ -637,6 +659,7 @@ export function FilterBar({
           options={[]}
           value={lensCrew?.id ?? ''}
           anchorRect={anchorRect}
+          opener={opener}
           onClose={closePopover}
           onSelect={(crewId) => setLensCrew(crewId || null)}
         >

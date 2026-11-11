@@ -34,12 +34,20 @@ test.describe('browse events page', () => {
 
     // Clicking the chip only opens its popover — the old version of this test
     // stopped there and asserted nothing about filtering, despite its name. The
-    // filter is applied by choosing an option, and the popover's first button is
-    // the placeholder that clears the filter, so the first venue is at index 1.
+    // filter is applied by choosing a venue row; the popover's header also has
+    // a Clear button, so the rows are found by their own testid. A row shows
+    // the venue's neighborhood under its name, so the label is the name alone.
     const panel = page.getByRole('dialog', { name: /filter$/ });
-    const firstVenueOption = panel.getByRole('button').nth(1);
+    const firstVenueOption = panel
+      .locator('[data-testid="venue-option"]')
+      .first();
     await firstVenueOption.waitFor({ state: 'visible', timeout: 10_000 });
-    const venueLabel = (await firstVenueOption.textContent())?.trim() ?? '';
+    const venueLabel =
+      (
+        await firstVenueOption
+          .locator('[data-testid="venue-option-name"]')
+          .textContent()
+      )?.trim() ?? '';
 
     await firstVenueOption.click();
 
