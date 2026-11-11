@@ -3,7 +3,7 @@ import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { httpUrl } from '../lib/url-schema.js';
-import { and, count, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 import {
   db,
   eventReportConfirms,
@@ -28,6 +28,7 @@ import {
 import { moderateNote } from '../lib/moderate-note.js';
 import { isImminentEvent } from '../lib/time.js';
 import { clearSoldOut } from '../lib/clear-sold-out.js';
+import { activeSoldOutWhere } from '../lib/sold-out.js';
 
 const REPORT_STATUSES = [
   'sold-out',
@@ -82,13 +83,7 @@ async function hasEventStateChanged(
   const existing = await db
     .select({ id: eventReports.id })
     .from(eventReports)
-    .where(
-      and(
-        eq(eventReports.eventId, eventId),
-        eq(eventReports.status, 'sold-out'),
-        eq(eventReports.resolution, 'promoted'),
-      ),
-    )
+    .where(activeSoldOutWhere(eventId))
     .limit(1);
   return existing.length === 0;
 }
@@ -154,20 +149,10 @@ eventReportsRouter.post(
     // Tickets available only means something against a live sold-out: with
     // nothing to clear, promoting it would change nothing.
     if (body.status === 'available') {
-      // The isSoldOutSql predicate, read straight off event_reports: that
-      // helper correlates on events.id, which a single-table select renders
-      // unqualified.
       const [soldOut] = await db
         .select({ id: eventReports.id })
         .from(eventReports)
-        .where(
-          and(
-            eq(eventReports.eventId, eventId),
-            eq(eventReports.status, 'sold-out'),
-            isNotNull(eventReports.resolvedAt),
-            eq(eventReports.resolution, 'promoted'),
-          ),
-        )
+        .where(activeSoldOutWhere(eventId))
         .limit(1);
       if (!soldOut) {
         return ctx.json(
@@ -328,22 +313,26 @@ eventReportsRouter.post(
   '/:id/reports/:reportId/confirm',
   clerkAuth,
   requireAuth,
-  zValidator('json', confirmBodySchema, (result, ctx) => {
-    if (!result.success) {
+  async (ctx) => {
+    const { id: eventId, reportId } = ctx.req.param();
+    const { userId } = getAuthUser(ctx);
+    // Parsed by hand rather than with zValidator('json'): a confirm is an
+    // action, and clients have always been free to send no body at all, even
+    // with a JSON content type, which the validator would refuse as malformed.
+    const parsedBody = confirmBodySchema.safeParse(
+      await ctx.req.json().catch(() => ({})),
+    );
+    if (!parsedBody.success) {
       return ctx.json(
         {
           success: false,
           error: 'Invalid input',
-          details: z.flattenError(result.error),
+          details: z.flattenError(parsedBody.error),
         },
         422,
       );
     }
-  }),
-  async (ctx) => {
-    const { id: eventId, reportId } = ctx.req.param();
-    const { userId } = getAuthUser(ctx);
-    const { method } = ctx.req.valid('json');
+    const { method } = parsedBody.data;
 
     // Fetch report and verify it belongs to this event
     const [report] = await db
@@ -452,8 +441,8 @@ eventReportsRouter.post(
       // #1064: fan out watch notifications to every user watching this event.
       // Best-effort — the promotion already committed above, so any error
       // here can't roll back the user-visible state change. Excluding
-      // 'available' (handled above) narrows to the mapping's keys without an
-      // `as` cast, so the compiler forces us to handle any new status. Gated on isRealTransition so
+      // 'available' (handled above, by clearSoldOut) narrows the status to
+      // the mapping's keys without an `as` cast. Gated on isRealTransition so
       // duplicate promotions don't re-spam the same watchers.
       if (isRealTransition && report.status !== 'available') {
         await fanoutWatchNotification(

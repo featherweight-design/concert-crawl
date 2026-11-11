@@ -166,4 +166,58 @@ describe('Tickets available reports', () => {
     );
     expect(res.status).toBe(422);
   });
+
+  it('closes a pending Tickets available when the sold-out is cleared, so it cannot clear a later one', async () => {
+    await promoteSoldOut();
+    const stale = await seedEventReport(eventId, 'user_reporter', {
+      status: 'available',
+    });
+    authState.current = {
+      userId: 'admin_user',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    const res = await post(`/v1/admin/events/${eventId}/available`, {});
+    expect(res.status).toBe(204);
+
+    const [row] = await db
+      .select({
+        resolvedAt: eventReports.resolvedAt,
+        resolution: eventReports.resolution,
+      })
+      .from(eventReports)
+      .where(eq(eventReports.id, stale.id));
+    expect(row?.resolution).toBe('promoted');
+    expect(row?.resolvedAt).not.toBeNull();
+
+    // The show sells out again; the old report can no longer be confirmed.
+    await seedEventReport(eventId, 'user_sold_again', {
+      resolution: 'promoted',
+      resolvedAt: new Date(),
+    });
+    setAuth('user_late');
+    const late = await post(
+      `/v1/events/${eventId}/reports/${stale.id}/confirm`,
+      { method: 'own_evidence' },
+    );
+    expect(late.status).toBe(400);
+    expect(await isSoldOut(eventId)).toBe(true);
+  });
+
+  it('confirms with a JSON content type and no body at all', async () => {
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'cancelled',
+    });
+    setAuth('user_a');
+    const res = await app.request(
+      `/v1/events/${eventId}/reports/${report.id}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    expect(res.status).toBe(200);
+  });
 });

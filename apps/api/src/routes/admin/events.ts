@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
-import { isSoldOutSql } from '../../lib/sold-out.js';
+import { activeSoldOutWhere, isSoldOutSql } from '../../lib/sold-out.js';
 import { clearSoldOut } from '../../lib/clear-sold-out.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
@@ -247,13 +247,7 @@ eventsAdminRouter.patch(
         const existing = await db
           .select({ id: eventReports.id })
           .from(eventReports)
-          .where(
-            and(
-              eq(eventReports.eventId, report.eventId),
-              eq(eventReports.status, 'sold-out'),
-              eq(eventReports.resolution, 'promoted'),
-            ),
-          )
+          .where(activeSoldOutWhere(report.eventId))
           .limit(1);
         isRealTransition = existing.length === 0;
       }
@@ -269,11 +263,13 @@ eventsAdminRouter.patch(
       .where(eq(eventReports.id, reportId))
       .returning();
 
+    // The sold-out reports a promoted Tickets available cleared, for the audit.
+    let clearedSoldOut: string[] = [];
     // If promoted and report maps to an event status — update the event
     if (resolution === 'promoted') {
       // Tickets available clears the sold-out, as the fan threshold does.
       if (report.status === 'available') {
-        await clearSoldOut(
+        clearedSoldOut = await clearSoldOut(
           report.eventId,
           adminNote ?? `cleared by tickets available report ${reportId}`,
         );
@@ -318,7 +314,13 @@ eventsAdminRouter.patch(
     ctx.set('auditAction', 'event.report.resolve');
     ctx.set('auditTargetId', reportId);
     ctx.set('auditActorId', actor.userId);
-    ctx.set('auditMeta', { resolution, adminNote: adminNote ?? null });
+    ctx.set('auditMeta', {
+      resolution,
+      adminNote: adminNote ?? null,
+      ...(clearedSoldOut.length > 0 && {
+        clearedSoldOutReportIds: clearedSoldOut,
+      }),
+    });
 
     return ctx.json({ success: true, data: updated });
   },
@@ -967,18 +969,7 @@ eventsAdminRouter.post(
     // unique-violation, re-queries for the now-existing row, and returns it
     // (so the API behavior stays consistent regardless of which caller won).
     const fetchExisting = () =>
-      db
-        .select()
-        .from(eventReports)
-        .where(
-          and(
-            eq(eventReports.eventId, id),
-            eq(eventReports.status, 'sold-out'),
-            isNotNull(eventReports.resolvedAt),
-            eq(eventReports.resolution, 'promoted'),
-          ),
-        )
-        .limit(1);
+      db.select().from(eventReports).where(activeSoldOutWhere(id)).limit(1);
 
     const [existing] = await fetchExisting();
 
