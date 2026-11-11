@@ -1,3 +1,15 @@
+# [1.321.0](https://github.com/featherweight-design/concert-crawl/compare/v1.320.0...v1.321.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** sweep the sheet edge onto every sheet and keep the sm modal border ([d081f28](https://github.com/featherweight-design/concert-crawl/commit/d081f28f9385174724c09993c791c9779a3cae09))
+
+
+### Features
+
+* **web:** add the b+ genre colors, status chip tones and sheet edge (F3) ([951fcb1](https://github.com/featherweight-design/concert-crawl/commit/951fcb10da6fbf47c7fbb725ce285dd3f6e775af))
+
 # [1.320.0](https://github.com/featherweight-design/concert-crawl/compare/v1.319.0...v1.320.0) (2026-11-11)
 
 
