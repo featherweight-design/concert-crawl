@@ -8,7 +8,8 @@
       "fullPage": true,
       "steps": [
         {
-          "goto": "/watching"
+          "goto": "/watching",
+          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/watching\"]"
         }
       ]
     },

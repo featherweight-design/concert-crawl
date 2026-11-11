@@ -7,7 +7,8 @@
       "label": "/watching",
       "steps": [
         {
-          "goto": "/watching"
+          "goto": "/watching",
+          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/watching\"]"
         }
       ]
     },
@@ -16,7 +17,8 @@
       "label": "/history (Concerts)",
       "steps": [
         {
-          "goto": "/history"
+          "goto": "/history",
+          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/history\"]"
         }
       ]
     },
@@ -25,7 +27,8 @@
       "label": "/following (Artists)",
       "steps": [
         {
-          "goto": "/following"
+          "goto": "/following",
+          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/following\"]"
         }
       ]
     }

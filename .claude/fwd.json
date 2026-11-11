@@ -28,7 +28,7 @@
     "aliases": {
       "@/": "apps/web/src/"
     },
-    "packageDir": "apps/e2e",
+    "packageDir": ["apps/e2e", "apps/web"],
     "tokens": {
       "declare": [
         "apps/web/src/app/globals.css",
@@ -41,6 +41,10 @@
       ],
       "hex": ["apps/web/src/components/**/*.{ts,tsx}"],
       "hexFails": false
-    }
+    },
+    "productionUrl": [
+      "https://concertcrawl.app",
+      "https://www.concertcrawl.app"
+    ]
   }
 }

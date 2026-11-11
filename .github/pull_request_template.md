@@ -15,12 +15,12 @@
 <!-- UI PRs only (`.claude/fwd/feature-acceptance.md`). Delete for docs, scripts, tests and invisible changes. -->
 
 - **Inventory:** `docs/superpowers/inventories/<file>.json`
-- **Contact sheet:** `node ~/.claude/fwd/skills/feature-acceptance/contact-sheet.mjs <inventory>` against staging, commit <!-- sha -->. <!-- This repo is PUBLIC: never attach signed-in or admin pages here. Link a private copy or redact; signed-out sheets may be attached. -->
+- **Pre-PR contact sheet:** `pnpm dev`, then `node ~/.claude/fwd/skills/feature-acceptance/contact-sheet.mjs <inventory> --base http://localhost:3000`. The staging sheet (the kit's default base) is for the close-out walk after merge. <!-- This repo is PUBLIC: never attach signed-in or admin pages here. Link a private copy or redact; signed-out sheets may be attached. -->
 - **Gap rule (Hugh, 2026-11-11):** the B+ boards are comprehensive; resolve a small ambiguity from the nearest drawn pattern and note it below; where the mock shows the answer, match it; only a meaningful undrawn gap goes to Design, and that piece waits for Hugh.
 
-| Route    | Viewport | Theme | Matches board?                         | Ambiguity resolved from              |
-| -------- | -------- | ----- | -------------------------------------- | ------------------------------------ |
-| `/route` | 390      | Light | yes / fixed to match / gap (to Design) | <!-- nearest drawn pattern, or — --> |
+| Board                   | Built                                                        | Ambiguity resolved from the nearest drawn pattern | Gap                                                |
+| ----------------------- | ------------------------------------------------------------ | ------------------------------------------------- | -------------------------------------------------- |
+| `screens/…/<board>.jpg` | <!-- route · viewport · theme, matches or fixed to match --> | <!-- or — -->                                     | <!-- none, or the undrawn piece sent to Design --> |
 
 ### Staging walk for Hugh
 

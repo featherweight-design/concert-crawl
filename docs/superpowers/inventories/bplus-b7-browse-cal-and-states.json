@@ -34,8 +34,7 @@
       "steps": [
         {
           "goto": "/events?search=zzqx-contact-sheet",
-          "wait": "h1, h2",
-          "settle": 600
+          "wait": "a[href=\"/events\"]:has-text(\"Clear filters\")"
         }
       ]
     }
