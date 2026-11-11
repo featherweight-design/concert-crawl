@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import type { InviteCode } from '@concert-crawl/types';
+import type { InviteCode, VenuePublic } from '@concert-crawl/types';
 import { auth, requireAdminUser } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
 import { siteOrigin } from '@/lib/share/site-origin';
@@ -7,6 +7,7 @@ import {
   isPrintable,
   posterJoinUrl,
   posterTypedUrl,
+  posterVenueLine,
   qrPath,
   seatsTaken,
 } from '@/lib/poster/poster-rule';
@@ -17,8 +18,9 @@ import './poster.css';
 
 /**
  * `/admin/invite-codes/[id]/poster`: a code's printable poster at US Letter,
- * with the QR drawn here on the server. An unknown, revoked, expired or full
- * code is a 404: there is nothing worth printing for it.
+ * Night look, with the QR drawn here on the server. The venue count and names
+ * come from the active venues at render time, never hard-coded. An unknown,
+ * revoked, expired or full code is a 404: there is nothing worth printing.
  */
 export default async function InviteCodePosterPage({
   params,
@@ -31,23 +33,26 @@ export default async function InviteCodePosterPage({
   if (!token) notFound();
 
   const { id } = await params;
-  const codes = await apiClient.get<InviteCode[]>(
-    '/v1/admin/invite-codes',
-    token,
-  );
+  const [codes, venues] = await Promise.all([
+    apiClient.get<InviteCode[]>('/v1/admin/invite-codes', token),
+    // The public list: active venues only, the ones the calendar shows.
+    apiClient.get<VenuePublic[]>('/v1/venues', token),
+  ]);
   const code = codes.find((row) => row.id === id);
   if (!code || !isPrintable(code, new Date())) notFound();
 
   const origin = siteOrigin();
   const url = posterJoinUrl(origin, code.code);
   const qr = qrPath(url);
+  const seatsLeft = code.maxUses - seatsTaken(code);
+  const venueLine = posterVenueLine(venues);
 
   return (
     <div className="poster-page" data-testid="poster-page">
       <PosterPrintBar
         label={code.label}
         code={code.code}
-        seatsLeft={code.maxUses - seatsTaken(code)}
+        seatsLeft={seatsLeft}
         qr={qr}
       />
       <PosterFit>
@@ -56,6 +61,10 @@ export default async function InviteCodePosterPage({
           typedUrl={posterTypedUrl(origin)}
           code={code.code}
           qr={qr}
+          seats={seatsLeft}
+          venueCount={venues.length}
+          venueNames={venueLine.names}
+          moreVenues={venueLine.more}
         />
       </PosterFit>
     </div>
