@@ -33,7 +33,8 @@ const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
 // though the code is spoken-for.
 function deriveStatus(code: InviteCode): DerivedStatus {
   if (code.revokedAt != null) return 'revoked';
-  if (code.usedBy != null || code.usedAt != null) return 'redeemed';
+  // Spent once every seat is taken; `usedBy` names only the first redeemer.
+  if (code.useCount >= code.maxUses) return 'redeemed';
   if (code.expiresAt != null && new Date(code.expiresAt) < new Date())
     return 'expired';
   return 'active';

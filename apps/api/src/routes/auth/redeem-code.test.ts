@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockGetAuth, mockCode, mockDb, REDEMPTIONS } = vi.hoisted(() => ({
-  // The redemptions ledger: a table sentinel so the select chain can tell a
-  // ledger lookup (this user has no redemption yet) from the code lookup.
-  REDEMPTIONS: { table: 'invite_code_redemptions' },
+const { mockGetAuth, mockCode, mockDb } = vi.hoisted(() => ({
   mockGetAuth: vi.fn(),
   // Hoisted with the rest: `vi.mock`'s factory runs before any module-scope
   // const, so a db stub declared below is not in scope when it is read.
@@ -23,7 +20,9 @@ const { mockGetAuth, mockCode, mockDb, REDEMPTIONS } = vi.hoisted(() => ({
   },
 }));
 
-let lastFrom: unknown = null;
+// The code lookup left-joins the caller's own ledger row; the comp read-back
+// does not join. The flag tells the chain which shape to resolve.
+let joined = false;
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -31,21 +30,30 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
 }));
 
-// `where` resolves for the invite lookup and `limit` for the comp read-back,
+// `where` resolves for the invite lookup (joined to the caller's ledger row,
+// none by default) and `limit` for the comp read-back,
 // so the chain has to be usable both with and without the extra hop.
 const mockSelectChain: {
   from: ReturnType<typeof vi.fn>;
+  leftJoin: ReturnType<typeof vi.fn>;
   where: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
 } = {
-  from: vi.fn((table: unknown) => {
-    lastFrom = table;
+  from: vi.fn(() => {
+    joined = false;
+    return mockSelectChain;
+  }),
+  leftJoin: vi.fn(() => {
+    joined = true;
     return mockSelectChain;
   }),
   where: vi.fn(() =>
-    Object.assign(Promise.resolve(lastFrom === REDEMPTIONS ? [] : [mockCode]), {
-      limit: mockSelectChain.limit,
-    }),
+    Object.assign(
+      Promise.resolve(
+        joined ? [{ invite: mockCode, ownRedemptionId: null }] : [mockCode],
+      ),
+      { limit: mockSelectChain.limit },
+    ),
   ),
   // The comp the grant reads back. Live by default (no revoke, no expiry),
   // which is the state every case here is about.
@@ -80,7 +88,7 @@ mockDb.transaction.mockImplementation(
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
   inviteCodes: {},
-  inviteCodeRedemptions: REDEMPTIONS,
+  inviteCodeRedemptions: { id: 'id' },
   giftedComps: { userId: 'gifted_comps.user_id' },
 }));
 
@@ -167,7 +175,10 @@ describe('POST /v1/auth/redeem-code', () => {
     mockSelectChain.where.mockReturnValueOnce(
       Object.assign(
         Promise.resolve([
-          { ...mockCode, usedBy: 'user_123', usedAt: new Date() },
+          {
+            invite: { ...mockCode, usedBy: 'user_123', usedAt: new Date() },
+            ownRedemptionId: 'redemption-1',
+          },
         ]),
         { limit: mockSelectChain.limit },
       ),
@@ -218,10 +229,13 @@ describe('POST /v1/auth/redeem-code', () => {
       Object.assign(
         Promise.resolve([
           {
-            ...mockCode,
-            usedBy: 'user_other',
-            usedAt: new Date(),
-            useCount: 1,
+            invite: {
+              ...mockCode,
+              usedBy: 'user_other',
+              usedAt: new Date(),
+              useCount: 1,
+            },
+            ownRedemptionId: null,
           },
         ]),
         { limit: mockSelectChain.limit },

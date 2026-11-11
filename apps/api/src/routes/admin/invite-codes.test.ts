@@ -177,6 +177,18 @@ describe('Admin invite code routes', () => {
     expect(mockSendInviteCodeEmail).not.toHaveBeenCalled();
   });
 
+  it('POST /v1/admin/invite-codes refuses a multi-seat code sent to one person', async () => {
+    adminAuth();
+    const res = await createApp().request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipientEmail: 'test@example.com', maxUses: 50 }),
+    });
+    expect(res.status).toBe(400);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockSendInviteCodeEmail).not.toHaveBeenCalled();
+  });
+
   it('POST /v1/admin/invite-codes/:id/revoke sets revokedAt and returns 200', async () => {
     adminAuth();
     const res = await createApp().request(

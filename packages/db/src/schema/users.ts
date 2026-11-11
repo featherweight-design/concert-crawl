@@ -1,4 +1,6 @@
+import { sql } from 'drizzle-orm';
 import {
+  check,
   integer,
   jsonb,
   pgEnum,
@@ -42,30 +44,44 @@ export const userCred = pgTable('user_cred', {
     .defaultNow(),
 });
 
-export const inviteCodes = pgTable('invite_codes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  code: text('code').notNull().unique(),
-  createdBy: text('created_by').notNull(),
-  usedBy: text('used_by'),
-  usedAt: timestamp('used_at', { withTimezone: true }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  revokedAt: timestamp('revoked_at', { withTimezone: true }),
-  revokedBy: text('revoked_by'),
-  /**
-   * How many people this code admits (1 for a personal code, more for a
-   * poster). `use_count` is claimed by a conditional UPDATE that only succeeds
-   * below the cap, so two redeemers can never both take the last seat.
-   * `used_by`/`used_at` still record the FIRST redemption, so every reader of
-   * a single-use code keeps working; `invite_code_redemptions` records all.
-   */
-  maxUses: integer('max_uses').notNull().default(1),
-  useCount: integer('use_count').notNull().default(0),
-  /** Where a multi-use code was put, e.g. "Hi-Dive bathroom, Nov". */
-  label: text('label'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const inviteCodes = pgTable(
+  'invite_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull().unique(),
+    createdBy: text('created_by').notNull(),
+    usedBy: text('used_by'),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedBy: text('revoked_by'),
+    /**
+     * How many people this code admits (1 for a personal code, more for a
+     * poster). `use_count` is claimed by a conditional UPDATE that only succeeds
+     * below the cap, so two redeemers can never both take the last seat.
+     * `used_by`/`used_at` still record the FIRST redemption, so every reader of
+     * a single-use code keeps working; `invite_code_redemptions` records all.
+     */
+    maxUses: integer('max_uses').notNull().default(1),
+    useCount: integer('use_count').notNull().default(0),
+    /** Where a multi-use code was put, e.g. "Hi-Dive bathroom, Nov". */
+    label: text('label'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    // The seat invariant, held by the database and not only by the claim.
+    maxUsesCheck: check(
+      'invite_codes_max_uses_check',
+      sql`${table.maxUses} >= 1`,
+    ),
+    useCountCheck: check(
+      'invite_codes_use_count_check',
+      sql`${table.useCount} BETWEEN 0 AND ${table.maxUses}`,
+    ),
+  }),
+);
 
 /**
  * Every redemption of an invite code, one row per (code, person): the unique

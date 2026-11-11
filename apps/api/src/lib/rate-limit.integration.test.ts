@@ -56,12 +56,36 @@ describe('rate limiter (Postgres-backed)', () => {
       expect(await instanceA.check(key, 3, WINDOW_MS, ALLOW)).toEqual({
         allowed: true,
         retryAfterMs: 0,
+        count: i + 1,
       });
     }
     const blocked = await instanceA.check(key, 3, WINDOW_MS, ALLOW);
     expect(blocked.allowed).toBe(false);
     expect(blocked.retryAfterMs).toBeGreaterThan(WINDOW_MS - 60_000);
     expect(blocked.retryAfterMs).toBeLessThanOrEqual(WINDOW_MS);
+  });
+
+  it('refunds a hit to a live window, never below zero', async () => {
+    const key = 'test:refund';
+    await instanceA.check(key, 2, WINDOW_MS, ALLOW);
+    await instanceA.check(key, 2, WINDOW_MS, ALLOW);
+    await instanceA.refund(key);
+    expect((await instanceA.check(key, 2, WINDOW_MS, ALLOW)).count).toBe(2);
+
+    for (let i = 0; i < 4; i++) await instanceA.refund(key);
+    expect((await instanceA.check(key, 2, WINDOW_MS, ALLOW)).count).toBe(1);
+  });
+
+  it('leaves an expired window alone on refund', async () => {
+    const key = 'test:refund-expired';
+    await instanceA.check(key, 1, WINDOW_MS, ALLOW);
+    await expireBucket(key);
+    await instanceA.refund(key);
+    const [row] = await testDb
+      .select()
+      .from(rateLimitBuckets)
+      .where(eq(rateLimitBuckets.key, key));
+    expect(row?.count).toBe(1);
   });
 
   it('enforces one limit across two independent instances', async () => {
@@ -102,6 +126,7 @@ describe('rate limiter (Postgres-backed)', () => {
     expect(await instanceB.check(key, 1, WINDOW_MS, ALLOW)).toEqual({
       allowed: true,
       retryAfterMs: 0,
+      count: 1,
     });
     const [row] = await testDb
       .select()

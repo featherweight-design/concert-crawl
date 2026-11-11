@@ -487,7 +487,7 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     disposition: 'delete',
     userIdColumn: 'user_id',
     otherUserIdColumns: [],
-    exportKey: 'inviteCodeRedemptions',
+    exportKey: 'inviteCodeLedger',
     exportColumns: ['redeemed_at'],
     reason:
       'The ledger only recognises a repeat redeem of a multi-use code. The ' +
