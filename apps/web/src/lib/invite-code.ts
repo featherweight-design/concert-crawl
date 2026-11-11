@@ -4,6 +4,9 @@
  */
 export const INVITE_CODE_PATTERN = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
+/** `BETA-XXXX-XXXX`, dashes included. */
+export const INVITE_CODE_LENGTH = 14;
+
 /** Whether a field value is a whole code, ready to redeem. */
 export const isCompleteInviteCode = (value: string): boolean =>
   INVITE_CODE_PATTERN.test(value);
@@ -21,7 +24,8 @@ export function formatInviteCodeInput(raw: string): string {
     // the middle one by the branch below.
     if (clean.startsWith('BETA'))
       return formatInviteCodeInput(`BETA-${clean.slice(4)}`);
-    return clean;
+    // Never longer than a whole code, whatever is pasted or linked.
+    return clean.slice(0, INVITE_CODE_LENGTH);
   }
   const rest = clean.slice(5).replace(/-/g, '');
   if (rest.length <= 4) return `BETA-${rest}`;

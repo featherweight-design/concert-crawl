@@ -66,9 +66,6 @@ const SECONDARY_CTA_STYLE = {
   whiteSpace: 'nowrap',
 } as const satisfies React.CSSProperties;
 
-// `all: 'unset'` on the CTAs strips the browser's default focus ring along with
-// everything else, so every interactive element on this page restores one
-// explicitly. Matches the ring used across the consumer surfaces.
 export default function LandingClientShell({
   shows,
   showCount = null,
