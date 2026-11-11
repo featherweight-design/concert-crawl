@@ -219,3 +219,58 @@ describe('JumpPicker B+ grid', () => {
     expect(todayCell?.getAttribute('style')).toContain('var(--signal)');
   });
 });
+
+describe('JumpPicker as a modal sheet', () => {
+  it('is modal and closes on Escape pressed anywhere in the document', () => {
+    const { onClose } = setup();
+    expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Tab inside the dialog', () => {
+    setup();
+    const dialog = screen.getByRole('dialog');
+    const today = screen.getByRole('button', {
+      name: CONSUMER_COPY.jumpPickerToday,
+    });
+    today.focus();
+    // Today is the last focusable control; Tab wraps to the first.
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(today);
+  });
+
+  it('hides blank spill days from assistive tech but keeps them keyed', () => {
+    setup();
+    const spill = document.querySelector('[data-iso="2026-03-30"]');
+    expect(spill).not.toBeNull();
+    expect(spill?.getAttribute('aria-hidden')).toBe('true');
+    const inMonth = document.querySelector('[data-iso="2026-04-29"]');
+    expect(inMonth?.getAttribute('aria-hidden')).toBeNull();
+  });
+});
+
+describe('JumpPicker Home and End (Monday-first)', () => {
+  it('End moves to the Sunday that closes the week', () => {
+    // Thu Apr 30 2026: a Monday-first week ends Sun May 3 (Sunday-first
+    // would stop at Sat May 2).
+    setup({ selectedDate: '2026-04-30' });
+    fireEvent.keyDown(screen.getByRole('grid'), { key: 'End' });
+    expect(document.activeElement?.getAttribute('data-iso')).toBe('2026-05-03');
+  });
+
+  it('Home moves to the Monday, walking forward past days already gone', () => {
+    // Mon Apr 27 is before today (Apr 28), so Home lands on today.
+    setup({ selectedDate: '2026-04-30' });
+    fireEvent.keyDown(screen.getByRole('grid'), { key: 'Home' });
+    expect(document.activeElement?.getAttribute('data-iso')).toBe('2026-04-28');
+  });
+
+  it('Home lands on the Monday itself when it is selectable', () => {
+    // Thu May 7 sits in the week of Mon May 4.
+    setup({ selectedDate: '2026-05-07' });
+    fireEvent.keyDown(screen.getByRole('grid'), { key: 'Home' });
+    expect(document.activeElement?.getAttribute('data-iso')).toBe('2026-05-04');
+  });
+});

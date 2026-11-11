@@ -147,7 +147,20 @@ export const followChipStyle = (active: boolean): CSSProperties => ({
  * spans, hidden from assistive tech and out of the tab order, so nothing that
  * looks tappable sits there doing nothing.
  */
-export const FilterBarPreview = () => (
+interface FilterBarPreviewProps {
+  /**
+   * Draw the "My artists" chip. Off by default: the live chip renders nothing
+   * until its entitlement resolves (and nothing at all for a viewer who
+   * follows no one), so a caller that can't know would draw a chip that then
+   * disappears. The trade-off is a chip that pops in for viewers who do get
+   * one, which shifts the chip row sideways rather than the page down.
+   */
+  showFollowChip?: boolean;
+}
+
+export const FilterBarPreview = ({
+  showFollowChip = false,
+}: FilterBarPreviewProps) => (
   <div
     aria-hidden="true"
     data-testid="filter-bar-preview"
@@ -178,10 +191,14 @@ export const FilterBarPreview = () => (
       </span>
     </div>
     <div className={CHIP_ROW_CLASS} style={CHIP_ROW_STYLE}>
-      <span className={FOLLOW_CHIP_CLASS} style={followChipStyle(false)}>
-        <span style={{ whiteSpace: 'nowrap' }}>{FOLLOWING_COPY.chip}</span>
-      </span>
-      <ChipDivider />
+      {showFollowChip && (
+        <>
+          <span className={FOLLOW_CHIP_CLASS} style={followChipStyle(false)}>
+            <span style={{ whiteSpace: 'nowrap' }}>{FOLLOWING_COPY.chip}</span>
+          </span>
+          <ChipDivider />
+        </>
+      )}
       {FILTER_ORDER.map((key) => (
         <span
           key={key}

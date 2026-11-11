@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -7,6 +8,7 @@ import {
   FILTER_DEFS,
   FILTER_ORDER,
 } from '@/components/consumer/filter-bar/filter-defs';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { BrowseSkeleton } from './BrowseSkeleton';
 
 let reduced = false;
@@ -63,11 +65,32 @@ describe('BrowseSkeleton', () => {
     const { container } = render(<BrowseSkeleton rows={2} />);
     const status = screen.getByRole('status');
     expect(status.textContent).toContain(CONSUMER_COPY.loadingShows);
-    expect(status.querySelector('svg [data-part="core"]')).not.toBeNull();
+    // The wave sits beside the status, outside the live region.
+    expect(
+      status.parentElement?.querySelector('svg [data-part="core"]'),
+    ).not.toBeNull();
     expect(screen.getAllByTestId('browse-row-skeleton')).toHaveLength(2);
     // Rule 10: one wave on the page, never one per row.
     expect(container.querySelectorAll('[data-part="core"]')).toHaveLength(1);
     expect(animate).toHaveBeenCalled();
+  });
+
+  it('sets "Loading shows" after mount so the live region announces it', () => {
+    // Server markup (no effects) carries an empty region; the text arrives
+    // once the client mounts, which is the change a screen reader reads.
+    const html = renderToString(<BrowseSkeleton />);
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain(CONSUMER_COPY.loadingShows);
+    render(<BrowseSkeleton />);
+    expect(screen.getByRole('status').textContent).toBe(
+      CONSUMER_COPY.loadingShows,
+    );
+    expect(document.querySelector('[aria-busy]')).toBeNull();
+  });
+
+  it('leaves out the My artists chip it cannot know about', () => {
+    render(<BrowseSkeleton />);
+    expect(screen.queryByText(FOLLOWING_COPY.chip)).toBeNull();
   });
 
   it('holds the wave still under reduced motion', () => {
