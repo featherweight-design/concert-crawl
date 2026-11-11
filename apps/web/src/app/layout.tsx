@@ -11,6 +11,7 @@ import { QueryProvider } from '@/components/QueryProvider';
 // module graph.
 import { PostHogProvider } from '@/lib/analytics/PostHogProvider';
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration';
+import { ErrorReportResend } from '@/components/consumer/standalone-error/ErrorReportResend';
 import { Toaster } from 'sonner';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { LANDING_COPY } from '@/app/_components/definitions/copy';
@@ -157,6 +158,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </head>
         <body className="min-h-screen bg-bg text-fg font-sans antialiased">
           <ServiceWorkerRegistration />
+          <ErrorReportResend />
           <QueryProvider>
             <PostHogProvider>
               <ThemeProvider>{children}</ThemeProvider>

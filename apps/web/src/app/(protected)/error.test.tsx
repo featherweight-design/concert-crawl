@@ -1,168 +1,86 @@
 // @vitest-environment jsdom
 
+import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { STANDALONE_ERROR_COPY } from '@/components/consumer/standalone-error/definitions/copy';
 import ProtectedError from './error';
 
-const captureException = vi.fn((_error: unknown) => 'evt123');
+const captureException = vi.fn(
+  (_error: unknown, _hint: { tags: Record<string, string> }) => 'evt123',
+);
 vi.mock('@sentry/nextjs', () => ({
-  captureException: (error: unknown) => captureException(error),
-  isEnabled: () => sentryEnabled.current,
+  captureException: (error: unknown, hint: { tags: Record<string, string> }) =>
+    captureException(error, hint),
 }));
-const sentryEnabled = { current: true };
 
-const auth = { isSignedIn: true, getToken: vi.fn(async () => 'token') };
+const signOut = vi.fn();
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => auth,
-  useClerk: () => ({ signOut: vi.fn() }),
+  useClerk: () => ({ signOut }),
 }));
+const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  usePathname: () => '/crews',
-}));
-
-const fetchMock = vi.fn(async (_url: string, _init: { body: string }) => ({
-  ok: true,
+  useRouter: () => ({ push: vi.fn(), refresh }),
 }));
 
 beforeEach(() => {
-  // ModalShell picks sheet or dialog by viewport.
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    })),
-  });
   captureException.mockClear();
-  sentryEnabled.current = true;
-  fetchMock.mockClear();
-  auth.isSignedIn = true;
-  vi.stubGlobal('fetch', fetchMock);
+  signOut.mockClear();
+  refresh.mockClear();
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  document.cookie = '__client_uat=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
 });
 
-const COPY = CONSUMER_COPY.errorReport;
-
 describe('ProtectedError', () => {
-  it('reports a browser throw to Sentry once, however often it mounts', () => {
+  it('files a browser throw to Sentry once, tagged with the id it shows', () => {
     // A retry that throws the same error mounts the boundary afresh, which
-    // re-runs its effect; only the cache keeps that to one event.
+    // re-runs its effect; only the cache keeps that to one event and one id.
     const error = new Error('boom');
     const first = render(<ProtectedError error={error} reset={vi.fn()} />);
     first.unmount();
     render(<ProtectedError error={error} reset={vi.fn()} />);
+
     expect(captureException).toHaveBeenCalledTimes(1);
+    const errorId = captureException.mock.calls[0]?.[1].tags['error_id'];
+    expect(errorId).toMatch(/^\d{10}$/);
+    expect(screen.getByText(errorId!)).toBeInTheDocument();
   });
 
-  it('leaves a server throw to onRequestError', () => {
+  it('leaves a server throw to onRequestError and shows its digest', () => {
     const error = Object.assign(new Error('server'), { digest: '42' });
     render(<ProtectedError error={error} reset={vi.fn()} />);
     expect(captureException).not.toHaveBeenCalled();
+    expect(screen.getByText('42')).toBeInTheDocument();
   });
 
-  it('hides the report link from a signed-out visitor', () => {
-    auth.isSignedIn = false;
-    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    expect(screen.queryByText(CONSUMER_COPY.error.reportLink)).toBeNull();
-  });
-
-  it('files the report with the error id and the reporter words', async () => {
-    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-
-    const [what, doing] = screen.getAllByRole('textbox');
-    fireEvent.change(what!, { target: { value: 'Blank page' } });
-    fireEvent.change(doing!, { target: { value: 'Opening crews' } });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const init = fetchMock.mock.calls[0]?.[1];
-    expect(JSON.parse(init?.body ?? '{}')).toMatchObject({
-      category: 'bug',
-      message: 'Blank page',
-      pageUrl: '/crews',
-      metadata: {
-        source: 'error',
-        doing: 'Opening crews',
-        sentryEventId: 'evt123',
-      },
-    });
-    await waitFor(() =>
-      expect(screen.getAllByText(COPY.sentTitle).length).toBeGreaterThan(0),
-    );
-  });
-
-  it('records no event id when Sentry is off, so none points nowhere', async () => {
-    sentryEnabled.current = false;
-    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(fetchMock.mock.calls[0]?.[1]?.body).not.toContain('sentryEventId');
-  });
-
-  it('opens a fresh form after one report was sent', async () => {
-    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
-    await waitFor(() =>
-      expect(screen.getAllByText(COPY.sentTitle).length).toBeGreaterThan(0),
-    );
-    fireEvent.click(screen.getAllByText(COPY.close)[0]!);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    expect(screen.queryByText(COPY.sentTitle)).toBeNull();
-    expect(screen.getAllByRole('textbox')[0]).toHaveProperty('value', '');
-  });
-
-  it('carries a server throw by its digest, and an id of another shape not at all', async () => {
-    const error = Object.assign(new Error('server'), { digest: '4242' });
-    render(<ProtectedError error={error} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(
-      JSON.parse(fetchMock.mock.calls[0]?.[1]?.body ?? '{}'),
-    ).toMatchObject({
-      metadata: { digest: '4242' },
-    });
-
-    cleanup();
-    fetchMock.mockClear();
+  it('mints an id for a digest of a shape a report cannot carry', () => {
     const odd = Object.assign(new Error('lib'), { digest: 'NEXT:REDIRECT;x' });
     render(<ProtectedError error={odd} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(fetchMock.mock.calls[0]?.[1]?.body).not.toContain('digest');
+    expect(screen.queryByText('NEXT:REDIRECT;x')).toBeNull();
+  });
+
+  it('retries by refreshing the payload and resetting', () => {
+    const reset = vi.fn();
+    render(<ProtectedError error={new Error('x')} reset={reset} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: STANDALONE_ERROR_COPY.tryAgain }),
+    );
+    expect(refresh).toHaveBeenCalled();
+    expect(reset).toHaveBeenCalled();
+  });
+
+  it('offers a signed-in visitor sign out and the Tell us card', () => {
+    document.cookie = '__client_uat=1731300000';
+    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: STANDALONE_ERROR_COPY.signOut }),
+    );
+    expect(signOut).toHaveBeenCalled();
   });
 });

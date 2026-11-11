@@ -27,17 +27,30 @@ const PLATFORMS: readonly [RegExp, string][] = [
   [/Linux/, 'Linux'],
 ];
 
+const deviceParts = (userAgent: string) => ({
+  browser:
+    BROWSERS.find(([pattern]) => pattern.test(userAgent))?.[1] ?? 'Browser',
+  platform:
+    PLATFORMS.find(([pattern]) => pattern.test(userAgent))?.[1] ?? 'unknown',
+});
+
 /**
  * "Chrome on Android": enough to start reproducing, nothing that fingerprints.
  * iPadOS sends a desktop Mac agent, so an iPad reads as Mac; there is nothing
  * in the agent to tell them apart.
  */
 export const deviceSummary = (userAgent: string): string => {
-  const browser =
-    BROWSERS.find(([pattern]) => pattern.test(userAgent))?.[1] ?? 'Browser';
-  const platform =
-    PLATFORMS.find(([pattern]) => pattern.test(userAgent))?.[1] ?? 'unknown';
+  const { browser, platform } = deviceParts(userAgent);
   return `${browser} on ${platform}`;
+};
+
+/**
+ * "iPhone · Safari", the error page's spelling of the same coarse summary. An
+ * unknown platform is left off rather than shown as a word.
+ */
+export const coarseDevice = (userAgent: string): string => {
+  const { browser, platform } = deviceParts(userAgent);
+  return platform === 'unknown' ? browser : `${platform} · ${browser}`;
 };
 
 /**

@@ -2,11 +2,15 @@
 
 import { useEffect } from 'react';
 
-import { EmptyState } from '@/components/consumer/empty-state';
 import { CREWS_COPY } from '@/components/consumer/crews';
+import {
+  StandaloneError,
+  useErrorId,
+} from '@/components/consumer/standalone-error';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
-import { ErrorReport } from '@/components/consumer/error-report';
 
+// The crew home boundary catches before the app one, so it carries the same
+// page, Tell us card included, with the crew's own wording.
 export default function CrewError({
   error,
   reset,
@@ -15,39 +19,19 @@ export default function CrewError({
   reset: () => void;
 }) {
   const onRetry = useErrorBoundaryRetry(reset);
+  const errorId = useErrorId(error);
 
   useEffect(() => {
     console.error('[crews] crew home boundary', error);
   }, [error]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col items-center gap-3 px-4 pb-10 pt-5">
-      <EmptyState
-        state="error"
-        density="dense"
-        eyebrow={CREWS_COPY.net.errCrewEyebrow}
-        title={CREWS_COPY.net.errCrewTitle}
-        body={CREWS_COPY.net.errCrewBody}
-      />
-      <button
-        type="button"
-        onClick={onRetry}
-        className="cursor-pointer"
-        style={{
-          minHeight: 44,
-          padding: '0 20px',
-          borderRadius: 999,
-          background: 'var(--signal)',
-          color: 'var(--fg-on-accent)',
-          border: 'none',
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13.5,
-          fontWeight: 700,
-        }}
-      >
-        {CREWS_COPY.net.retry}
-      </button>
-      <ErrorReport error={error} />
-    </div>
+    <StandaloneError
+      errorId={errorId}
+      onRetry={onRetry}
+      eyebrow={CREWS_COPY.net.errCrewEyebrow}
+      heading={CREWS_COPY.net.errCrewTitle}
+      body={CREWS_COPY.net.errCrewBody}
+    />
   );
 }

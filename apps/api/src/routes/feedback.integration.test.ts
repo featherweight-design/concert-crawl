@@ -130,6 +130,7 @@ describe('POST /v1/feedback', () => {
           doing: 'Opening my crew',
           digest: '1234567890',
           sentryEventId: 'a1b2c3d4e5f6',
+          errorId: '0042137731',
         },
       }),
     });
@@ -143,6 +144,7 @@ describe('POST /v1/feedback', () => {
       doing: 'Opening my crew',
       digest: '1234567890',
       sentryEventId: 'a1b2c3d4e5f6',
+      errorId: '0042137731',
     });
   });
 

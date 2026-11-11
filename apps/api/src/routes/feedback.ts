@@ -26,6 +26,9 @@ const feedbackSchema = z.object({
       doing: z.string().trim().max(1000).optional(),
       digest: errorIdSchema.optional(),
       sentryEventId: errorIdSchema.optional(),
+      // The id the standalone error page shows: the digest, or an id minted
+      // for a browser throw and tagged on its Sentry event as `error_id`.
+      errorId: errorIdSchema.optional(),
     })
     .optional(),
 });

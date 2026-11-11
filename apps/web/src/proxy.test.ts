@@ -346,6 +346,32 @@ describe('proxy — auth gate (#841)', () => {
     expect(auth.protect).toHaveBeenCalled();
   });
 
+  it('lets a signed-out error report reach its handler, which answers 401', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    // Gated, the page's fetch would follow a 307 to /sign-in and read the
+    // HTML as a sent report. The handler checks the session itself.
+    const req = new NextRequest('http://localhost/api/error-report', {
+      method: 'POST',
+    });
+    const auth = makeAuth(null);
+    const result = await middlewareHandler(auth, req);
+
+    expect(result).toBeUndefined();
+    expect(auth.protect).not.toHaveBeenCalled();
+  });
+
+  it('does not make paths under /api/error-report public', async () => {
+    const { middlewareHandler } = await import('./proxy');
+
+    const req = new NextRequest('http://localhost/api/error-report/all', {
+      method: 'POST',
+    });
+    const auth = makeAuth(null);
+    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized');
+    expect(auth.protect).toHaveBeenCalled();
+  });
+
   it('lets a signed-out visitor reach the offline fallback', async () => {
     const { middlewareHandler } = await import('./proxy');
 
@@ -925,6 +951,7 @@ describe('proxy — the known-segment list tracks the filesystem', () => {
 
   const NON_ROUTE_ROOT_FILES = new Set([
     'error.tsx',
+    'global-error.tsx',
     'globals.css',
     'layout.tsx',
     'not-found.tsx',

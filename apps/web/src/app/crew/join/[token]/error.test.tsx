@@ -9,24 +9,17 @@ import {
   cleanup,
   waitFor,
 } from '@testing-library/react';
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { STANDALONE_ERROR_COPY } from '@/components/consumer/standalone-error/definitions/copy';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh }),
-  usePathname: () => '/crew/join/secret-invite-token',
 }));
 
 import CrewJoinError from './error';
 import { CREWS_COPY } from '@/components/consumer/crews';
 
-// The boundary's report link reads the session; a signed-out visitor sees none.
-const session = { isSignedIn: false, getToken: async () => 'token' };
-vi.mock('@clerk/nextjs', () => ({ useAuth: () => session }));
-vi.mock('@sentry/nextjs', () => ({
-  captureException: () => 'evt',
-  isEnabled: () => true,
-}));
+vi.mock('@sentry/nextjs', () => ({ captureException: () => 'evt' }));
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -47,7 +40,7 @@ describe('crew join error boundary (#1226)', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(CREWS_COPY.net.errInviteBody)).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: CREWS_COPY.linkDead.browse }),
+      screen.getByRole('link', { name: STANDALONE_ERROR_COPY.goHome }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: CREWS_COPY.net.retry }));
@@ -60,33 +53,28 @@ describe('crew join error boundary (#1226)', () => {
   // The landing's path carries the invite token, a capability. A report filed
   // from here must never store it.
   it('files a report from the invite landing without the token', async () => {
-    session.isSignedIn = true;
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: () => ({
-        matches: false,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        addListener: () => {},
-        removeListener: () => {},
-      }),
-    });
-    const fetchMock = vi.fn(async (_url: string, _init: { body: string }) => ({
-      ok: true,
-    }));
+    window.history.replaceState(null, '', '/crew/join/secret-invite-token');
+    document.cookie = '__client_uat=1731300000';
+    const fetchMock = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response(null, { status: 201 }),
+    );
     vi.stubGlobal('fetch', fetchMock);
     try {
       render(<CrewJoinError error={new Error('x')} reset={vi.fn()} />);
-      fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-      fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-        target: { value: 'Blank' },
-      });
-      fireEvent.click(screen.getAllByText(CONSUMER_COPY.errorReport.send)[0]!);
+      fireEvent.click(
+        screen.getByRole('radio', {
+          name: STANDALONE_ERROR_COPY.card.doing.other,
+        }),
+      );
+      fireEvent.click(
+        screen.getByRole('button', { name: STANDALONE_ERROR_COPY.card.send }),
+      );
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-      const body = fetchMock.mock.calls[0]?.[1]?.body ?? '';
+      const body = String(fetchMock.mock.calls[0]?.[1]?.body ?? '');
       expect(body).not.toContain('secret-invite-token');
     } finally {
-      session.isSignedIn = false;
+      document.cookie = '__client_uat=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       vi.unstubAllGlobals();
     }
   });

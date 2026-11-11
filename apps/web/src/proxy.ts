@@ -41,6 +41,12 @@ const isAlwaysPublic = createRouteMatcher([
   // when that is unset — Clerk was simply the wrong gate for a non-browser
   // caller. Exact path, not a prefix.
   '/api/revalidate',
+  // The error page's Tell us report. It is sent from a page that may have no
+  // working app around it, with a plain fetch, and the handler checks the
+  // session itself and answers a signed-out send with 401, which switches the
+  // page to its signed-out layout. Gated here, that fetch would follow a 307
+  // to /sign-in and read an HTML page as a sent report. Exact path.
+  '/api/error-report',
   '/legal(.*)',
   // Every crawl request we send advertises `+https://concertcrawl.app/bot`, so
   // this page has to resolve for a venue's sysadmin who has no account and never

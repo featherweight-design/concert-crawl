@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deviceSummary, reportPage } from './report-context';
+import { coarseDevice, deviceSummary, reportPage } from './report-context';
 
 describe('reportPage', () => {
   it('keeps the path and drops the query and hash', () => {
@@ -38,5 +38,26 @@ describe('deviceSummary', () => {
         'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 FxiOS/132.0 Mobile/15E148 Safari/605.1.15',
       ),
     ).toBe('Firefox on iPhone');
+  });
+});
+
+describe('coarseDevice', () => {
+  it('reads platform first, the way the error page lists it', () => {
+    expect(
+      coarseDevice(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
+      ),
+    ).toBe('iPhone · Safari');
+    expect(
+      coarseDevice(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0 Safari/537.36',
+      ),
+    ).toBe('Mac · Chrome');
+  });
+
+  it('never carries the raw agent, and drops an unknown platform', () => {
+    const agent = 'SomeBot/1.0 (+https://example.com)';
+    expect(coarseDevice(agent)).toBe('Browser');
+    expect(coarseDevice(agent)).not.toContain('example');
   });
 });

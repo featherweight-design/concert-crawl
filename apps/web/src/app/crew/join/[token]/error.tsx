@@ -2,18 +2,12 @@
 
 import { useEffect } from 'react';
 
+import { CREWS_COPY } from '@/components/consumer/crews';
 import {
-  BrowseInstead,
-  CREWS_COPY,
-  DimmedMark,
-  InviteBody,
-  InviteEyebrow,
-  InviteShell,
-  InviteTitle,
-  primaryButtonStyle,
-} from '@/components/consumer/crews';
+  StandaloneError,
+  useErrorId,
+} from '@/components/consumer/standalone-error';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
-import { ErrorReport } from '@/components/consumer/error-report';
 
 /**
  * Our failure, stated as ours. Deliberately not the expired or retired dead
@@ -27,33 +21,19 @@ export default function CrewJoinError({
   reset: () => void;
 }) {
   const onRetry = useErrorBoundaryRetry(reset);
+  const errorId = useErrorId(error);
 
   useEffect(() => {
     console.error('[crews] invite landing boundary', error);
   }, [error]);
 
   return (
-    <InviteShell>
-      <DimmedMark />
-      <div className="flex max-w-[340px] flex-col items-center gap-[9px]">
-        <InviteEyebrow tone="warning">
-          {CREWS_COPY.net.errInviteEyebrow}
-        </InviteEyebrow>
-        <InviteTitle>{CREWS_COPY.net.errInviteTitle}</InviteTitle>
-        <InviteBody>{CREWS_COPY.net.errInviteBody}</InviteBody>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={onRetry}
-          className="cursor-pointer"
-          style={primaryButtonStyle}
-        >
-          {CREWS_COPY.net.retry}
-        </button>
-        <BrowseInstead />
-      </div>
-      <ErrorReport error={error} />
-    </InviteShell>
+    <StandaloneError
+      errorId={errorId}
+      onRetry={onRetry}
+      eyebrow={CREWS_COPY.net.errInviteEyebrow}
+      heading={CREWS_COPY.net.errInviteTitle}
+      body={CREWS_COPY.net.errInviteBody}
+    />
   );
 }
