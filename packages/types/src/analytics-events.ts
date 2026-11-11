@@ -19,6 +19,8 @@ export type PickerEntry =
   | 'follow'
   // A gated status report on the event page.
   | 'logged-out-report'
+  // A gated wrong-artist report on the artist page.
+  | 'logged-out-artist-report'
   // Reopened on the far side of sign-up, on the tier the visitor had picked
   // before they had an account (#1284).
   | 'post-signup'
