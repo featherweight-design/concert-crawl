@@ -190,6 +190,7 @@ export const PublicEventDetail = ({
           {!past && (
             <div className="mt-5">
               <EventTicketCta
+                cancelled={event.status === 'cancelled'}
                 soldOut={event.priceStatus === 'soldout'}
                 href={ctaHref}
                 hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
