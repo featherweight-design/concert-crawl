@@ -57,7 +57,9 @@ describe('repair-artist-names integration', () => {
       canonicalName,
       slug: canonicalName.replace(/[^a-z0-9]+/g, '-'),
       matchStatus,
-      spotifyArtistId: matchStatus === 'matched' ? `sp-${canonicalName}` : null,
+      // Kept on a non-matched row too, so the match-status guard is what
+      // keeps its candidates out, not a missing id.
+      spotifyArtistId: `sp-${canonicalName}`,
       spotifyCandidates: [
         {
           id: `sp-${canonicalName}`,
