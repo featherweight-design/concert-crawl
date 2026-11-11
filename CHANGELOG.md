@@ -1,3 +1,15 @@
+# [1.327.0](https://github.com/featherweight-design/concert-crawl/compare/v1.326.0...v1.327.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** card the calendar rows, order the hero by vibe and guard nextShow genres ([0525930](https://github.com/featherweight-design/concert-crawl/commit/0525930da9e20e8df33a874c5fd3640a1d4fc4b8))
+
+
+### Features
+
+* **web:** restyle browse rows, day headers and the tonight spotlight (B5) ([cfb56a8](https://github.com/featherweight-design/concert-crawl/commit/cfb56a8ee9095b82117524369183cf57f6273fb9))
+
 # [1.326.0](https://github.com/featherweight-design/concert-crawl/compare/v1.325.0...v1.326.0) (2026-11-11)
 
 
