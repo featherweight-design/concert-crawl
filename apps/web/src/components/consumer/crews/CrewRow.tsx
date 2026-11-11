@@ -3,6 +3,7 @@ import type { CrewSummary } from '@concert-crawl/types';
 
 import { CrewPatch } from '@/components/consumer/crew-patch';
 import { MemberCluster } from './MemberCluster';
+import { CREW_ROW } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY.list;
@@ -32,13 +33,13 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: wide ? 15 : 13,
+        gap: CREW_ROW.gap(wide),
         textDecoration: 'none',
-        padding: wide ? '14px 18px 14px 15px' : '14px 14px 14px 15px',
-        borderRadius: 16,
+        padding: CREW_ROW.padding(wide),
+        borderRadius: CREW_ROW.radius,
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
-        minHeight: 72,
+        minHeight: CREW_ROW.minHeight,
       }}
     >
       {/* Fixed size, not wide-scaled: the list is one column at every width
@@ -46,7 +47,7 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
       <CrewPatch
         crewId={crew.id}
         patchSalt={crew.patchSalt}
-        size={52}
+        size={CREW_ROW.patch}
         scale="tile"
       />
       <span

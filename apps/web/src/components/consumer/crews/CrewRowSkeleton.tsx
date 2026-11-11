@@ -1,3 +1,5 @@
+import { CREW_ROW } from './lib/styles';
+
 const shimmer: React.CSSProperties = {
   display: 'block',
   flexShrink: 0,
@@ -40,15 +42,15 @@ export const CrewRowSkeleton = ({ wide }: { wide: boolean }) => (
     style={{
       display: 'flex',
       alignItems: 'center',
-      gap: wide ? 15 : 13,
-      padding: wide ? '13px 15px' : '11px 12px',
-      borderRadius: 12,
+      gap: CREW_ROW.gap(wide),
+      padding: CREW_ROW.padding(wide),
+      borderRadius: CREW_ROW.radius,
       background: 'var(--surface-1)',
       border: '1px solid var(--border)',
-      minHeight: 64,
+      minHeight: CREW_ROW.minHeight,
     }}
   >
-    <Shimmer width={wide ? 54 : 48} height={wide ? 54 : 48} radius={14} />
+    <Shimmer width={CREW_ROW.patch} height={CREW_ROW.patch} radius={15} />
     <span
       style={{
         flex: 1,

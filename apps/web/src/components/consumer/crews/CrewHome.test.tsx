@@ -260,6 +260,10 @@ describe('CrewHome crew of one (#1226)', () => {
       screen.getByRole('heading', { level: 1, name: 'Thursdays' }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole('tab')).toHaveLength(3);
+    // B+ drops the notice's own Invite button: the hero's sits right above.
+    expect(
+      screen.getAllByRole('button', { name: CREWS_COPY.detail.invite }),
+    ).toHaveLength(1);
 
     const tablist = screen.getByRole('tablist');
     expect(
