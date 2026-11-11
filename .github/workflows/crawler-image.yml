@@ -31,9 +31,9 @@ permissions: read-all
 jobs:
   build-and-verify:
     name: Build and verify crawler image
-    # Pinned: on ubuntu-latest (26.04) apt cannot resolve archive.ubuntu.com,
-    # so `playwright install --with-deps` and apt-based builds hang. Unpin once
-    # the 26.04 image resolves it.
+    # Pinned with the Playwright smoke jobs, whose apt hangs on ubuntu-latest
+    # (26.04), so the crawler does not move to that image untested. Unpin every
+    # `ubuntu-24.04` pin together once apt works there.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

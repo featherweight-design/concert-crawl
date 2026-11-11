@@ -32,9 +32,9 @@ permissions: read-all
 jobs:
   e2e:
     name: Playwright E2E (staging)
-    # Pinned: on ubuntu-latest (26.04) apt cannot resolve archive.ubuntu.com,
-    # so `playwright install --with-deps` and apt-based builds hang. Unpin once
-    # the 26.04 image resolves it.
+    # Pinned: `playwright install --with-deps` runs apt, which on ubuntu-latest
+    # (26.04) cannot resolve archive.ubuntu.com and hangs. Unpin every
+    # `ubuntu-24.04` pin together once apt works there.
     runs-on: ubuntu-24.04
     # 40 min: up to 20 min waiting for the staging API deploy (a run can
     # queue behind the previous push's), then the suite.
