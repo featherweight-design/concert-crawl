@@ -1,3 +1,11 @@
+## [1.314.4](https://github.com/featherweight-design/concert-crawl/compare/v1.314.3...v1.314.4) (2026-11-11)
+
+
+### Bug Fixes
+
+* **events:** one query for live and contested prices; a live price leads ([a12a710](https://github.com/featherweight-design/concert-crawl/commit/a12a710e9bb496322a5ead164e09453ab4a1d0d0))
+* **events:** show open price checks, real confirm counts and an Already reported state ([45d4af6](https://github.com/featherweight-design/concert-crawl/commit/45d4af61ef2f91309987b4ceac78ffdc90045998))
+
 ## [1.314.3](https://github.com/featherweight-design/concert-crawl/compare/v1.314.2...v1.314.3) (2026-11-11)
 
 
