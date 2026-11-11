@@ -173,6 +173,14 @@ describe('artist reports — integration', () => {
       expect(await rows(artistId)).toHaveLength(1);
     });
 
+    it('does not spend the hourly allowance on repeat presses of an open report', async () => {
+      setAuth(REPORTER);
+      expect((await post(slug, { reason: 'other' })).status).toBe(201);
+      for (let n = 0; n < 12; n++) {
+        expect((await post(slug, { reason: 'other' })).status).toBe(409);
+      }
+    });
+
     it('lets two fans each hold an open report, and one fan re-report after withdrawing', async () => {
       setAuth(REPORTER);
       expect((await post(slug, { reason: 'wrong_photo' })).status).toBe(201);

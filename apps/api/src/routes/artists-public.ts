@@ -48,8 +48,8 @@ import { todayInDenver } from '../lib/time.js';
 export const artistsPublicRouter = new Hono();
 
 // The compare panel in the report sheet: what the page is matched to. Genres
-// and the link come from the match-time candidate snapshot; `genres` stays
-// null when that snapshot was never genre-hydrated.
+// come from the match-time candidate snapshot; `genres` stays null when that
+// snapshot was never genre-hydrated.
 function matchSummary(
   spotifyArtistId: string | null,
   candidates: SpotifyCandidateSnapshot[] | null,
@@ -58,8 +58,9 @@ function matchSummary(
   const hit = candidates?.find((cand) => cand.id === spotifyArtistId);
   return {
     spotifyArtistId,
-    spotifyUrl:
-      hit?.spotifyUrl ?? `https://open.spotify.com/artist/${spotifyArtistId}`,
+    // Built from the id, never taken from the snapshot, so the sheet's link
+    // can only ever point at open.spotify.com.
+    spotifyUrl: `https://open.spotify.com/artist/${spotifyArtistId}`,
     genres: hit?.genres ?? null,
   };
 }
