@@ -133,6 +133,11 @@ function parseCents(val: string | null | undefined): number | null {
 }
 
 // Derive the pending report of a given status from the reports array
+/** The viewer's own unresolved report on this show, if any. */
+function ownReportId(reports: EventReport[]): string | null {
+  return reports.find((rpt) => rpt.isReporter)?.id ?? null;
+}
+
 function findPendingReport(
   reports: EventReport[],
   status: EventReport['status'],
@@ -265,7 +270,7 @@ export function EventDetailBanners({
                 ? 'cancelled'
                 : 'postponed'
             }
-            confirms={activePendingReport.confirmsCount + 1}
+            confirms={activePendingReport.confirmsCount}
             needed={activePendingReport.confirmsNeeded}
             view={
               activePendingReport.isReporter
@@ -284,12 +289,6 @@ export function EventDetailBanners({
             }
             onConfirm={() => setConfirmSheetOpen(true)}
             onWithdraw={() => handleWithdrawReport(activePendingReport.id)}
-            onEdit={() => {
-              // Edit evidence — future flow
-            }}
-            onAddEvidence={() => {
-              // Add evidence — future flow
-            }}
             onSawDifferent={() => setSawDifferentSheetOpen(true)}
           />
         )}
@@ -351,6 +350,7 @@ export function EventDetailBanners({
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
+        ownReportId={ownReportId(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
           router.refresh();
@@ -1445,9 +1445,6 @@ export function EventDetailPriceBlock({
           note={pendingSoldOutReport.note}
           onConfirm={() => handleConfirmReport(pendingSoldOutReport.id)}
           onWithdraw={() => handleWithdrawReport(pendingSoldOutReport.id)}
-          onEdit={() => {
-            // Placeholder — edit sold-out report evidence
-          }}
           onSawDifferent={() => setSoldOutSawDifferentOpen(true)}
         />
 
@@ -1475,6 +1472,7 @@ export function EventDetailPriceBlock({
           reportType={soldOutEvidenceReportType}
           eventId={event.id}
           eventDate={event.date}
+          ownReportId={ownReportId(reports)}
           onSuccess={() => {
             setSoldOutEvidenceFormOpen(false);
             router.refresh();
@@ -2034,6 +2032,7 @@ export function EventDetailFooter({
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
+        ownReportId={ownReportId(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
           router.refresh();

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { ER_POLICY } from '@concert-crawl/types';
-import { fileEventReport } from '@/lib/events';
+import { ApiError } from '@/lib/api';
+import { fileEventReport, withdrawEventReport } from '@/lib/events';
 import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
@@ -183,6 +184,12 @@ export interface EvidenceFormProps {
   eventId: string;
   eventDate: string;
   onSuccess?: () => void;
+  /**
+   * The viewer's own unresolved report on this show, if the page knows of one.
+   * The API allows one open report per person per show; when it refuses a
+   * second, the form offers to withdraw this one.
+   */
+  ownReportId?: string | null;
 }
 
 // ── Main component ────────────────────────────────────────────────
@@ -193,8 +200,10 @@ export const EvidenceForm = ({
   eventId,
   eventDate,
   onSuccess,
+  ownReportId = null,
 }: EvidenceFormProps) => {
   const { getToken } = useAuth();
+  const [alreadyReported, setAlreadyReported] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<EvidenceMethod | null>(
     null,
   );
@@ -241,6 +250,10 @@ export const EvidenceForm = ({
       onSuccess?.();
       onClose();
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'report_exists') {
+        setAlreadyReported(true);
+        return;
+      }
       setErrorMsg(
         err instanceof Error ? err.message : 'Something went wrong. Try again.',
       );
@@ -248,6 +261,33 @@ export const EvidenceForm = ({
       setSubmitting(false);
     }
   };
+
+  if (alreadyReported) {
+    return (
+      <AlreadyReported
+        open={open}
+        onClose={() => {
+          setAlreadyReported(false);
+          onClose();
+        }}
+        onSeeReport={() => {
+          setAlreadyReported(false);
+          onSuccess?.();
+          onClose();
+        }}
+        {...(ownReportId !== null && {
+          onWithdraw: async () => {
+            const token = await getToken();
+            if (!token) return;
+            await withdrawEventReport(eventId, ownReportId, token);
+            setAlreadyReported(false);
+            onSuccess?.();
+            onClose();
+          },
+        })}
+      />
+    );
+  }
 
   return (
     <ModalShell
@@ -545,3 +585,142 @@ export const EvidenceForm = ({
     </ModalShell>
   );
 };
+
+// ── Already reported ──────────────────────────────────────────────
+// The API keeps one open report per person per show. A second filing comes
+// back 409 report_exists, and this replaces the form rather than showing the
+// raw server message.
+function AlreadyReported({
+  open,
+  onClose,
+  onSeeReport,
+  onWithdraw,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSeeReport: () => void;
+  onWithdraw?: () => Promise<void>;
+}) {
+  const copy = REPORTING_COPY.evidenceForm.alreadyReported;
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawFailed, setWithdrawFailed] = useState(false);
+
+  const handleWithdraw = async () => {
+    if (!onWithdraw) return;
+    setWithdrawing(true);
+    setWithdrawFailed(false);
+    try {
+      await onWithdraw();
+    } catch {
+      setWithdrawFailed(true);
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      ariaLabel={copy.eyebrow}
+      header={
+        <>
+          <span
+            style={{
+              display: 'block',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 9,
+              color: 'var(--fg-subtle)',
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.08em',
+              marginBottom: 10,
+            }}
+          >
+            {copy.eyebrow}
+          </span>
+          <h2
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 900,
+              fontSize: 24,
+              letterSpacing: '-0.025em',
+              color: 'var(--fg)',
+              margin: 0,
+              lineHeight: 1.1,
+            }}
+          >
+            {copy.heading}
+          </h2>
+        </>
+      }
+      footer={
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button
+            type="button"
+            onClick={onSeeReport}
+            style={{
+              background: 'var(--signal)',
+              height: 48,
+              borderRadius: 10,
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: 14.5,
+              color: 'var(--fg-on-accent)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {copy.seeReportButton}
+          </button>
+          {onWithdraw && (
+            <button
+              type="button"
+              onClick={() => {
+                void handleWithdraw();
+              }}
+              disabled={withdrawing}
+              style={{
+                background: 'none',
+                height: 48,
+                borderRadius: 10,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700,
+                fontSize: 14.5,
+                color: 'var(--warning)',
+                border: '1px solid var(--border-strong)',
+                cursor: withdrawing ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {copy.withdrawButton}
+            </button>
+          )}
+        </div>
+      }
+    >
+      <p
+        style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: 'var(--fg-muted)',
+          margin: 0,
+        }}
+      >
+        {copy.body}
+      </p>
+      {withdrawFailed && (
+        <p
+          role="alert"
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: 12,
+            color: 'var(--danger)',
+            margin: '10px 0 0',
+          }}
+        >
+          {copy.withdrawError}
+        </p>
+      )}
+    </ModalShell>
+  );
+}

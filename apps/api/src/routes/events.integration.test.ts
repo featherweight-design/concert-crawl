@@ -788,6 +788,89 @@ describe('GET /v1/events/:id — integration', () => {
     }
   });
 
+  // Filing a counter flips the parent to 'disputed' in the same transaction,
+  // so this is the shape every open price check actually has in the DB.
+  it('surfaces the counter against a parent the counter flipped to disputed', async () => {
+    const venue = await seedVenue({
+      name: 'Disputed Parent',
+      slug: 'disputed-parent',
+    });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    });
+    const submitter = await seedUserProfile('disputed-parent-fan', {
+      handle: 'disputed-parent-fan',
+    });
+    const challenger = await seedUserProfile('disputed-challenger', {
+      handle: 'disputed-challenger',
+    });
+    const parent = await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    });
+    const counter = await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '30',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: {
+        priceSubmissionId: string | null;
+        pendingSubmissions: Array<{ id: string }> | null;
+        counterSubmission: { id: string; parentSubmissionId: string } | null;
+        priceByTier: Array<{
+          counterSubmission: { id: string } | null;
+        }>;
+      };
+    };
+    expect(body.data.counterSubmission).toMatchObject({
+      id: counter.id,
+      parentSubmissionId: parent.id,
+    });
+    expect(body.data.priceSubmissionId).toBe(parent.id);
+    expect(body.data.priceByTier[0]?.counterSubmission?.id).toBe(counter.id);
+    expect(
+      (body.data.pendingSubmissions ?? []).find((sub) => sub.id === counter.id),
+    ).toBeUndefined();
+  });
+
+  it('keeps a disputed price with no open counter (a moderation denial) off the page', async () => {
+    const venue = await seedVenue({
+      name: 'Denied Price',
+      slug: 'denied-price',
+    });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    });
+    const submitter = await seedUserProfile('denied-fan', {
+      handle: 'denied-fan',
+    });
+    await seedPriceSubmission(event.id, submitter.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    });
+
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: { priceSubmissionId: string | null; priceByTier: unknown[] };
+    };
+    expect(body.data.priceSubmissionId).toBeNull();
+    expect(body.data.priceByTier).toEqual([]);
+  });
+
   it('pendingSubmissions is populated even when a corroborated price exists', async () => {
     const venue = await seedVenue({
       name: 'Pending Always',

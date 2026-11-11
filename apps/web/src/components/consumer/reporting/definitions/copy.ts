@@ -75,6 +75,17 @@ export const REPORTING_COPY = {
     cancelButton: 'Cancel',
     heading: 'How do you know?',
 
+    // Shown in place of the form when the API says this user already has an
+    // open report on the show (409 report_exists).
+    alreadyReported: {
+      eyebrow: 'Already reported',
+      heading: "You've flagged this one.",
+      body: 'Your report is still waiting on fans. One open report per show, so withdraw it first if you got it wrong.',
+      seeReportButton: 'See your report',
+      withdrawButton: 'Withdraw',
+      withdrawError: "Couldn't withdraw it. Try again.",
+    },
+
     evidenceOptions: {
       gotEmail: {
         label: 'Got an email',
@@ -174,7 +185,6 @@ export const REPORTING_COPY = {
     footerQuestion: 'Tickets still available?',
     confirmButton: 'Confirm sold out',
     yourReportLabel: 'Your report',
-    addEvidenceButton: 'Edit',
     withdrawButton: 'Withdraw',
     viewLink: 'View',
   },
@@ -190,7 +200,6 @@ export const REPORTING_COPY = {
     footerQuestion: 'Saw something different?',
     confirmButton: 'Confirm',
     yourReportLabel: 'Your report',
-    addEvidenceButton: 'Add evidence',
     withdrawButton: 'Withdraw',
     waitingForConfirms: 'Waiting for confirms',
     // Link out to the evidence URL attached to a report

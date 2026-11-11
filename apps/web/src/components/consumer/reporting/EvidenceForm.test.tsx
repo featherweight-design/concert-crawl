@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
 import { ER_POLICY } from '@concert-crawl/types';
 import { EvidenceForm } from './EvidenceForm';
 import { REPORTING_COPY } from './definitions/copy';
@@ -11,7 +17,13 @@ const copy = REPORTING_COPY.evidenceForm;
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => 'token' }),
 }));
-vi.mock('@/lib/events', () => ({ fileEventReport: vi.fn() }));
+vi.mock('@/lib/events', () => ({
+  fileEventReport: vi.fn(),
+  withdrawEventReport: vi.fn(),
+}));
+
+import { ApiError } from '@/lib/api';
+import { fileEventReport, withdrawEventReport } from '@/lib/events';
 
 const renderForm = (eventDate: string) =>
   render(
@@ -73,5 +85,88 @@ describe('EvidenceForm confirm threshold', () => {
     expect(
       screen.queryByText(copy.promotionNote(ER_POLICY.confirmsRequired)),
     ).toBeNull();
+  });
+});
+
+describe('EvidenceForm second report', () => {
+  const alreadyCopy = copy.alreadyReported;
+
+  const fileAgain = async (ownReportId: string | null) => {
+    vi.mocked(fileEventReport).mockRejectedValueOnce(
+      new ApiError(
+        409,
+        'You already have an unresolved report for this event',
+        'report_exists',
+      ),
+    );
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <EvidenceForm
+        open
+        onClose={onClose}
+        onSuccess={onSuccess}
+        reportType="cancelled"
+        eventId="event-1"
+        eventDate="2026-11-20"
+        ownReportId={ownReportId}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    await act(async () => {
+      fireEvent.click(screen.getByText(copy.submitButton));
+    });
+    return { onSuccess, onClose };
+  };
+
+  it('shows Already reported instead of the raw 409 message', async () => {
+    await fileAgain('report-9');
+    expect(screen.getByText(alreadyCopy.heading)).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'You already have an unresolved report for this event',
+      ),
+    ).toBeNull();
+  });
+
+  it("withdraws the viewer's own report from the Already reported state", async () => {
+    const { onSuccess } = await fileAgain('report-9');
+    await act(async () => {
+      fireEvent.click(screen.getByText(alreadyCopy.withdrawButton));
+    });
+    expect(withdrawEventReport).toHaveBeenCalledWith(
+      'event-1',
+      'report-9',
+      'token',
+    );
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it("offers only See your report when the page doesn't know the report", async () => {
+    const { onSuccess } = await fileAgain(null);
+    expect(screen.queryByText(alreadyCopy.withdrawButton)).toBeNull();
+    fireEvent.click(screen.getByText(alreadyCopy.seeReportButton));
+    expect(onSuccess).toHaveBeenCalled();
+  });
+
+  it('still shows other errors as text', async () => {
+    vi.mocked(fileEventReport).mockRejectedValueOnce(
+      new Error('Note rejected.'),
+    );
+    render(
+      <EvidenceForm
+        open
+        onClose={vi.fn()}
+        reportType="cancelled"
+        eventId="event-1"
+        eventDate="2026-11-20"
+      />,
+    );
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    await act(async () => {
+      fireEvent.click(screen.getByText(copy.submitButton));
+    });
+    expect(screen.getByText('Note rejected.')).toBeTruthy();
+    expect(screen.queryByText(alreadyCopy.heading)).toBeNull();
   });
 });

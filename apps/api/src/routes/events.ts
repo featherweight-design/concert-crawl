@@ -777,19 +777,20 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // same corroborated + pending data. Running the queries once and deriving
   // both shapes from the in-memory rows avoids duplicate DB work and keeps
   // the two payloads from drifting (an issue Copilot flagged in PR 723 r3).
-  const allCorroboratedRows = await db
-    .select({
-      id: priceSubmissions.id,
-      tier: priceSubmissions.tier,
-      priceMin: priceSubmissions.priceMin,
-      priceMax: priceSubmissions.priceMax,
-      vendor: priceSubmissions.vendor,
-      sourceCategory: priceSubmissions.sourceCategory,
-      userId: priceSubmissions.userId,
-      createdAt: priceSubmissions.createdAt,
-      updatedAt: priceSubmissions.updatedAt,
-      lastSeenAt: priceSubmissions.lastSeenAt,
-    })
+  const corroboratedSelection = {
+    id: priceSubmissions.id,
+    tier: priceSubmissions.tier,
+    priceMin: priceSubmissions.priceMin,
+    priceMax: priceSubmissions.priceMax,
+    vendor: priceSubmissions.vendor,
+    sourceCategory: priceSubmissions.sourceCategory,
+    userId: priceSubmissions.userId,
+    createdAt: priceSubmissions.createdAt,
+    updatedAt: priceSubmissions.updatedAt,
+    lastSeenAt: priceSubmissions.lastSeenAt,
+  };
+  const liveCorroboratedRows = await db
+    .select(corroboratedSelection)
     .from(priceSubmissions)
     .where(
       and(
@@ -825,6 +826,34 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         eq(priceSubmissions.status, 'pending'),
       ),
     );
+
+  // Filing a counter flips its parent from 'corroborated' to 'disputed' in the
+  // same transaction (price-submissions.ts, submissions.ts), so a price under an
+  // open price check is 'disputed', not 'corroborated'. It still leads its tier,
+  // with the counter beside it, until an admin resolves the check. 'disputed'
+  // alone also marks an admin moderation denial with no counter, so only a
+  // disputed row that a pending counter points at comes back here.
+  const contestedParentIds = [
+    ...new Set(
+      allPendingRows.flatMap((sub) =>
+        sub.disputedSubmissionId === null ? [] : [sub.disputedSubmissionId],
+      ),
+    ),
+  ];
+  const contestedParentRows =
+    contestedParentIds.length === 0
+      ? []
+      : await db
+          .select(corroboratedSelection)
+          .from(priceSubmissions)
+          .where(
+            and(
+              eq(priceSubmissions.eventId, id),
+              eq(priceSubmissions.status, 'disputed'),
+              inArray(priceSubmissions.id, contestedParentIds),
+            ),
+          );
+  const allCorroboratedRows = [...liveCorroboratedRows, ...contestedParentRows];
 
   // Counter-submissions = pending rows that point at a corroborated parent
   // AT THE SAME TIER. Tier match is required so a dispute that landed under a
