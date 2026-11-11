@@ -22,8 +22,10 @@ const submissionBodySchema = z
   .object({
     priceMin: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
     priceMax: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
-    tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']),
-    vendor: z.enum(VENDOR_VALUES),
+    // A price update (disputedSubmissionId set) takes its tier and vendor from
+    // the checked price, so it may leave these out. A new price must send them.
+    tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']).optional(),
+    vendor: z.enum(VENDOR_VALUES).optional(),
     howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
     // sourceCategory is the new top-level provenance choice (issue #641).
     // Optional during the expand phase — the submit form (PR 4) will start
@@ -39,7 +41,13 @@ const submissionBodySchema = z
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",
     path: ['priceMax'],
-  });
+  })
+  .refine(
+    (data) =>
+      data.disputedSubmissionId !== undefined ||
+      (data.tier !== undefined && data.vendor !== undefined),
+    { message: 'Pick a tier and where it is listed.', path: ['tier'] },
+  );
 
 // Batch bundle schema (#832). Per-row rules mirror submissionBodySchema's
 // price fields exactly; bundle-level fields are shared across every row.
@@ -444,6 +452,14 @@ priceSubmissionsRouter.post(
     // Check-then-insert runs inside an advisory-locked transaction so
     // concurrent requests for the same (user, event) serialize; the HTTP
     // status is mapped from the outcome after commit.
+    // The schema already requires tier and vendor here; this narrows them.
+    const { tier, vendor } = body;
+    if (tier === undefined || vendor === undefined) {
+      return ctx.json(
+        { success: false, error: 'Pick a tier and where it is listed.' },
+        422,
+      );
+    }
     type SingleOutcome =
       | {
           kind: 'already_submitted';
@@ -492,16 +508,15 @@ priceSubmissionsRouter.post(
           userId,
           priceMin: String(body.priceMin),
           priceMax: body.priceMax != null ? String(body.priceMax) : null,
-          tier: body.tier,
-          vendor: body.vendor,
+          tier,
+          vendor,
           howFound: body.howFound,
           // During the expand phase older clients omit sourceCategory.
           // Derive it from (vendor, howFound) via the shared helper so the
           // partial unique index + boxoffice staleness exemption apply
           // immediately instead of waiting for a later backfill.
           sourceCategory:
-            body.sourceCategory ??
-            deriveSourceCategory(body.vendor, body.howFound),
+            body.sourceCategory ?? deriveSourceCategory(vendor, body.howFound),
           // Submitter counts as observation #1 (1/2 confirmation model).
           // The DB default is also 1 — explicit value here is defensive
           // against default drift and easier to spot in code review.

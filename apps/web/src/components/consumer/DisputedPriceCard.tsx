@@ -8,6 +8,7 @@ import {
   PendingTrustPill,
 } from '@/components/consumer/glyphs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import type { Tier } from '@concert-crawl/types';
 
 const copy = CONSUMER_COPY.disputedPriceCard;
 
@@ -28,7 +29,8 @@ export interface DisputedPriceCardProps {
   // Live price (current corroborated price)
   floor: number;
   ceiling?: number;
-  tier: string;
+  /** The checked price's tier; its label is left out when unknown. */
+  tier: Tier | null;
   vendor: string;
   kind: 'community' | 'boxoffice';
   submitter: { handle: string } | null;
@@ -275,18 +277,20 @@ export const DisputedPriceCard = ({
             >
               {headlineStr}
             </span>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                fontSize: 11,
-                color: 'var(--fg-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              {tier}
-            </span>
+            {tier !== null && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700,
+                  fontSize: 11,
+                  color: 'var(--fg-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {tier}
+              </span>
+            )}
             <PendingTrustPill kind={kind} />
           </div>
 
@@ -401,6 +405,7 @@ export const DisputedPriceCard = ({
         currentFloor={floor}
         {...(ceiling != null ? { currentCeiling: ceiling } : {})}
         currentVendor={vendor}
+        currentTier={tier}
         onSuccess={handleSuccess}
       />
     </>

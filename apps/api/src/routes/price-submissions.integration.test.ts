@@ -665,6 +665,57 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
     expect(reloadedParent?.status).toBe('disputed');
   });
 
+  // CounterSubmitSheet no longer asks for or sends a tier or vendor: the
+  // update always lands in the checked price's slot.
+  it('accepts a price update without a tier or vendor and takes the parent slot', async () => {
+    const venue = await seedVenue({ name: 'Slot Only', slug: 'slot-only' });
+    const event = await seedEvent(venue.id, { date: '2027-07-04' });
+    await seedUserProfile('slot-only-parent', { handle: 'slot_only_parent' });
+    await seedUserProfile('slot-only-chal', { handle: 'slot_only_chal' });
+    const parent = await seedPriceSubmission(event.id, 'slot-only-parent', {
+      tier: 'VIP',
+      vendor: 'AXS',
+      status: 'corroborated',
+    });
+
+    setAuth('slot-only-chal');
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 80,
+        howFound: 'bought_myself',
+        disputedSubmissionId: parent.id,
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      data: { tier: string; vendor: string };
+    };
+    expect(body.data).toMatchObject({ tier: 'VIP', vendor: 'AXS' });
+  });
+
+  it('still requires a tier and vendor for a new price', async () => {
+    const venue = await seedVenue({ name: 'Needs Slot', slug: 'needs-slot' });
+    const event = await seedEvent(venue.id, { date: '2027-07-05' });
+    await seedUserProfile('needs-slot-fan', { handle: 'needs_slot_fan' });
+
+    setAuth('needs-slot-fan');
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({ priceMin: 40, howFound: 'bought_myself' }),
+    });
+    // The validation hook answers schema failures with 422.
+    expect(res.status).toBe(422);
+  });
+
   it('overwrites submitter-supplied slot fields with parent values', async () => {
     const venue = await seedVenue({
       name: 'Slot Inherit',

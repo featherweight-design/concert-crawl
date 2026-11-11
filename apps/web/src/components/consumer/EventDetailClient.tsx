@@ -1496,13 +1496,21 @@ export function EventDetailPriceBlock({
     event.priceStatus !== 'soldout'
   ) {
     const counter = event.counterSubmission;
+    // The flat fields carry no tier, so read it off the tier block holding
+    // this check.
+    const checkedTier =
+      event.priceByTier?.find(
+        (block) =>
+          block.counterSubmission?.id === counter.id ||
+          block.headline?.submissionId === counter.parentSubmissionId,
+      )?.tier ?? null;
     const liveKind: 'community' | 'boxoffice' =
       event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community';
     return (
       <DisputedPriceCard
         floor={priceMin}
         {...(priceMax !== null ? { ceiling: priceMax } : {})}
-        tier={event.priceVendor ?? 'GA'}
+        tier={checkedTier}
         vendor={event.priceVendor ?? event.venue.name}
         kind={liveKind}
         submitter={
