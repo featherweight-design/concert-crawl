@@ -63,18 +63,19 @@ interface UpcomingEventsOptions {
   includeMissing?: boolean;
 }
 
-/** The conditions every "shows still to come" query needs. */
 /**
- * The crawler-suppression half of consumer visibility (#607): a show the
- * crawler stopped seeing is hidden while it might be a blip, but once the
- * stale sweep has removed it (`delisted_at`, B+ A5) it comes back as a
- * No longer listed row rather than vanishing. A function, not a constant, so
- * the table isn't read at module load.
+ * #607 suppression with one exception (B+ A5): once the stale sweep has
+ * removed a show (`delisted_at`), it comes back as No longer listed, but ONLY
+ * where a person already holds it: Watching and its own detail page. Lists
+ * (browse, venue, artist, related, calendar) keep plain #607 suppression,
+ * because the sweep's main input is the title-drift duplicate of a show that
+ * is still live under a new row. A function so the table isn't read at load.
  */
 export const listedOrDelisted = (): SQL =>
   // `or` of two defined conditions is never undefined.
   or(isNull(events.firstMissingAt), isNotNull(events.delistedAt)) ?? sql`true`;
 
+/** The conditions every "shows still to come" query needs. */
 export const upcomingEventConditions = ({
   from,
   statuses = ['upcoming'],
@@ -98,7 +99,7 @@ export const upcomingEventConditions = ({
     conditions.push(eq(events.hiddenFromConsumer, false));
   }
   if (!includeMissing) {
-    conditions.push(listedOrDelisted());
+    conditions.push(isNull(events.firstMissingAt));
   }
 
   return conditions;

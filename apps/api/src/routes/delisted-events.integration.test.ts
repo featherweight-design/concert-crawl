@@ -86,14 +86,14 @@ describe('No longer listed (delisted_at)', () => {
     await clearTables();
   });
 
-  it('carries delistedAt on the browse and detail payloads', async () => {
+  it('comes back on its own page, but lists keep hiding it', async () => {
     const event = await seedDelisted();
+    // The sweep's main input is a title-drift duplicate of a live show, so
+    // browse keeps #607 suppression.
     const list = (await (await app.request('/v1/events')).json()) as {
-      data: { data: { id: string; delistedAt: string | null }[] };
+      data: { data: { id: string }[] };
     };
-    expect(list.data.data.find((row) => row.id === event.id)?.delistedAt).toBe(
-      '2099-01-01T00:00:00.000Z',
-    );
+    expect(list.data.data.map((row) => row.id)).not.toContain(event.id);
     const detail = (await (
       await app.request(`/v1/events/${event.id}`)
     ).json()) as { data: { delistedAt: string | null } };
@@ -167,6 +167,12 @@ describe('No longer listed (delisted_at)', () => {
       status: 'upcoming',
       delistedAt: null,
     });
+    // Restored means still on: the next sweep must not find it missing.
+    const [row] = await testDb
+      .select({ firstMissingAt: events.firstMissingAt })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.firstMissingAt).toBeNull();
     expect(await cancelNotices()).toHaveLength(0);
   });
 
@@ -200,37 +206,44 @@ describe('migration 0097 backfill', () => {
     return testDb.execute(sql.raw(statement));
   };
 
-  it('marks only sweep cancellations nobody has touched since', async () => {
+  it('marks the sweep cancellations that are still cancelled', async () => {
     const venue = await seedVenue();
     const sweptAt = new Date('2026-10-01T09:00:00Z');
-    const swept = await seedEvent(venue.id, {
-      status: 'cancelled',
-      updatedAt: sweptAt,
-    });
-    const editedAfter = await seedEvent(venue.id, {
-      artist: 'Edited',
+    const laterRun = new Date('2026-10-02T09:00:00Z');
+    const swept = await seedEvent(venue.id, { status: 'cancelled' });
+    // A background job touching the row after the sweep doesn't matter.
+    const touched = await seedEvent(venue.id, {
+      artist: 'Touched',
       status: 'cancelled',
       updatedAt: new Date('2026-10-05T09:00:00Z'),
+    });
+    // Someone moved it off cancelled since.
+    const restored = await seedEvent(venue.id, {
+      artist: 'Restored',
+      status: 'upcoming',
     });
     const humanCancel = await seedEvent(venue.id, {
       artist: 'Human',
       status: 'cancelled',
-      updatedAt: sweptAt,
     });
-    for (const row of [swept, editedAfter]) {
-      await testDb.insert(auditLog).values({
+    const audit = (targetId: string, createdAt: Date) =>
+      testDb.insert(auditLog).values({
         actorId: 'system:stale-event-sweep',
         action: 'event.auto_cancel.stale',
-        targetId: row.id,
-        createdAt: sweptAt,
+        targetId,
+        createdAt,
       });
-    }
+    await audit(swept.id, laterRun);
+    await audit(swept.id, sweptAt); // two runs: the first one counts
+    await audit(touched.id, sweptAt);
+    await audit(restored.id, sweptAt);
 
     await backfill();
     await backfill(); // idempotent
 
     expect((await delistedAtOf(swept.id))?.delistedAt).toEqual(sweptAt);
-    expect((await delistedAtOf(editedAfter.id))?.delistedAt).toBeNull();
+    expect((await delistedAtOf(touched.id))?.delistedAt).toEqual(sweptAt);
+    expect((await delistedAtOf(restored.id))?.delistedAt).toBeNull();
     expect((await delistedAtOf(humanCancel.id))?.delistedAt).toBeNull();
   });
 });
