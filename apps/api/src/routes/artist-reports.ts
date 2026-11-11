@@ -11,7 +11,7 @@ import {
 import type { ArtistReportSummary } from '@concert-crawl/types';
 import { clerkAuth, getAuthUser, requireAuth } from '../middleware/auth.js';
 import { moderateNote } from '../lib/moderate-note.js';
-import { checkRateLimit } from '../lib/rate-limit.js';
+import { checkRateLimit, refundRateLimit } from '../lib/rate-limit.js';
 import { parseSpotifyArtistLink } from '../lib/spotify-artist-link.js';
 
 export const artistReportsRouter = new Hono();
@@ -136,6 +136,9 @@ artistReportsRouter.post(
       });
 
     if (!created) {
+      // A repeat press on an already-open report is not a new report: hand
+      // the hit back so retries can't spend the fan's hourly allowance.
+      await refundRateLimit(`artist-report:${userId}`);
       const existing = await loadOpenReport(artist.id, userId);
       return ctx.json(
         {

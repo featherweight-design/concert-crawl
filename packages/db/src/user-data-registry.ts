@@ -165,7 +165,13 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     userIdColumn: 'reporter_id',
     otherUserIdColumns: ['resolved_by'],
     exportKey: 'artistReports',
-    exportColumns: ['reason', 'note', 'status', 'created_at'],
+    exportColumns: [
+      'reason',
+      'suggested_spotify_artist_id',
+      'note',
+      'status',
+      'created_at',
+    ],
     reason:
       "The reporter's own flag on an artist page, with their free-text note. " +
       '`resolved_by` is the admin who closed it and is not a customer, so it ' +
