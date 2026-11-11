@@ -387,6 +387,7 @@
 }
 .ps-tab {
   display: flex;
+  min-width: 0;
   flex: 1;
   flex-direction: column;
   align-items: center;
@@ -399,6 +400,14 @@
 }
 .ps-tab:first-child {
   border-left: 0;
+}
+/* A long host (a preview origin) ellipsizes rather than running off the tab. */
+.ps-tab b,
+.ps-tab span {
+  max-height: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .ps-tab b {
   font: 700 14px/1 var(--ps-mono);

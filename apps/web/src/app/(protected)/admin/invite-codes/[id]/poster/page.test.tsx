@@ -51,8 +51,13 @@ const venue = (name: string, upcomingCount: number, featured = false) => ({
   featured,
 });
 
-const renderPage = async (id = 'code-1') =>
-  render(await InviteCodePosterPage({ params: Promise.resolve({ id }) }));
+const renderPage = async (id = 'code-1', query: Record<string, string> = {}) =>
+  render(
+    await InviteCodePosterPage({
+      params: Promise.resolve({ id }),
+      searchParams: Promise.resolve(query),
+    }),
+  );
 
 describe('invite code poster page', () => {
   beforeEach(() => {
@@ -63,6 +68,8 @@ describe('invite code poster page', () => {
       venue('Ogden Theatre', 30),
       venue('Bluebird Theater', 12, true),
       venue('Hi-Dive', 40),
+      // Published but with nothing coming: not crawled, so not counted.
+      venue('Dark Room', 0),
     ]);
   });
   afterEach(() => {
@@ -120,5 +127,30 @@ describe('invite code poster page', () => {
   ])('is a 404 for an %s code', async (_, rows, id) => {
     getCodes.mockResolvedValue(rows);
     await expect(renderPage(id)).rejects.toThrow('NEXT_NOT_FOUND');
+    // Venues load only for a code worth printing.
+    expect(getVenues).not.toHaveBeenCalled();
+  });
+
+  it('still prints when the venues fail: no venue line, no count', async () => {
+    getVenues.mockRejectedValue(new Error('API down'));
+    await renderPage();
+
+    const sheet = screen.getByTestId('poster-sheet');
+    expect(sheet).toHaveTextContent('We check venue calendars every night');
+    expect(screen.queryByTestId('poster-venues')).toBeNull();
+  });
+
+  it.each([
+    [{}, 'night', 'false'],
+    [{ look: 'paper' }, 'paper', 'false'],
+    [{ tabs: '1' }, 'night', 'true'],
+    [{ look: 'paper', tabs: '1' }, 'paper', 'true'],
+    [{ look: 'neon', tabs: 'yes' }, 'night', 'false'],
+  ])('reads the look and tabs from %o', async (query, look, tabs) => {
+    await renderPage('code-1', query);
+
+    const sheet = screen.getByTestId('poster-sheet');
+    expect(sheet).toHaveAttribute('data-look', look);
+    expect(sheet).toHaveAttribute('data-tabs', tabs);
   });
 });
