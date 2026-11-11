@@ -24,6 +24,8 @@ export const UserNotificationCategorySchema = z.enum([
   'watch.backonsale',
   'watch.pricedrop',
   'artist.new_show',
+  // A fan's wrong-artist report was fixed. Bell-only, like contest.*.
+  'artist.report_fixed',
   // Crew activity (#1226) is bell-only, on the contest.* precedent — these
   // three are deliberately absent from PUSH_ELIGIBLE_CATEGORIES below.
   'crew.going',

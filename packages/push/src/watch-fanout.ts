@@ -168,11 +168,13 @@ const composeMessage = (
     case 'contest.resolved':
     case 'contest.needs_info':
     case 'artist.new_show':
+    case 'artist.report_fixed':
     case 'crew.going':
     case 'crew.joined':
     case 'crew.left':
       // Not fanned out here — contest.* handled by contest-notifications;
       // artist.new_show handled by the crawler artist fan-out helper;
+      // artist.report_fixed written by the admin artists route, bell-only;
       // crew.* handled by crew-notifications (#1226 PR-7), bell-only.
       return { title: '', body: '' };
     default: {
