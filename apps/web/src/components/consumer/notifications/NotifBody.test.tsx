@@ -466,3 +466,64 @@ describe('NotifItem', () => {
     expect(screen.getByRole('button')).not.toHaveAttribute('data-action-url');
   });
 });
+
+// B19: the B+ state boards (`06-states/bp-s-notif_*`).
+describe('NotifBody — B+ states', () => {
+  it('labels the loading skeleton with the Catching up divider', () => {
+    render(<NotifBody state="loading" now={NOW} />);
+    const status = screen.getByRole('status');
+    expect(
+      within(status).getByText(NOTIFICATIONS_COPY.loadingVisible),
+    ).toBeInTheDocument();
+  });
+
+  it('holds the count with a placeholder hidden from assistive tech while loading', () => {
+    render(<NotifBody state="loading" unreadCount={4} now={NOW} />);
+    const pending = screen.getByText(NOTIFICATIONS_COPY.countPending);
+    expect(pending.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('drops the placeholder once the first page lands', () => {
+    render(<NotifBody state="ready" items={[notification()]} now={NOW} />);
+    expect(screen.queryByText(NOTIFICATIONS_COPY.countPending)).toBeNull();
+  });
+
+  it('gives the empty state its All caught up eyebrow', () => {
+    render(<NotifBody state="ready" items={[]} onAction={vi.fn()} now={NOW} />);
+    expect(
+      screen.getByText(NOTIFICATIONS_COPY.emptyEyebrow),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.emptyAction }),
+    ).toBeInTheDocument();
+  });
+
+  it('gives the error state its Poll failed eyebrow inside the alert', () => {
+    render(<NotifBody state="error" onRetry={vi.fn()} now={NOW} />);
+    expect(
+      within(screen.getByRole('alert')).getByText(
+        NOTIFICATIONS_COPY.errorEyebrow,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('washes an unread row in its category ink and leaves a read row plain', () => {
+    const { container, rerender } = render(
+      <NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />,
+    );
+    const unreadLayers = container.querySelectorAll(
+      '.notif-row > span[aria-hidden="true"]',
+    ).length;
+    rerender(
+      <NotifItem
+        item={notification({ readAt: '2026-07-24T19:00:00-06:00' })}
+        onOpen={vi.fn()}
+        now={NOW}
+      />,
+    );
+    const readLayers = container.querySelectorAll(
+      '.notif-row > span[aria-hidden="true"]',
+    ).length;
+    expect(unreadLayers).toBe(readLayers + 1);
+  });
+});
