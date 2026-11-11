@@ -137,3 +137,12 @@ export const posterVenueLine = (
   }
   return { names, more: true };
 };
+
+/**
+ * The QR as a standalone SVG file: black modules on a white ground, quiet zone
+ * included, crisp at any size. The same path the sheet draws.
+ */
+export const qrSvg = (qr: QrPath): string =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${qr.size} ${qr.size}" width="${qr.size * 10}" height="${qr.size * 10}" shape-rendering="crispEdges">` +
+  `<rect width="${qr.size}" height="${qr.size}" fill="#ffffff"/>` +
+  `<path d="${qr.path}" fill="#000000"/></svg>`;

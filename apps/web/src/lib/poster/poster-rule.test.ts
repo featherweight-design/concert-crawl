@@ -10,6 +10,7 @@ import {
   posterVenueLine,
   posterVenues,
   qrPath,
+  qrSvg,
   seatsTaken,
 } from './poster-rule';
 
@@ -188,5 +189,20 @@ describe('posterVenueLine with a name longer than the budget', () => {
       names: ['A'.repeat(40)],
       more: true,
     });
+  });
+});
+
+describe('qrSvg', () => {
+  it('is black modules on a white ground, quiet zone inside the viewBox', () => {
+    const qr = qrPath('HTTPS://CONCERTCRAWL.APP/I/BETA-AB12-CD34');
+    const svg = qrSvg(qr);
+    expect(svg).toMatch(/^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
+    expect(svg).toContain(`viewBox="0 0 ${qr.size} ${qr.size}"`);
+    expect(svg).toContain(
+      `<rect width="${qr.size}" height="${qr.size}" fill="#ffffff"/>`,
+    );
+    expect(svg).toContain(`<path d="${qr.path}" fill="#000000"/>`);
+    // The quiet zone: no module starts inside the first four columns.
+    expect(qr.path).not.toMatch(/M[0-3] /);
   });
 });

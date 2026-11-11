@@ -2041,12 +2041,52 @@ export const ADMIN_COPY = {
       'Seats: how many people one code admits, 1 to 500. 1 for a personal code.',
     posterLink: 'Poster',
     poster: {
-      back: 'Invite codes',
-      print: 'Print',
-      downloadQr: 'Download QR (PNG)',
-      printHint:
-        'Letter, no margins. Turn off headers and footers in the print dialog.',
-      seatsLeft: (left: number) => `${left} seat${left === 1 ? '' : 's'} left`,
+      tabs: { codes: 'Codes', posters: 'Posters', label: 'Invite codes' },
+      title: 'Print a poster',
+      subtitle:
+        'One shared code per poster. Pick the code, pick the look, print at Letter.',
+      steps: { code: 'Code', look: 'Look', print: 'Print' },
+      seatsTaken: (taken: number, max: number) =>
+        `${taken} of ${max} seats taken`,
+      expiresNever: 'Never expires',
+      expiresOn: (date: string) => `Expires ${date}`,
+      full: 'Every seat is taken. Mint a new code to put up another poster.',
+      personalNote:
+        "Personal codes (1 seat) don't show here. A poster needs a code many people can use.",
+      // From the mobile board: the one-card picker's count of the rest.
+      moreCodes: (more: number, full: number) =>
+        `${more} more poster code${more === 1 ? '' : 's'}${full > 0 ? `, ${full} full` : ''}`,
+      look: {
+        night: {
+          name: 'Night',
+          hint: 'Color printer. Reads best in a dark bar.',
+        },
+        paper: {
+          name: 'Paper',
+          hint: 'Any printer, black ink. Copies well, works on colored paper.',
+        },
+      },
+      tearTabs: {
+        name: 'Tear-off tabs',
+        hint: 'Nine tabs with the code along the bottom. The QR shrinks to 3.5 in, so it scans from about 6 ft instead of 8.',
+      },
+      print: 'Print poster',
+      qrDownload: 'QR as SVG',
+      qrShort: 'QR',
+      printTipsHeading: 'In the print dialog',
+      printTips: [
+        'Letter at 100% scale',
+        'Margins: None',
+        'Background graphics on (Night needs it)',
+        'Headers and footers off',
+      ],
+      scanTip: 'Before you hang it, scan the printout from across the room.',
+      previewLabel: 'Preview · 8.5 × 11 in',
+      previewSpec: {
+        full: 'QR 4.5 in · scans from about 8 ft',
+        tabs: 'QR 3.5 in · scans from about 6 ft',
+      },
+      noCodes: 'No poster codes yet. Mint one on the Codes tab.',
     },
   },
 
