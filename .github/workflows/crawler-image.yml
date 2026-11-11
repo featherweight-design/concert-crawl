@@ -31,9 +31,9 @@ permissions: read-all
 jobs:
   build-and-verify:
     name: Build and verify crawler image
-    # Pinned with the Playwright smoke jobs, whose apt hangs on ubuntu-latest
-    # (26.04), so the crawler does not move to that image untested. Unpin every
-    # `ubuntu-24.04` pin together once apt works there.
+    # Pinned with the Playwright smoke jobs, which rely on this image's system
+    # libraries, so the crawler does not move to a new image untested. Move
+    # every `ubuntu-24.04` pin together.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
