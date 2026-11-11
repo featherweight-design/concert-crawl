@@ -241,6 +241,18 @@ describe('admin artist reports', () => {
       );
     });
 
+    it('says the wrong match was taken off when the fix clears it', async () => {
+      await report(artist.id, 'user_a');
+      const res = await fix({ spotifyArtistId: null });
+      expect(res.status).toBe(200);
+      const [sent] = await testDb.select().from(notifications);
+      expect(sent).toMatchObject({
+        title: 'We fixed Nightjar Choir’s page.',
+        body: 'Thanks to your report, we took the wrong photo and music off it.',
+        actionUrl: `/artists/${artist.slug}`,
+      });
+    });
+
     it('is a no-op for reports when there are none', async () => {
       expect((await fix({ spotifyArtistId: SPOTIFY_ID })).status).toBe(200);
       expect(await testDb.select().from(notifications)).toHaveLength(0);
@@ -254,7 +266,11 @@ describe('admin artist reports', () => {
       });
       expect(res.status).toBe(200);
       const [sent] = await testDb.select().from(notifications);
-      expect(sent).toMatchObject({ userId: 'user_a', actionUrl: null });
+      expect(sent).toMatchObject({
+        userId: 'user_a',
+        actionUrl: null,
+        title: 'We removed Nightjar Choir’s page.',
+      });
       expect((await reportRows(artist.id))[0]?.status).toBe('fixed');
     });
 

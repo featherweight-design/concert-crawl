@@ -9,7 +9,32 @@ interface ClosingArtist {
   name: string;
   slug: string;
   hidden: boolean;
+  matchStatus: string;
 }
+
+// What the reporter is told depends on what the fix did. The handoff's line
+// only holds when the page now points at a Spotify match; a cleared match or a
+// page taken down needs its own, or the notification states something false.
+const fixedNotification = (
+  artist: ClosingArtist,
+): { title: string; body: string } => {
+  if (artist.hidden) {
+    return {
+      title: `We removed ${artist.name}’s page.`,
+      body: 'Thanks to your report, it’s no longer listed as an artist.',
+    };
+  }
+  if (artist.matchStatus === 'matched') {
+    return {
+      title: `We fixed ${artist.name}’s page.`,
+      body: 'Thanks to your report, the photo and music now belong to the right artist.',
+    };
+  }
+  return {
+    title: `We fixed ${artist.name}’s page.`,
+    body: 'Thanks to your report, we took the wrong photo and music off it.',
+  };
+};
 
 /**
  * Close every open report on an artist, inside the caller's transaction.
@@ -24,7 +49,7 @@ interface ClosingArtist {
  * failure. The `dedupeKey` names the report, so a replay inserts nothing.
  *
  * A row hidden by the fix (Not an artist) has no page left to open, so its
- * notification carries no link.
+ * notification says the page was removed and carries no link.
  */
 export async function closeOpenArtistReports(
   tx: Tx,
@@ -56,8 +81,7 @@ export async function closeOpenArtistReports(
           userId: report.reporterId,
           type: 'user_notification' as const,
           category: 'artist.report_fixed',
-          title: `We fixed ${artist.name}’s page.`,
-          body: 'Thanks to your report, the photo and music now belong to the right artist.',
+          ...fixedNotification(artist),
           actionUrl: artist.hidden ? null : `/artists/${artist.slug}`,
           metadata: JSON.stringify({
             artistId: artist.id,
