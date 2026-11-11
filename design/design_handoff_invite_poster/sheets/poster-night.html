@@ -1,0 +1,90 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Invite poster test print</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>@page{size:letter;margin:0}html,body{margin:0;background:#2a2622}body{display:flex;justify-content:center;padding:24px 0}
+@media print{html,body{background:none;padding:0}}
+/* ---------- the sheet: US Letter at 96 css px per inch ---------- */
+.sheet{position:relative;width:816px;height:1056px;flex:none;background:#fff;font-family:Inter,system-ui,sans-serif;overflow:hidden;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet .wm{font-weight:900;letter-spacing:-0.025em;line-height:1;white-space:nowrap}
+.sheet p,.sheet h2{margin:0}
+/* 0.3in paper frame on Night: printers that can't print to the edge leave a white margin anyway, so it's designed in */
+.sheet .panel{position:absolute;inset:0;padding:44px 48px 30px;display:flex;flex-direction:column}
+.sheet.night .panel{inset:29px;padding:36px 40px 22px;background:
+  radial-gradient(720px 560px at 96% 2%,rgba(160,117,255,.22),transparent 64%),#070A1A;color:#E8F3FF}
+.sheet.paper{color:#111}
+.p-top{display:flex;align-items:center;justify-content:space-between}
+.p-chip{display:inline-flex;align-items:center;height:30px;padding:0 14px;border-radius:999px;font:600 12px/1 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase}
+.night .p-chip{border:1.5px solid #FF7BD4;color:#FF7BD4}
+.paper .p-chip{border:2px solid #111}
+.p-hero{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:22px}
+.p-copy{flex:1;min-width:0}
+.p-kicker{font:600 13px/1 'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase}
+.night .p-kicker{color:#7AE6FF}
+.p-head{margin-top:16px;font-weight:900;font-size:70px;line-height:.96;letter-spacing:-0.035em;text-wrap:balance}
+.night .p-head em{font-style:normal;background:linear-gradient(90deg,#7AE6FF,#FF7BD4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.paper .p-head em{font-style:normal}
+.p-mark{margin:-40px -30px 0 -60px;flex:none}
+.p-sub{margin-top:18px;font-size:20px;line-height:1.38;max-width:620px;text-wrap:pretty}
+.night .p-sub{color:#C9D6EE}
+.p-venues{margin-top:20px;font:600 10.5px/1.75 'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;text-wrap:balance}
+.night .p-venues{color:#9AA8C7}
+.p-venues{margin-bottom:22px}
+.p-venues .vsep{padding:0 7px;opacity:.6}
+.p-qrcard{margin-top:auto;display:flex;align-items:stretch;gap:22px;border-radius:18px;background:#fff;color:#070A1A;padding:0 26px 0 0}
+.paper .p-qrcard{border:3px solid #111}
+.p-qr{flex:none;padding:6px}
+.p-qr .qr{display:block}
+.p-side{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding:22px 0}
+.p-scan{font-weight:900;font-size:40px;line-height:.98;letter-spacing:-0.03em;text-wrap:balance}
+.p-arrow{width:60px;height:24px;margin-top:14px;color:#E0297A}
+.paper .p-arrow{color:#111}
+.p-seats{margin-top:14px;font-size:15.5px;line-height:1.38;color:#2B3352}
+.p-seats b{color:#070A1A}
+.p-typed{margin-top:auto;padding-top:14px;border-top:2px solid #070A1A;display:flex;flex-direction:column;gap:3px}
+.p-typed small{font:600 10px/1.3 'JetBrains Mono',monospace;letter-spacing:.16em;text-transform:uppercase;color:#4A5374}
+.p-url{font:700 16px/1.2 'JetBrains Mono',monospace}
+.p-code{font:700 19px/1.2 'JetBrains Mono',monospace;letter-spacing:.02em}
+.p-fine{margin-top:12px;font:500 9px/1 'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;text-align:right}
+.night .p-fine{color:#5A6788}
+.paper .p-fine{color:#555}
+/* tear-off tabs: bottom 1.55in of the page, outside the night panel */
+.has-tabs .panel{bottom:178px}
+.sheet.night.has-tabs .panel{bottom:178px}
+.has-tabs .p-head{font-size:68px}
+.has-tabs .p-scan{font-size:34px}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:150px;display:flex;border-top:2px dashed #111}
+.tab{flex:1;border-left:1.5px dashed #888;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  writing-mode:vertical-rl;transform:rotate(180deg);color:#111}
+.tab:first-child{border-left:0}
+.tab b{font:700 14px/1 'JetBrains Mono',monospace}
+.tab span{font:500 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.04em}
+</style></head><body>
+<div class="sheet night">
+  <div class="panel">
+    <div class="p-top"><span class="wm" style="font-size:30px;color:#E8F3FF">concert<span style="color:#FF7BD4">crawl.</span></span><span class="p-chip">Beta testers wanted</span></div>
+    <div class="p-hero">
+      <div class="p-copy">
+        <p class="p-kicker">Launching later · Testing now</p>
+        <h2 class="p-head">Every Denver show. <em>One list.</em></h2>
+      </div>
+      <div class="p-mark"><svg width="360" height="360" viewBox="0 0 96 96" aria-hidden="true" style="display:block;flex:none"><circle cx="72" cy="24" r="20" fill="#FF7BD4" opacity="0.22"/><circle cx="72" cy="24" r="12" fill="#FF7BD4" opacity="0.42"/><circle cx="72" cy="24" r="7" fill="#7AE6FF"/><circle cx="14" cy="76" r="1.5" fill="#7AE6FF" opacity="0.35"/><circle cx="24" cy="70" r="2" fill="#7AE6FF" opacity="0.44"/><circle cx="34" cy="64" r="2.5" fill="#7AE6FF" opacity="0.53"/><circle cx="42" cy="58" r="3" fill="#7AE6FF" opacity="0.62"/><circle cx="50" cy="50" r="4" fill="#7AE6FF" opacity="0.71"/><circle cx="58" cy="42" r="5" fill="#7AE6FF" opacity="0.80"/><circle cx="66" cy="32" r="6" fill="#7AE6FF" opacity="0.89"/></svg></div>
+    </div>
+    <p class="p-sub">We check 21 venue calendars every night and put every show in one place. Help us test it before launch. It’s free.</p>
+    <p class="p-venues"><span>Bluebird</span><span class="vsep">·</span><span>Ogden</span><span class="vsep">·</span><span>Gothic</span><span class="vsep">·</span><span>Mission Ballroom</span><span class="vsep">·</span><span>Fillmore</span><span class="vsep">·</span><span>Red Rocks</span><span class="vsep">·</span><span>Hi-Dive</span><span class="vsep">·</span><span>Larimer Lounge</span><span class="vsep">·</span><span>Globe Hall</span><span class="vsep">·</span><span>Lost Lake</span><span class="vsep">·</span><span>Marquis</span><span class="vsep">·</span><span>Summit</span><span class="vsep">·</span><span>Cervantes’</span><span class="vsep">·</span><span>Oriental</span><span class="vsep">·</span><span>Meow Wolf</span><span class="vsep">·</span><span>Levitt Pavilion</span><span class="vsep">·</span><span>Black Box</span><span class="vsep">·</span><span>Ball Arena</span><span class="vsep">·</span><span>and more</span></p>
+    <div class="p-qrcard">
+      <div class="p-qr"><svg class="qr" width="432" height="432" viewBox="0 0 37 37" shape-rendering="crispEdges" role="img" aria-label="QR code for invite BETA-7K2M-Q9XD"><rect width="37" height="37" fill="#fff"/><path d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM19 4h1v1h-1zM24 4h1v1h-1zM26 4h1v1h-1zM27 4h1v1h-1zM28 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM31 4h1v1h-1zM32 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM14 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM19 5h1v1h-1zM20 5h1v1h-1zM21 5h1v1h-1zM22 5h1v1h-1zM26 5h1v1h-1zM32 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM17 6h1v1h-1zM19 6h1v1h-1zM24 6h1v1h-1zM26 6h1v1h-1zM28 6h1v1h-1zM29 6h1v1h-1zM30 6h1v1h-1zM32 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM20 7h1v1h-1zM21 7h1v1h-1zM22 7h1v1h-1zM23 7h1v1h-1zM24 7h1v1h-1zM26 7h1v1h-1zM28 7h1v1h-1zM29 7h1v1h-1zM30 7h1v1h-1zM32 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM12 8h1v1h-1zM13 8h1v1h-1zM17 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM26 8h1v1h-1zM28 8h1v1h-1zM29 8h1v1h-1zM30 8h1v1h-1zM32 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM12 9h1v1h-1zM15 9h1v1h-1zM17 9h1v1h-1zM20 9h1v1h-1zM22 9h1v1h-1zM24 9h1v1h-1zM26 9h1v1h-1zM32 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM27 10h1v1h-1zM28 10h1v1h-1zM29 10h1v1h-1zM30 10h1v1h-1zM31 10h1v1h-1zM32 10h1v1h-1zM13 11h1v1h-1zM14 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM20 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM24 11h1v1h-1zM5 12h1v1h-1zM8 12h1v1h-1zM10 12h1v1h-1zM12 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM24 12h1v1h-1zM25 12h1v1h-1zM27 12h1v1h-1zM28 12h1v1h-1zM30 12h1v1h-1zM6 13h1v1h-1zM8 13h1v1h-1zM9 13h1v1h-1zM13 13h1v1h-1zM14 13h1v1h-1zM16 13h1v1h-1zM17 13h1v1h-1zM19 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM23 13h1v1h-1zM25 13h1v1h-1zM29 13h1v1h-1zM30 13h1v1h-1zM32 13h1v1h-1zM4 14h1v1h-1zM10 14h1v1h-1zM11 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM20 14h1v1h-1zM21 14h1v1h-1zM22 14h1v1h-1zM23 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM26 14h1v1h-1zM29 14h1v1h-1zM31 14h1v1h-1zM6 15h1v1h-1zM8 15h1v1h-1zM9 15h1v1h-1zM13 15h1v1h-1zM15 15h1v1h-1zM17 15h1v1h-1zM18 15h1v1h-1zM23 15h1v1h-1zM25 15h1v1h-1zM29 15h1v1h-1zM30 15h1v1h-1zM32 15h1v1h-1zM4 16h1v1h-1zM5 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM12 16h1v1h-1zM15 16h1v1h-1zM16 16h1v1h-1zM18 16h1v1h-1zM19 16h1v1h-1zM20 16h1v1h-1zM22 16h1v1h-1zM23 16h1v1h-1zM24 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM5 17h1v1h-1zM6 17h1v1h-1zM7 17h1v1h-1zM11 17h1v1h-1zM12 17h1v1h-1zM13 17h1v1h-1zM15 17h1v1h-1zM16 17h1v1h-1zM18 17h1v1h-1zM20 17h1v1h-1zM23 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM29 17h1v1h-1zM32 17h1v1h-1zM5 18h1v1h-1zM7 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM21 18h1v1h-1zM26 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM6 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM19 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM23 19h1v1h-1zM25 19h1v1h-1zM26 19h1v1h-1zM28 19h1v1h-1zM29 19h1v1h-1zM4 20h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM10 20h1v1h-1zM12 20h1v1h-1zM13 20h1v1h-1zM14 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM22 20h1v1h-1zM25 20h1v1h-1zM26 20h1v1h-1zM27 20h1v1h-1zM29 20h1v1h-1zM31 20h1v1h-1zM4 21h1v1h-1zM6 21h1v1h-1zM9 21h1v1h-1zM12 21h1v1h-1zM13 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM18 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM22 21h1v1h-1zM23 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM29 21h1v1h-1zM30 21h1v1h-1zM31 21h1v1h-1zM32 21h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM16 22h1v1h-1zM20 22h1v1h-1zM23 22h1v1h-1zM24 22h1v1h-1zM26 22h1v1h-1zM27 22h1v1h-1zM29 22h1v1h-1zM30 22h1v1h-1zM31 22h1v1h-1zM6 23h1v1h-1zM8 23h1v1h-1zM12 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM17 23h1v1h-1zM21 23h1v1h-1zM22 23h1v1h-1zM25 23h1v1h-1zM26 23h1v1h-1zM28 23h1v1h-1zM29 23h1v1h-1zM31 23h1v1h-1zM32 23h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM7 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM16 24h1v1h-1zM18 24h1v1h-1zM19 24h1v1h-1zM21 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM29 24h1v1h-1zM30 24h1v1h-1zM31 24h1v1h-1zM12 25h1v1h-1zM13 25h1v1h-1zM15 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM19 25h1v1h-1zM21 25h1v1h-1zM22 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM28 25h1v1h-1zM30 25h1v1h-1zM31 25h1v1h-1zM32 25h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM6 26h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM9 26h1v1h-1zM10 26h1v1h-1zM14 26h1v1h-1zM18 26h1v1h-1zM19 26h1v1h-1zM22 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM29 26h1v1h-1zM4 27h1v1h-1zM10 27h1v1h-1zM15 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM20 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM28 27h1v1h-1zM29 27h1v1h-1zM4 28h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM8 28h1v1h-1zM10 28h1v1h-1zM12 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM19 28h1v1h-1zM20 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM30 28h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM7 29h1v1h-1zM8 29h1v1h-1zM10 29h1v1h-1zM21 29h1v1h-1zM22 29h1v1h-1zM23 29h1v1h-1zM26 29h1v1h-1zM27 29h1v1h-1zM29 29h1v1h-1zM31 29h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM7 30h1v1h-1zM8 30h1v1h-1zM10 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM19 30h1v1h-1zM25 30h1v1h-1zM26 30h1v1h-1zM27 30h1v1h-1zM30 30h1v1h-1zM31 30h1v1h-1zM32 30h1v1h-1zM4 31h1v1h-1zM10 31h1v1h-1zM12 31h1v1h-1zM14 31h1v1h-1zM15 31h1v1h-1zM18 31h1v1h-1zM19 31h1v1h-1zM20 31h1v1h-1zM22 31h1v1h-1zM24 31h1v1h-1zM25 31h1v1h-1zM26 31h1v1h-1zM27 31h1v1h-1zM28 31h1v1h-1zM29 31h1v1h-1zM31 31h1v1h-1zM4 32h1v1h-1zM5 32h1v1h-1zM6 32h1v1h-1zM7 32h1v1h-1zM8 32h1v1h-1zM9 32h1v1h-1zM10 32h1v1h-1zM13 32h1v1h-1zM18 32h1v1h-1zM20 32h1v1h-1zM27 32h1v1h-1zM28 32h1v1h-1zM29 32h1v1h-1zM30 32h1v1h-1z" fill="#000"/></svg></div>
+      <div class="p-side">
+        <p class="p-scan">Scan to test it</p>
+        <svg class="p-arrow" viewBox="0 0 60 24" aria-hidden="true"><path d="M58 12H6M14 4L4 12l10 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="p-seats">This poster lets in <b>50 testers</b>. When the spots are gone, they’re gone.</p>
+        <div class="p-typed">
+          <small>No camera? Go to</small>
+          <b class="p-url">concertcrawl.app/i</b>
+          <small>and enter</small>
+          <b class="p-code">BETA-7K2M-Q9XD</b>
+        </div>
+      </div>
+    </div>
+    <p class="p-fine">Not affiliated with the venues listed.</p>
+  </div>
+  
+</div></body></html>
