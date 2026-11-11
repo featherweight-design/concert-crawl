@@ -2,7 +2,6 @@
 export const LANDING_COPY = {
   nav: {
     signIn: 'Sign in',
-    codeLink: 'I have a code →',
   },
   // What the browser tab, the search result and every social card say when a
   // route does not override them. Here rather than in `layout.tsx` because
@@ -39,10 +38,8 @@ export const LANDING_COPY = {
     browse: 'Browse shows',
     signUp: 'Sign up',
     noAccountNote: 'No account needed to look around',
-    // Private-beta CTAs. Live again whenever NEXT_PUBLIC_PUBLIC_BROWSE is off.
-    code: 'I have a code →',
+    // The private-beta landing's waitlist button (`invite` below).
     waitlist: 'Join the waitlist',
-    signIn: 'Already have an account? Sign in →',
   },
   rail: {
     // The count comes from a separate `to`-bounded /v1/events probe, not from
@@ -73,5 +70,20 @@ export const LANDING_COPY = {
   },
   betaPill: {
     label: 'Private Beta',
+  },
+  // The private-beta landing (B+ B24). Eyebrows and the count line render in
+  // mono caps through CSS, so they are written in sentence case here.
+  invite: {
+    eyebrow: 'Got an invite?',
+    fieldLabel: 'Invite code',
+    placeholder: 'BETA-XXXX-XXXX',
+    redeem: 'Redeem',
+    noCode: 'No code yet?',
+    signInPrompt: 'Already have an account?',
+    signInLink: 'Sign in',
+    venueCount: (count: number) =>
+      `${count} ${count === 1 ? 'venue' : 'venues'} · checked every night`,
+    ticker: 'This week in Denver',
+    tonight: 'Tonight',
   },
 } as const;

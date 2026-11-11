@@ -1,9 +1,45 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import LandingClientShell from './LandingClientShell';
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster';
+import type { InviteShow, InviteVenue } from './invite-landing';
+
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush, refresh: vi.fn() }),
+}));
+
+const INVITE_SHOWS: InviteShow[] = [
+  {
+    id: 'invite-1',
+    artist: 'Static Dress',
+    venue: 'Marquis',
+    tonight: true,
+    dateShort: 'NOV 11',
+    showTime: '6pm',
+    genre: 'metal',
+    imageUrl: null,
+    artistPhotoUrl: null,
+  },
+  {
+    id: 'invite-2',
+    artist: 'TOKiMONSTA',
+    venue: 'The Church',
+    tonight: false,
+    dateShort: 'NOV 13',
+    showTime: '9pm',
+    genre: 'electronic',
+    imageUrl: null,
+    artistPhotoUrl: null,
+  },
+];
+
+const INVITE_VENUES: InviteVenue[] = [
+  { slug: 'marquis-theater', name: 'Marquis Theater' },
+  { slug: 'the-church', name: 'The Church' },
+];
 
 const SHOWS: LandingShow[] = [
   {
@@ -90,47 +126,76 @@ describe('LandingClientShell — public CTAs (#794)', () => {
   });
 });
 
-describe('LandingClientShell — private-beta CTAs (#794 launch gate)', () => {
+describe('LandingClientShell — private-beta invite landing (#794 launch gate)', () => {
   beforeEach(() => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false');
+    mockPush.mockReset();
   });
 
-  it('renders the invite-code CTA pointing at /auth/code', () => {
-    render(<LandingClientShell shows={SHOWS} />);
-    const code = screen.getAllByRole('link', { name: /i have a code/i });
-    expect(code.length).toBeGreaterThan(0);
-    expect(
-      code.every((link) => link.getAttribute('href') === '/auth/code'),
-    ).toBe(true);
+  const renderBeta = (venues: InviteVenue[] | null = INVITE_VENUES) =>
+    render(
+      <LandingClientShell
+        shows={SHOWS}
+        showCount={214}
+        inviteShows={INVITE_SHOWS}
+        inviteVenues={venues}
+      />,
+    );
+
+  it('hands a complete code to /auth/code, which still asks to redeem it', () => {
+    renderBeta();
+    fireEvent.change(screen.getByRole('textbox', { name: /invite code/i }), {
+      target: { value: 'beta3f2a9c1e' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /redeem/i }));
+    expect(mockPush).toHaveBeenCalledWith('/auth/code?code=BETA-3F2A-9C1E');
+  });
+
+  it('sends a partial code to the empty code screen', () => {
+    renderBeta();
+    fireEvent.change(screen.getByRole('textbox', { name: /invite code/i }), {
+      target: { value: 'BETA-3F' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /redeem/i }));
+    expect(mockPush).toHaveBeenCalledWith('/auth/code');
   });
 
   it('renders the waitlist CTA and the beta pill', () => {
-    render(<LandingClientShell shows={SHOWS} />);
+    renderBeta();
     expect(
-      screen.getByRole('button', { name: /join the waitlist/i }),
-    ).toBeTruthy();
+      screen.getAllByRole('button', { name: /join the waitlist/i }).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(/private beta/i)).toBeTruthy();
   });
 
   it('offers sign-in to existing beta users', () => {
-    render(<LandingClientShell shows={SHOWS} />);
-    const signIn = screen.getByRole('link', {
-      name: /already have an account/i,
-    });
-    expect(signIn.getAttribute('href')).toBe('/sign-in');
+    renderBeta();
+    const signIn = screen.getAllByRole('link', { name: /^sign in$/i });
+    expect(signIn.length).toBeGreaterThan(0);
+    expect(
+      signIn.every((link) => link.getAttribute('href') === '/sign-in'),
+    ).toBe(true);
   });
 
-  it('shows no affordance pointing at a gated browse surface', () => {
-    render(<LandingClientShell shows={SHOWS} showCount={214} />);
+  it('shows the fan of shows without linking into a gated browse surface', () => {
+    renderBeta();
+    expect(screen.getAllByText('Static Dress').length).toBeGreaterThan(0);
     expect(screen.queryByText(/browse shows/i)).toBeNull();
-    expect(screen.queryByText(/no account needed/i)).toBeNull();
     expect(screen.queryByText(/see all/i)).toBeNull();
     expect(document.querySelector('a[href^="/events"]')).toBeNull();
   });
 
+  it('counts the crawled venues, and drops the row when they could not be read', () => {
+    const { unmount } = renderBeta();
+    expect(screen.getByText(/2 venues · checked every night/i)).toBeTruthy();
+    unmount();
+    renderBeta(null);
+    expect(screen.queryByText(/checked every night/i)).toBeNull();
+  });
+
   it('treats an unset flag as beta mode', () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', '');
-    render(<LandingClientShell shows={SHOWS} />);
+    renderBeta();
     expect(screen.queryByText(/browse shows/i)).toBeNull();
     expect(screen.getByText(/private beta/i)).toBeTruthy();
   });
