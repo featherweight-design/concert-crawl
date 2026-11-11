@@ -51,17 +51,25 @@ export const seatsTaken = (
 ): number =>
   Math.max(code.useCount, code.usedBy != null || code.usedAt != null ? 1 : 0);
 
+type StatusFields = Pick<
+  InviteCode,
+  'revokedAt' | 'expiresAt' | 'maxUses' | 'useCount' | 'usedBy' | 'usedAt'
+>;
+
+export type InviteStatus = 'active' | 'redeemed' | 'expired' | 'revoked';
+
+/** One answer to "is this code live", for the admin list and the poster. */
+export const inviteStatus = (code: StatusFields, now: Date): InviteStatus => {
+  if (code.revokedAt != null) return 'revoked';
+  if (seatsTaken(code) >= code.maxUses) return 'redeemed';
+  if (code.expiresAt != null && new Date(code.expiresAt) <= now)
+    return 'expired';
+  return 'active';
+};
+
 /**
- * A poster is only worth printing for a code that can still admit someone:
- * not revoked, not expired, and with a seat left.
+ * A poster is only worth printing for a live code that admits more than one
+ * person: a personal code on a wall is spent by the first scan.
  */
-export const isPrintable = (
-  code: Pick<
-    InviteCode,
-    'revokedAt' | 'expiresAt' | 'maxUses' | 'useCount' | 'usedBy' | 'usedAt'
-  >,
-  now: Date,
-): boolean =>
-  code.revokedAt == null &&
-  (code.expiresAt == null || new Date(code.expiresAt) > now) &&
-  seatsTaken(code) < code.maxUses;
+export const isPrintable = (code: StatusFields, now: Date): boolean =>
+  code.maxUses > 1 && inviteStatus(code, now) === 'active';

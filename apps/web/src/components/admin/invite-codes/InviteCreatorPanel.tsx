@@ -43,17 +43,27 @@ export function InviteCreatorPanel() {
     ok: boolean;
     code?: string;
     error?: string;
+    /** The seats the code was minted with, after clamping. */
+    seats?: number;
   } | null>(null);
 
   function handleMint() {
     setResult(null);
     startTransition(async () => {
+      const maxUses = clampSeats(seats);
       const res = await mintInviteCodeWithOptions({
         expiresIn,
         label,
-        maxUses: clampSeats(seats),
+        maxUses,
       });
-      setResult(res);
+      setResult(res.ok ? { ...res, seats: maxUses } : res);
+      // A fresh form after a mint, so pressing Mint again makes a personal
+      // code rather than a second copy of the poster code just made.
+      if (res.ok) {
+        setLabel('');
+        setSeats('1');
+        setSeatsTouched(false);
+      }
     });
   }
 
@@ -159,6 +169,9 @@ export function InviteCreatorPanel() {
           }}
         >
           &#10003; {result.code}
+          {result.seats !== undefined
+            ? ` · ${ADMIN_COPY.inviteCodes.seatsMinted(result.seats)}`
+            : null}
         </span>
       )}
       {result?.ok === false && result.error !== undefined && (

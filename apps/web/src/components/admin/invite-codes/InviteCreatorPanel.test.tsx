@@ -44,6 +44,19 @@ describe('InviteCreatorPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: /mint code/i }));
     });
     expect(mint).toHaveBeenCalledWith(expect.objectContaining({ maxUses: 50 }));
+    expect(screen.getByText(/BETA-AB12-CD34 · 50 seats/)).toBeInTheDocument();
+  });
+
+  it('starts fresh after a mint, so the next one is a personal code', async () => {
+    render(<InviteCreatorPanel />);
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'Hi-Dive bathroom' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /mint code/i }));
+    });
+    expect(screen.getByRole('textbox')).toHaveValue('');
+    expect(seatsField()).toHaveValue(1);
   });
 
   it('clamps the typed seats to what the API accepts', () => {

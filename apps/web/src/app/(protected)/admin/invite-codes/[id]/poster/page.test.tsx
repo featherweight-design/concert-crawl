@@ -85,6 +85,7 @@ describe('invite code poster page', () => {
     ['revoked', [code({ revokedAt: '2026-11-09T00:00:00Z' })], 'code-1'],
     ['expired', [code({ expiresAt: '2026-01-01T00:00:00Z' })], 'code-1'],
     ['full', [code({ useCount: 50 })], 'code-1'],
+    ['personal', [code({ maxUses: 1, useCount: 0 })], 'code-1'],
   ])('is a 404 for an %s code', async (_, rows, id) => {
     getCodes.mockResolvedValue(rows);
     await expect(renderPage(id)).rejects.toThrow('NEXT_NOT_FOUND');

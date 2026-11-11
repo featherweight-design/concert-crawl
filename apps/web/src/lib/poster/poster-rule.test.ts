@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   QR_QUIET_ZONE,
+  inviteStatus,
   isPrintable,
   posterJoinUrl,
   posterTypedUrl,
@@ -75,7 +76,26 @@ describe('seatsTaken', () => {
   });
 });
 
+describe('inviteStatus', () => {
+  it('reads revoked before full, and full before expired', () => {
+    expect(
+      inviteStatus({ ...open, revokedAt: '2026-11-01', useCount: 50 }, NOW),
+    ).toBe('revoked');
+    expect(
+      inviteStatus({ ...open, useCount: 50, expiresAt: '2026-01-01' }, NOW),
+    ).toBe('redeemed');
+    expect(inviteStatus({ ...open, expiresAt: NOW.toISOString() }, NOW)).toBe(
+      'expired',
+    );
+    expect(inviteStatus(open, NOW)).toBe('active');
+  });
+});
+
 describe('isPrintable', () => {
+  it('never prints a personal code, which the first scan would spend', () => {
+    expect(isPrintable({ ...open, maxUses: 1 }, NOW)).toBe(false);
+  });
+
   it('prints a code with a seat left', () => {
     expect(isPrintable(open, NOW)).toBe(true);
     expect(isPrintable({ ...open, useCount: 49, usedBy: 'u' }, NOW)).toBe(true);
