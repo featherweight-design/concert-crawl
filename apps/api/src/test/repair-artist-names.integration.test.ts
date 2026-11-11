@@ -42,6 +42,33 @@ describe('repair-artist-names integration', () => {
       slug: canonicalName.replace(/[^a-z0-9]+/g, '-'),
     });
 
+  /**
+   * An artist matched to Spotify, whose snapshot carries Spotify's own
+   * spelling under the matched id, as the match job writes it.
+   */
+  const seedMatchedArtist = async (
+    name: string,
+    canonicalName: string,
+    spotifyName: string,
+    matchStatus: 'matched' | 'ambiguous' = 'matched',
+  ) =>
+    testDb.insert(artists).values({
+      name,
+      canonicalName,
+      slug: canonicalName.replace(/[^a-z0-9]+/g, '-'),
+      matchStatus,
+      spotifyArtistId: matchStatus === 'matched' ? `sp-${canonicalName}` : null,
+      spotifyCandidates: [
+        {
+          id: `sp-${canonicalName}`,
+          name: spotifyName,
+          imageUrl: null,
+          genres: null,
+          spotifyUrl: null,
+        },
+      ],
+    });
+
   it('strips a tour suffix the billing does not carry', async () => {
     await seedSingleActBill('Dogstar', 'dogstar');
     await seedArtist('Dogstar: ALL IN NOW TOUR', 'dogstar');
@@ -250,6 +277,7 @@ describe('repair-artist-names integration', () => {
         from: 'Baby Keem - The Ca$ino Tour',
         to: 'Baby Keem',
         kind: 'shorten',
+        source: 'billing',
       },
     ]);
     const [row] = await listArtists();
@@ -310,5 +338,90 @@ describe('repair-artist-names integration', () => {
     const [row] = await listArtists();
     expect(row?.canonicalName).toBe('baby keem');
     expect(row?.slug).toBe('baby-keem');
+  });
+
+  describe('a row matched to Spotify takes its casing from Spotify', () => {
+    it('keeps an all-caps Spotify styling the venue lowers', async () => {
+      await seedSingleActBill('Mvtant', 'mvtant');
+      await seedMatchedArtist('MVTANT', 'mvtant', 'MVTANT');
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe('MVTANT');
+    });
+
+    it('keeps a lowercase Spotify styling the venue shouts', async () => {
+      await seedSingleActBill('BBNO$', 'bbno$');
+      await seedMatchedArtist('bbno$', 'bbno$', 'bbno$');
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe('bbno$');
+    });
+
+    it('re-cases a mixed-case name to Spotify, which billing alone may not', async () => {
+      await seedSingleActBill('Book Of Love', 'book of love');
+      await seedMatchedArtist('Book Of Love', 'book of love', 'Book of Love');
+
+      await repairArtistNames(testDb, { dryRun: false });
+
+      expect((await listArtists())[0]?.name).toBe('Book of Love');
+    });
+
+    it('fixes both acts of the Clipse & J.I.D bill to their Spotify names', async () => {
+      const venue = await seedVenue({ slug: `repair-spotify-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'Clipse & J.I.D',
+        canonicalArtist: 'clipse',
+        headliners: ['CLIPSE', 'j.i.d'],
+        canonicalHeadliners: ['clipse', 'j.i.d'],
+      });
+      await seedMatchedArtist('Clipse & J.I.D', 'clipse', 'Clipse');
+      await seedMatchedArtist('j.i.d', 'j.i.d', 'J.I.D');
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.sample).toEqual([
+        {
+          slug: 'clipse',
+          from: 'Clipse & J.I.D',
+          to: 'Clipse',
+          kind: 'shorten',
+          source: 'spotify',
+        },
+        {
+          slug: 'j-i-d',
+          from: 'j.i.d',
+          to: 'J.I.D',
+          kind: 'recase',
+          source: 'spotify',
+        },
+      ]);
+      expect((await listArtists()).map((row) => row.name)).toEqual([
+        'Clipse',
+        'J.I.D',
+      ]);
+    });
+
+    it('never adopts a billing that spells the act differently from Spotify', async () => {
+      await seedSingleActBill('Beatles', 'beatles');
+      await seedMatchedArtist('beatles', 'beatles', 'The Beatles');
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe('beatles');
+    });
+
+    it('ignores the candidates of a row that is not matched', async () => {
+      await seedSingleActBill('Ivri', 'ivri');
+      await seedMatchedArtist('ivri', 'ivri', 'IVRI', 'ambiguous');
+
+      await repairArtistNames(testDb, { dryRun: false });
+
+      expect((await listArtists())[0]?.name).toBe('Ivri');
+    });
   });
 });

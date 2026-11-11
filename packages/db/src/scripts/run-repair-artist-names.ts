@@ -27,7 +27,7 @@ async function main(): Promise<void> {
 
   for (const row of result.sample) {
     console.log(
-      `[repair-artist-names]   ${row.slug} (${row.kind}) — ${row.from} → ${row.to}`,
+      `[repair-artist-names]   ${row.slug} (${row.kind}, ${row.source}) — ${row.from} → ${row.to}`,
     );
   }
   if (result.candidates > result.sample.length) {

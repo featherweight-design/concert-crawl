@@ -23,6 +23,13 @@
  * construction, which is also why it cannot change any match outcome — the
  * Spotify search reads `canonical_name`.
  *
+ * Casing comes from Spotify where it can. A row matched to a Spotify artist
+ * takes that artist's own spelling (`MVTANT`, `bbno$`, `J.I.D`), because the
+ * act styled it and a venue's shift key did not. The billing still decides
+ * WHICH name the row should have (that is what proves a shorten), and Spotify
+ * decides only how it is cased. Rows with no Spotify name fall back to the
+ * billing-case rules below.
+ *
  * A separate concern this does NOT address: a row whose *canonical* name is
  * itself a tour title (`dogstar: all in now tour`) exists as its own artist
  * beside the real one. Those are unreferenced and belong to the reaper, not
@@ -43,7 +50,14 @@ export interface RepairArtistNamesResult {
    */
   repaired: number;
   /** Up to 25 candidates, for eyeballing before an apply run. */
-  sample: { slug: string; from: string; to: string; kind: RepairKind }[];
+  sample: {
+    slug: string;
+    from: string;
+    to: string;
+    kind: RepairKind;
+    /** Whether `to` is Spotify's spelling rather than the venue's billing. */
+    source: NameSource;
+  }[];
   /** Candidates by repair kind, so an apply decision can weigh the two classes separately. */
   byKind: Record<string, number>;
 }
@@ -56,12 +70,15 @@ export interface RepairArtistNamesResult {
  */
 type RepairKind = 'recase' | 'shorten';
 
+type NameSource = 'spotify' | 'billing';
+
 interface RepairRow extends Record<string, unknown> {
   id: string;
   slug: string;
   current_name: string;
-  billed_name: string;
+  repaired_name: string;
   kind: RepairKind;
+  source: NameSource;
 }
 
 const SAMPLE_SIZE = 25;
@@ -157,6 +174,50 @@ const CORROBORATED = sql`
 `;
 
 /**
+ * Spotify's own spelling of a matched artist: the snapshot candidate whose id
+ * is the row's `spotify_artist_id`. The match job writes that snapshot on every
+ * search, so a matched row nearly always carries it. Null for any row that is
+ * not `matched` (an ambiguous or no-match row's candidates are not this act),
+ * and for the few matched rows matched before snapshots existed.
+ */
+const SPOTIFY_NAME = sql`
+  SELECT btrim(candidate.value->>'name') AS spotify_name
+  FROM jsonb_array_elements(
+    CASE WHEN jsonb_typeof(artists.spotify_candidates) = 'array'
+      THEN artists.spotify_candidates
+      ELSE '[]'::jsonb
+    END
+  ) AS candidate(value)
+  WHERE artists.match_status = 'matched'
+    AND candidate.value->>'id' = artists.spotify_artist_id
+    AND btrim(coalesce(candidate.value->>'name', '')) <> ''
+  LIMIT 1
+`;
+
+/**
+ * Which billings a row may take, and under whose casing.
+ *
+ * With a Spotify name, the billing must be Spotify's name up to case, accents
+ * and whitespace, and the row then takes Spotify's spelling. None of the
+ * billing-case refusals apply: Spotify is the act's own styling, so `MVTANT`
+ * stays shouting, `bbno$` stays lowercase, and a mixed-case `Book Of Love`
+ * becomes Spotify's `Book of Love`. A billing that spells the act differently
+ * from Spotify is skipped, never adopted, so a matched row is only ever renamed
+ * to Spotify's spelling.
+ *
+ * Without one, today's billing rules decide, refusals included.
+ */
+const ELIGIBLE = sql`
+  CASE
+    WHEN spotify.spotify_name IS NOT NULL THEN
+      ${foldedArtistName('spotify.spotify_name')}
+        = ${foldedArtistName('billing.billed_name')}
+      AND (${IS_RECASE} OR ${NAME_EXTENDS_BILLING})
+    ELSE ${CORROBORATED}
+  END
+`;
+
+/**
  * One billing per artist: a cased spelling before a single-case one (as the
  * backfill pairs), then most frequently seen, then byte order so two runs and
  * two databases agree.
@@ -173,8 +234,10 @@ const CANDIDATES = sql`
       artists.id,
       artists.slug,
       artists.name AS current_name,
-      billing.billed_name,
+      coalesce(spotify.spotify_name, billing.billed_name) AS repaired_name,
       CASE WHEN ${IS_RECASE} THEN 'recase' ELSE 'shorten' END AS kind,
+      CASE WHEN spotify.spotify_name IS NULL THEN 'billing' ELSE 'spotify' END
+        AS source,
       COUNT(*) AS seen_count
     FROM artists
     JOIN events
@@ -183,29 +246,33 @@ const CANDIDATES = sql`
       ON events.canonical_headliners @> ARRAY[artists.canonical_name]
       AND events.hidden_from_consumer = false
     CROSS JOIN LATERAL (${BILLINGS}) AS billing
+    LEFT JOIN LATERAL (${SPOTIFY_NAME}) AS spotify ON true
     WHERE billing.billed_name IS NOT NULL
       AND billing.billed_name <> ''
-      AND ${CORROBORATED}
-    GROUP BY artists.id, artists.slug, artists.name, billing.billed_name
+      AND ${ELIGIBLE}
+    GROUP BY artists.id, artists.slug, artists.name, repaired_name, kind, source
   ),
   ranked AS (
     SELECT
-      id, slug, current_name, billed_name, kind,
+      id, slug, current_name, repaired_name, kind, source,
       ROW_NUMBER() OVER (
         PARTITION BY id
         -- A cased spelling outranks a shouted or whispered one, so an all-caps
-        -- name the venue mostly shouts is still fixed by a cased billing.
-        ORDER BY (billed_name = upper(billed_name)
-                  OR billed_name = lower(billed_name)) ASC,
+        -- name the venue mostly shouts is still fixed by a cased billing. On a
+        -- Spotify row every candidate shares one casing, so only the counts
+        -- and the recase-before-shorten tie-break below matter.
+        ORDER BY (repaired_name = upper(repaired_name)
+                  OR repaired_name = lower(repaired_name)) ASC,
                  seen_count DESC,
-                 billed_name COLLATE "C" ASC
+                 repaired_name COLLATE "C" ASC,
+                 kind ASC
       ) AS rank
     FROM billings
   )
-  SELECT id, slug, current_name, billed_name, kind
+  SELECT id, slug, current_name, repaired_name, kind, source
   FROM ranked
   WHERE rank = 1
-    AND billed_name <> current_name
+    AND repaired_name <> current_name
 `;
 
 export async function repairArtistNames(
@@ -221,8 +288,9 @@ export async function repairArtistNames(
   const sample = rows.slice(0, SAMPLE_SIZE).map((row) => ({
     slug: row.slug,
     from: row.current_name,
-    to: row.billed_name,
+    to: row.repaired_name,
     kind: row.kind,
+    source: row.source,
   }));
 
   const byKind = rows.reduce<Record<string, number>>((tally, row) => {
@@ -240,10 +308,10 @@ export async function repairArtistNames(
   // for any row that has since been repaired by hand.
   const written = await database.execute<{ id: string }>(sql`
     UPDATE artists
-    SET name = repair.billed_name, updated_at = NOW()
+    SET name = repair.repaired_name, updated_at = NOW()
     FROM (${CANDIDATES}) AS repair
     WHERE artists.id = repair.id
-      AND artists.name <> repair.billed_name
+      AND artists.name <> repair.repaired_name
     RETURNING artists.id
   `);
 
