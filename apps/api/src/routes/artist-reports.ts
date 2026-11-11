@@ -98,8 +98,9 @@ artistReportsRouter.post(
       }
     }
 
+    const rateKey = `artist-report:${userId}`;
     const { allowed, retryAfterMs } = await checkRateLimit(
-      `artist-report:${userId}`,
+      rateKey,
       REPORTS_PER_HOUR,
       60 * 60 * 1000,
       // Fail open: authenticated and low-value to abuse, and the report
@@ -116,6 +117,7 @@ artistReportsRouter.post(
 
     // The partial unique index is the one-open-report rule; inserting through
     // it settles two concurrent submits without a check-then-insert race.
+    // A failed insert files nothing, so it must not spend the allowance.
     const [created] = await db
       .insert(artistReports)
       .values({
@@ -133,12 +135,16 @@ artistReportsRouter.post(
         id: artistReports.id,
         reason: artistReports.reason,
         createdAt: artistReports.createdAt,
+      })
+      .catch(async (err: unknown) => {
+        await refundRateLimit(rateKey);
+        throw err;
       });
 
     if (!created) {
       // A repeat press on an already-open report is not a new report: hand
       // the hit back so retries can't spend the fan's hourly allowance.
-      await refundRateLimit(`artist-report:${userId}`);
+      await refundRateLimit(rateKey);
       const existing = await loadOpenReport(artist.id, userId);
       return ctx.json(
         {

@@ -357,6 +357,7 @@ artistsAdminRouter.patch(
       .select({
         spotifyArtistId: artists.spotifyArtistId,
         autoMatchedAt: artists.autoMatchedAt,
+        matchStatus: artists.matchStatus,
       })
       .from(artists)
       .where(eq(artists.id, id));
@@ -398,9 +399,15 @@ artistsAdminRouter.patch(
 
     const actor = getAuthUser(ctx);
 
-    // The fix and the closing of its reports commit together. "Looks right" on
-    // an auto-match says the page was right all along, so it dismisses rather
-    // than fixes: no notification.
+    // The fix and the closing of its reports commit together. Only a write
+    // that changed what the page shows is a fix. "Looks right" on an
+    // auto-match, or a save that repeats the current answer, says the page was
+    // right all along, so it dismisses instead: no notification.
+    const changedThePage =
+      body.confirmAutoMatch !== true &&
+      (identityChanged ||
+        nextStatus !== existing.matchStatus ||
+        body.photoUrl !== undefined);
     const updated = await db.transaction(async (tx) => {
       const [row] = await tx
         .update(artists)
@@ -441,7 +448,7 @@ artistsAdminRouter.patch(
       if (row) {
         await closeOpenArtistReports(tx, {
           artist: row,
-          outcome: body.confirmAutoMatch === true ? 'dismissed' : 'fixed',
+          outcome: changedThePage ? 'fixed' : 'dismissed',
           resolvedBy: actor.userId,
         });
       }
@@ -721,8 +728,9 @@ artistsAdminRouter.get(
 );
 
 // GET /v1/admin/artists/reports/count: how many artists have an open report.
-// Counted per artist, not per report, so the sidebar badge always agrees with
-// the Reported chip.
+// Counted per artist, not per report, across every date: it is the sidebar's
+// "something needs a look" signal, so it ignores the page's upcoming-only
+// filter (the Reported chip applies it by default).
 artistsAdminRouter.get('/reports/count', async (ctx) => {
   const [row] = await db
     .select({
@@ -874,17 +882,31 @@ artistsAdminRouter.patch(
     const { id } = ctx.req.valid('param');
     const { hidden } = ctx.req.valid('json');
 
-    const [updated] = await db
-      .update(artists)
-      .set({ hidden, updatedAt: new Date() })
-      .where(eq(artists.id, id))
-      .returning();
+    const actor = getAuthUser(ctx);
+
+    // Taking a page down answers every report on it, the same as ruling the
+    // row Not an artist: there is no page left to be wrong. Restoring a page
+    // changes nothing about reports.
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(artists)
+        .set({ hidden, updatedAt: new Date() })
+        .where(eq(artists.id, id))
+        .returning();
+      if (row && hidden) {
+        await closeOpenArtistReports(tx, {
+          artist: row,
+          outcome: 'fixed',
+          resolvedBy: actor.userId,
+        });
+      }
+      return row;
+    });
 
     if (!updated) {
       return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const actor = getAuthUser(ctx);
     ctx.set('auditAction', 'artist.visibility.update');
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor.userId);
