@@ -1,3 +1,18 @@
+# [1.313.0](https://github.com/featherweight-design/concert-crawl/compare/v1.312.0...v1.313.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** count legacy first redemptions as seats, refund real codes ([6d0a7f4](https://github.com/featherweight-design/concert-crawl/commit/6d0a7f4704f5c52e915d2e5a5b626c2470ee46fc))
+* **api:** count only misses against the code guard, and harden seats ([cd05a02](https://github.com/featherweight-design/concert-crawl/commit/cd05a02fcb3161fe80bd1e68e66146babe162ae9))
+* **api:** keep spent codes spent and cover the redemption ledger ([355e504](https://github.com/featherweight-design/concert-crawl/commit/355e504a9875cca4966ddf61db0ad100a8a36c01))
+
+
+### Features
+
+* **api:** multi-use invite codes with an atomic seat claim ([9f80895](https://github.com/featherweight-design/concert-crawl/commit/9f80895d47e9722ad74059ede12e2c3f52445005))
+* **types:** carry invite code seat fields in the API type ([e69cf5d](https://github.com/featherweight-design/concert-crawl/commit/e69cf5d4b3c75de438308befa728761153b7450f))
+
 # [1.312.0](https://github.com/featherweight-design/concert-crawl/compare/v1.311.2...v1.312.0) (2026-11-10)
 
 
