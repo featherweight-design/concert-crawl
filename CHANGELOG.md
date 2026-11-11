@@ -1,3 +1,10 @@
+# [1.323.0](https://github.com/featherweight-design/concert-crawl/compare/v1.322.0...v1.323.0) (2026-11-11)
+
+
+### Features
+
+* **admin:** show a Crawl paused pill in the venue list and detail header ([083546e](https://github.com/featherweight-design/concert-crawl/commit/083546e2141b79ab79723e7b7bccea6e101f8e84))
+
 # [1.322.0](https://github.com/featherweight-design/concert-crawl/compare/v1.321.0...v1.322.0) (2026-11-11)
 
 
