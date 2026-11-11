@@ -843,6 +843,81 @@ describe('GET /v1/events/:id — integration', () => {
     ).toBeUndefined();
   });
 
+  it('lets a live price in the same tier lead over one under a check', async () => {
+    const venue = await seedVenue({ name: 'Live Leads', slug: 'live-leads' });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    });
+    const fan = await seedUserProfile('live-leads-fan', {
+      handle: 'live-leads-fan',
+    });
+    const challenger = await seedUserProfile('live-leads-challenger', {
+      handle: 'live-leads-challenger',
+    });
+    const live = await seedPriceSubmission(event.id, fan.userId, {
+      tier: 'GA',
+      vendor: 'AXS',
+      priceMin: '45',
+      status: 'corroborated',
+    });
+    const contested = await seedPriceSubmission(event.id, fan.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      priceMin: '40',
+      status: 'disputed',
+    });
+    await seedPriceSubmission(event.id, challenger.userId, {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      priceMin: '30',
+      status: 'pending',
+      disputedSubmissionId: contested.id,
+    });
+
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: {
+        priceSubmissionId: string | null;
+        priceAlternates: Array<{ priceMin: string }>;
+        counterSubmission: unknown;
+      };
+    };
+    expect(body.data.priceSubmissionId).toBe(live.id);
+    expect(body.data.priceAlternates.map((alt) => alt.priceMin)).not.toContain(
+      '40',
+    );
+    expect(body.data.counterSubmission).toBeNull();
+  });
+
+  it('leaves a disputed parent off when its only counter is at another tier', async () => {
+    const venue = await seedVenue({ name: 'Cross Tier', slug: 'cross-tier' });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    });
+    const fan = await seedUserProfile('cross-tier-fan', {
+      handle: 'cross-tier-fan',
+    });
+    const parent = await seedPriceSubmission(event.id, fan.userId, {
+      tier: 'GA',
+      priceMin: '40',
+      status: 'disputed',
+    });
+    await seedPriceSubmission(event.id, fan.userId, {
+      tier: 'VIP',
+      priceMin: '90',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+
+    const res = await app.request(`/v1/events/${event.id}`);
+    const body = (await res.json()) as {
+      data: { priceSubmissionId: string | null };
+    };
+    expect(body.data.priceSubmissionId).toBeNull();
+  });
+
   it('keeps a disputed price with no open counter (a moderation denial) off the page', async () => {
     const venue = await seedVenue({
       name: 'Denied Price',

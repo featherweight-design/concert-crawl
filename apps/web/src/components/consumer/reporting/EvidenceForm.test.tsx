@@ -139,7 +139,23 @@ describe('EvidenceForm second report', () => {
       'report-9',
       'token',
     );
-    expect(onSuccess).toHaveBeenCalled();
+    // Back on the form, with the chosen method still selected, to file again.
+    expect(screen.queryByText(alreadyCopy.heading)).toBeNull();
+    expect(screen.getAllByRole('radio')[0]!.getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it('says so when the withdraw fails', async () => {
+    vi.mocked(withdrawEventReport).mockRejectedValueOnce(new Error('down'));
+    await fileAgain('report-9');
+    await act(async () => {
+      fireEvent.click(screen.getByText(alreadyCopy.withdrawButton));
+    });
+    expect(screen.getByRole('alert').textContent).toBe(
+      alreadyCopy.withdrawError,
+    );
   });
 
   it("offers only See your report when the page doesn't know the report", async () => {

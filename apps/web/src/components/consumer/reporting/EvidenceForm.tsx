@@ -276,13 +276,12 @@ export const EvidenceForm = ({
           onClose();
         }}
         {...(ownReportId !== null && {
+          // Back to the form with what they wrote, so they can file again.
           onWithdraw: async () => {
             const token = await getToken();
-            if (!token) return;
+            if (!token) throw new Error('Not signed in');
             await withdrawEventReport(eventId, ownReportId, token);
             setAlreadyReported(false);
-            onSuccess?.();
-            onClose();
           },
         })}
       />
