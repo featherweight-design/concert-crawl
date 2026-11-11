@@ -76,6 +76,39 @@ export interface ArtistDetailResponse {
   history: ArtistHistory;
   /** Present only when the request carries a session. Null when anonymous. */
   following: boolean | null;
+  /**
+   * The signed-in viewer's open wrong-artist report on this artist, or null
+   * (none open, or anonymous). Drives the card's reported state.
+   */
+  myOpenReport: ArtistReportSummary | null;
+  /**
+   * What the page is matched to, for the report sheet's compare panel. Null
+   * when the artist has no Spotify match. `genres` is null when the match was
+   * never genre-hydrated ("unknown", not "none").
+   */
+  match: ArtistMatchSummary | null;
+}
+
+export const ARTIST_REPORT_REASONS = [
+  'different_artist',
+  'wrong_photo',
+  'not_an_artist',
+  'other',
+] as const;
+export type ArtistReportReason = (typeof ARTIST_REPORT_REASONS)[number];
+
+export const ARTIST_REPORT_NOTE_MAX = 280;
+
+export interface ArtistReportSummary {
+  id: string;
+  reason: ArtistReportReason;
+  createdAt: string;
+}
+
+export interface ArtistMatchSummary {
+  spotifyArtistId: string;
+  spotifyUrl: string;
+  genres: string[] | null;
 }
 
 /**

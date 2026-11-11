@@ -126,6 +126,8 @@ const payload = (
   ],
   history: { count: 2, venues: ['Larimer Lounge', 'Globe Hall'] },
   following: false,
+  myOpenReport: null,
+  match: null,
   ...overrides,
 });
 
