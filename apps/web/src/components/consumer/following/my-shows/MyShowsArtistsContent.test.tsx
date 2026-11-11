@@ -104,6 +104,7 @@ const artist = (
           venue: 'Bluebird Theater',
           venueSlug: 'bluebird-theater',
           price: 28,
+          genres: [],
         },
 });
 

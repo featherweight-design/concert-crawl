@@ -73,6 +73,7 @@ const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   eventId: 'evt-ratbag',
   dateLine: 'Larimer Lounge · Sep 12',
   price: 32,
+  genre: null,
   following: false,
   ...overrides,
 });

@@ -24,6 +24,7 @@ const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   photoUrl: null,
   dateLine: 'Larimer Lounge · Sep 12',
   price: 32,
+  genre: null,
   following: false,
   ...overrides,
 });
@@ -84,5 +85,22 @@ describe('ShelfCard follow badge', () => {
     // what makes the literal safe — the circle and its overlay have to add up.
     expect(overlay?.style.inset).toBe('-9px');
     expect(NF_FOLLOW_SIZES.badge.height + 9 * 2).toBe(44);
+  });
+});
+
+// B+ rule 2: the next show's lead genre edges the card.
+describe('ShelfCard genre edge', () => {
+  it('edges the card in the genre color with a glow', () => {
+    renderCard({ genre: 'alternative' });
+    const link = screen.getByRole('link');
+    expect(link.style.border).toContain('var(--genre-rock)');
+    expect(link.style.boxShadow).toContain('var(--genre-rock)');
+  });
+
+  it('keeps the neutral hairline for an unknown genre', () => {
+    renderCard({ genre: null });
+    const link = screen.getByRole('link');
+    expect(link.style.border).toContain('var(--border)');
+    expect(link.style.boxShadow).toBe('');
   });
 });

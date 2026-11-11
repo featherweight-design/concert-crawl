@@ -30,6 +30,7 @@ import {
   NF_TAP_MIN,
 } from '@/components/consumer/artist-page/definitions/constants';
 import { Panel } from '@/components/consumer/image-slot';
+import { genreColor } from '@/lib/genre-color';
 import { FollowDateLine } from './FollowDateLine';
 import { FOLLOWING_COPY } from './definitions/copy';
 import type { ShelfArtist } from './definitions/types';
@@ -219,9 +220,15 @@ export const ShelfCard = ({
 
   const shellClass =
     'flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
+  // B+ rule 2: the next show's lead genre edges the card, with a soft glow.
+  // A show with no bucketed genre keeps the neutral hairline.
+  const edge = genreColor(artist.genre);
   const shellStyle = {
     background: 'var(--surface-1)',
-    border: '1px solid var(--border)',
+    border: `1px solid ${edge ?? 'var(--border)'}`,
+    boxShadow: edge
+      ? `0 0 14px color-mix(in oklch, ${edge} 22%, transparent)`
+      : undefined,
   };
 
   return (

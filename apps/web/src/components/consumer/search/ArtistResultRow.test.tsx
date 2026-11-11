@@ -33,6 +33,7 @@ const ARTIST: ArtistSearchResult = {
     venue: 'Hi-Dive',
     venueSlug: 'hi-dive',
     price: null,
+    genres: [],
   },
   following: false,
 };

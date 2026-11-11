@@ -104,6 +104,7 @@ export async function loadNextShowByCanonical(
       venue: venues.name,
       venueSlug: venues.slug,
       ticketPriceMin: events.ticketPriceMin,
+      genre: events.genre,
     })
     .from(events)
     .innerJoin(
@@ -153,6 +154,7 @@ export async function loadNextShowByCanonical(
       price:
         lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
         parsePrice(row.ticketPriceMin ?? null),
+      genres: row.genre ?? [],
     });
   }
 

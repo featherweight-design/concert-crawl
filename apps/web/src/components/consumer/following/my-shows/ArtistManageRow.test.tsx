@@ -45,6 +45,7 @@ const artist = (over: Partial<FollowedArtist> = {}): FollowedArtist => ({
     venue: 'Bluebird Theater',
     venueSlug: 'bluebird-theater',
     price: 28,
+    genres: [],
   },
   ...over,
 });

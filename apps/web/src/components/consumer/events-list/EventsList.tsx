@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types';
 import { useEvents } from '@/lib/queries/use-events';
@@ -8,6 +8,7 @@ import { useWatching } from '@/lib/queries/use-watching';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { dateGroupLabel } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { DayTile } from './DayTile';
 
 const copy = CONSUMER_COPY;
 
@@ -88,21 +89,18 @@ export const EventsList = ({
         <div className="flex flex-col gap-6">
           {Array.from(groups.entries()).map(([date, dateEvents]) => {
             const label = dateGroupLabel(date);
-            const isTonight = label.toLowerCase() === 'tonight';
             return (
               <section key={date} aria-label={label}>
-                <div
-                  className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
-                  style={{ borderBottom: '1px solid var(--border)' }}
-                >
+                <div className="mb-3 flex items-center gap-3">
+                  <DayTile date={date} />
                   <h2
                     className="shrink-0 leading-none"
                     style={{
                       fontFamily: 'Inter, system-ui',
-                      fontWeight: 900,
-                      fontSize: 18,
+                      fontWeight: 800,
+                      fontSize: 20,
                       letterSpacing: '-0.02em',
-                      color: isTonight ? 'var(--accent)' : 'var(--fg)',
+                      color: 'var(--fg)',
                     }}
                   >
                     {label}
@@ -111,31 +109,24 @@ export const EventsList = ({
                     className="shrink-0 uppercase text-fg-subtle"
                     style={{
                       fontFamily: 'var(--font-mono)',
-                      fontSize: 10,
-                      letterSpacing: '0.06em',
+                      fontSize: 10.5,
+                      letterSpacing: '0.12em',
                     }}
                   >
                     {copy.showCount(dateEvents.length)}
                   </span>
                 </div>
-                <div>
-                  {dateEvents.map((event, idx) => (
-                    <Fragment key={event.id}>
-                      {idx > 0 && (
-                        <div
-                          className="h-px bg-border"
-                          style={{ marginLeft: 58 }}
-                        />
-                      )}
-                      <EventRow
-                        show={fromEventWithVenue(event, {
-                          isWatching: effectiveWatchedIds.has(event.id),
-                        })}
-                        surface="browse"
-                        filterVibe={filterVibe}
-                        className="py-2.5"
-                      />
-                    </Fragment>
+                {/* B+ cards the rows, so a gap replaces the dividers. */}
+                <div className="flex flex-col gap-2.5">
+                  {dateEvents.map((event) => (
+                    <EventRow
+                      key={event.id}
+                      show={fromEventWithVenue(event, {
+                        isWatching: effectiveWatchedIds.has(event.id),
+                      })}
+                      surface="browse"
+                      filterVibe={filterVibe}
+                    />
                   ))}
                 </div>
               </section>

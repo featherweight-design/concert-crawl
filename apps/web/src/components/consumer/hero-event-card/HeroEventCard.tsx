@@ -5,7 +5,9 @@ import { WatchShowButton } from '../watch-show-button';
 import { formatShowTime, venueShort } from '../definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '../event-title-block';
-import { GenreChips } from '../GenreChips';
+import { GenreDot } from '../GenreDot';
+import { RowMetaChip } from '../event-row/RowMetaChip';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
 
 const copy = CONSUMER_COPY;
@@ -28,9 +30,21 @@ export function HeroEventCard({
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
       : null;
+  // B+ rule 2: the lead genre rings the art and starts the card's edge, which
+  // runs into the accent. The pair shares one chip, as on a row.
+  const [leadGenre, secondGenre] = event.genre ?? [];
+  const genre = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
 
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-border-strong bg-surface-1">
+    <div
+      data-testid="hero-event-card"
+      className="relative overflow-hidden rounded-[14px]"
+      style={{
+        border: '1.5px solid transparent',
+        background: `linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(120deg, ${genre}, var(--accent)) border-box`,
+        boxShadow: `0 0 28px color-mix(in oklch, ${genre} 22%, transparent)`,
+      }}
+    >
       <Link
         href={`/events/${event.id}`}
         className="flex items-center gap-3.5 p-3.5"
@@ -38,13 +52,22 @@ export function HeroEventCard({
         {/* A square panel rather than the wide banner this slot used to crop
             to. The old shape stretched a square source across ≈4:1 and lost
             whatever made it recognisable (#1525). */}
-        <Panel
-          surface="event"
-          name={event.artist}
-          artworkUrl={event.imageUrl}
-          photoUrl={event.artistPhotoUrl ?? null}
-          size={112}
-        />
+        <div
+          data-testid="hero-image-ring"
+          className="shrink-0 overflow-hidden rounded-[10px]"
+          style={{
+            boxShadow: `0 0 0 1.25px ${genre}, 0 0 12px color-mix(in oklch, ${genre} 35%, transparent)`,
+          }}
+        >
+          <Panel
+            surface="event"
+            name={event.artist}
+            artworkUrl={event.imageUrl}
+            photoUrl={event.artistPhotoUrl ?? null}
+            size={112}
+            radius={10}
+          />
+        </div>
 
         <div className="min-w-0 flex-1">
           {/* Eyebrow badge slot — the Spotify "Following" badge replaces the
@@ -106,7 +129,15 @@ export function HeroEventCard({
           </div>
           {/* Right padding clears the watch button, which sits over this
               corner and is deliberately outside the Link. */}
-          <GenreChips genres={event.genre} className="mt-2 pr-9" />
+          {leadGenre && (
+            <div className="mt-2 pr-9">
+              <RowMetaChip
+                label={leadGenre}
+                secondaryLabel={secondGenre}
+                icon={<GenreDot genre={leadGenre} />}
+              />
+            </div>
+          )}
         </div>
       </Link>
 

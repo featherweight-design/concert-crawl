@@ -113,6 +113,7 @@ describe('GET /v1/artists/suggestions — integration', () => {
       artist: 'Nightjar Choir',
       canonicalArtist: 'nightjar choir',
       date: '2099-08-14',
+      genre: ['indie folk', 'americana'],
     });
 
     const res = await getSuggestions();
@@ -128,6 +129,8 @@ describe('GET /v1/artists/suggestions — integration', () => {
         iso: '2099-08-14',
         venue: 'Larimer Lounge',
         venueSlug: 'larimer',
+        // The winning show's genres, lead first: the shelf card's edge color.
+        genres: ['indie folk', 'americana'],
       },
     });
   });
