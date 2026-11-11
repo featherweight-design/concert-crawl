@@ -361,7 +361,6 @@ eventsRouter.get(
         imageUrl: events.imageUrl,
         genre: events.genre,
         status: events.status,
-        delistedAt: events.delistedAt,
         confidenceScore: events.confidenceScore,
         verified: events.verified,
         sourceUrl: events.sourceUrl,
@@ -646,9 +645,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       and(eq(events.venueId, venues.id), eq(venues.active, true)),
     )
     .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
-    // isNull(firstMissingAt) mirrors the list-filter intent: if the crawler
+    // listedOrDelisted() mirrors the list-filter intent: if the crawler
     // stopped seeing this event, direct-link traffic from old emails / search
-    // results should 404 rather than render a stale detail page. The crawler
+    // results should 404 rather than render a stale detail page, until the
+    // stale sweep marks it No longer listed (B+ A5), when it renders again. The crawler
     // clears the flag on re-extraction, so the row becomes reachable again
     // automatically if it returns to the venue's calendar. hiddenFromConsumer
     // is the parallel "non-concert" filter from PR 6.
@@ -1310,7 +1310,6 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
       imageUrl: events.imageUrl,
       genre: events.genre,
       status: events.status,
-      delistedAt: events.delistedAt,
       confidenceScore: events.confidenceScore,
       verified: events.verified,
       sourceUrl: events.sourceUrl,
@@ -1394,7 +1393,7 @@ eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
       and(
         eq(events.id, eventId),
         eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
+        listedOrDelisted(),
       ),
     )
     .limit(1);

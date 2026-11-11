@@ -75,6 +75,17 @@ export const listedOrDelisted = (): SQL =>
   // `or` of two defined conditions is never undefined.
   or(isNull(events.firstMissingAt), isNotNull(events.delistedAt)) ?? sql`true`;
 
+/**
+ * The columns to set when a confirmed status (a promoted report, an admin
+ * PATCH) replaces No longer listed. A delisted row is also still missing, so
+ * clearing only `delisted_at` would hide it again (#607) right after its
+ * watchers were told; a row that is missing but never swept keeps both as is.
+ */
+export const endDelisting = () => ({
+  delistedAt: null,
+  firstMissingAt: sql`CASE WHEN ${events.delistedAt} IS NOT NULL THEN NULL ELSE ${events.firstMissingAt} END`,
+});
+
 /** The conditions every "shows still to come" query needs. */
 export const upcomingEventConditions = ({
   from,

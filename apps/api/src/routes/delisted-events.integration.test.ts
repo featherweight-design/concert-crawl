@@ -139,6 +139,33 @@ describe('No longer listed (delisted_at)', () => {
     expect((await cancelNotices()).map((row) => row.userId)).toEqual([
       'user_watcher',
     ]);
+    // Now plainly cancelled, and still in front of the people just told.
+    expect((await app.request(`/v1/events/${event.id}`)).status).toBe(200);
+    as('user_watcher');
+    const watching = (await (
+      await app.request('/v1/watching', { headers })
+    ).json()) as { data: { eventId: string }[] };
+    expect(watching.data.map((show) => show.eventId)).toContain(event.id);
+  });
+
+  it("serves the page's watchers, related shows and watch toggle", async () => {
+    const event = await seedDelisted();
+    as('user_other');
+    expect(
+      (await app.request(`/v1/events/${event.id}/watchers`, { headers }))
+        .status,
+    ).toBe(200);
+    expect((await app.request(`/v1/events/${event.id}/related`)).status).toBe(
+      200,
+    );
+    expect(
+      (
+        await app.request(`/v1/watching/${event.id}`, {
+          method: 'PUT',
+          headers,
+        })
+      ).status,
+    ).toBeLessThan(300);
   });
 
   it('an admin marking it cancelled clears it and notifies watchers', async () => {
@@ -152,6 +179,7 @@ describe('No longer listed (delisted_at)', () => {
     expect(res.status).toBe(200);
     expect((await delistedAtOf(event.id))?.delistedAt).toBeNull();
     expect(await cancelNotices()).toHaveLength(1);
+    expect((await app.request(`/v1/events/${event.id}`)).status).toBe(200);
   });
 
   it('an admin setting it back to upcoming clears it', async () => {
@@ -237,6 +265,18 @@ describe('migration 0097 backfill', () => {
     await audit(swept.id, sweptAt); // two runs: the first one counts
     await audit(touched.id, sweptAt);
     await audit(restored.id, sweptAt);
+    // Restored and re-cancelled by an admin after the sweep: a human call.
+    const recancelled = await seedEvent(venue.id, {
+      artist: 'Recancelled',
+      status: 'cancelled',
+    });
+    await audit(recancelled.id, sweptAt);
+    await testDb.insert(auditLog).values({
+      actorId: 'admin_user',
+      action: 'event.update',
+      targetId: recancelled.id,
+      createdAt: laterRun,
+    });
 
     await backfill();
     await backfill(); // idempotent
@@ -244,6 +284,7 @@ describe('migration 0097 backfill', () => {
     expect((await delistedAtOf(swept.id))?.delistedAt).toEqual(sweptAt);
     expect((await delistedAtOf(touched.id))?.delistedAt).toEqual(sweptAt);
     expect((await delistedAtOf(restored.id))?.delistedAt).toBeNull();
+    expect((await delistedAtOf(recancelled.id))?.delistedAt).toBeNull();
     expect((await delistedAtOf(humanCancel.id))?.delistedAt).toBeNull();
   });
 });
