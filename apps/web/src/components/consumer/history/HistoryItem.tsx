@@ -20,53 +20,12 @@ import {
 } from '@/components/consumer/venue-stamp';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { HISTORY_COPY } from './definitions/copy';
+import {
+  HISTORY_DENSITY_CONFIG,
+  type HistoryDensity,
+} from './definitions/constants';
 
-export type HistoryDensity = 'compact' | 'cozy' | 'roomy';
-
-const DENSITY_CONFIG: Record<
-  HistoryDensity,
-  {
-    artSize: number;
-    padY: number;
-    padL: number;
-    padR: number;
-    gap: number;
-    titleSize: number;
-    metaSize: number;
-    stampSize: number;
-  }
-> = {
-  compact: {
-    artSize: 40,
-    padY: 10,
-    padL: 14,
-    padR: 14,
-    gap: 12,
-    titleSize: 13,
-    metaSize: 11,
-    stampSize: 32,
-  },
-  cozy: {
-    artSize: 56,
-    padY: 14,
-    padL: 14,
-    padR: 16,
-    gap: 14,
-    titleSize: 14.5,
-    metaSize: 11.5,
-    stampSize: 44,
-  },
-  roomy: {
-    artSize: 64,
-    padY: 18,
-    padL: 18,
-    padR: 20,
-    gap: 16,
-    titleSize: 16,
-    metaSize: 12,
-    stampSize: 52,
-  },
-};
+export type { HistoryDensity } from './definitions/constants';
 
 export const HistoryItem = ({
   show,
@@ -78,7 +37,7 @@ export const HistoryItem = ({
   /** `dashed` for an upcoming night: the stamp it will become. */
   stamp?: VenueStampVariant;
 }) => {
-  const cfg = DENSITY_CONFIG[density];
+  const cfg = HISTORY_DENSITY_CONFIG[density];
   const genre = genreColor(show.genre) ?? NEUTRAL_GENRE_COLOR;
 
   // dateLabel and showTime arrive pre-formatted in Mountain Time — the API

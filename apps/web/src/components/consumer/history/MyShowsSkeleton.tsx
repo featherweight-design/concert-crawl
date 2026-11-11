@@ -7,9 +7,27 @@
 // and no 'use client', so the route `loading.tsx` files can render these.
 
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import {
+  HISTORY_DENSITY,
+  HISTORY_DENSITY_CONFIG,
+} from './definitions/constants';
 
 /** What sits in a row's right column: a price or follow pill, or a stamp. */
 export type SkeletonTrailing = 'pill' | 'stamp';
+
+/** The Watching and Artists card geometry: EventRow's carded row at 56px art. */
+const PILL_ROW = {
+  artSize: 56,
+  padding: '13px 12px 13px 14px',
+  gap: 14,
+} as const;
+
+/**
+ * The Concerts row is a HistoryItem, so its skeleton reads the live geometry
+ * at the density the route renders: the art, the padding and the stamp slot
+ * can never drift from the row they stand in for.
+ */
+const STAMP_ROW = HISTORY_DENSITY_CONFIG[HISTORY_DENSITY];
 
 /**
  * One carded row: the same card shape as the live rows, with a neutral left
@@ -22,33 +40,45 @@ export const MyShowsRowSkeleton = ({
 }: {
   trailing: SkeletonTrailing;
   fade?: number;
-}) => (
-  <div
-    data-testid="my-shows-row-skeleton"
-    data-trailing={trailing}
-    className="flex items-center rounded-xl border border-border bg-surface-1"
-    style={{
-      gap: 12,
-      padding: '13px 12px 13px 14px',
-      borderLeftWidth: 2,
-      borderLeftColor: 'var(--border-strong)',
-      opacity: fade,
-    }}
-  >
-    <SkeletonBlock width={52} height={52} radius={8} />
-    <span className="flex min-w-0 flex-1 flex-col" style={{ gap: 8 }}>
-      <SkeletonBlock width="55%" height={13} radius={6} />
-      <SkeletonBlock width="75%" height={10} radius={5} />
-    </span>
-    <span className="shrink-0">
-      {trailing === 'stamp' ? (
-        <SkeletonBlock width={56} height={56} radius="50%" />
-      ) : (
-        <SkeletonBlock width={40} height={18} radius={7} />
-      )}
-    </span>
-  </div>
-);
+}) => {
+  const stamp = trailing === 'stamp';
+  const artSize = stamp ? STAMP_ROW.artSize : PILL_ROW.artSize;
+  return (
+    <div
+      data-testid="my-shows-row-skeleton"
+      data-trailing={trailing}
+      className="flex items-center rounded-xl border border-border bg-surface-1"
+      style={{
+        gap: stamp ? STAMP_ROW.gap : PILL_ROW.gap,
+        padding: stamp
+          ? `${STAMP_ROW.padY}px ${STAMP_ROW.padR}px ${STAMP_ROW.padY}px ${STAMP_ROW.padL}px`
+          : PILL_ROW.padding,
+        borderLeftWidth: 2,
+        borderLeftColor: 'var(--border-strong)',
+        opacity: fade,
+      }}
+    >
+      <span data-testid="my-shows-row-skeleton-art" className="shrink-0">
+        <SkeletonBlock width={artSize} height={artSize} radius={8} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col" style={{ gap: 8 }}>
+        <SkeletonBlock width="55%" height={13} radius={6} />
+        <SkeletonBlock width="75%" height={10} radius={5} />
+      </span>
+      <span data-testid="my-shows-row-skeleton-trailing" className="shrink-0">
+        {stamp ? (
+          <SkeletonBlock
+            width={STAMP_ROW.stampSize}
+            height={STAMP_ROW.stampSize}
+            radius="50%"
+          />
+        ) : (
+          <SkeletonBlock width={40} height={18} radius={7} />
+        )}
+      </span>
+    </div>
+  );
+};
 
 /** The mono eyebrow bar plus the big headline bar, over the header divider. */
 export const MyShowsHeadlineSkeleton = () => (

@@ -1,7 +1,11 @@
 import { useId } from 'react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { VenueStamp, stampInkFor } from '@/components/consumer/venue-stamp';
+import {
+  VenueStamp,
+  stampAccentFor,
+  stampInkFor,
+} from '@/components/consumer/venue-stamp';
 import { stampDateParts } from '@/lib/passport/stamp';
 
 const COPY = CONSUMER_COPY.passport;
@@ -61,7 +65,7 @@ interface BookletStampProps {
  */
 export function BookletStamp({ show, size, tilt = 0 }: BookletStampProps) {
   const uid = useId().replace(/:/g, '');
-  const ink = stampInkFor(show.artist);
+  const ink = stampInkFor(stampAccentFor(show.artist));
   const date = stampDateParts(show.date);
   const topId = `bs${uid}t`;
   const bottomId = `bs${uid}b`;

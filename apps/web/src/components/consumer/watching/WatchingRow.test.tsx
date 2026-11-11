@@ -4,6 +4,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import type { WatchingShow } from '@concert-crawl/types';
+import { EVENT_ROW_COPY } from '@/components/consumer/event-row/definitions/copy';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -215,16 +216,18 @@ describe('WatchingRow "Still going?" nudge', () => {
 
 // B+ "My shows": the Stale price chip is dropped everywhere. #1366's
 // single-source staleness still feeds the price surfaces that word it; it just
-// never becomes a chip on this row again.
+// never becomes a chip on this row again. The row carries a provenance chip so
+// the meta line renders and the assertion cannot pass on an empty line.
 describe('WatchingRow staleness', () => {
   const daysAgo = (days: number) =>
     new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-  it('shows no Stale chip for a price observed long ago', () => {
-    const { queryByTestId } = render(
+  it('shows the provenance chip and no Stale chip for a long-held price', () => {
+    const { getByTestId } = render(
       <WatchingRow
         show={{
           ...baseShow,
+          priceSourceCategory: 'boxoffice',
           updatedAt: daysAgo(30),
           priceObservedAt: daysAgo(8),
         }}
@@ -232,17 +235,8 @@ describe('WatchingRow staleness', () => {
       />,
     );
 
-    expect(queryByTestId('row-meta')?.textContent ?? '').not.toContain('Stale');
-  });
-
-  it('shows no Stale chip when the price falls back to the event row', () => {
-    const { queryByTestId } = render(
-      <WatchingRow
-        show={{ ...baseShow, updatedAt: daysAgo(3), priceObservedAt: null }}
-        onRemove={() => {}}
-      />,
-    );
-
-    expect(queryByTestId('row-meta')?.textContent ?? '').not.toContain('Stale');
+    const meta = getByTestId('row-meta').textContent ?? '';
+    expect(meta).toContain(EVENT_ROW_COPY.provenance.boxoffice);
+    expect(meta).not.toContain('Stale');
   });
 });

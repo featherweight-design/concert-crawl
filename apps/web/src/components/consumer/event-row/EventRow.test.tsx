@@ -429,17 +429,20 @@ describe('EventRow — the footer slot', () => {
  * height would come back as zero — an assertion that would pass whether or not
  * the reservation existed at all.
  *
- * The fixtures are Watching rows, not Browse ones. A zero-chip row is what the
- * reservation exists for, and on Browse it is unreachable: `genre` leads that
- * surface's priority and no production event carries an empty `genres[]`. On
- * Watching the only chip is `provenance` (B+ dropped the Stale chip), which a
- * live, bare-priced show legitimately lacks.
+ * Watching's only chip is `provenance` (B+ dropped the Stale chip), so its
+ * ladder runs from no chips to one. The full two-chip budget is exercised on
+ * Browse, which still has two chip kinds (`following` and `genre`). A Browse
+ * row with no genre is unreachable in production, but it is the honest floor
+ * for this ladder.
  */
 describe('EventRow — Rule 3, the row reserves its own height', () => {
   const FRESH = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const STALE = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
 
-  const minHeights = (surface: 'watching' | 'artist', shows: EventRowShow[]) =>
+  const minHeights = (
+    surface: 'watching' | 'artist' | 'browse',
+    shows: EventRowShow[],
+  ) =>
     new Set(
       shows.map((show) => {
         cleanup();
@@ -449,8 +452,8 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     );
 
   const watchingLadder = [
-    // No chips at all: a fresh price with no corroborated source clears both
-    // of this surface's chip kinds, and MetaRow renders nothing.
+    // No chips at all: a fresh price with no corroborated source has no
+    // provenance, and MetaRow renders nothing.
     makeShow({
       price: {
         amount: 68,
@@ -460,7 +463,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         isPending: false,
       },
     }),
-    // One chip.
+    // One chip, provenance, which is all this surface can carry.
     makeShow({
       price: {
         amount: 68,
@@ -470,7 +473,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         isPending: false,
       },
     }),
-    // A stale price: once two chips, now the same one chip, since Stale is gone.
+    // An old price adds nothing now that Stale is gone: still the one chip.
     makeShow({
       price: {
         amount: 68,
@@ -480,22 +483,38 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         isPending: false,
       },
     }),
-    // No price at all, so the price slot reads "tba" and neither chip kind has
-    // anything to report.
+    // No price at all, so the price slot reads "tba" and provenance has
+    // nothing to report.
     makeShow({ price: null }),
   ];
 
+  const browseLadder = [
+    makeShow({ genres: [] }),
+    makeShow({ genres: ['rock'] }),
+    makeShow({ genres: ['rock'], isFollowed: true }),
+  ];
+
   // Asserted on the chip builder rather than on the rendered line, which has no
-  // widths to fit against under jsdom. Without this the height claim below
-  // would hold just as well over four identical rows.
-  it('runs the ladder from no chips to the full budget', () => {
+  // widths to fit against under jsdom. Without this the height claims below
+  // would hold just as well over identical rows.
+  it('runs the Watching ladder from no chips to its one chip', () => {
     expect(
       watchingLadder.map((show) => rowChips(show, 'watching').length),
     ).toEqual([0, 1, 1, 0]);
   });
 
-  it('holds one height across a Watching list that runs from no chips to full', () => {
+  it('runs the Browse ladder from no chips to the full two-chip budget', () => {
+    expect(browseLadder.map((show) => rowChips(show, 'browse').length)).toEqual(
+      [0, 1, 2],
+    );
+  });
+
+  it('holds one height across a Watching list with and without its chip', () => {
     expect(minHeights('watching', watchingLadder).size).toBe(1);
+  });
+
+  it('holds one height across a Browse list from no chips to the full budget', () => {
+    expect(minHeights('browse', browseLadder).size).toBe(1);
   });
 
   it('reserves less on a surface that can never carry a support line', () => {

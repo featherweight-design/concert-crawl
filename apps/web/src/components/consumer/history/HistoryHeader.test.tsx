@@ -130,4 +130,19 @@ describe('HistoryHeader gradient', () => {
     expect(painted).toHaveLength(1);
     expect(painted[0]?.textContent).toContain('Larimer Lounge');
   });
+
+  it('clips the gradient to the Top venue text and leaves the others solid', () => {
+    const { container } = render(<HistoryHeader stats={STATS} />);
+
+    for (const figure of Array.from(container.querySelectorAll('dd'))) {
+      const style = figure.getAttribute('style') ?? '';
+      if (figure.textContent === 'Larimer Lounge') {
+        expect(style).toContain('linear-gradient');
+        expect(figure.style.color).toBe('transparent');
+      } else {
+        expect(style).not.toContain('linear-gradient');
+        expect(figure.style.color).toBe('var(--fg)');
+      }
+    }
+  });
 });

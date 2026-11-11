@@ -1,7 +1,7 @@
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
 import { venueGlyphKey } from '@/components/consumer/venue-glyph';
 import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
-import { stampAccentFor } from '@/lib/passport/stamp';
+import { stampAccentFor, stampInkFor } from '@/lib/passport/stamp';
 
 export type VenueStampVariant = 'solid' | 'dashed';
 
@@ -28,18 +28,6 @@ export const glyphStrokeFor = (size: number): number => {
   // Rounded up to 0.01 so the stroke lands on or above 1px, never just under.
   return Math.max(GLYPH_STROKE, Math.ceil(onePx * 100) / 100);
 };
-
-/**
- * The accent pulled toward the theme's text colour: 55% accent holds at least
- * 3.7:1 against `--surface-2` on all nine themes, where the pale accents on
- * their own wash out on the light theme.
- */
-const inkFor = (accent: string): string =>
-  `color-mix(in oklch, ${accent} 55%, var(--fg))`;
-
-/** The ink a show's stamp is drawn in, for text printed around it. */
-export const stampInkFor = (seed: string): string =>
-  inkFor(stampAccentFor(seed));
 
 interface VenueStampProps {
   /** The venue's slug, which picks its glyph. */
@@ -71,7 +59,7 @@ export function VenueStamp({
   size = 28,
   labelled = false,
 }: VenueStampProps) {
-  const ink = inkFor(stampAccentFor(seed));
+  const ink = stampInkFor(stampAccentFor(seed));
   const glyphKey = venueGlyphKey(venueSlug);
   const dashed = variant === 'dashed';
   const a11y = labelled

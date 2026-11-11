@@ -4,7 +4,11 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type React from 'react';
-import { rowFadeFor } from './MyShowsSkeleton';
+import { MyShowsRowSkeleton, rowFadeFor } from './MyShowsSkeleton';
+import {
+  HISTORY_DENSITY,
+  HISTORY_DENSITY_CONFIG,
+} from './definitions/constants';
 import { HISTORY_COPY } from './definitions/copy';
 import WatchingLoading from '@/app/(protected)/(main)/watching/loading';
 import HistoryLoading from '@/app/(protected)/(main)/history/loading';
@@ -66,5 +70,31 @@ describe('rowFadeFor', () => {
     expect([0, 1, 2, 3, 4, 5].map((idx) => rowFadeFor(idx, 6))).toEqual([
       1, 1, 1, 1, 0.7, 0.4,
     ]);
+  });
+});
+
+// The Concerts skeleton row reads HistoryItem's own geometry at the route's
+// density, so the stand-in and the row it stands in for share one source.
+describe('MyShowsRowSkeleton stamp geometry', () => {
+  it('sizes the art, the stamp slot and the padding from the live density', () => {
+    const cfg = HISTORY_DENSITY_CONFIG[HISTORY_DENSITY];
+    render(<MyShowsRowSkeleton trailing="stamp" />);
+
+    const row = screen.getByTestId('my-shows-row-skeleton');
+    expect(row.style.padding).toBe(
+      `${cfg.padY}px ${cfg.padR}px ${cfg.padY}px ${cfg.padL}px`,
+    );
+    const art = screen.getByTestId(
+      'my-shows-row-skeleton-art',
+    ).firstElementChild;
+    if (!(art instanceof HTMLElement)) throw new Error('no art block');
+    expect(art.style.width).toBe(`${cfg.artSize}px`);
+
+    const stamp = screen.getByTestId(
+      'my-shows-row-skeleton-trailing',
+    ).firstElementChild;
+    if (!(stamp instanceof HTMLElement)) throw new Error('no stamp block');
+    expect(stamp.style.width).toBe(`${cfg.stampSize}px`);
+    expect(stamp.style.borderRadius).toBe('50%');
   });
 });
