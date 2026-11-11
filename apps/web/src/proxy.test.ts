@@ -978,22 +978,22 @@ describe('proxy — the known-segment list tracks the filesystem', () => {
 });
 
 describe('proxy — invite short link', () => {
-  const location = async (path: string, userId: string | null = null) => {
-    const { middlewareHandler } = await import('./proxy');
-    return redirectLocation(
-      await middlewareHandler(makeAuth(userId), makeReq(path)),
-    );
+  const location = async (path: string) => {
+    const { inviteShortLinkRedirect } = await import('./proxy');
+    return redirectLocation(inviteShortLinkRedirect(makeReq(path)));
   };
 
-  it("sends a poster's all-caps QR link to the invite screen with the code filled in", async () => {
+  it("sends a poster's all-caps QR link to the invite screen with the code", async () => {
     expect(await location('/I/BETA-AB12-CD34')).toBe(
       'http://localhost/auth/code?code=BETA-AB12-CD34',
     );
   });
 
-  it('matches the code whatever its case', async () => {
+  // The invite screen formats and validates `?code=` (formatCodeInput) and
+  // redeems only when its button is pressed, so the link passes the segment on.
+  it('passes the segment on whatever its case', async () => {
     expect(await location('/i/beta-ab12-cd34/')).toBe(
-      'http://localhost/auth/code?code=BETA-AB12-CD34',
+      'http://localhost/auth/code?code=beta-ab12-cd34',
     );
   });
 
@@ -1002,27 +1002,28 @@ describe('proxy — invite short link', () => {
     expect(await location('/I/')).toBe('http://localhost/auth/code');
   });
 
-  it("fills nothing for a path that isn't a well-formed code", async () => {
+  it('encodes what it passes on and drops a malformed escape', async () => {
     expect(await location('/i/%3Cscript%3E')).toBe(
-      'http://localhost/auth/code',
+      'http://localhost/auth/code?code=%3Cscript%3E',
     );
     expect(await location('/i/%E0%A4%A')).toBe('http://localhost/auth/code');
-    expect(await location('/i/BETA-AB12-CD345')).toBe(
-      'http://localhost/auth/code',
-    );
   });
 
-  // The invite screen only redeems when its button is pressed; the link itself
-  // is a plain redirect for everyone, signed in or not.
-  it('only redirects, the same for a signed-in visitor', async () => {
-    expect(await location('/I/BETA-AB12-CD34', 'user_123')).toBe(
-      'http://localhost/auth/code?code=BETA-AB12-CD34',
-    );
+  it('caps the length it passes on', async () => {
+    const long = 'A'.repeat(100);
+    const target = new URL((await location(`/i/${long}`)) ?? '');
+    expect(target.searchParams.get('code')).toHaveLength(32);
   });
 
   it('leaves other paths that start with i alone', async () => {
-    const { middlewareHandler } = await import('./proxy');
-    const result = await middlewareHandler(makeAuth(null), makeReq('/items'));
-    expect(result).toBeUndefined();
+    const { inviteShortLinkRedirect } = await import('./proxy');
+    expect(inviteShortLinkRedirect(makeReq('/items'))).toBeUndefined();
+    expect(inviteShortLinkRedirect(makeReq('/i/a/b'))).toBeUndefined();
+  });
+
+  it('keeps /i free of app routes, since the link answers before routing', () => {
+    const appDir = join(import.meta.dirname, 'app');
+    const segments = readdirSync(appDir).map((name) => name.toLowerCase());
+    expect(segments).not.toContain('i');
   });
 });
