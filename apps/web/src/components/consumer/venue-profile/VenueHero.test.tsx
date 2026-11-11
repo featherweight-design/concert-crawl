@@ -28,6 +28,11 @@ describe('VenueHero', () => {
       <VenueHero slug="new-room-denver" name="New Room" />,
     );
     expect(container.querySelector('[data-venue-neon]')).toBeNull();
-    expect(container.querySelector('svg')).not.toBeNull();
+    // Scoped to the identity wrapper: the BackChip's own chevron svg would
+    // satisfy a page-wide query even with the fallback art gone.
+    expect(
+      container.querySelector('[data-testid="venue-hero-identity"]')
+        ?.childElementCount,
+    ).toBeGreaterThan(0);
   });
 });

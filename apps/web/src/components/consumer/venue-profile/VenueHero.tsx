@@ -18,12 +18,14 @@ export function VenueHero({ slug, name }: VenueHeroProps) {
         <VenueNeonArt glyphKey={glyphKey} glyphSize={196} align="endFromSm" />
       ) : (
         <>
-          <IdentityArt
-            kind="venue"
-            name={name}
-            scale="hero"
-            style={{ position: 'absolute', inset: 0 }}
-          />
+          <div data-testid="venue-hero-identity" className="absolute inset-0">
+            <IdentityArt
+              kind="venue"
+              name={name}
+              scale="hero"
+              style={{ position: 'absolute', inset: 0 }}
+            />
+          </div>
           {/* Image tint */}
           <div
             className="pointer-events-none absolute inset-0"
