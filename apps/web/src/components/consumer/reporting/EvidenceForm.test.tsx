@@ -33,6 +33,7 @@ const renderForm = (eventDate: string) =>
       reportType="cancelled"
       eventId="event-1"
       eventDate={eventDate}
+      eventTitle="The Grouch"
     />,
   );
 
@@ -109,6 +110,7 @@ describe('EvidenceForm second report', () => {
         reportType="cancelled"
         eventId="event-1"
         eventDate="2026-11-20"
+        eventTitle="The Grouch"
         ownReportId={ownReportId}
       />,
     );
@@ -176,6 +178,7 @@ describe('EvidenceForm second report', () => {
         reportType="cancelled"
         eventId="event-1"
         eventDate="2026-11-20"
+        eventTitle="The Grouch"
       />,
     );
     fireEvent.click(screen.getAllByRole('radio')[0]!);
@@ -184,5 +187,55 @@ describe('EvidenceForm second report', () => {
     });
     expect(screen.getByText('Note rejected.')).toBeTruthy();
     expect(screen.queryByText(alreadyCopy.heading)).toBeNull();
+  });
+});
+
+describe('EvidenceForm report filed', () => {
+  const filedCopy = copy.reportFiled;
+
+  const fileReport = async (reportType: 'cancelled' | 'postponed') => {
+    vi.mocked(fileEventReport).mockResolvedValueOnce(undefined as never);
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <EvidenceForm
+        open
+        onClose={onClose}
+        onSuccess={onSuccess}
+        reportType={reportType}
+        eventId="event-1"
+        eventDate="2026-11-20"
+        eventTitle="The Grouch"
+      />,
+    );
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    await act(async () => {
+      fireEvent.click(screen.getByText(copy.submitButton));
+    });
+    return { onSuccess, onClose };
+  };
+
+  it('confirms the filing instead of closing silently', async () => {
+    const { onSuccess, onClose } = await fileReport('postponed');
+    expect(screen.getByText(filedCopy.heading)).toBeTruthy();
+    expect(
+      screen.getByText(filedCopy.recap('Postponed', 'The Grouch')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(filedCopy.progress(ER_POLICY.confirmsRequired)),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(filedCopy.body(ER_POLICY.confirmsRequired)),
+    ).toBeTruthy();
+    // The page is not refreshed under the sheet.
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('goes back to the show and refreshes it from Back to show', async () => {
+    const { onSuccess, onClose } = await fileReport('cancelled');
+    fireEvent.click(screen.getByText(filedCopy.backButton));
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

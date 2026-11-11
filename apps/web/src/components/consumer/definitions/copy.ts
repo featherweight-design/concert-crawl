@@ -917,6 +917,12 @@ export const CONSUMER_COPY = {
       // Used when the calling surface has no artist name in scope (WatchZone).
       thisShowFallback: 'this show',
     },
+    // Postponed: the Watch toggle takes the ticket CTA's slot, since there is
+    // no date to buy for yet.
+    newDate: {
+      on: 'Watching for the new date',
+      off: 'Watch for the new date',
+    },
   },
 
   // ── Post-signup return seam ─────────────────────────────────────
@@ -996,6 +1002,9 @@ export const CONSUMER_COPY = {
     noTicketsAriaLabel: 'No tickets available',
     soldOut: 'Sold out',
     soldOutAriaLabel: 'Sold out',
+    // Cancelled: the ticket link stays, relabelled, since the vendor is who
+    // handles the refund.
+    refundInfo: 'Refund info from the vendor',
 
     // About section
     aboutLabel: 'About',

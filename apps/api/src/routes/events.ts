@@ -60,6 +60,7 @@ import {
 } from '../lib/event-billing.js';
 import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
+import { isSoldOutSql } from '../lib/sold-out.js';
 import {
   aggregateByTier,
   deriveObservedAt,
@@ -340,6 +341,7 @@ eventsRouter.get(
     const rows = await db
       .select({
         id: events.id,
+        isSoldOut: isSoldOutSql(),
         venueId: events.venueId,
         title: events.title,
         artist: displayHeadliner(),
@@ -1280,6 +1282,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
   const relatedRows = await db
     .select({
       id: events.id,
+      isSoldOut: isSoldOutSql(),
       venueId: events.venueId,
       title: events.title,
       artist: displayHeadliner(),

@@ -7,6 +7,11 @@ import type { EventStatus } from './event-status.js';
 /** An upcoming show for this artist, ascending by date. */
 export interface ArtistShow {
   eventId: string;
+  /**
+   * A promoted fan sold-out report (isSoldOutSql). Optional because the web
+   * and API deploy separately: a payload without it reads as not sold out.
+   */
+  isSoldOut?: boolean;
   /** `YYYY-MM-DD`, straight from `events.date` — no timezone conversion. */
   iso: string;
   /** `HH:MM:SS` local to the venue, or null when the crawl found no show time. */

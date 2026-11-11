@@ -75,6 +75,19 @@ export const REPORTING_COPY = {
     cancelButton: 'Cancel',
     heading: 'How do you know?',
 
+    // Shown in place of the form once the report is filed. Promotion at the
+    // threshold fans out to the show's watchers (event-reports.ts, #1064).
+    reportFiled: {
+      eyebrow: 'Got it',
+      heading: 'Report filed.',
+      body: (confirmsNeeded: number) =>
+        `Other fans will see it on the show page. Once ${confirmsNeeded} of them confirm, it goes live and everyone watching hears about it.`,
+      recap: (statusLabel: string, showTitle: string) =>
+        `${statusLabel} · ${showTitle}`,
+      progress: (confirmsNeeded: number) => `Pending · 0 of ${confirmsNeeded}`,
+      backButton: 'Back to show',
+    },
+
     // Shown in place of the form when the API says this user already has an
     // open report on the show (409 report_exists).
     alreadyReported: {

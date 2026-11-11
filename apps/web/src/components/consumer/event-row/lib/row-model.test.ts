@@ -181,8 +181,15 @@ describe('fromEventWithVenue', () => {
   it('keeps the lifecycle status separate from the price status', () => {
     const row = fromEventWithVenue({ ...baseEvent, status: 'cancelled' });
     expect(row.lifecycle).toBe('cancelled');
-    // Browse payloads carry no sold-out signal.
     expect(row.status).toBe('live');
+  });
+
+  it('reads a promoted sold-out as a sold-out row', () => {
+    expect(fromEventWithVenue({ ...baseEvent, isSoldOut: true }).status).toBe(
+      'soldout',
+    );
+    // An older payload without the field is not sold out.
+    expect(fromEventWithVenue(baseEvent).status).toBe('live');
   });
 
   it('formats the date at full length so line 3 can shorten it in place', () => {

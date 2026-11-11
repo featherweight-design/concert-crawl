@@ -39,6 +39,7 @@ import {
 } from '../lib/event-billing.js';
 
 import { venueSlug } from '../lib/venue-slug-schema.js';
+import { isSoldOutSql } from '../lib/sold-out.js';
 import { aggregateByTier } from '../lib/price-aggregation/index.js';
 import { MT_TIME_ZONE, todayInDenver, todayInTimezone } from '../lib/time.js';
 
@@ -225,6 +226,7 @@ venuesPublicRouter.get(
     const upcomingEvents = await db
       .select({
         id: events.id,
+        isSoldOut: isSoldOutSql(),
         venueId: events.venueId,
         title: events.title,
         artist: displayHeadliner(),

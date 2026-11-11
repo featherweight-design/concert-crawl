@@ -350,6 +350,7 @@ export function EventDetailBanners({
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
+        eventTitle={event.title}
         ownReportId={ownReportId(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
@@ -1472,6 +1473,7 @@ export function EventDetailPriceBlock({
           reportType={soldOutEvidenceReportType}
           eventId={event.id}
           eventDate={event.date}
+          eventTitle={event.title}
           ownReportId={ownReportId(reports)}
           onSuccess={() => {
             setSoldOutEvidenceFormOpen(false);
@@ -2040,6 +2042,7 @@ export function EventDetailFooter({
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
+        eventTitle={event.title}
         ownReportId={ownReportId(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
