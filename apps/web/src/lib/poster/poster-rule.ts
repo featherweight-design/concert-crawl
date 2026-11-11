@@ -13,23 +13,26 @@ export interface QrPath {
   path: string;
 }
 
-/** Modules of white around the code. Two is what scanners reliably need on paper. */
-export const QR_QUIET_ZONE = 2;
+/** Modules of white around the code: the four the QR spec asks for. */
+export const QR_QUIET_ZONE = 4;
 
 /**
- * What the QR encodes: the invite screen with the code pre-filled. The visitor
- * still presses the button, so a scan redeems nothing on its own.
+ * What the QR encodes: the short link `/I/<CODE>`, which the proxy sends to the
+ * invite screen with the code filled in (`inviteShortLinkRedirect`). The
+ * visitor still presses the button, so a scan redeems nothing on its own.
+ * All caps, because scheme, host and the code are case-insensitive and an
+ * uppercase URL fits the QR's alphanumeric mode: fewer, larger modules.
  */
 export const posterJoinUrl = (origin: string, code: string): string =>
-  `${origin}/auth/code?code=${encodeURIComponent(code)}`;
+  `${origin}/I/${code}`.toUpperCase();
 
-/** The invite screen's address without its scheme, for typing by hand. */
+/** The short link without its scheme, for typing by hand. */
 export const posterTypedUrl = (origin: string): string =>
-  `${origin.replace(/^https?:\/\//, '')}/auth/code`;
+  `${origin.replace(/^https?:\/\//, '')}/i`;
 
-/** The QR as an SVG path at error correction M, drawn locally (no network). */
+/** The QR as an SVG path at error correction Q, drawn locally (no network). */
 export const qrPath = (text: string): QrPath => {
-  const { data, size } = encode(text, { ecc: 'M', border: QR_QUIET_ZONE });
+  const { data, size } = encode(text, { ecc: 'Q', border: QR_QUIET_ZONE });
   const parts: string[] = [];
   data.forEach((row, y) =>
     row.forEach((dark, x) => {

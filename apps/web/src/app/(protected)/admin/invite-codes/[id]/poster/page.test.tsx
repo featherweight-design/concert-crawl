@@ -60,7 +60,7 @@ describe('invite code poster page', () => {
     const sheet = screen.getByTestId('poster-sheet');
     expect(sheet).toHaveAttribute(
       'data-url',
-      'https://concertcrawl.app/auth/code?code=BETA-AB12-CD34',
+      'HTTPS://CONCERTCRAWL.APP/I/BETA-AB12-CD34',
     );
     expect(
       screen.getByRole('img', { name: /BETA-AB12-CD34/ }).querySelector('path'),
@@ -69,7 +69,7 @@ describe('invite code poster page', () => {
       'BETA-AB12-CD34',
     );
     expect(screen.getByTestId('poster-typed-url')).toHaveTextContent(
-      'concertcrawl.app/auth/code',
+      'concertcrawl.app/i',
     );
     expect(screen.getByTestId('poster-bar')).toHaveTextContent('47 seats left');
   });
