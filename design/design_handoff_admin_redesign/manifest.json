@@ -136,6 +136,38 @@
   "h": 900
  },
  {
+  "section": "02-needs-you",
+  "name": "answered-with-undo",
+  "title": "Answered, with Undo",
+  "note": "The answered card stays in place for the session, so a wrong tap is one click to undo.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "02-needs-you",
+  "name": "couldnt-load",
+  "title": "Couldn’t load",
+  "note": "Same pattern on every page.",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "02-needs-you",
+  "name": "snooze-menu",
+  "title": "Snooze menu",
+  "note": "From the clock on any item.",
+  "w": 380,
+  "h": 330
+ },
+ {
+  "section": "02-needs-you",
+  "name": "an-item-mobile",
+  "title": "An item · mobile",
+  "note": "Full screen from the card. Answers sit in a fixed footer.",
+  "w": 390,
+  "h": 900
+ },
+ {
   "section": "03-health",
   "name": "health-desktop",
   "title": "Health · desktop",
@@ -158,6 +190,14 @@
   "note": "Under More. Same order as desktop; the site checks fold into the Site tile.",
   "w": 390,
   "h": 1640
+ },
+ {
+  "section": "03-health",
+  "name": "llm-budget-panel",
+  "title": "LLM budget panel",
+  "note": "From the cost tile. Running out never stops a crawl.",
+  "w": 1280,
+  "h": 1000
  },
  {
   "section": "04-venues",
@@ -214,6 +254,62 @@
   "note": "Hide and Delete each open a confirm sheet, like Pause crawling in Foundations.",
   "w": 360,
   "h": 330
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-details",
+  "title": "Venue · Details",
+  "note": "Unsaved changes get a sticky Save bar.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-guide",
+  "title": "Venue · Guide",
+  "note": "Every section, published or not.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "04-venues",
+  "name": "guide-edit-a-section",
+  "title": "Guide · edit a section",
+  "note": "Overlay panel.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "04-venues",
+  "name": "hide-from-site",
+  "title": "Hide from site",
+  "note": "Asks why, says who stops seeing it.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "04-venues",
+  "name": "delete-venue",
+  "title": "Delete venue",
+  "note": "Only for empty venues; type the name.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "04-venues",
+  "name": "inspect-a-fetched-page",
+  "title": "Inspect a fetched page",
+  "note": "What we fetched beside what we read from it.",
+  "w": 1280,
+  "h": 440
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-runs-mobile",
+  "title": "Venue · Runs · mobile",
+  "note": "Tabs scroll; the same runs, as rows.",
+  "w": 390,
+  "h": 720
  },
  {
   "section": "05-add-a-venue",
@@ -350,6 +446,54 @@
   "note": "The draft venue on the Venues list, with the reply buttons.",
   "w": 640,
   "h": 230
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "basics-desktop",
+  "title": "Basics · desktop",
+  "note": "Prefilled from fan suggestions.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "review-desktop",
+  "title": "Review · desktop",
+  "note": "Every step with Edit; Later steps don’t block.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "gone-live",
+  "title": "Gone live",
+  "note": "What happened and what’s still waiting.",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "source-mobile",
+  "title": "Source · mobile",
+  "note": "",
+  "w": 390,
+  "h": 820
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "icon-mobile",
+  "title": "Icon · mobile",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "guide-mobile",
+  "title": "Guide · mobile",
+  "note": "",
+  "w": 390,
+  "h": 760
  },
  {
   "section": "06-events-artists-prices",
@@ -518,6 +662,102 @@
   "note": "",
   "w": 440,
   "h": 300
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "add-a-show-by-hand",
+  "title": "Add a show by hand",
+  "note": "Overlay panel from Events.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "merge-duplicates",
+  "title": "Merge duplicates",
+  "note": "Pick the listing to keep; everything moves to it.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "venue-filter",
+  "title": "Venue filter",
+  "note": "Searchable, with counts.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "status-filter",
+  "title": "Status filter",
+  "note": "Several at once.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "past-shows",
+  "title": "Past shows",
+  "note": "Read-only except Hidden and lineup.",
+  "w": 1280,
+  "h": 420
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "edit-price-desktop",
+  "title": "Edit price · desktop",
+  "note": "Overlay over event edit.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artists-matched",
+  "title": "Artists · Matched",
+  "note": "",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artists-not-artists",
+  "title": "Artists · Not artists",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "reject-a-submitted-price",
+  "title": "Reject a submitted price",
+  "note": "The fan sees the reason in Submitted prices.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artists-mobile",
+  "title": "Artists · mobile",
+  "note": "",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "submitted-prices-mobile",
+  "title": "Submitted prices · mobile",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "price-checks-mobile",
+  "title": "Price checks · mobile",
+  "note": "",
+  "w": 390,
+  "h": 640
  },
  {
   "section": "07-people-flags-operations",
@@ -878,6 +1118,158 @@
   "note": "",
   "w": 440,
   "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "crawl-runs-desktop",
+  "title": "Crawl runs · desktop",
+  "note": "The history page. Filters replace stat cards.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "a-runs-detail",
+  "title": "A run’s detail",
+  "note": "Overlay panel; each venue links to its own run.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "crawl-all-venues",
+  "title": "Crawl all venues",
+  "note": "Says the pace, the skips and the cost first.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "crawl-all-running",
+  "title": "Crawl all · running",
+  "note": "Progress at the top; safe to leave.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "role-changed-with-undo",
+  "title": "Role changed, with Undo",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "edit-an-invite-code",
+  "title": "Edit an invite code",
+  "note": "The code itself never changes.",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "reactivate-a-code",
+  "title": "Reactivate a code",
+  "note": "",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "flag-add-a-person",
+  "title": "Flag · add a person",
+  "note": "",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback-error-report",
+  "title": "Feedback · error report",
+  "note": "Grouped by error, with everyone affected.",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback-venue-suggestion",
+  "title": "Feedback · venue suggestion",
+  "note": "Starts Add a venue prefilled.",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback-done",
+  "title": "Feedback · Done",
+  "note": "",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "test-email-sent",
+  "title": "Test email sent",
+  "note": "",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "not-found",
+  "title": "Not found",
+  "note": "",
+  "w": 1280,
+  "h": 520
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "signed-out",
+  "title": "Signed out",
+  "note": "Unsaved edits survive signing back in.",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "crawl-runs-mobile",
+  "title": "Crawl runs · mobile",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "a-flag-mobile",
+  "title": "A flag · mobile",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "offline-mobile",
+  "title": "Offline · mobile",
+  "note": "",
+  "w": 390,
+  "h": 480
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "email-revealed",
+  "title": "Email revealed",
+  "note": "Logged.",
+  "w": 560,
+  "h": 220
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "person-menu",
+  "title": "Person ⋯ menu",
+  "note": "",
+  "w": 390,
+  "h": 440
  },
  {
   "section": "07-people-flags-operations",
