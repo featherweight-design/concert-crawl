@@ -37,6 +37,21 @@ describe('EventTicketCta', () => {
     expect(screen.getByText(copy.noTicketsAvailable)).toBeTruthy();
   });
 
+  it("keeps a venue homepage labelled as the venue's, not refund info", () => {
+    render(
+      <EventTicketCta
+        cancelled
+        soldOut={false}
+        href={href}
+        hasDirectLink={false}
+      />,
+    );
+    expect(screen.queryByText(copy.refundInfo)).toBeNull();
+    expect(
+      screen.getByRole('link', { name: copy.visitVenueWebsite }),
+    ).toBeTruthy();
+  });
+
   it('keeps Get tickets on a live show', () => {
     render(<EventTicketCta soldOut={false} href={href} hasDirectLink />);
     expect(screen.getByRole('link', { name: copy.getTickets })).toBeTruthy();

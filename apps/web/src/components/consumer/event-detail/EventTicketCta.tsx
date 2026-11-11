@@ -2,8 +2,9 @@
 // share mirror at /e/:id (#72).
 //
 // Four states, first match wins:
-//   cancelled + a url → "Refund info from the vendor ›", the same link: the
-//                        vendor handles the refund
+//   cancelled + a ticket/event link → "Refund info from the vendor ›", the
+//                        same link: the vendor handles the refund. A venue
+//                        homepage is not the vendor, so it falls through
 //   sold out          → disabled "Sold out"
 //   a safe http(s) url → "Get tickets ↗" (or "Visit venue website" when the only
 //                        link we have is the venue's homepage)
@@ -62,7 +63,7 @@ export const EventTicketCta = ({
   href,
   hasDirectLink,
 }: EventTicketCtaProps) => {
-  if (cancelled && href) {
+  if (cancelled && href && hasDirectLink) {
     return (
       <a
         href={href}
