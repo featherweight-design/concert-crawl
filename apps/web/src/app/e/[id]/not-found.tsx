@@ -1,4 +1,5 @@
-// Not-found boundary for the public share mirror (#72).
+// Not-found boundary for the public share mirror (#72), drawn as the B+ gone
+// state (bp-s-public_gone_m).
 //
 // /e/:id sits outside the (protected) route group, so it does not inherit
 // `app/(protected)/(main)/not-found.tsx` — without this file, `notFound()` here
@@ -13,14 +14,43 @@ import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 
 const copy = CONSUMER_COPY.publicEvent;
 
+const PRIMARY_STYLE: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 48,
+  padding: '0 28px',
+  borderRadius: 14,
+  background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+  boxShadow:
+    '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
+  color: 'var(--fg-on-accent)',
+  fontSize: 15,
+  fontWeight: 800,
+  textDecoration: 'none',
+};
+
+const SECONDARY_STYLE: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 44,
+  padding: '0 22px',
+  borderRadius: 999,
+  border: '1px solid var(--border-strong)',
+  color: 'var(--fg-muted)',
+  fontSize: 14,
+  fontWeight: 600,
+  textDecoration: 'none',
+};
+
 const PublicEventNotFound = () => {
-  // The CTA target is launch-mode-dependent. /events is only public once the
+  // The browse link is launch-mode-dependent. /events is only public once the
   // launch flag is on; sending a signed-out visitor there before launch bounces
   // them straight to /sign-in, which is a second dead end on top of the first.
-  // The landing page is always public, so that is the pre-launch destination.
+  // The landing page is always public, so before launch it is the one CTA, and
+  // after launch it steps down to the quiet second button the board draws.
   const launched = isPublicBrowseEnabled();
-  const href = launched ? '/events' : '/';
-  const label = launched ? copy.notFoundBrowseButton : copy.notFoundHomeButton;
 
   return (
     <main
@@ -30,53 +60,97 @@ const PublicEventNotFound = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
-        padding: '48px 24px',
+        justifyContent: 'flex-start',
+        padding: '64px 24px 48px',
         textAlign: 'center',
         color: 'var(--fg)',
         fontFamily: 'var(--font-ui)',
       }}
     >
+      <div
+        aria-hidden
+        data-testid="not-found-tile"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 84,
+          height: 84,
+          borderRadius: 24,
+          background: 'var(--surface-2)',
+          border:
+            '1px solid color-mix(in oklch, var(--signal) 40%, var(--border))',
+          boxShadow:
+            '0 0 36px color-mix(in oklch, var(--signal) 18%, transparent)',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 32,
+            fontWeight: 900,
+            letterSpacing: '-0.04em',
+            background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            color: 'transparent',
+          }}
+        >
+          {copy.notFoundCode}
+        </span>
+      </div>
+      <p
+        style={{
+          margin: '24px 0 0',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase',
+          color: 'var(--signal)',
+        }}
+      >
+        {copy.notFoundEyebrow}
+      </p>
       <h1
         style={{
-          margin: 0,
+          margin: '10px 0 0',
           fontWeight: 900,
-          fontSize: 24,
-          letterSpacing: '-0.03em',
+          fontSize: 30,
+          letterSpacing: '-0.04em',
+          lineHeight: 1.1,
         }}
       >
         {copy.notFoundHeading}
       </h1>
       <p
         style={{
-          margin: 0,
-          maxWidth: 360,
-          fontSize: 14,
+          margin: '12px 0 0',
+          maxWidth: 320,
+          fontSize: 15,
           lineHeight: 1.55,
           color: 'var(--fg-muted)',
         }}
       >
         {copy.notFoundBody}
       </p>
-      <Link
-        href={href}
+      <div
         style={{
-          display: 'inline-flex',
+          marginTop: 28,
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 44,
-          padding: '0 20px',
-          borderRadius: 10,
-          border: '1px solid var(--border-strong)',
-          color: 'var(--fg)',
-          fontSize: 13,
-          fontWeight: 700,
-          textDecoration: 'none',
+          gap: 12,
         }}
       >
-        {label}
-      </Link>
+        {launched && (
+          <Link href="/events" style={PRIMARY_STYLE}>
+            {copy.notFoundBrowseButton}
+          </Link>
+        )}
+        <Link href="/" style={launched ? SECONDARY_STYLE : PRIMARY_STYLE}>
+          {copy.notFoundHomeButton}
+        </Link>
+      </div>
     </main>
   );
 };

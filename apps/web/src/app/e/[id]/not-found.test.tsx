@@ -22,28 +22,41 @@ describe('/e/[id] not-found (#72)', () => {
 
     // /events is gated before launch, so linking it here would bounce the
     // visitor to /sign-in — a second dead end on top of the missing show.
-    const link = screen.getByRole('link', { name: copy.notFoundHomeButton });
-    expect(link.getAttribute('href')).toBe('/');
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]?.textContent).toBe(copy.notFoundHomeButton);
+    expect(links[0]?.getAttribute('href')).toBe('/');
   });
 
-  it('sends a post-launch visitor to the browse list', async () => {
+  it('leads a post-launch visitor to the browse list, with home second', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true');
     const NotFound = await loadNotFound();
 
     render(<NotFound />);
 
-    const link = screen.getByRole('link', { name: copy.notFoundBrowseButton });
-    expect(link.getAttribute('href')).toBe('/events');
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/events',
+      '/',
+    ]);
+    expect(links[0]?.textContent).toBe(copy.notFoundBrowseButton);
+    expect(links[1]?.textContent).toBe(copy.notFoundHomeButton);
   });
 
-  it('renders exactly one CTA and the branded copy', async () => {
+  it('renders the gone state: the 404 tile, eyebrow, heading and body', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true');
     const NotFound = await loadNotFound();
 
     render(<NotFound />);
 
-    expect(screen.getByText(copy.notFoundHeading)).toBeDefined();
+    // The tile is decoration; the heading says it in words.
+    const tile = screen.getByTestId('not-found-tile');
+    expect(tile.getAttribute('aria-hidden')).toBe('true');
+    expect(tile.textContent).toBe(copy.notFoundCode);
+    expect(screen.getByText(copy.notFoundEyebrow)).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 1, name: copy.notFoundHeading }),
+    ).toBeDefined();
     expect(screen.getByText(copy.notFoundBody)).toBeDefined();
-    expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 });

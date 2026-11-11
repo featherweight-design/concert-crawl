@@ -46,6 +46,17 @@ interface EventTitleBlockProps {
    * inside a card link is both invalid markup and a bad tap target.
    */
   linkArtists?: boolean;
+  /**
+   * The headline's size as a CSS value, overriding the surface's ramp. The
+   * event stage passes a custom property that steps at its breakpoint (B8).
+   */
+  headSize?: string;
+  /**
+   * Centers the block on mobile and returns it to the start edge from `sm`
+   * up, for the event stage, whose title sits under the card on a phone and
+   * beside it on desktop.
+   */
+  centered?: boolean;
 }
 
 export const EventTitleBlock = ({
@@ -61,6 +72,8 @@ export const EventTitleBlock = ({
   artistSlug = null,
   supportingArtistSlugs = null,
   linkArtists = false,
+  headSize,
+  centered = false,
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface];
   // `detail` is the surface that renders inside `HeroBand`, over generated
@@ -88,7 +101,10 @@ export const EventTitleBlock = ({
     isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner;
 
   return (
-    <div className="flex min-w-0 flex-col" style={{ gap: ramp.gap }}>
+    <div
+      className={`flex min-w-0 flex-col ${centered ? 'items-center text-center sm:items-start sm:text-left' : ''}`}
+      style={{ gap: ramp.gap }}
+    >
       {((hasPill && !pillBelow) || tourName) && (
         <div
           className="flex min-w-0 items-center gap-2"
@@ -130,7 +146,7 @@ export const EventTitleBlock = ({
             !isDelisted(status, delistedAt)
               ? 'line-through'
               : undefined,
-          fontSize: ramp.head,
+          fontSize: headSize ?? ramp.head,
           fontWeight: surface === 'detail' ? 900 : 800,
           letterSpacing: surface === 'detail' ? '-0.03em' : '-0.02em',
           lineHeight: 1.12,

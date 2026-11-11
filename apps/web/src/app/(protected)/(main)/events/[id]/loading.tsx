@@ -1,134 +1,74 @@
+// The event page while it loads (B+ rule 9, boards bp-s-load_event_m and _d).
+// The stage keeps its real geometry, its back control and a quiet wash, so the
+// page holds its shape when the data lands; only the data is a skeleton. Every
+// block carries the one shared sweep, which holds still under reduced motion.
+import { BackChip } from '@/components/consumer/back-chip/BackChip';
+import {
+  STAGE_CARD_RADIUS,
+  STAGE_CARD_TILT,
+  StageBackdrop,
+  StageShell,
+} from '@/components/consumer/event-stage';
+import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+
 export default function EventDetailLoading() {
   return (
-    <>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          height: 2,
-          background: 'var(--accent)',
-          animation: 'navProgress 3s ease-out forwards',
-          zIndex: 9999,
-        }}
-      />
-
-      {/* Hero — 300px full-bleed */}
-      <div
-        style={{
-          width: '100%',
-          height: 300,
-          background: 'var(--surface-2)',
-          flexShrink: 0,
-          animation: 'skeletonPulse 1.4s ease-in-out infinite',
-        }}
-      />
-
-      {/* Content column — mirrors -mt-5 / sm:-mt-[60px] from the real page */}
-      <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
-        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-10 sm:pb-16 sm:pt-5">
-          {/* Artist name — h1 26px / weight 900 */}
+    <div
+      data-testid="event-detail-skeleton"
+      className="flex flex-1 flex-col overflow-x-clip"
+    >
+      <StageShell
+        backdrop={<StageBackdrop />}
+        back={<BackChip inline fallbackHref="/events" />}
+        card={
           <div
             style={{
-              height: 28,
-              width: '55%',
-              borderRadius: 6,
-              background: 'var(--surface-2)',
-              marginBottom: 12,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.08s infinite',
-            }}
-          />
-
-          {/* Watch show button */}
-          <div
-            style={{
-              height: 36,
-              width: 140,
-              borderRadius: 8,
-              background: 'var(--surface-2)',
-              marginBottom: 16,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.16s infinite',
-            }}
-          />
-
-          {/* Info block — 4 rows (Venue, Date, Doors/Show, Ages) with icon + label + value */}
-          <div
-            style={{
-              borderTop: '1px solid var(--border)',
-              borderBottom: '1px solid var(--border)',
-              padding: '4px 0',
-              marginBottom: 16,
+              transform: `rotate(${STAGE_CARD_TILT}deg)`,
+              borderRadius: STAGE_CARD_RADIUS,
+              boxShadow: '0 0 0 1px var(--border-strong)',
+              aspectRatio: '4 / 5',
+              overflow: 'hidden',
             }}
           >
-            {[0, 1, 2, 3].map((idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 0',
-                  animation: `skeletonPulse 1.4s ease-in-out ${0.2 + idx * 0.06}s infinite`,
-                }}
-              >
-                {/* Icon */}
-                <div
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 4,
-                    background: 'var(--surface-2)',
-                    flexShrink: 0,
-                  }}
-                />
-                {/* Label + value stacked */}
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 3 }}
-                >
-                  <div
-                    style={{
-                      height: 9,
-                      width: 36,
-                      borderRadius: 3,
-                      background: 'var(--surface-2)',
-                    }}
-                  />
-                  <div
-                    style={{
-                      height: 14,
-                      width: [120, 100, 90, 60][idx],
-                      borderRadius: 4,
-                      background: 'var(--surface-2)',
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+            <SkeletonBlock height="100%" radius={STAGE_CARD_RADIUS} />
           </div>
+        }
+      >
+        {/* Countdown, name, then the date and venue line. Mobile centers
+            them under the card; the column's own alignment does the rest. */}
+        <div className="mt-2 flex w-full flex-col items-center gap-3 sm:mt-0 sm:items-start">
+          <SkeletonBlock width={120} height={24} radius={999} />
+          <span className="block w-[min(230px,70%)] sm:w-full sm:max-w-[460px]">
+            <SkeletonBlock height={34} radius={10} />
+          </span>
+          <span className="block w-[140px] sm:w-[180px]">
+            <SkeletonBlock height={16} />
+          </span>
+        </div>
+      </StageShell>
 
-          {/* Price card */}
+      <div className="flex-1">
+        <div className="mx-auto box-border w-full max-w-[880px] px-[18px] pb-24 pt-5 sm:px-8 sm:pb-16">
+          {/* The Your move card. */}
           <div
+            className="mt-3 flex flex-col gap-3 rounded-[14px] p-4"
             style={{
-              height: 80,
-              borderRadius: 10,
-              background: 'var(--surface-2)',
-              marginBottom: 16,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.44s infinite',
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border)',
             }}
-          />
-
-          {/* Primary CTA — h-12 full-width */}
-          <div
-            style={{
-              height: 48,
-              width: '100%',
-              borderRadius: 10,
-              background: 'var(--surface-2)',
-              animation: 'skeletonPulse 1.4s ease-in-out 0.5s infinite',
-            }}
-          />
+          >
+            <SkeletonBlock width={60} height={9} />
+            <SkeletonBlock width={110} height={30} radius={8} />
+            <span className="block w-[65%]">
+              <SkeletonBlock height={10} />
+            </span>
+          </div>
+          {/* The bill block below it. */}
+          <div className="mt-3">
+            <SkeletonBlock height={50} radius={14} />
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

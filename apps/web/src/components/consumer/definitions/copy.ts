@@ -1093,6 +1093,9 @@ export const CONSUMER_COPY = {
   publicEvent: {
     signUpPrompt: 'Watch this show, track prices, and get alerts.',
     signUpButton: 'Create an account',
+    // Under the button, for the visitor who already has an account (B+ B8).
+    alreadyIn: 'Already in?',
+    signInLink: 'Sign in',
     // The mirror's own 404. A shared link outlives the show it points at, so
     // "old link" is the likeliest story, not "you typed it wrong".
     notFoundHeading: 'This show is gone.',
@@ -1100,6 +1103,9 @@ export const CONSUMER_COPY = {
       "We couldn't find that show. The link may be old, or the show may have come off the calendar.",
     notFoundHomeButton: 'Go to Concert Crawl',
     notFoundBrowseButton: 'Browse shows',
+    // The gone page's tile and eyebrow (B+ B8, bp-s-public_gone_m).
+    notFoundCode: '404',
+    notFoundEyebrow: 'Show not found',
   },
 
   // ── PendingCardB ────────────────────────────────────────────────

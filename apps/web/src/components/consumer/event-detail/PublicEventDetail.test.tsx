@@ -101,7 +101,7 @@ const buildEvent = (
 });
 
 describe('PublicEventDetail (#72)', () => {
-  it('renders the show, and exactly one account CTA pointed at /sign-up', () => {
+  it('renders the show, and one account CTA pointed at /sign-up', () => {
     render(<PublicEventDetail event={buildEvent()} related={[]} />);
 
     expect(screen.getByText('Nightjar Choir')).toBeDefined();
@@ -119,12 +119,18 @@ describe('PublicEventDetail (#72)', () => {
     expect(signUp[0]?.getAttribute('href')).toBe(
       '/sign-up?redirect_url=%2Fe%2F11111111-1111-4111-8111-111111111111',
     );
-    expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
+    // The board's quiet line under it (B+ B8) is for the visitor who already
+    // has an account, and it brings them back to the same show.
+    const signIn = screen.getAllByRole('link', { name: copy.signInLink });
+    expect(signIn).toHaveLength(1);
+    expect(signIn[0]?.getAttribute('href')).toBe(
+      '/sign-in?redirect_url=%2Fe%2F11111111-1111-4111-8111-111111111111',
+    );
   });
 
   // #1359: what a link recipient can actually do here. Everything that needs a
   // session is absent, so the page must not be one dead control after another.
-  it('leaves the recipient exactly three controls, all of them live', () => {
+  it('leaves the recipient exactly four controls, all of them live', () => {
     render(<PublicEventDetail event={buildEvent()} related={[]} />);
 
     // Enumerated rather than probed one by one: the claim is about what is
@@ -135,12 +141,13 @@ describe('PublicEventDetail (#72)', () => {
       ...screen.getAllByRole('button'),
     ].map((el) => el.getAttribute('aria-label') ?? el.textContent);
 
-    expect(names).toHaveLength(3);
+    expect(names).toHaveLength(4);
     // Tickets, because that is the whole reason the link was sent.
     expect(names).toContain(detailCopy.getTickets);
     // Sharing it onward, which needs no session at all.
     expect(names).toContain(CONSUMER_COPY.share.triggerLabel);
     expect(names).toContain(copy.signUpButton);
+    expect(names).toContain(copy.signInLink);
   });
 
   it('names what an account is for rather than just asking for one', () => {
@@ -157,21 +164,26 @@ describe('PublicEventDetail (#72)', () => {
     );
 
     // Watching is the only show-tracking concept and its glyph is the lucide
-    // Eye. The mirror omits the affordance rather than substituting another
-    // glyph — and there is no heart anywhere in this product.
+    // Eye. The account card wears it as decoration (B+ B8), never as a
+    // control — and there is no heart anywhere in this product.
     expect(screen.queryByText(/watching/i)).toBeNull();
     expect(screen.queryByText(/i'm going/i)).toBeNull();
     expect(screen.queryByText(/report/i)).toBeNull();
     expect(screen.queryByText(/add a price/i)).toBeNull();
     expect(container.querySelector('.lucide-heart')).toBeNull();
-    expect(container.querySelector('.lucide-eye')).toBeNull();
+    const eyes = [...container.querySelectorAll('.lucide-eye')];
+    expect(eyes).toHaveLength(1);
+    for (const eye of eyes) {
+      expect(eye.getAttribute('aria-hidden')).toBe('true');
+      expect(eye.closest('a, button')).toBeNull();
+    }
     // EventDetailPriceBlock reaches price submission, tier-add and report
     // modals through useAuth. It must not render here at all — suppressing the
     // CTAs one by one would leave the next one added to it exposed.
     expect(screen.queryByTestId('price-block')).toBeNull();
   });
 
-  it('shows the price as a flat read-only row', () => {
+  it('shows the price as a flat read-only card', () => {
     render(
       <PublicEventDetail
         event={buildEvent({ ticketPriceMin: '25', ticketPriceMax: '35' })}
@@ -279,9 +291,12 @@ describe('PublicEventDetail (#72)', () => {
       />,
     );
 
-    expect(
-      screen.getByTestId('event-image').getAttribute('data-artist-photo-url'),
-    ).toBe(portrait);
+    // The card and the blurred backdrop resolve the same chain.
+    const images = screen.getAllByTestId('event-image');
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) {
+      expect(image.getAttribute('data-artist-photo-url')).toBe(portrait);
+    }
   });
 
   // #1525 — the title moved into the band. The old layout drew it below a

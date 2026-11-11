@@ -15,9 +15,10 @@
 // related show's own detail page instead. The mirror still does not diverge
 // from browse.
 //
-// In their place there is exactly one sign-in CTA. The Watching affordance on
-// the authed page is the lucide Eye; the mirror simply omits it rather than
-// substituting another glyph — there is no second show-tracking concept.
+// In their place there is one account card: Create an account, with a quiet
+// "Already in? Sign in" under it (B+ B8, bp-s-public_m). Its Eye is the
+// Watching glyph as decoration, naming what an account adds; there is no
+// watch control here and no second show-tracking concept.
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
@@ -26,7 +27,13 @@ import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { SectionHeader } from '@/components/consumer/section-header';
 
-import { HeroBand } from '@/components/consumer/image-slot';
+import { Eye } from 'lucide-react';
+import {
+  EventStage,
+  StageMeta,
+  eventCountdown,
+  stageMetaLine,
+} from '@/components/consumer/event-stage';
 import { GenreChips } from '@/components/consumer/GenreChips';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
 import {
@@ -46,7 +53,6 @@ import {
   IconCalendar,
   IconClock,
   IconUsers,
-  IconTag,
 } from './InfoRow';
 import { EventTicketCta } from './EventTicketCta';
 
@@ -112,10 +118,16 @@ export const PublicEventDetail = ({
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
     // horizontally, exactly as on the protected page (#973).
     <div className="flex flex-1 flex-col overflow-x-clip">
-      {/* The same band as the protected page. The mirror does not diverge from
-          the page it mirrors, so this moved with it (#1525). */}
-      <HeroBand
+      {/* The same stage as the protected page. The mirror does not diverge
+          from the page it mirrors, so this moved with it (#1525, B+ B8). */}
+      <EventStage
         name={event.artist}
+        leadGenre={event.genre?.[0] ?? null}
+        countdown={eventCountdown(
+          event.date,
+          event.venue.timezone,
+          event.status,
+        )}
         surface="event"
         artworkUrl={event.imageUrl}
         photoUrl={event.artistPhotoUrl ?? null}
@@ -128,7 +140,6 @@ export const PublicEventDetail = ({
           <ShareButton event={event} authed={false} inline />
         }
       >
-        <GenreChips genres={event.genre} className="mb-2" />
         {/* Artist names stay plain text here: /artists is itself gated
             before launch, so linking them from the mirror would hand a
             signed-out visitor a second dead end. */}
@@ -141,15 +152,163 @@ export const PublicEventDetail = ({
           delistedAt={event.delistedAt}
           surface="detail"
           headlinerAs="h1"
+          headSize="var(--stage-head)"
+          centered
         />
-      </HeroBand>
+        <GenreChips
+          genres={event.genre}
+          className="mt-3 justify-center sm:justify-start"
+        />
+        <StageMeta>
+          {stageMetaLine(event.date, event.venue.timezone, event.venue.name)}
+        </StageMeta>
+      </EventStage>
       <PublicEventView eventId={event.id} />
 
       <div className="flex-1">
         <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
+          {/* The board's order (bp-s-public_m, _d): what it costs, the way to
+              buy it, then the account. Side by side from `sm` up, the account
+              card in the right column. */}
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-4">
+            {(priceLabel || !past || billBlock) && (
+              <div className="flex min-w-0 flex-col gap-5 sm:flex-1">
+                {/* A flat, read-only price card rather than
+                    EventDetailPriceBlock. That block is a client component
+                    that wires up price submission, tier-add and report modals
+                    behind `useAuth`; on a signed-out mirror its community
+                    handoff card would invite a visitor with no account to
+                    submit a price. With no price there is no card at all,
+                    because the only honest thing to put there is that same
+                    invitation. */}
+                {priceLabel && (
+                  <div
+                    data-testid="public-event-price"
+                    className="rounded-[14px] px-5 py-4"
+                    style={{
+                      background: 'var(--surface-1)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <p
+                      className="m-0 font-mono uppercase text-fg-subtle"
+                      style={{ fontSize: 10, letterSpacing: '0.2em' }}
+                    >
+                      {copy.priceRowLabel}
+                    </p>
+                    <p
+                      className="m-0 mt-1 text-fg"
+                      style={{
+                        fontSize: 30,
+                        fontWeight: 900,
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {priceLabel}
+                    </p>
+                  </div>
+                )}
+
+                {!past && (
+                  <EventTicketCta
+                    status={event.status}
+                    delistedAt={event.delistedAt}
+                    ticketHref={safeTicketUrl}
+                    soldOut={event.priceStatus === 'soldout'}
+                    href={ctaHref}
+                    hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
+                  />
+                )}
+
+                {/* Under the CTA, in the same column at every width.
+                    Truthy rather than a nullish check on purpose: the wrapper
+                    exists only to hold the slot, so a falsy slot draws no
+                    wrapper at all. */}
+                {billBlock && <div>{billBlock}</div>}
+              </div>
+            )}
+
+            {/* The one account-shaped thing on the page, and it points at
+                /sign-up. This used to point at /sign-in on the grounds that
+                /sign-up bounced to the invite wall at /auth/code — but
+                middleware lists `/sign-up(.*)` and `/e/(.*)` in the same
+                `isPublicOnceLaunched` matcher, so they open in the same deploy.
+                A signed-out visitor can therefore never be standing here while
+                /sign-up is still walled (#1359). The board adds the quiet
+                "Already in? Sign in" line under it for the visitor who does
+                have an account.
+
+                Both carry `redirect_url` so the visitor lands back on the show
+                that was shared with them. Without it /auth/complete falls
+                through to /events and the link they were sent is gone. */}
+            <div
+              data-testid="public-account-card"
+              className="flex flex-col gap-4 rounded-[16px] p-5 sm:w-[340px] sm:shrink-0"
+              style={{
+                border: '1.5px solid transparent',
+                background:
+                  'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(120deg, var(--signal), var(--accent)) border-box',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                {/* Decoration: the Watching glyph names what an account adds.
+                    The prompt beside it says it in words. */}
+                <span
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[12px]"
+                  style={{
+                    background:
+                      'color-mix(in oklch, var(--signal) 14%, var(--surface-1))',
+                    border:
+                      '1px solid color-mix(in oklch, var(--signal) 34%, var(--border))',
+                    color: 'var(--signal)',
+                  }}
+                >
+                  <Eye size={20} aria-hidden />
+                </span>
+                <p
+                  className="m-0 text-fg"
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    lineHeight: 1.35,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {publicCopy.signUpPrompt}
+                </p>
+              </div>
+              <Link
+                href={`/sign-up?redirect_url=${encodeURIComponent(`/e/${event.id}`)}`}
+                className="inline-flex w-full items-center justify-center rounded-[12px] px-5 text-fg-on-accent"
+                style={{
+                  minHeight: 48,
+                  background:
+                    'linear-gradient(90deg, var(--signal), var(--accent))',
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 800,
+                  fontSize: 15,
+                  letterSpacing: '-0.01em',
+                  textDecoration: 'none',
+                }}
+              >
+                {publicCopy.signUpButton}
+              </Link>
+              <p className="m-0 text-center text-[13px] text-fg-muted">
+                {publicCopy.alreadyIn}{' '}
+                <Link
+                  href={`/sign-in?redirect_url=${encodeURIComponent(`/e/${event.id}`)}`}
+                  className="font-bold text-signal underline-offset-2 hover:underline"
+                >
+                  {publicCopy.signInLink}
+                </Link>
+              </p>
+            </div>
+          </div>
+
           {/* Info block. The venue row is not a link for the same reason the
               artist names aren't. */}
-          <div className="mt-4 border-y border-border py-1">
+          <div className="mt-5 border-y border-border py-1">
             <InfoRow
               icon={<IconPin />}
               label={copy.venueLabel}
@@ -171,85 +330,6 @@ export const PublicEventDetail = ({
               label={copy.agesLabel}
               value={copy.allAges}
             />
-            {/* A flat, read-only price line rather than EventDetailPriceBlock.
-                That block is a client component that wires up price submission,
-                tier-add and report modals behind `useAuth` — on a signed-out
-                mirror its community handoff card would invite a visitor with no
-                account to submit a price. When we have no price we render
-                nothing at all, because the only honest thing to put there is
-                that same invitation. */}
-            {priceLabel && (
-              <InfoRow
-                icon={<IconTag />}
-                label={copy.priceRowLabel}
-                value={priceLabel}
-                data-testid="public-event-price"
-              />
-            )}
-          </div>
-
-          {!past && (
-            <div className="mt-5">
-              <EventTicketCta
-                status={event.status}
-                delistedAt={event.delistedAt}
-                ticketHref={safeTicketUrl}
-                soldOut={event.priceStatus === 'soldout'}
-                href={ctaHref}
-                hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
-              />
-            </div>
-          )}
-
-          {/* Under the CTA, in the main column — the same slot at every width.
-              Neither event-detail screen has a right rail, so there is no
-              breakpoint at which this appears on one viewport only.
-
-              Truthy rather than a nullish check on purpose: the wrapper exists
-              only to space the block, so a falsy slot must draw no wrapper at
-              all rather than leave a bare 20px gap under the CTA. */}
-          {billBlock && <div className="mt-5">{billBlock}</div>}
-
-          {/* The one account-shaped thing on the page, and it points at
-              /sign-up. This used to point at /sign-in on the grounds that
-              /sign-up bounced to the invite wall at /auth/code — but middleware
-              lists `/sign-up(.*)` and `/e/(.*)` in the same
-              `isPublicOnceLaunched` matcher, so they open in the same deploy.
-              A signed-out visitor can therefore never be standing here while
-              /sign-up is still walled, and this page exists for someone with no
-              account (#1359).
-
-              It carries `redirect_url` so a new account lands back on the show
-              that was shared with them. Without it /auth/complete falls through
-              to /events and the link they were sent is gone. */}
-          <div
-            className="mt-5 flex flex-col items-center gap-3 rounded-xl px-5 py-6 text-center"
-            style={{
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <p
-              className="text-[13px] leading-[1.5] text-fg-muted"
-              style={{ maxWidth: 320 }}
-            >
-              {publicCopy.signUpPrompt}
-            </p>
-            <Link
-              href={`/sign-up?redirect_url=${encodeURIComponent(`/e/${event.id}`)}`}
-              className="inline-flex items-center justify-center rounded-[10px] px-5 text-fg-on-accent"
-              style={{
-                minHeight: 44,
-                background: 'var(--accent)',
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 800,
-                fontSize: 14,
-                letterSpacing: '-0.01em',
-                textDecoration: 'none',
-              }}
-            >
-              {publicCopy.signUpButton}
-            </Link>
           </div>
 
           {event.description && (
