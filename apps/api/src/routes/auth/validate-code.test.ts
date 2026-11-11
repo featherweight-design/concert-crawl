@@ -23,7 +23,10 @@ vi.mock('@concert-crawl/db', () => ({
 }));
 
 vi.mock('../../lib/rate-limit.js', () => ({
-  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+  checkRateLimit: vi
+    .fn()
+    .mockResolvedValue({ allowed: true, retryAfterMs: 0, count: 1 }),
+  refundRateLimit: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));

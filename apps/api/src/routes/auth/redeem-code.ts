@@ -125,33 +125,40 @@ redeemCodeRouter.post(
     const { userId } = getAuthUser(ctx);
     const { code } = ctx.req.valid('json');
 
-    const [invite] = await db
-      .select()
+    // The caller's own ledger row comes back with the code, so a repeat
+    // redeem is recognised without a second query.
+    const [found] = await db
+      .select({
+        invite: inviteCodes,
+        ownRedemptionId: inviteCodeRedemptions.id,
+      })
       .from(inviteCodes)
-      .where(eq(inviteCodes.code, code));
-
-    if (!invite) {
-      return ctx.json({ success: false, error: 'notfound' }, 404);
-    }
-
-    // Idempotent: already redeemed by this user. The grant runs here too, but
-    // only covers a REPEAT of the same trip — a retried POST, a double submit,
-    // a reload of /auth/complete while the invite cookie is still live. It does
-    // NOT reach a tester who redeemed before this shipped: this handler is only
-    // called from /auth/complete, which runs on sign-up alone and only while the
-    // signed `invite_verified` cookie is present, and that cookie is deleted on
-    // the first successful redemption and cannot be re-minted for a code that
-    // already has a `used_by`. Those accounts need the backfill in the PR body.
-    const [ownRedemption] = await db
-      .select({ id: inviteCodeRedemptions.id })
-      .from(inviteCodeRedemptions)
-      .where(
+      .leftJoin(
+        inviteCodeRedemptions,
         and(
-          eq(inviteCodeRedemptions.codeId, invite.id),
+          eq(inviteCodeRedemptions.codeId, inviteCodes.id),
           eq(inviteCodeRedemptions.userId, userId),
         ),
-      );
-    if (ownRedemption || invite.usedBy === userId) {
+      )
+      .where(eq(inviteCodes.code, code));
+
+    if (!found) {
+      return ctx.json({ success: false, error: 'notfound' }, 404);
+    }
+    const { invite } = found;
+
+    // Idempotent: already redeemed by this user, which only the ledger can
+    // say for a multi-use code (`used_by` names the first redeemer alone; the
+    // migration backfilled a ledger row for every past `used_by`). The grant
+    // runs here too, but only covers a REPEAT of the same trip: a retried POST,
+    // a double submit, a reload of /auth/complete while the invite cookie is
+    // still live, or a second visit through a poster code that still has
+    // seats. It does NOT reach a tester who redeemed before this shipped
+    // through a single-use code: this handler is only called from
+    // /auth/complete, which runs on sign-up alone and only while the signed
+    // `invite_verified` cookie is present, and validate refuses to mint that
+    // cookie for a code whose seats are all taken.
+    if (found.ownRedemptionId) {
       const live = await grantBetaComp(db, userId, new Date());
       if (live) await mirrorBetaComp(userId);
       return ctx.json({ ok: true });
@@ -220,9 +227,13 @@ redeemCodeRouter.post(
       })
       .catch((err: unknown) => {
         // The same person won a concurrent claim: the seat goes back, and
-        // their redemption stands.
+        // their redemption stands. Grant again, as the repeat path does, so
+        // the mirror below does not hang on the winner's write alone.
         if (err instanceof AlreadyRedeemed)
-          return { claimed: true, live: false };
+          return grantBetaComp(db, userId, now).then((live) => ({
+            claimed: true,
+            live,
+          }));
         throw err;
       });
 

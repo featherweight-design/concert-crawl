@@ -15,6 +15,12 @@ ALTER TABLE "invite_codes" ADD COLUMN IF NOT EXISTS "label" text;
 UPDATE "invite_codes" SET "use_count" = 1
 WHERE ("used_by" IS NOT NULL OR "used_at" IS NOT NULL) AND "use_count" = 0;
 --> statement-breakpoint
+-- The seat invariant, held by the database and not only by the claim. Added
+-- after the backfill, which keeps every row inside it (use_count 0 or 1, max 1).
+ALTER TABLE "invite_codes" ADD CONSTRAINT "invite_codes_max_uses_check" CHECK ("max_uses" >= 1);
+--> statement-breakpoint
+ALTER TABLE "invite_codes" ADD CONSTRAINT "invite_codes_use_count_check" CHECK ("use_count" BETWEEN 0 AND "max_uses");
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "invite_code_redemptions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "code_id" uuid NOT NULL REFERENCES "invite_codes"("id") ON DELETE CASCADE,

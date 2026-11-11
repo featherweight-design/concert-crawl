@@ -17,13 +17,23 @@ function generateCode(): string {
   return `BETA-${part()}-${part()}`;
 }
 
-const generateCodeSchema = z.object({
-  expiresAt: z.string().datetime({ offset: true }).optional(),
-  recipientEmail: z.string().email().optional(),
-  // A poster code admits many people; a personal code (the default) admits one.
-  label: z.string().trim().min(1).max(120).optional(),
-  maxUses: z.number().int().min(1).max(500).optional(),
-});
+const generateCodeSchema = z
+  .object({
+    expiresAt: z.string().datetime({ offset: true }).optional(),
+    recipientEmail: z.string().email().optional(),
+    // A poster code admits many people; a personal code (the default) admits one.
+    label: z.string().trim().min(1).max(120).optional(),
+    maxUses: z.number().int().min(1).max(500).optional(),
+  })
+  .refine(
+    // An emailed invite is personal; a multi-seat code sent as one would let
+    // every forward of the email in.
+    (body) => !(body.recipientEmail && (body.maxUses ?? 1) > 1),
+    {
+      message: 'A code sent to one person admits one person',
+      path: ['maxUses'],
+    },
+  );
 
 export const inviteCodesAdminRouter = new Hono<AdminVariables>();
 

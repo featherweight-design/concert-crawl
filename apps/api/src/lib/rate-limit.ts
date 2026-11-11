@@ -32,7 +32,7 @@ import * as Sentry from '@sentry/hono/node';
 import { db as appDb, rateLimitBuckets } from '@concert-crawl/db';
 import type { Database } from '@concert-crawl/db';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { runBackgroundTask } from './background-tasks.js';
 import { apiLogger } from './logger.js';
@@ -41,6 +41,8 @@ import { describeDbError } from './pg-errors.js';
 export interface RateLimitResult {
   allowed: boolean;
   retryAfterMs: number;
+  /** Hits in the window, this one included. Absent when the store failed. */
+  count?: number;
 }
 
 /**
@@ -98,6 +100,12 @@ export interface RateLimiter {
   ) => Promise<RateLimitResult>;
   /** Delete up to PRUNE_BATCH expired buckets. Returns how many went. */
   pruneExpired: () => Promise<number>;
+  /**
+   * Hand one hit back to `key`'s live window. For a limit that should count
+   * only failures: count every attempt up front, so a burst cannot outrun the
+   * cap, then refund the ones that succeeded.
+   */
+  refund: (key: string) => Promise<void>;
 }
 
 export function createRateLimiter<TSchema extends Record<string, unknown>>(
@@ -133,8 +141,9 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
       });
 
     const row = hitRowSchema.parse(rows[0]);
-    if (row.count <= maxRequests) return { allowed: true, retryAfterMs: 0 };
-    return { allowed: false, retryAfterMs: row.retryAfterMs };
+    if (row.count <= maxRequests)
+      return { allowed: true, retryAfterMs: 0, count: row.count };
+    return { allowed: false, retryAfterMs: row.retryAfterMs, count: row.count };
   };
 
   const pruneExpired = async (): Promise<number> => {
@@ -204,7 +213,31 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
     }
   };
 
-  return { check, pruneExpired };
+  const refund = async (key: string): Promise<void> => {
+    try {
+      await db
+        .update(rateLimitBuckets)
+        .set({ count: sql`${rateLimitBuckets.count} - 1` })
+        .where(
+          and(
+            eq(rateLimitBuckets.key, key),
+            gt(rateLimitBuckets.resetAt, sql`now()`),
+            gt(rateLimitBuckets.count, 0),
+          ),
+        );
+    } catch (err) {
+      // A lost refund only leaves the limit stricter than meant.
+      apiLogger.warn(
+        {
+          error: describeDbError(err),
+          limiter: key.split(':')[0] ?? 'unknown',
+        },
+        'rate-limit: refund failed',
+      );
+    }
+  };
+
+  return { check, pruneExpired, refund };
 }
 
 const defaultLimiter = createRateLimiter({ db: appDb });
@@ -215,6 +248,9 @@ const defaultLimiter = createRateLimiter({ db: appDb });
  * how long until the window closes.
  */
 export const checkRateLimit = defaultLimiter.check;
+
+/** Hand one hit back to `key`'s live window; see `RateLimiter.refund`. */
+export const refundRateLimit = defaultLimiter.refund;
 
 /**
  * Delete every expired bucket in one set-based statement. Run daily by the
