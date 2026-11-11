@@ -75,7 +75,7 @@ export const ArtistReportCard = ({
           // No payment element is reachable signed out; `true` only adds legal
           // copy, matching the other logged-out picker call-sites.
           scaRegion
-          entry="logged-out-report"
+          entry="logged-out-artist-report"
         />
       ) : (
         <ArtistReportSheet

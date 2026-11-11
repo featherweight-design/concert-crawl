@@ -39,6 +39,13 @@ export const TIER_PICKER_COPY = {
           'Submitting a price is free. It just needs an account to attach it to. ' +
           'Start on Free; pick a lane later if you ever want to chip in.',
       },
+      'logged-out-artist-report': {
+        eyebrow: 'Artist reports · free with an account',
+        title: 'Help us match the right artist.',
+        sub:
+          'Reporting is free. It just needs an account to stand behind it. ' +
+          'Start on Free; pick a lane later if you ever want to chip in.',
+      },
       'logged-out-report': {
         eyebrow: 'Status reports · free with an account',
         title: 'Let the room know before they go.',
