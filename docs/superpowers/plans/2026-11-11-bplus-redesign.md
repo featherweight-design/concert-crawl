@@ -48,7 +48,7 @@ Admin review screens are out of scope.
 | F2 | **Motion module and loaders**: WAAPI helper, `PinkWave`, the `Skeleton` sheen primitive, reduced-motion still frames | No (unused) | Nothing |
 | F3 | **Chips and image system**: `GenreChip`, `StatusChip` (pending and live), the image ring and the row's left edge, the sheet top edge, small-caps centering | **Yes**, every row | Hugh on staging |
 | F4 | **PassportStamp** (solid and dashed) with the StubStamp hash rules. StubStamp stays until B12. | No (unused) | F1 |
-| B5 | **Browse 1**: rows, Tonight spotlight, Coming to Denver, day headers, List/Cal toggle, remove the floating Crews button | Yes, release note | F3 |
+| B5 | **Browse 1**: rows, Tonight spotlight, Coming to Denver, day headers, List/Cal toggle, remove the floating Crews button | Yes, release note | F3; phase plan [`2026-11-11-bplus-b5-browse-rows.md`](2026-11-11-bplus-b5-browse-rows.md) |
 | B6 | **Browse 2**: filter restyle, the mobile sheet and the desktop segmented popovers, **single-select** Where and Vibe on today's URL params, the vibe teaching line, active chips | Yes | F1, question 1 |
 | B7 | **Browse 3**: Cal week strip and jump picker, Browse skeletons with the wave, empty and filtered-empty states. Pull-to-refresh goes in only if it fits, otherwise it moves to B22. | Yes | F2 |
 | B8 | **Event page**: backdrop option A, tilted card, genre chips, countdown, skeleton, the public `/e/[id]` | Yes, release note | A1, A2, A4 |
@@ -63,7 +63,8 @@ Admin review screens are out of scope.
 | B17 | **Chrome**: header, bottom nav, account menu (without the founder eyebrow) | Yes | Copy-review |
 | B18 | **Settings restyle** | Yes | The go-free Settings removal has landed |
 | B19 | **Search palette, notifications panel** and their states | Yes | |
-| B20 | **Errors, 404, offline, feedback tab** | Yes | Keeps "Tell us what happened" |
+| B20 | **Errors, 404, offline, feedback tab** | Yes | B20a owns the error page |
+| B20a | **Something went wrong page** (`12-error-page`, added in #98): one `StandaloneError` used by a new `app/global-error.tsx` and the route `error.tsx` files, carrying its own theme tokens; the signed-in Tell us card (prompt, form, sending, sent, failed, saved on the device and resent at the next launch); the signed-out layout; a same-origin `POST /api/error-report` that forwards to `/v1/feedback`. It replaces #73's interim report sheet. | Yes | Copy-review; **risky (API route)** |
 | B21 | **What's new feature page** | Yes | Question 4 |
 | B22 | **PWA surfaces**: install slot, iPhone sheets, offline pill and states, pull-to-refresh | Yes | F2 |
 | B23 | **Launch animation** and iPhone startup images | Flagged | F2 |
@@ -83,7 +84,7 @@ A user-facing PR adds its `releases.ts` entry: B5, B8, and one each for the My s
   - "Billing email always sends: receipts, a failed charge, a card about to expire."
   - "handle, email, and plan are gone": live already says "profile".
   - the "BETA · FOUNDER" eyebrow in the account menu
-- **Keep "Tell us what happened".** The error-report link and sheet (open, sending, sent, failed) shipped on every consumer error boundary, but the error board draws only Try again and Sign out. B20 keeps the live component, restyled by the system rules, unless Design adds it to the boards first. A build straight from the board would silently delete the feature.
+- **"Tell us what happened" is now drawn.** Design added the error page and its Tell us card in #98 (`12-error-page`), and it replaces both `bp-s-error_m` and #73's interim sheet. B20a builds it to those boards. The capability never lapses: the interim sheet stays until B20a replaces it in the same PR.
 - **Invite format.** If B24 ships, its code field must match the real multi-use code format (`BETA-XXXX-XXXX`, see `2026-11-10-invite-code-posters.md`) and the poster's QR pre-fill. The board's `CRAWL-XXXX` is a guess.
 - **A1, A2 and A4 land before B8 and B9**, so the restyle rebuilds working behaviour.
 
