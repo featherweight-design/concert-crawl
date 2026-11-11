@@ -9,10 +9,15 @@ const COPY = CONSUMER_COPY.passport;
 const VIEWBOX = 120;
 const CENTRE = VIEWBOX / 2;
 const OUTER_RADIUS = 57;
-/** Top text sits on its baseline, so its arc is inside the band. */
+// The band runs from the venue ring (r 34) to the outer ring (r 57). Both
+// lines sit on an alphabetic baseline, and a glyph's top points along the
+// path's left normal: outward on the clockwise top arc, inward on the
+// anticlockwise bottom one. So the top baseline sits low in the band and the
+// bottom baseline high, with the caps (about 7 units) inside the band.
+/** Caps reach outward to about r 52. */
 const TOP_TEXT_RADIUS = 45.5;
-/** Bottom text hangs inward from its baseline, so its arc is further out. */
-const BOTTOM_TEXT_RADIUS = 52.5;
+/** Caps reach inward to about r 43. */
+const BOTTOM_TEXT_RADIUS = 50;
 /** The venue ring at the centre, in viewBox units. */
 const VENUE_STAMP_BOX = 74;
 /** Past this, an artist name no longer fits the top arc. */
@@ -98,7 +103,6 @@ export function BookletStamp({ show, size }: BookletStampProps) {
             fontSize={9.5}
             fontWeight={700}
             letterSpacing="0.16em"
-            dominantBaseline="hanging"
           >
             <textPath
               href={`#${bottomId}`}

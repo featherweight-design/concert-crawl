@@ -93,6 +93,20 @@ export const spreadName = (spread: readonly BookletLeaf[]): string =>
     )
     .join(' · ');
 
+/** What the Jump to button reads aloud: `Identity and page 1`, `Pages 2 and 3`. */
+export const spreadLabel = (spread: readonly BookletLeaf[]): string => {
+  const [first, second] = spread;
+  if (first === undefined) return '';
+  const copy = CONSUMER_COPY.passport;
+  if (first.kind === 'id')
+    return second?.kind === 'page'
+      ? copy.jumpIdentityAndPage(second.page.number)
+      : copy.jumpIdentity;
+  if (second?.kind === 'page')
+    return copy.jumpPages(first.page.number, second.page.number);
+  return copy.pageLabel(first.page.number);
+};
+
 const dayNumber = (date: string): number => {
   const at = Date.parse(`${date}T12:00:00Z`);
   return Number.isNaN(at) ? Number.NaN : Math.round(at / 86_400_000);

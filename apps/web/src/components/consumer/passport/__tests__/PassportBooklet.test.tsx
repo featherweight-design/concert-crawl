@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { PassportBooklet } from '../PassportBooklet';
@@ -14,23 +20,8 @@ import { toAttendedShows } from '@/lib/passport/select-shows';
 
 const COPY = CONSUMER_COPY.passport;
 
-const mobile = vi.hoisted(() => ({ matches: false }));
-
-beforeEach(() => {
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn(() => ({
-      matches: mobile.matches,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  );
-});
-
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
-  mobile.matches = false;
 });
 
 const row = (index: number, over: Partial<HistoryShow> = {}): HistoryShow => {
@@ -70,46 +61,74 @@ const renderBooklet = (count: number, next: HistoryShow | null = null) => {
   );
 };
 
-const stampNames = () =>
-  screen
-    .queryAllByRole('img')
-    .map((node) => node.getAttribute('aria-label'))
-    .filter((name): name is string => name?.startsWith('Artist') ?? false);
+// Both layouts render and CSS shows one, so every query is scoped to a view.
+const view = (layout: 'spread' | 'stack') => {
+  const node = document.querySelector(`[data-booklet-layout="${layout}"]`);
+  if (!(node instanceof HTMLElement)) throw new Error(`no ${layout} view`);
+  return node;
+};
+
+const stampsIn = (layout: 'spread' | 'stack') =>
+  view(layout).querySelectorAll('[data-booklet-stamp]').length;
+
+const statusOf = (layout: 'spread' | 'stack') =>
+  view(layout).querySelector('[data-booklet-status]')?.textContent;
+
+const frameOf = (layout: 'spread' | 'stack') => {
+  const frame = view(layout).firstElementChild;
+  if (frame === null) throw new Error('no booklet frame');
+  return frame;
+};
+
+const swipe = (from: [number, number], to: [number, number]) => {
+  const frame = frameOf('stack');
+  fireEvent.touchStart(frame, {
+    touches: [{ clientX: from[0], clientY: from[1] }],
+  });
+  fireEvent.touchEnd(frame, {
+    changedTouches: [{ clientX: to[0], clientY: to[1] }],
+  });
+};
 
 describe('PassportBooklet', () => {
   it('opens on the identity page and page 1, with the code line', () => {
     renderBooklet(4);
+    const spread = within(view('spread'));
 
-    expect(screen.getByText('@hugh')).toBeInTheDocument();
+    expect(spread.getByText('@hugh')).toBeInTheDocument();
     expect(
-      screen.getByText('P<CCRAWL<<HUGH<<<<DENVER<<2026<<<4N4V'),
+      spread.getByText('P<CCRAWL<<HUGH<<<<DENVER<<2026<<<4N4V'),
     ).toBeInTheDocument();
-    expect(stampNames()).toHaveLength(4);
-    expect(
-      screen.getByText(`${COPY.spreadOf(1, 2)} · ${COPY.nextPageWaiting}`),
-    ).toBeInTheDocument();
+    expect(stampsIn('spread')).toBe(4);
+    expect(statusOf('spread')).toBe(
+      `${COPY.spreadOf(1, 2)} · ${COPY.nextPageWaiting}`,
+    );
   });
 
   it('turns to the next spread and back', () => {
     renderBooklet(11);
+    const spread = within(view('spread'));
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.nextPage }));
-    expect(screen.queryByText('@hugh')).not.toBeInTheDocument();
-    expect(stampNames()).toHaveLength(7);
-    expect(screen.getByRole('button', { name: COPY.nextPage })).toBeDisabled();
+    fireEvent.click(spread.getByRole('button', { name: COPY.nextPage }));
+    expect(spread.queryByText('@hugh')).not.toBeInTheDocument();
+    expect(stampsIn('spread')).toBe(7);
+    expect(spread.getByRole('button', { name: COPY.nextPage })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.previousPage }));
-    expect(screen.getByText('@hugh')).toBeInTheDocument();
+    fireEvent.click(spread.getByRole('button', { name: COPY.previousPage }));
+    expect(spread.getByText('@hugh')).toBeInTheDocument();
   });
 
-  it('offers Jump to once the stamps run past the first spread', () => {
+  it('names the Jump to buttons by the pages they open', () => {
     renderBooklet(11);
+    const spread = within(view('spread'));
 
-    fireEvent.click(screen.getByRole('button', { name: '2 · 3' }));
-    expect(screen.getByRole('button', { name: '2 · 3' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(
+      spread.getByRole('button', { name: COPY.jumpIdentityAndPage(1) }),
+    ).toHaveTextContent('ID · 1');
+    fireEvent.click(spread.getByRole('button', { name: COPY.jumpPages(2, 3) }));
+    expect(
+      spread.getByRole('button', { name: COPY.jumpPages(2, 3) }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('has no Jump to while every stamp is on the first spread', () => {
@@ -119,38 +138,76 @@ describe('PassportBooklet', () => {
   });
 
   it('swipes one page at a time on a phone', () => {
-    mobile.matches = true;
-    const { container } = renderBooklet(11);
+    renderBooklet(11);
 
-    expect(screen.getByText(COPY.swipeForPage(2))).toBeInTheDocument();
-    const frame = container.querySelector('section > div');
-    if (frame === null) throw new Error('no booklet frame');
-    fireEvent.touchStart(frame, { touches: [{ clientX: 300 }] });
-    fireEvent.touchEnd(frame, { changedTouches: [{ clientX: 100 }] });
+    expect(statusOf('stack')).toBe(COPY.swipeForPage(2));
+    swipe([300, 100], [100, 110]);
 
-    expect(screen.queryByText('@hugh')).not.toBeInTheDocument();
-    expect(stampNames()).toHaveLength(4);
-    expect(screen.getByText(COPY.swipeForPage(3))).toBeInTheDocument();
+    expect(within(view('stack')).queryByText('@hugh')).not.toBeInTheDocument();
+    expect(stampsIn('stack')).toBe(4);
+    expect(statusOf('stack')).toBe(COPY.swipeForPage(3));
+  });
+
+  // A vertical scroll that drifts sideways must not turn the page.
+  it('ignores a swipe that moves further down than across', () => {
+    renderBooklet(11);
+
+    swipe([300, 100], [200, 400]);
+
+    expect(statusOf('stack')).toBe(COPY.swipeForPage(2));
+    expect(within(view('stack')).getByText('@hugh')).toBeInTheDocument();
+  });
+
+  it('counts the whole booklet on the last page', () => {
+    renderBooklet(11);
+
+    swipe([300, 100], [100, 100]);
+    swipe([300, 100], [100, 100]);
+
+    expect(statusOf('stack')).toBe(COPY.pageNightsSoFar(3, 11));
+  });
+
+  // The two layouts group pages differently, so the booklet remembers a page,
+  // not a spread index: a resize keeps the reader on what they were reading.
+  it('keeps the same page when the layout changes', () => {
+    renderBooklet(11);
+
+    fireEvent.click(
+      within(view('spread')).getByRole('button', { name: COPY.nextPage }),
+    );
+    // Desktop now opens on pages 2 and 3; the phone shows page 2.
+    expect(statusOf('stack')).toBe(COPY.swipeForPage(3));
+
+    swipe([300, 100], [100, 100]);
+    // Phone on page 3; desktop still shows the spread that holds it.
+    expect(statusOf('stack')).toBe(COPY.pageNightsSoFar(3, 11));
+    expect(statusOf('spread')).toBe(COPY.spreadOf(2, 2));
   });
 
   it('draws the next show as the dashed slot after the last stamp', () => {
     renderBooklet(2, row(20, { artist: 'Marian Hill' }));
 
-    const next = document.querySelector('[data-booklet-next]');
+    const next = view('spread').querySelector('[data-booklet-next]');
     expect(next).not.toBeNull();
     expect(next?.querySelector('[data-venue-stamp="dashed"]')).not.toBeNull();
-    expect(document.querySelectorAll('[data-booklet-empty]')).toHaveLength(1);
+    expect(
+      view('spread').querySelectorAll('[data-booklet-empty]'),
+    ).toHaveLength(1);
   });
 
-  // B+ rule 4: one stamp everywhere. Every night is the VenueStamp, untilted.
+  // B+ rule 4: one stamp everywhere. Every night is the VenueStamp, and
+  // nothing anywhere in the stamp, svg included, is turned.
   it('stamps every night with the venue stamp, never tilted', () => {
     renderBooklet(3);
 
-    const stamps = document.querySelectorAll('[data-booklet-stamp]');
+    const stamps = view('spread').querySelectorAll('[data-booklet-stamp]');
     expect(stamps).toHaveLength(3);
     stamps.forEach((stamp) => {
       expect(stamp.querySelector('[data-venue-stamp="solid"]')).not.toBeNull();
-      expect(stamp.getAttribute('style') ?? '').not.toMatch(/rotate/);
+      [stamp, ...Array.from(stamp.querySelectorAll('*'))].forEach((node) => {
+        expect(node.getAttribute('transform') ?? '').not.toMatch(/rotate/);
+        expect(node.getAttribute('style') ?? '').not.toMatch(/rotate/);
+      });
     });
   });
 });

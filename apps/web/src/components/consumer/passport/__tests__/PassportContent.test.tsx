@@ -48,15 +48,6 @@ beforeEach(() => {
   );
   URL.createObjectURL = vi.fn(() => 'blob:passport');
   URL.revokeObjectURL = vi.fn();
-  // jsdom has no matchMedia; the booklet asks it which layout to draw.
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn(() => ({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  );
 });
 
 afterEach(() => {
@@ -124,12 +115,13 @@ describe('PassportContent', () => {
     expect(
       screen.getByRole('region', { name: COPY.bookletLabel }),
     ).toBeInTheDocument();
+    // Both booklet layouts render (CSS shows one), so each holds the stamp.
     expect(
-      screen.getByRole('img', {
+      screen.getAllByRole('img', {
         name: 'Wednesday, Larimer Lounge, Thu, May 14',
       }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('@hugh')).toBeInTheDocument();
+    ).toHaveLength(2);
+    expect(screen.getAllByText('@hugh')).toHaveLength(2);
   });
 
   it('counts Venues collected against the active venues', () => {
@@ -156,10 +148,10 @@ describe('PassportContent', () => {
       screen.getByText(`${COPY.nextStamp} · ${COPY.inDays(10)}`),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', {
+      screen.getAllByRole('img', {
         name: `${COPY.nextStamp}: Marian Hill, Larimer Lounge, Thu, May 14`,
       }),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
   });
 
   // The card follows the theme the browser is in, not the one last written to
