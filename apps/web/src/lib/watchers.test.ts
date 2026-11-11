@@ -9,7 +9,11 @@ import {
 } from './watchers';
 
 function named(...handles: string[]): EventWatcher[] {
-  return handles.map((handle) => ({ handle, avatarColor: null }));
+  return handles.map((handle) => ({
+    handle,
+    avatarColor: null,
+    avatarSecondColor: null,
+  }));
 }
 
 function response(total: number, ...handles: string[]): EventWatchersResponse {
@@ -113,20 +117,30 @@ describe('watcherInitial', () => {
 
 describe('watcherTone', () => {
   it('prefers the watcher’s chosen avatar color', () => {
-    expect(watcherTone({ handle: 'marisol', avatarColor: 'warning' })).toBe(
-      'warning',
-    );
+    expect(
+      watcherTone({
+        handle: 'marisol',
+        avatarColor: 'warning',
+        avatarSecondColor: null,
+      }),
+    ).toBe('warning');
   });
 
   it('is stable across calls for the same handle', () => {
-    const watcher: EventWatcher = { handle: 'marisol', avatarColor: null };
+    const watcher: EventWatcher = {
+      handle: 'marisol',
+      avatarColor: null,
+      avatarSecondColor: null,
+    };
     expect(watcherTone(watcher)).toBe(watcherTone(watcher));
   });
 
   it('always resolves to one of the four avatar tones', () => {
     const tones = ['signal', 'accent', 'success', 'warning'];
     for (const handle of ['marisol', 'dev_ftw', 'priya', 'jonah', 'sam']) {
-      expect(tones).toContain(watcherTone({ handle, avatarColor: null }));
+      expect(tones).toContain(
+        watcherTone({ handle, avatarColor: null, avatarSecondColor: null }),
+      );
     }
   });
 });

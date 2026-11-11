@@ -54,6 +54,7 @@ import {
 import { PG_UNIQUE_VIOLATION } from '../lib/pg-errors.js';
 import { notifyCrewMembershipChange } from '../lib/crew-notifications.js';
 import { idSchema } from '../lib/id-schema.js';
+import { avatarColumns, avatarOf } from '../lib/avatar.js';
 
 const nameSchema = z.string().trim().min(1).max(40);
 
@@ -130,8 +131,7 @@ crewsRouter.get('/', async (ctx) => {
         userId: crewMembers.userId,
         joinedAt: crewMembers.joinedAt,
         handle: userProfiles.handle,
-        avatarColor: userProfiles.avatarColor,
-        avatarSecondColor: userProfiles.avatarSecondColor,
+        ...avatarColumns(),
       })
       .from(crewMembers)
       .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
@@ -155,8 +155,7 @@ crewsRouter.get('/', async (ctx) => {
     list.push({
       userId: row.userId,
       handle: row.handle ?? null,
-      avatarColor: row.avatarColor ?? null,
-      avatarSecondColor: row.avatarSecondColor ?? null,
+      ...avatarOf(row),
     });
     membersByCrew.set(row.crewId, list);
   }
@@ -217,8 +216,7 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
     const [profile] = await db
       .select({
         handle: userProfiles.handle,
-        avatarColor: userProfiles.avatarColor,
-        avatarSecondColor: userProfiles.avatarSecondColor,
+        ...avatarColumns(),
       })
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId))
@@ -233,8 +231,7 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
         {
           userId,
           handle: profile?.handle ?? null,
-          avatarColor: profile?.avatarColor ?? null,
-          avatarSecondColor: profile?.avatarSecondColor ?? null,
+          ...avatarOf(profile),
         },
       ],
       upcomingCount: 0,
@@ -317,8 +314,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
       userId: crewMembers.userId,
       joinedAt: crewMembers.joinedAt,
       handle: userProfiles.handle,
-      avatarColor: userProfiles.avatarColor,
-      avatarSecondColor: userProfiles.avatarSecondColor,
+      ...avatarColumns(),
     })
     .from(crewMembers)
     .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
@@ -339,8 +335,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
   const members: CrewMember[] = memberRows.map((row) => ({
     userId: row.userId,
     handle: row.handle ?? null,
-    avatarColor: row.avatarColor ?? null,
-    avatarSecondColor: row.avatarSecondColor ?? null,
+    ...avatarOf(row),
     joinedAt: row.joinedAt.toISOString(),
     isKeeper: row.userId === crew.keeperId,
     isYou: row.userId === userId,

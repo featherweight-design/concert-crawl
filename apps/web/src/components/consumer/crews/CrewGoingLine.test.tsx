@@ -24,7 +24,12 @@ const mockFeatureFlag = (key: string, enabled: boolean) =>
 const member = (
   userId: string,
   handle: string | null = null,
-): CrewMemberPreview => ({ userId, handle, avatarColor: 'signal' });
+): CrewMemberPreview => ({
+  userId,
+  handle,
+  avatarColor: 'signal',
+  avatarSecondColor: null,
+});
 
 afterEach(cleanup);
 

@@ -10,7 +10,9 @@ describe('WatcherAvatarStack', () => {
   it('hides every disc from assistive tech — the sentence carries the meaning', () => {
     const { container } = render(
       <WatcherAvatarStack
-        watchers={[{ handle: 'marisol', avatarColor: 'signal' }]}
+        watchers={[
+          { handle: 'marisol', avatarColor: 'signal', avatarSecondColor: null },
+        ]}
         anonymousDiscs={1}
         overflow={3}
       />,
@@ -25,7 +27,9 @@ describe('WatcherAvatarStack', () => {
   it('strips a leading underscore so the disc letter is alphanumeric', () => {
     const { container } = render(
       <WatcherAvatarStack
-        watchers={[{ handle: '_dev_ftw', avatarColor: null }]}
+        watchers={[
+          { handle: '_dev_ftw', avatarColor: null, avatarSecondColor: null },
+        ]}
       />,
     );
     expect(container.textContent).toContain('D');
@@ -36,8 +40,8 @@ describe('WatcherAvatarStack', () => {
     const { container } = render(
       <WatcherAvatarStack
         watchers={[
-          { handle: 'marisol', avatarColor: null },
-          { handle: 'priya', avatarColor: null },
+          { handle: 'marisol', avatarColor: null, avatarSecondColor: null },
+          { handle: 'priya', avatarColor: null, avatarSecondColor: null },
         ]}
         anonymousDiscs={2}
       />,
@@ -48,7 +52,9 @@ describe('WatcherAvatarStack', () => {
   it('omits the overflow chip when nothing overflows', () => {
     const { container } = render(
       <WatcherAvatarStack
-        watchers={[{ handle: 'priya', avatarColor: null }]}
+        watchers={[
+          { handle: 'priya', avatarColor: null, avatarSecondColor: null },
+        ]}
       />,
     );
     expect(container.textContent).not.toContain('+');

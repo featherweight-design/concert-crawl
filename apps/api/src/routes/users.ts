@@ -34,6 +34,8 @@ import { isClerkNotFound } from '../lib/clerk-errors.js';
 import { evaluateNudgeFlags } from '../lib/nudges.js';
 import { loadPlanContext } from '../lib/plan.js';
 import { resolveFounderWindowView } from './billing-founder-window.js';
+import { AVATAR_COLORS } from '@concert-crawl/types';
+import { avatarColumns, avatarOf } from '../lib/avatar.js';
 
 export const usersRouter = new Hono();
 
@@ -200,8 +202,7 @@ usersRouter.get('/me', async (ctx) => {
     email,
     handle: profile?.handle ?? null,
     city: profile?.city ?? null,
-    avatarColor: profile?.avatarColor ?? null,
-    avatarSecondColor: profile?.avatarSecondColor ?? null,
+    ...avatarOf(profile),
     theme: profile?.theme ?? 'electric',
     planState,
     displayRole,
@@ -222,15 +223,9 @@ usersRouter.get('/me', async (ctx) => {
 const patchSchema = z.object({
   handle: z.string().min(3).max(20).regex(HANDLE_REGEX).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
-  avatarColor: z
-    .enum(['signal', 'accent', 'success', 'warning'])
-    .nullable()
-    .optional(),
+  avatarColor: z.enum(AVATAR_COLORS).nullable().optional(),
   // Null keeps the avatar solid.
-  avatarSecondColor: z
-    .enum(['signal', 'accent', 'success', 'warning'])
-    .nullable()
-    .optional(),
+  avatarSecondColor: z.enum(AVATAR_COLORS).nullable().optional(),
   theme: z
     .enum([
       'electric',
@@ -288,15 +283,41 @@ usersRouter.patch(
     if (body.city !== undefined) updateValues.city = body.city;
     if (body.avatarColor !== undefined)
       updateValues.avatarColor = body.avatarColor;
-    if (body.avatarSecondColor !== undefined)
-      updateValues.avatarSecondColor = body.avatarSecondColor;
     if (body.theme !== undefined) updateValues.theme = body.theme;
 
     const [existingProfile] = await db
-      .select({ id: userProfiles.id })
+      .select({ id: userProfiles.id, ...avatarColumns() })
       .from(userProfiles)
       .where(eq(userProfiles.userId, auth.userId))
       .limit(1);
+
+    // The avatar pair, resolved against what is stored: a second colour needs
+    // a first, clearing the first clears the pair, and a second that matches
+    // the first is just a solid avatar, so it is stored as null.
+    const firstColor =
+      body.avatarColor !== undefined
+        ? body.avatarColor
+        : (existingProfile?.avatarColor ?? null);
+    let secondColor =
+      body.avatarSecondColor !== undefined
+        ? body.avatarSecondColor
+        : (existingProfile?.avatarSecondColor ?? null);
+    if (firstColor === null && secondColor !== null) {
+      if (body.avatarSecondColor !== undefined) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'A second avatar colour needs a first',
+            code: 'second_without_first',
+          },
+          400,
+        );
+      }
+      secondColor = null;
+    }
+    if (secondColor === firstColor) secondColor = null;
+    if (secondColor !== (existingProfile?.avatarSecondColor ?? null))
+      updateValues.avatarSecondColor = secondColor;
 
     if (existingProfile) {
       await db
@@ -309,7 +330,7 @@ usersRouter.patch(
         handle: body.handle ?? null,
         city: body.city ?? null,
         avatarColor: body.avatarColor ?? null,
-        avatarSecondColor: body.avatarSecondColor ?? null,
+        avatarSecondColor: secondColor,
         theme: body.theme ?? 'electric',
       });
     }

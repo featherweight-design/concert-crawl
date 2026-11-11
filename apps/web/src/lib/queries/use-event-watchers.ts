@@ -43,7 +43,11 @@ function isEventWatcher(value: unknown): value is EventWatcher {
   const record: Record<string, unknown> = { ...value };
   return (
     typeof record.handle === 'string' &&
-    (record.avatarColor === null || isAvatarColor(record.avatarColor))
+    (record.avatarColor === null || isAvatarColor(record.avatarColor)) &&
+    // Absent from an API older than the avatar pair: read as solid.
+    (record.avatarSecondColor === undefined ||
+      record.avatarSecondColor === null ||
+      isAvatarColor(record.avatarSecondColor))
   );
 }
 

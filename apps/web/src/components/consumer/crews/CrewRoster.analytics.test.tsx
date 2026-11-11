@@ -13,6 +13,7 @@ const member = (overrides: Partial<CrewMember>): CrewMember => ({
   userId: 'user_other',
   handle: 'marisol',
   avatarColor: 'signal',
+  avatarSecondColor: null,
   joinedAt: '2026-10-01T00:00:00Z',
   isKeeper: false,
   isYou: false,
@@ -54,8 +55,8 @@ describe("other readers' handles are kept out of analytics", () => {
     render(
       <WatchersRoster
         named={[
-          { handle: 'marisol', avatarColor: 'signal' },
-          { handle: 'teo', avatarColor: 'accent' },
+          { handle: 'marisol', avatarColor: 'signal', avatarSecondColor: null },
+          { handle: 'teo', avatarColor: 'accent', avatarSecondColor: null },
         ]}
         anonymousCount={0}
       />,

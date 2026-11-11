@@ -17,6 +17,7 @@ const baseUser = (
   city: 'Denver',
   theme: 'jade',
   avatarColor: 'signal',
+  avatarSecondColor: null,
   role: 'beta',
   joinedAt: '2026-04-01T00:00:00.000Z',
   clerkAccountMissing: false,
@@ -71,7 +72,13 @@ describe('UserDetailClient', () => {
 
   it('hides the appearance line when theme and avatarColor are both null', () => {
     render(
-      <UserDetailClient user={baseUser({ theme: null, avatarColor: null })} />,
+      <UserDetailClient
+        user={baseUser({
+          theme: null,
+          avatarColor: null,
+          avatarSecondColor: null,
+        })}
+      />,
     );
     expect(screen.queryByText(COPY.identity.themePrefix)).toBeNull();
     expect(screen.queryByText(COPY.identity.avatarPrefix)).toBeNull();

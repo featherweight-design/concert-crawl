@@ -24,6 +24,7 @@ import type {
 } from '@concert-crawl/types';
 import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types';
 import { isClerkNotFound } from '../../lib/clerk-errors.js';
+import { avatarOf } from '../../lib/avatar.js';
 
 const userIdParamSchema = z.object({ userId: z.string().min(1).max(255) });
 
@@ -237,8 +238,7 @@ usersAdminRouter.get(
       handle: profile?.handle ?? clerkHandle ?? clerkUser?.username ?? null,
       city: profile?.city ?? null,
       theme: profile?.theme ?? null,
-      avatarColor: profile?.avatarColor ?? null,
-      avatarSecondColor: profile?.avatarSecondColor ?? null,
+      ...avatarOf(profile),
       role,
       joinedAt: clerkUser?.createdAt
         ? new Date(clerkUser.createdAt).toISOString()

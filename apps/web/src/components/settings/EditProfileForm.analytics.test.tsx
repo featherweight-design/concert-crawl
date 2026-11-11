@@ -37,6 +37,7 @@ const PROFILE: UserProfileResponse = {
   handle: 'adal',
   city: null,
   avatarColor: 'signal',
+  avatarSecondColor: null,
   theme: 'electric',
   planState: {
     plan: 'free',
