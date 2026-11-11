@@ -1,3 +1,15 @@
+# [1.319.0](https://github.com/featherweight-design/concert-crawl/compare/v1.318.0...v1.319.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** poster mint needs two seats and waits for the new code ([0f4f3bc](https://github.com/featherweight-design/concert-crawl/commit/0f4f3bc3d8ff936751872a44f076007cd5bc2536))
+
+
+### Features
+
+* **web:** mint a poster code inline from the Posters tab ([6042070](https://github.com/featherweight-design/concert-crawl/commit/6042070903f491e5f3160d46215db99e0fce0f17))
+
 # [1.318.0](https://github.com/featherweight-design/concert-crawl/compare/v1.317.0...v1.318.0) (2026-11-11)
 
 
