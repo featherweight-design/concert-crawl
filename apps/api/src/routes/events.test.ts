@@ -32,6 +32,7 @@ vi.mock('drizzle-orm', () => ({
   lt: vi.fn((_a, _b) => ({ type: 'lt' })),
   ilike: vi.fn((_a, _b) => ({ type: 'ilike' })),
   or: vi.fn((...args: unknown[]) => ({ type: 'or', args })),
+  exists: vi.fn((_a) => ({ type: 'exists' })),
   inArray: vi.fn((_a, _b) => ({ type: 'inArray' })),
   isNull: vi.fn((_a) => ({ type: 'isNull' })),
   isNotNull: vi.fn((_a) => ({ type: 'isNotNull' })),
@@ -39,6 +40,13 @@ vi.mock('drizzle-orm', () => ({
     vi.fn(() => ({ type: 'sql' })),
     { placeholder: vi.fn() },
   ),
+}));
+
+// The contested-parent EXISTS aliases price_submissions; the mocked table
+// object stands in for its alias.
+vi.mock('drizzle-orm/pg-core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('drizzle-orm/pg-core')>()),
+  alias: vi.fn((table: unknown) => table),
 }));
 
 vi.mock('@concert-crawl/db', () => ({
@@ -249,12 +257,16 @@ describe('GET /v1/events/:id', () => {
     //   2. watch count             — select().from().where()                  → terminal
     //   3. sold-out report          — select().from().where().orderBy().limit() → chainable where
     //   4. priceByTier corroborated — select().from().where()                  → terminal
+    //      (plus a contested-parent EXISTS subquery built inside its where)
     //   5. priceByTier pending      — select().from().where()                  → terminal
     //   6. reports-by-tier          — select().from().where().groupBy()        → chainable where
     // Queue mocks in call order so each .where() gets the right behavior.
     mockDb.where.mockResolvedValueOnce([mockEvent]); // 1
     mockDb.where.mockResolvedValueOnce([{ total: 0 }]); // 2
     mockDb.where.mockReturnValueOnce(mockDb); // 3 (chain into orderBy)
+    // 4a. the contested-parent EXISTS subquery — built (its .where() runs while
+    // query 4's arguments are evaluated), never awaited on its own.
+    mockDb.where.mockReturnValueOnce(mockDb); // 4a
     mockDb.where.mockResolvedValueOnce([]); // 4
     mockDb.where.mockResolvedValueOnce([]); // 5
     mockDb.where.mockReturnValueOnce(mockDb); // 6 (chain into groupBy)
