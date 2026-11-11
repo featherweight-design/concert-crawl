@@ -131,6 +131,12 @@ export const CONSUMER_COPY = {
   showLabel: 'Show',
   cancelledLabel: 'Cancelled',
   postponedLabel: 'Postponed',
+  // No longer listed (B+ A5): the stale sweep's cancellation, inferred from
+  // the venue page dropping the show. It never says Cancelled, because
+  // nobody confirmed that. Shared by the row chip and the detail pill so the
+  // two can never call the state different things.
+  noLongerListedLabel: 'No longer listed',
+  noLongerListedLine: 'The venue took this show down. It may be off.',
   freeLabel: 'Free',
   venueUpcoming: 'Upcoming shows',
   heroTonight: 'Tonight',
@@ -1005,6 +1011,11 @@ export const CONSUMER_COPY = {
     // Cancelled: the ticket link stays, relabelled, since the vendor is who
     // handles the refund.
     refundInfo: 'Refund info from the vendor',
+    // No longer listed card (B+ A5). The body is the shared
+    // `noLongerListedLine`; the heading echoes the chip, like the cancelled
+    // card's "This show has been cancelled." echoes its pill.
+    noLongerListedHeading: 'No longer listed.',
+    noLongerListedAriaLabel: 'Show status: no longer listed',
 
     // About section
     aboutLabel: 'About',

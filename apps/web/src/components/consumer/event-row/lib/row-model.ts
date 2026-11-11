@@ -81,6 +81,12 @@ export interface EventRowShow {
    */
   status: 'live' | 'soldout' | 'presale';
   lifecycle: EventStatus;
+  /**
+   * The stale sweep's marker. With `lifecycle: 'cancelled'` it makes the show
+   * No longer listed rather than Cancelled (`resolveRowStatus`). Only Watching
+   * and event detail ever receive a delisted row; every list filters them out.
+   */
+  delistedAt: string | null;
 }
 
 export function fromWatchingShow(show: WatchingShow): EventRowShow {
@@ -131,6 +137,8 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
     isWatching: false,
     status: show.watchStatus,
     lifecycle: show.eventStatus,
+    // Optional on the wire, so an API older than the marker reads as listed.
+    delistedAt: show.eventDelistedAt ?? null,
   };
 }
 
@@ -189,6 +197,7 @@ export function fromEventWithVenue(
     crewGoing: options.crewGoing ?? null,
     status: event.isSoldOut ? 'soldout' : 'live',
     lifecycle: event.status,
+    delistedAt: event.delistedAt ?? null,
   };
 }
 
@@ -250,6 +259,8 @@ export function fromArtistShow(
     isWatching: false,
     status: show.isSoldOut ? 'soldout' : 'live',
     lifecycle: show.status,
+    // The artist payload keeps the #607 filter, so it never carries one.
+    delistedAt: null,
   };
 }
 
@@ -294,5 +305,6 @@ export function fromCrewShow(show: CrewShow): EventRowShow {
     isWatching: false,
     status: 'live',
     lifecycle: 'upcoming',
+    delistedAt: null,
   };
 }

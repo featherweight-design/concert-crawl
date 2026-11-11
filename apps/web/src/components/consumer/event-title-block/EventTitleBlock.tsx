@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { EventStatus } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { StatusPill } from '@/components/consumer/StatusPill';
+import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { SupportingLine } from './SupportingLine';
 
 /**
@@ -25,6 +26,11 @@ interface EventTitleBlockProps {
   fallbackTitle?: string | null;
   surface: Surface;
   status?: EventStatus;
+  /**
+   * The stale sweep's marker (B+ A5). With `status: 'cancelled'` the pill reads
+   * No longer listed rather than Cancelled.
+   */
+  delistedAt?: string | null | undefined;
   maxInline?: number | null;
   headlinerAs?: 'h1' | 'div';
   /**
@@ -49,6 +55,7 @@ export const EventTitleBlock = ({
   fallbackTitle,
   surface,
   status = 'upcoming',
+  delistedAt = null,
   maxInline = null,
   headlinerAs = 'div',
   artistSlug = null,
@@ -88,7 +95,11 @@ export const EventTitleBlock = ({
           style={{ marginBottom: 1 }}
         >
           {pillBelow ? null : (
-            <StatusPill status={status} fontSize={ramp.tour} />
+            <StatusPill
+              status={status}
+              fontSize={ramp.tour}
+              delisted={isDelisted(status, delistedAt)}
+            />
           )}
           {tourName && (
             <div
@@ -109,11 +120,14 @@ export const EventTitleBlock = ({
         // multi-line title, so it is scoped to the hero only.
         className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
         // B+ draws a cancelled show's title struck and dimmed
-        // (`more-st-ev_canc_m`, `more-st-rows_board`). Postponed is not struck.
-        // The strike is the detail page's only: the hero card keeps its words.
+        // (`more-st-ev_canc_m`, `more-st-rows_board`). Postponed is not struck,
+        // and nor is a No longer listed show: nothing says it is off. The
+        // strike is the detail page's only: the hero card keeps its words.
         style={{
           textDecoration:
-            surface === 'detail' && status === 'cancelled'
+            surface === 'detail' &&
+            status === 'cancelled' &&
+            !isDelisted(status, delistedAt)
               ? 'line-through'
               : undefined,
           fontSize: ramp.head,
@@ -150,7 +164,11 @@ export const EventTitleBlock = ({
 
       {pillBelow && hasPill && (
         <div className="flex" style={{ marginTop: 2 }}>
-          <StatusPill status={status} fontSize={ramp.tour} />
+          <StatusPill
+            status={status}
+            fontSize={ramp.tour}
+            delisted={isDelisted(status, delistedAt)}
+          />
         </div>
       )}
 

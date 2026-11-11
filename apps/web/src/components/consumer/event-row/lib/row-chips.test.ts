@@ -25,6 +25,7 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     isWatching: false,
     status: 'live',
     lifecycle: 'upcoming',
+    delistedAt: null,
     ...partial,
   };
 }
