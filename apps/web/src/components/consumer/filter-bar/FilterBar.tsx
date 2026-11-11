@@ -18,6 +18,22 @@ import {
 } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { TasteFilterChip } from './TasteFilterChip';
+import {
+  CHIP_ROW_CLASS,
+  CHIP_ROW_STYLE,
+  FILTER_CHIP_CLASS,
+  HEADING_EYEBROW_CLASS,
+  HEADING_EYEBROW_STYLE,
+  HEADING_TITLE_CLASS,
+  HEADING_TITLE_STYLE,
+  IconChevDown,
+  VIEW_SEGMENTS,
+  VIEW_SEGMENT_CLASS,
+  VIEW_TOGGLE_CLASS,
+  VIEW_TOGGLE_STYLE,
+  filterChipStyle,
+  viewSegmentStyle,
+} from './chrome';
 import { FollowFilterChip } from './FollowFilterChip';
 
 const copy = CONSUMER_COPY.filterBar;
@@ -45,64 +61,6 @@ interface FilterBarProps {
    * viewer who follows fifty artists. `0` is a claim; `null` is an admission.
    */
   followCount?: number | null;
-}
-
-function IconList({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M3 4h10M3 8h10M3 12h10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconCal({ size = 13 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect
-        x="2"
-        y="3.25"
-        width="12"
-        height="10.75"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <path d="M2 7h12" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M5.5 1.75v2.5M10.5 1.75v2.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconChevDown({ size = 11 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden
-      style={{ flexShrink: 0 }}
-    >
-      <path
-        d="M4 6l4 4 4-4"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 export function FilterBar({
@@ -247,16 +205,13 @@ export function FilterBar({
               you're looking at, and two of them read as neither. */}
           {lensCrew === null && (
             <span
-              className="text-[10px] uppercase tracking-widest text-fg-muted"
-              style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
+              className={HEADING_EYEBROW_CLASS}
+              style={HEADING_EYEBROW_STYLE}
             >
               {copy.locationLine}
             </span>
           )}
-          <h1
-            className="truncate text-[28px] font-black leading-none tracking-tight text-fg"
-            style={{ letterSpacing: '-0.03em' }}
-          >
+          <h1 className={HEADING_TITLE_CLASS} style={HEADING_TITLE_STYLE}>
             {lensCrew === null ? copy.headingTitle : lensCrew.name}
           </h1>
         </div>
@@ -273,21 +228,8 @@ export function FilterBar({
         )}
 
         {/* List / Cal toggle (B+ `bp-browse`): an icon segmented control. */}
-        <div
-          className="inline-flex items-center"
-          style={{
-            padding: 3,
-            borderRadius: 10,
-            background: 'var(--surface-1)',
-            border: '1px solid var(--border-strong)',
-          }}
-        >
-          {(
-            [
-              { key: 'list', label: copy.viewList, Icon: IconList },
-              { key: 'cal', label: copy.viewCal, Icon: IconCal },
-            ] as const
-          ).map(({ key, label, Icon }) => {
+        <div className={VIEW_TOGGLE_CLASS} style={VIEW_TOGGLE_STYLE}>
+          {VIEW_SEGMENTS.map(({ key, label, Icon }) => {
             const active = isCalendarView ? key === 'cal' : key === 'list';
             return (
               <button
@@ -311,20 +253,8 @@ export function FilterBar({
                     });
                   }
                 }}
-                className="inline-flex cursor-pointer items-center gap-1.5 transition-colors"
-                style={{
-                  padding: '7px 12px',
-                  borderRadius: 7,
-                  fontFamily: 'Inter, system-ui',
-                  fontWeight: 600,
-                  fontSize: 12,
-                  letterSpacing: '-0.005em',
-                  color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-                  // B+ draws the active segment in the brand gradient.
-                  background: active
-                    ? 'linear-gradient(135deg, var(--signal), var(--accent))'
-                    : 'transparent',
-                }}
+                className={cn(VIEW_SEGMENT_CLASS, 'cursor-pointer')}
+                style={viewSegmentStyle(active)}
                 aria-pressed={active}
               >
                 {/* B+: icons only on the phone, icon and label from sm up. The
@@ -349,12 +279,7 @@ export function FilterBar({
       )}
 
       {/* Filter chips — Inter font, surface-1 inactive bg, placeholder as default label */}
-      <div
-        className="flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-none"
-        style={{
-          maskImage: 'linear-gradient(to right, black 85%, transparent)',
-        }}
-      >
+      <div className={CHIP_ROW_CLASS} style={CHIP_ROW_STYLE}>
         {activeFilterCount > 0 && (
           <button
             type="button"
@@ -422,16 +347,8 @@ export function FilterBar({
                 }
               }}
               data-testid={key === 'where' ? 'venue-chip' : undefined}
-              className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3"
-              style={{
-                fontFamily: 'Inter, system-ui',
-                fontWeight: 600,
-                fontSize: 12.5,
-                letterSpacing: '-0.005em',
-                color: isActive ? 'var(--fg-on-accent)' : 'var(--fg)',
-                borderColor: isActive ? 'var(--signal)' : 'var(--border)',
-                background: isActive ? 'var(--signal)' : 'var(--surface-1)',
-              }}
+              className={cn(FILTER_CHIP_CLASS, 'cursor-pointer')}
+              style={filterChipStyle(isActive)}
               aria-expanded={isOpen}
               aria-haspopup="dialog"
             >

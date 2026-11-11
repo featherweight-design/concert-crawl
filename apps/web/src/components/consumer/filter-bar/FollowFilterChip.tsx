@@ -26,6 +26,7 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { ChipDivider } from './ChipDivider';
+import { FOLLOW_CHIP_CLASS, followChipStyle } from './chrome';
 
 const GATE_DESCRIPTION_ID = 'follow-scope-chip-gate';
 
@@ -117,15 +118,8 @@ export const FollowFilterChip = ({
             active ? FOLLOWING_COPY.chipActiveAria : FOLLOWING_COPY.chipAria
           }
           data-testid="follow-scope-chip"
-          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-          style={{
-            fontFamily: 'Inter, system-ui',
-            fontWeight: 700,
-            fontSize: 12,
-            background: active ? 'var(--signal)' : 'transparent',
-            borderColor: active ? 'var(--signal)' : 'var(--border-strong)',
-            color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
-          }}
+          className={`${FOLLOW_CHIP_CLASS} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal`}
+          style={followChipStyle(active)}
         >
           <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
           {active && (

@@ -1,4 +1,5 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { FilterBarPreview } from '@/components/consumer/filter-bar/chrome';
 import { PinkWave } from '@/components/consumer/pink-wave/PinkWave';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 
@@ -44,41 +45,6 @@ const HeroSkeleton = () => (
   </div>
 );
 
-/**
- * Browse's page chrome, drawn for real while the data loads (rule 9): the
- * eyebrow and title render as text, and only the live controls, which can't
- * work yet, hold their shapes as skeletons.
- */
-const ChromeSkeleton = () => (
-  <div className="mb-5 flex flex-col gap-3">
-    <div className="flex items-end justify-between gap-2.5">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span
-          className="text-[10px] uppercase text-fg-muted"
-          style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
-        >
-          {copy.filterBar.locationLine}
-        </span>
-        <span
-          className="truncate text-[28px] font-black leading-none text-fg"
-          style={{ letterSpacing: '-0.03em' }}
-        >
-          {copy.filterBar.headingTitle}
-        </span>
-      </div>
-      <SkeletonBlock width={84} height={40} radius={10} />
-    </div>
-    {/* Phone: the Filters and My artists pills. Desktop: the filter bar. */}
-    <div className="flex gap-2 sm:hidden">
-      <SkeletonBlock width={112} height={44} radius={999} />
-      <SkeletonBlock width={132} height={44} radius={999} />
-    </div>
-    <div className="hidden sm:block">
-      <SkeletonBlock height={66} radius={16} />
-    </div>
-  </div>
-);
-
 interface BrowseSkeletonProps {
   /** Rows to hold below the loading line. */
   rows?: number;
@@ -92,7 +58,12 @@ interface BrowseSkeletonProps {
  */
 export const BrowseSkeleton = ({ rows = 4 }: BrowseSkeletonProps) => (
   <div aria-busy="true">
-    <ChromeSkeleton />
+    {/* The chrome renders as it looks live (rule 9; Hugh's audit ruling:
+        match the mock), inert. It follows FilterBar through ./chrome, so the
+        B6a/B6b filter bar restyle updates it there, not here. */}
+    <div className="mb-5">
+      <FilterBarPreview />
+    </div>
     <HeroSkeleton />
     <div className="mb-3 flex items-center justify-between gap-3">
       <SkeletonBlock width={120} height={22} radius={8} />

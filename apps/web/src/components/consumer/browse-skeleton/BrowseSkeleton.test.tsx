@@ -3,6 +3,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import {
+  FILTER_DEFS,
+  FILTER_ORDER,
+} from '@/components/consumer/filter-bar/filter-defs';
 import { BrowseSkeleton } from './BrowseSkeleton';
 
 let reduced = false;
@@ -44,10 +48,13 @@ afterEach(() => {
 });
 
 describe('BrowseSkeleton', () => {
-  it('renders the page chrome as real text and only the data as skeletons', () => {
+  it('renders the page chrome as it looks live and only the data as skeletons', () => {
     render(<BrowseSkeleton />);
     expect(screen.getByText(CONSUMER_COPY.filterBar.locationLine)).toBeTruthy();
     expect(screen.getByText(CONSUMER_COPY.filterBar.headingTitle)).toBeTruthy();
+    for (const key of FILTER_ORDER) {
+      expect(screen.getByText(FILTER_DEFS[key].placeholder)).toBeTruthy();
+    }
     expect(screen.getByTestId('browse-hero-skeleton')).toBeTruthy();
     expect(screen.getAllByTestId('browse-row-skeleton')).toHaveLength(4);
   });
@@ -67,6 +74,15 @@ describe('BrowseSkeleton', () => {
     reduced = true;
     render(<BrowseSkeleton />);
     expect(animate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the chrome inert: hidden from assistive tech, nothing to tap or tab to', () => {
+    const { container } = render(<BrowseSkeleton />);
+    const preview = screen.getByTestId('filter-bar-preview');
+    expect(preview.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      container.querySelectorAll('button, a, input, [tabindex]'),
+    ).toHaveLength(0);
   });
 
   it('uses no hand-rolled pulse animation', () => {
