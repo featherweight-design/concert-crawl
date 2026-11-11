@@ -95,6 +95,15 @@ const VENUE_SEPARATOR_CHARS = 3;
 type PosterVenue = Pick<VenuePublic, 'name' | 'featured' | 'upcomingCount'>;
 
 /**
+ * The venues the poster counts and names: active ones with shows coming, the
+ * ones a nightly crawl is actually reading, so "We check N venue calendars
+ * every night" stays true.
+ */
+export const posterVenues = <V extends Pick<VenuePublic, 'upcomingCount'>>(
+  venues: readonly V[],
+): V[] => venues.filter((venue) => venue.upcomingCount > 0);
+
+/**
  * The venue names the poster names, from live data: featured venues first,
  * then the busiest, cut to what fits `POSTER_VENUE_LINES` lines. `more` is true when any were
  * left off, so the line closes with "and more" only when that is so.
@@ -111,18 +120,20 @@ export const posterVenueLine = (
         left.name.localeCompare(right.name),
     )
     .map((venue) => venue.name);
-  const width = (names: string[]) =>
-    names.reduce(
-      (sum, name, i) => sum + name.length + (i ? VENUE_SEPARATOR_CHARS : 0),
-      0,
-    );
-  if (width(sorted) <= budget) return { names: sorted, more: false };
+  const cost = (name: string, i: number) =>
+    name.length + (i ? VENUE_SEPARATOR_CHARS : 0);
+  const total = sorted.reduce((sum, name, i) => sum + cost(name, i), 0);
+  if (total <= budget) return { names: sorted, more: false };
 
   const room = budget - VENUE_SEPARATOR_CHARS - POSTER_COPY.andMore.length;
   const names: string[] = [];
+  let used = 0;
   for (const name of sorted) {
-    if (width([...names, name]) > room) break;
+    const next = used + cost(name, names.length);
+    // The first name always goes in, so the line never reads "and more" alone.
+    if (names.length > 0 && next > room) break;
     names.push(name);
+    used = next;
   }
   return { names, more: true };
 };

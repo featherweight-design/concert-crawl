@@ -9,8 +9,15 @@ export const POSTER_COPY = {
   // The headline is two parts so the second can carry the gradient.
   headlineLead: 'Every Denver show.',
   headlineEm: 'One list.',
+  // With no count to give (the venue list failed to load), the sub drops it.
   sub: (venueCount: number) =>
-    `We check ${venueCount} venue calendars every night and put every show in one place. Help us test it before launch. It’s free.`,
+    `We check ${
+      venueCount === 0
+        ? 'venue calendars'
+        : venueCount === 1
+          ? '1 venue calendar'
+          : `${venueCount} venue calendars`
+    } every night and put every show in one place. Help us test it before launch. It’s free.`,
   // Closes the venue line when it had to stop short of every venue.
   andMore: 'and more',
   scan: 'Scan to test it',

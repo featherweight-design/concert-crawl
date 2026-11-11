@@ -84,6 +84,19 @@ describe('PosterSheet', () => {
     expect(qr.querySelector('path')).toHaveAttribute('fill', '#000');
   });
 
+  it.each([
+    [1, 'We check 1 venue calendar every night'],
+    [0, 'We check venue calendars every night'],
+  ])('words the sub for %i venues', (venueCount, sub) => {
+    renderSheet({ venueCount });
+    expect(screen.getByTestId('poster-sheet')).toHaveTextContent(sub);
+  });
+
+  it('draws no venue line when there are no names', () => {
+    renderSheet({ venueNames: [], moreVenues: false });
+    expect(screen.queryByTestId('poster-venues')).toBeNull();
+  });
+
   it('carries the copy and no launch date', () => {
     renderSheet({ tabs: true });
     const text = screen.getByTestId('poster-sheet').textContent ?? '';

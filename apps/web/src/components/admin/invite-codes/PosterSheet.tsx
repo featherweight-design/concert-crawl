@@ -2,6 +2,7 @@ import type { QrPath } from '@/lib/poster/poster-rule';
 import { POSTER_COPY } from '@/lib/poster/definitions/copy';
 import { BRAND_COPY } from '@/components/brand/definitions/copy';
 import {
+  CORE,
   CORE_RADIUS,
   HALO,
   TRAIL,
@@ -31,13 +32,13 @@ interface PosterSheetProps {
   tabs?: boolean;
 }
 
-/** The QR's printed side in CSS px at 96 per inch: 4.5 in, or 3.5 in with tabs. */
+/** CSS px per printed inch. */
+const PX_PER_INCH = 96;
+/** The QR's printed side in CSS px: 4.5 in, or 3.5 in with tabs. */
 const QR_PX = { full: 432, tabs: 336 } as const;
 /** The mark's side in CSS px: smaller with tabs, so the hero keeps its line. */
 const MARK_PX = { full: 360, tabs: 290 } as const;
 const TAB_COUNT = 9;
-/** The mark's core, in its 96-unit viewBox. */
-const CORE = { cx: 72, cy: 24 } as const;
 /**
  * Paper draws `HALO` as two stroked rings, outermost first; the outer one
  * steps in a unit so its stroke stays inside the halo's edge.
@@ -149,26 +150,28 @@ export function PosterSheet({
           </div>
         </div>
         <p className="ps-sub">{POSTER_COPY.sub(venueCount)}</p>
-        <p className="ps-venues" data-testid="poster-venues">
-          {lineItems.map((name, i) => (
-            <span key={`${i}:${name}`}>
-              {i > 0 ? (
-                <>
-                  <span className="ps-vsep">·</span>
-                  <wbr />
-                </>
-              ) : null}
-              {name}
-            </span>
-          ))}
-        </p>
+        {lineItems.length > 0 ? (
+          <p className="ps-venues" data-testid="poster-venues">
+            {lineItems.map((name, i) => (
+              <span key={`${i}:${name}`}>
+                {i > 0 ? (
+                  <>
+                    <span className="ps-vsep">·</span>
+                    <wbr />
+                  </>
+                ) : null}
+                {name}
+              </span>
+            ))}
+          </p>
+        ) : null}
 
         <div className="ps-qrcard">
           <div className="ps-qr">
             <svg
               className="ps-qr-svg"
               data-testid="poster-qr"
-              data-inches={tabs ? '3.5' : '4.5'}
+              data-inches={qrPx / PX_PER_INCH}
               width={qrPx}
               height={qrPx}
               role="img"

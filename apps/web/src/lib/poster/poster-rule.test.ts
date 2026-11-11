@@ -8,6 +8,7 @@ import {
   posterJoinUrl,
   posterTypedUrl,
   posterVenueLine,
+  posterVenues,
   qrPath,
   seatsTaken,
 } from './poster-rule';
@@ -164,5 +165,28 @@ describe('posterVenueLine', () => {
     // One more name would have overflowed.
     const next = venues[line.names.length]?.name ?? '';
     expect(lineChars([...line.names, next], true)).toBeGreaterThan(budget);
+  });
+});
+
+describe('posterVenues', () => {
+  it('keeps only venues with shows coming, the ones being crawled', () => {
+    const venues = [
+      { name: 'Live', upcomingCount: 4 },
+      { name: 'Dark', upcomingCount: 0 },
+    ];
+    expect(posterVenues(venues).map((venue) => venue.name)).toEqual(['Live']);
+  });
+});
+
+describe('posterVenueLine with a name longer than the budget', () => {
+  it('still names the first venue rather than "and more" alone', () => {
+    const venues = [
+      { name: 'A'.repeat(40), featured: false, upcomingCount: 2 },
+      { name: 'Short', featured: false, upcomingCount: 1 },
+    ];
+    expect(posterVenueLine(venues, 30)).toEqual({
+      names: ['A'.repeat(40)],
+      more: true,
+    });
   });
 });

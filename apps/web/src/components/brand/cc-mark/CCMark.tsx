@@ -22,6 +22,8 @@ export const HALO = [
   { radius: 12, opacity: 0.42 },
 ] as const;
 export const CORE_RADIUS = 7;
+/** Where the core and its halo sit, in the 96-unit viewBox. */
+export const CORE = { cx: 72, cy: 24 } as const;
 
 export function CCMark({ size = 24 }: CCMarkProps) {
   return (
@@ -36,14 +38,13 @@ export function CCMark({ size = 24 }: CCMarkProps) {
       {HALO.map((ring) => (
         <circle
           key={ring.radius}
-          cx="72"
-          cy="24"
+          {...CORE}
           r={ring.radius}
           fill="var(--accent)"
           opacity={ring.opacity}
         />
       ))}
-      <circle cx="72" cy="24" r={CORE_RADIUS} fill="var(--signal)" />
+      <circle {...CORE} r={CORE_RADIUS} fill="var(--signal)" />
       {TRAIL.map((dot, idx) => (
         <circle
           key={idx}
