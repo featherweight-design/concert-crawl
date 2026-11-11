@@ -64,6 +64,8 @@ export const STANDALONE_ERROR_COPY = {
     failedHeading: tellUs.modal.error.heading,
     failedBody:
       "We couldn't send that just now. It's saved on this device, and we'll send it the next time Concert Crawl opens.",
+    // A refusal the server would repeat: nothing is saved, so no promise.
+    rejectedBody: "We couldn't send that one.",
     savedLabel: 'Saved on this device',
     sendAgain: 'Send again',
     edit: 'Edit',

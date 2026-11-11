@@ -5,6 +5,8 @@ import { DOING_LABELS } from '@/components/consumer/standalone-error/definitions
 import { parseErrorReport } from '@/components/consumer/standalone-error/lib/parse';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+// Well inside the page's own 12s timeout, so the page hears this handler's
+// answer rather than aborting while the upstream is still deciding.
 const UPSTREAM_TIMEOUT_MS = 7000;
 
 /**
@@ -21,7 +23,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const raw: unknown = await request.json().catch(() => null);
+  let raw: unknown = null;
+  try {
+    raw = await request.json();
+  } catch (err) {
+    console.warn('[api/error-report] unparseable JSON body', { err });
+  }
   const report = parseErrorReport(raw);
   if (report === null) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 422 });
@@ -41,6 +48,8 @@ export async function POST(request: Request) {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        // The API dedupes on metadata.errorId; the header says so too.
+        'Idempotency-Key': `error-report:${errorId}`,
       },
       body: JSON.stringify({
         category: 'bug',
@@ -59,11 +68,19 @@ export async function POST(request: Request) {
     if (upstream.ok) {
       return NextResponse.json({ ok: true }, { status: 201 });
     }
+    console.error('[api/error-report] upstream refused the report', {
+      status: upstream.status,
+      errorId,
+    });
+    // Only this handler's own missing session is a 401: that is what tells
+    // the page to drop to its signed-out layout. An upstream 401 means the
+    // token we forwarded was refused, which is our fault, not the reader's.
     return NextResponse.json(
       { error: 'Upstream rejected the report' },
-      { status: upstream.status },
+      { status: upstream.status === 401 ? 502 : upstream.status },
     );
-  } catch {
+  } catch (err) {
+    console.error('[api/error-report] upstream unreachable', { err, errorId });
     return NextResponse.json(
       { error: 'Upstream unreachable' },
       { status: 502 },

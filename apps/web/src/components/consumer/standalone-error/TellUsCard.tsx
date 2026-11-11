@@ -3,11 +3,10 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { STANDALONE_ERROR_COPY } from './definitions/copy';
 import { CheckIcon, LogoMark } from './ErrorMarks';
+import { removePendingReports, savePendingReport } from './lib/pending';
 import {
   DOING_KEYS,
   NOTE_MAX,
-  clearPendingReport,
-  savePendingReport,
   sendErrorReport,
   type DoingKey,
   type ErrorReportBody,
@@ -31,6 +30,8 @@ interface TellUsCardProps {
   errorId: string;
   page: string;
   device: string;
+  /** Whose session this report was written under, for the saved copy. */
+  owner: string;
   /** A send came back 401: the session is gone, so the card goes too. */
   onSignedOut: () => void;
 }
@@ -44,9 +45,13 @@ export const TellUsCard = ({
   errorId,
   page,
   device,
+  owner,
   onSignedOut,
 }: TellUsCardProps) => {
   const [state, setState] = useState<CardState>('prompt');
+  // Whether the failed report is kept for the next launch. A refusal the
+  // server would repeat is not, so the card must not promise it.
+  const [saved, setSaved] = useState(false);
   const [doing, setDoing] = useState<DoingKey | undefined>();
   const [note, setNote] = useState('');
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -74,12 +79,20 @@ export const TellUsCard = ({
     setState('sending');
     const result = await sendErrorReport(body);
     if (result === 'sent') {
-      clearPendingReport();
+      removePendingReports([errorId]);
       setState('sent');
     } else if (result === 'unauthorized') {
+      // The session is gone, but the report is still theirs: keep it for the
+      // launch after they sign back in.
+      savePendingReport(body, owner);
       onSignedOut();
+    } else if (result === 'rejected') {
+      removePendingReports([errorId]);
+      setSaved(false);
+      setState('failed');
     } else {
-      savePendingReport(body);
+      savePendingReport(body, owner);
+      setSaved(true);
       setState('failed');
     }
   };
@@ -138,18 +151,22 @@ export const TellUsCard = ({
           >
             {copy.failedHeading}
           </h2>
-          <p className="cc-err-sub">{copy.failedBody}</p>
-          <div className="cc-err-saved">
-            <span className="cc-err-label">
-              <span className="cc-err-dot" />
-              {copy.savedLabel}
-            </span>
-            <p>
-              {doingLabel !== undefined && <strong>{doingLabel}.</strong>}
-              {doingLabel !== undefined && trimmedNote !== '' && ' '}
-              {trimmedNote}
-            </p>
-          </div>
+          <p className="cc-err-sub">
+            {saved ? copy.failedBody : copy.rejectedBody}
+          </p>
+          {saved && (
+            <div className="cc-err-saved">
+              <span className="cc-err-label">
+                <span className="cc-err-dot" />
+                {copy.savedLabel}
+              </span>
+              <p>
+                {doingLabel !== undefined && <strong>{doingLabel}.</strong>}
+                {doingLabel !== undefined && trimmedNote !== '' && ' '}
+                {trimmedNote}
+              </p>
+            </div>
+          )}
           <div className="cc-err-foot">
             <button
               type="button"

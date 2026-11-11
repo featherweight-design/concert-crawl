@@ -9,9 +9,11 @@ import ProtectedError from './error';
 const captureException = vi.fn(
   (_error: unknown, _hint: { tags: Record<string, string> }) => 'evt123',
 );
+const sentryEnabled = { current: true };
 vi.mock('@sentry/nextjs', () => ({
   captureException: (error: unknown, hint: { tags: Record<string, string> }) =>
     captureException(error, hint),
+  isEnabled: () => sentryEnabled.current,
 }));
 
 const signOut = vi.fn();
@@ -25,6 +27,7 @@ vi.mock('next/navigation', () => ({
 
 beforeEach(() => {
   captureException.mockClear();
+  sentryEnabled.current = true;
   signOut.mockClear();
   refresh.mockClear();
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -58,10 +61,18 @@ describe('ProtectedError', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
-  it('mints an id for a digest of a shape a report cannot carry', () => {
+  it('mints, shows and files an id for a digest a report cannot carry', () => {
     const odd = Object.assign(new Error('lib'), { digest: 'NEXT:REDIRECT;x' });
     render(<ProtectedError error={odd} reset={vi.fn()} />);
     expect(screen.queryByText('NEXT:REDIRECT;x')).toBeNull();
+    expect(captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it('still shows an id with Sentry off, but files no event for it', () => {
+    sentryEnabled.current = false;
+    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
+    expect(captureException).not.toHaveBeenCalled();
+    expect(screen.getByText(/^\d{10}$/)).toBeInTheDocument();
   });
 
   it('retries by refreshing the payload and resetting', () => {

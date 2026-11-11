@@ -9,7 +9,10 @@ import CrewError from './error';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
-vi.mock('@sentry/nextjs', () => ({ captureException: () => 'evt' }));
+vi.mock('@sentry/nextjs', () => ({
+  captureException: () => 'evt',
+  isEnabled: () => true,
+}));
 
 afterEach(() => {
   cleanup();
@@ -27,5 +30,16 @@ describe('CrewError', () => {
       screen.getByRole('heading', { name: CREWS_COPY.net.errCrewTitle }),
     ).toBeInTheDocument();
     expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+  });
+
+  // Inside the app shell: the header is already there and the phone nav sits
+  // over the bottom, so the page drops its own logo and full height.
+  it('renders embedded, without a second logo', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { container } = render(
+      <CrewError error={new Error('x')} reset={vi.fn()} />,
+    );
+    expect(container.querySelector('.cc-err-embedded')).not.toBeNull();
+    expect(container.querySelector('.cc-err-logo')).toBeNull();
   });
 });

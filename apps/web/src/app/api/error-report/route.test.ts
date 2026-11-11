@@ -11,6 +11,8 @@ const fetchMock = vi.fn(
 );
 
 beforeEach(() => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   getToken.mockResolvedValue('token');
   fetchMock.mockClear();
   vi.stubGlobal('fetch', fetchMock);
@@ -18,6 +20,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const post = async (body: unknown) => {
@@ -66,6 +69,9 @@ describe('POST /api/error-report', () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toMatch(/\/v1\/feedback$/);
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer token');
+    expect(new Headers(init.headers).get('Idempotency-Key')).toBe(
+      'error-report:2849204133',
+    );
     expect(JSON.parse(String(init.body))).toEqual({
       category: 'bug',
       message: 'Tapped Get tickets and it went blank.',
@@ -97,6 +103,13 @@ describe('POST /api/error-report', () => {
     expect((await post(VALID)).status).toBe(429);
 
     fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    expect((await post(VALID)).status).toBe(502);
+  });
+
+  // Only this handler's own missing session may read as 401: that is what
+  // drops the page to its signed-out layout.
+  it('maps an upstream 401 to 502', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
     expect((await post(VALID)).status).toBe(502);
   });
 });

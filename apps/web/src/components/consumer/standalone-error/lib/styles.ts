@@ -101,6 +101,9 @@ const LAYOUT_CSS = `
 .cc-err-meta{margin:10px 0 0;font-size:12.5px;color:var(--fg-subtle)}
 .cc-err-meta .cc-err-label{margin-right:8px}
 .cc-err-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Inside the app shell: the header and bottom nav are already there. */
+.cc-err-embedded{min-height:0;background:none}
+@media (max-width:639.98px){.cc-err-embedded{padding-bottom:calc(52px + env(safe-area-inset-bottom) + 16px)}}
 @media (min-width:900px){
 .cc-err{padding:16px 40px}
 .cc-err-main{flex-direction:row;justify-content:space-between;align-items:center;gap:48px;padding:32px 60px}

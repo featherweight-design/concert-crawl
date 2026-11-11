@@ -148,6 +148,28 @@ describe('POST /v1/feedback', () => {
     });
   });
 
+  it('files a resent error page report once', async () => {
+    setAuth('user-error-report-dupe');
+    const send = () =>
+      app.request('/v1/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'bug',
+          message: 'Opening a show',
+          pageUrl: '/events',
+          metadata: { source: 'error', errorId: '7777777777' },
+        }),
+      });
+    expect((await send()).status).toBe(201);
+    expect((await send()).status).toBe(200);
+    const rows = await testDb
+      .select()
+      .from(feedback)
+      .where(eq(feedback.userId, 'user-error-report-dupe'));
+    expect(rows).toHaveLength(1);
+  });
+
   it('rejects an error id that is not an id', async () => {
     setAuth('user-error-report-bad');
     const res = await app.request('/v1/feedback', {

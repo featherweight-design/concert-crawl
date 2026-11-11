@@ -24,13 +24,16 @@ export const errorIdFor = (error: Error & { digest?: string }): string => {
  * The id the error page shows and a report carries. A server throw is known
  * by its digest and was already reported by instrumentation's
  * onRequestError. A browser throw has none, so it gets a minted id, tagged on
- * the Sentry event filed for it here, once.
+ * the Sentry event filed for it here, once. With Sentry off (local, or no
+ * DSN) nothing is filed; the id still identifies the report, it just has no
+ * event behind it, and the page never claims one.
  */
 export const useErrorId = (error: Error & { digest?: string }): string => {
   const errorId = useMemo(() => errorIdFor(error), [error]);
 
   useEffect(() => {
-    if (error.digest !== undefined || captured.has(error)) return;
+    if (isReportableId(error.digest) || captured.has(error)) return;
+    if (!Sentry.isEnabled()) return;
     captured.add(error);
     Sentry.captureException(error, { tags: { error_id: errorId } });
   }, [error, errorId]);

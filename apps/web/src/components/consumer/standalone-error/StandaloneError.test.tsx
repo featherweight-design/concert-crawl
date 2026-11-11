@@ -11,7 +11,7 @@ import {
 } from '@testing-library/react';
 import { StandaloneError } from './StandaloneError';
 import { STANDALONE_ERROR_COPY } from './definitions/copy';
-import { PENDING_REPORT_KEY } from './lib/report';
+import { readPendingReports, savePendingReport } from './lib/pending';
 
 const copy = STANDALONE_ERROR_COPY;
 const card = copy.card;
@@ -181,7 +181,21 @@ describe('StandaloneError, signed in', () => {
     expect(
       screen.getByText(card.sentSummary(card.doing.opening, '2849204133')),
     ).toBeInTheDocument();
-    expect(localStorage.getItem(PENDING_REPORT_KEY)).toBeNull();
+    expect(readPendingReports()).toEqual([]);
+  });
+
+  it('removes only its own saved copy once sent', async () => {
+    savePendingReport(
+      { errorId: '1111111111', doing: 'searching', page: '/', device: 'Mac' },
+      'uat:1731300000',
+    );
+    renderPage({});
+    pick(card.doing.opening);
+    fireEvent.click(screen.getByRole('button', { name: card.send }));
+    await screen.findByRole('heading', { name: card.sentHeading });
+    expect(readPendingReports().map((entry) => entry.report.errorId)).toEqual([
+      '1111111111',
+    ]);
   });
 
   it('keeps a failed report on the device, with Send again and Edit', async () => {
@@ -195,9 +209,15 @@ describe('StandaloneError, signed in', () => {
     });
     await waitFor(() => expect(heading).toHaveFocus());
     expect(screen.getByText(card.failedBody)).toBeInTheDocument();
-    expect(
-      JSON.parse(localStorage.getItem(PENDING_REPORT_KEY) ?? '{}'),
-    ).toMatchObject({ errorId: '2849204133', doing: 'price' });
+    expect(readPendingReports()).toEqual([
+      expect.objectContaining({
+        owner: 'uat:1731300000',
+        report: expect.objectContaining({
+          errorId: '2849204133',
+          doing: 'price',
+        }),
+      }),
+    ]);
 
     fireEvent.click(screen.getByRole('button', { name: card.edit }));
     expect(screen.getByRole('radio', { name: card.doing.price })).toBeChecked();
@@ -208,7 +228,20 @@ describe('StandaloneError, signed in', () => {
 
     fireEvent.click(screen.getByRole('button', { name: card.sendAgain }));
     await screen.findByRole('heading', { name: card.sentHeading });
-    expect(localStorage.getItem(PENDING_REPORT_KEY)).toBeNull();
+    expect(readPendingReports()).toEqual([]);
+  });
+
+  it('does not promise to keep a report the server refused for good', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 422 }));
+    renderPage({});
+    pick(card.doing.price);
+    fireEvent.click(screen.getByRole('button', { name: card.send }));
+
+    await screen.findByRole('heading', { name: card.failedHeading });
+    expect(screen.getByText(card.rejectedBody)).toBeInTheDocument();
+    expect(screen.queryByText(card.failedBody)).toBeNull();
+    expect(screen.queryByText(card.savedLabel)).toBeNull();
+    expect(readPendingReports()).toEqual([]);
   });
 
   it('treats a network failure or timeout as failed', async () => {
@@ -228,7 +261,10 @@ describe('StandaloneError, signed in', () => {
     await waitFor(() => expect(screen.queryByRole('radiogroup')).toBeNull());
     expect(screen.getByRole('link', { name: copy.goHome })).toBeInTheDocument();
     expect(screen.getByText(copy.signedOutBody)).toBeInTheDocument();
-    expect(localStorage.getItem(PENDING_REPORT_KEY)).toBeNull();
+    // Saved under the session it was written in, for when they sign back in.
+    expect(readPendingReports()).toEqual([
+      expect.objectContaining({ owner: 'uat:1731300000' }),
+    ]);
   });
 
   it('uses a boundary’s own wording when it passes one', () => {
@@ -238,6 +274,14 @@ describe('StandaloneError, signed in', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Crew body')).toBeInTheDocument();
     expect(screen.getByText('CONNECTION')).toBeInTheDocument();
+  });
+});
+
+describe('StandaloneError, embedded in the app shell', () => {
+  it('drops its own logo and full height', () => {
+    const { container } = renderPage({ embedded: true });
+    expect(container.querySelector('.cc-err-embedded')).not.toBeNull();
+    expect(screen.queryByRole('link', { name: copy.homeLinkLabel })).toBeNull();
   });
 });
 

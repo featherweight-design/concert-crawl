@@ -17,8 +17,8 @@ export const DOING_KEYS = [
 export const NOTE_MAX = 1000;
 export const ERROR_ID_PATTERN = /^[\w-]{1,64}$/;
 export const ERROR_REPORT_ENDPOINT = '/api/error-report';
-export const SEND_TIMEOUT_MS = 8000;
-export const PENDING_REPORT_KEY = 'cc-error-report-pending';
+/** Clear headroom over the route handler's 7s upstream timeout. */
+export const SEND_TIMEOUT_MS = 12_000;
 
 /** What the page sends to its own route handler. */
 export interface ErrorReportBody {
@@ -35,19 +35,57 @@ export interface ErrorReportBody {
  */
 export type SendResult = 'sent' | 'unauthorized' | 'rejected' | 'failed';
 
+const cookieValues = (cookie: string, base: string): string[] =>
+  cookie.split(';').flatMap((part) => {
+    const [name = '', ...rest] = part.trim().split('=');
+    return name === base || name.startsWith(`${base}_`) ? [rest.join('=')] : [];
+  });
+
 /**
  * Clerk keeps `__client_uat` (and a suffixed twin) set to the last sign-in
  * time, and to 0 once signed out. Present and non-zero means a session.
  */
 export const hasClerkSession = (cookie: string): boolean =>
-  cookie.split(';').some((part) => {
-    const [name = '', ...rest] = part.trim().split('=');
-    if (name !== '__client_uat' && !name.startsWith('__client_uat_')) {
-      return false;
-    }
-    const value = rest.join('=');
-    return value !== '' && value !== '0';
-  });
+  cookieValues(cookie, '__client_uat').some(
+    (value) => value !== '' && value !== '0',
+  );
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+/** The `sub` of Clerk's session token, read (never verified) from its cookie. */
+const sessionSubject = (token: string): string | null => {
+  const payload = token.split('.')[1];
+  if (payload === undefined) return null;
+  try {
+    const json: unknown = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
+    );
+    return isRecord(json) && typeof json['sub'] === 'string'
+      ? json['sub']
+      : null;
+  } catch (err) {
+    console.warn('[error-report] unreadable session cookie', { err });
+    return null;
+  }
+};
+
+/**
+ * Who a saved report belongs to: the Clerk user id from the session cookie
+ * when it is readable, else the sign-in time `__client_uat` carries. Null when
+ * signed out. Only ever compared for equality, never trusted for auth.
+ */
+export const sessionOwner = (cookie: string): string | null => {
+  if (!hasClerkSession(cookie)) return null;
+  for (const token of cookieValues(cookie, '__session')) {
+    const sub = sessionSubject(token);
+    if (sub !== null) return `user:${sub}`;
+  }
+  const uat = cookieValues(cookie, '__client_uat').find(
+    (value) => value !== '' && value !== '0',
+  );
+  return uat === undefined ? null : `uat:${uat}`;
+};
 
 /** A ten-digit id for a browser throw, which has no server digest. */
 export const newErrorId = (): string => {
@@ -68,7 +106,11 @@ export const sendErrorReport = async (
   try {
     const res = await fetch(ERROR_REPORT_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // A resend of the same report is filed once (the API dedupes on it).
+        'Idempotency-Key': `error-report:${body.errorId}`,
+      },
       credentials: 'same-origin',
       keepalive: true,
       body: JSON.stringify(body),
@@ -78,37 +120,10 @@ export const sendErrorReport = async (
     if (res.status === 401) return 'unauthorized';
     if (res.status < 500 && !RETRYABLE.has(res.status)) return 'rejected';
     return 'failed';
-  } catch {
+  } catch (err) {
+    console.warn('[error-report] send failed', { err, errorId: body.errorId });
     return 'failed';
   } finally {
     clearTimeout(timer);
-  }
-};
-
-// Storage can throw (private mode, blocked site data), so every access is
-// guarded and a failure just means nothing is kept.
-
-export const savePendingReport = (body: ErrorReportBody): void => {
-  try {
-    localStorage.setItem(PENDING_REPORT_KEY, JSON.stringify(body));
-  } catch {
-    // Nothing kept; the failed card still says what happened.
-  }
-};
-
-export const readPendingReport = (): unknown => {
-  try {
-    const raw = localStorage.getItem(PENDING_REPORT_KEY);
-    return raw === null ? null : JSON.parse(raw);
-  } catch {
-    return null;
-  }
-};
-
-export const clearPendingReport = (): void => {
-  try {
-    localStorage.removeItem(PENDING_REPORT_KEY);
-  } catch {
-    // Nothing to clear we can reach.
   }
 };

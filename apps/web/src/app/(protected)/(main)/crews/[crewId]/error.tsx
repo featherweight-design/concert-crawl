@@ -10,7 +10,8 @@ import {
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 // The crew home boundary catches before the app one, so it carries the same
-// page, Tell us card included, with the crew's own wording.
+// page, Tell us card included, with the crew's own wording. It renders inside
+// the app shell, under the header and above the phone nav, so it is embedded.
 export default function CrewError({
   error,
   reset,
@@ -32,6 +33,7 @@ export default function CrewError({
       eyebrow={CREWS_COPY.net.errCrewEyebrow}
       heading={CREWS_COPY.net.errCrewTitle}
       body={CREWS_COPY.net.errCrewBody}
+      embedded
     />
   );
 }

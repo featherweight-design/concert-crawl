@@ -2015,6 +2015,7 @@ export const ADMIN_COPY = {
         submitted: 'Submitted',
         userId: 'User ID',
         doing: 'Was doing',
+        errorId: 'Error ID',
         errorDigest: 'Error digest',
         sentryEvent: 'Sentry event',
       },

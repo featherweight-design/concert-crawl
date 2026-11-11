@@ -19,7 +19,10 @@ vi.mock('next/navigation', () => ({
 import CrewJoinError from './error';
 import { CREWS_COPY } from '@/components/consumer/crews';
 
-vi.mock('@sentry/nextjs', () => ({ captureException: () => 'evt' }));
+vi.mock('@sentry/nextjs', () => ({
+  captureException: () => 'evt',
+  isEnabled: () => true,
+}));
 
 afterEach(cleanup);
 beforeEach(() => {

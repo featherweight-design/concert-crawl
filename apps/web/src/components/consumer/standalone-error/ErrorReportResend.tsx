@@ -1,41 +1,59 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
-  clearPendingReport,
-  hasClerkSession,
-  readPendingReport,
-  sendErrorReport,
-} from './lib/report';
-import { parseErrorReport } from './lib/parse';
+  acquireResendLock,
+  readPendingReports,
+  releaseResendLock,
+  removePendingReports,
+} from './lib/pending';
+import { sendErrorReport, sessionOwner } from './lib/report';
 
 /**
- * Delivers a report the error page could not send, the next time the app
- * opens. It waits for a session (the route needs one), drops a saved copy
- * that is unreadable or that the server rejects, and keeps one that failed
- * for a launch after this.
+ * Delivers the reports the error page could not send, at the next launch.
+ * Signed out, it leaves them for later. Signed in, it drops any saved under
+ * another account, sends the rest under a cross-tab lock, and removes only
+ * the ones that were delivered or that the server will always refuse; one
+ * that failed again stays for a later launch.
  */
-export const flushPendingReport = async (): Promise<void> => {
-  const saved = readPendingReport();
-  if (saved === null) return;
-  const report = parseErrorReport(saved);
-  if (report === null) {
-    clearPendingReport();
-    return;
+export const flushPendingReports = async (): Promise<void> => {
+  const owner = sessionOwner(document.cookie);
+  if (owner === null) return;
+
+  const entries = readPendingReports();
+  const foreign = entries.filter((entry) => entry.owner !== owner);
+  removePendingReports(foreign.map((entry) => entry.report.errorId));
+  const mine = entries.filter((entry) => entry.owner === owner);
+  if (mine.length === 0) return;
+
+  const lock = acquireResendLock();
+  if (lock === null) return;
+  try {
+    const done: string[] = [];
+    for (const { report } of mine) {
+      const result = await sendErrorReport(report);
+      if (result === 'sent' || result === 'rejected') {
+        done.push(report.errorId);
+      } else if (result === 'unauthorized') {
+        break;
+      }
+    }
+    removePendingReports(done);
+  } finally {
+    releaseResendLock(lock);
   }
-  if (!hasClerkSession(document.cookie)) return;
-  const result = await sendErrorReport(report);
-  if (result === 'sent' || result === 'rejected') clearPendingReport();
 };
+
+// Once per tab: a module lives for the page load, so neither development's
+// double effect nor a remount sends twice. A reload is a new launch.
+let started = false;
 
 /** Mounted once in the root layout, so it runs on every launch. */
 export const ErrorReportResend = () => {
-  // Development's double effect must not send the same report twice.
-  const started = useRef(false);
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    void flushPendingReport();
+    if (started) return;
+    started = true;
+    void flushPendingReports();
   }, []);
   return null;
 };

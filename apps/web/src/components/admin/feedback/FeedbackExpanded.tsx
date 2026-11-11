@@ -56,7 +56,13 @@ function buildGitHubIssueUrl(item: FeedbackItem): string {
     metaString(meta, 'doing')
       ? `- Was doing: ${metaString(meta, 'doing')}`
       : null,
-    metaString(meta, 'digest')
+    // The error page's id leads: it is the digest for a server throw, or the
+    // id tagged `error_id` on the Sentry event for a browser one.
+    metaString(meta, 'errorId')
+      ? `- Error ID: ${metaString(meta, 'errorId')}`
+      : null,
+    metaString(meta, 'digest') &&
+    metaString(meta, 'digest') !== metaString(meta, 'errorId')
       ? `- Error digest: ${metaString(meta, 'digest')}`
       : null,
     metaString(meta, 'sentryEventId')
@@ -181,9 +187,18 @@ export function FeedbackExpanded({
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.doing,
       value: metaString(meta, 'doing'),
     },
+    // The error page's own id (#B20a) leads; a digest is only listed beside
+    // it when it says something different (an older report has no errorId).
+    {
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.errorId,
+      value: metaString(meta, 'errorId'),
+    },
     {
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.errorDigest,
-      value: metaString(meta, 'digest'),
+      value:
+        metaString(meta, 'digest') === metaString(meta, 'errorId')
+          ? undefined
+          : metaString(meta, 'digest'),
     },
     {
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.sentryEvent,

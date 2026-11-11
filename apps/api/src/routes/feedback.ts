@@ -1,12 +1,47 @@
 // apps/api/src/routes/feedback.ts
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, feedback } from '@concert-crawl/db';
 import { checkRateLimit } from '../lib/rate-limit.js';
 import { apiLogger } from '../lib/logger.js';
 
 const errorIdSchema = z.string().regex(/^[\w-]{1,64}$/);
+
+/**
+ * How long an error page report is treated as already filed. The page sends
+ * the same errorId again when a send timed out after the server had it, and
+ * the resend runs at the next launch, which can be a day later.
+ */
+const ERROR_REPORT_DEDUPE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * True when this user already filed a report for this error id recently.
+ * A lookup failure files the report anyway: a duplicate beats a lost one.
+ */
+const alreadyFiled = async (
+  userId: string,
+  errorId: string,
+): Promise<boolean> => {
+  try {
+    const [existing] = await db
+      .select({ id: feedback.id })
+      .from(feedback)
+      .where(
+        and(
+          eq(feedback.userId, userId),
+          sql`${feedback.metadata}->>'errorId' = ${errorId}`,
+          gt(feedback.createdAt, new Date(Date.now() - ERROR_REPORT_DEDUPE_MS)),
+        ),
+      )
+      .limit(1);
+    return existing !== undefined;
+  } catch (err) {
+    apiLogger.warn({ err, userId }, 'feedback dedupe lookup failed');
+    return false;
+  }
+};
 
 const feedbackSchema = z.object({
   category: z.enum(['bug', 'idea', 'praise', 'other']),
@@ -54,6 +89,13 @@ feedbackRouter.post('/', async (ctx) => {
       },
       422,
     );
+  }
+
+  // A resend of an error page report the server already holds is a success,
+  // not a second row, and doesn't spend the user's rate-limit token.
+  const errorId = parsed.data.metadata?.errorId;
+  if (errorId !== undefined && (await alreadyFiled(authInfo.userId, errorId))) {
+    return ctx.json({ success: true, duplicate: true }, 200);
   }
 
   // Rate-limit only valid submissions so a malformed body doesn't burn

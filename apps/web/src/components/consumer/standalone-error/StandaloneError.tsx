@@ -5,7 +5,7 @@ import { BRAND_COPY } from '@/components/brand/definitions/copy';
 import { coarseDevice, reportPage } from '../error-report/lib/report-context';
 import { STANDALONE_ERROR_COPY } from './definitions/copy';
 import { CheckIcon, CopyIcon, LogoMark, SnappedMark } from './ErrorMarks';
-import { hasClerkSession } from './lib/report';
+import { sessionOwner } from './lib/report';
 import { STANDALONE_ERROR_CSS } from './lib/styles';
 import { TellUsCard } from './TellUsCard';
 
@@ -22,10 +22,17 @@ export interface StandaloneErrorProps {
   eyebrow?: string | undefined;
   heading?: string | undefined;
   body?: string | undefined;
+  /**
+   * For a boundary inside the app shell (header above, bottom nav below):
+   * no full-viewport height, no second logo, and room under the card for the
+   * phone nav.
+   */
+  embedded?: boolean | undefined;
 }
 
 interface Context {
-  signedIn: boolean;
+  /** Whose session this is, or null when signed out. */
+  owner: string | null;
   page: string;
   device: string;
 }
@@ -43,11 +50,12 @@ export const StandaloneError = ({
   eyebrow = copy.eyebrow,
   heading = copy.heading,
   body,
+  embedded = false,
 }: StandaloneErrorProps) => {
   // Read after mount: cookies, the path and the agent only exist in the
   // browser, and the server render must match the first client one.
   const [context, setContext] = useState<Context>({
-    signedIn: false,
+    owner: null,
     page: '',
     device: '',
   });
@@ -55,7 +63,7 @@ export const StandaloneError = ({
 
   useEffect(() => {
     setContext({
-      signedIn: hasClerkSession(document.cookie),
+      owner: sessionOwner(document.cookie),
       page: reportPage(window.location.pathname),
       device: coarseDevice(navigator.userAgent),
     });
@@ -71,26 +79,32 @@ export const StandaloneError = ({
     try {
       await navigator.clipboard.writeText(errorId);
       setCopied(true);
-    } catch {
+    } catch (err) {
       // No clipboard access; the id is still on screen to read out.
+      console.warn('[error page] clipboard write failed', { err });
     }
   };
 
-  const { signedIn } = context;
+  const { owner } = context;
+  const signedIn = owner !== null;
   const canSignOut = signedIn && onSignOut !== undefined;
   const bodyText = body ?? (canSignOut ? copy.body : copy.signedOutBody);
 
   return (
-    <div className="cc-err">
+    <div className={embedded ? 'cc-err cc-err-embedded' : 'cc-err'}>
       <style dangerouslySetInnerHTML={{ __html: STANDALONE_ERROR_CSS }} />
-      {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full load on purpose: the client router may be what failed, and a fresh document is the recovery */}
-      <a href="/" className="cc-err-logo" aria-label={copy.homeLinkLabel}>
-        <LogoMark size={30} />
-        <span>
-          {BRAND_COPY.wordmark.lead}
-          <span>{BRAND_COPY.wordmark.accent}</span>
-        </span>
-      </a>
+      {!embedded && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full load on purpose: the client router may be what failed, and a fresh document is the recovery */}
+          <a href="/" className="cc-err-logo" aria-label={copy.homeLinkLabel}>
+            <LogoMark size={30} />
+            <span>
+              {BRAND_COPY.wordmark.lead}
+              <span>{BRAND_COPY.wordmark.accent}</span>
+            </span>
+          </a>
+        </>
+      )}
       <div className="cc-err-main">
         <div className="cc-err-lead">
           <div className="cc-err-tile">
@@ -134,14 +148,13 @@ export const StandaloneError = ({
             </span>
           </div>
         </div>
-        {signedIn && (
+        {owner !== null && (
           <TellUsCard
+            owner={owner}
             errorId={errorId}
             page={context.page}
             device={context.device}
-            onSignedOut={() =>
-              setContext((prev) => ({ ...prev, signedIn: false }))
-            }
+            onSignedOut={() => setContext((prev) => ({ ...prev, owner: null }))}
           />
         )}
       </div>
