@@ -651,9 +651,17 @@ export const CONSUMER_COPY = {
     paletteEscHint: 'esc',
     paletteNavigateHint: 'navigate',
     paletteOpenHint: 'open',
+    // B19: the footer's third hint (`more-r3-palette`), the dialog's name and
+    // the field's name, which a placeholder alone does not give it.
+    paletteCloseHint: 'close',
+    paletteAriaLabel: 'Search',
+    inputAriaLabel: 'Search artists or venues',
 
     // SearchDefaultState section headers
     recentSectionLabel: 'Recent',
+    // B19: the × on a recent-search chip.
+    removeRecentAriaLabel: (query: string) =>
+      `Remove ${query} from recent searches`,
     popularSectionLabel: 'Popular this week',
 
     // SearchDefaultState price fallback

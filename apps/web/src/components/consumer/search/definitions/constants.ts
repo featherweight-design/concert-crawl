@@ -43,3 +43,17 @@ export const SEARCH_FIELD_BOX = {
 } as const;
 
 export const SEARCH_FIELD_FONT_SIZE = 16;
+
+/**
+ * The B+ search field's blue-to-pink edge (B19, `more-r3-search_m`), layered
+ * over `SEARCH_FIELD_BOX` by the search surfaces themselves: the field's fill
+ * on the padding box, the sweep on the border box behind a transparent border.
+ */
+export const SEARCH_FIELD_GRADIENT_EDGE = {
+  height: 52,
+  padding: '0 16px',
+  borderRadius: 16,
+  border: '1.5px solid transparent',
+  background:
+    'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(90deg, var(--signal), var(--accent)) border-box',
+} as const;

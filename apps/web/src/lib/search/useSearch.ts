@@ -14,6 +14,15 @@ export interface ArtistResult {
   name: string;
   nextDate: string;
   venueShort: string;
+  /**
+   * The soonest show's genres, artwork, portrait and price (B19): the row
+   * draws them the way every event row does. Optional, because they ride on
+   * the events list rather than being guaranteed by it.
+   */
+  genres?: string[] | null;
+  imageUrl?: string | null;
+  artistPhotoUrl?: string | null;
+  ticketPriceMin?: string | null;
 }
 
 export interface VenueResult {
@@ -35,6 +44,8 @@ export interface PopularEvent {
   ticketPriceMin: string | null;
   watcherCount: number;
   venue: { name: string; slug: string };
+  /** The show's genres, for the row's ring and chip (B19). */
+  genre?: string[] | null;
 }
 
 interface EventRow {
@@ -43,6 +54,10 @@ interface EventRow {
   date: string;
   title: string;
   venue: { id: string; name: string; slug: string };
+  genre?: string[] | null;
+  imageUrl?: string | null;
+  artistPhotoUrl?: string | null;
+  ticketPriceMin?: string | null;
 }
 
 function readRecent(): string[] {
@@ -74,6 +89,10 @@ function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
         name: row.artist,
         nextDate: row.date,
         venueShort: row.venue.name,
+        genres: row.genre ?? null,
+        imageUrl: row.imageUrl ?? null,
+        artistPhotoUrl: row.artistPhotoUrl ?? null,
+        ticketPriceMin: row.ticketPriceMin ?? null,
       });
     }
   }
@@ -275,6 +294,16 @@ export function useSearch() {
     [query, recentSearches, router],
   );
 
+  // A recent search the reader dismissed with its × (B19). Typed text, so it
+  // only ever lives in this browser's storage.
+  const removeRecent = useCallback((recent: string) => {
+    setRecentSearches((current) => {
+      const updated = current.filter((search) => search !== recent);
+      writeRecent(updated);
+      return updated;
+    });
+  }, []);
+
   const venueFirst =
     venueResults.length > 0 &&
     venueResults.some((venue) => venueMatchesQuery(venue.name, query.trim()));
@@ -284,6 +313,7 @@ export function useSearch() {
     setQuery,
     clearQuery,
     recentSearches,
+    removeRecent,
     popularEvents,
     artistResults,
     artistPageResults,

@@ -17,6 +17,14 @@ import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { AvatarSlot } from '@/components/consumer/image-slot';
+import {
+  Highlight,
+  RESULT_ART_SIZE,
+  RESULT_NAME_STYLE,
+  RESULT_META_STYLE,
+  resultRowStyle,
+  ringColorFor,
+} from './ResultParts';
 
 const copy = CONSUMER_COPY.search;
 
@@ -35,6 +43,8 @@ interface ArtistResultRowProps {
   onEntitlementRequired: () => void;
   size: 'row' | 'rowWide';
   iconOnly: boolean;
+  /** The typed query, lit in the name (B19). */
+  query?: string;
 }
 
 export const ArtistResultRow = ({
@@ -48,6 +58,7 @@ export const ArtistResultRow = ({
   onEntitlementRequired,
   size,
   iconOnly,
+  query,
 }: ArtistResultRowProps) => {
   const follow = useArtistFollow(
     artist.slug,
@@ -100,19 +111,17 @@ export const ArtistResultRow = ({
         }`
       : copy.artistPageNoUpcoming;
 
+  // An artist page carries no genre of its own, so its ring is the neutral
+  // one; the row still takes the B+ selected wash and edge.
+  const ring = ringColorFor(null);
+
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '10px 16px',
-        boxSizing: 'border-box',
-        background: selected ? 'var(--surface-2)' : 'transparent',
-      }}
+      style={{ ...resultRowStyle(selected, ring), cursor: 'default' }}
       onMouseEnter={onHover}
     >
       <button
+        type="button"
         onClick={onNavigate}
         data-selected={selected ? 'true' : undefined}
         style={{
@@ -120,75 +129,64 @@ export const ArtistResultRow = ({
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          gap: 14,
           flex: 1,
           minWidth: 0,
           // The navigate-to-artist target, sized independently of the Follow
-          // button beside it — that one draws at 28 or 32 and grows its own
+          // button beside it, which draws at 28 or 32 and grows its own
           // transparent overlay out to 44.
           minHeight: 44,
         }}
       >
         {/* An artist surface: the portrait or the generated mark, never an
             event's artwork. Decorative, because the row already renders the
-            name as text. */}
-        <AvatarSlot name={artist.name} photoUrl={artist.photoUrl} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 700,
-              fontSize: 14,
-              color: 'var(--fg)',
-              letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {artist.name}
-          </div>
-          <div
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              letterSpacing: '0.02em',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              // The no-dates line is quieter than a real count, not louder: it
-              // is an absence, and the live button beside it is the point.
-              color:
-                artist.upcomingShowCount > 0
-                  ? 'var(--fg-muted)'
-                  : 'var(--fg-subtle)',
-            }}
-          >
-            {meta}
-          </div>
-        </div>
-      </button>
-      {/* The tag that told a reader which kind of "Artists" row this is. Kept
-          from #1115, dropped only in the narrowest breakpoint, where the follow
-          control is already icon-only and there is no width left to spend on a
-          label the section header above also carries. */}
-      {!iconOnly && (
+            name as text. Round, as the one artist slot always is. */}
         <span
           style={{
+            display: 'inline-flex',
             flexShrink: 0,
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--accent)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 4,
-            padding: '2px 6px',
+            borderRadius: '50%',
+            boxShadow: `0 0 0 1.25px ${ring}`,
           }}
         >
-          {copy.artistPageRowTag}
+          <AvatarSlot
+            name={artist.name}
+            photoUrl={artist.photoUrl}
+            size={RESULT_ART_SIZE}
+          />
         </span>
-      )}
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <span style={RESULT_NAME_STYLE}>
+            <Highlight text={artist.name} {...(query ? { query } : {})} />
+          </span>
+          {/* The count, then the tag that tells a reader which kind of
+              "Artists" row this is, on one line as B+ draws it. The no-dates
+              line is quieter than a real count, not louder: it is an absence,
+              and the live button beside it is the point. */}
+          <span style={RESULT_META_STYLE}>
+            <span
+              style={{
+                color:
+                  artist.upcomingShowCount > 0
+                    ? 'var(--fg-muted)'
+                    : 'var(--fg-subtle)',
+              }}
+            >
+              {meta}
+            </span>
+            {' · '}
+            <span>{copy.artistPageRowTag}</span>
+          </span>
+        </span>
+      </button>
       <FollowButton
         name={artist.name}
         following={follow.following}

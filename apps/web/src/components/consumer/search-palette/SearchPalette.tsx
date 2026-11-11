@@ -1,15 +1,37 @@
 'use client';
 
+// The ⌘K search palette (B+ B19: `07-more-screens/more-r3-palette*` on
+// desktop, `more-r3-search_m*` below 640px, where it is a full-screen search
+// rather than a floating card a phone has no room for).
+//
+// A modal: Escape and the backdrop close it, Tab stays inside it, and focus
+// goes back to whatever opened it. ↑↓ walk the rows (the popular list before
+// anything is typed, the results after), and Enter opens the selected one.
+
 import { useEffect, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { ChevronLeft, Search, X } from 'lucide-react';
 import { useSearch } from '../../../lib/search/useSearch';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { CCMark } from '@/components/brand/cc-mark';
+import { CCWordmark } from '@/components/brand/cc-wordmark';
 import { SearchDefaultState } from '../search/SearchDefaultState';
 import { SearchResultsState } from '../search/SearchResultsState';
 import { SearchEmptyState } from '../search/SearchEmptyState';
 import { SearchLoadingState } from '../search/SearchLoadingState';
+import {
+  SEARCH_FIELD_BOX,
+  SEARCH_FIELD_FONT_SIZE,
+  SEARCH_FIELD_GRADIENT_EDGE,
+} from '../search/definitions/constants';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { PALETTE_SHEET_QUERY } from './definitions/constants';
 
 const copy = CONSUMER_COPY.search;
+
+// `:not([disabled])` matters: a disabled control cannot take focus, so
+// counting one as the trap's tail would let Tab walk out of the dialog.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface SearchPaletteProps {
   open: boolean;
@@ -17,20 +39,42 @@ interface SearchPaletteProps {
 }
 
 const kbdStyle: React.CSSProperties = {
-  padding: '1px 5px',
-  borderRadius: 3,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 24,
+  height: 22,
+  padding: '0 5px',
+  boxSizing: 'border-box',
+  borderRadius: 6,
   border: '1px solid var(--border-strong)',
   background: 'var(--surface-1)',
   color: 'var(--fg-muted)',
   fontFamily: 'var(--font-mono)',
   fontSize: 10,
+  textTransform: 'uppercase',
+};
+
+const hintStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  textTransform: 'uppercase',
+  letterSpacing: '0.12em',
 };
 
 export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   const search = useSearch();
+  const sheet = useMediaQuery(PALETTE_SHEET_QUERY);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const selectedIdxRef = useRef(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const select = (idx: number) => {
+    selectedIdxRef.current = idx;
+    setSelectedIdx(idx);
+  };
 
   useEffect(() => {
     selectedIdxRef.current = -1;
@@ -45,84 +89,120 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Focus goes back to the control that opened the palette. Without it focus
+  // falls to <body> and a keyboard user starts the page over from the top.
+  useEffect(() => {
+    if (!open) return;
+    const trigger = document.activeElement;
+    return () => {
+      if (trigger instanceof HTMLElement && trigger.isConnected)
+        trigger.focus();
+    };
+  }, [open]);
+
   const {
+    query,
+    popularEvents,
     artistResults,
     artistPageResults,
     venueResults,
     venueFirst,
     navigateTo,
   } = search;
+  const browsing = query.trim() === '';
 
   useEffect(() => {
     if (!open) return;
 
-    const totalResults =
-      artistPageResults.length + artistResults.length + venueResults.length;
+    const totalResults = browsing
+      ? popularEvents.length
+      : artistPageResults.length + artistResults.length + venueResults.length;
+
+    // Tab stays inside the dialog: `aria-modal` tells assistive tech the page
+    // behind is inert, and this makes the keyboard agree.
+    function trapTab(event: KeyboardEvent) {
+      const panel = panelRef.current;
+      if (panel === null) return;
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      const head = items[0];
+      const tail = items[items.length - 1];
+      if (head === undefined || tail === undefined) {
+        event.preventDefault();
+        return;
+      }
+      const active = document.activeElement;
+      if (!panel.contains(active)) {
+        event.preventDefault();
+        head.focus();
+      } else if (event.shiftKey && active === head) {
+        event.preventDefault();
+        tail.focus();
+      } else if (!event.shiftKey && active === tail) {
+        event.preventDefault();
+        head.focus();
+      }
+    }
+
+    function openSelected(rawIdx: number) {
+      if (browsing) {
+        const popular = popularEvents[rawIdx];
+        if (popular) {
+          navigateTo('artist', popular.artist);
+          onClose();
+        }
+        return;
+      }
+      // #1115 PR-G — artist-page rows own indices 0..n-1, ahead of both
+      // event-derived sections; everything below indexes into the remainder.
+      if (rawIdx < artistPageResults.length) {
+        const artistPage = artistPageResults[rawIdx];
+        if (artistPage) {
+          navigateTo('artistPage', { slug: artistPage.slug });
+          onClose();
+        }
+        return;
+      }
+      const currentIdx = rawIdx - artistPageResults.length;
+      const firstCount = venueFirst
+        ? venueResults.length
+        : artistResults.length;
+      const pickVenue = venueFirst
+        ? currentIdx < firstCount
+        : currentIdx >= firstCount;
+      if (pickVenue) {
+        const venue =
+          venueResults[venueFirst ? currentIdx : currentIdx - firstCount];
+        if (venue) {
+          navigateTo('venue', {
+            slug: venue.slug,
+            matchingEventId: venue.matchingEventId,
+          });
+          onClose();
+        }
+      } else {
+        const artist =
+          artistResults[venueFirst ? currentIdx - firstCount : currentIdx];
+        if (artist) {
+          navigateTo('artist', artist.name);
+          onClose();
+        }
+      }
+    }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         onClose();
+      } else if (event.key === 'Tab') {
+        trapTab(event);
       } else if (event.key === 'ArrowDown') {
         event.preventDefault();
-        const nextIdx = Math.min(selectedIdxRef.current + 1, totalResults - 1);
-        selectedIdxRef.current = nextIdx;
-        setSelectedIdx(nextIdx);
+        select(Math.min(selectedIdxRef.current + 1, totalResults - 1));
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
-        const nextIdx = Math.max(selectedIdxRef.current - 1, -1);
-        selectedIdxRef.current = nextIdx;
-        setSelectedIdx(nextIdx);
+        select(Math.max(selectedIdxRef.current - 1, -1));
       } else if (event.key === 'Enter' && selectedIdxRef.current >= 0) {
         event.preventDefault();
-        const rawIdx = selectedIdxRef.current;
-        // #1115 PR-G — artist-page rows own indices 0..n-1, ahead of both
-        // event-derived sections; everything below indexes into the remainder.
-        if (rawIdx < artistPageResults.length) {
-          const artistPage = artistPageResults[rawIdx];
-          if (artistPage) {
-            navigateTo('artistPage', { slug: artistPage.slug });
-            onClose();
-          }
-          return;
-        }
-        const currentIdx = rawIdx - artistPageResults.length;
-        if (venueFirst) {
-          const venueCount = venueResults.length;
-          if (currentIdx < venueCount) {
-            const venue = venueResults[currentIdx];
-            if (venue) {
-              navigateTo('venue', {
-                slug: venue.slug,
-                matchingEventId: venue.matchingEventId,
-              });
-              onClose();
-            }
-          } else {
-            const artist = artistResults[currentIdx - venueCount];
-            if (artist) {
-              navigateTo('artist', artist.name);
-              onClose();
-            }
-          }
-        } else {
-          const artistCount = artistResults.length;
-          if (currentIdx < artistCount) {
-            const artist = artistResults[currentIdx];
-            if (artist) {
-              navigateTo('artist', artist.name);
-              onClose();
-            }
-          } else {
-            const venue = venueResults[currentIdx - artistCount];
-            if (venue) {
-              navigateTo('venue', {
-                slug: venue.slug,
-                matchingEventId: venue.matchingEventId,
-              });
-              onClose();
-            }
-          }
-        }
+        openSelected(selectedIdxRef.current);
       }
     }
 
@@ -130,6 +210,8 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     open,
+    browsing,
+    popularEvents,
     artistResults,
     artistPageResults,
     venueResults,
@@ -141,9 +223,170 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   if (!open) return null;
 
   const hasResults =
-    search.artistPageResults.length > 0 ||
-    search.artistResults.length > 0 ||
-    search.venueResults.length > 0;
+    artistPageResults.length > 0 ||
+    artistResults.length > 0 ||
+    venueResults.length > 0;
+
+  const input = (
+    <input
+      ref={inputRef}
+      value={query}
+      onChange={(ev) => search.setQuery(ev.target.value)}
+      placeholder={copy.paletteSearchPlaceholder}
+      aria-label={copy.inputAriaLabel}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        border: 'none',
+        outline: 'none',
+        background: 'transparent',
+        fontFamily: 'var(--font-ui)',
+        fontWeight: 500,
+        // 16 at phone width: below it iOS Safari zooms the page on focus.
+        fontSize: sheet ? SEARCH_FIELD_FONT_SIZE : 18,
+        color: 'var(--fg)',
+        letterSpacing: '-0.01em',
+      }}
+    />
+  );
+
+  const clear = query ? (
+    <button
+      type="button"
+      onClick={search.clearQuery}
+      aria-label={copy.paletteClearAriaLabel}
+      style={{
+        all: 'unset',
+        cursor: 'pointer',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--surface-2)',
+        color: 'var(--fg-muted)',
+        flexShrink: 0,
+      }}
+    >
+      <X size={12} strokeWidth={1.75} />
+    </button>
+  ) : null;
+
+  const body = (
+    <div
+      style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        minHeight: 0,
+        paddingTop: 2,
+      }}
+    >
+      {browsing && (
+        <SearchDefaultState
+          recentSearches={search.recentSearches}
+          popularEvents={popularEvents}
+          onPickQuery={search.setQuery}
+          onPickEvent={(type, value) => {
+            navigateTo(type, value);
+            onClose();
+          }}
+          onRemoveRecent={search.removeRecent}
+          selectedIdx={selectedIdx}
+          onHover={select}
+        />
+      )}
+      {!browsing && search.isLoading && <SearchLoadingState />}
+      {!browsing && !search.isLoading && hasResults && (
+        <SearchResultsState
+          artistResults={artistResults}
+          artistPageResults={artistPageResults}
+          venueResults={venueResults}
+          venueFirst={venueFirst}
+          selectedIdx={selectedIdx}
+          query={query}
+          onHover={select}
+          onNavigateTo={(type, value) => {
+            navigateTo(type, value);
+            onClose();
+          }}
+        />
+      )}
+      {!browsing && !search.isLoading && !hasResults && (
+        <SearchEmptyState query={query} onCtaClick={onClose} />
+      )}
+    </div>
+  );
+
+  if (sheet) {
+    return (
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.paletteAriaLabel}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          background: 'var(--bg)',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: 'var(--font-ui)',
+          color: 'var(--fg)',
+          paddingTop: 'max(12px, env(safe-area-inset-top))',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '0 16px 8px 8px',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={copy.backAriaLabel}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--fg)',
+              flexShrink: 0,
+            }}
+          >
+            <ChevronLeft size={22} strokeWidth={1.75} />
+          </button>
+          <div
+            style={{
+              flex: 1,
+              ...SEARCH_FIELD_BOX,
+              ...SEARCH_FIELD_GRADIENT_EDGE,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{ color: 'var(--signal)', display: 'inline-flex' }}
+            >
+              <Search size={18} strokeWidth={1.75} />
+            </span>
+            {input}
+            {clear}
+          </div>
+        </div>
+        {body}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -152,168 +395,103 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(0,0,0,0.45)',
+        background: 'rgba(0,0,0,0.5)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
+        padding: 'min(10vh, 84px) 16px 16px',
       }}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.paletteAriaLabel}
         onClick={(ev) => ev.stopPropagation()}
         style={{
-          width: 560,
-          maxHeight: 540,
-          borderRadius: 14,
+          width: '100%',
+          maxWidth: 660,
+          maxHeight: 'min(680px, calc(100dvh - 120px))',
+          borderRadius: 18,
           overflow: 'hidden',
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
+          // The blue-to-pink edge: the fill on the padding box, the sweep on
+          // the border box behind a transparent border.
+          border: '1.5px solid transparent',
+          background:
+            'linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+          // The colored light behind the palette: one of the two glows README
+          // rule 1 grants outside the page's ambient one.
           boxShadow:
-            '0 24px 80px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.25)',
+            '0 30px 90px -24px color-mix(in oklch, var(--signal) 45%, transparent), 0 0 160px -24px color-mix(in oklch, var(--accent) 40%, transparent), 0 24px 60px rgba(0,0,0,0.45)',
           display: 'flex',
           flexDirection: 'column',
           fontFamily: 'var(--font-ui)',
           color: 'var(--fg)',
         }}
       >
-        {/* Search bar */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '0 18px',
-            height: 56,
+            gap: 14,
+            padding: '0 18px 0 20px',
+            height: 60,
             flexShrink: 0,
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <span style={{ color: 'var(--fg-muted)', display: 'inline-flex' }}>
-            <Search size={18} strokeWidth={1.5} />
-          </span>
-          <input
-            ref={inputRef}
-            value={search.query}
-            onChange={(ev) => search.setQuery(ev.target.value)}
-            placeholder={copy.paletteSearchPlaceholder}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              border: 'none',
-              outline: 'none',
-              background: 'transparent',
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 500,
-              fontSize: 15,
-              color: 'var(--fg)',
-              letterSpacing: '-0.01em',
-            }}
-          />
-          {search.query && (
-            <button
-              onClick={search.clearQuery}
-              aria-label={copy.paletteClearAriaLabel}
-              style={{
-                all: 'unset',
-                cursor: 'pointer',
-                width: 22,
-                height: 22,
-                borderRadius: 11,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'var(--surface-2)',
-                color: 'var(--fg-muted)',
-              }}
-            >
-              <X size={10} strokeWidth={1.5} />
-            </button>
-          )}
           <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--fg-subtle)',
-              padding: '3px 6px',
-              borderRadius: 4,
-              border: '1px solid var(--border-strong)',
-            }}
+            aria-hidden
+            style={{ color: 'var(--signal)', display: 'inline-flex' }}
           >
-            {copy.paletteEscHint}
+            <Search size={19} strokeWidth={1.75} />
           </span>
+          {input}
+          {clear}
+          <kbd style={kbdStyle}>{copy.paletteEscHint}</kbd>
         </div>
 
-        {/* Body */}
-        <div
-          style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingTop: 8 }}
-        >
-          {search.query.trim() === '' && (
-            <SearchDefaultState
-              recentSearches={search.recentSearches}
-              popularEvents={search.popularEvents}
-              onPickQuery={search.setQuery}
-              onPickEvent={search.navigateTo}
-            />
-          )}
-          {search.query.trim() !== '' && search.isLoading && (
-            <SearchLoadingState />
-          )}
-          {search.query.trim() !== '' && !search.isLoading && hasResults && (
-            <SearchResultsState
-              artistResults={search.artistResults}
-              artistPageResults={search.artistPageResults}
-              venueResults={search.venueResults}
-              venueFirst={search.venueFirst}
-              selectedIdx={selectedIdx}
-              onHover={(idx) => {
-                selectedIdxRef.current = idx;
-                setSelectedIdx(idx);
-              }}
-              onNavigateTo={(type, value) => {
-                search.navigateTo(type, value);
-                onClose();
-              }}
-            />
-          )}
-          {search.query.trim() !== '' && !search.isLoading && !hasResults && (
-            <SearchEmptyState query={search.query} onCtaClick={onClose} />
-          )}
-        </div>
+        {body}
 
-        {/* Footer */}
         <div
           style={{
             flexShrink: 0,
-            padding: '0 16px',
-            height: 38,
+            padding: '0 18px',
+            height: 46,
             display: 'flex',
             alignItems: 'center',
-            gap: 16,
+            gap: 18,
             borderTop: '1px solid var(--border)',
-            background: 'var(--bg-elevated)',
             fontFamily: 'var(--font-mono)',
-            fontSize: 10,
+            fontSize: 9.5,
             color: 'var(--fg-subtle)',
-            letterSpacing: '0.04em',
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <kbd style={kbdStyle}>↑</kbd>
-            <kbd style={kbdStyle}>↓</kbd> {copy.paletteNavigateHint}
+          <span style={hintStyle}>
+            <kbd style={kbdStyle}>
+              ↑<span>↓</span>
+            </kbd>
+            {copy.paletteNavigateHint}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <kbd style={kbdStyle}>↵</kbd> {copy.paletteOpenHint}
+          <span style={hintStyle}>
+            <kbd style={kbdStyle}>↵</kbd>
+            {copy.paletteOpenHint}
+          </span>
+          <span style={hintStyle}>
+            <kbd style={kbdStyle}>{copy.paletteEscHint}</kbd>
+            {copy.paletteCloseHint}
           </span>
           <span
+            aria-hidden
             style={{
               marginLeft: 'auto',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 8,
             }}
           >
-            <span style={{ color: 'var(--accent)' }}>●</span>
-            {'concert'}
-            <span style={{ color: 'var(--accent)' }}>{'crawl.'}</span>
+            <CCMark size={22} />
+            <CCWordmark size={13} />
           </span>
         </div>
       </div>

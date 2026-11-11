@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MapPin, Mic2, User } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
 import type { ArtistSearchResult, PickerEntry } from '@concert-crawl/types';
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch';
@@ -13,6 +13,20 @@ import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { ArtistResultRow } from './ArtistResultRow';
+import { GenreChips } from '../GenreChips';
+import { VenueTile } from '../venue-glyph';
+import {
+  Highlight,
+  RESULT_ART_SIZE,
+  RESULT_META_STYLE,
+  RESULT_NAME_STYLE,
+  ResultPrice,
+  RingArt,
+  SectionLabel,
+  formatDayLabel,
+  resultRowStyle,
+  ringColorFor,
+} from './ResultParts';
 import {
   SEARCH_DESKTOP_QUERY,
   SEARCH_FOLLOW_ICON_ONLY_QUERY,
@@ -39,53 +53,12 @@ interface SearchResultsStateProps {
   withExplainerRail?: boolean;
   selectedIdx?: number;
   onHover?: (idx: number) => void;
+  /** The typed query, lit in each row's name (B19). */
+  query?: string;
   onNavigateTo: (
     type: 'artist' | 'artistPage' | 'venue',
     value: string | { slug: string; matchingEventId?: string },
   ) => void;
-}
-
-function SectionHeader({
-  icon,
-  label,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '0 16px 8px',
-      }}
-    >
-      {icon && (
-        <span style={{ color: 'var(--fg-muted)', display: 'inline-flex' }}>
-          {icon}
-        </span>
-      )}
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-muted)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase' as const,
-          fontWeight: 600,
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function Divider() {
-  return (
-    <div style={{ height: 1, background: 'var(--border)', marginLeft: 68 }} />
-  );
 }
 
 // #1115 PR-G, extended by native following PR 5. Deliberately not folded into
@@ -101,14 +74,14 @@ function ArtistPageSection({
   artistPageResults,
   selectedIdx,
   baseIdx,
-  showDivider,
+  query,
   onHover,
   onNavigateTo,
 }: {
   artistPageResults: ArtistSearchResult[];
   selectedIdx: number;
   baseIdx: number;
-  showDivider: boolean;
+  query?: string | undefined;
   onHover?: (idx: number) => void;
   onNavigateTo: (type: 'artistPage', value: { slug: string }) => void;
 }) {
@@ -128,8 +101,7 @@ function ArtistPageSection({
   if (artistPageResults.length === 0) return null;
   return (
     <>
-      <SectionHeader
-        icon={<Mic2 size={13} strokeWidth={1.5} />}
+      <SectionLabel
         label={`${copy.artistPagesSectionPrefix} · ${artistPageResults.length}`}
       />
       {artistPageResults.map((artist, idx) => {
@@ -137,8 +109,8 @@ function ArtistPageSection({
         const hoverProps = onHover ? { onHover: () => onHover(itemIdx) } : {};
         return (
           <div key={artist.slug}>
-            {idx > 0 && <Divider />}
             <ArtistResultRow
+              {...(query === undefined ? {} : { query })}
               artist={artist}
               selected={selectedIdx === itemIdx}
               {...hoverProps}
@@ -155,7 +127,6 @@ function ArtistPageSection({
           </div>
         );
       })}
-      {showDivider && <div style={{ height: 16 }} />}
       <TierPickerSheet
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -257,93 +228,63 @@ function ArtistSection({
   artistResults,
   selectedIdx,
   baseIdx,
-  showDivider,
+  query,
   onHover,
   onNavigateTo,
 }: {
   artistResults: ArtistResult[];
   selectedIdx: number;
   baseIdx: number;
-  showDivider: boolean;
+  query?: string | undefined;
   onHover?: (idx: number) => void;
   onNavigateTo: (type: 'artist', value: string) => void;
 }) {
   if (artistResults.length === 0) return null;
   return (
     <>
-      <SectionHeader
-        icon={<User size={13} strokeWidth={1.5} />}
+      <SectionLabel
         label={`${copy.artistsSectionPrefix} · ${artistResults.length}`}
       />
       {artistResults.map((artist, idx) => {
         const itemIdx = baseIdx + idx;
+        const selected = selectedIdx === itemIdx;
+        const ring = ringColorFor(artist.genres);
         return (
-          <div key={artist.name}>
-            {idx > 0 && <Divider />}
-            <button
-              onClick={() => onNavigateTo('artist', artist.name)}
-              onMouseEnter={() => onHover?.(itemIdx)}
-              data-selected={selectedIdx === itemIdx ? 'true' : undefined}
+          <button
+            key={artist.name}
+            type="button"
+            onClick={() => onNavigateTo('artist', artist.name)}
+            onMouseEnter={() => onHover?.(itemIdx)}
+            data-selected={selected ? 'true' : undefined}
+            style={resultRowStyle(selected, ring)}
+          >
+            <RingArt
+              name={artist.name}
+              imageUrl={artist.imageUrl}
+              photoUrl={artist.artistPhotoUrl}
+              ring={ring}
+            />
+            <span
               style={{
-                all: 'unset',
-                cursor: 'pointer',
+                flex: 1,
+                minWidth: 0,
                 display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                width: '100%',
-                boxSizing: 'border-box' as const,
-                background:
-                  selectedIdx === itemIdx ? 'var(--surface-2)' : 'transparent',
+                flexDirection: 'column',
+                gap: 4,
               }}
             >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--fg-muted)',
-                  flexShrink: 0,
-                }}
-              >
-                <User size={18} strokeWidth={1.5} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.01em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {artist.name}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  {artist.venueShort}
-                </div>
-              </div>
-            </button>
-          </div>
+              <span style={RESULT_NAME_STYLE}>
+                <Highlight text={artist.name} {...(query ? { query } : {})} />
+              </span>
+              <span style={RESULT_META_STYLE}>
+                {artist.venueShort} · {formatDayLabel(artist.nextDate)}
+              </span>
+              <GenreChips genres={artist.genres ?? null} maxChips={1} />
+            </span>
+            <ResultPrice value={artist.ticketPriceMin} />
+          </button>
         );
       })}
-      {showDivider && <div style={{ height: 16 }} />}
     </>
   );
 }
@@ -352,14 +293,14 @@ function VenueSection({
   venueResults,
   selectedIdx,
   baseIdx,
-  showDivider,
+  query,
   onHover,
   onNavigateTo,
 }: {
   venueResults: VenueResult[];
   selectedIdx: number;
   baseIdx: number;
-  showDivider: boolean;
+  query?: string | undefined;
   onHover?: (idx: number) => void;
   onNavigateTo: (
     type: 'venue',
@@ -369,87 +310,61 @@ function VenueSection({
   if (venueResults.length === 0) return null;
   return (
     <>
-      <SectionHeader
-        icon={<MapPin size={13} strokeWidth={1.5} />}
+      <SectionLabel
         label={`${copy.venuesSectionPrefix} · ${venueResults.length}`}
       />
       {venueResults.map((venue, idx) => {
         const itemIdx = baseIdx + idx;
+        const selected = selectedIdx === itemIdx;
         return (
-          <div key={venue.slug}>
-            {idx > 0 && <Divider />}
-            <button
-              onClick={() =>
-                onNavigateTo('venue', {
-                  slug: venue.slug,
-                  matchingEventId: venue.matchingEventId,
-                })
-              }
-              onMouseEnter={() => onHover?.(itemIdx)}
-              data-selected={selectedIdx === itemIdx ? 'true' : undefined}
+          <button
+            key={venue.slug}
+            type="button"
+            onClick={() =>
+              onNavigateTo('venue', {
+                slug: venue.slug,
+                matchingEventId: venue.matchingEventId,
+              })
+            }
+            onMouseEnter={() => onHover?.(itemIdx)}
+            data-selected={selected ? 'true' : undefined}
+            // A venue has no genre: its edge is the neutral ring, and its
+            // identity is the glyph tile (README rule 5).
+            style={resultRowStyle(selected, ringColorFor(null))}
+          >
+            <VenueTile
+              slug={venue.slug}
+              name={venue.name}
+              size={RESULT_ART_SIZE}
+            />
+            <span
               style={{
-                all: 'unset',
-                cursor: 'pointer',
+                flex: 1,
+                minWidth: 0,
                 display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                width: '100%',
-                boxSizing: 'border-box' as const,
-                background:
-                  selectedIdx === itemIdx ? 'var(--surface-2)' : 'transparent',
+                flexDirection: 'column',
+                gap: 4,
               }}
             >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 8,
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--fg-muted)',
-                  flexShrink: 0,
-                }}
-              >
-                <MapPin size={18} strokeWidth={1.5} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.01em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {venue.name}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  {venue.showCount}{' '}
-                  {venue.showCount !== 1
-                    ? copy.upcomingShowPlural
-                    : copy.upcomingShowSingular}
-                </div>
-              </div>
-            </button>
-          </div>
+              <span style={RESULT_NAME_STYLE}>
+                <Highlight text={venue.name} {...(query ? { query } : {})} />
+              </span>
+              <span style={RESULT_META_STYLE}>
+                {venue.showCount}{' '}
+                {venue.showCount !== 1
+                  ? copy.upcomingShowPlural
+                  : copy.upcomingShowSingular}
+              </span>
+            </span>
+            <ChevronRight
+              size={16}
+              strokeWidth={1.75}
+              aria-hidden
+              style={{ color: 'var(--fg-subtle)', flexShrink: 0 }}
+            />
+          </button>
         );
       })}
-      {showDivider && <div style={{ height: 16 }} />}
     </>
   );
 }
@@ -462,6 +377,7 @@ export function SearchResultsState({
   withExplainerRail = false,
   selectedIdx = -1,
   onHover,
+  query,
   onNavigateTo,
 }: SearchResultsStateProps) {
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
@@ -480,15 +396,22 @@ export function SearchResultsState({
   const artistBaseIdx = pageCount + (venueFirst ? venueResults.length : 0);
 
   const hoverProp = onHover ? { onHover } : {};
+  const queryProp = query === undefined ? {} : { query };
 
   const results = (
-    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '0 8px 10px',
+      }}
+    >
       <ArtistPageSection
         artistPageResults={artistPageResults}
         selectedIdx={selectedIdx}
         baseIdx={0}
-        showDivider={artistResults.length > 0 || venueResults.length > 0}
         {...hoverProp}
+        {...queryProp}
         onNavigateTo={(type, value) => onNavigateTo(type, value)}
       />
       {venueFirst ? (
@@ -497,16 +420,16 @@ export function SearchResultsState({
             venueResults={venueResults}
             selectedIdx={selectedIdx}
             baseIdx={venueBaseIdx}
-            showDivider={artistResults.length > 0}
             {...hoverProp}
+            {...queryProp}
             onNavigateTo={(type, value) => onNavigateTo(type, value)}
           />
           <ArtistSection
             artistResults={artistResults}
             selectedIdx={selectedIdx}
             baseIdx={artistBaseIdx}
-            showDivider={false}
             {...hoverProp}
+            {...queryProp}
             onNavigateTo={(type, value) => onNavigateTo(type, value)}
           />
         </>
@@ -516,16 +439,16 @@ export function SearchResultsState({
             artistResults={artistResults}
             selectedIdx={selectedIdx}
             baseIdx={artistBaseIdx}
-            showDivider={venueResults.length > 0}
             {...hoverProp}
+            {...queryProp}
             onNavigateTo={(type, value) => onNavigateTo(type, value)}
           />
           <VenueSection
             venueResults={venueResults}
             selectedIdx={selectedIdx}
             baseIdx={venueBaseIdx}
-            showDivider={false}
             {...hoverProp}
+            {...queryProp}
             onNavigateTo={(type, value) => onNavigateTo(type, value)}
           />
         </>
