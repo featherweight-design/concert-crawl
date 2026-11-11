@@ -8,6 +8,10 @@ import { eventReports, events } from '@concert-crawl/db';
  *
  * A function, not a constant, so the table reference isn't evaluated at
  * module load (keeps unit-test mocks from needing every column accessor).
+ *
+ * ⚠️ Only in a select that joins another table. Drizzle renders `events.id`
+ * unqualified in a single-table select, and inside this subquery a bare `id`
+ * binds to `r.id`, so the check silently reads false.
  */
 export function isSoldOutSql() {
   return sql<boolean>`EXISTS (

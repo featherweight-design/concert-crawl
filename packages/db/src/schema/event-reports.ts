@@ -9,7 +9,7 @@ export const eventReports = pgTable('event_reports', {
   reporterId: text('reporter_id').notNull(),
   status: text('status')
     .notNull()
-    .$type<'sold-out' | 'cancelled' | 'postponed'>(),
+    .$type<'sold-out' | 'cancelled' | 'postponed' | 'available'>(),
   evidenceMethod: text('evidence_method')
     .notNull()
     .$type<'bought_myself' | 'saw_listing' | 'venue_site' | 'other'>(),

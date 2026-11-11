@@ -3,7 +3,7 @@ import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { httpUrl } from '../lib/url-schema.js';
-import { and, count, eq, inArray, isNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import {
   db,
   eventReportConfirms,
@@ -27,8 +27,20 @@ import {
 } from '../middleware/auth.js';
 import { moderateNote } from '../lib/moderate-note.js';
 import { isImminentEvent } from '../lib/time.js';
+import { clearSoldOut } from '../lib/clear-sold-out.js';
 
-const REPORT_STATUSES = ['sold-out', 'cancelled', 'postponed'] as const;
+const REPORT_STATUSES = [
+  'sold-out',
+  'cancelled',
+  'postponed',
+  // Tickets available: clears a promoted sold-out at the same threshold.
+  'available',
+] as const;
+const CONFIRM_METHODS = [
+  'saw_same_source',
+  'own_evidence',
+  'heard_from_venue',
+] as const;
 const EVIDENCE_METHODS = [
   'bought_myself',
   'saw_listing',
@@ -54,7 +66,7 @@ function isImminent(eventDate: string | null): boolean {
 //   correctly doesn't block the next fanout.
 async function hasEventStateChanged(
   eventId: string,
-  reportStatus: (typeof REPORT_STATUSES)[number],
+  reportStatus: Exclude<(typeof REPORT_STATUSES)[number], 'available'>,
 ): Promise<boolean> {
   if (reportStatus === 'cancelled' || reportStatus === 'postponed') {
     const [row] = await db
@@ -80,6 +92,11 @@ async function hasEventStateChanged(
     .limit(1);
   return existing.length === 0;
 }
+
+// Optional so a client that sends `{}` (or predates the method) still confirms.
+const confirmBodySchema = z.object({
+  method: z.enum(CONFIRM_METHODS).optional(),
+});
 
 const reportBodySchema = z.object({
   status: z.enum(REPORT_STATUSES),
@@ -130,6 +147,36 @@ eventReportsRouter.post(
         return ctx.json(
           { success: false, error: modResult.reason ?? 'Note rejected.' },
           422,
+        );
+      }
+    }
+
+    // Tickets available only means something against a live sold-out: with
+    // nothing to clear, promoting it would change nothing.
+    if (body.status === 'available') {
+      // The isSoldOutSql predicate, read straight off event_reports: that
+      // helper correlates on events.id, which a single-table select renders
+      // unqualified.
+      const [soldOut] = await db
+        .select({ id: eventReports.id })
+        .from(eventReports)
+        .where(
+          and(
+            eq(eventReports.eventId, eventId),
+            eq(eventReports.status, 'sold-out'),
+            isNotNull(eventReports.resolvedAt),
+            eq(eventReports.resolution, 'promoted'),
+          ),
+        )
+        .limit(1);
+      if (!soldOut) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'This show is not marked sold out',
+            code: 'not_sold_out',
+          },
+          409,
         );
       }
     }
@@ -281,9 +328,22 @@ eventReportsRouter.post(
   '/:id/reports/:reportId/confirm',
   clerkAuth,
   requireAuth,
+  zValidator('json', confirmBodySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Invalid input',
+          details: z.flattenError(result.error),
+        },
+        422,
+      );
+    }
+  }),
   async (ctx) => {
     const { id: eventId, reportId } = ctx.req.param();
     const { userId } = getAuthUser(ctx);
+    const { method } = ctx.req.valid('json');
 
     // Fetch report and verify it belongs to this event
     const [report] = await db
@@ -318,7 +378,7 @@ eventReportsRouter.post(
 
     const [insertedConfirm] = await db
       .insert(eventReportConfirms)
-      .values({ reportId, userId })
+      .values({ reportId, userId, method: method ?? null })
       .onConflictDoNothing()
       .returning();
 
@@ -356,10 +416,11 @@ eventReportsRouter.post(
       // user-visible state. Fan-out only fires on a real transition — a
       // second cancelled/postponed report promoted after the event was
       // already in that status shouldn't spam watchers a second time.
-      const isRealTransition = await hasEventStateChanged(
-        eventId,
-        report.status,
-      );
+      // A Tickets available report has no state of its own: its transition
+      // is the sold-out it clears, which clearSoldOut decides below.
+      const isRealTransition =
+        report.status !== 'available' &&
+        (await hasEventStateChanged(eventId, report.status));
 
       await db
         .update(eventReports)
@@ -368,6 +429,15 @@ eventReportsRouter.post(
           resolution: 'promoted',
         })
         .where(eq(eventReports.id, reportId));
+
+      // Tickets available clears the promoted sold-out and tells watchers
+      // it's back on sale, the same path as the admin action.
+      if (report.status === 'available') {
+        await clearSoldOut(
+          eventId,
+          `cleared by tickets available report ${reportId}`,
+        );
+      }
 
       // events table has a status column — update it
       // Only map report statuses that correspond to event statuses
@@ -381,14 +451,11 @@ eventReportsRouter.post(
 
       // #1064: fan out watch notifications to every user watching this event.
       // Best-effort — the promotion already committed above, so any error
-      // here can't roll back the user-visible state change. Narrow via `in`
-      // rather than an `as` cast so the compiler forces us to handle any
-      // new report status added later. Gated on isRealTransition so
+      // here can't roll back the user-visible state change. Excluding
+      // 'available' (handled above) narrows to the mapping's keys without an
+      // `as` cast, so the compiler forces us to handle any new status. Gated on isRealTransition so
       // duplicate promotions don't re-spam the same watchers.
-      if (
-        isRealTransition &&
-        report.status in WATCH_CATEGORY_FROM_REPORT_STATUS
-      ) {
+      if (isRealTransition && report.status !== 'available') {
         await fanoutWatchNotification(
           {
             db,
