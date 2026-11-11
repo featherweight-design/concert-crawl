@@ -90,6 +90,14 @@ vi.mock('@concert-crawl/db', () => ({
   inviteCodes: {},
   inviteCodeRedemptions: { id: 'id' },
   giftedComps: { userId: 'gifted_comps.user_id' },
+  inviteSeatsTaken: () => 'seats_taken',
+  // The real rule, so a mocked row is judged the way the route judges it.
+  seatsTaken: (code: {
+    useCount: number;
+    usedBy: string | null;
+    usedAt: unknown;
+  }) =>
+    Math.max(code.useCount, code.usedAt != null || code.usedBy != null ? 1 : 0),
 }));
 
 // The Clerk mirror is a third-party write with its own failure path; what

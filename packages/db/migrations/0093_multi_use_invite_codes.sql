@@ -17,7 +17,11 @@ WHERE ("used_by" IS NOT NULL OR "used_at" IS NOT NULL) AND "use_count" = 0;
 --> statement-breakpoint
 -- The seat invariant, held by the database and not only by the claim. Added
 -- after the backfill, which keeps every row inside it (use_count 0 or 1, max 1).
+ALTER TABLE "invite_codes" DROP CONSTRAINT IF EXISTS "invite_codes_max_uses_check";
+--> statement-breakpoint
 ALTER TABLE "invite_codes" ADD CONSTRAINT "invite_codes_max_uses_check" CHECK ("max_uses" >= 1);
+--> statement-breakpoint
+ALTER TABLE "invite_codes" DROP CONSTRAINT IF EXISTS "invite_codes_use_count_check";
 --> statement-breakpoint
 ALTER TABLE "invite_codes" ADD CONSTRAINT "invite_codes_use_count_check" CHECK ("use_count" BETWEEN 0 AND "max_uses");
 --> statement-breakpoint

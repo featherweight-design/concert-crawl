@@ -26,6 +26,7 @@ import {
   userProfiles,
   userRoles,
   inviteCodes,
+  inviteCodeRedemptions,
   userEvents,
   priceSubmissions,
   submissionConfirms,
@@ -802,30 +803,35 @@ export const SEED_INVITE_CODES = [
     code: 'BETA-USED-J1',
     createdBy: FAKE_USER_IDS.hugh,
     usedBy: FAKE_USER_IDS.jess,
+    useCount: 1,
     usedAt: new Date(now.getTime() - 14 * 86_400_000),
   },
   {
     code: 'BETA-USED-M2',
     createdBy: FAKE_USER_IDS.hugh,
     usedBy: FAKE_USER_IDS.marco,
+    useCount: 1,
     usedAt: new Date(now.getTime() - 10 * 86_400_000),
   },
   {
     code: 'BETA-USED-T3',
     createdBy: FAKE_USER_IDS.hugh,
     usedBy: FAKE_USER_IDS.taylor,
+    useCount: 1,
     usedAt: new Date(now.getTime() - 7 * 86_400_000),
   },
   {
     code: 'BETA-USED-R4',
     createdBy: FAKE_USER_IDS.amy,
     usedBy: FAKE_USER_IDS.riley,
+    useCount: 1,
     usedAt: new Date(now.getTime() - 5 * 86_400_000),
   },
   {
     code: 'BETA-USED-S5',
     createdBy: FAKE_USER_IDS.amy,
     usedBy: FAKE_USER_IDS.sam,
+    useCount: 1,
     usedAt: new Date(now.getTime() - 2 * 86_400_000),
   },
 ];
@@ -1823,6 +1829,20 @@ async function seed() {
     .values(SEED_INVITE_CODES)
     .onConflictDoNothing({ target: inviteCodes.code });
   console.warn(`Inserted ${SEED_INVITE_CODES.length} invite codes.`);
+  // Each redeemed code's ledger row, so a seeded redeemer is recognised.
+  const redeemed = await db
+    .select({ codeId: inviteCodes.id, userId: inviteCodes.usedBy })
+    .from(inviteCodes)
+    .where(isNotNull(inviteCodes.usedBy));
+  const ledgerRows = redeemed.flatMap(({ codeId, userId }) =>
+    userId ? [{ codeId, userId }] : [],
+  );
+  if (ledgerRows.length > 0) {
+    await db
+      .insert(inviteCodeRedemptions)
+      .values(ledgerRows)
+      .onConflictDoNothing();
+  }
 
   // Waitlist
   await db

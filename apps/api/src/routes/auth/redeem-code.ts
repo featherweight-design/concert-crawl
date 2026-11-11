@@ -7,6 +7,8 @@ import {
   giftedComps,
   inviteCodeRedemptions,
   inviteCodes,
+  inviteSeatsTaken,
+  seatsTaken,
 } from '@concert-crawl/db';
 import { isGiftLive } from '@concert-crawl/entitlements';
 import { and, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
@@ -165,7 +167,7 @@ redeemCodeRouter.post(
     }
 
     // Every seat already taken by someone else.
-    if (invite.useCount >= invite.maxUses) {
+    if (seatsTaken(invite) >= invite.maxUses) {
       return ctx.json({ success: false, error: 'used' }, 409);
     }
 
@@ -199,14 +201,17 @@ redeemCodeRouter.post(
         const updated = await tx
           .update(inviteCodes)
           .set({
-            useCount: sql`${inviteCodes.useCount} + 1`,
-            usedBy: sql`coalesce(${inviteCodes.usedBy}, ${userId})`,
+            useCount: sql`${inviteSeatsTaken()} + 1`,
+            // Keyed on `used_at`, not `used_by`: account deletion nulls
+            // `used_by` and keeps `used_at`, and the next redeemer must not
+            // be written in next to the deleted user's date.
+            usedBy: sql`CASE WHEN ${inviteCodes.usedAt} IS NULL THEN ${userId} ELSE ${inviteCodes.usedBy} END`,
             usedAt: sql`coalesce(${inviteCodes.usedAt}, ${now.toISOString()}::timestamptz)`,
           })
           .where(
             and(
               eq(inviteCodes.id, invite.id),
-              lt(inviteCodes.useCount, inviteCodes.maxUses),
+              lt(inviteSeatsTaken(), inviteCodes.maxUses),
               isNull(inviteCodes.revokedAt),
               or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
             ),

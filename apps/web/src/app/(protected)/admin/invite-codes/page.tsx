@@ -25,16 +25,18 @@ const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
   revoked: 'danger',
 };
 
-// #1084 — `usedBy` is the authoritative signal that a code has been
-// redeemed (the redemption route in `apps/api/src/routes/auth/redeem-code.ts`
-// writes it atomically alongside `usedAt`). Legacy rows exist where
-// `usedBy` is set but `usedAt` is null, so gating only on `usedAt` mis-
-// classifies those as active AND leaves the Redeemed column blank even
-// though the code is spoken-for.
+// Spent once every seat is taken. A first redemption (`usedBy` or `usedAt`)
+// always counts as one seat, whatever `useCount` says: legacy rows (#1084)
+// can carry `usedBy` with no `usedAt`, and a redemption written by code older
+// than `useCount` sets only those two. Mirrors `seatsTaken` in
+// `packages/db/src/schema/users.ts`, which the API decides with.
 function deriveStatus(code: InviteCode): DerivedStatus {
   if (code.revokedAt != null) return 'revoked';
-  // Spent once every seat is taken; `usedBy` names only the first redeemer.
-  if (code.useCount >= code.maxUses) return 'redeemed';
+  const taken = Math.max(
+    code.useCount,
+    code.usedBy != null || code.usedAt != null ? 1 : 0,
+  );
+  if (taken >= code.maxUses) return 'redeemed';
   if (code.expiresAt != null && new Date(code.expiresAt) < new Date())
     return 'expired';
   return 'active';
