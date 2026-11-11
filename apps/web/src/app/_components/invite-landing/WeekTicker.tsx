@@ -76,21 +76,33 @@ export function WeekTicker({ shows }: { shows: InviteShow[] }) {
         ).flat();
 
   useEffect(() => {
-    if (
-      typeof window.matchMedia !== 'function' ||
-      !window.matchMedia(TICKER_VIEWPORT_QUERY).matches
-    )
-      return;
-    const animation = runMotion(
-      trackRef.current,
-      [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
-      {
-        duration: Math.max(half.length, 1) * MS_PER_ITEM,
-        easing: 'linear',
-        iterations: Infinity,
-      },
-    );
-    return () => animation?.cancel();
+    if (typeof window.matchMedia !== 'function') return;
+    const viewport = window.matchMedia(TICKER_VIEWPORT_QUERY);
+    let animation: Animation | null = null;
+    // Runs only while the strip is on screen, and follows a window resized
+    // across the breakpoint either way.
+    const sync = () => {
+      if (viewport.matches && animation === null) {
+        animation = runMotion(
+          trackRef.current,
+          [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
+          {
+            duration: Math.max(half.length, 1) * MS_PER_ITEM,
+            easing: 'linear',
+            iterations: Infinity,
+          },
+        );
+      } else if (!viewport.matches && animation !== null) {
+        animation.cancel();
+        animation = null;
+      }
+    };
+    sync();
+    viewport.addEventListener('change', sync);
+    return () => {
+      viewport.removeEventListener('change', sync);
+      animation?.cancel();
+    };
   }, [half.length]);
 
   if (shows.length === 0) return null;

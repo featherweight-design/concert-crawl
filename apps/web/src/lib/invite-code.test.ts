@@ -11,6 +11,7 @@ describe('formatInviteCodeInput', () => {
     ['beta3f2a9c1e', 'BETA-3F2A-9C1E'],
     [' beta-3f2a-9c1e ', 'BETA-3F2A-9C1E'],
     ['BETA-3F2A-9C1EXTRA', 'BETA-3F2A-9C1E'],
+    ['not-a-code-but-very-long-text', 'NOT-A-CODE-BUT'],
   ])('formats %j as %j', (raw, formatted) => {
     expect(formatInviteCodeInput(raw)).toBe(formatted);
   });
