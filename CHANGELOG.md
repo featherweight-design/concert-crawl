@@ -1,3 +1,17 @@
+# [1.314.0](https://github.com/featherweight-design/concert-crawl/compare/v1.313.2...v1.314.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** let the seat field be cleared while typing a new count ([7fc4a95](https://github.com/featherweight-design/concert-crawl/commit/7fc4a95eee8abc4d625d216f39a0203895e086b2))
+* **web:** refuse an invalid seat count instead of rewriting it ([9a19f87](https://github.com/featherweight-design/concert-crawl/commit/9a19f871a193f017aac5bc29070ab05ab32158a9))
+* **web:** scope poster print rules and only offer posters for shared codes ([9623672](https://github.com/featherweight-design/concert-crawl/commit/9623672541f73ec21105a1878378b450c08568e3))
+
+
+### Features
+
+* **web:** printable invite-code posters with a pre-filled QR ([3af3251](https://github.com/featherweight-design/concert-crawl/commit/3af32516639c96998d86ed31d627c1901c673f83))
+
 ## [1.313.2](https://github.com/featherweight-design/concert-crawl/compare/v1.313.1...v1.313.2) (2026-11-11)
 
 
