@@ -22,6 +22,7 @@ vi.mock('@hono/clerk-auth', () => ({
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((_a, _b) => ({ type: 'eq' })),
   and: vi.fn((...args: unknown[]) => ({ type: 'and', args })),
+  or: vi.fn((...args: unknown[]) => ({ type: 'or', args })),
   asc: vi.fn((col: unknown) => ({ type: 'asc', col })),
   desc: vi.fn((col: unknown) => ({ type: 'desc', col })),
   gte: vi.fn((_a, _b) => ({ type: 'gte' })),

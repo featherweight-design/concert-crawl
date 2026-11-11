@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { listedOrDelisted } from '@concert-crawl/db/upcoming-events';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
@@ -323,7 +324,7 @@ artistsPublicRouter.get(
     // extraction can't inflate what the page renders (#607).
     const consumerVisible = and(
       eq(events.hiddenFromConsumer, false),
-      isNull(events.firstMissingAt),
+      listedOrDelisted(),
     );
 
     const showColumns = {

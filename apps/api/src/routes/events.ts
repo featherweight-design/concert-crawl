@@ -17,6 +17,7 @@ import {
   eventReportConfirms,
 } from '@concert-crawl/db';
 import {
+  listedOrDelisted,
   upcomingEventConditions,
   SCHEDULED_STATUSES,
 } from '@concert-crawl/db/upcoming-events';
@@ -655,7 +656,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       and(
         eq(events.id, id),
         eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
+        listedOrDelisted(),
       ),
     );
 
@@ -1254,7 +1255,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
       and(
         eq(events.id, eventId),
         eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
+        listedOrDelisted(),
       ),
     )
     .limit(1);
@@ -1393,7 +1394,7 @@ eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
       and(
         eq(events.id, eventId),
         eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
+        listedOrDelisted(),
       ),
     )
     .limit(1);

@@ -1,7 +1,8 @@
 // apps/api/src/routes/watching.ts
 import { Hono } from 'hono';
+import { listedOrDelisted } from '@concert-crawl/db/upcoming-events';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
-import { eq, and, gte, asc, isNull } from 'drizzle-orm';
+import { eq, and, gte, asc } from 'drizzle-orm';
 import { db, userEvents, events, venues, artists } from '@concert-crawl/db';
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
@@ -81,7 +82,7 @@ watchingRouter.get('/', async (ctx) => {
         // show moved venues and the old listing went missing. The crawler clears
         // the flag on re-extraction, so a watch hidden here returns on its own if
         // the show comes back to the venue's calendar.
-        isNull(events.firstMissingAt),
+        listedOrDelisted(),
       ),
     )
     .orderBy(asc(events.date), asc(events.showTime));
@@ -188,7 +189,7 @@ watchingRouter.put('/:eventId', async (ctx) => {
       and(
         eq(events.id, eventId),
         eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
+        listedOrDelisted(),
       ),
     )
     .limit(1);

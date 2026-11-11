@@ -48,6 +48,8 @@ const seedDelisted = async () => {
   const event = await seedEvent(venue.id, {
     date: FUTURE,
     status: 'cancelled',
+    // What the sweep leaves: still missing, and now delisted.
+    firstMissingAt: new Date('2098-12-15T00:00:00Z'),
     delistedAt: new Date('2099-01-01T00:00:00Z'),
   });
   await seedUserEvent('user_watcher', event.id, { status: 'watching' });
@@ -96,6 +98,25 @@ describe('No longer listed (delisted_at)', () => {
       await app.request(`/v1/events/${event.id}`)
     ).json()) as { data: { delistedAt: string | null } };
     expect(detail.data.delistedAt).toBe('2099-01-01T00:00:00.000Z');
+  });
+
+  it('shows on Watching, but a show missing and not yet swept stays hidden', async () => {
+    const event = await seedDelisted();
+    const missing = await seedEvent(event.venueId, {
+      artist: 'Blip',
+      date: FUTURE,
+      firstMissingAt: new Date(),
+    });
+    await seedUserEvent('user_watcher', missing.id, { status: 'watching' });
+    as('user_watcher');
+    const watching = (await (
+      await app.request('/v1/watching', { headers })
+    ).json()) as {
+      data: { eventId: string; eventDelistedAt: string | null }[];
+    };
+    expect(watching.data.map((show) => show.eventId)).toEqual([event.id]);
+    expect(watching.data[0]?.eventDelistedAt).toBe('2099-01-01T00:00:00.000Z');
+    expect((await app.request(`/v1/events/${missing.id}`)).status).toBe(404);
   });
 
   it('a fan-confirmed cancellation clears it and notifies watchers', async () => {
