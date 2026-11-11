@@ -1,45 +1,16 @@
 {
-  "feature": "What's new feature page",
-  "planRow": "B21",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "`/changelog` is public, so it is photographed signed in and signed out.",
+  "feature": "B21 · What's new feature page",
+  "note": "Plan row B21 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): whats-new = 07-more-screens/more-r3-whatsnew_m, 07-more-screens/more-r3-whatsnew. Walk by hand on staging (no kit verb reaches them yet): feature-modal (07-more-screens/more-r3-feature_modal): shown once per release.",
   "rows": [
     {
       "id": "whats-new",
       "label": "/changelog",
-      "route": "/changelog",
-      "boards": [
-        "07-more-screens/more-r3-whatsnew_m.jpg",
-        "07-more-screens/more-r3-whatsnew.jpg"
-      ],
       "steps": [
         {
           "goto": "/changelog",
           "wait": "h1"
         }
       ]
-    },
-    {
-      "id": "whats-new-out",
-      "label": "/changelog signed out",
-      "route": "/changelog",
-      "auth": "signed-out",
-      "boards": ["07-more-screens/more-r3-whatsnew_m.jpg"],
-      "steps": [
-        {
-          "goto": "/changelog",
-          "wait": "h1"
-        }
-      ]
-    },
-    {
-      "id": "feature-modal",
-      "label": "Feature modal (the spotlight)",
-      "route": "/events",
-      "boards": ["07-more-screens/more-r3-feature_modal.jpg"],
-      "when": "manual",
-      "note": "Shown once per release to an account that has not seen it.",
-      "steps": []
     }
   ]
 }

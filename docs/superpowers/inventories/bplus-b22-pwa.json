@@ -1,71 +1,33 @@
 {
-  "feature": "PWA surfaces: install slot, iPhone sheets, offline pill and states, pull-to-refresh",
-  "planRow": "B22",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "Install prompts need a real `beforeinstallprompt` and the iPhone sheets an iOS Safari user agent, neither of which headless Chromium gives. Those rows are walked on a phone.",
+  "feature": "B22 · PWA surfaces: install slot, iPhone sheets, offline pill and states, pull-to-refresh",
+  "note": "Plan row B22 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): offline-pill = 06-states/bp-s-offline_pill_m; offline-page = 06-states/bp-s-offline_m. Walk by hand on staging (no kit verb reaches them yet): install (06-states/bp-s-install_m, 06-states/bp-s-install_android_m, 06-states/bp-s-install_d, 06-states/bp-s-install_dismissed_m): needs a real beforeinstallprompt; ios-sheets (06-states/bp-s-install_ios_m, 06-states/bp-s-push_ios_m): needs iOS Safari; pull (06-states/bp-s-pull_m): touch; walk on Hugh's Android in Brave.",
   "rows": [
     {
       "id": "offline-pill",
       "label": "/events offline: the pill",
-      "route": "/events",
-      "boards": ["06-states/bp-s-offline_pill_m.jpg"],
       "steps": [
         {
           "goto": "/events",
           "wait": "[data-testid=\"event-row\"]"
         },
         {
-          "offline": true,
-          "settle": 1200
+          "offline": true
+        },
+        {
+          "wait": "[role=\"status\"][aria-label*=\"offline\"]",
+          "settle": 300
         }
       ]
     },
     {
       "id": "offline-page",
       "label": "/~offline",
-      "route": "/~offline",
-      "boards": ["06-states/bp-s-offline_m.jpg"],
       "steps": [
         {
           "goto": "/~offline",
           "wait": "h1"
         }
       ]
-    },
-    {
-      "id": "install",
-      "label": "Install slot (Android, desktop, dismissed)",
-      "route": "/events",
-      "boards": [
-        "06-states/bp-s-install_m.jpg",
-        "06-states/bp-s-install_android_m.jpg",
-        "06-states/bp-s-install_d.jpg",
-        "06-states/bp-s-install_dismissed_m.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "ios-sheets",
-      "label": "iPhone install and push sheets",
-      "route": "/events",
-      "boards": [
-        "06-states/bp-s-install_ios_m.jpg",
-        "06-states/bp-s-push_ios_m.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "pull",
-      "label": "Pull-to-refresh",
-      "route": "/events",
-      "boards": ["06-states/bp-s-pull_m.jpg"],
-      "when": "manual",
-      "note": "Touch only; walk on Hugh's Android in Brave.",
-      "steps": []
     }
   ]
 }

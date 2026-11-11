@@ -12,21 +12,23 @@
 
 ## Design review
 
-<!-- UI PRs only (the feature-acceptance pass, `.claude/fwd/feature-acceptance.md`). Delete for docs, scripts, tests and invisible changes. -->
+<!-- UI PRs only (`.claude/fwd/feature-acceptance.md`). Delete for docs, scripts, tests and invisible changes. -->
 
 - **Inventory:** `docs/superpowers/inventories/<file>.json`
-- **Staging commit photographed:** <!-- sha staging was running -->
-- **Contact sheet:** <!-- link or attach sheet.png from `pnpm contact-sheet <inventory>` (apps/e2e/contact-sheets/<inventory>/) -->
-- **Matrix:** route × viewport (320 floor, 390, 640, 1300) × theme (Electric, Light, one genre theme). Failed cells: <!-- none, or list them -->
-- **Boards compared:** `design/design_handoff_bplus_redesign/screens/…` <!-- or the handoff this PR builds -->
+- **Contact sheet:** `node ~/.claude/fwd/skills/feature-acceptance/contact-sheet.mjs <inventory>` against staging, commit <!-- sha -->. <!-- This repo is PUBLIC: never attach signed-in or admin pages here. Link a private copy or redact; signed-out sheets may be attached. -->
+- **Gap rule (Hugh, 2026-11-11):** the B+ boards are comprehensive; resolve a small ambiguity from the nearest drawn pattern and note it below; where the mock shows the answer, match it; only a meaningful undrawn gap goes to Design, and that piece waits for Hugh.
+
+| Route    | Viewport | Theme | Matches board?                         | Ambiguity resolved from              |
+| -------- | -------- | ----- | -------------------------------------- | ------------------------------------ |
+| `/route` | 390      | Light | yes / fixed to match / gap (to Design) | <!-- nearest drawn pattern, or — --> |
 
 ### Staging walk for Hugh
 
-<!-- One line per route × viewport that needs his eye, plus every `manual` row in the inventory. Phone walk is Android + Brave. -->
+<!-- Each route × viewport that needs his eye, plus every hand-walked surface named in the inventory's note. Electric and a genre theme are walked here (the kit draws Light). Phone walk is Android + Brave. -->
 
 - [ ] `/route` · 390 · <!-- what to look at -->
 - [ ] `/route` · 1300 · <!-- what to look at -->
-- [ ] Manual: <!-- row id and how to reach it -->
+- [ ] By hand: <!-- surface and how to reach it -->
 
 ## Checklist
 

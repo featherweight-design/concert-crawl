@@ -1,14 +1,10 @@
 {
-  "feature": "Chrome: header, bottom nav, account menu (no founder eyebrow)",
-  "planRow": "B17",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "The header switches bars at `sm` (640): the mobile bar and BottomNav below, the sticky TopNav from 640. The account menu is a sheet below `sm` and a popover from it.",
+  "feature": "B17 · Chrome: header, bottom nav, account menu",
+  "note": "Plan row B17 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): shell-browse = 02-mobile/bp-m-browse_m, 01-core/bp-browse; shell-venues = 02-mobile/bp-m-venues_m, 01-core/bp-venues; account = 02-mobile/bp-m-account_m, 01-core/bp-account.",
   "rows": [
     {
       "id": "shell-browse",
       "label": "/events: header and bottom nav",
-      "route": "/events",
-      "boards": ["02-mobile/bp-m-browse_m.jpg", "01-core/bp-browse.jpg"],
       "steps": [
         {
           "goto": "/events",
@@ -18,9 +14,7 @@
     },
     {
       "id": "shell-venues",
-      "label": "/venues: active tab moves",
-      "route": "/venues",
-      "boards": ["02-mobile/bp-m-venues_m.jpg", "01-core/bp-venues.jpg"],
+      "label": "/venues: the active tab moves",
       "steps": [
         {
           "goto": "/venues",
@@ -31,28 +25,15 @@
     {
       "id": "account",
       "label": "/events: account menu open",
-      "route": "/events",
-      "boards": ["02-mobile/bp-m-account_m.jpg", "01-core/bp-account.jpg"],
       "steps": [
         {
           "goto": "/events",
           "wait": "[data-testid=\"event-row\"]"
         },
         {
-          "openAccount": true,
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "wait": "[role=\"dialog\"]",
           "settle": 400
-        }
-      ]
-    },
-    {
-      "id": "signed-out-shell",
-      "label": "/changelog signed out: the signed-out header",
-      "route": "/changelog",
-      "auth": "signed-out",
-      "steps": [
-        {
-          "goto": "/changelog",
-          "wait": "h1"
         }
       ]
     }

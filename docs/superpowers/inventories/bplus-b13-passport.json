@@ -1,18 +1,10 @@
 {
-  "feature": "Passport booklet and the Up next stub",
-  "planRow": "B13",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "feature": "B13 · Passport booklet and the Up next stub",
+  "note": "Plan row B13 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): passport = 07-more-screens/more-r3-passport_m, 07-more-screens/more-r3-passport, 07-more-screens/more-r3-passport_book_m, 07-more-screens/more-r3-passport_book; passport-full = 07-more-screens/more-r3-passport_book_m. Walk by hand on staging (no kit verb reaches them yet): empty (06-states/bp-s-empty_passport_m): needs an account with no concerts.",
   "rows": [
     {
       "id": "passport",
       "label": "/passport: the booklet",
-      "route": "/passport",
-      "boards": [
-        "07-more-screens/more-r3-passport_m.jpg",
-        "07-more-screens/more-r3-passport.jpg",
-        "07-more-screens/more-r3-passport_book_m.jpg",
-        "07-more-screens/more-r3-passport_book.jpg"
-      ],
       "steps": [
         {
           "goto": "/passport",
@@ -23,8 +15,6 @@
     {
       "id": "passport-full",
       "label": "/passport: whole page, Up next stub",
-      "route": "/passport",
-      "boards": ["07-more-screens/more-r3-passport_book_m.jpg"],
       "fullPage": true,
       "steps": [
         {
@@ -32,15 +22,6 @@
           "wait": "h1"
         }
       ]
-    },
-    {
-      "id": "empty",
-      "label": "First-visit Passport empty state",
-      "route": "/passport",
-      "boards": ["06-states/bp-s-empty_passport_m.jpg"],
-      "when": "manual",
-      "note": "Needs an account with no concerts; desktop has no board (open question for Design).",
-      "steps": []
     }
   ]
 }
