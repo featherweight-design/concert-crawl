@@ -149,6 +149,14 @@ describe('HistoryContent', () => {
       <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
     );
 
+    // The dashed card and the CONCERTS eyebrow (`bp-s-empty_concerts_m`).
+    expect(screen.getByTestId('my-shows-empty-card').className).toContain(
+      'border-dashed',
+    );
+    expect(screen.getByTestId('my-shows-empty-eyebrow')).toHaveTextContent(
+      HISTORY_COPY.empty.eyebrow,
+    );
+
     const stamps = screen
       .getByTestId('history-empty-stamps')
       .querySelectorAll('[data-venue-stamp]');

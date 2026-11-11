@@ -27,7 +27,6 @@ import { SHELF_NARROW_QUERY } from '@/components/consumer/following/definitions/
 import { ArtistManageRow } from './ArtistManageRow';
 import { AlertsRow } from './AlertsRow';
 import { ArtistsEmpty } from './ArtistsEmpty';
-import { FindArtistsRow } from './FindArtistsRow';
 import { Mono } from './Mono';
 import { GlyphSearch } from './Glyphs';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
@@ -123,15 +122,16 @@ export const MyShowsArtistsContent = ({
   const datedHeading = COPY.groups.dated(groups.dated.length);
   const undatedHeading = COPY.groups.undated(groups.undated.length);
 
-  // Desktop promotes this into whichever group heading renders first. It used
-  // to live only in the dated row, which stranded it for anyone whose follows
-  // all lack a date — the one state where finding artists matters most.
+  // Both densities promote this into whichever group heading renders first, as
+  // the B+ boards draw it (`bp-artists`, `bp-m-artists_m`). It used to live
+  // only in the dated row, which stranded it for anyone whose follows all lack
+  // a date — the one state where finding artists matters most.
   //
   // Alerts is NOT here. It shipped as a second dense button beside this one,
   // pointing at the same place as the AlertsRow and carrying none of
   // that row's live "push on · digest off" readout, so desktop offered the
   // control twice and the state zero times.
-  const desktopActions = (
+  const findPill = (
     <SearchLink
       className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
       style={densePrimary}
@@ -198,10 +198,14 @@ export const MyShowsArtistsContent = ({
         <div>
           {groups.dated.length > 0 && (
             <>
-              <div style={{ padding: '13px 2px 9px' }}>
+              <div
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
+                style={{ padding: '13px 2px 10px' }}
+              >
                 <Mono as="h2" size={9.5}>
                   {datedHeading}
                 </Mono>
+                {findPill}
               </div>
               <div className="flex flex-col gap-2.5">
                 {groups.dated.map((artist) => (
@@ -217,10 +221,14 @@ export const MyShowsArtistsContent = ({
           )}
           {groups.undated.length > 0 && (
             <>
-              <div style={{ padding: '22px 2px 9px' }}>
+              <div
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
+                style={{ padding: '22px 2px 10px' }}
+              >
                 <Mono as="h2" size={9.5}>
                   {undatedHeading}
                 </Mono>
+                {groups.dated.length === 0 && findPill}
               </div>
               <div className="flex flex-col gap-2.5">
                 {groups.undated.map((artist) => (
@@ -234,9 +242,6 @@ export const MyShowsArtistsContent = ({
               </div>
             </>
           )}
-          <div style={{ marginTop: 18 }}>
-            <FindArtistsRow narrow={narrow} />
-          </div>
         </div>
         {picker}
       </div>
@@ -266,7 +271,7 @@ export const MyShowsArtistsContent = ({
               <Mono as="h2" size={10}>
                 {datedHeading}
               </Mono>
-              {desktopActions}
+              {findPill}
             </div>
             <div className="grid grid-cols-2 gap-3">
               {groups.dated.map((artist) => (
@@ -290,7 +295,7 @@ export const MyShowsArtistsContent = ({
               <Mono as="h2" size={10}>
                 {undatedHeading}
               </Mono>
-              {groups.dated.length === 0 && desktopActions}
+              {groups.dated.length === 0 && findPill}
             </div>
             <div className="grid grid-cols-2 gap-3">
               {groups.undated.map((artist) => (

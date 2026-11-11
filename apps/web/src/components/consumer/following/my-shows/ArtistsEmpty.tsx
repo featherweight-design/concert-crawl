@@ -4,46 +4,87 @@
 // than a chip rail: there is nothing to pick from until you have followed
 // someone.
 //
-// There is no eyebrow above the headline. "No one yet" over "Nobody on your
-// list." is one fact in two type sizes, and the headline is the layer that
-// survives that collision.
+// B+ (`bp-s-empty_artists_m`): the My shows empty card. A dashed, centred card
+// with three overlapping dashed rings, the location eyebrow, the gradient
+// primary and the secondary as a text link. The eyebrow names the tab rather
+// than restating the headline, which is what got the old one cut.
 
 import Link from 'next/link';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
+import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants';
-import { GlyphPlus } from './Glyphs';
 
 const COPY = MY_SHOWS_ARTISTS_COPY.empty;
 
-const buttonBase = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 46,
-  padding: '13px 20px',
-  borderRadius: 10,
-  fontFamily: 'Inter, system-ui, sans-serif',
-  letterSpacing: '-0.01em',
-  textDecoration: 'none',
-} as const;
-
-const PRIMARY_CLASS =
+const FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
 
 const primaryStyle = {
-  ...buttonBase,
-  background: 'var(--signal)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 44,
+  padding: '12px 24px',
+  borderRadius: 14,
+  backgroundImage: MY_SHOWS_GRADIENT,
   color: 'var(--fg-on-accent)',
-  border: '1px solid var(--signal)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 15,
   fontWeight: 800,
-  fontSize: 14.5,
+  letterSpacing: '-0.01em',
+  textDecoration: 'none',
+  boxShadow: '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
 } as const;
+
+const RING = 44;
+
+const PeopleGlyph = () => (
+  <svg
+    width={18}
+    height={18}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.7}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="9" cy="8" r="3.2" />
+    <circle cx="16.5" cy="9" r="2.6" />
+    <path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" />
+    <path d="M14.5 14.4c2.6-.4 4.9 1.2 5.6 4.6" />
+  </svg>
+);
+
+/** Three dashed rings, the middle one holding the people glyph. */
+const Badge = () => (
+  <span aria-hidden className="flex items-center">
+    {[0, 1, 2].map((idx) => (
+      <span
+        key={idx}
+        className="flex items-center justify-center rounded-full border border-dashed border-border-strong bg-surface-1"
+        style={{
+          width: RING,
+          height: RING,
+          marginLeft: idx === 0 ? 0 : -RING / 4,
+          color: 'var(--fg-subtle)',
+          position: 'relative',
+          zIndex: idx === 1 ? 1 : 0,
+        }}
+      >
+        {idx === 1 && <PeopleGlyph />}
+      </span>
+    ))}
+  </span>
+);
 
 interface ArtistsEmptyProps {
   /** Signed in, plan cannot follow. Swaps the primary move for one that works. */
   locked: boolean;
-  /** The desktop layout, which is wider and lays the CTAs side by side. */
+  /** The desktop layout, which sits a little further down the page. */
   desktop?: boolean;
 }
 
@@ -52,42 +93,37 @@ export const ArtistsEmpty = ({
   desktop = false,
 }: ArtistsEmptyProps) => (
   <div
-    style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: desktop ? 'flex-start' : 'center',
-      textAlign: 'center',
-      padding: desktop ? '70px 0' : '48px 26px',
-    }}
+    data-testid="artists-empty-card"
+    className="flex flex-col items-center rounded-[18px] border border-dashed border-border-strong px-5 py-8 text-center sm:px-10 sm:py-10"
+    style={{ marginTop: desktop ? 8 : 4 }}
   >
-    <span
-      aria-hidden
+    <div className="mb-5">
+      <Badge />
+    </div>
+
+    <p
       style={{
-        width: desktop ? 60 : 54,
-        height: desktop ? 60 : 54,
-        borderRadius: desktop ? 15 : 14,
-        border: '1px dashed var(--border-strong)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--fg-subtle)',
-        marginBottom: desktop ? 20 : 18,
+        margin: 0,
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10.5,
+        fontWeight: 700,
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase',
+        color: 'var(--signal)',
       }}
     >
-      <GlyphPlus size={desktop ? 22 : 20} />
-    </span>
+      {COPY.eyebrow}
+    </p>
 
     <h2
       style={{
-        margin: 0,
-        fontSize: desktop ? 28 : 22,
+        margin: '10px 0 0',
+        fontFamily: 'var(--font-ui)',
+        fontSize: 'clamp(22px, 6.5vw, 30px)',
         fontWeight: 900,
         letterSpacing: '-0.03em',
         lineHeight: 1.1,
         color: 'var(--fg)',
-        marginTop: desktop ? 12 : 11,
       }}
     >
       {COPY.headline}
@@ -95,48 +131,37 @@ export const ArtistsEmpty = ({
 
     <p
       style={{
-        margin: 0,
-        fontSize: desktop ? 14.5 : 13.5,
+        margin: '10px 0 0',
+        maxWidth: 380,
+        fontSize: 14,
+        lineHeight: 1.55,
         color: 'var(--fg-muted)',
-        lineHeight: 1.5,
-        marginTop: desktop ? 10 : 9,
-        maxWidth: desktop ? 430 : 290,
       }}
     >
       {COPY.body}
     </p>
 
-    <div
-      style={{
-        display: 'flex',
-        gap: desktop ? 10 : 8,
-        marginTop: desktop ? 24 : 22,
-        ...(desktop
-          ? {}
-          : { flexDirection: 'column', width: '100%', maxWidth: 300 }),
-      }}
-    >
+    <div className="mt-5 flex flex-col items-center gap-3">
       {/* Locked sends them to browse, which is a page. Unlocked is a search,
           which is a palette. */}
       {locked ? (
-        <Link href={BROWSE_HREF} className={PRIMARY_CLASS} style={primaryStyle}>
+        <Link href={BROWSE_HREF} className={FOCUS} style={primaryStyle}>
           {COPY.primaryLocked}
         </Link>
       ) : (
-        <SearchLink className={PRIMARY_CLASS} style={primaryStyle}>
+        <SearchLink className={FOCUS} style={primaryStyle}>
           {COPY.primary}
         </SearchLink>
       )}
       <Link
         href={WATCHING_HREF}
-        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        className={`inline-flex min-h-[44px] items-center ${FOCUS}`}
         style={{
-          ...buttonBase,
-          background: 'transparent',
-          color: 'var(--fg)',
-          border: '1px solid var(--border-strong)',
+          color: 'var(--signal)',
+          fontSize: 15,
           fontWeight: 700,
-          fontSize: 14,
+          letterSpacing: '-0.01em',
+          textDecoration: 'none',
         }}
       >
         {COPY.secondary}

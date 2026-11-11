@@ -226,7 +226,7 @@ describe('MyShowsArtistsContent', () => {
     expect(screen.getAllByRole('link', { name: 'One' })).not.toHaveLength(0);
   });
 
-  it('offers the find row and the alerts deep link', () => {
+  it('offers the find pill and the alerts deep link', () => {
     render(
       <MyShowsArtistsContent
         artists={[artist('One', '2026-09-12')]}
@@ -280,10 +280,45 @@ describe('MyShowsArtistsContent', () => {
     },
   );
 
+  // B+ (`bp-m-artists_m`): mobile carries the find pill in the heading row, as
+  // desktop does, and the old dashed find card at the foot of the list is gone.
+  it.each(['mobile', 'desktop'])(
+    'puts the find pill in the first group heading row on %s',
+    (density) => {
+      const { container } = render(
+        <MyShowsArtistsContent
+          artists={[artist('Wax Harbour', '2026-09-12')]}
+          scaRegion={false}
+        />,
+      );
+
+      const block = container.querySelector(
+        `[data-testid="my-shows-artists-${density}"]`,
+      );
+      if (!(block instanceof HTMLElement)) throw new Error('no density block');
+      const scope = within(block);
+
+      const finds = scope.getAllByRole('link', {
+        name: new RegExp(COPY.find.title),
+      });
+      expect(finds).toHaveLength(1);
+      const heading = scope.getByRole('heading', {
+        level: 2,
+        name: new RegExp(COPY.groups.dated(1), 'i'),
+      });
+      expect(heading.parentElement?.contains(finds[0] ?? null)).toBe(true);
+    },
+  );
+
   it('renders the empty state when the viewer follows nobody', () => {
     render(<MyShowsArtistsContent artists={[]} scaRegion={false} />);
 
     expect(screen.getAllByText(COPY.empty.headline)).not.toHaveLength(0);
+    // B+ `bp-s-empty_artists_m`: the dashed card with the ARTISTS eyebrow.
+    expect(screen.getAllByTestId('artists-empty-card')[0]?.className).toContain(
+      'border-dashed',
+    );
+    expect(screen.getAllByText(COPY.empty.eyebrow)).not.toHaveLength(0);
     expect(
       screen.getAllByRole('link', { name: COPY.empty.primary }),
     ).not.toHaveLength(0);

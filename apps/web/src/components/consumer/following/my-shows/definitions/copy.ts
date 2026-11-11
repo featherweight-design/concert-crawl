@@ -55,6 +55,12 @@ export const MY_SHOWS_ARTISTS_COPY = {
       : `${count} of these came in from Spotify. Unfollowing here won't touch your Spotify library.`,
 
   empty: {
+    /**
+     * The B+ empty card's eyebrow (`bp-s-empty_artists_m`). It names where you
+     * are, so it no longer restates the headline the way the cut one did.
+     * Uppercased by CSS.
+     */
+    eyebrow: 'Artists',
     headline: 'Nobody on your list.',
     body: "Follow an artist and we'll tell you the moment they book a Denver date. Even the ones who only come through once a year.",
     /** Entitled: the real next move is search. */
