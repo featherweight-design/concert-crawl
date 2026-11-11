@@ -1,16 +1,15 @@
-'use client';
-
+// No 'use client': these helpers are plain functions a server component may
+// import. The hook lives in ./use-reduced-motion.
+//
 // The Web Animations API home for B+ motion (plan: 2026-11-11-bplus-redesign,
 // "Animation module"). CLAUDE.md bars new hand-rolled @keyframes in
 // globals.css, and the global reduced-motion guard there only reaches CSS
 // animations, so everything here checks reduced motion itself and reads its
 // timing from the --motion-* tokens.
 
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-
 export type MotionToken = 'fast' | 'base' | 'slow';
 
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 /** The token values in globals.css, used when the stylesheet can't be read. */
 const TOKEN_FALLBACK_MS: Record<MotionToken, number> = {
@@ -53,11 +52,6 @@ export function prefersReducedMotion(): boolean {
     typeof window.matchMedia === 'function' &&
     window.matchMedia(REDUCED_MOTION_QUERY).matches
   );
-}
-
-/** Follows the reduced-motion setting, including changes while mounted. */
-export function useReducedMotion(): boolean {
-  return useMediaQuery(REDUCED_MOTION_QUERY);
 }
 
 export interface MotionOptions {
