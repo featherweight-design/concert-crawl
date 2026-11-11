@@ -1,6 +1,8 @@
 export {
+  DASHED_OPACITY,
   DASHED_RING,
   VenueStamp,
-  stampColor,
+  glyphStrokeFor,
   type VenueStampVariant,
 } from './VenueStamp';
+export { stampAccentFor } from '@/lib/passport/stamp';

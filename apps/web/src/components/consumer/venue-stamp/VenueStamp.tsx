@@ -1,12 +1,41 @@
-import { ia_getInitials } from '@/components/consumer/identity-art/IdentityArt';
+import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
 import { venueGlyphKey } from '@/components/consumer/venue-glyph';
 import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
-import { stampAccentFor } from '@/lib/stamp-accent';
+import { stampAccentFor } from '@/lib/passport/stamp';
 
 export type VenueStampVariant = 'solid' | 'dashed';
 
 /** The dash pattern an upcoming show's ring is drawn with, in viewBox units. */
 export const DASHED_RING = '3.2 2.6';
+
+/** How far an upcoming show's whole stamp is dimmed. */
+export const DASHED_OPACITY = 0.7;
+
+const VIEWBOX = 40;
+const RING_RADIUS = 18.4;
+const RING_STROKE = 1.6;
+/** The glyph's 24-unit grid drawn at 21.6 units, centred in the ring. */
+const GLYPH_BOX = 21.6;
+const GLYPH_OFFSET = (VIEWBOX - GLYPH_BOX) / 2;
+const GLYPH_STROKE = 1.13;
+
+/**
+ * The glyph's stroke in grid units, thickened so it never renders thinner
+ * than 1 CSS px at small sizes.
+ */
+export const glyphStrokeFor = (size: number): number => {
+  const onePx = 1 / ((size / VIEWBOX) * (GLYPH_BOX / 24));
+  // Rounded up to 0.01 so the stroke lands on or above 1px, never just under.
+  return Math.max(GLYPH_STROKE, Math.ceil(onePx * 100) / 100);
+};
+
+/**
+ * The accent pulled toward the theme's text colour: 55% accent holds at least
+ * 3.7:1 against `--surface-2` on all nine themes, where the pale accents on
+ * their own wash out on the light theme.
+ */
+const inkFor = (accent: string): string =>
+  `color-mix(in oklch, ${accent} 55%, var(--fg))`;
 
 interface VenueStampProps {
   /** The venue's slug, which picks its glyph. */
@@ -26,15 +55,9 @@ interface VenueStampProps {
 }
 
 /**
- * The stamp's ink colour. "Yes, going" is filled with it (B+ rule 4), so a
- * caller can match the stamp without rendering one.
- */
-export const stampColor = (seed: string): string => stampAccentFor(seed);
-
-/**
  * The Passport ink stamp (B+ rule 4): a venue ring with the venue's glyph,
- * inked in the show's accent and never tilted. A venue without a glyph gets the
- * ring with its initials instead.
+ * inked in the show's accent and never tilted. A venue without a glyph gets
+ * its identity art clipped to the ring, so venue imagery stays on one chain.
  */
 export function VenueStamp({
   venueSlug,
@@ -44,57 +67,83 @@ export function VenueStamp({
   size = 28,
   labelled = false,
 }: VenueStampProps) {
-  const ink = stampColor(seed);
+  const ink = inkFor(stampAccentFor(seed));
   const glyphKey = venueGlyphKey(venueSlug);
   const dashed = variant === 'dashed';
   const a11y = labelled
     ? { role: 'img', 'aria-label': venueName }
     : { 'aria-hidden': true };
+  const artInset = (size * (VIEWBOX / 2 - RING_RADIUS)) / VIEWBOX;
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      focusable="false"
-      style={{ display: 'block', flexShrink: 0 }}
+    <span
       data-venue-stamp={variant}
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        width: size,
+        height: size,
+        flexShrink: 0,
+        opacity: dashed ? DASHED_OPACITY : undefined,
+      }}
       {...a11y}
     >
-      <circle
-        cx="20"
-        cy="20"
-        r="18.4"
-        fill="none"
-        stroke={ink}
-        strokeWidth="1.6"
-        strokeDasharray={dashed ? DASHED_RING : undefined}
-        strokeLinecap={dashed ? 'round' : undefined}
-      />
-      <g opacity={dashed ? 0.7 : 1}>
-        {glyphKey === null ? (
-          <text
-            x="20"
-            y="20"
-            dy="0.35em"
-            textAnchor="middle"
-            fill={ink}
-            fontSize="13"
-            fontWeight="700"
-            fontFamily="var(--font-mono, ui-monospace, monospace)"
-            data-venue-stamp-fallback=""
-          >
-            {ia_getInitials(venueName, 2)}
-          </text>
-        ) : (
-          <g
-            transform="translate(9.2 9.2) scale(0.9)"
+      {glyphKey === null && (
+        <span
+          data-venue-stamp-fallback=""
+          style={{
+            position: 'absolute',
+            inset: artInset,
+            borderRadius: '50%',
+            overflow: 'hidden',
+          }}
+        >
+          <IdentityArt
+            name={venueName}
+            kind="venue"
+            scale="tile"
+            grain={0.08}
+            width="100%"
+            height="100%"
+          />
+        </span>
+      )}
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
+        aria-hidden="true"
+        focusable="false"
+        style={{ position: 'absolute', inset: 0, display: 'block' }}
+      >
+        <circle
+          data-venue-stamp-ring=""
+          cx={VIEWBOX / 2}
+          cy={VIEWBOX / 2}
+          r={RING_RADIUS}
+          fill={glyphKey === null ? 'none' : 'var(--surface-2)'}
+          stroke={ink}
+          strokeWidth={RING_STROKE}
+          strokeDasharray={dashed ? DASHED_RING : undefined}
+          strokeLinecap={dashed ? 'round' : undefined}
+        />
+        {glyphKey !== null && (
+          <svg
+            x={GLYPH_OFFSET}
+            y={GLYPH_OFFSET}
+            width={GLYPH_BOX}
+            height={GLYPH_BOX}
+            viewBox="0 0 24 24"
             data-venue-glyph={glyphKey}
           >
-            <GlyphShapes glyphKey={glyphKey} paint={ink} />
-          </g>
+            <GlyphShapes
+              glyphKey={glyphKey}
+              paint={ink}
+              strokeWidth={glyphStrokeFor(size)}
+            />
+          </svg>
         )}
-      </g>
-    </svg>
+      </svg>
+    </span>
   );
 }

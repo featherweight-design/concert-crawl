@@ -59,15 +59,18 @@ export function GlyphGradient({
 export function GlyphShapes({
   glyphKey,
   paint,
+  strokeWidth = 1.13,
 }: {
   glyphKey: VenueGlyphKey;
   paint: string;
+  /** In glyph-grid units. A caller drawing the glyph small thickens it to stay legible. */
+  strokeWidth?: number;
 }) {
   return (
     <g
       fill="none"
       stroke={paint}
-      strokeWidth={1.13}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
     >

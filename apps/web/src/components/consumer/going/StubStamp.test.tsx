@@ -89,8 +89,8 @@ describe('StubStamp', () => {
   });
 });
 
-// Pinned before the accent moved to `lib/stamp-accent.ts`: StubStamp stays
-// live until B12, so the extraction must not shift a single show's colour.
+// Pinned from origin/main before the accent moved to `lib/passport/stamp.ts`:
+// StubStamp stays live until B12, so the move must not shift a show's colour.
 describe('StubStamp accent after the shared-helper extraction', () => {
   afterEach(cleanup);
 
