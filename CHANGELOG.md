@@ -1,3 +1,11 @@
+# [1.316.0](https://github.com/featherweight-design/concert-crawl/compare/v1.315.0...v1.316.0) (2026-11-11)
+
+
+### Features
+
+* **web:** answer the poster short link before Clerk; the invite screen owns the code check ([6967725](https://github.com/featherweight-design/concert-crawl/commit/69677255d3d4cb93506767e6b83084eed0b36152))
+* **web:** poster QR opens /I/<CODE>, a short link to the pre-filled invite screen ([0eb8930](https://github.com/featherweight-design/concert-crawl/commit/0eb8930ab8c7a3c9cb9727a003b2785bd689f3d9))
+
 # [1.315.0](https://github.com/featherweight-design/concert-crawl/compare/v1.314.5...v1.315.0) (2026-11-11)
 
 
