@@ -39,6 +39,7 @@ import { deriveBulkVisibility } from './venue-table-bulk';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { ADMIN_MOBILE_VIEWPORT_QUERY } from '@/components/admin/definitions/constants';
 import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge';
+import { CrawlPausedBadge } from '@/components/admin/crawl-paused-badge';
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '');
@@ -201,6 +202,7 @@ export function VenueTableClient({ venues }: Props) {
                       status={venue.lastRunStatus}
                       variant="outline"
                     />
+                    <CrawlPausedBadge crawlPausedAt={venue.crawlPausedAt} />
                     <StatusBadge
                       kind={strategyKind(venue.extractionStrategy)}
                       variant="mono"
@@ -542,6 +544,7 @@ export function VenueTableClient({ venues }: Props) {
                         status={venue.lastRunStatus}
                         variant="outline"
                       />
+                      <CrawlPausedBadge crawlPausedAt={venue.crawlPausedAt} />
                     </div>
                   </TD>
                   <TD>

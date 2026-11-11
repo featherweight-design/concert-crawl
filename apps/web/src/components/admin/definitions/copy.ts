@@ -916,6 +916,11 @@ export const ADMIN_COPY = {
     },
   },
 
+  crawlPausedBadge: {
+    // Never plain "Paused": the venue status already says "Paused" for a
+    // venue taken off the site. A crawl pause keeps its shows published.
+    label: 'Crawl paused',
+  },
   venueTableClient: {
     empty: 'No venues match the current filter.',
     bulkActions: {
