@@ -12,6 +12,8 @@ import type * as EntitlementsModule from '@concert-crawl/entitlements';
 
 import { ArtistPageContent } from './ArtistPageContent';
 import { AP_STICKY_AFTER, AP_STICKY_BAR_H } from './definitions/constants';
+import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
+
 import { ARTIST_COPY } from './definitions/copy';
 
 // The mobile hero renders BackChip, which reaches for the app router.
@@ -437,6 +439,124 @@ describe('ArtistPageContent', () => {
       // `.ap-rail` carries `position: sticky` in globals.css; the band must not
       // render alongside it or the page would show two portraits.
       expect(container.querySelector('[data-testid="hero-band"]')).toBeNull();
+    });
+  });
+
+  // Wrong-artist report card. One card, placed by the viewport.
+  describe('the wrong-artist card', () => {
+    const copy = ARTIST_COPY.report;
+    const signedIn: ArtistDetailResponse = { ...withShows, following: false };
+    const cards = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('button')).filter((button) =>
+        button.textContent?.includes(copy.card.title),
+      );
+    const reported: ArtistDetailResponse = {
+      ...signedIn,
+      myOpenReport: {
+        id: 'rep_1',
+        reason: 'wrong_photo',
+        createdAt: '2026-11-11T12:00:00.000Z',
+      },
+    };
+
+    it('is the event page card, not a copy', () => {
+      const { container } = render(<ArtistPageContent data={signedIn} />);
+
+      // The eyebrow is the event card's own string, reused rather than copied.
+      expect(container.textContent).toContain(
+        REPORTING_COPY.reportFooterLink.eyebrow,
+      );
+    });
+
+    it('ends the page on mobile, after the shows and the player', () => {
+      const { container } = render(<ArtistPageContent data={signedIn} />);
+
+      expect(cards(container)).toHaveLength(1);
+      const column = container.querySelector('.ap-grid > div:last-child');
+      expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
+      // And not in the rail.
+      expect(
+        container.querySelector('.ap-rail')?.textContent ?? '',
+      ).not.toContain(copy.card.title);
+    });
+
+    it('ends the page on mobile with no shows too, after the player', () => {
+      const { container } = render(
+        <ArtistPageContent data={{ ...base, following: false }} />,
+      );
+
+      const column = container.querySelector('.ap-grid > div:last-child');
+      expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
+    });
+
+    it('sits in the desktop rail under Follow', () => {
+      setViewport(true);
+      const { container } = render(<ArtistPageContent data={signedIn} />);
+
+      expect(cards(container)).toHaveLength(1);
+      const rail = container.querySelector('.ap-rail');
+      expect(rail?.textContent).toContain(copy.card.title);
+      const follow = rail?.querySelector('button[aria-label]');
+      const card = cards(container)[0];
+      expect(
+        follow !== null &&
+          follow !== undefined &&
+          card !== undefined &&
+          (follow.compareDocumentPosition(card) &
+            Node.DOCUMENT_POSITION_FOLLOWING) !==
+            0,
+      ).toBe(true);
+    });
+
+    it('names the artist in the card body', () => {
+      const { container } = render(<ArtistPageContent data={signedIn} />);
+
+      expect(container.textContent).toContain(
+        copy.card.subtitle('Neal Francis'),
+      );
+    });
+
+    it('starts at rest when there is no open report', () => {
+      const { container } = render(<ArtistPageContent data={signedIn} />);
+
+      expect(container.textContent).not.toContain(copy.card.reportedChip);
+    });
+
+    it('starts reported when the viewer has an open report', () => {
+      const { container } = render(<ArtistPageContent data={reported} />);
+
+      expect(container.textContent).toContain(copy.card.reportedTitle);
+      expect(container.textContent).toContain(copy.card.reportedChip);
+      expect(container.textContent).toContain(copy.card.reportedFootnote);
+      expect(container.textContent).not.toContain(copy.card.title);
+    });
+
+    it('opens Already reported when the reported card is tapped', () => {
+      const { getByText } = render(<ArtistPageContent data={reported} />);
+
+      fireEvent.click(getByText(copy.card.reportedTitle));
+
+      expect(document.body.textContent).toContain(copy.already.title);
+    });
+
+    it('opens the report sheet from the card', () => {
+      const { getByText } = render(<ArtistPageContent data={signedIn} />);
+
+      fireEvent.click(getByText(copy.card.title));
+
+      expect(document.body.textContent).toContain(copy.sheet.title);
+    });
+
+    it('still renders for a signed-out visitor, announcing the gate', () => {
+      const { container } = render(<ArtistPageContent data={withShows} />);
+
+      const card = Array.from(container.querySelectorAll('button')).find(
+        (button) =>
+          button.getAttribute('aria-label') === copy.card.ariaSignedOut,
+      );
+      expect(card).not.toBeUndefined();
+      // Announced, not drawn: the visible title is the same.
+      expect(card?.textContent).toContain(copy.card.title);
     });
   });
 });

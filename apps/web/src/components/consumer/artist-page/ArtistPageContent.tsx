@@ -20,6 +20,7 @@ import {
   CRAWL_SINCE,
 } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';
+import { ArtistReportCard } from './ArtistReportCard';
 import { ArtistEmbed } from './embed/ArtistEmbed';
 import { EmptyUpcoming } from './EmptyUpcoming';
 import { FollowBlock } from './FollowBlock';
@@ -135,6 +136,22 @@ export const ArtistPageContent = ({
     </>
   );
 
+  // Mounted once and placed by the same JS decision as the follow control:
+  // desktop puts it in the rail under Follow, mobile ends the page with it.
+  // Keyed on the artist and the loaded report so the card's own state resets
+  // when either changes rather than going stale.
+  const reportCard = (
+    <ArtistReportCard
+      key={`${artist.slug}:${data.myOpenReport?.id ?? ''}`}
+      slug={artist.slug}
+      name={artist.name}
+      photoUrl={artist.photoUrl}
+      match={data.match}
+      myOpenReport={data.myOpenReport}
+      signedOut={signedOut}
+    />
+  );
+
   const player = (
     <ArtistEmbed
       name={artist.name}
@@ -190,6 +207,7 @@ export const ArtistPageContent = ({
                 <FollowBlock {...followProps} />
               </div>
             ) : null}
+            {isDesktop ? reportCard : null}
           </div>
           <div style={{ minWidth: 0 }}>
             {isDesktop ? titleBlock : null}
@@ -227,6 +245,8 @@ export const ArtistPageContent = ({
             ) : null}
 
             {hasShows ? null : <div className="ap-block-player">{player}</div>}
+
+            {isDesktop ? null : reportCard}
           </div>
         </div>
       </div>
