@@ -8,19 +8,10 @@
 
 import { ia_hashName } from '../../identity-art/IdentityArt';
 
-export type StampGlyph = 'star' | 'diamond' | 'ring' | 'triangle';
+// The accent lives in the shared helper so VenueStamp picks the same colour.
+export { STAMP_ACCENTS, stampAccentFor } from '@/lib/stamp-accent';
 
-// Hex is allowed here because this is identity data, not theming — the same
-// exception IA_PALETTES takes. Keep it out of components.
-export const STAMP_ACCENTS = [
-  '#7AE6FF',
-  '#FF7BD4',
-  '#FFE36B',
-  '#A075FF',
-  '#C9F26E',
-  '#FFB838',
-  '#5DD4D6',
-] as const;
+export type StampGlyph = 'star' | 'diamond' | 'ring' | 'triangle';
 
 export const STAMP_GLYPHS: readonly StampGlyph[] = [
   'star',
@@ -28,9 +19,6 @@ export const STAMP_GLYPHS: readonly StampGlyph[] = [
   'ring',
   'triangle',
 ];
-
-export const stampAccentFor = (artist: string): string =>
-  STAMP_ACCENTS[ia_hashName(artist, 'stamp-accent') % STAMP_ACCENTS.length]!;
 
 export const stampGlyphFor = (artist: string): StampGlyph =>
   STAMP_GLYPHS[ia_hashName(artist, 'stamp-glyph') % STAMP_GLYPHS.length]!;
