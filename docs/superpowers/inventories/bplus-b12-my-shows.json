@@ -1,0 +1,67 @@
+{
+  "feature": "My shows: Watching, Concerts and Artists with the stamp; StubStamp and the Stale price chip removed",
+  "planRow": "B12",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "Concerts is `/history` (the identifier stays `history`), Artists is `/following`.",
+  "rows": [
+    {
+      "id": "watching",
+      "label": "/watching",
+      "route": "/watching",
+      "boards": ["02-mobile/bp-m-watching_m.jpg", "01-core/bp-watching.jpg"],
+      "steps": [
+        {
+          "goto": "/watching"
+        }
+      ]
+    },
+    {
+      "id": "concerts",
+      "label": "/history: Concerts",
+      "route": "/history",
+      "boards": ["02-mobile/bp-m-concerts_m.jpg", "01-core/bp-concerts.jpg"],
+      "steps": [
+        {
+          "goto": "/history"
+        }
+      ]
+    },
+    {
+      "id": "artists",
+      "label": "/following: Artists",
+      "route": "/following",
+      "boards": ["02-mobile/bp-m-artists_m.jpg", "01-core/bp-artists.jpg"],
+      "steps": [
+        {
+          "goto": "/following"
+        }
+      ]
+    },
+    {
+      "id": "empties",
+      "label": "Empty Watching, Concerts and Artists",
+      "route": "/watching",
+      "boards": [
+        "06-states/bp-s-empty_watching_m.jpg",
+        "06-states/bp-s-empty_concerts_m.jpg",
+        "06-states/bp-s-empty_artists_m.jpg"
+      ],
+      "when": "manual",
+      "note": "Needs an account with nothing watched; the audit user is not empty.",
+      "steps": []
+    },
+    {
+      "id": "skeletons",
+      "label": "My shows skeletons",
+      "route": "/watching",
+      "boards": [
+        "06-states/bp-s-load_watching_m.jpg",
+        "06-states/bp-s-load_concerts_m.jpg",
+        "06-states/bp-s-load_artists_m.jpg"
+      ],
+      "when": "manual",
+      "note": "Throttle and navigate on staging.",
+      "steps": []
+    }
+  ]
+}

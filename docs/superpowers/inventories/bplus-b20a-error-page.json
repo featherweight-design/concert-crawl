@@ -1,0 +1,54 @@
+{
+  "feature": "Something went wrong page: StandaloneError, Tell us card, signed-out layout",
+  "planRow": "B20a",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "No route reaches `error.tsx` or `global-error.tsx` on demand. Until B20a gives staging a way to trigger it, every row is manual; walk each state and each theme board.",
+  "rows": [
+    {
+      "id": "prompt",
+      "label": "Signed in: prompt, form, sending, sent, failed",
+      "route": "/events",
+      "boards": [
+        "12-error-page/err-m-prompt.jpg",
+        "12-error-page/err-d-prompt.jpg",
+        "12-error-page/err-m-form.jpg",
+        "12-error-page/err-d-form.jpg",
+        "12-error-page/err-m-sending.jpg",
+        "12-error-page/err-m-sent.jpg",
+        "12-error-page/err-m-failed.jpg",
+        "12-error-page/err-d-failed.jpg"
+      ],
+      "when": "manual",
+      "note": "",
+      "steps": []
+    },
+    {
+      "id": "signed-out",
+      "label": "Signed out layout",
+      "route": "/",
+      "auth": "signed-out",
+      "boards": [
+        "12-error-page/err-m-signedout.jpg",
+        "12-error-page/err-d-signedout.jpg",
+        "12-error-page/err-d-signedout-light.jpg"
+      ],
+      "when": "manual",
+      "note": "",
+      "steps": []
+    },
+    {
+      "id": "themes",
+      "label": "Its own theme tokens, every theme",
+      "route": "/events",
+      "boards": [
+        "12-error-page/err-t-electric.jpg",
+        "12-error-page/err-t-light.jpg",
+        "12-error-page/err-t-pulse.jpg",
+        "12-error-page/err-t-forge.jpg"
+      ],
+      "when": "manual",
+      "note": "",
+      "steps": []
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "feature": "Passport booklet and the Up next stub",
+  "planRow": "B13",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "rows": [
+    {
+      "id": "passport",
+      "label": "/passport: the booklet",
+      "route": "/passport",
+      "boards": [
+        "07-more-screens/more-r3-passport_m.jpg",
+        "07-more-screens/more-r3-passport.jpg",
+        "07-more-screens/more-r3-passport_book_m.jpg",
+        "07-more-screens/more-r3-passport_book.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/passport",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "passport-full",
+      "label": "/passport: whole page, Up next stub",
+      "route": "/passport",
+      "boards": ["07-more-screens/more-r3-passport_book_m.jpg"],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/passport",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "empty",
+      "label": "First-visit Passport empty state",
+      "route": "/passport",
+      "boards": ["06-states/bp-s-empty_passport_m.jpg"],
+      "when": "manual",
+      "note": "Needs an account with no concerts; desktop has no board (open question for Design).",
+      "steps": []
+    }
+  ]
+}

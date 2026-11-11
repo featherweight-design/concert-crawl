@@ -19,6 +19,7 @@
     "venues:sync": "tsx scripts/sync-venues.ts",
     "worktree:prune": "scripts/worktree-prune.sh",
     "backlog:status": "scripts/backlog-status.sh",
+    "contact-sheet": "pnpm --filter @concert-crawl/e2e contact-sheet",
     "release:draft": "tsx scripts/draft-release.ts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "prepare": "husky"

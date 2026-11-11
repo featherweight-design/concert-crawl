@@ -1,0 +1,37 @@
+{
+  "feature": "Avatar Mix two UI and the profile banner",
+  "planRow": "B16",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "`/me/edit` is the profile editor. The account's saved theme is unaffected; `/me/edit` does not mount ThemeSync.",
+  "rows": [
+    {
+      "id": "edit",
+      "label": "/me/edit: profile editor with the Mix two picker",
+      "route": "/me/edit",
+      "boards": [
+        "07-more-screens/more-s-e_mix.jpg",
+        "07-more-screens/more-s-edit_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/me/edit"
+        }
+      ]
+    },
+    {
+      "id": "settings-banner",
+      "label": "/me: the profile banner",
+      "route": "/me",
+      "boards": [
+        "07-more-screens/more-s-d_profile.jpg",
+        "07-more-screens/more-s-settings_m.jpg"
+      ],
+      "theme": "account",
+      "steps": [
+        {
+          "goto": "/me"
+        }
+      ]
+    }
+  ]
+}
