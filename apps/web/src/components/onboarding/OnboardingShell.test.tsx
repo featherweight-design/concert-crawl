@@ -588,14 +588,19 @@ describe('OnboardingShell — genres then artists', () => {
       // machine lets the effects run and hides the race; on a loaded CI runner
       // the timer wins anyway, and the grid's prune, still holding the render
       // before the pick, dropped the pick while its search mark survived.
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         const hasRow = () =>
           screen.queryAllByRole('checkbox', { name: /ghost/i, hidden: true })
             .length > 0;
         if (hasRow()) return resolve();
+        const timeout = setTimeout(() => {
+          observer.disconnect();
+          reject(new Error('the ghost search row never rendered'));
+        }, 3000);
         const observer = new MutationObserver(() => {
           if (!hasRow()) return;
           observer.disconnect();
+          clearTimeout(timeout);
           resolve();
         });
         observer.observe(document.body, { subtree: true, childList: true });
