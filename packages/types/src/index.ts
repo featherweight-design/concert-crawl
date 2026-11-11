@@ -1008,6 +1008,12 @@ export interface InviteCode {
   revokedAt: string | null;
   revokedBy: string | null;
   createdAt: string;
+  // Multi-use codes (posters): a code admits `maxUses` accounts. `usedBy` and
+  // `usedAt` record only the first redemption, so "used up" is
+  // `useCount >= maxUses`, never `usedBy !== null`.
+  maxUses: number;
+  useCount: number;
+  label: string | null;
 }
 
 // Avatar color token keys — survive theme switches
