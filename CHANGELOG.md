@@ -1,3 +1,10 @@
+## [1.313.1](https://github.com/featherweight-design/concert-crawl/compare/v1.313.0...v1.313.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **db:** re-case only single-case artist names in the name repair ([37b5efd](https://github.com/featherweight-design/concert-crawl/commit/37b5efdd68f5a8b7049cbe645e01b50bfd3a1401))
+
 # [1.313.0](https://github.com/featherweight-design/concert-crawl/compare/v1.312.0...v1.313.0) (2026-11-11)
 
 
