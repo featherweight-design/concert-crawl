@@ -739,6 +739,9 @@ artistsAdminRouter.get('/reports/count', async (ctx) => {
       total: sql<number>`count(distinct ${artistReports.artistId})::int`,
     })
     .from(artistReports)
+    // Joined to the table the chip lists from: `artist_id` has no foreign key,
+    // so a report whose artist row is gone must not hold the badge up.
+    .innerJoin(artists, eq(artists.id, artistReports.artistId))
     .where(eq(artistReports.status, 'open'));
   return ctx.json({ success: true, data: { count: row?.total ?? 0 } });
 });
