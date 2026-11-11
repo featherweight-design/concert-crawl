@@ -171,10 +171,11 @@ export const FollowShelf = ({
           gate sentences inside the cards are position:absolute with no offsets,
           so without a positioned ancestor their rects resolve against <html>
           and leak into the page's scrollWidth at 320px (the #33 mechanism).
-          The scroller pads 12px so a card's genre glow isn't clipped, and the
-          wrapper's negative margin gives back the old 2px/4px footprint. */}
-      <div className="relative -mx-4 -mb-2 -mt-2.5 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
-        <ul className="flex list-none gap-[10px] overflow-x-auto px-4 py-3 sm:px-0">
+          The scroller pads 12px on every side so a card's genre glow isn't
+          clipped; from sm up a matching negative margin keeps the cards
+          aligned with the page. */}
+      <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:-mx-3 sm:max-w-[calc(100%+1.5rem)]">
+        <ul className="flex list-none gap-[10px] overflow-x-auto px-4 py-3 sm:px-3">
           {visible.map((artist) => (
             <ShelfCard
               key={artist.key}

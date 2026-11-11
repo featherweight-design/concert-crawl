@@ -5,8 +5,9 @@ import { WatchShowButton } from '../watch-show-button';
 import { formatShowTime, venueShort } from '../definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '../event-title-block';
-import { GenreDot } from '../GenreDot';
-import { RowMetaChip } from '../event-row/RowMetaChip';
+import { bucketMembersFor } from '@concert-crawl/types';
+import { MetaRow } from '../event-row/MetaRow';
+import { orderGenres } from '../event-row/lib/order-genres';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
 
@@ -16,12 +17,15 @@ interface HeroEventCardProps {
   event: EventWithVenue;
   label?: string;
   isWatching?: boolean;
+  /** The active Vibe filter, so the hero leads with the genre the rows do. */
+  filterVibe?: string | undefined;
 }
 
 export function HeroEventCard({
   event,
   label = copy.heroTonight,
   isWatching = false,
+  filterVibe,
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime);
   // Present only for connected viewers (#763 PR 6) — swaps the eyebrow badge.
@@ -31,8 +35,12 @@ export function HeroEventCard({
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
       : null;
   // B+ rule 2: the lead genre rings the art and starts the card's edge, which
-  // runs into the accent. The pair shares one chip, as on a row.
-  const [leadGenre, secondGenre] = event.genre ?? [];
+  // runs into the accent. The pair shares one chip, as on a row, ordered the
+  // way the rows order it so an active Vibe filter leads both.
+  const [leadGenre, secondGenre] = orderGenres(
+    event.genre ?? [],
+    bucketMembersFor(filterVibe),
+  );
   const genre = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
 
   return (
@@ -129,14 +137,22 @@ export function HeroEventCard({
           </div>
           {/* Right padding clears the watch button, which sits over this
               corner and is deliberately outside the Link. */}
+          {/* MetaRow's measure pass collapses the pair to its lead when the
+              column is narrow, as a row does, rather than overflowing at 320. */}
           {leadGenre && (
-            <div className="mt-2 pr-9">
-              <RowMetaChip
-                label={leadGenre}
-                secondaryLabel={secondGenre}
-                icon={<GenreDot genre={leadGenre} />}
-              />
-            </div>
+            <MetaRow
+              chips={[
+                {
+                  key: `genre-${leadGenre}`,
+                  label: leadGenre,
+                  tone: 'neutral',
+                  genreDot: leadGenre,
+                  ...(secondGenre ? { secondaryLabel: secondGenre } : {}),
+                },
+              ]}
+              budget={1}
+              className="mt-2 pr-9"
+            />
           )}
         </div>
       </Link>

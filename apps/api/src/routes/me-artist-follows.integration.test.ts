@@ -236,6 +236,7 @@ describe('GET /v1/me/artist-follows', () => {
       venue: 'Globe Hall',
       venueSlug: 'globe-hall',
       price: 28.5,
+      genres: [],
     });
   });
 

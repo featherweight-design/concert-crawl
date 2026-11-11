@@ -1,21 +1,19 @@
-import {
-  formatEventDate,
-  isToday,
-} from '@/components/consumer/definitions/lib';
+import { formatEventDate } from '@/components/consumer/definitions/lib';
 
 interface DayTileProps {
   /** The group's `YYYY-MM-DD`, as Browse keys its date groups. */
   date: string;
+  /** Passed in, so the tile and the header's "Tonight" read one clock. */
+  today: boolean;
 }
 
 /**
  * The date tile that leads a Browse day header (B+ `bp-browse`): the weekday
- * over the day number. Today's tile takes the brand gradient, every other day
- * a quiet neutral, so tonight is findable at a glance down a long list.
+ * over the day number. Today's tile takes the brand gradient and every other
+ * day the board's light neutral, so tonight is findable down a long list.
  * Decorative: the header's own label names the day for screen readers.
  */
-export const DayTile = ({ date }: DayTileProps) => {
-  const today = isToday(date);
+export const DayTile = ({ date, today }: DayTileProps) => {
   return (
     <span
       aria-hidden

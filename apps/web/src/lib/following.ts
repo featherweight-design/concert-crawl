@@ -164,7 +164,9 @@ export const followsToShelfArtists = (
     eventId: follow.nextShow?.eventId ?? null,
     dateLine: followDateLine(follow.nextShow),
     price: follow.nextShow?.price ?? null,
-    genre: follow.nextShow?.genres[0] ?? null,
+    // Optional chaining on `genres` as well: web and API deploy separately, so
+    // a response from an API that predates the field must still render.
+    genre: follow.nextShow?.genres?.[0] ?? null,
     following: true,
   }));
 
@@ -183,6 +185,6 @@ export const suggestionsToShelfArtists = (
     eventId: suggestion.nextShow.eventId,
     dateLine: followDateLine(suggestion.nextShow),
     price: suggestion.nextShow?.price ?? null,
-    genre: suggestion.nextShow.genres[0] ?? null,
+    genre: suggestion.nextShow.genres?.[0] ?? null,
     following: suggestion.following === true,
   }));
