@@ -1394,7 +1394,7 @@ eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
       and(
         eq(events.id, eventId),
         eq(events.hiddenFromConsumer, false),
-        listedOrDelisted(),
+        isNull(events.firstMissingAt),
       ),
     )
     .limit(1);

@@ -803,6 +803,10 @@ eventsAdminRouter.patch(
         .set({
           ...body,
           ...(typeof body.status === 'string' && { delistedAt: null }),
+          // Restoring a show is a decision that it is still on: without this
+          // the next sweep would find it missing and cancel it again.
+          ...(body.status === 'upcoming' &&
+            preUpdate?.delistedAt != null && { firstMissingAt: null }),
           updatedAt: new Date(),
         })
         .where(eq(events.id, id))
