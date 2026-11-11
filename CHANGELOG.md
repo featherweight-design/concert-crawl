@@ -1,3 +1,16 @@
+# [1.328.0](https://github.com/featherweight-design/concert-crawl/compare/v1.327.0...v1.328.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** keep the avatar pair coherent, one avatar projection ([09834b5](https://github.com/featherweight-design/concert-crawl/commit/09834b52847634efcb2a124ca708773e5f46cec2))
+* **api:** lock the avatar pair write, one palette, solid when absent ([0b7525e](https://github.com/featherweight-design/concert-crawl/commit/0b7525edcf08752509ab2325cb2b46f84ca69280))
+
+
+### Features
+
+* **api:** avatar pair, a nullable second colour (B+ B15) ([c59ebbc](https://github.com/featherweight-design/concert-crawl/commit/c59ebbc906c319fd9014ff59c8c7c1f2ba7105f9))
+
 # [1.327.0](https://github.com/featherweight-design/concert-crawl/compare/v1.326.0...v1.327.0) (2026-11-11)
 
 
