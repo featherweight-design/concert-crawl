@@ -44,7 +44,7 @@ export function VerifySheet({
         aria-hidden="true"
       />
       {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[82vh] flex flex-col rounded-t-[20px] bg-bg overflow-hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[82vh] flex flex-col rounded-t-[20px] sheet-edge [--sheet-bg:var(--bg)] overflow-hidden">
         {/* Grabber */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-border-strong" />

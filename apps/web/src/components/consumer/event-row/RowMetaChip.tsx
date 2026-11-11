@@ -18,8 +18,9 @@ const tint = (token: string, fill: number) => ({
   border: `color-mix(in oklch, var(${token}) 42%, transparent)`,
 });
 
-// Every tone sits on the same surface and differs only in its foreground and
-// border, so they read as one family under all nine themes rather than as
+// Every tone shares the chip's size, radius and type and differs only in color:
+// a neutral surface for neutral and strong, a tint of its own token for the
+// rest. So they read as one family under all nine themes rather than as
 // differently-shaped badges.
 const TONE: Record<
   ChipTone,

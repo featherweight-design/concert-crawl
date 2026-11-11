@@ -130,6 +130,8 @@ export const EventRow = ({
               boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
               // Sold out dims the artwork, never the row: a row-level opacity
               // pushes --fg-muted below the AA contrast floor.
+              // The ring dims with it, deliberately: it is decoration, and a
+              // full-strength ring around dimmed art would outshine the show.
               opacity: struck || show.status === 'soldout' ? 0.55 : 1,
             }}
           >
