@@ -1,5 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextResponse, type NextRequest } from 'next/server';
+import {
+  NextResponse,
+  type NextFetchEvent,
+  type NextRequest,
+} from 'next/server';
 import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import {
   DEFAULT_RETURN_PATH,
@@ -214,16 +218,17 @@ interface MiddlewareAuth {
   protect(options: { unauthenticatedUrl: string }): Promise<unknown>;
 }
 
-/** An invite code as minted: `BETA-XXXX-XXXX`. */
-const INVITE_CODE = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+/** Longer than any invite code, so a pasted essay isn't echoed into the URL. */
+const SHORT_LINK_CODE_MAX = 32;
 
 /**
  * A poster's QR opens `/I/<CODE>` (uppercase, so the QR can use alphanumeric
- * mode) and people type `concertcrawl.app/i`. Both go to the invite screen,
- * with a valid code filled in. The screen still waits for the visitor to press
- * the button, so a GET here never redeems anything. Handled before the route
- * check because `/I` and `/i` differ only in case and no app route serves
- * either; anything that isn't a well-formed code lands on an empty field.
+ * mode) and people type `concertcrawl.app/i`. Both go to the invite screen with
+ * the segment passed along as `?code=`; that screen formats and validates it
+ * (`formatCodeInput`) and still waits for its button, so a GET here never
+ * redeems anything. `/I` and `/i` differ only in case and no app route serves
+ * either, so the path is reserved for this link (proxy.test.ts checks `app/`
+ * has no `i` route). Runs before Clerk, so a scan never waits on a handshake.
  */
 export const inviteShortLinkRedirect = (
   req: NextRequest,
@@ -233,11 +238,13 @@ export const inviteShortLinkRedirect = (
   const target = new URL('/auth/code', req.url);
   let code = '';
   try {
-    code = decodeURIComponent(match[1] ?? '').toUpperCase();
+    code = decodeURIComponent(match[1] ?? '');
   } catch {
-    // A malformed escape is just not a code.
+    // A malformed escape carries no code.
   }
-  if (INVITE_CODE.test(code)) target.searchParams.set('code', code);
+  if (code !== '') {
+    target.searchParams.set('code', code.slice(0, SHORT_LINK_CODE_MAX));
+  }
   return NextResponse.redirect(target, 302);
 };
 
@@ -249,8 +256,6 @@ export const middlewareHandler = async (
   auth: MiddlewareAuth,
   req: NextRequest,
 ): Promise<NextResponse | undefined> => {
-  const shortLink = inviteShortLinkRedirect(req);
-  if (shortLink) return shortLink;
   // Before any auth decision: a path we don't serve gets no `auth.protect`, no
   // 307 and no sign-in render, just Next's 404. `clerkMiddleware` has already
   // run `authenticateRequest` by the time this handler is called, so this does
@@ -324,7 +329,11 @@ export const middlewareHandler = async (
   await auth.protect({ unauthenticatedUrl: signInUrl.toString() });
 };
 
-export default clerkMiddleware(middlewareHandler);
+const clerk = clerkMiddleware(middlewareHandler);
+
+export default function proxy(req: NextRequest, event: NextFetchEvent) {
+  return inviteShortLinkRedirect(req) ?? clerk(req, event);
+}
 
 export const config = {
   matcher: [
