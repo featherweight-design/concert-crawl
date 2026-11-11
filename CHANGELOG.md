@@ -1,3 +1,11 @@
+## [1.314.5](https://github.com/featherweight-design/concert-crawl/compare/v1.314.4...v1.314.5) (2026-11-11)
+
+
+### Bug Fixes
+
+* **watching,prices:** sold out means sold out; a price update keeps its slot ([9a38fdb](https://github.com/featherweight-design/concert-crawl/commit/9a38fdbfc1fa455a390fd425fa9339fdd41134fc))
+* **watching:** one sold-out rule for admin and Watching; skip cancelled shows in the summary ([ee51be0](https://github.com/featherweight-design/concert-crawl/commit/ee51be09abbde27adbfac06102722909b41fd913))
+
 ## [1.314.4](https://github.com/featherweight-design/concert-crawl/compare/v1.314.3...v1.314.4) (2026-11-11)
 
 
