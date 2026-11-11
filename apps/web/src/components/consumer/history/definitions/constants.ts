@@ -8,3 +8,8 @@ export const PASSPORT_ROUTE: string | null = '/passport';
 // Fixed at cozy to match the Watching list. The handoff's `density` designer
 // knob is deliberately not a prop on the route (plan PR-5 Task 5).
 export const HISTORY_DENSITY = 'cozy' as const;
+
+// The B+ brand gradient for the one figure on each My shows header that gets
+// it: the Watching count, and Top venue on Concerts. Inline-clipped to text.
+export const MY_SHOWS_GRADIENT =
+  'linear-gradient(90deg, var(--signal), var(--accent))';

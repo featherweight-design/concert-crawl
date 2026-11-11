@@ -20,8 +20,11 @@ export const FindArtistsRow = ({ narrow = false }: { narrow?: boolean }) => {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        padding: '13px 16px',
-        borderTop: '1px solid var(--border)',
+        padding: '11px 12px',
+        // Carded like the B+ artist rows above it, dashed because it holds
+        // no artist yet.
+        border: '1px dashed var(--border)',
+        borderRadius: 12,
         textDecoration: 'none',
       }}
     >

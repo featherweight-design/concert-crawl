@@ -55,6 +55,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.61.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: "My shows has a new look: every night you go to earns its venue's stamp, and the shows ahead of you wear the stamp they'll become.",
+      },
+      {
+        kind: 'removed',
+        text: 'Watching no longer tags older prices as Stale.',
+      },
+    ],
+  },
+  {
     version: 'v0.60.0-beta',
     date: 'Nov 12, 2026',
     headline: null,

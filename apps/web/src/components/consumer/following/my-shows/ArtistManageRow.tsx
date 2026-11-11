@@ -3,7 +3,9 @@
 // One followed artist on My shows ▸ Artists.
 //
 // Two densities of the SAME row, not two components: `row` is the mobile
-// full-bleed list item, `card` is the desktop two-up grid cell. They differ
+// list card, `card` is the desktop two-up grid cell. B+ (README "My shows",
+// rule 2) cards both, and the next show's lead genre colours the image ring
+// and the left edge; an artist with no date takes the neutral edge. They differ
 // in box and type scale only — same fields, same order, same control — so a
 // change to what a row says lands on both by construction.
 //
@@ -27,6 +29,7 @@ import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { followDateLine } from '@/lib/following';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import type { FollowedArtist } from '@concert-crawl/types';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import {
@@ -74,33 +77,46 @@ export const ArtistManageRow = ({
       ? ROW_ART_SIZE_NARROW
       : ROW_ART_SIZE;
   const dateLine = followDateLine(artist.nextShow);
+  const genre = genreColor(artist.nextShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR;
 
   return (
     <div
+      data-testid="artist-manage-row"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        ...(card
-          ? {
-              padding: 12,
-              borderRadius: 12,
-              border: '1px solid var(--border)',
-              // Group 1 cards are the ones with a date; the tint is what
-              // separates them from the reference list below.
-              ...(artist.nextShow === null
-                ? {}
-                : { background: 'var(--surface-1)' }),
-            }
-          : { padding: '11px 16px', borderTop: '1px solid var(--border)' }),
+        padding: card ? 12 : '11px 12px',
+        borderRadius: 12,
+        border: '1px solid var(--border)',
+        borderLeftWidth: 2,
+        borderLeftColor: genre,
+        // Group 1 cards are the ones with a date; the tint is what
+        // separates them from the reference list below.
+        ...(artist.nextShow === null
+          ? {}
+          : {
+              background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
+            }),
       }}
     >
-      <Panel
-        surface="artist"
-        name={artist.name}
-        photoUrl={artist.photoUrl}
-        size={art}
-      />
+      <span
+        data-testid="artist-image-ring"
+        className="block shrink-0 overflow-hidden rounded-md"
+        style={{
+          width: art,
+          height: art,
+          // A box-shadow, so the clip never cuts the ring.
+          boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
+        }}
+      >
+        <Panel
+          surface="artist"
+          name={artist.name}
+          photoUrl={artist.photoUrl}
+          size={art}
+        />
+      </span>
 
       <div
         style={{

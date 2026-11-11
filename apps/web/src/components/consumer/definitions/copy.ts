@@ -807,7 +807,6 @@ export const CONSUMER_COPY = {
       priceTba: 'tba',
       savedPrefix: 'saved',
       savedPricePrefix: 'at $',
-      stalePrefix: 'Stale · ',
     },
     // DeltaTag — the "no meaningful change since you saved" reading. The
     // drop/spike readings are formatted numbers, not copy.

@@ -3,7 +3,6 @@ import { SURFACES, type RowSurface } from '../definitions/surfaces';
 import type { ChipTone } from '../RowMetaChip';
 import type { EventRowShow } from './row-model';
 import { orderGenres } from './order-genres';
-import { isPriceStale, relTimeAgo } from '@/components/consumer/lib/staleness';
 
 export interface ChipSpec {
   key: string;
@@ -98,17 +97,6 @@ export function rowChips(
           genreDot: lead,
           ...(second ? { secondaryLabel: second } : {}),
         });
-    }
-
-    if (kind === 'freshness' && isPriceStale(show.price?.observedAt)) {
-      // observedAt is non-null here — isPriceStale is false without one.
-      const relTime = relTimeAgo(show.price?.observedAt ?? '');
-      chips.push({
-        key: 'freshness',
-        label: `${copy.freshness.stalePrefix} ${copy.glyphs.separator} ${relTime}`,
-        tone: 'warn',
-        srLabel: copy.a11y.stalePrice(relTime),
-      });
     }
 
     if (kind === 'provenance' && show.price?.source) {

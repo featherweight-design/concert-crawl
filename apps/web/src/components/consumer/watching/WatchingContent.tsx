@@ -8,6 +8,7 @@ import { WatchingRow } from './WatchingRow';
 import { WatchingEmpty } from './WatchingEmpty';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
+import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { denverTodayUtcMs } from '@/lib/time';
 
 const COPY = CONSUMER_COPY.watching;
@@ -186,7 +187,18 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
               lineHeight: 1,
             }}
           >
-            {displayedShows.length}{' '}
+            {/* B+: the count, alone on this header, takes the gradient. */}
+            <span
+              data-testid="watching-count"
+              style={{
+                backgroundImage: MY_SHOWS_GRADIENT,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              {displayedShows.length}
+            </span>{' '}
             {displayedShows.length !== 1
               ? COPY.watchingContent.showsPlural
               : COPY.watchingContent.showsSingular}

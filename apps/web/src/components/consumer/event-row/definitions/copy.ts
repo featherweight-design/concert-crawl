@@ -44,9 +44,6 @@ export const EVENT_ROW_COPY = {
     standard: 'Community',
     resale: 'Resale',
   },
-  freshness: {
-    stalePrefix: 'Stale',
-  },
   meta: {
     following: 'Following',
     // The visible chip is a count only. Naming people on a list row is event
@@ -86,7 +83,6 @@ export const EVENT_ROW_COPY = {
     // drawn under width pressure, and this is where it survives.
     droppedGenre: (genre: string) => ` and ${genre}`,
     priceProvenance: (label: string) => `Price source: ${label}`,
-    stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
     // Replaces the sold-out price slot's placeholder dash.
     soldOutPrice: 'No price, sold out',
     // Replaces the visible "pending" marker, so it has to say what pending

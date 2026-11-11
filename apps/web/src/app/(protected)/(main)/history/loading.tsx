@@ -1,5 +1,6 @@
 // Mirrors WatchingLoading, adjusted for History's shape: a sub-tab bar, a stat
-// hero instead of a headline block, and rows whose right column is a 28px stamp.
+// hero instead of a headline block, and rows whose right column is the 44px
+// round venue stamp (B+ rule 4).
 
 function HistoryRowSkeleton({ delay }: { delay: number }) {
   return (
@@ -51,12 +52,12 @@ function HistoryRowSkeleton({ delay }: { delay: number }) {
           }}
         />
       </div>
-      {/* Stub stamp column — 28px to match cozy */}
+      {/* Venue stamp column — 44px round, to match cozy */}
       <div
         style={{
-          width: 28,
-          height: 28,
-          borderRadius: 6,
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
           background: 'var(--surface-2)',
           flexShrink: 0,
         }}

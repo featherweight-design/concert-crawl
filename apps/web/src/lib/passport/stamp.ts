@@ -15,10 +15,10 @@ export const STAMP_ACCENTS = [
 ] as const;
 
 /**
- * A stamp's ink colour, stable per seed (the artist). Shared by the ticket-stub
- * `StubStamp` (#70) and the B+ `VenueStamp`, so a show keeps its colour when B12
- * swaps one for the other. The `stamp-accent` namespace keeps it independent of
- * the stub's glyph stream.
+ * A stamp's ink colour, stable per seed (the artist). The B+ `VenueStamp` keeps
+ * the hash the ticket-stub stamp used (#70), so a show kept its colour when B12
+ * swapped one for the other. The `stamp-accent` namespace keeps it independent
+ * of the going button's glyph stream.
  */
 export const stampAccentFor = (seed: string): string =>
   STAMP_ACCENTS[ia_hashName(seed, 'stamp-accent') % STAMP_ACCENTS.length]!;

@@ -18,8 +18,7 @@ export type WhenWhereUnit = (typeof WHEN_WHERE_UNITS)[number];
 export type CarriedContext =
   Extract<WhenWhereUnit, 'date' | 'venue'> | 'artist';
 
-export type MetaChipKind =
-  'crew' | 'following' | 'genre' | 'freshness' | 'provenance';
+export type MetaChipKind = 'crew' | 'following' | 'genre' | 'provenance';
 
 export interface SurfaceConfig {
   /** Context the surface states elsewhere, so the row must not repeat it. */
@@ -104,9 +103,12 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // The only surface with no tour clause: Watching is a list of shows already
   // decided on, so a tour name buys nothing and the room goes to the units the
   // row alone can state.
+  //
+  // B+ dropped the Stale price chip everywhere, so provenance is the only chip
+  // left here. Staleness itself still drives the price surfaces that word it.
   watching: {
     carries: [],
-    chipPriority: ['freshness', 'provenance'],
+    chipPriority: ['provenance'],
     hasActionGutter: true,
     carded: true,
     showsDelta: true,

@@ -5,6 +5,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { FollowedArtist } from '@concert-crawl/types';
 import { ArtistManageRow } from './ArtistManageRow';
+import { genreColor } from '@/lib/genre-color';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
 
@@ -176,5 +177,47 @@ describe('ArtistManageRow', () => {
     );
 
     expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  // B+ rule 2: the next show's lead genre rings the art and edges the card.
+  it("rings and edges the card in the next show's genre colour", () => {
+    const jazz = genreColor('jazz');
+    if (jazz === null) throw new Error('jazz has no genre colour');
+    render(
+      <ArtistManageRow
+        artist={artist({
+          nextShow: {
+            eventId: 'evt-1',
+            iso: '2026-09-12',
+            venue: 'Bluebird Theater',
+            venueSlug: 'bluebird-theater',
+            price: 28,
+            genres: ['jazz'],
+          },
+        })}
+        onEntitlementRequired={noop}
+      />,
+    );
+
+    expect(screen.getByTestId('artist-image-ring').style.boxShadow).toContain(
+      jazz,
+    );
+    expect(screen.getByTestId('artist-manage-row').style.borderLeftColor).toBe(
+      jazz,
+    );
+  });
+
+  it('takes the neutral edge when the artist has no date', () => {
+    render(
+      <ArtistManageRow
+        artist={artist({ nextShow: null })}
+        variant="card"
+        onEntitlementRequired={noop}
+      />,
+    );
+
+    expect(screen.getByTestId('artist-manage-row').style.borderLeftColor).toBe(
+      'var(--border-strong)',
+    );
   });
 });

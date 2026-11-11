@@ -1,6 +1,5 @@
 export { GoingButton } from './GoingButton';
 export type { GoingButtonState, GoingButtonSize } from './GoingButton';
-export { StubStamp } from './StubStamp';
 export { EventDetailCtaBlock } from './EventDetailCtaBlock';
 export { GOING_COPY } from './definitions/copy';
 export { goingStateFor } from './lib/cta-state';

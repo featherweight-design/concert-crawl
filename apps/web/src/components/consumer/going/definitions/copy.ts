@@ -26,7 +26,8 @@ export const GOING_COPY = {
   // `going-vs-watch`, not here: it is the same explanation on every surface
   // that draws the pair, and the handoff authors it as a two-row `defs` panel.
   nudge: {
-    heading: 'Going to this show?',
+    // B+ shortens the question so it and the day count hold one line.
+    heading: 'Going?',
     whenTonight: 'Tonight.',
     whenTomorrow: 'Tomorrow.',
     whenInDays: (days: number) => `In ${days} days.`,
