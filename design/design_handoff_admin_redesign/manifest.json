@@ -1,0 +1,1026 @@
+[
+ {
+  "section": "01-foundations",
+  "name": "desktop-sidebar",
+  "title": "Desktop sidebar",
+  "note": "Three groups. The account card opens your menu, which holds “Open Concert Crawl”. No User app / Admin toggle in the header.",
+  "w": 232,
+  "h": 900
+ },
+ {
+  "section": "01-foundations",
+  "name": "mobile-one-nav",
+  "title": "Mobile: one nav",
+  "note": "Four tabs. No slide-out shelf.",
+  "w": 390,
+  "h": 1080
+ },
+ {
+  "section": "01-foundations",
+  "name": "more",
+  "title": "More",
+  "note": "Everything else, grouped like the sidebar.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-foundations",
+  "name": "venues-list-status-columns",
+  "title": "Venues list, status columns",
+  "note": "The pink dot means the venue has an item in Needs you, so Latest keeps its room. Levitt and Meow Wolf read “Paused: awaiting reply”. Off-season is a snooze on warnings, not a status, so Fiddler’s Green still reads Crawling.",
+  "w": 1040,
+  "h": 430
+ },
+ {
+  "section": "01-foundations",
+  "name": "pause-crawling",
+  "title": "Pause crawling",
+  "note": "One pause, with a reason and a resume rule. Replaces “Pause crawling” vs “Pause venue”.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-needs-you",
+  "name": "needs-you-desktop",
+  "title": "Needs you · desktop",
+  "note": "Fiddler’s Green is open on the right: likely cause, the last 14 runs, last year’s season, and your answers.",
+  "w": 1280,
+  "h": 1120
+ },
+ {
+  "section": "02-needs-you",
+  "name": "needs-you-mobile",
+  "title": "Needs you · mobile",
+  "note": "The first two answers are buttons; the rest sit under them.",
+  "w": 390,
+  "h": 1080
+ },
+ {
+  "section": "02-needs-you",
+  "name": "a-batch-of-prices",
+  "title": "A batch of prices",
+  "note": "While “Approve every price myself” is on in Prices.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-needs-you",
+  "name": "all-clear",
+  "title": "All clear",
+  "note": "The empty state carries the crawl summary, so you don’t need Health to feel done.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-needs-you",
+  "name": "show-dropped-off-a-calendar",
+  "title": "Show · dropped off a calendar",
+  "note": "Ticket link checked for you; the suggested answer is the primary button.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "show-renamed-moved",
+  "title": "Show · renamed “MOVED”",
+  "note": "We look for the same act at the named venue and offer the merge.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "venue-auto-paused-after-3-failures",
+  "title": "Venue · auto-paused after 3 failures",
+  "note": "Every failed run says why. Needs the crawler to record reasons (engineering).",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "venue-blocked-403-429",
+  "title": "Venue · blocked (403/429)",
+  "note": "Never retried automatically. Ask the venue pauses with “Waiting on permission”.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "artist-wrong-artist-report-or-unsure-match",
+  "title": "Artist · wrong-artist report or unsure match",
+  "note": "Candidates best first, with where they’re from and how big they are.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "event-low-confidence",
+  "title": "Event · low confidence",
+  "note": "The venue’s own words, and what we would list.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "price-check",
+  "title": "Price check",
+  "note": "Two prices side by side, plus the ticket page.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "02-needs-you",
+  "name": "bug-or-error-report",
+  "title": "Bug or error report",
+  "note": "One-off reply, Resolve. Ideas go to the weekly Feedback read instead.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "03-health",
+  "name": "health-desktop",
+  "title": "Health · desktop",
+  "note": "Four headline tiles, then the detail. No “246 flagged” style numbers: counts that need you live only in Needs you.",
+  "w": 1280,
+  "h": 1540
+ },
+ {
+  "section": "03-health",
+  "name": "tiles-in-each-state",
+  "title": "Tiles in each state",
+  "note": "Blue is in progress, green fine, amber worth a look, red broken. The chip always says the state in words.",
+  "w": 1200,
+  "h": 800
+ },
+ {
+  "section": "03-health",
+  "name": "health-mobile",
+  "title": "Health · mobile",
+  "note": "Under More. Same order as desktop; the site checks fold into the Site tile.",
+  "w": 390,
+  "h": 1640
+ },
+ {
+  "section": "04-venues",
+  "name": "venues-desktop",
+  "title": "Venues · desktop",
+  "note": "Pink dot: something in Needs you. Filters replace the stat cards. robots.txt is a column and a filter.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-overview",
+  "title": "Venue · Overview",
+  "note": "Ball Arena’s Skipped now says why. The suggestion card appears only when we spot a cheaper or sturdier source.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-runs",
+  "title": "Venue · Runs",
+  "note": "Pick any run, including OK and Skipped, to see how far the extraction got and inspect the page. “This is normal” replaces Mark expected.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-source",
+  "title": "Venue · Source",
+  "note": "One choice instead of three overlapping selectors. Pace and schedule are shown as rules, not fields.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "04-venues",
+  "name": "venues-mobile",
+  "title": "Venues · mobile",
+  "note": "No stat cards: the list starts on the first screen. Add is the + button.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "04-venues",
+  "name": "venue-mobile",
+  "title": "Venue · mobile",
+  "note": "Back points back. Tabs scroll sideways; Overview stacks the same cards.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "04-venues",
+  "name": "the-menu",
+  "title": "The ⋯ menu",
+  "note": "Hide and Delete each open a confirm sheet, like Pause crawling in Foundations.",
+  "w": 360,
+  "h": 330
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "add-a-venue-start",
+  "title": "Add a venue · start",
+  "note": "Most asked first. Every row gets the same Set it up; a venue whose robots.txt disallows its calendar offers Ask the venue instead.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "ask-the-venue",
+  "title": "Ask the venue",
+  "note": "Drafts a permission note that opens in your own email, saves the venue as a draft paused “waiting on permission”, and brings it back to Needs you after 14 days without a reply.",
+  "w": 560,
+  "h": 600
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "step-2-source",
+  "title": "Step 2 · Source",
+  "note": "One column: where its shows are, then the test crawl with what we checked.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "step-3-icon-optional",
+  "title": "Step 3 · Icon (optional)",
+  "note": "Stacked: references, drafts (each at 20/32/48), then the full-size hero. Example glyphs, drawn for this board; the hero is the real renderer from the B+ venue page.",
+  "w": 1280,
+  "h": 1500
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "step-4-first-timer-guide-optional",
+  "title": "Step 4 · First-timer guide (optional)",
+  "note": "The live guide’s fields: Insider tip first (never drafted), Accessibility required, then the chips. Every field is editable here, with the 400-character limit. “Can’t document yet” still works for Accessibility.",
+  "w": 1280,
+  "h": 1180
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "step-1-basics-mobile",
+  "title": "Step 1 · Basics · mobile",
+  "note": "Pre-filled from what we noticed. Capacity is a type plus a number. The main button never clips.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "step-5-review-mobile",
+  "title": "Step 5 · Review · mobile",
+  "note": "What’s done, what waits. Go live publishes the tested shows.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "all-six-settings",
+  "title": "All six settings",
+  "note": "Street, Outdoor and Arena exist today; Theater, Club and Gallery are new. Each shown with a real venue’s glyph.",
+  "w": 1240,
+  "h": 640
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "source-test-running",
+  "title": "Source · test running",
+  "note": "Each check ticks off as it happens.",
+  "w": 560,
+  "h": 330
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "source-robots-txt-disallows",
+  "title": "Source · robots.txt disallows",
+  "note": "The step stops. Ask the venue is the main action.",
+  "w": 560,
+  "h": 330
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "source-no-shows-found",
+  "title": "Source · no shows found",
+  "note": "Says what each method found, and offers the usual fix.",
+  "w": 560,
+  "h": 360
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "icon-drafting",
+  "title": "Icon · drafting",
+  "note": "Skeleton rows in the stacked layout.",
+  "w": 560,
+  "h": 420
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "icon-drafts-failed-the-style-check",
+  "title": "Icon · drafts failed the style check",
+  "note": "Off-grid or filled drafts are hidden, not shown.",
+  "w": 560,
+  "h": 250
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "guide-nothing-to-draft-from",
+  "title": "Guide · nothing to draft from",
+  "note": "Starts blank; still editable in the flow.",
+  "w": 560,
+  "h": 290
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "review-not-ready",
+  "title": "Review · not ready",
+  "note": "Only Source blocks Go live. Save as draft keeps it.",
+  "w": 560,
+  "h": 380
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "start-nobody-asked-yet",
+  "title": "Start · nobody asked yet",
+  "note": "Empty state for the suggestions list.",
+  "w": 560,
+  "h": 250
+ },
+ {
+  "section": "05-add-a-venue",
+  "name": "after-ask-the-venue",
+  "title": "After Ask the venue",
+  "note": "The draft venue on the Venues list, with the reply buttons.",
+  "w": 640,
+  "h": 230
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "events",
+  "title": "Events",
+  "note": "Price column fits wide ranges ($89.50–$1,250). Status uses the fan-facing words; Hidden is separate.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "event-edit",
+  "title": "Event edit",
+  "note": "View on Concert Crawl and on the venue’s site, side by side. Amber lineup token: an unsure artist match. Edit price opens the shared price sheet.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artists-to-check",
+  "title": "Artists · To check",
+  "note": "Shows in the next 60 days first, matching Needs you. The canonical-name cut (“Beacons & Brews” → Beacons) is called out on the row.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-missing-a-price",
+  "title": "Prices · Missing a price",
+  "note": "Soonest and most Watched first. Add price opens the same sheet fans use.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-submitted-prices",
+  "title": "Prices · Submitted prices",
+  "note": "Who sent it (a handle), what backs it, and where it is. Waiting for you appears only while you approve every price yourself.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "events-mobile",
+  "title": "Events · mobile",
+  "note": "Cards, not a sideways table.",
+  "w": 390,
+  "h": 940
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-mobile",
+  "title": "Prices · mobile",
+  "note": "Tabs become a segmented control with counts, so nothing hides.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-price-checks",
+  "title": "Prices · Price checks",
+  "note": "Both prices side by side, with what we checked. Open and Resolved; the same open items also sit in Needs you.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "event-menu",
+  "title": "Event ⋯ menu",
+  "note": "Both “View on” links live here and on the edit page. Merge is for duplicates.",
+  "w": 360,
+  "h": 470
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-row-menu",
+  "title": "Prices row ⋯ menu",
+  "note": "Reject unpublishes and tells the fan why.",
+  "w": 360,
+  "h": 420
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "event-edit-mobile",
+  "title": "Event edit · mobile",
+  "note": "Same fields, stacked, Save pinned.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artists-search-opens-the-side-panel",
+  "title": "Artists · Search opens the side panel",
+  "note": "The panel overlays the table, which keeps its full width. Search lists every result, best for Denver first; the row stays highlighted.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-add-a-price-in-flow",
+  "title": "Prices · Add a price in flow",
+  "note": "Ticket page first, then the price. Publish and next opens the next show without one, so the backlog can be worked in one sitting.",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "event-edit-mark-cancelled-desktop",
+  "title": "Event edit · Mark cancelled (desktop)",
+  "note": "A centered dialog over the edit page, because it notifies Watchers.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artist-search-mobile",
+  "title": "Artist search · mobile",
+  "note": "Full screen, because it needs the keyboard and a long scrolling list. The short forms below are sheets.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "add-a-price-mobile",
+  "title": "Add a price · mobile",
+  "note": "Bottom sheet over Missing a price.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "mark-cancelled-mobile",
+  "title": "Mark cancelled · mobile",
+  "note": "Bottom sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "events-no-results",
+  "title": "Events · no results",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "artists-to-check-empty",
+  "title": "Artists · To check empty",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-nothing-missing",
+  "title": "Prices · nothing missing",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "06-events-artists-prices",
+  "name": "prices-no-checks",
+  "title": "Prices · no checks",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "people",
+  "title": "People",
+  "note": "Handle, role, how they joined, last active. No emails and no ids. Filters for Beta, Admin and Test accounts.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "person",
+  "title": "Person",
+  "note": "Stats in the locked words (Watching, Concerts, Submitted prices). Role, the flags they are trying early, the code that brought them in, and what they did lately.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "make-an-admin-asks-first",
+  "title": "Make an admin · asks first",
+  "note": "The only role change that asks. Member and Beta switch in place, with an Undo.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "people-mobile",
+  "title": "People · mobile",
+  "note": "Rows, not a sideways table. People, Codes and Posters are a segmented control.",
+  "w": 390,
+  "h": 720
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "person-mobile",
+  "title": "Person · mobile",
+  "note": "The same blocks, stacked.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "more-mobile",
+  "title": "More · mobile",
+  "note": "One nav: the tab bar plus this list. No hamburger shelf repeating the tabs. Open Concert Crawl is here and in the desktop user menu.",
+  "w": 390,
+  "h": 800
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "user-menu-mobile",
+  "title": "User menu · mobile",
+  "note": "Tap your avatar at the top of any tab. Same three rows as desktop.",
+  "w": 390,
+  "h": 800
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "invite-codes",
+  "title": "Invite codes",
+  "note": "Label under the code, seats as a bar, who made it as a handle. Statuses: Active, Full, Expired, Revoked.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "new-code-in-flow",
+  "title": "New code · in flow",
+  "note": "Side panel over the list. “Make a poster for it next” goes straight to Posters with the code picked.",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "a-code-in-flow",
+  "title": "A code · in flow",
+  "note": "Who joined with it, linked to their person page. Copy link, make a poster, add seats, revoke.",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "code-row-menu",
+  "title": "Code row ⋯ menu",
+  "note": "For an Active or Full code. Clicking the row itself opens the code panel.",
+  "w": 380,
+  "h": 420
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "code-row-menu-expired-or-revoked",
+  "title": "Code row ⋯ menu · Expired or Revoked",
+  "note": "Ended codes stay listed; Reactivate brings one back.",
+  "w": 380,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "revoke-asks-first",
+  "title": "Revoke · asks first",
+  "note": "Says what happens to people who joined and to printed posters.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "invite-codes-mobile",
+  "title": "Invite codes · mobile",
+  "note": "Cards; New code on top.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "new-code-mobile",
+  "title": "New code · mobile",
+  "note": "Bottom sheet.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "posters-mobile",
+  "title": "Posters · mobile",
+  "note": "Fixes the broken look picker: Night and Paper stack as two choices. Steps stay in order above the preview; Print stays pinned.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "staging-admin-feature-flags",
+  "title": "Staging admin · Feature flags",
+  "note": "One row per flag: who sees it here, then on the right whether it is verified. Mark verified appears once the flag is on for anyone.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "mark-verified-asks-first",
+  "title": "Mark verified · asks first",
+  "note": "How a flag gets verified: a short check and an optional note, which both admins show.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "a-flag-in-staging-admin-in-flow",
+  "title": "A flag in staging admin · in flow",
+  "note": "Named people on top of a step, the verified note, and history.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "production-admin-feature-flags",
+  "title": "Production admin · Feature flags",
+  "note": "The right column reads staging: verified or not, and its step. Wrong-artist reports stays locked until it is verified.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "a-flag-in-production-admin-in-flow",
+  "title": "A flag in production admin · in flow",
+  "note": "Staging’s answer on top, then production’s own step and named people.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "everyone-in-production-asks-first",
+  "title": "Everyone in production · asks first",
+  "note": "The one step that reaches every fan asks, with the number of people it reaches.",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "staging-flags-mobile",
+  "title": "Staging flags · mobile",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "production-flags-mobile",
+  "title": "Production flags · mobile",
+  "note": "Status sits beside the name; the ladder takes the full width under it.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback",
+  "title": "Feedback",
+  "note": "Kinds as small-caps labels: Bug, Error report (from Sentry, counted by people), Idea, Suggest a venue. To read and Done replace Active, so a resolved item never sits in the active list. Each row says where else it shows.",
+  "w": 1280,
+  "h": 620
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "a-feedback-item-in-flow",
+  "title": "A feedback item · in flow",
+  "note": "Opens in the side panel over the list, like every other edit. Context is readable: the page by name, the device in words. One set of buttons: Mark done, Reply, GitHub.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "reply-in-flow",
+  "title": "Reply · in flow",
+  "note": "Reply swaps the panel to a short form. One reply, sent as an in-app notice plus an email. If they answer, it arrives as new feedback, so there is still no thread to track.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback-mobile",
+  "title": "Feedback · mobile",
+  "note": "The filters stay as chips with counts.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback-item-mobile",
+  "title": "Feedback item · mobile",
+  "note": "Mark done, Reply and GitHub pinned at the bottom.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "reply-mobile",
+  "title": "Reply · mobile",
+  "note": "Bottom sheet over the item.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "fan-what-you-missed",
+  "title": "Fan · What you missed",
+  "note": "The reply sits with their other notices, labeled From Concert Crawl.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "fan-the-reply",
+  "title": "Fan · the reply",
+  "note": "Signed by the admin who wrote it, with their own note quoted.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "fan-the-email",
+  "title": "Fan · the email",
+  "note": "Same words. Says replies to the email aren’t read, and where to write instead.",
+  "w": 640,
+  "h": 420
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "fan-account-menu-send-feedback",
+  "title": "Fan account menu · Send feedback",
+  "note": "One new row in the App group. No floating tab.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "fan-send-feedback",
+  "title": "Fan · Send feedback",
+  "note": "The existing modal with plain kinds, including Suggest a venue. It says where an answer would appear.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "emails",
+  "title": "Emails",
+  "note": "Only emails we still send (the Spotify digest is gone). Preview with a real show, and send yourself a test.",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "activity-log",
+  "title": "Activity log",
+  "note": "Every admin change in words, with who and a link. This is where “Show email” is logged.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "emails-mobile",
+  "title": "Emails · mobile",
+  "note": "Preview fits the phone; test send below it.",
+  "w": 390,
+  "h": 720
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "activity-log-mobile",
+  "title": "Activity log · mobile",
+  "note": "One line per change, with who, when and where.",
+  "w": 390,
+  "h": 700
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "user-menu-desktop",
+  "title": "User menu · desktop",
+  "note": "Replaces the one-way User app/Admin toggle and the Settings theme picker.",
+  "w": 380,
+  "h": 330
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "not-an-admin",
+  "title": "Not an admin",
+  "note": "For a sub-admin opening People.",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "people-no-results",
+  "title": "People · no results",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "invite-codes-none",
+  "title": "Invite codes · none",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "feedback-nothing-to-read",
+  "title": "Feedback · nothing to read",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "activity-log-empty-day",
+  "title": "Activity log · empty day",
+  "note": "",
+  "w": 440,
+  "h": 300
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-needs-you",
+  "title": "Loading · Needs you",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-health",
+  "title": "Loading · Health",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-venues",
+  "title": "Loading · Venues",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-venue-page",
+  "title": "Loading · Venue page",
+  "note": "",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-events",
+  "title": "Loading · Events",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-event-edit",
+  "title": "Loading · Event edit",
+  "note": "",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-artists",
+  "title": "Loading · Artists",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-prices",
+  "title": "Loading · Prices",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-people",
+  "title": "Loading · People",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-person",
+  "title": "Loading · Person",
+  "note": "",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-invite-codes",
+  "title": "Loading · Invite codes",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-feature-flags",
+  "title": "Loading · Feature flags",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-feedback",
+  "title": "Loading · Feedback",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-activity-log",
+  "title": "Loading · Activity log",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-crawl-runs",
+  "title": "Loading · Crawl runs",
+  "note": "",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-any-list-on-mobile",
+  "title": "Loading · any list on mobile",
+  "note": "Needs you, Venues, Events, People and the rest share this shape.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "loading-any-detail-page-on-mobile",
+  "title": "Loading · any detail page on mobile",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "07-people-flags-operations",
+  "name": "save-failed",
+  "title": "Save failed",
+  "note": "Any control on these pages: it snaps back and says what is really saved.",
+  "w": 1000,
+  "h": 340
+ }
+]
