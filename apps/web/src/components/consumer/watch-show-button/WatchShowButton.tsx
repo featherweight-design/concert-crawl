@@ -398,8 +398,10 @@ export function WatchShowButton({
         <button
           {...controlProps}
           // Signed in, the visible label carries the state, so it is the
-          // name. Signed out it opens the picker, which the label can't say.
+          // name, and aria-pressed would announce the state a second time.
+          // Signed out it opens the picker, which the label can't say.
           aria-label={isSignedIn ? undefined : controlProps['aria-label']}
+          aria-pressed={undefined}
           className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] border-[1.5px] bg-transparent px-4 text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)] disabled:cursor-default disabled:opacity-60"
           style={{
             borderColor: renderedWatching

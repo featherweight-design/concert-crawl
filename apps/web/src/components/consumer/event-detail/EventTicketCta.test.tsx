@@ -13,7 +13,12 @@ afterEach(cleanup);
 describe('EventTicketCta', () => {
   it('sends a cancelled show to the vendor for refund info, same link', () => {
     render(
-      <EventTicketCta cancelled soldOut={false} href={href} hasDirectLink />,
+      <EventTicketCta
+        refundHref={href}
+        soldOut={false}
+        href={href}
+        hasDirectLink
+      />,
     );
     const link = screen.getByRole('link', { name: copy.refundInfo });
     expect(link.getAttribute('href')).toBe(href);
@@ -21,14 +26,16 @@ describe('EventTicketCta', () => {
   });
 
   it('prefers refund info over sold out once the show is cancelled', () => {
-    render(<EventTicketCta cancelled soldOut href={href} hasDirectLink />);
+    render(
+      <EventTicketCta refundHref={href} soldOut href={href} hasDirectLink />,
+    );
     expect(screen.getByRole('link', { name: copy.refundInfo })).toBeTruthy();
   });
 
   it('falls back to no tickets when a cancelled show has no link', () => {
     render(
       <EventTicketCta
-        cancelled
+        refundHref={null}
         soldOut={false}
         href={null}
         hasDirectLink={false}
@@ -37,10 +44,10 @@ describe('EventTicketCta', () => {
     expect(screen.getByText(copy.noTicketsAvailable)).toBeTruthy();
   });
 
-  it("keeps a venue homepage labelled as the venue's, not refund info", () => {
+  it("keeps a cancelled show without a ticket URL on the venue's own label", () => {
     render(
       <EventTicketCta
-        cancelled
+        refundHref={null}
         soldOut={false}
         href={href}
         hasDirectLink={false}
