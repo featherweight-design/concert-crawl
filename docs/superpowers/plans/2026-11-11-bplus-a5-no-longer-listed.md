@@ -12,9 +12,12 @@ Hugh's ruling: a sweep-removed show gets its own state, shown as **No longer lis
 
 - **The crawler never revives a swept row.** The upsert's conflict target is the partial unique index `WHERE status = 'upcoming'` (`crawl.ts:1359-1373`), so a show that reappears on the venue page arrives as a new `upcoming` row. Unchanged by this plan.
 - **`events.status` is a Postgres enum** (`event_status`, migration 0000), not a checked text column. Adding a value needs `ALTER TYPE … ADD VALUE`, and every exhaustive `Record<EventStatus, …>` on the web and in the API becomes a compile break, and a runtime break for any client older than the deploy.
-- **Listing filters already include `cancelled`** (`SCHEDULED_STATUSES`, browse, search, artist upcoming) and exclude it from history, crew shows and past venue shows. A swept show should sit in exactly the same lists: it is still a show someone may hold tickets for.
 - **The sweep is the only silent cancellation path.** Report promotion and the admin PATCH both fan out `watch.cancelled`.
 - **`StatusChip` already has the state.** F3 shipped `removed` (neutral tone, always dashed). Nothing passes it yet.
+
+## Visibility (ruled 2026-11-11, option 2)
+
+Every consumer query hides a row from its first missed crawl (`first_missing_at IS NULL`, #607), and the sweep only cancels rows already hidden that way, so today a swept show simply vanishes. **Watching and the event detail page** bring it back once the sweep has marked it (`first_missing_at IS NULL OR delisted_at IS NOT NULL`); days 1 to 14 stay hidden. **Browse, venue, artist, related, calendar and search keep the #607 filter.** Lists were considered and dropped: the sweep's main input is the title-drift duplicate of a show still live under a new row, so lists would show a show next to a No longer listed copy of itself. PR 2's row treatment therefore applies on Watching (and anywhere else a held show is listed later), not on browse lists.
 
 ## Decision: a marker column, not a new status
 
