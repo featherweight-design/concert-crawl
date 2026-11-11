@@ -2031,6 +2031,21 @@ export const ADMIN_COPY = {
     // the Redeemed date cell falls back to a plain textual marker to
     // avoid blanking the column for those records.
     redeemedWithoutDate: 'Redeemed',
+    // Multi-use (poster) codes: "3 of 50" in the list, and the mint form's
+    // optional label and seat count.
+    uses: (taken: number, max: number) => `${taken} of ${max}`,
+    labelPlaceholder: 'Label, e.g. Hi-Dive bathroom, Nov',
+    seatsLabel: 'Seats',
+    seatsHint: 'How many people one code admits. 1 for a personal code.',
+    posterLink: 'Poster',
+    poster: {
+      back: 'Invite codes',
+      print: 'Print',
+      downloadQr: 'Download QR (PNG)',
+      printHint:
+        'Letter, no margins. Turn off headers and footers in the print dialog.',
+      seatsLeft: (left: number) => `${left} seat${left === 1 ? '' : 's'} left`,
+    },
   },
 
   generateField: {

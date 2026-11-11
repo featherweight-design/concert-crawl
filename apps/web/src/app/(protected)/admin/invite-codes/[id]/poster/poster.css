@@ -1,0 +1,260 @@
+/* The invite poster's print page. The sheet is US Letter (816 x 1056 CSS px)
+   in one ink, so it prints on coloured paper. Self-contained: nothing here
+   reads the app's theme beyond the screen-only bar. */
+
+.poster-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.poster-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.poster-bar a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--signal);
+  text-decoration: none;
+}
+.poster-bar b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.poster-bar .pb-code {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font:
+    400 12px 'JetBrains Mono',
+    monospace;
+  color: var(--fg);
+}
+.poster-bar .pb-seats {
+  font:
+    400 12px 'JetBrains Mono',
+    monospace;
+  color: var(--fg-muted);
+}
+.poster-bar small {
+  flex-basis: 100%;
+  order: 5;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+.poster-bar .pb-spacer {
+  flex: 1;
+}
+.poster-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.poster-bar .pb-ghost {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+}
+.poster-bar .pb-solid {
+  border: 0;
+  background: var(--signal);
+  color: var(--fg-on-accent);
+}
+
+.poster-mat {
+  --poster-scale: 0.42;
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px 28px;
+  background: #2a2622;
+}
+.poster-fit {
+  position: relative;
+  flex: none;
+  width: calc(816px * var(--poster-scale));
+  height: calc(1056px * var(--poster-scale));
+}
+.poster-fit .poster-sheet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: scale(var(--poster-scale));
+  transform-origin: top left;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+
+@media (min-width: 768px) {
+  .poster-bar {
+    flex-wrap: nowrap;
+    padding: 0 20px;
+    height: 60px;
+  }
+  .poster-bar a {
+    min-height: 0;
+  }
+  .poster-bar small {
+    flex-basis: auto;
+    order: 0;
+  }
+  .poster-bar button {
+    height: 32px;
+    font-size: 12.5px;
+  }
+  .poster-mat {
+    --poster-scale: 0.75;
+    padding: 34px 0 40px;
+  }
+}
+
+/* The sheet: one ink on whatever paper it is printed on. */
+.poster-sheet {
+  --ink: #111111;
+  width: 816px;
+  height: 1056px;
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  color: var(--ink);
+  background: #ffffff;
+  font-family: Inter, system-ui, sans-serif;
+}
+:where(.poster-sheet) h2,
+:where(.poster-sheet) p {
+  margin: 0;
+}
+.poster-sheet .ps-in {
+  position: absolute;
+  inset: 64px 72px;
+  display: flex;
+  flex-direction: column;
+}
+.ps-wordmark {
+  font-weight: 900;
+  font-size: 44px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.ps-kicker {
+  margin-top: 40px;
+  font:
+    700 14px 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.ps-headline {
+  margin-top: 14px;
+  font-weight: 900;
+  font-size: 64px;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  max-width: 640px;
+  text-wrap: balance;
+}
+.ps-sub {
+  margin-top: 18px;
+  font-size: 22px;
+  line-height: 1.4;
+  max-width: 600px;
+  text-wrap: pretty;
+}
+.ps-mid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.ps-qr {
+  display: block;
+  width: 360px;
+  height: 360px;
+  fill: var(--ink);
+}
+.ps-scan {
+  font:
+    700 18px 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.ps-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding-top: 18px;
+  border-top: 3px solid var(--ink);
+}
+.ps-foot small {
+  display: block;
+  font:
+    600 12px 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.ps-foot b {
+  display: block;
+  margin-top: 6px;
+  font:
+    700 30px 'JetBrains Mono',
+    monospace;
+}
+.ps-typed {
+  text-align: right;
+}
+.ps-typed b {
+  font-size: 22px;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+  html,
+  body {
+    height: 1056px !important;
+    max-height: 1056px !important;
+    overflow: hidden !important;
+    background: none !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .poster-sheet,
+  .poster-sheet * {
+    visibility: visible !important;
+  }
+  .poster-bar {
+    display: none !important;
+  }
+  .poster-sheet {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    transform: none !important;
+    box-shadow: none;
+    background: none;
+  }
+}

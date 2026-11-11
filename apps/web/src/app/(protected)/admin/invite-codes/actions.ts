@@ -6,6 +6,10 @@ import { apiClient } from '@/lib/api';
 
 interface MintOptions {
   expiresIn: '7d' | '30d' | 'never';
+  /** Where a poster code goes, e.g. "Hi-Dive bathroom, Nov". */
+  label?: string;
+  /** How many people the code admits; the API defaults to 1. */
+  maxUses?: number;
 }
 
 export async function mintInviteCodeWithOptions(
@@ -26,7 +30,11 @@ export async function mintInviteCodeWithOptions(
     const result = await apiClient.post<{ code: string }>(
       '/v1/admin/invite-codes',
       token,
-      { expiresAt },
+      {
+        expiresAt,
+        label: opts.label?.trim() || undefined,
+        maxUses: opts.maxUses,
+      },
     );
     revalidatePath('/admin/invite-codes');
     return { ok: true, code: result.code };

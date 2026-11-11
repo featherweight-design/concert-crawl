@@ -6,12 +6,32 @@ import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/
 
 type ExpiresIn = '7d' | '30d' | 'never';
 
+/** Seats a labelled (poster) code starts with. */
+const POSTER_SEATS = 50;
+/** The API's cap on seats per code. */
+const MAX_SEATS = 500;
+
+const FIELD_STYLE = {
+  height: 32,
+  padding: '0 10px',
+  borderRadius: 6,
+  fontSize: 16,
+  border: '1px solid var(--border)',
+  background: 'transparent',
+  color: 'var(--fg)',
+} as const;
+
 // #1085 — default the expiry to "never" rather than 30d. Beta invite
 // codes have been long-lived in practice, and a 30-day auto-expiry
 // silently rots the batches Hugh sends to prospects; "never" matches
 // how admins actually use the mint form.
 export function InviteCreatorPanel() {
   const [expiresIn, setExpiresIn] = useState<ExpiresIn>('never');
+  const [label, setLabel] = useState('');
+  // A labelled code is a poster code, so the seats follow the label (50, as
+  // the plan defaults) until the admin sets them by hand.
+  const [seats, setSeats] = useState(1);
+  const [seatsTouched, setSeatsTouched] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{
     ok: boolean;
@@ -22,7 +42,11 @@ export function InviteCreatorPanel() {
   function handleMint() {
     setResult(null);
     startTransition(async () => {
-      const res = await mintInviteCodeWithOptions({ expiresIn });
+      const res = await mintInviteCodeWithOptions({
+        expiresIn,
+        label,
+        maxUses: seats,
+      });
       setResult(res);
     });
   }
@@ -66,6 +90,37 @@ export function InviteCreatorPanel() {
           </button>
         ))}
       </div>
+      <input
+        type="text"
+        value={label}
+        maxLength={120}
+        placeholder={ADMIN_COPY.inviteCodes.labelPlaceholder}
+        aria-label={ADMIN_COPY.inviteCodes.labelPlaceholder}
+        onChange={(event) => {
+          setLabel(event.target.value);
+          if (!seatsTouched)
+            setSeats(event.target.value.trim() ? POSTER_SEATS : 1);
+        }}
+        style={{ ...FIELD_STYLE, flex: '1 1 220px', minWidth: 0 }}
+      />
+      <label
+        title={ADMIN_COPY.inviteCodes.seatsHint}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+      >
+        {ADMIN_COPY.inviteCodes.seatsLabel}
+        <input
+          type="number"
+          min={1}
+          max={MAX_SEATS}
+          value={seats}
+          onChange={(event) => {
+            setSeatsTouched(true);
+            const next = Math.trunc(Number(event.target.value));
+            setSeats(Math.min(MAX_SEATS, Math.max(1, next || 1)));
+          }}
+          style={{ ...FIELD_STYLE, width: 72 }}
+        />
+      </label>
       <button
         type="button"
         onClick={handleMint}
