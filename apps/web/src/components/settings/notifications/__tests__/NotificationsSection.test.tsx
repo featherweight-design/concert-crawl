@@ -676,7 +676,6 @@ describe('NotificationsSection — Email from us', () => {
       ).not.toBeNull();
     });
     expect(screen.getByText(PRODUCT.heading)).not.toBeNull();
-    expect(screen.getByText(PRODUCT.billingFootnote)).not.toBeNull();
   });
 
   // The payload is the assertion. The detail line is driven by server state,

@@ -141,7 +141,7 @@ emailUnsubscribeRouter.get(
               set: { productEmailsEnabled: false, updatedAt: new Date() },
             });
           confirmationBody =
-            'Product emails are off, and you can turn them back on from Settings → Notifications. Receipts and billing notices still come through.';
+            'Product emails are off, and you can turn them back on from Settings → Notifications.';
           break;
       }
     } catch (err) {

@@ -93,25 +93,8 @@ export default function TermsPage() {
             <p>{copy.intellectualProperty.body}</p>
           </Section>
 
-          <Section title={copy.subscriptions.title}>
-            <p>{copy.subscriptions.body1}</p>
-            <p>{copy.subscriptions.body2}</p>
-            <p>{copy.subscriptions.body3}</p>
-            <div id="refunds" className="scroll-mt-8">
-              <h3 className="mb-2 pt-2 text-[15px] font-bold text-fg">
-                {copy.subscriptions.refundsTitle}
-              </h3>
-              <p>
-                {copy.subscriptions.refundsBodyPrefix}{' '}
-                <a
-                  href={`mailto:${LEGAL_COPY.shared.supportEmail}`}
-                  className="text-fg-muted underline underline-offset-4 transition-colors hover:text-fg"
-                >
-                  {LEGAL_COPY.shared.supportEmail}
-                </a>{' '}
-                {copy.subscriptions.refundsBodySuffix}
-              </p>
-            </div>
+          <Section title={copy.cost.title}>
+            <p>{copy.cost.body}</p>
           </Section>
 
           <Section title={copy.disclaimers.title}>

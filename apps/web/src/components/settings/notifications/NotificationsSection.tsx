@@ -520,11 +520,6 @@ export const NotificationsSection = ({
             disabled={patch.isPending}
           />
         </div>
-        {/* Prose, not a row: billing mail has no switch, and giving it a row
-            shape would imply one exists. */}
-        <p className="text-xs text-fg-muted">
-          {PRODUCT_EMAIL_COPY.billingFootnote}
-        </p>
       </div>
 
       {/* ── Artists you follow ───────────────────────────────────────────
