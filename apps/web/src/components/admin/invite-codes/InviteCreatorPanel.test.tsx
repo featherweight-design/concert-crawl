@@ -16,7 +16,7 @@ vi.mock('@/app/(protected)/admin/invite-codes/actions', () => ({
   mintInviteCodeWithOptions: mint,
 }));
 
-import { InviteCreatorPanel, clampSeats } from './InviteCreatorPanel';
+import { InviteCreatorPanel, parseSeats } from './InviteCreatorPanel';
 
 const seatsField = () => screen.getByRole('spinbutton');
 
@@ -59,10 +59,18 @@ describe('InviteCreatorPanel', () => {
     expect(seatsField()).toHaveValue(1);
   });
 
-  it('clamps the typed seats to what the API accepts', () => {
-    expect(clampSeats('')).toBe(1);
-    expect(clampSeats('0')).toBe(1);
-    expect(clampSeats('12.7')).toBe(12);
-    expect(clampSeats('9000')).toBe(500);
+  it('refuses a seat count the API would not take, rather than rewriting it', () => {
+    expect(parseSeats('50')).toBe(50);
+    for (const typed of ['', '0', '12.7', 'abc', '501']) {
+      expect(parseSeats(typed)).toBeNull();
+    }
+  });
+
+  it('holds Mint shut while the seat count is invalid', () => {
+    render(<InviteCreatorPanel />);
+    fireEvent.change(seatsField(), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: /mint code/i })).toBeDisabled();
+    fireEvent.change(seatsField(), { target: { value: '20' } });
+    expect(screen.getByRole('button', { name: /mint code/i })).toBeEnabled();
   });
 });
