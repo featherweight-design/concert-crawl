@@ -33,8 +33,10 @@ export const INSTALL_COPY = {
     done: 'Got it',
   },
   dismissAria: 'Dismiss install prompt',
-  dismissNote:
-    "We'll quit asking. You can still add it from Settings whenever.",
+  // Reworded 2026-11-11 (B+ B22): the locked line promised a Settings entry
+  // that Settings has never had, and the B+ Settings board draws none. The
+  // browser's own menu is where it can still be added.
+  dismissNote: "We'll quit asking. Your browser can still add it whenever.",
 } as const;
 
 // #1062 post-watch permission sheet. Two variants:

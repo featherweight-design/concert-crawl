@@ -9,6 +9,8 @@ import {
 import { dismissOnce, getDismissalState } from '@/lib/pwa/install-dismissal';
 import { INSTALL_COPY } from './definitions/copy';
 import { IosHowToSheet } from './IosHowToSheet';
+import { InstallDismissedToast } from './InstallDismissedToast';
+import { gradientEdge } from './definitions/styles';
 
 export const InstallSlot = () => {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
@@ -17,6 +19,9 @@ export const InstallSlot = () => {
   const [isIos, setIsIos] = useState(false);
   const [dismissed, setDismissed] = useState(true); // start hidden until we know
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Set only by the × in this session, so the note shows once, right after.
+  const [justDismissed, setJustDismissed] = useState(false);
+  const clearNote = useCallback(() => setJustDismissed(false), []);
 
   useEffect(() => {
     if (isStandalone()) return;
@@ -50,7 +55,8 @@ export const InstallSlot = () => {
   // Hidden if the user quieted or retired the slot, if the app is standalone,
   // or if the browser hasn't fired beforeinstallprompt AND we're not iOS Safari
   // (nothing to show).
-  if (dismissed) return null;
+  if (dismissed)
+    return justDismissed ? <InstallDismissedToast onDone={clearNote} /> : null;
   if (!deferred && !isIos) return null;
 
   return (
@@ -60,15 +66,17 @@ export const InstallSlot = () => {
           type="button"
           onClick={onTap}
           aria-label={INSTALL_COPY.slotAria}
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 text-[13px] font-semibold text-fg hover:bg-surface-1"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-transparent px-3 text-[13px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          style={{ background: gradientEdge('var(--surface-1)') }}
         >
           {/* Small download-glyph — aria-hidden because the button label above carries it. */}
           <svg
-            width="14"
-            height="14"
+            width="16"
+            height="16"
             viewBox="0 0 14 14"
             fill="none"
             aria-hidden="true"
+            className="text-signal"
           >
             <path
               d="M7 2v7M7 9L4 6M7 9l3-3M2 12h10"
@@ -85,6 +93,7 @@ export const InstallSlot = () => {
           onClick={() => {
             dismissOnce();
             setDismissed(true);
+            setJustDismissed(true);
           }}
           aria-label={INSTALL_COPY.dismissAria}
           className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-fg-subtle hover:text-fg"
