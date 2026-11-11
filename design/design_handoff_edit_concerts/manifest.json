@@ -1,0 +1,121 @@
+[
+ {
+  "name": "concerts_m",
+  "title": "Concerts · a ⋯ on every row",
+  "w": 390,
+  "h": 1500,
+  "scale": 2
+ },
+ {
+  "name": "remove_sheet_m",
+  "title": "Didn’t make it? (sheet)",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "removed_m",
+  "title": "Removed, with Undo",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "event_went_m",
+  "title": "Past show page · you went",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "event_remove_m",
+  "title": "Remove from the show page",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "event_unmarked_m",
+  "title": "Past show page · not marked",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "event_stamped_m",
+  "title": "Tapped I went: stamped",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "add_sheet_m",
+  "title": "Concerts → Add a show you went to",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "add_search_m",
+  "title": "Search: one artist",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "add_tapped_m",
+  "title": "Tapped I went in the list",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "add_end_m",
+  "title": "Scrolled to the start of our records",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "add_none_m",
+  "title": "No results",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "artist_past_m",
+  "title": "Artist page · Past shows",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "ask_m",
+  "title": "Concerts · Did you make it?",
+  "w": 390,
+  "h": 844,
+  "scale": 2
+ },
+ {
+  "name": "concerts_menu_d",
+  "title": "Concerts · the row menu",
+  "w": 1280,
+  "h": 1000,
+  "scale": 1
+ },
+ {
+  "name": "remove_dialog_d",
+  "title": "Didn’t make it? (dialog)",
+  "w": 1280,
+  "h": 1000,
+  "scale": 1
+ },
+ {
+  "name": "add_dialog_d",
+  "title": "Add a show you went to (dialog)",
+  "w": 1280,
+  "h": 1000,
+  "scale": 1
+ }
+]

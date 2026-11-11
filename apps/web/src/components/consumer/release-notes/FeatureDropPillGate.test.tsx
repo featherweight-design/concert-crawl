@@ -28,6 +28,8 @@ vi.mock('./SpotlightModal', () => ({
 // the fixture pins one in place — the signed-out assertions are about auth,
 // not about whatever happens to sit at the top of releases.ts.
 vi.mock('@/lib/definitions/releases', () => ({
+  // The What's new cards (B+ B21); nothing under test reads them.
+  FEATURE_CARDS: [],
   RELEASES: [
     {
       version: 'v0.0.0-test',
