@@ -21,4 +21,13 @@ describe('/legal/terms', () => {
 
     expect(link.getAttribute('href')).toBe('/bot');
   });
+
+  // Concert Crawl went free on 2026-11-10. The Terms must not keep promising
+  // renewals, refunds or a payment processor for plans nobody can buy.
+  it('describes a free service with no paid-plan terms', () => {
+    const { container } = render(<TermsPage />);
+
+    expect(screen.getByText(LEGAL_COPY.terms.cost.body)).not.toBeNull();
+    expect(container.textContent).not.toMatch(/auto-renew|refund|stripe/i);
+  });
 });

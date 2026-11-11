@@ -184,13 +184,16 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     expect(await getDigestEnabled('user_unsub_8')).toBe(true);
   });
 
-  it('turns product_emails_enabled off and says what still arrives', async () => {
+  it('turns product_emails_enabled off and promises no billing email', async () => {
     const token = buildUnsubscribeToken('user_product_1', 'product');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_product_1&family=product&token=${token}`,
     );
     expect(res.status).toBe(200);
-    expect(await res.text()).toContain('Receipts and billing notices');
+    const body = await res.text();
+    expect(body).toContain('Product emails are off');
+    // Concert Crawl is free: no billing email exists to promise.
+    expect(body).not.toContain('billing');
     const rows = await testDb
       .select()
       .from(userNotificationPreferences)

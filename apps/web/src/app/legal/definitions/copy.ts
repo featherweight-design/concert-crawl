@@ -20,9 +20,9 @@ export const LEGAL_COPY = {
 
   terms: {
     heading: 'Terms of Service',
-    // Revised to name Featherweight Design, LLC and to state that deleting an
-    // account ends a paid plan at once without a refund.
-    effectiveDate: 'Effective date: October 28, 2026',
+    // Revised when Concert Crawl went free: §7 no longer describes paid
+    // plans, renewals or refunds.
+    effectiveDate: 'Effective date: November 10, 2026',
 
     acceptance: {
       title: '1. Acceptance',
@@ -80,19 +80,9 @@ export const LEGAL_COPY = {
       body: 'The Concert Crawl name, logo, and design are owned by Featherweight Design, LLC. Event data sourced from venues remains the property of those venues. Generative artwork displayed on the Service is produced by our systems and is owned by Featherweight Design, LLC.',
     },
 
-    subscriptions: {
-      title: '7. Subscriptions and payments',
-      body1:
-        'Paid tiers are billed monthly through Stripe, our payment processor. We never see or store your card details. Subscriptions auto-renew each month until cancelled.',
-      body2:
-        'You can cancel anytime from your settings page. Cancelling stops future charges; your paid features keep working until the end of the period you already paid for. Deleting your account is different: it cancels your subscription immediately, paid features end at once, and the unused part of that period is not refunded.',
-      body3:
-        'The price you subscribe at is the price you keep. If we raise prices for new subscribers, your existing subscription is not affected.',
-      refundsTitle: 'Refunds',
-      refundsBodyPrefix:
-        "Monthly charges are generally not refunded when you cancel. You keep access through the end of the billing period instead. If something went wrong (a duplicate charge, a billing bug, a charge you didn't expect), email us at",
-      refundsBodySuffix:
-        "and we'll make it right. Nothing here limits any refund rights you have under applicable law.",
+    cost: {
+      title: '7. Cost',
+      body: "Concert Crawl is free. We don't take payments or sell subscriptions. If that ever changes, we'll update these terms and email you first.",
     },
 
     disclaimers: {
@@ -123,9 +113,9 @@ export const LEGAL_COPY = {
 
   privacy: {
     heading: 'Privacy Policy',
-    // Revised to disclose PostHog usage analytics. Set to the day the policy
-    // ships, before NEXT_PUBLIC_POSTHOG_KEY goes on in production.
-    effectiveDate: 'Effective date: October 30, 2026',
+    // Revised when Concert Crawl went free: Stripe is a former payment
+    // processor and no billing email is sent. Set to the day the policy ships.
+    effectiveDate: 'Effective date: November 10, 2026',
     collect: {
       title: 'What we collect',
       intro: "We collect only what's necessary to run the Service:",
@@ -162,7 +152,7 @@ export const LEGAL_COPY = {
         'Render: API and crawler hosting',
         'Sentry: error tracking (diagnostic data such as stack traces)',
         'Resend: transactional email delivery',
-        'Stripe: payment processing',
+        'Stripe: payment processing for the paid plans Concert Crawl used to offer. We no longer take payments.',
         "PostHog (US Cloud): usage analytics, so we can see how the app is used and improve it. It records the pages you open, how long you stay and how far you scroll, the links and buttons you tap with their labels (never what you type), the steps you take to share, your browser, device and screen size, and the site that sent you. What you search for here and invite codes are removed from web addresses first. When you're signed in, this is tied to your account ID and username, never your email. If your browser sends Do Not Track, nothing goes to PostHog.",
         'Spotify: only if you connect a Spotify account, and only to read the artists you follow',
         "Spotify's player: an artist page we have matched to Spotify embeds it, and it loads from Spotify as you scroll to it",
@@ -192,7 +182,7 @@ export const LEGAL_COPY = {
         'Edit your profile at any time from Settings',
         'Delete your account from the Settings page',
         'Download everything we store on you from Settings → Account. This does not include usage analytics held by PostHog.',
-        'Turn off product email in Settings → Notifications, or with the one-click link in any product email. Receipts and billing notices still come through.',
+        'Turn off product email in Settings → Notifications, or with the one-click link in any product email.',
       ],
     },
 
