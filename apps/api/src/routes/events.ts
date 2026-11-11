@@ -689,6 +689,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   }
 
   // Detect a promoted sold-out report — drives the confirmed sold-out UI.
+  // Same predicate as isSoldOutSql, so detail and every row agree.
   const [soldOutReportRow] = await db
     .select({
       id: eventReports.id,
@@ -701,6 +702,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         eq(eventReports.eventId, id),
         eq(eventReports.status, 'sold-out'),
         eq(eventReports.resolution, 'promoted'),
+        isNotNull(eventReports.resolvedAt),
       ),
     )
     .orderBy(desc(eventReports.createdAt))
