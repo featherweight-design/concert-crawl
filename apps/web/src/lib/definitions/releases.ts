@@ -16,12 +16,36 @@ export interface ReleaseSpotlight {
   founderSign?: string;
 }
 
+/** Which drawn art a What's new card carries (B+ `07-more-screens`). */
+export type FeatureCardArt =
+  'venues' | 'watching' | 'crews' | 'passport' | 'prices';
+
+/**
+ * A card on the What's new feature page (B+ B21): one big capability, told
+ * once, on the release that shipped it.
+ */
+export interface FeatureCard {
+  /**
+   * Its place on the page, lowest first. Explicit because the page is a
+   * story of what you can do, not a timeline: the board puts Crews before
+   * Passport and Prices last.
+   */
+  rank: number;
+  eyebrow: string;
+  title: string;
+  body: string;
+  /** Absent when there is nowhere better to send the reader than the card. */
+  cta?: { label: string; href: string };
+  art: FeatureCardArt;
+}
+
 export interface Release {
   version: string;
   date: string;
   headline?: string | null;
   items: ReleaseItem[];
   spotlight?: ReleaseSpotlight;
+  features?: FeatureCard[];
 }
 
 // The v0.20.0-beta entry announcing public browse was pulled when that vertical
@@ -349,6 +373,16 @@ export const RELEASES: Release[] = [
     version: 'v0.35.0-beta',
     date: 'Aug 8, 2026',
     headline: 'Go with your people.',
+    features: [
+      {
+        eyebrow: 'Crews',
+        title: 'Plan nights with your people.',
+        body: "A small invite-only group. One yes puts a show on everyone's list.",
+        cta: { label: 'Start a crew', href: '/crews' },
+        art: 'crews',
+        rank: 3,
+      },
+    ],
     items: [
       {
         kind: 'added',
@@ -444,6 +478,16 @@ export const RELEASES: Release[] = [
     version: 'v0.31.0-beta',
     date: 'Aug 3, 2026',
     headline: 'Your year, stamped.',
+    features: [
+      {
+        eyebrow: 'Passport',
+        title: 'A stamp for every night out.',
+        body: "Mark yourself going and the night lands in your Passport once it's passed.",
+        cta: { label: 'Open your Passport', href: '/passport' },
+        art: 'passport',
+        rank: 4,
+      },
+    ],
     items: [
       {
         kind: 'added',
@@ -1092,6 +1136,15 @@ export const RELEASES: Release[] = [
       ],
       founderSign: '— Hugh',
     },
+    features: [
+      {
+        eyebrow: 'Prices',
+        title: 'Prices from fans, checked by fans.',
+        body: 'Saw a price at the box office? Drop it in. Two fans confirm it and it goes live.',
+        art: 'prices',
+        rank: 5,
+      },
+    ],
     items: [
       {
         kind: 'added',
@@ -1135,6 +1188,26 @@ export const RELEASES: Release[] = [
     version: 'v0.4.0-beta',
     date: 'Apr 15, 2026',
     headline: 'First build you can actually use end-to-end.',
+    features: [
+      {
+        eyebrow: 'The beginning',
+        title: 'Every Denver show, in one place.',
+        // The board's "21 venue calendars … 21 tabs" is a live count, which a
+        // static card can't keep true, so the line names no number.
+        body: "We read the venue calendars every night so you don't have to open a tab for each.",
+        cta: { label: 'Browse shows', href: '/' },
+        art: 'venues',
+        rank: 1,
+      },
+      {
+        eyebrow: 'Watching',
+        title: 'Keep an eye on a show.',
+        body: "Tap the eye on any show. If the price drops, the night moves or it's called off, you hear from us.",
+        cta: { label: 'Try it on Browse', href: '/' },
+        art: 'watching',
+        rank: 2,
+      },
+    ],
     items: [
       {
         kind: 'added',
@@ -1149,3 +1222,8 @@ export const RELEASES: Release[] = [
     ],
   },
 ];
+
+/** Every What's new card, in page order (B+ B21). */
+export const FEATURE_CARDS: FeatureCard[] = RELEASES.flatMap(
+  (release) => release.features ?? [],
+).sort((first, second) => first.rank - second.rank);
