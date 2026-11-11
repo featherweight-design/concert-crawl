@@ -1,3 +1,15 @@
+# [1.318.0](https://github.com/featherweight-design/concert-crawl/compare/v1.317.0...v1.318.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** posters tab clears the mobile shell and refuses unprintable codes ([b0df191](https://github.com/featherweight-design/concert-crawl/commit/b0df1919fbb10ebd5aea0145e054817b53897caa))
+
+
+### Features
+
+* **web:** add the admin Posters tab for printing invite posters ([6d0eade](https://github.com/featherweight-design/concert-crawl/commit/6d0eade412f5e79515ccd68dad784f45c8d4ac33))
+
 # [1.317.0](https://github.com/featherweight-design/concert-crawl/compare/v1.316.0...v1.317.0) (2026-11-11)
 
 
