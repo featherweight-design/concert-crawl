@@ -1,4 +1,13 @@
-import { eq, gte, inArray, isNull, type SQL } from 'drizzle-orm';
+import {
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { events } from '../schema/events.js';
 
 /**
@@ -55,6 +64,17 @@ interface UpcomingEventsOptions {
 }
 
 /** The conditions every "shows still to come" query needs. */
+/**
+ * The crawler-suppression half of consumer visibility (#607): a show the
+ * crawler stopped seeing is hidden while it might be a blip, but once the
+ * stale sweep has removed it (`delisted_at`, B+ A5) it comes back as a
+ * No longer listed row rather than vanishing. A function, not a constant, so
+ * the table isn't read at module load.
+ */
+export const listedOrDelisted = (): SQL =>
+  // `or` of two defined conditions is never undefined.
+  or(isNull(events.firstMissingAt), isNotNull(events.delistedAt)) ?? sql`true`;
+
 export const upcomingEventConditions = ({
   from,
   statuses = ['upcoming'],
@@ -78,7 +98,7 @@ export const upcomingEventConditions = ({
     conditions.push(eq(events.hiddenFromConsumer, false));
   }
   if (!includeMissing) {
-    conditions.push(isNull(events.firstMissingAt));
+    conditions.push(listedOrDelisted());
   }
 
   return conditions;
