@@ -193,7 +193,7 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     const body = await res.text();
     expect(body).toContain('Product emails are off');
     // Concert Crawl is free: no billing email exists to promise.
-    expect(body).not.toContain('billing');
+    expect(body).not.toMatch(/billing|receipt/i);
     const rows = await testDb
       .select()
       .from(userNotificationPreferences)
