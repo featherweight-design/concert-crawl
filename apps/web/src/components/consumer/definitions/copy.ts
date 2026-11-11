@@ -751,7 +751,7 @@ export const CONSUMER_COPY = {
     popover: {
       clear: 'Clear',
       whoTitle: 'Crew lens',
-      whereSub: 'Every venue we crawl, with its icon.',
+      whereSub: 'Every venue we crawl.',
       whereSearch: 'Find a venue',
       whereNoMatch: 'No venue by that name.',
       vibeSub:
