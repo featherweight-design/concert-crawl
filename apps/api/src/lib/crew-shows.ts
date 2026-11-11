@@ -63,6 +63,7 @@ const selectAttendanceRows = async (
       userId: userEvents.userId,
       handle: userProfiles.handle,
       avatarColor: userProfiles.avatarColor,
+      avatarSecondColor: userProfiles.avatarSecondColor,
     })
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
@@ -116,6 +117,7 @@ export const loadCrewShows = async (
       userId: row.userId,
       handle: row.handle ?? null,
       avatarColor: row.avatarColor ?? null,
+      avatarSecondColor: row.avatarSecondColor ?? null,
     };
     const existing = byEvent.get(row.eventId);
     if (existing) {
@@ -167,6 +169,7 @@ export const loadCrewGoingForEvent = async (
       userId: userEvents.userId,
       handle: userProfiles.handle,
       avatarColor: userProfiles.avatarColor,
+      avatarSecondColor: userProfiles.avatarSecondColor,
     })
     .from(crewMembers)
     .innerJoin(userEvents, eq(userEvents.userId, crewMembers.userId))
@@ -185,6 +188,7 @@ export const loadCrewGoingForEvent = async (
     userId: row.userId,
     handle: row.handle ?? null,
     avatarColor: row.avatarColor ?? null,
+    avatarSecondColor: row.avatarSecondColor ?? null,
   }));
 };
 

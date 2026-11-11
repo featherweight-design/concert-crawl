@@ -238,6 +238,7 @@ usersAdminRouter.get(
       city: profile?.city ?? null,
       theme: profile?.theme ?? null,
       avatarColor: profile?.avatarColor ?? null,
+      avatarSecondColor: profile?.avatarSecondColor ?? null,
       role,
       joinedAt: clerkUser?.createdAt
         ? new Date(clerkUser.createdAt).toISOString()

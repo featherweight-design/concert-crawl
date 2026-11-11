@@ -784,6 +784,8 @@ export interface EventWatcher {
   /** Never null — handle-less watchers are never listed by name. */
   handle: string;
   avatarColor: AvatarColor | null;
+  /** The avatar pair's second colour. Absent or null means solid. */
+  avatarSecondColor?: AvatarColor | null;
 }
 
 // GET /v1/events/:id/watchers
@@ -1096,6 +1098,8 @@ export interface UserProfileResponse {
   handle: string | null;
   city: string | null;
   avatarColor: AvatarColor | null;
+  /** The avatar pair's second colour. Absent or null means solid. */
+  avatarSecondColor?: AvatarColor | null;
   theme: UserTheme;
   planState: PlanState;
   displayRole: DisplayRole;
@@ -1298,6 +1302,8 @@ export interface AdminUserDetail {
   city: string | null;
   theme: UserTheme | null;
   avatarColor: AvatarColor | null;
+  /** The avatar pair's second colour. Absent or null means solid. */
+  avatarSecondColor?: AvatarColor | null;
   role: Role | null;
   joinedAt: string | null; // Clerk account creation, ISO
   // true when no Clerk record backs this id (deleted account) — identity

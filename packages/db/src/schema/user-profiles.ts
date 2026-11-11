@@ -25,6 +25,8 @@ export const userProfiles = pgTable('user_profiles', {
   handle: text('handle').unique(),
   city: text('city'),
   avatarColor: avatarColorEnum('avatar_color'),
+  // The avatar pair (B+ "Mix two"). NULL means a solid avatar in avatarColor.
+  avatarSecondColor: avatarColorEnum('avatar_second_color'),
   theme: userThemeEnum('theme').notNull().default('electric'),
   // Set when the user dismisses the Spotify connect nudge (spec §8) so it
   // renders once. NULL = never shown/dismissed.

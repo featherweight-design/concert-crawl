@@ -131,6 +131,7 @@ crewsRouter.get('/', async (ctx) => {
         joinedAt: crewMembers.joinedAt,
         handle: userProfiles.handle,
         avatarColor: userProfiles.avatarColor,
+        avatarSecondColor: userProfiles.avatarSecondColor,
       })
       .from(crewMembers)
       .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
@@ -155,6 +156,7 @@ crewsRouter.get('/', async (ctx) => {
       userId: row.userId,
       handle: row.handle ?? null,
       avatarColor: row.avatarColor ?? null,
+      avatarSecondColor: row.avatarSecondColor ?? null,
     });
     membersByCrew.set(row.crewId, list);
   }
@@ -216,6 +218,7 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
       .select({
         handle: userProfiles.handle,
         avatarColor: userProfiles.avatarColor,
+        avatarSecondColor: userProfiles.avatarSecondColor,
       })
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId))
@@ -231,6 +234,7 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
           userId,
           handle: profile?.handle ?? null,
           avatarColor: profile?.avatarColor ?? null,
+          avatarSecondColor: profile?.avatarSecondColor ?? null,
         },
       ],
       upcomingCount: 0,
@@ -314,6 +318,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
       joinedAt: crewMembers.joinedAt,
       handle: userProfiles.handle,
       avatarColor: userProfiles.avatarColor,
+      avatarSecondColor: userProfiles.avatarSecondColor,
     })
     .from(crewMembers)
     .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
@@ -335,6 +340,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
     userId: row.userId,
     handle: row.handle ?? null,
     avatarColor: row.avatarColor ?? null,
+    avatarSecondColor: row.avatarSecondColor ?? null,
     joinedAt: row.joinedAt.toISOString(),
     isKeeper: row.userId === crew.keeperId,
     isYou: row.userId === userId,

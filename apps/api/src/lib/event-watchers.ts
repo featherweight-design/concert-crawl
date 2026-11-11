@@ -33,6 +33,7 @@ export async function getEventWatchers(
     .select({
       handle: userProfiles.handle,
       avatarColor: userProfiles.avatarColor,
+      avatarSecondColor: userProfiles.avatarSecondColor,
     })
     .from(userEvents)
     .innerJoin(userProfiles, eq(userEvents.userId, userProfiles.userId))
@@ -40,9 +41,11 @@ export async function getEventWatchers(
     .orderBy(desc(userEvents.createdAt))
     .limit(ROSTER_CAP);
 
-  // Drizzle still types `handle` as nullable under isNotNull; narrow with a
-  // guard rather than a cast.
-  const named = rows.filter((row): row is EventWatcher => row.handle !== null);
+  // Drizzle still types `handle` as nullable under isNotNull; narrow it per
+  // row rather than with a cast.
+  const named = rows.flatMap((row): EventWatcher[] =>
+    row.handle === null ? [] : [{ ...row, handle: row.handle }],
+  );
 
   return { total: countRow?.total ?? 0, named };
 }

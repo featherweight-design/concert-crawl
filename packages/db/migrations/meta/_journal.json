@@ -673,6 +673,13 @@
       "when": 1793750400000,
       "tag": "0095_artist_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1793836800000,
+      "tag": "0098_avatar_second_color",
+      "breakpoints": true
     }
   ]
 }

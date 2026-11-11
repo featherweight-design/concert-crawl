@@ -622,6 +622,54 @@ describe('PATCH /v1/users/me', () => {
     });
     expect(res.status).toBe(409);
   });
+
+  // B+ B15: the avatar pair. A null second colour means a solid avatar.
+  it('stores, returns and clears the avatar second colour', async () => {
+    setAuth();
+    const patch = (body: Record<string, unknown>) =>
+      app.request('/v1/users/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test',
+        },
+        body: JSON.stringify(body),
+      });
+    const readMe = async () => {
+      const res = await app.request('/v1/users/me', {
+        headers: { Authorization: 'Bearer test' },
+      });
+      return z
+        .object({
+          data: z.object({
+            avatarColor: z.string().nullable(),
+            avatarSecondColor: z.string().nullable(),
+          }),
+        })
+        .parse(await res.json()).data;
+    };
+
+    expect(
+      (await patch({ avatarColor: 'signal', avatarSecondColor: 'success' }))
+        .status,
+    ).toBe(200);
+    expect(await readMe()).toEqual({
+      avatarColor: 'signal',
+      avatarSecondColor: 'success',
+    });
+
+    // Changing the first colour alone leaves the pair's second as it was.
+    expect((await patch({ avatarColor: 'accent' })).status).toBe(200);
+    expect((await readMe()).avatarSecondColor).toBe('success');
+
+    expect((await patch({ avatarSecondColor: null })).status).toBe(200);
+    expect(await readMe()).toEqual({
+      avatarColor: 'accent',
+      avatarSecondColor: null,
+    });
+
+    expect((await patch({ avatarSecondColor: 'chartreuse' })).status).toBe(400);
+  });
 });
 
 describe('GET /v1/users/me/submissions', () => {
