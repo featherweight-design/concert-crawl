@@ -15,6 +15,8 @@ import {
 import type { StatusKind } from '@/components/admin/primitives';
 import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { isPrintable, seatsTaken } from '@/lib/poster/poster-rule';
+import Link from 'next/link';
 
 type DerivedStatus = 'active' | 'redeemed' | 'expired' | 'revoked';
 
@@ -25,18 +27,11 @@ const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
   revoked: 'danger',
 };
 
-// Spent once every seat is taken. A first redemption (`usedBy` or `usedAt`)
-// always counts as one seat, whatever `useCount` says: legacy rows (#1084)
-// can carry `usedBy` with no `usedAt`, and a redemption written by code older
-// than `useCount` sets only those two. Mirrors `seatsTaken` in
-// `packages/db/src/schema/users.ts`, which the API decides with.
+// Spent once every seat is taken (`seatsTaken` counts a legacy first
+// redemption, #1084, as one seat).
 function deriveStatus(code: InviteCode): DerivedStatus {
   if (code.revokedAt != null) return 'revoked';
-  const taken = Math.max(
-    code.useCount,
-    code.usedBy != null || code.usedAt != null ? 1 : 0,
-  );
-  if (taken >= code.maxUses) return 'redeemed';
+  if (seatsTaken(code) >= code.maxUses) return 'redeemed';
   if (code.expiresAt != null && new Date(code.expiresAt) < new Date())
     return 'expired';
   return 'active';
@@ -56,6 +51,7 @@ export default async function AdminInviteCodesPage() {
       );
     });
 
+  const now = new Date();
   const outstanding = codes.filter(
     (code) => deriveStatus(code) === 'active',
   ).length;
@@ -112,6 +108,7 @@ export default async function AdminInviteCodesPage() {
             <tr>
               <TH>Code</TH>
               <TH>Status</TH>
+              <TH>Uses</TH>
               <TH>Created</TH>
               <TH>Redeemed</TH>
               <TH>Expires</TH>
@@ -136,11 +133,40 @@ export default async function AdminInviteCodesPage() {
                     >
                       {code.code}
                     </span>
+                    {code.label ? (
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontSize: 12,
+                          color: 'var(--fg-muted)',
+                        }}
+                      >
+                        {code.label}
+                      </div>
+                    ) : null}
                   </TD>
                   <TD>
                     <StatusBadge kind={INVITE_STATUS_KIND[status]} dot>
                       {status}
                     </StatusBadge>
+                  </TD>
+                  <TD mono color="var(--fg-muted)">
+                    {ADMIN_COPY.inviteCodes.uses(
+                      seatsTaken(code),
+                      code.maxUses,
+                    )}
+                    {isPrintable(code, now) ? (
+                      <>
+                        {' · '}
+                        <Link
+                          href={`/admin/invite-codes/${code.id}/poster`}
+                          prefetch={false}
+                          style={{ color: 'var(--signal)' }}
+                        >
+                          {ADMIN_COPY.inviteCodes.posterLink}
+                        </Link>
+                      </>
+                    ) : null}
                   </TD>
                   <TD mono color="var(--fg-muted)">
                     {new Date(code.createdAt).toLocaleDateString()}

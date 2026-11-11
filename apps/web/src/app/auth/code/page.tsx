@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { validateAndSetInviteCode } from './actions';
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
@@ -32,6 +32,15 @@ export default function InviteCodePage() {
   const [errorKind, setErrorKind] = useState<ErrorKind>(null);
   const [isPending, startTransition] = useTransition();
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+
+  // A poster's QR lands here as `?code=BETA-…`. The field is filled in and
+  // nothing more: the visitor still presses the button, so a scan alone never
+  // redeems a seat. Read after mount, like `redirect_url` below, so the page
+  // needs no Suspense boundary and the server render matches the first paint.
+  useEffect(() => {
+    const fromLink = new URLSearchParams(window.location.search).get('code');
+    if (fromLink) setCode(formatCodeInput(fromLink));
+  }, []);
 
   const isComplete = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code);
 
