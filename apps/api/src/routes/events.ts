@@ -61,7 +61,7 @@ import {
 } from '../lib/event-billing.js';
 import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
-import { isSoldOutSql } from '../lib/sold-out.js';
+import { activeSoldOutWhere, isSoldOutSql } from '../lib/sold-out.js';
 import {
   aggregateByTier,
   deriveObservedAt,
@@ -700,14 +700,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       createdAt: eventReports.createdAt,
     })
     .from(eventReports)
-    .where(
-      and(
-        eq(eventReports.eventId, id),
-        eq(eventReports.status, 'sold-out'),
-        eq(eventReports.resolution, 'promoted'),
-        isNotNull(eventReports.resolvedAt),
-      ),
-    )
+    .where(activeSoldOutWhere(id))
     .orderBy(desc(eventReports.createdAt))
     .limit(1);
 

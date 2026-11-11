@@ -207,6 +207,7 @@ eventsAdminRouter.patch(
         eventId: eventReports.eventId,
         status: eventReports.status,
         resolvedAt: eventReports.resolvedAt,
+        createdAt: eventReports.createdAt,
       })
       .from(eventReports)
       .where(eq(eventReports.id, reportId))
@@ -253,6 +254,28 @@ eventsAdminRouter.patch(
       }
     }
 
+    // Promoting a Tickets available is clearing the sold-out it answered,
+    // which must still be live (the same rule as the fan threshold). The
+    // sold-out reports it cleared go in the audit.
+    let clearedSoldOut: string[] = [];
+    if (resolution === 'promoted' && report.status === 'available') {
+      clearedSoldOut = await clearSoldOut(
+        report.eventId,
+        adminNote ?? `cleared by tickets available report ${reportId}`,
+        { filedAt: report.createdAt },
+      );
+      if (clearedSoldOut.length === 0) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'No live sold-out for this report to clear',
+            code: 'not_sold_out',
+          },
+          409,
+        );
+      }
+    }
+
     const [updated] = await db
       .update(eventReports)
       .set({
@@ -263,18 +286,8 @@ eventsAdminRouter.patch(
       .where(eq(eventReports.id, reportId))
       .returning();
 
-    // The sold-out reports a promoted Tickets available cleared, for the audit.
-    let clearedSoldOut: string[] = [];
     // If promoted and report maps to an event status — update the event
     if (resolution === 'promoted') {
-      // Tickets available clears the sold-out, as the fan threshold does.
-      if (report.status === 'available') {
-        clearedSoldOut = await clearSoldOut(
-          report.eventId,
-          adminNote ?? `cleared by tickets available report ${reportId}`,
-        );
-      }
-
       if (report.status === 'cancelled' || report.status === 'postponed') {
         await db
           .update(events)
