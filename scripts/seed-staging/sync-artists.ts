@@ -44,6 +44,22 @@ import { artists } from '../../packages/db/src/schema/index.js';
 import type { ProdReadonlyClient } from './prod-readonly-client.js';
 import type { DrizzleWriteDb } from './sync-venues.js';
 
+export const PROD_ARTIST_COLUMNS = {
+  canonicalName: artists.canonicalName,
+  name: artists.name,
+  spotifyArtistId: artists.spotifyArtistId,
+  matchStatus: artists.matchStatus,
+  matchConfidence: artists.matchConfidence,
+  photoUrl: artists.photoUrl,
+  photoFetchedAt: artists.photoFetchedAt,
+  hidden: artists.hidden,
+  matchCheckedAt: artists.matchCheckedAt,
+  matchAttempts: artists.matchAttempts,
+  spotifyCandidates: artists.spotifyCandidates,
+  spotifyCandidatesFetchedAt: artists.spotifyCandidatesFetchedAt,
+  updatedAt: artists.updatedAt,
+};
+
 export async function syncArtists(deps: {
   prod: ProdReadonlyClient;
   staging: DrizzleWriteDb;
@@ -51,7 +67,13 @@ export async function syncArtists(deps: {
 }): Promise<{ scanned: number; processed: number }> {
   const { prod, staging, dryRun } = deps;
 
-  const prodRows = await prod.select((db) => db.select().from(artists));
+  // An explicit projection, never `select()`: Drizzle names every column the
+  // schema has, and staging migrates ahead of prod, so a bare select breaks
+  // the whole sync for as long as prod lacks a new column (`name_locked_at`,
+  // migration 0094). A new column joins this list once prod has it.
+  const prodRows = await prod.select((db) =>
+    db.select(PROD_ARTIST_COLUMNS).from(artists),
+  );
 
   const stagingRows = await staging
     .select({ canonicalName: artists.canonicalName, slug: artists.slug })
