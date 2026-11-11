@@ -214,6 +214,33 @@ interface MiddlewareAuth {
   protect(options: { unauthenticatedUrl: string }): Promise<unknown>;
 }
 
+/** An invite code as minted: `BETA-XXXX-XXXX`. */
+const INVITE_CODE = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+
+/**
+ * A poster's QR opens `/I/<CODE>` (uppercase, so the QR can use alphanumeric
+ * mode) and people type `concertcrawl.app/i`. Both go to the invite screen,
+ * with a valid code filled in. The screen still waits for the visitor to press
+ * the button, so a GET here never redeems anything. Handled before the route
+ * check because `/I` and `/i` differ only in case and no app route serves
+ * either; anything that isn't a well-formed code lands on an empty field.
+ */
+export const inviteShortLinkRedirect = (
+  req: NextRequest,
+): NextResponse | undefined => {
+  const match = /^\/i(?:\/([^/]*))?\/?$/i.exec(req.nextUrl.pathname);
+  if (match === null) return;
+  const target = new URL('/auth/code', req.url);
+  let code = '';
+  try {
+    code = decodeURIComponent(match[1] ?? '').toUpperCase();
+  } catch {
+    // A malformed escape is just not a code.
+  }
+  if (INVITE_CODE.test(code)) target.searchParams.set('code', code);
+  return NextResponse.redirect(target, 302);
+};
+
 /**
  * Exported for proxy.test.ts, which needs a callable signature — the
  * default export's opaque type forced a cast at every one of its call sites.
@@ -222,6 +249,8 @@ export const middlewareHandler = async (
   auth: MiddlewareAuth,
   req: NextRequest,
 ): Promise<NextResponse | undefined> => {
+  const shortLink = inviteShortLinkRedirect(req);
+  if (shortLink) return shortLink;
   // Before any auth decision: a path we don't serve gets no `auth.protect`, no
   // 307 and no sign-in render, just Next's 404. `clerkMiddleware` has already
   // run `authenticateRequest` by the time this handler is called, so this does

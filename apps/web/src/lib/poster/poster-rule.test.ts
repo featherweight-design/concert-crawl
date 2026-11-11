@@ -20,20 +20,17 @@ const open = {
 };
 
 describe('posterJoinUrl', () => {
-  it('points at the invite screen with the code pre-filled', () => {
-    const url = new URL(
-      posterJoinUrl('https://concertcrawl.app', 'BETA-AB12-CD34'),
+  it('encodes the all-caps short link, which the proxy sends to the invite screen', () => {
+    expect(posterJoinUrl('https://concertcrawl.app', 'BETA-AB12-CD34')).toBe(
+      'HTTPS://CONCERTCRAWL.APP/I/BETA-AB12-CD34',
     );
-    expect(url.origin).toBe('https://concertcrawl.app');
-    expect(url.pathname).toBe('/auth/code');
-    expect(url.searchParams.get('code')).toBe('BETA-AB12-CD34');
   });
 });
 
 describe('posterTypedUrl', () => {
   it('drops the scheme so it can be typed', () => {
     expect(posterTypedUrl('https://concertcrawl.app')).toBe(
-      'concertcrawl.app/auth/code',
+      'concertcrawl.app/i',
     );
   });
 });
@@ -41,9 +38,9 @@ describe('posterTypedUrl', () => {
 describe('qrPath', () => {
   it('draws only whole modules inside a square that includes the quiet zone', () => {
     const { size, path } = qrPath(
-      'https://concertcrawl.app/auth/code?code=BETA-AB12-CD34',
+      posterJoinUrl('https://concertcrawl.app', 'BETA-AB12-CD34'),
     );
-    // A QR symbol is 21 + 4k modules a side; the quiet zone adds two each side.
+    // A QR symbol is 21 + 4k modules a side; the quiet zone adds four each side.
     const symbol = size - 2 * QR_QUIET_ZONE;
     expect(symbol).toBeGreaterThanOrEqual(21);
     expect((symbol - 21) % 4).toBe(0);
@@ -56,6 +53,16 @@ describe('qrPath', () => {
         expect(coord).toBeLessThan(size - QR_QUIET_ZONE);
       }
     }
+  });
+
+  // The handoff's scan test (8 of 8 at 6 ft) assumes a version 3 symbol: the
+  // alphanumeric short link at ECC Q fits in 29 modules plus the quiet zone.
+  it('fits the example poster link in a 29-module symbol with a 4-module quiet zone', () => {
+    const { size } = qrPath(
+      posterJoinUrl('https://concertcrawl.app', 'BETA-AB12-CD34'),
+    );
+    expect(QR_QUIET_ZONE).toBe(4);
+    expect(size - 2 * QR_QUIET_ZONE).toBe(29);
   });
 
   it('draws the same code for the same text', () => {
