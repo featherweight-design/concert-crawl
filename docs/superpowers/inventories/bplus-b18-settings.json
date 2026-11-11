@@ -1,0 +1,42 @@
+{
+  "feature": "Settings restyle",
+  "planRow": "B18",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "`/me` mounts ThemeSync, which re-applies the account's saved theme over `cc-theme`, so its rows are `theme: account`: photographed once per width in the theme the account has. Walk Light and a genre theme by changing the audit account's theme on staging.",
+  "rows": [
+    {
+      "id": "settings",
+      "label": "/me: Settings",
+      "route": "/me",
+      "boards": [
+        "07-more-screens/more-s-settings_m.jpg",
+        "07-more-screens/more-s-d_account.jpg",
+        "07-more-screens/more-s-d_appearance.jpg",
+        "07-more-screens/more-s-d_notifications.jpg",
+        "07-more-screens/more-s-d_zone.jpg"
+      ],
+      "theme": "account",
+      "steps": [
+        {
+          "goto": "/me"
+        }
+      ]
+    },
+    {
+      "id": "settings-full",
+      "label": "/me: whole page",
+      "route": "/me",
+      "boards": [
+        "07-more-screens/more-s-d_submissions.jpg",
+        "07-more-screens/more-s-submissions_m.jpg"
+      ],
+      "theme": "account",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/me"
+        }
+      ]
+    }
+  ]
+}

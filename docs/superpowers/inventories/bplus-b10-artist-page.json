@@ -1,0 +1,48 @@
+{
+  "feature": "Artist page and its skeleton",
+  "planRow": "B10",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "rows": [
+    {
+      "id": "artist",
+      "label": "/artists/[slug]: first screen",
+      "route": "/artists/[slug]",
+      "boards": [
+        "09-artist/artist-m-noburst-puma.jpg",
+        "09-artist/artist-burst-puma.jpg",
+        "09-artist/artist-light.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/artists/${CC_ARTIST_SLUG}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "artist-full",
+      "label": "/artists/[slug]: whole page (Upcoming, the dashed note)",
+      "route": "/artists/[slug]",
+      "boards": [
+        "09-artist/artist-m-noburst-toki.jpg",
+        "09-artist/artist-burst-toki.jpg"
+      ],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/artists/${CC_ARTIST_SLUG}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "skeleton",
+      "label": "Artist skeleton",
+      "route": "/artists/[slug]",
+      "boards": ["06-states/bp-s-load_artist_m.jpg"],
+      "when": "manual",
+      "note": "Throttle and navigate to an artist on staging.",
+      "steps": []
+    }
+  ]
+}

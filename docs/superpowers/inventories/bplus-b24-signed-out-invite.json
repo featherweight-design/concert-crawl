@@ -1,0 +1,49 @@
+{
+  "feature": "Signed-out invite landing",
+  "planRow": "B24",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "While public browse is off, `/` renders the invite landing for a signed-out visitor (LandingClientShell). The code field must match `BETA-XXXX-XXXX`.",
+  "auth": "signed-out",
+  "rows": [
+    {
+      "id": "landing",
+      "label": "/: invite landing",
+      "route": "/",
+      "boards": [
+        "11-signed-out/inv-mob.jpg",
+        "11-signed-out/inv-desk.jpg",
+        "11-signed-out/inv-light.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "landing-full",
+      "label": "/: whole page",
+      "route": "/",
+      "boards": ["11-signed-out/inv-mob.jpg"],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "code",
+      "label": "/auth/code: code entry",
+      "route": "/auth/code",
+      "steps": [
+        {
+          "goto": "/auth/code",
+          "wait": "h1"
+        }
+      ]
+    }
+  ]
+}

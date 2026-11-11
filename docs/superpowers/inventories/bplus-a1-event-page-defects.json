@@ -1,0 +1,58 @@
+{
+  "feature": "Event page defects: disputed-card lookup, pending count, Already reported, Add evidence and Edit",
+  "planRow": "A1",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "Each row needs an event in the state it names, on staging, given by id in the environment. The report and evidence sheets are opened by controls B9 restyles, so their click steps are left to the PR that lands them; until then those rows are manual.",
+  "rows": [
+    {
+      "id": "disputed",
+      "label": "/events/[id]: a disputed price card (parent in `disputed`, needs-more-info pill kept)",
+      "route": "/events/[id]",
+      "boards": ["08-prices-and-status/more-st-disputes_board.jpg"],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/events/${CC_DISPUTED_EVENT_ID}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "pending-mine",
+      "label": "/events/[id]: the pending banner and its count",
+      "route": "/events/[id]",
+      "boards": [
+        "08-prices-and-status/more-st-ev_pending_mine_m.jpg",
+        "08-prices-and-status/more-st-ev_pending_canc_m.jpg"
+      ],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "already-reported",
+      "label": "Already reported state after a second report (See your report, Withdraw)",
+      "route": "/events/[id]",
+      "boards": [
+        "08-prices-and-status/more-st-already_rep_m.jpg",
+        "08-prices-and-status/more-p-already_m.jpg"
+      ],
+      "when": "manual",
+      "note": "Needs a report already filed by the audit user; open the report control and photograph.",
+      "steps": []
+    },
+    {
+      "id": "evidence",
+      "label": "Add evidence and Edit, wired or removed",
+      "route": "/events/[id]",
+      "boards": ["08-prices-and-status/more-st-evidence_m.jpg"],
+      "when": "manual",
+      "note": "Walk on the PR's staging deploy: press each control and confirm it does something or is gone.",
+      "steps": []
+    }
+  ]
+}

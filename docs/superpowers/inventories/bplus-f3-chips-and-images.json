@@ -1,0 +1,81 @@
+{
+  "feature": "Chips and image system: GenreChip, StatusChip, image ring, row left edge, sheet top edge",
+  "planRow": "F3",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "Visible on every row, so the inventory covers each surface that draws rows. The sheet top edge is checked on the Where filter sheet (phone widths only).",
+  "rows": [
+    {
+      "id": "browse",
+      "label": "/events: Browse list, first screen",
+      "route": "/events",
+      "boards": [
+        "04-genre-and-vibe/bp-chips-all.jpg",
+        "04-genre-and-vibe/bp-genres.jpg",
+        "02-mobile/bp-m-browse_m.jpg",
+        "01-core/bp-browse.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        }
+      ]
+    },
+    {
+      "id": "watching",
+      "label": "/watching: rows with status chips",
+      "route": "/watching",
+      "boards": ["08-prices-and-status/more-st-rows_board.jpg"],
+      "steps": [
+        {
+          "goto": "/watching"
+        }
+      ]
+    },
+    {
+      "id": "venue",
+      "label": "/venues/[slug]: a venue's event rows",
+      "route": "/venues/[slug]",
+      "boards": ["02-mobile/bp-m-venue_m.jpg"],
+      "steps": [
+        {
+          "goto": "/venues/red-rocks-amphitheatre",
+          "wait": "h1"
+        },
+        {
+          "scrollTo": "[data-testid=\"event-row\"]"
+        }
+      ]
+    },
+    {
+      "id": "event-chips",
+      "label": "/events/[id]: genre chips on the event page",
+      "route": "/events/[id]",
+      "boards": ["04-genre-and-vibe/bp-chips-all.jpg"],
+      "steps": [
+        {
+          "goto": "/events/${CC_EVENT_ID}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "sheet-edge",
+      "label": "/events: Where filter sheet, its top edge",
+      "route": "/events",
+      "boards": ["05-filters/bp-f-filt_sheet_m.jpg"],
+      "widths": ["floor", "phone"],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "[data-testid=\"venue-chip\"]:visible",
+          "waitDialog": "^Where filter$",
+          "settle": 400
+        }
+      ]
+    }
+  ]
+}

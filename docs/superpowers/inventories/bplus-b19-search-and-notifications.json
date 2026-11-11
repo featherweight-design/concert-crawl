@@ -1,0 +1,105 @@
+{
+  "feature": "Search palette, notifications panel and their states",
+  "planRow": "B19",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "rows": [
+    {
+      "id": "palette",
+      "label": "/events: search palette open",
+      "route": "/events",
+      "boards": [
+        "07-more-screens/more-r3-palette.jpg",
+        "07-more-screens/more-r3-search_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "openSearch": true,
+          "settle": 300
+        }
+      ]
+    },
+    {
+      "id": "palette-typed",
+      "label": "/events: search palette, typed",
+      "route": "/events",
+      "boards": [
+        "07-more-screens/more-r3-palette_typed.jpg",
+        "07-more-screens/more-r3-search_m_typed.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "openSearch": true
+        },
+        {
+          "pressKey": "r"
+        },
+        {
+          "pressKey": "e"
+        },
+        {
+          "pressKey": "d",
+          "settle": 1200
+        }
+      ]
+    },
+    {
+      "id": "search-page",
+      "label": "/search: the search route",
+      "route": "/search",
+      "boards": [
+        "07-more-screens/more-r3-search_m.jpg",
+        "06-states/bp-s-empty_search_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/search"
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "label": "/events: account menu, Notifications",
+      "route": "/events",
+      "boards": [
+        "06-states/bp-s-notif_m.jpg",
+        "06-states/bp-s-notif_empty_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "openAccount": true
+        },
+        {
+          "clickDialog": {
+            "dialog": "^Account",
+            "name": "^Notifications"
+          },
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "notif-states",
+      "label": "Notifications loading and error",
+      "route": "/events",
+      "boards": [
+        "06-states/bp-s-notif_load_m.jpg",
+        "06-states/bp-s-notif_error_m.jpg"
+      ],
+      "when": "manual",
+      "note": "Mock the notifications endpoint once its URL is pinned in this row.",
+      "steps": []
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "feature": "Crews: patch motif, Host rename, invite states, crew-lens empty state",
+  "planRow": "B14",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "`CC_CREW_ID` is a crew the audit user is in; `CC_CREW_INVITE_TOKEN` a live invite to a crew they are not in.",
+  "rows": [
+    {
+      "id": "crews",
+      "label": "/crews: the list",
+      "route": "/crews",
+      "boards": [
+        "07-more-screens/more-r3-crews_m.jpg",
+        "07-more-screens/more-r3-crews.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/crews",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "crew",
+      "label": "/crews/[crewId]: crew home",
+      "route": "/crews/[crewId]",
+      "boards": [
+        "07-more-screens/more-r3-crew_home_m.jpg",
+        "07-more-screens/more-r3-crew_home.jpg",
+        "07-more-screens/more-r3-crew_who.jpg",
+        "07-more-screens/more-r3-crew_been_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/crews/${CC_CREW_ID}",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "invite",
+      "label": "/crew/join/[token]: invite landing",
+      "route": "/crew/join/[token]",
+      "boards": [
+        "06-states/bp-s-invite_m.jpg",
+        "06-states/bp-s-invite_d.jpg",
+        "07-more-screens/more-r3-crew_invite_m.jpg",
+        "07-more-screens/more-r3-crew_invite.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/crew/join/${CC_CREW_INVITE_TOKEN}",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "invite-states",
+      "label": "Invite: already a member, stale invite",
+      "route": "/crew/join/[token]",
+      "boards": [
+        "06-states/bp-s-invite_member_m.jpg",
+        "06-states/bp-s-invite_stale_m.jpg"
+      ],
+      "when": "manual",
+      "note": "Needs a token for a crew the user is in, and an expired one.",
+      "steps": []
+    },
+    {
+      "id": "crew-lens-empty",
+      "label": "Crew lens empty state on Browse",
+      "route": "/events",
+      "boards": ["06-states/bp-s-empty_crewlens_m.jpg"],
+      "when": "manual",
+      "note": "Needs a crew with no shared shows.",
+      "steps": []
+    },
+    {
+      "id": "start",
+      "label": "Start a crew and its options",
+      "route": "/crews",
+      "boards": [
+        "07-more-screens/more-r3-crew_start_m.jpg",
+        "07-more-screens/more-r3-crew_start.jpg",
+        "07-more-screens/more-r3-crew_options_m.jpg",
+        "07-more-screens/more-r3-crew_options.jpg"
+      ],
+      "when": "manual",
+      "note": "Creating a crew writes a row on staging; walk by hand and delete it after.",
+      "steps": []
+    }
+  ]
+}

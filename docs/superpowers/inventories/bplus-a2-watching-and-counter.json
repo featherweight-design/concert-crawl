@@ -1,0 +1,51 @@
+{
+  "feature": "Watching status mapping and the counter sheet",
+  "planRow": "A2",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "`CC_CANCELLED_EVENT_ID` must be a cancelled show the audit user is watching.",
+  "rows": [
+    {
+      "id": "watching",
+      "label": "/watching: every status in its own state (cancelled is not sold out)",
+      "route": "/watching",
+      "boards": [
+        "02-mobile/bp-m-watching_m.jpg",
+        "01-core/bp-watching.jpg",
+        "08-prices-and-status/more-st-rows_board.jpg"
+      ],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/watching"
+        }
+      ]
+    },
+    {
+      "id": "cancelled-event",
+      "label": "/events/[id]: a cancelled show",
+      "route": "/events/[id]",
+      "boards": [
+        "08-prices-and-status/more-st-ev_canc_m.jpg",
+        "08-prices-and-status/more-st-ev_canc_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events/${CC_CANCELLED_EVENT_ID}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "counter",
+      "label": "Counter sheet: tier and vendor locked to the parent's",
+      "route": "/events/[id]",
+      "boards": [
+        "08-prices-and-status/more-st-counter_m.jpg",
+        "08-prices-and-status/more-st-counter_done_m.jpg"
+      ],
+      "when": "manual",
+      "note": "Open the counter on a price with a parent; tier and vendor read-only.",
+      "steps": []
+    }
+  ]
+}

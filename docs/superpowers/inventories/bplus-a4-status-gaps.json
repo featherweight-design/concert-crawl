@@ -1,0 +1,59 @@
+{
+  "feature": "Report filed sheet, cancelled and postponed CTAs, Sold out chip in rows",
+  "planRow": "A4",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "rows": [
+    {
+      "id": "cancelled-cta",
+      "label": "/events/[id]: cancelled, CTA is Refund info from the vendor",
+      "route": "/events/[id]",
+      "boards": [
+        "08-prices-and-status/more-st-ev_canc_m.jpg",
+        "08-prices-and-status/more-st-ev_canc_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events/${CC_CANCELLED_EVENT_ID}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "postponed-cta",
+      "label": "/events/[id]: postponed, CTA is Watching for the new date",
+      "route": "/events/[id]",
+      "boards": ["08-prices-and-status/more-st-ev_post_m.jpg"],
+      "steps": [
+        {
+          "goto": "/events/${CC_POSTPONED_EVENT_ID}",
+          "wait": "[data-testid=\"hero-band\"]"
+        }
+      ]
+    },
+    {
+      "id": "sold-out-chip",
+      "label": "/events: a Sold out chip in a row",
+      "route": "/events",
+      "boards": ["08-prices-and-status/more-st-rows_board.jpg"],
+      "note": "Needs a sold-out show in the list's first pages.",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "scrollTo": "[data-testid=\"row-sold-out\"]"
+        }
+      ]
+    },
+    {
+      "id": "filed",
+      "label": "Report filed sheet",
+      "route": "/events/[id]",
+      "boards": ["08-prices-and-status/more-st-filed_m.jpg"],
+      "when": "manual",
+      "note": "Shown right after filing a report; walk on staging.",
+      "steps": []
+    }
+  ]
+}

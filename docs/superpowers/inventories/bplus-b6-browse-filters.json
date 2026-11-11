@@ -1,0 +1,80 @@
+{
+  "feature": "Browse 2: filter restyle, mobile sheet, desktop popovers, single-select Where and Vibe, the vibe line, active chips",
+  "planRow": "B6",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "note": "The same chip opens a bottom sheet below `sm` and a popover from `sm`; both are `role=dialog` named `<Title> filter`.",
+  "rows": [
+    {
+      "id": "filters-rest",
+      "label": "/events: the filter bar at rest",
+      "route": "/events",
+      "boards": [
+        "05-filters/bp-f-filt_m_rest.jpg",
+        "05-filters/bp-f-filt_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        }
+      ]
+    },
+    {
+      "id": "where",
+      "label": "/events: Where open (sheet on phone, popover on desktop)",
+      "route": "/events",
+      "boards": [
+        "05-filters/bp-f-filt_sheet_m.jpg",
+        "05-filters/bp-f-filt_venues_m.jpg",
+        "05-filters/bp-f-filt_where_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "[data-testid=\"venue-chip\"]:visible",
+          "waitDialog": "^Where filter$",
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "vibe",
+      "label": "/events: Vibe open, with the teaching line",
+      "route": "/events",
+      "boards": [
+        "04-genre-and-vibe/bp-vibe-vibe_sheet_m.jpg",
+        "04-genre-and-vibe/bp-vibe-vibe_pop_d.jpg",
+        "04-genre-and-vibe/bp-vibe-browse_vibe_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "clickRole": "button",
+          "name": "^Vibe",
+          "waitDialog": "^Vibe filter$",
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "active",
+      "label": "/events: active chips (Where and When set)",
+      "route": "/events",
+      "boards": [
+        "05-filters/bp-f-filt_m_active.jpg",
+        "05-filters/bp-f-filt_active_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events?filterWhere=red-rocks-amphitheatre&filterWhen=this-week"
+        }
+      ]
+    }
+  ]
+}

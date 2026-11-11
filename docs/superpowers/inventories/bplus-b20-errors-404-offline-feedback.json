@@ -1,0 +1,84 @@
+{
+  "feature": "Errors, 404, offline, feedback tab",
+  "planRow": "B20",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "rows": [
+    {
+      "id": "not-found",
+      "label": "/venues/[slug] with no such venue: the in-shell 404",
+      "route": "/venues/[slug]",
+      "boards": [
+        "06-states/bp-s-notfound_m.jpg",
+        "06-states/bp-s-notfound_d.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/venues/contact-sheet-no-such-venue",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "offline-page",
+      "label": "/~offline: the offline fallback",
+      "route": "/~offline",
+      "boards": [
+        "06-states/bp-s-offline_m.jpg",
+        "06-states/bp-s-offline_empty_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/~offline",
+          "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "offline-pill",
+      "label": "/events with the connection dropped: the offline pill",
+      "route": "/events",
+      "boards": [
+        "06-states/bp-s-offline_pill_m.jpg",
+        "06-states/bp-s-offline_account_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "offline": true,
+          "settle": 1200
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "label": "/events: the feedback tab",
+      "route": "/events",
+      "boards": [
+        "06-states/bp-s-feedback_tab_m.jpg",
+        "06-states/bp-s-feedback_m.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label=\"Send feedback\"]",
+          "settle": 500
+        }
+      ]
+    },
+    {
+      "id": "feedback-done",
+      "label": "Feedback sent",
+      "route": "/events",
+      "boards": ["06-states/bp-s-feedback_done_m.jpg"],
+      "when": "manual",
+      "note": "Sending writes a row and pings Sentry; walk by hand.",
+      "steps": []
+    }
+  ]
+}

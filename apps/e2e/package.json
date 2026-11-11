@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "audit:sweep": "tsx src/audit/sweep.ts",
+    "contact-sheet": "tsx src/contact-sheet/contact-sheet.ts",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:smoke": "playwright test --config playwright.smoke.config.ts",
     "test": "vitest run",

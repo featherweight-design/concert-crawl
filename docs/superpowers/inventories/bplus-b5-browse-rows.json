@@ -1,0 +1,57 @@
+{
+  "feature": "Browse 1: rows, Tonight spotlight, Coming to Denver, day headers, List/Cal toggle, no floating Crews button",
+  "planRow": "B5",
+  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "rows": [
+    {
+      "id": "browse",
+      "label": "/events: Browse list, first screen",
+      "route": "/events",
+      "boards": [
+        "02-mobile/bp-m-browse_m.jpg",
+        "01-core/bp-browse.jpg",
+        "03-themes/bp-t-electric-browse_m.jpg",
+        "03-themes/bp-t-light-browse_m.jpg",
+        "03-themes/bp-t-pulse-browse_m.jpg",
+        "03-themes/bp-td-electric-browse.jpg",
+        "03-themes/bp-td-light-browse.jpg",
+        "03-themes/bp-td-pulse-browse.jpg"
+      ],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        }
+      ]
+    },
+    {
+      "id": "browse-scrolled",
+      "label": "/events: day headers and rows further down",
+      "route": "/events",
+      "boards": ["02-mobile/bp-m-browse_m.jpg", "01-core/bp-browse.jpg"],
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "scroll": 1400,
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "browse-full",
+      "label": "/events: the whole first page (spotlight, Coming to Denver, Load more)",
+      "route": "/events",
+      "boards": ["06-states/bp-s-loadmore_m.jpg"],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        }
+      ]
+    }
+  ]
+}

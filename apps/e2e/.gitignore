@@ -6,3 +6,4 @@ audit-output/*
 !audit-output/.gitkeep
 .auth/audit-*.json
 
+contact-sheets/
