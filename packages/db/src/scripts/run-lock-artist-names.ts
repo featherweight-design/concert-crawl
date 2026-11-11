@@ -20,8 +20,17 @@ const isEntrypoint = (): boolean => {
 };
 
 async function main(): Promise<void> {
-  const dryRun = !process.argv.includes('--apply');
-  const slugs = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
+  const args = process.argv.slice(2);
+  // A mistyped `--apply` must fail loudly, not fall back to a dry run that
+  // reads as done.
+  const unknown = args.filter(
+    (arg) => arg.startsWith('-') && arg !== '--apply',
+  );
+  if (unknown.length > 0) {
+    throw new Error(`Unknown flag: ${unknown.join(' ')}`);
+  }
+  const dryRun = !args.includes('--apply');
+  const slugs = args.filter((arg) => arg !== '--apply');
   if (slugs.length === 0) {
     throw new Error('Pass at least one artist slug.');
   }

@@ -1005,6 +1005,25 @@ describe('admin artists routes', () => {
       expect(row?.nameLockedAt).toBeNull();
     });
 
+    it('neither writes nor audits an unlock of a row that is not locked', async () => {
+      setAdminAuth();
+      const updatedAt = new Date('2026-01-01T00:00:00Z');
+      const id = await seedArtist({ canonicalName: 'never locked', updatedAt });
+
+      const res = await rename(id, { nameLocked: false });
+      expect(res.status).toBe(200);
+      const [row] = await testDb
+        .select()
+        .from(artists)
+        .where(eq(artists.id, id));
+      expect(row?.updatedAt).toEqual(updatedAt);
+      const audits = await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'artist.name.unlock'));
+      expect(audits).toHaveLength(0);
+    });
+
     it('writes an audit row with the previous name', async () => {
       setAdminAuth();
       const id = await seedArtist({ canonicalName: 'renamed act' });

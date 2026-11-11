@@ -184,6 +184,7 @@ artistsAdminRouter.get(
         matchCheckedAt: artists.matchCheckedAt,
         hidden: artists.hidden,
         autoMatchedAt: artists.autoMatchedAt,
+        nameLockedAt: artists.nameLockedAt,
         // Which chip the row belongs to, which is not always its matchStatus.
         // The page keeps its counts honest by walking the single row that
         // changed, and it can only do that if it knows the bucket it came from.
@@ -743,41 +744,55 @@ artistsAdminRouter.patch(
     const body = ctx.req.valid('json');
     const now = new Date();
 
-    const [previous] = await db
-      .select({ name: artists.name })
-      .from(artists)
-      .where(eq(artists.id, id));
+    // One transaction with the row locked, so the audit's `previousName` is
+    // the name this write replaced, not one a concurrent repair has since
+    // rewritten.
+    const outcome = await db.transaction(async (tx) => {
+      const [previous] = await tx
+        .select({ name: artists.name, nameLockedAt: artists.nameLockedAt })
+        .from(artists)
+        .where(eq(artists.id, id))
+        .for('update');
+      if (!previous) return null;
 
-    if (!previous) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404);
-    }
+      // Releasing a lock that is not there changes nothing, so it is neither
+      // written nor audited.
+      if (!('name' in body) && previous.nameLockedAt === null) {
+        const [row] = await tx.select().from(artists).where(eq(artists.id, id));
+        return row ? { previous, updated: row, changed: false } : null;
+      }
 
-    const [updated] = await db
-      .update(artists)
-      .set(
-        'name' in body
-          ? { name: body.name, nameLockedAt: now, updatedAt: now }
-          : { nameLockedAt: null, updatedAt: now },
-      )
-      .where(eq(artists.id, id))
-      .returning();
-
-    if (!updated) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404);
-    }
-
-    const actor = getAuthUser(ctx);
-    ctx.set(
-      'auditAction',
-      'name' in body ? 'artist.name.update' : 'artist.name.unlock',
-    );
-    ctx.set('auditTargetId', id);
-    ctx.set('auditActorId', actor.userId);
-    ctx.set('auditMeta', {
-      slug: updated.slug,
-      previousName: previous.name,
-      name: updated.name,
+      const [row] = await tx
+        .update(artists)
+        .set(
+          'name' in body
+            ? { name: body.name, nameLockedAt: now, updatedAt: now }
+            : { nameLockedAt: null, updatedAt: now },
+        )
+        .where(eq(artists.id, id))
+        .returning();
+      return row ? { previous, updated: row, changed: true } : null;
     });
+
+    if (!outcome) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
+    }
+    const { previous, updated, changed } = outcome;
+
+    if (changed) {
+      const actor = getAuthUser(ctx);
+      ctx.set(
+        'auditAction',
+        'name' in body ? 'artist.name.update' : 'artist.name.unlock',
+      );
+      ctx.set('auditTargetId', id);
+      ctx.set('auditActorId', actor.userId);
+      ctx.set('auditMeta', {
+        slug: updated.slug,
+        previousName: previous.name,
+        name: updated.name,
+      });
+    }
 
     return ctx.json({ success: true, data: updated });
   },
