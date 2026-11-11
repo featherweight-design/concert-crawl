@@ -84,6 +84,25 @@ export const inviteCodes = pgTable(
 );
 
 /**
+ * Seats a code has given out. A redemption written by code older than
+ * `use_count` (an API still serving across the migrate-then-deploy gap, or a
+ * rollback) sets only `used_by`/`used_at`, so a set first redemption counts
+ * as one seat whatever `use_count` says. Validate and redeem both read this,
+ * never `use_count` alone. A function so the schema stays free of
+ * import-time `sql` calls, which a test mocking `drizzle-orm` cannot satisfy.
+ */
+export const inviteSeatsTaken = () =>
+  sql<number>`greatest(${inviteCodes.useCount}, CASE WHEN ${inviteCodes.usedAt} IS NOT NULL OR ${inviteCodes.usedBy} IS NOT NULL THEN 1 ELSE 0 END)`;
+
+/** `inviteSeatsTaken`, for a row already read. */
+export const seatsTaken = (code: {
+  useCount: number;
+  usedBy: string | null;
+  usedAt: Date | string | null;
+}): number =>
+  Math.max(code.useCount, code.usedAt != null || code.usedBy != null ? 1 : 0);
+
+/**
  * Every redemption of an invite code, one row per (code, person): the unique
  * pair is what stops one person spending two seats of a multi-use code.
  */

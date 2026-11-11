@@ -51,6 +51,35 @@ describe('POST /v1/auth/validate-code rate limit', () => {
     expect((await validate(VALID)).status).toBe(429);
   });
 
+  it('never counts a real code that is full or expired as a miss', async () => {
+    await testDb.insert(inviteCodes).values([
+      {
+        code: 'BETA-AAAA-0002',
+        createdBy: 'user_admin',
+        usedBy: 'user_x',
+        usedAt: new Date(),
+        useCount: 1,
+      },
+      {
+        code: 'BETA-AAAA-0003',
+        createdBy: 'user_admin',
+        expiresAt: new Date(Date.now() - 60_000),
+      },
+    ]);
+    for (let i = 0; i < 15; i += 1) {
+      expect((await validate('BETA-AAAA-0002')).status).toBe(409);
+      expect((await validate('BETA-AAAA-0003')).status).toBe(410);
+    }
+    expect((await validate(miss(1))).status).toBe(404);
+  });
+
+  it('tells a miss refused in the extra slot to wait out the window', async () => {
+    for (let i = 0; i < 10; i += 1) await validate(miss(i));
+    const res = await validate(miss(10));
+    expect(res.status).toBe(429);
+    expect(Number(res.headers.get('Retry-After'))).toBe(3600);
+  });
+
   it('keeps one IP from spending another IP budget', async () => {
     for (let i = 0; i < 11; i += 1) await validate(miss(i), '198.51.100.1');
     expect((await validate(miss(99), '198.51.100.2')).status).toBe(404);

@@ -20,6 +20,13 @@ vi.mock('@concert-crawl/db', () => ({
     where: vi.fn().mockResolvedValue([mockInviteCode]),
   },
   inviteCodes: {},
+  // The real rule, so a mocked row is judged the way the route judges it.
+  seatsTaken: (code: {
+    useCount: number;
+    usedBy: string | null;
+    usedAt: unknown;
+  }) =>
+    Math.max(code.useCount, code.usedAt != null || code.usedBy != null ? 1 : 0),
 }));
 
 vi.mock('../../lib/rate-limit.js', () => ({

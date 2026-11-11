@@ -261,6 +261,42 @@ describe('POST /v1/auth/redeem-code — multi-use codes', () => {
     expect(await comps('user_b')).toHaveLength(1);
   });
 
+  // A redemption written by code older than use_count (the migrate-then-deploy
+  // gap, or a rollback) sets only used_by/used_at. It is still a seat.
+  it('counts a first redemption that left use_count behind as a seat', async () => {
+    await testDb.insert(inviteCodes).values({
+      code: POSTER,
+      createdBy: 'user_test_admin',
+      usedBy: 'user_legacy',
+      usedAt: new Date(),
+    });
+
+    expect((await asUser('user_b')).status).toBe(409);
+    expect(await comps('user_b')).toHaveLength(0);
+  });
+
+  it('never writes a later redeemer next to a deleted first redeemer', async () => {
+    // Account deletion nulls used_by and keeps used_at.
+    const firstAt = new Date('2026-10-01T00:00:00Z');
+    await testDb.insert(inviteCodes).values({
+      code: POSTER,
+      createdBy: 'user_test_admin',
+      maxUses: 3,
+      useCount: 1,
+      usedAt: firstAt,
+    });
+
+    expect((await asUser('user_b')).status).toBe(200);
+
+    const [row] = await testDb
+      .select()
+      .from(inviteCodes)
+      .where(eq(inviteCodes.code, POSTER));
+    expect(row?.usedBy).toBeNull();
+    expect(row?.usedAt?.toISOString()).toBe(firstAt.toISOString());
+    expect(row?.useCount).toBe(2);
+  });
+
   it('gives the last seat to exactly one of two concurrent redeems', async () => {
     // Two different accounts race for one remaining seat. A read-then-write
     // increment lets both through; the conditional UPDATE lets one.
