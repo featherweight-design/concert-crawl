@@ -8,8 +8,8 @@
 
 import { ia_hashName } from '../../identity-art/IdentityArt';
 
-// The accent lives in the shared helper so VenueStamp picks the same colour.
-export { STAMP_ACCENTS, stampAccentFor } from '@/lib/stamp-accent';
+// The accent lives with the passport stamp helpers so VenueStamp picks the same colour.
+export { STAMP_ACCENTS, stampAccentFor } from '@/lib/passport/stamp';
 
 export type StampGlyph = 'star' | 'diamond' | 'ring' | 'triangle';
 

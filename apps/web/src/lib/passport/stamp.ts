@@ -1,5 +1,27 @@
+import { ia_hashName } from '@/components/consumer/identity-art/IdentityArt';
 import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy';
 import { DENVER_TIME_ZONE } from '@/lib/time';
+
+// Hex is allowed here because this is identity data, not theming — the same
+// exception IA_PALETTES takes. Keep it out of components.
+export const STAMP_ACCENTS = [
+  '#7AE6FF',
+  '#FF7BD4',
+  '#FFE36B',
+  '#A075FF',
+  '#C9F26E',
+  '#FFB838',
+  '#5DD4D6',
+] as const;
+
+/**
+ * A stamp's ink colour, stable per seed (the artist). Shared by the ticket-stub
+ * `StubStamp` (#70) and the B+ `VenueStamp`, so a show keeps its colour when B12
+ * swaps one for the other. The `stamp-accent` namespace keeps it independent of
+ * the stub's glyph stream.
+ */
+export const stampAccentFor = (seed: string): string =>
+  STAMP_ACCENTS[ia_hashName(seed, 'stamp-accent') % STAMP_ACCENTS.length]!;
 
 /**
  * Deterministic ±2° tilt per show, so the wall reads as stamped rather than
