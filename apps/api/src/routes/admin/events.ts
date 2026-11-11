@@ -230,11 +230,13 @@ eventsAdminRouter.patch(
     if (resolution === 'promoted') {
       if (report.status === 'cancelled' || report.status === 'postponed') {
         const [eventRow] = await db
-          .select({ status: events.status })
+          .select({ status: events.status, delistedAt: events.delistedAt })
           .from(events)
           .where(eq(events.id, report.eventId))
           .limit(1);
-        isRealTransition = eventRow?.status !== report.status;
+        // A delisted show was cancelled silently by the sweep (B+ A5).
+        isRealTransition =
+          eventRow?.status !== report.status || eventRow.delistedAt !== null;
       } else if (report.status === 'sold-out') {
         // Excludes the current report because we haven't run the update
         // below yet — its resolution is still null, so the resolution=
@@ -270,7 +272,7 @@ eventsAdminRouter.patch(
       if (report.status === 'cancelled' || report.status === 'postponed') {
         await db
           .update(events)
-          .set({ status: report.status })
+          .set({ status: report.status, delistedAt: null })
           .where(eq(events.id, report.eventId));
       }
 
@@ -778,10 +780,15 @@ eventsAdminRouter.patch(
     // transaction that actually observed the transition; a losing PATCH
     // sees the new state and computes category=null.
     const result = await db.transaction(async (tx) => {
-      let preUpdate: { status: string; date: string } | undefined;
+      let preUpdate:
+        { status: string; date: string; delistedAt: Date | null } | undefined;
       if (touchesTransitionField) {
         const rows = await tx
-          .select({ status: events.status, date: events.date })
+          .select({
+            status: events.status,
+            date: events.date,
+            delistedAt: events.delistedAt,
+          })
           .from(events)
           .where(eq(events.id, id))
           .for('update')
@@ -791,7 +798,13 @@ eventsAdminRouter.patch(
 
       const [updated] = await tx
         .update(events)
-        .set({ ...body, updatedAt: new Date() })
+        // Any status an admin sets is a decision, not the sweep's guess, so
+        // it ends No longer listed (B+ A5).
+        .set({
+          ...body,
+          ...(typeof body.status === 'string' && { delistedAt: null }),
+          updatedAt: new Date(),
+        })
         .where(eq(events.id, id))
         .returning();
 
@@ -809,9 +822,13 @@ eventsAdminRouter.patch(
       // same PATCH, we still fan out only once — status transitions win.
       let category: 'watch.cancelled' | 'watch.postponed' | null = null;
       if (preUpdate && updated) {
+        // Confirming a delisted show as cancelled is a real transition:
+        // the sweep told nobody.
+        const wasDelisted = preUpdate.delistedAt !== null;
         if (
           typeof body.status === 'string' &&
-          body.status !== preUpdate.status
+          (body.status !== preUpdate.status ||
+            (body.status === 'cancelled' && wasDelisted))
         ) {
           if (body.status === 'cancelled') category = 'watch.cancelled';
           else if (body.status === 'postponed') category = 'watch.postponed';
