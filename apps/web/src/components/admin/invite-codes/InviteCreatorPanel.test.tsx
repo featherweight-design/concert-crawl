@@ -16,7 +16,8 @@ vi.mock('@/app/(protected)/admin/invite-codes/actions', () => ({
   mintInviteCodeWithOptions: mint,
 }));
 
-import { InviteCreatorPanel, parseSeats } from './InviteCreatorPanel';
+import { parseSeats } from '@/lib/poster/poster-rule';
+import { InviteCreatorPanel } from './InviteCreatorPanel';
 
 const seatsField = () => screen.getByRole('spinbutton');
 

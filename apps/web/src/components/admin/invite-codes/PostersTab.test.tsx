@@ -188,46 +188,58 @@ describe('PostersTab', () => {
     },
   );
 
-  it('validates seats from 1 to 500 before minting', () => {
+  it('validates seats from 2 to 500, quietly until Other is touched', () => {
     renderTab();
     fireEvent.click(screen.getByRole('button', { name: /New poster code/ }));
-    expect(
-      screen.getByText(
-        "The preview switches to the new code once it's minted.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId('poster-mat-note')).toHaveTextContent(
+      "The preview switches to the new code once it's minted.",
+    );
     fireEvent.click(screen.getByRole('radio', { name: 'Other' }));
     const seats = screen.getByRole('textbox', { name: 'Seats' });
     const submit = screen.getByRole('button', { name: 'Mint and preview' });
-    for (const typed of ['', '0', '501', '12.5']) {
+    expect(submit).toBeDisabled();
+    expect(seats).toHaveAttribute('aria-invalid', 'false');
+    fireEvent.blur(seats);
+    expect(seats).toHaveAttribute('aria-invalid', 'true');
+    for (const typed of ['', '0', '1', '501', '12.5']) {
       fireEvent.change(seats, { target: { value: typed } });
       expect(submit).toBeDisabled();
     }
+    fireEvent.change(seats, { target: { value: '2' } });
+    expect(submit).toBeEnabled();
+    expect(seats).toHaveAttribute('aria-invalid', 'false');
     fireEvent.change(seats, { target: { value: '500' } });
     expect(submit).toBeEnabled();
   });
 
-  it('mints through the audited action and selects the new code', async () => {
-    const view = renderTab();
+  const openAndMint = async () => {
     fireEvent.click(screen.getByRole('button', { name: /New poster code/ }));
     fireEvent.change(
       screen.getByRole('textbox', { name: /Where it's going/ }),
-      {
-        target: { value: 'Record shop on Colfax' },
-      },
+      { target: { value: 'Record shop on Colfax' } },
     );
     fireEvent.click(screen.getByRole('radio', { name: '100' }));
     fireEvent.click(screen.getByRole('radio', { name: '90 days' }));
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Mint and preview' }));
     });
+  };
+
+  it('mints through the audited action, keeps the old preview dimmed, then selects the new code', async () => {
+    const view = renderTab();
+    await openAndMint();
     expect(mint).toHaveBeenCalledWith({
       expiresIn: '90d',
       label: 'Record shop on Colfax',
       maxUses: 100,
     });
-    expect(screen.queryByTestId('new-poster-code')).toBeNull();
-    // The revalidated page brings the new code in; it is the one selected.
+    // Until the new code arrives, the old preview stays up, dimmed, and the
+    // form can't mint again.
+    expect(sheet()).toHaveAttribute('data-url', CARDS[0]!.url);
+    expect(
+      screen.getByRole('button', { name: 'Mint and preview' }),
+    ).toBeDisabled();
+    expect(screen.queryByText(/That code can't be printed/)).toBeNull();
     const fresh = { ...card('new'), id: 'code-new' };
     view.rerender(
       <PostersTab
@@ -237,8 +249,70 @@ describe('PostersTab', () => {
         initial={{ code: null, look: 'night', tabs: false }}
       />,
     );
+    expect(screen.queryByTestId('new-poster-code')).toBeNull();
     expect(sheet()).toHaveAttribute('data-url', fresh.url);
     expect(window.location.search).toBe('?code=code-new');
+  });
+
+  it('says so when the minted code never shows up in the list', async () => {
+    renderTab();
+    await openAndMint();
+    expect(screen.getByTestId('poster-mat-note')).toHaveTextContent(
+      "Minted, but the list didn't refresh.",
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "Minted, but the list didn't refresh.",
+    );
+  });
+
+  it('shows an error, not silence, when a mint comes back without an id', async () => {
+    mint.mockResolvedValueOnce({ ok: true, code: 'BETA-NEW0-0000' } as never);
+    renderTab();
+    await openAndMint();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "Minted, but couldn't select it. Find it in the list.",
+    );
+    expect(
+      screen.getByRole('button', { name: 'Mint and preview' }),
+    ).toBeDisabled();
+  });
+
+  it('holds Cancel while a mint is pending', async () => {
+    let finish: (value: {
+      ok: boolean;
+      id: string;
+      code: string;
+    }) => void = () => {};
+    mint.mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /New poster code/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Mint and preview' }));
+    });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await act(async () => finish({ ok: true, id: 'x', code: 'BETA-X' }));
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+  });
+
+  it('refuses a picked code once it can no longer be printed', () => {
+    const view = renderTab();
+    view.rerender(
+      <PostersTab
+        cards={[
+          { ...CARDS[0]!, full: true, taken: 50, qr: null },
+          ...CARDS.slice(1),
+        ]}
+        typedUrl="concertcrawl.app/i"
+        venues={{ venueCount: 21, venueNames: ['Hi-Dive'], moreVenues: true }}
+        initial={{ code: null, look: 'night', tabs: false }}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "That code can't be printed",
+    );
+    expect(screen.queryByTestId('poster-sheet')).toBeNull();
   });
 
   it('says so when there is no poster code yet', () => {

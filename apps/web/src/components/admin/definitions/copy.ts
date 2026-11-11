@@ -2062,7 +2062,7 @@ export const ADMIN_COPY = {
         labelHint: 'Only admins see this. It helps you tell posters apart.',
         seats: 'Seats',
         seatsOther: 'Other',
-        seatsHint: 'How many people this one code lets in. 1 to 500.',
+        seatsHint: 'How many people this one code lets in. 2 to 500.',
         expires: 'Expires',
         never: 'Never',
         days30: '30 days',
@@ -2071,6 +2071,10 @@ export const ADMIN_COPY = {
         pending: 'Minting…',
         cancel: 'Cancel',
         previewNote: "The preview switches to the new code once it's minted.",
+        mintedNoId: "Minted, but couldn't select it. Find it in the list.",
+        mintedMissing:
+          "Minted, but the list didn't refresh. Reload the page to find it.",
+        mintFailed: "Couldn't mint the code. Try again.",
       },
       look: {
         night: {

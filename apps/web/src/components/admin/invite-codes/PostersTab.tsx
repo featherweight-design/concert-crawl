@@ -92,13 +92,22 @@ export function PostersTab({
   const [look, setLook] = useState<PosterLook>(initial.look);
   const [tabs, setTabs] = useState(initial.tabs);
   const [formOpen, setFormOpen] = useState(false);
+  // A code just minted: the preview stays dimmed on the old one until the
+  // revalidated list brings it in, then it is selected.
+  const [pendingMintId, setPendingMintId] = useState<string | null>(null);
+  const [mintBusy, setMintBusy] = useState(false);
   const [listOpen, setListOpen] = useState(false);
 
   const selected = printable.find((card) => card.id === selectedId) ?? null;
-  // Only the code the URL asked for is refused: a code just minted is
-  // missing only until the revalidated list arrives.
+  // A selected code that can't be printed, asked for by the URL or picked
+  // and since gone full, is refused. A just-minted code is never selected
+  // before it arrives, so it is never refused.
   const refused =
-    selectedId !== null && selectedId === initial.code && selected === null;
+    selectedId !== null && selectedId !== pendingMintId && selected === null;
+  const mintArrived =
+    pendingMintId !== null &&
+    printable.some((card) => card.id === pendingMintId);
+  const mintMissing = pendingMintId !== null && !mintBusy && !mintArrived;
   const folded = selected !== null && !listOpen;
   const hiddenFull = cards.filter((card) => card.full).length;
 
@@ -115,6 +124,18 @@ export function PostersTab({
   const pick = (id: string) => {
     setSelectedId(id);
     setListOpen(false);
+  };
+
+  useEffect(() => {
+    if (!mintArrived || pendingMintId === null) return;
+    setSelectedId(pendingMintId);
+    setPendingMintId(null);
+    setFormOpen(false);
+  }, [mintArrived, pendingMintId]);
+
+  const closeForm = () => {
+    setFormOpen(false);
+    setPendingMintId(null);
   };
 
   return (
@@ -143,11 +164,10 @@ export function PostersTab({
             </div>
             {formOpen ? (
               <NewPosterCodeForm
-                onCancel={() => setFormOpen(false)}
-                onMinted={(id) => {
-                  pick(id);
-                  setFormOpen(false);
-                }}
+                onCancel={closeForm}
+                onMinted={setPendingMintId}
+                onBusyChange={setMintBusy}
+                notice={mintMissing ? copy.form.mintedMissing : null}
               />
             ) : null}
             {cards.length === 0 ? (
@@ -322,7 +342,7 @@ export function PostersTab({
           </section>
         </div>
 
-        {selected ? (
+        {selected || formOpen ? (
           <div className="pt-preview" data-dim={formOpen}>
             <div className="pt-preview-h">
               <span className="pt-mono">{copy.previewLabel}</span>
@@ -331,22 +351,28 @@ export function PostersTab({
               </span>
             </div>
             <div className="pt-mat">
-              <PosterFit>
-                <PosterSheet
-                  url={selected.url}
-                  typedUrl={typedUrl}
-                  code={selected.code}
-                  qr={selected.qr}
-                  seats={selected.max - selected.taken}
-                  venueCount={venues.venueCount}
-                  venueNames={venues.venueNames}
-                  moreVenues={venues.moreVenues}
-                  look={look}
-                  tabs={tabs}
-                />
-              </PosterFit>
+              {selected ? (
+                <PosterFit>
+                  <PosterSheet
+                    url={selected.url}
+                    typedUrl={typedUrl}
+                    code={selected.code}
+                    qr={selected.qr}
+                    seats={selected.max - selected.taken}
+                    venueCount={venues.venueCount}
+                    venueNames={venues.venueNames}
+                    moreVenues={venues.moreVenues}
+                    look={look}
+                    tabs={tabs}
+                  />
+                </PosterFit>
+              ) : null}
               {formOpen ? (
-                <p className="pt-mat-note">{copy.form.previewNote}</p>
+                <p className="pt-mat-note" data-testid="poster-mat-note">
+                  {mintMissing
+                    ? copy.form.mintedMissing
+                    : copy.form.previewNote}
+                </p>
               ) : null}
             </div>
           </div>
