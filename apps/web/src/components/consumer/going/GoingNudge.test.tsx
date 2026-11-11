@@ -5,6 +5,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { GoingNudge } from './GoingNudge';
 import { GOING_COPY } from './definitions/copy';
+import { stampAccentFor, stampInkFor } from '@/components/consumer/venue-stamp';
 
 afterEach(cleanup);
 
@@ -88,7 +89,16 @@ describe('GoingNudge', () => {
     const line = screen.getByTestId('going-nudge-line');
     expect(line.textContent).toMatch(/^Going\? In \d+ days\.$/);
     expect(line.style.whiteSpace).toBe('nowrap');
-    expect(line).toHaveClass('truncate');
+  });
+
+  // At 320px only the question may shrink; the count must never clip.
+  it('lets only the question truncate, never the day count', () => {
+    renderNudge();
+    expect(screen.getByTestId('going-nudge-question')).toHaveClass('truncate');
+    const days = screen.getByTestId('going-nudge-days');
+    expect(days).not.toHaveClass('truncate');
+    expect(days.style.flexShrink).toBe('0');
+    expect(days.textContent).toMatch(/^In \d+ days\.$/);
   });
 
   // B+ rule 4: the upcoming night shows the dashed stamp it will become.
@@ -103,5 +113,15 @@ describe('GoingNudge', () => {
         .getByTestId('going-nudge-stamp')
         .querySelector('[data-venue-glyph]'),
     ).toHaveAttribute('data-venue-glyph', 'mission');
+  });
+
+  // Rule 4: "Yes, going" is filled with the stamp's ink, not the raw accent.
+  it('fills "Yes, going" with the dashed stamp\'s own ink', () => {
+    renderNudge();
+    const ink = stampInkFor(stampAccentFor(SHOW.artist));
+    const yes = screen.getByRole('button', { name: GOING_COPY.nudge.yes });
+    expect(yes.getAttribute('style')).toContain('color-mix(in oklch');
+    expect(yes.getAttribute('style')).toContain('50%');
+    expect(ink).toContain(stampAccentFor(SHOW.artist));
   });
 });

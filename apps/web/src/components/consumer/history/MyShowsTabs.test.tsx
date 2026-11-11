@@ -126,4 +126,20 @@ describe('MyShowsTabs B+ styling', () => {
     expect(current).toHaveLength(1);
     expect(current[0]?.getAttribute('href')).toBe('/following');
   });
+
+  it('draws the gradient hairline on the current tab only', () => {
+    render(<MyShowsTabs active="artists" />);
+
+    const current = screen.getByRole('link', { name: COPY.artists });
+    const currentStyle = current.getAttribute('style') ?? '';
+    expect(currentStyle).toContain('linear-gradient');
+    expect(currentStyle).toContain('border-box');
+    expect(currentStyle).toContain('padding-box');
+
+    for (const label of [COPY.watching, COPY.concerts]) {
+      const style =
+        screen.getByRole('link', { name: label }).getAttribute('style') ?? '';
+      expect(style).not.toContain('linear-gradient');
+    }
+  });
 });

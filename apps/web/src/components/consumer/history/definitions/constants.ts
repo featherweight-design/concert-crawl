@@ -9,6 +9,56 @@ export const PASSPORT_ROUTE: string | null = '/passport';
 // knob is deliberately not a prop on the route (plan PR-5 Task 5).
 export const HISTORY_DENSITY = 'cozy' as const;
 
+export type HistoryDensity = 'compact' | 'cozy' | 'roomy';
+
+// The row geometry per density. It lives here, not in HistoryItem, so the
+// server route fallback can size its skeleton from the same numbers: a value
+// imported from a 'use client' module arrives on the server as a reference.
+export const HISTORY_DENSITY_CONFIG: Record<
+  HistoryDensity,
+  {
+    artSize: number;
+    padY: number;
+    padL: number;
+    padR: number;
+    gap: number;
+    titleSize: number;
+    metaSize: number;
+    stampSize: number;
+  }
+> = {
+  compact: {
+    artSize: 40,
+    padY: 10,
+    padL: 14,
+    padR: 14,
+    gap: 12,
+    titleSize: 13,
+    metaSize: 11,
+    stampSize: 32,
+  },
+  cozy: {
+    artSize: 56,
+    padY: 14,
+    padL: 14,
+    padR: 16,
+    gap: 14,
+    titleSize: 14.5,
+    metaSize: 11.5,
+    stampSize: 44,
+  },
+  roomy: {
+    artSize: 64,
+    padY: 18,
+    padL: 18,
+    padR: 20,
+    gap: 16,
+    titleSize: 16,
+    metaSize: 12,
+    stampSize: 52,
+  },
+};
+
 // The B+ brand gradient for the one figure on each My shows header that gets
 // it: the Watching count, and Top venue on Concerts. Inline-clipped to text.
 export const MY_SHOWS_GRADIENT =

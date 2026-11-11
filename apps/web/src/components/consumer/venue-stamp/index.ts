@@ -3,7 +3,6 @@ export {
   DASHED_RING,
   VenueStamp,
   glyphStrokeFor,
-  stampInkFor,
   type VenueStampVariant,
 } from './VenueStamp';
-export { stampAccentFor } from '@/lib/passport/stamp';
+export { stampAccentFor, stampInkFor } from '@/lib/passport/stamp';

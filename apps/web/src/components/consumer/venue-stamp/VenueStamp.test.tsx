@@ -99,7 +99,7 @@ describe('VenueStamp', () => {
       .innerHTML;
     expect(first).toBe(second);
     expect(ringOf(document.body).getAttribute('stroke')).toBe(
-      `color-mix(in oklch, ${accent} 55%, var(--fg))`,
+      `color-mix(in oklch, ${accent} 50%, var(--fg))`,
     );
   });
 

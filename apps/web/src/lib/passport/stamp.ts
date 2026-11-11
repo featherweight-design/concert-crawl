@@ -23,6 +23,25 @@ export const STAMP_ACCENTS = [
 export const stampAccentFor = (seed: string): string =>
   STAMP_ACCENTS[ia_hashName(seed, 'stamp-accent') % STAMP_ACCENTS.length]!;
 
+/** How much of the accent survives in the ink; the rest is the theme's `--fg`. */
+export const STAMP_INK_SHARE = 50;
+
+/**
+ * The ink a stamp is actually drawn in: the accent pulled toward the theme's
+ * text colour, where the pale accents on their own wash out on the light
+ * theme. Anything filled "with the stamp's colour" (B+ rule 4's "Yes, going")
+ * uses this, so the fill and the stamp beside it match.
+ *
+ * 50% rather than F4's 55%: "Yes, going" sets `--bg` text on this fill, and at
+ * 55% the pale accents (#FFE36B, #C9F26E) fell to 4.1:1 on the light theme.
+ * At 50% the worst case across all seven accents and nine themes is 4.8:1
+ * (WCAG relative luminance, oklch mix computed per theme's `--bg`/`--fg`), and
+ * a stamp ring only gains contrast against `--surface-2` by moving toward
+ * `--fg`.
+ */
+export const stampInkFor = (accent: string): string =>
+  `color-mix(in oklch, ${accent} ${STAMP_INK_SHARE}%, var(--fg))`;
+
 /**
  * Deterministic ±2° tilt per show, so the wall reads as stamped rather than
  * gridded — and reads the *same* way on every render. A random tilt would give

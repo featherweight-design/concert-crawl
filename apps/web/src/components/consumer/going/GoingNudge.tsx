@@ -16,7 +16,7 @@ import type { CSSProperties } from 'react';
 import type { WatchingShow } from '@concert-crawl/types';
 import { GOING_COPY } from './definitions/copy';
 import { stampAccentFor } from './lib/stamp';
-import { VenueStamp } from '@/components/consumer/venue-stamp';
+import { VenueStamp, stampInkFor } from '@/components/consumer/venue-stamp';
 import { daysUntilLabel } from '@/lib/going/nudge-window';
 
 type GoingNudgeProps = {
@@ -74,6 +74,9 @@ const RESET: CSSProperties = {
 
 export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
   const accent = stampAccentFor(show.artist);
+  // The dashed stamp's own ink, so "Yes, going" is filled with exactly the
+  // colour of the stamp it sits beside (rule 4).
+  const ink = stampInkFor(accent);
 
   return (
     <div
@@ -118,12 +121,15 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           gap: 2,
         }}
       >
-        {/* One line, always: the question and the count truncate before they
-            wrap, so the prompt never grows taller than the button beside it. */}
+        {/* One line, always. Only the question may shrink: the day count is
+            its own non-truncating span, so at 320px it never clips. */}
         <span
           data-testid="going-nudge-line"
-          className="truncate"
           style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '0.3em',
+            minWidth: 0,
             whiteSpace: 'nowrap',
             fontFamily: 'var(--font-ui)',
             fontSize: 12.5,
@@ -131,8 +137,15 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
             letterSpacing: '-0.005em',
           }}
         >
-          {GOING_COPY.nudge.heading}{' '}
-          <span style={{ color: 'var(--fg-muted)', fontWeight: 500 }}>
+          <span data-testid="going-nudge-question" className="min-w-0 truncate">
+            {GOING_COPY.nudge.heading}
+          </span>
+          {/* A real space for assistive tech; flex drops it visually and the
+              gap spaces the two. */}{' '}
+          <span
+            data-testid="going-nudge-days"
+            style={{ flexShrink: 0, color: 'var(--fg-muted)', fontWeight: 500 }}
+          >
             {daysUntilLabel(show)}
           </span>
         </span>
@@ -156,7 +169,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           ...RESET,
           padding: '7px 12px 7px 7px',
           borderRadius: 999,
-          background: accent,
+          background: ink,
           color: 'var(--bg)',
           fontSize: 12,
           fontWeight: 800,
