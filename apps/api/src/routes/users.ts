@@ -201,6 +201,7 @@ usersRouter.get('/me', async (ctx) => {
     handle: profile?.handle ?? null,
     city: profile?.city ?? null,
     avatarColor: profile?.avatarColor ?? null,
+    avatarSecondColor: profile?.avatarSecondColor ?? null,
     theme: profile?.theme ?? 'electric',
     planState,
     displayRole,
@@ -222,6 +223,11 @@ const patchSchema = z.object({
   handle: z.string().min(3).max(20).regex(HANDLE_REGEX).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
   avatarColor: z
+    .enum(['signal', 'accent', 'success', 'warning'])
+    .nullable()
+    .optional(),
+  // Null keeps the avatar solid.
+  avatarSecondColor: z
     .enum(['signal', 'accent', 'success', 'warning'])
     .nullable()
     .optional(),
@@ -282,6 +288,8 @@ usersRouter.patch(
     if (body.city !== undefined) updateValues.city = body.city;
     if (body.avatarColor !== undefined)
       updateValues.avatarColor = body.avatarColor;
+    if (body.avatarSecondColor !== undefined)
+      updateValues.avatarSecondColor = body.avatarSecondColor;
     if (body.theme !== undefined) updateValues.theme = body.theme;
 
     const [existingProfile] = await db
@@ -301,6 +309,7 @@ usersRouter.patch(
         handle: body.handle ?? null,
         city: body.city ?? null,
         avatarColor: body.avatarColor ?? null,
+        avatarSecondColor: body.avatarSecondColor ?? null,
         theme: body.theme ?? 'electric',
       });
     }

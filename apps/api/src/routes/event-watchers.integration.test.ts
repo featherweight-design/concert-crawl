@@ -113,7 +113,7 @@ describe('GET /v1/events/:id/watchers', () => {
     expect(body.data?.named[0]?.handle).toBe('marisol');
   });
 
-  it('exposes exactly handle and avatarColor — no identity fields', async () => {
+  it('exposes exactly the handle and avatar colours — no identity fields', async () => {
     const eventId = await seedWatchedEvent();
     await addWatcher(eventId, 'user_a', 'marisol');
     setAuth();
@@ -121,7 +121,12 @@ describe('GET /v1/events/:id/watchers', () => {
     const { body } = await fetchWatchers(eventId);
     const named = body.data?.named[0];
     expect(named).toBeDefined();
-    expect(Object.keys(named ?? {}).sort()).toEqual(['avatarColor', 'handle']);
+    // The avatar pair's second colour (B+ B15) is cosmetic, like the first.
+    expect(Object.keys(named ?? {}).sort()).toEqual([
+      'avatarColor',
+      'avatarSecondColor',
+      'handle',
+    ]);
   });
 
   it('counts a watcher with no profile row at all without naming them', async () => {
