@@ -827,6 +827,7 @@ artistsAdminRouter.post(
           name: artists.name,
           slug: artists.slug,
           hidden: artists.hidden,
+          matchStatus: artists.matchStatus,
         })
         .from(artists)
         .where(eq(artists.id, id));
