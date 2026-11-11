@@ -37,7 +37,7 @@ export const NOTIFICATIONS_COPY = {
   loading: 'Checking what you missed…',
   loadingVisible: 'Catching up…',
   /** The error state's eyebrow (B+ `bp-s-notif_error_m`). */
-  errorEyebrow: 'Poll failed',
+  errorEyebrow: "Couldn't load",
   error: "Couldn't reach the crawl.",
   errorBody: "Poll failed. Nothing's lost: it's all still on the server.",
   errorAction: 'Retry',
