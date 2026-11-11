@@ -1,3 +1,18 @@
+# [1.329.0](https://github.com/featherweight-design/concert-crawl/compare/v1.328.0...v1.329.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** the report badge counts only reports whose artist still exists ([688ba8a](https://github.com/featherweight-design/concert-crawl/commit/688ba8a106a15419b0a58e54b0cbf902666d8c4a))
+* **web:** reports panel follows the row, mobile drawer badges Artists ([b0817b1](https://github.com/featherweight-design/concert-crawl/commit/b0817b1771f7fa2f9e90f6e5051f093bc60d605e))
+* **web:** restoring a page leaves its reports in the Reported queue ([bff64e6](https://github.com/featherweight-design/concert-crawl/commit/bff64e69972ad16f31fe733b48d00ae421ad0fa1))
+
+
+### Features
+
+* **web:** add an Artists nav badge for open wrong-artist reports ([6a380c5](https://github.com/featherweight-design/concert-crawl/commit/6a380c50ca7188378835190c3935e5873133bf91))
+* **web:** admin Reported queue, reports panel and the bell category ([ce7447f](https://github.com/featherweight-design/concert-crawl/commit/ce7447fcae210b53095309d88b7a799ebd68b679))
+
 # [1.328.0](https://github.com/featherweight-design/concert-crawl/compare/v1.327.0...v1.328.0) (2026-11-11)
 
 
