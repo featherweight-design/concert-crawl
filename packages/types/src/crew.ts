@@ -60,8 +60,8 @@ export interface CrewMemberPreview {
   userId: string;
   handle: string | null;
   avatarColor: AvatarColor | null;
-  /** The avatar pair's second colour. Absent or null means solid. */
-  avatarSecondColor?: AvatarColor | null;
+  /** The avatar pair's second colour. Null means solid. */
+  avatarSecondColor: AvatarColor | null;
 }
 
 /** A roster row on the crew home. */

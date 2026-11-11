@@ -25,6 +25,8 @@ export async function patchMe(
     handle?: string | null;
     city?: string | null;
     avatarColor?: 'signal' | 'accent' | 'success' | 'warning' | null;
+    /** The avatar pair's second colour; null keeps it solid. */
+    avatarSecondColor?: 'signal' | 'accent' | 'success' | 'warning' | null;
     theme?: ThemeName;
   },
 ): Promise<void> {

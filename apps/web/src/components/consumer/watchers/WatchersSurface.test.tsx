@@ -13,6 +13,7 @@ const copy = CONSUMER_COPY.watchers;
 const watcher = (handle: string): EventWatchersResponse['named'][number] => ({
   handle,
   avatarColor: null,
+  avatarSecondColor: null,
 });
 
 // Desktop by default; the sheet test opts into the mobile viewport.

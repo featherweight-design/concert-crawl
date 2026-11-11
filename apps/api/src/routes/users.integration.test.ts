@@ -670,6 +670,50 @@ describe('PATCH /v1/users/me', () => {
 
     expect((await patch({ avatarSecondColor: 'chartreuse' })).status).toBe(400);
   });
+
+  it('keeps the avatar pair coherent', async () => {
+    setAuth();
+    const patch = (body: Record<string, unknown>) =>
+      app.request('/v1/users/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test',
+        },
+        body: JSON.stringify(body),
+      });
+    const stored = async () => {
+      const [row] = await testDb
+        .select({
+          avatarColor: userProfiles.avatarColor,
+          avatarSecondColor: userProfiles.avatarSecondColor,
+        })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, 'user_test123'));
+      return row;
+    };
+
+    // A second colour with no first is refused.
+    expect((await patch({ avatarSecondColor: 'success' })).status).toBe(400);
+
+    // The same colour twice is a solid avatar.
+    expect(
+      (await patch({ avatarColor: 'signal', avatarSecondColor: 'signal' }))
+        .status,
+    ).toBe(200);
+    expect(await stored()).toEqual({
+      avatarColor: 'signal',
+      avatarSecondColor: null,
+    });
+
+    // Clearing the first colour clears the pair.
+    await patch({ avatarSecondColor: 'success' });
+    expect((await patch({ avatarColor: null })).status).toBe(200);
+    expect(await stored()).toEqual({
+      avatarColor: null,
+      avatarSecondColor: null,
+    });
+  });
 });
 
 describe('GET /v1/users/me/submissions', () => {

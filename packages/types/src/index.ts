@@ -784,8 +784,8 @@ export interface EventWatcher {
   /** Never null — handle-less watchers are never listed by name. */
   handle: string;
   avatarColor: AvatarColor | null;
-  /** The avatar pair's second colour. Absent or null means solid. */
-  avatarSecondColor?: AvatarColor | null;
+  /** The avatar pair's second colour. Null means solid. */
+  avatarSecondColor: AvatarColor | null;
 }
 
 // GET /v1/events/:id/watchers
@@ -1024,7 +1024,14 @@ export interface InviteCode {
 }
 
 // Avatar color token keys — survive theme switches
-export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning';
+/** The avatar palette, in one place for the API's validators. */
+export const AVATAR_COLORS = [
+  'signal',
+  'accent',
+  'success',
+  'warning',
+] as const;
+export type AvatarColor = (typeof AVATAR_COLORS)[number];
 
 // User-selectable theme
 export type UserTheme =
@@ -1098,8 +1105,8 @@ export interface UserProfileResponse {
   handle: string | null;
   city: string | null;
   avatarColor: AvatarColor | null;
-  /** The avatar pair's second colour. Absent or null means solid. */
-  avatarSecondColor?: AvatarColor | null;
+  /** The avatar pair's second colour. Null means solid. */
+  avatarSecondColor: AvatarColor | null;
   theme: UserTheme;
   planState: PlanState;
   displayRole: DisplayRole;
@@ -1302,8 +1309,8 @@ export interface AdminUserDetail {
   city: string | null;
   theme: UserTheme | null;
   avatarColor: AvatarColor | null;
-  /** The avatar pair's second colour. Absent or null means solid. */
-  avatarSecondColor?: AvatarColor | null;
+  /** The avatar pair's second colour. Null means solid. */
+  avatarSecondColor: AvatarColor | null;
   role: Role | null;
   joinedAt: string | null; // Clerk account creation, ISO
   // true when no Clerk record backs this id (deleted account) — identity

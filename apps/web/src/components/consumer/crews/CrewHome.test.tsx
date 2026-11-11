@@ -78,6 +78,7 @@ const member = (over: Partial<CrewMember> = {}): CrewMember => ({
   userId: 'u1',
   handle: 'ana',
   avatarColor: null,
+  avatarSecondColor: null,
   joinedAt: new Date().toISOString(),
   isKeeper: true,
   isYou: true,

@@ -19,6 +19,7 @@ import {
 import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types';
 import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
 import { MT_TIME_ZONE } from './time.js';
+import { avatarColumns, avatarOf } from './avatar.js';
 
 /**
  * The tense rule (locked decision 2). Upcoming needs at least one member
@@ -62,8 +63,7 @@ const selectAttendanceRows = async (
       venueSlug: venues.slug,
       userId: userEvents.userId,
       handle: userProfiles.handle,
-      avatarColor: userProfiles.avatarColor,
-      avatarSecondColor: userProfiles.avatarSecondColor,
+      ...avatarColumns(),
     })
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
@@ -116,8 +116,7 @@ export const loadCrewShows = async (
     const going: CrewMemberPreview = {
       userId: row.userId,
       handle: row.handle ?? null,
-      avatarColor: row.avatarColor ?? null,
-      avatarSecondColor: row.avatarSecondColor ?? null,
+      ...avatarOf(row),
     };
     const existing = byEvent.get(row.eventId);
     if (existing) {
@@ -168,8 +167,7 @@ export const loadCrewGoingForEvent = async (
     .selectDistinct({
       userId: userEvents.userId,
       handle: userProfiles.handle,
-      avatarColor: userProfiles.avatarColor,
-      avatarSecondColor: userProfiles.avatarSecondColor,
+      ...avatarColumns(),
     })
     .from(crewMembers)
     .innerJoin(userEvents, eq(userEvents.userId, crewMembers.userId))
@@ -187,8 +185,7 @@ export const loadCrewGoingForEvent = async (
   return rows.map((row) => ({
     userId: row.userId,
     handle: row.handle ?? null,
-    avatarColor: row.avatarColor ?? null,
-    avatarSecondColor: row.avatarSecondColor ?? null,
+    ...avatarOf(row),
   }));
 };
 

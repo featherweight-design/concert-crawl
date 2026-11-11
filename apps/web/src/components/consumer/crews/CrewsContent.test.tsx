@@ -79,7 +79,9 @@ const crew = (over: Partial<CrewSummary> = {}): CrewSummary => ({
   name: 'Thursdays',
   patchSalt: 0,
   memberCount: 3,
-  members: [{ userId: 'u1', handle: 'ana', avatarColor: null }],
+  members: [
+    { userId: 'u1', handle: 'ana', avatarColor: null, avatarSecondColor: null },
+  ],
   upcomingCount: 2,
   isKeeper: true,
   muted: false,

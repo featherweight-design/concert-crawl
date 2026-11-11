@@ -65,7 +65,11 @@ const TARGET: FollowNudgeTarget = {
 };
 
 const named = (...handles: string[]): EventWatcher[] =>
-  handles.map((handle) => ({ handle, avatarColor: null }));
+  handles.map((handle) => ({
+    handle,
+    avatarColor: null,
+    avatarSecondColor: null,
+  }));
 
 const watchedShow = (eventId: string): WatchingShow => ({
   userEventId: 'ue_1',
