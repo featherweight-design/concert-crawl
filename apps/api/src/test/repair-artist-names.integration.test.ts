@@ -517,6 +517,13 @@ describe('repair-artist-names integration', () => {
       await seedMatchedArtist('Book Of Love', 'book of love', 'Book of Love');
       await testDb
         .update(artists)
+        .set({ nameLockedAt: new Date() })
+        .where(eq(artists.canonicalName, 'book of love'));
+      expect(
+        (await repairArtistNames(testDb, { dryRun: true })).candidates,
+      ).toBe(0);
+      await testDb
+        .update(artists)
         .set({ nameLockedAt: null })
         .where(eq(artists.canonicalName, 'book of love'));
 
