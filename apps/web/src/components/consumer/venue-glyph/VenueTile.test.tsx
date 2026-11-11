@@ -26,13 +26,14 @@ function seedVenueSlugs(): string[] {
   return [...block.matchAll(/slug: '([a-z0-9-]+)'/g)].map((match) => match[1]!);
 }
 
-/** Onboarded straight to prod, so the seed never had them (checked 2026-11-11). */
+/** Onboarded straight to prod, so the seed never had them (checked 2026-11-10). */
 const PROD_ONLY_SLUGS = ['ball-arena', 'the-black-box', 'the-church-nightclub'];
 
 describe('venue slug to glyph map', () => {
   it('gives every seed venue a glyph', () => {
     const slugs = seedVenueSlugs();
-    expect(slugs.length).toBeGreaterThan(0);
+    // A seed format the extraction can't read would shrink this silently.
+    expect(slugs.length).toBeGreaterThanOrEqual(18);
     expect(slugs.filter((slug) => venueGlyphKey(slug) === null)).toEqual([]);
   });
 
@@ -64,22 +65,20 @@ describe('VenueTile', () => {
     expect(svg?.querySelectorAll('path').length).toBeGreaterThan(0);
   });
 
-  it('falls back to a neutral initial tile for an unknown venue', () => {
+  it('hands a venue with no glyph to its identity tile', () => {
     const { container } = render(
-      <VenueTile slug="new-venue" name="  the new room" />,
+      <VenueTile slug="new-venue" name="The New Room" />,
     );
-    const svg = container.querySelector('svg');
-    expect(svg?.getAttribute('data-venue-tile')).toBe('fallback');
-    expect(svg?.textContent).toBe('T');
-    expect(svg?.querySelector('rect')?.getAttribute('stroke')).toBe(
-      'var(--border-strong)',
-    );
+    const tile = container.querySelector('[data-venue-tile]');
+    expect(tile?.getAttribute('data-venue-tile')).toBe('fallback');
+    expect(tile?.getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelector('svg[viewBox="0 0 96 96"]')).toBeNull();
   });
 
-  it('sits on the theme surface, not a fixed colour', () => {
+  it('keeps the glyph ground the art was drawn on, whatever the theme', () => {
     const { container } = render(<VenueTile slug="hi-dive" name="Hi-Dive" />);
     expect(container.querySelector('rect')?.getAttribute('fill')).toBe(
-      'var(--surface-1)',
+      '#11162E',
     );
   });
 
