@@ -269,24 +269,31 @@ export default function AdminArtistsPage() {
       patched: PatchedArtist,
       isExhausted: boolean,
       generation: number,
+      // An identity write, or hiding a page, closes every open report on the
+      // artist in the same transaction on the server; restoring a page leaves
+      // them open. Only a write that closed them moves the row out of Reported.
+      closedReports = true,
     ) => {
       if (generation !== loadGeneration.current) return;
-      // An identity write closes every open report on the artist, in the same
-      // transaction on the server. So the row leaves the Reported queue.
       const next: AdminArtist = {
         ...previous,
         ...patched,
         isExhausted,
-        openReportCount: 0,
+        openReportCount: closedReports ? 0 : previous.openReportCount,
       };
       const nextBucket = bucketOf(next);
       setCounts((prev) => {
         const shifted = shiftCounts(prev, bucketOf(previous), nextBucket);
-        return previous.openReportCount > 0
+        return closedReports && previous.openReportCount > 0
           ? { ...shifted, reported: Math.max(0, shifted.reported - 1) }
           : shifted;
       });
-      if (search !== '' || (status !== 'reported' && nextBucket === status)) {
+      if (
+        search !== '' ||
+        (status === 'reported'
+          ? next.openReportCount > 0
+          : nextBucket === status)
+      ) {
         // Functional, because a chip change or a debounced search can land a
         // new list while the PATCH is in flight; mapping the closed-over array
         // would put the stale page back.
@@ -517,7 +524,7 @@ export default function AdminArtistsPage() {
       const body: { data: PatchedArtist } = await resp.json();
       // The visibility PATCH does not touch the attempt counter, so whatever
       // the row was given up on stays true.
-      applyWrite(previous, body.data, previous.isExhausted, generation);
+      applyWrite(previous, body.data, previous.isExhausted, generation, hidden);
     } catch (err) {
       console.error('[admin artists] visibility change failed', err);
       setError(COPY.visibilityError);
