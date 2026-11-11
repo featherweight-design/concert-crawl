@@ -132,12 +132,12 @@ function parseCents(val: string | null | undefined): number | null {
   return isNaN(parsed) ? null : parsed;
 }
 
-// Derive the pending report of a given status from the reports array
 /** The viewer's own unresolved report on this show, if any. */
 function ownReportId(reports: EventReport[]): string | null {
   return reports.find((rpt) => rpt.isReporter)?.id ?? null;
 }
 
+// Derive the pending report of a given status from the reports array
 function findPendingReport(
   reports: EventReport[],
   status: EventReport['status'],

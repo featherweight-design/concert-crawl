@@ -27,6 +27,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   gte,
   ilike,
   inArray,
@@ -37,6 +38,7 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import {
   SP_POLICY,
   RESALE_VENDOR_VALUES,
@@ -777,27 +779,61 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // same corroborated + pending data. Running the queries once and deriving
   // both shapes from the in-memory rows avoids duplicate DB work and keeps
   // the two payloads from drifting (an issue Copilot flagged in PR 723 r3).
-  const corroboratedSelection = {
-    id: priceSubmissions.id,
-    tier: priceSubmissions.tier,
-    priceMin: priceSubmissions.priceMin,
-    priceMax: priceSubmissions.priceMax,
-    vendor: priceSubmissions.vendor,
-    sourceCategory: priceSubmissions.sourceCategory,
-    userId: priceSubmissions.userId,
-    createdAt: priceSubmissions.createdAt,
-    updatedAt: priceSubmissions.updatedAt,
-    lastSeenAt: priceSubmissions.lastSeenAt,
-  };
-  const liveCorroboratedRows = await db
-    .select(corroboratedSelection)
+  // Filing a counter flips its parent from 'corroborated' to 'disputed' in the
+  // same transaction (price-submissions.ts, submissions.ts), so a price under an
+  // open price check is 'disputed', not 'corroborated'. It still leads its tier,
+  // with the counter beside it, until an admin resolves the check. 'disputed'
+  // alone also marks an admin moderation denial with no counter, so only a
+  // disputed row with a pending same-tier counter (the only kind that attaches
+  // below) comes back here, flagged `contested`.
+  const counterRows = alias(priceSubmissions, 'counter');
+  const priceRows = await db
+    .select({
+      id: priceSubmissions.id,
+      tier: priceSubmissions.tier,
+      priceMin: priceSubmissions.priceMin,
+      priceMax: priceSubmissions.priceMax,
+      vendor: priceSubmissions.vendor,
+      sourceCategory: priceSubmissions.sourceCategory,
+      userId: priceSubmissions.userId,
+      createdAt: priceSubmissions.createdAt,
+      updatedAt: priceSubmissions.updatedAt,
+      lastSeenAt: priceSubmissions.lastSeenAt,
+      contested: sql<boolean>`${priceSubmissions.status} = 'disputed'`,
+    })
     .from(priceSubmissions)
     .where(
       and(
         eq(priceSubmissions.eventId, id),
-        eq(priceSubmissions.status, 'corroborated'),
+        or(
+          eq(priceSubmissions.status, 'corroborated'),
+          and(
+            eq(priceSubmissions.status, 'disputed'),
+            exists(
+              db
+                .select({ one: sql`1` })
+                .from(counterRows)
+                .where(
+                  and(
+                    eq(counterRows.disputedSubmissionId, priceSubmissions.id),
+                    eq(counterRows.status, 'pending'),
+                    eq(counterRows.tier, priceSubmissions.tier),
+                  ),
+                ),
+            ),
+          ),
+        ),
       ),
     );
+  // A live price outranks one under a check, so a contested parent only leads
+  // a tier that has no live price. Anywhere else it would sit beside the live
+  // price as an alternate with no sign it's being checked.
+  const liveTiers = new Set(
+    priceRows.filter((sub) => !sub.contested).map((sub) => sub.tier),
+  );
+  const allCorroboratedRows = priceRows.filter(
+    (sub) => !sub.contested || !liveTiers.has(sub.tier),
+  );
 
   const allPendingRows = await db
     .select({
@@ -826,34 +862,6 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         eq(priceSubmissions.status, 'pending'),
       ),
     );
-
-  // Filing a counter flips its parent from 'corroborated' to 'disputed' in the
-  // same transaction (price-submissions.ts, submissions.ts), so a price under an
-  // open price check is 'disputed', not 'corroborated'. It still leads its tier,
-  // with the counter beside it, until an admin resolves the check. 'disputed'
-  // alone also marks an admin moderation denial with no counter, so only a
-  // disputed row that a pending counter points at comes back here.
-  const contestedParentIds = [
-    ...new Set(
-      allPendingRows.flatMap((sub) =>
-        sub.disputedSubmissionId === null ? [] : [sub.disputedSubmissionId],
-      ),
-    ),
-  ];
-  const contestedParentRows =
-    contestedParentIds.length === 0
-      ? []
-      : await db
-          .select(corroboratedSelection)
-          .from(priceSubmissions)
-          .where(
-            and(
-              eq(priceSubmissions.eventId, id),
-              eq(priceSubmissions.status, 'disputed'),
-              inArray(priceSubmissions.id, contestedParentIds),
-            ),
-          );
-  const allCorroboratedRows = [...liveCorroboratedRows, ...contestedParentRows];
 
   // Counter-submissions = pending rows that point at a corroborated parent
   // AT THE SAME TIER. Tier match is required so a dispute that landed under a
@@ -904,6 +912,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     row.priceSource === 'community' && allCorroboratedRows.length > 0;
   const legacySortedCorroborated = isCommunityPriced
     ? [...allCorroboratedRows].sort((left, right) => {
+        // A price under a check never leads over a live one in another tier.
+        if (left.contested !== right.contested) return left.contested ? 1 : -1;
         const trustDelta =
           vendorTrustRank(left.vendor) - vendorTrustRank(right.vendor);
         if (trustDelta !== 0) return trustDelta;
@@ -1012,7 +1022,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // the in-memory allCorroboratedRows + side-tables that priceByTier also
   // consumes, so the two payload shapes share a single source of truth.
   if (legacyPrimary) {
-    const otherSubs = legacySortedCorroborated.slice(1);
+    // A price under a check isn't offered as an alternate to the live one.
+    const otherSubs = legacySortedCorroborated
+      .slice(1)
+      .filter((sub) => !sub.contested);
     priceVendor = legacyPrimary.vendor;
     priceSourceCategory = legacyPrimary.sourceCategory;
     priceObservedAt = deriveObservedAt(
