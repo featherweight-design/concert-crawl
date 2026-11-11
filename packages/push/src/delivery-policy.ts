@@ -94,6 +94,7 @@ const POLICIES: Record<UserNotificationCategory, DeliveryPolicy> = {
   'watch.backonsale': TIME_SENSITIVE,
   'watch.pricedrop': QUIET_UPDATE,
   'artist.new_show': QUIET_NEWS,
+  'artist.report_fixed': NOT_PUSHED,
   'crew.going': NOT_PUSHED,
   'crew.joined': NOT_PUSHED,
   'crew.left': NOT_PUSHED,

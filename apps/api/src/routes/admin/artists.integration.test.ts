@@ -267,6 +267,7 @@ describe('admin artists routes', () => {
 
       expect(res.status).toBe(200);
       expect(body.data).toEqual({
+        reported: 0,
         unmatched: 0,
         matched: 1,
         ambiguous: 2,
@@ -365,6 +366,7 @@ describe('admin artists routes', () => {
       const body = await res.json();
 
       expect(body.data).toEqual({
+        reported: 0,
         unmatched: 0,
         matched: 0,
         ambiguous: 1,

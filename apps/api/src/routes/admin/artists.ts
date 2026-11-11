@@ -14,13 +14,21 @@ import {
   and,
   asc,
   eq,
+  ne,
   ilike,
   isNotNull,
   isNull,
   sql,
   type SQL,
 } from 'drizzle-orm';
-import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db';
+import {
+  artistReports,
+  artists,
+  db,
+  userArtistFollows,
+  userProfiles,
+  type SpotifyCandidateSnapshot,
+} from '@concert-crawl/db';
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
@@ -32,6 +40,8 @@ import {
   isExhaustibleStatus,
   isNotExhaustedExpr,
 } from '../../lib/artist-exhaustion.js';
+import { loadNextShowByCanonical } from '../../lib/artist-follows.js';
+import { closeOpenArtistReports } from '../../lib/artist-reports.js';
 import { hasUpcomingShowExpr } from '../../lib/artist-upcoming.js';
 import { httpUrl } from '../../lib/url-schema.js';
 import {
@@ -74,7 +84,17 @@ const listFilterSchema = z.union([
   // queue an admin checks them in. Disjoint from `matched`, as `exhausted` is
   // from its statuses, so every row is listed and counted in one tab.
   z.literal('auto_matched'),
+  // Artists a fan says we matched to the wrong act. Orthogonal to the match
+  // status, like the other derived buckets: a row can be reported in any state.
+  z.literal('reported'),
 ]);
+
+// The outer id is written out qualified: inside a subquery drizzle renders a
+// bare column name, which would bind to the inner table's own `id`.
+const OUTER_ARTIST_ID = sql.raw('"artists"."id"');
+
+const openReportOn = (): SQL =>
+  sql`exists (select 1 from ${artistReports} where ${artistReports.artistId} = ${OUTER_ARTIST_ID} and ${artistReports.status} = 'open')`;
 
 /**
  * Whether to hide artists with no show left to see. Defaults ON.
@@ -121,15 +141,17 @@ const listQuerySchema = z.object({
  * reason.
  */
 const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
-  status === 'exhausted'
-    ? isExhaustedBucketExpr()
-    : status === 'auto_matched'
-      ? isAutoMatchedExpr()
-      : status === 'matched'
-        ? isConfirmedMatchExpr()
-        : isExhaustibleStatus(status)
-          ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
-          : eq(artists.matchStatus, status);
+  status === 'reported'
+    ? openReportOn()
+    : status === 'exhausted'
+      ? isExhaustedBucketExpr()
+      : status === 'auto_matched'
+        ? isAutoMatchedExpr()
+        : status === 'matched'
+          ? isConfirmedMatchExpr()
+          : isExhaustibleStatus(status)
+            ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
+            : eq(artists.matchStatus, status);
 
 const artistIdSchema = z.object({ id: idSchema });
 
@@ -189,6 +211,7 @@ artistsAdminRouter.get(
         // The page keeps its counts honest by walking the single row that
         // changed, and it can only do that if it knows the bucket it came from.
         isExhausted: isExhaustedBucketExpr(),
+        openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${OUTER_ARTIST_ID} and ${artistReports.status} = 'open')`,
       })
       .from(artists)
       .where(where)
@@ -248,7 +271,15 @@ artistsAdminRouter.get(
       .where(upcoming ? hasUpcomingShowExpr() : undefined)
       .groupBy(artists.matchStatus);
 
+    // Reported is its own overlapping bucket (an artist is reported in any
+    // match state), so it is counted apart and subtracts from nothing.
+    const [reportedRow] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(artists)
+      .where(and(openReportOn(), upcoming ? hasUpcomingShowExpr() : undefined));
+
     const counts = {
+      reported: reportedRow?.total ?? 0,
       unmatched: 0,
       matched: 0,
       ambiguous: 0,
@@ -365,42 +396,57 @@ artistsAdminRouter.patch(
             ? { photoUrl: null, photoFetchedAt: null }
             : {};
 
-    const [updated] = await db
-      .update(artists)
-      .set({
-        spotifyArtistId: body.spotifyArtistId,
-        matchStatus: nextStatus,
-        matchConfidence: null,
-        matchCheckedAt: new Date(),
-        // A human has just looked at this row, so whatever the job gave up on
-        // is no longer the current question. Resetting keeps `exhausted`
-        // meaning "the job stopped asking" rather than accumulating history.
-        matchAttempts: 0,
-        // A human answer, even one confirming the same pick, replaces the
-        // best-effort rule's.
-        autoMatchedAt: null,
-        updatedAt: new Date(),
-        ...photoFields,
-        // `not_an_artist` and `hidden` say the same thing about the same row —
-        // there is no act here — but only `hidden` is read by the public
-        // surfaces, so a row ruled not-an-artist kept its follow button, its
-        // slot on the bill and its own page. Deriving the switch from the
-        // verdict is one-directional on purpose: re-matching a row later does
-        // not un-hide it, because unhiding is its own deliberate admin action.
-        ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
-      })
-      // A confirm re-checks at the write, not just at the read above: the
-      // match job can repoint the row in between.
-      .where(
-        body.confirmAutoMatch === true
-          ? and(
-              eq(artists.id, id),
-              isNotNull(artists.autoMatchedAt),
-              eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
-            )
-          : eq(artists.id, id),
-      )
-      .returning();
+    const actor = getAuthUser(ctx);
+
+    // The fix and the closing of its reports commit together. "Looks right" on
+    // an auto-match says the page was right all along, so it dismisses rather
+    // than fixes: no notification.
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(artists)
+        .set({
+          spotifyArtistId: body.spotifyArtistId,
+          matchStatus: nextStatus,
+          matchConfidence: null,
+          matchCheckedAt: new Date(),
+          // A human has just looked at this row, so whatever the job gave up on
+          // is no longer the current question. Resetting keeps `exhausted`
+          // meaning "the job stopped asking" rather than accumulating history.
+          matchAttempts: 0,
+          // A human answer, even one confirming the same pick, replaces the
+          // best-effort rule's.
+          autoMatchedAt: null,
+          updatedAt: new Date(),
+          ...photoFields,
+          // `not_an_artist` and `hidden` say the same thing about the same row —
+          // there is no act here — but only `hidden` is read by the public
+          // surfaces, so a row ruled not-an-artist kept its follow button, its
+          // slot on the bill and its own page. Deriving the switch from the
+          // verdict is one-directional on purpose: re-matching a row later does
+          // not un-hide it, because unhiding is its own deliberate admin action.
+          ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
+        })
+        // A confirm re-checks at the write, not just at the read above: the
+        // match job can repoint the row in between.
+        .where(
+          body.confirmAutoMatch === true
+            ? and(
+                eq(artists.id, id),
+                isNotNull(artists.autoMatchedAt),
+                eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
+              )
+            : eq(artists.id, id),
+        )
+        .returning();
+      if (row) {
+        await closeOpenArtistReports(tx, {
+          artist: row,
+          outcome: body.confirmAutoMatch === true ? 'dismissed' : 'fixed',
+          resolvedBy: actor.userId,
+        });
+      }
+      return row;
+    });
 
     if (!updated) {
       return body.confirmAutoMatch === true
@@ -414,7 +460,6 @@ artistsAdminRouter.patch(
         : ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const actor = getAuthUser(ctx);
     ctx.set(
       'auditAction',
       body.confirmAutoMatch === true
@@ -672,6 +717,138 @@ artistsAdminRouter.get(
       }
       throw err;
     }
+  },
+);
+
+// GET /v1/admin/artists/reports/count: how many artists have an open report.
+// Counted per artist, not per report, so the sidebar badge always agrees with
+// the Reported chip.
+artistsAdminRouter.get('/reports/count', async (ctx) => {
+  const [row] = await db
+    .select({
+      total: sql<number>`count(distinct ${artistReports.artistId})::int`,
+    })
+    .from(artistReports)
+    .where(eq(artistReports.status, 'open'));
+  return ctx.json({ success: true, data: { count: row?.total ?? 0 } });
+});
+
+// GET /v1/admin/artists/:id/reports: what an expanded Reported row shows.
+// The open reports, oldest first, and what the page is matched to right now.
+artistsAdminRouter.get(
+  '/:id/reports',
+  zValidator('param', artistIdSchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+
+    const [artist] = await db
+      .select({
+        name: artists.name,
+        canonicalName: artists.canonicalName,
+        photoUrl: artists.photoUrl,
+        spotifyArtistId: artists.spotifyArtistId,
+        spotifyCandidates: artists.spotifyCandidates,
+      })
+      .from(artists)
+      .where(eq(artists.id, id));
+    if (!artist) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
+    }
+
+    const reports = await db
+      .select({
+        id: artistReports.id,
+        reason: artistReports.reason,
+        note: artistReports.note,
+        suggestedSpotifyArtistId: artistReports.suggestedSpotifyArtistId,
+        createdAt: artistReports.createdAt,
+        reporterHandle: userProfiles.handle,
+      })
+      .from(artistReports)
+      .leftJoin(userProfiles, eq(userProfiles.userId, artistReports.reporterId))
+      .where(
+        and(eq(artistReports.artistId, id), eq(artistReports.status, 'open')),
+      )
+      .orderBy(asc(artistReports.createdAt), asc(artistReports.id));
+
+    const [followers] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(userArtistFollows)
+      .where(
+        and(
+          eq(userArtistFollows.canonicalName, artist.canonicalName),
+          // Listening history is not a follow (the artist page's own rule).
+          ne(userArtistFollows.source, 'spotify_top'),
+        ),
+      );
+    const nextShow =
+      (await loadNextShowByCanonical([artist.canonicalName])).get(
+        artist.canonicalName,
+      ) ?? null;
+
+    const matchedGenres =
+      artist.spotifyCandidates?.find(
+        (candidate) => candidate.id === artist.spotifyArtistId,
+      )?.genres ?? null;
+
+    return ctx.json({
+      success: true,
+      data: {
+        matched: {
+          name: artist.name,
+          photoUrl: artist.photoUrl,
+          spotifyArtistId: artist.spotifyArtistId,
+          genres: matchedGenres,
+          nextShow,
+          followerCount: followers?.total ?? 0,
+        },
+        reports: reports.map((report) => ({
+          ...report,
+          createdAt: report.createdAt.toISOString(),
+        })),
+      },
+    });
+  },
+);
+
+// POST /v1/admin/artists/:id/reports/dismiss: the page is right as it is.
+// Closes every open report as `dismissed`; reporters are not notified.
+artistsAdminRouter.post(
+  '/:id/reports/dismiss',
+  zValidator('param', artistIdSchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const actor = getAuthUser(ctx);
+
+    const result = await db.transaction(async (tx) => {
+      const [artist] = await tx
+        .select({
+          id: artists.id,
+          name: artists.name,
+          slug: artists.slug,
+          hidden: artists.hidden,
+        })
+        .from(artists)
+        .where(eq(artists.id, id));
+      if (!artist) return null;
+      const closed = await closeOpenArtistReports(tx, {
+        artist,
+        outcome: 'dismissed',
+        resolvedBy: actor.userId,
+      });
+      return { slug: artist.slug, closed };
+    });
+
+    if (!result) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
+    }
+
+    ctx.set('auditAction', 'artist.reports.dismiss');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', { slug: result.slug, closed: result.closed });
+
+    return ctx.json({ success: true, data: { closed: result.closed } });
   },
 );
 
