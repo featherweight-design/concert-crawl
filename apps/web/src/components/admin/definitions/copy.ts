@@ -2037,7 +2037,8 @@ export const ADMIN_COPY = {
     labelPlaceholder: 'Label, e.g. Hi-Dive bathroom, Nov',
     seatsLabel: 'Seats',
     seatsMinted: (seats: number) => `${seats} seat${seats === 1 ? '' : 's'}`,
-    seatsHint: 'How many people one code admits. 1 for a personal code.',
+    seatsHint:
+      'Seats: how many people one code admits, 1 to 500. 1 for a personal code.',
     posterLink: 'Poster',
     poster: {
       back: 'Invite codes',

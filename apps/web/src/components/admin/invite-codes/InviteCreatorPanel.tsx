@@ -11,9 +11,15 @@ const POSTER_SEATS = 50;
 /** The API's cap on seats per code. */
 const MAX_SEATS = 500;
 
-/** The typed seat count as the API accepts it: a whole number, 1 to 500. */
-export const clampSeats = (typed: string): number =>
-  Math.min(MAX_SEATS, Math.max(1, Math.trunc(Number(typed)) || 1));
+/**
+ * The typed seat count, or null when the API would refuse it. Never clamped:
+ * a silently rewritten count mints a code the admin did not ask for.
+ */
+export const parseSeats = (typed: string): number | null => {
+  if (!/^\d+$/.test(typed.trim())) return null;
+  const seats = Number(typed.trim());
+  return seats >= 1 && seats <= MAX_SEATS ? seats : null;
+};
 
 const FIELD_STYLE = {
   height: 32,
@@ -47,10 +53,13 @@ export function InviteCreatorPanel() {
     seats?: number;
   } | null>(null);
 
+  const seatsInvalid = parseSeats(seats) === null;
+
   function handleMint() {
     setResult(null);
     startTransition(async () => {
-      const maxUses = clampSeats(seats);
+      const maxUses = parseSeats(seats);
+      if (maxUses === null) return;
       const res = await mintInviteCodeWithOptions({
         expiresIn,
         label,
@@ -120,7 +129,6 @@ export function InviteCreatorPanel() {
         style={{ ...FIELD_STYLE, flex: '1 1 220px', minWidth: 0 }}
       />
       <label
-        title={ADMIN_COPY.inviteCodes.seatsHint}
         style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
       >
         {ADMIN_COPY.inviteCodes.seatsLabel}
@@ -133,13 +141,25 @@ export function InviteCreatorPanel() {
             setSeatsTouched(true);
             setSeats(event.target.value);
           }}
+          aria-invalid={seatsInvalid}
+          aria-describedby="invite-seats-hint"
           style={{ ...FIELD_STYLE, width: 72 }}
         />
       </label>
+      <small
+        id="invite-seats-hint"
+        style={{
+          flexBasis: '100%',
+          fontSize: 11,
+          color: seatsInvalid ? 'var(--danger)' : 'var(--fg-muted)',
+        }}
+      >
+        {ADMIN_COPY.inviteCodes.seatsHint}
+      </small>
       <button
         type="button"
         onClick={handleMint}
-        disabled={isPending}
+        disabled={isPending || seatsInvalid}
         style={{
           height: 32,
           padding: '0 16px',
