@@ -956,4 +956,94 @@ describe('admin artists routes', () => {
       expect(missing.status).toBe(404);
     });
   });
+  describe('PATCH /:id/name', () => {
+    const rename = (id: string, body: unknown) =>
+      app.request(`/v1/admin/artists/${id}/name`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify(body),
+      });
+
+    it('sets the name, locks it, and leaves canonical name and slug alone', async () => {
+      setAdminAuth();
+      const id = await seedArtist({
+        canonicalName: 'mgmt',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_mgmt',
+      });
+
+      const res = await rename(id, { name: '  MGMT  ' });
+      expect(res.status).toBe(200);
+      const [row] = await testDb
+        .select()
+        .from(artists)
+        .where(eq(artists.id, id));
+      expect(row?.name).toBe('MGMT');
+      expect(row?.nameLockedAt).toBeInstanceOf(Date);
+      expect(row?.canonicalName).toBe('mgmt');
+      expect(row?.slug).toBe('mgmt');
+      // A rename never touches the match.
+      expect(row?.matchStatus).toBe('matched');
+      expect(row?.spotifyArtistId).toBe('sp_mgmt');
+    });
+
+    it('releases the lock without changing the name', async () => {
+      setAdminAuth();
+      const id = await seedArtist({
+        canonicalName: 'bbno$',
+        name: 'bbno$',
+        nameLockedAt: new Date(),
+      });
+
+      const res = await rename(id, { nameLocked: false });
+      expect(res.status).toBe(200);
+      const [row] = await testDb
+        .select()
+        .from(artists)
+        .where(eq(artists.id, id));
+      expect(row?.name).toBe('bbno$');
+      expect(row?.nameLockedAt).toBeNull();
+    });
+
+    it('writes an audit row with the previous name', async () => {
+      setAdminAuth();
+      const id = await seedArtist({ canonicalName: 'renamed act' });
+
+      await rename(id, { name: 'Renamed Act' });
+
+      const rows = await testDb
+        .select()
+        .from(auditLog)
+        .where(
+          and(
+            eq(auditLog.actorId, 'admin_artist_test'),
+            eq(auditLog.action, 'artist.name.update'),
+          ),
+        );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.metadata).toMatchObject({
+        previousName: 'renamed act',
+        name: 'Renamed Act',
+      });
+    });
+
+    it('rejects a blank name, a locking true, extra fields, and 404s an unknown artist', async () => {
+      setAdminAuth();
+      const id = await seedArtist({ canonicalName: 'strict name' });
+
+      expect((await rename(id, { name: '   ' })).status).toBe(400);
+      expect((await rename(id, { nameLocked: true })).status).toBe(400);
+      expect(
+        (await rename(id, { name: 'Strict Name', spotifyArtistId: null }))
+          .status,
+      ).toBe(400);
+      expect(
+        (
+          await rename('11111111-1111-1111-1111-111111111111', {
+            name: 'Nobody',
+          })
+        ).status,
+      ).toBe(404);
+    });
+  });
 });

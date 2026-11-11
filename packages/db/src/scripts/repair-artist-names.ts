@@ -31,6 +31,10 @@
  * spacing. A row with no Spotify name, or a billing that names the act
  * differently from Spotify, falls back to the billing-case rules below.
  *
+ * A name an admin set by hand (`name_locked_at`, set by the admin rename
+ * route) is never rewritten, Spotify's spelling included: the admin has
+ * already answered the question this repair asks.
+ *
  * A separate concern this does NOT address: a row whose *canonical* name is
  * itself a tour title (`dogstar: all in now tour`) exists as its own artist
  * beside the real one. Those are unreferenced and belong to the reaper, not
@@ -231,7 +235,9 @@ const SPOTIFY_RESPELLS_NAME = sql`
  * Otherwise today's billing rules decide, refusals included.
  */
 const ELIGIBLE = sql`
-  CASE
+  -- A name an admin set by hand is their answer, Spotify's spelling included.
+  artists.name_locked_at IS NULL
+  AND CASE
     WHEN ${USES_SPOTIFY} THEN
       ${SPOTIFY_RESPELLS_NAME} OR ${NAME_EXTENDS_BILLING}
     ELSE ${CORROBORATED}

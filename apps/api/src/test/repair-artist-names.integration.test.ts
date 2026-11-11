@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { asc } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { artists } from '@concert-crawl/db';
 import { repairArtistNames } from '@concert-crawl/db/scripts/repair-artist-names';
 import { testDb } from './helpers/db.js';
@@ -480,6 +480,49 @@ describe('repair-artist-names integration', () => {
       await repairArtistNames(testDb, { dryRun: false });
 
       expect((await listArtists())[0]?.name).toBe('Ivri');
+    });
+  });
+  describe('a name an admin locked is never rewritten', () => {
+    it('skips the billing repair on a locked row', async () => {
+      await seedSingleActBill('J.I.D', 'j.i.d');
+      await testDb.insert(artists).values({
+        name: 'j.i.d',
+        canonicalName: 'j.i.d',
+        slug: 'j-i-d',
+        nameLockedAt: new Date(),
+      });
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe('j.i.d');
+    });
+
+    it('skips the Spotify respell on a locked row', async () => {
+      await seedSingleActBill('Book Of Love', 'book of love');
+      await seedMatchedArtist('Book Of Love', 'book of love', 'Book of Love');
+      await testDb
+        .update(artists)
+        .set({ nameLockedAt: new Date() })
+        .where(eq(artists.canonicalName, 'book of love'));
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe('Book Of Love');
+    });
+
+    it('repairs the row again once the lock is released', async () => {
+      await seedSingleActBill('Book Of Love', 'book of love');
+      await seedMatchedArtist('Book Of Love', 'book of love', 'Book of Love');
+      await testDb
+        .update(artists)
+        .set({ nameLockedAt: null })
+        .where(eq(artists.canonicalName, 'book of love'));
+
+      await repairArtistNames(testDb, { dryRun: false });
+
+      expect((await listArtists())[0]?.name).toBe('Book of Love');
     });
   });
 });
