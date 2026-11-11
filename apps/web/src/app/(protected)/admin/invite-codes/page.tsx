@@ -14,6 +14,7 @@ import {
 } from '@/components/admin/primitives';
 import type { StatusKind } from '@/components/admin/primitives';
 import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel';
+import { InviteCodesTabs } from '@/components/admin/invite-codes/InviteCodesTabs';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   inviteStatus,
@@ -22,6 +23,7 @@ import {
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
 import Link from 'next/link';
+import { postersHref } from './posters/posters-href';
 
 const INVITE_STATUS_KIND: Record<InviteStatus, StatusKind> = {
   active: 'signal',
@@ -57,7 +59,10 @@ export default async function AdminInviteCodesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <SectionHead title="Invite codes" />
+      <SectionHead
+        title="Invite codes"
+        actions={<InviteCodesTabs active="codes" />}
+      />
 
       <div
         style={{
@@ -152,7 +157,11 @@ export default async function AdminInviteCodesPage() {
                       <>
                         {' · '}
                         <Link
-                          href={`/admin/invite-codes/${code.id}/poster`}
+                          href={postersHref({
+                            code: code.id,
+                            look: 'night',
+                            tabs: false,
+                          })}
                           prefetch={false}
                           style={{ color: 'var(--signal)' }}
                         >
