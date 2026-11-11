@@ -61,7 +61,8 @@ const mockHookState = {
   setQuery: vi.fn(),
   clearQuery: vi.fn(),
   recentSearches: [],
-  popularEvents: [],
+  // B19 — the popular list the arrows walk before anything is typed.
+  popularEvents: [] as unknown[],
   artistResults: [
     { name: 'Radiohead', nextDate: '2027-06-01', venueShort: 'Red Rocks' },
     { name: 'Godspeed', nextDate: '2027-06-05', venueShort: 'Bluebird' },
@@ -119,6 +120,7 @@ beforeEach(() => {
   ];
   mockHookState.venueFirst = false;
   mockHookState.artistPageResults = [];
+  mockHookState.popularEvents = [];
 });
 
 describe('SearchPalette', () => {
@@ -277,5 +279,127 @@ describe('SearchPalette — artist pages (#1115 PR-G)', () => {
     fireEvent.keyDown(window, { key: 'Enter' });
 
     expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'Radiohead');
+  });
+});
+
+// B19: the B+ palette (`07-more-screens/more-r3-palette*`).
+describe('SearchPalette — B+ dialog', () => {
+  const popular = [
+    {
+      id: 'ev-1',
+      title: 'Show A',
+      artist: 'Vince Staples',
+      date: '2027-06-01',
+      imageUrl: null,
+      artistPhotoUrl: null,
+      ticketPriceMin: '160',
+      watcherCount: 9,
+      venue: { name: 'The Fillmore Auditorium', slug: 'fillmore' },
+      genre: ['hip-hop'],
+    },
+    {
+      id: 'ev-2',
+      title: 'Show B',
+      artist: 'TOKiMONSTA',
+      date: '2027-06-02',
+      imageUrl: null,
+      artistPhotoUrl: null,
+      ticketPriceMin: null,
+      watcherCount: 4,
+      venue: { name: 'The Church Nightclub', slug: 'the-church' },
+      genre: ['electronic'],
+    },
+  ];
+
+  it('is a named modal dialog', () => {
+    render(<SearchPalette open onClose={onClose} />);
+    const dialog = screen.getByRole('dialog', { name: 'Search' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(
+      screen.getByRole('textbox', { name: /Search artists or venues/ }),
+    ).toBeTruthy();
+  });
+
+  it('draws the navigate, open and close hints in the footer', () => {
+    render(<SearchPalette open onClose={onClose} />);
+    expect(screen.getByText('navigate')).toBeTruthy();
+    expect(screen.getByText('open')).toBeTruthy();
+    expect(screen.getByText('close')).toBeTruthy();
+  });
+
+  it('walks the popular list with the arrows before anything is typed', () => {
+    mockHookState.query = '';
+    mockHookState.popularEvents = popular;
+    render(<SearchPalette open onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'TOKiMONSTA');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes after a popular row is clicked, like a result row', () => {
+    mockHookState.query = '';
+    mockHookState.popularEvents = popular;
+    render(<SearchPalette open onClose={onClose} />);
+    fireEvent.click(screen.getByText('Vince Staples'));
+    expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'Vince Staples');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Tab inside the dialog', () => {
+    render(<SearchPalette open onClose={onClose} />);
+    const dialog = screen.getByRole('dialog');
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input'),
+    );
+    const tail = focusable[focusable.length - 1];
+    tail?.focus();
+    fireEvent.keyDown(window, { key: 'Tab' });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(focusable[0]);
+  });
+
+  it('pulls focus back in when Tab is pressed from outside', () => {
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    try {
+      render(<SearchPalette open onClose={onClose} />);
+      outside.focus();
+      fireEvent.keyDown(window, { key: 'Tab' });
+      expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(
+        true,
+      );
+    } finally {
+      outside.remove();
+    }
+  });
+
+  it('returns focus to the control that opened it', () => {
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    try {
+      trigger.focus();
+      const { rerender } = render(<SearchPalette open onClose={onClose} />);
+      screen.getByRole('textbox').focus();
+      rerender(<SearchPalette open={false} onClose={onClose} />);
+      expect(document.activeElement).toBe(trigger);
+    } finally {
+      trigger.remove();
+    }
+  });
+
+  it('lights the typed query inside a result name', () => {
+    render(<SearchPalette open onClose={onClose} />);
+    const lit = screen.getByText('Radio');
+    expect(lit.getAttribute('style')).toContain('var(--signal)');
+  });
+
+  it('becomes a full-screen search with a back button at phone width', () => {
+    stubMatchMedia(true);
+    render(<SearchPalette open onClose={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('navigate')).toBeNull();
   });
 });

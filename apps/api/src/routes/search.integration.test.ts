@@ -109,6 +109,35 @@ describe('GET /v1/search/popular', () => {
     expect(body.data).toHaveLength(5);
   });
 
+  // B19: the palette's popular rows ring the art and dot the chip in the
+  // show's genre, so the row needs the genres the events list already carries.
+  it("carries each show's genres, null when it has none", async () => {
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    await seedEvent(venue.id, {
+      title: 'Show A',
+      date: '2027-06-01',
+      genre: ['hip-hop'],
+    });
+    await seedEvent(venue.id, { title: 'Show B', date: '2027-06-02' });
+
+    const res = await app.request('/v1/search/popular');
+    const body = z
+      .object({
+        data: z.array(
+          z.object({
+            title: z.string(),
+            genre: z.array(z.string()).nullable(),
+          }),
+        ),
+      })
+      .parse(await res.json());
+
+    expect(body.data.find((row) => row.title === 'Show A')?.genre).toEqual([
+      'hip-hop',
+    ]);
+    expect(body.data.find((row) => row.title === 'Show B')?.genre).toBeNull();
+  });
+
   const popularImageryResponse = z.object({
     data: z.array(
       z.object({

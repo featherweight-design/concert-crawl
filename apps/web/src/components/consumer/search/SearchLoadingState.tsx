@@ -1,24 +1,28 @@
+import { SkeletonBlock } from '../skeleton/SkeletonBlock';
+import { RESULT_ART_SIZE } from './ResultParts';
+
 const SKELETON_ROWS = 4;
 
-function SkeletonRow({ delay }: { delay: number }) {
+/**
+ * A skeleton in the result row's shape (README rule 9): the art box, the name,
+ * the meta line and the chip, with the app's one skeleton sweep. Not the pink
+ * wave, which is reserved for waits on shows (rule 10).
+ */
+function SkeletonRow() {
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        padding: '12px 16px',
-        animation: `skeletonPulse 1.4s ease-in-out ${delay}s infinite`,
+        gap: 14,
+        padding: '10px 16px 10px 16px',
+        minHeight: 64,
       }}
     >
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          background: 'var(--surface-2)',
-          flexShrink: 0,
-        }}
+      <SkeletonBlock
+        width={RESULT_ART_SIZE}
+        height={RESULT_ART_SIZE}
+        radius={10}
       />
       <div
         style={{
@@ -26,25 +30,12 @@ function SkeletonRow({ delay }: { delay: number }) {
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
+          gap: 7,
         }}
       >
-        <div
-          style={{
-            height: 13,
-            width: '55%',
-            borderRadius: 4,
-            background: 'var(--surface-2)',
-          }}
-        />
-        <div
-          style={{
-            height: 10,
-            width: '35%',
-            borderRadius: 4,
-            background: 'var(--surface-2)',
-          }}
-        />
+        <SkeletonBlock width="55%" height={13} radius={6} />
+        <SkeletonBlock width="75%" height={10} radius={5} />
+        <SkeletonBlock width={64} height={14} radius={5} />
       </div>
     </div>
   );
@@ -52,9 +43,16 @@ function SkeletonRow({ delay }: { delay: number }) {
 
 export function SearchLoadingState() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
+    <div
+      aria-hidden="true"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '10px 8px',
+      }}
+    >
       {Array.from({ length: SKELETON_ROWS }, (_, idx) => (
-        <SkeletonRow key={idx} delay={idx * 0.1} />
+        <SkeletonRow key={idx} />
       ))}
     </div>
   );

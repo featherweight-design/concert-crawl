@@ -692,3 +692,118 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     expect(screen.queryByText(FOLLOWING_COPY.searchRailBody)).toBeNull();
   });
 });
+
+// B19: the B+ search rows (`07-more-screens/more-r3-palette*`,
+// `more-r3-search_m*`).
+describe('Search — B+ rows', () => {
+  it('forgets a recent search from its × without rerunning it', () => {
+    const onRemove = vi.fn();
+    render(
+      <SearchDefaultState
+        recentSearches={['red rocks']}
+        popularEvents={[]}
+        onPickQuery={mockSetQuery}
+        onPickEvent={mockNavigateTo}
+        onRemoveRecent={onRemove}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove red rocks from recent searches',
+      }),
+    );
+    expect(onRemove).toHaveBeenCalledWith('red rocks');
+    expect(mockSetQuery).not.toHaveBeenCalled();
+  });
+
+  it('draws no × when nothing can remove a recent search', () => {
+    render(
+      <SearchDefaultState
+        recentSearches={['red rocks']}
+        popularEvents={[]}
+        onPickQuery={mockSetQuery}
+        onPickEvent={mockNavigateTo}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull();
+  });
+
+  it('ranks popular rows and carries the lead genre chip and price', () => {
+    render(
+      <SearchDefaultState
+        recentSearches={[]}
+        popularEvents={[
+          {
+            id: 'ev-1',
+            title: 'Show A',
+            artist: 'Vince Staples',
+            date: '2027-06-01',
+            imageUrl: null,
+            artistPhotoUrl: null,
+            ticketPriceMin: '160',
+            watcherCount: 9,
+            venue: { name: 'The Fillmore Auditorium', slug: 'fillmore' },
+            genre: ['hip-hop', 'rap'],
+          },
+        ]}
+        onPickQuery={mockSetQuery}
+        onPickEvent={mockNavigateTo}
+      />,
+    );
+    expect(screen.getByText('1')).toBeTruthy();
+    expect(screen.getAllByTestId('genre-chip')).toHaveLength(1);
+    expect(screen.getByText('hip-hop')).toBeTruthy();
+    expect(screen.getByText('$160')).toBeTruthy();
+  });
+
+  it('gives a matched artist its venue, date, genre and price', () => {
+    render(
+      <SearchResultsState
+        artistResults={[
+          {
+            name: 'Clipse & J.I.D',
+            nextDate: '2027-11-12',
+            venueShort: 'Red Rocks Amphitheatre',
+            genres: ['hip-hop'],
+            imageUrl: null,
+            artistPhotoUrl: null,
+            ticketPriceMin: '29',
+          },
+        ]}
+        venueResults={[]}
+        query="clip"
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    expect(screen.getByText(/Red Rocks Amphitheatre/)).toBeTruthy();
+    expect(screen.getByText('hip-hop')).toBeTruthy();
+    expect(screen.getByText('$29')).toBeTruthy();
+    expect(screen.getByText('Clip').getAttribute('style')).toContain(
+      'var(--signal)',
+    );
+  });
+
+  it('draws a venue with its glyph tile rather than a pin', () => {
+    const { container } = render(
+      <SearchResultsState
+        artistResults={[]}
+        venueResults={[
+          {
+            name: 'Bluebird Theater',
+            slug: 'bluebird-theater',
+            showCount: 4,
+            matchingEventId: 'evt-1',
+          },
+        ]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    expect(container.querySelector('[data-venue-tile]')).not.toBeNull();
+  });
+
+  it('wears the B+ state card when nothing matches', () => {
+    render(<SearchEmptyState query="bjork orkestra" />);
+    expect(screen.getByTestId('state-card')).toBeTruthy();
+    expect(screen.getByText('No results')).toBeTruthy();
+  });
+});

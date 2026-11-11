@@ -36,6 +36,9 @@ searchRouter.get('/popular', async (ctx) => {
       imageUrl: events.imageUrl,
       artistPhotoUrl: artists.photoUrl,
       ticketPriceMin: events.ticketPriceMin,
+      // The row's genre ring and chip (B19). Grouped by the primary key, so
+      // it needs no GROUP BY entry of its own.
+      genre: events.genre,
       watcherCount,
       venueName: venues.name,
       venueSlug: venues.slug,
@@ -74,6 +77,7 @@ searchRouter.get('/popular', async (ctx) => {
     imageUrl: row.imageUrl ?? null,
     artistPhotoUrl: row.artistPhotoUrl ?? null,
     ticketPriceMin: row.ticketPriceMin,
+    genre: row.genre ?? null,
     watcherCount: row.watcherCount,
     venue: { name: row.venueName, slug: row.venueSlug },
   }));

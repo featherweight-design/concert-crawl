@@ -2,11 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, ArrowLeft } from 'lucide-react';
+import { Search, X, ChevronLeft } from 'lucide-react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   SEARCH_FIELD_BOX,
   SEARCH_FIELD_FONT_SIZE,
+  SEARCH_FIELD_GRADIENT_EDGE,
 } from './definitions/constants';
 
 const copy = CONSUMER_COPY.search;
@@ -49,8 +50,9 @@ export function SearchBar({
           style={{
             all: 'unset',
             cursor: 'pointer',
-            width: 36,
-            height: 36,
+            width: 44,
+            height: 44,
+            marginLeft: -8,
             borderRadius: 10,
             display: 'flex',
             alignItems: 'center',
@@ -59,13 +61,22 @@ export function SearchBar({
             flexShrink: 0,
           }}
         >
-          <ArrowLeft size={18} strokeWidth={1.5} />
+          <ChevronLeft size={22} strokeWidth={1.75} />
         </button>
       )}
-      <div style={{ flex: 1, ...SEARCH_FIELD_BOX }}>
+      {/* The shared field box, under the B+ blue-to-pink edge
+          (`more-r3-search_m`). The edge is this bar's alone: the onboarding
+          tour borrows the box, not the edge. */}
+      <div
+        style={{
+          flex: 1,
+          ...SEARCH_FIELD_BOX,
+          ...SEARCH_FIELD_GRADIENT_EDGE,
+        }}
+      >
         <span
           style={{
-            color: 'var(--fg-muted)',
+            color: 'var(--signal)',
             flexShrink: 0,
             display: 'inline-flex',
           }}
@@ -77,6 +88,7 @@ export function SearchBar({
           value={value}
           onChange={(ev) => onChange(ev.target.value)}
           placeholder={copy.searchPlaceholder}
+          aria-label={copy.inputAriaLabel}
           style={{
             flex: 1,
             minWidth: 0,

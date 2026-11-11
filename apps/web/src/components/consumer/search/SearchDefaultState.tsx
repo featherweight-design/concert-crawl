@@ -1,67 +1,117 @@
-import { History, Flame } from 'lucide-react';
+import { Clock, Tag, X } from 'lucide-react';
 import type { PopularEvent } from '../../../lib/search/useSearch';
-import { Panel } from '../image-slot';
+import { GenreChips } from '../GenreChips';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import {
+  RESULT_META_STYLE,
+  RESULT_NAME_STYLE,
+  ResultPrice,
+  RingArt,
+  SectionLabel,
+  formatDayLabel,
+  resultRowStyle,
+  ringColorFor,
+} from './ResultParts';
 
 const copy = CONSUMER_COPY.search;
-
-function formatDayLabel(dateStr: string): string {
-  // Append T00:00:00 to force local-timezone parsing — bare YYYY-MM-DD
-  // parses as UTC midnight, which shifts the displayed day for negative offsets.
-  const date = new Date(`${dateStr}T00:00:00`);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 interface SearchDefaultStateProps {
   recentSearches: string[];
   popularEvents: PopularEvent[];
   onPickQuery: (query: string) => void;
   onPickEvent: (type: 'artist', value: string) => void;
+  /** Drops one recent search. Without it the chips draw no ×. */
+  onRemoveRecent?: ((query: string) => void) | undefined;
+  /** The keyboard-selected popular row, as the palette tracks it. */
+  selectedIdx?: number | undefined;
+  onHover?: ((idx: number) => void) | undefined;
 }
 
-function SectionHeader({
-  icon,
-  label,
-  accent = false,
+/**
+ * A recent search as a chip (B+ `more-r3-palette`): the query, which reruns
+ * it, and a separate ×, which forgets it. Two buttons side by side rather than
+ * one inside the other, so each is its own target.
+ */
+function RecentChip({
+  query,
+  onPick,
+  onRemove,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  accent?: boolean;
+  query: string;
+  onPick: () => void;
+  onRemove?: (() => void) | undefined;
 }) {
   return (
-    <div
+    <span
       style={{
-        display: 'flex',
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '0 16px 8px',
+        borderRadius: 999,
+        border: '1px solid var(--border-strong)',
+        background: 'var(--surface-1)',
+        maxWidth: '100%',
       }}
     >
-      <span
+      <button
+        // A recent search is text the reader typed: analytics autocapture
+        // skips this control (posthog-js `ph-no-capture`).
+        className="ph-no-capture"
+        type="button"
+        onClick={onPick}
         style={{
-          color: accent ? 'var(--accent)' : 'var(--fg-muted)',
+          all: 'unset',
+          cursor: 'pointer',
           display: 'inline-flex',
-        }}
-      >
-        {icon}
-      </span>
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--fg-muted)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase' as const,
+          alignItems: 'center',
+          gap: 7,
+          minHeight: 36,
+          padding: onRemove ? '0 4px 0 12px' : '0 14px 0 12px',
+          minWidth: 0,
+          fontFamily: 'var(--font-ui)',
           fontWeight: 600,
+          fontSize: 14,
+          color: 'var(--fg)',
+          letterSpacing: '-0.01em',
         }}
       >
-        {label}
-      </span>
-    </div>
+        <Clock
+          size={14}
+          strokeWidth={1.75}
+          aria-hidden
+          style={{ color: 'var(--fg-subtle)', flexShrink: 0 }}
+        />
+        <span
+          style={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {query}
+        </span>
+      </button>
+      {onRemove && (
+        <button
+          className="ph-no-capture"
+          type="button"
+          onClick={onRemove}
+          aria-label={copy.removeRecentAriaLabel(query)}
+          style={{
+            all: 'unset',
+            cursor: 'pointer',
+            width: 32,
+            height: 36,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--fg-subtle)',
+            flexShrink: 0,
+          }}
+        >
+          <X size={12} strokeWidth={2} aria-hidden />
+        </button>
+      )}
+    </span>
   );
 }
 
@@ -70,148 +120,107 @@ export function SearchDefaultState({
   popularEvents,
   onPickQuery,
   onPickEvent,
+  onRemoveRecent,
+  selectedIdx = -1,
+  onHover,
 }: SearchDefaultStateProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '0 8px 10px',
+      }}
+    >
       {recentSearches.length > 0 && (
         <>
-          <SectionHeader
-            icon={<History size={13} strokeWidth={1.5} />}
+          <SectionLabel
+            icon={<Clock size={13} strokeWidth={1.75} />}
             label={copy.recentSectionLabel}
           />
-          {recentSearches.map((query) => (
-            <button
-              key={query}
-              // A recent search is text the reader typed: analytics
-              // autocapture skips this control (posthog-js `ph-no-capture`).
-              className="ph-no-capture"
-              onClick={() => onPickQuery(query)}
-              style={{
-                all: 'unset',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '10px 16px',
-                width: '100%',
-                boxSizing: 'border-box' as const,
-              }}
-            >
-              <span
-                style={{
-                  color: 'var(--fg-subtle)',
-                  display: 'inline-flex',
-                  flexShrink: 0,
-                }}
-              >
-                <History size={16} strokeWidth={1.5} />
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 500,
-                  fontSize: 14,
-                  color: 'var(--fg)',
-                  letterSpacing: '-0.005em',
-                }}
-              >
-                {query}
-              </span>
-            </button>
-          ))}
-          <div style={{ height: 8 }} />
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              padding: '0 16px 6px',
+            }}
+          >
+            {recentSearches.map((query) => (
+              <RecentChip
+                key={query}
+                query={query}
+                onPick={() => onPickQuery(query)}
+                onRemove={
+                  onRemoveRecent ? () => onRemoveRecent(query) : undefined
+                }
+              />
+            ))}
+          </div>
         </>
       )}
 
       {popularEvents.length > 0 && (
         <>
-          <SectionHeader
-            icon={<Flame size={13} strokeWidth={1.5} />}
+          <SectionLabel
+            icon={<Tag size={13} strokeWidth={1.75} />}
             label={copy.popularSectionLabel}
             accent
           />
-          {popularEvents.map((event, idx) => (
-            <button
-              key={event.id}
-              onClick={() => onPickEvent('artist', event.artist)}
-              style={{
-                all: 'unset',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '10px 16px',
-                width: '100%',
-                boxSizing: 'border-box' as const,
-                borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
-              }}
-            >
-              {/* The slot owns the box, the radius and the source chain, so
-                  this row resolves artwork then portrait then generated mark
-                  like every other event row. Hand-rolling it here is what left
-                  the palette drawing a mark for shows that have a real face,
-                  at `hero` density in a 40px box. */}
-              <Panel
-                surface="event"
-                name={event.artist}
-                artworkUrl={event.imageUrl}
-                photoUrl={event.artistPhotoUrl}
-                size={40}
-              />
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                }}
+          {popularEvents.map((event, idx) => {
+            const ring = ringColorFor(event.genre);
+            const selected = selectedIdx === idx;
+            return (
+              <button
+                key={event.id}
+                type="button"
+                onClick={() => onPickEvent('artist', event.artist)}
+                onMouseEnter={() => onHover?.(idx)}
+                data-selected={selected ? 'true' : undefined}
+                style={resultRowStyle(selected, ring)}
               >
                 <span
+                  aria-hidden
                   style={{
+                    width: 14,
+                    flexShrink: 0,
+                    textAlign: 'center',
                     fontFamily: 'var(--font-ui)',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.01em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    fontWeight: 800,
+                    fontSize: 15,
+                    color: 'var(--fg-subtle)',
                   }}
                 >
-                  {event.artist}
+                  {idx + 1}
                 </span>
+                {/* The slot owns the box, the radius and the source chain, so
+                    this row resolves artwork then portrait then generated mark
+                    like every other event row. */}
+                <RingArt
+                  name={event.artist}
+                  imageUrl={event.imageUrl}
+                  photoUrl={event.artistPhotoUrl}
+                  ring={ring}
+                />
                 <span
                   style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.02em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
                   }}
                 >
-                  {event.venue.name} · {formatDayLabel(event.date)}
+                  <span style={RESULT_NAME_STYLE}>{event.artist}</span>
+                  <span style={RESULT_META_STYLE}>
+                    {event.venue.name} · {formatDayLabel(event.date)}
+                  </span>
+                  <GenreChips genres={event.genre ?? null} maxChips={1} />
                 </span>
-              </div>
-              <span
-                style={{
-                  flexShrink: 0,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: event.ticketPriceMin
-                    ? 'var(--signal)'
-                    : 'var(--fg-subtle)',
-                }}
-              >
-                {event.ticketPriceMin
-                  ? `$${event.ticketPriceMin}`
-                  : copy.priceNotAnnounced}
-              </span>
-            </button>
-          ))}
+                <ResultPrice value={event.ticketPriceMin} />
+              </button>
+            );
+          })}
         </>
       )}
     </div>

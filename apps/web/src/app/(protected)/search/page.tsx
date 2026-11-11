@@ -13,6 +13,7 @@ export default function SearchPage() {
     setQuery,
     clearQuery,
     recentSearches,
+    removeRecent,
     popularEvents,
     artistResults,
     artistPageResults,
@@ -51,6 +52,7 @@ export default function SearchPage() {
             popularEvents={popularEvents}
             onPickQuery={setQuery}
             onPickEvent={navigateTo}
+            onRemoveRecent={removeRecent}
           />
         )}
         {query.trim() !== '' && isLoading && <SearchLoadingState />}
@@ -60,6 +62,7 @@ export default function SearchPage() {
             artistPageResults={artistPageResults}
             venueResults={venueResults}
             withExplainerRail
+            query={query}
             onNavigateTo={navigateTo}
           />
         )}
