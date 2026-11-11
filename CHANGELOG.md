@@ -1,3 +1,18 @@
+# [1.325.0](https://github.com/featherweight-design/concert-crawl/compare/v1.324.1...v1.325.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** a repeat save is not a fix, hiding closes reports, failed insert refunds ([32a9361](https://github.com/featherweight-design/concert-crawl/commit/32a936100941e8bc2120676ba2ffe99fdbfe80e4))
+* **api:** build the outer artist id lazily so mocked-drizzle suites import ([b052cf6](https://github.com/featherweight-design/concert-crawl/commit/b052cf6233046553c35b51dba016d0de8c0d733a))
+* **api:** reporter notification matches what the fix did ([87d5021](https://github.com/featherweight-design/concert-crawl/commit/87d5021d8a84696c0153f6a0551bbeb5e31adee3))
+* **api:** type-only db import ([1bbb00e](https://github.com/featherweight-design/concert-crawl/commit/1bbb00eaa9a1dc6522f9b7ff48bac2db26d8cf98))
+
+
+### Features
+
+* **api:** admin report queue, dismiss, and closing reports on an identity fix ([6802e7d](https://github.com/featherweight-design/concert-crawl/commit/6802e7de1e08fa6697728e297ccd887eb96431fe))
+
 ## [1.324.1](https://github.com/featherweight-design/concert-crawl/compare/v1.324.0...v1.324.1) (2026-11-11)
 
 
