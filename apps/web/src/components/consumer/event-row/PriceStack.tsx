@@ -1,7 +1,7 @@
 import type React from 'react';
 import { EVENT_ROW_COPY as copy } from './definitions/copy';
 import { formatDollars } from '@/components/consumer/definitions/lib';
-import { RowMetaChip } from './RowMetaChip';
+import { StatusChip } from '@/components/consumer/StatusChip';
 import { SURFACES, type RowSurface } from './definitions/surfaces';
 import { deltaClass } from './lib/price-delta';
 import { resolveRowStatus } from './lib/row-status';
@@ -60,10 +60,10 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
   if (status === 'cancelled') {
     return slot(
       <span data-testid="row-cancelled">
-        <RowMetaChip
+        <StatusChip
+          status="cancelled"
           label={copy.status.cancelled}
           srLabel={copy.a11y.cancelled}
-          tone="warn"
         />
       </span>,
     );
@@ -72,10 +72,10 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
   if (status === 'postponed') {
     return slot(
       <span data-testid="row-postponed">
-        <RowMetaChip
+        <StatusChip
+          status="postponed"
           label={copy.status.postponed}
           srLabel={copy.a11y.postponed}
-          tone="strong"
         />
       </span>,
     );
@@ -87,7 +87,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
   if (status === 'soldout') {
     return slot(
       <span data-testid="row-sold-out">
-        <RowMetaChip label={copy.price.soldOut} tone="warn" />
+        <StatusChip status="soldout" label={copy.price.soldOut} />
       </span>,
     );
   }

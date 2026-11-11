@@ -12,6 +12,8 @@ export interface ChipSpec {
   srLabel?: string;
   /** Named rather than a node so this stays a pure data module. */
   mark?: 'spotify';
+  /** The raw genre whose color the chip's dot carries (B+ rule 2). */
+  genreDot?: string;
   /**
    * The second half of a paired chip, rendered after a separator. `MetaRow` may
    * drop it under width pressure, which is the one place the system degrades
@@ -24,9 +26,11 @@ const PROVENANCE_TONE: Record<
   keyof typeof copy.provenance,
   { tone: ChipTone }
 > = {
-  boxoffice: { tone: 'strong' },
+  // B+ colors only the community source; box office and resale are neutral
+  // (`04-genre-and-vibe/bp-chips-all`).
+  boxoffice: { tone: 'neutral' },
   standard: { tone: 'signal' },
-  resale: { tone: 'warn' },
+  resale: { tone: 'neutral' },
 };
 
 /**
@@ -91,6 +95,7 @@ export function rowChips(
           key: `genre-${lead}`,
           label: lead,
           tone: 'neutral',
+          genreDot: lead,
           ...(second ? { secondaryLabel: second } : {}),
         });
     }

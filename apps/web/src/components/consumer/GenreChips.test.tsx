@@ -24,7 +24,7 @@ describe('GenreChips', () => {
 
   it('applies className to the container', () => {
     render(<GenreChips genres={['rock']} className="mt-2" />);
-    const wrapper = screen.getByText('rock').parentElement;
+    const wrapper = screen.getByTestId('genre-chip').parentElement;
     expect(wrapper?.classList.contains('mt-2')).toBe(true);
   });
 
@@ -47,5 +47,16 @@ describe('GenreChips', () => {
 
     rerender(<GenreChips genres={['pop', 'jazz']} maxChips={-1} />);
     expect(screen.getByText('pop')).toBeTruthy();
+  });
+
+  // B+ rule 2: the genre's color lives only in the dot, never the fill.
+  it('colors each chip dot by its genre bucket and leaves the chip neutral', () => {
+    render(<GenreChips genres={['alternative', 'polka-step']} />);
+    const [rock, unbucketed] = screen.getAllByTestId('genre-dot');
+    expect(rock?.style.background).toBe('var(--genre-rock)');
+    expect(unbucketed?.style.background).toBe('var(--fg-subtle)');
+    for (const chip of screen.getAllByTestId('genre-chip')) {
+      expect(chip.classList.contains('bg-surface-2')).toBe(true);
+    }
   });
 });

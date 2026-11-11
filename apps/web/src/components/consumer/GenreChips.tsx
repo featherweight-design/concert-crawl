@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { GenreDot } from './GenreDot';
 
 interface GenreChipsProps {
   genres: string[] | null;
@@ -6,6 +7,11 @@ interface GenreChipsProps {
   maxChips?: number;
 }
 
+/**
+ * Neutral genre chips (B+ rule 2): a surface fill, a muted label and a
+ * hairline, with the genre's color only in the dot. A filled, colored chip
+ * always means a status or a price, never a genre.
+ */
 export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
   if (!genres || genres.length === 0) return null;
 
@@ -17,14 +23,21 @@ export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
       {chips.map((tag) => (
         <span
           key={tag}
-          className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
+          data-testid="genre-chip"
+          className="inline-flex items-center rounded-[5px] border border-border bg-surface-2 text-fg-muted"
           style={{
+            gap: 5,
+            padding: '2px 7px 2px 6px',
             fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            letterSpacing: '0.03em',
+            fontSize: 9.5,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            lineHeight: 1.5,
           }}
         >
-          {tag}
+          <GenreDot genre={tag} />
+          <span>{tag}</span>
         </span>
       ))}
     </div>

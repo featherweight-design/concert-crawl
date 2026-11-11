@@ -460,4 +460,35 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     const watching = minHeights('watching', [makeShow()]);
     expect(artist).toEqual(watching);
   });
+
+  // B+ rule 2: the lead genre colors the ring and the carded row's edge.
+  describe('genre color', () => {
+    it('rings the artwork in the lead genre color', () => {
+      render(
+        <EventRow
+          show={makeShow({ genres: ['alternative', 'pop'] })}
+          surface="browse"
+        />,
+      );
+      expect(screen.getByTestId('row-image-ring').style.boxShadow).toContain(
+        'var(--genre-rock)',
+      );
+    });
+
+    it('edges a carded row in the lead genre color', () => {
+      const { container } = render(
+        <EventRow show={makeShow({ genres: ['jazz'] })} surface="watching" />,
+      );
+      const card = container.firstElementChild;
+      if (!(card instanceof HTMLElement)) throw new Error('no card');
+      expect(card.style.borderLeftColor).toBe('var(--genre-jazz)');
+    });
+
+    it('falls back to a neutral ring for an ungenred show', () => {
+      render(<EventRow show={makeShow({ genres: [] })} surface="browse" />);
+      expect(screen.getByTestId('row-image-ring').style.boxShadow).toContain(
+        'var(--border-strong)',
+      );
+    });
+  });
 });

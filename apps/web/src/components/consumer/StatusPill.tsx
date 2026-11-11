@@ -7,16 +7,10 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 // `uppercase` class, so 'Cancelled'/'Postponed' still render all-caps.
 const STATUS_PILL: Record<
   Exclude<EventStatus, 'upcoming'>,
-  { label: string; tone: string }
+  { label: string; token: string }
 > = {
-  cancelled: {
-    label: CONSUMER_COPY.cancelledLabel,
-    tone: 'text-danger border-danger',
-  },
-  postponed: {
-    label: CONSUMER_COPY.postponedLabel,
-    tone: 'text-warning border-warning',
-  },
+  cancelled: { label: CONSUMER_COPY.cancelledLabel, token: '--danger' },
+  postponed: { label: CONSUMER_COPY.postponedLabel, token: '--warning' },
 };
 
 interface StatusPillProps {
@@ -35,8 +29,17 @@ export const StatusPill = ({ status, fontSize }: StatusPillProps) => {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded border font-mono font-bold uppercase tracking-widest ${pill.tone}`}
-      style={{ fontSize, padding: '2px 7px', lineHeight: 1 }}
+      className="inline-flex shrink-0 items-center rounded border font-mono font-bold uppercase tracking-widest"
+      // Tinted like every B+ status chip (rule 3): the color with a wash, never
+      // a bare full-strength outline.
+      style={{
+        fontSize,
+        padding: '2px 7px',
+        lineHeight: 1,
+        color: `var(${pill.token})`,
+        background: `color-mix(in oklch, var(${pill.token}) 10%, transparent)`,
+        borderColor: `color-mix(in oklch, var(${pill.token}) 42%, transparent)`,
+      }}
     >
       {pill.label}
     </span>
