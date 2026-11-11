@@ -1,3 +1,13 @@
+## [1.324.1](https://github.com/featherweight-design/concert-crawl/compare/v1.324.0...v1.324.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** cancelled shows never offer tickets, one sold-out predicate ([dafcd07](https://github.com/featherweight-design/concert-crawl/commit/dafcd07ba04748e1c51462f3ea82e0c7b4b1ff17))
+* **web:** refund info only on a vendor link, and on the public mirror ([c137f78](https://github.com/featherweight-design/concert-crawl/commit/c137f7820c53ae912175026e7d563766c4d6d522))
+* **web:** report filed sheet, cancelled and postponed CTAs, sold out rows (B+ A4) ([863392a](https://github.com/featherweight-design/concert-crawl/commit/863392a0ed0eebd785eae8d6e6e3e9dc2e9b2bd0))
+* **web:** review fixes for the A4 CTAs and filed sheet, release note ([b6ccf0e](https://github.com/featherweight-design/concert-crawl/commit/b6ccf0e857b0b54bb65b5ae26df5dfa3963d51fe))
+
 # [1.324.0](https://github.com/featherweight-design/concert-crawl/compare/v1.323.0...v1.324.0) (2026-11-11)
 
 
