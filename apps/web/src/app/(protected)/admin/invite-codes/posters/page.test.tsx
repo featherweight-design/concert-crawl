@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import type { InviteCode } from '@concert-crawl/types';
 
-const { requireAdminUser, getCodes, getVenues } = vi.hoisted(() => ({
+const { requireAdminUser, getCodes, getVenues, getToken } = vi.hoisted(() => ({
+  getToken: vi.fn(),
   requireAdminUser: vi.fn(),
   getCodes: vi.fn(),
   getVenues: vi.fn(),
@@ -12,12 +13,17 @@ const { requireAdminUser, getCodes, getVenues } = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth', () => ({
   requireAdminUser,
-  auth: async () => ({ getToken: async () => 'token' }),
+  auth: async () => ({ getToken }),
 }));
 vi.mock('@/lib/api', () => ({
   apiClient: {
     get: (path: string) =>
       path === '/v1/venues' ? getVenues() : getCodes(path),
+  },
+}));
+vi.mock('next/navigation', () => ({
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND');
   },
 }));
 vi.mock('./poster.css', () => ({}));
@@ -49,6 +55,7 @@ describe('Posters tab page', () => {
   beforeEach(() => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://concertcrawl.app');
     requireAdminUser.mockResolvedValue({ userId: 'user_admin' });
+    getToken.mockResolvedValue('token');
     getVenues.mockResolvedValue([
       { name: 'Hi-Dive', upcomingCount: 40, featured: false },
       { name: 'Dark Room', upcomingCount: 0, featured: false },
@@ -106,5 +113,28 @@ describe('Posters tab page', () => {
     requireAdminUser.mockRejectedValue(new Error('NEXT_NOT_FOUND'));
     await expect(renderPage()).rejects.toThrow('NEXT_NOT_FOUND');
     expect(getCodes).not.toHaveBeenCalled();
+  });
+
+  it('is a 404 without a token', async () => {
+    getToken.mockResolvedValue(null);
+    await expect(renderPage()).rejects.toThrow('NEXT_NOT_FOUND');
+    expect(getCodes).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['full', 'code-2'],
+    ['personal', 'code-3'],
+    ['revoked', 'code-4'],
+    ['expired', 'code-5'],
+    ['unknown', 'code-9'],
+  ])('refuses a requested %s code without picking another', async (_, id) => {
+    await renderPage({ code: id });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "That code can't be printed",
+    );
+    expect(screen.queryByTestId('poster-sheet')).toBeNull();
+    expect(
+      document.querySelector('input[name="poster-code"]:checked'),
+    ).toBeNull();
   });
 });

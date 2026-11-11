@@ -12,13 +12,11 @@ import {
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { SectionHead } from '@/components/admin/primitives';
+import { downloadBlob } from '@/lib/download-blob';
 import { qrSvg, type QrPath } from '@/lib/poster/poster-rule';
 import type { PosterVenueData } from '@/lib/poster/load-poster-venues';
 import { DENVER_TIME_ZONE } from '@/lib/time';
-import {
-  postersHref,
-  type PosterSelection,
-} from '@/app/(protected)/admin/invite-codes/posters/posters-href';
+import { postersHref, type PosterSelection } from '@/lib/poster/posters-href';
 import { InviteCodesTabs } from './InviteCodesTabs';
 import { PosterFit } from './PosterFit';
 import { PosterSheet, type PosterLook } from './PosterSheet';
@@ -61,16 +59,11 @@ const expiry = (expiresAt: string | null) =>
     : copy.expiresOn(expiryDate.format(new Date(expiresAt)));
 
 /** Saves the selected code's QR as an SVG file, black on white. */
-const downloadQr = (card: PosterCodeCard & { qr: QrPath }) => {
-  const href = URL.createObjectURL(
+const downloadQr = (card: PosterCodeCard & { qr: QrPath }) =>
+  downloadBlob(
     new Blob([qrSvg(card.qr)], { type: 'image/svg+xml' }),
+    `poster-qr-${card.code}.svg`,
   );
-  const anchor = document.createElement('a');
-  anchor.href = href;
-  anchor.download = `poster-qr-${card.code}.svg`;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(href), 1000);
-};
 
 /**
  * The Posters tab: Code, Look, Print on the left, the real sheet at scale on
@@ -85,25 +78,33 @@ export function PostersTab({
   venues,
   initial,
 }: PostersTabProps) {
-  const [selectedId, setSelectedId] = useState(initial.code);
+  const printable = cards.filter(
+    (card): card is PosterCodeCard & { qr: QrPath } => card.qr !== null,
+  );
+  // A requested code is honoured or refused, never swapped for another: an
+  // unprintable one selects nothing and says so. With no request, the newest
+  // printable code is picked.
+  const [selectedId, setSelectedId] = useState(
+    initial.code ?? printable[0]?.id ?? null,
+  );
   const [look, setLook] = useState<PosterLook>(initial.look);
   const [tabs, setTabs] = useState(initial.tabs);
   const [listOpen, setListOpen] = useState(false);
 
-  const printable = cards.filter(
-    (card): card is PosterCodeCard & { qr: QrPath } => card.qr !== null,
-  );
-  const selected =
-    printable.find((card) => card.id === selectedId) ?? printable[0] ?? null;
-  const fullCount = cards.filter((card) => card.full).length;
+  const selected = printable.find((card) => card.id === selectedId) ?? null;
+  const refused = selectedId !== null && selected === null;
+  const folded = selected !== null && !listOpen;
+  const hiddenFull = cards.filter((card) => card.full).length;
 
+  // The URL follows the selection; with nothing selected it stays as it was.
   useEffect(() => {
+    if (!selected) return;
     window.history.replaceState(
       null,
       '',
-      postersHref({ code: selected?.id ?? null, look, tabs }),
+      postersHref({ code: selected.id, look, tabs }),
     );
-  }, [selected?.id, look, tabs]);
+  }, [selected, look, tabs]);
 
   const pick = (id: string) => {
     setSelectedId(id);
@@ -131,7 +132,7 @@ export function PostersTab({
                 role="radiogroup"
                 aria-labelledby="pt-step-code"
                 className="pt-codes"
-                data-open={listOpen}
+                data-folded={folded}
               >
                 {cards.map((card) => {
                   const on = card.id === selected?.id;
@@ -181,14 +182,19 @@ export function PostersTab({
                 })}
               </div>
             )}
-            {cards.length > 1 ? (
+            {refused ? (
+              <p role="alert" className="pt-refused">
+                {copy.notPrintable}
+              </p>
+            ) : null}
+            {selected && cards.length > 1 ? (
               <button
                 type="button"
                 className="pt-more"
                 aria-expanded={listOpen}
                 onClick={() => setListOpen((open) => !open)}
               >
-                {copy.moreCodes(cards.length - 1, fullCount)}
+                {copy.moreCodes(cards.length - 1, hiddenFull)}
                 <ChevronDown size={14} aria-hidden />
               </button>
             ) : null}

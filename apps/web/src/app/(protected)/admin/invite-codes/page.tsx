@@ -23,7 +23,7 @@ import {
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
 import Link from 'next/link';
-import { postersHref } from './posters/posters-href';
+import { postersHref } from '@/lib/poster/posters-href';
 
 const INVITE_STATUS_KIND: Record<InviteStatus, StatusKind> = {
   active: 'signal',
@@ -157,11 +157,7 @@ export default async function AdminInviteCodesPage() {
                       <>
                         {' · '}
                         <Link
-                          href={postersHref({
-                            code: code.id,
-                            look: 'night',
-                            tabs: false,
-                          })}
+                          href={postersHref({ code: code.id })}
                           prefetch={false}
                           style={{ color: 'var(--signal)' }}
                         >

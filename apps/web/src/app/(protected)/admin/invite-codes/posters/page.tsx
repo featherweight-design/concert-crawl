@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import type { InviteCode } from '@concert-crawl/types';
 import { auth, requireAdminUser } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
@@ -14,7 +15,7 @@ import {
   PostersTab,
   type PosterCodeCard,
 } from '@/components/admin/invite-codes/PostersTab';
-import { readSelection } from './posters-href';
+import { readSelection } from '@/lib/poster/posters-href';
 import './poster.css';
 
 /**
@@ -32,7 +33,7 @@ export default async function InviteCodePostersPage({
   await requireAdminUser();
   const { getToken } = await auth();
   const token = await getToken();
-  if (!token) return null;
+  if (!token) notFound();
 
   const codes = await apiClient.get<InviteCode[]>(
     '/v1/admin/invite-codes',

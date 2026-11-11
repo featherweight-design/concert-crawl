@@ -2086,6 +2086,8 @@ export const ADMIN_COPY = {
         full: 'QR 4.5 in · scans from about 8 ft',
         tabs: 'QR 3.5 in · scans from about 6 ft',
       },
+      notPrintable:
+        "That code can't be printed: it's full, expired, revoked or a personal code. Pick another.",
       noCodes: 'No poster codes yet. Mint one on the Codes tab.',
     },
   },

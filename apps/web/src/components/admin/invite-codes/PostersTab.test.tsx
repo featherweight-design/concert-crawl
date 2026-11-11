@@ -107,15 +107,68 @@ describe('PostersTab', () => {
     expect(print).toHaveBeenCalled();
   });
 
-  it('folds the phone picker to one card with a count of the rest', () => {
+  it('folds the phone picker to the selected card with a count of the rest', () => {
     renderTab();
+    expect(screen.getByRole('radiogroup', { name: 'Code' })).toHaveAttribute(
+      'data-folded',
+      'true',
+    );
     const more = screen.getByRole('button', {
       name: /2 more poster codes, 1 full/,
     });
     expect(more).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(more);
     expect(more).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('radiogroup', { name: 'Code' })).toHaveAttribute(
+      'data-folded',
+      'false',
+    );
   });
+
+  it('never folds away every card: a lone full code still shows why', () => {
+    renderTab([CARDS[2]!]);
+    expect(screen.getByRole('radiogroup', { name: 'Code' })).toHaveAttribute(
+      'data-folded',
+      'false',
+    );
+    expect(
+      screen.queryByRole('button', { name: /more poster code/ }),
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        'Every seat is taken. Mint a new code to put up another poster.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('poster-sheet')).toBeNull();
+  });
+
+  it.each(['full', 'gone'])(
+    'refuses a requested %s code: nothing selected, URL kept, notice shown',
+    (code) => {
+      window.history.replaceState(
+        null,
+        '',
+        `/admin/invite-codes/posters?code=${code}&look=paper`,
+      );
+      renderTab(CARDS, code);
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        "That code can't be printed",
+      );
+      expect(screen.queryByTestId('poster-sheet')).toBeNull();
+      expect(
+        document.querySelector('input[name="poster-code"]:checked'),
+      ).toBeNull();
+      expect(screen.getByRole('radiogroup', { name: 'Code' })).toHaveAttribute(
+        'data-folded',
+        'false',
+      );
+      expect(window.location.search).toBe(`?code=${code}&look=paper`);
+      // Picking a code clears the notice and takes over the URL.
+      fireEvent.click(screen.getByRole('radio', { name: /BETA-TWO/ }));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(window.location.search).toBe('?code=two');
+    },
+  );
 
   it('says so when there is no poster code yet', () => {
     renderTab([]);
