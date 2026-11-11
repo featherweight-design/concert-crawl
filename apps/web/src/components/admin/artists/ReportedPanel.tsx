@@ -2,8 +2,9 @@
 
 // The expanded body of a Reported row: what the page is matched to right now,
 // each open report with its suggested Spotify artist, and the dismiss action.
-// The fixes themselves (Use this artist, the picker, Not an artist) stay on the
-// row and in the page's own handlers, so every identity write goes one way.
+// It performs no write itself: Use this artist and Dismiss call back into the
+// page, whose handlers (like the row's picker and Not an artist) own every
+// write, so each one reconciles the counts the same way.
 
 import { useEffect, useState } from 'react';
 import { AdminButton } from '@/components/admin/primitives';
@@ -49,17 +50,17 @@ interface ReportedPanelProps {
 
 const ageOf = (iso: string): string => {
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  return days < 1 ? 'today' : `${days}d`;
+  return REPORT_COPY.age(days);
 };
 
-export function ReportedPanel({
+export const ReportedPanel = ({
   artistId,
   apiBase,
   getToken,
   onUse,
   onDismiss,
   dismissing,
-}: ReportedPanelProps) {
+}: ReportedPanelProps) => {
   const [data, setData] = useState<ReportsResponse | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -216,4 +217,4 @@ export function ReportedPanel({
       </div>
     </div>
   );
-}
+};

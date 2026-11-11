@@ -146,8 +146,8 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       />
     </>
   ),
-  // A person with a cross: the wrong match was taken off. Reads as lucide's
-  // UserX, which is the glyph the wrong-artist report card uses.
+  // A person with a cross: the wrong match was taken off. The same idea as the
+  // UserX mark the wrong-artist report card is drawn with in its handoff.
   userfixed: (
     <>
       <circle cx="6" cy="5.2" r="2.2" stroke="currentColor" strokeWidth="1.5" />
