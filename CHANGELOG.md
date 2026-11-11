@@ -1,3 +1,13 @@
+# [1.315.0](https://github.com/featherweight-design/concert-crawl/compare/v1.314.5...v1.315.0) (2026-11-11)
+
+
+### Features
+
+* **web:** add the B+ motion module, pink wave and skeleton sheen, unused ([d5deee1](https://github.com/featherweight-design/concert-crawl/commit/d5deee1c89b2f9fbf74b7abefef6e66c77903dad))
+* **web:** add the B+ venue glyphs and icon tile, unused ([21c286c](https://github.com/featherweight-design/concert-crawl/commit/21c286cf07bb0c1d67a52a48fe434204645e709e))
+* **web:** motion module review follow-ups ([ae46c9e](https://github.com/featherweight-design/concert-crawl/commit/ae46c9eeae4c61c09aa1e36d91f2d433679d9a4f))
+* **web:** venue tile review follow-ups ([f2a0b44](https://github.com/featherweight-design/concert-crawl/commit/f2a0b44d6088cd0eae446ad1b4adb0e9c2db50f5))
+
 ## [1.314.5](https://github.com/featherweight-design/concert-crawl/compare/v1.314.4...v1.314.5) (2026-11-11)
 
 
