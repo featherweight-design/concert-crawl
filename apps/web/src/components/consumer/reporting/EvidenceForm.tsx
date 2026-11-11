@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { ER_POLICY } from '@concert-crawl/types';
 import { ApiError } from '@/lib/api';
@@ -217,6 +217,12 @@ export const EvidenceForm = ({
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // A sheet closed some other way than Back to show must not reopen on the
+  // filed state of a report made earlier.
+  useEffect(() => {
+    if (!open) setFiled(false);
+  }, [open]);
+
   const daysUntil = getDaysUntil(eventDate);
   // Same window and counts the API applies (event-reports.ts), inclusive of
   // the threshold day.
@@ -253,6 +259,10 @@ export const EvidenceForm = ({
       );
 
       // The page refreshes once the filed sheet is dismissed (onSuccess).
+      // The answers are spent: the next report starts from a blank form.
+      setSelectedMethod(null);
+      setSourceUrl('');
+      setNotes('');
       setFiled(true);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'report_exists') {

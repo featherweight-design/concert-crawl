@@ -31,6 +31,25 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.55.0-beta',
+    date: 'Nov 11, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'Filing a status report now confirms it, and shows how many fans still need to back it up.',
+      },
+      {
+        kind: 'added',
+        text: 'A cancelled show points you at your ticket vendor for a refund, and a postponed one lets you watch for the new date.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Sold out shows say so in every list, not only in Watching.',
+      },
+    ],
+  },
+  {
     version: 'v0.54.0-beta',
     date: 'Nov 10, 2026',
     headline: null,

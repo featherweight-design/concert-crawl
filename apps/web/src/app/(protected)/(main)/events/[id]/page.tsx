@@ -357,7 +357,7 @@ export default async function EventDetailPage({
               />
             ) : (
               <EventTicketCta
-                cancelled={event.status === 'cancelled'}
+                refundHref={event.status === 'cancelled' ? safeTicketUrl : null}
                 soldOut={event.priceStatus === 'soldout'}
                 href={ctaHref}
                 hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}

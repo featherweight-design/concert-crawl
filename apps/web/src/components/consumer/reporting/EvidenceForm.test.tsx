@@ -239,3 +239,30 @@ describe('EvidenceForm report filed', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('EvidenceForm reopened after filing', () => {
+  it('starts from a blank form when the parent closes it another way', async () => {
+    vi.mocked(fileEventReport).mockResolvedValueOnce(undefined as never);
+    const props = {
+      onClose: vi.fn(),
+      reportType: 'cancelled' as const,
+      eventId: 'event-1',
+      eventDate: '2026-11-20',
+      eventTitle: 'The Grouch',
+    };
+    const { rerender } = render(<EvidenceForm open {...props} />);
+    fireEvent.click(screen.getAllByRole('radio')[0]!);
+    await act(async () => {
+      fireEvent.click(screen.getByText(copy.submitButton));
+    });
+    expect(screen.getByText(copy.reportFiled.heading)).toBeTruthy();
+    rerender(<EvidenceForm open={false} {...props} />);
+    rerender(<EvidenceForm open {...props} />);
+    expect(screen.queryByText(copy.reportFiled.heading)).toBeNull();
+    expect(
+      screen
+        .getAllByRole('radio')
+        .every((radio) => radio.getAttribute('aria-checked') === 'false'),
+    ).toBe(true);
+  });
+});

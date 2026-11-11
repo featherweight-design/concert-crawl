@@ -690,7 +690,8 @@ describe('cta variant (postponed show)', () => {
     const button = screen.getByRole('button', {
       name: CONSUMER_COPY.watchShowButton.newDate.on,
     });
-    expect(button.getAttribute('aria-pressed')).toBe('true');
+    // The label carries the state; aria-pressed would announce it twice.
+    expect(button.hasAttribute('aria-pressed')).toBe(false);
   });
 
   it('toggles the watch like every other variant', () => {

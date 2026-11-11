@@ -2,9 +2,10 @@
 // share mirror at /e/:id (#72).
 //
 // Four states, first match wins:
-//   cancelled + a ticket/event link → "Refund info from the vendor ›", the
-//                        same link: the vendor handles the refund. A venue
-//                        homepage is not the vendor, so it falls through
+//   a refund link     → "Refund info from the vendor ›": a cancelled show's
+//                        ticket URL, since the vendor handles the refund. The
+//                        venue's event page or homepage is not the vendor, so
+//                        a cancelled show without a ticket URL falls through
 //   sold out          → disabled "Sold out"
 //   a safe http(s) url → "Get tickets ↗" (or "Visit venue website" when the only
 //                        link we have is the venue's homepage)
@@ -43,9 +44,24 @@ const disabledStyle = {
   letterSpacing: '-0.005em',
 } satisfies React.CSSProperties;
 
+// The two link CTAs (tickets, refund info) share one shape.
+const linkClass =
+  'flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px]';
+const linkStyle = {
+  fontFamily: 'var(--font-ui)',
+  fontWeight: 800,
+  fontSize: 15,
+  letterSpacing: '-0.01em',
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+} satisfies React.CSSProperties;
+
 interface EventTicketCtaProps {
-  /** True when the show is cancelled: the link becomes refund info. */
-  cancelled?: boolean | undefined;
+  /**
+   * A cancelled show's already-validated ticket URL (the vendor), or null.
+   * When set it takes precedence over everything else.
+   */
+  refundHref?: string | null | undefined;
   /** True when the show is sold out — takes precedence over any link. */
   soldOut: boolean;
   /** Already-validated http(s) destination, or null when we have none. */
@@ -58,27 +74,22 @@ interface EventTicketCtaProps {
 }
 
 export const EventTicketCta = ({
-  cancelled = false,
+  refundHref = null,
   soldOut,
   href,
   hasDirectLink,
 }: EventTicketCtaProps) => {
-  if (cancelled && href && hasDirectLink) {
+  if (refundHref) {
     return (
       <a
-        href={href}
+        href={refundHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px] text-fg"
+        className={`${linkClass} text-fg`}
         style={{
+          ...linkStyle,
           border:
             '1.5px solid color-mix(in oklab, var(--danger) 50%, transparent)',
-          fontFamily: 'var(--font-ui)',
-          fontWeight: 800,
-          fontSize: 15,
-          letterSpacing: '-0.01em',
-          textDecoration: 'none',
-          whiteSpace: 'nowrap',
         }}
       >
         {copy.refundInfo}
@@ -106,16 +117,8 @@ export const EventTicketCta = ({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px] text-fg-on-accent"
-        style={{
-          background: 'var(--accent)',
-          fontFamily: 'var(--font-ui)',
-          fontWeight: 800,
-          fontSize: 15,
-          letterSpacing: '-0.01em',
-          textDecoration: 'none',
-          whiteSpace: 'nowrap',
-        }}
+        className={`${linkClass} text-fg-on-accent`}
+        style={{ ...linkStyle, background: 'var(--accent)' }}
       >
         {hasDirectLink ? copy.getTickets : copy.visitVenueWebsite}
         <ExternalLinkIcon />
