@@ -3,23 +3,12 @@
 import { useState, useTransition } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/actions';
+import { MAX_SEATS, parseSeats } from '@/lib/poster/poster-rule';
 
 type ExpiresIn = '7d' | '30d' | 'never';
 
 /** Seats a labelled (poster) code starts with. */
 const POSTER_SEATS = 50;
-/** The API's cap on seats per code. */
-const MAX_SEATS = 500;
-
-/**
- * The typed seat count, or null when the API would refuse it. Never clamped:
- * a silently rewritten count mints a code the admin did not ask for.
- */
-export const parseSeats = (typed: string): number | null => {
-  if (!/^\d+$/.test(typed.trim())) return null;
-  const seats = Number(typed.trim());
-  return seats >= 1 && seats <= MAX_SEATS ? seats : null;
-};
 
 const FIELD_STYLE = {
   height: 32,

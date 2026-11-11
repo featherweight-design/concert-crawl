@@ -774,6 +774,11 @@
 .pt-mat {
   position: relative;
 }
+.pt-mat:not(:has(.poster-mat)) {
+  min-height: 220px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
 .pt-preview[data-dim='true'] .poster-fit {
   opacity: 0.28;
 }

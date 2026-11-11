@@ -146,3 +146,22 @@ export const qrSvg = (qr: QrPath): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${qr.size} ${qr.size}" width="${qr.size * 10}" height="${qr.size * 10}" shape-rendering="crispEdges">` +
   `<rect width="${qr.size}" height="${qr.size}" fill="#ffffff"/>` +
   `<path d="${qr.path}" fill="#000000"/></svg>`;
+
+/** The API's cap on seats per code. */
+export const MAX_SEATS = 500;
+/**
+ * The fewest seats a poster code may have: the Posters tab lists only codes
+ * that admit more than one person, so a 1-seat "poster" would vanish.
+ */
+export const POSTER_MIN_SEATS = 2;
+
+/**
+ * The typed seat count, or null when it falls outside `min` to `MAX_SEATS` or
+ * isn't a whole number. Never clamped: a silently rewritten count mints a code
+ * the admin did not ask for.
+ */
+export const parseSeats = (typed: string, min = 1): number | null => {
+  if (!/^\d+$/.test(typed.trim())) return null;
+  const seats = Number(typed.trim());
+  return seats >= min && seats <= MAX_SEATS ? seats : null;
+};

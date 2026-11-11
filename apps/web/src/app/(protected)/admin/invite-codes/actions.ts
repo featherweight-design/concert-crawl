@@ -42,8 +42,8 @@ export async function mintInviteCodeWithOptions(
         maxUses: opts.maxUses,
       },
     );
-    revalidatePath('/admin/invite-codes');
-    revalidatePath('/admin/invite-codes/posters');
+    // The Codes and Posters tabs both list codes.
+    revalidatePath('/admin/invite-codes', 'layout');
     return { ok: true, id: result.id, code: result.code };
   } catch (err) {
     return {

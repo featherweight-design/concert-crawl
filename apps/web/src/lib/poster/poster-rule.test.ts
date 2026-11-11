@@ -10,6 +10,8 @@ import {
   posterVenueLine,
   posterVenues,
   qrPath,
+  parseSeats,
+  POSTER_MIN_SEATS,
   qrSvg,
   seatsTaken,
 } from './poster-rule';
@@ -204,5 +206,16 @@ describe('qrSvg', () => {
     expect(svg).toContain(`<path d="${qr.path}" fill="#000000"/>`);
     // The quiet zone: no module starts inside the first four columns.
     expect(qr.path).not.toMatch(/M[0-3] /);
+  });
+});
+
+describe('parseSeats', () => {
+  it('takes 1 to 500 by default and 2 to 500 for a poster code', () => {
+    expect(parseSeats('1')).toBe(1);
+    expect(parseSeats('1', POSTER_MIN_SEATS)).toBeNull();
+    expect(parseSeats(' 2 ', POSTER_MIN_SEATS)).toBe(2);
+    expect(parseSeats('500', POSTER_MIN_SEATS)).toBe(500);
+    for (const typed of ['', '0', '501', '12.5', 'abc'])
+      expect(parseSeats(typed, POSTER_MIN_SEATS)).toBeNull();
   });
 });
