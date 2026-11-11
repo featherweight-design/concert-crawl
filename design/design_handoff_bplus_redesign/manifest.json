@@ -1419,5 +1419,180 @@
   "title": "Invite page \u00b7 Light theme",
   "w": 1440,
   "h": 900
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-prompt",
+  "title": "Error + the prompt",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-form",
+  "title": "Form open",
+  "w": 390,
+  "h": 960
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-sending",
+  "title": "Sending",
+  "w": 390,
+  "h": 960
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-sent",
+  "title": "Sent",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-failed",
+  "title": "Failed",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-signedout",
+  "title": "Signed out (no form)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-prompt",
+  "title": "Error + the prompt \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-form",
+  "title": "Form open \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-sending",
+  "title": "Sending \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-sent",
+  "title": "Sent \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-failed",
+  "title": "Failed \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-signedout",
+  "title": "Signed out (no form) \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-form-light",
+  "title": "Form open \u00b7 Light",
+  "w": 390,
+  "h": 960
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-m-failed-light",
+  "title": "Failed \u00b7 Light",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-prompt-light",
+  "title": "Error + the prompt \u00b7 desktop \u00b7 Light",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-d-signedout-light",
+  "title": "Signed out \u00b7 desktop \u00b7 Light",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-electric",
+  "title": "Electric",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-jade",
+  "title": "Jade",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-light",
+  "title": "Light",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-pulse",
+  "title": "Pulse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-forge",
+  "title": "Forge",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-blue-note",
+  "title": "Blue Note",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-drip",
+  "title": "Drip",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-cedar",
+  "title": "Cedar",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-error-page",
+  "name": "err-t-gloss",
+  "title": "Gloss",
+  "w": 390,
+  "h": 844
  }
 ]

@@ -60,7 +60,7 @@ Build the shared pieces with tests, using them nowhere yet, or only where the sw
 ## Phase 5: Chrome, account and the long tail
 
 - Header and bottom nav (Crews included), the account menu, Settings, the ⌘K search palette and mobile search overlay, the notifications panel and its states, What's new and the feature modal, the Tell us tab.
-- Error, 404 and offline pages.
+- Error, 404 and offline pages. The error page is the standalone page in `12-error-page`, which replaces `bp-s-error_m` (see the README for its render-without-the-app rules).
 - The signed-out beta invite page, if Hugh keeps it in scope.
 
 ## Phase 6: PWA and launch
