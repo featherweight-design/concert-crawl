@@ -211,6 +211,33 @@ describe('admin artist reports', () => {
     });
   });
 
+  describe('hiding a page', () => {
+    it('closes open reports as fixed and notifies, with no link', async () => {
+      await report(artist.id, 'user_a');
+      const res = await call('PATCH', `/${artist.id}/visibility`, {
+        hidden: true,
+      });
+      expect(res.status).toBe(200);
+      expect((await reportRows(artist.id))[0]?.status).toBe('fixed');
+      const [sent] = await testDb.select().from(notifications);
+      expect(sent).toMatchObject({
+        userId: 'user_a',
+        actionUrl: null,
+        title: 'We removed Nightjar Choir’s page.',
+      });
+    });
+
+    it('leaves reports alone when a page is restored', async () => {
+      await testDb
+        .update(artists)
+        .set({ hidden: true })
+        .where(eq(artists.id, artist.id));
+      await report(artist.id, 'user_a');
+      await call('PATCH', `/${artist.id}/visibility`, { hidden: false });
+      expect((await reportRows(artist.id))[0]?.status).toBe('open');
+    });
+  });
+
   describe('closing on an identity fix', () => {
     const fix = (body: unknown) => call('PATCH', `/${artist.id}`, body);
 
@@ -297,6 +324,17 @@ describe('admin artist reports', () => {
       });
       expect(res.status).toBe(400);
       expect((await reportRows(artist.id))[0]?.status).toBe('open');
+    });
+
+    it('dismisses without notifying when the save repeats the current answer', async () => {
+      await report(artist.id, 'user_a');
+      const res = await fix({
+        spotifyArtistId: 'sp_wrong',
+        matchStatus: 'matched',
+      });
+      expect(res.status).toBe(200);
+      expect((await reportRows(artist.id))[0]?.status).toBe('dismissed');
+      expect(await testDb.select().from(notifications)).toHaveLength(0);
     });
 
     it('does not double-notify when a second fix follows', async () => {
