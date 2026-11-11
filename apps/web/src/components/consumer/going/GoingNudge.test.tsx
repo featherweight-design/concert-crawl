@@ -10,7 +10,12 @@ afterEach(cleanup);
 
 // Far enough out that the label is the "In N days" branch and never shifts as
 // the suite's real clock advances.
-const SHOW = { artist: 'Wednesday', date: '2099-01-05' };
+const SHOW = {
+  artist: 'Wednesday',
+  date: '2099-01-05',
+  venueSlug: 'mission-ballroom',
+  venueName: 'Mission Ballroom',
+};
 
 const renderNudge = () => {
   const onYes = vi.fn();
@@ -75,5 +80,28 @@ describe('GoingNudge', () => {
   it('counts the days until the show', () => {
     renderNudge();
     expect(screen.getByRole('status').textContent).toMatch(/In \d+ days\./);
+  });
+
+  // B+ "My shows": "Going? In N days." holds one line beside the button.
+  it('keeps the question and the day count on one unwrapping line', () => {
+    renderNudge();
+    const line = screen.getByTestId('going-nudge-line');
+    expect(line.textContent).toMatch(/^Going\? In \d+ days\.$/);
+    expect(line.style.whiteSpace).toBe('nowrap');
+    expect(line).toHaveClass('truncate');
+  });
+
+  // B+ rule 4: the upcoming night shows the dashed stamp it will become.
+  it('leads with the dashed venue stamp, not a ticket stub', () => {
+    renderNudge();
+    const stamp = screen
+      .getByTestId('going-nudge-stamp')
+      .querySelector('[data-venue-stamp]');
+    expect(stamp?.getAttribute('data-venue-stamp')).toBe('dashed');
+    expect(
+      screen
+        .getByTestId('going-nudge-stamp')
+        .querySelector('[data-venue-glyph]'),
+    ).toHaveAttribute('data-venue-glyph', 'mission');
   });
 });

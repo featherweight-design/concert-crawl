@@ -46,7 +46,7 @@ interface VenueStampProps {
   venueSlug: string;
   /** The venue's display name, for the label and a venue with no glyph. */
   venueName: string;
-  /** What the accent hashes on: the same seed StubStamp takes (the artist). */
+  /** What the accent hashes on: the artist, as the old ticket stub did. */
   seed: string;
   /** `solid` for an attended show, `dashed` for the stamp an upcoming show will become. */
   variant?: VenueStampVariant;

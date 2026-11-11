@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
-import { PassportTeaser } from './PassportTeaser';
+import { PassportTeaser, teaserStampsFor } from './PassportTeaser';
 import { PASSPORT_ROUTE } from './definitions/constants';
 import { HISTORY_COPY } from './definitions/copy';
 
@@ -83,5 +83,46 @@ describe('PassportTeaser', () => {
     render(<PassportTeaser stats={STATS} shows={SHOWS} />);
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+});
+
+// B+ rule 4: the teaser carries the Passport venue stamp, not a ticket stub.
+describe('PassportTeaser stamps', () => {
+  it('stamps one solid venue stamp per recent venue', () => {
+    const { container } = render(
+      <PassportTeaser
+        stats={STATS}
+        shows={[
+          show('a', 'Wednesday'),
+          { ...show('b', 'MJ Lenderman'), venueSlug: 'mission-ballroom' },
+          // Same venue as the first night, so it adds no second stamp.
+          show('c', 'Slaughter Beach, Dog'),
+        ]}
+      />,
+    );
+
+    const stamps = container.querySelectorAll('[data-venue-stamp]');
+    expect(stamps).toHaveLength(2);
+    for (const stamp of stamps) {
+      expect(stamp).toHaveAttribute('data-venue-stamp', 'solid');
+    }
+  });
+
+  it('caps the block at four stamps', () => {
+    const slugs = [
+      'larimer-lounge',
+      'mission-ballroom',
+      'bluebird-theater',
+      'ogden-theatre',
+      'gothic-theatre',
+    ];
+    expect(
+      teaserStampsFor(
+        slugs.map((slug, index) => ({
+          ...show(String(index), `Artist ${index}`),
+          venueSlug: slug,
+        })),
+      ).map((picked) => picked.venueSlug),
+    ).toEqual(slugs.slice(0, 4));
   });
 });

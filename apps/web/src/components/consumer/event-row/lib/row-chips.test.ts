@@ -61,7 +61,7 @@ describe('rowChips', () => {
     expect(chip?.mark).toBe('spotify');
   });
 
-  it('offers no provenance or freshness on Browse, whatever the price', () => {
+  it('offers no provenance on Browse, whatever the price', () => {
     const chips = rowChips(
       makeShow({ price: priceObservedHoursAgo(48, 'boxoffice') }),
       'browse',
@@ -69,20 +69,32 @@ describe('rowChips', () => {
     expect(chips).toEqual([]);
   });
 
-  it('puts freshness ahead of provenance on Watching', () => {
+  // B+ dropped the Stale price chip everywhere: an old price is no chip at all.
+  it('offers no Stale chip on Watching, however old the price', () => {
     const chips = rowChips(
-      makeShow({ price: priceObservedHoursAgo(48, 'boxoffice') }),
-      'watching',
-    );
-    expect(chips.map((chip) => chip.key)).toEqual(['freshness', 'provenance']);
-  });
-
-  it('offers no freshness chip for a price observed inside the stale window', () => {
-    const chips = rowChips(
-      makeShow({ price: priceObservedHoursAgo(2, 'boxoffice') }),
+      makeShow({ price: priceObservedHoursAgo(24 * 30, 'boxoffice') }),
       'watching',
     );
     expect(chips.map((chip) => chip.key)).toEqual(['provenance']);
+    expect(chips.some((chip) => chip.label.includes('Stale'))).toBe(false);
+  });
+
+  it('offers no Stale chip on any surface', () => {
+    for (const surface of [
+      'browse',
+      'venue',
+      'watching',
+      'related',
+      'crew',
+      'crewLens',
+      'artist',
+    ] as const) {
+      const chips = rowChips(
+        makeShow({ price: priceObservedHoursAgo(24 * 30, null) }),
+        surface,
+      );
+      expect(chips.map((chip) => chip.label).join('|')).not.toContain('Stale');
+    }
   });
 
   it('offers no provenance for a crawled price, which has none', () => {

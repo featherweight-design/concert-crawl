@@ -4,7 +4,11 @@
 // design_handoff_concert_history/going-cta.jsx:236-306.
 //
 // Appears beneath a Watching row while the night is still ahead. Tone is
-// helpful, not nagging — one line, accent-tinted, no exclamation. The caller
+// helpful, not nagging — one line, accent-tinted, no exclamation.
+//
+// B+ (README "My shows", rule 4): the question and the day count hold one line
+// beside the button, and from sm up the dashed stamp the night will become
+// leads the prompt. "Yes, going" is filled with that stamp's own ink. The caller
 // owns the window check and the per-device memory; this component only draws
 // and reports whether the night was committed to or the nudge dismissed.
 
@@ -12,10 +16,11 @@ import type { CSSProperties } from 'react';
 import type { WatchingShow } from '@concert-crawl/types';
 import { GOING_COPY } from './definitions/copy';
 import { stampAccentFor } from './lib/stamp';
+import { VenueStamp } from '@/components/consumer/venue-stamp';
 import { daysUntilLabel } from '@/lib/going/nudge-window';
 
 type GoingNudgeProps = {
-  show: Pick<WatchingShow, 'artist' | 'date'>;
+  show: Pick<WatchingShow, 'artist' | 'date' | 'venueSlug' | 'venueName'>;
   onYes: () => void;
   onDismiss: () => void;
 };
@@ -76,18 +81,34 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
       // screen reader would otherwise never learn it exists.
       role="status"
       aria-live="polite"
+      data-testid="going-nudge"
+      // The accent edge is the mobile cue; from sm the dashed stamp carries it.
+      className="border-l-[3px] sm:border-l"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '10px 12px 10px 14px',
         background: `color-mix(in oklch, ${accent} 10%, var(--surface-1))`,
-        border: `1px solid color-mix(in oklch, ${accent} 40%, var(--border))`,
-        borderLeft: `3px solid ${accent}`,
+        borderStyle: 'solid',
+        borderTopWidth: 1,
+        borderRightWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: `color-mix(in oklch, ${accent} 40%, var(--border))`,
+        borderLeftColor: accent,
         borderRadius: 10,
         color: 'var(--fg)',
       }}
     >
+      <span className="hidden sm:inline-flex" data-testid="going-nudge-stamp">
+        <VenueStamp
+          venueSlug={show.venueSlug}
+          venueName={show.venueName}
+          seed={show.artist}
+          variant="dashed"
+          size={32}
+        />
+      </span>
       <div
         style={{
           flex: 1,
@@ -97,8 +118,13 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           gap: 2,
         }}
       >
+        {/* One line, always: the question and the count truncate before they
+            wrap, so the prompt never grows taller than the button beside it. */}
         <span
+          data-testid="going-nudge-line"
+          className="truncate"
           style={{
+            whiteSpace: 'nowrap',
             fontFamily: 'var(--font-ui)',
             fontSize: 12.5,
             fontWeight: 700,
@@ -128,8 +154,8 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
         onClick={onYes}
         style={{
           ...RESET,
-          padding: '7px 11px',
-          borderRadius: 7,
+          padding: '7px 12px 7px 7px',
+          borderRadius: 999,
           background: accent,
           color: 'var(--bg)',
           fontSize: 12,
@@ -137,10 +163,24 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           letterSpacing: '-0.005em',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 6,
+          whiteSpace: 'nowrap',
         }}
       >
-        <CheckIcon />
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            background: 'color-mix(in oklch, var(--bg) 18%, transparent)',
+          }}
+        >
+          <CheckIcon />
+        </span>
         {GOING_COPY.nudge.yes}
       </button>
 

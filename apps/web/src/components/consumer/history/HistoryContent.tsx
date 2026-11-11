@@ -19,6 +19,7 @@
 // venues and spend are all past-tense claims.
 
 import type { HistoryResponse, HistoryShow } from '@concert-crawl/types';
+import type { VenueStampVariant } from '@/components/consumer/venue-stamp';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useHistory } from '@/lib/queries/use-history';
 import { MyShowsTabs } from './MyShowsTabs';
@@ -48,7 +49,13 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
   </main>
 );
 
-const MonthBuckets = ({ shows }: { shows: HistoryShow[] }) => (
+const MonthBuckets = ({
+  shows,
+  stamp,
+}: {
+  shows: HistoryShow[];
+  stamp: VenueStampVariant;
+}) => (
   <>
     {groupHistoryByMonth(shows).map((bucket) => (
       <section key={bucket.key}>
@@ -82,6 +89,7 @@ const MonthBuckets = ({ shows }: { shows: HistoryShow[] }) => (
               key={show.eventId}
               show={show}
               density={HISTORY_DENSITY}
+              stamp={stamp}
             />
           ))}
         </div>
@@ -97,10 +105,13 @@ const AttendanceSection = ({
   heading,
   emptyLabel,
   shows,
+  stamp,
 }: {
   heading: string;
   emptyLabel: string;
   shows: HistoryShow[];
+  /** Upcoming nights show the dashed stamp they will become (B+ rule 4). */
+  stamp: VenueStampVariant;
 }) => (
   <section aria-label={heading} className="flex flex-col gap-2 sm:gap-3">
     <h2
@@ -125,7 +136,7 @@ const AttendanceSection = ({
         {emptyLabel}
       </p>
     ) : (
-      <MonthBuckets shows={shows} />
+      <MonthBuckets shows={shows} stamp={stamp} />
     )}
   </section>
 );
@@ -199,11 +210,13 @@ export const HistoryContent = ({
             heading={SECTION_COPY.upcoming}
             emptyLabel={SECTION_COPY.upcomingEmpty}
             shows={history.upcoming}
+            stamp="dashed"
           />
           <AttendanceSection
             heading={SECTION_COPY.past}
             emptyLabel={SECTION_COPY.pastEmpty}
             shows={history.past}
+            stamp="solid"
           />
         </div>
       </div>

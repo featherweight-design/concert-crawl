@@ -112,3 +112,22 @@ describe('HistoryHeader', () => {
     expect(screen.queryByText(/^since /)).not.toBeInTheDocument();
   });
 });
+
+// B+ "My shows": in the Concerts stats only Top venue keeps a gradient.
+describe('HistoryHeader gradient', () => {
+  it('marks Top venue, and only Top venue, for the gradient', () => {
+    expect(
+      historyTilesFor(STATS)
+        .filter((tile) => tile.gradient)
+        .map((tile) => tile.key),
+    ).toEqual(['topVenue']);
+  });
+
+  it('paints only the Top venue figure with the gradient', () => {
+    const { container } = render(<HistoryHeader stats={STATS} />);
+
+    const painted = container.querySelectorAll('[data-stat-gradient]');
+    expect(painted).toHaveLength(1);
+    expect(painted[0]?.textContent).toContain('Larimer Lounge');
+  });
+});

@@ -143,6 +143,21 @@ describe('HistoryContent', () => {
     ).not.toBeInTheDocument();
   });
 
+  // B+ rule 4: the empty state shows unearned dashed venue stamps.
+  it('draws dashed venue stamps above the empty state', () => {
+    render(
+      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
+    );
+
+    const stamps = screen
+      .getByTestId('history-empty-stamps')
+      .querySelectorAll('[data-venue-stamp]');
+    expect(stamps).toHaveLength(3);
+    for (const stamp of stamps) {
+      expect(stamp).toHaveAttribute('data-venue-stamp', 'dashed');
+    }
+  });
+
   it('renders the populated list from initialData without a flash of empty', () => {
     // No client fetch has resolved yet — the server payload alone must render
     // the rows rather than the "nothing behind you" state.
@@ -250,6 +265,32 @@ describe('HistoryContent', () => {
     expect(
       screen.getByRole('region', { name: HISTORY_COPY.sections.past }),
     ).not.toHaveTextContent('Artist up');
+  });
+
+  // B+ rule 4: an upcoming night shows the dashed stamp it will become, and a
+  // past one the solid stamp it earned.
+  it('stamps Upcoming dashed and Past solid', () => {
+    render(
+      <HistoryContent
+        initialData={{ ...RESPONSE, upcoming: [show('up', `${year}-12-20`)] }}
+        locked={false}
+        scaRegion={false}
+      />,
+    );
+
+    const variants = (name: string) =>
+      Array.from(
+        screen
+          .getByRole('region', { name })
+          .querySelectorAll('[data-venue-stamp]'),
+      ).map((stamp) => stamp.getAttribute('data-venue-stamp'));
+
+    expect(new Set(variants(HISTORY_COPY.sections.upcoming))).toEqual(
+      new Set(['dashed']),
+    );
+    expect(new Set(variants(HISTORY_COPY.sections.past))).toEqual(
+      new Set(['solid']),
+    );
   });
 
   it('names each empty half rather than hiding it, while the other has rows', () => {

@@ -188,46 +188,50 @@ export const MyShowsArtistsContent = ({
     // because a page gets a single <main>, and landmark navigation still walks
     // a CSS-hidden one.
     <main className="flex w-full flex-1 flex-col">
-      {/* Mobile: full-bleed list. */}
+      {/* Mobile: a list of cards (B+), so it no longer bleeds to the edge. */}
       <div
         data-testid="my-shows-artists-mobile"
         className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:hidden"
       >
         <MyShowsTabs active="artists" artistCount={follows.length} />
         {meta}
-        <div className="-mx-4">
+        <div>
           {groups.dated.length > 0 && (
             <>
-              <div style={{ padding: '13px 16px 9px' }}>
+              <div style={{ padding: '13px 2px 9px' }}>
                 <Mono as="h2" size={9.5}>
                   {datedHeading}
                 </Mono>
               </div>
-              {groups.dated.map((artist) => (
-                <ArtistManageRow
-                  key={artist.canonicalName}
-                  artist={artist}
-                  narrow={narrow}
-                  onEntitlementRequired={onEntitlementRequired}
-                />
-              ))}
+              <div className="flex flex-col gap-2.5">
+                {groups.dated.map((artist) => (
+                  <ArtistManageRow
+                    key={artist.canonicalName}
+                    artist={artist}
+                    narrow={narrow}
+                    onEntitlementRequired={onEntitlementRequired}
+                  />
+                ))}
+              </div>
             </>
           )}
           {groups.undated.length > 0 && (
             <>
-              <div style={{ padding: '22px 16px 9px' }}>
+              <div style={{ padding: '22px 2px 9px' }}>
                 <Mono as="h2" size={9.5}>
                   {undatedHeading}
                 </Mono>
               </div>
-              {groups.undated.map((artist) => (
-                <ArtistManageRow
-                  key={artist.canonicalName}
-                  artist={artist}
-                  narrow={narrow}
-                  onEntitlementRequired={onEntitlementRequired}
-                />
-              ))}
+              <div className="flex flex-col gap-2.5">
+                {groups.undated.map((artist) => (
+                  <ArtistManageRow
+                    key={artist.canonicalName}
+                    artist={artist}
+                    narrow={narrow}
+                    onEntitlementRequired={onEntitlementRequired}
+                  />
+                ))}
+              </div>
             </>
           )}
           <div style={{ marginTop: 18 }}>
@@ -315,10 +319,12 @@ const denseButton = {
   textDecoration: 'none',
 } as const;
 
+// B+ (`bp-artists`): the find action is the gradient pill.
 const densePrimary = {
   ...denseButton,
-  background: 'var(--signal)',
+  background: 'linear-gradient(90deg, var(--signal), var(--accent))',
   color: 'var(--fg-on-accent)',
-  border: '1px solid var(--signal)',
+  border: '1px solid transparent',
+  borderRadius: 999,
   fontWeight: 800,
 };

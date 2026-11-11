@@ -6,6 +6,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { HistoryItem } from './HistoryItem';
 import { HISTORY_COPY } from './definitions/copy';
+import { genreColor } from '@/lib/genre-color';
 
 afterEach(cleanup);
 
@@ -92,7 +93,7 @@ describe('HistoryItem', () => {
     expect(screen.getByText('Wednesday')).toBeInTheDocument();
   });
 
-  it('keeps the stub stamp out of the accessibility tree', () => {
+  it('keeps the venue stamp out of the accessibility tree', () => {
     const { container } = render(<HistoryItem show={SHOW} density="cozy" />);
 
     // Every svg on the row (identity art + stamp) is decoration.
@@ -120,5 +121,50 @@ describe('HistoryItem', () => {
 
     expect(container.querySelector('img')).toBeNull();
     expect(container.querySelectorAll('svg').length).toBeGreaterThan(0);
+  });
+
+  // B+ rule 4: one stamp everywhere, the Passport venue stamp.
+  it('stamps an attended night with the solid venue stamp', () => {
+    const { container } = render(<HistoryItem show={SHOW} density="cozy" />);
+
+    const stamp = container.querySelector('[data-venue-stamp]');
+    expect(stamp).toHaveAttribute('data-venue-stamp', 'solid');
+    expect(container.querySelector('[data-venue-glyph]')).toHaveAttribute(
+      'data-venue-glyph',
+      'larimer',
+    );
+  });
+
+  it('stamps an upcoming night with the dashed stamp it will become', () => {
+    const { container } = render(
+      <HistoryItem show={SHOW} density="cozy" stamp="dashed" />,
+    );
+
+    expect(container.querySelector('[data-venue-stamp]')).toHaveAttribute(
+      'data-venue-stamp',
+      'dashed',
+    );
+  });
+
+  // B+ rule 2: the lead genre colours the image ring and the left edge.
+  it('rings the art and edges the card in the genre colour', () => {
+    render(<HistoryItem show={SHOW} density="cozy" />);
+
+    const indie = genreColor('indie');
+    if (indie === null) throw new Error('indie has no genre colour');
+    expect(screen.getByTestId('history-image-ring').style.boxShadow).toContain(
+      indie,
+    );
+    expect(screen.getByTestId('history-item').style.borderLeftColor).toBe(
+      indie,
+    );
+  });
+
+  it('falls back to the neutral edge when the night has no genre', () => {
+    render(<HistoryItem show={{ ...SHOW, genre: null }} density="cozy" />);
+
+    expect(screen.getByTestId('history-item').style.borderLeftColor).toBe(
+      'var(--border-strong)',
+    );
   });
 });

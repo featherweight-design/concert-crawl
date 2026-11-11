@@ -54,7 +54,7 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
   const pairChip = pairIndex === -1 ? undefined : candidates[pairIndex];
   // Re-measure when the chip set itself changes, not just when the box resizes.
   // The label is part of the signature because a chip can keep its key and
-  // still change width — the freshness chip's relative time does exactly that.
+  // still change width, as a crew chip's count does.
   const chipKeys = candidates
     .map((chip) => `${chip.key}:${chip.label}:${chip.secondaryLabel ?? ''}`)
     .join('|');

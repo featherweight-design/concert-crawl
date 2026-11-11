@@ -9,18 +9,29 @@
 
 import Link from 'next/link';
 import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
-import { StubStamp } from '@/components/consumer/going/StubStamp';
+import { VenueStamp } from '@/components/consumer/venue-stamp';
 import { HISTORY_COPY } from './definitions/copy';
 import { PASSPORT_ROUTE } from './definitions/constants';
 
 const COPY = HISTORY_COPY.passport;
 
-// Three most-recent artists, padded with deterministic filler names so the strip
-// keeps its shape for a one-night history.
-const stampArtistsFor = (shows: readonly HistoryShow[]): string[] => {
-  const recent = shows.slice(0, 3).map((show) => show.artist);
-  while (recent.length < 3) recent.push(`passport-${recent.length}`);
-  return recent;
+// B+ rule 4: the teaser shows the Passport's own venue stamps, one per venue,
+// from the most recent nights. Four fill the 2×2 block; a shorter history shows
+// what it has rather than inventing venues it never went to.
+const TEASER_STAMPS = 4;
+
+export const teaserStampsFor = (
+  shows: readonly HistoryShow[],
+): HistoryShow[] => {
+  const seen = new Set<string>();
+  const picked: HistoryShow[] = [];
+  for (const show of shows) {
+    if (picked.length === TEASER_STAMPS) break;
+    if (seen.has(show.venueSlug)) continue;
+    seen.add(show.venueSlug);
+    picked.push(show);
+  }
+  return picked;
 };
 
 const TeaserBody = ({
@@ -69,9 +80,20 @@ const TeaserBody = ({
       )}
     </span>
     {/* Decorative — the stat line above already carries every fact. */}
-    <span aria-hidden className="flex shrink-0 gap-1.5">
-      {stampArtistsFor(shows).map((artist, index) => (
-        <StubStamp key={`${artist}-${index}`} artist={artist} size={32} />
+    <span
+      aria-hidden
+      data-testid="passport-teaser-stamps"
+      className="grid shrink-0 grid-cols-2 gap-1.5 self-stretch border-l border-dashed border-border-strong pl-3.5"
+      style={{ alignContent: 'center' }}
+    >
+      {teaserStampsFor(shows).map((show) => (
+        <VenueStamp
+          key={show.venueSlug}
+          venueSlug={show.venueSlug}
+          venueName={show.venueName}
+          seed={show.artist}
+          size={40}
+        />
       ))}
     </span>
   </>

@@ -432,8 +432,8 @@ describe('EventRow — the footer slot', () => {
  * The fixtures are Watching rows, not Browse ones. A zero-chip row is what the
  * reservation exists for, and on Browse it is unreachable: `genre` leads that
  * surface's priority and no production event carries an empty `genres[]`. On
- * Watching the chips are `freshness` and `provenance`, both of which a live,
- * bare-priced show legitimately lacks.
+ * Watching the only chip is `provenance` (B+ dropped the Stale chip), which a
+ * live, bare-priced show legitimately lacks.
  */
 describe('EventRow — Rule 3, the row reserves its own height', () => {
   const FRESH = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -470,7 +470,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         isPending: false,
       },
     }),
-    // Both chips, which is the whole budget.
+    // A stale price: once two chips, now the same one chip, since Stale is gone.
     makeShow({
       price: {
         amount: 68,
@@ -491,7 +491,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
   it('runs the ladder from no chips to the full budget', () => {
     expect(
       watchingLadder.map((show) => rowChips(show, 'watching').length),
-    ).toEqual([0, 1, 2, 0]);
+    ).toEqual([0, 1, 1, 0]);
   });
 
   it('holds one height across a Watching list that runs from no chips to full', () => {

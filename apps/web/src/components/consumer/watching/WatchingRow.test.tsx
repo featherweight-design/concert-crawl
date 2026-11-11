@@ -213,35 +213,20 @@ describe('WatchingRow "Still going?" nudge', () => {
   });
 });
 
-// #1366 — staleness used to be computed from the event row's updatedAt, so a
-// price that Event Detail (which reads the price timestamp) called fresh could
-// be flagged stale here, and vice versa.
+// B+ "My shows": the Stale price chip is dropped everywhere. #1366's
+// single-source staleness still feeds the price surfaces that word it; it just
+// never becomes a chip on this row again.
 describe('WatchingRow staleness', () => {
   const daysAgo = (days: number) =>
     new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-  it('ages the price off its own observation time, not the event row', () => {
-    const { getByTestId } = render(
-      <WatchingRow
-        show={{
-          ...baseShow,
-          updatedAt: new Date().toISOString(),
-          priceObservedAt: daysAgo(8),
-        }}
-        onRemove={() => {}}
-      />,
-    );
-
-    expect(getByTestId('row-meta').textContent).toContain('Stale · 8d ago');
-  });
-
-  it('leaves a freshly observed price unflagged even on an old event row', () => {
+  it('shows no Stale chip for a price observed long ago', () => {
     const { queryByTestId } = render(
       <WatchingRow
         show={{
           ...baseShow,
           updatedAt: daysAgo(30),
-          priceObservedAt: new Date().toISOString(),
+          priceObservedAt: daysAgo(8),
         }}
         onRemove={() => {}}
       />,
@@ -250,16 +235,14 @@ describe('WatchingRow staleness', () => {
     expect(queryByTestId('row-meta')?.textContent ?? '').not.toContain('Stale');
   });
 
-  // Crawler prices carry no submission timestamp; the last crawl is what last
-  // confirmed the number, so updatedAt stays the fallback.
-  it('falls back to the event row when the price has no observation time', () => {
-    const { getByTestId } = render(
+  it('shows no Stale chip when the price falls back to the event row', () => {
+    const { queryByTestId } = render(
       <WatchingRow
         show={{ ...baseShow, updatedAt: daysAgo(3), priceObservedAt: null }}
         onRemove={() => {}}
       />,
     );
 
-    expect(getByTestId('row-meta').textContent).toContain('Stale · 3d ago');
+    expect(queryByTestId('row-meta')?.textContent ?? '').not.toContain('Stale');
   });
 });

@@ -11,13 +11,25 @@
 
 import type { HistoryStats } from '@concert-crawl/types';
 import { HISTORY_COPY } from './definitions/copy';
+import { MY_SHOWS_GRADIENT } from './definitions/constants';
 
 const COPY = HISTORY_COPY.header;
 
 // dt precedes dd in the DOM because HTML requires that order inside a <dl>
 // wrapper div; flex-col-reverse puts the big number back on top visually.
-const StatTile = ({ value, label }: { value: string; label: string }) => (
-  <div className="flex min-w-0 flex-col-reverse gap-0.5">
+const StatTile = ({
+  value,
+  label,
+  gradient,
+}: {
+  value: string;
+  label: string;
+  gradient: boolean;
+}) => (
+  <div
+    className="flex min-w-0 flex-col-reverse gap-0.5"
+    data-stat-gradient={gradient || undefined}
+  >
     <dt
       className="truncate"
       style={{
@@ -40,8 +52,13 @@ const StatTile = ({ value, label }: { value: string; label: string }) => (
         letterSpacing: '-0.025em',
         fontVariantNumeric: 'tabular-nums',
         lineHeight: 1,
-        color: 'var(--fg)',
+        color: gradient ? 'transparent' : 'var(--fg)',
         margin: 0,
+        ...(gradient && {
+          backgroundImage: MY_SHOWS_GRADIENT,
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+        }),
       }}
     >
       {value}
@@ -53,6 +70,8 @@ interface Tile {
   key: string;
   value: string;
   label: string;
+  /** B+ "My shows": only Top venue keeps a gradient. */
+  gradient: boolean;
 }
 
 // Kept as a pure function so the null-hiding rule is testable independently of
@@ -66,6 +85,7 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
         stats.nights === 1
           ? COPY.stats.nightsSingular
           : COPY.stats.nightsPlural,
+      gradient: false,
     },
     {
       key: 'venues',
@@ -74,6 +94,7 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
         stats.venues === 1
           ? COPY.stats.venuesSingular
           : COPY.stats.venuesPlural,
+      gradient: false,
     },
     {
       key: 'artists',
@@ -82,6 +103,7 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
         stats.artists === 1
           ? COPY.stats.artistsSingular
           : COPY.stats.artistsPlural,
+      gradient: false,
     },
   ];
 
@@ -90,6 +112,7 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
       key: 'topGenre',
       value: stats.topGenre,
       label: COPY.stats.topGenre,
+      gradient: false,
     });
   }
   if (stats.topVenue !== null) {
@@ -97,6 +120,7 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
       key: 'topVenue',
       value: stats.topVenue,
       label: COPY.stats.topVenue,
+      gradient: true,
     });
   }
   if (stats.totalSpent !== null) {
@@ -104,6 +128,7 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
       key: 'spent',
       value: `$${Math.round(stats.totalSpent)}`,
       label: COPY.stats.spent,
+      gradient: false,
     });
   }
 
@@ -148,7 +173,12 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
       {/* Wraps instead of scrolling at 320px — six tiles never fit one row. */}
       <dl className="m-0 flex flex-wrap items-center gap-x-5 gap-y-4">
         {tiles.map((tile) => (
-          <StatTile key={tile.key} value={tile.value} label={tile.label} />
+          <StatTile
+            key={tile.key}
+            value={tile.value}
+            label={tile.label}
+            gradient={tile.gradient}
+          />
         ))}
       </dl>
 

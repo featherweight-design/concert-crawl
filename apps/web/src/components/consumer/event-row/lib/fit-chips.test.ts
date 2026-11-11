@@ -31,10 +31,9 @@ describe('fitChips', () => {
     expect(fitChips([40, 50], 0, 5)).toBe(2);
   });
 
-  it("drops provenance when Stale alone fills a 320 row's meta column", () => {
-    // The handoff's stated consequence: freshness outranks provenance, and
-    // `Stale · 9d ago` (~96px) fills the tightest measured meta column (106px),
-    // so `Box office` (~81px) drops.
+  it("drops the second chip when the first fills a 320 row's meta column", () => {
+    // A ~96px chip fills the tightest measured meta column (106px), so a
+    // ~81px second chip drops.
     expect(fitChips([96, 81], 106, 5)).toBe(1);
   });
 });
