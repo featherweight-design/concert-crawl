@@ -19,6 +19,7 @@ import {
 } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { CandidatePicker } from '@/components/admin/artists/CandidatePicker';
+import { ReportedPanel } from '@/components/admin/artists/ReportedPanel';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -33,7 +34,7 @@ type MatchStatus =
  * answered — but it is a queue the admin filters by, so the two share a type
  * here and nowhere else.
  */
-type QueueFilter = MatchStatus | 'exhausted' | 'auto_matched';
+type QueueFilter = MatchStatus | 'exhausted' | 'auto_matched' | 'reported';
 
 interface AdminArtist {
   id: string;
@@ -48,6 +49,8 @@ interface AdminArtist {
   /** Set while the match is the best-effort rule's, until a human confirms it. */
   autoMatchedAt: string | null;
   isExhausted: boolean;
+  /** Open wrong-artist reports. Orthogonal to the match status. */
+  openReportCount: number;
 }
 
 /**
@@ -61,9 +64,10 @@ interface AdminArtist {
  * PATCH resets the attempt counter to zero, and the visibility PATCH never
  * touches it.
  */
-type PatchedArtist = Omit<AdminArtist, 'isExhausted'>;
+type PatchedArtist = Omit<AdminArtist, 'isExhausted' | 'openReportCount'>;
 
 const STATUS_CHIPS: QueueFilter[] = [
+  'reported',
   'ambiguous',
   'auto_matched',
   'unmatched',
@@ -73,8 +77,12 @@ const STATUS_CHIPS: QueueFilter[] = [
   'exhausted',
 ];
 
-/** The chip a row is listed under, which outranks its match status. */
-const bucketOf = (row: AdminArtist): QueueFilter =>
+/**
+ * The match-state chip a row is listed under, which outranks its match status.
+ * `reported` is never the answer: it is a second queue over the same rows, so
+ * it has its own count and its own leave rule in `applyWrite`.
+ */
+const bucketOf = (row: AdminArtist): Exclude<QueueFilter, 'reported'> =>
   row.isExhausted
     ? 'exhausted'
     : row.matchStatus === 'matched' && row.autoMatchedAt !== null
@@ -111,6 +119,7 @@ const shiftCounts = (
 };
 
 const EMPTY_COUNTS: Record<QueueFilter, number> = {
+  reported: 0,
   ambiguous: 0,
   unmatched: 0,
   no_match: 0,
@@ -134,6 +143,11 @@ export default function AdminArtistsPage() {
     useState<Record<QueueFilter, number>>(EMPTY_COUNTS);
   const [rows, setRows] = useState<AdminArtist[]>([]);
   const [confirming, setConfirming] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // One reports panel open at a time, like the picker; each one is a fetch.
+  const [openReportsFor, setOpenReportsFor] = useState<string | null>(null);
+  const [dismissing, setDismissing] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
   const [isLoading, setIsLoading] = useState(true);
@@ -255,10 +269,22 @@ export default function AdminArtistsPage() {
       generation: number,
     ) => {
       if (generation !== loadGeneration.current) return;
-      const next: AdminArtist = { ...previous, ...patched, isExhausted };
+      // An identity write closes every open report on the artist, in the same
+      // transaction on the server. So the row leaves the Reported queue.
+      const next: AdminArtist = {
+        ...previous,
+        ...patched,
+        isExhausted,
+        openReportCount: 0,
+      };
       const nextBucket = bucketOf(next);
-      setCounts((prev) => shiftCounts(prev, bucketOf(previous), nextBucket));
-      if (search !== '' || nextBucket === status) {
+      setCounts((prev) => {
+        const shifted = shiftCounts(prev, bucketOf(previous), nextBucket);
+        return previous.openReportCount > 0
+          ? { ...shifted, reported: Math.max(0, shifted.reported - 1) }
+          : shifted;
+      });
+      if (search !== '' || (status !== 'reported' && nextBucket === status)) {
         // Functional, because a chip change or a debounced search can land a
         // new list while the PATCH is in flight; mapping the closed-over array
         // would put the stale page back.
@@ -397,6 +423,58 @@ export default function AdminArtistsPage() {
     }
   };
 
+  // "Dismiss reports": the page is right as it is. Closes every open report
+  // without changing the match and without telling the reporters.
+  const dismissReports = async (previous: AdminArtist) => {
+    const generation = loadGeneration.current;
+    setDismissing((prev) => new Set(prev).add(previous.id));
+    try {
+      const token = await getToken();
+      if (!token) {
+        setError(COPY.reports.dismissError);
+        return;
+      }
+      const resp = await fetch(
+        `${API_BASE}/v1/admin/artists/${previous.id}/reports/dismiss`,
+        { method: 'POST', headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!resp.ok) {
+        setError(COPY.reports.dismissError);
+        return;
+      }
+      setError(null);
+      // Same rule as applyWrite: a load that landed meanwhile already read the
+      // dismissal back, and shifting on top of it would count it twice.
+      if (generation !== loadGeneration.current) return;
+      setCounts((prev) => ({
+        ...prev,
+        reported: Math.max(0, prev.reported - 1),
+      }));
+      setOpenReportsFor((current) =>
+        current === previous.id ? null : current,
+      );
+      if (status === 'reported' && search === '') {
+        setRows((prev) => prev.filter((row) => row.id !== previous.id));
+        setTotal((prev) => Math.max(0, prev - 1));
+      } else {
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === previous.id ? { ...row, openReportCount: 0 } : row,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error('[admin artists] dismiss failed', err);
+      setError(COPY.reports.dismissError);
+    } finally {
+      setDismissing((prev) => {
+        const next = new Set(prev);
+        next.delete(previous.id);
+        return next;
+      });
+    }
+  };
+
   // Visibility is its own endpoint, not a field on the identity PATCH above:
   // that body requires a spotifyArtistId, so hiding through it would mean
   // resending an identity just to take a page down (#1342).
@@ -455,6 +533,12 @@ export default function AdminArtistsPage() {
         {COPY.notAnArtistHint}
       </p>
 
+      {status === 'reported' && search === '' && (
+        <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
+          {COPY.reportedNotice}
+        </p>
+      )}
+
       {status === 'exhausted' && search === '' && (
         <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
           {COPY.exhaustedNotice}
@@ -471,6 +555,7 @@ export default function AdminArtistsPage() {
               // A picker left open on another chip reopens — and spends a fresh
               // Spotify search on mount — the moment the admin comes back.
               setOpenCandidatesFor(null);
+              setOpenReportsFor(null);
               setStatus(chip);
               setOffset(0);
             }}
@@ -611,6 +696,11 @@ export default function AdminArtistsPage() {
                               {COPY.autoBadge}
                             </StatusBadge>
                           )}
+                          {row.openReportCount > 0 && (
+                            <StatusBadge kind="warning">
+                              {COPY.reportsBadge(row.openReportCount)}
+                            </StatusBadge>
+                          )}
                         </div>
                       </TD>
                       {/* Read-only since #1345 gave every row a picker: an
@@ -661,6 +751,21 @@ export default function AdminArtistsPage() {
                                 {COPY.looksRight}
                               </AdminButton>
                             )}
+                          {row.openReportCount > 0 && (
+                            <AdminButton
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setOpenReportsFor((current) =>
+                                  current === row.id ? null : row.id,
+                                )
+                              }
+                            >
+                              {openReportsFor === row.id
+                                ? COPY.reports.toggleClose
+                                : COPY.reports.toggleOpen}
+                            </AdminButton>
+                          )}
                           {/* On every row, including `matched`: a matched row can
                             still be matched to the wrong artist, and this is
                             the only way to see the alternatives. */}
@@ -701,6 +806,23 @@ export default function AdminArtistsPage() {
                         </div>
                       </TD>
                     </TR>
+                    {openReportsFor === row.id && (
+                      <TR>
+                        <TD colSpan={6}>
+                          <ReportedPanel
+                            artistId={row.id}
+                            apiBase={API_BASE}
+                            getToken={getToken}
+                            dismissing={dismissing.has(row.id)}
+                            onUse={(spotifyArtistId) => {
+                              setOpenReportsFor(null);
+                              void save(row, spotifyArtistId);
+                            }}
+                            onDismiss={() => void dismissReports(row)}
+                          />
+                        </TD>
+                      </TR>
+                    )}
                     {openCandidatesFor === row.id && (
                       <TR>
                         <TD colSpan={6}>

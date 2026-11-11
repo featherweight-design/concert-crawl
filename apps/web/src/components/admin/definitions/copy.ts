@@ -2233,6 +2233,34 @@ export const ADMIN_COPY = {
       not_an_artist: 'Not an artist',
       exhausted: 'Given up',
       auto_matched: 'Auto-matched',
+      reported: 'Reported',
+    },
+    reportedNotice:
+      'Reported rows are artists a fan says we matched to the wrong act. Check the suggestion, then fix the match the usual way.',
+    reportsBadge: (count: number) =>
+      count === 1 ? '1 REPORT' : `${count} REPORTS`,
+    reports: {
+      toggleOpen: 'Reports',
+      toggleClose: 'Close',
+      matchedNow: 'MATCHED NOW',
+      suggested: 'SUGGESTED',
+      useThisArtist: 'Use this artist',
+      dismiss: 'Dismiss reports',
+      loading: 'Loading reports…',
+      loadError: 'Could not load the reports for this artist.',
+      dismissError: 'Could not dismiss the reports.',
+      noSuggestion: 'No link given',
+      followers: (count: number) =>
+        count === 1 ? '1 follower' : `${count} followers`,
+      noNextShow: 'No upcoming show',
+      closesHint: (count: number) =>
+        `Any fix or dismiss closes ${count === 1 ? 'this report' : `all ${count} reports`}. A fix also tells the reporters.`,
+      reason: {
+        different_artist: 'Different artist, same name',
+        wrong_photo: 'Right music, wrong photo',
+        not_an_artist: 'Not an artist',
+        other: 'Something else',
+      },
     },
     exhaustedNotice:
       'Given up holds rows the match job stopped searching after three tries. They keep their public page, and resolving one by hand puts it back in the rotation.',
