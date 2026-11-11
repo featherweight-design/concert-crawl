@@ -35,7 +35,10 @@ import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldO
 import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner';
 import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
 import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink';
-import { ReportSheet } from '@/components/consumer/reporting/ReportSheet';
+import {
+  ReportSheet,
+  getVisibleOptions,
+} from '@/components/consumer/reporting/ReportSheet';
 import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm';
 import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet';
 import { PriceDisplay } from '@/components/consumer/PriceDisplay';
@@ -181,11 +184,12 @@ export function EventDetailBanners({
   const [sawDifferentSheetOpen, setSawDifferentSheetOpen] = useState(false);
   const [evidenceFormOpen, setEvidenceFormOpen] = useState(false);
   const [evidenceFormReportType, setEvidenceFormReportType] = useState<
-    'sold-out' | 'cancelled' | 'postponed'
+    'sold-out' | 'cancelled' | 'postponed' | 'available'
   >('cancelled');
 
   const pendingCancelledReport = findPendingReport(reports, 'cancelled');
   const pendingPostponedReport = findPendingReport(reports, 'postponed');
+  const pendingAvailableReport = findPendingReport(reports, 'available');
 
   // Promoted status is reflected in event.status — admin resolves reports by promoting them.
   // The GET /reports endpoint only returns unresolved reports (resolvedAt IS NULL),
@@ -213,7 +217,10 @@ export function EventDetailBanners({
         ? pendingCancelledReport
         : pendingPostponedReport !== null && event.status !== 'postponed'
           ? pendingPostponedReport
-          : null;
+          : // Tickets available only means something against a live sold-out.
+            pendingAvailableReport !== null && event.priceStatus === 'soldout'
+            ? pendingAvailableReport
+            : null;
 
   const handleWithdrawReport = useCallback(
     (reportId: string) => {
@@ -237,7 +244,7 @@ export function EventDetailBanners({
   }, [router]);
 
   const handleSawDifferentSelect = useCallback(
-    (reportType: 'sold-out' | 'cancelled' | 'postponed') => {
+    (reportType: 'sold-out' | 'cancelled' | 'postponed' | 'available') => {
       setSawDifferentSheetOpen(false);
       setEvidenceFormReportType(reportType);
       setEvidenceFormOpen(true);
@@ -252,12 +259,25 @@ export function EventDetailBanners({
 
   // liveStatus for the "Saw something different?" ReportSheet — treat the
   // pending report as if it were live so the sheet shows counter options.
-  const sawDifferentLiveStatus: 'cancelled' | 'postponed' | null =
+  // A pending Tickets available sits on a live sold-out, so the sheet offers
+  // what a sold-out show offers.
+  const sawDifferentLiveStatus: 'cancelled' | 'postponed' | 'sold-out' | null =
     activePendingReport?.status === 'cancelled'
       ? 'cancelled'
       : activePendingReport?.status === 'postponed'
         ? 'postponed'
-        : null;
+        : activePendingReport?.status === 'available'
+          ? 'sold-out'
+          : null;
+  // Pending cancel/postpone reports have no live status yet, so the sheet
+  // shows the pending options; a pending Tickets available sits on a live
+  // sold-out. With nothing left to report, the ways into the sheet hide.
+  const canReportDifferent =
+    sawDifferentLiveStatus !== null &&
+    getVisibleOptions(
+      sawDifferentLiveStatus,
+      activePendingReport?.status !== 'available',
+    ).length > 0;
 
   // The promoted fan report behind the live status: sold out's own report,
   // or the one behind a cancelled or postponed status. With none, the status
@@ -310,7 +330,9 @@ export function EventDetailBanners({
             kind={
               activePendingReport.status === 'cancelled'
                 ? 'cancelled'
-                : 'postponed'
+                : activePendingReport.status === 'available'
+                  ? 'available'
+                  : 'postponed'
             }
             confirms={activePendingReport.confirmsCount}
             needed={activePendingReport.confirmsNeeded}
@@ -331,7 +353,11 @@ export function EventDetailBanners({
             }
             onConfirm={() => setConfirmSheetOpen(true)}
             onWithdraw={() => handleWithdrawReport(activePendingReport.id)}
-            onSawDifferent={() => setSawDifferentSheetOpen(true)}
+            onSawDifferent={
+              canReportDifferent
+                ? () => setSawDifferentSheetOpen(true)
+                : undefined
+            }
           />
         )}
       </div>
@@ -346,7 +372,9 @@ export function EventDetailBanners({
               ? 'cancelled'
               : activePendingReport.status === 'postponed'
                 ? 'postponed'
-                : 'sold-out'
+                : activePendingReport.status === 'available'
+                  ? 'available'
+                  : 'sold-out'
           }
           reportedAt={activePendingReport.createdAt}
           eventId={event.id}
@@ -357,10 +385,14 @@ export function EventDetailBanners({
               : null
           }
           onSuccess={handleConfirmSuccess}
-          onFileCounter={() => {
-            setConfirmSheetOpen(false);
-            setSawDifferentSheetOpen(true);
-          }}
+          onFileCounter={
+            canReportDifferent
+              ? () => {
+                  setConfirmSheetOpen(false);
+                  setSawDifferentSheetOpen(true);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -371,17 +403,7 @@ export function EventDetailBanners({
           onClose={() => setSawDifferentSheetOpen(false)}
           liveStatus={sawDifferentLiveStatus}
           eventDate={event.date}
-          onSelect={(reportType) => {
-            if (
-              reportType === 'sold-out' ||
-              reportType === 'cancelled' ||
-              reportType === 'postponed'
-            ) {
-              handleSawDifferentSelect(reportType);
-            } else {
-              setSawDifferentSheetOpen(false);
-            }
-          }}
+          onSelect={handleSawDifferentSelect}
         />
       )}
 
@@ -438,7 +460,7 @@ export function EventDetailPriceBlock({
   const [soldOutSawDifferentOpen, setSoldOutSawDifferentOpen] = useState(false);
   const [soldOutEvidenceFormOpen, setSoldOutEvidenceFormOpen] = useState(false);
   const [soldOutEvidenceReportType, setSoldOutEvidenceReportType] = useState<
-    'sold-out' | 'cancelled' | 'postponed'
+    'sold-out' | 'cancelled' | 'postponed' | 'available'
   >('sold-out');
   // Local confirm counts — incremented optimistically on successful API confirm
   const [localConfirms, setLocalConfirms] = useState<Record<string, number>>(
@@ -1490,22 +1512,19 @@ export function EventDetailPriceBlock({
           onSawDifferent={() => setSoldOutSawDifferentOpen(true)}
         />
 
-        {/* Fix 8: "Tickets still available?" → opens a ReportSheet → EvidenceForm */}
+        {/* Fix 8: "Saw something different?" on a pending sold-out → ReportSheet →
+            EvidenceForm. Pending, so Tickets available is not offered. */}
         <ReportSheet
           open={soldOutSawDifferentOpen}
           onClose={() => setSoldOutSawDifferentOpen(false)}
           liveStatus="sold-out"
+          // Not promoted yet, so Tickets available has nothing to clear.
+          isPending
           eventDate={event.date}
           onSelect={(reportType) => {
             setSoldOutSawDifferentOpen(false);
-            if (
-              reportType === 'sold-out' ||
-              reportType === 'cancelled' ||
-              reportType === 'postponed'
-            ) {
-              setSoldOutEvidenceReportType(reportType);
-              setSoldOutEvidenceFormOpen(true);
-            }
+            setSoldOutEvidenceReportType(reportType);
+            setSoldOutEvidenceFormOpen(true);
           }}
         />
         <EvidenceForm
@@ -2005,7 +2024,7 @@ export function EventDetailFooter({
   const [isReportSheetOpen, setIsReportSheetOpen] = useState(false);
   const [evidenceFormOpen, setEvidenceFormOpen] = useState(false);
   const [evidenceFormReportType, setEvidenceFormReportType] = useState<
-    'sold-out' | 'cancelled' | 'postponed'
+    'sold-out' | 'cancelled' | 'postponed' | 'available'
   >('cancelled');
 
   const pendingSoldOut = findPendingReport(reports, 'sold-out');
@@ -2025,9 +2044,10 @@ export function EventDetailFooter({
           ? 'sold-out'
           : null;
 
-  // When there's a pending cancellation/postponement (not yet promoted), the footer
-  // CTA becomes "Tickets still available?" and the ReportSheet must show the counter-
-  // report options (liveStatus='cancelled' → only 'available' is shown).
+  // A pending cancellation/postponement (not yet promoted) narrows the sheet to
+  // what is left to report against it (getVisibleOptions): a pending
+  // postponement leaves Cancelled; a pending cancellation leaves nothing, so
+  // the footer link hides.
   const hasPendingCancellation =
     pendingCancelled !== null && event.status !== 'cancelled';
   const hasPendingPostponement =
@@ -2036,8 +2056,8 @@ export function EventDetailFooter({
     pendingSoldOut !== null && event.priceStatus !== 'soldout';
 
   // The liveStatus passed to the ReportSheet controls which options are shown.
-  // For pending-but-not-promoted states, pass the pending type so the counter-report
-  // path (Tickets available) is the only visible option.
+  // For pending-but-not-promoted states, pass the pending type with isPending,
+  // so Tickets available is offered only against a promoted sold-out.
   const reportSheetLiveStatus: 'sold-out' | 'cancelled' | 'postponed' | null =
     hasPendingCancellation
       ? 'cancelled'
@@ -2052,11 +2072,14 @@ export function EventDetailFooter({
 
   return (
     <>
-      <ReportFooterLink
-        liveStatus={footerLiveStatus}
-        onOpen={() => setIsReportSheetOpen(true)}
-        signedOut={authLoaded && !isSignedIn}
-      />
+      {getVisibleOptions(reportSheetLiveStatus, reportSheetIsPending).length >
+        0 && (
+        <ReportFooterLink
+          liveStatus={footerLiveStatus}
+          onOpen={() => setIsReportSheetOpen(true)}
+          signedOut={authLoaded && !isSignedIn}
+        />
+      )}
       <ReportSheet
         open={isReportSheetOpen}
         onClose={() => setIsReportSheetOpen(false)}
@@ -2065,16 +2088,8 @@ export function EventDetailFooter({
         eventDate={event.date}
         onSelect={(reportType) => {
           setIsReportSheetOpen(false);
-          // 'available' is a counter-report — the API does not yet support this status.
-          // The modal closes cleanly; backend support is a follow-up item.
-          if (
-            reportType === 'sold-out' ||
-            reportType === 'cancelled' ||
-            reportType === 'postponed'
-          ) {
-            setEvidenceFormReportType(reportType);
-            setEvidenceFormOpen(true);
-          }
+          setEvidenceFormReportType(reportType);
+          setEvidenceFormOpen(true);
         }}
       />
       <EvidenceForm

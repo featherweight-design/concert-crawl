@@ -254,13 +254,21 @@ export interface ReportSheetProps {
 }
 
 // ── Derive visible options from liveStatus ────────────────────────
-const getVisibleOptions = (
+// Tickets available clears a promoted sold-out, and the API refuses it against
+// anything else (409 not_sold_out), so it is offered only while sold out is
+// live. Un-cancelling and un-postponing are not built, so a cancelled show has
+// nothing left to report and the footer link hides (B+ A3).
+export const getVisibleOptions = (
   liveStatus: ReportSheetProps['liveStatus'],
+  isPending = false,
 ): ReportType[] => {
   if (liveStatus === null) return ['sold-out', 'postponed', 'cancelled'];
-  if (liveStatus === 'sold-out') return ['available', 'postponed', 'cancelled'];
-  if (liveStatus === 'postponed') return ['available', 'cancelled'];
-  if (liveStatus === 'cancelled') return ['available'];
+  if (liveStatus === 'sold-out')
+    return isPending
+      ? ['postponed', 'cancelled']
+      : ['available', 'postponed', 'cancelled'];
+  if (liveStatus === 'postponed') return ['cancelled'];
+  if (liveStatus === 'cancelled') return [];
   return ['sold-out', 'postponed', 'cancelled'];
 };
 
@@ -277,7 +285,7 @@ export const ReportSheet = ({
   const hintId = useId();
   const { isLoaded, isSignedIn } = useAuth();
 
-  const visibleOptions = getVisibleOptions(liveStatus);
+  const visibleOptions = getVisibleOptions(liveStatus, isPending);
   const sheetHeight: 'tall' | 'short' =
     visibleOptions.length === 1 ? 'short' : 'tall';
 

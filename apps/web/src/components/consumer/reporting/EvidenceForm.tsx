@@ -31,7 +31,7 @@ const EVIDENCE_METHOD_TO_API: Record<EvidenceMethod, ApiEvidenceMethod> = {
   something_else: 'other',
 };
 
-type ReportType = 'sold-out' | 'cancelled' | 'postponed';
+type ReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available';
 
 // ── Evidence option data ──────────────────────────────────────────
 interface EvidenceOptionData {
@@ -440,11 +440,7 @@ export const EvidenceForm = ({
             textTransform: 'uppercase' as const,
           }}
         >
-          {reportType === 'sold-out'
-            ? 'Sold out'
-            : reportType === 'cancelled'
-              ? 'Cancelled'
-              : 'Postponed'}
+          {tokens.label}
         </div>
 
         {isImminent && (

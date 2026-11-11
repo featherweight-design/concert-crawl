@@ -240,7 +240,8 @@ export interface ConfirmReportSheetProps {
   eventId: string;
   reportId: string;
   onSuccess?: () => void;
-  onFileCounter: () => void;
+  /** Absent when there is nothing different left to report. */
+  onFileCounter?: (() => void) | undefined;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -297,7 +298,7 @@ export const ConfirmReportSheet = ({
     try {
       const authToken = await getToken();
       if (authToken === null) return;
-      await confirmEventReport(eventId, reportId, authToken);
+      await confirmEventReport(eventId, reportId, authToken, selectedMethod);
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -422,23 +423,25 @@ export const ConfirmReportSheet = ({
           >
             {copy.confirmButton}
           </button>
-          <button
-            onClick={onFileCounter}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '8px 0',
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              cursor: 'pointer',
-              textAlign: 'center' as const,
-              lineHeight: 1.4,
-            }}
-          >
-            {copy.counterReportLink}
-          </button>
+          {onFileCounter && (
+            <button
+              onClick={onFileCounter}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '8px 0',
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                cursor: 'pointer',
+                textAlign: 'center' as const,
+                lineHeight: 1.4,
+              }}
+            >
+              {copy.counterReportLink}
+            </button>
+          )}
         </div>
       }
     >
