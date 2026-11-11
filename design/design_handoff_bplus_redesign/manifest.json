@@ -1,0 +1,1423 @@
+[
+ {
+  "section": "01-core",
+  "name": "bp-browse",
+  "title": "Browse",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "01-core",
+  "name": "bp-event",
+  "title": "Event page",
+  "w": 1280,
+  "h": 1880
+ },
+ {
+  "section": "01-core",
+  "name": "bp-venue",
+  "title": "Venue page + First-timer guide",
+  "w": 1280,
+  "h": 1360
+ },
+ {
+  "section": "01-core",
+  "name": "bp-venues",
+  "title": "Venues list",
+  "w": 1280,
+  "h": 1180
+ },
+ {
+  "section": "01-core",
+  "name": "bp-watching",
+  "title": "Watching",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "01-core",
+  "name": "bp-concerts",
+  "title": "Concerts",
+  "w": 1280,
+  "h": 880
+ },
+ {
+  "section": "01-core",
+  "name": "bp-artists",
+  "title": "Artists",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "01-core",
+  "name": "bp-account",
+  "title": "Account menu",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-browse_m",
+  "title": "Browse (as live: one Tonight spotlight, then rows)",
+  "w": 390,
+  "h": 1500
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-event_m",
+  "title": "Event page",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-event_m_end",
+  "title": "Event page, scrolled to the end",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-venues_m",
+  "title": "Venues",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-venue_m",
+  "title": "Venue page + First-timer guide",
+  "w": 390,
+  "h": 1500
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-watching_m",
+  "title": "Watching",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-concerts_m",
+  "title": "Concerts",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-artists_m",
+  "title": "Artists",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "02-mobile",
+  "name": "bp-m-account_m",
+  "title": "Account menu (sheet)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-electric-browse_m",
+  "title": "Electric \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-electric-event_m_A",
+  "title": "Electric \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-jade-browse_m",
+  "title": "Jade \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-jade-event_m_A",
+  "title": "Jade \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-light-browse_m",
+  "title": "Light \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-light-event_m_A",
+  "title": "Light \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-pulse-browse_m",
+  "title": "Pulse \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-pulse-event_m_A",
+  "title": "Pulse \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-forge-browse_m",
+  "title": "Forge \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-forge-event_m_A",
+  "title": "Forge \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-bluenote-browse_m",
+  "title": "Blue Note \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-bluenote-event_m_A",
+  "title": "Blue Note \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-drip-browse_m",
+  "title": "Drip \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-drip-event_m_A",
+  "title": "Drip \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-cedar-browse_m",
+  "title": "Cedar \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-cedar-event_m_A",
+  "title": "Cedar \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-gloss-browse_m",
+  "title": "Gloss \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-t-gloss-event_m_A",
+  "title": "Gloss \u00b7 Event \u00b7 A theme backdrop",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-electric-browse",
+  "title": "Electric \u00b7 desktop Browse",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-electric-event_A",
+  "title": "Electric \u00b7 desktop Event \u00b7 A",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-pulse-browse",
+  "title": "Pulse \u00b7 desktop Browse",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-pulse-event_A",
+  "title": "Pulse \u00b7 desktop Event \u00b7 A",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-forge-browse",
+  "title": "Forge \u00b7 desktop Browse",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-forge-event_A",
+  "title": "Forge \u00b7 desktop Event \u00b7 A",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-light-browse",
+  "title": "Light \u00b7 desktop Browse",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "03-themes",
+  "name": "bp-td-light-event_A",
+  "title": "Light \u00b7 desktop Event \u00b7 A",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "04-genre-and-vibe",
+  "name": "bp-genres",
+  "title": "Genre color map",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "04-genre-and-vibe",
+  "name": "bp-chips-all",
+  "title": "Every chip in B+",
+  "w": 1280,
+  "h": 720
+ },
+ {
+  "section": "04-genre-and-vibe",
+  "name": "bp-vibe-vibe_sheet_m",
+  "title": "Vibe filter \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-genre-and-vibe",
+  "name": "bp-vibe-browse_vibe_m",
+  "title": "Filtered by two genres \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-genre-and-vibe",
+  "name": "bp-vibe-vibe_pop_d",
+  "title": "Vibe filter \u00b7 desktop",
+  "w": 1280,
+  "h": 1300
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_d",
+  "title": "Desktop \u00b7 at rest",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_who_d",
+  "title": "Desktop \u00b7 Crew lens open",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_where_d",
+  "title": "Desktop \u00b7 Where open, with venue icons",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_active_d",
+  "title": "Desktop \u00b7 four filters on",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_m_rest",
+  "title": "Mobile \u00b7 at rest",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_m_active",
+  "title": "Mobile \u00b7 four filters on",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_sheet_m",
+  "title": "Mobile \u00b7 the Filters sheet",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "05-filters",
+  "name": "bp-f-filt_venues_m",
+  "title": "Mobile \u00b7 All 21 venues",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_browse_m",
+  "title": "Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_event_m",
+  "title": "Event",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_artist_m",
+  "title": "Artist",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_venue_m",
+  "title": "Venue",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_watching_m",
+  "title": "Watching",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_concerts_m",
+  "title": "Concerts",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_artists_m",
+  "title": "Artists",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_crews_m",
+  "title": "Crews",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_crew_m",
+  "title": "A crew",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_browse_d",
+  "title": "Browse \u00b7 desktop",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-load_event_d",
+  "title": "Event \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-wave_board",
+  "title": "The pink wave loader",
+  "w": 1280,
+  "h": 520
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-pull_m",
+  "title": "Pull to refresh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-loadmore_m",
+  "title": "Load more, fetching (no wave)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_watching_m",
+  "title": "Watching",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_concerts_m",
+  "title": "Concerts",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_artists_m",
+  "title": "Artists",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_filtered_m",
+  "title": "No filter results",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_search_m",
+  "title": "No search results",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_passport_m",
+  "title": "Passport",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-empty_crewlens_m",
+  "title": "Crew lens, nobody going",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-cal_empty_m",
+  "title": "Cal, empty day",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-error_m",
+  "title": "Something went wrong",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-notfound_m",
+  "title": "Not found",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-offline_m",
+  "title": "Offline (PWA)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-notfound_d",
+  "title": "Not found \u00b7 desktop",
+  "w": 1280,
+  "h": 600
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-cal_m",
+  "title": "Cal \u00b7 week strip",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-cal_jump_m",
+  "title": "Jump to a date",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-cal_d",
+  "title": "Cal \u00b7 desktop",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-invite_m",
+  "title": "Crew invite",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-invite_member_m",
+  "title": "Already in",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-invite_stale_m",
+  "title": "Link gone stale",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-invite_d",
+  "title": "Crew invite \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-public_m",
+  "title": "Shared show, signed out",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-public_gone_m",
+  "title": "Shared show gone",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-public_d",
+  "title": "Shared show \u00b7 desktop",
+  "w": 1280,
+  "h": 800
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-confirm_price_m",
+  "title": "Confirm a price",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-confirm_self_m",
+  "title": "Your own pending price",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-tiers_board",
+  "title": "More tiers and vendors",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-extras_board",
+  "title": "Load more and welcome back",
+  "w": 1280,
+  "h": 420
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-notif_m",
+  "title": "Notifications",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-notif_empty_m",
+  "title": "Notifications \u00b7 empty",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-notif_load_m",
+  "title": "Notifications \u00b7 loading",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-notif_error_m",
+  "title": "Notifications \u00b7 error",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-feedback_tab_m",
+  "title": "Tell us tab",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-feedback_m",
+  "title": "Tell us",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-feedback_done_m",
+  "title": "Tell us \u00b7 sent",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-pwa_icons",
+  "title": "Home-screen icon",
+  "w": 1280,
+  "h": 540
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-install_m",
+  "title": "Install slot",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-install_ios_m",
+  "title": "Install on iPhone",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-install_android_m",
+  "title": "Install on Android",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-install_dismissed_m",
+  "title": "Install dismissed",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-install_d",
+  "title": "Install slot \u00b7 desktop",
+  "w": 1280,
+  "h": 500
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-push_ios_m",
+  "title": "Alerts need install (iPhone)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-offline_pill_m",
+  "title": "Offline, cached",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-offline_empty_m",
+  "title": "Offline, nothing cached",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-offline_account_m",
+  "title": "Offline, My shows",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_android_m",
+  "title": "Android system splash",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_ios0_m",
+  "title": "iPhone startup image",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_play_m",
+  "title": "\u25b6 Plays at real speed (loops)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_slow_m",
+  "title": "\u25b6 Same, 4\u00d7 slower",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k0_m",
+  "title": "0 ms \u00b7 first paint matches the splash",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k110_m",
+  "title": "110 ms \u00b7 the tile is gone, then it grows",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k300_m",
+  "title": "300 ms \u00b7 full size, pink starts up the trail",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k400_m",
+  "title": "400 ms \u00b7 pink climbs dot by dot",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k590_m",
+  "title": "590 ms \u00b7 pink reaches the core",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k740_m",
+  "title": "740 ms \u00b7 back to blue, the core pulses",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k950_m",
+  "title": "950 ms \u00b7 mark flies to the header",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-states",
+  "name": "bp-s-launch_k1100_m",
+  "title": "1.1 s \u00b7 Browse",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-d_profile",
+  "title": "Profile",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-d_submissions",
+  "title": "My submissions",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-d_appearance",
+  "title": "Appearance",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-d_notifications",
+  "title": "Notifications",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-d_account",
+  "title": "Account",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-d_zone",
+  "title": "Danger zone",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-edit_d",
+  "title": "Edit profile (dialog)",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-settings_m",
+  "title": "Settings \u00b7 mobile",
+  "w": 390,
+  "h": 2380
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-submissions_m",
+  "title": "My submissions \u00b7 mobile page",
+  "w": 390,
+  "h": 1200
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-s-e_mix",
+  "title": "Edit profile \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-palette",
+  "title": "Search palette (\u2318K), before typing",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-palette_typed",
+  "title": "Search palette, typing",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-search_m",
+  "title": "Search \u00b7 mobile, before typing",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-search_m_typed",
+  "title": "Search \u00b7 mobile, typing",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-passport",
+  "title": "Passport",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-passport_book",
+  "title": "Passport \u00b7 a few months in (spread 2)",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-passport_m",
+  "title": "Passport \u00b7 mobile",
+  "w": 390,
+  "h": 1480
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-passport_book_m",
+  "title": "Passport \u00b7 a few months in \u00b7 mobile",
+  "w": 390,
+  "h": 1240
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crews",
+  "title": "Crews",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_start",
+  "title": "Start a crew",
+  "w": 1280,
+  "h": 820
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_home",
+  "title": "Crew \u00b7 Coming up",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_who",
+  "title": "Crew \u00b7 Who's in",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_invite",
+  "title": "Invite people",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_options",
+  "title": "Crew options",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crews_m",
+  "title": "Crews \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_start_m",
+  "title": "Start a crew \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_home_m",
+  "title": "Crew \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_been_m",
+  "title": "Crew \u00b7 Been there, empty \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_invite_m",
+  "title": "Invite \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-crew_options_m",
+  "title": "Crew options \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-share_d",
+  "title": "Share sheet \u00b7 desktop",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-share_m",
+  "title": "Share sheet \u00b7 mobile, Wide",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-share_m_square",
+  "title": "Share sheet \u00b7 mobile, Square",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-share_shapes",
+  "title": "Share image: Story, Square, Wide",
+  "w": 1400,
+  "h": 620
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-whatsnew",
+  "title": "What's new",
+  "w": 1280,
+  "h": 1320
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-feature_modal",
+  "title": "Feature announcement",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "07-more-screens",
+  "name": "more-r3-whatsnew_m",
+  "title": "What's new \u00b7 mobile",
+  "w": 390,
+  "h": 1720
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-submit_d",
+  "title": "Submit a price \u00b7 desktop",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-check_d",
+  "title": "Price check \u00b7 desktop",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-price_states",
+  "title": "Prices on the event page",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-submit_m",
+  "title": "Submit a price \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-submit_two_m",
+  "title": "Two tiers, with errors \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-submit_done_m",
+  "title": "Submitted \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-already_m",
+  "title": "Already submitted \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-error_m",
+  "title": "Didn\u2019t go through \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-p-check_m",
+  "title": "Price check \u00b7 mobile",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-report_m",
+  "title": "Report a status change \u00b7 nothing live",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-report_live_m",
+  "title": "Report \u00b7 something already live",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-evidence_m",
+  "title": "How do you know? \u00b7 show within 7 days",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-filed_m",
+  "title": "Report filed (new)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-already_rep_m",
+  "title": "Already reported (new)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-confirm_rep_m",
+  "title": "Confirm a report",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_pending_canc_m",
+  "title": "Cancelled \u00b7 pending, another fan sees",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_pending_mine_m",
+  "title": "Postponed \u00b7 pending, your report",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_canc_m",
+  "title": "Cancelled \u00b7 live",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_post_m",
+  "title": "Postponed \u00b7 live",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_sold_pending_m",
+  "title": "Sold out \u00b7 pending",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_sold_m",
+  "title": "Sold out \u00b7 live",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-ev_canc_d",
+  "title": "Cancelled \u00b7 desktop",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-rows_board",
+  "title": "In rows, and in the inbox",
+  "w": 1280,
+  "h": 660
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-disputes_board",
+  "title": "The price card while a Price check is open",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-counter_m",
+  "title": "Update the price \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-prices-and-status",
+  "name": "more-st-counter_done_m",
+  "title": "Update submitted \u00b7 mobile",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "09-artist",
+  "name": "artist-light",
+  "title": "Artist \u00b7 Light theme",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "09-artist",
+  "name": "artist-burst-toki",
+  "title": "Desktop with starburst \u00b7 following",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "09-artist",
+  "name": "artist-burst-puma",
+  "title": "Desktop with starburst \u00b7 not following",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "09-artist",
+  "name": "artist-m-noburst-puma",
+  "title": "Mobile without starburst \u00b7 not following",
+  "w": 390,
+  "h": 1180
+ },
+ {
+  "section": "09-artist",
+  "name": "artist-m-noburst-toki",
+  "title": "Mobile without starburst \u00b7 following",
+  "w": 390,
+  "h": 1180
+ },
+ {
+  "section": "10-venue-art",
+  "name": "hero-venue",
+  "title": "Venue page \u00b7 neon hero + icon",
+  "w": 1280,
+  "h": 1400
+ },
+ {
+  "section": "10-venue-art",
+  "name": "hero-m-church",
+  "title": "Mobile \u00b7 The Church Nightclub",
+  "w": 390,
+  "h": 480
+ },
+ {
+  "section": "10-venue-art",
+  "name": "hero-m-ogden",
+  "title": "Mobile \u00b7 Ogden Theatre",
+  "w": 390,
+  "h": 480
+ },
+ {
+  "section": "10-venue-art",
+  "name": "hero-m-redrocks",
+  "title": "Mobile \u00b7 Red Rocks Amphitheatre",
+  "w": 390,
+  "h": 480
+ },
+ {
+  "section": "10-venue-art",
+  "name": "hero-all",
+  "title": "Venue heroes \u00b7 all 21",
+  "w": 1320,
+  "h": 2560
+ },
+ {
+  "section": "10-venue-art",
+  "name": "hero-review",
+  "title": "Review sheet \u00b7 every venue, every state",
+  "w": 1320,
+  "h": 2560
+ },
+ {
+  "section": "10-venue-art",
+  "name": "vall-icon",
+  "title": "Icon \u00b7 all 21",
+  "w": 1320,
+  "h": 2240
+ },
+ {
+  "section": "11-signed-out",
+  "name": "inv-desk",
+  "title": "Invite page \u00b7 desktop",
+  "w": 1440,
+  "h": 900
+ },
+ {
+  "section": "11-signed-out",
+  "name": "inv-mob",
+  "title": "Invite page \u00b7 mobile",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "11-signed-out",
+  "name": "inv-light",
+  "title": "Invite page \u00b7 Light theme",
+  "w": 1440,
+  "h": 900
+ }
+]

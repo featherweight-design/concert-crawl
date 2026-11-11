@@ -78,9 +78,9 @@ _Currently empty — **#1226** went 🟢 on 2026-08-05 and shipped 2026-08-08; *
 
 Currently active. Handoff iteration or audit is mid-stream.
 
-| # / vertical                                                                                                                       | Phase | Priority | State |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ----- | -------- | ----- |
-| _Currently empty — **#1525**'s R3 audit closed 2026-08-14 with a 🟢 verdict, so it moved straight to 🟢 Ready for implementation._ |
+| # / vertical                                                                                                                                                         | Phase  | Priority | State                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **— (no source ticket)** B+ redesign of every consumer screen: `design/design_handoff_bplus_redesign/` ([canvas](https://claude.ai/artifact/N4JeHr2G9B3vC1gSHEFdMc)) | Launch | Normal   | Handoff landed 2026-11-11 (all screens approved by Hugh). Next: Readiness Review, then copy review before Phase 1, then the Phase 0 plan PR. |
 
 ---
 
