@@ -2,16 +2,9 @@
 
 import '@testing-library/jest-dom';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { CounterSubmitSheet } from './CounterSubmitSheet';
-import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy';
 
 const getToken = vi.fn(async () => 'test-token');
 const refresh = vi.fn();
@@ -50,7 +43,6 @@ const fillRequiredFields = () => {
   fireEvent.change(screen.getByLabelText(/floor/i), {
     target: { value: '55' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'GA' }));
   fireEvent.click(screen.getByRole('button', { name: /bought it myself/i }));
 };
 
@@ -108,80 +100,44 @@ describe('CounterSubmitSheet signed-out gate (#1247)', () => {
   });
 });
 
-describe('CounterSubmitSheet vendor picker', () => {
-  it('renders the shared grouped picker, not a flat vendor chip list', () => {
+// A price update lands in the checked price's slot: the API copies its tier and
+// vendor, so the sheet names that slot and asks for neither.
+describe('CounterSubmitSheet slot', () => {
+  it('asks for no tier or vendor', () => {
     renderSheet();
+    expect(screen.queryByRole('button', { name: 'GA' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'VIP' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Etix' })).toBeNull();
+  });
 
-    const group = screen.getByRole('radiogroup', {
-      name: VENDOR_PICKER_COPY.label,
+  it("names the checked price's tier and vendor", () => {
+    render(
+      <CounterSubmitSheet
+        open
+        onClose={vi.fn()}
+        eventId="evt-1"
+        disputedSubmissionId="sub-1"
+        currentFloor={40}
+        currentVendor="AXS"
+        currentTier="VIP"
+      />,
+    );
+    expect(screen.getByText(/\$40 VIP on AXS/)).toBeInTheDocument();
+  });
+
+  it('posts without a tier or vendor', async () => {
+    renderSheet();
+    fillRequiredFields();
+    submit();
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    const body = lastPostBody();
+    expect(body).not.toHaveProperty('tier');
+    expect(body).not.toHaveProperty('vendor');
+    expect(body).toMatchObject({
+      priceMin: 55,
+      howFound: 'bought_myself',
+      disputedSubmissionId: 'sub-1',
     });
-    expect(within(group).getAllByRole('radio')).toHaveLength(3);
-    expect(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    ).toBeInTheDocument();
-  });
-
-  it('offers Etix, the vendor the flat six-option list was missing', () => {
-    renderSheet();
-
-    fireEvent.click(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    );
-
-    expect(screen.getByRole('option', { name: 'Etix' })).toBeInTheDocument();
-  });
-
-  it('teaches the resale distinction the flat list never did', () => {
-    renderSheet();
-
-    fireEvent.click(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    );
-
-    expect(
-      screen.getByRole('group', {
-        name: `${VENDOR_PICKER_COPY.groups.resale.label}, ${VENDOR_PICKER_COPY.groups.resale.caption}`,
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it('posts a vendor picked from the dropdown', async () => {
-    renderSheet();
-
-    fillRequiredFields();
-    fireEvent.click(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    );
-    fireEvent.click(screen.getByRole('option', { name: 'Etix' }));
-    submit();
-
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-    expect(lastPostBody()['vendor']).toBe('Etix');
-  });
-
-  it('posts the catch-all as Other rather than silently becoming Ticketmaster', async () => {
-    renderSheet();
-
-    fillRequiredFields();
-    fireEvent.click(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    );
-    fireEvent.click(
-      screen.getByRole('option', { name: VENDOR_PICKER_COPY.vendors.Other }),
-    );
-    submit();
-
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-    expect(lastPostBody()['vendor']).toBe('Other');
-  });
-
-  it('blocks submission until a vendor is picked', () => {
-    renderSheet();
-
-    fillRequiredFields();
-    submit();
-
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(screen.getByText("Pick where it's listed.")).toBeInTheDocument();
   });
 });

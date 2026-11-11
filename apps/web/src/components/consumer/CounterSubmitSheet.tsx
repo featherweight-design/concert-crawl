@@ -10,20 +10,11 @@ import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { VendorField } from '@/components/consumer/submit-price/VendorField';
 import { apiErrorMessage } from '@/components/consumer/lib/api-error-message';
 import { SP_POLICY } from '@concert-crawl/types';
-import type { Tier, Vendor } from '@concert-crawl/types';
+import type { Tier } from '@concert-crawl/types';
 
 const copy = CONSUMER_COPY.counterSubmitSheet;
-
-const TIER_OPTIONS: { value: string; label: string }[] = [
-  { value: 'GA', label: 'GA' },
-  { value: 'Reserved', label: 'Reserved' },
-  { value: 'VIP', label: 'VIP' },
-  { value: 'Pit', label: 'Pit' },
-  { value: 'Lawn', label: 'Lawn' },
-];
 
 type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue';
 
@@ -46,6 +37,12 @@ export interface CounterSubmitSheetProps {
   currentFloor: number;
   currentCeiling?: number;
   currentVendor: string;
+  /**
+   * The checked price's tier, when the page knows it. A price update always
+   * lands in the checked price's slot (the API copies its tier and vendor), so
+   * the sheet names that slot instead of asking for one.
+   */
+  currentTier?: Tier | null;
   onSuccess?: () => void;
 }
 
@@ -54,16 +51,12 @@ const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 interface FormErrors {
   floor?: string;
   ceiling?: string;
-  tier?: string;
-  vendor?: string;
   howFound?: string;
 }
 
 const validateForm = (
   floor: string,
   ceiling: string,
-  tier: string | null,
-  vendor: string | null,
   howFound: string | null,
 ): FormErrors => {
   const errors: FormErrors = {};
@@ -84,16 +77,9 @@ const validateForm = (
     }
   }
 
-  if (!tier) errors.tier = 'Pick a tier.';
-  if (!vendor) errors.vendor = "Pick where it's listed.";
   if (!howFound) errors.howFound = 'Tell us how you found out.';
 
   return errors;
-};
-
-const isValidTier = (value: string): value is Tier => {
-  const validTiers: Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn'];
-  return validTiers.includes(value as Tier);
 };
 
 export function CounterSubmitSheet({
@@ -104,6 +90,7 @@ export function CounterSubmitSheet({
   currentFloor,
   currentCeiling,
   currentVendor,
+  currentTier = null,
   onSuccess,
 }: CounterSubmitSheetProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -112,24 +99,26 @@ export function CounterSubmitSheet({
   const [sheetState, setSheetState] = useState<SheetState>('form');
   const [floor, setFloor] = useState('');
   const [ceiling, setCeiling] = useState('');
-  const [tier, setTier] = useState<string | null>(null);
-  const [vendor, setVendor] = useState<Vendor | null>(null);
   const [howFound, setHowFound] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
 
   const subtitle =
     currentCeiling != null
-      ? copy.subtitleWithRange(currentFloor, currentCeiling, currentVendor)
-      : copy.subtitleFloorOnly(currentFloor, currentVendor);
+      ? copy.subtitleWithRange(
+          currentFloor,
+          currentCeiling,
+          currentTier,
+          currentVendor,
+        )
+      : copy.subtitleFloorOnly(currentFloor, currentTier, currentVendor);
 
   const handleSubmit = useCallback(async () => {
-    const errors = validateForm(floor, ceiling, tier, vendor, howFound);
+    const errors = validateForm(floor, ceiling, howFound);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    if (!tier || !vendor || !howFound) return;
+    if (!howFound) return;
 
-    const resolvedTier = isValidTier(tier) ? tier : 'GA';
     const resolvedHowFound: HowFound = isValidHowFound(howFound)
       ? howFound
       : 'saw_listing';
@@ -152,8 +141,6 @@ export function CounterSubmitSheet({
           body: JSON.stringify({
             priceMin: Number(floor),
             priceMax: ceiling ? Number(ceiling) : undefined,
-            tier: resolvedTier,
-            vendor,
             howFound: resolvedHowFound,
             disputedSubmissionId,
           }),
@@ -174,8 +161,6 @@ export function CounterSubmitSheet({
   }, [
     floor,
     ceiling,
-    tier,
-    vendor,
     howFound,
     getToken,
     eventId,
@@ -197,8 +182,6 @@ export function CounterSubmitSheet({
     setSheetState('form');
     setFloor('');
     setCeiling('');
-    setTier(null);
-    setVendor(null);
     setHowFound(null);
     setFieldErrors({});
     onClose();
@@ -377,21 +360,6 @@ export function CounterSubmitSheet({
               {copy.ceilingHint}
             </p>
           </div>
-
-          {/* Tier chips */}
-          <ChipGroup
-            label={copy.tierLabel}
-            options={TIER_OPTIONS}
-            value={tier}
-            onChange={setTier}
-            error={fieldErrors.tier}
-          />
-
-          <VendorField
-            value={vendor}
-            onChange={setVendor}
-            error={fieldErrors.vendor}
-          />
 
           {/* How found chips */}
           <ChipGroup

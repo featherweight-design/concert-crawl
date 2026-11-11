@@ -16,7 +16,7 @@ interface WatchingContentProps {
   initialShows: WatchingShow[];
 }
 
-function countChanges(shows: WatchingShow[]): {
+export function countChanges(shows: WatchingShow[]): {
   drops: number;
   spikes: number;
   soldOut: number;
@@ -26,7 +26,9 @@ function countChanges(shows: WatchingShow[]): {
   let soldOut = 0;
   for (const show of shows) {
     if (show.watchStatus === 'soldout') {
-      soldOut++;
+      // A cancelled or postponed show's row says that rather than "Sold out"
+      // (resolveRowStatus), so the summary doesn't count it as sold out.
+      if (show.eventStatus === 'upcoming') soldOut++;
     } else if (
       show.savedPrice !== null &&
       show.currentPrice !== null &&

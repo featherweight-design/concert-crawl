@@ -27,6 +27,7 @@ import {
   seedUserEvent,
   seedPriceSubmission,
   seedArtist,
+  seedEventReport,
 } from '../test/helpers/seed.js';
 
 const app = createApp();
@@ -169,6 +170,49 @@ describe('GET /v1/watching', () => {
     expect(body.data[0]?.artist).toBe('Radiohead');
     expect(body.data[0]?.venueName).toBe('Red Rocks');
     expect(body.data[0]?.venueSlug).toBe('red-rocks');
+  });
+
+  // watchStatus is the price's state; the show's lifecycle is eventStatus.
+  it('reads a cancelled show as live, not sold out', async () => {
+    setAuth('user_cancelled');
+    const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' });
+    const event = await seedEvent(venue.id, {
+      date: '2099-08-02',
+      status: 'cancelled',
+    });
+    await seedUserEvent('user_cancelled', event.id, { status: 'watching' });
+
+    const res = await app.request('/v1/watching');
+    const body = (await res.json()) as {
+      data: { watchStatus: string; eventStatus: string }[];
+    };
+    expect(body.data[0]).toMatchObject({
+      watchStatus: 'live',
+      eventStatus: 'cancelled',
+    });
+  });
+
+  it('reads a show with a promoted sold-out report as sold out', async () => {
+    setAuth('user_soldout');
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' });
+    const soldOut = await seedEvent(venue.id, { date: '2099-08-03' });
+    const pendingOnly = await seedEvent(venue.id, {
+      artist: 'Someone Else',
+      date: '2099-08-04',
+    });
+    await seedEventReport(soldOut.id, 'fan_a', { resolution: 'promoted' });
+    await seedEventReport(pendingOnly.id, 'fan_b');
+    await seedUserEvent('user_soldout', soldOut.id, { status: 'watching' });
+    await seedUserEvent('user_soldout', pendingOnly.id, { status: 'watching' });
+
+    const res = await app.request('/v1/watching');
+    const body = (await res.json()) as {
+      data: { eventId: string; watchStatus: string }[];
+    };
+    const statusOf = (id: string) =>
+      body.data.find((show) => show.eventId === id)?.watchStatus;
+    expect(statusOf(soldOut.id)).toBe('soldout');
+    expect(statusOf(pendingOnly.id)).toBe('live');
   });
 
   it('returns watchStatus: live (not presale) for on-sale events with no price data', async () => {

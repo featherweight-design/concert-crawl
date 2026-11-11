@@ -1,8 +1,15 @@
 // apps/api/src/routes/watching.ts
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
-import { eq, and, gte, asc, isNull } from 'drizzle-orm';
-import { db, userEvents, events, venues, artists } from '@concert-crawl/db';
+import { eq, and, gte, asc, inArray, isNull } from 'drizzle-orm';
+import {
+  db,
+  userEvents,
+  events,
+  eventReports,
+  venues,
+  artists,
+} from '@concert-crawl/db';
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
 import {
@@ -28,11 +35,25 @@ export const watchingRouter = new Hono();
 
 watchingRouter.use('*', clerkMiddleware());
 
-function resolveWatchStatus(
-  eventStatus: 'upcoming' | 'cancelled' | 'postponed',
-): 'live' | 'soldout' {
-  if (eventStatus === 'cancelled') return 'soldout';
-  return 'live';
+/**
+ * The events among `eventIds` with a promoted sold-out report: the same test
+ * GET /v1/events/:id uses for its priceStatus. watchStatus is the price's
+ * state, a separate axis from the show's lifecycle (eventStatus), which the row
+ * resolves on its own: a cancelled show is not sold out.
+ */
+async function soldOutEventIds(eventIds: string[]): Promise<Set<string>> {
+  if (eventIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ eventId: eventReports.eventId })
+    .from(eventReports)
+    .where(
+      and(
+        inArray(eventReports.eventId, eventIds),
+        eq(eventReports.status, 'sold-out'),
+        eq(eventReports.resolution, 'promoted'),
+      ),
+    );
+  return new Set(rows.map((row) => row.eventId));
 }
 
 // GET /v1/watching — return user's watched upcoming shows
@@ -91,9 +112,11 @@ watchingRouter.get('/', async (ctx) => {
   // The cheapest tier, not events.ticketPriceMin — that scalar holds whatever
   // price was written last and made Watching disagree with the event page
   // (#1365).
-  const priceByTierByEventId = await loadPriceByTierByEventId(
-    rows.map((row) => row.eventId),
-  );
+  const eventIds = rows.map((row) => row.eventId);
+  const [priceByTierByEventId, soldOut] = await Promise.all([
+    loadPriceByTierByEventId(eventIds),
+    soldOutEventIds(eventIds),
+  ]);
 
   const data: WatchingShow[] = rows.map((row) => ({
     userEventId: row.userEventId,
@@ -119,7 +142,7 @@ watchingRouter.get('/', async (ctx) => {
       priceByTierByEventId.get(row.eventId) ?? [],
     ),
     eventStatus: row.eventStatus,
-    watchStatus: resolveWatchStatus(row.eventStatus),
+    watchStatus: soldOut.has(row.eventId) ? 'soldout' : 'live',
     updatedAt: row.updatedAt.toISOString(),
     priceObservedAt: lowestHeadlineObservedAt(
       priceByTierByEventId.get(row.eventId) ?? [],

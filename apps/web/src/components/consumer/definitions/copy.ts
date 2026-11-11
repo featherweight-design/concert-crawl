@@ -1460,15 +1460,20 @@ export const CONSUMER_COPY = {
   counterSubmitSheet: {
     eyebrow: 'Price update',
     heading: 'Update the price.',
-    subtitleWithRange: (floor: number, ceiling: number, vendor: string) =>
-      `Currently listed: $${floor}–$${ceiling} on ${vendor}. Your update goes pending until another fan confirms.`,
-    subtitleFloorOnly: (floor: number, vendor: string) =>
-      `Currently listed: $${floor} on ${vendor}. Your update goes pending until another fan confirms.`,
+    // The tier names the slot the update lands in; it's left out when unknown.
+    subtitleWithRange: (
+      floor: number,
+      ceiling: number,
+      tier: string | null,
+      vendor: string,
+    ) =>
+      `Currently listed: $${floor}–$${ceiling}${tier ? ` ${tier}` : ''} on ${vendor}. Your update goes pending until another fan confirms.`,
+    subtitleFloorOnly: (floor: number, tier: string | null, vendor: string) =>
+      `Currently listed: $${floor}${tier ? ` ${tier}` : ''} on ${vendor}. Your update goes pending until another fan confirms.`,
     floorLabel: 'Floor price',
     floorPlaceholder: '35',
     ceilingLabel: 'Ceiling price (optional)',
     ceilingPlaceholder: '75',
-    tierLabel: 'Tier *',
     howFoundLabel: 'How you found out *',
     ceilingHint: 'Optional. Helps fans know the full price range.',
     honestyDisclaimer: 'By submitting, you confirm this is accurate.',
