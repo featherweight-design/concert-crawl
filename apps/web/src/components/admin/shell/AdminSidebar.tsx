@@ -6,7 +6,12 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useClerk } from '@clerk/nextjs';
 import * as LucideIcons from 'lucide-react';
 import { LogOut } from 'lucide-react';
-import { NAV_V2, type NavItem } from './nav';
+import {
+  NAV_V2,
+  badgeCountFor,
+  type AdminBadgeCounts,
+  type NavItem,
+} from './nav';
 import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
 import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
@@ -16,7 +21,7 @@ type SidebarMode = 'full' | 'rail' | 'auto';
 const STORAGE_KEY = 'cc-admin-sidebar';
 
 interface AdminSidebarProps {
-  badgeCounts?: { crawl: number; review: number; feedback: number };
+  badgeCounts?: AdminBadgeCounts;
   user: { firstName: string | null; email: string };
 }
 
@@ -188,13 +193,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
   const effectiveMode: 'full' | 'rail' = mode === 'auto' ? viewportMode : mode;
   const width = effectiveMode === 'full' ? 240 : 64;
 
-  const getCount = (key: string): number => {
-    if (!badgeCounts) return 0;
-    if (key === 'crawl') return badgeCounts.crawl;
-    if (key === 'review') return badgeCounts.review;
-    if (key === 'feedback') return badgeCounts.feedback;
-    return 0;
-  };
+  const getCount = (key: string): number => badgeCountFor(key, badgeCounts);
 
   const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase();
   const opsItems = NAV_V2.filter((item) => item.section === 'operations');

@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import * as LucideIcons from 'lucide-react';
-import { NAV_V2 } from './nav';
+import { NAV_V2, badgeCountFor, type AdminBadgeCounts } from './nav';
 import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface MobileBottomBarProps {
-  badgeCounts?: { crawl: number; review: number; feedback: number };
+  badgeCounts?: AdminBadgeCounts;
 }
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
@@ -19,17 +19,6 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
     >
   )[name];
   return Icon ? <Icon size={size} /> : null;
-};
-
-const getCount = (
-  key: string,
-  counts?: { crawl: number; review: number; feedback: number },
-): number => {
-  if (!counts) return 0;
-  if (key === 'crawl') return counts.crawl;
-  if (key === 'review') return counts.review;
-  if (key === 'feedback') return counts.feedback;
-  return 0;
 };
 
 export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
@@ -63,7 +52,7 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
         const active =
           pathname === item.href ||
           (item.href !== '/admin' && pathname.startsWith(item.href));
-        const count = getCount(item.key, badgeCounts);
+        const count = badgeCountFor(item.key, badgeCounts);
         const showBadge = item.badge !== undefined && count > 0;
 
         const href = item.key === 'review' ? reviewHref : item.href;

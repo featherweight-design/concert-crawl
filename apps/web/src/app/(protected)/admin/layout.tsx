@@ -23,6 +23,10 @@ interface FeedbackCounts {
   unread: number;
 }
 
+interface ReportedArtistsCount {
+  count: number;
+}
+
 export default async function AdminLayout({
   children,
 }: {
@@ -35,13 +39,19 @@ export default async function AdminLayout({
   let blockedCrawls = 0;
   let pendingReview = 0;
   let unreadFeedback = 0;
+  let reportedArtists = 0;
 
   if (token) {
-    const [statusRes, reviewRes, feedbackRes] = await Promise.allSettled([
-      apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
-      apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
-      apiClient.get<FeedbackCounts>('/v1/admin/feedback/counts', token),
-    ]);
+    const [statusRes, reviewRes, feedbackRes, reportedRes] =
+      await Promise.allSettled([
+        apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
+        apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
+        apiClient.get<FeedbackCounts>('/v1/admin/feedback/counts', token),
+        apiClient.get<ReportedArtistsCount>(
+          '/v1/admin/artists/reports/count',
+          token,
+        ),
+      ]);
 
     if (statusRes.status === 'fulfilled') {
       blockedCrawls = statusRes.value.filter(
@@ -78,6 +88,14 @@ export default async function AdminLayout({
         reason: feedbackRes.reason,
       });
     }
+
+    if (reportedRes.status === 'fulfilled') {
+      reportedArtists = reportedRes.value.count;
+    } else {
+      console.warn('[admin layout] reported artists count fetch failed', {
+        reason: reportedRes.reason,
+      });
+    }
   }
 
   return (
@@ -96,6 +114,7 @@ export default async function AdminLayout({
             crawl: blockedCrawls,
             review: pendingReview,
             feedback: unreadFeedback,
+            artists: reportedArtists,
           }}
           user={{ firstName: adminUser.firstName, email: adminUser.email }}
         >
