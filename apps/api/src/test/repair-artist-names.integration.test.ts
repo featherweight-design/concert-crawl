@@ -411,14 +411,66 @@ describe('repair-artist-names integration', () => {
       ]);
     });
 
-    it('never adopts a billing that spells the act differently from Spotify', async () => {
+    it('falls back to the billing rules when Spotify names the act differently', async () => {
       await seedSingleActBill('Beatles', 'beatles');
-      await seedMatchedArtist('beatles', 'beatles', 'The Beatles');
+      await seedMatchedArtist(
+        'Beatles: Farewell Tour',
+        'beatles',
+        'The Beatles',
+      );
 
       const result = await repairArtistNames(testDb, { dryRun: false });
 
-      expect(result.candidates).toBe(0);
-      expect((await listArtists())[0]?.name).toBe('beatles');
+      expect(result.sample).toEqual([
+        {
+          slug: 'beatles',
+          from: 'Beatles: Farewell Tour',
+          to: 'Beatles',
+          kind: 'shorten',
+          source: 'billing',
+        },
+      ]);
+    });
+
+    it("restores Spotify's accents on a mixed-case name", async () => {
+      await seedSingleActBill('Sigur Rós', 'sigur ros');
+      await seedMatchedArtist('Sigur Ros', 'sigur ros', 'Sigur Rós');
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.byKind).toEqual({ recase: 1 });
+      expect((await listArtists())[0]?.name).toBe('Sigur Rós');
+    });
+
+    it('reads a repeated Spotify id in snapshot order', async () => {
+      await seedSingleActBill('Foo Fighters', 'foo fighters');
+      await testDb.insert(artists).values({
+        name: 'foo fighters',
+        canonicalName: 'foo fighters',
+        slug: 'foo-fighters',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp-foo',
+        spotifyCandidates: [
+          {
+            id: 'sp-foo',
+            name: 'FOO FIGHTERS',
+            imageUrl: null,
+            genres: null,
+            spotifyUrl: null,
+          },
+          {
+            id: 'sp-foo',
+            name: 'Foo Fighters',
+            imageUrl: null,
+            genres: null,
+            spotifyUrl: null,
+          },
+        ],
+      });
+
+      await repairArtistNames(testDb, { dryRun: false });
+
+      expect((await listArtists())[0]?.name).toBe('FOO FIGHTERS');
     });
 
     it('ignores the candidates of a row that is not matched', async () => {

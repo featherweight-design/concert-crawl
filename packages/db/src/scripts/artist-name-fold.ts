@@ -33,7 +33,11 @@ const JS_WHITESPACE_RUN = `'[[:space:]' || ${[
 
 /** The fixed column references the fold is applied to; never input. */
 export type FoldableColumn =
-  'raw.value' | 'billing.billed_name' | 'input.value' | 'spotify.spotify_name';
+  | 'raw.value'
+  | 'billing.billed_name'
+  | 'input.value'
+  | 'spotify.spotify_name'
+  | 'artists.name';
 
 export const foldedArtistName = (column: FoldableColumn): SQL => {
   const marksStripped = `regexp_replace(normalize(${column}, NFD), '[' || chr(768) || '-' || chr(879) || ']', '', 'g')`;

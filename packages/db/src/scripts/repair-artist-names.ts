@@ -23,12 +23,13 @@
  * construction, which is also why it cannot change any match outcome — the
  * Spotify search reads `canonical_name`.
  *
- * Casing comes from Spotify where it can. A row matched to a Spotify artist
- * takes that artist's own spelling (`MVTANT`, `bbno$`, `J.I.D`), because the
- * act styled it and a venue's shift key did not. The billing still decides
- * WHICH name the row should have (that is what proves a shorten), and Spotify
- * decides how it is spelled: its casing, accents and spacing. Rows with no Spotify name fall back to the
- * billing-case rules below.
+ * Spelling comes from Spotify where it can. A row matched to a Spotify
+ * artist takes that artist's own spelling (`MVTANT`, `bbno$`, `J.I.D`),
+ * because the act styled it and a venue's shift key did not. The billing
+ * still decides WHICH name the row should have (that is what proves a
+ * shorten), and Spotify decides how it is spelled: its casing, accents and
+ * spacing. A row with no Spotify name, or a billing that names the act
+ * differently from Spotify, falls back to the billing-case rules below.
  *
  * A separate concern this does NOT address: a row whose *canonical* name is
  * itself a tour title (`dogstar: all in now tour`) exists as its own artist
@@ -175,45 +176,64 @@ const CORROBORATED = sql`
 /**
  * Spotify's own spelling of a matched artist: the snapshot candidate whose id
  * is the row's `spotify_artist_id`. The match job writes that snapshot on every
- * search, so a matched row nearly always carries it. Null for any row that is
- * not `matched` (an ambiguous or no-match row's candidates are not this act),
- * and for the few matched rows matched before snapshots existed.
+ * search, so a matched row nearly always carries it. No row for an artist that
+ * is not `matched` (an ambiguous or no-match row's candidates are not this
+ * act), nor for the few matched rows matched before snapshots existed.
+ *
+ * One row per artist, folded once here rather than once per event and billing
+ * in the main query.
  */
-const SPOTIFY_NAME = sql`
-  SELECT btrim(candidate.value->>'name') AS spotify_name
-  FROM jsonb_array_elements(
-    CASE WHEN jsonb_typeof(artists.spotify_candidates) = 'array'
-      THEN artists.spotify_candidates
-      ELSE '[]'::jsonb
-    END
-  ) WITH ORDINALITY AS candidate(value, position)
+const SPOTIFY_NAMES = sql`
+  SELECT artists.id AS artist_id, spotify.spotify_name,
+    ${foldedArtistName('spotify.spotify_name')} AS spotify_folded
+  FROM artists
+  CROSS JOIN LATERAL (
+    SELECT btrim(candidate.value->>'name') AS spotify_name
+    FROM jsonb_array_elements(
+      CASE WHEN jsonb_typeof(artists.spotify_candidates) = 'array'
+        THEN artists.spotify_candidates
+        ELSE '[]'::jsonb
+      END
+    ) WITH ORDINALITY AS candidate(value, position)
+    WHERE candidate.value->>'id' = artists.spotify_artist_id
+      AND btrim(coalesce(candidate.value->>'name', '')) <> ''
+    -- Snapshot order, so a repeated id always resolves the same way.
+    ORDER BY candidate.position
+    LIMIT 1
+  ) AS spotify
   WHERE artists.match_status = 'matched'
-    AND candidate.value->>'id' = artists.spotify_artist_id
-    AND btrim(coalesce(candidate.value->>'name', '')) <> ''
-  -- Snapshot order, so a repeated id always resolves the same way.
-  ORDER BY candidate.position
-  LIMIT 1
 `;
 
 /**
- * Which billings a row may take, and under whose casing.
+ * The billing names the act Spotify names, up to case, accents and spacing,
+ * so the row takes Spotify's spelling of it. A billing that names the act
+ * differently (`Beatles` beside Spotify's `The Beatles`) is not Spotify's
+ * evidence, and falls back to the billing rules.
+ */
+const USES_SPOTIFY = sql`
+  spotify.spotify_folded = ${foldedArtistName('billing.billed_name')}
+`;
+
+/** Spotify's spelling is the stored name respelled, rather than a shorter one. */
+const SPOTIFY_RESPELLS_NAME = sql`
+  spotify.spotify_folded = ${foldedArtistName('artists.name')}
+`;
+
+/**
+ * Which billings a row may take.
  *
- * With a Spotify name, the billing must be Spotify's name up to case, accents
- * and whitespace, and the row then takes Spotify's spelling. None of the
- * billing-case refusals apply: Spotify is the act's own styling, so `MVTANT`
- * stays shouting, `bbno$` stays lowercase, and a mixed-case `Book Of Love`
- * becomes Spotify's `Book of Love`. A billing that spells the act differently
- * from Spotify is skipped, never adopted, so a matched row is only ever renamed
- * to Spotify's spelling.
+ * On the Spotify path, the stored name must be Spotify's name respelled, or
+ * extend the billing (a shorten). None of the billing-case refusals apply:
+ * Spotify is the act's own styling, so `MVTANT` stays shouting, `bbno$` stays
+ * lowercase, a mixed-case `Book Of Love` becomes Spotify's `Book of Love`, and
+ * `Sigur Ros` gets Spotify's accent.
  *
- * Without one, today's billing rules decide, refusals included.
+ * Otherwise today's billing rules decide, refusals included.
  */
 const ELIGIBLE = sql`
   CASE
-    WHEN spotify.spotify_name IS NOT NULL THEN
-      ${foldedArtistName('spotify.spotify_name')}
-        = ${foldedArtistName('billing.billed_name')}
-      AND (${IS_RECASE} OR ${NAME_EXTENDS_BILLING})
+    WHEN ${USES_SPOTIFY} THEN
+      ${SPOTIFY_RESPELLS_NAME} OR ${NAME_EXTENDS_BILLING}
     ELSE ${CORROBORATED}
   END
 `;
@@ -230,15 +250,24 @@ const ELIGIBLE = sql`
  * swap places on every run.
  */
 const CANDIDATES = sql`
-  WITH billings AS (
+  WITH spotify_names AS (${SPOTIFY_NAMES}),
+  billings AS (
     SELECT
       artists.id,
       artists.slug,
       artists.name AS current_name,
-      coalesce(spotify.spotify_name, billing.billed_name) AS repaired_name,
-      CASE WHEN ${IS_RECASE} THEN 'recase' ELSE 'shorten' END AS kind,
-      CASE WHEN spotify.spotify_name IS NULL THEN 'billing' ELSE 'spotify' END
-        AS source,
+      CASE WHEN ${USES_SPOTIFY} THEN spotify.spotify_name
+        ELSE billing.billed_name
+      END AS repaired_name,
+      -- On the Spotify path the label describes what is written: Spotify's
+      -- spelling of the same name is a recase, a shorter name a shorten.
+      CASE
+        WHEN ${USES_SPOTIFY} THEN
+          CASE WHEN ${SPOTIFY_RESPELLS_NAME} THEN 'recase' ELSE 'shorten' END
+        WHEN ${IS_RECASE} THEN 'recase'
+        ELSE 'shorten'
+      END AS kind,
+      CASE WHEN ${USES_SPOTIFY} THEN 'spotify' ELSE 'billing' END AS source,
       COUNT(*) AS seen_count
     FROM artists
     JOIN events
@@ -247,7 +276,7 @@ const CANDIDATES = sql`
       ON events.canonical_headliners @> ARRAY[artists.canonical_name]
       AND events.hidden_from_consumer = false
     CROSS JOIN LATERAL (${BILLINGS}) AS billing
-    LEFT JOIN LATERAL (${SPOTIFY_NAME}) AS spotify ON true
+    LEFT JOIN spotify_names AS spotify ON spotify.artist_id = artists.id
     WHERE billing.billed_name IS NOT NULL
       AND billing.billed_name <> ''
       AND ${ELIGIBLE}
@@ -258,11 +287,11 @@ const CANDIDATES = sql`
       id, slug, current_name, repaired_name, kind, source,
       ROW_NUMBER() OVER (
         PARTITION BY id
-        -- A cased spelling outranks a shouted or whispered one, so a lowercase
-        -- name the venue mostly shouts is still fixed by a cased billing. On a
-        -- Spotify row every candidate shares one casing, so only the counts
-        -- and the recase-before-shorten tie-break below matter.
-        ORDER BY (repaired_name = upper(repaired_name)
+        -- Spotify's spelling first, whenever a billing corroborates it. Then a
+        -- cased spelling outranks a shouted or whispered one, so a lowercase
+        -- name the venue mostly shouts is still fixed by a cased billing.
+        ORDER BY (source = 'spotify') DESC,
+                 (repaired_name = upper(repaired_name)
                   OR repaired_name = lower(repaired_name)) ASC,
                  seen_count DESC,
                  repaired_name COLLATE "C" ASC,
