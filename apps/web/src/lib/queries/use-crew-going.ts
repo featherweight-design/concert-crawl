@@ -7,6 +7,7 @@ import type {
   CrewMemberPreview,
   EventCrewGoing,
 } from '@concert-crawl/types';
+import { AVATAR_COLORS } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 
@@ -26,13 +27,6 @@ export const crewGoingQueryKey = (
 
 // apps/web has no zod dependency, so the boundary is narrowed with hand-written
 // guards, matching use-event-watchers.
-const AVATAR_COLORS: readonly AvatarColor[] = [
-  'signal',
-  'accent',
-  'success',
-  'warning',
-];
-
 const isAvatarColor = (value: unknown): value is AvatarColor =>
   AVATAR_COLORS.some((color) => color === value);
 
@@ -85,7 +79,15 @@ export function useCrewGoing(eventId: string) {
       if (!isEventCrewGoing(raw)) {
         throw new Error('Unexpected /crews/event-going response shape');
       }
-      return raw;
+      // An API older than the avatar pair omits the second colour; make it
+      // the null that means solid, so no consumer sees undefined.
+      return {
+        ...raw,
+        going: raw.going.map((member) => ({
+          ...member,
+          avatarSecondColor: member.avatarSecondColor ?? null,
+        })),
+      };
     },
     enabled: !!isSignedIn && crewsEnabled,
     staleTime: 60_000,

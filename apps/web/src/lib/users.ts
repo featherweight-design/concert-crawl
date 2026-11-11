@@ -1,4 +1,5 @@
 import type {
+  AvatarColor,
   UserProfileResponse,
   UserSubmissionItem,
   HandleAvailabilityResponse,
@@ -24,9 +25,9 @@ export async function patchMe(
   updates: {
     handle?: string | null;
     city?: string | null;
-    avatarColor?: 'signal' | 'accent' | 'success' | 'warning' | null;
+    avatarColor?: AvatarColor | null;
     /** The avatar pair's second colour; null keeps it solid. */
-    avatarSecondColor?: 'signal' | 'accent' | 'success' | 'warning' | null;
+    avatarSecondColor?: AvatarColor | null;
     theme?: ThemeName;
   },
 ): Promise<void> {
