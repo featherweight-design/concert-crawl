@@ -156,7 +156,7 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     userIdColumn: 'user_id',
     otherUserIdColumns: [],
     exportKey: 'reportConfirmations',
-    exportColumns: ['report_id', 'confirmed_at'],
+    exportColumns: ['report_id', 'confirmed_at', 'method'],
     reason: 'Same reasoning as submission_confirms.',
   },
   {
