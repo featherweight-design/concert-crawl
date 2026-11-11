@@ -602,6 +602,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         !tasteNudgeConnect &&
         !lensActive && (
           <EmptyState
+            layout="card"
+            glyph={isFiltered ? 'dots' : 'calendar'}
             state={isFiltered ? 'filtered' : 'no-data'}
             eyebrow={
               isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
@@ -610,9 +612,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
               isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle
             }
             body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
+            // B+ `empty_filtered_m`: clearing the filters is the way out,
+            // so it takes the primary (gradient) action.
             {...(isFiltered
               ? {
-                  secondaryCta: {
+                  primaryCta: {
                     label: copy.emptyFilteredCta,
                     href: '/events',
                   },

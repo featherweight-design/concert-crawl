@@ -27,6 +27,170 @@ export interface EmptyStateProps {
   primaryCta?: EmptyStateCta;
   secondaryCta?: EmptyStateCta;
   className?: string;
+  /**
+   * `card` is the B+ empty pattern (`06-states/empty_*`): a dashed card with a
+   * dashed medallion, a centered eyebrow and a gradient action. `rail` (the
+   * default) is the older status-rail layout, kept until every surface moves.
+   */
+  layout?: 'rail' | 'card';
+  /** The medallion's glyph in the card layout. */
+  glyph?: EmptyStateGlyph;
+}
+
+export type EmptyStateGlyph = 'dots' | 'calendar';
+
+/** Scattered dots: a sky with nothing in it (B+ `empty_filtered_m`). */
+const DOTS: readonly { cx: number; cy: number }[] = [
+  { cx: 22, cy: 34 },
+  { cx: 76, cy: 25 },
+  { cx: 49, cy: 48 },
+  { cx: 31, cy: 72 },
+  { cx: 62, cy: 68 },
+];
+
+function MedallionGlyph({ glyph }: { glyph: EmptyStateGlyph }) {
+  if (glyph === 'calendar') {
+    return (
+      <svg width={40} height={40} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x={3.5}
+          y={5}
+          width={17}
+          height={15}
+          rx={2.5}
+          stroke="var(--fg-muted)"
+          strokeWidth={1.6}
+        />
+        <path
+          d="M3.5 10h17M8 3v4M16 3v4"
+          stroke="var(--fg-muted)"
+          strokeWidth={1.6}
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg width={96} height={96} viewBox="0 0 96 96" aria-hidden>
+      {DOTS.map((dot) => (
+        <circle
+          key={`${dot.cx}-${dot.cy}`}
+          cx={dot.cx}
+          cy={dot.cy}
+          r={2.6}
+          fill="var(--fg-subtle)"
+        />
+      ))}
+    </svg>
+  );
+}
+
+function CardPrimary({ cta }: { cta: EmptyStateCta }) {
+  return (
+    <Link
+      href={cta.href}
+      {...(cta.onClick ? { onClick: cta.onClick } : {})}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+        color: 'var(--fg-on-accent)',
+        borderRadius: 14,
+        padding: '12px 22px',
+        fontFamily: 'var(--font-ui)',
+        fontSize: 15,
+        fontWeight: 800,
+        letterSpacing: '-0.01em',
+        textDecoration: 'none',
+        boxShadow:
+          '0 8px 28px color-mix(in oklch, var(--signal) 28%, transparent)',
+      }}
+    >
+      {cta.label}
+    </Link>
+  );
+}
+
+function EmptyStateCard({
+  glyph = 'dots',
+  eyebrow,
+  title,
+  body,
+  primaryCta,
+  secondaryCta,
+  className,
+}: Omit<EmptyStateProps, 'layout' | 'state' | 'density' | 'railLabel'>) {
+  return (
+    <div
+      data-testid="empty-state-card"
+      className={cn('flex w-full flex-col items-center text-center', className)}
+      style={{
+        gap: 12,
+        padding: '32px 22px 34px',
+        border: '1.5px dashed var(--border-strong)',
+        borderRadius: 20,
+        fontFamily: 'var(--font-ui)',
+        color: 'var(--fg)',
+      }}
+    >
+      <div
+        data-testid="empty-state-medallion"
+        className="flex items-center justify-center rounded-full"
+        style={{
+          width: 96,
+          height: 96,
+          border: '1.5px dashed var(--border-strong)',
+          background:
+            'radial-gradient(circle, var(--surface-1), transparent 72%)',
+          marginBottom: 8,
+        }}
+      >
+        <MedallionGlyph glyph={glyph} />
+      </div>
+      {eyebrow !== undefined && (
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {eyebrow}
+        </div>
+      )}
+      <div
+        style={{
+          fontSize: 30,
+          fontWeight: 900,
+          letterSpacing: '-0.035em',
+          lineHeight: 1.05,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          fontSize: 15,
+          lineHeight: 1.5,
+          color: 'var(--fg-muted)',
+          maxWidth: 340,
+        }}
+      >
+        {body}
+      </div>
+      {(primaryCta ?? secondaryCta) && (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
+          {primaryCta && <CardPrimary cta={primaryCta} />}
+          {secondaryCta && (
+            <EmptyStateSecondary cta={secondaryCta} dense={false} />
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function EmptyStatePrimary({
@@ -99,7 +263,22 @@ export function EmptyState({
   primaryCta,
   secondaryCta,
   className,
+  layout = 'rail',
+  glyph,
 }: EmptyStateProps) {
+  if (layout === 'card') {
+    return (
+      <EmptyStateCard
+        {...(glyph !== undefined && { glyph })}
+        {...(eyebrow !== undefined && { eyebrow })}
+        title={title}
+        body={body}
+        {...(primaryCta !== undefined && { primaryCta })}
+        {...(secondaryCta !== undefined && { secondaryCta })}
+        {...(className !== undefined && { className })}
+      />
+    );
+  }
   const dense = density === 'dense';
   const accent =
     state === 'error'

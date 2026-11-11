@@ -9,7 +9,7 @@ import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { dateGroupLabel, isToday } from '@/components/consumer/definitions/lib';
 import { localDateString } from '@/lib/time';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { DayTile } from './DayTile';
+import { DayHeader } from './DayHeader';
 
 const copy = CONSUMER_COPY;
 
@@ -104,31 +104,12 @@ export const EventsList = ({
             const label = dateGroupLabel(date);
             return (
               <section key={date} aria-label={label}>
-                <div className="mb-3 flex items-center gap-3">
-                  <DayTile date={date} today={isToday(date)} />
-                  <h2
-                    className="shrink-0 leading-none"
-                    style={{
-                      fontFamily: 'Inter, system-ui',
-                      fontWeight: 800,
-                      fontSize: 20,
-                      letterSpacing: '-0.02em',
-                      color: 'var(--fg)',
-                    }}
-                  >
-                    {label}
-                  </h2>
-                  <span
-                    className="shrink-0 uppercase text-fg-subtle"
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 10.5,
-                      letterSpacing: '0.12em',
-                    }}
-                  >
-                    {copy.showCount(dateEvents.length)}
-                  </span>
-                </div>
+                <DayHeader
+                  date={date}
+                  label={label}
+                  count={dateEvents.length}
+                  today={isToday(date)}
+                />
                 {/* B+ cards the rows, so a gap replaces the dividers. */}
                 <div className="flex flex-col gap-2.5">
                   {dateEvents.map((event) => (
@@ -148,67 +129,24 @@ export const EventsList = ({
         </div>
       )}
 
-      {isFetchingNextPage && (
-        <div className="mt-2 flex flex-col">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                animation: `skeletonPulse 1.4s ease-in-out ${idx * 0.07}s infinite`,
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 8,
-                  background: 'var(--surface-2)',
-                  flexShrink: 0,
-                }}
-              />
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
-                }}
-              >
-                <div
-                  style={{
-                    height: 13,
-                    width: '60%',
-                    borderRadius: 4,
-                    background: 'var(--surface-2)',
-                  }}
-                />
-                <div
-                  style={{
-                    height: 10,
-                    width: '40%',
-                    borderRadius: 4,
-                    background: 'var(--surface-2)',
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {hasNextPage && !isFetchingNextPage && (
-        <div className="mt-8 flex justify-center pt-2">
+      {/* B+ rule 10: the pink wave is reserved for waiting on shows at
+          first load, so Load more stays quiet. While it fetches, the button
+          holds its place and reads "Loading shows" instead of growing
+          skeleton rows under the list. */}
+      {(hasNextPage || isFetchingNextPage) && (
+        <div className="mt-6">
           <button
             type="button"
-            onClick={() => void fetchNextPage()}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-border-strong bg-surface-2 px-4 text-[13px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1"
+            onClick={() => {
+              if (!isFetchingNextPage) void fetchNextPage();
+            }}
+            // aria-disabled rather than disabled, so a keyboard user's focus
+            // stays on the button while the next page loads.
+            aria-disabled={isFetchingNextPage || undefined}
+            aria-busy={isFetchingNextPage || undefined}
+            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border-strong bg-surface-2 px-4 text-[15px] font-bold text-signal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1 aria-disabled:cursor-default aria-disabled:text-fg-subtle"
           >
-            {copy.loadMore}
+            {isFetchingNextPage ? copy.loadingShows : copy.loadMore}
           </button>
         </div>
       )}

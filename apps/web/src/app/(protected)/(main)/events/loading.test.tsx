@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
 import { render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SHELF_HINT_COOKIE } from '@/lib/shelf-hint';
+import { stubMatchMedia } from '@/test-utils/match-media';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 let cookieValue: string | undefined;
 let authUserId: string | null = 'user_entitled';
@@ -27,6 +29,27 @@ import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 const renderLoading = async () => render(await EventsLoading());
 
 const shelfTitle = SPOTIFY_COPY.discovery.title;
+
+// The fallback's pink wave follows reduced motion through matchMedia, which
+// jsdom doesn't ship.
+beforeEach(() => {
+  stubMatchMedia(false);
+});
+
+describe('EventsLoading B+ first load', () => {
+  it('shows the pink wave beside "Loading shows" and skeleton rows', async () => {
+    cookieValue = undefined;
+    authUserId = 'user_entitled';
+    const { getByRole, getAllByTestId, container } = await renderLoading();
+    expect(getByRole('status').textContent).toContain(
+      CONSUMER_COPY.loadingShows,
+    );
+    expect(getAllByTestId('browse-row-skeleton').length).toBeGreaterThan(0);
+    // The hand-rolled pulse and top progress bar are gone (rule 9 and 10).
+    expect(container.innerHTML).not.toContain('skeletonPulse');
+    expect(container.innerHTML).not.toContain('navProgress');
+  });
+});
 
 describe('EventsLoading shelf reservation', () => {
   it('reserves the shelf footprint when the viewer is known to get one', async () => {

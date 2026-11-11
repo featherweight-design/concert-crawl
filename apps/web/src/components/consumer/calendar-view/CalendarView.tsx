@@ -13,6 +13,7 @@ import {
   WeekStripHeader,
   type WeekStripDay,
 } from '@/components/consumer/week-strip';
+import { DayHeader } from '@/components/consumer/events-list/DayHeader';
 import { dateGroupLabel } from '@/components/consumer/definitions/lib';
 import {
   monthLabelFor,
@@ -21,6 +22,7 @@ import {
 } from '@/components/consumer/jump-picker/date-math';
 import { useAvailability } from '@/lib/queries/use-availability';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { dayGenreColors } from './day-genres';
 
 const copy = CONSUMER_COPY;
 
@@ -75,6 +77,11 @@ export function CalendarView({
       ? { initialData: initialAvailability }
       : {}),
   });
+
+  const dayGenres = useMemo(
+    () => dayGenreColors(events, filterVibe),
+    [events, filterVibe],
+  );
 
   const weekDates = useMemo(() => new Set(days.map((day) => day.date)), [days]);
 
@@ -137,13 +144,14 @@ export function CalendarView({
         days={days}
         selectedDate={selectedDate}
         today={today}
+        dayGenres={dayGenres}
         onDateSelect={handleDateSelect}
       />
 
       {groups.size === 0 && (
         <EmptyState
-          state="no-data"
-          density="dense"
+          layout="card"
+          glyph="calendar"
           eyebrow={copy.emptyCalEyebrow}
           title={copy.emptyCalTitle}
           body={copy.emptyCalBody}
@@ -154,36 +162,14 @@ export function CalendarView({
         <div className="flex flex-col gap-6">
           {Array.from(groups.entries()).map(([date, dateEvents]) => {
             const label = dateGroupLabel(date);
-            const isTonight = label.toLowerCase() === 'tonight';
             return (
               <section key={date} aria-label={label}>
-                <div
-                  className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
-                  style={{ borderBottom: '1px solid var(--border)' }}
-                >
-                  <h2
-                    className="shrink-0 leading-none"
-                    style={{
-                      fontFamily: 'Inter, system-ui',
-                      fontWeight: 900,
-                      fontSize: 18,
-                      letterSpacing: '-0.02em',
-                      color: isTonight ? 'var(--accent)' : 'var(--fg)',
-                    }}
-                  >
-                    {label}
-                  </h2>
-                  <span
-                    className="shrink-0 uppercase text-fg-subtle"
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 10,
-                      letterSpacing: '0.06em',
-                    }}
-                  >
-                    {copy.showCount(dateEvents.length)}
-                  </span>
-                </div>
+                <DayHeader
+                  date={date}
+                  label={label}
+                  count={dateEvents.length}
+                  today={date === today}
+                />
                 {/* Browse rows are carded (B+), so a gap replaces the
                     dividers, as in the list view. */}
                 <div className="flex flex-col gap-2.5">

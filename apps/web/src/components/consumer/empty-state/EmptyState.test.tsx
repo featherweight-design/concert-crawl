@@ -143,3 +143,47 @@ describe('EmptyState', () => {
     ).toBe(true);
   });
 });
+
+describe('EmptyState card layout (B+)', () => {
+  it('renders the dashed card with a medallion and no status rail', () => {
+    render(
+      <EmptyState
+        layout="card"
+        state="filtered"
+        eyebrow="Filtered"
+        title="Crickets."
+        body="Nothing found with these filters."
+        primaryCta={{ label: 'Clear filters', href: '/events' }}
+      />,
+    );
+    expect(screen.getByTestId('empty-state-card')).toBeTruthy();
+    expect(screen.getByTestId('empty-state-medallion')).toBeTruthy();
+    expect(screen.getByText('Filtered')).toBeTruthy();
+    expect(screen.getByText('Crickets.')).toBeTruthy();
+    // The rail's right-hand count belongs to the old layout only.
+    expect(screen.queryByText('0 hits')).toBeNull();
+    const cta = screen.getByText('Clear filters');
+    expect(cta.getAttribute('href')).toBe('/events');
+    expect(cta.getAttribute('style')).toContain('linear-gradient');
+  });
+
+  it('draws the calendar glyph when asked', () => {
+    const { container } = render(
+      <EmptyState
+        layout="card"
+        glyph="calendar"
+        title="Nothing on this day."
+        body="Try a different day or drop a filter."
+      />,
+    );
+    const medallion = screen.getByTestId('empty-state-medallion');
+    expect(medallion.querySelector('rect')).not.toBeNull();
+    expect(container.querySelectorAll('circle')).toHaveLength(0);
+  });
+
+  it('defaults to the dots glyph', () => {
+    render(<EmptyState layout="card" title="Crickets." body="Nothing." />);
+    const medallion = screen.getByTestId('empty-state-medallion');
+    expect(medallion.querySelectorAll('circle').length).toBeGreaterThan(0);
+  });
+});
