@@ -66,7 +66,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carries: ['date'],
     chipPriority: ['following', 'genre'],
     hasActionGutter: false,
-    carded: false,
+    carded: true,
     showsDelta: false,
     showsPrice: true,
     showsTour: true,

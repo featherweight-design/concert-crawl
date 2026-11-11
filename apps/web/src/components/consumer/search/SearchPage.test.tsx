@@ -361,6 +361,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
         venue: 'Hi-Dive',
         venueSlug: 'hi-dive',
         price: null,
+        genres: [],
       },
       // PR 5 renders the inline Follow button off this; PR 3 only adds the
       // field to the contract.
@@ -502,6 +503,7 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
       venue: 'Hi-Dive',
       venueSlug: 'hi-dive',
       price: null,
+      genres: [],
     },
     following: false,
     ...overrides,

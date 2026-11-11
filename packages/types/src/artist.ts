@@ -189,6 +189,11 @@ export interface FollowedArtistNextShow {
    * (#1364/#1365/#1366).
    */
   price: number | null;
+  /**
+   * The show's raw genres (`events.genre`), lead first. Surfaces color the
+   * card by the lead genre's Vibe bucket (B+ rule 2); empty when unknown.
+   */
+  genres: string[];
 }
 
 /** One row of `GET /v1/me/artist-follows`. */

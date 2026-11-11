@@ -272,14 +272,14 @@ export function FilterBar({
           </div>
         )}
 
-        {/* List / Cal toggle — Inter font, SVG icons (icons hidden on mobile) */}
+        {/* List / Cal toggle (B+ `bp-browse`): an icon segmented control. */}
         <div
           className="inline-flex items-center"
           style={{
             padding: 3,
-            borderRadius: 8,
+            borderRadius: 10,
             background: 'var(--surface-1)',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-strong)',
           }}
         >
           {(
@@ -313,21 +313,26 @@ export function FilterBar({
                 }}
                 className="inline-flex cursor-pointer items-center gap-1.5 transition-colors"
                 style={{
-                  padding: '6px 14px',
-                  borderRadius: 6,
+                  padding: '7px 12px',
+                  borderRadius: 7,
                   fontFamily: 'Inter, system-ui',
                   fontWeight: 600,
                   fontSize: 12,
                   letterSpacing: '-0.005em',
                   color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-                  background: active ? 'var(--signal)' : 'transparent',
+                  // B+ draws the active segment in the brand gradient.
+                  background: active
+                    ? 'linear-gradient(135deg, var(--signal), var(--accent))'
+                    : 'transparent',
                 }}
                 aria-pressed={active}
               >
-                <span className="hidden sm:inline-flex">
-                  <Icon size={13} />
+                {/* B+: icons only on the phone, icon and label from sm up. The
+                    label stays in the accessible name at every width. */}
+                <span className="inline-flex">
+                  <Icon size={15} />
                 </span>
-                {label}
+                <span className="sr-only sm:not-sr-only">{label}</span>
               </button>
             );
           })}

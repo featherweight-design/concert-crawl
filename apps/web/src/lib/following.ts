@@ -164,6 +164,7 @@ export const followsToShelfArtists = (
     eventId: follow.nextShow?.eventId ?? null,
     dateLine: followDateLine(follow.nextShow),
     price: follow.nextShow?.price ?? null,
+    genre: follow.nextShow?.genres[0] ?? null,
     following: true,
   }));
 
@@ -182,5 +183,6 @@ export const suggestionsToShelfArtists = (
     eventId: suggestion.nextShow.eventId,
     dateLine: followDateLine(suggestion.nextShow),
     price: suggestion.nextShow?.price ?? null,
+    genre: suggestion.nextShow.genres[0] ?? null,
     following: suggestion.following === true,
   }));

@@ -38,6 +38,8 @@ export interface ShelfArtist {
    * null-vs-priced distinction, which a formatted string has already thrown away.
    */
   price: number | null;
+  /** The next show's lead genre, which colors the card's edge (B+ rule 2). */
+  genre: string | null;
   /** Whether the viewer already follows this artist. */
   following: boolean;
 }

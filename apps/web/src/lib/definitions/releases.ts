@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.56.0-beta',
+    date: 'Nov 11, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: "Browse has a new look: every show wears its genre's color, so your kind of night stands out as you scroll.",
+      },
+    ],
+  },
+  {
     version: 'v0.55.0-beta',
     date: 'Nov 11, 2026',
     headline: null,

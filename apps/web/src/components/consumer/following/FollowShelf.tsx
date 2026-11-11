@@ -170,9 +170,11 @@ export const FollowShelf = ({
       {/* `relative` + `overflow-hidden` on the full-bleed wrapper: the sr-only
           gate sentences inside the cards are position:absolute with no offsets,
           so without a positioned ancestor their rects resolve against <html>
-          and leak into the page's scrollWidth at 320px (the #33 mechanism). */}
-      <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
-        <ul className="flex list-none gap-[10px] overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0">
+          and leak into the page's scrollWidth at 320px (the #33 mechanism).
+          The scroller pads 12px so a card's genre glow isn't clipped, and the
+          wrapper's negative margin gives back the old 2px/4px footprint. */}
+      <div className="relative -mx-4 -mb-2 -mt-2.5 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
+        <ul className="flex list-none gap-[10px] overflow-x-auto px-4 py-3 sm:px-0">
           {visible.map((artist) => (
             <ShelfCard
               key={artist.key}

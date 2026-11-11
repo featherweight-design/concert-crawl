@@ -123,6 +123,10 @@ describe('HeroEventCard — imagery chain (#1525)', () => {
 });
 
 describe('HeroEventCard — band layout (#1525 PR 4)', () => {
+  // The type column sits beside the slot's genre ring (B+), not the slot.
+  const typeColumn = (root: HTMLElement) =>
+    root.querySelector('[data-testid="hero-image-ring"]')?.nextElementSibling;
+
   const slot = (root: HTMLElement) => {
     // Panel marks the slot aria-hidden because it repeats the artist name the
     // type column already carries — an inherent property, not a DOM position.
@@ -143,7 +147,7 @@ describe('HeroEventCard — band layout (#1525 PR 4)', () => {
     const { container } = render(<HeroEventCard event={baseEvent} />);
     // The panel is the only fixed-width child, so the type column must be
     // free to shrink or the band overflows on the 320px baseline.
-    const column = slot(container).nextElementSibling;
+    const column = typeColumn(container);
     expect(column?.className).toContain('min-w-0');
     expect(column?.className).toContain('flex-1');
   });
@@ -157,6 +161,27 @@ describe('HeroEventCard — band layout (#1525 PR 4)', () => {
   it('puts the eyebrow badge in the type column', () => {
     const { container } = render(<HeroEventCard event={baseEvent} />);
     const badge = screen.getByText(/★/);
-    expect(slot(container).nextElementSibling?.contains(badge)).toBe(true);
+    expect(typeColumn(container)?.contains(badge)).toBe(true);
+  });
+});
+
+// B+ rule 2: the lead genre rings the art and starts the card's edge, and the
+// pair shares one chip whose dot takes the lead genre.
+describe('HeroEventCard genre color', () => {
+  it('rings the art and edges the card in the lead genre color', () => {
+    render(
+      <HeroEventCard
+        event={{ ...baseEvent, genre: ['alternative', 'metal'] }}
+      />,
+    );
+    expect(screen.getByTestId('hero-image-ring').style.boxShadow).toContain(
+      'var(--genre-rock)',
+    );
+    expect(screen.getByTestId('hero-event-card').style.background).toContain(
+      'var(--genre-rock)',
+    );
+    expect(screen.getByText('alternative')).toBeTruthy();
+    expect(screen.getByText('metal')).toBeTruthy();
+    expect(screen.getAllByTestId('genre-dot')).toHaveLength(1);
   });
 });
