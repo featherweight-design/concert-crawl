@@ -348,6 +348,9 @@ export async function repairArtistNames(
     FROM (${CANDIDATES}) AS repair
     WHERE artists.id = repair.id
       AND artists.name <> repair.repaired_name
+      -- Re-checked on the row being written, not just in the candidate read:
+      -- an admin lock that commits while this UPDATE waits on the row must win.
+      AND artists.name_locked_at IS NULL
     RETURNING artists.id
   `);
 
