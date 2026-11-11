@@ -109,7 +109,9 @@ const StepTile = ({ icon, num }: { icon: string; num: string }) => (
 );
 
 export const IosHowToSheet = ({ open, onClose }: IosHowToSheetProps) => (
-  <BottomSheet open={open} onClose={onClose} title={INSTALL_COPY.sheet.title}>
+  // The dialog's accessible name is the short eyebrow, so a screen reader does
+  // not hear the visible title twice (copy audit 03, row 71).
+  <BottomSheet open={open} onClose={onClose} title={INSTALL_COPY.sheet.eyebrow}>
     <div className="flex flex-col gap-4">
       <div className="flex items-start gap-4">
         <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl bg-bg shadow-lg">

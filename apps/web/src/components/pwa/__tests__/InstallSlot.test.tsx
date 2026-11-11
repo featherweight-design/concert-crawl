@@ -55,7 +55,7 @@ describe('InstallSlot', () => {
     expect(button).not.toBeNull();
   });
 
-  it('leaves a status note when the slot is dismissed, then hides', () => {
+  it('leaves a status note when the slot is dismissed, then hides', async () => {
     isIosSafariMock.mockReturnValue(true);
     render(<InstallSlot />);
     fireEvent.click(
@@ -64,9 +64,9 @@ describe('InstallSlot', () => {
     expect(
       screen.queryByRole('button', { name: /install concert crawl/i }),
     ).toBeNull();
-    expect(screen.getByRole('status').textContent).toBe(
-      INSTALL_COPY.dismissNote,
-    );
+    // The live region mounts empty and the note is written in a tick later.
+    expect(screen.getByRole('status').textContent).toBe('');
+    expect(await screen.findByText(INSTALL_COPY.dismissNote)).toBeTruthy();
   });
 
   it('shows no note when the slot was already dismissed on an earlier visit', () => {
