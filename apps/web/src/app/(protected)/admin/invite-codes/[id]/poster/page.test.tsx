@@ -4,16 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import type { InviteCode } from '@concert-crawl/types';
 
-const { requireAdminUser, getCodes } = vi.hoisted(() => ({
+const { requireAdminUser, getCodes, getVenues } = vi.hoisted(() => ({
   requireAdminUser: vi.fn(),
   getCodes: vi.fn(),
+  getVenues: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
   requireAdminUser,
   auth: async () => ({ getToken: async () => 'token' }),
 }));
-vi.mock('@/lib/api', () => ({ apiClient: { get: getCodes } }));
+vi.mock('@/lib/api', () => ({
+  apiClient: {
+    get: (path: string) =>
+      path === '/v1/venues' ? getVenues() : getCodes(path),
+  },
+}));
 vi.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND');
@@ -39,6 +45,12 @@ const code = (overrides: Partial<InviteCode> = {}): InviteCode => ({
   ...overrides,
 });
 
+const venue = (name: string, upcomingCount: number, featured = false) => ({
+  name,
+  upcomingCount,
+  featured,
+});
+
 const renderPage = async (id = 'code-1') =>
   render(await InviteCodePosterPage({ params: Promise.resolve({ id }) }));
 
@@ -47,6 +59,11 @@ describe('invite code poster page', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://concertcrawl.app');
     requireAdminUser.mockResolvedValue({ userId: 'user_admin' });
     getCodes.mockResolvedValue([code()]);
+    getVenues.mockResolvedValue([
+      venue('Ogden Theatre', 30),
+      venue('Bluebird Theater', 12, true),
+      venue('Hi-Dive', 40),
+    ]);
   });
   afterEach(() => {
     cleanup();
@@ -72,6 +89,20 @@ describe('invite code poster page', () => {
       'concertcrawl.app/i',
     );
     expect(screen.getByTestId('poster-bar')).toHaveTextContent('47 seats left');
+  });
+
+  it('renders Night without tabs, with the live venue count and names', async () => {
+    await renderPage();
+
+    const sheet = screen.getByTestId('poster-sheet');
+    expect(sheet).toHaveAttribute('data-look', 'night');
+    expect(sheet).toHaveAttribute('data-tabs', 'false');
+    expect(sheet).toHaveTextContent('We check 3 venue calendars every night');
+    expect(sheet).toHaveTextContent('This poster lets in 47 testers.');
+    // Featured first, then the busiest; all three fit, so no "and more".
+    expect(screen.getByTestId('poster-venues')).toHaveTextContent(
+      /^Bluebird Theater·Hi-Dive·Ogden Theatre$/,
+    );
   });
 
   it('gates on admin before reading any code', async () => {

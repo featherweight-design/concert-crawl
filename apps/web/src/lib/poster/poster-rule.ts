@@ -4,7 +4,8 @@
  * the page, the admin list and the tests all read the same answers.
  */
 import { encode } from 'uqr';
-import type { InviteCode } from '@concert-crawl/types';
+import type { InviteCode, VenuePublic } from '@concert-crawl/types';
+import { POSTER_COPY } from './definitions/copy';
 
 /** A QR code as one SVG path, in module units, quiet zone included. */
 export interface QrPath {
@@ -76,3 +77,52 @@ export const inviteStatus = (code: StatusFields, now: Date): InviteStatus => {
  */
 export const isPrintable = (code: StatusFields, now: Date): boolean =>
   code.maxUses > 1 && inviteStatus(code, now) === 'active';
+
+/**
+ * Characters one line of the poster's venue list is counted as holding. 10.5 px
+ * JetBrains Mono at 0.14em tracking measures 7.8 px a character, and the Night
+ * panel's text column is 678 px, so a line holds 87. The list wraps at spaces
+ * and after each separator, so a line can end up to one word short: 12 are
+ * held back for that (the longest word in a Denver venue name today is
+ * AMPHITHEATRE).
+ */
+export const POSTER_VENUE_LINE_CHARS = 75;
+/** Lines the venue list may wrap to, as in the design's sheets. */
+export const POSTER_VENUE_LINES = 3;
+/** A `·` separator and its padding, in characters of the same line. */
+const VENUE_SEPARATOR_CHARS = 3;
+
+type PosterVenue = Pick<VenuePublic, 'name' | 'featured' | 'upcomingCount'>;
+
+/**
+ * The venue names the poster names, from live data: featured venues first,
+ * then the busiest, cut to what fits `POSTER_VENUE_LINES` lines. `more` is true when any were
+ * left off, so the line closes with "and more" only when that is so.
+ */
+export const posterVenueLine = (
+  venues: readonly PosterVenue[],
+  budget: number = POSTER_VENUE_LINE_CHARS * POSTER_VENUE_LINES,
+): { names: string[]; more: boolean } => {
+  const sorted = [...venues]
+    .sort(
+      (left, right) =>
+        Number(right.featured) - Number(left.featured) ||
+        right.upcomingCount - left.upcomingCount ||
+        left.name.localeCompare(right.name),
+    )
+    .map((venue) => venue.name);
+  const width = (names: string[]) =>
+    names.reduce(
+      (sum, name, i) => sum + name.length + (i ? VENUE_SEPARATOR_CHARS : 0),
+      0,
+    );
+  if (width(sorted) <= budget) return { names: sorted, more: false };
+
+  const room = budget - VENUE_SEPARATOR_CHARS - POSTER_COPY.andMore.length;
+  const names: string[] = [];
+  for (const name of sorted) {
+    if (width([...names, name]) > room) break;
+    names.push(name);
+  }
+  return { names, more: true };
+};

@@ -1,6 +1,6 @@
-/* The invite poster's print page. The sheet is US Letter (816 x 1056 CSS px)
-   in one ink, so it prints on coloured paper. Self-contained: nothing here
-   reads the app's theme beyond the screen-only bar. */
+/* The invite poster's print page. The sheet is US Letter (816 x 1056 CSS px).
+   Self-contained: nothing here reads the app's theme beyond the screen-only
+   bar. */
 
 .poster-page {
   display: flex;
@@ -123,108 +123,289 @@
   }
 }
 
-/* The sheet: one ink on whatever paper it is printed on. */
+/* The sheet, ported from design/design_handoff_invite_poster/sheets. Night is
+   the Electric panel inside a 0.3 in paper frame, since most printers can't
+   print to the edge; Paper is one black ink. The palette is fixed here, never
+   the app's theme, so a poster prints the same from any theme. */
 .poster-sheet {
-  --ink: #111111;
+  --ps-ui: var(--font-ui, Inter), system-ui, sans-serif;
+  --ps-mono: var(--font-mono, 'JetBrains Mono'), monospace;
+  --ps-ink: #111111;
+  --ps-qr-ink: #070a1a;
+  position: relative;
   width: 816px;
   height: 1056px;
   flex: none;
-  position: relative;
   overflow: hidden;
-  color: var(--ink);
   background: #ffffff;
-  font-family: Inter, system-ui, sans-serif;
+  color: var(--ps-ink);
+  font-family: var(--ps-ui);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
+.poster-sheet.night {
+  --ps-bg: #070a1a;
+  --ps-fg: #e8f3ff;
+  --ps-signal: #7ae6ff;
+  --ps-accent: #ff7bd4;
+}
+/* No margins on the text blocks: the approved render (the handoff's
+   `.sheet p{margin:0}` outranks its own `.p-sub{margin-top}`) sets them flush.
+   The one gap kept is under the venue list (3 px, as the approved Night
+   sheet has it with three lines), so it never meets the QR card. */
 :where(.poster-sheet) h2,
 :where(.poster-sheet) p {
   margin: 0;
 }
-.poster-sheet .ps-in {
+.ps-panel {
   position: absolute;
-  inset: 64px 72px;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  padding: 44px 48px 30px;
+}
+.night .ps-panel {
+  inset: 29px;
+  padding: 36px 40px 22px;
+  background:
+    radial-gradient(
+      720px 560px at 96% 2%,
+      rgba(160, 117, 255, 0.22),
+      transparent 64%
+    ),
+    var(--ps-bg);
+  color: var(--ps-fg);
+}
+.ps-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .ps-wordmark {
   font-weight: 900;
-  font-size: 44px;
-  letter-spacing: -0.03em;
+  font-size: 30px;
+  letter-spacing: -0.025em;
   line-height: 1;
+  white-space: nowrap;
 }
-.ps-kicker {
-  margin-top: 40px;
-  font:
-    700 14px 'JetBrains Mono',
-    monospace;
-  letter-spacing: 0.24em;
+.night .ps-wordmark-accent {
+  color: var(--ps-accent);
+}
+.ps-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border: 2px solid var(--ps-ink);
+  border-radius: 999px;
+  font: 600 12px/1 var(--ps-mono);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
-.ps-headline {
-  margin-top: 14px;
+.night .ps-chip {
+  border: 1.5px solid var(--ps-accent);
+  color: var(--ps-accent);
+}
+.ps-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 22px;
+}
+.ps-copy {
+  flex: 1;
+  min-width: 0;
+}
+.ps-kicker {
+  font: 600 13px/1 var(--ps-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.night .ps-kicker {
+  color: var(--ps-signal);
+}
+.ps-head {
   font-weight: 900;
-  font-size: 64px;
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  max-width: 640px;
+  font-size: 70px;
+  line-height: 0.96;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
+.ps-head em {
+  font-style: normal;
+}
+.night .ps-head em {
+  background: linear-gradient(90deg, var(--ps-signal), var(--ps-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ps-mark {
+  flex: none;
+  margin: -40px -30px 0 -60px;
+}
+.ps-mark-svg {
+  display: block;
+}
+.ps-halo {
+  fill: var(--ps-accent);
+}
+.ps-core,
+.ps-trail {
+  fill: var(--ps-signal, var(--ps-ink));
+}
+.ps-ring {
+  stroke: var(--ps-ink);
+}
 .ps-sub {
-  margin-top: 18px;
-  font-size: 22px;
-  line-height: 1.4;
-  max-width: 600px;
+  max-width: 620px;
+  font-size: 20px;
+  line-height: 1.38;
   text-wrap: pretty;
 }
-.ps-mid {
-  flex: 1;
-  min-height: 0;
+.night .ps-sub {
+  color: #c9d6ee;
+}
+.ps-venues {
+  margin-bottom: 3px;
+  font: 600 10.5px/1.75 var(--ps-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.night .ps-venues {
+  color: #9aa8c7;
+}
+.ps-vsep {
+  padding: 0 7px;
+  opacity: 0.6;
+}
+/* Always white with black modules, on both looks: never inverted. */
+.ps-qrcard {
   display: flex;
+  align-items: stretch;
+  gap: 22px;
+  margin-top: auto;
+  padding: 0 26px 0 0;
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--ps-qr-ink);
+}
+.paper .ps-qrcard {
+  border: 3px solid var(--ps-ink);
+}
+.ps-qr {
+  flex: none;
+  padding: 6px;
+}
+.ps-qr-svg {
+  display: block;
+}
+.ps-side {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 22px 0;
+}
+.ps-scan {
+  font-weight: 900;
+  font-size: 40px;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.ps-arrow {
+  width: 60px;
+  height: 24px;
+  margin-top: 14px;
+  color: #e0297a;
+}
+.paper .ps-arrow {
+  color: var(--ps-ink);
+}
+.ps-seats {
+  margin-top: 14px;
+  font-size: 15.5px;
+  line-height: 1.38;
+  color: #2b3352;
+}
+.ps-seats b {
+  color: var(--ps-qr-ink);
+}
+.ps-typed {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 2px solid var(--ps-qr-ink);
+}
+.ps-typed small {
+  font: 600 10px/1.3 var(--ps-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #4a5374;
+}
+.ps-url {
+  font: 700 16px/1.2 var(--ps-mono);
+}
+.ps-code {
+  font: 700 19px/1.2 var(--ps-mono);
+  letter-spacing: 0.02em;
+}
+.ps-fine {
+  font: 500 9px/1 var(--ps-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: right;
+  color: #555555;
+}
+.night .ps-fine {
+  color: #5a6788;
+}
+/* Tear-off tabs: the bottom 1.55 in, outside the Night panel. */
+.has-tabs .ps-panel {
+  bottom: 178px;
+}
+.has-tabs .ps-head {
+  font-size: 68px;
+}
+.has-tabs .ps-scan {
+  font-size: 34px;
+}
+.ps-tabs {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  height: 150px;
+  border-top: 2px dashed var(--ps-ink);
+}
+.ps-tab {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 4px;
+  border-left: 1.5px dashed #888888;
+  color: var(--ps-ink);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
 }
-.ps-qr {
-  display: block;
-  width: 360px;
-  height: 360px;
-  fill: var(--ink);
+.ps-tab:first-child {
+  border-left: 0;
 }
-.ps-scan {
-  font:
-    700 18px 'JetBrains Mono',
-    monospace;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+.ps-tab b {
+  font: 700 14px/1 var(--ps-mono);
 }
-.ps-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 24px;
-  padding-top: 18px;
-  border-top: 3px solid var(--ink);
-}
-.ps-foot small {
-  display: block;
-  font:
-    600 12px 'JetBrains Mono',
-    monospace;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-.ps-foot b {
-  display: block;
-  margin-top: 6px;
-  font:
-    700 30px 'JetBrains Mono',
-    monospace;
-}
-.ps-typed {
-  text-align: right;
-}
-.ps-typed b {
-  font-size: 22px;
+.ps-tab span {
+  font: 500 10.5px/1 var(--ps-mono);
+  letter-spacing: 0.04em;
 }
 
 /* Scoped to a document that holds the poster: App Router keeps a route's

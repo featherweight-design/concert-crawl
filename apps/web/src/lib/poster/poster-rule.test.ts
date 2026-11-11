@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  POSTER_VENUE_LINE_CHARS,
+  POSTER_VENUE_LINES,
   QR_QUIET_ZONE,
   inviteStatus,
   isPrintable,
   posterJoinUrl,
   posterTypedUrl,
+  posterVenueLine,
   qrPath,
   seatsTaken,
 } from './poster-rule';
@@ -117,5 +120,49 @@ describe('isPrintable', () => {
     expect(isPrintable({ ...open, maxUses: 1, usedBy: 'user_1' }, NOW)).toBe(
       false,
     );
+  });
+});
+
+describe('posterVenueLine', () => {
+  const venue = (name: string, upcomingCount = 0, featured = false) => ({
+    name,
+    upcomingCount,
+    featured,
+  });
+  // " · " and the closing "and more" cost the same characters on the sheet.
+  const lineChars = (names: string[], more: boolean) =>
+    [...names, ...(more ? ['and more'] : [])].join('·  ').length;
+
+  it('keeps every name, with no "and more", when they all fit', () => {
+    expect(posterVenueLine([venue('Ogden'), venue('Gothic')])).toEqual({
+      names: ['Gothic', 'Ogden'],
+      more: false,
+    });
+  });
+
+  it('orders featured venues first, then the busiest', () => {
+    const { names } = posterVenueLine([
+      venue('Ace', 1),
+      venue('Busy', 50),
+      venue('Star', 2, true),
+    ]);
+    expect(names).toEqual(['Star', 'Busy', 'Ace']);
+  });
+
+  it('stops at three lines and leaves room for "and more"', () => {
+    const venues = Array.from({ length: 21 }, (_, i) =>
+      venue(`Venue Number ${i + 1}`, 21 - i),
+    );
+    const line = posterVenueLine(venues);
+    expect(line.more).toBe(true);
+    expect(line.names.length).toBeGreaterThan(0);
+    expect(line.names.length).toBeLessThan(21);
+    expect(line.names[0]).toBe('Venue Number 1');
+    expect(POSTER_VENUE_LINES).toBe(3);
+    const budget = POSTER_VENUE_LINE_CHARS * POSTER_VENUE_LINES;
+    expect(lineChars(line.names, true)).toBeLessThanOrEqual(budget);
+    // One more name would have overflowed.
+    const next = venues[line.names.length]?.name ?? '';
+    expect(lineChars([...line.names, next], true)).toBeGreaterThan(budget);
   });
 });
