@@ -37,6 +37,13 @@ vi.mock('drizzle-orm', () => ({
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
+  // isSoldOutSql reads these into its correlated subquery.
+  eventReports: {
+    eventId: 'eventId',
+    status: 'status',
+    resolvedAt: 'resolvedAt',
+    resolution: 'resolution',
+  },
   events: {
     id: 'id',
     venueId: 'venueId',
