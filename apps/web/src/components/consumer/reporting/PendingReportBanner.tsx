@@ -2,6 +2,7 @@
 
 import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
+import { ReportGlyph } from './ReportTypeMark';
 import { CheckGlyph, LockGlyph } from '../glyphs';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
@@ -92,7 +93,7 @@ const EVIDENCE_METHOD_LABELS: Record<string, string> = {
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface PendingReportBannerProps {
-  kind: 'cancelled' | 'postponed';
+  kind: 'cancelled' | 'postponed' | 'available';
   confirms: number;
   needed: number;
   view: 'other' | 'reporter' | 'self-locked';
@@ -102,7 +103,8 @@ export interface PendingReportBannerProps {
   reporter: { handle: string; url: string } | null;
   onConfirm: () => void;
   onWithdraw: () => void;
-  onSawDifferent: () => void;
+  /** Absent when there is nothing different left to report. */
+  onSawDifferent?: (() => void) | undefined;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -125,10 +127,18 @@ export const PendingReportBanner = ({
   const isReporter = view === 'reporter' || view === 'self-locked';
 
   const badgeLabel =
-    kind === 'cancelled' ? copy.cancelledBadge : copy.postponedBadge;
+    kind === 'cancelled'
+      ? copy.cancelledBadge
+      : kind === 'postponed'
+        ? copy.postponedBadge
+        : copy.availableBadge;
 
   const leadText =
-    kind === 'cancelled' ? copy.cancelledLead : copy.postponedLead;
+    kind === 'cancelled'
+      ? copy.cancelledLead
+      : kind === 'postponed'
+        ? copy.postponedLead
+        : copy.availableLead;
 
   const evidenceLabel = evidenceUrl
     ? evidenceUrl
@@ -173,7 +183,13 @@ export const PendingReportBanner = ({
             letterSpacing: '0.08em',
           }}
         >
-          {kind === 'cancelled' ? <CancelledGlyph14 /> : <PostponedGlyph14 />}
+          {kind === 'cancelled' ? (
+            <CancelledGlyph14 />
+          ) : kind === 'postponed' ? (
+            <PostponedGlyph14 />
+          ) : (
+            <ReportGlyph kind="available" size={14} />
+          )}
           {badgeLabel}
         </span>
 
@@ -345,21 +361,23 @@ export const PendingReportBanner = ({
         >
           {view === 'other' && (
             <>
-              <button
-                type="button"
-                onClick={onSawDifferent}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 10,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {copy.footerQuestion}
-              </button>
+              {onSawDifferent && (
+                <button
+                  type="button"
+                  onClick={onSawDifferent}
+                  style={{
+                    all: 'unset',
+                    cursor: 'pointer',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {copy.footerQuestion}
+                </button>
+              )}
 
               <button
                 type="button"

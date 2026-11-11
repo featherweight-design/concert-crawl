@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
 import { ConfirmReportSheet } from './ConfirmReportSheet';
 import { REPORTING_COPY } from './definitions/copy';
 
@@ -14,6 +20,14 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ isLoaded, isSignedIn, getToken: async () => 'token' }),
 }));
 
+const confirmEventReport = vi.fn(async (..._args: unknown[]) => ({
+  confirmed: true,
+  confirmsCount: 1,
+  resolved: false,
+}));
+vi.mock('@/lib/events', () => ({
+  confirmEventReport: (...args: unknown[]) => confirmEventReport(...args),
+}));
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ entry }: { entry: string }) => (
     <div data-testid="tier-picker" data-entry={entry} />
@@ -81,5 +95,20 @@ describe('ConfirmReportSheet', () => {
     renderSheet();
 
     expect(screen.queryByTestId('tier-picker')).toBe(null);
+  });
+
+  // B+ A3: how the confirmer knows reaches the server and is stored.
+  it('sends the chosen method with the confirm', async () => {
+    renderSheet();
+    fireEvent.click(screen.getAllByRole('radio')[1]!);
+    await act(async () => {
+      fireEvent.click(screen.getByText(copy.confirmButton));
+    });
+    expect(confirmEventReport).toHaveBeenCalledWith(
+      'evt_1',
+      'rep_1',
+      'token',
+      'own_evidence',
+    );
   });
 });
