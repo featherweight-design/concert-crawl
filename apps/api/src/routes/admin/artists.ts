@@ -714,3 +714,71 @@ artistsAdminRouter.patch(
     return ctx.json({ success: true, data: updated });
   },
 );
+
+// PATCH /v1/admin/artists/:id/name — set an artist's display name by hand, or
+// hand it back to the automatic repair.
+//
+// Its own endpoint for the same reason as visibility: the identity PATCH
+// requires `spotifyArtistId`, and a rename must never risk the match.
+//
+// `{ name }` writes the name and locks it, so the name repair
+// (`repair-artist-names`, Spotify respell included) never overrides it — the
+// act styles itself `MGMT` or `bbno$` and a human has said so.
+// `{ nameLocked: false }` releases the lock and leaves the name as it is; the
+// next repair run may then rewrite it.
+//
+// `canonical_name` and `slug` are never touched: they are the join key and the
+// public URL, and a display-name edit must not move either.
+const nameBodySchema = z.union([
+  z.object({ name: z.string().trim().min(1).max(200) }).strict(),
+  z.object({ nameLocked: z.literal(false) }).strict(),
+]);
+
+artistsAdminRouter.patch(
+  '/:id/name',
+  zValidator('param', artistIdSchema, validationHook),
+  zValidator('json', nameBodySchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
+    const now = new Date();
+
+    const [previous] = await db
+      .select({ name: artists.name })
+      .from(artists)
+      .where(eq(artists.id, id));
+
+    if (!previous) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
+    }
+
+    const [updated] = await db
+      .update(artists)
+      .set(
+        'name' in body
+          ? { name: body.name, nameLockedAt: now, updatedAt: now }
+          : { nameLockedAt: null, updatedAt: now },
+      )
+      .where(eq(artists.id, id))
+      .returning();
+
+    if (!updated) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
+    }
+
+    const actor = getAuthUser(ctx);
+    ctx.set(
+      'auditAction',
+      'name' in body ? 'artist.name.update' : 'artist.name.unlock',
+    );
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', {
+      slug: updated.slug,
+      previousName: previous.name,
+      name: updated.name,
+    });
+
+    return ctx.json({ success: true, data: updated });
+  },
+);

@@ -36,6 +36,11 @@
       "import": "./dist/scripts/repair-artist-names.js",
       "default": "./dist/scripts/repair-artist-names.js"
     },
+    "./scripts/lock-artist-names": {
+      "types": "./dist/scripts/lock-artist-names.d.ts",
+      "import": "./dist/scripts/lock-artist-names.js",
+      "default": "./dist/scripts/lock-artist-names.js"
+    },
     "./scripts/auto-match-ambiguous": {
       "types": "./dist/scripts/auto-match-ambiguous.d.ts",
       "import": "./dist/scripts/auto-match-ambiguous.js",
@@ -62,6 +67,7 @@
     "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts",
     "db:prune-artists": "tsx src/scripts/run-prune-artists.ts",
     "db:repair-artist-names": "tsx src/scripts/run-repair-artist-names.ts",
+    "db:lock-artist-names": "tsx src/scripts/run-lock-artist-names.ts",
     "db:auto-match-ambiguous": "tsx src/scripts/run-auto-match-ambiguous.ts",
     "db:musicbrainz-disambiguate": "tsx src/scripts/run-musicbrainz-disambiguate.ts",
     "db:resolve-photo-tiebreak": "tsx src/scripts/run-resolve-photo-tiebreak.ts"

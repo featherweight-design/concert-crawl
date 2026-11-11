@@ -132,6 +132,13 @@ export const artists = pgTable(
      */
     autoMatchedAt: timestamp('auto_matched_at', { withTimezone: true }),
     /**
+     * Set when an admin sets `name` by hand. A locked name is the admin's
+     * answer, so the automatic name repair (`repair-artist-names`, Spotify
+     * respell included) never rewrites it. Null hands the name back to the
+     * repair.
+     */
+    nameLockedAt: timestamp('name_locked_at', { withTimezone: true }),
+    /**
      * What Spotify returned the last time this row was searched.
      *
      * Written on every verdict, not just the unresolved ones: the picker is
