@@ -114,6 +114,8 @@ describe('POST /v1/events/:id/reports', () => {
       body: JSON.stringify(reportBody),
     });
     expect(res.status).toBe(409);
+    // The client keys its Already reported state off this code.
+    expect(await res.json()).toMatchObject({ code: 'report_exists' });
   });
 
   it('returns 422 when note contains profanity', async () => {

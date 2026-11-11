@@ -37,7 +37,6 @@ export interface PendingSoldOutCardProps {
   note?: string | null;
   onConfirm: () => void;
   onWithdraw: () => void;
-  onEdit: () => void;
   onSawDifferent?: () => void;
 }
 
@@ -80,7 +79,6 @@ export const PendingSoldOutCard = ({
   note,
   onConfirm,
   onWithdraw,
-  onEdit,
   onSawDifferent,
 }: PendingSoldOutCardProps) => {
   const timeAgo = formatTimeAgo(reportedAt);
@@ -399,22 +397,6 @@ export const PendingSoldOutCard = ({
                 gap: 12,
               }}
             >
-              <button
-                type="button"
-                onClick={onEdit}
-                style={{
-                  all: 'unset',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 600,
-                  fontSize: 12,
-                  color: 'var(--signal)',
-                  lineHeight: 1,
-                }}
-              >
-                {copy.addEvidenceButton}
-              </button>
-
               <button
                 type="button"
                 onClick={onWithdraw}

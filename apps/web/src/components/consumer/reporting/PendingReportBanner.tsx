@@ -102,8 +102,6 @@ export interface PendingReportBannerProps {
   reporter: { handle: string; url: string } | null;
   onConfirm: () => void;
   onWithdraw: () => void;
-  onEdit: () => void;
-  onAddEvidence: () => void;
   onSawDifferent: () => void;
 }
 
@@ -120,7 +118,6 @@ export const PendingReportBanner = ({
   reporter,
   onConfirm,
   onWithdraw,
-  onAddEvidence,
   onSawDifferent,
 }: PendingReportBannerProps) => {
   const tokens = REPORT_TOKENS[kind];
@@ -407,22 +404,6 @@ export const PendingReportBanner = ({
               </span>
 
               <div style={{ display: 'flex', gap: 14 }}>
-                <button
-                  type="button"
-                  onClick={onAddEvidence}
-                  style={{
-                    all: 'unset',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 600,
-                    fontSize: 12,
-                    color: 'var(--signal)',
-                    lineHeight: 1,
-                  }}
-                >
-                  {copy.addEvidenceButton}
-                </button>
-
                 <button
                   type="button"
                   onClick={onWithdraw}

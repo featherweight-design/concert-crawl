@@ -149,6 +149,9 @@ eventReportsRouter.post(
         {
           success: false,
           error: 'You already have an unresolved report for this event',
+          // Lets the client show its Already reported state instead of the
+          // raw message.
+          code: 'report_exists',
         },
         409,
       );

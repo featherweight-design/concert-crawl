@@ -12,6 +12,7 @@ import {
 } from '@testing-library/react';
 import type {
   EventDetailResponse,
+  EventReport,
   TierHeadline,
   TierPriceBlock,
   Tier,
@@ -97,7 +98,7 @@ afterEach(() => {
 });
 
 // Imported after mocks so vi.mock takes effect.
-import { EventDetailPriceBlock } from './EventDetailClient';
+import { EventDetailBanners, EventDetailPriceBlock } from './EventDetailClient';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -1286,5 +1287,66 @@ describe('EventDetailPriceBlock — crawled price, no submissions', () => {
       />,
     );
     expect(screen.getByTestId('price-display-stub')).toBeDefined();
+  });
+});
+
+function buildReport(overrides: Partial<EventReport> = {}): EventReport {
+  return {
+    id: 'report-1',
+    eventId: 'evt-1',
+    reporterId: 'user-reporter',
+    status: 'cancelled',
+    evidenceMethod: 'venue_site',
+    evidenceUrl: null,
+    note: null,
+    createdAt: '2026-11-01T12:00:00.000Z',
+    confirmsCount: 1,
+    confirmsNeeded: 2,
+    isReporter: false,
+    userHasConfirmed: false,
+    reporterHandle: 'fan',
+    ...overrides,
+  };
+}
+
+describe('EventDetailBanners pending report', () => {
+  // The API never counts the reporter toward the threshold (a reporter can't
+  // confirm their own report), so the banner shows the confirms as they are.
+  it('shows the server confirm count against the threshold, without adding the reporter', () => {
+    render(
+      <EventDetailBanners
+        event={buildBaseEvent()}
+        reports={[buildReport({ confirmsCount: 1, confirmsNeeded: 2 })]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByText('1 of 2')).toBeTruthy();
+    expect(screen.queryByText('2 of 2')).toBeNull();
+  });
+
+  it('gives the reporter Withdraw and no dead Add evidence button', () => {
+    render(
+      <EventDetailBanners
+        event={buildBaseEvent()}
+        reports={[buildReport({ isReporter: true })]}
+        currentUserId="user-reporter"
+      />,
+    );
+    expect(screen.getByText('Withdraw')).toBeTruthy();
+    expect(screen.queryByText('Add evidence')).toBeNull();
+  });
+});
+
+describe('EventDetailPriceBlock pending sold-out report', () => {
+  it('gives the reporter Withdraw and no dead Edit button', () => {
+    render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent()}
+        reports={[buildReport({ status: 'sold-out', isReporter: true })]}
+        currentUserId="user-reporter"
+      />,
+    );
+    expect(screen.getByText('Withdraw')).toBeTruthy();
+    expect(screen.queryByText('Edit')).toBeNull();
   });
 });
