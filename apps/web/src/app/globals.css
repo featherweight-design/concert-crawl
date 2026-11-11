@@ -51,6 +51,47 @@
     --motion-base: 240ms;
     --motion-slow: 720ms;
     --motion-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+    /* Genre colors, one per Vibe bucket (B+ rule 2). A genre's color has one
+       job: the image ring, the row's left edge and the dot in a genre chip,
+       never a chip fill, so a filled chip always means a status or a price.
+       Theme-independent on every dark ground; Light swaps in the darker set
+       below. `lib/genre-color.ts` resolves a raw genre to one of these. */
+    --genre-electronic: #7ae6ff;
+    --genre-hip-hop: #ffe36b;
+    --genre-pop: #ff7bd4;
+    --genre-indie: #b7a6ff;
+    --genre-rock: #ff8838;
+    --genre-metal: #a075ff;
+    --genre-punk: #ff6b8a;
+    --genre-folk: #c9f26e;
+    --genre-country: #e8c48a;
+    --genre-jazz: #5dd4d6;
+    --genre-latin: #ff9a5c;
+    --genre-reggae: #6ee7a0;
+    --genre-jam: #9ee6c9;
+    --genre-world: #f2a3ff;
+    --genre-classical: #d9e2f2;
+    --genre-comedy: #f7f08a;
+  }
+
+  :root[data-theme='light'] {
+    --genre-electronic: #0083a3;
+    --genre-hip-hop: #8a6a00;
+    --genre-pop: #c2187f;
+    --genre-indie: #5b45c9;
+    --genre-rock: #a65f00;
+    --genre-metal: #6a3bd6;
+    --genre-punk: #c2244a;
+    --genre-folk: #4e7a00;
+    --genre-country: #8a5a12;
+    --genre-jazz: #007f81;
+    --genre-latin: #b84a00;
+    --genre-reggae: #1f8a4f;
+    --genre-jam: #2b7a5e;
+    --genre-world: #9b2fb0;
+    --genre-classical: #4a5374;
+    --genre-comedy: #7a6f00;
   }
 
   * {
@@ -676,4 +717,30 @@
   to {
     opacity: var(--band-art-opacity);
   }
+}
+
+/* B+ rule 7: a sheet's blue-to-pink top edge, which follows the rounded top
+   corners and fades out down the sides. Drawn with background layers on the
+   sheet's own transparent border rather than a pseudo-element, so it stays put
+   when a scrolling sheet scrolls its content. A sheet whose fill is not
+   --surface-1 sets --sheet-bg in place of a bg-* class; it is read with a
+   fallback rather than declared here, because this unlayered rule would beat
+   the utility that sets it. */
+.sheet-edge {
+  border: 1.5px solid transparent;
+  border-bottom-width: 0;
+  background:
+    linear-gradient(
+        var(--sheet-bg, var(--surface-1)),
+        var(--sheet-bg, var(--surface-1))
+      )
+      padding-box,
+    linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 20px,
+        var(--sheet-bg, var(--surface-1)) 72px
+      )
+      border-box,
+    linear-gradient(90deg, var(--signal), var(--accent)) border-box;
 }

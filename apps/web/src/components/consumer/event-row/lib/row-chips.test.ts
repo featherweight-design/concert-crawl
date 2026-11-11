@@ -92,13 +92,13 @@ describe('rowChips', () => {
     expect(chips).toEqual([]);
   });
 
-  it('labels provenance the way admin does, and tones resale as a warning', () => {
+  it('labels provenance the way admin does, and leaves box office neutral', () => {
     const [chip] = rowChips(
       makeShow({ price: priceObservedHoursAgo(2, 'boxoffice') }),
       'watching',
     );
     expect(chip?.label).toBe('Box office');
-    expect(chip?.tone).toBe('strong');
+    expect(chip?.tone).toBe('neutral');
   });
 
   it('carries the provenance meaning for screen readers, not just the label', () => {
@@ -114,6 +114,12 @@ describe('rowChips', () => {
     expect(chips).toHaveLength(1);
     expect(chips[0]?.label).toBe('indie');
     expect(chips[0]?.secondaryLabel).toBe('rock');
+  });
+
+  // B+ rule 2: the first genre colors the dot; the second stays muted.
+  it('dots the genre chip with its lead genre', () => {
+    const chips = rowChips(makeShow({ genres: ['indie', 'rock'] }), 'browse');
+    expect(chips[0]?.genreDot).toBe('indie');
   });
 
   it('leads with the genre the active Vibe filter matched', () => {

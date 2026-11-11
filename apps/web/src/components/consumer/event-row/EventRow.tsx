@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { bucketMembersFor } from '@concert-crawl/types';
 import { cn } from '@/lib/utils';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { EventImage } from '../event-image';
 import { SupportingLine } from '@/components/consumer/event-title-block';
 import { RowTitleLine } from './RowTitleLine';
@@ -15,6 +16,7 @@ import { SURFACES, type RowSurface } from './definitions/surfaces';
 import { rowMin } from './definitions/row-min';
 import { rowChips, chipBudget } from './lib/row-chips';
 import { isStruck, resolveRowStatus } from './lib/row-status';
+import { orderGenres } from './lib/order-genres';
 import type { EventRowShow } from './lib/row-model';
 
 const NARROW_AT = 360;
@@ -73,9 +75,15 @@ export const EventRow = ({
   const hasSupportLine = config.showsSupports && show.supports.length > 0;
   // Resolved once here rather than inside the chip builder, so the taxonomy
   // stays out of a module whose whole job is turning a show into chip data.
-  const chips = rowChips(show, surface, bucketMembersFor(filterVibe));
+  const bucketMembers = bucketMembersFor(filterVibe);
+  const chips = rowChips(show, surface, bucketMembers);
   const status = resolveRowStatus(show.lifecycle, show.status);
   const struck = isStruck(status);
+  // B+ rule 2: the lead genre, the one that dots the genre chip, colors the
+  // image ring and the card's left edge. Decoration only; the chip names it.
+  const genre =
+    genreColor(orderGenres(show.genres, bucketMembers)[0]) ??
+    NEUTRAL_GENRE_COLOR;
 
   return (
     <div
@@ -90,6 +98,11 @@ export const EventRow = ({
           ? `13px ${config.hasActionGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
           : '13px 0',
         borderRadius: config.carded ? 12 : undefined,
+        ...(config.carded && {
+          borderLeftWidth: 2,
+          borderLeftColor: genre,
+          background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
+        }),
       }}
     >
       <div
@@ -109,8 +122,12 @@ export const EventRow = ({
           style={{ width: artSize, height: artSize }}
         >
           <div
+            data-testid="row-image-ring"
             className="h-full w-full overflow-hidden rounded-md"
             style={{
+              // The image ring: 1.25px in the genre's color plus a soft glow.
+              // A box-shadow, so the clip above never cuts it.
+              boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
               // Sold out dims the artwork, never the row: a row-level opacity
               // pushes --fg-muted below the AA contrast floor.
               opacity: struck || show.status === 'soldout' ? 0.55 : 1,

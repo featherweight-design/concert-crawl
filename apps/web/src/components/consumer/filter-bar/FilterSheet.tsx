@@ -42,7 +42,7 @@ export function FilterSheet({
         role="dialog"
         aria-modal="true"
         aria-label={`${title} filter`}
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-[20px] border-t border-border-strong bg-bg-elevated"
+        className="sheet-edge absolute [--sheet-bg:var(--bg-elevated)] bottom-0 left-1/2 -translate-x-1/2 w-full rounded-t-[20px]"
         style={{
           maxWidth: 402,
           paddingTop: 8,

@@ -7,11 +7,20 @@ import { EVENT_ROW_COPY } from './definitions/copy';
  * radius, type and spacing are fixed here; tone is the only variable.
  */
 
-export type ChipTone = 'neutral' | 'strong' | 'warn' | 'signal';
+export type ChipTone =
+  'neutral' | 'strong' | 'warn' | 'signal' | 'accent' | 'danger' | 'success';
+
+// Tinted rather than solid-bordered: a full-strength rule around a 9.5px chip
+// out-shouts the label it frames.
+const tint = (token: string, fill: number) => ({
+  color: `var(${token})`,
+  background: `color-mix(in oklch, var(${token}) ${fill}%, transparent)`,
+  border: `color-mix(in oklch, var(${token}) 42%, transparent)`,
+});
 
 // Every tone sits on the same surface and differs only in its foreground and
-// border, so the four read as one family under all nine themes rather than as
-// four differently-shaped badges.
+// border, so they read as one family under all nine themes rather than as
+// differently-shaped badges.
 const TONE: Record<
   ChipTone,
   { color: string; background: string; border: string }
@@ -21,25 +30,19 @@ const TONE: Record<
     background: 'var(--surface-2)',
     border: 'var(--border)',
   },
-  // Stand-in pending the open design call on the box-office tone (plan open
-  // call 1): admin renders box office in gold and the row's set has no gold.
+  // The Following chip. Box office used to borrow it; B+ draws box office and
+  // resale neutral (`04-genre-and-vibe/bp-chips-all`).
   strong: {
     color: 'var(--fg)',
     background: 'var(--surface-3)',
     border: 'var(--border-strong)',
   },
-  // Tinted rather than solid-bordered: a full-strength --warning/--signal rule
-  // around a 9.5px chip out-shouts the label it frames.
-  warn: {
-    color: 'var(--warning)',
-    background: 'color-mix(in oklch, var(--warning) 10%, transparent)',
-    border: 'color-mix(in oklch, var(--warning) 42%, transparent)',
-  },
-  signal: {
-    color: 'var(--signal)',
-    background: 'color-mix(in oklch, var(--signal) 9%, transparent)',
-    border: 'color-mix(in oklch, var(--signal) 42%, transparent)',
-  },
+  warn: tint('--warning', 10),
+  signal: tint('--signal', 9),
+  // The B+ status set (rule 3): sold out, cancelled and tickets available.
+  accent: tint('--accent', 10),
+  danger: tint('--danger', 10),
+  success: tint('--success', 9),
 };
 
 export interface RowMetaChipProps {
@@ -54,6 +57,8 @@ export interface RowMetaChipProps {
   secondaryLabel?: string | undefined;
   /** Read after the label, for meaning the visible chip stopped carrying. */
   srSuffix?: string | undefined;
+  /** A status still waiting on confirms draws a dashed edge (B+ rule 3). */
+  dashed?: boolean | undefined;
 }
 
 export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
@@ -66,6 +71,7 @@ export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
       icon,
       secondaryLabel,
       srSuffix,
+      dashed,
     },
     ref,
   ) {
@@ -79,6 +85,7 @@ export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
           color,
           background,
           borderColor: border,
+          borderStyle: dashed ? 'dashed' : 'solid',
           gap: icon ? 4 : 0,
           padding: icon ? '2px 7px 2px 5px' : '2px 7px',
           fontFamily: 'var(--font-mono)',
