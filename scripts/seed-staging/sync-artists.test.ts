@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { syncArtists } from './sync-artists.js';
+import { PROD_ARTIST_COLUMNS, syncArtists } from './sync-artists.js';
 
 describe('syncArtists', () => {
   const rows = [
@@ -147,5 +147,11 @@ describe('syncArtists', () => {
     expect(spies.update).not.toHaveBeenCalled();
     expect(result.scanned).toBe(2);
     expect(result.processed).toBe(2);
+  });
+
+  it('reads prod by an explicit projection that leaves out columns prod may not have yet', () => {
+    // Staging migrates ahead of prod: reading `name_locked_at` (0094) before
+    // prod is promoted would fail the whole weekly sync.
+    expect(Object.keys(PROD_ARTIST_COLUMNS)).not.toContain('nameLockedAt');
   });
 });

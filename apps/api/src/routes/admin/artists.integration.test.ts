@@ -277,6 +277,22 @@ describe('admin artists routes', () => {
       });
     });
 
+    it('returns the name lock with each row', async () => {
+      const lockedAt = new Date('2026-11-11T00:00:00Z');
+      await seedArtist({
+        canonicalName: 'mgmt',
+        matchStatus: 'matched',
+        nameLockedAt: lockedAt,
+      });
+
+      const listed = await (
+        await app.request('/v1/admin/artists?status=matched&upcoming=false', {
+          headers: ADMIN_HEADERS,
+        })
+      ).json();
+      expect(listed.data[0].nameLockedAt).toBe(lockedAt.toISOString());
+    });
+
     it('counts and lists an auto-matched row apart from matched', async () => {
       await seedArtist({ canonicalName: 'ccc', matchStatus: 'matched' });
       await seedArtist({
