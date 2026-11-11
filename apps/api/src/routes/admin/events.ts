@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { isSoldOutSql } from '../../lib/sold-out.js';
@@ -272,7 +273,7 @@ eventsAdminRouter.patch(
       if (report.status === 'cancelled' || report.status === 'postponed') {
         await db
           .update(events)
-          .set({ status: report.status, delistedAt: null })
+          .set({ status: report.status, ...endDelisting() })
           .where(eq(events.id, report.eventId));
       }
 
@@ -802,11 +803,10 @@ eventsAdminRouter.patch(
         // it ends No longer listed (B+ A5).
         .set({
           ...body,
-          ...(typeof body.status === 'string' && { delistedAt: null }),
-          // Restoring a show is a decision that it is still on: without this
-          // the next sweep would find it missing and cancel it again.
-          ...(body.status === 'upcoming' &&
-            preUpdate?.delistedAt != null && { firstMissingAt: null }),
+          // Clears first_missing_at too on a delisted row: otherwise the show
+          // hides again right after its watchers hear, and a restore would be
+          // re-cancelled by the next sweep.
+          ...(typeof body.status === 'string' && endDelisting()),
           updatedAt: new Date(),
         })
         .where(eq(events.id, id))

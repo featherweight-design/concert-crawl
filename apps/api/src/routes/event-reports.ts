@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { httpUrl } from '../lib/url-schema.js';
@@ -374,7 +375,7 @@ eventReportsRouter.post(
         await db
           .update(events)
           // A confirmed status replaces the sweep's No longer listed.
-          .set({ status: report.status, delistedAt: null })
+          .set({ status: report.status, ...endDelisting() })
           .where(eq(events.id, eventId));
       }
 

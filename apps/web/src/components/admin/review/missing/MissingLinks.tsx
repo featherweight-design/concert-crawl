@@ -20,7 +20,8 @@ export interface MissingEventLinkProps {
 }
 
 // The missing row points at the admin record rather than /events/[id]: the
-// consumer detail route deliberately 404s once firstMissingAt is set, so a
+// consumer detail route deliberately 404s once firstMissingAt is set (until
+// the stale sweep delists it, and this list only holds upcoming rows), so a
 // consumer link would be dead for every row in this list by definition.
 export const MissingEventLink = ({
   eventId,

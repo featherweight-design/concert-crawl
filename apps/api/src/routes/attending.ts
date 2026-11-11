@@ -59,8 +59,9 @@ attendingRouter.put('/:eventId', async (ctx) => {
   }
   const eventId = parsed.data;
 
-  // The consumer-visibility pair the event detail route applies: a delisted
-  // event 404s there, so it must not be markable as a night you are going to.
+  // The consumer-visibility pair, at its strict #607 form: a show the crawler
+  // stopped seeing is not markable as a night you are going to, even once the
+  // stale sweep brings it back on its detail page as No longer listed.
   // Un-going lives on DELETE and is unaffected.
   const [eventRow] = await db
     .select({ id: events.id })
