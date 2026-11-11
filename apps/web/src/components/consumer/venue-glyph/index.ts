@@ -1,4 +1,5 @@
 export { VenueGlyph } from './VenueGlyph';
+export { VenueNeonArt } from './VenueNeonArt';
 export { VenueTile } from './VenueTile';
 export {
   VENUE_GLYPHS,

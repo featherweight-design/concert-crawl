@@ -64,7 +64,13 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
     <>
       {/* Page heading — reactive to filtered count */}
       <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] sm:gap-[14px]">
-        <h1 className="m-0 text-[28px] font-extrabold text-fg sm:text-[40px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]">
+        <h1
+          className="m-0 bg-clip-text text-[28px] font-extrabold text-transparent sm:text-[40px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]"
+          style={{
+            backgroundImage:
+              'linear-gradient(90deg, var(--signal), var(--accent))',
+          }}
+        >
           {VENUES_INDEX_COPY.pageHeading}
         </h1>
         <span
@@ -92,44 +98,11 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
         </div>
       )}
 
-      {/* Column headers — desktop only */}
-      {listVenues.length > 0 && (
-        <div
-          className="hidden lg:grid px-2 border-b border-border"
-          style={{
-            paddingTop: 20,
-            paddingBottom: 10,
-            gridTemplateColumns: '88px 1fr 120px 120px 24px',
-            gap: 20,
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontWeight: 500,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          <div />
-          <div>{VENUES_INDEX_COPY.columnHeaders.venue}</div>
-          <div style={{ textAlign: 'right' }}>
-            {VENUES_INDEX_COPY.columnHeaders.capacity}
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            {VENUES_INDEX_COPY.columnHeaders.upcoming}
-          </div>
-          <div />
-        </div>
-      )}
-
       {/* Venue list */}
       {listVenues.length > 0 ? (
-        <div>
-          {listVenues.map((venue, idx) => (
-            <VenueRow
-              key={venue.id}
-              venue={venue}
-              last={idx === listVenues.length - 1}
-            />
+        <div className="flex flex-col gap-2.5">
+          {listVenues.map((venue) => (
+            <VenueRow key={venue.id} venue={venue} />
           ))}
         </div>
       ) : !featured ? (

@@ -7,6 +7,7 @@ import {
   ia_isDark,
   identityFor,
 } from '../identity-art/IdentityArt';
+import { VenueNeonArt, venueGlyphKey } from '../venue-glyph';
 import {
   fmtNum,
   fmtDistance,
@@ -24,6 +25,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
   const identity = identityFor(venue.name, 'venue');
   const dark = ia_isDark(identity.palette.bg);
   const initials = ia_getInitials(venue.name, 2);
+  const glyphKey = venueGlyphKey(venue.slug);
 
   return (
     <Link href={`/venues/${venue.slug}`} className="group block w-full">
@@ -37,14 +39,18 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           className="relative"
           style={{ height: 240, background: identity.palette.bg }}
         >
-          <IdentityArt
-            name={venue.name}
-            kind="venue"
-            scale="hero"
-            grain={0.1}
-            style={{ width: '100%', height: '100%' }}
-            templateOverride="stripes"
-          />
+          {glyphKey !== null ? (
+            <VenueNeonArt glyphKey={glyphKey} glyphSize={150} />
+          ) : (
+            <IdentityArt
+              name={venue.name}
+              kind="venue"
+              scale="hero"
+              grain={0.1}
+              style={{ width: '100%', height: '100%' }}
+              templateOverride="stripes"
+            />
+          )}
           {/* Flagship eyebrow */}
           <div
             style={{
@@ -67,26 +73,31 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           </div>
           {/* Monogram chip, drawn here rather than by IdentityArt: #1525
               retired the chip internal to IdentityArt. Venue surfaces keep
-              their own overlay — venue imagery is a separate handoff. */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 14,
-              bottom: 14,
-              padding: '8px 12px',
-              borderRadius: 8,
-              background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)',
-              backdropFilter: 'blur(6px)',
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 900,
-              fontSize: 24,
-              letterSpacing: '0.02em',
-              color: dark ? '#F1E6D5' : '#191418',
-              lineHeight: 1,
-            }}
-          >
-            {initials}
-          </div>
+              their own overlay — venue imagery is a separate handoff. The
+              neon glyph art names the venue itself, so it takes no chip. */}
+          {glyphKey === null && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 14,
+                bottom: 14,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: dark
+                  ? 'rgba(0,0,0,0.55)'
+                  : 'rgba(255,255,255,0.78)',
+                backdropFilter: 'blur(6px)',
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 900,
+                fontSize: 24,
+                letterSpacing: '0.02em',
+                color: dark ? '#F1E6D5' : '#191418',
+                lineHeight: 1,
+              }}
+            >
+              {initials}
+            </div>
+          )}
         </div>
 
         {/* Right — meta column */}
@@ -229,19 +240,23 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
       </div>
 
       {/* Mobile — vertical card */}
-      <div className="lg:hidden mx-4 rounded-[14px] overflow-hidden border border-border bg-surface-1">
+      <div className="lg:hidden rounded-[14px] overflow-hidden border border-border bg-surface-1">
         <div
           className="relative"
           style={{ height: 180, background: identity.palette.bg }}
         >
-          <IdentityArt
-            name={venue.name}
-            kind="venue"
-            scale="hero"
-            grain={0.1}
-            style={{ width: '100%', height: '100%' }}
-            templateOverride="stripes"
-          />
+          {glyphKey !== null ? (
+            <VenueNeonArt glyphKey={glyphKey} glyphSize={120} />
+          ) : (
+            <IdentityArt
+              name={venue.name}
+              kind="venue"
+              scale="hero"
+              grain={0.1}
+              style={{ width: '100%', height: '100%' }}
+              templateOverride="stripes"
+            />
+          )}
           <div
             style={{
               position: 'absolute',
@@ -261,25 +276,29 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           >
             {VENUES_INDEX_COPY.featureCard.flagship}
           </div>
-          <div
-            style={{
-              position: 'absolute',
-              left: 12,
-              bottom: 12,
-              padding: '6px 10px',
-              borderRadius: 7,
-              background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)',
-              backdropFilter: 'blur(6px)',
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 900,
-              fontSize: 18,
-              letterSpacing: '0.02em',
-              color: dark ? '#F1E6D5' : '#191418',
-              lineHeight: 1,
-            }}
-          >
-            {initials}
-          </div>
+          {glyphKey === null && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 12,
+                bottom: 12,
+                padding: '6px 10px',
+                borderRadius: 7,
+                background: dark
+                  ? 'rgba(0,0,0,0.55)'
+                  : 'rgba(255,255,255,0.78)',
+                backdropFilter: 'blur(6px)',
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 900,
+                fontSize: 18,
+                letterSpacing: '0.02em',
+                color: dark ? '#F1E6D5' : '#191418',
+                lineHeight: 1,
+              }}
+            >
+              {initials}
+            </div>
+          )}
         </div>
         <div className="p-4 pb-4.5">
           {venue.venueType && (

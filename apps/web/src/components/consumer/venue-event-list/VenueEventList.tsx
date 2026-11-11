@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { EventWithVenue } from '@concert-crawl/types';
 import { EventRow, fromEventWithVenue } from '../event-row';
 import { CONSUMER_COPY } from '../definitions/copy';
@@ -59,7 +59,7 @@ export function VenueEventList({
         return (
           <section key={date} aria-label={label}>
             <div
-              className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
+              className="mb-2.5 flex items-baseline gap-2.5 px-4 pb-2"
               style={{ borderBottom: '1px solid var(--border)' }}
             >
               <h2
@@ -85,27 +85,19 @@ export function VenueEventList({
                 {CONSUMER_COPY.showCount(dateEvents.length)}
               </span>
             </div>
-            <div>
-              {dateEvents.map((event, idx) => (
-                <Fragment key={event.id}>
-                  {idx > 0 && (
-                    <div
-                      className="h-px bg-border"
-                      style={{ marginLeft: 58 }}
-                    />
-                  )}
-                  <div
-                    ref={event.id === highlightId ? highlightRef : undefined}
-                  >
-                    <EventRow
-                      show={fromEventWithVenue(event, {
-                        isWatching: watchedSet.has(event.id),
-                      })}
-                      surface="venue"
-                      className="py-2.5"
-                    />
-                  </div>
-                </Fragment>
+            <div className="flex flex-col gap-2">
+              {dateEvents.map((event) => (
+                <div
+                  key={event.id}
+                  ref={event.id === highlightId ? highlightRef : undefined}
+                >
+                  <EventRow
+                    show={fromEventWithVenue(event, {
+                      isWatching: watchedSet.has(event.id),
+                    })}
+                    surface="venue"
+                  />
+                </div>
               ))}
             </div>
           </section>

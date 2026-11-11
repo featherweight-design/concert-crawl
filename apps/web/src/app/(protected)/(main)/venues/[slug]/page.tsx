@@ -12,10 +12,10 @@ import {
 import { EmptyState } from '@/components/consumer/empty-state';
 import { googleMapsUrl } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
+import { VenueTile } from '@/components/consumer/venue-glyph';
+import { VenueHero } from '@/components/consumer/venue-profile/VenueHero';
 import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList';
 import { StatPill } from '@/components/consumer/venue-profile/StatPill';
-import { BackChip } from '@/components/consumer/back-chip/BackChip';
 
 const copy = CONSUMER_COPY;
 
@@ -81,42 +81,21 @@ export default async function VenueProfilePage({
 
   return (
     <>
-      {/* Hero — 320px */}
-      <div className="relative w-full shrink-0" style={{ height: 320 }}>
-        <IdentityArt
-          kind="venue"
-          name={venue.name}
-          scale="hero"
-          style={{ position: 'absolute', inset: 0 }}
-        />
-        {/* Image tint */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'var(--image-tint)' }}
-          aria-hidden
-        />
-        {/* Bottom scrim */}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
-          style={{ background: 'linear-gradient(transparent, var(--bg))' }}
-          aria-hidden
-        />
-        {/* Floating back button */}
-        <BackChip top={56} fallbackHref="/events" />
-      </div>
+      <VenueHero slug={venue.slug} name={venue.name} />
 
       {/* Content */}
-      <div className="relative -mt-5 flex-1 pb-24 sm:pb-10">
+      <div className="relative -mt-10 flex-1 pb-24 sm:pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
           {/* Type chip */}
           {venue.venueType && (
-            <div className="mb-2">
+            <div className="mb-3">
               <span
-                className="rounded-[4px] bg-surface-3 px-[7px] py-[2px] text-fg-muted"
+                className="inline-block rounded-[6px] border border-border-strong bg-surface-2 px-2.5 py-1 uppercase text-fg"
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.03em',
+                  fontSize: 11,
+                  lineHeight: 1,
+                  letterSpacing: '0.12em',
                 }}
               >
                 {venue.venueType}
@@ -124,28 +103,35 @@ export default async function VenueProfilePage({
             </div>
           )}
 
-          {/* Venue name */}
-          <h1
-            className="text-fg"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 900,
-              fontSize: 26,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              margin: 0,
-            }}
-          >
-            {venue.name}
-          </h1>
+          {/* Tile + venue name */}
+          <div className="flex items-center gap-3.5 sm:gap-5">
+            <span className="shrink-0 sm:hidden">
+              <VenueTile slug={venue.slug} name={venue.name} size={64} />
+            </span>
+            <span className="hidden shrink-0 sm:inline-flex">
+              <VenueTile slug={venue.slug} name={venue.name} size={72} />
+            </span>
+            <h1
+              className="min-w-0 text-[30px] text-fg sm:text-[44px]"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 900,
+                letterSpacing: '-0.035em',
+                lineHeight: 1.05,
+                margin: 0,
+              }}
+            >
+              {venue.name}
+            </h1>
+          </div>
 
           {/* City + Directions */}
-          <div className="mt-1.5 flex items-center gap-2">
+          <div className="mt-2.5 flex items-center gap-2">
             <span
               className="text-fg-muted"
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
+                fontSize: '11px',
                 letterSpacing: '0.04em',
               }}
             >
@@ -159,7 +145,7 @@ export default async function VenueProfilePage({
               className="inline-flex items-center gap-1 text-signal"
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: '10px',
+                fontSize: '11px',
                 letterSpacing: '0.03em',
               }}
             >
@@ -190,9 +176,9 @@ export default async function VenueProfilePage({
 
           {/* Stats row */}
           {hasStats && (
-            <div className="mt-4">
+            <div className="mt-5">
               <div className="h-px bg-border" />
-              <div className="flex gap-4 py-3">
+              <div className="flex gap-4 py-4">
                 <StatPill label="Capacity" value={capacityFormatted} />
                 <StatPill
                   label="Upcoming"
@@ -207,13 +193,13 @@ export default async function VenueProfilePage({
 
           {/* About */}
           {venue.about && (
-            <div className="mt-4">
+            <div className="mt-5">
               <p
-                className="mb-1 text-fg-subtle"
+                className="mb-1.5 text-fg-subtle"
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '8px',
-                  letterSpacing: '0.06em',
+                  fontSize: '10px',
+                  letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                 }}
               >
@@ -221,7 +207,7 @@ export default async function VenueProfilePage({
               </p>
               <p
                 className="text-fg-muted"
-                style={{ fontSize: '13px', lineHeight: 1.55 }}
+                style={{ fontSize: '15px', lineHeight: 1.6 }}
               >
                 {venue.about}
               </p>
@@ -243,7 +229,7 @@ export default async function VenueProfilePage({
           />
 
           {/* Upcoming shows */}
-          <div className="mt-5">
+          <div className="mt-8">
             <SectionHeader
               title="Upcoming"
               count={`${venue.upcomingCount} show${venue.upcomingCount !== 1 ? 's' : ''}`}

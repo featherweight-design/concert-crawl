@@ -884,18 +884,11 @@ export const CONSUMER_COPY = {
     pageHeading: 'Venues',
     venueCountSuffix: 'in Denver',
 
-    columnHeaders: {
-      venue: 'Venue',
-      capacity: 'Capacity',
-      upcoming: 'Upcoming',
-    },
-
     statLabels: {
       capacity: 'Capacity',
       upcoming: 'Upcoming',
       distance: 'Distance',
       shows: 'shows',
-      capacityAbbr: 'cap',
     },
 
     featureCard: {

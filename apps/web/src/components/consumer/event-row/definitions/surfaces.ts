@@ -73,12 +73,12 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     promotesTour: false,
     showsSupports: true,
   },
-  // The venue is the page.
+  // The venue is the page. Carded to match the B+ venue board (`bp-venue`).
   venue: {
     carries: ['venue'],
     chipPriority: ['following', 'genre'],
     hasActionGutter: false,
-    carded: false,
+    carded: true,
     showsDelta: false,
     showsPrice: true,
     showsTour: true,
