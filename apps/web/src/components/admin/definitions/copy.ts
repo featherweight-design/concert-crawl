@@ -2253,6 +2253,7 @@ export const ADMIN_COPY = {
       followers: (count: number) =>
         count === 1 ? '1 follower' : `${count} followers`,
       noNextShow: 'No upcoming show',
+      age: (days: number) => (days < 1 ? 'today' : `${days}d`),
       closesHint: (count: number) =>
         `Any fix or dismiss closes ${count === 1 ? 'this report' : `all ${count} reports`}. A fix also tells the reporters.`,
       reason: {

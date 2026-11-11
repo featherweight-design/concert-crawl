@@ -251,7 +251,9 @@ export default function AdminArtistsPage() {
    * it also drops their scroll position and costs two requests. Since both
    * PATCH endpoints return the row they wrote, none of that is necessary.
    *
-   * A row leaves the list when its bucket stops matching the chip in view.
+   * A row leaves the list when it stops belonging to the chip in view: its
+   * match bucket changed, or, on the Reported chip, because the write closed its
+   * reports.
    * During a search nothing leaves: the list is "everything named X", and a row
    * the admin just edited still is.
    *
@@ -443,13 +445,18 @@ export default function AdminArtistsPage() {
         return;
       }
       setError(null);
+      const body: { data: { closed: number } } = await resp.json();
       // Same rule as applyWrite: a load that landed meanwhile already read the
       // dismissal back, and shifting on top of it would count it twice.
       if (generation !== loadGeneration.current) return;
-      setCounts((prev) => ({
-        ...prev,
-        reported: Math.max(0, prev.reported - 1),
-      }));
+      // Nothing to close means the reports were already gone (another admin,
+      // or a fix); the chip was not counting this row any more.
+      if (body.data.closed > 0) {
+        setCounts((prev) => ({
+          ...prev,
+          reported: Math.max(0, prev.reported - 1),
+        }));
+      }
       setOpenReportsFor((current) =>
         current === previous.id ? null : current,
       );
@@ -806,7 +813,7 @@ export default function AdminArtistsPage() {
                         </div>
                       </TD>
                     </TR>
-                    {openReportsFor === row.id && (
+                    {openReportsFor === row.id && row.openReportCount > 0 && (
                       <TR>
                         <TD colSpan={6}>
                           <ReportedPanel
