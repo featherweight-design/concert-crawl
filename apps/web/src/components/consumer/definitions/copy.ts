@@ -696,7 +696,6 @@ export const CONSUMER_COPY = {
 
     // Clear controls
     clearAllFiltersAriaLabel: 'Clear all filters',
-    clearFiltersButton: '× Clear filters',
     clearSearchButton: 'Clear search',
 
     // Filter labels
@@ -726,6 +725,37 @@ export const CONSUMER_COPY = {
     // FilterSheet
     filterSheet: {
       closeAriaLabel: 'Close filter sheet',
+    },
+
+    // Desktop segmented bar (B+ B6a). The eyebrows render uppercase in CSS.
+    // When, Where and Vibe reuse the labels above; My artists reuses the
+    // following chip's label, and Everyone the crew lens picker's.
+    segment: {
+      whoEyebrow: 'Who',
+      priceEyebrow: 'Price',
+      // The bar says "night" where the mobile sheet says "date".
+      whenPlaceholder: 'Any night',
+      followOff: 'Off',
+      followOn: 'On',
+      followedCount: (count: number) => `${count} followed`,
+      clearAria: (label: string) => `Clear ${label}`,
+    },
+
+    // The count line under the desktop bar
+    showCount: (count: number) => `${count} ${count === 1 ? 'show' : 'shows'}`,
+    showCountMatch: (count: number) =>
+      `${count} ${count === 1 ? 'show matches' : 'shows match'}`,
+    clearAll: 'Clear all',
+
+    // Desktop filter popovers
+    popover: {
+      clear: 'Clear',
+      whoTitle: 'Crew lens',
+      whereSub: 'Every venue we crawl, with its icon.',
+      whereSearch: 'Find a venue',
+      whereNoMatch: 'No venue by that name.',
+      vibeSub:
+        "Every genre has a color. It's the dot on each show, and the glow around its photo.",
     },
   },
 

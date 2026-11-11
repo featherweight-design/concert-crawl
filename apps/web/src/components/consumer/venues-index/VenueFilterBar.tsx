@@ -193,7 +193,6 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
         <FilterPopover
           open={!!openKey}
           title={VENUE_FILTER_DEFS[openKey]?.label ?? ''}
-          placeholder={VENUE_FILTER_DEFS[openKey]?.placeholder ?? ''}
           options={VENUE_FILTER_DEFS[openKey]?.options ?? []}
           value={state[openKey] ?? ''}
           anchorRect={anchorRect}

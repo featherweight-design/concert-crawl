@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import type { FilterOption } from './filter-defs';
+
+const copy = CONSUMER_COPY.filterBar.popover;
 
 const ANCHOR_GAP = 6;
 const VIEWPORT_MARGIN = 16;
@@ -34,14 +37,34 @@ export const getPopoverPlacement = (
   return { top: anchorRect.bottom + ANCHOR_GAP, maxHeight: roomBelow };
 };
 
+/**
+ * The popover's left edge: under its anchor, pulled back inside the viewport
+ * margin when a wide popover (the two-column Where list) would overrun it.
+ */
+export const getPopoverLeft = (
+  anchorLeft: number,
+  width: number,
+  viewportWidth: number,
+): number => {
+  const maxLeft = viewportWidth - width - VIEWPORT_MARGIN;
+  return Math.max(VIEWPORT_MARGIN, Math.min(anchorLeft, maxLeft));
+};
+
 interface FilterPopoverProps {
   open: boolean;
   title: string;
-  placeholder: string;
   options: FilterOption[];
   value: string;
   anchorRect: DOMRect | null;
   alwaysOn?: boolean;
+  /** One line under the title. */
+  sub?: string | undefined;
+  /** A fixed width, kept inside the viewport. Omitted, the menu sizes to fit. */
+  width?: number;
+  /** A leading mark per option row, such as a genre's dot. */
+  renderLeading?: ((option: FilterOption) => ReactNode) | undefined;
+  /** Replaces the option list, for a body that is not a plain list. */
+  children?: ReactNode | undefined;
   onSelect: (nextValue: string) => void;
   onClose: () => void;
 }
@@ -49,11 +72,14 @@ interface FilterPopoverProps {
 export function FilterPopover({
   open,
   title,
-  placeholder,
   options,
   value,
   anchorRect,
   alwaysOn = false,
+  sub,
+  width,
+  renderLeading,
+  children,
   onSelect,
   onClose,
 }: FilterPopoverProps) {
@@ -110,43 +136,84 @@ export function FilterPopover({
   if (!open || !anchorRect) return null;
 
   const placement = getPopoverPlacement(anchorRect, window.innerHeight);
+  const fittedWidth =
+    width === undefined
+      ? undefined
+      : Math.min(width, window.innerWidth - VIEWPORT_MARGIN * 2);
+  const left =
+    fittedWidth === undefined
+      ? anchorRect.left
+      : getPopoverLeft(anchorRect.left, fittedWidth, window.innerWidth);
+
+  // The single-select rows apply and close at once, as the sheet does; the
+  // header's Clear is the way back to the resting value.
+  const pick = (nextValue: string) => {
+    onSelect(nextValue);
+    onClose();
+  };
 
   return (
     <div
       ref={popoverRef}
       role="dialog"
       aria-label={`${title} filter`}
-      className="fixed z-50 hidden min-w-[240px] overflow-y-auto overscroll-contain border border-border-strong bg-bg-elevated sm:block"
+      className="sheet-edge fixed z-50 hidden min-w-[240px] flex-col overscroll-contain [--sheet-bg:var(--bg-elevated)] sm:flex"
       style={{
         ...placement,
-        left: anchorRect.left,
-        borderRadius: 10,
-        padding: 6,
-        boxShadow: '0 12px 36px rgba(0,0,0,0.4)',
+        left,
+        width: fittedWidth,
+        borderRadius: 14,
+        boxShadow: '0 18px 48px rgba(0,0,0,0.45)',
       }}
     >
-      {!alwaysOn && (
-        <OptionButton
-          label={placeholder}
-          active={!value}
-          onClick={() => {
-            onSelect('');
-            onClose();
-          }}
-        />
-      )}
+      <div className="flex items-start justify-between gap-3 px-4 pt-3.5 pb-2.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 700,
+              fontSize: 15,
+              letterSpacing: '-0.01em',
+              color: 'var(--fg)',
+            }}
+          >
+            {title}
+          </span>
+          {sub && (
+            <span
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12.5,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {sub}
+            </span>
+          )}
+        </div>
+        {!alwaysOn && (
+          <button
+            type="button"
+            onClick={() => pick('')}
+            className="shrink-0 cursor-pointer rounded-md px-1 text-[12.5px] font-semibold text-fg-muted transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            {copy.clear}
+          </button>
+        )}
+      </div>
 
-      {options.map((option) => (
-        <OptionButton
-          key={option.value}
-          label={option.label}
-          active={value === option.value}
-          onClick={() => {
-            onSelect(option.value);
-            onClose();
-          }}
-        />
-      ))}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+        {children ??
+          options.map((option) => (
+            <OptionButton
+              key={option.value}
+              label={option.label}
+              leading={renderLeading?.(option)}
+              active={value === option.value}
+              onClick={() => pick(option.value)}
+            />
+          ))}
+      </div>
     </div>
   );
 }
@@ -154,18 +221,25 @@ export function FilterPopover({
 interface OptionButtonProps {
   label: string;
   active: boolean;
+  leading?: ReactNode;
   onClick: () => void;
 }
 
-function OptionButton({ label, active, onClick }: OptionButtonProps) {
+export function OptionButton({
+  label,
+  active,
+  leading,
+  onClick,
+}: OptionButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between text-left text-[13px]"
+      aria-pressed={active}
+      className="flex w-full cursor-pointer items-center gap-2.5 text-left text-[13.5px]"
       style={{
-        padding: '8px 10px',
-        borderRadius: 6,
+        padding: '9px 10px',
+        borderRadius: 8,
         color: active ? 'var(--fg)' : 'var(--fg-muted)',
         fontWeight: active ? 700 : 500,
         background: active ? 'var(--surface-2)' : 'transparent',
@@ -179,7 +253,8 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
         event.currentTarget.style.background = 'transparent';
       }}
     >
-      <span>{label}</span>
+      {leading}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
       {active ? (
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
