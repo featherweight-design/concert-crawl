@@ -33,7 +33,12 @@ export {
   DimmedMark,
   primaryButtonStyle,
 } from './InviteShell';
-export { CrewLensPill, CrewLensRail, LensGlyph } from './CrewLens';
+export {
+  CrewLensPill,
+  CrewLensRail,
+  CrewPickerBody,
+  LensGlyph,
+} from './CrewLens';
 export { CrewGoingLine, CrewGoingZone } from './CrewGoingLine';
 export { CrewLensList } from './CrewLensList';
 export { CREWS_COPY } from './definitions/copy';

@@ -553,6 +553,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
             crews={crews}
             lensCount={lensFailed ? null : lensShows.length}
             followCount={followCount}
+            showCount={view === 'list' && !lensActive ? total : null}
           />
         </Suspense>
       </div>

@@ -173,7 +173,7 @@ interface CrewPickerBodyProps {
   onSelect: (crewId: string | null) => void;
 }
 
-const CrewPickerBody = ({
+export const CrewPickerBody = ({
   crews,
   selectedId,
   compact,

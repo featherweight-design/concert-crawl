@@ -20,3 +20,13 @@ export const ChipDivider = () => (
     }}
   />
 );
+
+// The hairline between two segments of the desktop filter bar (B+ B6a). Same
+// trailing-ownership rule: the My artists segment owns the rule after it.
+export const SegmentDivider = () => (
+  <span
+    aria-hidden
+    className="my-3 w-px shrink-0 self-stretch"
+    style={{ background: 'var(--border)' }}
+  />
+);

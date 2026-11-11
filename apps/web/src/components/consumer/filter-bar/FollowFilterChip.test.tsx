@@ -23,6 +23,9 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
 
 import { FollowFilterChip } from './FollowFilterChip';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+
+const SEGMENT_COPY = CONSUMER_COPY.filterBar.segment;
 
 const ENTITLED: EntitlementResult = {
   isLoading: false,
@@ -167,5 +170,59 @@ describe('FollowFilterChip', () => {
     const onToggle = vi.fn();
     renderChip({ active: true, onToggle });
     expect(onToggle).toHaveBeenCalledWith(false);
+  });
+
+  describe('segment variant (desktop bar)', () => {
+    it('is a switch reading Off at rest', () => {
+      entitlementState.current = ENTITLED;
+      const onToggle = vi.fn();
+      renderChip({ variant: 'segment', onToggle });
+      const toggle = screen.getByRole('switch', {
+        name: FOLLOWING_COPY.chipAria,
+      });
+      expect(toggle.getAttribute('aria-checked')).toBe('false');
+      expect(toggle.textContent).toContain(SEGMENT_COPY.followOff);
+      fireEvent.click(toggle);
+      expect(onToggle).toHaveBeenCalledWith(true);
+    });
+
+    it('on, it reads the followed count, or On when the count is unknown', () => {
+      entitlementState.current = ENTITLED;
+      const { unmount } = renderChip({
+        variant: 'segment',
+        active: true,
+        followCount: 271,
+      });
+      expect(screen.getByRole('switch').textContent).toContain(
+        SEGMENT_COPY.followedCount(271),
+      );
+      unmount();
+      renderChip({ variant: 'segment', active: true, followCount: null });
+      const text = screen.getByRole('switch').textContent ?? '';
+      expect(text).toContain(SEGMENT_COPY.followOn);
+      expect(text).not.toContain('0');
+    });
+
+    it('absent: entitled with zero follows renders nothing', () => {
+      entitlementState.current = ENTITLED;
+      const { container } = renderChip({ variant: 'segment', followCount: 0 });
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('locked opens the picker instead of toggling', () => {
+      entitlementState.current = {
+        isLoading: false,
+        active: false,
+        surface: 'paywall-on-tap',
+      };
+      const onToggle = vi.fn();
+      renderChip({ variant: 'segment', onToggle });
+      expect(screen.queryByRole('switch')).toBeNull();
+      fireEvent.click(
+        screen.getByRole('button', { name: FOLLOWING_COPY.chipAria }),
+      );
+      expect(onToggle).not.toHaveBeenCalled();
+      expect(screen.getByTestId('tier-picker')).toBeTruthy();
+    });
   });
 });

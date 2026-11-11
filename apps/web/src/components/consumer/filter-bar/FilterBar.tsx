@@ -1,9 +1,25 @@
 'use client';
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from 'react';
 import type { CrewSummary, VenuePublic } from '@concert-crawl/types';
-import { CrewLensPill, CrewLensRail } from '@/components/consumer/crews';
+import {
+  CREWS_COPY,
+  CrewLensPill,
+  CrewLensRail,
+  CrewPickerBody,
+} from '@/components/consumer/crews';
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { GenreDot } from '@/components/consumer/GenreDot';
+import { VenueTile } from '@/components/consumer/venue-glyph';
 import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { FilterPopover } from './FilterPopover';
@@ -35,8 +51,47 @@ import {
   viewSegmentStyle,
 } from './chrome';
 import { FollowFilterChip } from './FollowFilterChip';
+import { FilterSegment } from './FilterSegment';
+import { SegmentDivider } from './ChipDivider';
+import { VenueOptionGrid } from './VenueOptionGrid';
 
 const copy = CONSUMER_COPY.filterBar;
+
+/** The desktop bar's segments: the four filter dimensions plus the crew lens. */
+type SegmentKey = FilterKey | 'who';
+
+/** Desktop popover widths. Where holds two columns of venues. */
+const POPOVER_WIDTH: Record<SegmentKey, number> = {
+  who: 340,
+  when: 260,
+  where: 620,
+  price: 260,
+  vibe: 320,
+};
+
+/** The desktop eyebrow and popover title for each filter dimension. */
+const SEGMENT_LABEL: Record<FilterKey, string> = {
+  when: FILTER_DEFS.when.label,
+  where: FILTER_DEFS.where.label,
+  price: copy.segment.priceEyebrow,
+  vibe: FILTER_DEFS.vibe.label,
+};
+
+interface BarSegment {
+  key: SegmentKey;
+  eyebrow: string;
+  value: string;
+  leading: ReactNode;
+  active: boolean;
+  clear: () => void;
+}
+
+const SEGMENT_PLACEHOLDER: Record<FilterKey, string> = {
+  when: copy.segment.whenPlaceholder,
+  where: FILTER_DEFS.where.placeholder,
+  price: FILTER_DEFS.price.placeholder,
+  vibe: FILTER_DEFS.vibe.placeholder,
+};
 
 interface FilterBarProps {
   venues: VenuePublic[];
@@ -61,6 +116,11 @@ interface FilterBarProps {
    * viewer who follows fifty artists. `0` is a claim; `null` is an admission.
    */
   followCount?: number | null;
+  /**
+   * The events response's `total`, for the count line under the desktop bar.
+   * Null hides the number (Cal view, the crew lens, which carries its own).
+   */
+  showCount?: number | null;
 }
 
 export function FilterBar({
@@ -71,6 +131,7 @@ export function FilterBar({
   crews: crewsProp = [],
   lensCount = null,
   followCount = null,
+  showCount = null,
 }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -104,15 +165,13 @@ export function FilterBar({
     [pathname, router, searchParams],
   );
 
-  const [openFilterKey, setOpenFilterKey] = useState<FilterKey | null>(null);
+  const [openFilterKey, setOpenFilterKey] = useState<SegmentKey | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
-  const chipRefs = useRef<Record<FilterKey, HTMLButtonElement | null>>({
-    when: null,
-    where: null,
-    price: null,
-    vibe: null,
-  });
+  // Desktop segments anchor their popovers on the whole segment, ✕ included.
+  const segmentRefs = useRef<
+    Partial<Record<SegmentKey, HTMLDivElement | null>>
+  >({});
 
   const filterValues: Partial<Record<FilterKey, string>> = {
     when: searchParams.get('filterWhen') ?? '',
@@ -139,7 +198,7 @@ export function FilterBar({
 
   useEffect(() => {
     if (!openFilterKey || !isDesktop) return;
-    const nextAnchor = chipRefs.current[openFilterKey];
+    const nextAnchor = segmentRefs.current[openFilterKey];
     setAnchorRect(nextAnchor?.getBoundingClientRect() ?? null);
   }, [openFilterKey, isDesktop]);
 
@@ -151,11 +210,15 @@ export function FilterBar({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const activeDef = openFilterKey ? FILTER_DEFS[openFilterKey] : null;
-  const activeOptions = openFilterKey
-    ? getFilterOptions(openFilterKey, venues, genres)
+  // The crew lens has no sheet or option list of its own here: on mobile it is
+  // the heading's pill, and on desktop its popover body is the crew picker.
+  const openDimension: FilterKey | null =
+    openFilterKey === 'who' ? null : openFilterKey;
+  const activeDef = openDimension ? FILTER_DEFS[openDimension] : null;
+  const activeOptions = openDimension
+    ? getFilterOptions(openDimension, venues, genres)
     : [];
-  const activeValue = openFilterKey ? (filterValues[openFilterKey] ?? '') : '';
+  const activeValue = openDimension ? (filterValues[openDimension] ?? '') : '';
 
   const setFilterValue = useCallback(
     (key: FilterKey, value: string) => {
@@ -189,6 +252,74 @@ export function FilterBar({
     setOpenFilterKey(null);
   }, [updateParams]);
 
+  const closePopover = useCallback(() => setOpenFilterKey(null), []);
+
+  const toggleFollow = useCallback(
+    (next: boolean) => updateParams({ filterFollowing: next ? '1' : '' }),
+    [updateParams],
+  );
+
+  // Rendered in exactly one place at a time (the mobile chip row, or the
+  // desktop count line), so its entitlement effects never run twice.
+  const tasteChip = (
+    <TasteFilterChip
+      active={tasteActive}
+      onToggle={(next) => updateParams({ filterTaste: next ? '1' : '' })}
+      scaRegion={scaRegion}
+    />
+  );
+
+  const dimensionSegment = (key: FilterKey): BarSegment => {
+    const value = filterValues[key] ?? '';
+    const activeLabel = value
+      ? getActiveFilterLabel(key, value, venues, genres)
+      : null;
+    const venue =
+      key === 'where' && value
+        ? venues.find((candidate) => candidate.slug === value)
+        : undefined;
+    let leading: ReactNode = null;
+    if (venue) {
+      leading = <VenueTile slug={venue.slug} name={venue.name} size={20} />;
+    } else if (key === 'vibe' && value) {
+      leading = <GenreDot genre={value} />;
+    }
+    return {
+      key,
+      eyebrow: SEGMENT_LABEL[key],
+      value: activeLabel ?? SEGMENT_PLACEHOLDER[key],
+      leading,
+      active: Boolean(value),
+      clear: () => setFilterValue(key, ''),
+    };
+  };
+
+  // Bar order (B+ board): My artists, Who, When, Where, Price, Vibe. Who shows
+  // only when the viewer has crews and the flag is on, as the pill did; When
+  // hides in Cal view, as its chip does.
+  const segments: BarSegment[] = [];
+  if (crews.length > 0) {
+    segments.push({
+      key: 'who',
+      eyebrow: copy.segment.whoEyebrow,
+      value: lensCrew?.name ?? CREWS_COPY.lens.pickerNone,
+      leading: lensCrew ? (
+        <CrewPatch
+          crewId={lensCrew.id}
+          patchSalt={lensCrew.patchSalt}
+          size={20}
+          scale="micro"
+        />
+      ) : null,
+      active: lensCrew !== null,
+      clear: () => setLensCrew(null),
+    });
+  }
+  for (const key of FILTER_ORDER) {
+    if (key === 'when' && isCalendarView) continue;
+    segments.push(dimensionSegment(key));
+  }
+
   return (
     <div
       className={cn(
@@ -216,8 +347,9 @@ export function FilterBar({
           </h1>
         </div>
 
+        {/* Mobile only: from sm up the lens is the bar's Who segment. */}
         {crews.length > 0 && (
-          <div className="flex shrink-0 items-center">
+          <div className="flex shrink-0 items-center sm:hidden">
             <CrewLensPill
               crews={crews}
               activeCrew={lensCrew}
@@ -278,8 +410,9 @@ export function FilterBar({
         />
       )}
 
-      {/* Filter chips — Inter font, surface-1 inactive bg, placeholder as default label */}
-      <div className={CHIP_ROW_CLASS} style={CHIP_ROW_STYLE}>
+      {/* Filter chips (mobile) — Inter font, surface-1 inactive bg, placeholder
+          as default label. From sm up the segmented bar below replaces them. */}
+      <div className={cn(CHIP_ROW_CLASS, 'sm:hidden')} style={CHIP_ROW_STYLE}>
         {activeFilterCount > 0 && (
           <button
             type="button"
@@ -306,20 +439,17 @@ export function FilterBar({
             built by hand, where the taste chip scopes to one Spotify inferred.
             Either chip can render nothing, and because each owns the divider
             that FOLLOWS it, no combination can strand a leading rule. */}
-        <FollowFilterChip
-          active={followActive}
-          onToggle={(next) =>
-            updateParams({ filterFollowing: next ? '1' : '' })
-          }
-          followCount={followCount}
-          scaRegion={scaRegion}
-        />
-
-        <TasteFilterChip
-          active={tasteActive}
-          onToggle={(next) => updateParams({ filterTaste: next ? '1' : '' })}
-          scaRegion={scaRegion}
-        />
+        {!isDesktop && (
+          <>
+            <FollowFilterChip
+              active={followActive}
+              onToggle={toggleFollow}
+              followCount={followCount}
+              scaRegion={scaRegion}
+            />
+            {tasteChip}
+          </>
+        )}
 
         {FILTER_ORDER.map((key) => {
           if (key === 'when' && isCalendarView) return null;
@@ -336,9 +466,6 @@ export function FilterBar({
             <button
               key={key}
               type="button"
-              ref={(element) => {
-                chipRefs.current[key] = element;
-              }}
               onClick={(event) => {
                 const nextOpen = isOpen ? null : key;
                 setOpenFilterKey(nextOpen);
@@ -346,7 +473,11 @@ export function FilterBar({
                   setAnchorRect(event.currentTarget.getBoundingClientRect());
                 }
               }}
-              data-testid={key === 'where' ? 'venue-chip' : undefined}
+              // One `venue-chip` in the DOM at a time: the desktop segment
+              // carries it from sm up, and e2e locates it strictly.
+              data-testid={
+                key === 'where' && !isDesktop ? 'venue-chip' : undefined
+              }
               className={cn(FILTER_CHIP_CLASS, 'cursor-pointer')}
               style={filterChipStyle(isActive)}
               aria-expanded={isOpen}
@@ -357,47 +488,168 @@ export function FilterBar({
             </button>
           );
         })}
-
-        {activeFilterCount > 0 && (
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="hidden h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3 sm:inline-flex"
-            style={{
-              fontFamily: 'Inter, system-ui',
-              fontWeight: 600,
-              fontSize: 12.5,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {copy.clearFiltersButton}
-          </button>
-        )}
       </div>
 
-      {activeDef && openFilterKey && (
+      {/* Segmented filter bar (desktop, B+ B6a) */}
+      <div className="hidden flex-col gap-2.5 sm:flex">
+        <div
+          data-testid="filter-segment-bar"
+          className="flex items-stretch rounded-[14px] border border-border-strong p-1"
+          style={{ background: 'var(--surface-1)', minHeight: 62 }}
+        >
+          {isDesktop && (
+            <FollowFilterChip
+              variant="segment"
+              active={followActive}
+              onToggle={toggleFollow}
+              followCount={followCount}
+              scaRegion={scaRegion}
+            />
+          )}
+          {segments.map((segment, index) => (
+            <Fragment key={segment.key}>
+              {index > 0 && <SegmentDivider />}
+              <FilterSegment
+                eyebrow={segment.eyebrow}
+                value={segment.value}
+                leading={segment.leading}
+                active={segment.active}
+                open={openFilterKey === segment.key}
+                clearLabel={copy.segment.clearAria(segment.eyebrow)}
+                testId={
+                  segment.key === 'where' && isDesktop
+                    ? 'venue-chip'
+                    : `filter-segment-${segment.key}`
+                }
+                anchorRef={(element) => {
+                  segmentRefs.current[segment.key] = element;
+                }}
+                onToggle={() => {
+                  const nextOpen =
+                    openFilterKey === segment.key ? null : segment.key;
+                  setOpenFilterKey(nextOpen);
+                  if (nextOpen) {
+                    setAnchorRect(
+                      segmentRefs.current[
+                        segment.key
+                      ]?.getBoundingClientRect() ?? null,
+                    );
+                  }
+                }}
+                onClear={() => {
+                  segment.clear();
+                  setOpenFilterKey(null);
+                }}
+              />
+            </Fragment>
+          ))}
+        </div>
+
+        <div className="flex min-h-[22px] items-center gap-3">
+          {showCount !== null && (
+            <span
+              data-testid="filter-count-line"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              {activeFilterCount > 0
+                ? copy.showCountMatch(showCount)
+                : copy.showCount(showCount)}
+            </span>
+          )}
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="cursor-pointer text-[12.5px] font-semibold text-signal underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {copy.clearAll}
+            </button>
+          )}
+          {isDesktop && (
+            <span className="ml-auto inline-flex items-center">
+              {tasteChip}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {activeDef && openDimension && (
         <FilterSheet
           open={!isDesktop}
           title={activeDef.label}
           placeholder={activeDef.placeholder}
           options={activeOptions}
           value={activeValue}
-          onClose={() => setOpenFilterKey(null)}
-          onSelect={(nextValue) => setFilterValue(openFilterKey, nextValue)}
+          onClose={closePopover}
+          onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
         />
       )}
 
-      {activeDef && openFilterKey && (
+      {openDimension && (
         <FilterPopover
           open={isDesktop}
-          title={activeDef.label}
-          placeholder={activeDef.placeholder}
+          title={SEGMENT_LABEL[openDimension]}
+          sub={
+            openDimension === 'where'
+              ? copy.popover.whereSub
+              : openDimension === 'vibe'
+                ? copy.popover.vibeSub
+                : undefined
+          }
+          width={POPOVER_WIDTH[openDimension]}
           options={activeOptions}
           value={activeValue}
           anchorRect={anchorRect}
-          onClose={() => setOpenFilterKey(null)}
-          onSelect={(nextValue) => setFilterValue(openFilterKey, nextValue)}
-        />
+          renderLeading={
+            openDimension === 'vibe'
+              ? (option) => <GenreDot genre={option.value} />
+              : undefined
+          }
+          onClose={closePopover}
+          onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
+        >
+          {openDimension === 'where' ? (
+            <VenueOptionGrid
+              venues={venues}
+              value={activeValue}
+              onPick={(slug) => {
+                setFilterValue('where', slug);
+                closePopover();
+              }}
+            />
+          ) : undefined}
+        </FilterPopover>
+      )}
+
+      {openFilterKey === 'who' && (
+        <FilterPopover
+          open={isDesktop}
+          title={copy.popover.whoTitle}
+          sub={CREWS_COPY.lens.pickerSub}
+          width={POPOVER_WIDTH.who}
+          options={[]}
+          value={lensCrew?.id ?? ''}
+          anchorRect={anchorRect}
+          onClose={closePopover}
+          onSelect={(crewId) => setLensCrew(crewId || null)}
+        >
+          <CrewPickerBody
+            crews={crews}
+            selectedId={lensCrew?.id ?? null}
+            compact
+            onSelect={(crewId) => {
+              setLensCrew(crewId);
+              closePopover();
+            }}
+          />
+        </FilterPopover>
       )}
 
       {(searchParams.get('search') || searchParams.get('venueSlug')) && (
