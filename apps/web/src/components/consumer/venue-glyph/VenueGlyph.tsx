@@ -27,13 +27,18 @@ export function VenueGlyph({ glyphKey, size = 24 }: VenueGlyphProps) {
   );
 }
 
-/** A user-space gradient across the 24×24 glyph grid, as in the assets. */
+/**
+ * The venue's two-stop gradient, corner to corner across a `span`-unit square
+ * in user space: the 24-unit glyph grid by default, or the 96-unit tile edge.
+ */
 export function GlyphGradient({
   id,
   glyphKey,
+  span = 24,
 }: {
   id: string;
   glyphKey: VenueGlyphKey;
+  span?: number;
 }) {
   const { from, to } = VENUE_GLYPHS[glyphKey];
   return (
@@ -42,8 +47,8 @@ export function GlyphGradient({
       gradientUnits="userSpaceOnUse"
       x1="0"
       y1="0"
-      x2="24"
-      y2="24"
+      x2={span}
+      y2={span}
     >
       <stop offset="0" stopColor={from} />
       <stop offset="1" stopColor={to} />
@@ -74,7 +79,8 @@ export function GlyphShapes({
             key={i}
             d={shape.pathData}
             transform={shape.transform}
-            {...(shape.filled === true && { fill: paint, stroke: 'none' })}
+            fill={shape.filled ? paint : undefined}
+            stroke={shape.filled ? 'none' : undefined}
           />
         ),
       )}

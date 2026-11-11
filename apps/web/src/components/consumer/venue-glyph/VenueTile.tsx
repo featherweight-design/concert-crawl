@@ -1,12 +1,20 @@
 import { useId } from 'react';
 
-import { VENUE_GLYPHS } from './definitions/glyphs';
+import { VenueIdentityTile } from '@/components/consumer/venues-index/VenueIdentityTile';
+
 import { venueGlyphKey } from './definitions/venue-glyph-keys';
 import { GlyphGradient, GlyphShapes } from './VenueGlyph';
 
+/**
+ * The tile ground the glyphs were drawn on. Fixed rather than the theme's
+ * surface: the tile is the venue's icon, like an app icon, and its pale glyph
+ * gradients vanish on a light theme's ground.
+ */
+const TILE_GROUND = '#11162E';
+
 interface VenueTileProps {
   slug: string;
-  /** The venue's display name. Its first letter marks the fallback tile. */
+  /** The venue's display name, for the label and a venue with no glyph. */
   name: string;
   size?: number;
   /**
@@ -17,9 +25,9 @@ interface VenueTileProps {
 }
 
 /**
- * The venue icon tile: a rounded square on the theme's `--surface-1`, edged in
- * the venue's gradient, with its glyph. A venue without a glyph gets a neutral
- * tile marked with its initial, never a broken image.
+ * The venue icon tile: a rounded square edged in the venue's gradient, with its
+ * glyph. A venue without a glyph gets its existing identity tile
+ * (`VenueIdentityTile`), so venue imagery stays on one chain.
  */
 export function VenueTile({
   slug,
@@ -35,40 +43,16 @@ export function VenueTile({
 
   if (glyphKey === null) {
     return (
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 96 96"
-        focusable="false"
+      <span
         data-venue-tile="fallback"
+        style={{ display: 'inline-flex' }}
         {...a11y}
       >
-        <rect
-          x="0.8"
-          y="0.8"
-          width="94.4"
-          height="94.4"
-          rx="22.2"
-          fill="var(--surface-1)"
-          stroke="var(--border-strong)"
-          strokeWidth="1.6"
-        />
-        <text
-          x="48"
-          y="48"
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize="40"
-          fontWeight="600"
-          fill="var(--fg-muted)"
-        >
-          {name.trim().charAt(0).toUpperCase()}
-        </text>
-      </svg>
+        <VenueIdentityTile name={name} size={size} />
+      </span>
     );
   }
 
-  const { from, to } = VENUE_GLYPHS[glyphKey];
   const edgeId = `vt${uid}e`;
   const glyphId = `vt${uid}g`;
   return (
@@ -81,10 +65,7 @@ export function VenueTile({
       {...a11y}
     >
       <defs>
-        <linearGradient id={edgeId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={from} />
-          <stop offset="1" stopColor={to} />
-        </linearGradient>
+        <GlyphGradient id={edgeId} glyphKey={glyphKey} span={96} />
         <GlyphGradient id={glyphId} glyphKey={glyphKey} />
       </defs>
       <rect
@@ -93,7 +74,7 @@ export function VenueTile({
         width="94.4"
         height="94.4"
         rx="22.2"
-        fill="var(--surface-1)"
+        fill={TILE_GROUND}
         stroke={`url(#${edgeId})`}
         strokeWidth="1.6"
       />
