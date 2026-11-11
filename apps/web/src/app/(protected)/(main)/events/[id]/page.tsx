@@ -26,6 +26,7 @@ import { ShareButton } from '@/components/consumer/event-detail/ShareButton';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { SectionHeader } from '@/components/consumer/section-header';
 import { WatchZone } from '@/components/consumer/watchers';
+import { WatchShowButton } from '@/components/consumer/watch-show-button';
 import { EventDetailCtaBlock } from '@/components/consumer/going';
 import { CrewGoingZone } from '@/components/consumer/crews';
 import { GenreChips } from '@/components/consumer/GenreChips';
@@ -339,19 +340,29 @@ export default async function EventDetailPage({
             />
           </div>
 
-          {/* Primary CTA — always renders on all events including cancelled/postponed,
-              per spec ("PrimaryCTA always renders with no cancelled carve-out").
-              Fans may still want to visit the venue site even for cancelled shows.
+          {/* Primary CTA — always renders on all events. Postponed swaps it for
+              the Watch toggle (no date to buy for yet); cancelled relabels the
+              ticket link as refund info, since the vendor handles refunds.
               Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
               (eventUrl deep-links the venue's specific event page when there's
               no direct ticket link, #1152). Fallback → venue website. No URL →
               disabled "No tickets available". */}
           <div className="mt-5">
-            <EventTicketCta
-              soldOut={event.priceStatus === 'soldout'}
-              href={ctaHref}
-              hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
-            />
+            {event.status === 'postponed' ? (
+              <WatchShowButton
+                eventId={event.id}
+                initialWatching={event.isWatching}
+                artist={event.artist}
+                variant="cta"
+              />
+            ) : (
+              <EventTicketCta
+                cancelled={event.status === 'cancelled'}
+                soldOut={event.priceStatus === 'soldout'}
+                href={ctaHref}
+                hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
+              />
+            )}
           </div>
 
           {/* About — after CTA, per design */}

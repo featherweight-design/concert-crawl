@@ -187,9 +187,7 @@ export function fromEventWithVenue(
     isFollowed: (event.followedArtists?.length ?? 0) > 0,
     isWatching: options.isWatching ?? false,
     crewGoing: options.crewGoing ?? null,
-    // The browse payload carries no sold-out signal, so every row is live
-    // until a surface that knows better says otherwise.
-    status: 'live',
+    status: event.isSoldOut ? 'soldout' : 'live',
     lifecycle: event.status,
   };
 }
@@ -250,7 +248,7 @@ export function fromArtistShow(
     // The row's action is the watch button, which states the same thing louder
     // and one gutter away. A tick beside it is the fact twice.
     isWatching: false,
-    status: 'live',
+    status: show.isSoldOut ? 'soldout' : 'live',
     lifecycle: show.status,
   };
 }

@@ -7,8 +7,18 @@ const copy = REPORTING_COPY.reportTypeMark;
 
 // ── Glyphs ────────────────────────────────────────────────────────
 
-const CancelledGlyph = () => (
-  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+interface GlyphProps {
+  size: number;
+}
+
+const CancelledGlyph = ({ size }: GlyphProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 12 12"
+    fill="none"
+    aria-hidden="true"
+  >
     <path
       d="M3 3l6 6M9 3L3 9"
       stroke="currentColor"
@@ -18,8 +28,14 @@ const CancelledGlyph = () => (
   </svg>
 );
 
-const PostponedGlyph = () => (
-  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+const PostponedGlyph = ({ size }: GlyphProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 12 12"
+    fill="none"
+    aria-hidden="true"
+  >
     <circle
       cx="6"
       cy="6"
@@ -38,8 +54,14 @@ const PostponedGlyph = () => (
   </svg>
 );
 
-const SoldOutGlyph = () => (
-  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+const SoldOutGlyph = ({ size }: GlyphProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 12 12"
+    fill="none"
+    aria-hidden="true"
+  >
     <circle
       cx="6"
       cy="6"
@@ -57,8 +79,14 @@ const SoldOutGlyph = () => (
   </svg>
 );
 
-const AvailableGlyph = () => (
-  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+const AvailableGlyph = ({ size }: GlyphProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 12 12"
+    fill="none"
+    aria-hidden="true"
+  >
     <path
       d="M2 5a1.5 1.5 0 010 3v2h8V8a1.5 1.5 0 010-3V3H2v2z"
       stroke="currentColor"
@@ -75,11 +103,26 @@ const AvailableGlyph = () => (
   </svg>
 );
 
-const GLYPHS: Record<ReportTypeMarkProps['kind'], () => React.JSX.Element> = {
+const GLYPHS: Record<
+  ReportTypeMarkProps['kind'],
+  (props: GlyphProps) => React.JSX.Element
+> = {
   cancelled: CancelledGlyph,
   postponed: PostponedGlyph,
   'sold-out': SoldOutGlyph,
   available: AvailableGlyph,
+};
+
+/** A report kind's glyph on its own, at any size (default: the chip's 9px). */
+export const ReportGlyph = ({
+  kind,
+  size = 9,
+}: {
+  kind: ReportTypeMarkProps['kind'];
+  size?: number;
+}) => {
+  const Glyph = GLYPHS[kind];
+  return <Glyph size={size} />;
 };
 
 // ── Props ─────────────────────────────────────────────────────────
@@ -96,8 +139,6 @@ export const ReportTypeMark = ({
   pending = false,
 }: ReportTypeMarkProps) => {
   const token = REPORT_TOKENS[kind];
-  const Glyph = GLYPHS[kind];
-
   return (
     <span
       style={{
@@ -118,7 +159,7 @@ export const ReportTypeMark = ({
         whiteSpace: 'nowrap',
       }}
     >
-      <Glyph />
+      <ReportGlyph kind={kind} />
       {token.label}
       {pending && (
         <span aria-hidden="true">

@@ -43,9 +43,10 @@ interface WatchShowButtonProps {
    * event-detail watch strip: the same control widened so the status line sits
    * inside the hit area instead of orphaned beside it. Both share this
    * component so the signed-out picker routing and the post-watch ask can't
-   * diverge between the two shapes.
+   * diverge between the two shapes. `cta` is the full-width button that takes
+   * the ticket CTA's slot on a postponed show, labelled for the new date.
    */
-  variant?: 'icon' | 'strip';
+  variant?: 'icon' | 'strip' | 'cta';
 }
 
 export function WatchShowButton({
@@ -318,7 +319,7 @@ export function WatchShowButton({
 
   const glyph = isPending ? (
     <Loader2
-      size={variant === 'strip' ? 16 : 10}
+      size={variant === 'icon' ? 10 : 16}
       aria-hidden
       style={{ animation: 'fbSpin 0.7s linear infinite' }}
     />
@@ -328,7 +329,7 @@ export function WatchShowButton({
     // gesture itself; state is carried by the fill, and the accessible
     // name carries it for screen readers.
     <Eye
-      size={variant === 'strip' ? 20 : 14}
+      size={variant === 'strip' ? 20 : variant === 'cta' ? 16 : 14}
       aria-hidden
       style={{ flexShrink: 0 }}
     />
@@ -392,6 +393,40 @@ export function WatchShowButton({
               ? CONSUMER_COPY.watchers.watchStatusOn
               : CONSUMER_COPY.watchers.watchHint}
           </span>
+        </button>
+      ) : variant === 'cta' ? (
+        <button
+          {...controlProps}
+          // Signed in, the visible label carries the state, so it is the
+          // name. Signed out it opens the picker, which the label can't say.
+          aria-label={isSignedIn ? undefined : controlProps['aria-label']}
+          className="flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-[10px] border-[1.5px] bg-transparent px-4 text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)] disabled:cursor-default disabled:opacity-60"
+          style={{
+            borderColor: renderedWatching
+              ? 'color-mix(in oklab, var(--accent) 50%, transparent)'
+              : 'var(--border-strong)',
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 800,
+            fontSize: 15,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          <span
+            aria-hidden
+            className="inline-flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-lg"
+            style={{
+              color: renderedWatching ? 'var(--accent)' : 'var(--fg-muted)',
+              border: `1.5px solid ${renderedWatching ? 'var(--accent)' : 'var(--border-strong)'}`,
+              background: renderedWatching
+                ? 'color-mix(in oklab, var(--accent) 12%, transparent)'
+                : 'transparent',
+            }}
+          >
+            {glyph}
+          </span>
+          {renderedWatching
+            ? CONSUMER_COPY.watchShowButton.newDate.on
+            : CONSUMER_COPY.watchShowButton.newDate.off}
         </button>
       ) : (
         <div

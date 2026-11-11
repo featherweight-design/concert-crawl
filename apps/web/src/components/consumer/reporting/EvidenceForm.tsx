@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { fileEventReport, withdrawEventReport } from '@/lib/events';
 import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
+import { ReportGlyph } from './ReportTypeMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 import { denverTodayUtcMs } from '@/lib/time';
 
@@ -183,6 +184,8 @@ export interface EvidenceFormProps {
   reportType: ReportType;
   eventId: string;
   eventDate: string;
+  /** The show's title, recapped on the Report filed sheet. */
+  eventTitle: string;
   onSuccess?: () => void;
   /**
    * The viewer's own unresolved report on this show, if the page knows of one.
@@ -199,10 +202,12 @@ export const EvidenceForm = ({
   reportType,
   eventId,
   eventDate,
+  eventTitle,
   onSuccess,
   ownReportId = null,
 }: EvidenceFormProps) => {
   const { getToken } = useAuth();
+  const [filed, setFiled] = useState(false);
   const [alreadyReported, setAlreadyReported] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<EvidenceMethod | null>(
     null,
@@ -247,8 +252,8 @@ export const EvidenceForm = ({
         token,
       );
 
-      onSuccess?.();
-      onClose();
+      // The page refreshes once the filed sheet is dismissed (onSuccess).
+      setFiled(true);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'report_exists') {
         setAlreadyReported(true);
@@ -261,6 +266,22 @@ export const EvidenceForm = ({
       setSubmitting(false);
     }
   };
+
+  if (filed) {
+    return (
+      <ReportFiled
+        open={open}
+        reportType={reportType}
+        eventTitle={eventTitle}
+        confirmsNeeded={confirmsNeeded}
+        onDone={() => {
+          setFiled(false);
+          onSuccess?.();
+          onClose();
+        }}
+      />
+    );
+  }
 
   if (alreadyReported) {
     return (
@@ -584,6 +605,192 @@ export const EvidenceForm = ({
     </ModalShell>
   );
 };
+
+// ── Report filed ──────────────────────────────────────────────────
+// Replaces the form once the report is in, recapping it as a pending card
+// with no confirms yet. Every way out goes back to the show and refreshes it.
+function ReportFiled({
+  open,
+  reportType,
+  eventTitle,
+  confirmsNeeded,
+  onDone,
+}: {
+  open: boolean;
+  reportType: ReportType;
+  eventTitle: string;
+  confirmsNeeded: number;
+  onDone: () => void;
+}) {
+  const copy = REPORTING_COPY.evidenceForm.reportFiled;
+  const tokens = REPORT_TOKENS[reportType];
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onDone}
+      ariaLabel={copy.heading}
+      header={
+        <>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginBottom: 14,
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 9,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.08em',
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: tokens.color,
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ color: 'var(--fg-subtle)' }}>{copy.eyebrow}</span>
+            <span
+              aria-hidden="true"
+              style={{ flex: 1, height: 1, background: 'var(--border)' }}
+            />
+          </div>
+          <h2
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 900,
+              fontSize: 30,
+              letterSpacing: '-0.03em',
+              color: 'var(--fg)',
+              margin: 0,
+              lineHeight: 1.1,
+            }}
+          >
+            {copy.heading}
+          </h2>
+        </>
+      }
+      footer={
+        <button
+          type="button"
+          onClick={onDone}
+          style={{
+            background: 'var(--signal)',
+            height: 48,
+            width: '100%',
+            borderRadius: 10,
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 800,
+            fontSize: 14.5,
+            color: 'var(--fg-on-accent)',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          {copy.backButton}
+        </button>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontSize: 14,
+            lineHeight: 1.5,
+            color: 'var(--fg-muted)',
+            margin: 0,
+          }}
+        >
+          {copy.body(confirmsNeeded)}
+        </p>
+        <div
+          data-testid="report-filed-recap"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: `1.5px dashed ${tokens.border}`,
+            background: 'var(--surface-1)',
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              flexShrink: 0,
+              color: tokens.color,
+              background: tokens.bgStrong,
+              border: `1px solid ${tokens.border}`,
+            }}
+          >
+            <ReportGlyph kind={reportType} size={18} />
+          </span>
+          <div
+            style={{
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 800,
+                fontSize: 14.5,
+                color: 'var(--fg)',
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {copy.recap(tokens.label, eventTitle)}
+            </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase' as const,
+                color: tokens.color,
+              }}
+            >
+              {Array.from({ length: confirmsNeeded }).map((_, idx) => (
+                <span
+                  key={idx}
+                  aria-hidden="true"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    border: `1.1px solid ${tokens.color}`,
+                  }}
+                />
+              ))}
+              <span style={{ marginLeft: 4 }}>
+                {copy.progress(confirmsNeeded)}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
 
 // ── Already reported ──────────────────────────────────────────────
 // The API keeps one open report per person per show. A second filing comes

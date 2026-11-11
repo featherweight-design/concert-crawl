@@ -37,6 +37,7 @@ import type {
 } from '@concert-crawl/types';
 import { loadOpenReport } from './artist-reports.js';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
+import { isSoldOutSql } from '../lib/sold-out.js';
 import { billsCanonicalName } from '../lib/event-billing.js';
 import {
   loadPriceByTierByEventId,
@@ -344,6 +345,7 @@ artistsPublicRouter.get(
       tourName: events.tourName,
       genre: events.genre,
       imageUrl: events.imageUrl,
+      isSoldOut: isSoldOutSql(),
     };
 
     const upcomingRows = await db
@@ -417,6 +419,7 @@ artistsPublicRouter.get(
       genres: row.genre ?? [],
       imageUrl: row.imageUrl,
       status: row.status,
+      isSoldOut: row.isSoldOut,
     }));
 
     const past: ArtistPastShow[] = pastRows.map((row) => ({

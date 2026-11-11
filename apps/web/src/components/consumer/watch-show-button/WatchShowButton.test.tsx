@@ -664,3 +664,38 @@ describe('WatchShowButton strip variant', () => {
     expect(toggleMutate).not.toHaveBeenCalled();
   });
 });
+
+describe('cta variant (postponed show)', () => {
+  const renderCta = () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return render(
+      <QueryClientProvider client={client}>
+        <WatchShowButton eventId="evt_1" variant="cta" />
+      </QueryClientProvider>,
+    );
+  };
+
+  it('labels the toggle for the new date, by state', () => {
+    renderCta();
+    expect(
+      screen.getByRole('button', {
+        name: CONSUMER_COPY.watchShowButton.newDate.off,
+      }),
+    ).toBeTruthy();
+    cleanup();
+    watchingData.mockReturnValue([watchedShow('evt_1')]);
+    renderCta();
+    const button = screen.getByRole('button', {
+      name: CONSUMER_COPY.watchShowButton.newDate.on,
+    });
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('toggles the watch like every other variant', () => {
+    renderCta();
+    fireEvent.click(screen.getByRole('button'));
+    expect(toggleMutate).toHaveBeenCalledWith('evt_1', expect.anything());
+  });
+});

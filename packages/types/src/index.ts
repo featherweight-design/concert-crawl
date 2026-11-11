@@ -665,6 +665,11 @@ export interface EventReport {
 
 // EventWithVenue — event joined with its venue, returned by the public events API
 export interface EventWithVenue extends Event {
+  /**
+   * A promoted fan sold-out report (isSoldOutSql). Optional because the web
+   * and API deploy separately: a payload without it reads as not sold out.
+   */
+  isSoldOut?: boolean;
   venue: Pick<
     Venue,
     'id' | 'name' | 'slug' | 'city' | 'websiteUrl' | 'timezone'

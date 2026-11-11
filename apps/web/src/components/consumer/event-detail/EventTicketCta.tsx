@@ -1,15 +1,22 @@
 // The event detail primary CTA, shared by the protected page and the public
 // share mirror at /e/:id (#72).
 //
-// Three states, first match wins:
+// Four states, first match wins:
+//   cancelled + a url → "Refund info from the vendor ›", the same link: the
+//                        vendor handles the refund
 //   sold out          → disabled "Sold out"
 //   a safe http(s) url → "Get tickets ↗" (or "Visit venue website" when the only
 //                        link we have is the venue's homepage)
 //   nothing            → disabled "No tickets available"
 //
+// Postponed never reaches here on the signed-in page: the Watch toggle takes
+// this slot (WatchShowButton's `cta` variant).
+//
 // `href` must already be `isSafeHttpUrl`-filtered by the caller: ticketUrl and
 // eventUrl are crawler-derived and untrusted, so a compromised venue page must
 // not be able to put a javascript:/data: target here (#1152).
+import { ChevronRight } from 'lucide-react';
+
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 import { ExternalLinkIcon } from './InfoRow';
@@ -36,6 +43,8 @@ const disabledStyle = {
 } satisfies React.CSSProperties;
 
 interface EventTicketCtaProps {
+  /** True when the show is cancelled: the link becomes refund info. */
+  cancelled?: boolean | undefined;
   /** True when the show is sold out — takes precedence over any link. */
   soldOut: boolean;
   /** Already-validated http(s) destination, or null when we have none. */
@@ -48,10 +57,35 @@ interface EventTicketCtaProps {
 }
 
 export const EventTicketCta = ({
+  cancelled = false,
   soldOut,
   href,
   hasDirectLink,
 }: EventTicketCtaProps) => {
+  if (cancelled && href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px] text-fg"
+        style={{
+          border:
+            '1.5px solid color-mix(in oklab, var(--danger) 50%, transparent)',
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 800,
+          fontSize: 15,
+          letterSpacing: '-0.01em',
+          textDecoration: 'none',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {copy.refundInfo}
+        <ChevronRight size={16} aria-hidden />
+      </a>
+    );
+  }
+
   if (soldOut) {
     return (
       <button
