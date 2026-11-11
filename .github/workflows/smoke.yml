@@ -18,7 +18,10 @@ concurrency:
 jobs:
   smoke:
     name: Playwright smoke (production)
-    runs-on: ubuntu-latest
+    # Pinned: on ubuntu-latest (26.04) apt cannot resolve archive.ubuntu.com,
+    # so `playwright install --with-deps` and apt-based builds hang. Unpin once
+    # the 26.04 image resolves it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     if: vars.SMOKE_ENABLED == 'true'
     steps:

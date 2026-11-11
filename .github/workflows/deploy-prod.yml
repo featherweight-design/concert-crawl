@@ -538,7 +538,10 @@ jobs:
   smoke:
     name: Playwright smoke (production, post-deploy)
     needs: deploy
-    runs-on: ubuntu-latest
+    # Pinned: on ubuntu-latest (26.04) apt cannot resolve archive.ubuntu.com,
+    # so `playwright install --with-deps` and apt-based builds hang. Unpin once
+    # the 26.04 image resolves it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     # Output an explicit "Playwright completed and asserted a failure"
     # signal that the rollback job keys off, instead of relying on
