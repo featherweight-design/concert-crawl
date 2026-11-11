@@ -10,7 +10,7 @@
  * Idempotent: an already-locked row keeps its original lock time.
  */
 
-import { and, inArray, isNull } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import type { Database } from '../client.js';
 import { artists } from '../schema/artists.js';
 import { auditLog } from '../schema/users.js';
@@ -35,44 +35,51 @@ export async function lockArtistNames(
   const slugs = [...new Set(options.slugs)];
   if (slugs.length === 0) return { found: [], missing: [], locked: 0 };
 
-  const rows = await database
-    .select({
-      slug: artists.slug,
-      name: artists.name,
-      nameLockedAt: artists.nameLockedAt,
-    })
-    .from(artists)
-    .where(inArray(artists.slug, slugs));
+  // Read and write in one transaction, with the rows locked, so the report
+  // describes exactly the rows the write saw.
+  return database.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        id: artists.id,
+        slug: artists.slug,
+        name: artists.name,
+        nameLockedAt: artists.nameLockedAt,
+      })
+      .from(artists)
+      .where(inArray(artists.slug, slugs))
+      .for('update');
 
-  const found = rows.map((row) => ({
-    slug: row.slug,
-    name: row.name,
-    alreadyLocked: row.nameLockedAt !== null,
-  }));
-  const seen = new Set(rows.map((row) => row.slug));
-  const missing = slugs.filter((slug) => !seen.has(slug));
+    const found = rows.map((row) => ({
+      slug: row.slug,
+      name: row.name,
+      alreadyLocked: row.nameLockedAt !== null,
+    }));
+    const seen = new Set(rows.map((row) => row.slug));
+    const missing = slugs.filter((slug) => !seen.has(slug));
+    const toLock = rows.filter((row) => row.nameLockedAt === null);
 
-  if (options.dryRun) return { found, missing, locked: 0 };
+    if (options.dryRun || toLock.length === 0) {
+      return { found, missing, locked: 0 };
+    }
 
-  const locked = await database.transaction(async (tx) => {
     const now = new Date();
-    const written = await tx
+    await tx
       .update(artists)
       .set({ nameLockedAt: now, updatedAt: now })
-      .where(and(inArray(artists.slug, slugs), isNull(artists.nameLockedAt)))
-      .returning({ id: artists.id, slug: artists.slug, name: artists.name });
-    if (written.length > 0) {
-      await tx.insert(auditLog).values(
-        written.map((row) => ({
-          actorId: LOCK_NAMES_ACTOR,
-          action: LOCK_NAMES_AUDIT_ACTION,
-          targetId: row.id,
-          metadata: { slug: row.slug, name: row.name },
-        })),
+      .where(
+        inArray(
+          artists.id,
+          toLock.map((row) => row.id),
+        ),
       );
-    }
-    return written.length;
+    await tx.insert(auditLog).values(
+      toLock.map((row) => ({
+        actorId: LOCK_NAMES_ACTOR,
+        action: LOCK_NAMES_AUDIT_ACTION,
+        targetId: row.id,
+        metadata: { slug: row.slug, name: row.name },
+      })),
+    );
+    return { found, missing, locked: toLock.length };
   });
-
-  return { found, missing, locked };
 }
