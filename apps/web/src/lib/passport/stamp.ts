@@ -90,3 +90,20 @@ export const passportHandle = (handle: string | null | undefined): string => {
   if (trimmed === '' || trimmed === '@') return PASSPORT_COPY.fallbackHandle;
   return trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
 };
+
+const SINCE_FORMAT = new Intl.DateTimeFormat('en-US', {
+  timeZone: DENVER_TIME_ZONE,
+  month: 'short',
+  year: 'numeric',
+});
+
+/**
+ * `Mar 2026` for the first night on the passport. Shared by the PNG card's
+ * footer and the booklet's identity page. UTC-noon anchored for the same
+ * reason as the stamp punch (#596).
+ */
+export const sinceLabel = (date: string | undefined): string | null => {
+  if (date === undefined) return null;
+  const at = new Date(`${date}T12:00:00Z`);
+  return Number.isNaN(at.getTime()) ? null : SINCE_FORMAT.format(at);
+};

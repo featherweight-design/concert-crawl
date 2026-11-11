@@ -5,9 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { PassportContent } from '../PassportContent';
-import { PP_MODES, PASSPORT_PRINT_MODE } from '../definitions/modes';
 import { ThemeProvider } from '@/theme';
-import type { AttendedShow } from '@/lib/passport/stats';
+import type { HistoryShow } from '@concert-crawl/types';
 
 const entitlement = vi.hoisted(() => ({
   value: { isLoading: false, active: true },
@@ -49,6 +48,15 @@ beforeEach(() => {
   );
   URL.createObjectURL = vi.fn(() => 'blob:passport');
   URL.revokeObjectURL = vi.fn();
+  // jsdom has no matchMedia; the booklet asks it which layout to draw.
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
 });
 
 afterEach(() => {
@@ -61,36 +69,47 @@ afterEach(() => {
 
 const COPY = CONSUMER_COPY.passport;
 
-const show = (index: number): AttendedShow => ({
-  id: `show-${index}`,
-  artist: `Artist ${index}`,
-  venue: 'Larimer Lounge',
-  genre: 'indie',
-  date: '2026-05-14',
+const row = (
+  id: string,
+  date: string,
+  over: Partial<HistoryShow> = {},
+): HistoryShow => ({
+  eventId: id,
+  artist: `Artist ${id}`,
+  artistPhotoUrl: null,
+  venueName: 'Larimer Lounge',
+  venueSlug: 'larimer-lounge',
+  neighborhood: null,
+  date,
+  dateLabel: 'Thu, May 14',
+  showTime: null,
   priceFinal: 22,
+  genre: 'indie',
+  attendingAt: `${date}T01:00:00Z`,
+  ...over,
 });
 
-const SHOWS: AttendedShow[] = [
-  {
-    id: 'a',
-    artist: 'Wednesday',
-    venue: 'Larimer Lounge',
-    genre: 'indie',
-    date: '2026-05-14',
-    priceFinal: 22,
-  },
-];
+const PAST: HistoryShow[] = [row('a', '2026-05-14', { artist: 'Wednesday' })];
 
-const TOKENS = { '--bg': '#000', '--fg': '#fff', '--accent': '#0ff' };
+const ACTIVE = [
+  { slug: 'larimer-lounge', name: 'Larimer Lounge' },
+  { slug: 'globe-hall', name: 'Globe Hall' },
+];
 
 const renderContent = (props: Partial<Parameters<typeof PassportContent>[0]>) =>
   render(
     <ThemeProvider>
       <PassportContent
-        shows={SHOWS}
-        tokens={TOKENS}
-        handle="hugh"
-        year={2026}
+        past={PAST}
+        upcoming={[]}
+        activeVenues={ACTIVE}
+        identity={{
+          handle: 'hugh',
+          city: 'Denver',
+          avatarColor: null,
+          year: 2026,
+        }}
+        today="2026-11-11"
         locked={false}
         scaRegion={false}
         {...props}
@@ -99,23 +118,48 @@ const renderContent = (props: Partial<Parameters<typeof PassportContent>[0]>) =>
   );
 
 describe('PassportContent', () => {
-  it('draws the card for an entitled user with stamps', () => {
+  it('draws the booklet for an entitled user with stamps', () => {
     renderContent({});
 
-    expect(screen.getByText(COPY.pageTitle)).toBeInTheDocument();
-    expect(screen.getByText('Wednesday')).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: COPY.bookletLabel }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: 'Wednesday, Larimer Lounge, Thu, May 14',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('@hugh')).toBeInTheDocument();
   });
 
-  // The preview used to be the compact 3×3 card while the download was the
-  // 4×4 print card, so the reader was shown one wall and handed another.
-  it('previews the same card the download contains, not the compact one', () => {
-    const card = PP_MODES[PASSPORT_PRINT_MODE];
-    const wall = card.cols * card.rows;
+  it('counts Venues collected against the active venues', () => {
+    renderContent({});
+
+    expect(screen.getByText(COPY.collectedCount(1, 2))).toBeInTheDocument();
+  });
+
+  // The venue list is optional: when it failed there is no total to count
+  // against, and "0 of 0" would be a claim rather than a gap.
+  it('leaves Venues collected out when the active list is empty', () => {
+    renderContent({ activeVenues: [] });
+
+    expect(screen.queryByText(COPY.venuesCollected)).not.toBeInTheDocument();
+  });
+
+  it('puts the next show on the Up next stub and in the next slot', () => {
     renderContent({
-      shows: Array.from({ length: wall }, (_, i) => show(i)),
+      upcoming: [row('up', '2026-11-21', { artist: 'Marian Hill' })],
     });
 
-    expect(screen.getByText(`Artist ${wall - 1}`)).toBeInTheDocument();
+    expect(screen.getByText(COPY.upNext)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${COPY.nextStamp} · ${COPY.inDays(10)}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: `${COPY.nextStamp}: Marian Hill, Larimer Lounge, Thu, May 14`,
+      }),
+    ).toBeInTheDocument();
   });
 
   // The card follows the theme the browser is in, not the one last written to
@@ -137,7 +181,9 @@ describe('PassportContent', () => {
   it('locks on the server 403 even when the client thinks it is entitled', () => {
     renderContent({ locked: true });
 
-    expect(screen.queryByText(COPY.pageTitle)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: COPY.bookletLabel }),
+    ).not.toBeInTheDocument();
   });
 
   // The other direction: a token that downgraded mid-session leaves the server
@@ -146,12 +192,14 @@ describe('PassportContent', () => {
     entitlement.value = { isLoading: false, active: false };
     renderContent({});
 
-    expect(screen.queryByText(COPY.pageTitle)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: COPY.bookletLabel }),
+    ).not.toBeInTheDocument();
   });
 
   // Not a locked state: the plan is fine, the stamp book is simply empty.
   it('shows the empty state rather than a blank card when nothing is attended', () => {
-    renderContent({ shows: [] });
+    renderContent({ past: [] });
 
     expect(screen.getByText(COPY.emptyTitle)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: COPY.emptyCta })).toHaveAttribute(
@@ -165,6 +213,8 @@ describe('PassportContent', () => {
     entitlement.value = { isLoading: true, active: false };
     renderContent({});
 
-    expect(screen.getByText(COPY.pageTitle)).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: COPY.bookletLabel }),
+    ).toBeInTheDocument();
   });
 });

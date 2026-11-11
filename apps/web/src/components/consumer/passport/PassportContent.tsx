@@ -1,99 +1,99 @@
 'use client';
 
-// The /passport route body (#85).
+// The /passport route body (#85, booklet B+ B13).
 //
 // The Passport is drawn from Concert History, so it is gated on the same
 // entitlement and locked by the same component — a second lock screen saying
 // the same thing in different words is how two surfaces of one feature start
 // quoting different prices.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { EmptyState } from '@/components/consumer/empty-state';
 import { HistoryLocked } from '@/components/consumer/history/HistoryLocked';
-import { PassportCard } from '@/components/consumer/passport/PassportCard';
 import { PassportActions } from '@/components/consumer/passport/PassportActions';
+import { PassportBooklet } from '@/components/consumer/passport/PassportBooklet';
+import { PassportEmpty } from '@/components/consumer/passport/PassportEmpty';
+import type { PassportIdentity } from '@/components/consumer/passport/PassportIdPage';
+import { UpNextStubs } from '@/components/consumer/passport/UpNextStubs';
+import { VenuesCollected } from '@/components/consumer/passport/VenuesCollected';
 import {
-  PP_MODES,
-  PASSPORT_PRINT_MODE,
-} from '@/components/consumer/passport/definitions/modes';
+  bookletPages,
+  collectedVenues,
+  upcomingQueue,
+} from '@/lib/passport/booklet';
+import { toAttendedShows } from '@/lib/passport/select-shows';
+import { passportStats } from '@/lib/passport/stats';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { resolveThemeTokens } from '@/lib/share/theme-tokens';
 import { useTheme } from '@/theme';
-import type { AttendedShow } from '@/lib/passport/stats';
 
 const COPY = CONSUMER_COPY.passport;
 
-/** How wide the preview is allowed to get. The card is square. */
-const PREVIEW_MAX_WIDTH = 420;
-
 export interface PassportContentProps {
-  shows: AttendedShow[];
-  tokens: Record<string, string>;
-  handle: string | null;
-  year: number;
+  /** Attended shows whose night has passed: the stamps. */
+  past: HistoryShow[];
+  /** Attended shows still ahead: Up next and the next slot. */
+  upcoming: HistoryShow[];
+  /** Every active venue, for Venues collected. Empty if the list failed. */
+  activeVenues: { slug: string; name: string }[];
+  identity: PassportIdentity;
+  /** Today in Denver, `YYYY-MM-DD`. */
+  today: string;
   /** The server's verdict from the /v1/history 403. */
   locked: boolean;
   scaRegion: boolean;
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
+  <main className="mx-auto w-full max-w-[1040px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
     {children}
   </main>
 );
 
+/** `Your Passport`, with the last word in the brand gradient. */
+function PageTitle() {
+  const split = COPY.pageTitle.lastIndexOf(' ');
+  const lead = COPY.pageTitle.slice(0, split + 1);
+  const mark = COPY.pageTitle.slice(split + 1);
+  return (
+    <h1 className="text-[34px] font-black leading-none tracking-[-0.04em] text-fg sm:text-[44px]">
+      {lead}
+      <span
+        style={{
+          background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          color: 'transparent',
+        }}
+      >
+        {mark}
+      </span>
+    </h1>
+  );
+}
+
 export const PassportContent = ({
-  shows,
-  tokens,
-  handle,
-  year,
+  past,
+  upcoming,
+  activeVenues,
+  identity,
+  today,
   locked,
   scaRegion,
 }: PassportContentProps) => {
   const { isLoading, active } = useEntitlement('concert-history');
   const { theme } = useTheme();
 
-  // The server draws the card in the theme stored on the profile; the browser
-  // may be sitting in a different one, and the theme the reader can see is the
-  // one the card has to match. Deferred to after mount because swapping tokens
-  // during hydration would fight the server's markup.
+  // The share card is drawn in the theme the reader can see, which the browser
+  // knows and the server does not. Held until mount so the prefetch runs once,
+  // against the live theme: rendering it earlier would fetch the card, then
+  // fetch it again the moment the theme resolved, and drop the button back to
+  // "Preparing…" in between.
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
-  const liveTokens = mounted ? resolveThemeTokens(theme).tokens : tokens;
   const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`;
-
-  // The preview is the print card itself, scaled down — not the compact mode.
-  // A preview that is a different card is how the reader is shown a 3×3 wall
-  // and handed a 4×4 one.
-  const [previewWidth, setPreviewWidth] = useState(PREVIEW_MAX_WIDTH);
-  const observerRef = useRef<ResizeObserver | null>(null);
-  const measureFrame = useCallback((node: HTMLDivElement | null) => {
-    observerRef.current?.disconnect();
-    observerRef.current = null;
-    if (node === null) return;
-    const measured = node.getBoundingClientRect().width;
-    if (measured > 0) setPreviewWidth(measured);
-    // The first measurement is what the preview actually needs; tracking later
-    // resizes is an enhancement, so a runtime without ResizeObserver renders
-    // rather than throws.
-    if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width;
-      if (width !== undefined && width > 0) setPreviewWidth(width);
-    });
-    observer.observe(node);
-    observerRef.current = observer;
-  }, []);
-  useEffect(
-    () => () => {
-      observerRef.current?.disconnect();
-    },
-    [],
-  );
-  const previewScale = previewWidth / PP_MODES[PASSPORT_PRINT_MODE].width;
 
   // Server 403 wins outright; the client hook decides for a plan the server
   // hasn't rejected — e.g. a token that downgraded mid-session.
@@ -105,63 +105,56 @@ export const PassportContent = ({
     );
   }
 
-  if (shows.length === 0) {
+  const queue = upcomingQueue(upcoming, today);
+  const upNext = <UpNextStubs queue={queue} today={today} />;
+
+  if (past.length === 0) {
     return (
       <Shell>
-        <EmptyState
-          state="no-data"
-          eyebrow={COPY.emptyEyebrow}
-          title={COPY.emptyTitle}
-          body={COPY.emptyBody}
-          primaryCta={{ label: COPY.emptyCta, href: '/events' }}
-        />
+        <header className="mb-6">
+          <PageTitle />
+        </header>
+        <div className="flex flex-col gap-8">
+          <PassportEmpty />
+          <div className="mx-auto w-full max-w-[460px]">{upNext}</div>
+        </div>
       </Shell>
     );
   }
 
+  const stats = passportStats(toAttendedShows(past));
+  const pages = bookletPages(past, queue[0] ?? null);
+  const venues = collectedVenues(activeVenues, past);
+
   return (
     <Shell>
-      <header className="mb-5 flex flex-col gap-1">
-        <h1 className="text-xl font-bold tracking-tight text-fg">
-          {COPY.pageTitle}
-        </h1>
-        <p className="text-sm text-fg-muted">{COPY.pageSubtitle}</p>
-      </header>
+      <div className="grid gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
+        <header className="flex flex-col gap-2 [grid-area:head]">
+          <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle sm:block">
+            {COPY.breadcrumb}
+          </p>
+          <PageTitle />
+          <p className="text-sm text-fg-muted sm:text-[15px]">
+            {COPY.pageSubtitle}
+          </p>
+        </header>
 
-      <div className="flex flex-col items-center gap-5">
-        <div
-          ref={measureFrame}
-          className="w-full"
-          style={{ maxWidth: PREVIEW_MAX_WIDTH }}
-        >
-          <div
-            className="relative overflow-hidden"
-            style={{ width: '100%', height: previewWidth }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                transformOrigin: 'top left',
-                transform: `scale(${previewScale})`,
-              }}
-            >
-              <PassportCard
-                mode={PASSPORT_PRINT_MODE}
-                shows={shows}
-                tokens={liveTokens}
-                handle={handle}
-                year={year}
-              />
-            </div>
-          </div>
+        <div className="[grid-area:book]">
+          <PassportBooklet pages={pages} identity={identity} stats={stats} />
         </div>
-        {/* Held until mount so the prefetch runs once, against the theme the
-            reader is actually in. Rendering it earlier would fetch the card,
-            then fetch it again the moment the live theme resolved — and drop
-            the button back to "Preparing…" in between. */}
-        {mounted && <PassportActions imageUrl={imageUrl} />}
+
+        <div className="[grid-area:actions] lg:self-end">
+          {mounted && <PassportActions imageUrl={imageUrl} />}
+        </div>
+
+        <div className="flex flex-col gap-7 [grid-area:side]">
+          {upNext}
+          <VenuesCollected
+            venues={venues.venues}
+            collected={venues.collected}
+            total={venues.total}
+          />
+        </div>
       </div>
     </Shell>
   );
