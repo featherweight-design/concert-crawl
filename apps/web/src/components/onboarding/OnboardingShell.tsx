@@ -362,6 +362,15 @@ export function OnboardingShell({
     searching ? searchQuery : '',
   );
   pickedRef.current = pickedArtists;
+  // Read by `toggleArtist`, which is declared above the suggestions and must
+  // not be rebuilt on every refetch. Written during render, like `pickedRef`,
+  // so a tap on a tile the newest grid just drew is judged against that grid:
+  // written from the prune effect it lagged one flush behind, and a grid pick
+  // made in that gap was marked as a search pick and escaped later prunes.
+  // Only a successful fetch updates it, the same gate the prune uses.
+  if (onArtistsStep && suggestionsLoaded) {
+    suggestedRef.current = new Set(suggestions.map((artist) => artist.slug));
+  }
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => {
     setSearching(false);
@@ -385,11 +394,6 @@ export function OnboardingShell({
   useEffect(() => {
     if (!onArtistsStep || !suggestionsLoaded) return;
     const visible = new Set(suggestions.map((artist) => artist.slug));
-    // Read by `toggleArtist`, which is declared above the suggestions and
-    // must not be rebuilt on every refetch. Kept in step with the same list
-    // the prune runs against, so the two can never disagree about what the
-    // grid holds.
-    suggestedRef.current = visible;
     setPickedArtists((previous) => {
       // A search pick is exempt: it never had a tile here, so "no longer in
       // the grid" says nothing about it. Without this it vanished the moment
