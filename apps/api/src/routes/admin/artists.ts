@@ -91,10 +91,12 @@ const listFilterSchema = z.union([
 
 // The outer id is written out qualified: inside a subquery drizzle renders a
 // bare column name, which would bind to the inner table's own `id`.
-const OUTER_ARTIST_ID = sql.raw('"artists"."id"');
+// A function, not a constant: several unit suites mock `drizzle-orm` without
+// `sql.raw`, and a module-level call would fail at import.
+const outerArtistId = (): SQL => sql.raw('"artists"."id"');
 
 const openReportOn = (): SQL =>
-  sql`exists (select 1 from ${artistReports} where ${artistReports.artistId} = ${OUTER_ARTIST_ID} and ${artistReports.status} = 'open')`;
+  sql`exists (select 1 from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`;
 
 /**
  * Whether to hide artists with no show left to see. Defaults ON.
@@ -211,7 +213,7 @@ artistsAdminRouter.get(
         // The page keeps its counts honest by walking the single row that
         // changed, and it can only do that if it knows the bucket it came from.
         isExhausted: isExhaustedBucketExpr(),
-        openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${OUTER_ARTIST_ID} and ${artistReports.status} = 'open')`,
+        openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`,
       })
       .from(artists)
       .where(where)
