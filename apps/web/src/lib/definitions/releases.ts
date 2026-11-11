@@ -45,7 +45,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: 'fixed',
-        text: 'Sold out shows say so in every list, not only in Watching.',
+        text: 'Sold out shows say so on Browse, venue and artist pages, not only in Watching.',
       },
     ],
   },

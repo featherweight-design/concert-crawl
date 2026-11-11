@@ -6,7 +6,8 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTicketCta } from './EventTicketCta';
 
 const copy = CONSUMER_COPY.eventDetail;
-const href = 'https://tickets.example.com/show';
+const ticket = 'https://tickets.example.com/show';
+const venuePage = 'https://venue.example.com/events/show';
 
 afterEach(cleanup);
 
@@ -14,28 +15,52 @@ describe('EventTicketCta', () => {
   it('sends a cancelled show to the vendor for refund info, same link', () => {
     render(
       <EventTicketCta
-        refundHref={href}
+        status="cancelled"
+        ticketHref={ticket}
         soldOut={false}
-        href={href}
+        href={ticket}
         hasDirectLink
       />,
     );
     const link = screen.getByRole('link', { name: copy.refundInfo });
-    expect(link.getAttribute('href')).toBe(href);
+    expect(link.getAttribute('href')).toBe(ticket);
     expect(screen.queryByText(copy.getTickets)).toBeNull();
   });
 
   it('prefers refund info over sold out once the show is cancelled', () => {
     render(
-      <EventTicketCta refundHref={href} soldOut href={href} hasDirectLink />,
+      <EventTicketCta
+        status="cancelled"
+        ticketHref={ticket}
+        soldOut
+        href={ticket}
+        hasDirectLink
+      />,
     );
     expect(screen.getByRole('link', { name: copy.refundInfo })).toBeTruthy();
+  });
+
+  it("never offers tickets on a cancelled show with only the venue's event page", () => {
+    render(
+      <EventTicketCta
+        status="cancelled"
+        ticketHref={null}
+        soldOut={false}
+        href={venuePage}
+        hasDirectLink
+      />,
+    );
+    expect(screen.queryByText(copy.refundInfo)).toBeNull();
+    expect(screen.queryByText(copy.getTickets)).toBeNull();
+    expect(
+      screen.getByRole('link', { name: copy.visitVenueWebsite }),
+    ).toBeTruthy();
   });
 
   it('falls back to no tickets when a cancelled show has no link', () => {
     render(
       <EventTicketCta
-        refundHref={null}
+        status="cancelled"
         soldOut={false}
         href={null}
         hasDirectLink={false}
@@ -44,23 +69,17 @@ describe('EventTicketCta', () => {
     expect(screen.getByText(copy.noTicketsAvailable)).toBeTruthy();
   });
 
-  it("keeps a cancelled show without a ticket URL on the venue's own label", () => {
+  it('ignores the ticket URL for refunds on a live show', () => {
     render(
       <EventTicketCta
-        refundHref={null}
+        status="upcoming"
+        ticketHref={ticket}
         soldOut={false}
-        href={href}
-        hasDirectLink={false}
+        href={ticket}
+        hasDirectLink
       />,
     );
-    expect(screen.queryByText(copy.refundInfo)).toBeNull();
-    expect(
-      screen.getByRole('link', { name: copy.visitVenueWebsite }),
-    ).toBeTruthy();
-  });
-
-  it('keeps Get tickets on a live show', () => {
-    render(<EventTicketCta soldOut={false} href={href} hasDirectLink />);
     expect(screen.getByRole('link', { name: copy.getTickets })).toBeTruthy();
+    expect(screen.queryByText(copy.refundInfo)).toBeNull();
   });
 });

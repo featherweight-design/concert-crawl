@@ -2,10 +2,10 @@
 // share mirror at /e/:id (#72).
 //
 // Four states, first match wins:
-//   a refund link     → "Refund info from the vendor ›": a cancelled show's
-//                        ticket URL, since the vendor handles the refund. The
-//                        venue's event page or homepage is not the vendor, so
-//                        a cancelled show without a ticket URL falls through
+//   cancelled + ticket URL → "Refund info from the vendor ›" on that URL: the
+//                        vendor handles the refund. The venue's event page or
+//                        homepage is not the vendor, so without a ticket URL a
+//                        cancelled show falls through, never to "Get tickets"
 //   sold out          → disabled "Sold out"
 //   a safe http(s) url → "Get tickets ↗" (or "Visit venue website" when the only
 //                        link we have is the venue's homepage)
@@ -19,6 +19,7 @@
 // not be able to put a javascript:/data: target here (#1152).
 import { ChevronRight } from 'lucide-react';
 
+import type { EventStatus } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 import { ExternalLinkIcon } from './InfoRow';
@@ -57,11 +58,13 @@ const linkStyle = {
 } satisfies React.CSSProperties;
 
 interface EventTicketCtaProps {
+  /** The show's lifecycle. Cancelled turns the ticket link into refund info. */
+  status?: EventStatus | undefined;
   /**
-   * A cancelled show's already-validated ticket URL (the vendor), or null.
-   * When set it takes precedence over everything else.
+   * The already-validated ticket URL (the vendor), or null. Only read on a
+   * cancelled show, where it is the refund link.
    */
-  refundHref?: string | null | undefined;
+  ticketHref?: string | null | undefined;
   /** True when the show is sold out — takes precedence over any link. */
   soldOut: boolean;
   /** Already-validated http(s) destination, or null when we have none. */
@@ -74,15 +77,17 @@ interface EventTicketCtaProps {
 }
 
 export const EventTicketCta = ({
-  refundHref = null,
+  status,
+  ticketHref = null,
   soldOut,
   href,
   hasDirectLink,
 }: EventTicketCtaProps) => {
-  if (refundHref) {
+  const cancelled = status === 'cancelled';
+  if (cancelled && ticketHref) {
     return (
       <a
-        href={refundHref}
+        href={ticketHref}
         target="_blank"
         rel="noopener noreferrer"
         className={`${linkClass} text-fg`}
@@ -120,7 +125,9 @@ export const EventTicketCta = ({
         className={`${linkClass} text-fg-on-accent`}
         style={{ ...linkStyle, background: 'var(--accent)' }}
       >
-        {hasDirectLink ? copy.getTickets : copy.visitVenueWebsite}
+        {/* A cancelled show is never offered tickets: without a vendor link
+            it keeps the venue's own page, labelled as the venue's. */}
+        {hasDirectLink && !cancelled ? copy.getTickets : copy.visitVenueWebsite}
         <ExternalLinkIcon />
       </a>
     );
