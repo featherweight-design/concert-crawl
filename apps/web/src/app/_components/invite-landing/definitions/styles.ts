@@ -10,3 +10,7 @@ export const MONO_CAPS = {
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
 } as const satisfies React.CSSProperties;
+
+/** The landing pages' keyboard focus ring. */
+export const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';

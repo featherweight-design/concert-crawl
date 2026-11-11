@@ -13,6 +13,13 @@ const COPY = LANDING_COPY.invite;
 // drift, measured per item so a longer week does not scroll faster.
 const MS_PER_ITEM = 4000;
 
+// Each half of the loop holds at least this many items, so even a quiet week
+// is wider than the strip and the loop never shows a gap.
+const MIN_ITEMS_PER_HALF = 8;
+
+/** The strip only shows from `md` up; below it nothing animates. */
+const TICKER_VIEWPORT_QUERY = '(min-width: 768px)';
+
 function TickerItem({ show }: { show: InviteShow }) {
   return (
     <span
@@ -24,7 +31,12 @@ function TickerItem({ show }: { show: InviteShow }) {
         whiteSpace: 'nowrap',
       }}
     >
-      {show.genre && <GenreDot genre={show.genre} />}
+      {show.genre && (
+        <>
+          <GenreDot genre={show.genre} />
+          <span className="sr-only">{show.genre}</span>
+        </>
+      )}
       {show.showTime !== '' && (
         <span
           style={{
@@ -48,24 +60,38 @@ function TickerItem({ show }: { show: InviteShow }) {
 
 /**
  * The desktop footer strip: this week's shows drifting past. The list is drawn
- * twice so a half-width loop reads as continuous; under reduced motion it
- * holds still and the second copy is hidden from assistive tech either way.
+ * twice (and repeated within each half for a quiet week) so a half-width loop
+ * reads as continuous. Under reduced motion, or below `md`, it holds still;
+ * every repeat is hidden from assistive tech, so each show is read once.
  */
 export function WeekTicker({ shows }: { shows: InviteShow[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
+  const half =
+    shows.length === 0
+      ? []
+      : Array.from(
+          { length: Math.ceil(MIN_ITEMS_PER_HALF / shows.length) },
+          () => shows,
+        ).flat();
+
   useEffect(() => {
+    if (
+      typeof window.matchMedia !== 'function' ||
+      !window.matchMedia(TICKER_VIEWPORT_QUERY).matches
+    )
+      return;
     const animation = runMotion(
       trackRef.current,
       [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
       {
-        duration: Math.max(shows.length, 1) * MS_PER_ITEM,
+        duration: Math.max(half.length, 1) * MS_PER_ITEM,
         easing: 'linear',
         iterations: Infinity,
       },
     );
     return () => animation?.cancel();
-  }, [shows.length]);
+  }, [half.length]);
 
   if (shows.length === 0) return null;
 
@@ -88,12 +114,18 @@ export function WeekTicker({ shows }: { shows: InviteShow[] }) {
           ref={trackRef}
           style={{ display: 'inline-flex', width: 'max-content' }}
         >
-          {shows.map((show) => (
-            <TickerItem key={show.id} show={show} />
+          {half.map((show, index) => (
+            <span
+              key={`${show.id}-${index}`}
+              aria-hidden={index >= shows.length}
+              style={{ display: 'inline-flex' }}
+            >
+              <TickerItem show={show} />
+            </span>
           ))}
           <span aria-hidden style={{ display: 'inline-flex' }}>
-            {shows.map((show) => (
-              <TickerItem key={`${show.id}-loop`} show={show} />
+            {half.map((show, index) => (
+              <TickerItem key={`${show.id}-loop-${index}`} show={show} />
             ))}
           </span>
         </div>

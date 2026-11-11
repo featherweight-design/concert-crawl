@@ -182,10 +182,10 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
  * page may link into the gated browse surface, so the cards are not links.
  */
 export function ShowFan({ shows }: { shows: InviteShow[] }) {
-  const tonightIndex = shows.findIndex((show) => show.tonight);
-  const centre = shows[tonightIndex === -1 ? 0 : tonightIndex];
+  // Shows arrive in date order, so the first is tonight's whenever one is.
+  const [centre, ...rest] = shows;
   if (centre === undefined) return null;
-  const sides = shows.filter((show) => show !== centre).slice(0, 2);
+  const sides = rest.slice(0, 2);
   const placed: { show: InviteShow; slot: Slot }[] = [
     ...(sides[0] ? [{ show: sides[0], slot: 'left' as const }] : []),
     ...(sides[1] ? [{ show: sides[1], slot: 'right' as const }] : []),

@@ -3,29 +3,31 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Tag } from 'lucide-react';
-import { formatInviteCodeInput, isCompleteInviteCode } from '@/lib/invite-code';
+import { formatInviteCodeInput } from '@/lib/invite-code';
 import { LANDING_COPY } from '../definitions/copy';
-import { INVITE_GRADIENT } from './definitions/styles';
+import { FOCUS_RING, INVITE_GRADIENT } from './definitions/styles';
 
 const COPY = LANDING_COPY.invite;
 
 /**
  * The landing's inline code field. Redeem hands the code to `/auth/code`
- * pre-filled, exactly as a poster QR does, rather than redeeming here: that
+ * pre-filled, as a poster QR does, rather than redeeming here: that
  * screen carries the Private Beta Agreement line a redemption agrees to, and
  * every error state. A visitor still presses its button to redeem.
  */
 export function InviteCodeField() {
   const router = useRouter();
   const [code, setCode] = useState('');
-  const complete = isCompleteInviteCode(code);
 
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
-    const target = complete
-      ? `/auth/code?code=${encodeURIComponent(code)}`
-      : '/auth/code';
-    router.push(target);
+    // A partial code goes too, so a visitor who pressed early keeps what
+    // they typed; that screen formats it and holds its button until whole.
+    router.push(
+      code === ''
+        ? '/auth/code'
+        : `/auth/code?code=${encodeURIComponent(code)}`,
+    );
   };
 
   return (
@@ -55,7 +57,6 @@ export function InviteCodeField() {
         autoComplete="off"
         autoCapitalize="characters"
         spellCheck={false}
-        maxLength={14}
         className="focus-visible:outline-none"
         style={{
           flex: 1,
@@ -72,7 +73,7 @@ export function InviteCodeField() {
       />
       <button
         type="submit"
-        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        className={FOCUS_RING}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
