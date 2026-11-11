@@ -174,6 +174,11 @@ export const events = pgTable(
       .notNull()
       .defaultNow(),
     firstMissingAt: timestamp('first_missing_at', { withTimezone: true }),
+    // B+ A5: set by the stale sweep beside status = 'cancelled'. A cancelled
+    // row with this set is "No longer listed" (the venue took the show down),
+    // never "Cancelled". Cleared when anyone confirms a real cancellation or
+    // sets the show back to upcoming.
+    delistedAt: timestamp('delisted_at', { withTimezone: true }),
     // search_vector is a generated column managed via raw SQL in migration
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
