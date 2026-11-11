@@ -176,9 +176,10 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe(billed);
   });
 
-  // A shorten, because a re-case only ever moves toward mixed case, which is
-  // final, and the ranking already prefers mixed case; only a shorten can
-  // still meet a rival billing it would trade places with on the next run.
+  // A shorten, because a re-case can never swap back: lowercase may move to
+  // all-caps or mixed case, all-caps only to mixed case, and mixed case never
+  // moves, so a later run can only take it one step further. Only a shorten
+  // can meet a rival billing it would trade places with on every run.
   it('settles: the current name votes, so a second run never shortens it again', async () => {
     for (let i = 0; i < 5; i += 1)
       await seedSingleActBill('Dogstar: ALL IN', 'dogstar');
