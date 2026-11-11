@@ -2036,6 +2036,7 @@ export const ADMIN_COPY = {
     uses: (taken: number, max: number) => `${taken} of ${max}`,
     labelPlaceholder: 'Label, e.g. Hi-Dive bathroom, Nov',
     seatsLabel: 'Seats',
+    seatsMinted: (seats: number) => `${seats} seat${seats === 1 ? '' : 's'}`,
     seatsHint: 'How many people one code admits. 1 for a personal code.',
     posterLink: 'Poster',
     poster: {

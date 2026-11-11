@@ -1,5 +1,5 @@
 import type { QrPath } from '@/lib/poster/poster-rule';
-import { POSTER_COPY } from './definitions/copy';
+import { POSTER_COPY } from '@/lib/poster/definitions/copy';
 
 interface PosterSheetProps {
   /** What the QR encodes: the invite screen with the code pre-filled. */

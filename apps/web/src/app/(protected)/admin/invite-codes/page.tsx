@@ -15,27 +15,20 @@ import {
 import type { StatusKind } from '@/components/admin/primitives';
 import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { isPrintable, seatsTaken } from '@/lib/poster/poster-rule';
+import {
+  inviteStatus,
+  isPrintable,
+  seatsTaken,
+  type InviteStatus,
+} from '@/lib/poster/poster-rule';
 import Link from 'next/link';
 
-type DerivedStatus = 'active' | 'redeemed' | 'expired' | 'revoked';
-
-const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
+const INVITE_STATUS_KIND: Record<InviteStatus, StatusKind> = {
   active: 'signal',
   redeemed: 'success',
   expired: 'neutral',
   revoked: 'danger',
 };
-
-// Spent once every seat is taken (`seatsTaken` counts a legacy first
-// redemption, #1084, as one seat).
-function deriveStatus(code: InviteCode): DerivedStatus {
-  if (code.revokedAt != null) return 'revoked';
-  if (seatsTaken(code) >= code.maxUses) return 'redeemed';
-  if (code.expiresAt != null && new Date(code.expiresAt) < new Date())
-    return 'expired';
-  return 'active';
-}
 
 export default async function AdminInviteCodesPage() {
   await requireAdminUser();
@@ -53,13 +46,13 @@ export default async function AdminInviteCodesPage() {
 
   const now = new Date();
   const outstanding = codes.filter(
-    (code) => deriveStatus(code) === 'active',
+    (code) => inviteStatus(code, now) === 'active',
   ).length;
   const redeemed = codes.filter(
-    (code) => deriveStatus(code) === 'redeemed',
+    (code) => inviteStatus(code, now) === 'redeemed',
   ).length;
   const revoked = codes.filter(
-    (code) => deriveStatus(code) === 'revoked',
+    (code) => inviteStatus(code, now) === 'revoked',
   ).length;
 
   return (
@@ -117,7 +110,7 @@ export default async function AdminInviteCodesPage() {
           </THead>
           <tbody>
             {codes.map((code) => {
-              const status = deriveStatus(code);
+              const status = inviteStatus(code, now);
               return (
                 <TR key={code.id}>
                   <TD>
