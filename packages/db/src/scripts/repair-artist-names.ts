@@ -27,7 +27,7 @@
  * takes that artist's own spelling (`MVTANT`, `bbno$`, `J.I.D`), because the
  * act styled it and a venue's shift key did not. The billing still decides
  * WHICH name the row should have (that is what proves a shorten), and Spotify
- * decides only how it is cased. Rows with no Spotify name fall back to the
+ * decides how it is spelled: its casing, accents and spacing. Rows with no Spotify name fall back to the
  * billing-case rules below.
  *
  * A separate concern this does NOT address: a row whose *canonical* name is
@@ -186,10 +186,12 @@ const SPOTIFY_NAME = sql`
       THEN artists.spotify_candidates
       ELSE '[]'::jsonb
     END
-  ) AS candidate(value)
+  ) WITH ORDINALITY AS candidate(value, position)
   WHERE artists.match_status = 'matched'
     AND candidate.value->>'id' = artists.spotify_artist_id
     AND btrim(coalesce(candidate.value->>'name', '')) <> ''
+  -- Snapshot order, so a repeated id always resolves the same way.
+  ORDER BY candidate.position
   LIMIT 1
 `;
 
