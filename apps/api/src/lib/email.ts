@@ -16,7 +16,7 @@ import {
 import { apiLogger } from './logger.js';
 
 const ADMIN_EMAIL_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>';
-const TRANSACTIONAL_EMAIL_FROM = 'Concert Crawl <billing@concertcrawl.app>';
+const TRANSACTIONAL_EMAIL_FROM = 'Concert Crawl <hello@concertcrawl.app>';
 const TRANSACTIONAL_REPLY_TO = 'support@concertcrawl.app';
 const INVITE_EMAIL_FROM = 'Concert Crawl <noreply@concertcrawl.app>';
 

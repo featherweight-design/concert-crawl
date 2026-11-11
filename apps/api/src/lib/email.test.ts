@@ -285,7 +285,7 @@ describe('sendTransactionalEmail', () => {
     });
     expect(mockSend).toHaveBeenCalledOnce();
     const call = mockSend.mock.calls[0]![0];
-    expect(call.from).toBe('Concert Crawl <billing@concertcrawl.app>');
+    expect(call.from).toBe('Concert Crawl <hello@concertcrawl.app>');
     expect(call.replyTo).toBe('support@concertcrawl.app');
     expect(call.to).toBe('primary@example.com');
     expect(call.subject).toBe('Test subject');
