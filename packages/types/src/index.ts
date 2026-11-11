@@ -1152,6 +1152,8 @@ export interface HandleAvailabilityResponse {
 // WatchingShow — a single upcoming show saved by the user, with price delta context
 export interface WatchingShow {
   userEventId: string;
+  /** B+ A5: set when the stale sweep removed it (No longer listed). */
+  eventDelistedAt?: string | null;
   eventId: string;
   artist: string;
   venueName: string;

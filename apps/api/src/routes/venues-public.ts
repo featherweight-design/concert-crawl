@@ -245,6 +245,7 @@ venuesPublicRouter.get(
         priceSource: events.priceSource,
         pipelineExhaustedAt: events.pipelineExhaustedAt,
         status: events.status,
+        delistedAt: events.delistedAt,
         confidenceScore: events.confidenceScore,
         verified: events.verified,
         sourceUrl: events.sourceUrl,

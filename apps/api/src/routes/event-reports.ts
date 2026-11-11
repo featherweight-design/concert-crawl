@@ -57,11 +57,13 @@ async function hasEventStateChanged(
 ): Promise<boolean> {
   if (reportStatus === 'cancelled' || reportStatus === 'postponed') {
     const [row] = await db
-      .select({ status: events.status })
+      .select({ status: events.status, delistedAt: events.delistedAt })
       .from(events)
       .where(eq(events.id, eventId))
       .limit(1);
-    return row?.status !== reportStatus;
+    // A delisted show is cancelled only by the stale sweep (B+ A5), so a
+    // confirmed cancellation of it is news: watchers were never told.
+    return row?.status !== reportStatus || row.delistedAt !== null;
   }
   // sold-out
   const existing = await db
@@ -371,7 +373,8 @@ eventReportsRouter.post(
       if (report.status === 'cancelled' || report.status === 'postponed') {
         await db
           .update(events)
-          .set({ status: report.status })
+          // A confirmed status replaces the sweep's No longer listed.
+          .set({ status: report.status, delistedAt: null })
           .where(eq(events.id, eventId));
       }
 

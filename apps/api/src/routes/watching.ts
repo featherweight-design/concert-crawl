@@ -51,6 +51,7 @@ watchingRouter.get('/', async (ctx) => {
       ticketLinks: events.ticketLinks,
       ticketPriceMin: events.ticketPriceMin,
       eventStatus: events.status,
+      eventDelistedAt: events.delistedAt,
       // watchStatus is the price's state, a separate axis from the show's
       // lifecycle (eventStatus): a cancelled show is not sold out.
       isSoldOut: isSoldOutSql(),
@@ -116,6 +117,7 @@ watchingRouter.get('/', async (ctx) => {
       priceByTierByEventId.get(row.eventId) ?? [],
     ),
     eventStatus: row.eventStatus,
+    eventDelistedAt: row.eventDelistedAt?.toISOString() ?? null,
     watchStatus: row.isSoldOut ? 'soldout' : 'live',
     updatedAt: row.updatedAt.toISOString(),
     priceObservedAt: lowestHeadlineObservedAt(
