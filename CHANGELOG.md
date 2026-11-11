@@ -1,3 +1,15 @@
+# [1.317.0](https://github.com/featherweight-design/concert-crawl/compare/v1.316.0...v1.317.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** poster counts crawled venues, reads look and tabs, survives a venue failure ([7236d78](https://github.com/featherweight-design/concert-crawl/commit/7236d784bbd58ae91adfa49a978649087af00138))
+
+
+### Features
+
+* **web:** restyle the invite poster to the approved Night, Paper and tabs sheets ([dc15e23](https://github.com/featherweight-design/concert-crawl/commit/dc15e23cfa63e6ecf17c38efd69a0dcd9e16525a))
+
 # [1.316.0](https://github.com/featherweight-design/concert-crawl/compare/v1.315.0...v1.316.0) (2026-11-11)
 
 
