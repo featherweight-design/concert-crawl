@@ -1,3 +1,15 @@
+# [1.320.0](https://github.com/featherweight-design/concert-crawl/compare/v1.319.0...v1.320.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** ground VenueStamp for light themes and review fixes ([c7a1154](https://github.com/featherweight-design/concert-crawl/commit/c7a11545290c287de792299875ea54e4f0f14277))
+
+
+### Features
+
+* **web:** add the unused VenueStamp ink stamp (B+ F4) ([97abf47](https://github.com/featherweight-design/concert-crawl/commit/97abf47e4f8340991e7ef3fbda504101d9beef9d))
+
 # [1.319.0](https://github.com/featherweight-design/concert-crawl/compare/v1.318.0...v1.319.0) (2026-11-11)
 
 
