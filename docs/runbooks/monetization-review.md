@@ -94,7 +94,7 @@ RESEND_API_KEY=re_... pnpm --filter @concert-crawl/api email:preview -- \
 # omit --only to send the whole set
 ```
 
-Sends go from `billing@concertcrawl.app` with subject prefixed `[preview]`.
+Sends go from `hello@concertcrawl.app` with subject prefixed `[preview]`.
 Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 
 **Confirm the sending domain is healthy in Resend:**

@@ -26,7 +26,7 @@ import type {
   RenderedEmail,
 } from './types.js';
 
-const FROM = 'Concert Crawl <billing@concertcrawl.app>';
+const FROM = 'Concert Crawl <hello@concertcrawl.app>';
 const REPLY_TO = 'support@concertcrawl.app';
 // Anchor output to the api package dir (../../ from src/emails or dist/emails),
 // not process.cwd(), so previews always land in apps/api/.email-preview/ —
