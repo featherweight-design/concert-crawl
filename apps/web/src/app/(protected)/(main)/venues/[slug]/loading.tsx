@@ -28,6 +28,19 @@ function VenueEventRowSkeleton() {
 export default function VenueLoading() {
   return (
     <div aria-busy="true">
+      {/* The route progress bar every other loading state carries. */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: 2,
+          background: 'var(--accent)',
+          animation: 'navProgress 3s ease-out forwards',
+          zIndex: 9999,
+        }}
+      />
+
       {/* Hero: 380px on a phone, as the page */}
       <div className="relative flex h-[380px] w-full shrink-0 items-center justify-center sm:h-[400px] sm:justify-end sm:pr-[14%]">
         <div data-testid="venue-hero-skeleton">
@@ -68,8 +81,12 @@ export default function VenueLoading() {
             <SkeletonBlock height={70} radius={14} />
           </div>
 
-          {/* Upcoming */}
-          <div className="mt-8 flex flex-col gap-2">
+          {/* Upcoming: the section header, then the rows */}
+          <div className="mt-8 mb-3 flex items-baseline justify-between border-b border-border pb-2">
+            <SkeletonBlock width={88} height={16} />
+            <SkeletonBlock width={52} height={11} />
+          </div>
+          <div className="flex flex-col gap-2">
             {Array.from({ length: UPCOMING_ROW_COUNT }, (_, idx) => (
               <VenueEventRowSkeleton key={idx} />
             ))}
