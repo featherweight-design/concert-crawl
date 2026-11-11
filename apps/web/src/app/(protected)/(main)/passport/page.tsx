@@ -1,5 +1,4 @@
 import { headers } from 'next/headers';
-import type { VenuePublic } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { fetchHistory } from '@/lib/history';
@@ -8,6 +7,33 @@ import { isScaRegion } from '@/lib/sca-region';
 import { passportYear } from '@/lib/passport/passport-request';
 import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
 import { PassportContent } from '@/components/consumer/passport/PassportContent';
+
+interface ActiveVenue {
+  slug: string;
+  name: string;
+}
+
+const isActiveVenue = (candidate: unknown): candidate is ActiveVenue =>
+  typeof candidate === 'object' &&
+  candidate !== null &&
+  'slug' in candidate &&
+  'name' in candidate &&
+  typeof candidate.slug === 'string' &&
+  typeof candidate.name === 'string';
+
+/**
+ * The list is optional to this page, so a payload of the wrong shape hides
+ * Venues collected instead of failing the render.
+ */
+const toActiveVenues = (payload: unknown): ActiveVenue[] => {
+  if (!Array.isArray(payload)) {
+    console.error('Passport active venues payload is not a list');
+    return [];
+  }
+  return payload
+    .filter(isActiveVenue)
+    .map((venue) => ({ slug: venue.slug, name: venue.name }));
+};
 
 export const metadata = { title: 'Passport — Concert Crawl' };
 
@@ -24,9 +50,12 @@ export default async function PassportPage() {
   const [{ data, locked }, profile, venues] = await Promise.all([
     fetchHistory(token),
     fetchMe(token),
-    apiClient
-      .get<VenuePublic[]>('/v1/venues', token)
-      .catch((): VenuePublic[] => []),
+    apiClient.get<unknown>('/v1/venues', token).catch((error: unknown) => {
+      // Logged rather than swallowed: the page still draws without it, so a
+      // failing list would otherwise only show up as a missing grid.
+      console.error('Passport active venues fetch failed', error);
+      return [];
+    }),
   ]);
 
   const requestHeaders = await headers();
@@ -36,10 +65,7 @@ export default async function PassportPage() {
     <PassportContent
       past={data?.past ?? []}
       upcoming={data?.upcoming ?? []}
-      activeVenues={venues.map((venue) => ({
-        slug: venue.slug,
-        name: venue.name,
-      }))}
+      activeVenues={toActiveVenues(venues)}
       identity={{
         handle: profile.handle,
         city: profile.city,

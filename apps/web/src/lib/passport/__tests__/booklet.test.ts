@@ -7,6 +7,7 @@ import {
   daysUntil,
   passportCodeLine,
   spreadHasStamps,
+  spreadLabel,
   spreadName,
   upcomingQueue,
 } from '../booklet';
@@ -68,6 +69,17 @@ describe('bookletPages', () => {
     expect(bookletPages(nights(11), null)).toHaveLength(3);
   });
 
+  // The waiting page is where the next stamp lands when page 1 is full.
+  it('puts the next show at the top of the waiting page after a full page', () => {
+    const pages = bookletPages(nights(4), show('up', '2027-01-01'));
+    expect(kinds(pages)).toEqual([
+      ['stamp', 'stamp', 'stamp', 'stamp'],
+      ['next', 'empty', 'empty', 'empty'],
+    ]);
+    const slot = pages[1]?.slots[0];
+    expect(slot?.kind === 'next' && slot.show.eventId).toBe('up');
+  });
+
   it('numbers pages from 1', () => {
     expect(bookletPages(nights(5), null).map((page) => page.number)).toEqual([
       1, 2,
@@ -86,6 +98,20 @@ describe('bookletSpreads', () => {
   it('stacks the identity page over page 1 on a phone, then one page each', () => {
     const spreads = bookletSpreads(pages, 'stack');
     expect(spreads.map(spreadName)).toEqual(['ID · 1', '2', '3']);
+  });
+
+  it('labels each spread by the pages in it', () => {
+    const spreads = bookletSpreads(bookletPages(nights(16), null), 'spread');
+    expect(spreads.map(spreadLabel)).toEqual([
+      'Identity and page 1',
+      'Pages 2 and 3',
+      'Pages 4 and 5',
+    ]);
+    expect(
+      spreadLabel(
+        bookletSpreads(bookletPages(nights(8), null), 'spread')[1] ?? [],
+      ),
+    ).toBe('Pages 2 and 3');
   });
 
   it('knows a spread with no stamps is waiting', () => {

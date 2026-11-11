@@ -1815,9 +1815,15 @@ export const CONSUMER_COPY = {
       `Spread ${spread} of ${total}`,
     nextPageWaiting: 'Next page is waiting',
     swipeForPage: (page: number): string => `Swipe for page ${page}`,
-    pageNights: (page: number, nights: number): string =>
-      `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'}`,
+    /** The last page on a phone. The nights are the whole booklet's. */
+    pageNightsSoFar: (page: number, nights: number): string =>
+      `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'} so far`,
     jumpTo: 'Jump to',
+    // Jump to buttons read `ID · 1` and `2 · 3`; these are what they announce.
+    jumpIdentity: 'Identity page',
+    jumpIdentityAndPage: (page: number): string => `Identity and page ${page}`,
+    jumpPages: (left: number, right: number): string =>
+      `Pages ${left} and ${right}`,
     previousPage: 'Previous page',
     nextPage: 'Next page',
     /** The slot the next stamp lands in. */

@@ -11,12 +11,13 @@ import {
   PassportIdPage,
   type PassportIdentity,
 } from '@/components/consumer/passport/PassportIdPage';
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import {
   STAMPS_PER_PAGE,
   bookletSpreads,
   spreadHasStamps,
+  spreadLabel,
   spreadName,
+  type BookletLayout,
   type BookletLeaf,
   type BookletPage,
 } from '@/lib/passport/booklet';
@@ -111,44 +112,67 @@ function PagerButton({
   );
 }
 
-interface PassportBookletProps {
+/** The number a leaf goes by: 0 for the identity page, else its page number. */
+const leafNumber = (leaf: BookletLeaf): number =>
+  leaf.kind === 'id' ? 0 : leaf.page.number;
+
+/**
+ * The spread a page sits in. The page is what the booklet remembers, not the
+ * spread index, because the two layouts group pages differently: page 3 is
+ * spread 2 on desktop and spread 3 on a phone.
+ */
+export const spreadIndexFor = (
+  spreads: readonly BookletLeaf[][],
+  page: number,
+): number => {
+  const found = spreads.findIndex((spread) =>
+    spread.some((leaf) => leafNumber(leaf) === page),
+  );
+  return found < 0 ? spreads.length - 1 : found;
+};
+
+interface BookletViewProps {
+  layout: BookletLayout;
   pages: BookletPage[];
   identity: PassportIdentity;
   stats: PassportStats;
+  /** The first visible page, 0 for the identity page. */
+  firstPage: number;
+  onTurn: (firstPage: number) => void;
+  className: string;
 }
 
-/**
- * The open stamp booklet (B+ Passport board): four stamps a page, two pages a
- * spread on desktop, and on a phone the identity page over page 1, then one
- * page at a time under a swipe.
- */
-export function PassportBooklet({
+function BookletView({
+  layout,
   pages,
   identity,
   stats,
-}: PassportBookletProps) {
-  const stack = useIsMobileViewport();
-  const layout = stack ? 'stack' : 'spread';
+  firstPage,
+  onTurn,
+  className,
+}: BookletViewProps) {
+  const stack = layout === 'stack';
   const spreads = bookletSpreads(pages, layout);
-  const [requested, setRequested] = useState(0);
-  // The spread count changes with the layout, so the index is clamped rather
-  // than reset: a reader on the last spread stays on the last spread.
-  const current = Math.min(requested, spreads.length - 1);
+  const current = spreadIndexFor(spreads, firstPage);
   const spread = spreads[current] ?? [];
   const last = spreads.length - 1;
-  const touchStart = useRef<number | null>(null);
-  const size = STAMP_SIZE;
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-  const go = (index: number) =>
-    setRequested(Math.max(0, Math.min(last, index)));
+  const go = (index: number) => {
+    const target = spreads[Math.max(0, Math.min(last, index))];
+    const lead = target?.[0];
+    if (lead !== undefined) onTurn(leafNumber(lead));
+  };
 
   const following = spreads[current + 1];
-  const pageNumberOf = (leaf: BookletLeaf | undefined): number =>
-    leaf?.kind === 'page' ? leaf.page.number : 1;
+  const lastLeaf = spread[spread.length - 1];
   const status = stack
-    ? current < last
-      ? COPY.swipeForPage(pageNumberOf(following?.[0]))
-      : COPY.pageNights(pageNumberOf(spread[spread.length - 1]), stats.nights)
+    ? following?.[0] !== undefined
+      ? COPY.swipeForPage(leafNumber(following[0]))
+      : COPY.pageNightsSoFar(
+          lastLeaf === undefined ? 1 : Math.max(1, leafNumber(lastLeaf)),
+          stats.nights,
+        )
     : [
         COPY.spreadOf(current + 1, spreads.length),
         following !== undefined && !spreadHasStamps(following)
@@ -160,28 +184,37 @@ export function PassportBooklet({
   const showJump = !stack && stats.nights > STAMPS_PER_PAGE;
 
   return (
-    <section aria-label={COPY.bookletLabel} className="flex flex-col gap-4">
+    <div data-booklet-layout={layout} className={className}>
       <div
         className="overflow-hidden rounded-[22px]"
         style={{
           border: '1.5px solid transparent',
           background:
             'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+          // The page turns sideways; vertical drags stay the browser's scroll.
+          touchAction: stack ? 'pan-y' : undefined,
         }}
         onTouchStart={(event) => {
-          touchStart.current = event.touches[0]?.clientX ?? null;
+          const touch = event.touches[0];
+          touchStart.current =
+            !stack || touch === undefined
+              ? null
+              : { x: touch.clientX, y: touch.clientY };
         }}
         onTouchEnd={(event) => {
           const start = touchStart.current;
-          const end = event.changedTouches[0]?.clientX;
+          const touch = event.changedTouches[0];
           touchStart.current = null;
-          if (start === null || end === undefined) return;
-          if (start - end > SWIPE_THRESHOLD) go(current + 1);
-          else if (end - start > SWIPE_THRESHOLD) go(current - 1);
+          if (start === null || touch === undefined) return;
+          const dx = touch.clientX - start.x;
+          const dy = touch.clientY - start.y;
+          // A scroll that drifts sideways is still a scroll.
+          if (Math.abs(dx) <= Math.abs(dy)) return;
+          if (dx < -SWIPE_THRESHOLD) go(current + 1);
+          else if (dx > SWIPE_THRESHOLD) go(current - 1);
         }}
       >
         <div
-          aria-live="polite"
           className={
             stack
               ? 'flex flex-col divide-y divide-dashed divide-border'
@@ -190,11 +223,11 @@ export function PassportBooklet({
         >
           {spread.map((leaf) => (
             <Leaf
-              key={leaf.kind === 'id' ? 'id' : leaf.page.number}
+              key={leafNumber(leaf)}
               leaf={leaf}
               identity={identity}
               stats={stats}
-              size={size}
+              size={STAMP_SIZE}
             />
           ))}
         </div>
@@ -222,7 +255,11 @@ export function PassportBooklet({
             />
           ))}
         </span>
-        <span className={`min-w-0 flex-1 truncate ${MONO_LABEL}`}>
+        <span
+          aria-live="polite"
+          data-booklet-status=""
+          className={`min-w-0 flex-1 truncate ${MONO_LABEL}`}
+        >
           {status}
         </span>
         <PagerButton
@@ -240,6 +277,7 @@ export function PassportBooklet({
               key={index}
               type="button"
               aria-pressed={index === current}
+              aria-label={spreadLabel(item)}
               onClick={() => go(index)}
               className={`min-h-9 rounded-lg border px-3 font-mono text-[10px] uppercase tracking-[0.14em] ${
                 index === current
@@ -252,6 +290,44 @@ export function PassportBooklet({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface PassportBookletProps {
+  pages: BookletPage[];
+  identity: PassportIdentity;
+  stats: PassportStats;
+}
+
+/**
+ * The open stamp booklet (B+ Passport board): four stamps a page, two pages a
+ * spread on desktop, and on a phone the identity page over page 1, then one
+ * page at a time under a swipe.
+ *
+ * Both layouts render and CSS shows one, so a phone never paints a frame of
+ * the desktop spread before a media query answers. They share the first
+ * visible page, so a resize keeps the reader on the page they were reading.
+ */
+export function PassportBooklet({
+  pages,
+  identity,
+  stats,
+}: PassportBookletProps) {
+  const [firstPage, setFirstPage] = useState(0);
+  const shared = { pages, identity, stats, firstPage, onTurn: setFirstPage };
+  return (
+    <section aria-label={COPY.bookletLabel}>
+      <BookletView
+        layout="stack"
+        className="flex flex-col gap-4 sm:hidden"
+        {...shared}
+      />
+      <BookletView
+        layout="spread"
+        className="hidden flex-col gap-4 sm:flex"
+        {...shared}
+      />
     </section>
   );
 }
