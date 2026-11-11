@@ -274,6 +274,35 @@ describe('fromWatchingShow', () => {
   });
 });
 
+describe('the No longer listed marker', () => {
+  it('threads the delisted marker through from Watching', () => {
+    const row = fromWatchingShow({
+      ...baseWatchingShow,
+      eventStatus: 'cancelled',
+      eventDelistedAt: '2026-11-01T09:00:00Z',
+    });
+    expect(row.lifecycle).toBe('cancelled');
+    expect(row.delistedAt).toBe('2026-11-01T09:00:00Z');
+  });
+
+  // An API older than the marker omits the field; that has to read as listed,
+  // never as undefined leaking into the row.
+  it('reads an absent marker as listed', () => {
+    expect(fromWatchingShow(baseWatchingShow).delistedAt).toBeNull();
+    expect(fromEventWithVenue(baseEvent).delistedAt).toBeNull();
+  });
+
+  it('threads the delisted marker through from an event payload', () => {
+    expect(
+      fromEventWithVenue({
+        ...baseEvent,
+        status: 'cancelled',
+        delistedAt: '2026-11-01T09:00:00Z',
+      }).delistedAt,
+    ).toBe('2026-11-01T09:00:00Z');
+  });
+});
+
 describe('fromCrewShow', () => {
   const crewShow: CrewShow = {
     eventId: 'evt-1',

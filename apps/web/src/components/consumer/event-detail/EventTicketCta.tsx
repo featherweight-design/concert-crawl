@@ -1,6 +1,11 @@
 // The event detail primary CTA, shared by the protected page and the public
 // share mirror at /e/:id (#72).
 //
+// A No longer listed show (B+ A5: cancelled by the stale sweep, `delistedAt`
+// set) is not treated as cancelled here: nothing says the show is off, so it
+// keeps the ordinary ticket or venue link and its ordinary label, never refund
+// info.
+//
 // Four states, first match wins:
 //   cancelled + ticket URL → "Refund info from the vendor ›" on that URL: the
 //                        vendor handles the refund. The venue's event page or
@@ -21,6 +26,7 @@ import { ChevronRight } from 'lucide-react';
 
 import type { EventStatus } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 
 import { ExternalLinkIcon } from './InfoRow';
 
@@ -72,6 +78,8 @@ const CANCELLED_VENUE_LINK_STYLE = {
 interface EventTicketCtaProps {
   /** The show's lifecycle. Cancelled turns the ticket link into refund info. */
   status?: EventStatus | undefined;
+  /** The stale sweep's marker: a delisted cancellation is not a cancellation. */
+  delistedAt?: string | null | undefined;
   /**
    * The already-validated ticket URL (the vendor), or null. Only read on a
    * cancelled show, where it is the refund link.
@@ -90,12 +98,13 @@ interface EventTicketCtaProps {
 
 export const EventTicketCta = ({
   status,
+  delistedAt = null,
   ticketHref = null,
   soldOut,
   href,
   hasDirectLink,
 }: EventTicketCtaProps) => {
-  const cancelled = status === 'cancelled';
+  const cancelled = status === 'cancelled' && !isDelisted(status, delistedAt);
   if (cancelled && ticketHref) {
     return (
       <a
