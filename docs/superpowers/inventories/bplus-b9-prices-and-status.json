@@ -1,14 +1,10 @@
 {
-  "feature": "Prices and status restyle: submit, check, report, filed, already reported, counter",
-  "planRow": "B9",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "The sheets are opened by the controls this PR restyles, so the PR that lands B9 adds their click steps here and drops `manual`.",
+  "feature": "B9 · Prices and status restyle: submit, check, report, filed, already reported, counter",
+  "note": "B9 restyles the controls that open these sheets, so the PR that lands B9 adds a row per sheet with its click steps. Plan row B9 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): prices = 08-prices-and-status/more-p-price_states. Walk by hand on staging (no kit verb reaches them yet): submit (08-prices-and-status/more-p-submit_m, 08-prices-and-status/more-p-submit_two_m, 08-prices-and-status/more-p-submit_done_m, 08-prices-and-status/more-p-submit_d); check (08-prices-and-status/more-p-check_m, 08-prices-and-status/more-p-check_d, 08-prices-and-status/more-p-error_m); report (08-prices-and-status/more-st-report_m, 08-prices-and-status/more-st-report_live_m, 08-prices-and-status/more-st-filed_m); already (08-prices-and-status/more-st-already_rep_m, 08-prices-and-status/more-p-already_m); counter (08-prices-and-status/more-st-counter_m, 08-prices-and-status/more-st-counter_done_m).",
   "rows": [
     {
       "id": "prices",
       "label": "/events/[id]: the price region",
-      "route": "/events/[id]",
-      "boards": ["08-prices-and-status/more-p-price_states.jpg"],
       "fullPage": true,
       "steps": [
         {
@@ -16,70 +12,6 @@
           "wait": "[data-testid=\"hero-band\"]"
         }
       ]
-    },
-    {
-      "id": "submit",
-      "label": "Submit a price sheet (one tier, two tiers, done)",
-      "route": "/events/[id]",
-      "boards": [
-        "08-prices-and-status/more-p-submit_m.jpg",
-        "08-prices-and-status/more-p-submit_two_m.jpg",
-        "08-prices-and-status/more-p-submit_done_m.jpg",
-        "08-prices-and-status/more-p-submit_d.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "check",
-      "label": "Price check sheet",
-      "route": "/events/[id]",
-      "boards": [
-        "08-prices-and-status/more-p-check_m.jpg",
-        "08-prices-and-status/more-p-check_d.jpg",
-        "08-prices-and-status/more-p-error_m.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "report",
-      "label": "Report sheet (live styling) and filed",
-      "route": "/events/[id]",
-      "boards": [
-        "08-prices-and-status/more-st-report_m.jpg",
-        "08-prices-and-status/more-st-report_live_m.jpg",
-        "08-prices-and-status/more-st-filed_m.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "already",
-      "label": "Already reported",
-      "route": "/events/[id]",
-      "boards": [
-        "08-prices-and-status/more-st-already_rep_m.jpg",
-        "08-prices-and-status/more-p-already_m.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "counter",
-      "label": "Counter sheet",
-      "route": "/events/[id]",
-      "boards": [
-        "08-prices-and-status/more-st-counter_m.jpg",
-        "08-prices-and-status/more-st-counter_done_m.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
     }
   ]
 }

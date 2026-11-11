@@ -1,4 +1,46 @@
 {
   "ownApp": true,
-  "uiSweep": "pnpm --filter @concert-crawl/e2e audit:sweep"
+  "uiSweep": "pnpm --filter @concert-crawl/e2e audit:sweep",
+  "featureAcceptance": {
+    "baseUrl": "https://staging.concertcrawl.app",
+    "widths": [
+      {
+        "label": "phone",
+        "width": 390,
+        "height": 844,
+        "touch": true
+      },
+      {
+        "label": "sm",
+        "width": 640,
+        "height": 900
+      },
+      {
+        "label": "desktop",
+        "width": 1300,
+        "height": 900
+      }
+    ],
+    "pageScope": "",
+    "signIn": "apps/e2e/src/fwd/sign-in.mjs",
+    "inventories": "docs/superpowers/inventories",
+    "out": "contact-sheets",
+    "aliases": {
+      "@/": "apps/web/src/"
+    },
+    "packageDir": "apps/e2e",
+    "tokens": {
+      "declare": [
+        "apps/web/src/app/globals.css",
+        "apps/web/src/theme/themes.ts",
+        "apps/web/src/app/layout.tsx"
+      ],
+      "read": [
+        "apps/web/src/components/**/*.{ts,tsx,css}",
+        "apps/web/src/app/**/*.{ts,tsx,css}"
+      ],
+      "hex": ["apps/web/src/components/**/*.{ts,tsx}"],
+      "hexFails": false
+    }
+  }
 }

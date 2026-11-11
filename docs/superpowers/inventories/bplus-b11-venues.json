@@ -1,17 +1,10 @@
 {
-  "feature": "Venues: list tiles, glyph hero, venues/loading.tsx",
-  "planRow": "B11",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "feature": "B11 · Venues: list tiles, glyph hero, venues/loading.tsx",
+  "note": "Plan row B11 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): venues = 02-mobile/bp-m-venues_m, 01-core/bp-venues, 10-venue-art/vall-icon; red-rocks = 10-venue-art/hero-m-redrocks, 10-venue-art/hero-venue, 02-mobile/bp-m-venue_m, 01-core/bp-venue; ogden = 10-venue-art/hero-m-ogden; church = 10-venue-art/hero-m-church. Walk by hand on staging (no kit verb reaches them yet): skeleton (06-states/bp-s-load_venue_m): throttle and navigate.",
   "rows": [
     {
       "id": "venues",
-      "label": "/venues: the tile list",
-      "route": "/venues",
-      "boards": [
-        "02-mobile/bp-m-venues_m.jpg",
-        "01-core/bp-venues.jpg",
-        "10-venue-art/vall-icon.jpg"
-      ],
+      "label": "/venues: tile list",
       "steps": [
         {
           "goto": "/venues",
@@ -22,13 +15,6 @@
     {
       "id": "red-rocks",
       "label": "/venues/red-rocks-amphitheatre: glyph hero",
-      "route": "/venues/[slug]",
-      "boards": [
-        "10-venue-art/hero-m-redrocks.jpg",
-        "10-venue-art/hero-venue.jpg",
-        "02-mobile/bp-m-venue_m.jpg",
-        "01-core/bp-venue.jpg"
-      ],
       "steps": [
         {
           "goto": "/venues/red-rocks-amphitheatre",
@@ -39,8 +25,6 @@
     {
       "id": "ogden",
       "label": "/venues/ogden-theatre: glyph hero",
-      "route": "/venues/[slug]",
-      "boards": ["10-venue-art/hero-m-ogden.jpg"],
       "steps": [
         {
           "goto": "/venues/ogden-theatre",
@@ -50,24 +34,13 @@
     },
     {
       "id": "church",
-      "label": "/venues/the-church-nightclub: glyph hero (onboarded straight to prod, not in the seed)",
-      "route": "/venues/[slug]",
-      "boards": ["10-venue-art/hero-m-church.jpg"],
+      "label": "/venues/the-church-nightclub: glyph hero",
       "steps": [
         {
           "goto": "/venues/the-church-nightclub",
           "wait": "h1"
         }
       ]
-    },
-    {
-      "id": "skeleton",
-      "label": "Venue skeleton (venues/loading.tsx)",
-      "route": "/venues",
-      "boards": ["06-states/bp-s-load_venue_m.jpg"],
-      "when": "manual",
-      "note": "Throttle and navigate to Venues on staging.",
-      "steps": []
     }
   ]
 }

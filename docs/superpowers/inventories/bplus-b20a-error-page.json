@@ -1,54 +1,16 @@
 {
-  "feature": "Something went wrong page: StandaloneError, Tell us card, signed-out layout",
-  "planRow": "B20a",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "No route reaches `error.tsx` or `global-error.tsx` on demand. Until B20a gives staging a way to trigger it, every row is manual; walk each state and each theme board.",
+  "feature": "B20a · Something went wrong page",
+  "note": "No route reaches error.tsx or global-error.tsx on demand, so the error page itself is walked by hand until B20a gives staging a trigger and a row here. Plan row B20a of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): events-baseline = none drawn. Walk by hand on staging (no kit verb reaches them yet): prompt (12-error-page/err-m-prompt, 12-error-page/err-d-prompt, 12-error-page/err-m-form, 12-error-page/err-m-sending, 12-error-page/err-m-sent, 12-error-page/err-m-failed); signed-out (12-error-page/err-m-signedout, 12-error-page/err-d-signedout); themes (12-error-page/err-t-electric, 12-error-page/err-t-light, 12-error-page/err-t-pulse).",
   "rows": [
     {
-      "id": "prompt",
-      "label": "Signed in: prompt, form, sending, sent, failed",
-      "route": "/events",
-      "boards": [
-        "12-error-page/err-m-prompt.jpg",
-        "12-error-page/err-d-prompt.jpg",
-        "12-error-page/err-m-form.jpg",
-        "12-error-page/err-d-form.jpg",
-        "12-error-page/err-m-sending.jpg",
-        "12-error-page/err-m-sent.jpg",
-        "12-error-page/err-m-failed.jpg",
-        "12-error-page/err-d-failed.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "signed-out",
-      "label": "Signed out layout",
-      "route": "/",
-      "auth": "signed-out",
-      "boards": [
-        "12-error-page/err-m-signedout.jpg",
-        "12-error-page/err-d-signedout.jpg",
-        "12-error-page/err-d-signedout-light.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
-    },
-    {
-      "id": "themes",
-      "label": "Its own theme tokens, every theme",
-      "route": "/events",
-      "boards": [
-        "12-error-page/err-t-electric.jpg",
-        "12-error-page/err-t-light.jpg",
-        "12-error-page/err-t-pulse.jpg",
-        "12-error-page/err-t-forge.jpg"
-      ],
-      "when": "manual",
-      "note": "",
-      "steps": []
+      "id": "events-baseline",
+      "label": "/events: the shell the error page replaces (baseline)",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        }
+      ]
     }
   ]
 }

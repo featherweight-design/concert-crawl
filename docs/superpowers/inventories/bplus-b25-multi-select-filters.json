@@ -1,17 +1,10 @@
 {
-  "feature": "Multi-select Where and Vibe (flagged)",
-  "planRow": "B25",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "Only if Hugh picks multi-select (plan question 1). The URL contract is B25's to define: add an active-filters row with two Where values once it exists.",
+  "feature": "B25 · Multi-select Where and Vibe (flagged)",
+  "note": "Only if Hugh picks multi-select (plan question 1). Add an active-filters row with two Where values once B25 defines the URL contract. Plan row B25 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): where = 05-filters/bp-f-filt_venues_m, 05-filters/bp-f-filt_where_d; vibe = 04-genre-and-vibe/bp-vibe-vibe_sheet_m, 04-genre-and-vibe/bp-vibe-vibe_pop_d.",
   "rows": [
     {
       "id": "where",
-      "label": "/events: Where, several picked",
-      "route": "/events",
-      "boards": [
-        "05-filters/bp-f-filt_venues_m.jpg",
-        "05-filters/bp-f-filt_where_d.jpg"
-      ],
+      "label": "/events: Where open",
       "steps": [
         {
           "goto": "/events",
@@ -19,19 +12,14 @@
         },
         {
           "click": "[data-testid=\"venue-chip\"]:visible",
-          "waitDialog": "^Where filter$",
+          "waitDialog": "Where filter",
           "settle": 400
         }
       ]
     },
     {
       "id": "vibe",
-      "label": "/events: Vibe, several picked",
-      "route": "/events",
-      "boards": [
-        "04-genre-and-vibe/bp-vibe-vibe_sheet_m.jpg",
-        "04-genre-and-vibe/bp-vibe-vibe_pop_d.jpg"
-      ],
+      "label": "/events: Vibe open",
       "steps": [
         {
           "goto": "/events",
@@ -40,7 +28,7 @@
         {
           "clickRole": "button",
           "name": "^Vibe",
-          "waitDialog": "^Vibe filter$",
+          "waitDialog": "Vibe filter",
           "settle": 400
         }
       ]

@@ -1,22 +1,10 @@
 {
-  "feature": "Browse 1: rows, Tonight spotlight, Coming to Denver, day headers, List/Cal toggle, no floating Crews button",
-  "planRow": "B5",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "feature": "B5 · Browse 1: rows, Tonight spotlight, Coming to Denver, day headers, List/Cal toggle",
+  "note": "Plan row B5 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): browse = 02-mobile/bp-m-browse_m, 01-core/bp-browse, 03-themes/bp-t-light-browse_m, 03-themes/bp-td-light-browse, 03-themes/bp-t-electric-browse_m, 03-themes/bp-td-electric-browse; browse-scrolled = 02-mobile/bp-m-browse_m, 01-core/bp-browse; browse-full = 06-states/bp-s-loadmore_m.",
   "rows": [
     {
       "id": "browse",
-      "label": "/events: Browse list, first screen",
-      "route": "/events",
-      "boards": [
-        "02-mobile/bp-m-browse_m.jpg",
-        "01-core/bp-browse.jpg",
-        "03-themes/bp-t-electric-browse_m.jpg",
-        "03-themes/bp-t-light-browse_m.jpg",
-        "03-themes/bp-t-pulse-browse_m.jpg",
-        "03-themes/bp-td-electric-browse.jpg",
-        "03-themes/bp-td-light-browse.jpg",
-        "03-themes/bp-td-pulse-browse.jpg"
-      ],
+      "label": "/events: first screen",
       "steps": [
         {
           "goto": "/events",
@@ -26,25 +14,21 @@
     },
     {
       "id": "browse-scrolled",
-      "label": "/events: day headers and rows further down",
-      "route": "/events",
-      "boards": ["02-mobile/bp-m-browse_m.jpg", "01-core/bp-browse.jpg"],
+      "label": "/events: day headers further down",
       "steps": [
         {
           "goto": "/events",
           "wait": "[data-testid=\"event-row\"]"
         },
         {
-          "scroll": 1400,
-          "settle": 400
+          "settle": 400,
+          "scroll": 1400
         }
       ]
     },
     {
       "id": "browse-full",
-      "label": "/events: the whole first page (spotlight, Coming to Denver, Load more)",
-      "route": "/events",
-      "boards": ["06-states/bp-s-loadmore_m.jpg"],
+      "label": "/events: whole first page",
       "fullPage": true,
       "steps": [
         {

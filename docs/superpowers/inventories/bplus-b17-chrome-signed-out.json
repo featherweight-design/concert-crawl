@@ -1,0 +1,17 @@
+{
+  "feature": "B17 · Chrome, signed out: the signed-out header",
+  "note": "Plan row B17 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): changelog = none drawn.",
+  "signedOut": true,
+  "rows": [
+    {
+      "id": "changelog",
+      "label": "/changelog signed out: the signed-out header",
+      "steps": [
+        {
+          "goto": "/changelog",
+          "wait": "h1"
+        }
+      ]
+    }
+  ]
+}

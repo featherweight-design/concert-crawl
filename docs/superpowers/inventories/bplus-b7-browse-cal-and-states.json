@@ -1,32 +1,29 @@
 {
-  "feature": "Browse 3: Cal week strip and jump picker, Browse skeletons with the wave, empty and filtered-empty states",
-  "planRow": "B7",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
+  "feature": "B7 · Browse 3: Cal week strip and jump picker, skeletons, empty and filtered-empty",
+  "note": "Plan row B7 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): cal = 06-states/bp-s-cal_m, 06-states/bp-s-cal_d; jump = 06-states/bp-s-cal_jump_m; filtered-empty = 06-states/bp-s-empty_filtered_m. Walk by hand on staging (no kit verb reaches them yet): skeleton (06-states/bp-s-load_browse_m, 06-states/bp-s-load_browse_d, 06-states/bp-s-wave_board): loading.tsx shows only during a client navigation; throttle and navigate; cal-empty (06-states/bp-s-cal_empty_m): step the week strip to an empty week.",
   "rows": [
     {
       "id": "cal",
       "label": "/events?view=cal: week strip",
-      "route": "/events",
-      "boards": ["06-states/bp-s-cal_m.jpg", "06-states/bp-s-cal_d.jpg"],
       "steps": [
         {
-          "goto": "/events?view=cal"
+          "goto": "/events?view=cal",
+          "wait": "[data-testid=\"day-tile\"]"
         }
       ]
     },
     {
       "id": "jump",
-      "label": "/events?view=cal: the jump picker open",
-      "route": "/events",
-      "boards": ["06-states/bp-s-cal_jump_m.jpg"],
+      "label": "/events?view=cal: jump picker open",
       "steps": [
         {
-          "goto": "/events?view=cal"
+          "goto": "/events?view=cal",
+          "wait": "[data-testid=\"day-tile\"]"
         },
         {
           "clickRole": "button",
           "name": "Jump to a date$",
-          "waitDialog": "^Jump to a date",
+          "wait": "[role=\"dialog\"][aria-label^=\"Jump to a date\"]",
           "settle": 300
         }
       ]
@@ -34,35 +31,13 @@
     {
       "id": "filtered-empty",
       "label": "/events: filtered to nothing",
-      "route": "/events",
-      "boards": ["06-states/bp-s-empty_filtered_m.jpg"],
       "steps": [
         {
-          "goto": "/events?search=contact-sheet-no-match-zq"
+          "goto": "/events?search=zzqx-contact-sheet",
+          "wait": "h1, h2",
+          "settle": 600
         }
       ]
-    },
-    {
-      "id": "skeleton",
-      "label": "Browse skeleton with the wave",
-      "route": "/events",
-      "boards": [
-        "06-states/bp-s-load_browse_m.jpg",
-        "06-states/bp-s-load_browse_d.jpg",
-        "06-states/bp-s-wave_board.jpg"
-      ],
-      "when": "manual",
-      "note": "loading.tsx shows only during a client navigation; throttle the network in devtools on staging and navigate to Browse.",
-      "steps": []
-    },
-    {
-      "id": "cal-empty",
-      "label": "Cal week with no shows",
-      "route": "/events",
-      "boards": ["06-states/bp-s-cal_empty_m.jpg"],
-      "when": "manual",
-      "note": "Needs a week with no shows; step forward in the week strip until one is empty.",
-      "steps": []
     }
   ]
 }

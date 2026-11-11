@@ -1,23 +1,10 @@
 {
-  "feature": "Event page: backdrop option A, tilted card, genre chips, countdown, skeleton, the public /e/[id]",
-  "planRow": "B8",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "`/e/[id]` redirects a signed-in visitor to `/events/[id]` and is launch-gated for a signed-out one, so its row runs only with NEXT_PUBLIC_PUBLIC_BROWSE=true.",
+  "feature": "B8 · Event page: backdrop, tilted card, genre chips, countdown, skeleton, public /e/[id]",
+  "note": "Plan row B8 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): event = 02-mobile/bp-m-event_m, 01-core/bp-event, 03-themes/bp-t-light-event_m_A, 03-themes/bp-td-light-event_A, 03-themes/bp-t-electric-event_m_A, 03-themes/bp-td-electric-event_A; event-end = 02-mobile/bp-m-event_m_end. Walk by hand on staging (no kit verb reaches them yet): skeleton (06-states/bp-s-load_event_m, 06-states/bp-s-load_event_d): throttle and navigate from Browse; public (06-states/bp-s-public_m, 06-states/bp-s-public_d, 06-states/bp-s-public_gone_m): /e/[id] is signed-out and launch-gated: it redirects to /sign-in on staging until NEXT_PUBLIC_PUBLIC_BROWSE is on, and the kit fails a redirected goto.",
   "rows": [
     {
       "id": "event",
       "label": "/events/[id]: first screen",
-      "route": "/events/[id]",
-      "boards": [
-        "02-mobile/bp-m-event_m.jpg",
-        "01-core/bp-event.jpg",
-        "03-themes/bp-t-electric-event_m_A.jpg",
-        "03-themes/bp-t-light-event_m_A.jpg",
-        "03-themes/bp-t-pulse-event_m_A.jpg",
-        "03-themes/bp-td-electric-event_A.jpg",
-        "03-themes/bp-td-light-event_A.jpg",
-        "03-themes/bp-td-pulse-event_A.jpg"
-      ],
       "steps": [
         {
           "goto": "/events/${CC_EVENT_ID}",
@@ -28,8 +15,6 @@
     {
       "id": "event-end",
       "label": "/events/[id]: the foot of the page",
-      "route": "/events/[id]",
-      "boards": ["02-mobile/bp-m-event_m_end.jpg"],
       "steps": [
         {
           "goto": "/events/${CC_EVENT_ID}",
@@ -39,42 +24,6 @@
           "scroll": "bottom"
         }
       ]
-    },
-    {
-      "id": "public",
-      "label": "/e/[id]: the public event page, signed out",
-      "route": "/e/[id]",
-      "auth": "signed-out",
-      "boards": ["06-states/bp-s-public_m.jpg", "06-states/bp-s-public_d.jpg"],
-      "when": "public-browse",
-      "steps": [
-        {
-          "goto": "/e/${CC_EVENT_ID}",
-          "wait": "[data-testid=\"public-event-price\"]"
-        }
-      ]
-    },
-    {
-      "id": "skeleton",
-      "label": "Event page skeleton",
-      "route": "/events/[id]",
-      "boards": [
-        "06-states/bp-s-load_event_m.jpg",
-        "06-states/bp-s-load_event_d.jpg"
-      ],
-      "when": "manual",
-      "note": "Throttle and navigate from Browse to an event on staging.",
-      "steps": []
-    },
-    {
-      "id": "public-gone",
-      "label": "/e/[id] for a show that is gone",
-      "route": "/e/[id]",
-      "auth": "signed-out",
-      "boards": ["06-states/bp-s-public_gone_m.jpg"],
-      "when": "manual",
-      "note": "Needs a removed event id; signed out, once public browse is on.",
-      "steps": []
     }
   ]
 }

@@ -1,14 +1,10 @@
 {
-  "feature": "No longer listed: the stale sweep's own state, chip and dashed row",
-  "planRow": "A5",
-  "plan": "docs/superpowers/plans/2026-11-11-bplus-redesign.md",
-  "note": "Needs a show the sweep removed, watched by the audit user. No notification goes out, so there is nothing to photograph there.",
+  "feature": "A5 · No longer listed: the sweep's own state, chip and dashed row",
+  "note": "Plan row A5 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): watching = 08-prices-and-status/more-st-rows_board; event = none drawn.",
   "rows": [
     {
       "id": "watching",
       "label": "/watching: the dashed No longer listed row",
-      "route": "/watching",
-      "boards": ["08-prices-and-status/more-st-rows_board.jpg"],
       "fullPage": true,
       "steps": [
         {
@@ -19,7 +15,6 @@
     {
       "id": "event",
       "label": "/events/[id]: a show no longer listed",
-      "route": "/events/[id]",
       "steps": [
         {
           "goto": "/events/${CC_REMOVED_EVENT_ID}",
