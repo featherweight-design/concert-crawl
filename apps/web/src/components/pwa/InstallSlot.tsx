@@ -52,9 +52,10 @@ export const InstallSlot = () => {
     }
   }, [deferred, isIos]);
 
-  // Hidden if the user quieted or retired the slot, if the app is standalone,
-  // or if the browser hasn't fired beforeinstallprompt AND we're not iOS Safari
-  // (nothing to show).
+  // Hidden if the user quieted or retired the slot (showing, right after a
+  // dismiss in this session, only the note saying so), if the app is
+  // standalone, or if the browser hasn't fired beforeinstallprompt AND we're
+  // not iOS Safari (nothing to show).
   if (dismissed)
     return justDismissed ? <InstallDismissedToast onDone={clearNote} /> : null;
   if (!deferred && !isIos) return null;
