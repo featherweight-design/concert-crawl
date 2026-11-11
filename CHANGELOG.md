@@ -1,3 +1,19 @@
+# [1.322.0](https://github.com/featherweight-design/concert-crawl/compare/v1.321.0...v1.322.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **artists:** lock the row for a rename, skip no-op unlocks, reject unknown flags ([95e8ec8](https://github.com/featherweight-design/concert-crawl/commit/95e8ec8445a6d3e0cf07e76d1f43b1ab5de36786))
+* **ci:** pin Playwright, smoke and crawler jobs to ubuntu-24.04 ([42b4e7e](https://github.com/featherweight-design/concert-crawl/commit/42b4e7ea2c0e576bb7b5aa32be71d58d32ddfa96))
+* **ci:** say what each runner pin guards against ([1af7d54](https://github.com/featherweight-design/concert-crawl/commit/1af7d546174a7c2ce31d7a53a2178afdc6762fae))
+* **db:** re-check the name lock on the row the repair writes ([f8ec022](https://github.com/featherweight-design/concert-crawl/commit/f8ec022d9cbb54ffd4df4b61883306d6f2116a3a))
+* **seed-staging:** read prod artists by explicit projection; pin the list's nameLockedAt ([6def418](https://github.com/featherweight-design/concert-crawl/commit/6def418c4c3daef0da10f9a0a30ce280cb2889b0))
+
+
+### Features
+
+* **artists:** lock admin-set names against the automatic name repair ([abf21cd](https://github.com/featherweight-design/concert-crawl/commit/abf21cd8fd4e11a3e37d5d8d27eae608b6cd5648))
+
 # [1.321.0](https://github.com/featherweight-design/concert-crawl/compare/v1.320.0...v1.321.0) (2026-11-11)
 
 
