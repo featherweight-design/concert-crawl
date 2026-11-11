@@ -20,7 +20,12 @@ import {
   eventShareMetadata,
 } from '@/lib/share/event-metadata';
 import { fetchEventReports } from '@/lib/events';
-import { HeroBand } from '@/components/consumer/image-slot';
+import {
+  EventStage,
+  StageMeta,
+  eventCountdown,
+  stageMetaLine,
+} from '@/components/consumer/event-stage';
 import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import { ShareButton } from '@/components/consumer/event-detail/ShareButton';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
@@ -269,11 +274,17 @@ export default async function EventDetailPage({
     // `hidden` here to avoid turning the wrapper into a vertical scroll
     // container. #973
     <div className="flex flex-1 flex-col overflow-x-clip">
-      {/* The band: a square panel and the title as a column beside it. It
-          replaces 300px of full-bleed image, so there is no scrim to fade type
-          into and no negative margin pulling the title back over art (#1525). */}
-      <HeroBand
+      {/* The stage (B+ B8): the photo blurred and washed in the theme's two
+          colors, the tilted card in its genre ring, then the countdown, the
+          name, its genre chips and the date and venue line. */}
+      <EventStage
         name={event.artist}
+        leadGenre={event.genre?.[0] ?? null}
+        countdown={eventCountdown(
+          event.date,
+          event.venue.timezone,
+          event.status,
+        )}
         surface="event"
         artworkUrl={event.imageUrl}
         photoUrl={event.artistPhotoUrl ?? null}
@@ -282,7 +293,6 @@ export default async function EventDetailPage({
           <ShareButton event={event} handle={shareHandle} authed inline />
         }
       >
-        <GenreChips genres={event.genre} className="mb-2" />
         <EventTitleBlock
           headliner={event.artist}
           supportingArtists={event.supportingArtists}
@@ -295,8 +305,17 @@ export default async function EventDetailPage({
           artistSlug={event.artistSlug}
           supportingArtistSlugs={event.supportingArtistSlugs}
           linkArtists
+          headSize="var(--stage-head)"
+          centered
         />
-      </HeroBand>
+        <GenreChips
+          genres={event.genre}
+          className="mt-3 justify-center sm:justify-start"
+        />
+        <StageMeta>
+          {stageMetaLine(event.date, event.venue.timezone, event.venue.name)}
+        </StageMeta>
+      </EventStage>
 
       <div className="flex-1">
         <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
