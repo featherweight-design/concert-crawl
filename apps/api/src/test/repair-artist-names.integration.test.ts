@@ -117,23 +117,6 @@ describe('repair-artist-names integration', () => {
     ]);
   });
 
-  it.each([
-    ['Rezz', 'rezz', 'REZZ'],
-    ['Maná', 'mana', 'MANÁ'],
-    ['Ivri', 'ivri', 'ivri'],
-  ])(
-    'never trades a cased name for a single-case billing (%s)',
-    async (name, canonical, billed) => {
-      await seedSingleActBill(billed, canonical);
-      await seedArtist(name, canonical);
-
-      const result = await repairArtistNames(testDb, { dryRun: false });
-
-      expect(result.candidates).toBe(0);
-      expect((await listArtists())[0]?.name).toBe(name);
-    },
-  );
-
   it('still shortens a tour title to a single-case billing', async () => {
     await seedSingleActBill('DOGSTAR', 'dogstar');
     await seedArtist('Dogstar: ALL IN NOW TOUR', 'dogstar');
@@ -158,27 +141,44 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe('Beyoncé');
   });
 
-  // Regression: "Book of Love" became "Book Of Love". A mixed-case name was
-  // cased by someone, and a venue's capitalisation is no better evidence.
+  // Only a single-case name is re-cased. A mixed-case name was cased by
+  // someone, and a venue's capitalisation is no better evidence (regression:
+  // "Book of Love" became "Book Of Love"); an all-caps name never takes a
+  // lowercase billing.
   it.each([
     ['Book of Love', 'book of love', 'Book Of Love'],
     ['Rezz', 'rezz', 'ReZZ'],
+    ['Rezz', 'rezz', 'REZZ'],
+    ['Maná', 'mana', 'MANÁ'],
+    ['Ivri', 'ivri', 'ivri'],
     ['Chief Keef', 'chief keef', 'CHIEF Keef'],
-  ])(
-    'never re-cases a name that already mixes cases (%s)',
-    async (name, canonical, billed) => {
-      await seedSingleActBill(billed, canonical);
-      await seedArtist(name, canonical);
+    ['REZZ', 'rezz', 'rezz'],
+  ])('never re-cases %s to %s', async (name, canonical, billed) => {
+    await seedSingleActBill(billed, canonical);
+    await seedArtist(name, canonical);
 
-      const result = await repairArtistNames(testDb, { dryRun: false });
+    const result = await repairArtistNames(testDb, { dryRun: false });
 
-      expect(result.candidates).toBe(0);
-      expect((await listArtists())[0]?.name).toBe(name);
-    },
-  );
+    expect(result.candidates).toBe(0);
+    expect((await listArtists())[0]?.name).toBe(name);
+  });
 
-  // A shorten, because a re-cased name is never re-cased again (it is cased
-  // now), so only a shorten can still meet a rival billing on the next run.
+  it.each([
+    ['CHIEF KEEF', 'chief keef', 'Chief Keef'],
+    ['j.i.d', 'j.i.d', 'J.I.D'],
+    ['ivri', 'ivri', 'Ivri'],
+  ])('re-cases the single-case %s to %s', async (name, canonical, billed) => {
+    await seedSingleActBill(billed, canonical);
+    await seedArtist(name, canonical);
+
+    await repairArtistNames(testDb, { dryRun: false });
+
+    expect((await listArtists())[0]?.name).toBe(billed);
+  });
+
+  // A shorten, because a re-case only ever moves toward mixed case, which is
+  // final, and the ranking already prefers mixed case; only a shorten can
+  // still meet a rival billing it would trade places with on the next run.
   it('settles: the current name votes, so a second run never shortens it again', async () => {
     for (let i = 0; i < 5; i += 1)
       await seedSingleActBill('Dogstar: ALL IN', 'dogstar');
@@ -281,10 +281,11 @@ describe('repair-artist-names integration', () => {
         showTime,
       });
     }
+    // Mixed case too, so count decides rather than the cased-first rank.
     await seedEvent(venue.id, {
-      artist: 'REZZ',
+      artist: 'ReZZ',
       canonicalArtist: 'rezz',
-      headliners: ['REZZ'],
+      headliners: ['ReZZ'],
       canonicalHeadliners: ['rezz'],
       showTime: '21:00:00',
     });
