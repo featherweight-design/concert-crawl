@@ -28,7 +28,10 @@
     "aliases": {
       "@/": "apps/web/src/"
     },
-    "packageDir": ["apps/e2e", "apps/web"],
+    "packageDir": [
+      "apps/e2e",
+      "apps/web"
+    ],
     "tokens": {
       "declare": [
         "apps/web/src/app/globals.css",
@@ -39,12 +42,18 @@
         "apps/web/src/components/**/*.{ts,tsx,css}",
         "apps/web/src/app/**/*.{ts,tsx,css}"
       ],
-      "hex": ["apps/web/src/components/**/*.{ts,tsx}"],
+      "hex": [
+        "apps/web/src/components/**/*.{ts,tsx}"
+      ],
       "hexFails": false
     },
     "productionUrl": [
       "https://concertcrawl.app",
       "https://www.concertcrawl.app"
     ]
+  },
+  "orchestrator": {
+    "maxLanes": 2,
+    "note": "Hugh's standing rule (2026-11-11): 2 lanes while CC and The 99 both run, up to 4 when only one does. The machine runs out of memory beyond that."
   }
 }
