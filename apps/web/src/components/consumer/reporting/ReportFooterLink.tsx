@@ -1,6 +1,9 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import { REPORTING_COPY } from './definitions/copy';
+import { REPORT_TOKENS } from './reportTokens';
 
 const copy = REPORTING_COPY.reportFooterLink;
 
@@ -10,8 +13,13 @@ const STATUS_LABELS: Record<'sold-out' | 'cancelled' | 'postponed', string> = {
   postponed: 'postponed',
 };
 
+// The amber the report family already uses; the tile and the reported state
+// share it so every "Spot something off?" card reads as one family.
+const AMBER = REPORT_TOKENS.postponed;
+
 export interface ReportFooterLinkProps {
-  liveStatus: null | 'sold-out' | 'cancelled' | 'postponed';
+  /** Event page only. The artist card leaves it out. */
+  liveStatus?: null | 'sold-out' | 'cancelled' | 'postponed';
   onOpen: () => void;
   /**
    * Announces the sign-up gate to assistive tech without drawing it (#1247).
@@ -19,24 +27,89 @@ export interface ReportFooterLinkProps {
    * itself for the tier picker once it is open.
    */
   signedOut?: boolean;
+  /**
+   * The card is shared with the artist page (wrong-artist reports), which
+   * brings its own words and a tile. Left out, the card is the event page's
+   * status card exactly as it always was.
+   */
+  icon?: ReactNode;
+  title?: string;
+  subtitle?: string;
+  /** The mono line under the row. */
+  footnote?: string;
+  /** The accessible name when `signedOut`, for a card with its own title. */
+  ariaSignedOut?: string;
+  /**
+   * The viewer already has a report open: a dashed amber border and a chip in
+   * place of the chevron. Still tappable; the host decides what it opens.
+   */
+  reported?: boolean;
+  reportedChip?: string;
+  /** Drops the page-gutter padding for a host that already has its own. */
+  flush?: boolean;
 }
 
 export const ReportFooterLink = ({
-  liveStatus,
+  liveStatus = null,
   onOpen,
   signedOut = false,
+  icon,
+  title: titleOverride,
+  subtitle: subtitleOverride,
+  footnote,
+  ariaSignedOut,
+  reported = false,
+  reportedChip,
+  flush = false,
 }: ReportFooterLinkProps) => {
   const hasStatus = liveStatus !== null;
-  const title = hasStatus ? copy.titleHasStatus : copy.title;
-  const subtitle = hasStatus
-    ? copy.subtitleHasStatus(STATUS_LABELS[liveStatus])
-    : copy.subtitle;
+  const title = titleOverride ?? (hasStatus ? copy.titleHasStatus : copy.title);
+  const subtitle =
+    subtitleOverride ??
+    (hasStatus
+      ? copy.subtitleHasStatus(STATUS_LABELS[liveStatus])
+      : copy.subtitle);
+  const signedOutName =
+    ariaSignedOut ??
+    (hasStatus ? copy.ariaSignedOutHasStatus : copy.ariaSignedOut);
+
+  const text = (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: 700,
+          fontSize: '14px',
+          color: 'var(--fg)',
+          letterSpacing: '-0.005em',
+        }}
+      >
+        {title}
+      </span>
+      <span
+        style={{
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '12px',
+          color: 'var(--fg-muted)',
+          letterSpacing: '-0.005em',
+        }}
+      >
+        {subtitle}
+      </span>
+    </div>
+  );
 
   return (
     <div
       style={{
         width: '100%',
-        padding: '24px 18px 32px',
+        padding: flush ? '24px 0 0' : '24px 18px 32px',
         borderTop: '1px dashed var(--border)',
         background: 'var(--bg)',
         color: 'var(--fg)',
@@ -60,13 +133,8 @@ export const ReportFooterLink = ({
       {/* Button row */}
       <button
         onClick={onOpen}
-        {...(signedOut
-          ? {
-              'aria-label': hasStatus
-                ? copy.ariaSignedOutHasStatus
-                : copy.ariaSignedOut,
-            }
-          : {})}
+        {...(reported ? { 'data-reported': 'true' } : {})}
+        {...(signedOut ? { 'aria-label': signedOutName } : {})}
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -74,53 +142,86 @@ export const ReportFooterLink = ({
           padding: '12px 14px',
           borderRadius: '10px',
           background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
+          border: reported
+            ? `1px dashed ${AMBER.border}`
+            : '1px solid var(--border)',
           cursor: 'pointer',
           width: '100%',
           textAlign: 'left',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span
+        {icon === undefined ? (
+          text
+        ) : (
+          <div
             style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 700,
-              fontSize: '14px',
-              color: 'var(--fg)',
-              letterSpacing: '-0.005em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              minWidth: 0,
             }}
           >
-            {title}
-          </span>
-          <span
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '12px',
-              color: 'var(--fg-muted)',
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {subtitle}
-          </span>
-        </div>
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                flexShrink: 0,
+                color: AMBER.color,
+                background: AMBER.bgStrong,
+                border: `1px solid ${AMBER.border}`,
+              }}
+            >
+              {icon}
+            </span>
+            {text}
+          </div>
+        )}
 
-        {/* Arrow icon */}
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          fill="none"
-          aria-hidden="true"
-          style={{ marginLeft: '8px', flexShrink: 0, color: 'var(--fg-muted)' }}
-        >
-          <path
-            d="M6 4L10 8L6 12"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        {reported && reportedChip !== undefined ? (
+          <span
+            style={{
+              marginLeft: '8px',
+              flexShrink: 0,
+              padding: '3px 7px',
+              borderRadius: 6,
+              border: '1px solid var(--border-strong)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '9px',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {reportedChip}
+          </span>
+        ) : (
+          /* Arrow icon */
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+            style={{
+              marginLeft: '8px',
+              flexShrink: 0,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            <path
+              d="M6 4L10 8L6 12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </button>
 
       {/* Bottom note */}
@@ -135,7 +236,7 @@ export const ReportFooterLink = ({
           textTransform: 'uppercase',
         }}
       >
-        {copy.bottomNote}
+        {footnote ?? copy.bottomNote}
       </p>
     </div>
   );

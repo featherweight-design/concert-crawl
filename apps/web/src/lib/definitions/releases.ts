@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.57.0-beta',
+    date: 'Nov 11, 2026',
+    headline: 'Tell us when an artist is the wrong one.',
+    items: [
+      {
+        kind: 'added',
+        text: 'If an artist page shows a different act’s photo or music, you can report it from the page, and we’ll tell you when it’s fixed.',
+      },
+    ],
+  },
+  {
     version: 'v0.56.0-beta',
     date: 'Nov 11, 2026',
     headline: null,

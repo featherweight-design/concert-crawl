@@ -113,6 +113,104 @@ export const ARTIST_COPY = {
   // Loading
   loadingArtist: 'Finding them…',
 
+  // Wrong-artist report (design/design_handoff_wrong_artist_report/COPY.md).
+  // Verbatim from the handoff, curly apostrophes included. `{artist}` and
+  // `{genres}` are DATA, interpolated by the functions.
+  report: {
+    // The result sheets' dismiss X; the visible Close is the error sheet's.
+    closeAria: 'Close sheet',
+    card: {
+      title: 'Wrong artist?',
+      subtitle: (artist: string) =>
+        `Photo or music from a different ${artist}? Let us know.`,
+      footnote:
+        'We match artists to Spotify by name. A person checks every report.',
+      reportedTitle: 'You reported this artist',
+      reportedSubtitle: 'We’re checking it. Thanks for the heads up.',
+      reportedChip: 'UNDER REVIEW',
+      reportedFootnote:
+        'Only you see this. The page stays as it is until we fix it.',
+      // Signed out the card looks the same and only its name carries the gate.
+      ariaSignedOut: 'Wrong artist? Sign up to report',
+    },
+    sheet: {
+      eyebrow: 'ARTIST REPORT',
+      close: 'Cancel',
+      title: 'Not the right artist?',
+      subtitle:
+        'We match artists to Spotify by name, and some names are shared. Tell us what looks wrong.',
+      matchLabel: 'THIS PAGE IS MATCHED TO',
+      matchMeta: (genres: string) => `ON SPOTIFY · ${genres}`,
+      // The match was never genre-hydrated, so the meta line drops the genres.
+      matchMetaNoGenres: 'ON SPOTIFY',
+      matchLink: 'Open in Spotify ↗',
+      reasonsLabel: 'WHAT’S WRONG?',
+      reasons: {
+        different_artist: {
+          title: 'A different artist, same name',
+          sub: 'The photo and the music belong to someone else.',
+        },
+        wrong_photo: {
+          title: 'Right music, wrong photo',
+          sub: 'The songs are theirs. The picture isn’t.',
+        },
+        not_an_artist: {
+          title: 'Not an artist',
+          sub: 'A festival pass, a ticket package or a theme night.',
+        },
+        other: {
+          title: 'Something else',
+          sub: 'Tell us in the note.',
+        },
+      },
+      linkLabel: 'The right artist on Spotify (optional)',
+      linkPlaceholder: 'Paste a Spotify link',
+      linkHint:
+        'In Spotify, open their profile, then Share and Copy link. It’s the fastest way for us to fix it.',
+      linkError: 'That isn’t a Spotify artist link.',
+      noteLabel: 'Anything else? (optional)',
+      notePlaceholder: 'Where they’re from, what they play…',
+      counter: (count: number, max: number) => `${count} / ${max}`,
+      submit: 'Send report',
+      footnote: 'A person checks it before anything changes.',
+    },
+    sent: {
+      rail: 'GOT IT · SENT',
+      code: 'SENT',
+      title: 'Thanks. We’ll check it.',
+      body: (artist: string) =>
+        `If it’s a mix-up, we’ll swap in the right ${artist} and let you know in your notifications.`,
+      // The reason words are the picked reason, lower-cased for the stub.
+      stub: (artist: string, reason: string) => `${artist} · ${reason}`,
+      stubStatus: 'UNDER REVIEW · WITH US',
+      back: 'Back to artist',
+    },
+    reasonShort: {
+      different_artist: 'different artist',
+      wrong_photo: 'wrong photo',
+      not_an_artist: 'not an artist',
+      other: 'other',
+    },
+    already: {
+      rail: 'ALREADY REPORTED',
+      code: 'DONE',
+      title: 'You’ve flagged this one.',
+      body: 'We’re still checking your report. One open report per artist, so withdraw it if you got it wrong.',
+      back: 'Back to artist',
+      withdraw: 'Withdraw',
+      // New: the withdraw call can fail, and the sheet has to say so.
+      withdrawError: 'Couldn’t withdraw it. Try again.',
+    },
+    error: {
+      rail: 'DIDN’T SEND · ARTIST REPORT',
+      code: 'ERR',
+      title: 'Didn’t go through.',
+      body: 'Couldn’t reach the server. Your answers are still here. Try again or come back later.',
+      retry: 'Try again',
+      close: 'Close',
+    },
+  },
+
   // A11y
   pageAria: (name: string) => `Artist page for ${name}`,
   showsListAria: (name: string) => `Upcoming shows for ${name}`,
