@@ -200,7 +200,10 @@ describe('GET /v1/watching', () => {
       artist: 'Someone Else',
       date: '2099-08-04',
     });
-    await seedEventReport(soldOut.id, 'fan_a', { resolution: 'promoted' });
+    await seedEventReport(soldOut.id, 'fan_a', {
+      resolution: 'promoted',
+      resolvedAt: new Date(),
+    });
     await seedEventReport(pendingOnly.id, 'fan_b');
     await seedUserEvent('user_soldout', soldOut.id, { status: 'watching' });
     await seedUserEvent('user_soldout', pendingOnly.id, { status: 'watching' });

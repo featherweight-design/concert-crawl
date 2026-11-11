@@ -452,12 +452,12 @@ priceSubmissionsRouter.post(
     // Check-then-insert runs inside an advisory-locked transaction so
     // concurrent requests for the same (user, event) serialize; the HTTP
     // status is mapped from the outcome after commit.
-    // The schema already requires tier and vendor here; this narrows them.
+    // submissionBodySchema requires tier and vendor when there's no
+    // disputedSubmissionId; this only narrows their types.
     const { tier, vendor } = body;
     if (tier === undefined || vendor === undefined) {
-      return ctx.json(
-        { success: false, error: 'Pick a tier and where it is listed.' },
-        422,
+      throw new Error(
+        'submissionBodySchema let a new price through without a slot',
       );
     }
     type SingleOutcome =

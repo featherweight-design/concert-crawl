@@ -32,6 +32,15 @@ describe('countChanges', () => {
     expect(countChanges([show({ watchStatus: 'soldout' })]).soldOut).toBe(1);
   });
 
+  it("doesn't count a cancelled or postponed show at all", () => {
+    expect(
+      countChanges([
+        show({ eventStatus: 'cancelled', savedPrice: 50, currentPrice: 40 }),
+        show({ eventStatus: 'postponed', savedPrice: 40, currentPrice: 50 }),
+      ]),
+    ).toEqual({ drops: 0, spikes: 0, soldOut: 0 });
+  });
+
   it("doesn't count a cancelled or postponed show as sold out", () => {
     expect(
       countChanges([

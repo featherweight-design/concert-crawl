@@ -122,7 +122,7 @@ describe('CounterSubmitSheet slot', () => {
         currentTier="VIP"
       />,
     );
-    expect(screen.getByText(/\$40 VIP on AXS/)).toBeInTheDocument();
+    expect(screen.getByText(/\$40 on AXS \(VIP\)/)).toBeInTheDocument();
   });
 
   it('posts without a tier or vendor', async () => {
