@@ -88,3 +88,21 @@ describe('StubStamp', () => {
     expect(hasCircle).toBe(glyph === 'ring');
   });
 });
+
+// Pinned before the accent moved to `lib/stamp-accent.ts`: StubStamp stays
+// live until B12, so the extraction must not shift a single show's colour.
+describe('StubStamp accent after the shared-helper extraction', () => {
+  afterEach(cleanup);
+
+  it.each([
+    ['Khruangbin', '#7AE6FF'],
+    ['Phoebe Bridgers', '#A075FF'],
+    ['Red Rocks', '#FFE36B'],
+    ['evt_0001', '#FF7BD4'],
+    ['', '#C9F26E'],
+  ])('keeps %j on %s', (artist, accent) => {
+    expect(stampAccentFor(artist)).toBe(accent);
+    const { container } = render(<StubStamp artist={artist} />);
+    expect(container.innerHTML).toContain(accent);
+  });
+});
