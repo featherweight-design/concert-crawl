@@ -3,6 +3,7 @@ import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { isSoldOutSql } from '../../lib/sold-out.js';
+import { clearSoldOut } from '../../lib/clear-sold-out.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import {
@@ -270,6 +271,14 @@ eventsAdminRouter.patch(
 
     // If promoted and report maps to an event status — update the event
     if (resolution === 'promoted') {
+      // Tickets available clears the sold-out, as the fan threshold does.
+      if (report.status === 'available') {
+        await clearSoldOut(
+          report.eventId,
+          adminNote ?? `cleared by tickets available report ${reportId}`,
+        );
+      }
+
       if (report.status === 'cancelled' || report.status === 'postponed') {
         await db
           .update(events)
@@ -278,15 +287,13 @@ eventsAdminRouter.patch(
       }
 
       // #1064: fan out watch notifications to every user watching this event.
-      // Best-effort — the resolve above already committed. `in` narrowing
-      // avoids an `as` cast; the compiler forces us to update the mapping if
+      // Best-effort — the resolve above already committed. Excluding
+      // 'available' (handled above) narrows the status to the mapping's keys
+      // without an `as` cast; the compiler forces us to update the mapping if
       // a new report status is added later. Gated on isRealTransition so a
       // second promoted cancelled/postponed/sold-out on an already-flagged
       // event doesn't duplicate notifications.
-      if (
-        isRealTransition &&
-        report.status in WATCH_CATEGORY_FROM_REPORT_STATUS
-      ) {
+      if (isRealTransition && report.status !== 'available') {
         await fanoutWatchNotification(
           {
             db,
@@ -1101,26 +1108,7 @@ eventsAdminRouter.post(
       return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
-    // Clear ALL active promoted sold-out reports for this event. Migration 0032
-    // enforces "at most one" via partial unique index, so in practice this
-    // affects at most one row — but using the predicate (not a single id) is
-    // robust against any historical data anomaly + against the brief race
-    // window between SELECT and UPDATE.
-    const cleared = await db
-      .update(eventReports)
-      .set({
-        resolution: 'rejected',
-        adminNote: note ?? 'admin marked available',
-      })
-      .where(
-        and(
-          eq(eventReports.eventId, id),
-          eq(eventReports.status, 'sold-out'),
-          isNotNull(eventReports.resolvedAt),
-          eq(eventReports.resolution, 'promoted'),
-        ),
-      )
-      .returning({ id: eventReports.id });
+    const cleared = await clearSoldOut(id, note ?? 'admin marked available');
 
     // 204 either way (idempotent no-op when nothing was active). Audit only
     // when we actually cleared something — admin action with no DB effect
@@ -1129,31 +1117,7 @@ eventsAdminRouter.post(
       ctx.set('auditAction', 'event.sold_out.clear');
       ctx.set('auditTargetId', id);
       ctx.set('auditActorId', actor.userId);
-      ctx.set('auditMeta', { reportIds: cleared.map((row) => row.id) });
-
-      // #1064: fan out watch.backonsale to every user watching this event.
-      // Only when we actually flipped state — a no-op call didn't change
-      // anything user-visible.
-      await fanoutWatchNotification(
-        {
-          db,
-          notifications,
-          userEvents,
-          events,
-          venues,
-        },
-        {
-          eventId: id,
-          category: 'watch.backonsale',
-          // #1311: the sold-out report(s) this call flipped to rejected. A
-          // report is cleared at most once, so a later sell-out and re-clear
-          // names a different report.
-          transition: `cleared:${cleared
-            .map((row) => row.id)
-            .sort()
-            .join(',')}`,
-        },
-      );
+      ctx.set('auditMeta', { reportIds: cleared });
     }
 
     return ctx.body(null, 204);

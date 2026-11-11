@@ -9,6 +9,10 @@ export const eventReportConfirms = pgTable(
       .notNull()
       .references(() => eventReports.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
+    /** How the confirmer knows. NULL on confirms from before 0096. */
+    method: text('method').$type<
+      'saw_same_source' | 'own_evidence' | 'heard_from_venue'
+    >(),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

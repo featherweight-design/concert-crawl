@@ -646,7 +646,8 @@ export interface SubmissionListResponse {
 }
 
 // EventReport status options
-export type EventReportStatus = 'sold-out' | 'cancelled' | 'postponed';
+export type EventReportStatus =
+  'sold-out' | 'cancelled' | 'postponed' | 'available';
 
 // EventReport evidence methods
 export type EventReportEvidenceMethod =
