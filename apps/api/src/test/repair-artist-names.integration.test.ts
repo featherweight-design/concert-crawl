@@ -177,16 +177,21 @@ describe('repair-artist-names integration', () => {
     },
   );
 
-  it('settles: the current name votes, so two spellings never swap each run', async () => {
-    for (let i = 0; i < 3; i += 1) await seedSingleActBill('Rezz', 'rezz');
-    for (let i = 0; i < 5; i += 1) await seedSingleActBill('ReZZ', 'rezz');
-    await seedArtist('REZZ', 'rezz');
+  // A shorten, because a re-cased name is never re-cased again (it is cased
+  // now), so only a shorten can still meet a rival billing on the next run.
+  it('settles: the current name votes, so a second run never shortens it again', async () => {
+    for (let i = 0; i < 5; i += 1)
+      await seedSingleActBill('Dogstar: ALL IN', 'dogstar');
+    for (let i = 0; i < 2; i += 1)
+      await seedSingleActBill('Dogstar', 'dogstar');
+    await seedArtist('Dogstar: ALL IN NOW TOUR', 'dogstar');
 
     await repairArtistNames(testDb, { dryRun: false });
+    expect((await listArtists())[0]?.name).toBe('Dogstar: ALL IN');
     const second = await repairArtistNames(testDb, { dryRun: false });
 
     expect(second.candidates).toBe(0);
-    expect((await listArtists())[0]?.name).toBe('ReZZ');
+    expect((await listArtists())[0]?.name).toBe('Dogstar: ALL IN');
   });
 
   it('fixes an all-caps name even when the venue mostly shouts it', async () => {
