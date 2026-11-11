@@ -11,6 +11,10 @@ const POSTER_SEATS = 50;
 /** The API's cap on seats per code. */
 const MAX_SEATS = 500;
 
+/** The typed seat count as the API accepts it: a whole number, 1 to 500. */
+export const clampSeats = (typed: string): number =>
+  Math.min(MAX_SEATS, Math.max(1, Math.trunc(Number(typed)) || 1));
+
 const FIELD_STYLE = {
   height: 32,
   padding: '0 10px',
@@ -30,7 +34,9 @@ export function InviteCreatorPanel() {
   const [label, setLabel] = useState('');
   // A labelled code is a poster code, so the seats follow the label (50, as
   // the plan defaults) until the admin sets them by hand.
-  const [seats, setSeats] = useState(1);
+  // Held as typed, so the field can be cleared on the way to a new number;
+  // clamped only when the code is minted.
+  const [seats, setSeats] = useState('1');
   const [seatsTouched, setSeatsTouched] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{
@@ -45,7 +51,7 @@ export function InviteCreatorPanel() {
       const res = await mintInviteCodeWithOptions({
         expiresIn,
         label,
-        maxUses: seats,
+        maxUses: clampSeats(seats),
       });
       setResult(res);
     });
@@ -99,7 +105,7 @@ export function InviteCreatorPanel() {
         onChange={(event) => {
           setLabel(event.target.value);
           if (!seatsTouched)
-            setSeats(event.target.value.trim() ? POSTER_SEATS : 1);
+            setSeats(event.target.value.trim() ? String(POSTER_SEATS) : '1');
         }}
         style={{ ...FIELD_STYLE, flex: '1 1 220px', minWidth: 0 }}
       />
@@ -115,8 +121,7 @@ export function InviteCreatorPanel() {
           value={seats}
           onChange={(event) => {
             setSeatsTouched(true);
-            const next = Math.trunc(Number(event.target.value));
-            setSeats(Math.min(MAX_SEATS, Math.max(1, next || 1)));
+            setSeats(event.target.value);
           }}
           style={{ ...FIELD_STYLE, width: 72 }}
         />
