@@ -1,3 +1,11 @@
+## [1.313.2](https://github.com/featherweight-design/concert-crawl/compare/v1.313.1...v1.313.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** judge a grid tap against the grid it was drawn from ([bb275c3](https://github.com/featherweight-design/concert-crawl/commit/bb275c3c11cef57897932870dc2967fff42b3160))
+* **web:** keep a search pick the grid's prune ran too early to see ([4c73243](https://github.com/featherweight-design/concert-crawl/commit/4c732434c4d196f7ae3e44e215633c9749bac464))
+
 ## [1.313.1](https://github.com/featherweight-design/concert-crawl/compare/v1.313.0...v1.313.1) (2026-11-11)
 
 
