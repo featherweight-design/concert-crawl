@@ -14,6 +14,7 @@ import { unlockTierFor } from '@/lib/unlock-tier';
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { CreateCrewSheet } from './CreateCrewSheet';
+import { CREW_GRADIENT } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY;
@@ -92,19 +93,22 @@ export const CreateCrewButton = ({
         className="flex cursor-pointer items-center justify-center gap-1.5 disabled:cursor-default"
         style={{
           minHeight: 44,
-          padding: isHeader ? '0 14px' : '0 20px',
+          padding: isHeader ? '0 18px' : '0 20px',
           borderRadius: 999,
-          background: gated ? 'transparent' : 'var(--signal)',
+          background: gated ? 'transparent' : CREW_GRADIENT,
           color: gated ? 'var(--fg)' : 'var(--fg-on-accent)',
           border: gated ? '1px solid var(--border-strong)' : 'none',
           fontFamily: 'var(--font-ui)',
-          fontSize: isHeader ? 13 : 13.5,
+          fontSize: isHeader ? 14 : 13.5,
           fontWeight: 700,
           letterSpacing: '-0.005em',
           opacity: isLoading ? 0.6 : 1,
           flexShrink: 0,
         }}
       >
+        {/* B+ draws "+ Start a crew"; the glyph is decoration, so the
+            accessible name stays the label. */}
+        {!gated && <span aria-hidden="true">{COPY.glyphs.add}</span>}
         {COPY.list.create}
         {gated && (
           // The star is the whole visual difference between the gated and

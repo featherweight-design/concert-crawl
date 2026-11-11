@@ -21,6 +21,7 @@ export const CREWS_COPY = {
   // multiplication sign from a sentence.
   glyphs: {
     clear: '×',
+    add: '+',
   },
 
   list: {
@@ -36,6 +37,8 @@ export const CREWS_COPY = {
         ? 'Nothing upcoming'
         : `${count} ${plural(count, 'show', 'shows')} coming up`,
     justYou: 'Just you so far',
+    // "Just you so far · 1 show coming up": a crew of one can still have plans.
+    metaPair: (first: string, second: string) => `${first} · ${second}`,
     // Announced, never rendered: the new row appears silently otherwise.
     created: (name: string) => `${name} is ready.`,
   },
@@ -55,8 +58,9 @@ export const CREWS_COPY = {
     rosterTitle: "Who's in",
     invite: 'Invite people',
     options: 'Crew options',
-    // Mono meta, so the uppercase is in the string rather than in CSS.
-    keeperEyebrow: 'YOU KEEP IT',
+    // Mono meta, so the uppercase is in the string rather than in CSS. B+
+    // renames Keeper to Host in copy only; the identifier stays `keeperId`.
+    hostEyebrow: "YOU'RE THE HOST",
     mutedEyebrow: 'MUTED',
     spots: (count: number) => `${count} / ${CREW_MEMBER_CAP} SPOTS`,
     together: (others: number) => `you + ${others}`,
@@ -68,7 +72,14 @@ export const CREWS_COPY = {
 
   roster: {
     you: 'You',
-    keeper: 'Keeper',
+    host: 'Host',
+    // The small-caps chip beside the host's row (B+ rule 8).
+    hostChip: 'HOST',
+    // An empty seat drawn under the roster, so a small crew reads as room to
+    // grow rather than a short list.
+    openSpot: 'Open spot',
+    inviteMore: (left: number) =>
+      `Invite people · ${left} ${plural(left, 'spot', 'spots')} left`,
     noHandle: 'No handle yet',
     // #762's rule: never render a person the app can't honestly name.
     noHandleHelp: "They haven't picked a handle. We won't make one up.",
@@ -187,9 +198,9 @@ export const CREWS_COPY = {
     deleteCta: 'Delete crew',
     handoffTitle: 'Pass the crew on first',
     handoffBody:
-      'You keep this one, so it needs a new keeper before you go. Pick someone.',
+      "You're the host, so it needs a new one before you go. Pick someone.",
     handoffCta: 'Pass it on',
-    // The keeper is the last member: there is nobody to hand it to, so this
+    // The host is the last member: there is nobody to hand it to, so this
     // names the only real outcome instead of offering a choice that cannot
     // happen.
     lastOneTitle: (crew: string) => `You're the last one in ${crew}.`,
@@ -202,6 +213,26 @@ export const CREWS_COPY = {
     failed: "That didn't go through. Try again.",
   },
 
+  // The crews list with a single crew (B+): three steps that say what a crew
+  // is for, gone once a second crew makes the point on its own.
+  howItWorks: {
+    eyebrow: 'HOW CREWS WORK',
+    steps: [
+      {
+        title: 'Start one',
+        body: 'Name it something the group chat will get.',
+      },
+      {
+        title: 'Send the link',
+        body: `Up to ${CREW_MEMBER_CAP} people. Links go stale on their own.`,
+      },
+      {
+        title: 'Say yes to a show',
+        body: "One yes puts it on everyone's Coming up.",
+      },
+    ],
+  },
+
   empty: {
     eyebrow: 'NOBODY YET',
     title: 'No crews yet.',
@@ -210,7 +241,6 @@ export const CREWS_COPY = {
     // here.
     rail: '0 crews',
 
-    crewOfOneEyebrow: 'CREW OF ONE',
     crewOfOneTitle: 'Party of one.',
     crewOfOneBody: 'You made a crew. Now the hard part: telling people.',
 
@@ -281,7 +311,7 @@ export const CREWS_COPY = {
     emptyRail: '0 shows',
     // The way out is the lens off, not the crew home: you came here to look at
     // the calendar.
-    emptyCta: 'Show every show',
+    emptyCta: 'Show everyone',
     // A failed load is not an empty crew, and must never borrow the empty
     // state's words: "your people are homebodies" is a lie about the data.
     failedEyebrow: 'CREW LENS',
