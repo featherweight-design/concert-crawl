@@ -1,3 +1,15 @@
+# [1.326.0](https://github.com/featherweight-design/concert-crawl/compare/v1.325.0...v1.326.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **web:** keep a partial invite code, loop a quiet week, fetch per landing ([3420895](https://github.com/featherweight-design/concert-crawl/commit/3420895b5e8c709b6c279568aa6b208a5fe3364b))
+
+
+### Features
+
+* **web:** the B+ signed-out invite landing (B24) ([3cb5019](https://github.com/featherweight-design/concert-crawl/commit/3cb5019fc7480227dbc93c18ed7c6fee6f5ccfb2))
+
 # [1.325.0](https://github.com/featherweight-design/concert-crawl/compare/v1.324.1...v1.325.0) (2026-11-11)
 
 
