@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { VenueIdentityTile } from './VenueIdentityTile';
+import { VenueTile } from '@/components/consumer/venue-glyph';
 import {
   fmtNum,
   fmtDistance,
@@ -13,7 +13,6 @@ const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex;
 
 interface VenueRowProps {
   venue: VenueWithDistance;
-  last?: boolean;
 }
 
 function IconChevron() {
@@ -50,23 +49,23 @@ function IconPin({
   );
 }
 
-export function VenueRow({ venue, last = false }: VenueRowProps) {
+/** One venue as a card (B+ `bp-venues`): its icon tile, name, where, and counts. */
+export function VenueRow({ venue }: VenueRowProps) {
   return (
     <Link
       href={`/venues/${venue.slug}`}
-      className="group block w-full"
-      style={{ borderBottom: last ? 'none' : '1px solid var(--border)' }}
+      className="group block w-full rounded-[14px] border border-border bg-surface-1 transition-colors hover:border-border-strong"
     >
       {/* Desktop layout */}
       <div
-        className="hidden lg:grid items-center px-2 py-4 group-hover:bg-overlay-hover transition-colors"
-        style={{ gridTemplateColumns: '88px 1fr 120px 120px 24px', gap: 20 }}
+        className="hidden lg:grid items-center rounded-[14px] py-3.5 pl-3.5 pr-5 group-hover:bg-overlay-hover transition-colors"
+        style={{ gridTemplateColumns: '64px 1fr 120px 120px 24px', gap: 20 }}
       >
-        <VenueIdentityTile name={venue.name} size={72} />
+        <VenueTile slug={venue.slug} name={venue.name} size={64} />
 
         <div className="min-w-0">
           <div
-            className="truncate text-[22px] font-bold text-fg leading-[1.15]"
+            className="truncate text-[21px] font-bold text-fg leading-[1.15]"
             style={{ letterSpacing: '-0.02em' }}
           >
             {venue.name}
@@ -164,8 +163,8 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
       </div>
 
       {/* Mobile layout */}
-      <div className="flex lg:hidden items-center gap-3.5 px-4 py-3 group-hover:bg-overlay-hover transition-colors">
-        <VenueIdentityTile name={venue.name} size={56} />
+      <div className="flex lg:hidden items-center gap-3.5 rounded-[14px] py-3 pl-3 pr-4 group-hover:bg-overlay-hover transition-colors">
+        <VenueTile slug={venue.slug} name={venue.name} size={56} />
         <div className="flex-1 min-w-0">
           <div
             className="truncate text-[16px] font-bold text-fg leading-[1.2]"
@@ -178,49 +177,43 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
               color: 'var(--fg-muted)',
             }}
           >
-            <span className="flex items-center gap-[3px] font-semibold text-fg">
-              <IconPin size={9} dotRadius={1.1} />
-              {fmtDistance(venue.distanceMi)}
-            </span>
-            <span style={{ color: 'var(--fg-subtle)' }}>·</span>
-            <span className="truncate min-w-0">
-              {venue.capacity ? fmtNum(venue.capacity) : '—'}{' '}
-              {VENUES_INDEX_COPY.statLabels.capacityAbbr}
-            </span>
+            <span className="shrink-0">{fmtDistance(venue.distanceMi)}</span>
+            {venue.neighborhood && (
+              <>
+                <span style={{ color: 'var(--fg-subtle)' }}>·</span>
+                <span className="truncate min-w-0">{venue.neighborhood}</span>
+              </>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex flex-col items-end gap-0.5">
-            <span
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 700,
-                fontSize: 16,
-                color: 'var(--signal)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-              }}
-            >
-              {venue.upcomingCount}
-            </span>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              {VENUES_INDEX_COPY.statLabels.shows}
-            </span>
-          </div>
-          <span className="text-fg-subtle">
-            <IconChevron />
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {VENUES_INDEX_COPY.statLabels.shows}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 700,
+              fontSize: 18,
+              color: 'var(--signal)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+            }}
+          >
+            {venue.upcomingCount}
           </span>
         </div>
       </div>

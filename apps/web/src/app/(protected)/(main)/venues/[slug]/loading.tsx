@@ -1,171 +1,81 @@
-function VenueEventRowSkeleton({ delay }: { delay: number }) {
+import { BackChip } from '@/components/consumer/back-chip/BackChip';
+import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+
+const UPCOMING_ROW_COUNT = 4;
+
+function VenueEventRowSkeleton() {
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '10px 0',
-        animation: `skeletonPulse 1.4s ease-in-out ${delay}s infinite`,
-      }}
+      data-testid="venue-event-row-skeleton"
+      className="flex items-center gap-3.5 rounded-[12px] border border-border bg-surface-1 py-[13px] pl-3.5 pr-3"
+      style={{ borderLeftWidth: 2 }}
     >
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 6,
-          background: 'var(--surface-2)',
-          flexShrink: 0,
-        }}
-      />
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-        }}
-      >
-        <div
-          style={{
-            height: 14,
-            width: '55%',
-            borderRadius: 4,
-            background: 'var(--surface-2)',
-          }}
-        />
-        <div
-          style={{
-            height: 10,
-            width: '32%',
-            borderRadius: 3,
-            background: 'var(--surface-2)',
-          }}
-        />
+      <SkeletonBlock width={56} height={56} radius={10} />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <SkeletonBlock width="55%" height={14} />
+        <SkeletonBlock width="32%" height={10} />
       </div>
     </div>
   );
 }
 
+/**
+ * Route fallback for a venue page (B+ `bp-s-load_venue_m`, rule 9). The back
+ * chip renders at once; the hero holds the glyph's place, and the header,
+ * stats, About and the first card are skeletons in the page's own shapes. The
+ * sheen is SkeletonBlock's, which holds still under reduced motion.
+ */
 export default function VenueLoading() {
   return (
-    <>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          height: 2,
-          background: 'var(--accent)',
-          animation: 'navProgress 3s ease-out forwards',
-          zIndex: 9999,
-        }}
-      />
+    <div aria-busy="true">
+      {/* Hero: 380px on a phone, as the page */}
+      <div className="relative flex h-[380px] w-full shrink-0 items-center justify-center sm:h-[400px] sm:justify-end sm:pr-[14%]">
+        <div data-testid="venue-hero-skeleton">
+          <SkeletonBlock width={140} height={140} radius={36} />
+        </div>
+        <BackChip top={56} fallbackHref="/events" />
+      </div>
 
-      {/* Hero — 320px full-bleed */}
-      <div
-        style={{
-          width: '100%',
-          height: 320,
-          background: 'var(--surface-2)',
-          flexShrink: 0,
-          animation: 'skeletonPulse 1.4s ease-in-out infinite',
-        }}
-      />
-
-      {/* Content column */}
-      <div className="relative -mt-5 flex-1 pb-10">
-        <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
-          {/* Venue name — h1 26px / weight 900 */}
-          <div
-            style={{
-              height: 28,
-              width: '48%',
-              borderRadius: 6,
-              background: 'var(--surface-2)',
-              marginBottom: 10,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.1s infinite',
-            }}
-          />
-
-          {/* City + Directions row */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              alignItems: 'center',
-              marginBottom: 16,
-            }}
-          >
-            <div
-              style={{
-                height: 11,
-                width: 64,
-                borderRadius: 3,
-                background: 'var(--surface-2)',
-                animation: 'skeletonPulse 1.4s ease-in-out 0.14s infinite',
-              }}
-            />
-            <div
-              style={{
-                height: 11,
-                width: 72,
-                borderRadius: 3,
-                background: 'var(--surface-2)',
-                animation: 'skeletonPulse 1.4s ease-in-out 0.16s infinite',
-              }}
-            />
+      <div className="relative -mt-10 flex-1 pb-24 sm:pb-10">
+        <div className="mx-auto flex w-full max-w-[880px] flex-col px-[18px] sm:px-8">
+          <SkeletonBlock width={80} height={20} />
+          <div className="mt-3">
+            <SkeletonBlock width="66%" height={34} radius={8} />
+          </div>
+          <div className="mt-3">
+            <SkeletonBlock width={140} height={10} />
           </div>
 
-          {/* Map placeholder */}
-          <div
-            style={{
-              height: 160,
-              borderRadius: 10,
-              background: 'var(--surface-2)',
-              marginBottom: 20,
-              animation: 'skeletonPulse 1.4s ease-in-out 0.42s infinite',
-            }}
-          />
-
-          {/* Section header — "Upcoming" + count */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              marginBottom: 12,
-              borderBottom: '1px solid var(--border)',
-              paddingBottom: 8,
-            }}
-          >
-            <div
-              style={{
-                height: 16,
-                width: 88,
-                borderRadius: 4,
-                background: 'var(--surface-2)',
-                animation: 'skeletonPulse 1.4s ease-in-out 0.48s infinite',
-              }}
-            />
-            <div
-              style={{
-                height: 11,
-                width: 52,
-                borderRadius: 3,
-                background: 'var(--surface-2)',
-                animation: 'skeletonPulse 1.4s ease-in-out 0.5s infinite',
-              }}
-            />
+          {/* Stats row */}
+          <div className="mt-5 flex gap-4 border-y border-border py-4">
+            {[0, 1, 2].map((idx) => (
+              <div key={idx} className="flex flex-1 flex-col gap-2">
+                <SkeletonBlock width={50} height={8} />
+                <SkeletonBlock width={60} height={18} />
+              </div>
+            ))}
           </div>
 
-          {/* Event rows */}
-          {Array.from({ length: 5 }).map((_, idx) => (
-            <VenueEventRowSkeleton key={idx} delay={0.52 + idx * 0.07} />
-          ))}
+          {/* About */}
+          <div className="mt-5 flex flex-col gap-2.5">
+            <SkeletonBlock height={11} />
+            <SkeletonBlock width="92%" height={11} />
+            <SkeletonBlock width="60%" height={11} />
+          </div>
+
+          {/* First-timer callout */}
+          <div className="mt-6">
+            <SkeletonBlock height={70} radius={14} />
+          </div>
+
+          {/* Upcoming */}
+          <div className="mt-8 flex flex-col gap-2">
+            {Array.from({ length: UPCOMING_ROW_COUNT }, (_, idx) => (
+              <VenueEventRowSkeleton key={idx} />
+            ))}
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -86,3 +86,9 @@ describe('whenWhereUnits', () => {
     expect(SURFACES.artist.promotesTour).toBe(true);
   });
 });
+
+describe('venue surface', () => {
+  it('cards its rows, as the B+ venue board draws them', () => {
+    expect(SURFACES.venue.carded).toBe(true);
+  });
+});
