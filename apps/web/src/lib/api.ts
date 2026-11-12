@@ -1,3 +1,5 @@
+import { startApiTimer, type ApiTimer } from './perf/timing';
+
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 // Server-side only — undefined in the browser bundle (not NEXT_PUBLIC_).
 // Sent as x-service-key so the API can allow Next.js SSR calls without a user token.
@@ -82,15 +84,27 @@ async function request<T>(
     ? { 'x-service-key': SERVICE_KEY }
     : {};
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-      ...serviceHeaders,
-      ...options.headers,
-    },
-  });
+  const timer = startApiTimer(options.method ?? 'GET', path, token !== null);
+  try {
+    return await readResponse<T>(
+      await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+          ...serviceHeaders,
+          ...options.headers,
+        },
+      }),
+      timer,
+    );
+  } finally {
+    timer.done();
+  }
+}
+
+async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
+  timer.headers(res.status);
 
   // 204 No Content — no body to parse; return undefined as T. The admin
   // mark-available endpoint uses this status; callers that care receive
