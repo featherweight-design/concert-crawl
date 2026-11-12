@@ -80,10 +80,22 @@ const openSheet = () => {
   return trigger;
 };
 
+// The two layouts word their delete button differently: the phone sheet names
+// the armed state, the desktop dialog keeps one label for both.
 describe.each([
-  { layout: 'phone sheet', desktop: false },
-  { layout: 'desktop dialog', desktop: true },
-])('DeleteAccountSheet ($layout)', ({ desktop }) => {
+  {
+    layout: 'phone sheet',
+    desktop: false,
+    idleLabel: DANGER_COPY.deleteButtonDisabled,
+    armedLabel: DANGER_COPY.deleteButtonArmed,
+  },
+  {
+    layout: 'desktop dialog',
+    desktop: true,
+    idleLabel: DANGER_COPY.deleteForeverButton,
+    armedLabel: DANGER_COPY.deleteForeverButton,
+  },
+])('DeleteAccountSheet ($layout)', ({ desktop, idleLabel, armedLabel }) => {
   beforeEach(() => stubViewport(desktop));
 
   it('moves focus into the dialog when it opens, then to the confirm input', () => {
@@ -136,9 +148,7 @@ describe.each([
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'DELETE' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: DANGER_COPY.deleteForeverButton }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: armedLabel }));
     // The request really went out, so this is the in-flight state.
     await waitFor(() =>
       expect(mockDeleteAccount).toHaveBeenCalledWith('token'),
@@ -154,9 +164,7 @@ describe.each([
   it('never calls the delete request until DELETE is typed', () => {
     render(<Harness onClose={vi.fn()} />);
     openSheet();
-    fireEvent.click(
-      screen.getByRole('button', { name: DANGER_COPY.deleteForeverButton }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: idleLabel }));
     expect(mockDeleteAccount).not.toHaveBeenCalled();
   });
 });
