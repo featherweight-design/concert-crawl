@@ -73,7 +73,7 @@
       "steps": [
         {
           "goto": "/admin/more",
-          "wait": "[data-testid=\"admin-more\"]"
+          "wait": "[data-testid=\"admin-shell\"] [data-testid=\"admin-more\"]"
         }
       ]
     },
