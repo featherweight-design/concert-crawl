@@ -117,16 +117,26 @@ describe('admin needs-you answers', () => {
       corroborationCount: 2,
       priceMin: '30',
     });
+    const otherEvent = await seedEvent(venue.id, {
+      artist: 'Second Batch Act',
+      date: inDays(11),
+    });
+    const second = await seedPriceSubmission(otherEvent.id, 'user-2', {
+      corroborationCount: 2,
+      priceMin: '45',
+    });
     const [item] = await itemsOf('price-batch');
     expect(item?.key).toBe('price-batch:all');
 
     const res = await answer('price-batch:all', { answer: 'approve_all' });
     expect(res.status).toBe(200);
-    const [approved] = await testDb
-      .select()
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, first.id));
-    expect(approved?.status).toBe('corroborated');
+    for (const submission of [first, second]) {
+      const [approved] = await testDb
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, submission.id));
+      expect(approved?.status).toBe('corroborated');
+    }
     const [projected] = await testDb
       .select()
       .from(events)
