@@ -1,3 +1,15 @@
+# [1.336.0](https://github.com/featherweight-design/concert-crawl/compare/v1.335.1...v1.336.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** name the page columns, break ties by id, check the reason union in a test ([2a69501](https://github.com/featherweight-design/concert-crawl/commit/2a69501386a53389ee24820c3fa90711c6005b60))
+
+
+### Features
+
+* **api:** reason on crawl runs and the fetched pages of a run ([0bd1156](https://github.com/featherweight-design/concert-crawl/commit/0bd11560b187868eb75b4e20f82ab08e049f6a14))
+
 ## [1.335.1](https://github.com/featherweight-design/concert-crawl/compare/v1.335.0...v1.335.1) (2026-11-12)
 
 
