@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 
 interface ModalShellProps {
   open: boolean;
@@ -41,6 +42,7 @@ export function ModalShell({
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const drag = useSheetDrag(onClose);
 
   useEffect(() => {
     setMounted(true);
@@ -161,10 +163,15 @@ export function ModalShell({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            ...drag.sheetStyle,
           }}
+          onTransitionEnd={drag.onSheetTransitionEnd}
         >
+          {/* The handle strip and the header are the drag-down grab zone. */}
           <div
+            {...drag.zoneProps}
             style={{
+              ...drag.zoneProps.style,
               flexShrink: 0,
               height: 18,
               display: 'flex',
@@ -182,7 +189,14 @@ export function ModalShell({
             />
           </div>
           {header != null && (
-            <div style={{ flexShrink: 0, padding: '10px 16px 8px' }}>
+            <div
+              {...drag.zoneProps}
+              style={{
+                ...drag.zoneProps.style,
+                flexShrink: 0,
+                padding: '10px 16px 8px',
+              }}
+            >
               {header}
             </div>
           )}

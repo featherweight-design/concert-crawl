@@ -38,6 +38,7 @@ import { GetInCard } from './GetInCard';
 import { AccountMenuContext, useAccountMenu } from './account-menu-context';
 import type { AccountMenuState } from './account-menu-context';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
 
@@ -938,9 +939,11 @@ function UserMenuPopover(props: MenuBodyProps) {
 
 function UserMenuSheet(props: MenuBodyProps) {
   useFocusTrap(props.surfaceRef, props.open);
+  const drag = useSheetDrag(props.onDismiss);
   return (
     <div
       ref={props.surfaceRef}
+      onTransitionEnd={drag.onSheetTransitionEnd}
       role="dialog"
       aria-modal="true"
       aria-label={shellLabelOf(props)}
@@ -977,11 +980,14 @@ function UserMenuSheet(props: MenuBodyProps) {
               display: 'flex',
               flexDirection: 'column',
             }),
+        ...drag.sheetStyle,
       }}
     >
-      {/* Drag handle */}
+      {/* Drag handle: the grab zone for the shared drag-down dismiss. */}
       <div
+        {...drag.zoneProps}
         style={{
+          ...drag.zoneProps.style,
           height: 18,
           display: 'flex',
           alignItems: 'center',
