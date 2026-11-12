@@ -27,7 +27,7 @@ const formatTimeAgo = (isoDate: string): string => {
 };
 
 // ── Color constants ──────────────────────────────────────────────
-const AZURE = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
+const COMMUNITY_SIGNAL = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
 const GOLD = 'oklch(0.66 0.14 78)'; // box-office tier
 
 // ── Token shape ──────────────────────────────────────────────────
@@ -43,12 +43,12 @@ interface PendingTokens {
 const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
   if (kind === 'community') {
     return {
-      color: AZURE,
-      bg: `color-mix(in oklab, ${AZURE} 6%, var(--surface-1))`,
-      border: `color-mix(in oklab, ${AZURE} 32%, var(--border))`,
-      strip: `color-mix(in oklab, ${AZURE} 12%, transparent)`,
-      stripBorder: `color-mix(in oklab, ${AZURE} 26%, var(--border))`,
-      pill: `color-mix(in oklab, ${AZURE} 16%, transparent)`,
+      color: COMMUNITY_SIGNAL,
+      bg: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 6%, var(--surface-1))`,
+      border: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 32%, var(--border))`,
+      strip: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 12%, transparent)`,
+      stripBorder: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 26%, var(--border))`,
+      pill: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 16%, transparent)`,
     };
   }
 

@@ -14,6 +14,7 @@ import { Panel } from '@/components/consumer/image-slot';
 import type { SlotSource } from '@/components/consumer/image-slot';
 import { slotSources } from '@/components/consumer/image-slot/lib/slot-metrics';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+import { gradientEdge } from '@/lib/gradient-edge';
 import { stageMetaParts } from './lib/meta';
 
 type EventSlotSource = Extract<SlotSource, { surface: 'event' }>;
@@ -180,11 +181,8 @@ export const StageCountdown = ({ label }: { label: string }) => (
       fontSize: 11,
       letterSpacing: '0.22em',
       lineHeight: 1.2,
-      // The gradient edge, as drawn: a transparent border with the fill on the
-      // padding box and the signal-to-accent gradient on the border box.
-      border: '1px solid transparent',
-      background:
-        'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+      // The gradient edge, as drawn, shared with the price cards.
+      ...gradientEdge('var(--surface-1)'),
     }}
   >
     <span
