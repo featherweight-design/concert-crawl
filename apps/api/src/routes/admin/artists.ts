@@ -10,17 +10,7 @@ import { createLogger } from '@concert-crawl/logger';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import {
-  and,
-  asc,
-  eq,
-  ne,
-  ilike,
-  isNotNull,
-  isNull,
-  sql,
-  type SQL,
-} from 'drizzle-orm';
+import { and, asc, eq, ne, ilike, isNull, sql, type SQL } from 'drizzle-orm';
 import {
   artistReports,
   artists,
@@ -43,7 +33,6 @@ import {
 import { loadNextShowByCanonical } from '../../lib/artist-follows.js';
 import { closeOpenArtistReports } from '../../lib/artist-reports.js';
 import { hasUpcomingShowExpr } from '../../lib/artist-upcoming.js';
-import { httpUrl } from '../../lib/url-schema.js';
 import {
   dedupeCandidates,
   toCandidateSnapshot,
@@ -55,16 +44,14 @@ import {
 import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
+import {
+  applyArtistMatch,
+  artistMatchBodySchema,
+  matchStatusSchema,
+} from './lib/artist-match-update.js';
+import { dismissArtistReports } from './lib/artist-report-dismiss.js';
 
 const logger = createLogger('admin:artists');
-
-const matchStatusSchema = z.enum([
-  'unmatched',
-  'matched',
-  'ambiguous',
-  'no_match',
-  'not_an_artist',
-]);
 
 /**
  * What the admin queue can be filtered by: the five verdicts, plus the
@@ -156,18 +143,6 @@ const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
             : eq(artists.matchStatus, status);
 
 const artistIdSchema = z.object({ id: idSchema });
-
-const patchBodySchema = z
-  .object({
-    spotifyArtistId: z.union([z.string().trim().min(1).max(64), z.null()]),
-    matchStatus: matchStatusSchema.optional(),
-    photoUrl: z.union([httpUrl(), z.null()]).optional(),
-    // "Looks right" on an auto-matched row: confirm the pick only if it is
-    // still the row's current, unconfirmed answer. A stale page must never
-    // write an old guess over a newer match.
-    confirmAutoMatch: z.literal(true).optional(),
-  })
-  .strict();
 
 export const artistsAdminRouter = new Hono<AdminVariables>();
 
@@ -314,160 +289,17 @@ artistsAdminRouter.get(
 artistsAdminRouter.patch(
   '/:id',
   zValidator('param', artistIdSchema, validationHook),
-  zValidator('json', patchBodySchema, validationHook),
+  zValidator('json', artistMatchBodySchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
 
-    const nextStatus =
-      body.matchStatus ??
-      (body.spotifyArtistId === null ? 'no_match' : 'matched');
-
-    if (body.spotifyArtistId === null && nextStatus === 'matched') {
-      return ctx.json(
-        {
-          success: false,
-          error: 'matchStatus "matched" requires a spotifyArtistId',
-        },
-        400,
-      );
-    }
-
-    // An identity and a photo only mean anything on a matched row. Rather than
-    // let a client write `ambiguous` alongside a live spotifyArtistId — a state
-    // the job and the artist page would both read as matched — reject it.
-    if (nextStatus !== 'matched' && body.spotifyArtistId !== null) {
-      return ctx.json(
-        {
-          success: false,
-          error: `matchStatus "${nextStatus}" requires spotifyArtistId to be null`,
-        },
-        400,
-      );
-    }
-    if (nextStatus !== 'matched' && body.photoUrl) {
-      return ctx.json(
-        {
-          success: false,
-          error: `matchStatus "${nextStatus}" cannot carry a photoUrl`,
-        },
-        400,
-      );
-    }
-
-    const [existing] = await db
-      .select({
-        spotifyArtistId: artists.spotifyArtistId,
-        autoMatchedAt: artists.autoMatchedAt,
-        matchStatus: artists.matchStatus,
-      })
-      .from(artists)
-      .where(eq(artists.id, id));
-
-    if (!existing) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404);
-    }
-    if (
-      body.confirmAutoMatch === true &&
-      (existing.autoMatchedAt === null ||
-        existing.spotifyArtistId !== body.spotifyArtistId)
-    ) {
-      return ctx.json(
-        {
-          success: false,
-          error: 'The auto-match has changed since it was loaded',
-        },
-        409,
-      );
-    }
-
-    // The cached photo belongs to the Spotify identity it was fetched for, so
-    // it dies whenever that identity does — whether the row is demoted or
-    // repointed at a different artist. Leaving it behind is how a stranger's
-    // face ends up on a public page, which is the exact failure this queue
-    // exists to prevent. The job re-fetches on its next pass.
-    const identityChanged = body.spotifyArtistId !== existing.spotifyArtistId;
-    const photoFields =
-      nextStatus !== 'matched'
-        ? { photoUrl: null, photoFetchedAt: null }
-        : body.photoUrl !== undefined
-          ? {
-              photoUrl: body.photoUrl,
-              photoFetchedAt: body.photoUrl === null ? null : new Date(),
-            }
-          : identityChanged
-            ? { photoUrl: null, photoFetchedAt: null }
-            : {};
-
     const actor = getAuthUser(ctx);
-
-    // The fix and the closing of its reports commit together. Only a write
-    // that changed what the page shows is a fix. "Looks right" on an
-    // auto-match, or a save that repeats the current answer, says the page was
-    // right all along, so it dismisses instead: no notification.
-    const changedThePage =
-      body.confirmAutoMatch !== true &&
-      (identityChanged ||
-        nextStatus !== existing.matchStatus ||
-        body.photoUrl !== undefined);
-    const updated = await db.transaction(async (tx) => {
-      const [row] = await tx
-        .update(artists)
-        .set({
-          spotifyArtistId: body.spotifyArtistId,
-          matchStatus: nextStatus,
-          matchConfidence: null,
-          matchCheckedAt: new Date(),
-          // A human has just looked at this row, so whatever the job gave up on
-          // is no longer the current question. Resetting keeps `exhausted`
-          // meaning "the job stopped asking" rather than accumulating history.
-          matchAttempts: 0,
-          // A human answer, even one confirming the same pick, replaces the
-          // best-effort rule's.
-          autoMatchedAt: null,
-          updatedAt: new Date(),
-          ...photoFields,
-          // `not_an_artist` and `hidden` say the same thing about the same row —
-          // there is no act here — but only `hidden` is read by the public
-          // surfaces, so a row ruled not-an-artist kept its follow button, its
-          // slot on the bill and its own page. Deriving the switch from the
-          // verdict is one-directional on purpose: re-matching a row later does
-          // not un-hide it, because unhiding is its own deliberate admin action.
-          ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
-        })
-        // A confirm re-checks at the write, not just at the read above: the
-        // match job can repoint the row in between.
-        .where(
-          body.confirmAutoMatch === true
-            ? and(
-                eq(artists.id, id),
-                isNotNull(artists.autoMatchedAt),
-                eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
-              )
-            : eq(artists.id, id),
-        )
-        .returning();
-      if (row) {
-        await closeOpenArtistReports(tx, {
-          artist: row,
-          outcome: changedThePage ? 'fixed' : 'dismissed',
-          resolvedBy: actor.userId,
-        });
-      }
-      return row;
-    });
-
-    if (!updated) {
-      return body.confirmAutoMatch === true
-        ? ctx.json(
-            {
-              success: false,
-              error: 'The auto-match has changed since it was loaded',
-            },
-            409,
-          )
-        : ctx.json({ success: false, error: 'Artist not found' }, 404);
+    const result = await applyArtistMatch(id, body, actor.userId);
+    if (!result.ok) {
+      return ctx.json({ success: false, error: result.error }, result.status);
     }
+    const { artist: updated, nextStatus, previousAutoMatchedAt } = result;
 
     ctx.set(
       'auditAction',
@@ -482,7 +314,7 @@ artistsAdminRouter.patch(
       matchStatus: nextStatus,
       // Which answer this replaced, so a confirmed or repointed best-effort
       // pick can be traced.
-      previousAutoMatchedAt: existing.autoMatchedAt,
+      previousAutoMatchedAt,
     });
 
     return ctx.json({ success: true, data: updated });
@@ -833,25 +665,7 @@ artistsAdminRouter.post(
     const { id } = ctx.req.valid('param');
     const actor = getAuthUser(ctx);
 
-    const result = await db.transaction(async (tx) => {
-      const [artist] = await tx
-        .select({
-          id: artists.id,
-          name: artists.name,
-          slug: artists.slug,
-          hidden: artists.hidden,
-          matchStatus: artists.matchStatus,
-        })
-        .from(artists)
-        .where(eq(artists.id, id));
-      if (!artist) return null;
-      const closed = await closeOpenArtistReports(tx, {
-        artist,
-        outcome: 'dismissed',
-        resolvedBy: actor.userId,
-      });
-      return { slug: artist.slug, closed };
-    });
+    const result = await dismissArtistReports(id, actor.userId);
 
     if (!result) {
       return ctx.json({ success: false, error: 'Artist not found' }, 404);
