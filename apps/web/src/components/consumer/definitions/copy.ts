@@ -1156,8 +1156,11 @@ export const CONSUMER_COPY = {
   // reason: a flagged-off /crews is not a show that came off the calendar.
   notFound: {
     heading: 'Nothing here.',
-    body: "That page doesn't exist. The link may be old, or we may have moved it.",
+    body: 'That page doesn’t exist. The link may be old, or we may have moved it.',
     browseButton: 'Browse shows',
+    // The tile and eyebrow (bp-s-notfound_m / _d).
+    code: '404',
+    eyebrow: 'Not found',
   },
 
   // ── Public event mirror (/e/:id) ────────────────────────────────
