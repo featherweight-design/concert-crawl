@@ -55,7 +55,6 @@ settingsAdminRouter.patch(
   async (ctx) => {
     const patch = ctx.req.valid('json');
     const { userId } = getAuthUser(ctx);
-    const before = toSettings(await readRow());
     const updatedAt = new Date();
 
     const values = {
@@ -74,11 +73,22 @@ settingsAdminRouter.patch(
       updatedBy: userId,
     };
 
-    const [row] = await db
-      .insert(adminSettings)
-      .values({ id: SETTINGS_ROW_ID, ...values })
-      .onConflictDoUpdate({ target: adminSettings.id, set: values })
-      .returning();
+    // One transaction so the audited "before" is the row this write replaced,
+    // even when two admins save at once: the second waits on the row lock.
+    const saved = await db.transaction(async (tx) => {
+      const [previous] = await tx
+        .select()
+        .from(adminSettings)
+        .for('update')
+        .limit(1);
+      const [next] = await tx
+        .insert(adminSettings)
+        .values({ id: SETTINGS_ROW_ID, ...values })
+        .onConflictDoUpdate({ target: adminSettings.id, set: values })
+        .returning();
+      return { before: toSettings(previous), row: next };
+    });
+    const { before, row } = saved;
     if (!row) {
       return ctx.json({ success: false, error: 'Failed to save' }, 500);
     }
