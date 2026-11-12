@@ -48,7 +48,7 @@ These are the parts to build once and reuse.
    - No longer listed is grey and dashed.
 
    A status that is still pending is dashed and shows its confirm dots. A confirmed one is solid. Each status's Continue and File buttons take its color.
-4. **One stamp everywhere.** This is the Passport ink stamp: a venue ring with the venue glyph, never tilted. It **replaces the ticket-stub `StubStamp`** in Watching, Concerts and the Passport teaser. Upcoming shows show the dashed stamp they will become, and "Yes, going" is filled with that stamp's color.
+4. **One stamp everywhere.** This is the Passport ink stamp: a venue ring with the venue glyph, never tilted except inside the Passport booklet ([`addendum-2`](addendum-2/README.md) item 3). It **replaces the ticket-stub `StubStamp`** in Watching, Concerts and the Passport teaser. Upcoming shows show the dashed stamp they will become, and "Yes, going" is filled with that stamp's color.
 5. **Venue identity is the glyph.** The venue's icon tile is used in lists, search, filter options, chips and the avatar beside a venue name. Only the venue page hero shows the glyph large in neon (`assets/venues`). The 21 glyphs follow Hugh's final picks, including the Bluebird District bird, the Cervantes trumpet, Ogden's twin towers and the Oriental torch blade.
 6. **Event and artist hero (theme option A).** The page background is the photo blurred and washed in the **theme's** two colors. The tilted artist card keeps the **genre** ring. That way the theme still reads on the page while the genre stays consistent everywhere (`03-themes`, the `_A` boards).
 7. **Sheets.** The blue-to-pink top edge follows the rounded top corners and fades out down the sides (see any sheet in `06-states`).
@@ -132,7 +132,7 @@ These are the parts to build once and reuse.
 
 ## Data-contract gaps engineering needs to know
 
-1. **Multi-value Where and Vibe.** The designs show "Bluebird + Ogden" and two genres at once. Live `filterWhere` and `filterVibe` hold one value each (`filter-bar/filter-defs.ts`). Either widen the params to lists or ship single-select first. The plan PR should choose; single-select is a safe Phase 1.
+1. **Multi-value Where and Vibe.** The designs show "Bluebird + Ogden" and two genres at once. Live `filterWhere` and `filterVibe` hold one value each (`filter-bar/filter-defs.ts`). Widen the params to lists: multi-select is intended ([`addendum-2`](addendum-2/README.md) item 6).
 2. **Venue glyphs need a home.** No venue icon component exists yet. Add the 21 SVGs (`assets/venues`) keyed by venue slug, with a neutral fallback tile for any future venue.
 3. **Passport stamp per show.** The stamp needs the venue key and its accent for every attended and upcoming show. The current `StubStamp` hash rules can choose the accent.
 4. **Avatar pair.** "Mix two" stores two colors, but `user_profiles.avatar_color` holds one enum value today. Adding a nullable second color is an expand-only migration, and a missing second color means solid.
@@ -145,8 +145,8 @@ These are the parts to build once and reuse.
 [`addendum-2/`](addendum-2/README.md) answers 29 questions engineering raised while building B+ and the admin redesign. Each item number has a drawn board or a written ruling. **Where an addendum-2 board or ruling differs from a board above, addendum 2 wins.** The main changes:
 
 - Notification tabs get a fixed category map.
-- Filters are single-select.
-- There is one round, untilted stamp everywhere, and the Passport is oldest first.
+- Filters stay multi-select, as drawn, so Where and Vibe widen to lists.
+- There is one round stamp everywhere. It is straight except inside the Passport booklet, where it keeps its hand-stamped tilt. The Passport is oldest first.
 - No longer listed has its own event page card and no notification.
 - Cancelled shows get a crawler-source line and are never offered Get tickets.
 - New boards: the Tickets available pending state, 320px fixes, desktop empty Passport, the desktop notifications panel, Light venue pages, the error page's refused report and in-app error, the shelf's See all, venue tiles in Submitted prices, and the Price check counter's How you found out.
