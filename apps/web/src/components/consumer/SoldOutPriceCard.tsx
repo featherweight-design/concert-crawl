@@ -1,12 +1,14 @@
 'use client';
 
-// SoldOutPriceCard — extracted from the inline JSX in EventDetailPriceBlock
-// (formerly lines 372–498). Renders the "Tickets" eyebrow + strikethrough
-// price + Sold-out pill + "as of …" stale caption that ships in the promoted
-// sold-out state.
+// SoldOutPriceCard — the "Tickets" card on a show reported sold out.
+//
+// Drawn as more-st-ev_sold_m: an accent-stroked card holding the "Tickets"
+// eyebrow, "Sold out" set large in the accent (README rule 3: Sold out uses
+// --accent, never amber), and the reporter caption. There is no struck price:
+// a sold-out show has no price to read.
 //
 // Variants (Appendix A.2 — Q1 lock):
-//   - 'has-listing' (default) → strikethrough price + reporter caption.
+//   - 'has-listing' (default) → "Sold out" + reporter caption.
 //   - 'no-listing'            → em-dash price, no strikethrough, and a
 //     subline "No tickets listed anywhere we can see. Not even resale."
 //     replaces the reporter caption. Used when the event is sold-out AND
@@ -20,20 +22,7 @@
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const AMBER = 'oklch(0.73 0.13 78)';
-
-const formatTimeAgo = (reportedAtIso: string): string => {
-  const reportedAtMs = new Date(reportedAtIso).getTime();
-  if (Number.isNaN(reportedAtMs)) return 'recently';
-  // Clamp at 0 so future timestamps (e.g. server-client clock skew) don't
-  // render as "-5m ago".
-  const diffMs = Math.max(0, Date.now() - reportedAtMs);
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
-};
+const ACCENT_STROKE = 'color-mix(in oklab, var(--accent) 55%, transparent)';
 
 export type SoldOutPriceCardVariant = 'has-listing' | 'no-listing';
 
@@ -43,11 +32,8 @@ interface SoldOutPriceCardSharedProps {
 
 interface SoldOutPriceCardHasListingProps extends SoldOutPriceCardSharedProps {
   variant?: 'has-listing';
-  priceMin: number | null;
-  priceMax: number | null;
   reporterHandle: string | null;
   confirmsCount: number;
-  reportedAt: string;
 }
 
 interface SoldOutPriceCardNoListingProps extends SoldOutPriceCardSharedProps {
@@ -57,130 +43,59 @@ interface SoldOutPriceCardNoListingProps extends SoldOutPriceCardSharedProps {
 export type SoldOutPriceCardProps =
   SoldOutPriceCardHasListingProps | SoldOutPriceCardNoListingProps;
 
+const EYEBROW = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9,
+  fontWeight: 700,
+  color: 'var(--fg-subtle)',
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+} as const;
+
 export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
   const variant: SoldOutPriceCardVariant = props.variant ?? 'has-listing';
 
-  // Has-listing variant — uses the shipped strikethrough + reporter caption.
   if (variant === 'has-listing') {
-    const hasListing = props as SoldOutPriceCardHasListingProps;
-    const { priceMin, priceMax, reporterHandle, confirmsCount, reportedAt } =
-      hasListing;
-    const timeAgo = formatTimeAgo(reportedAt);
+    const { reporterHandle, confirmsCount } =
+      props as SoldOutPriceCardHasListingProps;
+    const fans = `${confirmsCount} fan${confirmsCount !== 1 ? 's' : ''} confirmed`;
 
     return (
       <div
         style={{
-          borderRadius: 12,
+          borderRadius: 16,
           background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
-          overflow: 'hidden',
+          border: `1px solid ${ACCENT_STROKE}`,
+          padding: '14px 16px 16px',
         }}
       >
-        <div style={{ padding: '14px 14px 0' }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              fontWeight: 700,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {CONSUMER_COPY.ticketsEyebrow}
-          </span>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 10,
-              marginTop: 6,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 800,
-                fontSize: 28,
-                color: 'var(--fg-subtle)',
-                textDecoration: 'line-through',
-                letterSpacing: '-0.025em',
-                lineHeight: 1.05,
-              }}
-            >
-              {priceMin != null && priceMax != null
-                ? `$${priceMin}–$${priceMax}`
-                : priceMin != null
-                  ? `$${priceMin}`
-                  : priceMax != null
-                    ? `$${priceMax}`
-                    : '—'}
-            </span>
-            <span
-              style={{
-                background: AMBER,
-                borderRadius: 6,
-                padding: '3px 9px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--fg-on-accent)',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                alignSelf: 'flex-end',
-              }}
-            >
-              {CONSUMER_COPY.priceRegion.soldOutBadge}
-            </span>
-          </div>
-          <div
-            className={reporterHandle ? 'ph-no-capture' : undefined}
-            style={{
-              marginTop: 8,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {reporterHandle
-              ? `Reported sold out by @${reporterHandle} · ${confirmsCount} fan${confirmsCount !== 1 ? 's' : ''} confirmed`
-              : `Reported sold out · ${confirmsCount} fan${confirmsCount !== 1 ? 's' : ''} confirmed`}
-          </div>
-        </div>
+        <span style={EYEBROW}>{CONSUMER_COPY.ticketsEyebrow}</span>
         <div
           style={{
-            margin: '12px 14px 0',
-            borderTop: '1px solid var(--border)',
-            padding: '10px 0 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
+            marginTop: 6,
+            fontFamily: 'var(--font-ui)',
+            fontWeight: 900,
+            fontSize: 28,
+            color: 'var(--accent)',
+            letterSpacing: '-0.025em',
+            lineHeight: 1.05,
           }}
         >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: AMBER,
-              flexShrink: 0,
-              display: 'inline-block',
-            }}
-          />
-          <span
-            className={reporterHandle ? 'ph-no-capture' : undefined}
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              color: `color-mix(in oklab, ${AMBER} 80%, var(--fg-subtle))`,
-              letterSpacing: '0.04em',
-            }}
-          >
-            {CONSUMER_COPY.priceStaleness.asOfStale(timeAgo)}
-            {reporterHandle && ` · @${reporterHandle}`}
-          </span>
+          {CONSUMER_COPY.priceRegion.soldOutBadge}
+        </div>
+        <div
+          className={reporterHandle ? 'ph-no-capture' : undefined}
+          style={{
+            marginTop: 8,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+            letterSpacing: '-0.005em',
+          }}
+        >
+          {reporterHandle
+            ? `Reported sold out by @${reporterHandle} · ${fans}`
+            : `Reported sold out · ${fans}`}
         </div>
       </div>
     );
@@ -192,24 +107,13 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
   return (
     <div
       style={{
-        borderRadius: 12,
+        borderRadius: 16,
         background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-        padding: '14px 14px 13px',
+        border: `1px solid ${ACCENT_STROKE}`,
+        padding: '14px 16px 13px',
       }}
     >
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9,
-          fontWeight: 700,
-          color: 'var(--fg-subtle)',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-        }}
-      >
-        {CONSUMER_COPY.ticketsEyebrow}
-      </span>
+      <span style={EYEBROW}>{CONSUMER_COPY.ticketsEyebrow}</span>
       <div
         style={{
           display: 'flex',
@@ -235,7 +139,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
           style={{
             padding: '2px 7px',
             borderRadius: 4,
-            background: 'var(--warning)',
+            background: 'var(--accent)',
             color: 'var(--fg-on-accent)',
             fontFamily: 'var(--font-mono)',
             fontSize: 9,
