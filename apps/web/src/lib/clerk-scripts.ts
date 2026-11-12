@@ -13,5 +13,9 @@
 //
 // Set to the releases the major tags resolved to on 2026-11-12, so pinning changes where the
 // browser gets them from and not what it runs.
+//
+// How they are kept current: a pin does not move by itself, so `clerk-scripts.test.ts` fails when
+// the installed `@clerk/nextjs` (which Dependabot bumps) was built against a newer release than
+// the pin. Raise the pin to the tag's current release (read the redirect above) in that bump's PR.
 export const CLERK_JS_VERSION = '6.42.3';
 export const CLERK_UI_VERSION = '1.42.4';
