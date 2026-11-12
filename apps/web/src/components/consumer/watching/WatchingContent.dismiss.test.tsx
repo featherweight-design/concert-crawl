@@ -210,6 +210,48 @@ describe('Watching: dismissing a No longer listed show', () => {
     ).toBeNull();
   });
 
+  it('draws the board × at full weight, never dimmed by the removed row', () => {
+    setup([live, delisted]);
+
+    const dismiss = dismissButton();
+    const remove = screen.getByRole('button', {
+      name: COPY.watchingItem.removeAriaLabel(live.artist),
+    });
+
+    // addendum-3 `02/nll-row-watching-m`: 14px box, 16-unit view, 1.6 stroke.
+    const glyph = dismiss.querySelector('svg');
+    expect(glyph?.getAttribute('width')).toBe('14');
+    expect(glyph?.getAttribute('height')).toBe('14');
+    expect(glyph?.getAttribute('viewBox')).toBe('0 0 16 16');
+    expect(glyph?.querySelector('path')?.getAttribute('stroke-width')).toBe(
+      '1.6',
+    );
+
+    // The same ink as a live row's remove ×: --fg-subtle, brightening on hover.
+    for (const token of ['text-fg-subtle', 'hover:text-fg']) {
+      expect(dismiss.classList.contains(token)).toBe(true);
+      expect(remove.classList.contains(token)).toBe(true);
+    }
+
+    // Nothing between the × and the page fades it: the removed row's
+    // greyscale and fade belong to the artwork only.
+    for (
+      let node: HTMLElement | null = dismiss;
+      node && node !== document.body;
+      node = node.parentElement
+    ) {
+      expect(node.style.opacity === '' || node.style.opacity === '1').toBe(
+        true,
+      );
+      expect(node.style.filter).toBe('');
+      expect(
+        [...node.classList].some(
+          (cls) => cls.startsWith('opacity-') || cls === 'grayscale',
+        ),
+      ).toBe(false);
+    }
+  });
+
   it('hides the row at once, then raises the Undo toast on success', async () => {
     let answer: (value: unknown) => void = () => {};
     postMock.mockReturnValue(

@@ -80,7 +80,10 @@ export const WatchingRow = ({
             aria-label={COPY.watchingItem.dismissAriaLabel(show.artist)}
             onClick={() => dismiss(show)}
             // The board's glyph (14px box, 16-unit view, 1.6 stroke, --fg-subtle)
-            // padded out to the 44px minimum target, as the remove × is.
+            // padded out to the 44px minimum target, as the remove × is. It is
+            // smaller than the remove × on purpose: measured on the board it
+            // draws about 8.4px of ink at a 1.4px stroke, against the remove ×'s
+            // 11.5px at 1.5px. Same colour, no opacity: it is never dimmed.
             className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
           >
             <svg
