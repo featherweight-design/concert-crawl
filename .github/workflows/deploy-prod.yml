@@ -525,6 +525,18 @@ jobs:
           npx --yes vercel@59.23.2 deploy --prod --yes \
             --token "$VERCEL_TOKEN"
 
+      # Record the deploy in Sentry under the API project only, after both
+      # halves shipped. A no-op until SENTRY_AUTH_TOKEN (secret) and the
+      # SENTRY_ORG / SENTRY_PROJECT_API vars exist, and never a reason to fail
+      # a promotion that already went out.
+      - name: Record the deploy in Sentry
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT_API }}
+        run: bash .github/scripts/sentry-create-deploy.sh "$(git rev-parse HEAD)"
+
       # `inputs.*` is only defined for `workflow_dispatch`. Using
       # `github.event.inputs.reason` is safe on `workflow_run` too — it
       # evaluates to empty rather than breaking expression evaluation.

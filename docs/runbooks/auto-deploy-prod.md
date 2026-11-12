@@ -677,3 +677,12 @@ issue rather than to raise the thresholds. Raising them hides the next real one.
 - **Every `deploy-prod` dispatch requires a `reason`.** This is intentional — it
   shows up in the workflow log, so the audit trail of who promoted what and why
   is preserved. It is the only record of the promotion decision.
+
+## Sentry deploy events (optional)
+
+The deploy job's last step, `Record the deploy in Sentry`, creates a Sentry release named for the deployed commit and adds a `production` deploy to it, under the API project only. It does nothing until all three exist, and it never fails a promotion (`continue-on-error`):
+
+- Secret `SENTRY_AUTH_TOKEN` (production environment or repo level): a token with release write scope (`project:releases`).
+- Variables `SENTRY_ORG` and `SENTRY_PROJECT_API`: the organization and API project slugs.
+
+The release name matches the `release` the API reports from `VERCEL_GIT_COMMIT_SHA`, so errors group under the release that shipped them. If Vercel does not set that variable on CLI deploys, the API's events carry no release and the deploy is still recorded.
