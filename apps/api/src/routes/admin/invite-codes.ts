@@ -314,6 +314,19 @@ inviteCodesAdminRouter.post(
       return ctx.json({ success: false, error: 'Invite code not found' }, 404);
     }
 
+    // A member's own share code ends with a revoke and stays ended: bringing it
+    // back is not an admin control, same as editing it.
+    if (existing.kind === 'member') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A member share code cannot be reactivated',
+          code: 'member_code',
+        },
+        409,
+      );
+    }
+
     if (!existing.revokedAt && !isExpired(existing.expiresAt, now)) {
       return ctx.json(
         { success: false, error: 'Invite code is not ended' },

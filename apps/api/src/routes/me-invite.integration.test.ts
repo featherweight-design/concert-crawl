@@ -199,6 +199,26 @@ describe('a member code in the admin surfaces', () => {
     expect((await memberRows('user_a'))[0]?.maxUses).toBe(MEMBER_CODE_SEATS);
   });
 
+  it('cannot be reactivated by an admin once revoked', async () => {
+    await read();
+    const [row] = await memberRows('user_a');
+    authState.current = {
+      userId: 'admin_1',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    const send = (path: string) =>
+      app.request(`/v1/admin/invite-codes/${row?.id}/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+    expect((await send('revoke')).status).toBe(200);
+    const res = await send('reactivate');
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'member_code' });
+    expect((await memberRows('user_a'))[0]?.revokedAt).not.toBeNull();
+  });
+
   it('reads as a member join source for people who joined with it, not a poster', async () => {
     await read();
     const [row] = await memberRows('user_a');
