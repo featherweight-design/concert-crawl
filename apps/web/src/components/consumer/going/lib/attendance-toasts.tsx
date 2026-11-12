@@ -41,6 +41,31 @@ const ACTION_STYLE = {
   fontWeight: 700,
 } as const;
 
+/**
+ * The house Undo toast (`04/removed-d`): the check, the dark elevated card and
+ * the accent action, for ~6s. Watching's No longer listed dismiss raises it
+ * too, under its own id, so the two lists never replace each other's toast.
+ */
+export const showUndoToast = ({
+  id,
+  message,
+  undoLabel,
+  onUndo,
+}: {
+  id: string;
+  message: string;
+  undoLabel: string;
+  onUndo: (() => void) | null;
+}) =>
+  toast(message, {
+    id,
+    icon: <CheckIcon />,
+    duration: ATTENDANCE_TOAST_MS,
+    style: TOAST_STYLE,
+    actionButtonStyle: ACTION_STYLE,
+    action: onUndo ? { label: undoLabel, onClick: onUndo } : undefined,
+  });
+
 /** "{artist} is out of your Concerts." with Undo, or without when `onUndo` is null. */
 export const showRemovedToast = ({
   artist,
@@ -49,15 +74,11 @@ export const showRemovedToast = ({
   artist: string;
   onUndo: (() => void) | null;
 }) =>
-  toast(GOING_COPY.toast.removed(artist), {
+  showUndoToast({
     id: ATTENDANCE_TOAST_ID,
-    icon: <CheckIcon />,
-    duration: ATTENDANCE_TOAST_MS,
-    style: TOAST_STYLE,
-    actionButtonStyle: ACTION_STYLE,
-    action: onUndo
-      ? { label: GOING_COPY.toast.undo, onClick: onUndo }
-      : undefined,
+    message: GOING_COPY.toast.removed(artist),
+    undoLabel: GOING_COPY.toast.undo,
+    onUndo,
   });
 
 export const showAttendanceError = (kind: 'save' | 'undo') =>

@@ -10,12 +10,18 @@ import { markNudge, readNudgeState } from '@/lib/going/nudge-dismissal';
 import type { NudgeOutcome } from '@/lib/going/nudge-dismissal';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
 import { isOptimisticWatchRow } from '@/lib/queries/optimistic-watch-row';
+import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 
 const COPY = CONSUMER_COPY.watching;
 
 interface WatchingRowProps {
   show: WatchingShow;
   onRemove: (userEventId: string) => void;
+  /**
+   * Hides a No longer listed row for this viewer. Without it a delisted row
+   * keeps the remove ×.
+   */
+  onDismiss?: (show: WatchingShow) => void;
 }
 
 /**
@@ -24,7 +30,11 @@ interface WatchingRowProps {
  * The nudge sits in the footer slot deliberately — it is outside the row's
  * four-line contract and spends none of the chip budget.
  */
-export const WatchingRow = ({ show, onRemove }: WatchingRowProps) => {
+export const WatchingRow = ({
+  show,
+  onRemove,
+  onDismiss,
+}: WatchingRowProps) => {
   const attending = useAttendingToggle();
 
   // `undefined` means "not read yet". The record lives in localStorage, so the
@@ -52,34 +62,68 @@ export const WatchingRow = ({ show, onRemove }: WatchingRowProps) => {
     setAnswered(outcome);
   };
 
+  // A No longer listed row's × hides the row for this viewer instead of
+  // unwatching (addendum 3, `02/nll-row-watching-m`: "the dismiss × stays").
+  const dismiss = isDelisted(show.eventStatus, show.eventDelistedAt)
+    ? onDismiss
+    : undefined;
+
   return (
     <EventRow
       show={fromWatchingShow(show)}
       surface="watching"
       action={
-        <button
-          type="button"
-          aria-label={COPY.watchingItem.removeAriaLabel(show.artist)}
-          onClick={() => onRemove(show.userEventId)}
-          // A 28px paint box padded out to the 44px minimum target: the visible
-          // control stays quiet without shrinking what a thumb has to hit.
-          className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            aria-hidden
+        dismiss ? (
+          <button
+            type="button"
+            data-testid="watching-dismiss"
+            aria-label={COPY.watchingItem.dismissAriaLabel(show.artist)}
+            onClick={() => dismiss(show)}
+            // The board's glyph (14px box, 16-unit view, 1.6 stroke, --fg-subtle)
+            // padded out to the 44px minimum target, as the remove × is.
+            className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
           >
-            <path
-              d="M1 1l10 10M11 1L1 11"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M4 4l8 8M12 4l-8 8"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label={COPY.watchingItem.removeAriaLabel(show.artist)}
+            onClick={() => onRemove(show.userEventId)}
+            // A 28px paint box padded out to the 44px minimum target: the visible
+            // control stays quiet without shrinking what a thumb has to hit.
+            className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M1 1l10 10M11 1L1 11"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )
       }
       footer={
         nudging ? (

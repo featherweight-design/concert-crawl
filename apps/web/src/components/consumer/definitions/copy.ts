@@ -875,8 +875,21 @@ export const CONSUMER_COPY = {
       bucketThisWeek: 'This week',
       bucketNextWeek: 'Next week',
     },
+    // Hiding a No longer listed show from your own list, with Undo.
+    dismiss: {
+      hidden: (artist: string) => `${artist} is hidden from Watching.`,
+      undo: 'Undo',
+      failed: "Couldn't hide that. Try again.",
+      // A 409: the venue listed the show again, so the row comes back as live.
+      stillListed: "It's back on the venue's calendar, so it stays.",
+      undoFailed: "Undo didn't go through.",
+      retry: 'Try again',
+    },
     watchingItem: {
       removeAriaLabel: (artist: string) => `Remove ${artist} from watching`,
+      // The × on a No longer listed row hides it for you; the watch stays.
+      dismissAriaLabel: (artist: string) =>
+        `Hide ${artist} from your Watching list`,
       soldOut: 'SOLD OUT',
       priceTba: 'tba',
       savedPrefix: 'saved',
