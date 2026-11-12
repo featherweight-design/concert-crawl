@@ -5,7 +5,7 @@
 // Only venues an admin paused with a date are touched: a crawler auto-pause
 // (three failures) and a removal have no resume date and stay paused.
 
-import { and, inArray, isNotNull, lte } from 'drizzle-orm';
+import { and, inArray, isNotNull, isNull, lte } from 'drizzle-orm';
 import { auditLog, db, venues } from '@concert-crawl/db';
 import { denverDate } from '../routes/admin/lib/needs-you/keys.js';
 
@@ -40,6 +40,9 @@ export const runVenueAutoResume = async (
           isNotNull(venues.crawlPausedAt),
           isNotNull(venues.crawlResumeOn),
           lte(venues.crawlResumeOn, today),
+          // Belt and braces: the removal also clears the date, but a removed
+          // venue must never be crawled again by any path.
+          isNull(venues.removedAt),
         ),
       )
       .for('update');
