@@ -1,7 +1,5 @@
 import type { VenueHeroSetting } from './definitions/venue-settings';
 
-/** Same night as the hero's ground (`VenueNeonArt`). */
-const NIGHT_GROUND = '#0B0D1F'; // fwd-allow-hex: board art colour
 const MOON_YELLOW = '#FFE36B'; // fwd-allow-hex: board art colour
 const STAR_WHITE = '#FFFFFF'; // fwd-allow-hex: board art colour
 const MASK_BLACK = '#000000'; // fwd-allow-hex: a mask cut-out, not a drawn colour
@@ -11,6 +9,11 @@ interface VenueBackdropProps {
   /** The venue's two glyph colours, used for the tints. */
   from: string;
   to: string;
+  /**
+   * The venue's own night (`VENUE_NEON[key].ground`), the same ground the hero
+   * paints: the ridge, the skyline and the brick mortar are cut from it.
+   */
+  ground: string;
   /** Unique suffix for ids inside the svg. */
   uid: string;
 }
@@ -77,7 +80,13 @@ const ARENA_STARS = [
  * brick courses (street), a night sky over the Front Range ridge (outdoor),
  * or a low skyline under a crescent moon (arena).
  */
-export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
+export function VenueBackdrop({
+  setting,
+  from,
+  to,
+  ground,
+  uid,
+}: VenueBackdropProps) {
   if (setting === 'outdoor') {
     const horizonId = `vn${uid}h`;
     return (
@@ -108,7 +117,7 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
             opacity={star.opacity}
           />
         ))}
-        <path d={`${RIDGE} L380 200 Z`} fill={NIGHT_GROUND} />
+        <path d={`${RIDGE} L380 200 Z`} fill={ground} />
         <path
           d={RIDGE}
           fill="none"
@@ -140,7 +149,7 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
               y={top}
               width={width}
               height={200 - top + 52}
-              fill={NIGHT_GROUND}
+              fill={ground}
               stroke={from}
               strokeOpacity={0.18}
             />
@@ -213,7 +222,7 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
         inset: 0,
         opacity: 0.07,
         backgroundImage: [
-          `repeating-linear-gradient(0deg, transparent 0 12px, ${NIGHT_GROUND} 12px 16px)`,
+          `repeating-linear-gradient(0deg, transparent 0 12px, ${ground} 12px 16px)`,
           `repeating-linear-gradient(90deg, ${to} 0 40px, transparent 40px 44px)`,
         ].join(', '),
         maskImage: 'linear-gradient(180deg, transparent, #000)',

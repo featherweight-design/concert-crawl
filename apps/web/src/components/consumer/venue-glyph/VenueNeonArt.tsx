@@ -7,16 +7,9 @@ import {
   VENUE_HERO_SETTINGS,
   type VenueHeroSetting,
 } from './definitions/venue-settings';
+import { VENUE_NEON } from './definitions/venue-neon';
 import { VenueBackdrop } from './VenueBackdrop';
-import { GlyphGradient, GlyphShapes } from './VenueGlyph';
-
-/**
- * The night the sign hangs in. Fixed rather than the theme's ground for the
- * same reason as the tile's ground (`VenueTile`): the neon is the venue's
- * sign, and its pale gradients vanish on the Light theme's ground. The page
- * blends the panel into the theme with its own scrim.
- */
-const NIGHT_GROUND = '#0B0D1F'; // fwd-allow-hex: board art colour
+import { GlyphShapes } from './VenueGlyph';
 
 interface VenueNeonArtProps {
   glyphKey: VenueGlyphKey;
@@ -42,9 +35,19 @@ interface VenueNeonArtProps {
 /**
  * The venue page hero art (B+ README rule 5, `10-venue-art`): the venue's own
  * glyph drawn large in neon on a quiet backdrop tinted in its two colours.
- * Built from the same glyph shapes as the tile rather than the handoff's
- * per-venue hero HTML, so a glyph fix lands in both. Fills its positioned
+ * Each stroke carries its own board colour (`VENUE_NEON`, read off the
+ * handoff's per-venue hero HTML), the way the boards draw it; the tile keeps
+ * its two-stop gradient. Built from the same glyph shapes as the tile, so a
+ * glyph fix lands in both. Fills its positioned
  * parent. Decorative: the page states the venue's name.
+ *
+ * The night the sign hangs in is the venue's own near-black
+ * (`VENUE_NEON[key].ground`), fixed rather than the theme's ground for the same
+ * reason as the tile's ground (`VenueTile`): the neon is the venue's sign, and
+ * its pale colours vanish on the Light theme's ground. The page blends the
+ * panel into the theme with its own scrim. The tints are the board's: the
+ * venue's `to` at 22% by the bottom edge, and its `from` at 28% in a radial
+ * centred 15% across and 20% down, reaching 0 at 0.7 of the box.
  */
 export function VenueNeonArt({
   glyphKey,
@@ -55,13 +58,14 @@ export function VenueNeonArt({
   className,
 }: VenueNeonArtProps) {
   const uid = useId().replace(/:/g, '');
-  const gradientId = `vn${uid}g`;
   const glowId = `vn${uid}f`;
-  const softId = `vn${uid}s`;
+  const skyId = `vn${uid}k`;
+  const glowTintId = `vn${uid}r`;
   const { from, to } = VENUE_GLYPHS[glyphKey];
+  const { ground, halo } = VENUE_NEON[glyphKey];
   // The venue page hero passes the sm size too; the flagship cards do not. The
-  // audit's halo and neon-fill rows are for the hero, so the cards keep the soft
-  // halo and the flat glyph fill they have always had.
+  // audit's neon-fill row is for the hero, so the cards keep the flat glyph
+  // fill they have always had. Both draw the board's two halo discs.
   const responsive = glyphSizeSm !== undefined;
 
   return (
@@ -74,13 +78,46 @@ export function VenueNeonArt({
         position: 'absolute',
         inset: 0,
         overflow: 'hidden',
-        background: [
-          `radial-gradient(70% 90% at 15% 15%, color-mix(in oklch, ${from} 22%, transparent), transparent)`,
-          `linear-gradient(180deg, ${NIGHT_GROUND}, color-mix(in oklch, ${to} 18%, ${NIGHT_GROUND}))`,
-        ].join(', '),
+        background: ground,
       }}
     >
-      <VenueBackdrop setting={setting} from={from} to={to} uid={uid} />
+      {/* The board's two tint rects, stretched over the box: an svg gradient
+          rather than a css one, so the stops interpolate the way the board's do. */}
+      <svg
+        viewBox="0 0 1200 420"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+        data-venue-ground={ground}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+        }}
+      >
+        <defs>
+          <linearGradient id={skyId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={ground} />
+            <stop offset="1" stopColor={to} stopOpacity={0.22} />
+          </linearGradient>
+          <radialGradient id={glowTintId} cx="0.15" cy="0.2" r="0.7">
+            <stop offset="0" stopColor={from} stopOpacity={0.28} />
+            <stop offset="1" stopColor={from} stopOpacity={0} />
+          </radialGradient>
+        </defs>
+        <rect width="1200" height="420" fill={ground} />
+        <rect width="1200" height="420" fill={`url(#${skyId})`} />
+        <rect width="1200" height="420" fill={`url(#${glowTintId})`} />
+      </svg>
+      <VenueBackdrop
+        setting={setting}
+        from={from}
+        to={to}
+        ground={ground}
+        uid={uid}
+      />
       <div
         className={cn(
           'absolute inset-0 flex items-center justify-center',
@@ -110,7 +147,6 @@ export function VenueNeonArt({
           }}
         >
           <defs>
-            <GlyphGradient id={gradientId} glyphKey={glyphKey} />
             <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="0.45" result="blur" />
               <feMerge>
@@ -119,51 +155,38 @@ export function VenueNeonArt({
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            {!responsive && (
-              <radialGradient id={softId}>
-                <stop offset="0" stopColor={to} stopOpacity={0.22} />
-                <stop offset="0.88" stopColor={from} stopOpacity={0.12} />
-                <stop offset="1" stopColor={from} stopOpacity={0} />
-              </radialGradient>
-            )}
           </defs>
-          {responsive ? (
-            <>
-              {/* Two flat halo discs spanning the glyph box (r210 and r130 of
-                  the board's 420). */}
-              <circle
-                data-venue-halo="outer"
-                cx={12}
-                cy={12}
-                r={14}
-                fill={to}
-                fillOpacity={0.1}
-              />
-              <circle
-                data-venue-halo="inner"
-                cx={12}
-                cy={12}
-                r={8.67}
-                fill={from}
-                fillOpacity={0.1}
-              />
-            </>
-          ) : (
-            // The cards' soft halo: 1.45x the glyph box, fading out at its edge.
-            <circle
-              data-venue-halo="soft"
-              cx={12}
-              cy={12}
-              r={20.3}
-              fill={`url(#${softId})`}
-            />
-          )}
+          {/* Two flat halo discs spanning the glyph box (r210 and r130 of the
+              board's 420), in the pair the venue's hero board draws. The
+              venues-index boards draw the same pair, at the same size in glyph
+              units, behind the flagship card's sign. */}
+          <circle
+            data-venue-halo="outer"
+            cx={12}
+            cy={12}
+            r={14}
+            fill={halo.outer}
+            fillOpacity={0.1}
+          />
+          <circle
+            data-venue-halo="inner"
+            cx={12}
+            cy={12}
+            r={8.67}
+            fill={halo.inner}
+            fillOpacity={0.1}
+          />
           <g filter={`url(#${glowId})`}>
+            {/* Every shape strokes in its own board colour, so the group's
+                paint is `none`: a shape with no colour would not draw, and the
+                test that every glyph is covered catches it. The glow takes each
+                stroke's colour because it blurs the source graphic. */}
             <GlyphShapes
               glyphKey={glyphKey}
-              paint={`url(#${gradientId})`}
+              paint="none"
               strokeWidth={0.9}
               neonFilled={responsive}
+              multicolour
             />
           </g>
         </svg>
