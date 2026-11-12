@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
@@ -8,9 +8,10 @@ import { useReducedMotion } from '@/lib/motion/use-reduced-motion';
 import { PinkWave } from './PinkWave';
 import { PINK_WAVE_COPY } from './definitions/copy';
 
-// A refresh that returns instantly still shows the wave for a beat, so the
-// pull reads as having done something.
-const MIN_REFRESH_MS = 600;
+// A refresh holds the wave for at least one full loop (1300ms) so it never
+// flashes, and then until the fetch settles.
+const MIN_REFRESH_MS = 1300;
+const CLOSE_BACKSTOP_MS = 400;
 
 /**
  * Pull-to-refresh for Browse (B+ `bp-s-pull_m`): drag the page down from the
@@ -36,7 +37,25 @@ export function PullToRefresh() {
   }, [router, queryClient]);
 
   const { height, state } = usePullToRefresh(refresh);
-  if (state === 'idle' && height === 0) return null;
+  // Letting go short of the threshold snaps back on --motion-fast; a refresh
+  // that has finished closes on --motion-base. The zone stays mounted while it
+  // collapses so the height can animate.
+  const [seen, setSeen] = useState(state);
+  const [closing, setClosing] = useState<'fast' | 'base' | null>(null);
+  // Derived during render, so the zone never unmounts between the release and
+  // its collapse (an unmounted zone has no height to animate from).
+  if (seen !== state) {
+    setSeen(state);
+    if (state !== 'idle') setClosing(null);
+    else if (!reduced) setClosing(seen === 'refreshing' ? 'base' : 'fast');
+  }
+  useEffect(() => {
+    if (closing === null) return;
+    // Backstop for a collapse that has no height change to end on.
+    const timer = setTimeout(() => setClosing(null), CLOSE_BACKSTOP_MS);
+    return () => clearTimeout(timer);
+  }, [closing]);
+  if (state === 'idle' && height === 0 && closing === null) return null;
 
   return (
     <div
@@ -44,6 +63,9 @@ export function PullToRefresh() {
       aria-live="polite"
       aria-label={PINK_WAVE_COPY.loadingShows}
       data-state={state}
+      onTransitionEnd={() => {
+        if (state === 'idle') setClosing(null);
+      }}
       style={{
         height,
         overflow: 'hidden',
@@ -56,10 +78,10 @@ export function PullToRefresh() {
         transition:
           state === 'pulling' || state === 'ready' || reduced
             ? 'none'
-            : `height var(--motion-base) var(--motion-ease)`,
+            : `height ${closing === 'fast' ? 'var(--motion-fast)' : 'var(--motion-base)'} var(--motion-ease)`,
       }}
     >
-      <PinkWave scale="sm" />
+      <PinkWave scale="sm" rest={state === 'pulling'} />
       <span
         style={{
           fontFamily: 'var(--font-mono)',

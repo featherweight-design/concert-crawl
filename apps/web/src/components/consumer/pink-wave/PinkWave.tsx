@@ -62,8 +62,16 @@ const SWELL_STYLE = {
  * carries the meaning. Under reduced motion it holds still on the mark's
  * resting frame: a blue trail and core inside the halo.
  */
-export function PinkWave({ scale = 'md' }: { scale?: PinkWaveScale }) {
-  const reduced = useReducedMotion();
+export function PinkWave({
+  scale = 'md',
+  rest = false,
+}: {
+  scale?: PinkWaveScale;
+  /** Hold on the resting frame, as the pull zone does until it passes 74px. */
+  rest?: boolean;
+}) {
+  const prefersReduced = useReducedMotion();
+  const reduced = prefersReduced || rest;
   const dotRefs = useRef<(SVGCircleElement | null)[]>([]);
   const coreRef = useRef<SVGCircleElement | null>(null);
   const haloRefs = useRef<(SVGCircleElement | null)[]>([]);
