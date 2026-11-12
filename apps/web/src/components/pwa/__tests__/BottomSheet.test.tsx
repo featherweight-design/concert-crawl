@@ -205,10 +205,23 @@ describe('BottomSheet', () => {
     expect(close.className).toContain('h-11');
     expect(close.className).toContain('w-11');
     const sheet = screen.getByRole('dialog').className;
-    expect(sheet).toContain('px-5');
+    expect(sheet).toContain('px-4');
+    expect(sheet).toContain('min-[360px]:px-5');
     expect(sheet).not.toContain(' p-6 ');
     fireEvent.click(close);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('raises the fill and the phone height cap only on request', () => {
+    render(
+      <BottomSheet open onClose={vi.fn()} title="test" edgeFromSm raised tall>
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const sheet = screen.getByRole('dialog').className;
+    expect(sheet).toContain('[--sheet-bg:var(--surface-2)]');
+    expect(sheet).toContain('sm:[--sheet-bg:var(--bg-elevated)]');
+    expect(sheet).toContain('max-h-[calc(100dvh-40px)]');
   });
 
   it('closes when the scrim is clicked', () => {
