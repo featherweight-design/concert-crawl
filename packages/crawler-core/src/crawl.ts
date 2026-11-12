@@ -1897,6 +1897,10 @@ export async function crawlVenue(
       !(err instanceof CrawlFetchError) &&
       isAccountWideKind(classifyCrawlError(String(err)).kind);
 
+    // Set below when this failure paused or blocked the venue, and written once
+    // the failed run row is safely recorded.
+    let systemAction: Parameters<typeof recordSystemAction>[0] | null = null;
+
     if (!isAccountWide) {
       const isHttpBlocked =
         err instanceof CrawlFetchError &&
@@ -1956,8 +1960,10 @@ export async function crawlVenue(
 
       // What the system did on its own, for the admin's Done for you list.
       // A block records on every 403/429; the pause only on the transition.
+      // Written after the failed run row below, not here: the audit insert is
+      // an extra round trip that must never delay recording the run.
       if (isBlocked || shouldAutoPause) {
-        await recordSystemAction({
+        systemAction = {
           action: isBlocked ? 'venue.crawl_blocked' : 'venue.crawl_auto_paused',
           targetId: venueId,
           metadata: {
@@ -1966,7 +1972,7 @@ export async function crawlVenue(
             consecutiveFailures: newFailureCount,
             ...(isBlocked ? { cause: isHttpBlocked ? 'http' : 'timeout' } : {}),
           },
-        });
+        };
       }
 
       if (newFailureCount >= 3) {
@@ -2029,6 +2035,8 @@ export async function crawlVenue(
       },
       fetchLog,
     );
+
+    if (systemAction !== null) await recordSystemAction(systemAction);
 
     reportFailure({
       event: 'crawl.failed',

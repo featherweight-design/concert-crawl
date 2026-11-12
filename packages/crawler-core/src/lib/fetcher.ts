@@ -288,7 +288,11 @@ export async function fetchPage(
     );
     return { html, httpStatus: finalStatus, finalUrl };
   } catch (err) {
-    if (!recorded) {
+    // A redirect robots.txt declined was never requested, so it is not a failed
+    // page (fetchPageHttp makes the same call).
+    const declined =
+      err instanceof CrawlSkipError || err instanceof RobotsDisallowedError;
+    if (!recorded && !declined) {
       fetchLog?.record(
         err instanceof CrawlSelectorTimeoutError
           ? {

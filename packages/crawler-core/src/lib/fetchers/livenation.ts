@@ -39,7 +39,7 @@ import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import type { NormalizedEvent } from '../../types.js';
 import type { FetchLog } from '../fetch-log.js';
-import { isAllowed, isAllowedOrSkip } from '../robots.js';
+import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
   fetchFollowingRobots,
   RobotsDisallowedError,
@@ -134,6 +134,14 @@ async function fetchText(
         : {}),
     });
   } catch (err) {
+    // A request that threw before any response (a timeout, a reset) is the
+    // page that explains the run; one robots.txt declined was never requested.
+    if (
+      !(err instanceof RobotsDisallowedError) &&
+      !(err instanceof CrawlSkipError)
+    ) {
+      fetchLog?.record({ url, mode: 'http' });
+    }
     if (err instanceof RobotsDisallowedError) {
       throw new LiveNationFetchError(
         0,
