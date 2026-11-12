@@ -26,8 +26,6 @@ import {
   eventReports,
   events,
   notifications,
-  priceRetrievalLog,
-  priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db';
@@ -43,6 +41,9 @@ import {
   withMissingClassification,
 } from './lib/missing-events.js';
 import { idSchema } from '../../lib/id-schema.js';
+import { eventPatchSchema, updateEvent } from './lib/event-update.js';
+import { mergeEvents } from './lib/event-merge.js';
+import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
 
 const eventIdSchema = z.object({ id: idSchema });
 
@@ -565,11 +566,7 @@ eventsAdminRouter.patch(
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
-    const [updated] = await db
-      .update(events)
-      .set({ verified: true, updatedAt: new Date() })
-      .where(eq(events.id, id))
-      .returning();
+    const updated = await verifyEvent(id);
 
     if (!updated) {
       return ctx.json({ success: false, error: 'Event not found' }, 404);
@@ -639,134 +636,13 @@ eventsAdminRouter.get(
 eventsAdminRouter.patch(
   '/:id',
   zValidator('param', eventIdSchema, validationHook),
-  zValidator(
-    'json',
-    z.object({
-      verified: z.boolean().optional(),
-      status: z.enum(['upcoming', 'cancelled', 'postponed']).optional(),
-      title: z.string().min(1).optional(),
-      artist: z.string().min(1).optional(),
-      date: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
-        .optional(),
-      doorsTime: z.string().nullable().optional(),
-      showTime: z.string().nullable().optional(),
-      ticketPriceMin: z.string().nullable().optional(),
-      ticketPriceMax: z.string().nullable().optional(),
-      genre: z.array(z.string()).nullable().optional(),
-      // #992 — the tour kicker is only ever auto-populated on the LLM
-      // extraction path, so a JSON-LD venue needs an admin to set it. A blank
-      // (or whitespace-only) string clears the value to NULL rather than
-      // persisting '' — the consumer UI keys the kicker off `tourName !== null`.
-      tourName: z
-        .string()
-        .trim()
-        .max(200)
-        .nullable()
-        .optional()
-        .transform((value) => {
-          if (value === null || value === undefined) return value;
-          return value === '' ? null : value;
-        }),
-      // Admin "Dismiss" on the Missing tab — clears the stale-event flag
-      // so the row falls out of the ?missing=true filter. The crawler
-      // re-stamps it if the event genuinely re-disappears on a future sweep.
-      firstMissingAt: z.null().optional(),
-      // PR 6 — admin "Mark non-concert" hides the event from every
-      // consumer-facing listing query. See migration 0039 + the consumer
-      // route audit.
-      hiddenFromConsumer: z.boolean().optional(),
-    }),
-    validationHook,
-  ),
+  zValidator('json', eventPatchSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
 
-    // Only bother with the transactional pre-state lock when the PATCH
-    // actually touches status or date — every other field is edit-only
-    // and doesn't need a serialize gate.
-    const touchesTransitionField =
-      typeof body.status === 'string' || typeof body.date === 'string';
-
-    // #1107: read pre-state + write inside a transaction so two concurrent
-    // PATCHes can't both observe the same pre-state and fan out twice.
-    // SELECT FOR UPDATE serializes on the row. Fan-out fires only for the
-    // transaction that actually observed the transition; a losing PATCH
-    // sees the new state and computes category=null.
-    const result = await db.transaction(async (tx) => {
-      let preUpdate:
-        { status: string; date: string; delistedAt: Date | null } | undefined;
-      if (touchesTransitionField) {
-        const rows = await tx
-          .select({
-            status: events.status,
-            date: events.date,
-            delistedAt: events.delistedAt,
-          })
-          .from(events)
-          .where(eq(events.id, id))
-          .for('update')
-          .limit(1);
-        preUpdate = rows[0];
-      }
-
-      const [updated] = await tx
-        .update(events)
-        // Any status an admin sets is a decision, not the sweep's guess, so
-        // it ends No longer listed (B+ A5).
-        .set({
-          ...body,
-          // Clears first_missing_at too on a delisted row: otherwise the show
-          // hides again right after its watchers hear, and a restore would be
-          // re-cancelled by the next sweep.
-          ...(typeof body.status === 'string' && endDelisting()),
-          updatedAt: new Date(),
-        })
-        .where(eq(events.id, id))
-        .returning();
-
-      // Watch-update fan-out category — computed inside the tx against the
-      // locked pre-state row. Fires AFTER commit.
-      //
-      // Categories fired:
-      //   - watch.cancelled when status flips upcoming|postponed → cancelled
-      //   - watch.postponed when status flips upcoming|cancelled → postponed
-      //   - watch.postponed on a date change to an upcoming/postponed event
-      //
-      // A date change carries the same signal as a status flip to postponed
-      // (the show is on a different night), so we treat both as
-      // watch.postponed. If both a status flip AND a date change land in the
-      // same PATCH, we still fan out only once — status transitions win.
-      let category: 'watch.cancelled' | 'watch.postponed' | null = null;
-      if (preUpdate && updated) {
-        // Confirming a delisted show as cancelled is a real transition:
-        // the sweep told nobody.
-        const wasDelisted = preUpdate.delistedAt !== null;
-        if (
-          typeof body.status === 'string' &&
-          (body.status !== preUpdate.status ||
-            (body.status === 'cancelled' && wasDelisted))
-        ) {
-          if (body.status === 'cancelled') category = 'watch.cancelled';
-          else if (body.status === 'postponed') category = 'watch.postponed';
-        } else if (
-          typeof body.date === 'string' &&
-          body.date !== preUpdate.date &&
-          // Skip if this event is already cancelled — a stale ticker
-          // somewhere may still emit dates for cancelled events; watchers
-          // already got the cancel notification.
-          preUpdate.status !== 'cancelled'
-        ) {
-          category = 'watch.postponed';
-        }
-      }
-
-      return { updated, category };
-    });
-
-    if (!result.updated) {
+    const updated = await updateEvent(id, body);
+    if (!updated) {
       return ctx.json({ success: false, error: 'Not found' } as const, 404);
     }
 
@@ -775,27 +651,7 @@ eventsAdminRouter.patch(
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor.userId);
 
-    if (result.category) {
-      await fanoutWatchNotification(
-        {
-          db,
-          notifications,
-          userEvents,
-          events,
-          venues,
-        },
-        {
-          eventId: id,
-          category: result.category,
-          // #1311: the committed updated_at of the PATCH that observed the
-          // transition under FOR UPDATE. Set inside that transaction, so it
-          // names this one write: a later genuine flip commits a new value.
-          transition: `patch:${result.updated.updatedAt.toISOString()}`,
-        },
-      );
-    }
-
-    return ctx.json({ success: true, data: result.updated } as const);
+    return ctx.json({ success: true, data: updated } as const);
   },
 );
 
@@ -1089,24 +945,18 @@ eventsAdminRouter.post(
     const actor = getAuthUser(ctx);
 
     const count = await db.transaction(async (tx) => {
-      const updated = await tx
-        .update(events)
-        .set({ hiddenFromConsumer: true, updatedAt: new Date() })
-        .where(
-          and(inArray(events.id, ids), eq(events.hiddenFromConsumer, false)),
-        )
-        .returning({ id: events.id });
-      if (updated.length > 0) {
+      const changed = await setHiddenFromConsumer(tx, ids, true);
+      if (changed.length > 0) {
         await tx.insert(auditLog).values(
-          updated.map((row) => ({
+          changed.map((changedId) => ({
             actorId: actor.userId,
             action: 'event.bulk_mark_non_concert',
-            targetId: row.id,
+            targetId: changedId,
             metadata: null,
           })),
         );
       }
-      return updated.length;
+      return changed.length;
     });
 
     return ctx.json({ success: true, data: { count } });
@@ -1138,24 +988,18 @@ eventsAdminRouter.post(
     const actor = getAuthUser(ctx);
 
     const count = await db.transaction(async (tx) => {
-      const updated = await tx
-        .update(events)
-        .set({ hiddenFromConsumer: false, updatedAt: new Date() })
-        .where(
-          and(inArray(events.id, ids), eq(events.hiddenFromConsumer, true)),
-        )
-        .returning({ id: events.id });
-      if (updated.length > 0) {
+      const changed = await setHiddenFromConsumer(tx, ids, false);
+      if (changed.length > 0) {
         await tx.insert(auditLog).values(
-          updated.map((row) => ({
+          changed.map((changedId) => ({
             actorId: actor.userId,
             action: 'event.bulk_mark_as_concert',
-            targetId: row.id,
+            targetId: changedId,
             metadata: null,
           })),
         );
       }
-      return updated.length;
+      return changed.length;
     });
 
     return ctx.json({ success: true, data: { count } });
@@ -1254,195 +1098,20 @@ eventsAdminRouter.post(
       );
     }
 
-    // Pre-flight existence checks return 404 with a clear message before we
-    // open a transaction — cheaper than rolling back inside.
-    //
-    // venueId + venueName come back too: the source row is deleted by the
-    // merge, so the venue a watcher knew the show under has to be captured
-    // here or it is gone before the fan-out can name it.
-    const both = await db
-      .select({
-        id: events.id,
-        venueId: events.venueId,
-        venueName: venues.name,
-      })
-      .from(events)
-      .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(or(eq(events.id, sourceId), eq(events.id, targetId)));
-    const source = both.find((row) => row.id === sourceId);
-    const target = both.find((row) => row.id === targetId);
-    if (!source) {
+    const result = await mergeEvents({
+      sourceId,
+      targetId,
+      actorId: actor.userId,
+      notifyWatchers,
+      suggestion,
+    });
+    if (result.ok === 'source_not_found') {
       return ctx.json({ success: false, error: 'Source event not found' }, 404);
     }
-    if (!target) {
+    if (result.ok === 'target_not_found') {
       return ctx.json({ success: false, error: 'Target event not found' }, 404);
     }
-
-    const merged = await db.transaction(async (tx) => {
-      // Captured BEFORE any row moves: these are the users who were watching
-      // the row that is disappearing, and they are the only ones for whom
-      // anything changed. Reading watchers off the target after the merge
-      // would also sweep up people who only ever watched the target.
-      const movedWatchers = await tx
-        .select({ userId: userEvents.userId })
-        .from(userEvents)
-        .where(
-          and(
-            eq(userEvents.eventId, sourceId),
-            eq(userEvents.status, 'watching'),
-          ),
-        );
-
-      // user_events: drop conflicting source rows (target wins) before moving
-      // the rest. Doing the delete inside the same transaction means a partial
-      // failure rolls the drops back too.
-      // Before dropping the losing source rows, salvage their attendance onto
-      // the target: an attended night must not vanish because an admin merged
-      // two listings for the same show (#70). LEAST() keeps the earliest
-      // commitment, which is the honest timestamp for when the user decided.
-      // Postgres LEAST/GREATEST ignore NULL arguments (unlike most other SQL
-      // dialects and unlike ordinary operators) and return NULL only when
-      // every argument is NULL — so a watching-only target with a NULL
-      // attending_at correctly adopts the source's timestamp. No COALESCE
-      // wrapper needed; adding one would be a no-op here.
-      const coalescedAttending = await tx
-        .update(userEvents)
-        .set({
-          attendingAt: sql`LEAST(
-            ${userEvents.attendingAt},
-            (SELECT src.attending_at FROM ${userEvents} src
-              WHERE src.event_id = ${sourceId}
-                AND src.user_id = ${userEvents.userId})
-          )`,
-        })
-        .where(
-          and(
-            eq(userEvents.eventId, targetId),
-            sql`EXISTS (
-              SELECT 1 FROM ${userEvents} src
-              WHERE src.event_id = ${sourceId}
-                AND src.user_id = ${userEvents.userId}
-                AND src.attending_at IS NOT NULL
-            )`,
-          ),
-        )
-        .returning({ id: userEvents.id });
-
-      const droppedUserEvents = await tx
-        .delete(userEvents)
-        .where(
-          and(
-            eq(userEvents.eventId, sourceId),
-            sql`EXISTS (
-              SELECT 1 FROM ${userEvents} t
-              WHERE t.event_id = ${targetId}
-                AND t.user_id = ${userEvents.userId}
-            )`,
-          ),
-        )
-        .returning({ id: userEvents.id });
-
-      const movedUserEvents = await tx
-        .update(userEvents)
-        .set({ eventId: targetId })
-        .where(eq(userEvents.eventId, sourceId))
-        .returning({ id: userEvents.id });
-
-      const movedReports = await tx
-        .update(eventReports)
-        .set({ eventId: targetId })
-        .where(eq(eventReports.eventId, sourceId))
-        .returning({ id: eventReports.id });
-
-      const movedSubmissions = await tx
-        .update(priceSubmissions)
-        .set({ eventId: targetId, updatedAt: new Date() })
-        .where(eq(priceSubmissions.eventId, sourceId))
-        .returning({ id: priceSubmissions.id });
-
-      const movedLogs = await tx
-        .update(priceRetrievalLog)
-        .set({ eventId: targetId })
-        .where(eq(priceRetrievalLog.eventId, sourceId))
-        .returning({ id: priceRetrievalLog.id });
-
-      // With every reference moved, deleting the source row is safe — there's
-      // nothing left to cascade. Doing this last means a failure earlier in
-      // the transaction never reaches the destructive step.
-      //
-      // The DELETE returns the affected rows so we can detect a concurrent
-      // race: if a parallel merge (or delete) cleared the source between the
-      // pre-flight existence check and now, we'd otherwise commit a no-op
-      // with a misleading "success" + audit row. Throwing rolls the whole
-      // transaction back.
-      const deletedSource = await tx
-        .delete(events)
-        .where(eq(events.id, sourceId))
-        .returning({ id: events.id });
-      if (deletedSource.length === 0) {
-        throw new Error('Source event disappeared mid-merge');
-      }
-
-      const counts = {
-        userEventsMoved: movedUserEvents.length,
-        userEventsDropped: droppedUserEvents.length,
-        attendingCoalesced: coalescedAttending.length,
-        reportsMoved: movedReports.length,
-        submissionsMoved: movedSubmissions.length,
-        priceLogsMoved: movedLogs.length,
-      };
-
-      await tx.insert(auditLog).values({
-        actorId: actor.userId,
-        action: 'event.merge',
-        targetId,
-        metadata: {
-          sourceId,
-          referencesMoved: counts,
-          suggestion: suggestion ?? null,
-          notifyWatchers,
-        },
-      });
-
-      return {
-        counts,
-        movedWatcherIds: movedWatchers.map((row) => row.userId),
-      };
-    });
-    const referencesMoved = merged.counts;
-
-    // After commit, mirroring the PATCH call site: the fan-out is best-effort
-    // by contract and never throws, so it must not sit inside the transaction
-    // that moved the watch rows.
-    //
-    // A relocation is decided by comparing the two rows, not by trusting the
-    // caller's `suggestion.reason` — the copy a watcher reads is not a client
-    // decision. Same venue means the night changed, which is what the plain
-    // postponed template already says.
-    if (notifyWatchers) {
-      // Only the venue ids decide this. `venueName` may be null because
-      // `events.venue_id` is ON DELETE SET NULL, and falling back to the date
-      // template there would claim the night changed when it did not — the
-      // copy handles a null old room itself.
-      const relocated =
-        source.venueId !== target.venueId
-          ? { fromVenueName: source.venueName }
-          : null;
-      await fanoutWatchNotification(
-        { db, notifications, userEvents, events, venues },
-        {
-          eventId: targetId,
-          category: 'watch.postponed',
-          // #1311: the source row is deleted by the merge, so it can only be
-          // merged away once; its id names this transition.
-          transition: `merge:${sourceId}`,
-          restrictToUserIds: merged.movedWatcherIds,
-          // Spread rather than pass `undefined`: exactOptionalPropertyTypes
-          // distinguishes an absent key from an explicitly-undefined one.
-          ...(relocated ? { relocated } : {}),
-        },
-      );
-    }
+    const referencesMoved = result.referencesMoved;
 
     return ctx.json({
       success: true,
