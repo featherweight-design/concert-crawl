@@ -281,3 +281,54 @@
     display: none;
   }
 }
+
+/* Health (admin 1c). Desktop is 03/health-desktop, the phone 03/health-mobile;
+   copy that differs renders twice and the breakpoint picks one. Between 720
+   and 1100 the boards draw nothing (gap G14): tiles go 2 by 2, columns stack. */
+.health-phone {
+  display: none;
+}
+.health-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.health-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.health-cells {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+}
+.health-cells[data-group='ok'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .health-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .health-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .health-desk {
+    display: none;
+  }
+  .health-phone {
+    display: inline;
+  }
+  .health-tiles {
+    gap: 10px;
+  }
+  .health-cells {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .health-cells[data-group='ok'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

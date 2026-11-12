@@ -25,6 +25,104 @@ const showCount = (count: number): string =>
   `${count.toLocaleString('en-US')} ${count === 1 ? 'show' : 'shows'}`;
 
 export const ADMIN_COPY = {
+  // --- Health (plan row 1c; boards 03-health) ---
+  health: {
+    title: 'Health',
+    summary: (count: number) =>
+      count === 0
+        ? 'Everything is running. Nothing needs you.'
+        : `Everything is running. ${count} ${count === 1 ? 'thing needs' : 'things need'} you, and ${count === 1 ? "it's" : "they're"} already in Needs you.`,
+    summaryPhone: (count: number) =>
+      `Everything is running · ${count} in Needs you`,
+    openNeedsYou: (count: number | null) =>
+      count === null ? 'Open Needs you' : `Open Needs you · ${count}`,
+    tiles: {
+      crawl: {
+        label: 'Crawl · last night',
+        labelPhone: 'Crawl',
+        value: (ok: number, total: number) => `${ok} of ${total}`,
+        finished: (time: string, shows: string, added: string) =>
+          `Finished ${time} · ${shows} shows, ${added} new`,
+        finishedPhone: (time: string, added: string) =>
+          `${time} · ${added} new`,
+        failed: (count: number) => `${count} failed.`,
+        noRuns: 'No runs last night.',
+        onTime: 'On time',
+        failedPill: (count: number) => `${count} failed`,
+      },
+      artists: {
+        label: 'Artists',
+        soon: (count: number) =>
+          `Matched to a photo and genre. ${count} unsure have shows soon.`,
+        soonPhone: (count: number) => `${count} unsure, soon`,
+        toCheck: (count: number) =>
+          `Matched to a photo and genre. ${count} to check.`,
+        toCheckPhone: (count: number) => `${count} to check`,
+      },
+      cost: {
+        label: (month: string) => `LLM cost · ${month}`,
+        labelPhone: (month: string) => `LLM · ${month}`,
+        ofBudget: (budget: string, pace: string) =>
+          `of ${budget} budget · on pace for ${pace}`,
+        ofBudgetPhone: (budget: string, pace: string) =>
+          `of ${budget} · pace ${pace}`,
+        over: (budget: string) =>
+          `Over the ${budget} budget. Haiku still runs.`,
+        noBudget: (pace: string) => `On pace for ${pace}`,
+        noBudgetPhone: (pace: string) => `Pace ${pace}`,
+        under: 'Under budget',
+        underPhone: 'Under',
+        willGoOver: 'Will go over',
+        overPill: 'Over budget',
+      },
+      site: {
+        label: 'The site',
+        labelPhone: 'Site',
+        value: (sent: number) => `${sent} sent`,
+        emails: (hours: number) => `Emails, last ${hours} h`,
+        failed: (count: number) => `${count} failed`,
+        lastSent: (time: string) => `last sent ${time}`,
+      },
+    },
+    grid: {
+      title: 'Last night, venue by venue',
+      crawlRuns: 'Crawl runs',
+      groups: {
+        failed: 'Failed',
+        paused: 'Paused',
+        quiet: 'Quiet on purpose',
+        ok: 'OK',
+      },
+      failure: (count: number, autoPaused: boolean) => {
+        const tens = count % 100;
+        const ones = count % 10;
+        const suffix =
+          tens >= 11 && tens <= 13
+            ? 'th'
+            : ones === 1
+              ? 'st'
+              : ones === 2
+                ? 'nd'
+                : ones === 3
+                  ? 'rd'
+                  : 'th';
+        return `${count}${suffix} failure${autoPaused ? ' · auto-paused' : ''}`;
+      },
+      paused: 'Paused',
+      pageUnchanged: 'Page unchanged',
+      footer: 'Worst first. Every venue opens its own page.',
+      empty: 'No venue ran last night.',
+    },
+    cost: {
+      title: 'LLM cost by day',
+      perDay: (amount: string) => `${amount} a day`,
+      dailyBudget: (amount: string) => `Daily budget ${amount}`,
+      footnote: 'Haiku only runs when HTML and JSON-LD fail.',
+      chartLabel: (month: string, total: string) =>
+        `LLM cost by day in ${month}: ${total} so far`,
+      day: (date: string, amount: string) => `${date}: ${amount}`,
+    },
+  },
   dashboard: {
     statCards: {
       needsReview: 'Needs review',
