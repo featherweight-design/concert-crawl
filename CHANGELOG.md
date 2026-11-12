@@ -1,3 +1,25 @@
+# [1.363.0](https://github.com/featherweight-design/concert-crawl/compare/v1.362.0...v1.363.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** a request that sends Authorization is never edge-cacheable ([dffa0ca](https://github.com/featherweight-design/concert-crawl/commit/dffa0ca64062e78e86354226e93bd31429a14f2a))
+* **api:** shorter edge windows, one viewer-scoped helper, assert the CORS vary ([3716524](https://github.com/featherweight-design/concert-crawl/commit/371652496d1b0e2e76f6248f7d3c0e0050bf6cd6))
+* **web:** availability prefetch catches a synchronous throw, one predicate for the suggestions ([e70e76a](https://github.com/featherweight-design/concert-crawl/commit/e70e76a09d508284a1d1214e2932f7398e63037a))
+* **web:** venues list phone head, row heights, chip fit and copy-review pass ([ddd5d10](https://github.com/featherweight-design/concert-crawl/commit/ddd5d105cf8ef46f8f80294a28e40e6be9374499))
+* **web:** venues list review fixes, cell names for screen readers, fold focus, component test ([8dff4d5](https://github.com/featherweight-design/concert-crawl/commit/8dff4d5c7312426ebfe37cd31796d7835f146990))
+
+
+### Features
+
+* **web:** admin venues list, worst first, two-chip status, filters and phone cards ([837fdba](https://github.com/featherweight-design/concert-crawl/commit/837fdba5e1ec6ef83d5d67cc92a86594750760e9))
+
+
+### Performance Improvements
+
+* **api:** parallelise the events list reads, let the edge hold anonymous public reads ([cab3320](https://github.com/featherweight-design/concert-crawl/commit/cab3320c5d323dd4f60bc4ec370675f04d4b8387))
+* **web:** start Browse's availability and anonymous suggestions reads with the first batch ([5b801ee](https://github.com/featherweight-design/concert-crawl/commit/5b801eeb5c9b9f45c1cc1ee48e6f43729ed42c01))
+
 # [1.362.0](https://github.com/featherweight-design/concert-crawl/compare/v1.361.0...v1.362.0) (2026-11-12)
 
 
