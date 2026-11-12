@@ -91,6 +91,38 @@ describe('Needs you sources and ranking', () => {
     expect(await keysOf()).toEqual([lowKey(shown.id)]);
   });
 
+  it('does not also ask whether a missing or cancelled show is a concert', async () => {
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const plain = await seedLowConfidence(venue.id, 'Plain Act', inDays(5));
+    await seedEvent(venue.id, {
+      artist: 'Missing Act',
+      date: inDays(6),
+      verified: false,
+      firstMissingAt: new Date(),
+    });
+    await seedEvent(venue.id, {
+      artist: 'Cancelled Act',
+      date: inDays(7),
+      verified: false,
+      status: 'cancelled',
+    });
+
+    expect(await keysOf({ kind: 'event-low-confidence', now: now() })).toEqual([
+      lowKey(plain.id),
+    ]);
+  });
+
+  it('keeps a venue fault snoozed under one stable key', async () => {
+    const venue = await seedVenue({
+      name: 'Blocked Hall',
+      slug: 'blocked-hall',
+      blockedAt: new Date(Date.now() - 3 * 24 * HOUR_MS),
+    });
+
+    const keys = await keysOf({ kind: 'venue-blocked', now: now() });
+    expect(keys).toEqual([`venue-blocked:${venue.id}`]);
+  });
+
   it('hides a snoozed item until the snooze passes', async () => {
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const event = await seedLowConfidence(venue.id, 'Snoozed Act', inDays(5));

@@ -90,25 +90,35 @@ const line = (
 // Watchers
 // ---------------------------------------------------------------------------
 
-/** Watching rows per event, in one query. Events nobody watches are absent. */
+// Bind parameters per query stay far below Postgres's 65,535 limit however many
+// events a bad crawl leaves unverified.
+const WATCHER_CHUNK = 1000;
+
+/** Watching rows per event. Events nobody watches are absent. */
 export const watcherCounts = async (
   eventIds: string[],
 ): Promise<Map<string, number>> => {
-  if (eventIds.length === 0) return new Map();
-  const rows = await db
-    .select({
-      eventId: userEvents.eventId,
-      total: sql<number>`count(*)::int`,
-    })
-    .from(userEvents)
-    .where(
-      and(
-        inArray(userEvents.eventId, eventIds),
-        eq(userEvents.status, 'watching'),
-      ),
-    )
-    .groupBy(userEvents.eventId);
-  return new Map(rows.map((row) => [row.eventId, row.total]));
+  const counts = new Map<string, number>();
+  for (let start = 0; start < eventIds.length; start += WATCHER_CHUNK) {
+    const rows = await db
+      .select({
+        eventId: userEvents.eventId,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(userEvents)
+      .where(
+        and(
+          inArray(
+            userEvents.eventId,
+            eventIds.slice(start, start + WATCHER_CHUNK),
+          ),
+          eq(userEvents.status, 'watching'),
+        ),
+      )
+      .groupBy(userEvents.eventId);
+    for (const row of rows) counts.set(row.eventId, row.total);
+  }
+  return counts;
 };
 
 // ---------------------------------------------------------------------------
@@ -269,7 +279,9 @@ const venueFaultItems: Adapter = async ({ now }) => {
         status: run.status,
         errorMessage: run.errorMessage,
       }));
-    const since = Date.parse(fault.persistedSince);
+    // The key is the venue and the kind of fault, with no timestamp. The
+    // "since" of a streak is read from a 30-run window and slides forward as
+    // old runs fall out of it, which would make a snoozed fault reappear.
     const common = {
       venueId: fault.venueId,
       venueName: fault.venue,
@@ -281,7 +293,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
     if (fault.condition === 'failed') {
       items.push({
         ...common,
-        key: `venue-failing:${fault.venueId}:${since}`,
+        key: `venue-failing:${fault.venueId}`,
         kind: 'venue-failing',
         title: `${fault.venue} crawl is failing`,
         cause: fault.evidence.errorClass,
@@ -298,7 +310,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
     } else {
       items.push({
         ...common,
-        key: `venue-blocked:${fault.venueId}:${since}`,
+        key: `venue-blocked:${fault.venueId}`,
         kind: 'venue-blocked',
         title: `${fault.venue} is blocking the crawler`,
         cause:
@@ -400,6 +412,11 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
         eq(events.verified, false),
         // An event an admin ruled Not a concert is answered, not undecided.
         eq(events.hiddenFromConsumer, false),
+        // A show the crawler stopped seeing is a show-dropped item already,
+        // and a cancelled or postponed one has been decided: neither is also
+        // a low-confidence question.
+        eq(events.status, 'upcoming'),
+        isNull(events.firstMissingAt),
         gte(events.date, today),
       ),
     );
@@ -431,7 +448,8 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
 // Price checks (contests) and the price batch
 // ---------------------------------------------------------------------------
 
-const priceCheckItems: Adapter = async () => {
+const priceCheckItems: Adapter = async ({ now }) => {
+  const today = denverDate(now);
   const parent = alias(priceSubmissions, 'parent');
   const rows = await db
     .select({
@@ -454,6 +472,9 @@ const priceCheckItems: Adapter = async () => {
       and(
         eq(priceSubmissions.status, 'pending'),
         isNotNull(priceSubmissions.disputedSubmissionId),
+        // A price check on a show that has happened decides nothing a fan
+        // will see, and would rank first for being the soonest date.
+        gte(events.date, today),
       ),
     );
   const watchers = await watcherCounts(rows.map((row) => row.eventId));
