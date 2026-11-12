@@ -688,6 +688,13 @@ From the design-review sections of the admin PRs (#169 shell, #170 primitives, #
 | G6, paused reason and venue groups | The grid draws "Levitt Pavilion · Awaiting reply". | [Design] + [eng/data] No paused reason is stored before 3c. Show a bare "Paused"? Hidden (active=false), blocked and robots.txt-disallowed venues have no group drawn. Where do they go? |
 | G12, phone omits panels | health-mobile has none of these: Artist sync, The site, "Open Needs you", the grid's "Crawl runs" link, the footer, "$x a day", the footnote, "All activity". | [Design] Is leaving them out on the phone deliberate? |
 | G14, phone loading and mid widths | 07/loading-health is desktop only. | [Design] There's no phone loading board. How do the tiles and columns reflow between 720 and about 1100? |
+| G8b, "If it runs out" off state (03-health/llm-budget-panel) | The switch is drawn only in its on state: "Keep crawling with HTML and JSON-LD only, and tell me. Never stops a crawl." | [Design] + [Hugh product] What does off mean: keep using Haiku past the budget, or stop the LLM step entirely? #208 stores the switch (default on); nothing reads it until this is answered. |
+
+## Admin 4c Artists: built from the nearest pattern (b1), confirm or correct
+
+| board / PR | what it says | the question |
+| --- | --- | --- |
+| 06/artists-to-check, 06/artists-search-opens-the-side-panel (4c UI) | Three behaviours are undrawn: the "Exact name" button, how a candidate gets picked before "Use selected", and whether "Not an artist…" asks for a reason. | [Design] Built from existing patterns. "Exact name" is a toggle that limits results to exact name matches. Clicking a candidate card selects it (gradient border). "Not an artist…" opens a ConfirmDialog with no reason step, since no reason is stored. Confirm or correct each. |
 
 ## From adm2 (2a backend scope ruling)
 
