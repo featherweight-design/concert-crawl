@@ -33,18 +33,29 @@ export default function EventDetailLoading() {
             <SkeletonBlock height="100%" radius={STAGE_CARD_RADIUS} />
           </div>
         }
+        // The countdown slot, so it takes the loaded pill's `-mt-7` overlap
+        // of the card's foot on mobile.
+        eyebrow={<SkeletonBlock width={120} height={24} radius={999} />}
       >
-        {/* Countdown, name, then the date and venue line. Mobile centers
-            them under the card; the column's own alignment does the rest. */}
-        <div className="mt-2 flex w-full flex-col items-center gap-3 sm:mt-0 sm:items-start">
-          <SkeletonBlock width={120} height={24} radius={999} />
-          <span className="block w-[min(230px,70%)] sm:w-full sm:max-w-[460px]">
-            <SkeletonBlock height={34} radius={10} />
-          </span>
-          <span className="block w-[140px] sm:w-[180px]">
-            <SkeletonBlock height={16} />
-          </span>
-        </div>
+        {/* The name, its genre chips, then the date and venue line, in the
+            loaded column's order and spacing (EventStage). The name is one
+            line of the stage headline: `--stage-head` at the title block's
+            1.12 line height. */}
+        <span
+          data-testid="stage-skeleton-title"
+          className="block w-[min(230px,70%)] sm:w-full sm:max-w-[460px]"
+        >
+          <SkeletonBlock height="calc(var(--stage-head) * 1.12)" radius={10} />
+        </span>
+        <span data-testid="stage-skeleton-genres" className="mt-3 block">
+          <SkeletonBlock width={128} height={20} radius={5} />
+        </span>
+        <span
+          data-testid="stage-skeleton-meta"
+          className="mt-3 block w-[140px] sm:w-[180px]"
+        >
+          <SkeletonBlock height={16} />
+        </span>
       </StageShell>
 
       <div className="flex-1">
