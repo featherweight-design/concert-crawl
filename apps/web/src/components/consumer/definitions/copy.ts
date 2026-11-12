@@ -1534,7 +1534,7 @@ export const CONSUMER_COPY = {
     // viewer already has one, so the line names neither.
     updatePendingHeading: 'Already waiting.',
     updatePendingBody:
-      'An update is already in review. Check back once it’s reviewed.',
+      'An update on this price is in review. Check back once it’s settled.',
     errorHeading: "Didn't go through.",
     errorBody:
       "Couldn't reach the server. Your inputs are still here. Try again or come back later.",

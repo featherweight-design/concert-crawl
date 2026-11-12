@@ -180,7 +180,7 @@ describe('CounterSubmitSheet update already pending (409)', () => {
     expect(await screen.findByText('Already waiting.')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'An update is already in review. Check back once it’s reviewed.',
+        'An update on this price is in review. Check back once it’s settled.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByTestId('sheet-rail')).toHaveTextContent('Waiting');
