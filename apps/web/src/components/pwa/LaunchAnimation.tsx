@@ -21,6 +21,12 @@ import {
   shouldPlayLaunch,
   writeStored,
 } from '@/lib/pwa/launch';
+import {
+  PWA_ICON_PALETTE,
+  PWA_SPLASH_BACKGROUND,
+  STARTUP_TILE_CSS_PX,
+  STARTUP_TILE_RADIUS_CSS_PX,
+} from '@/app/api/pwa/icon-svg';
 import { LAUNCH_COPY } from './definitions/copy';
 
 // The launch animation (B+ README rule 12, boards `bp-s-launch_*`). It plays on
@@ -30,8 +36,8 @@ import { LAUNCH_COPY } from './definitions/copy';
 // every animation is the Web Animations API through `runMotion`, never
 // @keyframes.
 
-const SPLASH_BG = '#070A1A'; // fwd-allow-hex: board art colour
-const TILE_BG = '#171D3A'; // fwd-allow-hex: board art colour
+const SPLASH_BG = PWA_SPLASH_BACKGROUND;
+const TILE_BG = PWA_ICON_PALETTE.background;
 // The splash ground is fixed, so its ink is fixed too: on the Light theme the
 // theme tokens would put dark wordmark ink on this dark ground.
 const INK_LEAD = '#E8F3FF'; // fwd-allow-hex: board art colour
@@ -41,10 +47,21 @@ const INK_SIGNAL = '#7AE6FF'; // fwd-allow-hex: board art colour
 const INK_SUBTLE = '#5B6488'; // fwd-allow-hex: board art colour
 /** Core position on the full-size mark, from the boards (390 x 844 screen). */
 const CORE_FROM_CENTRE = { x: 55, y: -102 } as const;
+/** The board's screen, which CORE_FROM_CENTRE is measured on. */
+const BOARD_VIEW = { width: 390, height: 844 } as const;
+/** Keeps the scaled offset sane on very small or very large windows. */
+const OFFSET_SCALE_MIN = 0.8;
+const OFFSET_SCALE_MAX = 1.25;
+const clampScale = (value: number) =>
+  Math.min(OFFSET_SCALE_MAX, Math.max(OFFSET_SCALE_MIN, value));
 /** The core bloom: about 330px across, centred on the core (k740, k950). */
 const BLOOM_PX = 330;
 const BLOOM_PEAK = 0.55;
-const TILE_PX = 128;
+// INK_ACCENT (#FF7BD4) at 35% and 0%, written out rather than built by
+// concatenating hex alpha onto the colour.
+const BLOOM_CENTRE = 'rgba(255, 123, 212, 0.35)';
+const BLOOM_EDGE = 'rgba(255, 123, 212, 0)';
+const TILE_PX = STARTUP_TILE_CSS_PX;
 /** The mark's art is 96 units; its box at scale 1 is that 96px. */
 const MARK_PX = 96;
 /** The header logo's box, where the mark lands. */
@@ -61,10 +78,14 @@ const FAILSAFE_MS = LAUNCH_MS.total + 1500;
 
 const at = (ms: number) => ms / LAUNCH_MS.total;
 
-/** The core's spot on screen once the mark is full size. */
+/**
+ * The core's spot on screen once the mark is full size. The board's offset from
+ * centre scales with the viewport (clamped), so the art stays proportional at
+ * 320 wide and on larger windows; at 390 x 844 it is exactly the board's.
+ */
 export const coreAtFull = (vw: number, vh: number) => ({
-  x: vw / 2 + CORE_FROM_CENTRE.x,
-  y: vh / 2 + CORE_FROM_CENTRE.y,
+  x: vw / 2 + CORE_FROM_CENTRE.x * clampScale(vw / BOARD_VIEW.width),
+  y: vh / 2 + CORE_FROM_CENTRE.y * clampScale(vh / BOARD_VIEW.height),
 });
 
 /**
@@ -244,7 +265,9 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
       { offset: 1, fill: INK_SIGNAL, transform: 'scale(1)' },
     ]);
     // The core's bloom, the one sanctioned soft glow: it rises with the pulse
-    // and is gone by the end (about 680 to 1040ms on the boards).
+    // and is gone by the time the mark starts to shrink, so it never lingers
+    // after the mark leaves.
+    const bloomEnd = Math.min(LAUNCH_MS.pulseEnd, LAUNCH_MS.shrinkStart);
     run(bloomRef.current, [
       { offset: 0, opacity: 0 },
       { offset: at(LAUNCH_MS.pulseStart), opacity: 0 },
@@ -252,6 +275,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
         offset: at((LAUNCH_MS.pulseStart + LAUNCH_MS.pulseEnd) / 2),
         opacity: BLOOM_PEAK,
       },
+      { offset: at(bloomEnd), opacity: 0 },
       { offset: 1, opacity: 0 },
     ]);
     haloRefs.current.forEach((ring) =>
@@ -349,7 +373,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
           top: '50%',
           width: TILE_PX,
           height: TILE_PX,
-          borderRadius: 28,
+          borderRadius: STARTUP_TILE_RADIUS_CSS_PX,
           background: TILE_BG,
           transform: centre,
         }}
@@ -364,7 +388,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
           width: BLOOM_PX,
           height: BLOOM_PX,
           borderRadius: '50%',
-          background: `radial-gradient(circle, ${INK_ACCENT}59 0%, ${INK_ACCENT}00 70%)`,
+          background: `radial-gradient(circle, ${BLOOM_CENTRE} 0%, ${BLOOM_EDGE} 70%)`,
           opacity: 0,
         }}
       />

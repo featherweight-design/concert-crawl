@@ -9,7 +9,11 @@ vi.mock('@/lib/queries/use-feature-flags', () => ({
 }));
 
 import { LaunchAnimation, coreAtFull, markCorner } from '../LaunchAnimation';
-import { LAUNCH_FLAG_KEY, LAUNCH_PLAYED_KEY } from '@/lib/pwa/launch';
+import {
+  LAUNCH_FLAG_KEY,
+  LAUNCH_MS,
+  LAUNCH_PLAYED_KEY,
+} from '@/lib/pwa/launch';
 
 const stubDisplay = (standalone: boolean, reduced = false) => {
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -91,6 +95,46 @@ describe('LaunchAnimation', () => {
     expect(corner.x).toBeCloseTo(-52.4, 1);
     expect(corner.y).toBeCloseTo(219.2, 1);
     expect(markCorner(390, 844, 128 / 96, true)).toEqual({ x: 131, y: 358 });
+  });
+
+  it('scales the core offset with the viewport so a narrow screen is not cropped', () => {
+    const board = markCorner(390, 844, 4.2, false);
+    const narrow = markCorner(320, 568, 4.2, false);
+    // Relative to each viewport's centre, the narrow corner sits no further
+    // left than the board's does.
+    expect(narrow.x - 320 / 2).toBeGreaterThanOrEqual(board.x - 390 / 2);
+    expect(coreAtFull(320, 568).x).toBeLessThan(160 + 55);
+    expect(coreAtFull(320, 568).x).toBeGreaterThan(160);
+  });
+
+  it('has the bloom back to opacity 0 by the time the mark starts to shrink', () => {
+    stubDisplay(true);
+    const bloomFrames: Keyframe[][] = [];
+    Element.prototype.animate = vi.fn(function (
+      this: Element,
+      keyframes: Keyframe[],
+    ) {
+      if (this.getAttribute('data-testid') === 'launch-bloom') {
+        bloomFrames.push(keyframes);
+      }
+      return {
+        finished: new Promise<Animation>(() => undefined),
+        cancel: () => undefined,
+      } as unknown as Animation;
+    }) as unknown as typeof Element.prototype.animate;
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    render(<LaunchAnimation />);
+    const frames = bloomFrames[0] ?? [];
+    const settled = frames.find(
+      (frame, index) =>
+        index > 0 &&
+        frame.opacity === 0 &&
+        Number(frame.offset) > Number(frames[2]?.offset),
+    );
+    expect(Number(frames[2]?.opacity)).toBeGreaterThan(0);
+    expect(Number(settled?.offset)).toBeLessThanOrEqual(
+      LAUNCH_MS.shrinkStart / LAUNCH_MS.total,
+    );
   });
 
   it('draws a 330px pink bloom centred on the core, hidden until it pulses', () => {
