@@ -13,7 +13,7 @@
 #
 # Optional env:
 #   SENTRY_ENVIRONMENT — deploy environment, defaults to `production`
-#   SENTRY_URL         — defaults to https://sentry.io
+#   SENTRY_URL         — defaults to https://sentry.io (e.g. https://de.sentry.io for the EU region)
 #
 # Skipping when unconfigured is deliberate: the deploy already shipped, and
 # "release tracking is not set up" must not be a second failure. A configured
@@ -28,19 +28,26 @@ if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${SENTRY_ORG:-}" ] || [ -z "${SENTRY
   exit 0
 fi
 
+case "${SENTRY_ORG}${SENTRY_PROJECT}" in
+  *[!A-Za-z0-9_-]*) echo "SENTRY_ORG and SENTRY_PROJECT must be plain slugs." >&2; exit 1 ;;
+esac
+
 base="${SENTRY_URL:-https://sentry.io}/api/0/organizations/${SENTRY_ORG}/releases"
 environment="${SENTRY_ENVIRONMENT:-production}"
 
 post() {
-  curl --silent --show-error --fail-with-body \
+  # --max-time: a hung Sentry call must not hold the deploy job to its
+  # timeout, which would skip the smoke and rollback jobs behind it.
+  curl --silent --show-error --fail-with-body --max-time 20 \
     --request POST "$1" \
     --header "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
     --header "Content-Type: application/json" \
-    --data "$2" > /dev/null
+    --data "$2"
+  echo
 }
 
-# Creating a release that already exists is a 208, not an error, so a re-run
-# of the same promotion is safe.
+# Creating a release that already exists is a 208, not an error. The deploy
+# call is not idempotent: a re-run adds another deploy record to the release.
 post "${base}/" "{\"version\":\"${sha}\",\"projects\":[\"${SENTRY_PROJECT}\"]}"
 post "${base}/${sha}/deploys/" "{\"environment\":\"${environment}\"}"
 echo "Recorded ${sha:0:7} as a ${environment} deploy in Sentry (${SENTRY_PROJECT})."

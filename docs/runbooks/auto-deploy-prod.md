@@ -685,4 +685,4 @@ The deploy job's last step, `Record the deploy in Sentry`, creates a Sentry rele
 - Secret `SENTRY_AUTH_TOKEN` (production environment or repo level): a token with release write scope (`project:releases`).
 - Variables `SENTRY_ORG` and `SENTRY_PROJECT_API`: the organization and API project slugs.
 
-The release name matches the `release` the API reports from `VERCEL_GIT_COMMIT_SHA`, so errors group under the release that shipped them. If Vercel does not set that variable on CLI deploys, the API's events carry no release and the deploy is still recorded.
+The release name is the deployed commit sha, which the API reports as its `release` from `VERCEL_GIT_COMMIT_SHA` (set in `apps/api/src/instrument.ts`). If Vercel does not set that variable on CLI deploys, the API's events carry no release and the deploy is still recorded. Optional variable `SENTRY_URL` is for a non-US region, for example `https://de.sentry.io`; it defaults to `https://sentry.io`.
