@@ -18,10 +18,25 @@ const SLOT_POSE: Record<
   Slot,
   { dx: number; dy: number; rotate: number; z: number }
 > = {
-  left: { dx: -0.62, dy: 0.1, rotate: -8, z: 1 },
-  centre: { dx: 0, dy: 0, rotate: 0, z: 3 },
+  left: { dx: -0.62, dy: 0.1, rotate: -9, z: 1 },
+  centre: { dx: 0, dy: 0, rotate: -2, z: 3 },
   right: { dx: 0.62, dy: 0.12, rotate: 8, z: 2 },
 };
+
+/**
+ * The cards are fixed dark on every theme, as invite-320 and inv-light draw
+ * them: a photo card with a dark scrim, not a themed surface.
+ */
+const CARD_SCRIM =
+  'linear-gradient(180deg, transparent 30%, rgba(5, 6, 15, 0.94))'; // fwd-allow-hex: board art colour
+const CARD_FG = '#F4F6FF'; // fwd-allow-hex: board art colour
+const CARD_FG_MUTED = '#C9D1E6'; // fwd-allow-hex: board art colour
+const CHIP_BG = '#171D3A'; // fwd-allow-hex: board art colour
+const CHIP_BORDER = '#1F2748'; // fwd-allow-hex: board art colour
+const CHIP_FG = '#B8C2DA'; // fwd-allow-hex: board art colour
+const EYE_BG = 'rgba(7, 10, 26, 0.5)'; // fwd-allow-hex: board art colour
+const EYE_BORDER = '#2C3661'; // fwd-allow-hex: board art colour
+const EYE_FG = '#E8F3FF'; // fwd-allow-hex: board art colour
 
 const metaLine = (show: InviteShow): string =>
   [show.tonight ? COPY.tonight : show.dateShort, show.showTimeShort, show.venue]
@@ -32,7 +47,12 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
   const pose = SLOT_POSE[slot];
   const ring = genreColor(show.genre) ?? NEUTRAL_GENRE_COLOR;
   const centre = slot === 'centre';
-  const edge = centre ? 'var(--warning)' : ring;
+  // The centre card carries a 2px ring in its genre colour, the sides a 1px
+  // one at 60%; all three share a genre-tinted glow (invite-320 fan).
+  const edgeShadow = centre
+    ? `0 0 0 2px ${ring}`
+    : `0 0 0 1px color-mix(in srgb, ${ring} 60%, transparent)`;
+  const glow = `0 16px 36px color-mix(in srgb, ${ring} 30%, transparent)`;
 
   return (
     <div
@@ -47,8 +67,7 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
         zIndex: pose.z,
         borderRadius: 16,
         overflow: 'hidden',
-        border: `2px solid ${edge}`,
-        boxShadow: `0 24px 60px -24px ${edge}, 0 18px 40px var(--shadow-strong)`,
+        boxShadow: `${edgeShadow}, ${glow}`,
         background: 'var(--surface-1)',
       }}
     >
@@ -65,11 +84,11 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
         className="absolute inset-0 h-full w-full"
       />
       <div
+        data-fan-scrim
         style={{
           position: 'absolute',
           inset: 0,
-          background:
-            'linear-gradient(to bottom, transparent 40%, var(--scrim) 72%, var(--bg) 100%)',
+          background: CARD_SCRIM,
         }}
       />
       {centre && show.tonight && (
@@ -106,9 +125,9 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'var(--scrim)',
-            border: '1px solid var(--border-strong)',
-            color: 'var(--fg)',
+            background: EYE_BG,
+            border: `1px solid ${EYE_BORDER}`,
+            color: EYE_FG,
           }}
         >
           <Eye size={14} />
@@ -135,8 +154,9 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
               gap: 6,
               padding: '3px 8px',
               borderRadius: 6,
-              background: 'var(--scrim)',
-              color: 'var(--fg)',
+              background: CHIP_BG,
+              border: `1px solid ${CHIP_BORDER}`,
+              color: CHIP_FG,
               fontSize: 9,
               maxWidth: '100%',
             }}
@@ -152,7 +172,7 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
             fontSize: 'calc(var(--fan-card-w) * 0.085)',
             letterSpacing: '-0.02em',
             lineHeight: 1.05,
-            color: 'var(--fg)',
+            color: CARD_FG,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -165,7 +185,7 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
             ...MONO_CAPS,
             fontSize: 9.5,
             letterSpacing: '0.08em',
-            color: 'var(--fg-muted)',
+            color: CARD_FG_MUTED,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',

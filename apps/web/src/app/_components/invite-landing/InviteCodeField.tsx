@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Tag } from 'lucide-react';
 import { formatInviteCodeInput } from '@/lib/invite-code';
 import { LANDING_COPY } from '../definitions/copy';
-import { FOCUS_RING, INVITE_GRADIENT } from './definitions/styles';
+import {
+  FOCUS_RING,
+  INVITE_FIELD_BORDER,
+  INVITE_FIELD_SHADOW,
+  INVITE_GRADIENT,
+} from './definitions/styles';
 
 const COPY = LANDING_COPY.invite;
 
@@ -40,9 +45,10 @@ export function InviteCodeField() {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        borderRadius: 12,
-        border: '1.5px solid transparent',
-        background: `linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, ${INVITE_GRADIENT} border-box`,
+        borderRadius: 14,
+        border: '1px solid transparent',
+        background: `linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, ${INVITE_FIELD_BORDER} border-box`,
+        boxShadow: INVITE_FIELD_SHADOW,
       }}
     >
       <Tag
@@ -83,7 +89,7 @@ export function InviteCodeField() {
           gap: 6,
           minHeight: 44,
           border: 'none',
-          borderRadius: 9,
+          borderRadius: 10,
           background: INVITE_GRADIENT,
           color: 'var(--fg-on-accent)',
           fontFamily: 'Inter, system-ui',
