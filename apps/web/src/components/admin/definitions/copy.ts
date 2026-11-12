@@ -2099,7 +2099,7 @@ export const ADMIN_COPY = {
       },
       addSeats: 'Add seats',
       // Undrawn: someone who joined before picking a handle.
-      noHandle: 'No handle',
+      noHandle: 'No handle yet',
     },
     form: {
       expires: 'Expires',
@@ -2117,7 +2117,11 @@ export const ADMIN_COPY = {
     revoke: {
       title: (code: string) => `Revoke ${code}?`,
       body: (code: string, joined: number) =>
-        `Nobody new can join with ${code}. The ${joined} ${joined === 1 ? 'person' : 'people'} who already joined keep their accounts. A poster with this code will show “This code has ended” when scanned.`,
+        `Nobody new can join with ${code}. ${
+          joined === 1
+            ? 'The 1 person who already joined keeps their account.'
+            : `The ${joined} people who already joined keep their accounts.`
+        } A poster with this code will show “This code has ended” when scanned.`,
       keep: 'Keep it',
       confirm: 'Revoke',
     },
