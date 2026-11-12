@@ -1,3 +1,26 @@
+# [1.347.0](https://github.com/featherweight-design/concert-crawl/compare/v1.346.0...v1.347.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** require the auto-match time in the artist undo snapshot and cover two-submission batches ([cfaa498](https://github.com/featherweight-design/concert-crawl/commit/cfaa49806d617659d00ef2dab628c2e34168d9d6))
+* stable genre tie-break, Enter on a focused palette control stays with the control ([e4993f7](https://github.com/featherweight-design/concert-crawl/commit/e4993f7909326c555382a264d6279bcc8b805e97))
+* **web:** announce and scroll to the palette selection, fix highlight offsets ([9692dae](https://github.com/featherweight-design/concert-crawl/commit/9692dae1105f1e012dc250a0f93b5dab4e3a7038))
+* **web:** keep the tab row steady and the identity row filled ([e4e0c13](https://github.com/featherweight-design/concert-crawl/commit/e4e0c13dbbdff29bafa5c73bfc2cc2e47ffcaa0a))
+* **web:** nav label back to 9px mono; account menu shows [@handle](https://github.com/handle), no founder eyebrow ([4890d21](https://github.com/featherweight-design/concert-crawl/commit/4890d217fe3c75de638709ec564c13daad28f44d))
+* **web:** palette rows keep the date, and the 320 field keeps its clear button ([af4ef79](https://github.com/featherweight-design/concert-crawl/commit/af4ef79db48c16145d5d622a76adb896747b2bf3))
+* **web:** the account menu sheet scrolls above its footer on short phones ([57c929b](https://github.com/featherweight-design/concert-crawl/commit/57c929b23bb78bb5566975e3e296f049533c0d9c))
+* **web:** the desktop palette draws only ESC beside the typed query ([0a4e372](https://github.com/featherweight-design/concert-crawl/commit/0a4e37268a18c8f44e225543301ec170a27d07ff))
+* **web:** the no-results action pushes /events now that StateCard actions are buttons ([1bc720c](https://github.com/featherweight-design/concert-crawl/commit/1bc720c9ea3142526398e16bcab72d2e04132b7d))
+
+
+### Features
+
+* **api:** add the needs-you answers for venues, artists, prices and bugs ([56625f0](https://github.com/featherweight-design/concert-crawl/commit/56625f08e2f445b2347e2dfa4c40ef59d9488886))
+* genre chip on artist search rows, palette order Artists, Venues, Artist pages (B+ B19 rulings) ([c789304](https://github.com/featherweight-design/concert-crawl/commit/c7893040c5ceccdc7f0a1fd063f86fa44ead607e))
+* **web:** the B+ chrome: header tabs, bottom nav bar, account menu tiles (B17) ([60a9ea9](https://github.com/featherweight-design/concert-crawl/commit/60a9ea94153d651a2d3f325a7da984f54e157f8a))
+* **web:** the b+ search palette and mobile search (B19) ([45a1b34](https://github.com/featherweight-design/concert-crawl/commit/45a1b34f03873eda53dabe8ea5f98399096f6184))
+
 # [1.346.0](https://github.com/featherweight-design/concert-crawl/compare/v1.345.0...v1.346.0) (2026-11-12)
 
 
