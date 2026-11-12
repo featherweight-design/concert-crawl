@@ -186,18 +186,18 @@ describe('ArtistPageContent', () => {
 
   // The handoff is explicit: enforce this in code, not by convention.
   describe('exactly one live follow affordance', () => {
-    it('(a) mobile, has shows, scrolled — the sticky bar owns it', () => {
+    // Addendum 2, item 27: Follow stays under the hero and is not sticky.
+    it('(a) mobile, has shows, scrolled — the block under the stage keeps it', () => {
       const { container } = render(<ArtistPageContent data={withShows} />);
       expect(countFollows(container, 'Neal Francis')).toBe(1);
 
       scrollTo(AP_STICKY_AFTER + 10);
-      expect(container.querySelector('[data-sticky-bar]')).not.toBeNull();
+      const bar = container.querySelector('[data-sticky-bar]');
+      expect(bar).not.toBeNull();
+      expect(countFollows(bar as HTMLElement, 'Neal Francis')).toBe(0);
       expect(countFollows(container, 'Neal Francis')).toBe(1);
-      // The one that survived is the sticky bar's.
-      const follow = container.querySelector(
-        '[data-sticky-bar] button[aria-label]',
-      );
-      expect(follow).not.toBeNull();
+      const block = container.querySelector('.ap-block-follow');
+      expect(countFollows(block as HTMLElement, 'Neal Francis')).toBe(1);
     });
 
     it('(b) mobile, no shows — the block under the stage owns it', () => {
@@ -270,21 +270,21 @@ describe('ArtistPageContent', () => {
     vi.unstubAllGlobals();
   });
 
-  it('hands the sticky bar the follow whether or not there are shows', () => {
+  it('never hands the sticky bar the follow, with or without shows', () => {
     const { container, rerender } = render(
       <ArtistPageContent data={withShows} />,
     );
     scrollTo(AP_STICKY_AFTER + 10);
-    expect(
-      container.querySelector('[data-sticky-bar] button[aria-label]'),
-    ).not.toBeNull();
-
-    // No empty-block follow any more, so the bar is its only home past the
-    // stage on mobile.
-    rerender(<ArtistPageContent data={base} />);
-    const bar = container.querySelector('[data-sticky-bar]');
+    let bar = container.querySelector('[data-sticky-bar]');
     expect(bar).not.toBeNull();
-    expect(countFollows(bar as HTMLElement, 'Neal Francis')).toBe(1);
+    expect(countFollows(bar as HTMLElement, 'Neal Francis')).toBe(0);
+
+    rerender(<ArtistPageContent data={base} />);
+    bar = container.querySelector('[data-sticky-bar]');
+    expect(bar).not.toBeNull();
+    expect(countFollows(bar as HTMLElement, 'Neal Francis')).toBe(0);
+    const block = container.querySelector('.ap-block-follow');
+    expect(countFollows(block as HTMLElement, 'Neal Francis')).toBe(1);
   });
 
   // B+ `09-artist` reads Upcoming first, then the player. Desktop lifts the

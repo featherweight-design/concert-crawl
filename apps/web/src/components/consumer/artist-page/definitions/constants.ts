@@ -48,6 +48,16 @@ export const AP_NARROW_BP = 360;
  */
 export const AP_PILL_FONT_SIZE = 9.5;
 
+/**
+ * The loading skeleton's tilted card on mobile (addendum 2, item 11, board
+ * `11-artist-skeleton/load-artist-m`): 190 × 230 at −2.5°.
+ */
+export const AP_SKELETON_CARD = {
+  width: 190,
+  height: 230,
+  tilt: -2.5,
+} as const;
+
 /** The mobile sticky sub-header's own height. */
 export const AP_STICKY_BAR_H = 56;
 

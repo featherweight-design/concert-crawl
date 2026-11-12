@@ -51,8 +51,9 @@ import { UpcomingShows } from './UpcomingShows';
  * than by convention. The viewport decision is made in JS (`useIsDesktop`) and
  * only one slot is ever rendered:
  *   desktop  → the stage's right-hand slot, for the whole visit
- *   mobile   → the block under the stage until the page scrolls past the
- *              stage, then the sticky sub-header takes over
+ *   mobile   → the block under the stage, for the whole visit. It is not
+ *              sticky (addendum 2, item 27): the sub-header that arrives past
+ *              the stage carries back and the name only.
  * The empty-upcoming block is copy only now: the follow sits above it on
  * every viewport, so it never needs its own.
  *
@@ -120,9 +121,9 @@ export const ArtistPageContent = ({
     onLockedTap: openUpgrade,
   };
 
-  // Mobile hands the follow control to the sub-header the moment the bar
-  // arrives; desktop never renders the bar, so the stage keeps it throughout.
-  const inlineFollow = !isDesktop && !scrolled;
+  // Follow stays under the hero on mobile and scrolls away with it
+  // (addendum 2, item 27); desktop keeps it in the stage.
+  const inlineFollow = !isDesktop;
 
   const historyText = historyLine(history, CRAWL_SINCE);
   const historyNode = (
@@ -156,7 +157,7 @@ export const ArtistPageContent = ({
 
   return (
     <main className="ap-page" aria-label={ARTIST_COPY.pageAria(artist.name)}>
-      <StickyBar {...followProps} visible={!isDesktop && scrolled} showFollow />
+      <StickyBar name={artist.name} visible={!isDesktop && scrolled} />
 
       <div ref={bandRef}>
         <ArtistStage
