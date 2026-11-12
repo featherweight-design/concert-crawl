@@ -1,3 +1,11 @@
+## [1.337.1](https://github.com/featherweight-design/concert-crawl/compare/v1.337.0...v1.337.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** log a tagging failure and keep route and tier when only the hash fails ([4305656](https://github.com/featherweight-design/concert-crawl/commit/43056560b11c95468cadf490b1c1014cfcaeabfa))
+* **api:** make Sentry tagging best effort so a tag failure never loses the error ([930e051](https://github.com/featherweight-design/concert-crawl/commit/930e05141f42029c0b57556141e7a90cf1338d88))
+
 # [1.337.0](https://github.com/featherweight-design/concert-crawl/compare/v1.336.1...v1.337.0) (2026-11-12)
 
 
