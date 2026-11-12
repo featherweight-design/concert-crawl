@@ -2081,6 +2081,8 @@ export const ADMIN_COPY = {
       seeWhoJoined: 'See who joined',
       seeWhoJoinedHint: (joined: number) =>
         `Opens the code: ${joined} ${joined === 1 ? 'person' : 'people'}.`,
+      edit: 'Edit…',
+      editHint: 'Label, seats or expiry.',
       revoke: 'Revoke…',
       revokeHint: 'Nobody new can join. Asks first.',
       reactivate: 'Reactivate…',
@@ -2105,6 +2107,22 @@ export const ADMIN_COPY = {
       noHandle: 'No handle yet',
     },
     form: {
+      editNote: 'The code itself can’t change; printed posters use it.',
+      newTitle: 'New code',
+      label: 'Label (only you see it)',
+      code: 'Code',
+      codeHint:
+        'Letters and numbers. Suggested from the label; change it if you like.',
+      codeTaken: (code: string, suggestion: string) =>
+        `${code} is already a code. Try ${suggestion}.`,
+      codeRule: '4 to 20 letters and numbers. Not case-sensitive.',
+      seats: 'Seats',
+      other: 'Other',
+      otherLabel: 'Seats, 1 to 500',
+      seatsNewHint: '1 to 500 people can join with it.',
+      seatsEditHint: (used: number) =>
+        `${used} already used; can’t go below that.`,
+      seatsFloor: (used: number) => `${used} already used`,
       expires: 'Expires',
       keep: (date: string) => `Keep ${date}`,
       expiry: {
@@ -2113,6 +2131,12 @@ export const ADMIN_COPY = {
         d30: '30 days',
         d90: '90 days',
       },
+      posterNext: 'Make a poster for it next',
+      posterNextHint: 'Opens Posters with this code picked.',
+      save: 'Save',
+      make: 'Make code',
+      cancel: 'Cancel',
+      makeFailed: "Couldn't make the code. Try again.",
       // SaveFailedToast's "what is still saved", e.g. "REDROCKS is still active."
       stillStatus: (code: string, status: string) =>
         `${code} is still ${status.toLowerCase()}.`,

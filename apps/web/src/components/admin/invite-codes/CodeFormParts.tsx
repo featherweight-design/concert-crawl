@@ -6,6 +6,32 @@ import { EXPIRY_CHOICES, type ExpiryChoice } from './code-rules';
 
 const COPY = ADMIN_COPY.codesPage.form;
 
+export const INPUT: CSSProperties = {
+  width: '100%',
+  height: 38,
+  padding: '0 12px',
+  borderRadius: 10,
+  border: '1px solid var(--border-strong)',
+  background: 'var(--bg)',
+  color: 'var(--fg)',
+  fontSize: 13.5,
+  boxSizing: 'border-box',
+};
+
+export const Hint = ({
+  children,
+  tone = 'var(--fg-subtle)',
+  id,
+}: {
+  children: ReactNode;
+  tone?: string;
+  id?: string;
+}) => (
+  <div id={id} style={{ fontSize: 12, color: tone, marginTop: 5 }}>
+    {children}
+  </div>
+);
+
 export const Field = ({
   label,
   htmlFor,
@@ -134,5 +160,69 @@ export const ExpiryPills = ({
         })),
       ]}
     />
+  </Field>
+);
+
+export type SeatsChoice = `${number}` | 'other';
+
+/**
+ * Seats pills plus Other's number field. `typed` is Other's text; the parsed
+ * count is the caller's, so the floor error can sit under it.
+ */
+export const SeatsField = ({
+  presets,
+  choice,
+  typed,
+  onChoice,
+  onTyped,
+  hint,
+  error,
+  inputRef,
+}: {
+  presets: readonly number[];
+  choice: SeatsChoice;
+  typed: string;
+  onChoice: (next: SeatsChoice) => void;
+  onTyped: (next: string) => void;
+  hint: string;
+  error: string | null;
+  inputRef?: React.Ref<HTMLInputElement>;
+}) => (
+  <Field label={COPY.seats}>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <Pills<SeatsChoice>
+        label={COPY.seats}
+        value={choice}
+        onChange={onChoice}
+        options={[
+          ...presets.map((seats) => ({
+            value: `${seats}` as const,
+            label: String(seats),
+          })),
+          { value: 'other', label: COPY.other },
+        ]}
+      />
+      {choice === 'other' && (
+        <input
+          ref={inputRef}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={500}
+          aria-label={COPY.otherLabel}
+          aria-invalid={error ? true : undefined}
+          value={typed}
+          onChange={(evt) => onTyped(evt.target.value)}
+          style={{
+            ...INPUT,
+            width: 96,
+            height: 32,
+            borderColor: error ? 'var(--danger)' : 'var(--border-strong)',
+          }}
+        />
+      )}
+    </div>
+    {error ? <Hint tone="var(--danger)">{error}</Hint> : null}
+    <Hint>{hint}</Hint>
   </Field>
 );

@@ -22,7 +22,7 @@ import {
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
 import { postersHref } from '@/lib/poster/posters-href';
-import { codesApi } from './codes-api';
+import { codesApi, type CodeEdit } from './codes-api';
 import {
   STATUS_KIND,
   codeLabel,
@@ -34,15 +34,17 @@ import { MONO } from './code-styles';
 import { InviteCodesRowsSkeleton } from './InviteCodesSkeleton';
 import { CodeRowMenu, MENU_ICONS, type CodeMenuItem } from './CodeRowMenu';
 import { CodePanel } from './CodePanel';
+import { EditCodePanel } from './EditCodePanel';
+import { NewCodePanel } from './NewCodePanel';
 import { ReactivateConfirm, RevokeConfirm } from './CodeConfirms';
 import { SeatsBar } from './SeatsBar';
 
 const COPY = ADMIN_COPY.codesPage;
 
-interface Open {
-  kind: 'code' | 'revoke' | 'reactivate';
-  id: string;
-}
+type Open =
+  | { kind: 'new' }
+  | { kind: 'code' | 'revoke' | 'reactivate'; id: string }
+  | { kind: 'edit'; id: string; focusSeats: boolean };
 
 interface Failure {
   code: string;
@@ -68,9 +70,6 @@ const COLUMN_HEAD = {
   textAlign: 'left',
   padding: '12px 6px',
 } as const;
-
-/** New code reads as unavailable until its panel lands (5b C). */
-const PENDING_BUTTON = { opacity: 0.55, cursor: 'not-allowed' } as const;
 
 const CELL = {
   padding: '10px 6px',
@@ -248,6 +247,19 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     );
   };
 
+  // A failed save snaps the row back and says so (rule 10).
+  const saveEdit = async (row: AdminInviteCode, edit: CodeEdit) => {
+    setOpen(null);
+    setFailure(null);
+    replace({ ...row, ...edit });
+    try {
+      replace({ ...row, ...(await api.edit(row.id, edit)) });
+    } catch {
+      replace(row);
+      setFailure(failureFor(row, () => void saveEdit(row, edit)));
+    }
+  };
+
   // A failed change says so, with Try again (rule 10), and reloads the list,
   // since a refusal (409) usually means the code changed elsewhere.
   const runEnding = async (
@@ -320,6 +332,14 @@ export function InviteCodesClient({ origin }: { origin: string }) {
         : []),
       see,
       {
+        key: 'edit',
+        icon: MENU_ICONS.edit,
+        label: COPY.menu.edit,
+        hint: COPY.menu.editHint,
+        onSelect: () =>
+          setOpen({ kind: 'edit', id: row.id, focusSeats: false }),
+      },
+      {
         key: 'revoke',
         icon: MENU_ICONS.revoke,
         label: COPY.menu.revoke,
@@ -339,7 +359,10 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     ({ row, status }) =>
       row.maxUses > 1 && (status === 'active' || status === 'full'),
   ).length;
-  const openRow = open ? codes?.find((row) => row.id === open.id) : undefined;
+  const openRow =
+    open && open.kind !== 'new'
+      ? codes?.find((row) => row.id === open.id)
+      : undefined;
 
   const newButton = (
     <AdminButton
@@ -347,10 +370,8 @@ export function InviteCodesClient({ origin }: { origin: string }) {
       icon={Plus}
       fullWidth={isPhone}
       variant="gradient"
-      // New code lands with its panel in the forms PR.
-      disabled
+      onClick={() => setOpen({ kind: 'new' })}
       style={{
-        ...PENDING_BUTTON,
         height: isPhone ? 42 : 36,
         fontSize: isPhone ? 14 : 13,
         borderRadius: 9,
@@ -376,8 +397,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
             type="button"
             icon={Plus}
             variant="gradient"
-            disabled
-            style={PENDING_BUTTON}
+            onClick={() => setOpen({ kind: 'new' })}
           >
             {COPY.newCode}
           </AdminButton>
@@ -634,14 +654,37 @@ export function InviteCodesClient({ origin }: { origin: string }) {
       </div>
       {body}
 
+      {open?.kind === 'new' && (
+        <NewCodePanel
+          create={api.create}
+          onClose={() => setOpen(null)}
+          onCreated={(made, posterNext) => {
+            setOpen(null);
+            if (posterNext) router.push(postersHref({ code: made.id }));
+            else void load();
+          }}
+        />
+      )}
       {openRow && open?.kind === 'code' && (
         <CodePanel
           code={openRow}
           status={inviteStatus(openRow, now)}
           api={api}
           onCopy={() => copyLink(openRow)}
+          onAddSeats={() =>
+            setOpen({ kind: 'edit', id: openRow.id, focusSeats: true })
+          }
           onRevoke={() => setOpen({ kind: 'revoke', id: openRow.id })}
           onReactivate={() => setOpen({ kind: 'reactivate', id: openRow.id })}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      {openRow && open?.kind === 'edit' && (
+        <EditCodePanel
+          code={openRow}
+          now={now}
+          focusSeats={open.focusSeats}
+          onSave={(edit) => void saveEdit(openRow, edit)}
           onClose={() => setOpen(null)}
         />
       )}

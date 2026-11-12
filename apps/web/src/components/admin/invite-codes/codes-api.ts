@@ -61,6 +61,30 @@ const isRedemption = (value: unknown): value is InviteCodeRedemption =>
 /** A payload that isn't the route's documented shape. Never shown as text. */
 class ShapeError extends Error {}
 
+/** A taken custom code: the 409 carries a free suggestion (`12/code-taken-d`). */
+export class CodeTakenError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly suggestion: string,
+  ) {
+    super('code_taken');
+    this.name = 'CodeTakenError';
+  }
+}
+
+export interface CodeEdit {
+  label?: string | null;
+  maxUses?: number;
+  expiresAt?: string | null;
+}
+
+export interface NewCode {
+  label?: string;
+  maxUses: number;
+  expiresAt?: string;
+  code?: string;
+}
+
 export type GetToken = () => Promise<string | null>;
 
 /** The envelope's `data`, unchecked; each caller narrows it with a guard. */
@@ -83,6 +107,15 @@ const call = async (
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const body: unknown = await res.json().catch(() => null);
+  if (
+    res.status === 409 &&
+    isRecord(body) &&
+    body['error'] === 'code_taken' &&
+    isText(body['code']) &&
+    isText(body['suggestion'])
+  ) {
+    throw new CodeTakenError(body['code'], body['suggestion']);
+  }
   if (!res.ok || !isRecord(body) || body['success'] !== true) {
     throw new ShapeError(`status ${res.status}`);
   }
@@ -110,6 +143,10 @@ export const codesApi = (getToken: GetToken) => ({
       throw new ShapeError('total');
     return data['total'];
   },
+  create: (body: NewCode) =>
+    oneCode(call(getToken, BASE, { method: 'POST', body })),
+  edit: (id: string, body: CodeEdit) =>
+    oneCode(call(getToken, `${BASE}/${id}`, { method: 'PATCH', body })),
   revoke: (id: string) =>
     oneCode(call(getToken, `${BASE}/${id}/revoke`, { method: 'POST' })),
   reactivate: (id: string, expiresAt: string | null | undefined) =>

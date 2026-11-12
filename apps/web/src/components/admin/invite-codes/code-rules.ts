@@ -1,14 +1,17 @@
 /**
- * The invite-codes admin's pure rules (5b): what a code's row says, and which
- * expiry choice a picker starts on.
+ * The invite-codes admin's pure rules (5b): what a code's row says, what a new
+ * code is suggested from, and which expiry choice a form starts on.
  */
 import type { AdminInviteCode, Role } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
-import type { InviteStatus } from '@/lib/poster/poster-rule';
+import { parseSeats, type InviteStatus } from '@/lib/poster/poster-rule';
 
 const COPY = ADMIN_COPY.codesPage;
+
+/** Longest custom code the API takes. */
+export const MAX_CODE_LENGTH = 20;
 
 /** Status chip tones, from `07/invite-codes`. */
 export const STATUS_KIND: Record<InviteStatus, StatusKind> = {
@@ -44,6 +47,27 @@ export const makerName = (code: Pick<AdminInviteCode, 'createdByHandle'>) =>
 /** A role worth naming beside a joiner; a plain member says nothing. */
 export const roleLabel = (role: Role | null): string | null =>
   role && role !== 'user' ? COPY.panel.roles[role] : null;
+
+/**
+ * The code a label suggests: its letters and numbers, uppercased, cut to 20.
+ * A label with no letters suggests nothing, and a derived "Poster ·" prefix
+ * typed into it is dropped, as `07/new-code-in-flow` draws GLOBEHALL.
+ */
+export const suggestCode = (label: string): string => {
+  if (!/[a-z]/i.test(label)) return '';
+  return label
+    .replace(/^\s*poster\s*·\s*/i, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase()
+    .slice(0, MAX_CODE_LENGTH);
+};
+
+/** What a typed code becomes: letters and numbers only, uppercased. */
+export const cleanCode = (typed: string): string =>
+  typed
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase()
+    .slice(0, MAX_CODE_LENGTH);
 
 export type ExpiryChoice = 'keep' | 'never' | 'd7' | 'd30' | 'd90';
 
@@ -88,3 +112,13 @@ export const expiresAtFor = (
   if (choice === 'never') return null;
   return new Date(now.getTime() + DAYS[choice] * 86_400_000).toISOString();
 };
+
+/** The seats a picker holds: a preset, or Other's typed count (null if bad). */
+export const seatsFrom = (
+  choice: `${number}` | 'other',
+  typed: string,
+): number | null => (choice === 'other' ? parseSeats(typed) : Number(choice));
+
+/** The inline error for seats below what's used, or null when they fit. */
+export const seatsFloorError = (seats: number | null, used: number) =>
+  seats != null && seats < used ? COPY.form.seatsFloor(used) : null;
