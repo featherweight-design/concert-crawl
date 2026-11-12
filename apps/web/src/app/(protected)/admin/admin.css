@@ -316,6 +316,12 @@
   }
 }
 @media (max-width: 720px) {
+  /* Panel's phoneCompact variant: 03/health-mobile, 04/venue-mobile. */
+  .admin-panel-phone-compact {
+    --panel-title-size: 14px;
+    --panel-head-pad: 14px 14px 0;
+    --panel-body-pad: 10px 14px 14px;
+  }
   .health-desk {
     display: none;
   }

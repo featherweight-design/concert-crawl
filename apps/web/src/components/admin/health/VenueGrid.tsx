@@ -104,8 +104,10 @@ export const VenueGrid = ({
     <div data-testid="venue-grid">
       <Panel
         title={copy.title}
-        // The board's 14px gap under the title and 16px bottom pad.
+        // The board's 14px gap under the title and 16px bottom pad; the phone
+        // board draws the compact panel.
         padding="14px 18px 16px"
+        phoneCompact
         action={
           // The phone board has no Crawl runs link or footer (gap G12).
           <Link
