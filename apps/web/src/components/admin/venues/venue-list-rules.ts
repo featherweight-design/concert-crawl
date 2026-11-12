@@ -91,8 +91,8 @@ const runLine = (run: VenueLatestRun, now: Date): string => {
  * "Failed: calendar block not found". A hand-paused venue reads its pause
  * instead, "Paused · Oct 28", and so does an auto-paused one once its nightly
  * runs are skips for the pause: the failure that paused it is no longer the
- * latest run. HOLD: the board's "Paused by Hugh" needs a name, and the API
- * sends `crawlPausedBy` as a user id; the auto-paused row's failure reason,
+ * latest run, and names who paused it when someone did: "Paused by Hugh ·
+ * Oct 28" (`A3/03/venues-select-d`). HOLD: the auto-paused row's failure reason,
  * "since Nov 10" on Unchanged and "off-season until Apr 1" have no data yet.
  */
 export const latestRunLine = (
@@ -107,12 +107,13 @@ export const latestRunLine = (
     (chips.crawling === 'paused' ||
       (chips.crawling === 'auto_paused' && pauseSkip))
   ) {
-    return RUN.pausedOn(
-      formatISODate(venue.crawlPausedAt, DENVER_TIME_ZONE, {
-        month: 'short',
-        day: 'numeric',
-      }),
-    );
+    const date = formatISODate(venue.crawlPausedAt, DENVER_TIME_ZONE, {
+      month: 'short',
+      day: 'numeric',
+    });
+    return venue.crawlPausedByName
+      ? RUN.pausedBy(venue.crawlPausedByName, date)
+      : RUN.pausedOn(date);
   }
   return venue.latestRun === null ? RUN.never : runLine(venue.latestRun, now);
 };

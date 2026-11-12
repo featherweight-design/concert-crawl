@@ -15,8 +15,17 @@ const { apiPost } = vi.hoisted(() => ({ apiPost: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
   apiClient: { get: vi.fn(), put: vi.fn(), post: apiPost, delete: vi.fn() },
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    constructor(
+      public status: number,
+      message: string,
+    ) {
+      super(message);
+    }
+  },
 }));
+
+const { ApiError } = await import('@/lib/api');
 
 const { pauseCrawling } = await import('./venues');
 
@@ -61,5 +70,27 @@ describe('pauseCrawling — request body', () => {
     expect(apiPost.mock.calls[0]?.[2]).toStrictEqual({
       reason: 'waiting_on_permission',
     });
+  });
+});
+
+describe('pauseCrawling — outcome', () => {
+  it('says ok when the API takes it', async () => {
+    await expect(
+      pauseCrawling('venue-1', { reason: 'waiting_on_permission' }),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it("returns a 422's message for the panel to show inline", async () => {
+    apiPost.mockRejectedValue(new ApiError(422, 'Pick a date after today'));
+    await expect(
+      pauseCrawling('venue-1', { reason: 'waiting_on_permission' }),
+    ).resolves.toEqual({ ok: false, error: 'Pick a date after today' });
+  });
+
+  it('returns a bare failure for any other refusal', async () => {
+    apiPost.mockRejectedValue(new ApiError(500, 'Request failed'));
+    await expect(
+      pauseCrawling('venue-1', { reason: 'waiting_on_permission' }),
+    ).resolves.toEqual({ ok: false, error: null });
   });
 });

@@ -23,12 +23,32 @@ vi.mock('next/navigation', () => ({
 
 import { CrawlPauseControl } from './CrawlPauseControl';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import type { CrawlPauseControlProps } from './definitions/types';
 
 const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.crawlPause;
+const PANEL = ADMIN_COPY.pausePanel;
+
+const venue = (
+  over: Partial<CrawlPauseControlProps['venue']> = {},
+): CrawlPauseControlProps['venue'] => ({
+  id: 'venue-1',
+  name: 'Ball Arena',
+  crawlPausedAt: null,
+  crawlPauseReason: null,
+  crawlPauseNote: null,
+  consecutiveFailures: 0,
+  crawlPausedByName: null,
+  ...over,
+});
 
 describe('CrawlPauseControl', () => {
   beforeEach(() => {
-    mockPauseCrawling.mockResolvedValue(undefined);
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    mockPauseCrawling.mockResolvedValue({ ok: true });
     mockResumeCrawling.mockResolvedValue(undefined);
   });
   afterEach(() => {
@@ -36,47 +56,69 @@ describe('CrawlPauseControl', () => {
     vi.clearAllMocks();
   });
 
-  it('will not pause without a reason', () => {
-    render(<CrawlPauseControl venueId="venue-1" crawlPausedAt={null} />);
-    const button = screen.getByRole('button', { name: COPY.pauseButton });
-    expect(button.hasAttribute('disabled')).toBe(true);
-
-    fireEvent.change(screen.getByLabelText(COPY.reasonLabel), {
-      target: { value: '   ' },
-    });
-    expect(button.hasAttribute('disabled')).toBe(true);
-  });
-
-  it('pauses with the trimmed reason', async () => {
-    render(<CrawlPauseControl venueId="venue-1" crawlPausedAt={null} />);
-    fireEvent.change(screen.getByLabelText(COPY.reasonLabel), {
-      target: { value: '  venue asked us to stop  ' },
-    });
+  it('opens the Pause panel for this venue and sends the full body', async () => {
+    render(<CrawlPauseControl venue={venue()} showCount={235} />);
     fireEvent.click(screen.getByRole('button', { name: COPY.pauseButton }));
+
+    expect(screen.getByText(PANEL.title('Ball Arena'))).toBeTruthy();
+    expect(screen.getByText(PANEL.body(235))).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
 
     await waitFor(() =>
       expect(mockPauseCrawling).toHaveBeenCalledWith('venue-1', {
-        reason: 'other',
-        note: 'venue asked us to stop',
+        reason: 'waiting_on_permission',
+        resume: { mode: 'manual' },
       }),
     );
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(screen.queryByText(PANEL.title('Ball Arena'))).toBeNull();
   });
 
-  it('shows when a paused venue was paused, and resumes it', async () => {
+  it('closes on a failed save and offers Try again', async () => {
+    mockPauseCrawling.mockResolvedValueOnce({ ok: false, error: null });
+    render(<CrawlPauseControl venue={venue()} showCount={1} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.pauseButton }));
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
+
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(mockPauseCrawling).toHaveBeenCalledTimes(2));
+  });
+
+  it('says who paused it, when and why, and resumes it', async () => {
     render(
       <CrawlPauseControl
-        venueId="venue-1"
-        crawlPausedAt="2026-10-28T15:00:00.000Z"
+        venue={venue({
+          crawlPausedAt: '2026-10-28T15:00:00.000Z',
+          crawlPausedByName: 'Hugh',
+          crawlPauseReason: 'waiting_on_permission',
+        })}
+        showCount={18}
       />,
     );
-    expect(screen.getByText(/Paused since/)).toBeTruthy();
-    expect(screen.queryByLabelText(COPY.reasonLabel)).toBeNull();
+    expect(screen.getByTestId('crawl-pause-line').textContent).toBe(
+      'Paused by Hugh, Oct 28: waiting on permission.',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: COPY.resumeButton }));
     await waitFor(() =>
       expect(mockResumeCrawling).toHaveBeenCalledWith('venue-1'),
     );
     expect(mockPauseCrawling).not.toHaveBeenCalled();
+  });
+
+  it('reads an auto-pause without the held re-crawl hint', () => {
+    render(
+      <CrawlPauseControl
+        venue={venue({
+          crawlPausedAt: '2026-10-28T15:00:00.000Z',
+          consecutiveFailures: 3,
+        })}
+        showCount={14}
+      />,
+    );
+    expect(screen.getByTestId('crawl-pause-line').textContent).toBe(
+      'Auto-paused after 3 failures.',
+    );
   });
 });

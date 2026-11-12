@@ -11,6 +11,7 @@ import type {
   VenueGuideChip,
   VenuePlatform,
 } from '@concert-crawl/types';
+import type { PauseOutcome } from '@/components/admin/venues/pause-rules';
 import { buildUpdateVenueBody } from './build-update-venue-body';
 
 async function getToken(): Promise<string> {
@@ -158,18 +159,28 @@ export async function pauseVenue(id: string): Promise<void> {
 
 // Sends the whole pause body (reason, note, resume) to the API, as given. A
 // reason-only pause is a valid body: the API defaults resume to manual.
+// A refusal comes back as a value, not a throw, because a server action's
+// thrown message is redacted in production: the Pause panel shows the API's
+// 422 date errors ("Pick a date after today") inline, so it needs the text.
 export async function pauseCrawling(
   id: string,
   body: CrawlPauseRequest,
-): Promise<void> {
+): Promise<PauseOutcome> {
   const token = await getToken();
-  await apiClient.post<Venue>(
-    `/v1/admin/venues/${id}/crawl-pause`,
-    token,
-    body,
-  );
+  try {
+    await apiClient.post<Venue>(
+      `/v1/admin/venues/${id}/crawl-pause`,
+      token,
+      body,
+    );
+  } catch (err: unknown) {
+    if (!(err instanceof ApiError)) throw err;
+    console.warn('pauseCrawling: refused', { id, status: err.status });
+    return { ok: false, error: err.status === 422 ? err.message : null };
+  }
   revalidatePath('/admin/venues');
   revalidatePath(`/admin/venues/${id}`);
+  return { ok: true };
 }
 
 export async function resumeCrawling(id: string): Promise<void> {

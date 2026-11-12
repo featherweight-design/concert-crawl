@@ -154,6 +154,15 @@ describe('venue list rules', () => {
     ).toBe('Paused · Oct 28');
   });
 
+  it('names who paused it when someone did', () => {
+    expect(
+      lineFor(run({ status: 'skipped', reason: 'crawl_paused' }), {
+        crawlPausedAt: '2026-10-28T18:00:00Z',
+        crawlPausedByName: 'Hugh',
+      }),
+    ).toBe('Paused by Hugh · Oct 28');
+  });
+
   it('reads a partial run as partial, whatever its reason', () => {
     expect(
       lineFor(
