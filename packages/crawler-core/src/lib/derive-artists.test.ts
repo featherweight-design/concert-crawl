@@ -619,6 +619,91 @@ describe('"X & Friends" is X', () => {
   });
 });
 
+describe('a joined name settled by evidence', () => {
+  const known = (whole: string[], parts: string[]) => ({
+    whole: async (name: string) => whole.includes(name),
+    part: async (name: string) => parts.includes(name),
+  });
+  const model = (headliners: string[]) =>
+    vi.fn(async () => ({ isConcert: true, headliners, supportingArtists: [] }));
+  const ask = (
+    title: string,
+    observed: string[],
+    answer: string[],
+    evidence: ReturnType<typeof known>,
+  ) =>
+    deriveArtists(
+      { ...base, title, observedPerformers: observed },
+      model(answer),
+      evidence,
+    );
+
+  it('keeps a known whole name whole even when the model split it', async () => {
+    const result = await ask(
+      'Iron & Wine',
+      ['Iron & Wine'],
+      ['Iron', 'Wine'],
+      known(['Iron & Wine'], []),
+    );
+    expect(result.headliners).toEqual(['Iron & Wine']);
+  });
+
+  it('splits two known acts even when the model kept them as one', async () => {
+    const result = await ask(
+      'Nas & The Roots',
+      ['Nas & The Roots'],
+      ['Nas & The Roots'],
+      known([], ['Nas', 'The Roots']),
+    );
+    expect(result.headliners).toEqual(['Nas', 'The Roots']);
+  });
+
+  it('writes nothing for a name the evidence cannot settle, and keeps the model guess beside it', async () => {
+    const result = await ask(
+      'Jade Cicada & Mickman',
+      ['Jade Cicada & Mickman'],
+      ['Jade Cicada', 'Mickman'],
+      known([], []),
+    );
+    expect(result.headliners).toBeNull();
+    expect(result.supportingArtists).toBeNull();
+    expect(result.unresolvedJoined).toEqual([
+      { name: 'Jade Cicada & Mickman', guess: ['Jade Cicada', 'Mickman'] },
+    ]);
+  });
+
+  it('is unchanged without evidence', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Jade Cicada & Mickman',
+        observedPerformers: ['Jade Cicada & Mickman'],
+      },
+      model(['Jade Cicada & Mickman']),
+    );
+    expect(result.headliners).toEqual(['Jade Cicada & Mickman']);
+    expect(result.unresolvedJoined).toBeUndefined();
+  });
+
+  it('adds a presenter only when it is a known artist', async () => {
+    const title = (presenter: string) => `${presenter} Presents: Hallow Rocks`;
+    const withTapeB = await ask(
+      title('Tape B'),
+      ['Jykl & Hyde'],
+      ['Jykl & Hyde'],
+      known(['Jykl & Hyde'], ['Tape B']),
+    );
+    expect(withTapeB.headliners).toEqual(['Tape B', 'Jykl & Hyde']);
+    const withKgnu = await ask(
+      title('KGNU'),
+      ['Jykl & Hyde'],
+      ['Jykl & Hyde'],
+      known(['Jykl & Hyde'], []),
+    );
+    expect(withKgnu.headliners).toEqual(['Jykl & Hyde']);
+  });
+});
+
 describe('a joined name the venue lists as separate acts', () => {
   const ask = (title: string, performers: string[], headliners: string[]) =>
     deriveArtists(
