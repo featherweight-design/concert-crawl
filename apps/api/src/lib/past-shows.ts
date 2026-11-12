@@ -34,8 +34,6 @@ import { MT_TIME_ZONE, todayInDenver } from './time.js';
 
 export const PAST_SHOWS_PAGE = 30;
 
-const attended = alias(events, 'attended');
-
 const dateLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',
   month: 'short',
@@ -81,6 +79,9 @@ export const loadPastShows = async ({
   }
 
   if (scope === 'venues') {
+    // Built here, not at module load: route unit tests mock the db package
+    // without `events`, and a module-level alias would throw on import.
+    const attended = alias(events, 'attended');
     // Venues the caller has already been to.
     conditions.push(
       exists(
