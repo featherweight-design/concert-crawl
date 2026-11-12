@@ -38,7 +38,7 @@ export async function sweepExpiredPageBodies(
     .select({
       bodies: sql<number>`count(*)::int`,
       bytes:
-        sql<number>`coalesce(sum(octet_length(${crawlRunPages.htmlGz})), 0)::bigint`.mapWith(
+        sql<number>`coalesce(sum(pg_column_size(${crawlRunPages.htmlGz})), 0)::bigint`.mapWith(
           Number,
         ),
     })

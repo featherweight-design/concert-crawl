@@ -104,6 +104,17 @@ describe('GET /v1/admin/crawl/pages/:id/body', () => {
     expect(await reasonOf({ bodyTruncated: true })).toBe('too_large');
   });
 
+  it('treats a body past its expiry as gone even before the sweep nulls it', async () => {
+    setAuth('admin');
+    const id = await seedPage({
+      htmlGz: gzipSync('<html>old</html>'),
+      bodyExpiresAt: new Date(Date.now() - 1000),
+    });
+    const res = await body(id);
+    expect(res.status).toBe(404);
+    expect(((await res.json()) as { reason: string }).reason).toBe('expired');
+  });
+
   it('404s an unknown page and 400s a malformed id', async () => {
     setAuth('admin');
     expect((await body('00000000-0000-0000-0000-000000000099')).status).toBe(

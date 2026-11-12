@@ -39,7 +39,11 @@ vi.mock('@concert-crawl/logger', () => ({ reportFailure: vi.fn() }));
 
 import { reportFailure } from '@concert-crawl/logger';
 import type { FetchLogEntry } from './fetch-log.js';
-import { PAGE_INSERT_CHUNK, insertCrawlRun } from './record-run.js';
+import {
+  PAGE_INSERT_BODY_BYTES,
+  PAGE_INSERT_CHUNK,
+  insertCrawlRun,
+} from './record-run.js';
 
 const entries = (count: number): FetchLogEntry[] =>
   Array.from({ length: count }, (_, index) => ({
@@ -91,6 +95,37 @@ describe('insertCrawlRun page flushing', () => {
 
     expect(crawlRun.id).toBe('run-1');
     expect(calls.pageBatches).toHaveLength(3);
+    expect(reportFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it('splits a log whose bodies are large into byte-bounded chunks', async () => {
+    const big = Buffer.alloc(Math.floor(PAGE_INSERT_BODY_BYTES * 0.6));
+    const log = entries(4).map((entry) => ({ ...entry, htmlGz: big }));
+
+    await insertCrawlRun(run, { entries: log });
+
+    // 0.6 of the budget each: one body per chunk once a second would pass it.
+    expect(calls.pageBatches.map((batch) => batch.length)).toEqual([
+      1, 1, 1, 1,
+    ]);
+  });
+
+  it('retries a failed chunk without its bodies, so the page metadata survives', async () => {
+    calls.failBatch = 0;
+    const log = entries(2).map((entry) => ({
+      ...entry,
+      htmlGz: Buffer.from('gz'),
+      bodyExpiresAt: new Date(),
+    }));
+
+    await insertCrawlRun(run, { entries: log });
+
+    expect(calls.pageBatches).toHaveLength(2);
+    const [, retry] = calls.pageBatches;
+    expect(retry).toHaveLength(2);
+    expect(
+      retry?.every((row) => (row as { htmlGz: unknown }).htmlGz === null),
+    ).toBe(true);
     expect(reportFailure).toHaveBeenCalledTimes(1);
   });
 });

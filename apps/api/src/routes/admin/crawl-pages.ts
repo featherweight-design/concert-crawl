@@ -46,11 +46,14 @@ crawlPagesAdminRouter.get(
       return ctx.json({ success: false, error: 'Page not found' }, 404);
     }
 
-    if (page.htmlGz === null) {
+    // A body past its window is gone even before the sweep has nulled it.
+    const expired =
+      page.bodyExpiresAt !== null && page.bodyExpiresAt.getTime() <= Date.now();
+    if (page.htmlGz === null || expired) {
       // Why there is no body, so the viewer can say so.
       const reason = page.bodyTruncated
         ? 'too_large'
-        : page.bodyExpiresAt !== null
+        : expired || page.bodyExpiresAt !== null
           ? 'expired'
           : 'not_stored';
       return ctx.json(
