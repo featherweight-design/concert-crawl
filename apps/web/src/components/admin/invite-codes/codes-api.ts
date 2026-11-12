@@ -4,16 +4,19 @@
  * before it's used (the web app carries no Zod), so a shape drift fails into
  * Couldn't load or the save-failed toast rather than drawing bad rows.
  */
-import type {
-  AdminInviteCode,
-  InviteCode,
-  InviteCodeRedemption,
-  InviteCodeRedemptionsResponse,
-  Role,
+import {
+  isRole,
+  type AdminInviteCode,
+  type InviteCode,
+  type InviteCodeRedemption,
+  type InviteCodeRedemptionsResponse,
+  type Role,
 } from '@concert-crawl/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const BASE = '/v1/admin/invite-codes';
+/** How long a call may hang before it fails into Couldn't load or the toast. */
+const REQUEST_TIMEOUT_MS = 15_000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -24,15 +27,8 @@ const isTextOrNull = (value: unknown): value is string | null =>
 const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
-const ROLES: readonly Role[] = [
-  'admin',
-  'promoter',
-  'beta',
-  'sub_admin',
-  'user',
-];
 const isRoleOrNull = (value: unknown): value is Role | null =>
-  value === null || ROLES.some((role) => role === value);
+  value === null || isRole(value);
 
 export const isInviteCode = (value: unknown): value is InviteCode =>
   isRecord(value) &&
@@ -75,13 +71,16 @@ const call = async (
 ): Promise<unknown> => {
   const token = await getToken();
   if (!token) throw new ShapeError('no token');
+  const hasBody = init.body !== undefined;
   const res = await fetch(`${API_BASE}${path}`, {
     method: init.method ?? 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     },
-    ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+    ...(hasBody ? { body: JSON.stringify(init.body) } : {}),
+    // A hung request must not trap the admin in a pending confirm.
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok || !isRecord(body) || body['success'] !== true) {

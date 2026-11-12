@@ -49,7 +49,18 @@ const pillStyle = (on: boolean): CSSProperties => ({
     : 'var(--surface-1)',
 });
 
-/** One-of-many pills (`07/edit-an-invite-code`), as a radio group. */
+/** Arrow keys that move a radio group's choice, and which way. */
+const ARROW_STEP: Record<string, number> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+};
+
+/**
+ * One-of-many pills (`07/edit-an-invite-code`), as a radio group: one Tab
+ * stop (the checked pill), and the arrow keys move the choice.
+ */
 export const Pills = <T extends string>({
   label,
   options,
@@ -65,6 +76,22 @@ export const Pills = <T extends string>({
     role="radiogroup"
     aria-label={label}
     style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+    onKeyDown={(evt) => {
+      const step = ARROW_STEP[evt.key];
+      if (step === undefined) return;
+      evt.preventDefault();
+      const at = options.findIndex((option) => option.value === value);
+      const next = options[(at + step + options.length) % options.length];
+      if (!next) return;
+      onChange(next.value);
+      const group = evt.currentTarget;
+      // Focus follows the choice once it has rendered as checked.
+      requestAnimationFrame(() =>
+        group
+          .querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')
+          ?.focus(),
+      );
+    }}
   >
     {options.map((option) => (
       <button
@@ -72,6 +99,7 @@ export const Pills = <T extends string>({
         type="button"
         role="radio"
         aria-checked={option.value === value}
+        tabIndex={option.value === value ? 0 : -1}
         onClick={() => onChange(option.value)}
         style={pillStyle(option.value === value)}
       >

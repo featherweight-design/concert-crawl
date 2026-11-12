@@ -2069,10 +2069,13 @@ export const ADMIN_COPY = {
         `Make one for a friend or a poster. Each can seat up to ${max} people.`,
     },
     menu: {
-      trigger: 'Code actions',
+      // Names the row, so a screen reader can tell the menus apart.
+      trigger: (code: string) => `Actions for ${code}`,
+      columnLabel: 'Code actions',
       copyLink: 'Copy link',
       copyLinkEnded: 'Shows “This code has ended” when opened.',
       copied: 'Link copied',
+      copyFailed: "Couldn't copy the link.",
       makePoster: 'Make a poster',
       makePosterHint: 'Opens Posters with this code picked.',
       seeWhoJoined: 'See who joined',
@@ -2117,11 +2120,18 @@ export const ADMIN_COPY = {
     revoke: {
       title: (code: string) => `Revoke ${code}?`,
       body: (code: string, joined: number) =>
-        `Nobody new can join with ${code}. ${
-          joined === 1
-            ? 'The 1 person who already joined keeps their account.'
-            : `The ${joined} people who already joined keep their accounts.`
-        } A poster with this code will show “This code has ended” when scanned.`,
+        [
+          `Nobody new can join with ${code}.`,
+          // Nobody has joined yet: there are no accounts to reassure about.
+          joined === 0
+            ? null
+            : joined === 1
+              ? 'The 1 person who already joined keeps their account.'
+              : `The ${joined} people who already joined keep their accounts.`,
+          'A poster with this code will show “This code has ended” when scanned.',
+        ]
+          .filter(Boolean)
+          .join(' '),
       keep: 'Keep it',
       confirm: 'Revoke',
     },
