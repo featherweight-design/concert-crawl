@@ -54,6 +54,7 @@ import {
   type Tier,
 } from '@concert-crawl/types';
 import { followedArtistsCondition } from '../lib/artist-follows.js';
+import { markPublicRead } from '../lib/edge-cache.js';
 import { resolveArtistSlugs } from '../lib/artist-slugs.js';
 import { getEventWatchers } from '../lib/event-watchers.js';
 import {
@@ -381,7 +382,9 @@ eventsRouter.get(
 
     const where = and(...conditions);
 
-    const countResult = await db
+    // The count and the page do not depend on each other, so they run together:
+    // one round trip of latency instead of two (perf audit rec 6).
+    const countQuery = db
       .select({ total: count() })
       .from(events)
       .innerJoin(
@@ -390,9 +393,7 @@ eventsRouter.get(
       )
       .where(where);
 
-    const total = countResult[0]?.total ?? 0;
-
-    const rows = await db
+    const rowsQuery = db
       .select({
         id: events.id,
         isSoldOut: isSoldOutSql(),
@@ -451,6 +452,9 @@ eventsRouter.get(
       .limit(limit)
       .offset(offset);
 
+    const [countResult, rows] = await Promise.all([countQuery, rowsQuery]);
+    const total = countResult[0]?.total ?? 0;
+
     // followedArtists overlay (#763 PR 6, §9.2): one extra query for any
     // signed-in viewer with results (the matcher must load Spotify-sourced
     // follow names to decide presence); anonymous and empty-page requests
@@ -471,8 +475,11 @@ eventsRouter.get(
       .filter((row) => row.priceSource === 'community')
       .map((row) => row.id);
 
-    const vendorByEventId: Record<string, string | null> = {};
-    if (communityEventIds.length > 0) {
+    const loadVendorByEventId = async (): Promise<
+      Record<string, string | null>
+    > => {
+      const vendorByEventId: Record<string, string | null> = {};
+      if (communityEventIds.length === 0) return vendorByEventId;
       const vendorRows = await db
         .select({
           eventId: priceSubmissions.eventId,
@@ -498,7 +505,8 @@ eventsRouter.get(
           vendorByEventId[vRow.eventId] = vRow.vendor;
         }
       }
-    }
+      return vendorByEventId;
+    };
     // priceByTier on the browse list endpoint — closes issue #787 (browse chip
     // parity). The consumer EventCard reads `event.priceByTier` directly via
     // `pickBrowseHeadline()`, which mirrors `pickTierHeadline` /
@@ -507,9 +515,11 @@ eventsRouter.get(
     // EventCard for events the API doesn't surface priceByTier for (defensive
     // only — the list endpoint always populates it for events with at least
     // one corroborated submission).
-    const priceByTierByEventId = await loadPriceByTierByEventId(
-      rows.map((row) => row.id),
-    );
+    // Both read only the page's event ids, so they run together.
+    const [vendorByEventId, priceByTierByEventId] = await Promise.all([
+      loadVendorByEventId(),
+      loadPriceByTierByEventId(rows.map((row) => row.id)),
+    ]);
 
     const enrichedRows = rows.map((row) => {
       const {
@@ -537,6 +547,15 @@ eventsRouter.get(
       };
     });
 
+    // Anonymous: the same for everyone, so the edge may hold it. A signed-in
+    // list can carry the followedArtists overlay and taste/following scopes, so
+    // it stays out of any shared cache. Set after the reads, never on an error.
+    if (listAuth?.userId) {
+      ctx.header('Vary', 'Authorization', { append: true });
+      ctx.header('Cache-Control', 'private, no-store');
+    } else {
+      markPublicRead(ctx);
+    }
     return ctx.json({
       success: true,
       data: { data: enrichedRows, total, limit, offset, followingApplied },
@@ -565,6 +584,9 @@ eventsRouter.get('/genres', async (ctx) => {
     sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL`,
   );
   const rawGenres = parseGenreRows(rows);
+  // Identical for every caller: the edge may hold it. Set after the read, so a
+  // failure never carries it.
+  markPublicRead(ctx);
   return ctx.json({ success: true, data: bucketsPresentIn(rawGenres) });
 });
 
@@ -639,6 +661,7 @@ function markViewerScoped(ctx: Context, isAuthed: boolean): void {
   // would drop that and make a shared cache key on the wrong axis.
   ctx.header('Vary', 'Authorization', { append: true });
   if (isAuthed) ctx.header('Cache-Control', 'private, no-store');
+  else markPublicRead(ctx);
 }
 
 // GET /v1/events/:id — single event with venue and watching count
