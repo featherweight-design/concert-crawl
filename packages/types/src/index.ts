@@ -1828,6 +1828,7 @@ export interface PersonDetail {
     feedback: number;
   };
   recent: PersonRecent[];
+}
 
 // ── Admin venues (redesign 3a) ───────────────────────────────────────────────
 
