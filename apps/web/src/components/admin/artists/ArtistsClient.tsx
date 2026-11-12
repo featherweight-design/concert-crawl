@@ -1,0 +1,557 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { Music, Search } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import {
+  AdminButton,
+  ConfirmDialog,
+  CouldntLoad,
+  EmptyState,
+  PageSkeleton,
+  Pagination,
+  SaveFailedToast,
+  useIsPhone,
+} from '@/components/admin/primitives';
+import {
+  PAGE_SIZE,
+  StaleRowError,
+  artistsApi,
+  type AdminArtistRow,
+  type ArtistCounts,
+  type ArtistTab,
+  type ArtistWrite,
+  type ShowWindow,
+} from './artists-api';
+import { isToCheck } from './artist-rules';
+import { PENDING, SECONDARY_BUTTON, gradientBorder } from './artist-styles';
+import { ToCheckRow } from './ToCheckRow';
+
+const COPY = ADMIN_COPY.artists;
+
+const WINDOWS: ShowWindow[] = ['soon', 'later', 'none'];
+const WINDOW_COUNT: Record<ShowWindow, keyof ArtistCounts> = {
+  soon: 'to_check_soon',
+  later: 'to_check_later',
+  none: 'to_check_none',
+};
+
+/** A tab's count: 12px beside a desktop tab, 11px in a phone segment. */
+const Count = ({ value, phone }: { value: number | null; phone: boolean }) =>
+  value == null ? null : (
+    <span
+      style={{
+        fontSize: phone ? 11 : 12,
+        color: 'var(--fg-subtle)',
+        marginLeft: phone ? 5 : 6,
+      }}
+    >
+      {value}
+    </span>
+  );
+
+/** To check, Matched, Not artists: underline tabs, or the phone's segments. */
+const Tabs = ({
+  isPhone,
+  counts,
+}: {
+  isPhone: boolean;
+  counts: ArtistCounts | null;
+}) => {
+  const tabs: { key: ArtistTab; label: string }[] = [
+    { key: 'to_check', label: COPY.tabs.toCheck },
+    { key: 'matched', label: COPY.tabs.matched },
+    {
+      key: 'not_an_artist',
+      label: isPhone ? COPY.tabs.notArtistsShort : COPY.tabs.notArtists,
+    },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label={COPY.tabs.label}
+      style={
+        isPhone
+          ? {
+              display: 'flex',
+              padding: 3,
+              borderRadius: 10,
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+            }
+          : { display: 'flex', gap: 4, borderBottom: '1px solid var(--border)' }
+      }
+    >
+      {tabs.map((tab) => {
+        const on = tab.key === 'to_check';
+        return (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            // Matched and Not artists land in 4c B.
+            disabled={!on}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              whiteSpace: 'nowrap',
+              fontFamily: 'inherit',
+              color: on ? 'var(--fg)' : 'var(--fg-muted)',
+              border: 'none',
+              ...(on ? {} : PENDING),
+              ...(isPhone
+                ? {
+                    flex: 1,
+                    height: 32,
+                    borderRadius: 7,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    background: on ? 'var(--bg-elevated)' : 'transparent',
+                  }
+                : {
+                    height: 40,
+                    padding: '0 14px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    background: 'transparent',
+                    borderBottom: `2px solid ${on ? 'var(--signal)' : 'transparent'}`,
+                  }),
+            }}
+          >
+            {tab.label}
+            <Count value={counts ? counts[tab.key] : null} phone={isPhone} />
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+/** Show in 60 days, Later, No show: pills with counts. */
+const WindowChips = ({
+  value,
+  counts,
+  onChange,
+}: {
+  value: ShowWindow;
+  counts: ArtistCounts | null;
+  onChange: (next: ShowWindow) => void;
+}) => (
+  <div
+    role="group"
+    aria-label={COPY.windows.label}
+    style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+  >
+    {WINDOWS.map((key) => {
+      const on = key === value;
+      return (
+        <button
+          key={key}
+          type="button"
+          aria-pressed={on}
+          onClick={() => onChange(key)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 7,
+            height: 32,
+            padding: '0 12px',
+            borderRadius: 999,
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            color: on ? 'var(--fg)' : 'var(--fg-muted)',
+            ...(on
+              ? gradientBorder('var(--surface-2)')
+              : {
+                  border: '1px solid var(--border)',
+                  background:
+                    'color-mix(in oklab, var(--bg-elevated) 60%, transparent)',
+                }),
+          }}
+        >
+          {COPY.windows[key]}
+          {counts && (
+            <span
+              style={{
+                fontSize: 11.5,
+                color: on ? 'var(--fg-muted)' : 'var(--fg-subtle)',
+              }}
+            >
+              {counts[WINDOW_COUNT[key]]}
+            </span>
+          )}
+        </button>
+      );
+    })}
+  </div>
+);
+
+const SearchBox = ({
+  value,
+  onChange,
+  width,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  width: number | '100%';
+}) => (
+  <label
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      height: 36,
+      width,
+      padding: '0 12px',
+      borderRadius: 10,
+      border: '1px solid var(--border)',
+      background: 'var(--surface-1)',
+      color: 'var(--fg-subtle)',
+      boxSizing: 'border-box',
+    }}
+  >
+    <Search size={14} aria-hidden style={{ flex: 'none' }} />
+    <input
+      type="search"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={COPY.search}
+      aria-label={COPY.search}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        border: 'none',
+        outline: 'none',
+        background: 'transparent',
+        color: 'var(--fg)',
+        fontFamily: 'inherit',
+        fontSize: 13,
+      }}
+    />
+  </label>
+);
+
+/** A write in flight or failed: the row and where it sat, to put it back. */
+interface Pending {
+  row: AdminArtistRow;
+  index: number;
+  write: ArtistWrite;
+}
+
+/**
+ * 4c Artists (`06/artists-to-check`, `06/artists-mobile`): the page shell and
+ * the To check tab. Matched and Not artists land in 4c B; the artist search
+ * in 4c C.
+ */
+export function ArtistsClient() {
+  const { getToken } = useAuth();
+  const isPhone = useIsPhone();
+  const api = useMemo(() => artistsApi(getToken), [getToken]);
+  const [counts, setCounts] = useState<ArtistCounts | null>(null);
+  const [showWindow, setShowWindow] = useState<ShowWindow>('soon');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [list, setList] = useState<{
+    rows: AdminArtistRow[];
+    total: number;
+  } | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
+  const [failed, setFailed] = useState<Pending | null>(null);
+  const [confirming, setConfirming] = useState<AdminArtistRow | null>(null);
+  // Bumped on every load, so a stale response never lands over a newer one.
+  const generation = useRef(0);
+
+  // A keystroke per request would spend a query on every prefix of the name.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const loadCounts = useCallback(() => {
+    api
+      .counts()
+      .then(setCounts)
+      // The counts are a nicety; the list still works without them.
+      .catch(() => undefined);
+  }, [api]);
+
+  const load = useCallback(async () => {
+    const mine = ++generation.current;
+    setLoadFailed(false);
+    setList(null);
+    try {
+      const next = await api.list({
+        tab: 'to_check',
+        window: showWindow,
+        search,
+        offset: (page - 1) * PAGE_SIZE,
+      });
+      if (mine !== generation.current) return;
+      // A search lists every status; this tab keeps only its own rows.
+      setList(
+        search === ''
+          ? next
+          : (() => {
+              const rows = next.rows.filter(isToCheck);
+              return { rows, total: rows.length };
+            })(),
+      );
+    } catch {
+      if (mine === generation.current) setLoadFailed(true);
+    }
+  }, [api, showWindow, search, page]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
+
+  const setRowBusy = (id: string, on: boolean) =>
+    setBusy((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  /**
+   * Every write here moves the row out of To check, so it leaves at once and
+   * comes back where it was if the save fails (rule 10). A 409 means the row
+   * changed under the page: reload rather than retry a stale answer.
+   */
+  const runWrite = async (row: AdminArtistRow, write: ArtistWrite) => {
+    const index = list?.rows.findIndex((each) => each.id === row.id) ?? -1;
+    if (index < 0) return;
+    setFailed(null);
+    setRowBusy(row.id, true);
+    setList((prev) =>
+      prev
+        ? {
+            rows: prev.rows.filter((each) => each.id !== row.id),
+            total: Math.max(0, prev.total - 1),
+          }
+        : prev,
+    );
+    try {
+      await api.write(row.id, write);
+      loadCounts();
+    } catch (err) {
+      if (err instanceof StaleRowError) {
+        void load();
+        loadCounts();
+        return;
+      }
+      setList((prev) => {
+        if (!prev || prev.rows.some((each) => each.id === row.id)) return prev;
+        const rows = [...prev.rows];
+        rows.splice(Math.min(index, rows.length), 0, row);
+        return { rows, total: prev.total + 1 };
+      });
+      setFailed({ row, index, write });
+    } finally {
+      setRowBusy(row.id, false);
+    }
+  };
+
+  const toast = failed && (
+    <SaveFailedToast
+      what={failed.row.name}
+      saved={COPY.stillToCheck(failed.row.name)}
+      onRetry={() => void runWrite(failed.row, failed.write)}
+    />
+  );
+
+  let body;
+  if (loadFailed) {
+    body = <CouldntLoad page={COPY.title} onRetry={() => void load()} />;
+  } else if (list == null) {
+    body = (
+      <PageSkeleton
+        columns={isPhone ? 2 : 3}
+        rows={isPhone ? 5 : 6}
+        rowHeight={isPhone ? 138 : 94}
+      />
+    );
+  } else if (list.rows.length === 0) {
+    body =
+      search !== '' ? (
+        <EmptyState
+          title={COPY.noResults.title}
+          body={COPY.noResults.body}
+          action={
+            <AdminButton
+              type="button"
+              onClick={() => setSearchInput('')}
+              style={{ ...SECONDARY_BUTTON, height: 34 }}
+            >
+              {COPY.noResults.clear}
+            </AdminButton>
+          }
+        />
+      ) : (
+        <EmptyState
+          icon={Music}
+          title={COPY.empty.title}
+          body={COPY.empty[showWindow]}
+        />
+      );
+  } else {
+    body = (
+      <ul
+        data-testid="artists-list"
+        aria-label={COPY.tabs.toCheck}
+        style={{ listStyle: 'none', margin: 0, padding: 0 }}
+      >
+        {list.rows.map((row) => (
+          <ToCheckRow
+            key={row.id}
+            row={row}
+            isPhone={isPhone}
+            busy={busy.has(row.id)}
+            onWrite={(write) => void runWrite(row, write)}
+            onNotAnArtist={() => setConfirming(row)}
+          />
+        ))}
+      </ul>
+    );
+  }
+
+  const chips = (
+    <WindowChips
+      value={showWindow}
+      counts={counts}
+      onChange={(next) => {
+        setShowWindow(next);
+        setPage(1);
+      }}
+    />
+  );
+
+  const pager = list && search === '' && list.total > PAGE_SIZE && (
+    <Pagination
+      page={page}
+      pageSize={PAGE_SIZE}
+      total={list.total}
+      onPageChange={setPage}
+      showSizeSelector={false}
+      itemLabel={COPY.itemLabel}
+    />
+  );
+
+  const confirm = confirming && (
+    <ConfirmDialog
+      title={COPY.notAnArtistConfirm.title(confirming.name)}
+      body={COPY.notAnArtistConfirm.body}
+      confirmLabel={COPY.notAnArtistConfirm.confirm}
+      onCancel={() => setConfirming(null)}
+      onConfirm={() => {
+        setConfirming(null);
+        void runWrite(confirming, { kind: 'not_an_artist' });
+      }}
+    />
+  );
+
+  if (isPhone) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* The shell's bar carries the title; the count sits under it. */}
+        <p
+          style={{
+            margin: '-10px 0 0',
+            fontSize: 12.5,
+            color: 'var(--fg-muted)',
+            minHeight: 16,
+          }}
+        >
+          {counts ? COPY.toCheckCount(counts.to_check) : null}
+        </p>
+        <SearchBox value={searchInput} onChange={setSearchInput} width="100%" />
+        <Tabs isPhone counts={counts} />
+        {search === '' && chips}
+        {toast}
+        {body}
+        {pager}
+        {confirm}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 28,
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {COPY.title}
+        </h1>
+        <p
+          style={{
+            margin: '4px 0 0',
+            fontSize: 13.5,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {COPY.subtitle}
+        </p>
+      </div>
+      <Tabs isPhone={false} counts={counts} />
+      {toast}
+      <div
+        style={{
+          borderRadius: 14,
+          border: '1px solid var(--border)',
+          background: 'var(--surface-1)',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            padding: '12px 18px',
+            display: 'flex',
+            gap: 10,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          {search === '' && chips}
+          <span style={{ flex: 1 }} />
+          <SearchBox
+            value={searchInput}
+            onChange={setSearchInput}
+            width={220}
+          />
+        </div>
+        {list != null && list.rows.length > 0 ? (
+          body
+        ) : (
+          <div
+            style={{ borderTop: '1px solid var(--border)', padding: '0 18px' }}
+          >
+            {body}
+          </div>
+        )}
+      </div>
+      {pager}
+      {confirm}
+    </div>
+  );
+}

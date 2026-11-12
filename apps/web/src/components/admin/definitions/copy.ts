@@ -2436,120 +2436,61 @@ export const ADMIN_COPY = {
 
   // The Spotify artist match-review queue (#1115, PR-C). Deliberately plain:
   // this surface is exempt from the design pipeline.
+  // 4c Artists (`06/artists-*`). Board strings are verbatim; the rest went
+  // through copy-review.
   artists: {
-    eyebrow: 'Artists',
-    title: 'Spotify match',
+    title: 'Artists',
     subtitle:
-      'Ambiguous rows had more than one exact Spotify hit. Find on Spotify shows what the matcher saw, so you can pick one — a wrong photo is worse than no photo. Hide takes down the public page for a row that is not a performer, such as a festival ticket package.',
-    statusChips: {
-      ambiguous: 'Ambiguous',
-      unmatched: 'Unmatched',
-      no_match: 'No match',
+      'The photo and genre fans see on every show. Fix it here; reports land here too.',
+    tabs: {
+      label: 'Artist lists',
+      toCheck: 'To check',
       matched: 'Matched',
-      not_an_artist: 'Not an artist',
-      exhausted: 'Given up',
-      auto_matched: 'Auto-matched',
-      reported: 'Reported',
+      notArtists: 'Not artists',
+      notArtistsShort: 'Not',
     },
-    reportedNotice:
-      'Reported rows are artists a fan says we matched to the wrong act. Check the suggestion, then fix the match the usual way.',
-    reportsBadge: (count: number) =>
-      count === 1 ? '1 REPORT' : `${count} REPORTS`,
-    reports: {
-      toggleOpen: 'Reports',
-      toggleClose: 'Close',
-      matchedNow: 'MATCHED NOW',
-      suggested: 'SUGGESTED',
-      useThisArtist: 'Use this artist',
-      dismiss: 'Dismiss reports',
-      loading: 'Loading reports…',
-      loadError: 'Could not load the reports for this artist.',
-      dismissError: 'Could not dismiss the reports.',
-      noSuggestion: 'No link given',
-      followers: (count: number) =>
-        count === 1 ? '1 follower' : `${count} followers`,
-      noNextShow: 'No upcoming show',
-      age: (days: number) => (days < 1 ? 'today' : `${days}d`),
-      closesHint: (count: number) =>
-        `Any fix or dismiss closes ${count === 1 ? 'this report' : `all ${count} reports`}. A fix also tells the reporters.`,
-      reason: {
-        different_artist: 'Different artist, same name',
-        wrong_photo: 'Right music, wrong photo',
-        not_an_artist: 'Not an artist',
-        other: 'Something else',
-      },
+    toCheckCount: (count: number) => `${count} to check`,
+    windows: {
+      label: 'Next show',
+      soon: 'Show in 60 days',
+      later: 'Later',
+      none: 'No show',
     },
-    exhaustedNotice:
-      'Given up holds rows the match job stopped searching after three tries. They keep their public page, and resolving one by hand puts it back in the rotation.',
-    /** Chip label carrying its queue size, so the biggest backlog is visible. */
-    statusChipCount: (label: string, count: number) => `${label} (${count})`,
-    searchLabel: 'Search artists',
-    searchPlaceholder: 'Search every status',
-    searchNotice:
-      'Searching every status and every date. Clear the box to filter by chip.',
-    upcomingLabel: 'Only artists playing a show from today on',
-    upcomingNotice:
-      'Hiding artists whose last Denver date has passed. Resolving one changes nothing anybody can see, so the chips count only the rows still worth your time. Untick to list every artist we have ever derived.',
-    notAnArtist: 'Not an artist',
-    notAnArtistHint:
-      'Bingo nights, ticket packages, venue names. Marking one stops the match job working it, and stops the reaper deleting it only to have tomorrow’s backfill put it back.',
-    prev: 'Previous',
-    next: 'Next',
-    pageStatus: (from: number, to: number, total: number) =>
-      `${from}–${to} of ${total}`,
-    columns: {
-      name: 'Artist',
-      canonicalName: 'Canonical name',
-      status: 'Status',
-      spotifyArtistId: 'Spotify artist id',
-      checkedAt: 'Last checked',
-      actions: '',
+    search: 'Search artists',
+    kind: {
+      reported: 'Unsure',
+      unsure: 'Unsure',
+      no_match: 'No match',
+      check: 'Check',
     },
-    idPlaceholder: 'Spotify artist id',
-    noSpotifyId: '—',
-    pasteIdLabel: 'Or paste an id',
-    save: 'Save',
-    clear: 'Clear',
-    hide: 'Hide',
-    restore: 'Restore',
-    autoBadge: 'Auto',
+    reports: (count: number) =>
+      `${count} wrong-artist ${count === 1 ? 'report' : 'reports'}`,
+    matchedAutomatically: 'Matched automatically',
+    candidates: (name: string) => `Spotify artists for ${name}`,
+    searchCard: { title: 'Search', line: 'Pick someone else' },
+    useSelected: 'Use selected',
     looksRight: 'Looks right',
-    autoMatchChanged:
-      'That artist changed since the page loaded. The list has been refreshed.',
-    hiddenBadge: 'Hidden',
-    visibilityError: 'Could not change that artist’s visibility.',
-    findOnSpotify: 'Find on Spotify',
-    hideCandidates: 'Close',
-    // Covers both paths: opening the picker reads a saved snapshot, searching
-    // or refreshing hits Spotify.
-    candidatesLoading: 'Loading candidates…',
-    candidatesEmpty:
-      'Spotify returned nothing for this search. Try a different spelling.',
-    candidatesError: 'Could not search Spotify.',
-    candidatesDormant:
-      'Spotify search is not configured on the API, so candidates cannot be fetched. Paste an artist id below instead.',
-    candidatesRateLimited:
-      'Spotify is rate limiting us. Cooldowns usually run for hours, so searching again now will not help. The API logs record how long it asked for.',
-    candidatesCredentialsRejected:
-      'Spotify rejected our app credentials. Check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API.',
-    exactMatchBadge: 'Exact name',
-    useCandidate: 'Use this one',
-    candidateSearchLabel: 'Search Spotify for',
-    candidateSearch: 'Search',
-    openInSpotify: 'Open in Spotify',
-    noGenres: 'No genres listed',
-    /** `genres: null` — hydration never ran or failed, so we do not know. */
-    genresUnknown: 'Genres unavailable',
-    candidatesCachedAt: (when: string) => `Fetched from Spotify on ${when}.`,
-    candidatesRefresh: 'Refresh from Spotify',
-    loadingState: 'Loading artists…',
-    emptyState: 'Nothing in this queue.',
-    noSearchResults: 'No artist matches that search.',
-    errorState: 'Could not load artists.',
-    saveError: 'Could not save that artist.',
-    never: 'never',
-    dormantNotice:
-      'Automatic matching needs SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API. If those are not set, rows stay unmatched and can only be resolved by hand here.',
+    notAnArtist: 'Not an artist',
+    pick: 'Pick',
+    searchButton: 'Search',
+    notAnArtistConfirm: {
+      title: (name: string) => `Mark ${name} as not an artist?`,
+      body: 'Its page comes down and matching stops. Not artists can send it back.',
+      confirm: 'Not an artist',
+    },
+    empty: {
+      title: 'Every artist checks out',
+      soon: 'No unsure or unmatched artists with a show in the next 60 days.',
+      later: 'No unsure or unmatched artists with a show after 60 days.',
+      none: 'No unsure or unmatched artists without a show.',
+    },
+    noResults: {
+      title: 'No artist matches',
+      body: 'Check the spelling, or clear the search.',
+      clear: 'Clear search',
+    },
+    stillToCheck: (name: string) => `${name} is still in To check.`,
+    itemLabel: 'artists',
   },
 
   // The dashboard triage panel (#1215). Mirrors
