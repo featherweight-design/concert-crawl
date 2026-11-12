@@ -17,6 +17,7 @@ import { rowMin } from './definitions/row-min';
 import { rowChips, chipBudget } from './lib/row-chips';
 import { isFaded, isStruck, resolveRowStatus } from './lib/row-status';
 import { orderGenres } from './lib/order-genres';
+import { cardedEdge } from './lib/carded-edge';
 import type { EventRowShow } from './lib/row-model';
 
 const NARROW_AT = 360;
@@ -106,12 +107,7 @@ export const EventRow = ({
           ? `13px ${config.hasActionGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
           : '13px 0',
         borderRadius: config.carded ? 12 : undefined,
-        ...(config.carded &&
-          !removed && {
-            borderLeftWidth: 2,
-            borderLeftColor: genre,
-            background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
-          }),
+        ...(config.carded && !removed && cardedEdge(genre)),
         // The board draws the whole card dashed with no genre edge and no
         // wash: the row recedes rather than alarms.
         ...(config.carded && removed && { background: 'transparent' }),
