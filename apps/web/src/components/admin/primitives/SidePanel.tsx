@@ -13,7 +13,8 @@ import { useDialogKeyboard } from './useDialogKeyboard';
 
 export interface SidePanelProps {
   onClose: () => void;
-  title: string;
+  /** Text, or a styled node such as an invite code in mono. */
+  title: ReactNode;
   /** A `KindLabel` or similar, above the title. */
   eyebrow?: ReactNode;
   subtitle?: string;

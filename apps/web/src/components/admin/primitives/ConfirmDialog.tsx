@@ -15,6 +15,12 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   /** `danger` for a step that can't be undone or that notifies fans. */
   tone?: 'default' | 'danger';
+  /**
+   * The redesign's drawn buttons: `gradient` (Reactivate) or `dangerOutline`
+   * (Revoke) for confirm, with an outlined cancel beside it. Omitted, the
+   * buttons follow `tone` as before.
+   */
+  confirmVariant?: 'gradient' | 'dangerOutline';
   /** True while the action runs: both buttons disable and dismissing stops. */
   pending?: boolean;
   eyebrow?: string;
@@ -32,6 +38,7 @@ export const ConfirmDialog = ({
   confirmLabel,
   cancelLabel = ADMIN_COPY.confirm.cancel,
   tone = 'default',
+  confirmVariant,
   pending = false,
   eyebrow = '',
   onConfirm,
@@ -41,7 +48,7 @@ export const ConfirmDialog = ({
   const confirm = (
     <AdminButton
       type="button"
-      variant={tone === 'danger' ? 'danger' : 'primary'}
+      variant={confirmVariant ?? (tone === 'danger' ? 'danger' : 'primary')}
       disabled={pending}
       onClick={onConfirm}
       fullWidth={isPhone}
@@ -52,7 +59,7 @@ export const ConfirmDialog = ({
   const cancel = (
     <AdminButton
       type="button"
-      variant="ghost"
+      variant={confirmVariant ? 'outline' : 'ghost'}
       disabled={pending}
       onClick={onCancel}
       fullWidth={isPhone}

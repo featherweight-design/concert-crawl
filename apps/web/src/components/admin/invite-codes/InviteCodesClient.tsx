@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { Plus, Ticket } from 'lucide-react';
-import type { AdminInviteCode } from '@concert-crawl/types';
+import type { AdminInviteCode, InviteCode } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   CouldntLoad,
   EmptyState,
+  SaveFailedToast,
   StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
@@ -21,12 +23,31 @@ import {
 } from '@/lib/poster/poster-rule';
 import { postersHref } from '@/lib/poster/posters-href';
 import { codesApi } from './codes-api';
-import { STATUS_KIND, codeLabel, makerName, shortDate } from './code-rules';
+import {
+  STATUS_KIND,
+  codeLabel,
+  isEnded,
+  makerName,
+  shortDate,
+} from './code-rules';
 import { MONO } from './code-styles';
 import { InviteCodesRowsSkeleton } from './InviteCodesSkeleton';
+import { CodeRowMenu, MENU_ICONS, type CodeMenuItem } from './CodeRowMenu';
+import { CodePanel } from './CodePanel';
+import { ReactivateConfirm, RevokeConfirm } from './CodeConfirms';
 import { SeatsBar } from './SeatsBar';
 
 const COPY = ADMIN_COPY.codesPage;
+
+interface Open {
+  kind: 'code' | 'revoke' | 'reactivate';
+  id: string;
+}
+
+interface Failure {
+  code: string;
+  retry: () => void;
+}
 
 const COLUMN_HEAD = {
   ...MONO,
@@ -156,16 +177,21 @@ const Tabs = ({
 };
 
 /**
- * 5b Invite codes (`07/invite-codes`, `07/invite-codes-mobile`): the list.
- * The row menus, the code panel and New code land in the next two PRs.
+ * 5b Invite codes (`07/invite-codes`, `07/invite-codes-mobile`): the list,
+ * its ⋯ menus, and the panels they open.
  */
-export function InviteCodesClient() {
+export function InviteCodesClient({ origin }: { origin: string }) {
   const { getToken } = useAuth();
+  const router = useRouter();
   const isPhone = useIsPhone();
   const api = useMemo(() => codesApi(getToken), [getToken]);
   const [codes, setCodes] = useState<AdminInviteCode[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [people, setPeople] = useState<number | null>(null);
+  const [open, setOpen] = useState<Open | null>(null);
+  const [pending, setPending] = useState(false);
+  const [failure, setFailure] = useState<Failure | null>(null);
+  const [copied, setCopied] = useState(false);
   const now = new Date();
 
   const load = useCallback(async () => {
@@ -187,6 +213,95 @@ export function InviteCodesClient() {
       .catch(() => undefined);
   }, [api, load]);
 
+  const replace = (row: AdminInviteCode) =>
+    setCodes((rows) =>
+      rows ? rows.map((each) => (each.id === row.id ? row : each)) : rows,
+    );
+
+  const copyLink = (code: AdminInviteCode) => {
+    void navigator.clipboard?.writeText(`${origin}/i/${code.code}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  // A failed change says so, with Try again (rule 10).
+  const runEnding = async (
+    row: AdminInviteCode,
+    action: () => Promise<InviteCode>,
+  ) => {
+    setPending(true);
+    setFailure(null);
+    try {
+      replace({ ...row, ...(await action()) });
+      setOpen(null);
+    } catch {
+      setOpen(null);
+      setFailure({ code: row.code, retry: () => void runEnding(row, action) });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const menuItems = (
+    row: AdminInviteCode,
+    status: InviteStatus,
+  ): CodeMenuItem[] => {
+    const host = origin.replace(/^https?:\/\//, '');
+    const joined = seatsTaken(row);
+    const copy: CodeMenuItem = {
+      key: 'copy',
+      icon: MENU_ICONS.copy,
+      label: COPY.menu.copyLink,
+      hint: isEnded(status) ? COPY.menu.copyLinkEnded : `${host}/i/${row.code}`,
+      onSelect: () => copyLink(row),
+    };
+    const see: CodeMenuItem = {
+      key: 'joined',
+      icon: MENU_ICONS.joined,
+      label: COPY.menu.seeWhoJoined,
+      hint: COPY.menu.seeWhoJoinedHint(joined),
+      onSelect: () => setOpen({ kind: 'code', id: row.id }),
+    };
+    if (isEnded(status)) {
+      return [
+        copy,
+        see,
+        {
+          key: 'reactivate',
+          icon: MENU_ICONS.reactivate,
+          label: COPY.menu.reactivate,
+          hint: COPY.menu.reactivateHint,
+          onSelect: () => setOpen({ kind: 'reactivate', id: row.id }),
+        },
+      ];
+    }
+    return [
+      copy,
+      ...(row.maxUses > 1
+        ? [
+            {
+              key: 'poster',
+              icon: MENU_ICONS.poster,
+              label: COPY.menu.makePoster,
+              hint: COPY.menu.makePosterHint,
+              onSelect: () => router.push(postersHref({ code: row.id })),
+            },
+          ]
+        : []),
+      see,
+      {
+        key: 'revoke',
+        icon: MENU_ICONS.revoke,
+        label: COPY.menu.revoke,
+        hint: COPY.menu.revokeHint,
+        danger: true,
+        divided: true,
+        onSelect: () => setOpen({ kind: 'revoke', id: row.id }),
+      },
+    ];
+  };
+
   const rows = (codes ?? []).map((row) => ({
     row,
     status: inviteStatus(row, now),
@@ -195,6 +310,7 @@ export function InviteCodesClient() {
     ({ row, status }) =>
       row.maxUses > 1 && (status === 'active' || status === 'full'),
   ).length;
+  const openRow = open ? codes?.find((row) => row.id === open.id) : undefined;
 
   const newButton = (
     <AdminButton
@@ -247,40 +363,48 @@ export function InviteCodesClient() {
         style={{ listStyle: 'none', margin: 0, padding: 0 }}
       >
         {rows.map(({ row, status }) => (
-          <li
-            key={row.id}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 7,
-              padding: '12px 0',
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ ...MONO, fontSize: 13 }}>{row.code}</span>
-              <span style={{ flex: 1 }} />
-              <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
-                {COPY.expiresOn(
-                  row.expiresAt ? shortDate(row.expiresAt) : null,
-                )}
+          <li key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              onClick={() => setOpen({ kind: 'code', id: row.id })}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 7,
+                width: '100%',
+                padding: '12px 0',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--fg)',
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ ...MONO, fontSize: 13 }}>{row.code}</span>
+                <span style={{ flex: 1 }} />
+                <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+                  {COPY.expiresOn(
+                    row.expiresAt ? shortDate(row.expiresAt) : null,
+                  )}
+                </span>
               </span>
-            </span>
-            {codeLabel(row) && (
-              <span style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
-                {codeLabel(row)}
+              {codeLabel(row) && (
+                <span style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
+                  {codeLabel(row)}
+                </span>
+              )}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <SeatsBar
+                  used={seatsTaken(row)}
+                  max={row.maxUses}
+                  full={status === 'full'}
+                  width={120}
+                />
+                <span style={{ flex: 1 }} />
+                <StatusChip status={status} />
               </span>
-            )}
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <SeatsBar
-                used={seatsTaken(row)}
-                max={row.maxUses}
-                full={status === 'full'}
-                width={120}
-              />
-              <span style={{ flex: 1 }} />
-              <StatusChip status={status} />
-            </span>
+            </button>
           </li>
         ))}
       </ul>
@@ -324,6 +448,10 @@ export function InviteCodesClient() {
                 <th style={{ ...COLUMN_HEAD, width: 90 }}>
                   {COPY.columns.madeBy}
                 </th>
+                <th
+                  style={{ ...COLUMN_HEAD, width: 20, paddingRight: 18 }}
+                  aria-label={COPY.menu.trigger}
+                />
               </tr>
             </thead>
             <tbody>
@@ -376,6 +504,12 @@ export function InviteCodesClient() {
                     }}
                   >
                     {makerName(row)}
+                  </td>
+                  <td style={{ ...CELL, paddingRight: 18 }}>
+                    <CodeRowMenu
+                      label={COPY.menu.trigger}
+                      items={menuItems(row, status)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -448,7 +582,55 @@ export function InviteCodesClient() {
         }}
       />
       {isPhone && newButton}
+      {failure && (
+        <SaveFailedToast
+          what={failure.code}
+          saved={COPY.form.stillAsItWas(failure.code)}
+          retrying={pending}
+          onRetry={failure.retry}
+        />
+      )}
+      <div
+        role="status"
+        aria-live="polite"
+        style={{ fontSize: 12.5, color: 'var(--success)' }}
+      >
+        {copied ? COPY.menu.copied : null}
+      </div>
       {body}
+
+      {openRow && open?.kind === 'code' && (
+        <CodePanel
+          code={openRow}
+          status={inviteStatus(openRow, now)}
+          api={api}
+          onCopy={() => copyLink(openRow)}
+          onRevoke={() => setOpen({ kind: 'revoke', id: openRow.id })}
+          onReactivate={() => setOpen({ kind: 'reactivate', id: openRow.id })}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      {openRow && open?.kind === 'revoke' && (
+        <RevokeConfirm
+          code={openRow}
+          pending={pending}
+          onCancel={() => setOpen(null)}
+          onConfirm={() =>
+            void runEnding(openRow, () => api.revoke(openRow.id))
+          }
+        />
+      )}
+      {openRow && open?.kind === 'reactivate' && (
+        <ReactivateConfirm
+          code={openRow}
+          now={now}
+          pending={pending}
+          onCancel={() => setOpen(null)}
+          onConfirm={(expiresAt) =>
+            void runEnding(openRow, () => api.reactivate(openRow.id, expiresAt))
+          }
+        />
+      )}
     </div>
   );
 }

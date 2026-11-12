@@ -1,7 +1,8 @@
 /**
- * The invite-codes admin's pure rules (5b): what a code's row says.
+ * The invite-codes admin's pure rules (5b): what a code's row says, and which
+ * expiry choice a picker starts on.
  */
-import type { AdminInviteCode } from '@concert-crawl/types';
+import type { AdminInviteCode, Role } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
@@ -16,6 +17,10 @@ export const STATUS_KIND: Record<InviteStatus, StatusKind> = {
   expired: 'warning',
   revoked: 'danger',
 };
+
+/** An ended code is one Reactivate can bring back; Full is not ended. */
+export const isEnded = (status: InviteStatus): boolean =>
+  status === 'revoked' || status === 'expired';
 
 const SHORT_DATE = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -35,3 +40,51 @@ export const codeLabel = (
 
 export const makerName = (code: Pick<AdminInviteCode, 'createdByHandle'>) =>
   code.createdByHandle ? `@${code.createdByHandle}` : COPY.formerAdmin;
+
+/** A role worth naming beside a joiner; a plain member says nothing. */
+export const roleLabel = (role: Role | null): string | null =>
+  role && role !== 'user' ? COPY.panel.roles[role] : null;
+
+export type ExpiryChoice = 'keep' | 'never' | 'd7' | 'd30' | 'd90';
+
+const DAYS: Record<Exclude<ExpiryChoice, 'keep' | 'never'>, number> = {
+  d7: 7,
+  d30: 30,
+  d90: 90,
+};
+
+/** The expiry pills, in drawn order. `keep` leads only when it applies. */
+export const EXPIRY_CHOICES: readonly Exclude<ExpiryChoice, 'keep'>[] = [
+  'never',
+  'd7',
+  'd30',
+  'd90',
+];
+
+/** True when the code has an exact expiry still ahead, which Keep offers. */
+export const hasFutureExpiry = (expiresAt: string | null, now: Date) =>
+  expiresAt != null && new Date(expiresAt) > now;
+
+/**
+ * Where an expiry picker starts: Keep when the code has a future exact expiry
+ * (A3 r10, r13), else `otherwise`. Edit starts on Never; Reactivate on 7 days,
+ * as `07/reactivate-a-code` draws it.
+ */
+export const initialExpiry = (
+  expiresAt: string | null,
+  now: Date,
+  otherwise: ExpiryChoice,
+): ExpiryChoice => (hasFutureExpiry(expiresAt, now) ? 'keep' : otherwise);
+
+/**
+ * The `expiresAt` to send for a choice: undefined leaves it as it is, null
+ * means never.
+ */
+export const expiresAtFor = (
+  choice: ExpiryChoice,
+  now: Date,
+): string | null | undefined => {
+  if (choice === 'keep') return undefined;
+  if (choice === 'never') return null;
+  return new Date(now.getTime() + DAYS[choice] * 86_400_000).toISOString();
+};
