@@ -34,7 +34,7 @@ describe('showRemovedToast', () => {
 
     const action = options?.action;
     if (!isAction(action)) throw new Error('expected an Undo action');
-    action.onClick(new MouseEvent('click') as never);
+    action.onClick({} as never);
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
 
