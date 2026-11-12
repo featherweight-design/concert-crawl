@@ -45,26 +45,29 @@ export const RunGroup = ({
   >
     <div
       data-testid="artist-run-head"
-      style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}
+      className="flex min-w-0 items-center"
+      style={{ gap: 8 }}
     >
-      {/* A long venue name ellipsises; the icon never gives up width to it. */}
-      <span style={{ display: 'flex', flexShrink: 0 }}>
+      {/* A long venue name ellipsises; the icon and the pill never give up
+          width to it, so the header holds at 320. */}
+      <span data-testid="artist-run-tile" className="flex shrink-0">
         <VenueTile slug={venueSlug} name={venue} size={AP_VENUE_TILE} />
       </span>
       <span
+        data-testid="artist-run-venue"
+        className="min-w-0 truncate"
         style={{
           fontFamily: 'Inter, system-ui',
           fontWeight: 700,
           fontSize: 14,
           color: 'var(--fg)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
         }}
       >
         {venue}
       </span>
       <span
+        data-testid="artist-run-pill"
+        className="shrink-0"
         style={{
           fontFamily: 'JetBrains Mono, monospace',
           fontSize: 9.5,
@@ -77,7 +80,6 @@ export const RunGroup = ({
             '1px solid color-mix(in oklab, var(--signal) 40%, transparent)',
           borderRadius: 5,
           padding: '4px 8px',
-          flexShrink: 0,
         }}
       >
         {ARTIST_COPY.residencyRun(shows.length)}

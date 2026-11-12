@@ -5,7 +5,6 @@ import { renderToString } from 'react-dom/server';
 import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { EMBED_H } from '../definitions/constants';
 import { ARTIST_COPY } from '../definitions/copy';
 
 import { ArtistEmbed } from './ArtistEmbed';
@@ -33,7 +32,10 @@ describe('ArtistEmbed — the player', () => {
     );
     expect(frame?.getAttribute('loading')).toBe('lazy');
     expect(frame?.getAttribute('allow')).toBe('encrypted-media');
-    expect(frame?.getAttribute('height')).toBe(String(EMBED_H.wholeTracks));
+    // The measured value, written out: three whole Spotify tracks at the 320,
+    // 390 and desktop iframe widths (see `ARTIST_EMBED_H`). Changing it means
+    // re-measuring, not editing the constant to match.
+    expect(frame?.getAttribute('height')).toBe('362');
     expect(frame?.style.width).toBe('100%');
     // B+ `09-artist`: the iframe sits 12px-round inside the 16px framed mat.
     expect(frame?.style.borderRadius).toBe('12px');
@@ -158,23 +160,4 @@ describe('ArtistEmbed — the player', () => {
       expect(container.textContent).not.toContain('below');
     },
   );
-});
-
-// Spotify's list layout (from 352) starts its rows at 208 on a ~51px pitch and
-// runs the list to the frame's edge; below 352 it keeps the 152 layout, whose
-// fixed scroller always cuts a fourth row in half. Measured 2026-11-12.
-describe('ArtistEmbed — whole tracks', () => {
-  const LIST_LAYOUT_FROM = 352;
-  const FIRST_ROW_TOP = 208;
-  const ROW_PITCH = 51.3;
-
-  it('uses the list layout, not the compact one that always clips a row', () => {
-    expect(EMBED_H.wholeTracks).toBeGreaterThanOrEqual(LIST_LAYOUT_FROM);
-  });
-
-  it('ends the frame on a row edge, so no track is cut in half', () => {
-    const rows = (EMBED_H.wholeTracks - FIRST_ROW_TOP) / ROW_PITCH;
-    expect(Math.abs(rows - Math.round(rows))).toBeLessThan(0.05);
-    expect(Math.round(rows)).toBe(3);
-  });
 });

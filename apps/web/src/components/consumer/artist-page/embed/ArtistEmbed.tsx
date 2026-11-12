@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { EMBED_H } from '../definitions/constants';
+import { ARTIST_EMBED_H } from '../definitions/constants';
 import { ARTIST_COPY } from '../definitions/copy';
 
 import { EmbedRail } from './EmbedRail';
@@ -93,8 +93,8 @@ export const ArtistEmbed = ({
           src={`https://open.spotify.com/embed/artist/${spotifyArtistId}`}
           title={ARTIST_COPY.playerTitle(name)}
           // Whole tracks only: Spotify's own scroller cuts a row in half at
-          // both of its documented heights (see `EMBED_H`).
-          height={EMBED_H.wholeTracks}
+          // both of its documented heights (see `ARTIST_EMBED_H`).
+          height={ARTIST_EMBED_H}
           loading="lazy"
           allow="encrypted-media"
           // The plate is the only value we send Spotify, and it has to be a

@@ -69,19 +69,22 @@ export const AP_STICKY_AFTER = AP_BAND_H - AP_STICKY_BAR_H;
 export const AP_VENUE_TILE = 22;
 
 /**
- * Spotify artist-embed heights. `compact` and `tall` are Spotify's documented
- * 152 and 352; `wholeTracks` is the one the page draws.
+ * The Spotify ARTIST embed's height: three whole tracks. Measured for the
+ * artist embed only; another embed type has its own layout and needs its own
+ * measurement.
  *
- * Measured inside the embed (2026-11-12, Playwright, at 346 and 380 wide):
- * - Below 352 Spotify keeps its 152 layout, whose track list is a fixed 81px
- *   scroller of 23px rows, so a fourth row is always cut in half. No height
- *   changes that.
- * - From 352 it switches to the list layout: the list starts at 200, its rows
- *   at 208 on a ~51px pitch, and the list runs to the frame's bottom edge. At
- *   352 the third row is cut 10px short.
- * - 362 ends the frame on the third row's bottom edge: three whole tracks.
+ * Measured inside the embed (2026-11-12, Playwright). Iframe widths are the
+ * viewport less the shell gutters and the mat (6px padding + 1.5px border a
+ * side): 277 at a 320 viewport (14px gutters), 343 at 390 (16px), 385 at 1300
+ * (the 400px side column).
+ * - Below 352 tall Spotify keeps its 152 layout, whose track list is a fixed
+ *   81px scroller of 23px rows, so a fourth row is always cut in half.
+ * - From 352 it switches to the list layout, identical at all three widths:
+ *   rows at 208-260, 260-311, 311-362, and the list runs to the frame's
+ *   bottom edge. At 352 the third row is cut 10px short.
+ * - 362 ends the frame on the third row's bottom edge at 277, 343 and 385.
  */
-export const EMBED_H = { compact: 152, tall: 352, wholeTracks: 362 } as const;
+export const ARTIST_EMBED_H = 362;
 
 /**
  * Follow-button geometry, from the R3 scale-and-weight handoff. One table so
