@@ -42,7 +42,10 @@ describe('VENUE_NEON', () => {
     (key) => {
       const { shapeColors, fillColor } = VENUE_NEON[key];
       expect(shapeColors).toHaveLength(VENUE_GLYPHS[key].shapes.length);
-      for (const colour of [...shapeColors, fillColor ?? '#000000']) {
+      for (const colour of [
+        ...shapeColors,
+        ...(fillColor === undefined ? [] : [fillColor]),
+      ]) {
         expect(colour).toMatch(/^#[0-9A-F]{6}$/);
       }
       // No venue's own source is single-colour: Bluebird is a blue fill under
@@ -116,36 +119,67 @@ describe('the neon hero', () => {
   });
 });
 
-/** The handoff's own hero markup for a venue, the source of every neon colour. */
+/**
+ * The handoff's own hero markup for a venue, the source of every neon colour.
+ *
+ * Brittle on purpose: it reads `design/design_handoff_bplus_redesign` from the
+ * repo checkout by a path relative to this file, and the patterns below match
+ * the handoff's generated markup attribute for attribute. A moved folder or a
+ * re-exported hero fails these tests with the message below, naming the file
+ * and the pattern, rather than a bare ENOENT or a null dereference. Update the
+ * patterns with the handoff; do not delete the tests, they are the proof that
+ * the live colours are the boards'.
+ */
 function heroSource(key: string): string {
-  return readFileSync(
-    path.resolve(
-      __dirname,
-      '../../../../../../design/design_handoff_bplus_redesign/assets/venues',
-      `${key}-hero.html`,
-    ),
-    'utf8',
+  const file = path.resolve(
+    __dirname,
+    '../../../../../../design/design_handoff_bplus_redesign/assets/venues',
+    `${key}-hero.html`,
   );
+  try {
+    return readFileSync(file, 'utf8');
+  } catch (error) {
+    throw new Error(
+      `Cannot read the ${key} hero board source at ${file}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
+
+/** A pattern's match in a venue's hero source, or an error saying what is missing. */
+function heroMatch(
+  key: string,
+  pattern: RegExp,
+  what: string,
+): RegExpExecArray {
+  const match = pattern.exec(heroSource(key));
+  if (match === null) {
+    throw new Error(
+      `The ${key} hero board source (${key}-hero.html) has no ${what}; the pattern ${pattern} no longer matches the handoff's markup`,
+    );
+  }
+  return match;
 }
 
 describe('the neon colours match the handoff hero HTML', () => {
   it.each(VENUE_GLYPH_KEYS)('%s halo discs', (key) => {
-    const match =
-      /<circle cx="200" cy="200" r="210" fill="(#[0-9A-Fa-f]{6})" opacity="0\.10"\/><circle cx="200" cy="200" r="130" fill="(#[0-9A-Fa-f]{6})" opacity="0\.10"\/>/.exec(
-        heroSource(key),
-      );
-    expect(match).not.toBeNull();
+    const match = heroMatch(
+      key,
+      /<circle cx="200" cy="200" r="210" fill="(#[0-9A-Fa-f]{6})" opacity="0\.10"\/><circle cx="200" cy="200" r="130" fill="(#[0-9A-Fa-f]{6})" opacity="0\.10"\/>/,
+      'halo disc pair',
+    );
     expect(VENUE_NEON[key].halo).toEqual({
-      outer: match![1]!.toUpperCase(),
-      inner: match![2]!.toUpperCase(),
+      outer: match[1]!.toUpperCase(),
+      inner: match[2]!.toUpperCase(),
     });
     const { container } = render(
       <VenueNeonArt glyphKey={key} glyphSize={163} glyphSizeSm={196} />,
     );
     const outer = container.querySelector('[data-venue-halo="outer"]');
     const inner = container.querySelector('[data-venue-halo="inner"]');
-    expect(outer?.getAttribute('fill')).toBe(match![1]!.toUpperCase());
-    expect(inner?.getAttribute('fill')).toBe(match![2]!.toUpperCase());
+    expect(outer?.getAttribute('fill')).toBe(match[1]!.toUpperCase());
+    expect(inner?.getAttribute('fill')).toBe(match[2]!.toUpperCase());
     // The board's disc opacity and the live sizes (r210 and r130 of 420).
     expect(outer?.getAttribute('fill-opacity')).toBe('0.1');
     expect(inner?.getAttribute('fill-opacity')).toBe('0.1');
@@ -156,43 +190,42 @@ describe('the neon colours match the handoff hero HTML', () => {
   it.each(VENUE_GLYPH_KEYS.filter((key) => key !== 'bluebird'))(
     '%s strokes',
     (key) => {
-      const group =
-        /<g transform="translate\(20 20\) scale\(15\.0\)">([\s\S]*?)<\/g>/.exec(
-          heroSource(key),
-        );
-      expect(group).not.toBeNull();
+      const group = heroMatch(
+        key,
+        /<g transform="translate\(20 20\) scale\(15\.0\)">([\s\S]*?)<\/g>/,
+        'glyph group',
+      );
       const strokes = [
-        ...group![1]!.matchAll(/stroke="(#[0-9A-Fa-f]{6})"/g),
+        ...group[1]!.matchAll(/stroke="(#[0-9A-Fa-f]{6})"/g),
       ].map((match) => match[1]!.toUpperCase());
       expect(VENUE_NEON[key].shapeColors).toEqual(strokes);
     },
   );
 
   it('bluebird fill and outline', () => {
-    const match =
-      /<path d="[^"]*" fill="(#[0-9A-Fa-f]{6})" fill-opacity="0\.3" stroke="(#[0-9A-Fa-f]{6})"/.exec(
-        heroSource('bluebird'),
-      );
-    expect(match).not.toBeNull();
-    expect(VENUE_NEON.bluebird.fillColor).toBe(match![1]!.toUpperCase());
-    expect(VENUE_NEON.bluebird.shapeColors).toEqual([match![2]!.toUpperCase()]);
+    const match = heroMatch(
+      'bluebird',
+      /<path d="[^"]*" fill="(#[0-9A-Fa-f]{6})" fill-opacity="0\.3" stroke="(#[0-9A-Fa-f]{6})"/,
+      'filled bird path',
+    );
+    expect(VENUE_NEON.bluebird.fillColor).toBe(match[1]!.toUpperCase());
+    expect(VENUE_NEON.bluebird.shapeColors).toEqual([match[2]!.toUpperCase()]);
   });
 });
 
 describe('the backdrop ground and tints match the handoff hero HTML', () => {
   it.each(VENUE_GLYPH_KEYS)('%s ground and tints', (key) => {
-    const source = heroSource(key);
-    const sky =
-      /<linearGradient id="hs\d+" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="(#[0-9A-Fa-f]{6})"\/><stop offset="1" stop-color="(#[0-9A-Fa-f]{6})" stop-opacity="0\.22"\/>/.exec(
-        source,
-      );
-    const radial =
-      /<radialGradient id="hr\d+" cx="0\.15" cy="0\.2" r="0\.7"><stop offset="0" stop-color="(#[0-9A-Fa-f]{6})" stop-opacity="0\.28"\/>/.exec(
-        source,
-      );
-    expect(sky).not.toBeNull();
-    expect(radial).not.toBeNull();
-    const ground = sky![1]!.toUpperCase();
+    const sky = heroMatch(
+      key,
+      /<linearGradient id="hs\d+" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="(#[0-9A-Fa-f]{6})"\/><stop offset="1" stop-color="(#[0-9A-Fa-f]{6})" stop-opacity="0\.22"\/>/,
+      'sky gradient',
+    );
+    const radial = heroMatch(
+      key,
+      /<radialGradient id="hr\d+" cx="0\.15" cy="0\.2" r="0\.7"><stop offset="0" stop-color="(#[0-9A-Fa-f]{6})" stop-opacity="0\.28"\/>/,
+      'radial tint gradient',
+    );
+    const ground = sky[1]!.toUpperCase();
     expect(VENUE_NEON[key].ground).toBe(ground);
 
     const { container } = render(
@@ -206,7 +239,7 @@ describe('the backdrop ground and tints match the handoff hero HTML', () => {
     const sky1 = layer?.querySelector('linearGradient stop:nth-child(2)');
     expect(sky0?.getAttribute('stop-color')).toBe(ground);
     // The board's tint is the venue's second colour at 22% by the bottom edge.
-    expect(sky1?.getAttribute('stop-color')).toBe(sky![2]!.toUpperCase());
+    expect(sky1?.getAttribute('stop-color')).toBe(sky[2]!.toUpperCase());
     expect(sky1?.getAttribute('stop-color')).toBe(VENUE_GLYPHS[key].to);
     expect(sky1?.getAttribute('stop-opacity')).toBe('0.22');
     const glow = layer?.querySelector('radialGradient');
@@ -214,7 +247,7 @@ describe('the backdrop ground and tints match the handoff hero HTML', () => {
     expect(glow?.getAttribute('cy')).toBe('0.2');
     expect(glow?.getAttribute('r')).toBe('0.7');
     const glow0 = glow?.querySelector('stop');
-    expect(glow0?.getAttribute('stop-color')).toBe(radial![1]!.toUpperCase());
+    expect(glow0?.getAttribute('stop-color')).toBe(radial[1]!.toUpperCase());
     expect(glow0?.getAttribute('stop-color')).toBe(VENUE_GLYPHS[key].from);
     expect(glow0?.getAttribute('stop-opacity')).toBe('0.28');
     expect(layer?.querySelector('rect')?.getAttribute('fill')).toBe(ground);
