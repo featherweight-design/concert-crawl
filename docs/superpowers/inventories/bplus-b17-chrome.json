@@ -24,7 +24,7 @@
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
-          "wait": "main a[href^=\"/venues/\"]"
+          "wait": "a[href^=\"/venues/\"]"
         }
       ]
     },
