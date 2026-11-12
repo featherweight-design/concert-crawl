@@ -1136,6 +1136,18 @@ export const CONSUMER_COPY = {
       'An error occurred loading this page. Try again, or sign out and back in.',
     tryAgainButton: 'Try again',
     signOutButton: 'Sign out',
+    // The standalone error page (12-error-page): the eyebrow, the signed-out
+    // body and way out, and the copyable error-ID chip.
+    eyebrow: 'Error',
+    signedOutBody:
+      'An error occurred loading this page. Try again in a moment.',
+    goHomeButton: 'Go home',
+    homeLinkLabel: 'Concert Crawl home',
+    wordmarkLead: 'concert',
+    wordmarkTail: 'crawl.',
+    errorIdLabel: 'Error ID',
+    copyErrorId: 'Copy error ID',
+    copiedErrorId: 'Copied',
     // The quiet way in to a problem report, under the buttons.
     reportLink: 'Tell us what happened',
   },
