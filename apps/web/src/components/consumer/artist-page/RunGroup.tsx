@@ -7,13 +7,16 @@ import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
 import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
-import { AP_PILL_FONT_SIZE } from './definitions/constants';
+import { VenueTile } from '@/components/consumer/venue-glyph';
+
+import { AP_PILL_FONT_SIZE, AP_VENUE_TILE } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';
 import { fmtDate } from './DateStamp';
 import { PriceChip } from './PriceChip';
 
 interface RunGroupProps {
   venue: string;
+  venueSlug: string;
   city: string | null;
   shows: ArtistShow[];
   /** Headliner name — only used to build the Watch control's signed-out name. */
@@ -22,8 +25,16 @@ interface RunGroupProps {
 
 /** A residency reads as one booking with several nights, not several bookings. */
 // It wears the carded row's genre edge (B+ `09-artist`), so a run sits in the
-// list as one more card rather than a different kind of object.
-export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
+// list as one more card rather than a different kind of object. Its header
+// carries the venue icon at the single row's size and spacing, beside the
+// name: the board gives every Upcoming item its venue icon.
+export const RunGroup = ({
+  venue,
+  venueSlug,
+  city,
+  shows,
+  artist,
+}: RunGroupProps) => (
   <div
     data-show-item=""
     className="border border-border bg-surface-1"
@@ -32,7 +43,14 @@ export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
       padding: 12,
     }}
   >
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+    <div
+      data-testid="artist-run-head"
+      style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}
+    >
+      {/* A long venue name ellipsises; the icon never gives up width to it. */}
+      <span style={{ display: 'flex', flexShrink: 0 }}>
+        <VenueTile slug={venueSlug} name={venue} size={AP_VENUE_TILE} />
+      </span>
       <span
         style={{
           fontFamily: 'Inter, system-ui',
