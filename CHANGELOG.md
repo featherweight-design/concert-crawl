@@ -1,3 +1,26 @@
+# [1.354.0](https://github.com/featherweight-design/concert-crawl/compare/v1.353.0...v1.354.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** file a by-hand run under its trigger, count paused skips apart, cut errors in SQL ([8850f25](https://github.com/featherweight-design/concert-crawl/commit/8850f250b94bf6008026d7dd1cb1532df2d17477))
+* **api:** read a night's detail back far enough to derive Didn't start ([ada761a](https://github.com/featherweight-design/concert-crawl/commit/ada761aa2678c690e046d66e57f042baf34c3369))
+* **web:** give the delete-account sheet the B+ sheet edge ([d19c6be](https://github.com/featherweight-design/concert-crawl/commit/d19c6be8c80775e1111ba63578d56cb5dd837dfe))
+
+
+### Features
+
+* **api:** add the crawl run batches list and detail ([502e7cf](https://github.com/featherweight-design/concert-crawl/commit/502e7cfaee7405a9da910854d0aab7f2bbfe09fe))
+* **web:** restyle the Settings account, legal, export and danger cards ([daa33bb](https://github.com/featherweight-design/concert-crawl/commit/daa33bb1256910f98eb3d02ca631a909ece05dfc))
+* **web:** restyle the Settings notification cards and switches ([cb7e32f](https://github.com/featherweight-design/concert-crawl/commit/cb7e32f49c3d4ba9d804e28d3813ac6e11597947))
+
+
+### Performance Improvements
+
+* **web:** fail the build when a Clerk pin falls behind the installed SDK ([77fee19](https://github.com/featherweight-design/concert-crawl/commit/77fee19f828d0162af738859820d3fca76dc6204))
+* **web:** pin the Clerk script versions so the browser skips two redirects ([2661c79](https://github.com/featherweight-design/concert-crawl/commit/2661c79416a0c817a28de35efa2520e01c404368))
+* **web:** share one /v1/users/me read across the mount-time readers ([e7b54a7](https://github.com/featherweight-design/concert-crawl/commit/e7b54a7d41722e717867b2494f50aafe744a1d40))
+
 # [1.353.0](https://github.com/featherweight-design/concert-crawl/compare/v1.352.0...v1.353.0) (2026-11-12)
 
 
