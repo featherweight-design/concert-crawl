@@ -187,6 +187,54 @@ describe('admin artist reports', () => {
       });
     });
 
+    it('counts Watching off the follows alone, as the list row does', async () => {
+      await report(artist.id, 'user_a');
+      await testDb.insert(userArtistFollows).values([
+        {
+          userId: 'user_f',
+          artistName: 'Nightjar Choir',
+          canonicalName: artist.canonicalName,
+          source: 'manual',
+        },
+        {
+          userId: 'user_g',
+          artistName: 'Nightjar Choir',
+          canonicalName: artist.canonicalName,
+          source: 'manual',
+        },
+        // Listening history is not a follow.
+        {
+          userId: 'user_h',
+          artistName: 'Nightjar Choir',
+          canonicalName: artist.canonicalName,
+          source: 'spotify_top',
+          spotifyArtistId: 'sp_nightjar_top',
+        },
+        // Another artist's fan is not this one's.
+        {
+          userId: 'user_i',
+          artistName: 'Someone Else',
+          canonicalName: 'someone else',
+          source: 'manual',
+        },
+      ]);
+
+      const res = await call('GET', `/${artist.id}/reports`);
+      expect(res.status).toBe(200);
+      const { data } = (await res.json()) as {
+        data: { matched: { followerCount: number } };
+      };
+      expect(data.matched.followerCount).toBe(2);
+
+      const list = await call('GET', '?status=reported&upcoming=false');
+      const listed = (await list.json()) as {
+        data: { id: string; watchingCount: number }[];
+      };
+      expect(listed.data.find((row) => row.id === artist.id)).toMatchObject({
+        watchingCount: 2,
+      });
+    });
+
     it('404s for an unknown artist', async () => {
       const res = await call(
         'GET',

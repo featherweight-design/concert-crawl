@@ -31,6 +31,8 @@ import { createApp } from '../../app.js';
 import { testDb } from '../../test/helpers/db.js';
 import { seedEvent, seedVenue } from '../../test/helpers/seed.js';
 import { MATCH_ATTEMPT_LIMIT } from '../../lib/artist-exhaustion.js';
+import { todayInDenver } from '../../lib/time.js';
+import { addDays } from './lib/needs-you/keys.js';
 
 const app = createApp();
 
@@ -628,6 +630,43 @@ describe('admin artists routes', () => {
       ]);
       const [row] = await list('status=matched');
       expect(row?.watchingCount).toBe(1);
+    });
+
+    it('counts the next 60 days as today plus 59 more', async () => {
+      const today = todayInDenver();
+      await seedArtist({ canonicalName: 'day 59', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'day 60', matchStatus: 'ambiguous' });
+      await seedShow('day 59', addDays(today, 59));
+      await seedShow('day 60', addDays(today, 60));
+
+      const names = async (query: string) =>
+        (await list(`status=to_check&${query}`)).map(
+          (row) => row.canonicalName,
+        );
+      expect(await names('window=soon')).toEqual(['day 59']);
+      expect(await names('window=later')).toEqual(['day 60']);
+
+      const res = await app.request('/v1/admin/artists/counts', {
+        headers: ADMIN_HEADERS,
+      });
+      expect((await res.json()).data).toMatchObject({
+        to_check_soon: 1,
+        to_check_later: 1,
+      });
+    });
+
+    it('rejects a window off the To check tab', async () => {
+      for (const query of ['status=matched&window=soon', 'window=soon']) {
+        const res = await app.request(`/v1/admin/artists?${query}`, {
+          headers: ADMIN_HEADERS,
+        });
+        expect(res.status).toBe(400);
+      }
+      const ok = await app.request(
+        '/v1/admin/artists?status=to_check&window=soon',
+        { headers: ADMIN_HEADERS },
+      );
+      expect(ok.status).toBe(200);
     });
 
     it('rejects an unknown window', async () => {
@@ -1229,6 +1268,49 @@ describe('admin artists routes', () => {
         .where(eq(artists.id, id));
       expect(row?.matchAttempts).toBe(0);
       expect(row?.matchCheckedAt).not.toBeNull();
+    });
+
+    it('409s rather than leave a row hidden when a not-an-artist ruling lands mid-write', async () => {
+      const id = await seedArtist({
+        canonicalName: 'nirvana',
+        matchStatus: 'ambiguous',
+      });
+
+      // Another admin rules the row not-an-artist after this request read it
+      // and before it writes.
+      const realTransaction = testDb.transaction.bind(testDb);
+      const transactionSpy = vi
+        .spyOn(testDb, 'transaction')
+        .mockImplementationOnce(async (run, config) => {
+          await testDb
+            .update(artists)
+            .set({ matchStatus: 'not_an_artist', hidden: true })
+            .where(eq(artists.id, id));
+          return realTransaction(run, config);
+        });
+      try {
+        const res = await app.request(`/v1/admin/artists/${id}`, {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({
+            spotifyArtistId: null,
+            matchStatus: 'unmatched',
+          }),
+        });
+        expect(res.status).toBe(409);
+        expect((await res.json()).error).toBe(
+          'The artist has changed since it was loaded',
+        );
+      } finally {
+        transactionSpy.mockRestore();
+      }
+
+      const [row] = await testDb
+        .select()
+        .from(artists)
+        .where(eq(artists.id, id));
+      expect(row?.matchStatus).toBe('not_an_artist');
+      expect(row?.hidden).toBe(true);
     });
 
     it('404s an unknown artist', async () => {
