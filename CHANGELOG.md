@@ -1,3 +1,16 @@
+# [1.365.0](https://github.com/featherweight-design/concert-crawl/compare/v1.364.1...v1.365.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** a dismissal ends with the watch, the write is atomic, the watching read is private ([02bf6b1](https://github.com/featherweight-design/concert-crawl/commit/02bf6b130c5c724b6ad4265e60093b45c44a248c))
+
+
+### Features
+
+* **api:** per-user dismiss for a no longer listed show ([8af24bc](https://github.com/featherweight-design/concert-crawl/commit/8af24bc1b00684d6536a5b8670d0a6dc81142386))
+* **types:** export the dismiss endpoints' response type ([66b9c5b](https://github.com/featherweight-design/concert-crawl/commit/66b9c5b8677b9a76001954c9cb8bf2dc0ece648a))
+
 ## [1.364.1](https://github.com/featherweight-design/concert-crawl/compare/v1.364.0...v1.364.1) (2026-11-12)
 
 
