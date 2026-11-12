@@ -228,7 +228,7 @@ export const REPORTING_COPY = {
     postponedLead: 'A fan reports the show is being rescheduled.',
     // Tickets available: a fan says a sold-out show has tickets again (B+ A3).
     availableBadge: 'Tickets available · pending',
-    availableLead: 'A fan reports tickets are on sale again.',
+    availableLead: 'A fan reports tickets are back.',
     footerQuestion: 'Saw something different?',
     confirmButton: 'Confirm',
     yourReportLabel: 'Your report',

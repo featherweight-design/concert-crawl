@@ -140,6 +140,9 @@ export const PendingReportBanner = ({
         ? copy.postponedLead
         : copy.availableLead;
 
+  // Tickets available is the green dashed pending card (addendum 2, item 14).
+  const lineStyle = kind === 'available' ? 'dashed' : 'solid';
+
   const evidenceLabel = evidenceUrl
     ? evidenceUrl
     : evidenceMethod
@@ -151,7 +154,7 @@ export const PendingReportBanner = ({
       style={{
         borderRadius: 12,
         background: tokens.bg,
-        border: `1px solid ${tokens.border}`,
+        border: `1px ${lineStyle} ${tokens.border}`,
         overflow: 'hidden',
       }}
     >
@@ -160,7 +163,7 @@ export const PendingReportBanner = ({
         style={{
           padding: '10px 14px',
           background: tokens.bgStrong,
-          borderBottom: `1px solid ${tokens.border}`,
+          borderBottom: `1px ${lineStyle} ${tokens.border}`,
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
@@ -181,6 +184,14 @@ export const PendingReportBanner = ({
             color: tokens.color,
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
+            ...(kind === 'available'
+              ? {
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  border: `1px solid ${tokens.border}`,
+                  background: tokens.bg,
+                }
+              : {}),
           }}
         >
           {kind === 'cancelled' ? (
@@ -211,8 +222,8 @@ export const PendingReportBanner = ({
             <span
               key={idx}
               style={{
-                width: 7,
-                height: 7,
+                width: kind === 'available' ? 9 : 7,
+                height: kind === 'available' ? 9 : 7,
                 borderRadius: '50%',
                 background: idx < confirms ? tokens.color : 'transparent',
                 border: `1.1px solid ${tokens.color}`,
