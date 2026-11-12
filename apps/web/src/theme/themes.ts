@@ -1,3 +1,5 @@
+import { firstReadableInk } from './contrast';
+
 export type ThemeName =
   | 'electric'
   | 'jade'
@@ -315,16 +317,34 @@ const gloss: Record<string, string> = {
   'trust-resale': 'oklch(0.65 0.20 25)',
 };
 
+/**
+ * Tokens derived from a palette by contrast rather than hand-listed.
+ *
+ * `toast-action`: the action in a toast on `--surface-3` (B+ addendum 3,
+ * board 04/removed-d draws it in `--signal`). It keeps `--signal` wherever
+ * that reaches AA on `--surface-3` and falls back to `--fg` where it does not
+ * (Light's #0080A0 and Forge's #C8211A both fall short).
+ */
+const withDerived = (
+  palette: Record<string, string>,
+): Record<string, string> => ({
+  ...palette,
+  'toast-action': firstReadableInk(palette['surface-3'] ?? '', [
+    palette.signal ?? '',
+    palette.fg ?? '',
+  ]),
+});
+
 export const THEMES: Record<ThemeName, Record<string, string>> = {
-  electric,
-  jade,
-  light,
-  pulse,
-  forge,
-  bluenote,
-  drip,
-  cedar,
-  gloss,
+  electric: withDerived(electric),
+  jade: withDerived(jade),
+  light: withDerived(light),
+  pulse: withDerived(pulse),
+  forge: withDerived(forge),
+  bluenote: withDerived(bluenote),
+  drip: withDerived(drip),
+  cedar: withDerived(cedar),
+  gloss: withDerived(gloss),
 };
 
 export const THEME_NAMES = [

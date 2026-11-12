@@ -10,35 +10,16 @@
 // (`contrast-color()` only returns black or white, and is not yet in every
 // browser), so this reads the resolved tokens from `THEMES`.
 
+import { AA_TEXT_CONTRAST, contrastRatio } from '@/theme/contrast';
 import { THEMES, type ThemeName } from '@/theme/themes';
 
-/** WCAG 2 AA for body-size text. */
-export const AA_TEXT_CONTRAST = 4.5;
-
-const channel = (srgb: number): number => {
-  const unit = srgb / 255;
-  return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
-};
-
-/** WCAG relative luminance of a six-digit hex, or null for anything else. */
-export const relativeLuminance = (hex: string): number | null => {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!match?.[1]) return null;
-  const num = parseInt(match[1], 16);
-  return (
-    0.2126 * channel((num >> 16) & 255) +
-    0.7152 * channel((num >> 8) & 255) +
-    0.0722 * channel(num & 255)
-  );
-};
-
-/** WCAG contrast ratio between two six-digit hexes, or null if either is not one. */
-export const contrastRatio = (one: string, two: string): number | null => {
-  const lumOne = relativeLuminance(one);
-  const lumTwo = relativeLuminance(two);
-  if (lumOne === null || lumTwo === null) return null;
-  return (Math.max(lumOne, lumTwo) + 0.05) / (Math.min(lumOne, lumTwo) + 0.05);
-};
+// The maths moved to `@/theme/contrast` so `themes.ts` can derive tokens by
+// contrast too; re-exported so existing imports keep working.
+export {
+  AA_TEXT_CONTRAST,
+  contrastRatio,
+  relativeLuminance,
+} from '@/theme/contrast';
 
 type InkToken = 'var(--bg)' | 'var(--fg)';
 

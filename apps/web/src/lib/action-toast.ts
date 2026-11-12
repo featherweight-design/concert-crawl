@@ -1,6 +1,6 @@
 // The one look for every toast that carries an action (B+ addendum 3, board
 // 04/removed-d): the dark surface-3 pill with its action in signal cyan at
-// weight 800. The shared <Toaster> is sonner's default light one, so a toast
+// weight 800 (or `--fg` in a theme whose signal fails AA there). The shared <Toaster> is sonner's default light one, so a toast
 // with an action spreads these options in rather than restyling it locally.
 // Any new toast with an action uses this, so the action never drifts back to
 // the accent pink.
@@ -16,9 +16,12 @@ export const ACTION_TOAST_STYLE = {
   border: '1px solid var(--border-strong)',
 } satisfies NonNullable<ExternalToast['style']>;
 
+// `--toast-action` is `--signal` wherever that reaches AA on `--surface-3`,
+// else `--fg`, derived per theme in `themes.ts`. The fallback covers the
+// Electric SSR `:root`, where it is `--signal`.
 export const TOAST_ACTION_STYLE = {
   background: 'transparent',
-  color: 'var(--signal)',
+  color: 'var(--toast-action, var(--signal))',
   fontWeight: 800,
 } satisfies NonNullable<ExternalToast['actionButtonStyle']>;
 
