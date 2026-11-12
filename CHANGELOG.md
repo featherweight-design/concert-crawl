@@ -1,3 +1,21 @@
+# [1.366.0](https://github.com/featherweight-design/concert-crawl/compare/v1.365.0...v1.366.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** chrome account ring 46px, sign out arrow, tell-us tab clear of content ([5226360](https://github.com/featherweight-design/concert-crawl/commit/52263605c787de076c542da2c00a816155b47cb4))
+* **web:** chrome review fixes, avatar load edge, tab hit area and focus ring ([fa18777](https://github.com/featherweight-design/concert-crawl/commit/fa1877756228ffb474a8a56f6b115699790cdc30))
+* **web:** header rule draws in the border row; one glow constant ([8fe4cba](https://github.com/featherweight-design/concert-crawl/commit/8fe4cba22d53c0e5adf019ba4801f92b829f4ff7))
+* **web:** launch review fixes, bloom timing, proportional core ([840af97](https://github.com/featherweight-design/concert-crawl/commit/840af97af4ad16ba91b47227759a5ee70b0f8655))
+* **web:** my shows header rule and passport action glows to the B+ boards ([015a746](https://github.com/featherweight-design/concert-crawl/commit/015a746e88fa3e4a6e2e1f816dc059344aba3253))
+* **web:** tell-us tab drops its hit slop so it never steals a tap ([ce5f172](https://github.com/featherweight-design/concert-crawl/commit/ce5f17222eefd385baf01e62f1e34c661dad07ec))
+
+
+### Features
+
+* **web:** chrome fidelity, header lockup, avatar rings, nav states, tell-us tab gutter ([0fc425c](https://github.com/featherweight-design/concert-crawl/commit/0fc425c92f3af92d1c6648364bdc503d3714a53f))
+* **web:** launch splash fidelity, bloom, fixed colours, mark position, iOS tile, install arrow ([66b53d7](https://github.com/featherweight-design/concert-crawl/commit/66b53d7387b948023e2fc88cd015b23dde8c5a8b))
+
 # [1.365.0](https://github.com/featherweight-design/concert-crawl/compare/v1.364.1...v1.365.0) (2026-11-12)
 
 
