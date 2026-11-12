@@ -62,7 +62,16 @@ describe('BrowseSkeleton', () => {
   it('renders the page chrome as it looks live and only the data as skeletons', () => {
     render(<BrowseSkeleton />);
     expect(screen.getByText(CONSUMER_COPY.filterBar.locationLine)).toBeTruthy();
-    expect(screen.getByText(CONSUMER_COPY.filterBar.headingTitle)).toBeTruthy();
+    // The title's last word sits in its own gradient span, so match the
+    // phrase across both nodes.
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'SPAN' &&
+          el.textContent === CONSUMER_COPY.filterBar.headingTitle &&
+          el.querySelector('[data-testid="heading-accent"]') !== null,
+      ),
+    ).toBeTruthy();
     const chips = screen.getByTestId('filter-bar-preview-chips');
     for (const key of FILTER_ORDER) {
       expect(

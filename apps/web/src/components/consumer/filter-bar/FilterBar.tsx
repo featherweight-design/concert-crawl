@@ -55,6 +55,7 @@ import {
   HEADING_EYEBROW_STYLE,
   HEADING_TITLE_CLASS,
   HEADING_TITLE_STYLE,
+  HeadingTitleText,
   IconChevDown,
   SEGMENT_BAR_CLASS,
   SEGMENT_BLOCK_CLASS,
@@ -546,7 +547,11 @@ export function FilterBar({
             </span>
           )}
           <h1 className={HEADING_TITLE_CLASS} style={HEADING_TITLE_STYLE}>
-            {lensCrew === null ? copy.headingTitle : lensCrew.name}
+            {lensCrew === null ? (
+              <HeadingTitleText title={copy.headingTitle} />
+            ) : (
+              lensCrew.name
+            )}
           </h1>
         </div>
 

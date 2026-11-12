@@ -4,23 +4,11 @@
 // of the Cancelled banner. Drawn in addendum 2 item 12: a grey dashed card with
 // the chip, the headline and the source line.
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { DENVER_TIME_ZONE } from '@/lib/time';
+import { formatDelistedDate } from '@/lib/delisted-date';
 
 const copy = CONSUMER_COPY.eventDetail;
 
 const MUTED = 'var(--fg-subtle)';
-
-/** The sweep's timestamp as a short Mountain Time date, or null if unreadable. */
-const formatDelistedDate = (iso: string | null | undefined): string | null => {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: DENVER_TIME_ZONE,
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-};
 
 export const NoLongerListedCard = ({
   delistedAt,

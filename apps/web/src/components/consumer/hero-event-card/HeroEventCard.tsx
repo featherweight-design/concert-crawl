@@ -10,6 +10,8 @@ import { orderGenres, vibeBucketMembers } from '../event-row/lib/order-genres';
 import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
+import { EventImage } from '../event-image';
+import { HERO_BACKDROP_STYLE, heroFrame, heroWash } from './lib/hero-frame';
 
 const copy = CONSUMER_COPY;
 
@@ -19,11 +21,7 @@ const HERO_ART_SIZES = [
   { size: 130, className: 'hidden sm:block' },
 ] as const;
 
-/** The spotlight's outer glow in its lead genre's color; none when ungenred. */
-export const spotlightGlow = (genre: string): string =>
-  genre === NEUTRAL_GENRE_COLOR
-    ? 'none'
-    : `0 0 28px color-mix(in oklch, ${genre} 22%, transparent)`;
+export { spotlightGlow } from './lib/hero-frame';
 
 interface HeroEventCardProps {
   event: EventWithVenue;
@@ -58,23 +56,37 @@ export function HeroEventCard({
   return (
     <div
       data-testid="hero-event-card"
-      className="relative overflow-hidden rounded-[14px]"
-      style={{
-        border: '1.5px solid transparent',
-        // The fill carries a genre wash off the image side, as a carded row
-        // does (EventRow), stronger here because the spotlight is the one card
-        // on the page meant to read warm. The light theme showed the old flat
-        // fill most plainly.
-        background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 20%, var(--surface-1)), var(--surface-1) 55%) padding-box, linear-gradient(120deg, ${genre}, var(--accent)) border-box`,
-        // An ungenred show gets no glow, the rule `genreRing` and `stageRing`
-        // follow (addendum-2 item 23). The B5 boards draw only a genred
-        // spotlight, so none shows a neutral one glowing.
-        boxShadow: spotlightGlow(genre),
-      }}
+      className="relative overflow-hidden rounded-[16px]"
+      style={heroFrame(genre)}
     >
+      {/* The spotlight's own photo, blurred and saturated behind the card,
+          under a genre radial wash that fades into the elevated fill
+          (`shelf-see-all-m`, `browse-active-320`, `bp-browse`). Decorative:
+          the art beside the title already shows the photo. */}
+      <div
+        aria-hidden
+        data-testid="hero-backdrop"
+        className="pointer-events-none absolute"
+        style={HERO_BACKDROP_STYLE}
+      >
+        <EventImage
+          src={event.imageUrl}
+          artistPhotoUrl={event.artistPhotoUrl ?? null}
+          alt=""
+          artist={event.artist}
+          identityScale="hero"
+          className="h-full w-full"
+        />
+      </div>
+      <div
+        aria-hidden
+        data-testid="hero-backdrop-wash"
+        className="pointer-events-none absolute inset-0"
+        style={{ background: heroWash(genre) }}
+      />
       <Link
         href={`/events/${event.id}`}
-        className="flex items-center gap-3.5 p-3.5"
+        className="relative flex items-center gap-3.5 p-3.5"
       >
         {/* A square panel rather than the wide banner this slot used to crop
             to. The old shape stretched a square source across ≈4:1 and lost
@@ -85,7 +97,7 @@ export function HeroEventCard({
             is display:none, so its lazy image is never fetched. */}
         <div
           data-testid="hero-image-ring"
-          className="shrink-0 overflow-hidden rounded-[10px]"
+          className="shrink-0 overflow-hidden rounded-[12px]"
           style={{
             boxShadow: genreRing(genre),
           }}
@@ -98,7 +110,7 @@ export function HeroEventCard({
                 artworkUrl={event.imageUrl}
                 photoUrl={event.artistPhotoUrl ?? null}
                 size={size}
-                radius={10}
+                radius={12}
               />
             </span>
           ))}
@@ -113,7 +125,7 @@ export function HeroEventCard({
               <HeroFollowingBadge />
             ) : (
               <span
-                className="inline-block rounded-[4px] bg-accent px-2 py-[3px] text-fg-on-accent"
+                className="inline-block rounded-[5px] bg-accent px-2 py-[3px] text-fg-on-accent"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '9px',
