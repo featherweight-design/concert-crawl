@@ -93,6 +93,8 @@ export type ArtistStageShellProps = {
   /** The title column. */
   children: ReactNode;
   back?: ReactNode;
+  /** The top-right control, the back chip's mirror: Share. */
+  actions?: ReactNode;
   /** Desktop only: the follow block on the stage's right. */
   aside?: ReactNode;
 };
@@ -107,6 +109,7 @@ export const ArtistStageShell = ({
   burst = null,
   children,
   back,
+  actions,
   aside,
 }: ArtistStageShellProps) => (
   <div
@@ -117,6 +120,11 @@ export const ArtistStageShell = ({
     {back && (
       <div className="absolute left-4 top-3 z-[3] md:left-8 md:top-6">
         {back}
+      </div>
+    )}
+    {actions && (
+      <div className="absolute right-4 top-3 z-[3] md:right-8 md:top-6">
+        {actions}
       </div>
     )}
     <div className="relative mx-auto flex max-w-[1040px] flex-col items-center md:flex-row md:items-center md:gap-9">
@@ -158,6 +166,7 @@ export type ArtistStageProps = {
   ring: string;
   children: ReactNode;
   back?: ReactNode;
+  actions?: ReactNode;
   aside?: ReactNode;
 };
 
@@ -167,12 +176,14 @@ export const ArtistStage = ({
   ring,
   children,
   back,
+  actions,
   aside,
 }: ArtistStageProps) => (
   <ArtistStageShell
     backdrop={<ArtistBackdrop art={{ name, photoUrl }} />}
     burst={ring}
     back={back}
+    actions={actions}
     aside={aside}
     card={
       <div

@@ -90,6 +90,12 @@ export interface ShareEventMap {
   passport_shared: {
     destination: Extract<ShareDestination, 'system' | 'save-image'>;
   };
+  // The artist page's Share (B+ B10). A plain link with no card, so no
+  // `save-image`, and keyed on the slug because the link is the artist page.
+  artist_shared: {
+    artistSlug: string;
+    destination: Extract<ShareDestination, 'system' | 'copy-link'>;
+  };
 }
 
 export type ShareEvent = keyof ShareEventMap;

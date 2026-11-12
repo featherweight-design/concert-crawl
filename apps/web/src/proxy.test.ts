@@ -781,6 +781,40 @@ describe('proxy — private-beta launch gate (#794)', () => {
   });
 });
 
+// B+ B10 — a shared artist link (`/artists/<slug>`, from the artist page's
+// Share) opened by someone signed out goes through sign-in and must land back
+// on that artist, query and all, rather than on the calendar. Before launch
+// this is the auth.protect branch; Clerk's drop-in <SignIn /> honours
+// `redirect_url`, and NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL is only its fallback.
+describe('proxy — shared artist link (B10)', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false');
+  });
+
+  it.each(['/artists/puma-blue', '/artists/tokimonsta?utm_source=share'])(
+    'returns a signed-out visitor to %s after sign-in',
+    async (path) => {
+      const { middlewareHandler } = await import('./proxy');
+      const auth = makeAuth(null);
+
+      await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow();
+
+      const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl);
+      expect(url.pathname).toBe('/sign-in');
+      expect(url.searchParams.get('redirect_url')).toBe(path);
+    },
+  );
+
+  it('lets a signed-in recipient straight through', async () => {
+    const { middlewareHandler } = await import('./proxy');
+    const auth = makeAuth('user_1');
+
+    const result = await middlewareHandler(auth, makeReq('/artists/puma-blue'));
+
+    expect(result).toBeUndefined();
+  });
+});
+
 // The crew join surface (#1226) is authenticated. The correct middleware change
 // for it was NO change at all — it falls through to auth.protect() and gets
 // redirect_url for free. This suite pins that, so a later reader does not

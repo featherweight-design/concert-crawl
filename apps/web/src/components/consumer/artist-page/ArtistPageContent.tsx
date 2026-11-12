@@ -21,6 +21,7 @@ import {
 } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';
 import { ArtistReportCard } from './ArtistReportCard';
+import { ArtistShareButton } from './ArtistShareButton';
 import { ArtistStage } from './ArtistStage';
 import { artistGenres } from './lib/artist-genres';
 import { ArtistEmbed } from './embed/ArtistEmbed';
@@ -161,6 +162,7 @@ export const ArtistPageContent = ({
           photoUrl={artist.photoUrl}
           ring={ring}
           back={<BackChip inline fallbackHref="/events" />}
+          actions={<ArtistShareButton slug={artist.slug} name={artist.name} />}
           aside={isDesktop ? <FollowBlock {...followProps} /> : null}
         >
           <p className="ap-eyebrow">{ARTIST_COPY.eyebrow}</p>
