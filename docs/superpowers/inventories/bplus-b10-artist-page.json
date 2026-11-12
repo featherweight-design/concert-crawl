@@ -26,7 +26,13 @@
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG}",
-          "wait": "[data-testid=\"hero-band\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"stage-card\"]"
         }
       ]
     },
@@ -37,6 +43,12 @@
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG}",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
           "wait": "[data-testid=\"artist-show-row\"]"
         }
       ]
@@ -48,6 +60,12 @@
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG_NO_SHOWS}",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
           "wait": "[data-empty-upcoming]"
         }
       ]
@@ -58,7 +76,13 @@
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG}",
-          "wait": "[data-testid=\"hero-band\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"stage-card\"]"
         },
         {
           "scrollTo": "[data-testid=\"artist-report-card\"]"
