@@ -418,13 +418,33 @@ export const ADMIN_COPY = {
       latestRun: 'Latest run',
       robots: 'robots.txt',
     },
+    // The latest-run line: "OK · 3:04 AM · 2 new", "Failed: calendar block
+    // not found" (`04/venues-desktop`). Outcome words follow the run-result
+    // chips (`09/run-result-chips`, ruling 8: "Unchanged", not "Skipped").
     latestRun: {
       success: 'OK',
       failed: 'Failed',
       partial: 'Partial',
       skipped: 'Skipped',
+      unchanged: 'Unchanged',
+      blocked: 'Blocked',
+      notRun: 'Not run',
+      robots: 'robots.txt',
       // Not "Not crawled yet": a hidden venue's chip already says "Not crawled".
       never: 'No runs yet',
+      newShows: (count: number) => `${count.toLocaleString('en-US')} new`,
+      withReason: (outcome: string, reason: string) => `${outcome}: ${reason}`,
+      pausedOn: (date: string) => `Paused · ${date}`,
+      reasons: {
+        calendar_not_found: 'calendar block not found',
+        no_events_found: 'no shows found',
+        timeout: 'timed out',
+        crawl_paused: 'paused',
+        robots_disallowed: 'disallowed',
+        robots_unreachable: 'unreachable',
+        robots_crawl_delay: 'Crawl-delay over the cap',
+        llm_account: 'account-wide LLM refusal',
+      },
     },
     robots: {
       allowed: 'Allowed',
@@ -2330,6 +2350,11 @@ export const ADMIN_COPY = {
         crawlRuns: (when: string) => `Last run ${when}`,
         operations: (count: number) => `${count} feedback to read`,
         operationsDescription: 'Feedback, emails, activity log',
+      },
+      // Interim row until the audit's own place is drawn (`08/more-interim-m`).
+      robotsAudit: {
+        title: 'Robots.txt audit',
+        detail: "Every venue's last robots.txt check",
       },
     },
     userMenu: {
