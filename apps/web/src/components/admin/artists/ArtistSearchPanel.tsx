@@ -37,7 +37,12 @@ const PANEL = COPY.searchPanel;
 type Results =
   | { state: 'loading' }
   | { state: 'failed' }
-  | { state: 'ready'; candidates: SearchCandidate[] };
+  | {
+      state: 'ready';
+      candidates: SearchCandidate[];
+      /** From a typed search, not the saved snapshot. */
+      searched: boolean;
+    };
 
 /** "Lost Lake · Sun Nov 15 · 2 wrong-artist reports", from the row. */
 const contextLine = (row: AdminArtistRow): string | null => {
@@ -73,18 +78,25 @@ export const ArtistSearchPanel = ({
   const [query, setQuery] = useState(row.name);
   const [exact, setExact] = useState(false);
   const [results, setResults] = useState<Results>({ state: 'loading' });
+  // The term the results on screen came from; undefined is the saved snapshot.
+  const lastTerm = useRef<string | undefined>(undefined);
 
   // Only the latest search lands: a slow first load never covers a newer one.
   const latest = useRef(0);
   const run = useCallback(
     (term?: string) => {
       const mine = ++latest.current;
+      lastTerm.current = term;
       setResults({ state: 'loading' });
       api
         .candidates(row.id, term)
         .then((candidates) => {
           if (mine === latest.current)
-            setResults({ state: 'ready', candidates });
+            setResults({
+              state: 'ready',
+              candidates,
+              searched: term !== undefined,
+            });
         })
         .catch((err: unknown) => {
           console.error('[admin artists] artist search failed', row.id, err);
@@ -94,7 +106,8 @@ export const ArtistSearchPanel = ({
     [api, row.id],
   );
 
-  // The saved candidates first: no Spotify call unless they lack genres.
+  // Open on the saved snapshot. The server calls Spotify then only to fill
+  // in genres the snapshot lacks; a new name is a live search.
   useEffect(() => {
     run();
     // Closing the panel drops whatever is still in flight.
@@ -105,9 +118,14 @@ export const ArtistSearchPanel = ({
 
   const onSubmit = (evt: FormEvent) => {
     evt.preventDefault();
-    const term = query.trim();
+    const typed = query.trim();
     // The row's own name is what the snapshot already holds.
-    run(term === '' || term === row.name ? undefined : term);
+    const term = typed === '' || typed === row.name ? undefined : typed;
+    // One search at a time, and never the same one twice (a failed one may
+    // be tried again). Exact name filters on the client, so it never counts.
+    if (results.state === 'loading') return;
+    if (results.state === 'ready' && term === lastTerm.current) return;
+    run(term);
   };
 
   const shown =
@@ -181,11 +199,17 @@ export const ArtistSearchPanel = ({
       </div>
       {results.state === 'ready' && shown.length === 0 && (
         <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-          {PANEL.empty}
+          {results.candidates.length > 0
+            ? // Exact name hid every hit.
+              PANEL.noExact
+            : results.searched
+              ? PANEL.empty
+              : // Nothing saved for this row yet: the search is the way in.
+                PANEL.noSaved}
         </div>
       )}
       <ul
-        aria-label={PANEL.title(row.name)}
+        aria-label={COPY.candidates(row.name)}
         style={{
           listStyle: 'none',
           margin: 0,
@@ -197,9 +221,14 @@ export const ArtistSearchPanel = ({
       >
         {shown.map((candidate) => {
           const selected = candidate.id === selectedId;
+          // Picking the current match is Looks right: it keeps the match,
+          // which dismisses open reports (or confirms an automatic pick).
+          const keeps = candidate.id === row.spotifyArtistId;
+          const label = keeps ? COPY.looksRight : PANEL.use;
           return (
             <li
               key={candidate.id}
+              aria-current={selected || undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -240,13 +269,13 @@ export const ArtistSearchPanel = ({
               <AdminButton
                 type="button"
                 onClick={() => onUse(candidate)}
-                aria-label={COPY.actionFor(PANEL.use, candidate.name)}
+                aria-label={COPY.actionFor(label, candidate.name)}
                 style={{
                   ...(selected ? TINT_BUTTON : SECONDARY_BUTTON),
                   ...ROW_BUTTON,
                 }}
               >
-                {PANEL.use}
+                {label}
               </AdminButton>
             </li>
           );
@@ -261,6 +290,7 @@ export const ArtistSearchPanel = ({
         fullScreen
         backLabel={COPY.title}
         title={PANEL.title(row.name)}
+        // The phone board draws the context bare; the desktop one adds "For".
         subtitle={context ?? undefined}
         onClose={onClose}
         footer={
