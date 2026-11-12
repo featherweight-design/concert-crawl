@@ -122,10 +122,75 @@ describe('NewCodePanel', () => {
       expect.objectContaining({ code: 'REDROCKS' }),
     );
     expect(
-      screen.getByText('REDROCKS is already a code. Try REDROCKS2.'),
+      await screen.findByText('REDROCKS is already a code. Try REDROCKS2.'),
     ).toBeInTheDocument();
     expect(
       screen.getByText('4 to 20 letters and numbers. Not case-sensitive.'),
     ).toBeInTheDocument();
+  });
+
+  it('stores the label without a typed "Poster ·" prefix', async () => {
+    const create = vi.fn(async () => code());
+    render(
+      <NewCodePanel create={create} onCreated={vi.fn()} onClose={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByLabelText('Label (only you see it)'), {
+      target: { value: 'Poster · Globe Hall' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Make code' }));
+    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ label: 'Globe Hall', code: 'GLOBEHALL' }),
+    );
+  });
+
+  it('refuses a code starting with BETA before sending it', () => {
+    const create = vi.fn();
+    render(
+      <NewCodePanel create={create} onCreated={vi.fn()} onClose={vi.fn()} />,
+    );
+    fireEvent.change(screen.getByLabelText('Code'), {
+      target: { value: 'betatest' },
+    });
+    expect(
+      screen.getByText("Codes can't start with BETA."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Make code' })).toBeDisabled();
+  });
+});
+
+describe('EditCodePanel saving', () => {
+  it('sends only what changed, and closes without saving when nothing did', () => {
+    const onSave = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <EditCodePanel
+        code={code()}
+        now={NOW}
+        onSave={onSave}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('radio', { name: '100' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSave).toHaveBeenCalledWith({ maxUses: 100 });
+  });
+
+  it('focuses the checked Seats pill when opened from Add seats', () => {
+    render(
+      <EditCodePanel
+        code={code()}
+        now={NOW}
+        focusSeats
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('radio', { name: '50' })).toHaveFocus();
   });
 });

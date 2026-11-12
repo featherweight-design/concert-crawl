@@ -7,6 +7,7 @@ import { AdminButton, useIsPhone } from '@/components/admin/primitives';
 import { seatsTaken } from '@/lib/poster/poster-rule';
 import type { CodeEdit } from './codes-api';
 import {
+  cleanLabel,
   expiresAtFor,
   hasFutureExpiry,
   initialExpiry,
@@ -76,7 +77,7 @@ export const EditCodePanel = ({
   const save = () => {
     if (!canSave) return;
     const edit: CodeEdit = {};
-    const nextLabel = label.trim() || null;
+    const nextLabel = cleanLabel(label);
     if (nextLabel !== code.label) edit.label = nextLabel;
     if (seats !== code.maxUses) edit.maxUses = seats;
     const expiresAt = expiresAtFor(expiry, now);

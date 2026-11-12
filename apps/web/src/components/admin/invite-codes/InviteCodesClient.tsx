@@ -257,6 +257,8 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     } catch {
       replace(row);
       setFailure(failureFor(row, () => void saveEdit(row, edit)));
+      // A refusal (409) usually means the code changed elsewhere.
+      void load();
     }
   };
 
