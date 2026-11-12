@@ -125,6 +125,14 @@ export const applyArtistMatch = async (
   // right all along, so it dismisses instead: no notification.
   const unhide =
     existing.matchStatus === 'not_an_artist' && nextStatus === 'unmatched';
+  // Any other ruling except not-an-artist writes over the status it read. If
+  // another admin ruled the row not-an-artist in between, that write set
+  // `hidden`, and an id-only write here would leave the row `unmatched` (or
+  // matched) and still hidden: a verdict nobody gave. So the write re-checks
+  // the status it read. A not-an-artist ruling needs no guard, since it sets
+  // the hide itself whatever came before.
+  const guardStatus =
+    body.confirmAutoMatch !== true && !unhide && nextStatus !== 'not_an_artist';
   const changedThePage =
     body.confirmAutoMatch !== true &&
     (identityChanged ||
@@ -176,7 +184,12 @@ export const applyArtistMatch = async (
             )
           : unhide
             ? and(eq(artists.id, id), eq(artists.matchStatus, 'not_an_artist'))
-            : eq(artists.id, id),
+            : guardStatus
+              ? and(
+                  eq(artists.id, id),
+                  eq(artists.matchStatus, existing.matchStatus),
+                )
+              : eq(artists.id, id),
       )
       .returning();
     if (row) {
@@ -196,7 +209,7 @@ export const applyArtistMatch = async (
           status: 409,
           error: 'The auto-match has changed since it was loaded',
         }
-      : unhide
+      : unhide || guardStatus
         ? {
             ok: false,
             status: 409,

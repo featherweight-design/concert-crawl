@@ -42,6 +42,7 @@ import {
 import { loadNextShowByCanonical } from '../../lib/artist-follows.js';
 import { closeOpenArtistReports } from '../../lib/artist-reports.js';
 import {
+  hasShowInNextDaysExpr,
   hasUpcomingShowExpr,
   nextShowDateExpr,
   nextShowVenueExpr,
@@ -105,23 +106,31 @@ const isToCheckExpr = (): SQL =>
 /**
  * The To check tab's show-date chips: a show in the next 60 days, a show
  * after that, or no show at all. 60 is the redesign's locked artist window
- * (README "Decided", the same one Needs you uses).
+ * (README "Decided", the same length Needs you uses). "The next 60 days" is
+ * today plus 59 more, so a show exactly 60 days out reads Later. Needs you's
+ * horizon keeps its inclusive bound, which is why this uses its own
+ * expression rather than `hasUpcomingShowExpr(60)`.
  */
 const SOON_WINDOW_DAYS = 60;
 const windowSchema = z.enum(['soon', 'later', 'none']);
+const soonShowExpr = (): SQL => hasShowInNextDaysExpr(SOON_WINDOW_DAYS);
 const windowFilter = (window: z.infer<typeof windowSchema>): SQL =>
   window === 'soon'
-    ? hasUpcomingShowExpr(SOON_WINDOW_DAYS)
+    ? soonShowExpr()
     : window === 'later'
-      ? sql`${hasUpcomingShowExpr()} and not ${hasUpcomingShowExpr(SOON_WINDOW_DAYS)}`
+      ? sql`${hasUpcomingShowExpr()} and not ${soonShowExpr()}`
       : sql`not ${hasUpcomingShowExpr()}`;
 
 // How many fans are Watching the artist: the list's column and the detail
 // panel's count, so the two can't disagree. Listening history is not a follow
 // (the artist page's own rule), so Spotify top-artist rows are left out. A fan
 // can follow both by hand and through Spotify, so users are counted, not rows.
+const watchingFollowsOf = (canonicalName: SQL | string): SQL =>
+  sql`${userArtistFollows.canonicalName} = ${canonicalName} and ${userArtistFollows.source} <> 'spotify_top'`;
+const watchingUsersCount = (): SQL<number> =>
+  sql<number>`count(distinct ${userArtistFollows.userId})::int`;
 const watchingCountExpr = (canonicalName: SQL | string): SQL<number> =>
-  sql<number>`(select count(distinct ${userArtistFollows.userId})::int from ${userArtistFollows} where ${userArtistFollows.canonicalName} = ${canonicalName} and ${userArtistFollows.source} <> 'spotify_top')`;
+  sql<number>`(select ${watchingUsersCount()} from ${userArtistFollows} where ${watchingFollowsOf(canonicalName)})`;
 
 // The outer row's canonical name, qualified for the same reason as
 // `outerArtistId`.
@@ -157,25 +166,36 @@ const upcomingParamSchema = z
   .default('true')
   .transform((value) => value === 'true');
 
-const listQuerySchema = z.object({
-  status: listFilterSchema.optional(),
-  upcoming: upcomingParamSchema,
-  // To check's show-date chips. Applied on top of `upcoming`, as `/counts`
-  // counts them, so "No show" lists rows only with `upcoming=false`.
-  window: windowSchema.optional(),
-  // An empty `search=` is what a controlled input sends when the admin clears
-  // it, and that means "no filter" — not a bad request.
-  search: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .transform((value) =>
-      value === undefined || value === '' ? undefined : value,
-    ),
-  limit: z.coerce.number().int().min(1).max(200).default(100),
-  offset: z.coerce.number().int().min(0).default(0),
-});
+const listQuerySchema = z
+  .object({
+    status: listFilterSchema.optional(),
+    upcoming: upcomingParamSchema,
+    // To check's show-date chips. Applied on top of `upcoming`, as `/counts`
+    // counts them, so "No show" lists rows only with `upcoming=false`.
+    window: windowSchema.optional(),
+    // An empty `search=` is what a controlled input sends when the admin clears
+    // it, and that means "no filter" — not a bad request.
+    search: z
+      .string()
+      .trim()
+      .max(200)
+      .optional()
+      .transform((value) =>
+        value === undefined || value === '' ? undefined : value,
+      ),
+    limit: z.coerce.number().int().min(1).max(200).default(100),
+    offset: z.coerce.number().int().min(0).default(0),
+  })
+  // The show-date chips exist only on To check, and `/counts` only counts them
+  // there. A window on any other tab would filter a list whose chips never
+  // say so, so it is a bad request rather than a silent narrowing.
+  .refine(
+    (query) => query.window === undefined || query.status === 'to_check',
+    {
+      message: '`window` is only valid with status=to_check',
+      path: ['window'],
+    },
+  );
 
 /**
  * Exhausted rows move OUT of the queue they came from rather than sitting in
@@ -257,6 +277,9 @@ artistsAdminRouter.get(
         openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`,
         upcomingCount: upcomingShowCountExpr(),
         watchingCount: watchingCountExpr(outerCanonicalName()),
+        // Next show in SQL, one subquery per row. The detail panel reads it
+        // through `loadNextShowByCanonical` instead, for its richer response
+        // shape; see the comment there.
         nextShowDate: nextShowDateExpr(),
         nextShowVenue: nextShowVenueExpr(),
         // The To check row shows its candidates inline (redesign 4c), from
@@ -327,7 +350,7 @@ artistsAdminRouter.get(
     // select list and the GROUP BY, so it cannot see the two as the same
     // expression and rejects the query.
     const upcomingOnly = upcoming ? hasUpcomingShowExpr() : undefined;
-    const soon = hasUpcomingShowExpr(SOON_WINDOW_DAYS);
+    const soon = soonShowExpr();
     const anyShow = hasUpcomingShowExpr();
     const [rows, [reportedRow], [toCheckRow]] = await Promise.all([
       db
@@ -734,11 +757,19 @@ artistsAdminRouter.get(
       )
       .orderBy(asc(artistReports.createdAt), asc(artistReports.id));
 
-    // The list's Watching count, so the row and the panel agree.
+    // The list's Watching count, built from the same fragments so the row and
+    // the panel agree, counted straight off the follows for this one name.
     const [followers] = await db
-      .select({ total: watchingCountExpr(outerCanonicalName()) })
-      .from(artists)
-      .where(eq(artists.id, id));
+      .select({ total: watchingUsersCount() })
+      .from(userArtistFollows)
+      .where(watchingFollowsOf(artist.canonicalName));
+    // Next show: the list computes it in SQL (`nextShowDateExpr` and
+    // `nextShowVenueExpr`), this panel through `loadNextShowByCanonical`. Kept
+    // apart on purpose: this response's `nextShow` is the loader's
+    // `FollowedArtistNextShow` (eventId, venueSlug, price, genres), which the
+    // SQL fragments cannot produce, and the response shape must not change.
+    // Both apply the same consumer predicate and the same date, show time, id
+    // order, so they pick the same show.
     const nextShow =
       (await loadNextShowByCanonical([artist.canonicalName])).get(
         artist.canonicalName,
