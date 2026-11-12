@@ -382,11 +382,13 @@ export type CrawlPauseResume =
 // Body of POST /v1/admin/venues/:id/crawl-pause (pauseBodySchema). `note` is
 // at most 500 characters and required when `reason` is 'other'; `resume`
 // defaults to manual.
-export interface CrawlPauseRequest {
-  reason: CrawlPauseReason;
-  note?: string;
-  resume?: CrawlPauseResume;
-}
+export type CrawlPauseRequest =
+  | {
+      reason: Exclude<CrawlPauseReason, 'other'>;
+      note?: string;
+      resume?: CrawlPauseResume;
+    }
+  | { reason: 'other'; note: string; resume?: CrawlPauseResume };
 
 // Venue — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.

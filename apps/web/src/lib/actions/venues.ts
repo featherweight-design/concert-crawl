@@ -156,9 +156,8 @@ export async function pauseVenue(id: string): Promise<void> {
   revalidatePath(`/admin/venues/${id}`);
 }
 
-// Sends the whole pause body (reason, note, resume) to the API. Optional
-// fields left undefined are dropped by JSON serialisation, so a reason-only
-// pause stays a valid body and the API defaults resume to manual.
+// Sends the whole pause body (reason, note, resume) to the API, as given. A
+// reason-only pause is a valid body: the API defaults resume to manual.
 export async function pauseCrawling(
   id: string,
   body: CrawlPauseRequest,
