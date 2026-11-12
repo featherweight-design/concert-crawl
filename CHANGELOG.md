@@ -1,3 +1,10 @@
+## [1.342.3](https://github.com/featherweight-design/concert-crawl/compare/v1.342.2...v1.342.3) (2026-11-12)
+
+
+### Bug Fixes
+
+* **admin:** read declared tokens instead of undeclared ones ([b5018cc](https://github.com/featherweight-design/concert-crawl/commit/b5018cc962db6ac7e667d9e647b7060a40c9fae9))
+
 ## [1.342.2](https://github.com/featherweight-design/concert-crawl/compare/v1.342.1...v1.342.2) (2026-11-12)
 
 
