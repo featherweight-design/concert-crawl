@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AdminPerson, PeopleApi, PeoplePage } from './people-api';
+import {
+  joinSourceFrom,
+  type AdminPerson,
+  type PeopleApi,
+  type PeoplePage,
+} from './people-api';
 import {
   chipCount,
   codeNameFor,
@@ -104,6 +109,20 @@ describe('fetchPeople', () => {
       offset: 0,
     });
     expect(result.people.map((each) => each.id)).toEqual(['t1']);
+  });
+});
+
+describe('joinSourceFrom', () => {
+  it('keeps a known kind', () => {
+    expect(
+      joinSourceFrom({ kind: 'poster', code: 'HIDIVE', label: 'Hi-Dive' }),
+    ).toEqual({ kind: 'poster', code: 'HIDIVE', label: 'Hi-Dive' });
+  });
+  it('reads a kind it does not know as no source, so JOINED shows the date', () => {
+    expect(
+      joinSourceFrom({ kind: 'member', code: 'MIRA', label: null }),
+    ).toBeNull();
+    expect(joinSourceFrom(null)).toBeNull();
   });
 });
 
