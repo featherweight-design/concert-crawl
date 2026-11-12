@@ -5,7 +5,11 @@ import Link from 'next/link';
 import { validateAndSetInviteCode } from './actions';
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
 import { copy } from './definitions/copy';
-import { formatInviteCodeInput, isCompleteInviteCode } from '@/lib/invite-code';
+import {
+  charactersRemaining,
+  formatInviteCodeInput,
+  isCompleteInviteCode,
+} from '@/lib/invite-code';
 
 type ErrorKind =
   | 'invalid_format'
@@ -184,7 +188,7 @@ export default function InviteCodePage() {
               >
                 {isComplete
                   ? copy.hint.valid
-                  : copy.hint.remaining(14 - code.length)}
+                  : copy.hint.remaining(charactersRemaining(code))}
               </div>
             )}
           </div>

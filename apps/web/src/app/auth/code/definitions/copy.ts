@@ -4,9 +4,10 @@ export const copy = {
   stepLabel: 'Step 1 of 2',
   heading: 'Enter your invite code',
   description: 'Concert Crawl is invite-only right now. Your code looks like',
-  codeFormat: 'BETA-XXXX-XXXX',
+  // Both shapes a code can take: generated, or a custom word from a poster.
+  codeFormat: 'BETA-XXXX-XXXX or REDROCKS',
   input: {
-    placeholder: 'BETA-XXXX-XXXX',
+    placeholder: 'Your code',
     ariaLabel: 'Invite code',
   },
   hint: {
@@ -26,7 +27,8 @@ export const copy = {
     href: '/legal/beta',
   },
   errors: {
-    invalid_format: 'Code format is BETA-XXXX-XXXX. Check for typos.',
+    invalid_format:
+      'Codes are BETA-XXXX-XXXX, or 4 to 20 letters and numbers. Check for typos.',
     notfound: 'Code not found. Double-check for typos.',
     used: 'This code has already been redeemed.',
     expired: 'This code has expired.',
