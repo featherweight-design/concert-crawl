@@ -18,7 +18,7 @@ const TONE: Record<Kind, string> = {
   event: 'var(--warning)',
   prices: 'var(--success)',
   bug: 'var(--danger)',
-  flag: 'var(--fg-muted)',
+  flag: 'var(--fg-subtle)',
   priceCheck: 'var(--danger)',
 };
 

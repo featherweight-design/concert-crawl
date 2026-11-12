@@ -2640,7 +2640,7 @@ export const ADMIN_COPY = {
     couldntLoad: {
       title: (page: string) => `Couldn't load ${page}`,
       titleGeneric: "Couldn't load this page",
-      body: 'Something broke while loading it. Nothing you decided is lost.',
+      body: "The API didn't answer in time. Nothing you decided is lost.",
       tryAgain: 'Try again',
       openHealth: 'Open Health',
       errorId: (digest: string) => `Error ID: ${digest}`,
