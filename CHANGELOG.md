@@ -1,3 +1,16 @@
+# [1.337.0](https://github.com/featherweight-design/concert-crawl/compare/v1.336.1...v1.337.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **ci:** bound the Sentry deploy call, validate slugs, document region and release link ([837e387](https://github.com/featherweight-design/concert-crawl/commit/837e387f0a137b8ccc98b7bbc447411afa6aa018))
+* **web:** draw the live status card as its three boards do ([a5f33f9](https://github.com/featherweight-design/concert-crawl/commit/a5f33f930d6beb7e1ad79ef75d969a2b20f8b9a2))
+
+
+### Features
+
+* **ci:** record prod deploys as Sentry releases under the API project ([82c4df7](https://github.com/featherweight-design/concert-crawl/commit/82c4df7f102a660a82dc24cc0301f0d66938770e))
+
 ## [1.336.1](https://github.com/featherweight-design/concert-crawl/compare/v1.336.0...v1.336.1) (2026-11-12)
 
 
