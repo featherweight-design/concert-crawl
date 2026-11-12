@@ -26,10 +26,12 @@ const CancelledGlyph16 = () => (
     fill="none"
     aria-hidden="true"
   >
+    {/* ⊘, as the board draws it: a ring with one bar across. */}
+    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
     <path
-      d="M3 3l6 6M9 3L3 9"
+      d="M2.9 9.1L9.1 2.9"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth="1.3"
       strokeLinecap="round"
     />
   </svg>
@@ -118,6 +120,9 @@ export const LiveReportBanner = ({
   const headline = copy.headlines[status];
 
   const subLabel = (() => {
+    // A crawled change has no reporter and no confirms, so "0 confirms" would
+    // read as a report nobody backed. It keeps only its age.
+    if (reporter == null && confirmCount === undefined) return timeAgo;
     const confirms = confirmCount ?? 0;
     if (reporter != null) {
       return copy.reportedBy(reporter.handle, confirms, timeAgo);
@@ -144,6 +149,8 @@ export const LiveReportBanner = ({
           height: '32px',
           borderRadius: '8px',
           background: token.bgStrong,
+          border: `1px solid ${token.border}`,
+          boxSizing: 'border-box',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',

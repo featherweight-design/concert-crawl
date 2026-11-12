@@ -57,6 +57,13 @@ const linkStyle = {
   whiteSpace: 'nowrap',
 } satisfies React.CSSProperties;
 
+// A cancelled show's link (refund info, or the venue's page): outlined, never
+// the filled primary.
+const CANCELLED_LINK_STYLE = {
+  ...linkStyle,
+  border: '1.5px solid color-mix(in oklab, var(--danger) 50%, transparent)',
+} satisfies React.CSSProperties;
+
 interface EventTicketCtaProps {
   /** The show's lifecycle. Cancelled turns the ticket link into refund info. */
   status?: EventStatus | undefined;
@@ -91,11 +98,7 @@ export const EventTicketCta = ({
         target="_blank"
         rel="noopener noreferrer"
         className={`${linkClass} text-fg`}
-        style={{
-          ...linkStyle,
-          border:
-            '1.5px solid color-mix(in oklab, var(--danger) 50%, transparent)',
-        }}
+        style={CANCELLED_LINK_STYLE}
       >
         {copy.refundInfo}
         <ChevronRight size={16} aria-hidden />
@@ -116,6 +119,24 @@ export const EventTicketCta = ({
     );
   }
 
+  // A cancelled show is never offered tickets: without a vendor link it keeps
+  // the venue's own page, in the refund link's outlined style rather than the
+  // filled primary, since there is nothing left to buy.
+  if (cancelled && href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${linkClass} text-fg`}
+        style={CANCELLED_LINK_STYLE}
+      >
+        {copy.visitVenueWebsite}
+        <ExternalLinkIcon />
+      </a>
+    );
+  }
+
   if (href) {
     return (
       <a
@@ -125,9 +146,7 @@ export const EventTicketCta = ({
         className={`${linkClass} text-fg-on-accent`}
         style={{ ...linkStyle, background: 'var(--accent)' }}
       >
-        {/* A cancelled show is never offered tickets: without a vendor link
-            it keeps the venue's own page, labelled as the venue's. */}
-        {hasDirectLink && !cancelled ? copy.getTickets : copy.visitVenueWebsite}
+        {hasDirectLink ? copy.getTickets : copy.visitVenueWebsite}
         <ExternalLinkIcon />
       </a>
     );
