@@ -14,17 +14,19 @@ type Slot = 'left' | 'centre' | 'right';
 
 // Each slot's side (-1, 0, 1) from the fan's centre, scaled by --fan-dx (a
 // fraction of the card width), its drop and its tilt. The side cards sit behind
-// and lower than the centre one. --fan-dx is the board's 0.62 from 390px up;
-// below, 0.45 keeps the rotated side cards inside the viewport (at 320 the
-// card is 147px and its 9deg bounding box 88px from its centre, so the offset
-// must stay under 68px = 0.46; 375 and 360 allow 0.465).
+// and lower than the centre one. invite-320 draws fixed 165x216 cards, side
+// centres at about 0.65 of the width and tops at 18px (left) and 21px (right):
+// 0.109 and 0.127 of 165. Below 390px the card scales with the viewport
+// (--fan-card-w: 38vw) so the 9deg side boxes (0.598 of the width from their
+// centre, 1.248 with the offset) fit: 320 gives 122px (needs <= 128) and 375
+// gives 142 (needs <= 150).
 const SLOT_POSE: Record<
   Slot,
   { side: number; dy: number; rotate: number; z: number }
 > = {
-  left: { side: -1, dy: 0.1, rotate: -9, z: 1 },
+  left: { side: -1, dy: 18 / 165, rotate: -9, z: 1 },
   centre: { side: 0, dy: 0, rotate: -2, z: 3 },
-  right: { side: 1, dy: 0.12, rotate: 8, z: 2 },
+  right: { side: 1, dy: 21 / 165, rotate: 8, z: 2 },
 };
 
 /**
@@ -38,6 +40,8 @@ const CARD_FG_MUTED = '#C9D1E6'; // fwd-allow-hex: board art colour
 const CHIP_BG = '#171D3A'; // fwd-allow-hex: board art colour
 const CHIP_BORDER = '#1F2748'; // fwd-allow-hex: board art colour
 const CHIP_FG = '#B8C2DA'; // fwd-allow-hex: board art colour
+export const TONIGHT_BG = '#FF7BD4'; // fwd-allow-hex: board art colour
+export const TONIGHT_FG = '#070A1A'; // fwd-allow-hex: board art colour
 const EYE_BG = 'rgba(7, 10, 26, 0.5)'; // fwd-allow-hex: board art colour
 const EYE_BORDER = '#2C3661'; // fwd-allow-hex: board art colour
 const EYE_FG = '#E8F3FF'; // fwd-allow-hex: board art colour
@@ -66,7 +70,7 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
         left: '50%',
         top: 0,
         width: 'var(--fan-card-w)',
-        aspectRatio: '3 / 4',
+        aspectRatio: '165 / 216',
         transform: `translateX(calc(-50% + var(--fan-card-w) * var(--fan-dx) * ${pose.side}))translateY(calc(var(--fan-card-w) * ${pose.dy})) rotate(${pose.rotate}deg)`,
         zIndex: pose.z,
         borderRadius: 16,
@@ -107,8 +111,11 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
             gap: 5,
             padding: '4px 9px',
             borderRadius: 999,
-            background: 'var(--accent)',
-            color: 'var(--fg-on-accent)',
+            // Fixed on every theme: the pill sits on the dark card scrim, so
+            // the themed --accent (which shifts on Light) would drift from
+            // the board's #FF7BD4 on #070A1A.
+            background: TONIGHT_BG,
+            color: TONIGHT_FG,
             fontSize: 9.5,
           }}
         >
@@ -220,11 +227,12 @@ export function ShowFan({ shows }: { shows: InviteShow[] }) {
 
   return (
     <div
-      className="[--fan-card-w:min(46vw,220px)] [--fan-dx:0.45] min-[390px]:[--fan-dx:0.62] md:[--fan-card-w:250px]"
+      className="[--fan-card-w:38vw] [--fan-dx:0.65] min-[390px]:[--fan-card-w:165px] md:[--fan-card-w:250px]"
       style={{
         position: 'relative',
         width: '100%',
-        height: 'calc(var(--fan-card-w) * 1.5)',
+        // The board's 259px box for 216px cards: 1.57 of the width.
+        height: 'calc(var(--fan-card-w) * 1.57)',
       }}
     >
       {placed.map(({ show, slot }) => (

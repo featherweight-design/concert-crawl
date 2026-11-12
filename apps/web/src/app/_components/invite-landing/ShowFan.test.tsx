@@ -61,6 +61,45 @@ describe('ShowFan', () => {
     for (const value of shadows) expect(value).toContain('0 16px 36px');
   });
 
+  it('draws 165x216 cards with the board offsets and drops', () => {
+    const { container } = render(
+      <ShowFan shows={[show('a', null), show('b', null), show('c', null)]} />,
+    );
+    const root = container.querySelector<HTMLElement>('div')!;
+    expect(root.className).toContain('min-[390px]:[--fan-card-w:165px]');
+    expect(root.className).toContain('[--fan-dx:0.65]');
+    const cards = [
+      ...container.querySelectorAll<HTMLElement>('[style*="rotate("]'),
+    ];
+    expect(cards.every((card) => card.style.aspectRatio === '165 / 216')).toBe(
+      true,
+    );
+    const drops = cards
+      .map(
+        (card) =>
+          /translateY\(calc\(var\(--fan-card-w\) \* ([\d.]+)\)\)/.exec(
+            card.style.transform,
+          )?.[1],
+      )
+      .map(Number)
+      .sort((lo, hi) => lo - hi);
+    expect(drops[0]).toBe(0);
+    expect(drops[1]).toBeCloseTo(18 / 165, 3);
+    expect(drops[2]).toBeCloseTo(21 / 165, 3);
+  });
+
+  it('draws the TONIGHT pill fixed #FF7BD4 on #070A1A, no theme token', () => {
+    const { container } = render(
+      <ShowFan shows={[{ ...show('a', null), tonight: true }]} />,
+    );
+    const pill = [...container.querySelectorAll<HTMLElement>('span')].find(
+      (node) => node.style.borderRadius === '999px',
+    );
+    expect(pill?.style.background).toContain('rgb(255, 123, 212)');
+    expect(pill?.style.color).toBe('rgb(7, 10, 26)');
+    expect(pill?.getAttribute('style')).not.toContain('var(--');
+  });
+
   it('keeps the scrim fixed dark, with no theme token', () => {
     const { container } = render(<ShowFan shows={[show('a', null)]} />);
     const scrim = container.querySelector<HTMLElement>('[data-fan-scrim]');
