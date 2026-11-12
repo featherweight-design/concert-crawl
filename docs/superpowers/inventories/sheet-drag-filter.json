@@ -1,0 +1,54 @@
+{
+  "feature": "Sheet drag: venues FilterSheet open state",
+  "note": "Phone only. Opens the venues filter bottom sheet from the mobile chip row.",
+  "widths": [
+    {
+      "label": "w390",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "w320",
+      "width": 320,
+      "height": 640,
+      "touch": true
+    }
+  ],
+  "fullPage": false,
+  "rows": [
+    {
+      "id": "venues-filter-sheet",
+      "label": "/venues: FilterSheet open",
+      "steps": [
+        {
+          "goto": "/venues",
+          "settle": 1000
+        },
+        {
+          "wait": "a[href^=\"/venues/\"]"
+        },
+        {
+          "clickRole": "button",
+          "name": "capacity"
+        },
+        {
+          "waitDialog": "Capacity filter"
+        },
+        {
+          "settle": 2500
+        }
+      ]
+    }
+  ],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ]
+}
