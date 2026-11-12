@@ -119,6 +119,18 @@ describe('VenueFeatureCard', () => {
     });
   });
 
+  it('drops the type chip on the mobile flagship card only, as the boards draw it', () => {
+    const { getByTestId } = render(
+      <VenueFeatureCard venue={makeVenue({ venueType: 'Amphitheater' })} />,
+    );
+    expect(getByTestId('venue-feature-card-mobile').textContent).not.toContain(
+      'Amphitheater',
+    );
+    expect(getByTestId('venue-feature-card-desktop').textContent).toContain(
+      'Amphitheater',
+    );
+  });
+
   it('gives both cards a gradient edge and a glow', () => {
     const { getByTestId } = render(<VenueFeatureCard venue={makeVenue({})} />);
     ['venue-feature-card-desktop', 'venue-feature-card-mobile'].forEach(
