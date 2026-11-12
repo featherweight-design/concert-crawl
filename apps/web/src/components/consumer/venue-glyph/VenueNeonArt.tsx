@@ -55,7 +55,11 @@ export function VenueNeonArt({
   const uid = useId().replace(/:/g, '');
   const gradientId = `vn${uid}g`;
   const glowId = `vn${uid}f`;
+  const softId = `vn${uid}s`;
   const { from, to } = VENUE_GLYPHS[glyphKey];
+  // The venue page hero passes the sm size too; the flagship cards do not. The
+  // audit's halo and neon-fill rows are for the hero, so the cards keep the soft
+  // halo and the flat glyph fill they have always had.
   const responsive = glyphSizeSm !== undefined;
 
   return (
@@ -112,30 +116,51 @@ export function VenueNeonArt({
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+            {!responsive && (
+              <radialGradient id={softId}>
+                <stop offset="0" stopColor={to} stopOpacity={0.22} />
+                <stop offset="0.88" stopColor={from} stopOpacity={0.12} />
+                <stop offset="1" stopColor={from} stopOpacity={0} />
+              </radialGradient>
+            )}
           </defs>
-          {/* Two flat halo discs spanning the glyph box (r210 and r130 of the board's 420). */}
-          <circle
-            data-venue-halo="outer"
-            cx={12}
-            cy={12}
-            r={14}
-            fill={to}
-            fillOpacity={0.1}
-          />
-          <circle
-            data-venue-halo="inner"
-            cx={12}
-            cy={12}
-            r={8.67}
-            fill={from}
-            fillOpacity={0.1}
-          />
+          {responsive ? (
+            <>
+              {/* Two flat halo discs spanning the glyph box (r210 and r130 of
+                  the board's 420). */}
+              <circle
+                data-venue-halo="outer"
+                cx={12}
+                cy={12}
+                r={14}
+                fill={to}
+                fillOpacity={0.1}
+              />
+              <circle
+                data-venue-halo="inner"
+                cx={12}
+                cy={12}
+                r={8.67}
+                fill={from}
+                fillOpacity={0.1}
+              />
+            </>
+          ) : (
+            // The cards' soft halo: 1.45x the glyph box, fading out at its edge.
+            <circle
+              data-venue-halo="soft"
+              cx={12}
+              cy={12}
+              r={20.3}
+              fill={`url(#${softId})`}
+            />
+          )}
           <g filter={`url(#${glowId})`}>
             <GlyphShapes
               glyphKey={glyphKey}
               paint={`url(#${gradientId})`}
               strokeWidth={0.9}
-              neonFilled
+              neonFilled={responsive}
             />
           </g>
         </svg>

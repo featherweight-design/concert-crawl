@@ -4,6 +4,7 @@ import type { VenueHeroSetting } from './definitions/venue-settings';
 const NIGHT_GROUND = '#0B0D1F'; // fwd-allow-hex: board art colour
 const MOON_YELLOW = '#FFE36B'; // fwd-allow-hex: board art colour
 const STAR_WHITE = '#FFFFFF'; // fwd-allow-hex: board art colour
+const MASK_BLACK = '#000000'; // fwd-allow-hex: a mask cut-out, not a drawn colour
 
 interface VenueBackdropProps {
   setting: VenueHeroSetting;
@@ -123,68 +124,82 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
     const moonId = `vn${uid}m`;
     const moonMaskId = `vn${uid}mm`;
     return (
-      <svg
-        viewBox="0 0 380 200"
-        // Left-anchored so the moon, top left, survives the slice crop on a phone.
-        preserveAspectRatio="xMinYMax slice"
-        aria-hidden="true"
-        focusable="false"
-        data-venue-backdrop="arena"
-        style={SVG_STYLE}
-      >
-        <defs>
-          <radialGradient id={moonId}>
-            <stop offset="0" stopColor={MOON_YELLOW} stopOpacity={0.22} />
-            <stop offset="1" stopColor={MOON_YELLOW} stopOpacity={0} />
-          </radialGradient>
-          <mask id={moonMaskId}>
-            <rect width="380" height="200" fill={STAR_WHITE} />
-            <circle cx="45" cy="36" r="14" fill="#000" />
-          </mask>
-        </defs>
-        {BUILDINGS.map(([bx, width, top]) => (
-          <rect
-            key={bx}
-            x={bx}
-            y={top}
-            width={width}
-            height={200 - top + 52}
-            fill={NIGHT_GROUND}
-            stroke={from}
-            strokeOpacity={0.18}
-          />
-        ))}
-        {WINDOWS.map(([wx, wy]) => (
-          <rect
-            key={`${wx}-${wy}`}
-            x={wx}
-            y={wy}
-            width={2.5}
-            height={3.5}
-            fill={MOON_YELLOW}
-            opacity={0.3}
-          />
-        ))}
-        <circle cx="38" cy="40" r="42" fill={`url(#${moonId})`} />
-        <circle
-          cx="38"
-          cy="40"
-          r="14"
-          fill={MOON_YELLOW}
-          opacity={0.55}
-          mask={`url(#${moonMaskId})`}
-        />
-        {ARENA_STARS.map(([sx, sy, radius, opacity]) => (
+      <>
+        <svg
+          viewBox="0 0 380 200"
+          preserveAspectRatio="xMidYMax slice"
+          aria-hidden="true"
+          focusable="false"
+          data-venue-backdrop="arena"
+          style={SVG_STYLE}
+        >
+          {BUILDINGS.map(([bx, width, top]) => (
+            <rect
+              key={bx}
+              x={bx}
+              y={top}
+              width={width}
+              height={200 - top + 52}
+              fill={NIGHT_GROUND}
+              stroke={from}
+              strokeOpacity={0.18}
+            />
+          ))}
+          {WINDOWS.map(([wx, wy]) => (
+            <rect
+              key={`${wx}-${wy}`}
+              x={wx}
+              y={wy}
+              width={2.5}
+              height={3.5}
+              fill={MOON_YELLOW}
+              opacity={0.3}
+            />
+          ))}
+        </svg>
+        {/* The moon and its stars are their own top-left layer at a fixed size,
+            not part of the sliced skyline: a wide, short hero crops the top of
+            the skyline's box, and the moon would go with it. */}
+        <svg
+          viewBox="0 0 150 100"
+          width={150}
+          height={100}
+          aria-hidden="true"
+          focusable="false"
+          data-venue-moon=""
+          style={{ position: 'absolute', left: 0, top: 0, display: 'block' }}
+        >
+          <defs>
+            <radialGradient id={moonId}>
+              <stop offset="0" stopColor={MOON_YELLOW} stopOpacity={0.22} />
+              <stop offset="1" stopColor={MOON_YELLOW} stopOpacity={0} />
+            </radialGradient>
+            <mask id={moonMaskId}>
+              <rect width="150" height="100" fill={STAR_WHITE} />
+              <circle cx="45" cy="36" r="14" fill={MASK_BLACK} />
+            </mask>
+          </defs>
+          <circle cx="38" cy="40" r="42" fill={`url(#${moonId})`} />
           <circle
-            key={`${sx}-${sy}`}
-            cx={sx}
-            cy={sy}
-            r={radius}
-            fill={STAR_WHITE}
-            opacity={opacity}
+            cx="38"
+            cy="40"
+            r="14"
+            fill={MOON_YELLOW}
+            opacity={0.55}
+            mask={`url(#${moonMaskId})`}
           />
-        ))}
-      </svg>
+          {ARENA_STARS.map(([sx, sy, radius, opacity]) => (
+            <circle
+              key={`${sx}-${sy}`}
+              cx={sx}
+              cy={sy}
+              r={radius}
+              fill={STAR_WHITE}
+              opacity={opacity}
+            />
+          ))}
+        </svg>
+      </>
     );
   }
 

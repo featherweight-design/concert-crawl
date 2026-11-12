@@ -38,7 +38,11 @@ describe('VenueNeonArt', () => {
     expect(art?.querySelector('[data-venue-backdrop="street"]')).toBeNull();
     const backdrop = art?.querySelector('[data-venue-backdrop="arena"]');
     expect(backdrop?.querySelectorAll('rect[stroke]')).toHaveLength(8);
-    expect(backdrop?.querySelector('mask')).not.toBeNull();
+    // The crescent is its own top-left layer, so a wide hero's crop of the
+    // skyline cannot take it away.
+    const moon = art?.querySelector('svg[data-venue-moon]');
+    expect(moon?.querySelector('mask')).not.toBeNull();
+    expect(backdrop?.querySelector('mask')).toBeNull();
   });
 
   it('keeps the brick layer for a street venue', () => {
@@ -59,17 +63,32 @@ describe('VenueNeonArt', () => {
     expect(art?.querySelector('[data-venue-backdrop="arena"]')).not.toBeNull();
   });
 
-  it('draws two flat halo discs and a neon outline for a filled glyph', () => {
+  it('the hero draws two flat halo discs and a neon outline for a filled glyph', () => {
+    // The venue page hero passes the sm size too.
     const { container } = render(
-      <VenueNeonArt glyphKey="bluebird" glyphSize={196} />,
+      <VenueNeonArt glyphKey="bluebird" glyphSize={163} glyphSizeSm={196} />,
     );
     expect(container.querySelectorAll('circle[data-venue-halo]')).toHaveLength(
       2,
     );
+    expect(container.querySelector('[data-venue-halo="soft"]')).toBeNull();
     const bird = container.querySelector('svg[data-venue-glyph] path');
     expect(bird?.getAttribute('fill-opacity')).toBe('0.3');
     expect(bird?.getAttribute('stroke-width')).toBe('5.25');
     expect(bird?.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+  });
+
+  it('a flagship card keeps its soft halo and its flat glyph fill', () => {
+    const { container } = render(
+      <VenueNeonArt glyphKey="bluebird" glyphSize={150} />,
+    );
+    expect(container.querySelectorAll('circle[data-venue-halo]')).toHaveLength(
+      1,
+    );
+    expect(container.querySelector('[data-venue-halo="soft"]')).not.toBeNull();
+    const bird = container.querySelector('svg[data-venue-glyph] path');
+    expect(bird?.getAttribute('fill-opacity')).not.toBe('0.3');
+    expect(bird?.getAttribute('stroke-width')).not.toBe('5.25');
   });
 
   it('moves the sign right from sm only when asked', () => {
