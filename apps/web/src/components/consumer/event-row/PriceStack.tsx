@@ -96,13 +96,21 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     );
   }
 
-  // Rule 2's one exemption: sold out takes the price slot outright rather than
-  // winning a chip, so it spends no chip budget. The artwork dims, not the row
-  // — a row-level opacity drags --fg-muted toward the AA floor.
+  // Rule 2's one exemption: sold out spends no chip budget. Its chip sits on
+  // the title line (B+ rows board), so the price slot holds a lone dash: there
+  // is no price to buy at.
   if (status === 'soldout') {
     return slot(
-      <span data-testid="row-sold-out">
-        <StatusChip status="soldout" label={copy.price.soldOut} />
+      <span
+        data-testid="row-sold-out-price"
+        style={{
+          fontSize: amountSize,
+          fontWeight: 600,
+          color: 'var(--fg-muted)',
+        }}
+      >
+        <span className="sr-only">{copy.a11y.soldOutPrice}</span>
+        <span aria-hidden>{copy.price.soldOutPlaceholder}</span>
       </span>,
     );
   }

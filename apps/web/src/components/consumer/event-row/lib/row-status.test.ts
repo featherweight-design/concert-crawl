@@ -5,6 +5,7 @@ import {
   isFaded,
   isStruck,
   resolveRowStatus,
+  rowEdgeStatus,
   type RowPriceState,
   type RowStatus,
 } from './row-status';
@@ -80,11 +81,11 @@ describe('No longer listed', () => {
     expect(isStruck('removed')).toBe(false);
   });
 
-  it('fades the artwork for every suppressed state and no live one', () => {
+  it('fades the artwork only when the show is off or no longer listed', () => {
     expect(isFaded('removed')).toBe(true);
     expect(isFaded('cancelled')).toBe(true);
-    expect(isFaded('postponed')).toBe(true);
-    expect(isFaded('soldout')).toBe(true);
+    expect(isFaded('postponed')).toBe(false);
+    expect(isFaded('soldout')).toBe(false);
     expect(isFaded('presale')).toBe(false);
     expect(isFaded('price')).toBe(false);
   });
@@ -99,5 +100,17 @@ describe('isStruck', () => {
     expect(isStruck('soldout')).toBe(false);
     expect(isStruck('presale')).toBe(false);
     expect(isStruck('price')).toBe(false);
+  });
+});
+
+describe('rowEdgeStatus', () => {
+  it.each<[RowStatus, ReturnType<typeof rowEdgeStatus>]>([
+    ['cancelled', 'cancelled'],
+    ['postponed', 'postponed'],
+    ['soldout', 'soldout'],
+    ['presale', null],
+    ['price', null],
+  ])('maps %s to %s', (status, expected) => {
+    expect(rowEdgeStatus(status)).toBe(expected);
   });
 });
