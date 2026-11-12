@@ -321,10 +321,10 @@ export function AccountMenuProvider({
   // shows the email, as it does on main.
   const identityLabel = avatarHandle
     ? `@${avatarHandle}`
-    : (user?.fullName ??
-      user?.firstName ??
-      user?.emailAddresses[0]?.emailAddress ??
-      '');
+    : user?.fullName?.trim() ||
+      user?.firstName?.trim() ||
+      user?.emailAddresses[0]?.emailAddress ||
+      '';
 
   // CustomJwtSessionClaims is augmented in apps/web/src/types/clerk.d.ts — no cast needed
   const isAdmin = sessionClaims?.metadata?.role === 'admin';

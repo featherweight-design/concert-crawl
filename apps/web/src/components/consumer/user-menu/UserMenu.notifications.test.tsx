@@ -56,6 +56,8 @@ vi.mock('@/lib/notifications', async (importOriginal) => ({
   markPanelSeen: (...args: unknown[]) => markPanelSeen(...args),
 }));
 
+let mockNames: { fullName?: string | null; firstName?: string | null } = {};
+
 let mockAuth: {
   isSignedIn: boolean;
   isLoaded: boolean;
@@ -70,6 +72,7 @@ vi.mock('@clerk/nextjs', () => ({
     user: mockAuth.userId
       ? {
           id: mockAuth.userId,
+          ...mockNames,
           emailAddresses: [{ emailAddress: 'hugh@example.com' }],
         }
       : null,
@@ -419,6 +422,10 @@ describe('#737 pip — the seen watermark', () => {
 });
 
 describe('account menu identity (addendum 2 item 25)', () => {
+  beforeEach(() => {
+    mockNames = {};
+  });
+
   it('shows @handle with no founder eyebrow', async () => {
     signIn();
     await renderChrome(<UserMenu />);
@@ -436,6 +443,43 @@ describe('account menu identity (addendum 2 item 25)', () => {
       submissionCount: 0,
       theme: 'electric',
     });
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    expect(screen.getByText('hugh@example.com')).toBeInTheDocument();
+  });
+
+  const noHandle = {
+    handle: null,
+    avatarColor: null,
+    submissionCount: 0,
+    theme: 'electric',
+  };
+
+  it('shows the display name when there is no handle', async () => {
+    signIn();
+    mockNames = { fullName: 'Hugh Hartigan', firstName: 'Hugh' };
+    fetchMe.mockResolvedValue(noHandle);
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    expect(screen.getByText('Hugh Hartigan')).toBeInTheDocument();
+  });
+
+  it('shows the first name when there is no handle or full name', async () => {
+    signIn();
+    mockNames = { fullName: null, firstName: 'Hugh' };
+    fetchMe.mockResolvedValue(noHandle);
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    expect(screen.getByText('Hugh')).toBeInTheDocument();
+  });
+
+  it('falls through an empty full name to the email', async () => {
+    signIn();
+    mockNames = { fullName: '', firstName: '' };
+    fetchMe.mockResolvedValue(noHandle);
     await renderChrome(<UserMenu />);
     await click(desktopTrigger());
 
