@@ -21,6 +21,29 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 - **The local stack.** The dev server signs in against the **Concert Crawl Staging** Clerk app's **development**
   instance, with the same `E2E_AUDIT_*` credentials as staging, and its database is the Neon `scratch-contact-sheet`
   branch, not the seeded Docker DB. Both are set in the operator's local env files; never read or print them.
+- **Parallel stacks (one per lane).** The local env files stay untouched; a second stack takes its ports from the
+  process env on the command line. `dotenv` never overrides an existing variable, so the command line wins. `cp` both
+  apps' local env files from the main checkout into the worktree (never open them), run `pnpm install`, and build the
+  dependencies once (`turbo run build --filter=@concert-crawl/api^... --filter=@concert-crawl/web^...`). Pick your row;
+  main is 3000/3001.
+
+  | Stack  | Web  | API  |
+  | ------ | ---- | ---- |
+  | main   | 3000 | 3001 |
+  | second | 3010 | 3011 |
+  | third  | 3020 | 3021 |
+
+  ```
+  cd apps/api && PORT=3011 ALLOWED_ORIGIN=http://localhost:3010 pnpm dev
+  cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:3011 pnpm exec next dev --webpack --port 3010
+  node ~/.claude/fwd/skills/feature-acceptance/contact-sheet.mjs <inventory.json> --base http://localhost:3010
+  ```
+
+  Run web as `pnpm exec next dev`, not `pnpm dev`: the script hard-codes `--port 3000`. Clerk dev sign-in works on any
+  localhost port and the sheet's `signIn` accepts it (proved on 3010: `/watching`, 3 widths × 3 themes, all green).
+  Stop both servers when your PR merges. Stacks share the one Neon scratch branch, so do not run rows that mutate the
+  same account's data at the same time.
+
 - **Theme passes.** `featureAcceptance.themes` photographs every sheet three times, each in a fresh context:
   **Electric** (dark, the base), **Light**, and **Pulse** (the genre-theme pass). Each sets localStorage `cc-theme`
   before the page's scripts run, which the inline script in `app/layout.tsx` reads before paint, and the kit reads
