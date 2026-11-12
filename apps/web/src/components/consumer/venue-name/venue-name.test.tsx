@@ -23,6 +23,11 @@ describe('splitVenueName', () => {
     expect(splitVenueName('The Black Box')?.highlight).toBe('Box');
   });
 
+  it('treats "music" and the city as generic', () => {
+    expect(splitVenueName('Summit Music Hall')?.highlight).toBe('Summit');
+    expect(splitVenueName('Meow Wolf Denver')?.highlight).toBe('Wolf');
+  });
+
   it('takes a single distinctive word whole', () => {
     expect(splitVenueName('Hi-Dive')?.highlight).toBe('Hi-Dive');
   });

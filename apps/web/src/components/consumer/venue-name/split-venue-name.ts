@@ -31,6 +31,8 @@ const GENERIC_VENUE_NOUNS: ReadonlySet<string> = new Set([
   'tavern',
   'stadium',
   'house',
+  // The city is a place, not the venue's name ("Meow Wolf Denver" gradients "Wolf").
+  'denver',
 ]);
 
 const ARTICLES: ReadonlySet<string> = new Set(['the']);
