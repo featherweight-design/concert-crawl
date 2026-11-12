@@ -21,16 +21,16 @@ interface Night {
   showTime: string | null;
 }
 
-/** True when `a` should be shown instead of `b`, as rows of one night. */
+/** True when `challenger` should be shown instead of `holder`, as rows of one night. */
 const beats = (
-  a: Night,
-  b: Night,
+  challenger: Night,
+  holder: Night,
   attendedIds: ReadonlySet<string> | null,
 ): boolean => {
-  const aAttended = attendedIds?.has(a.eventId) ?? false;
-  const bAttended = attendedIds?.has(b.eventId) ?? false;
-  if (aAttended !== bAttended) return aAttended;
-  return a.eventId < b.eventId;
+  const challengerAttended = attendedIds?.has(challenger.eventId) ?? false;
+  const holderAttended = attendedIds?.has(holder.eventId) ?? false;
+  if (challengerAttended !== holderAttended) return challengerAttended;
+  return challenger.eventId < holder.eventId;
 };
 
 /**
