@@ -58,8 +58,10 @@ const Chip = ({
       fontWeight: 600,
       lineHeight: 1,
       whiteSpace: 'nowrap',
-      // An Other pause shows its note, which can outrun the cell.
+      // An Other pause shows its note, which can outrun the cell. Only the
+      // crawling chip gives way; the on-site word is always short.
       maxWidth: '100%',
+      flexShrink: testId === 'venue-status-crawling' ? 1 : 0,
       minWidth: 0,
       color: textTone(tone),
       background: `color-mix(in srgb, ${tone} 14%, transparent)`,
@@ -130,7 +132,9 @@ export const VenueStatus = ({
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        flexWrap: 'wrap',
+        // A list row keeps one line, so its height never changes; a long
+        // reason ellipsises instead.
+        flexWrap: inList ? 'nowrap' : 'wrap',
         maxWidth: '100%',
       }}
     >

@@ -2,7 +2,7 @@ import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 
 /** A loaded row's height, so nothing jumps when the list arrives (adm2 item 29). */
 const DESKTOP_ROW = 55;
-const PHONE_ROW = 92;
+const PHONE_ROW = 93;
 const ROWS = 7;
 const NAME_WIDTHS = ['38%', '55%', '42%', '60%', '46%', '52%', '40%'];
 
@@ -21,7 +21,10 @@ export const VenuesListSkeleton = () => (
     style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
   >
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <SkeletonBlock width={200} height={28} radius={8} />
+      {/* The phone shell's top bar carries the title. */}
+      <span className="max-[720px]:hidden">
+        <SkeletonBlock width={200} height={28} radius={8} />
+      </span>
       <SkeletonBlock width="min(380px, 80%)" height={12} radius={6} />
     </div>
     <div style={{ display: 'flex', gap: 8, overflow: 'hidden' }}>

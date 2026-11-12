@@ -432,9 +432,11 @@ export const ADMIN_COPY = {
       notChecked: 'Not checked',
     },
     pausedWith: (reason: string) => `Paused: ${reason}`,
+    // Chip forms, short enough for the drawn 196px Crawling column. The Pause
+    // panel's radios keep the long names ("Waiting on permission").
     pauseReason: {
-      waiting_on_permission: 'waiting on permission',
-      site_broken_or_moved: 'site is broken or moved',
+      waiting_on_permission: 'awaiting reply',
+      site_broken_or_moved: 'site down or moved',
     },
     moreOk: (count: number) => `${count} more, all OK`,
     noMatch: 'No venues match the current filter.',

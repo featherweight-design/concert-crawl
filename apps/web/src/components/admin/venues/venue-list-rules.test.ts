@@ -77,7 +77,7 @@ describe('venue list rules', () => {
           crawlPauseReason: 'waiting_on_permission',
         }),
       ),
-    ).toBe('Paused: waiting on permission');
+    ).toBe('Paused: awaiting reply');
     expect(
       crawlingLabel(
         venue('B', {
