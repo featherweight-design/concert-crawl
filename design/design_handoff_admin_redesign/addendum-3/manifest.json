@@ -1,0 +1,610 @@
+[
+ {
+  "section": "01-snooze",
+  "name": "needs-you-clock-d",
+  "title": "Needs you · the snooze clock",
+  "note": "Every card ends its top line with the clock; the open panel has it beside ×.",
+  "w": 1280,
+  "h": 1120
+ },
+ {
+  "section": "01-snooze",
+  "name": "snooze-open-d",
+  "title": "Snooze · opened from a card",
+  "note": "The popover hangs from the clock it came from.",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "01-snooze",
+  "name": "snooze-no-venue-d",
+  "title": "Snooze · an item with no venue",
+  "note": "Artist, price check, price batch and bug items: snooze only, no Not useful.",
+  "w": 380,
+  "h": 250
+ },
+ {
+  "section": "01-snooze",
+  "name": "snooze-until-a-date-d",
+  "title": "Snooze · until a date",
+  "note": "The menu turns into a month picker in place. Back at 8 AM MT on that day.",
+  "w": 380,
+  "h": 540
+ },
+ {
+  "section": "01-snooze",
+  "name": "not-useful-d",
+  "title": "Not useful · reason",
+  "note": "Turns one kind of warning off for one venue. A reason is picked, a note is optional.",
+  "w": 400,
+  "h": 560
+ },
+ {
+  "section": "01-snooze",
+  "name": "answered-d",
+  "title": "Answered rows · notifying and snoozed",
+  "note": "A notifying answer has no Undo and says who was told; a snooze has Undo. The badge and filter counts drop at once.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "01-snooze",
+  "name": "item-menu-m",
+  "title": "Phone · the item ⋯",
+  "note": "On the phone the clock lives in the item page’s ⋯, as a sheet.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "01-snooze",
+  "name": "snooze-until-a-date-m",
+  "title": "Phone · snooze until a date",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "01-snooze",
+  "name": "not-useful-m",
+  "title": "Phone · not useful",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "01-snooze",
+  "name": "answered-m",
+  "title": "Phone · answered rows",
+  "note": "The same two rows, on the phone list.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "01-snooze",
+  "name": "warnings-off-overview-d",
+  "title": "Venue Overview · turned-off warnings",
+  "note": "The way back on: the venue’s In Needs you card lists each warning kind you turned off.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "01-snooze",
+  "name": "all-clear-d",
+  "title": "Needs you · all clear, desktop",
+  "note": "No badge at zero. Snoozed counts every snoozed item, with the next one back.",
+  "w": 1280,
+  "h": 720
+ },
+ {
+  "section": "01-snooze",
+  "name": "filter-empty-d",
+  "title": "Needs you · a filter with nothing in it",
+  "note": "One line and Show all; not the all-clear.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "01-snooze",
+  "name": "couldnt-load-m",
+  "title": "Needs you · couldn’t load, phone",
+  "note": "The badge hides when its count can’t load.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "01-snooze",
+  "name": "loading-d",
+  "title": "Needs you · loading, desktop",
+  "note": "The final shape: filter pills, stacked cards, the panel.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "01-snooze",
+  "name": "loading-m",
+  "title": "Needs you · loading, phone",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "fan-suggest-a-venue-m",
+  "title": "Send feedback · Suggest a venue",
+  "note": "Picking Suggest a venue swaps the box for Venue name, Website (optional) and Anything else. No screenshot option for this kind.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "fan-suggest-a-venue-empty-m",
+  "title": "Suggest a venue · empty fields",
+  "note": "Placeholders. Send stays off until there is a venue name.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "fan-suggest-a-venue-d",
+  "title": "Suggest a venue · desktop modal",
+  "note": "The same body in a centered modal over the page.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "fan-feedback-sent-m",
+  "title": "Send feedback · sent",
+  "note": "One sent state for every kind.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "admin-suggestion-d",
+  "title": "Admin · a venue suggestion with a website",
+  "note": "Name and website come from the form; robots.txt is checked against the website.",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "admin-suggestion-no-website-d",
+  "title": "Admin · a suggestion with no website",
+  "note": "No URL, no robots check yet: it runs when you set the venue up.",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "admin-not-for-us-d",
+  "title": "Admin · Not for us, reason",
+  "note": "",
+  "w": 1280,
+  "h": 700
+ },
+ {
+  "section": "02-suggest-a-venue",
+  "name": "admin-suggestion-m",
+  "title": "Admin · a venue suggestion, phone",
+  "note": "Full screen (decision 1), answers pinned.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-venues",
+  "name": "venues-select-d",
+  "title": "Venues · Select",
+  "note": "Bulk select is for Re-crawl and Pause only. Hide, Delete and Take down stay one venue at a time.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "03-venues",
+  "name": "venue-menu-states",
+  "title": "Venue ⋯ menu · every state",
+  "note": "Paused, auto-paused or blocked, hidden, and flagship. Take down is the last line on every one (decision 21).",
+  "w": 1320,
+  "h": 420
+ },
+ {
+  "section": "03-venues",
+  "name": "delete-refused",
+  "title": "Venue ⋯ · Delete refused",
+  "note": "The line is disabled and says why. No dialog.",
+  "w": 360,
+  "h": 330
+ },
+ {
+  "section": "03-venues",
+  "name": "take-down-d",
+  "title": "Take down · asks first",
+  "note": "Deletes the venue, its shows and their prices for good.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "03-venues",
+  "name": "pause-panel-d",
+  "title": "Pause crawling · desktop",
+  "note": "A side panel (rule 4), the same fields as the phone sheet. Other takes a note; Pick a date opens the picker in place.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "03-venues",
+  "name": "hide-other-d",
+  "title": "Hide from site · Other",
+  "note": "Other takes a note. Asked us to stop moves to Take down.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "03-venues",
+  "name": "re-crawl-states",
+  "title": "Re-crawl · queued, running, unavailable",
+  "note": "Disabled while paused or disallowed, with the reason beside the chips.",
+  "w": 1100,
+  "h": 470
+ },
+ {
+  "section": "03-venues",
+  "name": "last-14-runs-legend",
+  "title": "Last 14 runs · legend",
+  "note": "Every bar kind, including Failed, Partial and Paused.",
+  "w": 760,
+  "h": 120
+ },
+ {
+  "section": "03-venues",
+  "name": "venue-overview-m",
+  "title": "Venue Overview · phone, every card",
+  "note": "The caption wins: the phone stacks every desktop card.",
+  "w": 390,
+  "h": 1640
+ },
+ {
+  "section": "03-venues",
+  "name": "drafts-in-list-d",
+  "title": "Venues · drafts",
+  "note": "A Drafts filter, and the waiting draft row with its two answers.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "03-venues",
+  "name": "drafts-card-m",
+  "title": "Venues · a draft, phone",
+  "note": "",
+  "w": 390,
+  "h": 600
+ },
+ {
+  "section": "04-venue-details",
+  "name": "details-d",
+  "title": "Venue Details · every field",
+  "note": "Adds Neighborhood, Map pin, Price page, Website, Contact email, and a Look card for the icon and hero setting.",
+  "w": 1280,
+  "h": 1240
+ },
+ {
+  "section": "04-venue-details",
+  "name": "details-m",
+  "title": "Venue Details · phone",
+  "note": "The same cards, stacked.",
+  "w": 390,
+  "h": 1900
+ },
+ {
+  "section": "04-venue-details",
+  "name": "details-no-icon",
+  "title": "Details · Look, before an icon",
+  "note": "Where Skip leads after going live.",
+  "w": 560,
+  "h": 260
+ },
+ {
+  "section": "05-ask-the-venue-reminder",
+  "name": "no-reply-d",
+  "title": "Needs you · Ask the venue, no reply",
+  "note": "A VENUE item 14 days after asking, with its panel and answers.",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "05-ask-the-venue-reminder",
+  "name": "no-reply-m",
+  "title": "No reply · phone",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-ask-the-venue-reminder",
+  "name": "they-said-no-m",
+  "title": "They said no · reason",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-venue-notice",
+  "name": "venue-notice-d",
+  "title": "Needs you · a venue notice",
+  "note": "Several shows at one venue vanishing in one run is one card. Look at each splits it into show cards.",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "06-venue-notice",
+  "name": "venue-notice-m",
+  "title": "Venue notice · phone",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-kind-labels",
+  "name": "kind-labels",
+  "title": "Needs you · the kind labels",
+  "note": "The canonical set and tones. FLAG is signal.",
+  "w": 720,
+  "h": 470
+ },
+ {
+  "section": "08-more-interim-row",
+  "name": "more-interim-m",
+  "title": "Admin More · interim Invite codes row",
+  "note": "Phone twin of addendum 2 item 8: from 0a until 5b.",
+  "w": 390,
+  "h": 800
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "runs-filters-m",
+  "title": "Crawl runs · phone filters",
+  "note": "Rule 6: the filters become a segmented control.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "run-result-chips",
+  "title": "Crawl runs · result chips",
+  "note": "One chip per venue outcome.",
+  "w": 640,
+  "h": 470
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "crawl-all-m",
+  "title": "Crawl all · phone sheet",
+  "note": "Says how many are skipped, and why.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "crawl-all-starting-m",
+  "title": "Crawl all · starting",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "crawl-all-failed-m",
+  "title": "Crawl all · couldn’t start",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "crawl-all-none-m",
+  "title": "Crawl all · nothing to crawl",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "crawl-all-done-d",
+  "title": "Crawl all · finished banner",
+  "note": "The running banner becomes a summary you close.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "runs-filter-empty-d",
+  "title": "Crawl runs · a filter with nothing in it",
+  "note": "",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "loading-runs-d",
+  "title": "Crawl runs · loading",
+  "note": "The final table shape (rule 9).",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "09-crawl-runs",
+  "name": "load-more",
+  "title": "Lists · Load more",
+  "note": "One paging pattern for every admin list.",
+  "w": 760,
+  "h": 300
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "panel-loading",
+  "title": "Evidence panel · loading",
+  "note": "The header comes from the card; only the evidence is a skeleton.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "panel-couldnt-load",
+  "title": "Evidence panel · couldn’t load",
+  "note": "",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "panel-answer-failed",
+  "title": "Evidence panel · answer failed",
+  "note": "Rule 10, inside the panel.",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "postponed-d",
+  "title": "Postponed · asks first",
+  "note": "Optional new date.",
+  "w": 1280,
+  "h": 1120
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "postponed-m",
+  "title": "Postponed · phone",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "venue-blocked-before-3c",
+  "title": "Venue blocked · before Ask the venue ships",
+  "note": "",
+  "w": 440,
+  "h": 900
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "venue-failing-m",
+  "title": "Phone item · a venue",
+  "note": "The footer pattern for every kind: the main answer full width, the rest below.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "price-check-m",
+  "title": "Phone item · a price check",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "10-needs-you-panels",
+  "name": "price-batch-d",
+  "title": "Price batch · desktop panel",
+  "note": "One unticked: the button counts down and the unticked one becomes its own item.",
+  "w": 1280,
+  "h": 1120
+ },
+ {
+  "section": "11-events-artists-prices",
+  "name": "add-a-show-lineup-d",
+  "title": "Add a show by hand · lineup and duplicate check",
+  "note": "The lineup uses the edit page’s chips: first is the headliner.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "11-events-artists-prices",
+  "name": "artist-row-menu",
+  "title": "Artists · row ⋯ and Any way",
+  "note": "",
+  "w": 640,
+  "h": 300
+ },
+ {
+  "section": "11-events-artists-prices",
+  "name": "price-checks-resolved-d",
+  "title": "Price checks · Resolved",
+  "note": "",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "person-menu-d",
+  "title": "Person · ⋯ on desktop",
+  "note": "The phone menu’s lines, from a ⋯ in the header.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "sign-out-everywhere-d",
+  "title": "Sign out everywhere · asks first",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "signed-out-everywhere-d",
+  "title": "Sign out everywhere · done",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "code-taken-d",
+  "title": "New invite code · code taken",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "code-ended-fan-m",
+  "title": "Fan · This code has ended",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "feedback-reopen-d",
+  "title": "Feedback · a Done item, Reopen",
+  "note": "",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "reply-sending-d",
+  "title": "Reply · sending",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "reply-failed-d",
+  "title": "Reply · couldn’t send",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "12-people-codes-operations",
+  "name": "reply-sent-d",
+  "title": "Reply · sent",
+  "note": "The sent reply shows in the item; Reply is gone.",
+  "w": 1280,
+  "h": 760
+ }
+]
