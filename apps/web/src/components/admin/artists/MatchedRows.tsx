@@ -140,7 +140,9 @@ const ArtistRowMenu = ({
           '[role="menuitem"]:not([disabled])',
         ) ?? [],
       );
-    items()[0]?.focus();
+    // With no item enabled (a write in flight), the menu itself takes focus,
+    // so Escape and Tab still work from inside it.
+    (items()[0] ?? menuRef.current)?.focus();
     const handleClick = (evt: MouseEvent) => {
       if (
         evt.target instanceof Node &&
@@ -160,8 +162,15 @@ const ArtistRowMenu = ({
       if (list.length === 0) return;
       evt.preventDefault();
       const at = list.findIndex((item) => item === document.activeElement);
-      const step = evt.key === 'ArrowDown' ? 1 : -1;
-      list[(at + step + list.length) % list.length]?.focus();
+      const down = evt.key === 'ArrowDown';
+      // From outside the items, Down lands on the first and Up on the last.
+      const next =
+        at < 0
+          ? down
+            ? 0
+            : list.length - 1
+          : (at + (down ? 1 : -1) + list.length) % list.length;
+      list[next]?.focus();
     };
     // Tabbing out of the menu closes it.
     const handleFocusOut = (evt: FocusEvent) => {
@@ -211,8 +220,10 @@ const ArtistRowMenu = ({
         <div
           ref={menuRef}
           role="menu"
+          tabIndex={-1}
           aria-label={COPY.menu.label(row.name)}
           style={{
+            outline: 'none',
             position: 'absolute',
             top: 'calc(100% + 4px)',
             right: 0,
