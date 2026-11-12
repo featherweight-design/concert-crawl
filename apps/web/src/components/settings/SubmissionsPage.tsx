@@ -23,8 +23,9 @@ export const SubmissionsPage = ({
   profile,
   submissions,
 }: SubmissionsPageProps) => {
-  // From the list itself, so the tiles agree with the filter counts below it:
-  // the list leaves stale rows out, `profile.submissionCount` does not.
+  // From the list itself, so the tiles agree with the filter counts below it.
+  // The list holds every row (stale and archived as `closed`, under All only),
+  // so its total is `profile.submissionCounts.total`.
   const counts = countsByFilter(submissions);
 
   return (
