@@ -75,6 +75,10 @@ export async function fetchPage(
   const context = await browser.newContext({
     userAgent: CRAWLER_USER_AGENT,
   });
+  // Set once the page has a log entry, so a failure that never got a response
+  // (a navigation timeout, a reset connection) is recorded and one that did is not
+  // recorded twice.
+  let recorded = false;
   try {
     const page = await context.newPage();
 
@@ -181,6 +185,7 @@ export async function fetchPage(
 
     if (finalStatus === 403 || finalStatus === 429) {
       fetchLog?.record({ url, httpStatus: finalStatus, mode: 'browser' });
+      recorded = true;
       console.log(
         JSON.stringify({ event: 'fetch.blocked', url, status: finalStatus }),
       );
@@ -196,6 +201,7 @@ export async function fetchPage(
 
     if (finalStatus >= 400) {
       fetchLog?.record({ url, httpStatus: finalStatus, mode: 'browser' });
+      recorded = true;
       console.log(
         JSON.stringify({ event: 'fetch.error', url, status: finalStatus }),
       );
@@ -270,6 +276,7 @@ export async function fetchPage(
       mode: 'browser',
       body: html,
     });
+    recorded = true;
 
     console.log(
       JSON.stringify({
@@ -280,6 +287,20 @@ export async function fetchPage(
       }),
     );
     return { html, httpStatus: finalStatus, finalUrl };
+  } catch (err) {
+    if (!recorded) {
+      fetchLog?.record(
+        err instanceof CrawlSelectorTimeoutError
+          ? {
+              url,
+              finalUrl: err.finalUrl,
+              httpStatus: err.httpStatus,
+              mode: 'browser',
+            }
+          : { url, mode: 'browser' },
+      );
+    }
+    throw err;
   } finally {
     await context.close();
   }
@@ -300,6 +321,9 @@ export async function fetchPageHttp(
   const { response, finalUrl } = await fetchFollowingRobots(url, {
     headers: { Accept: 'text/html,application/xhtml+xml' },
     crawlDelayMs,
+  }).catch((err: unknown) => {
+    fetchLog?.record({ url, mode: 'http' });
+    throw err;
   });
 
   if (response.status === 403 || response.status === 429) {

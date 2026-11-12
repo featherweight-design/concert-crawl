@@ -100,6 +100,7 @@ export async function clearRedirect(
   if (delayMs === null) {
     throw new CrawlSkipError(
       `robots.txt Crawl-delay for redirect target ${to} exceeds the cap; not followed`,
+      'robots_crawl_delay',
     );
   }
   const wait = jitter(delayMs);

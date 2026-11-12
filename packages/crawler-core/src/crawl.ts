@@ -47,6 +47,7 @@ import {
 import { calculateCost } from './lib/cost.js';
 import { dispatch } from './lib/fetchers/index.js';
 import { CalendarNotFoundError } from './lib/fetchers/detail-page.js';
+import { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js';
 import { FetchLog } from './lib/fetch-log.js';
 import { insertCrawlRun } from './lib/record-run.js';
 import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js';
@@ -398,6 +399,7 @@ function failureReason(err: unknown, isAccountWide: boolean): CrawlRunReason {
   if (err instanceof CalendarNotFoundError) return 'calendar_not_found';
   if (
     err instanceof CrawlSelectorTimeoutError ||
+    err instanceof PlatformFetchDeadlineError ||
     (err instanceof Error && err.name === 'TimeoutError')
   ) {
     return 'timeout';

@@ -332,7 +332,7 @@ async function fetchAegBlob(
     mode: 'api',
     body: text,
   });
-  return JSON.parse(text) as unknown;
+  return JSON.parse(text);
 }
 
 async function aegFetch(
@@ -375,6 +375,7 @@ async function aegFetch(
   if (crawlDelayMs === null) {
     throw new CrawlSkipError(
       `robots.txt Crawl-delay for ${url} exceeds the cap; not crawled`,
+      'robots_crawl_delay',
     );
   }
 

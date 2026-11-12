@@ -337,8 +337,7 @@ export class CrawlSkipError extends Error {
   constructor(
     message: string,
     /** Which of the two skips this is, for the run's recorded reason. */
-    public readonly reason:
-      'robots_unreachable' | 'robots_crawl_delay' = 'robots_crawl_delay',
+    public readonly reason: 'robots_unreachable' | 'robots_crawl_delay',
   ) {
     super(message);
     this.name = 'CrawlSkipError';

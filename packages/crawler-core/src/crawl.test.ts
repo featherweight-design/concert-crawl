@@ -1533,7 +1533,10 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
   it('records a skipped run and no strike when the adapter declines on robots.txt', async () => {
     const { venue, fetch } = seedPlatformVenue(1);
     fetch.mockRejectedValueOnce(
-      new CrawlSkipError('robots.txt unreachable for the API; not crawled'),
+      new CrawlSkipError(
+        'robots.txt unreachable for the API; not crawled',
+        'robots_unreachable',
+      ),
     );
 
     const run = await crawlVenue(venue.id, mockBrowser);
@@ -1762,6 +1765,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
     mockFetchPageHttp.mockRejectedValueOnce(
       new CrawlSkipError(
         'robots.txt Crawl-delay for redirect target exceeds the cap',
+        'robots_crawl_delay',
       ),
     );
 
