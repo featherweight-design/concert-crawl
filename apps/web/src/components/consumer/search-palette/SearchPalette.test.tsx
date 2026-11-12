@@ -259,10 +259,14 @@ describe('SearchPalette — artist pages (#1115 PR-G)', () => {
     ];
   });
 
-  it('opens the artist page when the first row is selected with Enter', () => {
+  // B+ order (`more-r3-palette_typed`): Artists, Venues, then Artist pages.
+  // The fixture has 2 artists and 1 venue, so the artist page is index 3.
+  it('opens the artist page when the last row, after artists and venues, is selected', () => {
     render(<SearchPalette open onClose={onClose} />);
 
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    for (let step = 0; step < 4; step++) {
+      fireEvent.keyDown(window, { key: 'ArrowDown' });
+    }
     fireEvent.keyDown(window, { key: 'Enter' });
 
     expect(mockNavigateTo).toHaveBeenCalledWith('artistPage', {
@@ -271,10 +275,9 @@ describe('SearchPalette — artist pages (#1115 PR-G)', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('still reaches the event-derived artist rows below the artist pages', () => {
+  it('reaches the event-derived artist rows ahead of the artist pages', () => {
     render(<SearchPalette open onClose={onClose} />);
 
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'Enter' });
 

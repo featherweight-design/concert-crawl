@@ -151,6 +151,12 @@ export interface ArtistSearchResult {
    * is no session to read.
    */
   following: boolean;
+  /**
+   * The artist's most common primary genre across their visible shows, for the
+   * search row's chip. Null when none of their shows carries one; absent on an
+   * older payload.
+   */
+  genre?: string | null;
 }
 
 /** Response body for POST/DELETE `/v1/artists/:slug/follow`. */

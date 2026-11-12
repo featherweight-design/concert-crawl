@@ -279,6 +279,47 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
     });
   });
 
+  // The row's genre chip (B19): the artist's most common primary genre across
+  // their visible shows, null when none carries one.
+  it('carries the artist genre: most common primary genre, null when none', async () => {
+    const venue = await seedVenue({ slug: 'genre-venue', name: 'Gothic' });
+    await seedArtist({ name: 'Genre Mix' });
+    await seedArtist({ name: 'Genre None' });
+    await seedEvent(venue.id, {
+      artist: 'Genre Mix',
+      date: '2027-09-01',
+      showTime: '20:00:00',
+      genre: ['rock', 'indie'],
+    });
+    await seedEvent(venue.id, {
+      artist: 'Genre Mix',
+      date: '2027-09-02',
+      showTime: '20:00:00',
+      genre: ['hip-hop'],
+    });
+    await seedEvent(venue.id, {
+      artist: 'Genre Mix',
+      date: '2027-09-03',
+      showTime: '20:00:00',
+      genre: ['hip-hop'],
+    });
+    await seedEvent(venue.id, {
+      artist: 'Genre None',
+      date: '2027-09-04',
+      showTime: '20:00:00',
+    });
+
+    const read = async (query: string) => {
+      const res = await app.request(`/v1/search/artists?q=${query}`);
+      const body = (await res.json()) as {
+        data: Array<{ name: string; genre: string | null }>;
+      };
+      return body.data[0];
+    };
+    expect((await read('genre mix'))?.genre).toBe('hip-hop');
+    expect((await read('genre none'))?.genre).toBeNull();
+  });
+
   // The date the row draws. It comes from `loadNextShowByCanonical`, the same
   // loader the suggestions endpoint and the follows list use, so a row drawn
   // from search carries the same shape as one drawn from either.
