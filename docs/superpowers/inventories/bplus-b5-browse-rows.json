@@ -13,6 +13,9 @@
       "steps": [
         {
           "goto": "/events",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
@@ -27,6 +30,9 @@
       "steps": [
         {
           "goto": "/events",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
@@ -48,6 +54,9 @@
       "steps": [
         {
           "goto": "/events",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
