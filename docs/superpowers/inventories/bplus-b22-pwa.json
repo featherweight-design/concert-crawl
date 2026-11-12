@@ -28,9 +28,6 @@
       "steps": [
         {
           "goto": "/~offline",
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
-        },
-        {
           "wait": "h1:has-text(\"offline\")"
         }
       ]

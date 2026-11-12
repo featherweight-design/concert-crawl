@@ -18,9 +18,6 @@
       "steps": [
         {
           "goto": "/me/edit",
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
-        },
-        {
           "wait": "form#edit-profile-form"
         }
       ]
@@ -31,10 +28,10 @@
       "steps": [
         {
           "goto": "/me",
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+          "wait": ":is(#notifications, main h2):visible"
         },
         {
-          "wait": ":is(#notifications, main h2):visible"
+          "settle": 2500
         }
       ]
     }

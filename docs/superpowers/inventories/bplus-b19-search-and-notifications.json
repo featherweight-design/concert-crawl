@@ -48,9 +48,6 @@
       "steps": [
         {
           "goto": "/search",
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
-        },
-        {
           "wait": "input[placeholder=\"Search artists, venues…\"]"
         }
       ]
