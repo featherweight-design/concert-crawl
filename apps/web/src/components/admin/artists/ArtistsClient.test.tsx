@@ -101,7 +101,13 @@ beforeEach(() => {
         if (patchGate) await patchGate;
         return patchStatus === 200
           ? json(200, { success: true, data: {} })
-          : json(patchStatus, { success: false, error: 'nope' });
+          : json(patchStatus, {
+              success: false,
+              error:
+                patchStatus === 409
+                  ? 'The artist has changed since it was loaded'
+                  : 'nope',
+            });
       }
       if (url.includes('/counts'))
         return json(200, { success: true, data: COUNTS });
@@ -217,7 +223,11 @@ describe('ArtistsClient', () => {
         .mocked(fetch)
         .mock.calls.find(([, init]) => init?.method === 'PATCH');
       expect(patch?.[1]?.body).toBe(
-        JSON.stringify({ spotifyArtistId: null, matchStatus: 'unmatched' }),
+        JSON.stringify({
+          spotifyArtistId: null,
+          matchStatus: 'unmatched',
+          expectedStatus: 'not_an_artist',
+        }),
       );
     });
   });
@@ -249,6 +259,48 @@ describe('ArtistsClient', () => {
     );
     await waitFor(() => expect(listCalls).toBe(2));
     expect(screen.queryByTestId('save-failed')).toBeNull();
+    // No snap-back: the row comes back only from the reload's own list.
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')
+        .length,
+    ).toBe(1);
+  });
+
+  it('pins every write to the status the row was loaded with', async () => {
+    render(<ArtistsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' }),
+    );
+    await waitFor(() => {
+      const patch = vi
+        .mocked(fetch)
+        .mock.calls.find(([, init]) => init?.method === 'PATCH');
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({
+        spotifyArtistId: 'sp1',
+        confirmAutoMatch: true,
+        expectedStatus: 'matched',
+      });
+    });
+  });
+
+  it('sends the original expected status again on Try again', async () => {
+    patchStatus = 500;
+    render(<ArtistsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    await waitFor(() => {
+      const bodies = vi
+        .mocked(fetch)
+        .mock.calls.filter(([, init]) => init?.method === 'PATCH')
+        .map(([, init]) => JSON.parse(String(init?.body)));
+      expect(bodies).toHaveLength(2);
+      expect(bodies.map((body) => body.expectedStatus)).toEqual([
+        'matched',
+        'matched',
+      ]);
+    });
   });
 
   it('confirms Not an artist before writing it', async () => {
