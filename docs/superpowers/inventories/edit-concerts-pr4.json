@@ -9,20 +9,19 @@
   ],
   "rows": [
     {
-      "id": "concerts-add-row",
-      "label": "/history rail with the Add row",
-      "steps": [
-        { "goto": "/history", "wait": "[data-testid=\"add-show-row\"]" }
-      ]
-    },
-    {
       "id": "add-sheet",
       "label": "Add sheet opened, records note",
       "steps": [
-        { "goto": "/history", "wait": "[data-testid=\"add-show-row\"]" },
+        {
+          "goto": "/history?cell=sheet",
+          "wait": "[data-testid=\"add-show-row\"]"
+        },
         { "click": "[data-testid=\"add-show-row\"]" },
         { "waitDialog": "^Add a show you went to$" },
-        { "wait": "[data-testid=\"went-pill\"]" }
+        {
+          "wait": "[data-testid=\"add-records-note\"]",
+          "settle": 2500
+        }
       ]
     },
     {
@@ -52,6 +51,13 @@
           "text": "zz no such show zz",
           "wait": "[data-testid=\"add-show-none\"]"
         }
+      ]
+    },
+    {
+      "id": "concerts-add-row",
+      "label": "/history rail with the Add row (last: a cell after another can miss its trigger)",
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"add-show-row\"]" }
       ]
     }
   ]
