@@ -29,7 +29,7 @@ The boards are built on the approved B+ kit, addendum 2's helpers, and the Edit 
 1. **The header under 1024.** Search becomes an icon button. The offline pill drops "· cached OK" and reads "Offline". Under 768, the wordmark becomes the mark. Nav labels never truncate. When the filter bar can't fit, it becomes the phone chips row under the header (`01/header-640`, `01/header-900`, `01/header-1100`).
 2. **Long titles step down, never clip.** A hero or stat title wraps at spaces. A single word that can't fit steps down one size at a time (38, 30, 26 for the hero), and never uses an ellipsis or a mid-word break (`01/hero-320-wrap`, `01/hero-320-long-word`). The same goes for venue stats ("Amphitheater").
 3. **Days-ago range.** Today, Yesterday, then "{N} DAYS AGO" up to 30, then the date ("OCT 2"). The past twin of DAYS AWAY.
-4. **One stamp everywhere.** The shared VenueStamp: round, straight, filled in the venue's stamp color, on every row, the Passport and the share card (`04/one-stamp-m`).
+4. **One stamp everywhere.** The shared VenueStamp: round, filled in the venue's stamp color, on every row, the Passport and the share card (`04/one-stamp-m`). It's straight everywhere except inside the Passport booklet, which keeps its hand-stamped tilt (Hugh, addendum 2).
 5. **Tap targets.** Every ⋯ is a 44px target with an 18px glyph (`04/menu-hit-target-m`).
 
 ## B7 Browse calendar week strip
