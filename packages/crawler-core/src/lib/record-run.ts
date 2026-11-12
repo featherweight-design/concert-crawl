@@ -1,17 +1,7 @@
 import { db, crawlRuns, crawlRunPages } from '@concert-crawl/db';
 import type { CrawlRun, CrawlRunReason, NewCrawlRun } from '@concert-crawl/db';
 import { reportFailure } from '@concert-crawl/logger';
-import type { CrawlRunReason as ApiCrawlRunReason } from '@concert-crawl/types';
 import type { FetchLog } from './fetch-log.js';
-
-// The API's CrawlRunReason mirrors the DB enum by hand. This fails to compile
-// when one gains or loses a value the other lacks.
-type Same<Left, Right> = [Left] extends [Right]
-  ? [Right] extends [Left]
-    ? true
-    : never
-  : never;
-export const reasonsMatchApi: Same<CrawlRunReason, ApiCrawlRunReason> = true;
 
 /**
  * A run row to insert. The type makes `reason` required for every status but

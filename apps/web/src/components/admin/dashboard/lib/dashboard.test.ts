@@ -99,7 +99,6 @@ function makeCrawlRun(overrides: Partial<CrawlRun> = {}): CrawlRun {
     id: 'run-1',
     venueId: 'venue-1',
     status: 'success',
-    reason: null,
     httpStatusCode: 200,
     robotsTxtBlocked: null,
     extractionStrategyUsed: null,

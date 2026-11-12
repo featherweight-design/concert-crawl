@@ -445,41 +445,12 @@ export interface VenueRobotsStatus {
   robotsTxtCheckedAt: string | null;
 }
 
-// Why a run produced nothing. NULL on a success row, and on every row from
-// before reasons were recorded. Mirrors the `crawl_run_reason` DB enum.
-export type CrawlRunReason =
-  | 'page_unchanged'
-  | 'crawl_paused'
-  | 'robots_unreachable'
-  | 'robots_disallowed'
-  | 'robots_crawl_delay'
-  | 'timeout'
-  | 'blocked_http'
-  | 'no_events_found'
-  | 'calendar_not_found'
-  | 'llm_account'
-  | 'error';
-
-// One page a crawl run fetched: metadata only, never the body.
-export interface CrawlRunPage {
-  id: string;
-  crawlRunId: string;
-  url: string;
-  finalUrl: string | null;
-  httpStatus: number | null;
-  fetchMode: 'browser' | 'http' | 'api';
-  bytes: number | null;
-  contentHash: string | null;
-  fetchedAt: string;
-}
-
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {
   id: string;
   venueId: string;
   status: CrawlStatus | 'in_progress';
-  reason: CrawlRunReason | null;
   httpStatusCode: number | null;
   robotsTxtBlocked: string | null;
   extractionStrategyUsed: string | null;

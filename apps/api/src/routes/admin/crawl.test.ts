@@ -39,7 +39,6 @@ vi.mock('@concert-crawl/db', () => ({
   },
   venues: { blockedAt: 'venues.blocked_at' },
   crawlRuns: {},
-  crawlRunPages: {},
   crawlTriggers: {},
   notifications: {},
   auditLog: {},
@@ -69,7 +68,6 @@ const mockCrawlRun = {
   id: RUN_ID,
   venueId: VENUE_ID,
   status: 'success',
-  reason: null,
   httpStatusCode: 200,
   robotsTxtBlocked: 'no',
   extractionStrategyUsed: 'structured_data',
@@ -438,76 +436,6 @@ describe('Admin crawl routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.id).toBe(RUN_ID);
       expect(body.data.status).toBe('success');
-      expect(body.data).toHaveProperty('reason');
-    });
-  });
-
-  describe('GET /v1/admin/crawl/runs/:id/pages', () => {
-    it('returns 401 for unauthenticated requests', async () => {
-      mockGetAuth.mockReturnValue(null);
-      const res = await createApp().request(
-        `/v1/admin/crawl/runs/${RUN_ID}/pages`,
-      );
-      expect(res.status).toBe(401);
-    });
-
-    it('returns 403 for non-admin users', async () => {
-      mockGetAuth.mockReturnValue({
-        userId: 'user_123',
-        sessionClaims: { metadata: { role: 'user' } },
-      });
-      const res = await createApp().request(
-        `/v1/admin/crawl/runs/${RUN_ID}/pages`,
-      );
-      expect(res.status).toBe(403);
-    });
-
-    it('returns 400 for a non-UUID id and for a limit over 50', async () => {
-      adminAuth();
-      const bad = await createApp().request(
-        '/v1/admin/crawl/runs/not-a-uuid/pages',
-      );
-      expect(bad.status).toBe(400);
-      const over = await createApp().request(
-        `/v1/admin/crawl/runs/${RUN_ID}/pages?limit=201`,
-      );
-      expect(over.status).toBe(400);
-    });
-
-    it('returns 404 when the run does not exist', async () => {
-      adminAuth();
-      const { db } = await import('@concert-crawl/db');
-      vi.mocked(db.select().from().where).mockResolvedValueOnce([]);
-      const res = await createApp().request(
-        `/v1/admin/crawl/runs/${RUN_ID}/pages`,
-      );
-      expect(res.status).toBe(404);
-    });
-
-    it('returns the pages a run fetched', async () => {
-      adminAuth();
-      const { db } = await import('@concert-crawl/db');
-      const page = {
-        id: '00000000-0000-0000-0000-000000000009',
-        crawlRunId: RUN_ID,
-        url: 'https://www.redrocksonline.com/',
-        finalUrl: null,
-        httpStatus: 200,
-        fetchMode: 'http',
-        bytes: 1200,
-        contentHash: 'abc',
-        fetchedAt: new Date(),
-      };
-      vi.mocked(db.where)
-        .mockResolvedValueOnce([{ id: RUN_ID }] as never)
-        .mockReturnValueOnce(db as never);
-      vi.mocked(db.limit).mockResolvedValueOnce([page] as never);
-      const res = await createApp().request(
-        `/v1/admin/crawl/runs/${RUN_ID}/pages`,
-      );
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { data: { url: string }[] };
-      expect(body.data[0]?.url).toBe(page.url);
     });
   });
 
