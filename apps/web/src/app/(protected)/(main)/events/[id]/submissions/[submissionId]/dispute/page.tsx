@@ -43,7 +43,7 @@ export default async function DisputePage({ params }: DisputePageProps) {
   });
 
   return (
-    <main className="min-h-screen bg-bg">
+    <main className="min-h-screen">
       <header className="flex items-center justify-between px-5 py-4">
         <a href={`/events/${id}`} className="text-sm text-fg-muted">
           {CONSUMER_COPY.disputePage.cancelLink}

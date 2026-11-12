@@ -30,6 +30,24 @@ describe('page-ambient', () => {
     expect(rule).toContain('pointer-events: none;');
   });
 
+  it('gives the ::before glow to Electric and the SSR fallback only', () => {
+    // Every selector in every rule that targets the glow layer, in order.
+    const selectors = [
+      ...css.matchAll(/([^{}]*\.page-ambient::before[^{}]*)\{/g),
+    ].flatMap((match) =>
+      (match[1] ?? '').split(',').map((selector) => selector.trim()),
+    );
+    expect(selectors).toEqual([
+      ':root:not([data-theme]) .page-ambient::before',
+      ":root[data-theme='electric'] .page-ambient::before",
+    ]);
+    // No other theme is named anywhere a glow rule could hide.
+    const themed = [
+      ...css.matchAll(/\[data-theme='([^']+)'\][^{}]*\.page-ambient/g),
+    ].map((match) => match[1]);
+    expect(new Set(themed)).toEqual(new Set(['electric']));
+  });
+
   it('keeps the flat --bg on every theme the boards give no values for', () => {
     expect(css).toContain('.page-ambient { background-color: var(--bg); }');
   });
