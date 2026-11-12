@@ -26,6 +26,7 @@ import {
   gte,
   inArray,
   isNotNull,
+  isNull,
   ne,
   not,
   or,
@@ -60,6 +61,11 @@ import {
   resolvePauseDetails,
 } from './lib/venue-crawl-pause.js';
 import { todayInDenver } from '../../lib/time.js';
+import {
+  HIDE_REASONS,
+  deleteBlockers,
+  upcomingShowCount,
+} from './lib/venue-hide.js';
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -143,6 +149,11 @@ export const updateVenueSchema = createVenueSchema
     crawlDelayMs: createVenueSchema.shape.crawlDelayMs.unwrap().optional(),
     crawlWaitUntil: createVenueSchema.shape.crawlWaitUntil.unwrap().optional(),
     active: z.boolean().optional(),
+    // Why a venue is hidden (`active: false`), kept on the venue and in the
+    // audit log. Optional so a caller that predates the reason still works; the
+    // Hide dialog always sends one. Other needs a note.
+    hideReason: z.enum(HIDE_REASONS).optional(),
+    hideNote: z.string().trim().max(500).optional(),
     verified: z.boolean().optional(),
     verifiedBy: z.string().max(200).nullable().optional(),
     crawlMode: z.enum(['http', 'browser']).nullable().optional(),
@@ -209,6 +220,30 @@ export const updateVenueSchema = createVenueSchema
     },
   );
 
+/** The latest crawl run of a venue, as the list shows it. */
+const latestRunOf = (
+  run:
+    | {
+        status: string;
+        reason: string | null;
+        at: Date;
+        eventsFound: number;
+        eventsInserted: number;
+        errorMessage: string | null;
+      }
+    | undefined,
+) =>
+  run === undefined
+    ? null
+    : {
+        status: run.status,
+        reason: run.reason,
+        at: run.at.toISOString(),
+        eventsFound: run.eventsFound,
+        eventsInserted: run.eventsInserted,
+        errorMessage: run.errorMessage,
+      };
+
 export const venuesAdminRouter = new Hono<AdminVariables>();
 
 // #764 first-timer guide authoring — a distinct resource with its own publish
@@ -217,7 +252,13 @@ venuesAdminRouter.route('/:id/guide', venueGuideAdminRouter);
 
 // GET /v1/admin/venues — list all venues with upcoming event counts
 venuesAdminRouter.get('/', async (ctx) => {
-  const allVenues = await db.select().from(venues).orderBy(venues.name);
+  // A taken-down venue (removedAt) is gone from the list; showing it again is
+  // not offered, so there is nothing for an admin to do with the row.
+  const allVenues = await db
+    .select()
+    .from(venues)
+    .where(isNull(venues.removedAt))
+    .orderBy(venues.name);
 
   const today = todayInDenver();
   const eventCounts = await db
@@ -244,18 +285,24 @@ venuesAdminRouter.get('/', async (ctx) => {
     .selectDistinctOn([crawlRuns.venueId], {
       venueId: crawlRuns.venueId,
       status: crawlRuns.status,
+      reason: crawlRuns.reason,
+      at: crawlRuns.createdAt,
+      eventsFound: crawlRuns.eventsFound,
+      eventsInserted: crawlRuns.eventsInserted,
+      errorMessage: sql<string | null>`left(${crawlRuns.errorMessage}, 300)`,
     })
     .from(crawlRuns)
     .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt));
 
-  const statusByVenueId = new Map(
-    latestRuns.map((run) => [run.venueId, run.status]),
-  );
+  const latestByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]));
 
   const venuesWithCounts = allVenues.map((venue) => ({
     ...venue,
     eventCount: countByVenueId.get(venue.id) ?? 0,
-    lastRunStatus: statusByVenueId.get(venue.id) ?? null,
+    lastRunStatus: latestByVenueId.get(venue.id)?.status ?? null,
+    // The latest run in full, for the list's one-line "Failed: calendar block
+    // not found" / "OK · 3:04 AM · 2 new" column.
+    latestRun: latestRunOf(latestByVenueId.get(venue.id)),
   }));
 
   return ctx.json({ success: true, data: venuesWithCounts });
@@ -408,7 +455,13 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     consecutiveFails: venue.consecutiveFailures,
   };
 
-  return ctx.json({ success: true, data: { ...venue, crawlHealth } });
+  // What a delete would destroy, for the ⋯ menu to say so before it is tried.
+  const blockers = await deleteBlockers(id);
+
+  return ctx.json({
+    success: true,
+    data: { ...venue, crawlHealth, deleteBlockers: blockers },
+  });
 });
 
 // POST /v1/admin/venues — create venue with slug uniqueness check
@@ -478,12 +531,38 @@ venuesAdminRouter.patch(
   zValidator('json', updateVenueSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.param();
-    const body = ctx.req.valid('json');
+    const { hideReason, hideNote, ...body } = ctx.req.valid('json');
 
     const [existing] = await db.select().from(venues).where(eq(venues.id, id));
     if (!existing) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
+
+    if (hideReason === 'other' && (hideNote ?? '') === '') {
+      return ctx.json(
+        { success: false, error: 'Other needs a note', field: 'hideNote' },
+        422,
+      );
+    }
+    // Hiding an already-hidden venue keeps who hid it and why; showing it again
+    // clears the explanation along with the removal marker.
+    const hidingNow = body.active === false && existing.active;
+    const hiddenFields = hidingNow
+      ? {
+          hiddenAt: new Date(),
+          hiddenBy: getAuthUser(ctx).userId,
+          hiddenReason: hideReason ?? null,
+          hiddenNote:
+            hideNote === undefined || hideNote === '' ? null : hideNote,
+        }
+      : body.active === true
+        ? {
+            hiddenAt: null,
+            hiddenBy: null,
+            hiddenReason: null,
+            hiddenNote: null,
+          }
+        : {};
 
     if (body.slug && body.slug !== existing.slug) {
       const [slugConflict] = await db
@@ -694,6 +773,7 @@ venuesAdminRouter.patch(
         // Activating a removed venue undoes the removal marker, so its past
         // shows return to artist pages with the rest of it.
         ...(body.active === true ? { removedAt: null } : {}),
+        ...hiddenFields,
         updatedAt: new Date(),
       })
       .where(eq(venues.id, id))
@@ -718,6 +798,15 @@ venuesAdminRouter.patch(
           platformVenueId: nextPlatformVenueId,
         },
       });
+    } else if (hidingNow) {
+      ctx.set('auditAction', 'venue.hide');
+      ctx.set('auditMeta', {
+        reason: hideReason ?? null,
+        note: hideNote ?? null,
+        upcomingShows: await upcomingShowCount(id),
+      });
+    } else if (body.active === true && !existing.active) {
+      ctx.set('auditAction', 'venue.show');
     } else {
       ctx.set('auditAction', 'venue.update');
     }
@@ -951,6 +1040,25 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
     return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
 
+  // A venue with shows or Watchers is hidden, never deleted: the delete would
+  // detach its shows and drop its crawl history.
+  const blockers = await deleteBlockers(id);
+  if (
+    blockers.pastShows > 0 ||
+    blockers.upcomingShows > 0 ||
+    blockers.watchers > 0
+  ) {
+    return ctx.json(
+      {
+        success: false,
+        error: 'This venue has shows or Watchers, so it can only be hidden',
+        code: 'has_history',
+        ...blockers,
+      },
+      409,
+    );
+  }
+
   const eventsDetached = await db.transaction(async (tx) => {
     // Count events before detaching
     const [eventCountResult] = await tx
@@ -1117,7 +1225,11 @@ venuesAdminRouter.post(
       return ctx.json({ success: false, error: resolved.error }, 422);
     }
 
-    const result = await pauseVenueCrawl(id, resolved.details);
+    const result = await pauseVenueCrawl(
+      id,
+      resolved.details,
+      getAuthUser(ctx).userId,
+    );
     if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
@@ -1158,6 +1270,7 @@ venuesAdminRouter.delete(
         .update(venues)
         .set({
           crawlPausedAt: null,
+          crawlPausedBy: null,
           crawlPauseReason: null,
           crawlPauseNote: null,
           crawlResumeOn: null,

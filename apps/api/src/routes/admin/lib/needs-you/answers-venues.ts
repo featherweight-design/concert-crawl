@@ -34,6 +34,8 @@ export const reCrawl = (
           return fail(422, 'Venue must be active and verified to crawl');
         case 'paused':
           return fail(409, 'Crawling is paused for this venue');
+        case 'robots_disallowed':
+          return fail(409, 'robots.txt disallows crawling this venue');
         case 'failed':
           return fail(500, 'Failed to create crawl trigger');
       }
@@ -48,11 +50,15 @@ export const pauseAnswer = (
     slug,
     kinds: [kind],
     schema: pauseBodySchema,
-    run: async (item, params) => {
+    run: async (item, params, actorId) => {
       if (item.venueId === null) return fail(422, 'This item has no venue');
       const resolved = resolvePauseDetails(params, new Date());
       if (!resolved.ok) return fail(422, resolved.error);
-      const paused = await pauseVenueCrawl(item.venueId, resolved.details);
+      const paused = await pauseVenueCrawl(
+        item.venueId,
+        resolved.details,
+        actorId,
+      );
       if (!paused) return fail(404, 'Venue not found');
       return {
         ok: true,

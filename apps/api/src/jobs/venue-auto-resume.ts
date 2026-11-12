@@ -52,6 +52,7 @@ export const runVenueAutoResume = async (
       .update(venues)
       .set({
         crawlPausedAt: null,
+        crawlPausedBy: null,
         crawlPauseReason: null,
         crawlPauseNote: null,
         crawlResumeOn: null,

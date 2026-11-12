@@ -403,42 +403,37 @@ describe('DELETE /v1/admin/venues/:id — integration (hard delete)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('hard deletes venue and returns eventsDetached count', async () => {
+  it('refuses to delete a venue that has shows, and keeps the venue and its shows', async () => {
     setAuth('admin');
-    const venue = await seedVenue({
-      name: 'Venue To Delete',
-      slug: 'delete-me',
-    });
-    await seedEvent(venue.id);
-    await seedEvent(venue.id, { artist: 'Second Artist', date: '2026-07-01' });
+    const venue = await seedVenue({ name: 'Venue X', slug: 'venue-x' });
+    const event = await seedEvent(venue.id);
+    await seedEvent(venue.id, { artist: 'Second Artist', date: '2020-01-01' });
 
     const res = await app.request(`/v1/admin/venues/${venue.id}`, {
       method: 'DELETE',
     });
-    expect(res.status).toBe(200);
-
+    expect(res.status).toBe(409);
     const body = (await res.json()) as {
-      success: boolean;
-      data: { eventsDetached: number };
+      code: string;
+      pastShows: number;
+      upcomingShows: number;
+      watchers: number;
     };
-    expect(body.success).toBe(true);
-    expect(body.data.eventsDetached).toBe(2);
-  });
+    expect(body).toMatchObject({
+      code: 'has_history',
+      pastShows: 1,
+      upcomingShows: 1,
+      watchers: 0,
+    });
 
-  it('nulls venue_id on events but keeps events in DB', async () => {
-    setAuth('admin');
-    const venue = await seedVenue({ name: 'Venue X', slug: 'venue-x' });
-    const event = await seedEvent(venue.id);
-
-    await app.request(`/v1/admin/venues/${venue.id}`, { method: 'DELETE' });
-
-    const [detachedEvent] = await testDb
+    const [kept] = await testDb
       .select({ venueId: events.venueId })
       .from(events)
       .where(eq(events.id, event.id));
-
-    expect(detachedEvent).toBeDefined();
-    expect(detachedEvent?.venueId).toBeNull();
+    expect(kept?.venueId).toBe(venue.id);
+    expect((await app.request(`/v1/admin/venues/${venue.id}`)).status).toBe(
+      200,
+    );
   });
 
   it('venue is gone from DB after delete', async () => {
@@ -451,7 +446,7 @@ describe('DELETE /v1/admin/venues/:id — integration (hard delete)', () => {
     expect(getRes.status).toBe(404);
   });
 
-  it('returns 0 eventsDetached when venue had no events', async () => {
+  it('deletes a venue that has no shows and no Watchers', async () => {
     setAuth('admin');
     const venue = await seedVenue({
       name: 'No Events Venue',
