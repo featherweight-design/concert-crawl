@@ -50,6 +50,9 @@ export function formatShowTime(timeStr: string | null): string | null {
   // timeStr is HH:MM:SS from Postgres time column
   const [hours, minutes] = timeStr.split(':').map(Number);
   if (hours === undefined || minutes === undefined) return null;
+  // A malformed time would make `format` throw (Invalid time value) and take
+  // its caller's whole list down with it.
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
   const date = new Date();
   date.setHours(hours, minutes, 0, 0);
   return new Intl.DateTimeFormat('en-US', {

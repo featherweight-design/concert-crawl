@@ -108,6 +108,9 @@ export function InviteLanding({
             data-testid="invite-app-icon"
             style={{
               display: 'block',
+              // The svg is inline; without this the line box adds a strip
+              // under it. The board's svg is display:block.
+              lineHeight: 0,
               flex: 'none',
               borderRadius: 7,
               overflow: 'hidden',
