@@ -139,7 +139,7 @@ export const PassportContent = ({
           </p>
         </header>
 
-        <div className="[grid-area:book]">
+        <div className="[grid-area:book]" data-testid="passport-booklet">
           <PassportBooklet pages={pages} identity={identity} stats={stats} />
         </div>
 
