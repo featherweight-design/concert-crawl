@@ -84,4 +84,21 @@ describe('EventTicketCta', () => {
     expect(screen.getByRole('link', { name: copy.getTickets })).toBeTruthy();
     expect(screen.queryByText(copy.refundInfo)).toBeNull();
   });
+
+  // B+ A5: the stale sweep's cancellation is not a confirmed one, so the
+  // ticket link keeps its ordinary label rather than turning into refund info.
+  it('keeps the ordinary ticket label on a No longer listed show', () => {
+    render(
+      <EventTicketCta
+        status="cancelled"
+        delistedAt="2026-11-01T00:00:00.000Z"
+        ticketHref={ticket}
+        soldOut={false}
+        href={ticket}
+        hasDirectLink
+      />,
+    );
+    expect(screen.getByRole('link', { name: copy.getTickets })).toBeTruthy();
+    expect(screen.queryByText(copy.refundInfo)).toBeNull();
+  });
 });
