@@ -34,10 +34,11 @@ const notification = (
 });
 
 describe('NotifBody — panel states', () => {
-  it('renders the loading state as a polite busy region, never a list', () => {
+  it('renders the loading state as a polite live region, never a list', () => {
     render(<NotifBody state="loading" now={NOW} />);
     const status = screen.getByRole('status');
-    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).not.toHaveAttribute('aria-busy');
+    expect(status).toHaveAttribute('aria-live', 'polite');
     expect(status).toHaveTextContent(NOTIFICATIONS_COPY.loading);
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
@@ -715,6 +716,7 @@ describe('NotifBody — B+ states', () => {
     const retry = within(card).getByRole('button', {
       name: NOTIFICATIONS_COPY.errorAction,
     });
+    expect(retry.style.minHeight).toBe('44px');
     expect(retry.style.padding).toBe('12px 24px');
     expect(retry.style.borderRadius).toBe('12px');
     expect(retry.style.marginTop).toBe('22px');

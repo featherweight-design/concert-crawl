@@ -5,8 +5,8 @@
 // rows fading down the panel as `addendum-3/03/notif-tab-loading-m` draws them
 // (no divider above them). The sweep is the app's one
 // skeleton sweep (`SkeletonBlock`), static under reduced motion. The spoken
-// form is one visually-hidden sentence inside a single role="status"/aria-busy
-// region, not one per skeleton.
+// form is one visually-hidden sentence inside a single polite role="status"
+// region (no aria-busy, which would suppress the announcement), not one per skeleton.
 //
 // EMPTY and ERROR are the B+ state card (`bp-s-notif_empty_m`,
 // `bp-s-notif_error_m`). Both actions render only when their handler is wired:
@@ -59,8 +59,10 @@ export const NotifSkeletonRow = ({
 );
 
 export const NotifLoading = ({ rows = 5 }: { rows?: number | undefined }) => (
-  <div role="status" aria-busy="true" aria-live="polite">
+  <div>
     <span
+      role="status"
+      aria-live="polite"
       style={{
         position: 'absolute',
         width: 1,
