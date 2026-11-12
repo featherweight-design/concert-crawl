@@ -1095,6 +1095,28 @@ export interface InviteCode {
   label: string | null;
 }
 
+// AdminInviteCode — one row of GET /v1/admin/invite-codes. The maker's handle
+// comes from user_profiles (null when the maker has none or is gone), and
+// lastUsedAt is the latest redemption, falling back to the legacy used_at.
+export interface AdminInviteCode extends InviteCode {
+  createdByHandle: string | null;
+  lastUsedAt: string | null;
+}
+
+// One person who joined with a code (GET /v1/admin/invite-codes/:id/redemptions).
+// `role` is read from Clerk and is null when Clerk can't answer.
+export interface InviteCodeRedemption {
+  userId: string;
+  handle: string | null;
+  role: Role | null;
+  redeemedAt: string;
+}
+
+export interface InviteCodeRedemptionsResponse {
+  data: InviteCodeRedemption[];
+  total: number;
+}
+
 // Avatar color token keys — survive theme switches
 /** The avatar palette, in one place for the API's validators. */
 export const AVATAR_COLORS = [
