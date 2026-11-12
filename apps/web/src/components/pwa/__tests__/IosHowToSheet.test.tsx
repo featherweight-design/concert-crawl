@@ -28,7 +28,7 @@ describe('IosHowToSheet', () => {
     });
   });
 
-  it('ends with a decorative cyan arrow, centred, below Got it', () => {
+  it('ends with a decorative cyan arrow carrying the auto-margin centring class, below Got it', () => {
     render(<IosHowToSheet open onClose={vi.fn()} />);
     const arrow = screen.getByTestId('ios-share-pointer');
     expect(arrow.getAttribute('aria-hidden')).toBe('true');
