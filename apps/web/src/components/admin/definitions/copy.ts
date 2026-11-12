@@ -2447,7 +2447,6 @@ export const ADMIN_COPY = {
       toCheck: 'To check',
       matched: 'Matched',
       notArtists: 'Not artists',
-      notArtistsShort: 'Not',
     },
     toCheckCount: (count: number) => `${count} to check`,
     windows: {
@@ -2475,7 +2474,7 @@ export const ADMIN_COPY = {
     searchButton: 'Search',
     notAnArtistConfirm: {
       title: (name: string) => `Mark ${name} as not an artist?`,
-      body: 'Its page comes down and matching stops. Not artists can send it back.',
+      body: 'Its page comes down and matching stops. You can send it back from Not artists.',
       confirm: 'Not an artist',
     },
     empty: {
@@ -2489,7 +2488,8 @@ export const ADMIN_COPY = {
       body: 'Check the spelling, or clear the search.',
       clear: 'Clear search',
     },
-    stillToCheck: (name: string) => `${name} is still in To check.`,
+    // Under "Couldn't change {name}", so the name isn't said twice.
+    stillToCheck: "It's still in To check.",
     itemLabel: 'artists',
   },
 
