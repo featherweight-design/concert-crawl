@@ -36,7 +36,12 @@ vi.mock('../../lib/rate-limit.js', () => ({
   refundRateLimit: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
+// Spread the real module so a new drizzle-orm import elsewhere in the app
+// doesn't break this suite; only the operators it inspects are mocked.
+vi.mock('drizzle-orm', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('drizzle-orm')>()),
+  eq: vi.fn(),
+}));
 
 import { createApp } from '../../app.js';
 import { inviteCodes } from '@concert-crawl/db';

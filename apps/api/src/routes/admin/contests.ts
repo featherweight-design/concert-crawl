@@ -158,13 +158,18 @@ contestsAdminRouter.get(
         // statuses when includeArchived widens the scope (#758).
         counterStatus: priceSubmissions.status,
         filedAt: priceSubmissions.createdAt,
-        openCounterCount: db.$count(
-          openCounter,
-          and(
-            eq(openCounter.disputedSubmissionId, parentAlias.id),
-            eq(openCounter.status, 'pending'),
-          ),
-        ),
+        // A scalar subquery that declares its own alias in its FROM.
+        // db.$count(alias) rendered the alias name as a bare table name
+        // ('relation "open_counter" does not exist').
+        openCounterCount: sql<number>`(${db
+          .select({ value: sql<number>`count(*)::int` })
+          .from(openCounter)
+          .where(
+            and(
+              eq(openCounter.disputedSubmissionId, parentAlias.id),
+              eq(openCounter.status, 'pending'),
+            ),
+          )})`.mapWith(Number),
       })
       .from(priceSubmissions)
       .innerJoin(
@@ -625,7 +630,7 @@ contestsAdminRouter.post(
               : undefined,
           ),
         )
-        .orderBy(...leadingCounterOrderBy)
+        .orderBy(...leadingCounterOrderBy())
         .limit(1)
         .for('update');
       if (!challenger) {
@@ -1047,7 +1052,7 @@ contestsAdminRouter.post(
             eq(priceSubmissions.status, 'pending'),
           ),
         )
-        .orderBy(...leadingCounterOrderBy)
+        .orderBy(...leadingCounterOrderBy())
         .limit(1)
         .for('update');
       if (!counter) {

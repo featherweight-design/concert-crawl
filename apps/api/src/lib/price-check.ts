@@ -107,12 +107,18 @@ export function filedAtMs(column: AnyColumn): SQL<Date> {
   return sql<Date>`date_trunc('milliseconds', ${column})`;
 }
 
-/** The same order as `compareLeadingCounters`, for an ORDER BY. */
-export const leadingCounterOrderBy = [
-  desc(priceSubmissions.corroborationCount),
-  asc(filedAtMs(priceSubmissions.createdAt)),
-  asc(priceSubmissions.id),
-];
+/**
+ * The same order as `compareLeadingCounters`, for an ORDER BY. A function,
+ * not a module-level constant, so importing this module reads nothing off
+ * the schema (test suites mock @concert-crawl/db with partial tables).
+ */
+export function leadingCounterOrderBy(): SQL[] {
+  return [
+    desc(priceSubmissions.corroborationCount),
+    asc(filedAtMs(priceSubmissions.createdAt)),
+    asc(priceSubmissions.id),
+  ];
+}
 
 /**
  * Lock a price row FOR UPDATE: the first lock every check-changing path
