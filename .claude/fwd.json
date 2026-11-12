@@ -10,6 +10,12 @@
     ],
     "widths": [
       {
+        "label": "xs",
+        "width": 320,
+        "height": 640,
+        "touch": true
+      },
+      {
         "label": "phone",
         "width": 390,
         "height": 844,
