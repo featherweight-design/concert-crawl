@@ -8,7 +8,13 @@
       "steps": [
         {
           "goto": "/watching",
-          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/watching\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"event-row\"]"
         }
       ]
     },
@@ -18,7 +24,13 @@
       "steps": [
         {
           "goto": "/history",
-          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/history\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"history-item\"]"
         }
       ]
     },
@@ -28,7 +40,13 @@
       "steps": [
         {
           "goto": "/following",
-          "wait": "nav[aria-label=\"My shows\"] a[aria-current=\"page\"][href=\"/following\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"artist-manage-row\"]:visible"
         }
       ]
     }
