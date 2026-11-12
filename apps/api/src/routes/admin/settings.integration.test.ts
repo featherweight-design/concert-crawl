@@ -17,6 +17,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { desc, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { auditLog } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
 import { clearTables } from '../../test/helpers/seed.js';
@@ -39,11 +40,22 @@ const patch = (body: unknown): Promise<Response> =>
 interface SettingsBody {
   data: {
     llmMonthlyBudgetUsd: number | null;
+    llmBudgetWarnAtPercent: number;
+    llmBudgetFallbackToStructured: boolean;
     approvePricesMyself: boolean;
     updatedAt: string | null;
     updatedBy: string | null;
   };
 }
+
+const budgetControlsSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    llmMonthlyBudgetUsd: z.number().nullable(),
+    llmBudgetWarnAtPercent: z.number(),
+    llmBudgetFallbackToStructured: z.boolean(),
+  }),
+});
 
 describe('admin settings', () => {
   beforeEach(async () => {
@@ -63,6 +75,8 @@ describe('admin settings', () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as SettingsBody).data).toEqual({
       llmMonthlyBudgetUsd: null,
+      llmBudgetWarnAtPercent: 75,
+      llmBudgetFallbackToStructured: true,
       approvePricesMyself: false,
       updatedAt: null,
       updatedBy: null,
@@ -77,6 +91,11 @@ describe('admin settings', () => {
       { llmMonthlyBudgetUsd: 1000.01 },
       { llmMonthlyBudgetUsd: '50' },
       { approvePricesMyself: 'yes' },
+      { llmBudgetWarnAtPercent: 80 },
+      { llmBudgetWarnAtPercent: '75' },
+      { llmBudgetWarnAtPercent: null },
+      { llmBudgetFallbackToStructured: 'on' },
+      { llmBudgetFallbackToStructured: null },
       { somethingElse: true },
       {},
     ]) {
@@ -105,8 +124,58 @@ describe('admin settings', () => {
       .limit(1);
     expect(row?.actorId).toBe('admin-a');
     expect(row?.metadata).toEqual({
-      before: { llmMonthlyBudgetUsd: 40, approvePricesMyself: false },
-      after: { llmMonthlyBudgetUsd: 40, approvePricesMyself: true },
+      before: {
+        llmMonthlyBudgetUsd: 40,
+        llmBudgetWarnAtPercent: 75,
+        llmBudgetFallbackToStructured: true,
+        approvePricesMyself: false,
+      },
+      after: {
+        llmMonthlyBudgetUsd: 40,
+        llmBudgetWarnAtPercent: 75,
+        llmBudgetFallbackToStructured: true,
+        approvePricesMyself: true,
+      },
+    });
+  });
+
+  it('saves the budget panel controls, keeps the budget, and audits them', async () => {
+    setAuth('admin', 'admin-b');
+    expect((await patch({ llmMonthlyBudgetUsd: 25 })).status).toBe(200);
+
+    const res = await patch({
+      llmBudgetWarnAtPercent: 90,
+      llmBudgetFallbackToStructured: false,
+    });
+    expect(res.status).toBe(200);
+    expect(budgetControlsSchema.parse(await res.json()).data).toEqual({
+      llmMonthlyBudgetUsd: 25,
+      llmBudgetWarnAtPercent: 90,
+      llmBudgetFallbackToStructured: false,
+    });
+    expect(budgetControlsSchema.parse(await (await get()).json()).data).toEqual(
+      {
+        llmMonthlyBudgetUsd: 25,
+        llmBudgetWarnAtPercent: 90,
+        llmBudgetFallbackToStructured: false,
+      },
+    );
+
+    const [row] = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'settings.update'))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(1);
+    expect(row?.metadata).toMatchObject({
+      before: {
+        llmBudgetWarnAtPercent: 75,
+        llmBudgetFallbackToStructured: true,
+      },
+      after: {
+        llmBudgetWarnAtPercent: 90,
+        llmBudgetFallbackToStructured: false,
+      },
     });
   });
 

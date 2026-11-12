@@ -20,6 +20,16 @@ export const adminSettings = pgTable(
       precision: 8,
       scale: 2,
     }),
+    // "Warn me at" on the LLM budget panel: a percent of the monthly budget,
+    // one of 50, 75 or 90 (the board's three chips; 75 is drawn selected).
+    llmBudgetWarnAtPercent: smallint('llm_budget_warn_at_percent')
+      .notNull()
+      .default(75),
+    // "If it runs out": on means keep crawling with HTML and JSON-LD only, and
+    // tell the admin. The board draws it on.
+    llmBudgetFallbackToStructured: boolean('llm_budget_fallback_to_structured')
+      .notNull()
+      .default(true),
     // The admin's "approve every price myself" choice. Stored here and read
     // back by the settings API; the price hold that acts on it ships with 2a.
     approvePricesMyself: boolean('approve_prices_myself')
@@ -30,7 +40,13 @@ export const adminSettings = pgTable(
       .defaultNow(),
     updatedBy: text('updated_by'),
   },
-  (table) => [check('admin_settings_single_row', sql`${table.id} = 1`)],
+  (table) => [
+    check('admin_settings_single_row', sql`${table.id} = 1`),
+    check(
+      'admin_settings_llm_budget_warn_at_percent_check',
+      sql`${table.llmBudgetWarnAtPercent} IN (50, 75, 90)`,
+    ),
+  ],
 );
 
 export type AdminSettingsRow = typeof adminSettings.$inferSelect;

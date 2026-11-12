@@ -46,6 +46,7 @@ vi.mock('@concert-crawl/db', () => ({
     createdAt: 'createdAt',
   },
   auditLog: {},
+  emailSendLog: {},
   venues: {},
   inviteCodes: {},
   crawlRuns: {},

@@ -1543,9 +1543,31 @@ export const TRIAGE_NO_SWEEP = '—';
 // is set; `updatedAt` and `updatedBy` are null until the first save.
 export interface AdminSettings {
   llmMonthlyBudgetUsd: number | null;
+  // Percent of the monthly budget at which the admin is warned.
+  llmBudgetWarnAtPercent: LlmBudgetWarnAtPercent;
+  // "If it runs out": on means keep crawling with HTML and JSON-LD only, and
+  // tell the admin.
+  llmBudgetFallbackToStructured: boolean;
   approvePricesMyself: boolean;
   updatedAt: string | null;
   updatedBy: string | null;
+}
+
+// The three "Warn me at" choices drawn on the LLM budget panel.
+export const LLM_BUDGET_WARN_AT_PERCENTS = [50, 75, 90] as const;
+export type LlmBudgetWarnAtPercent =
+  (typeof LLM_BUDGET_WARN_AT_PERCENTS)[number];
+
+// What `GET /v1/admin/notifications/delivery` returns for the Health page's
+// "The site" tile: transactional email outcomes from `email_send_log` in the
+// last `hours` hours. `lastSentAt` is the newest sent row at any age, or null
+// when nothing has ever been sent.
+export interface AdminEmailDelivery {
+  lastSentAt: string | null;
+  sent: number;
+  failed: number;
+  suppressed: number;
+  hours: number;
 }
 
 // One audit_log row as the admin reads it. `actor` is a handle or a `system:`
