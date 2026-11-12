@@ -20,6 +20,11 @@ export interface SidePanelProps {
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * `ruled`: the footer starts at the left under a top border, as
+   * `07/a-code-in-flow` draws it. Omitted, it stays right-aligned.
+   */
+  footerLayout?: 'end' | 'ruled';
   width?: number;
   /**
    * No scrim, no trap: the panel sits beside the page. Only Needs you on
@@ -37,6 +42,7 @@ const PanelBody = ({
   subtitle,
   children,
   footer,
+  footerLayout = 'end',
   onClose,
 }: Omit<SidePanelProps, 'width' | 'inline' | 'dismissible'> & {
   titleId: string;
@@ -79,7 +85,15 @@ const PanelBody = ({
     </div>
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>{children}</div>
     {footer && (
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 8,
+          ...(footerLayout === 'ruled'
+            ? { paddingTop: 12, borderTop: '1px solid var(--border)' }
+            : { justifyContent: 'flex-end' }),
+        }}
+      >
         {footer}
       </div>
     )}

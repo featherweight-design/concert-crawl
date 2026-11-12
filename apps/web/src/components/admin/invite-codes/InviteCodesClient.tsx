@@ -46,8 +46,19 @@ interface Open {
 
 interface Failure {
   code: string;
+  /** What is still saved, e.g. "REDROCKS is still active." */
+  saved: string;
   retry: () => void;
 }
+
+const failureFor = (row: AdminInviteCode, retry: () => void): Failure => ({
+  code: row.code,
+  saved: COPY.form.stillStatus(
+    row.code,
+    COPY.status[inviteStatus(row, new Date())],
+  ),
+  retry,
+});
 
 const COLUMN_HEAD = {
   ...MONO,
@@ -237,7 +248,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
       setOpen(null);
     } catch {
       setOpen(null);
-      setFailure({ code: row.code, retry: () => void runEnding(row, action) });
+      setFailure(failureFor(row, () => void runEnding(row, action)));
     } finally {
       setPending(false);
     }
@@ -585,7 +596,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
       {failure && (
         <SaveFailedToast
           what={failure.code}
-          saved={COPY.form.stillAsItWas(failure.code)}
+          saved={failure.saved}
           retrying={pending}
           onRetry={failure.retry}
         />

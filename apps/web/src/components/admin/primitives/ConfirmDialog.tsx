@@ -21,6 +21,11 @@ export interface ConfirmDialogProps {
    * buttons follow `tone` as before.
    */
   confirmVariant?: 'gradient' | 'dangerOutline';
+  /**
+   * `large`: 38px buttons with 9px corners and a raised cancel, as the 07
+   * confirm boards draw them. Omitted, the buttons keep their 32px size.
+   */
+  buttonSize?: 'default' | 'large';
   /** True while the action runs: both buttons disable and dismissing stops. */
   pending?: boolean;
   eyebrow?: string;
@@ -39,12 +44,17 @@ export const ConfirmDialog = ({
   cancelLabel = ADMIN_COPY.confirm.cancel,
   tone = 'default',
   confirmVariant,
+  buttonSize = 'default',
   pending = false,
   eyebrow = '',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) => {
   const isPhone = useIsPhone();
+  const large =
+    buttonSize === 'large'
+      ? { height: 38, borderRadius: 9, fontSize: 13.5, fontWeight: 600 }
+      : undefined;
   const confirm = (
     <AdminButton
       type="button"
@@ -52,6 +62,7 @@ export const ConfirmDialog = ({
       disabled={pending}
       onClick={onConfirm}
       fullWidth={isPhone}
+      style={large}
     >
       {confirmLabel}
     </AdminButton>
@@ -63,6 +74,13 @@ export const ConfirmDialog = ({
       disabled={pending}
       onClick={onCancel}
       fullWidth={isPhone}
+      style={
+        large && {
+          ...large,
+          color: 'var(--fg)',
+          background: 'var(--surface-2)',
+        }
+      }
     >
       {cancelLabel}
     </AdminButton>

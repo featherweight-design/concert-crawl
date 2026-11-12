@@ -31,6 +31,7 @@ export const RevokeConfirm = ({
   <ConfirmDialog
     tone="danger"
     confirmVariant="dangerOutline"
+    buttonSize="large"
     title={COPY.revoke.title(code.code)}
     body={COPY.revoke.body(code.code, seatsTaken(code))}
     confirmLabel={COPY.revoke.confirm}
@@ -82,6 +83,7 @@ export const ReactivateConfirm = ({
       }
       confirmLabel={COPY.reactivate.confirm}
       confirmVariant="gradient"
+      buttonSize="large"
       cancelLabel={COPY.reactivate.keep}
       pending={pending}
       onConfirm={() => onConfirm(expiresAtFor(expiry, new Date()))}
