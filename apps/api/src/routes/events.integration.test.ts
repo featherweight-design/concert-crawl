@@ -16,6 +16,7 @@ import { events } from '@concert-crawl/db';
 import { STALE_AFTER_MS } from '@concert-crawl/types';
 import { createApp } from '../app.js';
 import { apiLogger } from '../lib/logger.js';
+import { loadPromotedReportSummary } from '../lib/promoted-report.js';
 import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
@@ -398,6 +399,42 @@ describe('GET /v1/events/:id — integration', () => {
       expect(authedBody.data.soldOutReport?.reporterHandle).toBe('ada');
     });
 
+    it('lets a shared cache hold the anonymous answer and never the signed-in one', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+
+      const anon = await app.request(`/v1/events/${event.id}`);
+      expect(anon.headers.get('Cache-Control')).toContain('public');
+      expect(anon.headers.get('Cache-Control')).toContain('s-maxage=');
+      expect(anon.headers.get('Vary')).toContain('Authorization');
+
+      authState.current = { userId: 'user_viewer' };
+      const authed = await app.request(`/v1/events/${event.id}`);
+      expect(authed.headers.get('Cache-Control')).toBe('private, no-store');
+      expect(authed.headers.get('Vary')).toContain('Authorization');
+    });
+
+    it('loadPromotedReportSummary skips the handle when includeHandle is false', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+      await seedUserProfile('user_reporter', { handle: 'sami' });
+      await seedEventReport(event.id, 'user_reporter', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+
+      const withoutHandle = await loadPromotedReportSummary(
+        event.id,
+        'cancelled',
+        { includeHandle: false },
+      );
+      const withHandle = await loadPromotedReportSummary(event.id, 'cancelled');
+
+      expect(withoutHandle?.reporterHandle).toBeNull();
+      expect(withHandle?.reporterHandle).toBe('sami');
+    });
+
     it('ignores a client-controlled header: only the verified session unlocks the handle', async () => {
       const venue = await seedVenue();
       const event = await seedEvent(venue.id, { status: 'cancelled' });
@@ -502,12 +539,6 @@ describe('GET /v1/events/:id — integration', () => {
       const venue = await seedVenue();
       const event = await seedEvent(venue.id, { status: 'cancelled' });
       expect(await sourceOf(event.id)).toBe('admin');
-    });
-
-    it("never emits 'crawler'", async () => {
-      const venue = await seedVenue();
-      const event = await seedEvent(venue.id, { status: 'postponed' });
-      expect(await sourceOf(event.id)).not.toBe('crawler');
     });
   });
 

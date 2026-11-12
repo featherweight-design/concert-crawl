@@ -16,10 +16,16 @@ import { activePromotedReportWhere } from './sold-out.js';
  *
  * With more than one, the latest promotion wins: that is the one that set
  * the status the page shows now.
+ *
+ * `includeHandle` (default true) is false for a viewer who may not see a fan's
+ * identity: the userProfiles lookup is skipped and `reporterHandle` is null, so
+ * the handle is never read for an anonymous caller. Pass the verified session
+ * state, never a client-supplied flag.
  */
 export async function loadPromotedReportSummary(
   eventId: string,
   status: 'sold-out' | 'cancelled' | 'postponed',
+  { includeHandle = true }: { includeHandle?: boolean } = {},
 ): Promise<PromotedReportSummary | null> {
   const [report] = await db
     .select({
@@ -33,16 +39,19 @@ export async function loadPromotedReportSummary(
     .limit(1);
   if (!report) return null;
 
-  const [[confirms], [reporter]] = await Promise.all([
+  const [[confirms], reporter] = await Promise.all([
     db
       .select({ total: count() })
       .from(eventReportConfirms)
       .where(eq(eventReportConfirms.reportId, report.id)),
-    db
-      .select({ handle: userProfiles.handle })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, report.reporterId))
-      .limit(1),
+    includeHandle
+      ? db
+          .select({ handle: userProfiles.handle })
+          .from(userProfiles)
+          .where(eq(userProfiles.userId, report.reporterId))
+          .limit(1)
+          .then(([profile]) => profile)
+      : Promise.resolve(undefined),
   ]);
 
   return {
