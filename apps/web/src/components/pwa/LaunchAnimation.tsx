@@ -33,9 +33,12 @@ import { LAUNCH_COPY } from './definitions/copy';
 const SPLASH_BG = '#070A1A';
 const TILE_BG = '#171D3A';
 const TILE_PX = 128;
-/** The mark's box at scale 1 is the header logo's: 28px. */
-const MARK_PX = LAUNCH_LANDING.size;
-const START_SCALE = 2.4;
+/** The mark's art is 96 units; its box at scale 1 is that 96px. */
+const MARK_PX = 96;
+/** The header logo's box, where the mark lands. */
+const LANDING_PX = LAUNCH_LANDING.size;
+/** Starts at 128 / 96, the splash tile's size, centred (addendum 2 item 22). */
+const START_SCALE = TILE_PX / MARK_PX;
 const FULL_SCALE = 4.2;
 const SWELL = 1.28;
 const CORE_PULSE = 1.4;
@@ -98,8 +101,8 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     // Where the mark lands: the header logo's spot, measured from the centre.
-    const landX = LAUNCH_LANDING.left + MARK_PX / 2 - vw / 2;
-    const landY = LAUNCH_LANDING.top + MARK_PX / 2 - vh / 2;
+    const landX = LAUNCH_LANDING.left + LANDING_PX / 2 - vw / 2;
+    const landY = LAUNCH_LANDING.top + LANDING_PX / 2 - vh / 2;
     const centred = (scale: number) => `translate(0px, 0px) scale(${scale})`;
     const animations: (Animation | null)[] = [];
     const run = (
@@ -135,7 +138,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
       { offset: at(LAUNCH_MS.shrinkStart), transform: centred(FULL_SCALE) },
       {
         offset: 1,
-        transform: `translate(${landX}px, ${landY}px) scale(1)`,
+        transform: `translate(${landX}px, ${landY}px) scale(${LANDING_PX / MARK_PX})`,
       },
     ]);
 
