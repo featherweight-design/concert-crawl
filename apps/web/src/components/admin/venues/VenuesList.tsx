@@ -4,7 +4,6 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Search, X } from 'lucide-react';
-import type { VenueWithEventCount } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AddVenueModal } from '@/components/admin/AddVenueModal';
 import {
@@ -22,8 +21,8 @@ import {
   matchesFilter,
   matchesSearch,
   sortWorstFirst,
-  withoutTakenDown,
   type VenueFilter,
+  type VenueListRow,
 } from './venue-list-rules';
 
 const COPY = ADMIN_COPY.venuesList;
@@ -114,13 +113,7 @@ const Robots = ({ allowed }: { allowed: boolean | null }) => {
 };
 
 /** The venue's glyph tile at a fixed size; a long name never squeezes it. */
-const Tile = ({
-  venue,
-  size,
-}: {
-  venue: VenueWithEventCount;
-  size: number;
-}) => (
+const Tile = ({ venue, size }: { venue: VenueListRow; size: number }) => (
   <span style={{ display: 'flex', flex: 'none' }}>
     <VenueTile slug={venue.slug} name={venue.name} size={size} />
   </span>
@@ -134,7 +127,7 @@ const ColumnName = ({ name }: { name: string }) => (
   <span className="sr-only">{COPY.cellName(name)}</span>
 );
 
-const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
+const DesktopRow = ({ venue }: { venue: VenueListRow }) => (
   <Link
     href={`/admin/venues/${venue.id}`}
     data-testid="venue-row"
@@ -218,7 +211,7 @@ const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
   </Link>
 );
 
-const PhoneCard = ({ venue }: { venue: VenueWithEventCount }) => (
+const PhoneCard = ({ venue }: { venue: VenueListRow }) => (
   <Link
     href={`/admin/venues/${venue.id}`}
     data-testid="venue-row"
@@ -269,18 +262,15 @@ const PhoneCard = ({ venue }: { venue: VenueWithEventCount }) => (
  * the ⋯ menu land in parts 3 and 4. `venues` is null when the list failed to
  * load.
  */
-export const VenuesList = ({
-  venues,
-}: {
-  venues: VenueWithEventCount[] | null;
-}) => {
+export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
   const router = useRouter();
   const isPhone = useIsPhone();
   const [filter, setFilter] = useState<VenueFilter>('all');
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(false);
 
-  const listed = useMemo(() => withoutTakenDown(venues ?? []), [venues]);
+  // The API leaves taken-down venues out (row 11).
+  const listed = useMemo(() => venues ?? [], [venues]);
   const upcoming = listed.reduce((sum, venue) => sum + venue.eventCount, 0);
   const sorted = useMemo(
     () =>

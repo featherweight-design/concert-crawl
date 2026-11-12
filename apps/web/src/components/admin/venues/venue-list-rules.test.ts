@@ -1,18 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { VenueWithEventCount } from '@concert-crawl/types';
+import type { VenueLatestRun } from '@concert-crawl/types';
 import {
   crawlingLabel,
   foldOk,
   latestRunLine,
   matchesFilter,
   sortWorstFirst,
-  withoutTakenDown,
+  type VenueListRow,
 } from './venue-list-rules';
 
-const venue = (
-  name: string,
-  over: Partial<VenueWithEventCount> = {},
-): VenueWithEventCount =>
+const venue = (name: string, over: Partial<VenueListRow> = {}): VenueListRow =>
   ({
     id: name,
     name,
@@ -28,18 +25,27 @@ const venue = (
     neighborhood: null,
     eventCount: 0,
     lastRunStatus: 'success',
+    latestRun: null,
     ...over,
-  }) as VenueWithEventCount; // fixture: the rules read only these fields
+  }) as VenueListRow; // fixture: the rules read only these fields
 
 const PAUSED = '2026-11-10T00:00:00Z';
 
-describe('venue list rules', () => {
-  it('drops taken-down venues', () => {
-    expect(
-      withoutTakenDown([venue('A'), venue('B', { removedAt: PAUSED })]),
-    ).toHaveLength(1);
-  });
+// 2:00 PM in Denver on Nov 12; the runs below are at 3:04 AM that morning.
+const NOW = new Date('2026-11-12T21:00:00Z');
+const run = (over: Partial<VenueLatestRun> = {}): VenueLatestRun => ({
+  status: 'success',
+  reason: null,
+  at: '2026-11-12T10:04:00Z',
+  eventsFound: 40,
+  eventsInserted: 0,
+  errorMessage: null,
+  ...over,
+});
+const lineFor = (latestRun: VenueLatestRun, over: Partial<VenueListRow> = {}) =>
+  latestRunLine(venue('V', { latestRun, ...over }), NOW);
 
+describe('venue list rules', () => {
   it('sorts worst first, then OK by name', () => {
     const sorted = sortWorstFirst([
       venue('Zed'),
@@ -101,12 +107,48 @@ describe('venue list rules', () => {
     ).toBe(true);
   });
 
-  it('reads the latest run as a word until #242', () => {
-    expect(latestRunLine(venue('A', { lastRunStatus: null }))).toBe(
-      'No runs yet',
+  it('reads an OK run with its time and new shows', () => {
+    expect(lineFor(run({ eventsInserted: 2 }))).toBe('OK · 3:04 AM · 2 new');
+    expect(lineFor(run())).toBe('OK · 3:04 AM');
+    expect(lineFor(run({ at: '2026-11-10T10:04:00Z' }))).toBe('OK · Nov 10');
+  });
+
+  it('reads a failure with its reason, or the error line', () => {
+    expect(
+      lineFor(run({ status: 'failed', reason: 'calendar_not_found' })),
+    ).toBe('Failed: calendar block not found');
+    expect(
+      lineFor(
+        run({ status: 'failed', reason: 'error', errorMessage: 'boom\nstack' }),
+      ),
+    ).toBe('Failed: boom');
+    expect(lineFor(run({ status: 'failed', reason: null }))).toBe('Failed');
+  });
+
+  it('reads skips by their outcome', () => {
+    expect(lineFor(run({ status: 'skipped', reason: 'page_unchanged' }))).toBe(
+      'Unchanged · 3:04 AM',
     );
-    expect(latestRunLine(venue('B', { lastRunStatus: 'failed' }))).toBe(
-      'Failed',
-    );
+    expect(
+      lineFor(run({ status: 'skipped', reason: 'robots_disallowed' })),
+    ).toBe('robots.txt: disallowed');
+  });
+
+  it('reads a hand-paused venue as its pause, and auto-paused as its run', () => {
+    expect(
+      lineFor(run({ status: 'skipped', reason: 'crawl_paused' }), {
+        crawlPausedAt: '2026-10-28T18:00:00Z',
+      }),
+    ).toBe('Paused · Oct 28');
+    expect(
+      lineFor(run({ status: 'failed', reason: 'calendar_not_found' }), {
+        crawlPausedAt: PAUSED,
+        consecutiveFailures: 3,
+      }),
+    ).toBe('Failed: calendar block not found');
+  });
+
+  it('says No runs yet for a venue that never crawled', () => {
+    expect(latestRunLine(venue('A'), NOW)).toBe('No runs yet');
   });
 });

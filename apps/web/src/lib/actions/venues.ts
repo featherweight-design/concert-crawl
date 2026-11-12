@@ -256,40 +256,6 @@ export async function unverifyVenue(id: string): Promise<void> {
   revalidatePath(`/admin/venues/${id}`);
 }
 
-export async function bulkVerifyVenues(ids: string[]): Promise<void> {
-  const token = await getToken();
-  await Promise.all(
-    ids.map((id) =>
-      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-        verified: true,
-      }),
-    ),
-  );
-  revalidatePath('/admin/venues');
-}
-
-export async function bulkUnverifyVenues(ids: string[]): Promise<void> {
-  const token = await getToken();
-  await Promise.all(
-    ids.map((id) =>
-      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-        verified: false,
-      }),
-    ),
-  );
-  revalidatePath('/admin/venues');
-}
-
-export async function bulkActivateVenues(ids: string[]): Promise<void> {
-  const token = await getToken();
-  await Promise.all(
-    ids.map((id) =>
-      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, { active: true }),
-    ),
-  );
-  revalidatePath('/admin/venues');
-}
-
 export interface GenerateAboutResult {
   success: boolean;
   data?: {
@@ -349,18 +315,6 @@ export async function probeVenuePlatform(
     const message = err instanceof Error ? err.message : 'Probe request failed';
     return { success: false, error: message };
   }
-}
-
-export async function bulkDeactivateVenues(ids: string[]): Promise<void> {
-  const token = await getToken();
-  await Promise.all(
-    ids.map((id) =>
-      apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-        active: false,
-      }),
-    ),
-  );
-  revalidatePath('/admin/venues');
 }
 
 // --- #764 first-timer guide -------------------------------------------------

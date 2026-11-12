@@ -3,7 +3,13 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
 import { useClerk } from '@clerk/nextjs';
-import { ChevronRight, ExternalLink, LogOut } from 'lucide-react';
+import {
+  ChevronRight,
+  ExternalLink,
+  LogOut,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { NAV, TAB_BAR, type NavGroup, type NavKey } from './nav';
 
@@ -94,6 +100,41 @@ const itemsFor = (group: Exclude<NavGroup, 'primary'>) => {
   return [...health, ...items];
 };
 
+interface MoreRow {
+  key: string;
+  label: string;
+  detail: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+/**
+ * The robots.txt audit lost its button with the old Venues page, and nothing
+ * else links it. It joins System as an interim row, drawn as
+ * `08/more-interim-m` draws one: the same row, no badge.
+ */
+const ROBOTS_AUDIT_ROW: MoreRow = {
+  key: 'robots-audit',
+  label: ADMIN_COPY.shell.more.robotsAudit.title,
+  detail: ADMIN_COPY.shell.more.robotsAudit.detail,
+  href: '/admin/venues/robots-audit',
+  icon: ShieldCheck,
+};
+
+const rowsFor = (
+  group: Exclude<NavGroup, 'primary'>,
+  data: AdminMoreDetails,
+): MoreRow[] => {
+  const rows = itemsFor(group).map((item) => ({
+    key: item.key,
+    label: item.label,
+    detail: detailFor(item.key, data),
+    href: item.href,
+    icon: item.icon,
+  }));
+  return group === 'system' ? [...rows, ROBOTS_AUDIT_ROW] : rows;
+};
+
 const actionStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -131,7 +172,7 @@ export const AdminMoreList = ({ data }: { data: AdminMoreDetails }) => {
               {ADMIN_COPY.shell.nav.groups[group]}
             </span>
           </div>
-          {itemsFor(group).map((item) => {
+          {rowsFor(group, data).map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -176,7 +217,7 @@ export const AdminMoreList = ({ data }: { data: AdminMoreDetails }) => {
                       marginTop: 2,
                     }}
                   >
-                    {detailFor(item.key, data)}
+                    {item.detail}
                   </span>
                 </span>
                 <ChevronRight size={16} color="var(--fg-subtle)" aria-hidden />

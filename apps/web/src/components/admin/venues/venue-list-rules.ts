@@ -1,6 +1,7 @@
-import type { VenueWithEventCount } from '@concert-crawl/types';
+import type { VenueLatestRun, VenueWithEventCount } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
+import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 
 const COPY = ADMIN_COPY.venuesList;
 
@@ -16,22 +17,106 @@ export type VenueFilter = (typeof VENUE_FILTERS)[number];
 export const VISIBLE_ROWS = 10;
 
 /**
- * HOLD, #242 resolves: a taken-down venue is gone from the list (row 11). The
- * API still returns them until #242 filters them server-side; then this goes.
+ * A row as `GET /v1/admin/venues` sends it since #242, which leaves taken-down
+ * venues out and adds the latest run. `VenueWithEventCount` in
+ * packages/types doesn't carry `latestRun` yet, so the list names it here.
  */
-export const withoutTakenDown = (
-  venues: readonly VenueWithEventCount[],
-): VenueWithEventCount[] => venues.filter((venue) => venue.removedAt === null);
+export interface VenueListRow extends VenueWithEventCount {
+  latestRun: VenueLatestRun | null;
+}
+
+const RUN = COPY.latestRun;
+
+/** Today's runs read as a time ("3:04 AM"), older ones as a date ("Nov 10"). */
+const runWhen = (iso: string, now: Date): string => {
+  const day = (date: Date) =>
+    formatISODate(date.toISOString(), DENVER_TIME_ZONE, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  const at = new Date(iso);
+  return day(at) === day(now)
+    ? formatISODate(iso, DENVER_TIME_ZONE, {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      })
+    : formatISODate(iso, DENVER_TIME_ZONE, { month: 'short', day: 'numeric' });
+};
+
+const joined = (...parts: Array<string | null>): string =>
+  parts.filter((part): part is string => part !== null).join(' · ');
+
+/** A failed run without a known reason reads its error's first line. */
+const errorLine = (run: VenueLatestRun): string => {
+  const first = run.errorMessage?.split('\n')[0]?.trim();
+  return first ? RUN.withReason(RUN.failed, first) : RUN.failed;
+};
+
+const runLine = (run: VenueLatestRun, now: Date): string => {
+  const when = runWhen(run.at, now);
+  const added =
+    run.eventsInserted > 0 ? RUN.newShows(run.eventsInserted) : null;
+  switch (run.reason) {
+    case 'page_unchanged':
+      return joined(RUN.unchanged, when);
+    case 'crawl_paused':
+      return RUN.withReason(RUN.skipped, RUN.reasons.crawl_paused);
+    case 'robots_disallowed':
+    case 'robots_unreachable':
+    case 'robots_crawl_delay':
+      return RUN.withReason(RUN.robots, RUN.reasons[run.reason]);
+    case 'blocked_http':
+      return RUN.blocked;
+    case 'llm_account':
+      return RUN.withReason(RUN.notRun, RUN.reasons.llm_account);
+    case 'calendar_not_found':
+    case 'no_events_found':
+    case 'timeout':
+      return RUN.withReason(RUN.failed, RUN.reasons[run.reason]);
+    case 'error':
+    case null:
+      break;
+  }
+  switch (run.status) {
+    case 'success':
+      return joined(RUN.success, when, added);
+    case 'partial':
+      return joined(RUN.partial, when, added);
+    case 'failed':
+      return errorLine(run);
+    case 'skipped':
+      return joined(RUN.skipped, when);
+  }
+};
 
 /**
- * The latest-run cell. HOLD, #242 resolves: today the API returns only the
- * run's status, so the time, the new-show count, the failure reason and
- * "Paused by" wait for `latestRun` and `crawlPausedBy`.
+ * The latest-run cell (`04/venues-desktop`): "OK · 3:04 AM · 2 new",
+ * "Failed: calendar block not found". A hand-paused venue reads its pause
+ * instead, "Paused · Oct 28". HOLD: the board's "Paused by Hugh" needs a name,
+ * and the API sends `crawlPausedBy` as a user id; "since Nov 10" on Unchanged
+ * and "off-season until Apr 1" have no data yet.
  */
-export const latestRunLine = (venue: VenueWithEventCount): string =>
-  venue.lastRunStatus === null
-    ? COPY.latestRun.never
-    : COPY.latestRun[venue.lastRunStatus];
+export const latestRunLine = (
+  venue: VenueListRow,
+  now: Date = new Date(),
+): string => {
+  const chips = deriveVenueStatusChips(venue);
+  if (
+    chips.onSite === 'live' &&
+    chips.crawling === 'paused' &&
+    venue.crawlPausedAt !== null
+  ) {
+    return RUN.pausedOn(
+      formatISODate(venue.crawlPausedAt, DENVER_TIME_ZONE, {
+        month: 'short',
+        day: 'numeric',
+      }),
+    );
+  }
+  return venue.latestRun === null ? RUN.never : runLine(venue.latestRun, now);
+};
 
 /** "Paused: {reason}" (row 5); the Other reason shows its note. */
 export const crawlingLabel = (
@@ -100,9 +185,9 @@ const isFailing = (venue: VenueWithEventCount): boolean =>
 export const isOk = (venue: VenueWithEventCount): boolean =>
   worstRank(venue) === OK_RANK;
 
-export const sortWorstFirst = (
-  venues: readonly VenueWithEventCount[],
-): VenueWithEventCount[] =>
+export const sortWorstFirst = <T extends VenueWithEventCount>(
+  venues: readonly T[],
+): T[] =>
   [...venues].sort(
     (left, right) =>
       worstRank(left) - worstRank(right) || left.name.localeCompare(right.name),
@@ -113,9 +198,9 @@ export const sortWorstFirst = (
  * OK venues fill up to `VISIBLE_ROWS`. OK venues sort last, so the fold is
  * always the tail. A fold of one row would hide nothing worth hiding.
  */
-export const foldOk = (
-  sorted: readonly VenueWithEventCount[],
-): { shown: VenueWithEventCount[]; folded: VenueWithEventCount[] } => {
+export const foldOk = <T extends VenueWithEventCount>(
+  sorted: readonly T[],
+): { shown: T[]; folded: T[] } => {
   const firstOk = sorted.findIndex(isOk);
   const keep = firstOk === -1 ? sorted.length : Math.max(firstOk, VISIBLE_ROWS);
   if (sorted.length - keep <= 1) return { shown: [...sorted], folded: [] };
