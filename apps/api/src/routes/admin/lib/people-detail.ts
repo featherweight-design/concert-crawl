@@ -3,7 +3,17 @@
 // feedback. Identity (email, sign-in methods, role) is Clerk's and is read by the
 // route; everything here is our own database.
 
-import { and, count, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 import {
   artistReports,
   artists,
@@ -27,6 +37,10 @@ const FEEDBACK_EXCERPT = 120;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Codes are matched without regard to case: a custom code may be stored in any.
+const sameCode = (code: string) =>
+  sql`upper(${inviteCodes.code}) = ${code.toUpperCase()}`;
+
 /** The ids of the invite code a caller named by its code string or its id. */
 export const resolveInviteCodeIds = async (
   codeOrId: string,
@@ -36,11 +50,8 @@ export const resolveInviteCodeIds = async (
     .from(inviteCodes)
     .where(
       UUID.test(codeOrId)
-        ? or(
-            eq(inviteCodes.id, codeOrId),
-            eq(inviteCodes.code, codeOrId.toUpperCase()),
-          )
-        : eq(inviteCodes.code, codeOrId.toUpperCase()),
+        ? or(eq(inviteCodes.id, codeOrId), sameCode(codeOrId))
+        : sameCode(codeOrId),
     );
   return rows.map((row) => row.id);
 };
@@ -178,6 +189,10 @@ export const loadPersonOurSide = async (
           isNotNull(userEvents.attendingAt),
           sql`${events.date} < ${today}`,
           sql`${events.status} <> 'cancelled'`,
+          // The Concerts list's own rules: a hidden show or one the crawler has
+          // lost sight of is not on the person's list, so not in their count.
+          eq(events.hiddenFromConsumer, false),
+          isNull(events.firstMissingAt),
         ),
       ),
     db
@@ -234,7 +249,8 @@ export const loadPersonOurSide = async (
 
   const joined = redemptions[0];
   let codeRedeemerCount: number | null = null;
-  if (joined !== undefined) {
+  // Only when the page shows the code: a test account's source reads "test".
+  if (joined !== undefined && !isTest) {
     const [row] = await db
       .select({ value: count() })
       .from(inviteCodeRedemptions)

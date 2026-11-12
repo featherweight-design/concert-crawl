@@ -411,7 +411,7 @@ describe('admin people', () => {
     ];
     const [code] = await testDb
       .insert(inviteCodes)
-      .values({ code: 'REDROCKS', createdBy: 'user_admin', maxUses: 5 })
+      .values({ code: 'REDROCKS', createdBy: 'user_admin' })
       .returning({ id: inviteCodes.id });
     await testDb.insert(inviteCodeRedemptions).values([
       { codeId: code?.id ?? '', userId: 'user_m' },
