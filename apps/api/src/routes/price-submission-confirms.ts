@@ -143,6 +143,14 @@ priceSubmissionConfirmsRouter.post(
           return undefined;
         }
 
+        // The status before this confirm, locked so two concurrent confirms
+        // cannot both see "pending" and both audit the same promotion.
+        const [priorRow] = await tx
+          .select({ status: priceSubmissions.status })
+          .from(priceSubmissions)
+          .where(eq(priceSubmissions.id, submissionId))
+          .for('update');
+
         const [updatedRow] = await tx
           .update(priceSubmissions)
           .set({
@@ -201,10 +209,8 @@ priceSubmissionConfirmsRouter.post(
           );
 
           // The promotion is the system's act, so it is audited as one. Only
-          // the confirm that crosses the threshold is the promotion: the
-          // count lands on confirmsRequired exactly once, and a later confirm
-          // on the already corroborated row lands above it.
-          if (updatedRow.corroborationCount === confirmsRequired) {
+          // the confirm that flips the row from pending is the promotion.
+          if (priorRow?.status === 'pending') {
             await tx.insert(auditLog).values({
               actorId: PRICE_PROMOTION_ACTOR,
               action: 'price.promoted',

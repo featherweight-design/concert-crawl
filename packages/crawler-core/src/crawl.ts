@@ -1654,16 +1654,11 @@ export async function crawlVenue(
     // just re-seen. Reassign its FK rows onto the sibling and delete it so it
     // never reaches the admin missing list. Guarded: a reconcile failure must
     // never fail the crawl (crawl resilience is existential) — log and continue.
+    let reconciledLosers = 0;
     if (seenEventCoords.length > 0) {
       try {
-        const { reconciledLosers } = await reconcileDriftDuplicates(venueId);
-        if (reconciledLosers > 0) {
-          await recordSystemAction({
-            action: 'event.drift_duplicates_merged',
-            targetId: venueId,
-            metadata: { venueName: venue.name, merged: reconciledLosers },
-          });
-        }
+        reconciledLosers = (await reconcileDriftDuplicates(venueId))
+          .reconciledLosers;
       } catch (err) {
         reportFailure({
           event: 'crawl.reconcile_drift_duplicates_failed',
@@ -1673,6 +1668,13 @@ export async function crawlVenue(
           error: String(err),
         });
       }
+    }
+    if (reconciledLosers > 0) {
+      await recordSystemAction({
+        action: 'event.drift_duplicates_merged',
+        targetId: venueId,
+        metadata: { venueName: venue.name, merged: reconciledLosers },
+      });
     }
 
     // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
@@ -1962,6 +1964,7 @@ export async function crawlVenue(
             venueName: venue.name,
             crawlRunId: id,
             consecutiveFailures: newFailureCount,
+            ...(isBlocked ? { cause: isHttpBlocked ? 'http' : 'timeout' } : {}),
           },
         });
       }
