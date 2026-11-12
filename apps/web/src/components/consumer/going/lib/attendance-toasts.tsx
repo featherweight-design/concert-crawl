@@ -3,6 +3,7 @@
 // list and the event page cannot drift.
 
 import { toast } from 'sonner';
+import { actionToastOptions, TOAST_ICON_SIZE } from '@/lib/action-toast';
 import { GOING_COPY } from '../definitions/copy';
 
 export const ATTENDANCE_TOAST_MS = 6000;
@@ -13,8 +14,8 @@ const ATTENDANCE_TOAST_ID = 'attendance';
 
 const CheckIcon = () => (
   <svg
-    width="18"
-    height="18"
+    width={TOAST_ICON_SIZE}
+    height={TOAST_ICON_SIZE}
     viewBox="0 0 18 18"
     fill="none"
     stroke="var(--success, #5ee08a)"
@@ -27,23 +28,9 @@ const CheckIcon = () => (
   </svg>
 );
 
-// The shared toaster is the default light one; these draw the board's dark,
-// elevated toast with the accent-coloured action.
-const TOAST_STYLE = {
-  background: 'var(--bg-elevated)',
-  color: 'var(--fg)',
-  border: '1px solid var(--border-strong)',
-} as const;
-
-const ACTION_STYLE = {
-  background: 'transparent',
-  color: 'var(--accent)',
-  fontWeight: 700,
-} as const;
-
 /**
  * The house Undo toast (`04/removed-d`): the check, the dark elevated card and
- * the accent action, for ~6s. Watching's No longer listed dismiss raises it
+ * the shared action ink (`actionToastOptions`), for ~6s. Watching's No longer listed dismiss raises it
  * too, under its own id, so the two lists never replace each other's toast.
  */
 export const showUndoToast = ({
@@ -61,8 +48,7 @@ export const showUndoToast = ({
     id,
     icon: <CheckIcon />,
     duration: ATTENDANCE_TOAST_MS,
-    style: TOAST_STYLE,
-    actionButtonStyle: ACTION_STYLE,
+    ...actionToastOptions,
     action: onUndo ? { label: undoLabel, onClick: onUndo } : undefined,
   });
 
@@ -96,8 +82,7 @@ export const showStampedToast = (
     id: ATTENDANCE_TOAST_ID,
     icon: <CheckIcon />,
     duration: ATTENDANCE_TOAST_MS,
-    style: TOAST_STYLE,
-    actionButtonStyle: ACTION_STYLE,
+    ...actionToastOptions,
     action: input.onUndo
       ? { label: GOING_COPY.toast.undo, onClick: input.onUndo }
       : { label: GOING_COPY.toast.openPassport, onClick: input.onOpenPassport },
