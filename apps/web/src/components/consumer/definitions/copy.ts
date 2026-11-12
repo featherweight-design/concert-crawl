@@ -592,9 +592,6 @@ export const CONSUMER_COPY = {
       unreadAnnouncement: (count: number): string =>
         `${count} unread ${count === 1 ? 'notification' : 'notifications'}`,
     },
-    identity: {
-      badge: 'Beta · founder',
-    },
     signedOut: {
       eyebrow: 'NOT SIGNED IN',
       line: 'Browsing as a guest',

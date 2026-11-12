@@ -163,6 +163,10 @@ describe('BottomNav crews slot (#1226)', () => {
       const label = link.querySelector('span:not([aria-hidden])');
       expect(label?.className).toContain('whitespace-nowrap');
       expect(label?.className).not.toContain('truncate');
+      // 9px mono, 0.04em tracking, and never shrinks (addendum 2 item 15).
+      expect(label?.className).toContain('text-[9px]');
+      expect(label?.className).toContain('tracking-[0.04em]');
+      expect(label?.className).not.toContain('shrink');
     }
   });
 

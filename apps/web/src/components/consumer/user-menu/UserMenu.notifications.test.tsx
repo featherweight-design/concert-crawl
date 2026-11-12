@@ -418,6 +418,17 @@ describe('#737 pip — the seen watermark', () => {
   });
 });
 
+describe('account menu identity (addendum 2 item 25)', () => {
+  it('shows @handle with no founder eyebrow', async () => {
+    signIn();
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    expect(screen.getByText('@hugh')).toBeInTheDocument();
+    expect(screen.queryByText(/founder/i)).toBeNull();
+  });
+});
+
 describe('#737 inbox strip', () => {
   it('previews at most two unread rows and links to the rest', async () => {
     signIn();
