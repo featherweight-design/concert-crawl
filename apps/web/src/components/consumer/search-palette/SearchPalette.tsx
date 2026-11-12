@@ -498,7 +498,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
             <Search size={19} strokeWidth={1.75} />
           </span>
           {input}
-          {clear}
+          {/* The typed board draws only ESC here: Escape clears and closes. */}
           <kbd style={kbdStyle}>{copy.paletteEscHint}</kbd>
         </div>
 
