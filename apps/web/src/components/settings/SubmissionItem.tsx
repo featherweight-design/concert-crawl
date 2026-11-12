@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { VenueTile } from '@/components/consumer/venue-glyph';
 import { StatusPill } from './StatusPill';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { formatAgo, formatDate, priceLabelOf } from './submission-format';
@@ -21,10 +22,17 @@ export function SubmissionItem({
   return (
     <Link
       href={`/events/${submission.eventId}`}
-      className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
+      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
       style={isLast ? undefined : { borderBottom: '1px solid var(--border)' }}
     >
-      {/* Left: who, where, and how the price is doing */}
+      {/* The venue's tile: every submission has a venue, none has an image */}
+      <VenueTile
+        slug={submission.venueSlug ?? ''}
+        name={submission.venue}
+        size={44}
+      />
+
+      {/* Middle: who, where, and how the price is doing */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="truncate text-[16px] font-extrabold leading-snug tracking-[-0.01em] text-fg">
           {submission.artist}

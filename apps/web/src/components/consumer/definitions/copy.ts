@@ -1272,6 +1272,20 @@ export const CONSUMER_COPY = {
       cred: 'Cred earned',
     },
     submissionsBack: '← Settings',
+    // Filter chips over the list, each with its count.
+    submissionFilters: {
+      all: 'All',
+      live: 'Live',
+      pending: 'Pending',
+      priceChecks: 'Price checks',
+    },
+    submissionFilterLabel: (label: string, count: number) =>
+      `${label} ${count}`,
+    submissionsFilterAria: 'Filter submitted prices',
+    // Month heading: "NOVEMBER · 6" (month name, then how many that month).
+    submissionsMonthHeading: (month: string, count: number) =>
+      `${month} · ${count}`,
+    submissionsFilterEmpty: 'No prices here.',
     submissionsConfirmedSuffixDesktop: (confirmedCount: number) =>
       ` · ${confirmedCount} confirmed by other fans.`,
 

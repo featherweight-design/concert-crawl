@@ -40,3 +40,93 @@ export const latestSubmission = (
         : latest,
     undefined,
   );
+
+/**
+ * The page's filters. "Live" is a price that stands (confirmed), "Price
+ * checks" is one a fan has queried (the display status `disputed`).
+ */
+export type SubmissionFilter = 'all' | 'live' | 'pending' | 'priceChecks';
+
+export const SUBMISSION_FILTERS: SubmissionFilter[] = [
+  'all',
+  'live',
+  'pending',
+  'priceChecks',
+];
+
+const FILTER_STATUS: Record<
+  Exclude<SubmissionFilter, 'all'>,
+  UserSubmissionItem['status']
+> = {
+  live: 'confirmed',
+  pending: 'pending',
+  priceChecks: 'disputed',
+};
+
+export const matchesFilter = (
+  submission: Pick<UserSubmissionItem, 'status'>,
+  filter: SubmissionFilter,
+): boolean => filter === 'all' || submission.status === FILTER_STATUS[filter];
+
+export const countsByFilter = (
+  submissions: Pick<UserSubmissionItem, 'status'>[],
+): Record<SubmissionFilter, number> => ({
+  all: submissions.length,
+  live: submissions.filter((sub) => matchesFilter(sub, 'live')).length,
+  pending: submissions.filter((sub) => matchesFilter(sub, 'pending')).length,
+  priceChecks: submissions.filter((sub) => matchesFilter(sub, 'priceChecks'))
+    .length,
+});
+
+export interface SubmissionMonth {
+  /** `YYYY-MM` in Mountain Time, the month the price was submitted. */
+  key: string;
+  /** The month's full name, e.g. `November`. */
+  label: string;
+  items: UserSubmissionItem[];
+}
+
+const DENVER = 'America/Denver';
+
+const monthKeyOf = (iso: string): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: DENVER,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date(iso));
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  return `${year}-${month}`;
+};
+
+const monthLabelOf = (iso: string): string =>
+  new Intl.DateTimeFormat('en-US', { timeZone: DENVER, month: 'long' }).format(
+    new Date(iso),
+  );
+
+/**
+ * Groups by the month the price was submitted (Mountain Time), newest month
+ * first and newest submission first within it, whatever order they arrived in.
+ */
+export const groupByMonth = (
+  submissions: UserSubmissionItem[],
+): SubmissionMonth[] => {
+  const sorted = [...submissions].sort((left, right) =>
+    left.submittedAt < right.submittedAt
+      ? 1
+      : left.submittedAt > right.submittedAt
+        ? -1
+        : 0,
+  );
+  const months: SubmissionMonth[] = [];
+  for (const sub of sorted) {
+    const key = monthKeyOf(sub.submittedAt);
+    const last = months[months.length - 1];
+    if (last?.key === key) {
+      last.items.push(sub);
+    } else {
+      months.push({ key, label: monthLabelOf(sub.submittedAt), items: [sub] });
+    }
+  }
+  return months;
+};

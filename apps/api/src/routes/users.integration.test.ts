@@ -638,6 +638,22 @@ describe('GET /v1/users/me/submissions', () => {
     expect(body.data[0]?.priceMin).toBe(4000);
   });
 
+  it('returns the venue slug for the venue tile', async () => {
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '25' });
+
+    const res = await app.request('/v1/users/me/submissions', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const body = (await res.json()) as {
+      data: Array<{ venueSlug: string | null }>;
+    };
+    expect(body.data[0]?.venueSlug).toBe(venue.slug);
+  });
+
   it('returns tier, corroborationCount, and submittedAt fields', async () => {
     setAuth();
     await clearTables();

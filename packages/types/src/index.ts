@@ -1227,6 +1227,7 @@ export interface UserSubmissionItem {
   eventId: string;
   artist: string;
   venue: string;
+  venueSlug: string | null; // for the venue tile; null when the event has no venue
   date: string; // ISO YYYY-MM-DD
   priceMin: number; // cents (integer)
   priceMax: number | null;
