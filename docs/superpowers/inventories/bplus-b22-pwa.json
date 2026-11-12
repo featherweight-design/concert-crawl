@@ -17,7 +17,7 @@
           "offline": true
         },
         {
-          "wait": "[role=\"status\"][aria-label*=\"offline\"]",
+          "wait": "[role=\"status\"][aria-label*=\"offline\"]:visible",
           "settle": 300
         }
       ]
