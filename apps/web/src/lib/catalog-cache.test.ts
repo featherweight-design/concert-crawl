@@ -9,7 +9,7 @@ vi.mock('react', async (importOriginal) => {
 import {
   CATALOG_REVALIDATE_SECONDS,
   CATALOG_TAG,
-  FALLBACK_GENERATION,
+  EVENT_REVALIDATE_SECONDS,
   catalogKey,
   mountainDate,
   publicCatalogGet,
@@ -86,25 +86,42 @@ describe('catalog cache', () => {
     );
   });
 
-  it('falls back to a fixed stamp when the generation cannot be read, never failing the read', async () => {
-    generation = () => new Response('boom', { status: 500 });
+  it('gives events the short ceiling and venues and genres the long one', async () => {
+    await publicCatalogGet('/v1/events?limit=10');
+    await publicCatalogGet('/v1/events/abc');
+    await publicCatalogGet('/v1/events/genres');
+    const revalidate = (suffix: string) =>
+      calls.find((call) => call.url.endsWith(suffix))?.init.next?.revalidate;
+    expect(revalidate('/v1/events?limit=10')).toBe(EVENT_REVALIDATE_SECONDS);
+    expect(revalidate('/v1/events/abc')).toBe(EVENT_REVALIDATE_SECONDS);
+    expect(revalidate('/v1/events/genres')).toBe(CATALOG_REVALIDATE_SECONDS);
+  });
+
+  it('skips the cache, and still answers, when the generation cannot be read', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(await catalogKey()).toMatch(
-      new RegExp(`^g${FALLBACK_GENERATION}\\.`),
-    );
-    generation = () => {
-      throw new Error('network down');
-    };
-    expect(await catalogKey()).toMatch(
-      new RegExp(`^g${FALLBACK_GENERATION}\\.`),
-    );
-    generation = () => ok({ generation: 12 });
-    expect(await catalogKey()).toMatch(
-      new RegExp(`^g${FALLBACK_GENERATION}\\.`),
-    );
-    await expect(publicCatalogGet<string[]>('/v1/venues')).resolves.toEqual([
-      'rock',
-    ]);
+    for (const broken of [
+      () => new Response('boom', { status: 500 }),
+      () => {
+        throw new Error('network down');
+      },
+      () => ok({ generation: 12 }),
+    ]) {
+      generation = broken;
+      calls = [];
+      expect(await catalogKey()).toBeNull();
+      await expect(publicCatalogGet<string[]>('/v1/venues')).resolves.toEqual([
+        'rock',
+      ]);
+      const read = calls.find((call) => call.url.endsWith('/v1/venues'));
+      expect(read?.init.next).toBeUndefined();
+      expect(headersOf(read as Call)).not.toHaveProperty('x-catalog-key');
+    }
+  });
+
+  it('reads a free-text search uncached, so a term cannot fill the cache', async () => {
+    await publicCatalogGet('/v1/events?q=anything&limit=5');
+    const read = calls.find((call) => call.url.includes('q=anything'));
+    expect(read?.init.next).toBeUndefined();
   });
 
   it('throws on a bad answer so Next never stores it', async () => {
