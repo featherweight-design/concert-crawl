@@ -61,14 +61,18 @@ export const EditCodePanel = ({
   );
 
   useEffect(() => {
-    if (!focusSeats) return;
-    bodyRef.current
-      ?.querySelector<HTMLElement>(
-        `[aria-label="${COPY.seats}"] [aria-checked="true"]`,
-      )
-      ?.focus();
-    // Re-run when the surface swaps to the phone sheet: its focus trap mounts
-    // afterwards and would otherwise leave focus on Label.
+    if (!focusSeats) return undefined;
+    // After this commit's effects: the surface's own `useIsPhone` can swap it
+    // to the phone sheet a commit later, and that sheet's focus trap would
+    // otherwise leave focus on Label. Re-run on the swap too.
+    const timer = setTimeout(() => {
+      bodyRef.current
+        ?.querySelector<HTMLElement>(
+          `[aria-label="${COPY.seats}"] [aria-checked="true"]`,
+        )
+        ?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [focusSeats, isPhone]);
 
   const used = seatsTaken(code);

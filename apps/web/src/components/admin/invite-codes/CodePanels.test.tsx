@@ -7,6 +7,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
 import type { AdminInviteCode } from '@concert-crawl/types';
 import { CodeTakenError } from './codes-api';
@@ -181,7 +182,7 @@ describe('EditCodePanel saving', () => {
     expect(onSave).toHaveBeenCalledWith({ maxUses: 100 });
   });
 
-  it('focuses the checked Seats pill when opened from Add seats', () => {
+  it('focuses the checked Seats pill when opened from Add seats', async () => {
     render(
       <EditCodePanel
         code={code()}
@@ -191,6 +192,8 @@ describe('EditCodePanel saving', () => {
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByRole('radio', { name: '50' })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: '50' })).toHaveFocus(),
+    );
   });
 });
