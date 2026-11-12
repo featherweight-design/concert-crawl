@@ -11,6 +11,7 @@ import {
   evaluateRunHealth,
   reportRunHealth,
   sweepStaleEvents,
+  sweepExpiredPageBodies,
   tagEventsWithGenres,
   type CrossVenueCandidate,
   type VenueRunOutcome,
@@ -576,6 +577,18 @@ export async function runDailyCrawl(): Promise<{
     logger.error(
       { sweepErr },
       'Stale event sweep failed — crawl data unaffected',
+    );
+  }
+
+  // 1e — drop stored page bodies past their retention window. Housekeeping:
+  // it never fails the crawl.
+  try {
+    await sweepExpiredPageBodies();
+  } catch (bodySweepErr: unknown) {
+    Sentry.captureException(bodySweepErr);
+    logger.error(
+      { bodySweepErr },
+      'Page body sweep failed — crawl data unaffected',
     );
   }
 

@@ -50,6 +50,9 @@ const entries = (count: number): FetchLogEntry[] =>
     bytes: null,
     contentHash: null,
     fetchedAt: new Date(),
+    htmlGz: null,
+    bodyExpiresAt: null,
+    bodyTruncated: false,
   }));
 
 const run = { venueId: 'venue-1', status: 'success' } as const;

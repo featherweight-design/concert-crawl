@@ -258,7 +258,11 @@ crawlAdminRouter.get(
 );
 
 // GET /v1/admin/crawl/runs/:id/pages — the pages a run fetched, oldest first.
-// Metadata only (URL, status, mode, size, content hash); never a body.
+// Metadata only (URL, status, mode, size, content hash, and whether a body is
+// kept); never a body. `bodyExpiresAt` is set only on a page whose body was
+// stored: the body is there while it is in the future, swept once it has
+// passed. `bodyTruncated` marks a body over the size cap that was not kept.
+// GET /v1/admin/crawl/pages/:id/body (crawl-pages.ts) serves the body.
 const pagesQuerySchema = z.object({
   // A run stores up to 50 pages plus every failed request, so the default
   // reads them all.
@@ -295,6 +299,8 @@ crawlAdminRouter.get(
         bytes: crawlRunPages.bytes,
         contentHash: crawlRunPages.contentHash,
         fetchedAt: crawlRunPages.fetchedAt,
+        bodyExpiresAt: crawlRunPages.bodyExpiresAt,
+        bodyTruncated: crawlRunPages.bodyTruncated,
       })
       .from(crawlRunPages)
       .where(eq(crawlRunPages.crawlRunId, id))
