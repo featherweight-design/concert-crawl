@@ -1,12 +1,17 @@
 'use client';
 
-import { useId, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pause, Play } from 'lucide-react';
-import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
-import { AdminButton } from '@/components/admin/primitives';
+import type { CrawlPauseRequest } from '@concert-crawl/types';
+import { AdminButton, SaveFailedToast } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { pauseCrawling, resumeCrawling } from '@/lib/actions/venues';
+import { PausePanel } from '@/components/admin/venues/PausePanel';
+import {
+  pausedStateLine,
+  type PauseOutcome,
+} from '@/components/admin/venues/pause-rules';
 import type { CrawlPauseControlProps } from './definitions/types';
 
 const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.crawlPause;
@@ -14,30 +19,34 @@ const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.crawlPause;
 /**
  * Stops every crawl of a venue while its shows stay published, for a venue
  * that asked us to stop or one whose source we may not use yet. Distinct from
- * deactivating the venue, which takes its shows off the site.
+ * hiding the venue, which takes its shows off the site. Pause opens the shared
+ * Pause panel (`A3/03/pause-panel-d`) for this one venue.
  */
 export const CrawlPauseControl = ({
-  venueId,
-  crawlPausedAt,
+  venue,
+  showCount,
 }: CrawlPauseControlProps) => {
   const router = useRouter();
-  const reasonId = useId();
-  const [reason, setReason] = useState('');
   const [isPending, startTransition] = useTransition();
-  const paused = crawlPausedAt !== null;
-  const trimmedReason = reason.trim();
+  const [open, setOpen] = useState(false);
+  const [failedBody, setFailedBody] = useState<CrawlPauseRequest | null>(null);
+  const paused = venue.crawlPausedAt !== null;
 
-  const toggleCrawlPause = () => {
+  const pause = async (body: CrawlPauseRequest): Promise<string | null> => {
+    const outcome = await pauseCrawling(venue.id, body).catch(
+      (): PauseOutcome => ({ ok: false, error: null }),
+    );
+    // A refused date stays in the panel; anything else closes it and says so.
+    if (!outcome.ok && outcome.error !== null) return outcome.error;
+    setOpen(false);
+    setFailedBody(outcome.ok ? null : body);
+    router.refresh();
+    return null;
+  };
+
+  const resume = () => {
     startTransition(async () => {
-      if (paused) {
-        await resumeCrawling(venueId);
-      } else {
-        // The field is free text, which the API files as Other with the text
-        // as its note. Sending that shape directly keeps the body typed and
-        // means a typed "other" no longer arrives as Other with no note.
-        await pauseCrawling(venueId, { reason: 'other', note: trimmedReason });
-        setReason('');
-      }
+      await resumeCrawling(venue.id);
       router.refresh();
     });
   };
@@ -64,6 +73,7 @@ export const CrawlPauseControl = ({
             {COPY.title}
           </div>
           <div
+            data-testid="crawl-pause-line"
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
@@ -72,48 +82,36 @@ export const CrawlPauseControl = ({
               lineHeight: 1.4,
             }}
           >
-            {crawlPausedAt !== null
-              ? COPY.pausedSince(formatISODate(crawlPausedAt, DENVER_TIME_ZONE))
-              : COPY.description}
+            {pausedStateLine(venue) ?? COPY.description}
           </div>
         </div>
         <AdminButton
           variant="outline"
           size="sm"
           icon={paused ? Play : Pause}
-          disabled={isPending || (!paused && trimmedReason === '')}
-          onClick={toggleCrawlPause}
+          disabled={isPending}
+          onClick={paused ? resume : () => setOpen(true)}
           type="button"
         >
           {paused ? COPY.resumeButton : COPY.pauseButton}
         </AdminButton>
       </div>
-      {!paused && (
-        <>
-          <label
-            htmlFor={reasonId}
-            style={{ fontSize: 12, color: 'var(--fg-muted)' }}
-          >
-            {COPY.reasonLabel}
-          </label>
-          <input
-            id={reasonId}
-            type="text"
-            value={reason}
-            maxLength={500}
-            placeholder={COPY.reasonPlaceholder}
-            onChange={(event) => setReason(event.target.value)}
-            style={{
-              padding: '8px 10px',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              color: 'var(--fg)',
-              // 16px or iOS Safari zooms the page when the field takes focus.
-              fontSize: 16,
-            }}
-          />
-        </>
+      {failedBody && (
+        <SaveFailedToast
+          what={COPY.failedWhat(venue.name)}
+          saved={COPY.failedSaved}
+          onRetry={() => {
+            setFailedBody(null);
+            void pause(failedBody);
+          }}
+        />
+      )}
+      {open && (
+        <PausePanel
+          venues={[{ id: venue.id, name: venue.name, eventCount: showCount }]}
+          onClose={() => setOpen(false)}
+          onSubmit={pause}
+        />
       )}
     </div>
   );

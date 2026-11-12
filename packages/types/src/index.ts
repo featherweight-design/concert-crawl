@@ -489,6 +489,10 @@ export interface CrawlHealth {
 // VenueWithCrawlHealth — admin detail view includes crawl health stats
 export interface VenueWithCrawlHealth extends Venue {
   crawlHealth: CrawlHealth;
+  // As on VenueWithEventCount: who paused the crawl or hid the venue, by name.
+  // The API always sends them; optional here so existing fixtures compile.
+  crawlPausedByName?: string | null;
+  hiddenByName?: string | null;
 }
 
 // VenueRobotsStatus — robots.txt audit row for the admin audit page.

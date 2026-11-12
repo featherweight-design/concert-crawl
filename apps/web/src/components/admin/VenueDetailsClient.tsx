@@ -2620,8 +2620,8 @@ export function VenueDetailsClient({
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <CrawlPauseControl
-              venueId={venue.id}
-              crawlPausedAt={venue.crawlPausedAt}
+              venue={venue}
+              showCount={crawlHealth.eventsTracked}
             />
 
             <div

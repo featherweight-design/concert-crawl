@@ -21,6 +21,9 @@ const TRIAGE_ERROR_CLASS_LABELS: Record<string, string> = {
 const venueCount = (count: number): string =>
   `${count.toLocaleString('en-US')} ${count === 1 ? 'venue' : 'venues'}`;
 
+const showCount = (count: number): string =>
+  `${count.toLocaleString('en-US')} ${count === 1 ? 'show' : 'shows'}`;
+
 export const ADMIN_COPY = {
   dashboard: {
     statCards: {
@@ -435,6 +438,7 @@ export const ADMIN_COPY = {
       newShows: (count: number) => `${count.toLocaleString('en-US')} new`,
       withReason: (outcome: string, reason: string) => `${outcome}: ${reason}`,
       pausedOn: (date: string) => `Paused · ${date}`,
+      pausedBy: (name: string, date: string) => `Paused by ${name} · ${date}`,
       reasons: {
         calendar_not_found: 'calendar block not found',
         no_events_found: 'no shows found',
@@ -462,6 +466,46 @@ export const ADMIN_COPY = {
     /** A row cell's column name, read before its value by screen readers. */
     cellName: (column: string) => `${column}: `,
     noMatch: 'No venues match the current filter.',
+  },
+
+  // The shared Pause panel and sheet (`A3/03/pause-panel-d`, rule 4), for one
+  // venue or a Select of N.
+  pausePanel: {
+    title: (venue: string) => `Pause crawling ${venue}`,
+    titleMany: (count: number) => `Pause crawling ${count} venues`,
+    body: (shows: number) =>
+      `Its ${showCount(shows)} stay listed. We stop visiting the site until you resume.`,
+    bodyMany: (shows: number) =>
+      `Their ${showCount(shows)} stay listed. We stop visiting their sites until you resume.`,
+    why: 'Why',
+    resume: 'Resume',
+    reasons: {
+      waiting_on_permission: 'Waiting on permission',
+      site_broken_or_moved: 'Site is broken or moved',
+      other: 'Other',
+    },
+    noteLabel: 'What’s going on',
+    notePlaceholder: 'Ticketmaster migration this week; check back Monday.',
+    resumeChoices: {
+      manual: 'When I say',
+      twoWeeks: 'In 2 weeks',
+      date: 'Pick a date',
+    },
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+    // The auto-resume job runs at 08:40 UTC (01:40 MT) on the resume date, so
+    // that date's own 3 AM MT crawl is the first one.
+    resumesOn: (date: string) =>
+      `Resumes ${date}, and is crawled at 3 AM that morning.`,
+    submit: 'Pause crawling',
+    cancel: 'Cancel',
+    // The API's 422s, shown inline (spec: Pause panel). Every refusal but
+    // "too far out" means the date isn't after today.
+    dateError: (apiError: string) =>
+      apiError === 'Pick a date within a year'
+        ? 'Pick a date within a year'
+        : 'Pick a date after today',
   },
 
   robotsAudit: {
@@ -877,9 +921,25 @@ export const ADMIN_COPY = {
         description:
           'Stops every crawl of this venue, manual runs included. Its shows stay published.',
         pausedSince: (date: string) => `Paused since ${date}.`,
+        // Menu line pattern (`A3/03/venue-menu-states`): "Paused by @hugh,
+        // Oct 28: waiting on permission." The auto-pause's "Try a re-crawl
+        // first." is HOLD (§4.1).
+        pausedBy: (name: string, date: string, reason: string | null) =>
+          reason
+            ? `Paused by ${name}, ${date}: ${reason}.`
+            : `Paused by ${name}, ${date}.`,
+        autoPaused: 'Auto-paused after 3 failures.',
+        reasons: {
+          waiting_on_permission: 'waiting on permission',
+          site_broken_or_moved: 'site is broken or moved',
+        },
+        // Rule 10, through `states.saveFailed`: "Couldn't change crawling for
+        // Ball Arena. Crawling is as it was. Nothing changed."
+        failedWhat: (venue: string) => `crawling for ${venue}`,
+        failedSaved: 'Crawling is as it was.',
         reasonLabel: 'Reason (kept in the audit log)',
         reasonPlaceholder: 'e.g. venue asked us to stop',
-        pauseButton: 'Pause crawling',
+        pauseButton: 'Pause crawling…',
         resumeButton: 'Resume crawling',
       },
       remove: {
