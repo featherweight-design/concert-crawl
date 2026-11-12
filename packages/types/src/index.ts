@@ -1186,11 +1186,8 @@ export interface UserProfileResponse {
   joined: string; // formatted "Apr 2026"
   submissionCount: number;
   cred: number; // lifetime cumulative confirmed-submission count
-  // Lifecycle nudge flags + founder window snapshot — evaluated
-  // server-side (eng infra spec Part 2 §6).
-  showTrialEndedTakeover: boolean;
-  showDayThirteenBanner: boolean;
-  showPastDueBanner: boolean;
+  // Founder window snapshot — evaluated server-side so the client never
+  // does date math.
   founderWindow: FounderWindowView;
 }
 

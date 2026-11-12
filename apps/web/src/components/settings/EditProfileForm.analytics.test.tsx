@@ -53,9 +53,6 @@ const PROFILE: UserProfileResponse = {
   joined: 'Apr 2026',
   submissionCount: 0,
   cred: 0,
-  showTrialEndedTakeover: false,
-  showDayThirteenBanner: false,
-  showPastDueBanner: false,
   founderWindow: { state: 'pre-launch', seatsTotal: 100, closesAt: null },
 };
 

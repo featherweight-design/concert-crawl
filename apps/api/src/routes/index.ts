@@ -31,7 +31,6 @@ import { mePushRouter } from './me-push.js';
 import { notificationsRouter } from './notifications.js';
 import { emailUnsubscribeRouter } from './email-unsubscribe.js';
 import { createFounderWindowRouter } from './billing-founder-window.js';
-import { createBillingNudgesRouter } from './billing-nudges.js';
 import { createInternalCronRouter } from './internal-cron.js';
 
 export function registerRoutes(app: Hono) {
@@ -72,5 +71,4 @@ export function registerRoutes(app: Hono) {
   // Signed one-click unsubscribe — no auth by design (#763 §8.2).
   app.route('/v1/email', emailUnsubscribeRouter);
   app.route('/v1/billing', createFounderWindowRouter());
-  app.route('/v1/billing', createBillingNudgesRouter());
 }
