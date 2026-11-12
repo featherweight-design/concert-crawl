@@ -2533,8 +2533,12 @@ export const ADMIN_COPY = {
       title: 'No artist matches',
       body: 'Check the spelling, or clear the search.',
       clear: 'Clear search',
-      elsewhereTitle: 'Not in To check',
-      elsewhereBody: 'That name is in Matched or Not artists.',
+      elsewhereTitle: (tab: string) => `Not in ${tab}`,
+      elsewhereBody: (tabs: string) => `That name is in ${tabs}.`,
+      or: ' or ',
+      // A search page whose hits all sit in other tabs, with more pages after.
+      morePagesTitle: 'Nothing on this page',
+      morePagesBody: 'More results are on the next page.',
     },
     /** A row's buttons name the artist for screen readers. */
     actionFor: (action: string, name: string) => `${action}: ${name}`,

@@ -31,6 +31,8 @@ import { ToCheckRow } from './ToCheckRow';
 
 const COPY = ADMIN_COPY.artists;
 
+const TABS_ORDER: ArtistTab[] = ['to_check', 'matched', 'not_an_artist'];
+
 const TAB_LABEL: Record<ArtistTab, string> = {
   to_check: COPY.tabs.toCheck,
   matched: COPY.tabs.matched,
@@ -281,6 +283,8 @@ export function ArtistsClient() {
     total: number;
     /** A search hit only rows that live in another tab. */
     elsewhere?: boolean;
+    /** This search page has none of the tab's rows, but more pages follow. */
+    morePages?: boolean;
   } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
@@ -326,21 +330,31 @@ export function ArtistsClient() {
    * the pages before it, and no row is skipped.
    */
   const removals = useRef<{ key: string; page: number }[]>([]);
-  const filterKey = `${tab}|${showWindow}|${search}`;
+  // Only To check sends a window, so only its key carries one.
+  const filterKey =
+    tab === 'to_check' ? `${tab}|${showWindow}|${search}` : `${tab}|${search}`;
 
   const load = useCallback(async () => {
     const mine = ++generation.current;
     setLoadFailed(false);
     setList(null);
+    // Page 1 reads the server afresh, and later pages follow from it, so the
+    // shifts recorded under this filter are spent.
+    if (page === 1) {
+      removals.current = removals.current.filter(
+        (each) => each.key !== filterKey,
+      );
+    }
     const shift = removals.current.filter(
       (each) => each.key === filterKey && each.page < page,
     ).length;
+    const offset = Math.max(0, (page - 1) * PAGE_SIZE - shift);
     try {
       const next = await api.list({
         tab,
         ...(tab === 'to_check' ? { window: showWindow } : {}),
         search,
-        offset: Math.max(0, (page - 1) * PAGE_SIZE - shift),
+        offset,
       });
       if (mine !== generation.current) return;
       const fresh = next.rows.filter(
@@ -361,6 +375,11 @@ export function ArtistsClient() {
           rows.length === 0 &&
           fresh.length > 0 &&
           next.total <= next.rows.length,
+        // A search page whose hits all live in other tabs, with more after it.
+        morePages:
+          search !== '' &&
+          rows.length === 0 &&
+          next.total > offset + next.rows.length,
       });
     } catch (err) {
       console.error('[admin artists] list failed', err);
@@ -400,9 +419,18 @@ export function ArtistsClient() {
    * comes back where it was if the save fails (rule 10). A 409 means the row
    * changed under the page: reload rather than retry a stale answer.
    */
-  const runWrite = async (row: AdminArtistRow, write: ArtistWrite) => {
+  const runWrite = async (
+    row: AdminArtistRow,
+    write: ArtistWrite,
+    // The tab the row was in. A retry from the toast passes the tab it
+    // failed in, which may not be the one on screen now.
+    fromTab: ArtistTab = tab,
+  ) => {
     // A retry from the toast can run after the list moved on; it still saves.
-    const index = list?.rows.findIndex((each) => each.id === row.id) ?? -1;
+    const index =
+      fromTab === tab
+        ? (list?.rows.findIndex((each) => each.id === row.id) ?? -1)
+        : -1;
     const mine = generation.current;
     const at = { key: filterKey, page };
     const searched = search !== '';
@@ -415,13 +443,22 @@ export function ArtistsClient() {
       setList((prev) =>
         prev
           ? {
+              ...prev,
               rows: prev.rows.filter((each) => each.id !== row.id),
               total: Math.max(0, prev.total - 1),
             }
           : prev,
       );
-      // The pressed button left with its row; keep focus in the list.
-      requestAnimationFrame(() => listRef.current?.focus());
+      // The pressed button left with its row; keep focus in the list, or on
+      // the tab when that was the last row.
+      requestAnimationFrame(() =>
+        (
+          listRef.current ??
+          document.querySelector<HTMLElement>(
+            '[role="tab"][aria-selected="true"]',
+          )
+        )?.focus(),
+      );
     }
     try {
       await api.write(row.id, write);
@@ -438,7 +475,8 @@ export function ArtistsClient() {
         return;
       }
       console.error('[admin artists] save failed', row.id, err);
-      // Snap back only into the list the row left; a newer list never had it.
+      // Snap back only into the list the row left. A newer list was loaded
+      // while the row was marked resolved, so it left the row out: reload it.
       if (index >= 0 && generation.current === mine) {
         setList((prev) => {
           if (!prev || prev.rows.some((each) => each.id === row.id))
@@ -447,8 +485,10 @@ export function ArtistsClient() {
           rows.splice(Math.min(index, rows.length), 0, row);
           return { ...prev, rows, total: prev.total + 1 };
         });
+      } else if (generation.current !== mine) {
+        void loadRef.current();
       }
-      setFailed({ row, index, write, tab });
+      setFailed({ row, index, write, tab: fromTab });
     } finally {
       setRowBusy(row.id, false);
     }
@@ -458,7 +498,7 @@ export function ArtistsClient() {
     <SaveFailedToast
       what={failed.row.name}
       saved={COPY.stillIn(TAB_LABEL[failed.tab])}
-      onRetry={() => void runWrite(failed.row, failed.write)}
+      onRetry={() => void runWrite(failed.row, failed.write, failed.tab)}
     />
   );
 
@@ -478,12 +518,22 @@ export function ArtistsClient() {
       search !== '' ? (
         <EmptyState
           title={
-            list.elsewhere
-              ? COPY.noResults.elsewhereTitle
-              : COPY.noResults.title
+            list.morePages
+              ? COPY.noResults.morePagesTitle
+              : list.elsewhere
+                ? COPY.noResults.elsewhereTitle(TAB_LABEL[tab])
+                : COPY.noResults.title
           }
           body={
-            list.elsewhere ? COPY.noResults.elsewhereBody : COPY.noResults.body
+            list.morePages
+              ? COPY.noResults.morePagesBody
+              : list.elsewhere
+                ? COPY.noResults.elsewhereBody(
+                    TABS_ORDER.filter((each) => each !== tab)
+                      .map((each) => TAB_LABEL[each])
+                      .join(COPY.noResults.or),
+                  )
+                : COPY.noResults.body
           }
           action={
             <AdminButton

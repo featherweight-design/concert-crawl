@@ -129,6 +129,46 @@ afterEach(() => {
 });
 
 describe('ArtistsClient', () => {
+  it('keeps the failed tab in the toast when Try again runs from another tab', async () => {
+    patchStatus = 500;
+    render(<ArtistsClient />);
+    fireEvent.click(await screen.findByRole('tab', { name: /Not artists/ }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'It’s an artist: All My Friends Tour',
+      }),
+    );
+    expect(await screen.findByText(/It's still in Not artists\./)).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /To check/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.filter(([, init]) => init?.method === 'PATCH').length,
+      ).toBe(2),
+    );
+    expect(await screen.findByText(/It's still in Not artists\./)).toBeTruthy();
+  });
+
+  it('keeps only Matched hits on a Matched search', async () => {
+    // An automatic match lives in To check, so a Matched search drops it.
+    listFor = () => ({ data: [row()], total: 1 });
+    render(<ArtistsClient />);
+    fireEvent.click(await screen.findByRole('tab', { name: /Matched/ }));
+    await screen.findByTestId('artists-list');
+    fireEvent.change(
+      screen.getByRole('searchbox', { name: 'Search artists' }),
+      {
+        target: { value: 'kyle' },
+      },
+    );
+    expect(await screen.findByText('Not in Matched')).toBeTruthy();
+    expect(
+      screen.getByText('That name is in To check or Not artists.'),
+    ).toBeTruthy();
+  });
+
   it('sends a Not artists row back with unmatched', async () => {
     render(<ArtistsClient />);
     fireEvent.click(await screen.findByRole('tab', { name: /Not artists/ }));
