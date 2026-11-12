@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import { useAuth } from '@clerk/nextjs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ErrorReportForm } from './ErrorReportForm';
+import { ErrorTellUsCard } from './ErrorTellUsCard';
 
 // The same error instance can reach a boundary more than once (a remount, a
 // development double effect), and must file one Sentry event. A retry that
@@ -35,8 +36,15 @@ const eventIdFor = (error: Error & { digest?: string }): string | undefined => {
  */
 export const ErrorReport = ({
   error,
+  variant = 'link',
 }: {
   error: Error & { digest?: string };
+  /**
+   * `card` is the Tell us card of the standalone error page (12-error-page);
+   * `link` is the quiet "Tell us what happened" link that opens a form, for a
+   * boundary with no card in its design.
+   */
+  variant?: 'link' | 'card';
 }) => {
   const { isSignedIn } = useAuth();
   const [reporting, setReporting] = useState(false);
@@ -47,6 +55,10 @@ export const ErrorReport = ({
   }, [error]);
 
   if (isSignedIn !== true) return null;
+
+  if (variant === 'card') {
+    return <ErrorTellUsCard errorId={error.digest ?? sentryEventId} />;
+  }
 
   return (
     <>

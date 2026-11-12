@@ -1,0 +1,56 @@
+import { deviceSummary, isReportableId, reportPage } from './report-context';
+
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
+const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
+// The same bounds the API enforces on /v1/feedback.
+const MESSAGE_MAX = 2000;
+const DOING_MAX = 1000;
+
+/** What a problem report is made of, before it is shaped for the API. */
+export interface ErrorReportDraft {
+  /** The chip the reporter tapped. One tap is a complete report. */
+  doing: string;
+  /** Optional words from the reporter. */
+  note: string;
+  /** The error's own id: a server digest or a browser Sentry event id. */
+  errorId?: string | undefined;
+  /** Path only (no query or hash), as `reportPage` returns it. */
+  page: string;
+}
+
+/**
+ * Files the report as an ordinary bug in admin feedback, through the same
+ * `/v1/feedback` the edge tab uses. The reporter's words go only to our own
+ * table, never to Sentry. Throws on a refused or failed send.
+ */
+export const sendErrorReport = async (
+  token: string,
+  draft: ErrorReportDraft,
+  userAgent: string,
+): Promise<void> => {
+  const note = draft.note.trim();
+  const doing = draft.doing.trim().slice(0, DOING_MAX);
+  const res = await fetch(`${API_URL}/v1/feedback`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      category: 'bug',
+      message: (note === '' ? doing : `${doing}. ${note}`).slice(
+        0,
+        MESSAGE_MAX,
+      ),
+      pageUrl: reportPage(draft.page),
+      metadata: {
+        source: 'error',
+        build: APP_VERSION,
+        device: deviceSummary(userAgent),
+        doing,
+        ...(isReportableId(draft.errorId) ? { errorId: draft.errorId } : {}),
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(String(res.status));
+};
