@@ -250,7 +250,7 @@ export const CandidatePicker = ({
                   height: 56,
                   borderRadius: 6,
                   objectFit: 'cover',
-                  background: 'var(--bg-subtle)',
+                  background: 'var(--surface-1)',
                   flexShrink: 0,
                 }}
               />

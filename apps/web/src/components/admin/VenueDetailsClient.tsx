@@ -2488,7 +2488,7 @@ export function VenueDetailsClient({
                           ? 'rgba(0,0,0,0.55)'
                           : 'rgba(255,255,255,0.78)',
                         backdropFilter: 'blur(4px)',
-                        fontFamily: 'var(--font-sans)',
+                        fontFamily: 'var(--font-ui)',
                         fontWeight: 900,
                         fontSize: 10,
                         letterSpacing: '0.04em',

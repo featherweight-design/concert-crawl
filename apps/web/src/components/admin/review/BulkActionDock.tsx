@@ -28,7 +28,7 @@ export const BulkActionDock = ({
         alignItems: 'center',
         gap: 12,
         padding: '10px 14px',
-        background: 'var(--ink)',
+        background: 'var(--fg)',
         borderRadius: 14,
         boxShadow: '0 12px 36px rgba(0,0,0,0.32), 0 2px 6px rgba(0,0,0,0.18)',
         zIndex: 50,
@@ -59,7 +59,7 @@ export const BulkActionDock = ({
         style={{
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
-          color: 'var(--paper)',
+          color: 'var(--bg)',
         }}
       >
         {ADMIN_COPY.review.bulkActionDock.selected}

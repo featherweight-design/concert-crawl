@@ -52,7 +52,7 @@ export const ChipPicker = ({
             padding: '0 13px',
             borderRadius: 999,
             boxSizing: 'border-box',
-            fontFamily: 'var(--font-sans)',
+            fontFamily: 'var(--font-ui)',
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: '-0.005em',
@@ -91,7 +91,7 @@ export const ChipPicker = ({
           padding: '0 13px',
           borderRadius: 999,
           boxSizing: 'border-box',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-ui)',
           fontSize: 12,
           fontWeight: 500,
           color: 'var(--fg-subtle)',
@@ -122,7 +122,7 @@ export const ChipPicker = ({
     <span
       style={{
         flexBasis: '100%',
-        fontFamily: 'var(--font-sans)',
+        fontFamily: 'var(--font-ui)',
         fontSize: 11.5,
         lineHeight: 1.45,
         color: 'var(--fg-subtle)',
