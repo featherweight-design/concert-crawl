@@ -108,10 +108,11 @@ export type AccountMenuMode = 'menu' | 'notifications';
 /**
  * The desktop popover in notifications mode (addendum 2, item 16): the account
  * panel swaps to What you missed, 390 wide under the avatar, and the whole
- * panel (back row, header, tabs, list) is bounded at 700 tall with the list
- * scrolling inside it. The mobile sheet grows to its content instead.
+ * panel (back row, header, tabs, list) is bounded at 700 tall, clamped to the
+ * viewport (88px = header + gap + breathing room), with the list scrolling
+ * inside it. The mobile sheet grows to its content instead.
  */
-const PANEL_MAX_HEIGHT = 700;
+const PANEL_MAX_HEIGHT = 'min(700px, calc(100dvh - 88px))';
 const PANEL_WIDTH = 390;
 
 /**
@@ -543,7 +544,7 @@ function MenuShellContent({
   panelClosable = false,
 }: {
   props: MenuBodyProps;
-  panelMaxHeight?: number;
+  panelMaxHeight?: number | string;
   /** See NotifMenuPanel's `onClose` — the sheet sets it, the popover does not. */
   panelClosable?: boolean;
 }) {
