@@ -197,6 +197,18 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         event.preventDefault();
         select(Math.max(selectedIdxRef.current - 1, -1));
       } else if (event.key === 'Enter' && selectedIdxRef.current >= 0) {
+        // A focused control inside the panel (a chip's remove, Follow, clear)
+        // owns its own Enter; only the input, or nothing focused, opens the
+        // highlighted row. Hover moves the highlight, so without this a
+        // hovered row would steal Enter from the button the user tabbed to.
+        const active = document.activeElement;
+        if (
+          active instanceof HTMLElement &&
+          panelRef.current?.contains(active) &&
+          active.tagName !== 'INPUT'
+        ) {
+          return;
+        }
         event.preventDefault();
         openSelected(selectedIdxRef.current);
       }

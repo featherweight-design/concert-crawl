@@ -200,7 +200,9 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
         eq(events.hiddenFromConsumer, false),
         isNull(events.firstMissingAt),
       ),
-    );
+    )
+    // A fixed order, so the genre tie-break below is stable across requests.
+    .orderBy(asc(events.date), asc(events.id));
 
   const today = todayInDenver();
   const hasVisibleEvent = new Set<string>();
