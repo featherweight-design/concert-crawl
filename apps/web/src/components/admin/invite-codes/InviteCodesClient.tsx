@@ -37,6 +37,9 @@ const COLUMN_HEAD = {
   padding: '12px 6px',
 } as const;
 
+/** New code reads as unavailable until its panel lands (5b C). */
+const PENDING_BUTTON = { opacity: 0.55, cursor: 'not-allowed' } as const;
+
 const CELL = {
   padding: '10px 6px',
   fontSize: 12.5,
@@ -202,6 +205,7 @@ export function InviteCodesClient() {
       // New code lands with its panel in the forms PR.
       disabled
       style={{
+        ...PENDING_BUTTON,
         height: isPhone ? 42 : 36,
         fontSize: isPhone ? 14 : 13,
         borderRadius: 9,
@@ -223,7 +227,13 @@ export function InviteCodesClient() {
         title={COPY.empty.title}
         body={COPY.empty.body(MAX_SEATS)}
         action={
-          <AdminButton type="button" icon={Plus} variant="gradient" disabled>
+          <AdminButton
+            type="button"
+            icon={Plus}
+            variant="gradient"
+            disabled
+            style={PENDING_BUTTON}
+          >
             {COPY.newCode}
           </AdminButton>
         }
