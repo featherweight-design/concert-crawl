@@ -1,6 +1,16 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  ne,
+  notExists,
+  sql,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import {
@@ -21,6 +31,10 @@ import {
 } from '../../lib/price-drop.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
+import {
+  compareLeadingCounters,
+  leadingCounterOrderBy,
+} from '../../lib/price-check.js';
 
 export const contestsAdminRouter = new Hono<AdminVariables>();
 
@@ -65,11 +79,36 @@ contestsAdminRouter.get(
 
     // Both the page query and the total count must apply the same filter,
     // or the pager's "X–Y of TOTAL" readout drifts from the rows shown.
+    //
+    // Open mode lists one row per CHECK, not per counter: several fans can
+    // each have an update pending on one price (B+ B9), and the row carries
+    // the leading one (most confirmations, then earliest filed, then id),
+    // the same counter the detail endpoint shows and resolve acts on by
+    // default. `openCounterCount` says how many are waiting. History mode
+    // (includeArchived) keeps one row per counter.
+    const sibling = alias(priceSubmissions, 'sibling');
+    const openCounter = alias(priceSubmissions, 'open_counter');
+    const aheadOfThisCounter = db
+      .select({ one: sql`1` })
+      .from(sibling)
+      .where(
+        and(
+          eq(
+            sibling.disputedSubmissionId,
+            priceSubmissions.disputedSubmissionId,
+          ),
+          eq(sibling.status, 'pending'),
+          ne(sibling.id, priceSubmissions.id),
+          sql`(${sibling.corroborationCount}, ${priceSubmissions.createdAt}, ${priceSubmissions.id})
+            > (${priceSubmissions.corroborationCount}, ${sibling.createdAt}, ${sibling.id})`,
+        ),
+      );
     const listWhere = includeArchived
       ? isNotNull(priceSubmissions.disputedSubmissionId)
       : and(
           eq(priceSubmissions.status, 'pending'),
           isNotNull(priceSubmissions.disputedSubmissionId),
+          notExists(aheadOfThisCounter),
         );
     const direction = sort === 'filed-at-desc' ? desc : asc;
 
@@ -116,6 +155,13 @@ contestsAdminRouter.get(
         // statuses when includeArchived widens the scope (#758).
         counterStatus: priceSubmissions.status,
         filedAt: priceSubmissions.createdAt,
+        openCounterCount: db.$count(
+          openCounter,
+          and(
+            eq(openCounter.disputedSubmissionId, parentAlias.id),
+            eq(openCounter.status, 'pending'),
+          ),
+        ),
       })
       .from(priceSubmissions)
       .innerJoin(
@@ -214,6 +260,8 @@ contestsAdminRouter.get(
         status: row.counterStatus,
       },
       filedAt: row.filedAt.toISOString(),
+      // Pending updates open on this price, the listed counter included.
+      openCounterCount: row.openCounterCount,
     }));
 
     // `total` counts contests by their pending counter (matching the items
@@ -299,10 +347,13 @@ contestsAdminRouter.get(
       return ctx.json({ success: false, error: 'Contest not found' }, 404);
     }
 
-    // Counter = the most recent row whose disputedSubmissionId = parent.id.
+    // Counter = the leading PENDING counter when the check is open (several
+    // fans can each have one, B+ B9: most confirmations, then earliest
+    // filed), the same one resolve and defer act on by default. With none
+    // pending, the most recent row whose disputedSubmissionId = parent.id.
     // No status filter (spec §6.2) — read-only banners for resolved/deferred
     // states render off the actual counter.status.
-    const [counterRow] = await db
+    const allCounterRows = await db
       .select({
         id: priceSubmissions.id,
         priceMin: priceSubmissions.priceMin,
@@ -310,6 +361,7 @@ contestsAdminRouter.get(
         vendor: priceSubmissions.vendor,
         userId: priceSubmissions.userId,
         observedAt: priceSubmissions.createdAt,
+        createdAt: priceSubmissions.createdAt,
         note: priceSubmissions.note,
         status: priceSubmissions.status,
         corroborationCount: priceSubmissions.corroborationCount,
@@ -321,8 +373,11 @@ contestsAdminRouter.get(
       })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.disputedSubmissionId, contestId))
-      .orderBy(desc(priceSubmissions.createdAt))
-      .limit(1);
+      .orderBy(desc(priceSubmissions.createdAt));
+    const pendingCounterRows = allCounterRows
+      .filter((row) => row.status === 'pending')
+      .sort(compareLeadingCounters);
+    const counterRow = pendingCounterRows[0] ?? allCounterRows[0];
 
     if (!counterRow) {
       // The parent exists but no row references it as a dispute — caller
@@ -333,9 +388,11 @@ contestsAdminRouter.get(
 
     // Resolve handles for both sides via a single LEFT JOIN-style lookup.
     // Same pattern as the list endpoint.
-    const userIds = [parentRow.userId, counterRow.userId].filter(
-      (uid): uid is string => uid !== null,
-    );
+    const userIds = [
+      parentRow.userId,
+      ...pendingCounterRows.map((row) => row.userId),
+      counterRow.userId,
+    ].filter((uid): uid is string => uid !== null);
     const handleMap = new Map<string, string | null>();
     if (userIds.length > 0) {
       const handles = await db
@@ -423,6 +480,21 @@ contestsAdminRouter.get(
           archivedReason: counterRow.archivedReason ?? null,
         },
         filedAt: counterRow.observedAt.toISOString(),
+        // Every open update on this price, leading first (B+ B9). `counter`
+        // above is the first of these whenever any is pending; resolve takes
+        // `challengerId` to decide on another one.
+        pendingCounters: pendingCounterRows.map((row) => ({
+          id: row.id,
+          priceMin: row.priceMin,
+          priceMax: row.priceMax,
+          submitter: {
+            userId: row.userId,
+            handle: row.userId ? (handleMap.get(row.userId) ?? null) : null,
+          },
+          confirms: { fans: row.corroborationCount, admin: 0 },
+          observedAt: row.observedAt.toISOString(),
+          note: row.note ?? null,
+        })),
         history: [],
       },
     });
@@ -436,6 +508,10 @@ const resolveParamsSchema = z.object({
 const resolveBodySchema = z.object({
   resolution: z.enum(['parent_wins', 'challenger_wins']),
   reason: z.string().min(10).max(2000),
+  // Which pending update the resolution is about, when a price has several
+  // (B+ B9). Omitted, it is the leading one, the same one the detail
+  // endpoint shows.
+  challengerId: idSchema.optional(),
 });
 
 // POST /v1/admin/contests/prices/:contestId/resolve — atomic resolution.
@@ -462,10 +538,10 @@ const resolveBodySchema = z.object({
 // (+1 priceCredScore to the winner's submitter) happens regardless of the
 // projection gate.
 //
-// Orphan cleanup archives any OTHER pending counters against the same parent
-// inside the transaction. The §4.6 partial unique index makes this dead-by-
-// construction in steady state, but the branch is kept defensively for
-// migration-window in-flight rows.
+// Superseded cleanup archives every OTHER pending counter against the same
+// parent inside the transaction. Since migration 0099 several fans can each
+// have an update open on one price (B+ B9), so this is the ordinary path: one
+// resolution decides the whole check.
 //
 // Audit + notification writes happen OUTSIDE the transaction (after commit)
 // so a Sentry-tagged failure in either telemetry path can't roll back the
@@ -491,7 +567,7 @@ contestsAdminRouter.post(
   }),
   async (ctx) => {
     const { contestId } = ctx.req.valid('param');
-    const { resolution, reason } = ctx.req.valid('json');
+    const { resolution, reason, challengerId } = ctx.req.valid('json');
     const admin = getAuthUser(ctx);
 
     type ResolveOutcome =
@@ -528,9 +604,12 @@ contestsAdminRouter.post(
         .for('update');
       if (!parent) return { ok: 'not_found' };
 
-      // Lock the (single, per §4.6) pending counter. If a previous resolution
-      // already archived it, we surface precondition_failed instead of
-      // silently no-oping.
+      // Lock the challenger: the pending counter the admin named, or else
+      // the leading one (most confirmations, then earliest filed; see
+      // lib/price-check.ts). Several fans can each have one open on this
+      // parent (B+ B9); the rest are archived as superseded below. If a
+      // previous resolution already archived it, we surface
+      // precondition_failed instead of silently no-oping.
       const [challenger] = await tx
         .select()
         .from(priceSubmissions)
@@ -538,8 +617,12 @@ contestsAdminRouter.post(
           and(
             eq(priceSubmissions.disputedSubmissionId, contestId),
             eq(priceSubmissions.status, 'pending'),
+            challengerId !== undefined
+              ? eq(priceSubmissions.id, challengerId)
+              : undefined,
           ),
         )
+        .orderBy(...leadingCounterOrderBy)
         .limit(1)
         .for('update');
       if (!challenger) {
@@ -731,10 +814,10 @@ contestsAdminRouter.post(
         // no re-award.
       }
 
-      // Orphan cleanup — archive any OTHER pending counters against this
-      // parent. Dead-by-construction post-§4.6 unique index, but kept for
-      // migration-window in-flight rows. The ne() guard avoids double-touching
-      // the winner/loser the handler just flipped.
+      // Superseded cleanup — archive every OTHER pending counter against
+      // this parent; one resolution decides the whole check (B+ B9). The ne()
+      // guard avoids double-touching the winner/loser the handler just
+      // flipped.
       const orphans = await tx
         .update(priceSubmissions)
         .set({
@@ -948,7 +1031,9 @@ contestsAdminRouter.post(
         .for('update');
       if (!parent) return { ok: 'not_found' };
 
-      // Lock the single pending counter (§4.6 partial unique index).
+      // Lock the leading pending counter: several fans can each have one
+      // open on this parent (B+ B9), and the consumer card carries the defer
+      // pill on the leading one, so that is the one deferred.
       const [counter] = await tx
         .select()
         .from(priceSubmissions)
@@ -958,6 +1043,7 @@ contestsAdminRouter.post(
             eq(priceSubmissions.status, 'pending'),
           ),
         )
+        .orderBy(...leadingCounterOrderBy)
         .limit(1)
         .for('update');
       if (!counter) {

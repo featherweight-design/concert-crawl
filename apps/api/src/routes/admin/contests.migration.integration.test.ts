@@ -53,20 +53,23 @@ describe('migration 0041 — admin contest review', () => {
            'price_submissions_disputed_status_idx',
            'price_submissions_pending_counters_idx',
            'price_submissions_pending_counters_by_filed_idx',
-           'price_submissions_pending_counter_unique_idx'
+           'price_submissions_pending_counter_unique_idx',
+           'price_submissions_pending_counter_user_unique_idx'
          )
        ORDER BY indexname
     `);
     const names = rows.map((row) => row.indexname);
+    // 0099 replaced 0041's one-counter-per-parent index with one counter per
+    // (parent, submitter), so the old name is gone (B+ B9).
     expect(names).toEqual([
       'price_submissions_disputed_status_idx',
-      'price_submissions_pending_counter_unique_idx',
+      'price_submissions_pending_counter_user_unique_idx',
       'price_submissions_pending_counters_by_filed_idx',
       'price_submissions_pending_counters_idx',
     ]);
   });
 
-  it('unique index rejects a 2nd pending counter against the same parent', async () => {
+  it("unique index admits a 2nd fan's pending counter but rejects the same fan's second", async () => {
     // Seed a venue + event + parent submission so we can attach counters.
     // venues.websiteUrl, events.title, events.artist are notNull — must be
     // provided explicitly to avoid runtime + type errors. canonicalArtist is
@@ -118,7 +121,20 @@ describe('migration 0041 — admin contest review', () => {
       disputedSubmissionId: parent!.id,
     });
 
-    // Second pending counter against the SAME parent — rejected by unique idx.
+    // A second fan's pending counter on the SAME parent — admitted (0099).
+    await db.insert(priceSubmissions).values({
+      eventId: event!.id,
+      userId: 'challenger-2',
+      priceMin: '55',
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'pending',
+      disputedSubmissionId: parent!.id,
+    });
+
+    // The FIRST fan's second pending counter — rejected by the unique idx.
     // Drizzle wraps the underlying Postgres error in "Failed query: ..."; the
     // original error (with the constraint name) is on `.cause`. Mirror the
     // pattern in apps/api/src/test/migration-0040.integration.test.ts and
@@ -127,7 +143,7 @@ describe('migration 0041 — admin contest review', () => {
     try {
       await db.insert(priceSubmissions).values({
         eventId: event!.id,
-        userId: 'challenger-2',
+        userId: 'challenger-1',
         priceMin: '60',
         tier: 'GA',
         vendor: 'AXS',
@@ -146,7 +162,7 @@ describe('migration 0041 — admin contest review', () => {
         ? caught.cause.message
         : '';
     expect(causeMessage).toMatch(
-      /price_submissions_pending_counter_unique_idx/,
+      /price_submissions_pending_counter_user_unique_idx/,
     );
   });
 });

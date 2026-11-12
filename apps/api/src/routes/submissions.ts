@@ -15,8 +15,17 @@ import {
   deriveSourceCategory,
 } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
-import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
+import {
+  PG_UNIQUE_VIOLATION,
+  describeDbError,
+  isPendingCounterUniqueViolation,
+} from '../lib/pg-errors.js';
 import { idSchema } from '../lib/id-schema.js';
+import {
+  OWN_UPDATE_PENDING_ERROR,
+  reopenPriceWhenCheckEmpty,
+  settleCheckOnCounterPromotion,
+} from '../lib/price-check.js';
 
 export const submissionsRouter = new Hono();
 
@@ -118,18 +127,30 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
   let newCount = submission.corroborationCount;
 
   if (inserted.length > 0) {
-    const [updated] = await db
-      .update(priceSubmissions)
-      .set({
-        corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
-        status: sql`CASE WHEN ${priceSubmissions.corroborationCount} + 1 >= ${SP_POLICY.confirmsRequired} THEN 'corroborated'::price_submission_status ELSE ${priceSubmissions.status} END`,
-        updatedAt: sql`now()`,
-      })
-      .where(eq(priceSubmissions.id, submissionId))
-      .returning({
-        corroborationCount: priceSubmissions.corroborationCount,
-        status: priceSubmissions.status,
-      });
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(priceSubmissions)
+        .set({
+          corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
+          status: sql`CASE WHEN ${priceSubmissions.corroborationCount} + 1 >= ${SP_POLICY.confirmsRequired} THEN 'corroborated'::price_submission_status ELSE ${priceSubmissions.status} END`,
+          updatedAt: sql`now()`,
+        })
+        .where(eq(priceSubmissions.id, submissionId))
+        .returning({
+          corroborationCount: priceSubmissions.corroborationCount,
+          status: priceSubmissions.status,
+        });
+      // A pending update that reaches the threshold wins its price check:
+      // the parent and every other pending update are archived with it.
+      if (
+        row?.status === 'corroborated' &&
+        submission.status === 'pending' &&
+        submission.disputedSubmissionId !== null
+      ) {
+        await settleCheckOnCounterPromotion(tx, submission);
+      }
+      return row;
+    });
     if (updated) {
       newCount = updated.corroborationCount;
       newStatus = updated.status;
@@ -199,33 +220,25 @@ submissionsRouter.post(
       );
     }
 
-    // 1-pending-counter-per-parent invariant (locked design decision — see
-    // docs/superpowers/specs/2026-06-22-admin-contest-review-design.md §4.6).
-    // The DB partial unique index `price_submissions_pending_counter_unique_idx`
-    // (migration 0041) is the source of truth; this app-level check returns a
-    // clean 409 to consumers instead of letting them race straight into the
-    // raw unique_violation. The try/catch below the transaction catches the
-    // narrow window where two requests race past this SELECT and only one
-    // INSERT survives the index.
-    const [existingCounter] = await db
+    // One pending counter per (parent, submitter) (B+ B9, 2026-11-11):
+    // several fans may each have an update waiting on the same price, but
+    // nobody can stack their own. The partial unique index
+    // `price_submissions_pending_counter_user_unique_idx` (migration 0099) is
+    // the source of truth; this check returns a clean 409, and the try/catch
+    // below the transaction covers two racing requests from the same user.
+    const [ownCounter] = await db
       .select({ id: priceSubmissions.id })
       .from(priceSubmissions)
       .where(
         and(
           eq(priceSubmissions.disputedSubmissionId, submissionId),
+          eq(priceSubmissions.userId, userId),
           eq(priceSubmissions.status, 'pending'),
         ),
       )
       .limit(1);
-    if (existingCounter) {
-      return ctx.json(
-        {
-          success: false,
-          error:
-            'Another challenge is already pending against this submission.',
-        },
-        409,
-      );
+    if (ownCounter) {
+      return ctx.json({ success: false, error: OWN_UPDATE_PENDING_ERROR }, 409);
     }
 
     const vendor = parent.vendor;
@@ -273,11 +286,7 @@ submissionsRouter.post(
       // outer error AND `err.cause` for SQLSTATE 23505 + the index name.
       if (isPendingCounterUniqueViolation(err)) {
         return ctx.json(
-          {
-            success: false,
-            error:
-              'Another challenge is already pending against this submission.',
-          },
+          { success: false, error: OWN_UPDATE_PENDING_ERROR },
           409,
         );
       }
@@ -405,6 +414,23 @@ submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
     return ctx.json({ success: false, error: 'Forbidden' }, 403);
   }
 
-  await db.delete(priceSubmissions).where(eq(priceSubmissions.id, id));
+  const parentId =
+    submission.status === 'pending' ? submission.disputedSubmissionId : null;
+  await db.transaction(async (tx) => {
+    await tx.delete(priceSubmissions).where(eq(priceSubmissions.id, id));
+    // Withdrawing the last pending update on a price closes its check, so the
+    // price goes back to live. Savepoint: if a box-office price was approved
+    // in the same slot meanwhile, the unique index refuses the reopen, and
+    // the withdrawal still goes through; the box-office price leads that slot.
+    if (parentId !== null) {
+      try {
+        await tx.transaction((savepoint) =>
+          reopenPriceWhenCheckEmpty(savepoint, parentId),
+        );
+      } catch (err) {
+        if (describeDbError(err).code !== PG_UNIQUE_VIOLATION) throw err;
+      }
+    }
+  });
   return ctx.body(null, 204);
 });

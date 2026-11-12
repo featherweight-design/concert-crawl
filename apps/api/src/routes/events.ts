@@ -28,7 +28,6 @@ import {
   count,
   desc,
   eq,
-  exists,
   gte,
   ilike,
   inArray,
@@ -39,7 +38,6 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/pg-core';
 import {
   SP_POLICY,
   RESALE_VENDOR_VALUES,
@@ -49,6 +47,7 @@ import {
   type AvailabilityDay,
   type EventsAvailabilityResponse,
   type PlanState,
+  type PriceCheckFields,
   type SourceCategory,
   type Tier,
 } from '@concert-crawl/types';
@@ -69,6 +68,13 @@ import {
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js';
 import { narrowLastAdminAction } from '../lib/last-admin-action.js';
+import {
+  compareLeadingCounters,
+  currentPriceCondition,
+  dropCheckedWhereLive,
+  priceCheckFields,
+  underCheckSql,
+} from '../lib/price-check.js';
 import {
   getFollowedArtistMatcher,
   spotifyTasteCondition,
@@ -429,10 +435,13 @@ eventsRouter.get(
         .where(
           and(
             inArray(priceSubmissions.eventId, communityEventIds),
-            eq(priceSubmissions.status, 'corroborated'),
+            // A price under an open check is still the price (B+ B9);
+            // a live one is preferred over it.
+            currentPriceCondition(),
           ),
         )
         .orderBy(
+          asc(underCheckSql()),
           sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${inArray(priceSubmissions.vendor, RESALE_VENDOR_VALUES)} THEN 2 ELSE 1 END ASC`,
           desc(priceSubmissions.createdAt),
         );
@@ -760,19 +769,21 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     sourceCategory: SourceCategory | null;
   }> = [];
   let priceConfirmsCount: number = 0;
-  let counterSubmission: {
-    id: string;
-    parentSubmissionId: string;
-    floor: number;
-    ceiling?: number;
-    submitter: { handle: string } | null;
-    submittedAt: string;
-    // Engagement-signal fields mirror priceByTier[].counterSubmission so the
-    // flat + per-tier shapes stay in lock-step during PR 4's migration window.
-    // 'defer' is the only kind we surface to consumers today.
-    lastAdminActionAt: string | null;
-    lastAdminActionKind: 'defer' | null;
-  } | null = null;
+  let counterSubmission:
+    | ({
+        id: string;
+        parentSubmissionId: string;
+        floor: number;
+        ceiling?: number;
+        submitter: { handle: string } | null;
+        submittedAt: string;
+        // Engagement-signal fields mirror priceByTier[].counterSubmission so the
+        // flat + per-tier shapes stay in lock-step during PR 4's migration window.
+        // 'defer' is the only kind we surface to consumers today.
+        lastAdminActionAt: string | null;
+        lastAdminActionKind: 'defer' | null;
+      } & PriceCheckFields)
+    | null = null;
 
   // Per-tier price aggregation (PR 3) and the flat priceVendor/priceAlternates/
   // priceConfirmsCount/counterSubmission/pendingSubmissions fields share the
@@ -786,7 +797,6 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // alone also marks an admin moderation denial with no counter, so only a
   // disputed row with a pending same-tier counter (the only kind that attaches
   // below) comes back here, flagged `contested`.
-  const counterRows = alias(priceSubmissions, 'counter');
   const priceRows = await db
     .select({
       id: priceSubmissions.id,
@@ -799,40 +809,16 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       createdAt: priceSubmissions.createdAt,
       updatedAt: priceSubmissions.updatedAt,
       lastSeenAt: priceSubmissions.lastSeenAt,
-      contested: sql<boolean>`${priceSubmissions.status} = 'disputed'`,
+      contested: underCheckSql(),
     })
     .from(priceSubmissions)
-    .where(
-      and(
-        eq(priceSubmissions.eventId, id),
-        or(
-          eq(priceSubmissions.status, 'corroborated'),
-          and(
-            eq(priceSubmissions.status, 'disputed'),
-            exists(
-              db
-                .select({ one: sql`1` })
-                .from(counterRows)
-                .where(
-                  and(
-                    eq(counterRows.disputedSubmissionId, priceSubmissions.id),
-                    eq(counterRows.status, 'pending'),
-                    eq(counterRows.tier, priceSubmissions.tier),
-                  ),
-                ),
-            ),
-          ),
-        ),
-      ),
-    );
+    .where(and(eq(priceSubmissions.eventId, id), currentPriceCondition()));
   // A live price outranks one under a check, so a contested parent only leads
-  // a tier that has no live price. Anywhere else it would sit beside the live
-  // price as an alternate with no sign it's being checked.
-  const liveTiers = new Set(
-    priceRows.filter((sub) => !sub.contested).map((sub) => sub.tier),
-  );
-  const allCorroboratedRows = priceRows.filter(
-    (sub) => !sub.contested || !liveTiers.has(sub.tier),
+  // a tier that has no live price. The same rule the list surfaces apply
+  // (loadPriceByTierByEventId), so Browse and this page agree on the price.
+  const allCorroboratedRows = dropCheckedWhereLive(
+    priceRows,
+    (sub) => sub.tier,
   );
 
   const allPendingRows = await db
@@ -848,6 +834,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       userId: priceSubmissions.userId,
       createdAt: priceSubmissions.createdAt,
       disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+      // Ranks pending counters on one price: the leading one has the most
+      // confirmations (compareLeadingCounters).
+      corroborationCount: priceSubmissions.corroborationCount,
       // Engagement-signal columns surfaced on counter rows via
       // counterSubmission.lastAdminActionAt/Kind. Read here so the same
       // allPendingRows scan feeds both priceByTier (via counterTierRows)
@@ -871,8 +860,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // instead of the tier's pending list so the UI shows "Saw a different
   // number?" against the corroborated price without double-counting.
   //
-  // Counters are sorted newest-first so when multiple disputes exist against
-  // the same headline, the most recent challenger wins deterministically.
+  // Several fans can each have an update pending on one price (B+ B9).
+  // Counters are sorted LEADING-first (most confirmations, then earliest
+  // filed), so the first match for a parent is the one its card shows.
   const corroboratedById = new Map(
     allCorroboratedRows.map((sub) => [sub.id, sub]),
   );
@@ -891,14 +881,13 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           priceMax: sub.priceMax,
           userId: sub.userId,
           createdAt: sub.createdAt,
+          corroborationCount: sub.corroborationCount,
           lastAdminActionAt: sub.lastAdminActionAt,
           lastAdminActionKind: sub.lastAdminActionKind,
         },
       ];
     })
-    .sort(
-      (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
-    );
+    .sort(compareLeadingCounters);
 
   // Resolve the per-tier headlines AND the legacy flat-field primary so both
   // the truePendingRows filter and the flat-field derivation below share a
@@ -922,29 +911,23 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     : [];
   const legacyPrimary = legacySortedCorroborated[0] ?? null;
 
-  // truePendingRows excludes ONLY the counter rows that actually surface
-  // somewhere via counterSubmission — either as the flat-field counter
-  // (legacy primary's newest counter) or as a per-tier headline's counter
-  // inside priceByTier. Every other dispute row stays in pending so it
-  // remains visible to the user.
-  //
-  // Without this discipline, older counters against the same headline and
-  // counters against alternate (non-headline) corroborated rows would
-  // disappear from both pendingSubmissions and priceByTier[].pending — the
-  // PR 723 audit caught exactly this regression.
-  const attachedCounterIds = new Set<string>();
-  for (const [tier, head] of headlinesByTier) {
-    const newest = counterTierRows.find(
-      (sub) => sub.tier === tier && sub.parentSubmissionId === head.id,
-    );
-    if (newest) attachedCounterIds.add(newest.id);
-  }
-  if (legacyPrimary) {
-    const flatCounter = counterTierRows.find(
-      (sub) => sub.parentSubmissionId === legacyPrimary.id,
-    );
-    if (flatCounter) attachedCounterIds.add(flatCounter.id);
-  }
+  // truePendingRows excludes ONLY the counter rows that belong to a price
+  // check shown via counterSubmission: every pending counter against a
+  // per-tier headline or the legacy flat primary. The leading one is the
+  // card's pending amount; the rest are counted in its pendingCount and
+  // reachable through viewerCounterId, so listing them again as plain pending
+  // prices would show one check as several (B+ B9). Every other dispute row,
+  // e.g. a counter against an alternate (non-headline) corroborated row,
+  // stays in pending so it remains visible to the user (the PR 723 audit
+  // caught that regression).
+  const checkedParentIds = new Set<string>();
+  for (const head of headlinesByTier.values()) checkedParentIds.add(head.id);
+  if (legacyPrimary) checkedParentIds.add(legacyPrimary.id);
+  const attachedCounterIds = new Set(
+    counterTierRows
+      .filter((sub) => checkedParentIds.has(sub.parentSubmissionId))
+      .map((sub) => sub.id),
+  );
 
   const truePendingRows = allPendingRows.filter(
     (sub) => !attachedCounterIds.has(sub.id),
@@ -1047,11 +1030,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       sourceCategory: sub.sourceCategory,
     }));
 
-    // counterTierRows is sorted newest-first and filtered to tier-match
-    // counters. Pick the newest counter whose parent is the legacy primary.
-    const counter = counterTierRows.find(
+    // counterTierRows is sorted leading-first and filtered to tier-match
+    // counters. Pick the leading counter whose parent is the legacy primary.
+    const primaryCounters = counterTierRows.filter(
       (sub) => sub.parentSubmissionId === legacyPrimary.id,
     );
+    const counter = primaryCounters[0];
     if (counter) {
       const counterHandle =
         counter.userId !== null
@@ -1077,6 +1061,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         submittedAt: counter.createdAt.toISOString(),
         lastAdminActionAt: counterLastAction.at,
         lastAdminActionKind: counterLastAction.kind,
+        ...priceCheckFields({
+          viewerUserId: authInfo?.userId ?? null,
+          parentUserId: legacyPrimary.userId,
+          counters: primaryCounters,
+        }),
       };
     }
   }

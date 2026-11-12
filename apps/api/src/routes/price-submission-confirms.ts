@@ -13,6 +13,7 @@ import {
 import { SP_POLICY } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 import { isImminentEvent } from '../lib/time.js';
+import { settleCheckOnCounterPromotion } from '../lib/price-check.js';
 import {
   detectPriceDrop,
   fanoutPriceDrop,
@@ -79,6 +80,7 @@ priceSubmissionConfirmsRouter.post(
         status: priceSubmissions.status,
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
+        disputedSubmissionId: priceSubmissions.disputedSubmissionId,
       })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, submissionId))
@@ -185,6 +187,11 @@ priceSubmissionConfirmsRouter.post(
         // (the UPDATE above), event row second.
         let drop: PriceDrop | undefined;
         if (updatedRow?.status === 'corroborated') {
+          // A pending update that reaches the threshold wins its price
+          // check: archive the parent and every other pending update on it.
+          // Submission rows only, so it stays ahead of the event lock below.
+          await settleCheckOnCounterPromotion(tx, submission);
+
           const [preEvent] = await tx
             .select({ ticketPriceMin: events.ticketPriceMin })
             .from(events)

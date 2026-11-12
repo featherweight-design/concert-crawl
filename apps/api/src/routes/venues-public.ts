@@ -26,10 +26,8 @@ import {
 } from 'drizzle-orm';
 import {
   GUIDE_CHIP_ORDER,
-  SP_POLICY,
   type VenueGuide,
   type VenueGuideChip,
-  deriveSourceCategory,
   isGuideChipKey,
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types';
@@ -40,7 +38,8 @@ import {
 
 import { venueSlug } from '../lib/venue-slug-schema.js';
 import { isSoldOutSql } from '../lib/sold-out.js';
-import { aggregateByTier } from '../lib/price-aggregation/index.js';
+import { loadPriceByTierByEventId } from '../lib/price-aggregation/index.js';
+import { currentPriceCondition, underCheckSql } from '../lib/price-check.js';
 import { MT_TIME_ZONE, todayInDenver, todayInTimezone } from '../lib/time.js';
 
 export const venuesPublicRouter = new Hono();
@@ -276,10 +275,13 @@ venuesPublicRouter.get(
         .where(
           and(
             inArray(priceSubmissions.eventId, communityEventIds),
-            eq(priceSubmissions.status, 'corroborated'),
+            // A price under an open check is still the price (B+ B9);
+            // a live one is preferred over it.
+            currentPriceCondition(),
           ),
         )
         .orderBy(
+          asc(underCheckSql()),
           sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${inArray(priceSubmissions.vendor, RESALE_VENDOR_VALUES)} THEN 2 ELSE 1 END ASC`,
           desc(priceSubmissions.createdAt),
         );
@@ -296,76 +298,13 @@ venuesPublicRouter.get(
     // venue card falls back to the flat `ticketPriceMin` scalar, which is
     // clobbered to whichever tier was most recently confirmed (a multi-tier
     // event's VIP min can overwrite its GA min), so the venue page showed a
-    // higher "from" price than browse for the same event. Mirrors the list
-    // endpoint's cost-controlled shape: only corroborated rows, empty
-    // pending/counters, headline-only consumption. Bounded by the 50-event
-    // page limit above, same order as a browse page.
-    const visibleEventIds = upcomingEvents.map((evt) => evt.id);
-    const priceByTierByEventId = new Map<
-      string,
-      Awaited<ReturnType<typeof aggregateByTier>>
-    >();
-    if (visibleEventIds.length > 0) {
-      const corroboratedRows = await db
-        .select({
-          id: priceSubmissions.id,
-          eventId: priceSubmissions.eventId,
-          tier: priceSubmissions.tier,
-          priceMin: priceSubmissions.priceMin,
-          priceMax: priceSubmissions.priceMax,
-          vendor: priceSubmissions.vendor,
-          sourceCategory: priceSubmissions.sourceCategory,
-          howFound: priceSubmissions.howFound,
-          userId: priceSubmissions.userId,
-          createdAt: priceSubmissions.createdAt,
-          updatedAt: priceSubmissions.updatedAt,
-          lastSeenAt: priceSubmissions.lastSeenAt,
-          corroborationCount: priceSubmissions.corroborationCount,
-        })
-        .from(priceSubmissions)
-        .where(
-          and(
-            inArray(priceSubmissions.eventId, visibleEventIds),
-            eq(priceSubmissions.status, 'corroborated'),
-          ),
-        );
-
-      const corroboratedByEvent = new Map<string, typeof corroboratedRows>();
-      for (const sub of corroboratedRows) {
-        const existing = corroboratedByEvent.get(sub.eventId);
-        if (existing) existing.push(sub);
-        else corroboratedByEvent.set(sub.eventId, [sub]);
-      }
-
-      for (const [eventId, subs] of corroboratedByEvent) {
-        const blocks = aggregateByTier({
-          corroborated: subs.map((sub) => ({
-            id: sub.id,
-            tier: sub.tier,
-            priceMin: sub.priceMin,
-            priceMax: sub.priceMax,
-            vendor: sub.vendor,
-            sourceCategory:
-              sub.sourceCategory ??
-              deriveSourceCategory(sub.vendor, sub.howFound),
-            userId: sub.userId,
-            createdAt: sub.createdAt,
-            updatedAt: sub.updatedAt,
-            lastSeenAt: sub.lastSeenAt,
-            // Submitter counts as observation #1 per the corroboration_count
-            // schema comment, so the surfaced confirm count excludes them.
-            confirmsCount: Math.max(0, sub.corroborationCount - 1),
-          })),
-          pending: [],
-          counters: [],
-          handles: new Map(),
-          reportsByTier: new Map(),
-          confirmsNeeded: SP_POLICY.confirmsRequired,
-          viewerUserId: null,
-        });
-        priceByTierByEventId.set(eventId, blocks);
-      }
-    }
+    // higher "from" price than browse for the same event. Uses the list
+    // endpoint's shared loader (headline-only, empty pending/counters), so a
+    // price under an open check stays the price here exactly as it does on
+    // Browse (B+ B9). Bounded by the 50-event page limit above.
+    const priceByTierByEventId = await loadPriceByTierByEventId(
+      upcomingEvents.map((evt) => evt.id),
+    );
 
     const enrichedEvents = upcomingEvents.map((evt) => ({
       ...evt,

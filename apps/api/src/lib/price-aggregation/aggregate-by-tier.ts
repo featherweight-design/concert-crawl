@@ -1,5 +1,6 @@
 import type {
   HowFound,
+  PriceCheckFields,
   SourceCategory,
   Tier,
   TierAlternate,
@@ -16,6 +17,7 @@ import {
 } from './pick-tier-headline.js';
 import { narrowLastAdminAction } from '../last-admin-action.js';
 import { deriveObservedAt } from './observed-at.js';
+import { priceCheckFields } from '../price-check-rules.js';
 
 export interface CorroboratedTierRow extends TierRow {
   tier: Tier;
@@ -56,9 +58,10 @@ export interface CounterTierRow {
 export interface AggregateByTierInput {
   corroborated: readonly CorroboratedTierRow[];
   pending: readonly PendingTierRow[];
-  // Sorted newest-first (createdAt descending). The composer's find() picks
-  // the first matching counter for each headline, so the caller's ordering
-  // determines which dispute wins when multiple challenge the same row.
+  // Every pending counter, sorted LEADING-first (compareLeadingCounters in
+  // lib/price-check.ts: most confirmations, then earliest filed). The first
+  // match for a headline is the counter the card shows; all the matches feed
+  // its pendingCount and viewer fields.
   counters: readonly CounterTierRow[];
   handles: ReadonlyMap<string, string>;
   reportsByTier: ReadonlyMap<Tier, number>;
@@ -157,6 +160,7 @@ function buildPending(
 function buildCounter(
   row: CounterTierRow,
   handles: ReadonlyMap<string, string>,
+  checkFields: PriceCheckFields,
 ): TierCounter {
   const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null;
   const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null;
@@ -178,6 +182,7 @@ function buildCounter(
     submittedAt: row.createdAt.toISOString(),
     lastAdminActionAt: lastAction.at,
     lastAdminActionKind: lastAction.kind,
+    ...checkFields,
   };
 }
 
@@ -250,16 +255,16 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
     const headline = head !== null ? buildHeadline(head, handles) : null;
     const alternates = sortedCorrob.slice(1).map(buildAlternate);
 
-    // Counters input is contract-required to be sorted newest-first by the
-    // caller so find() returns the most recent challenger deterministically
-    // when multiple disputes exist against the same headline. See the
-    // AggregateByTierInput.counters doc comment.
-    const counter =
+    // Counters input is contract-required to be sorted leading-first by the
+    // caller, so the first match is the leading update on this headline. See
+    // the AggregateByTierInput.counters doc comment.
+    const headCounters =
       head !== null
-        ? counters.find(
+        ? counters.filter(
             (row) => row.tier === tier && row.parentSubmissionId === head.id,
           )
-        : undefined;
+        : [];
+    const counter = headCounters[0];
 
     blocks.push({
       tier,
@@ -269,7 +274,17 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
         buildPending(row, handles, confirmsNeeded, viewerUserId),
       ),
       counterSubmission:
-        counter !== undefined ? buildCounter(counter, handles) : null,
+        counter !== undefined && head !== null
+          ? buildCounter(
+              counter,
+              handles,
+              priceCheckFields({
+                viewerUserId,
+                parentUserId: head.userId,
+                counters: headCounters,
+              }),
+            )
+          : null,
       reports: reportsByTier.get(tier) ?? 0,
     });
   }

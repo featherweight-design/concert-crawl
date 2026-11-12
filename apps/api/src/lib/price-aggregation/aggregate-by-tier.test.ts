@@ -4,6 +4,7 @@ import {
   pickHeadlinesByTier,
   type AggregateByTierInput,
   type CorroboratedTierRow,
+  type CounterTierRow,
   type PendingTierRow,
 } from './aggregate-by-tier.js';
 
@@ -181,6 +182,41 @@ describe('aggregateByTier', () => {
     // Default state — neither field set on the row → both null in the output.
     expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull();
     expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull();
+  });
+
+  it('with several updates on one price, attaches the first (leading) and counts them all', () => {
+    // B+ B9: the caller sorts counters leading-first; the card shows the
+    // first, and pendingCount / the viewer fields read every one.
+    const headline = corrob({ id: 'head', tier: 'GA', userId: 'hugh' });
+    const counterRow = (
+      id: string,
+      userId: string,
+      priceMin: string,
+    ): CounterTierRow => ({
+      id,
+      parentSubmissionId: 'head',
+      tier: 'GA',
+      priceMin,
+      priceMax: null,
+      userId,
+      createdAt: new Date('2026-06-12T00:00:00Z'),
+      lastAdminActionAt: null,
+      lastAdminActionKind: null,
+    });
+    const blocks = aggregateByTier({
+      ...baseInput,
+      corroborated: [headline],
+      counters: [
+        counterRow('lead', 'rae', '52'),
+        counterRow('second', 'sam', '60'),
+      ],
+      viewerUserId: 'sam',
+    });
+    expect(blocks[0]?.counterSubmission?.id).toBe('lead');
+    expect(blocks[0]?.counterSubmission?.floor).toBe(52);
+    expect(blocks[0]?.counterSubmission?.pendingCount).toBe(2);
+    expect(blocks[0]?.counterSubmission?.viewerAction).toBe('withdraw');
+    expect(blocks[0]?.counterSubmission?.viewerCounterId).toBe('second');
   });
 
   it('counter-submission carries lastAdminActionKind="defer" when the counter row was deferred', () => {
