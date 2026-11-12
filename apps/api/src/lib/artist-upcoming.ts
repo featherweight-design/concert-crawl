@@ -69,3 +69,24 @@ export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
   sql<
     string | null
   >`(SELECT MIN(${events.date}) ${upcomingShowsFrom(withinDays)})`;
+
+/**
+ * The venue of the soonest show `nextShowDateExpr` dates, from the same
+ * fragment. Ties on the day break on show time, then id, as the fan lists do.
+ */
+export const nextShowVenueExpr = (): SQL<string | null> =>
+  sql<
+    string | null
+  >`(SELECT ${venues.name} ${upcomingShowsFrom(undefined)} ORDER BY ${eventsColumn('date')}, ${eventsColumn('show_time')} NULLS LAST, ${eventsColumn('id')} LIMIT 1)`;
+
+// Written out qualified: inside a subquery drizzle renders a bare column name,
+// and `id` exists on both `events` and the joined `venues`.
+const eventsColumn = (column: 'date' | 'show_time' | 'id'): SQL =>
+  sql.raw(`"events"."${column}"`);
+
+/**
+ * How many shows `hasUpcomingShowExpr` would accept for this artist. Built
+ * from the same fragment, so a row the filter lists never reads 0.
+ */
+export const upcomingShowCountExpr = (): SQL<number> =>
+  sql<number>`(SELECT count(*)::int ${upcomingShowsFrom(undefined)})`;
