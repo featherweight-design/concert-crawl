@@ -117,10 +117,9 @@ function UpNextStub({
           {date !== null && (
             <span
               data-up-next-ghost-date=""
-              className="font-mono text-fg-subtle"
+              className="font-mono font-semibold text-fg-subtle"
               style={{
                 fontSize: 8.5,
-                fontWeight: 600,
                 letterSpacing: '0.14em',
               }}
             >
