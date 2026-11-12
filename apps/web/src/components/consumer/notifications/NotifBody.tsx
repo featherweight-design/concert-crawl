@@ -76,6 +76,11 @@ export const NotifBody = ({
   // The boards draw the tab row on the empty and error states too; only the
   // loading state, where nothing has landed yet, has none.
   const showTabs = state !== 'loading';
+  const unreadTabs = new Set<NotificationTab>(
+    items
+      .filter((item) => item.readAt === null)
+      .map((item) => tabFor(item.category)),
+  );
   const visible = items.filter((item) => tabFor(item.category) === tab);
   const derived = unreadCount ?? countUnread(items);
   // Loading and error headers read zero: there is nothing on screen to mark.
@@ -92,6 +97,7 @@ export const NotifBody = ({
         onMarkAll={onMarkAll}
         onClose={onClose}
         showClose={showClose}
+        unreadTabs={unreadTabs}
         empty={isEmpty}
         showMarkAll={isEmpty || state === 'error'}
         tab={showTabs ? tab : undefined}

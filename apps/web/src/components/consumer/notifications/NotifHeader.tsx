@@ -36,8 +36,11 @@ export const NotifHeader = ({
   onTab,
   empty = false,
   showMarkAll = false,
+  unreadTabs,
 }: {
   count: number;
+  /** Tabs holding an unread item; the open tab never draws its dot. */
+  unreadTabs?: ReadonlySet<NotificationTab> | undefined;
   /**
    * B+ draws the empty state's readout as "0 NEW" in --signal (not "All caught
    * up.", which the eyebrow below already says).
@@ -257,6 +260,22 @@ export const NotifHeader = ({
               }}
             >
               {NOTIFICATIONS_COPY.segments[key]}
+              {!selected && unreadTabs?.has(key) === true && (
+                // Addendum 2 (decided): a tab other than the open one carries
+                // a 6px accent dot while it holds an unread item. No number.
+                <span
+                  aria-hidden="true"
+                  data-testid={`notif-tab-dot-${key}`}
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'var(--accent)',
+                    flex: 'none',
+                    marginLeft: 6,
+                  }}
+                />
+              )}
             </button>
           );
         })}

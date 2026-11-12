@@ -239,6 +239,29 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull();
   });
 
+  it('dots a tab other than the open one while it holds an unread item, and never the open tab', () => {
+    render(
+      <NotifBody
+        state="ready"
+        items={[
+          notification({ id: 'a', category: 'watch.cancelled', readAt: null }),
+          notification({ id: 'b', category: 'artist.new_show', readAt: null }),
+          notification({
+            id: 'c',
+            category: 'watch.pricedrop',
+            readAt: '2026-07-24T19:00:00-06:00',
+          }),
+        ]}
+        now={NOW}
+      />,
+    );
+    // Opens on Shows: its own rows show their dots, so the tab does not.
+    expect(screen.queryByTestId('notif-tab-dot-shows')).toBeNull();
+    expect(screen.getByTestId('notif-tab-dot-alerts')).toBeInTheDocument();
+    // The Prices item is read: no dot.
+    expect(screen.queryByTestId('notif-tab-dot-prices')).toBeNull();
+  });
+
   it('draws no tabs while loading', () => {
     render(<NotifBody state="loading" now={NOW} />);
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
