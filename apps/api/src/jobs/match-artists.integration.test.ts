@@ -269,6 +269,40 @@ describe('runMatchArtists', () => {
     expect(row?.matchAttempts).toBe(0);
   });
 
+  it('keeps a not-an-artist ruling made while Spotify finds an exact match', async () => {
+    const id = await seedArtist({ canonicalName: 'khruangbin' });
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        await testDb
+          .update(artists)
+          .set({
+            matchStatus: 'not_an_artist',
+            hidden: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(artists.id, id));
+        // One exact, photographed result: the job's verdict would be matched.
+        return [
+          {
+            id: 'sp_khru',
+            name: 'Khruangbin',
+            images: [{ url: 'https://i.scdn.co/image/khru' }],
+            genres: [],
+            spotifyUrl: null,
+          },
+        ];
+      }),
+    });
+
+    expect(summary).toMatchObject({ matched: 0 });
+    const row = await readArtist(id);
+    expect(row?.matchStatus).toBe('not_an_artist');
+    expect(row?.spotifyArtistId).toBeNull();
+    expect(row?.hidden).toBe(true);
+  });
+
   it('writes matched / ambiguous / no_match verdicts and stamps matchCheckedAt', async () => {
     const matchedId = await seedArtist({ canonicalName: 'khruangbin' });
     const ambiguousId = await seedArtist({ canonicalName: 'nirvana' });
