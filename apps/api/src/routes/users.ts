@@ -20,6 +20,7 @@ import type {
   DisplayRole,
   FounderWindowView,
   RoleBadge,
+  SubmissionCounts,
   UserProfileResponse,
   UserSubmissionItem,
   HandleAvailabilityResponse,
@@ -85,6 +86,22 @@ const RESERVED_HANDLES = new Set([
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
+// One read, one definition: every surface that shows a submitted-price count
+// takes it from here (see SubmissionCounts), so none can disagree.
+async function loadSubmissionCounts(userId: string): Promise<SubmissionCounts> {
+  const rows = await db
+    .select({ status: priceSubmissions.status, value: count() })
+    .from(priceSubmissions)
+    .where(eq(priceSubmissions.userId, userId))
+    .groupBy(priceSubmissions.status);
+  return tallySubmissionCounts(
+    rows.map((row) => ({
+      status: submissionDisplayStatus(row.status),
+      count: row.value,
+    })),
+  );
+}
+
 function formatJoined(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
@@ -143,19 +160,7 @@ usersRouter.get('/me', async (ctx) => {
   );
   const { planState } = planContext;
 
-  // One read, one definition: every surface that shows a submitted-price count
-  // takes it from here (see SubmissionCounts), so none can disagree.
-  const submissionStatusRows = await db
-    .select({ status: priceSubmissions.status, value: count() })
-    .from(priceSubmissions)
-    .where(eq(priceSubmissions.userId, auth.userId))
-    .groupBy(priceSubmissions.status);
-  const submissionCounts = tallySubmissionCounts(
-    submissionStatusRows.map((row) => ({
-      status: submissionDisplayStatus(row.status),
-      count: row.value,
-    })),
-  );
+  const submissionCounts = await loadSubmissionCounts(auth.userId);
 
   const [credRow] = await db
     .select({ priceCredScore: userCred.priceCredScore })
@@ -328,10 +333,21 @@ usersRouter.patch(
   },
 );
 
+// GET /v1/users/me/submissions/count — DEPRECATED, kept for one deploy
+// (expand/contract: a cached client may still call it). It used to leave stale
+// rows out, a second definition of the count; it now returns the same total as
+// everywhere else. Counts come from GET /v1/users/me (`submissionCounts`).
+usersRouter.get('/me/submissions/count', async (ctx) => {
+  const auth = getAuth(ctx);
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+
+  const counts = await loadSubmissionCounts(auth.userId);
+  return ctx.json({ success: true, data: { count: counts.total } });
+});
+
 // GET /v1/users/me/submissions — every row, stale and archived included (they
-// read as `closed`, under All only). The old `/me/submissions/count` that left
-// stale rows out was a second, conflicting definition with no caller; counts
-// now come from GET /v1/users/me (`submissionCounts`).
+// read as `closed`, under All only).
 usersRouter.get('/me/submissions', async (ctx) => {
   const auth = getAuth(ctx);
   if (!auth?.userId)

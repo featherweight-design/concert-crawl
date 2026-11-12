@@ -100,6 +100,11 @@ import {
   userBilling,
   userProfiles,
 } from '@concert-crawl/db';
+import { tallySubmissionCounts } from '@concert-crawl/types';
+import type {
+  SubmissionCounts,
+  SubmissionDisplayStatus,
+} from '@concert-crawl/types';
 import { createApp } from '../app.js';
 import {
   clearTables,
@@ -731,13 +736,21 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
     const me = (await meRes.json()) as {
       data: {
         submissionCount: number;
-        submissionCounts: Record<string, number>;
+        submissionCounts: SubmissionCounts;
       };
     };
     const listRes = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
     });
-    const list = (await listRes.json()) as { data: Array<{ status: string }> };
+    const list = (await listRes.json()) as {
+      data: Array<{ status: SubmissionDisplayStatus }>;
+    };
+    const deprecatedRes = await app.request('/v1/users/me/submissions/count', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const deprecated = (await deprecatedRes.json()) as {
+      data: { count: number };
+    };
 
     expect(me.data.submissionCounts).toEqual({
       total: 7,
@@ -747,12 +760,11 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
       closed: 2,
     });
     expect(me.data.submissionCount).toBe(7);
-    // The page lists the same seven rows, and its filters tally the same.
-    expect(list.data).toHaveLength(me.data.submissionCounts['total']);
-    expect(list.data.filter((row) => row.status === 'closed')).toHaveLength(2);
-    expect(list.data.filter((row) => row.status === 'confirmed')).toHaveLength(
-      me.data.submissionCounts['live'] ?? -1,
-    );
+    // The page lists the same seven rows: tallying the list gives the same
+    // breakdown (so a stale row is `closed`, an archived row is `closed`).
+    expect(tallySubmissionCounts(list.data)).toEqual(me.data.submissionCounts);
+    // The deprecated count route agrees too, rather than being a second answer.
+    expect(deprecated.data.count).toBe(7);
   });
 });
 
