@@ -83,6 +83,7 @@ export const EventRow = ({
   // strike, since nothing says the show is off. The genre gives way to the
   // neutral edge so no colour on the row claims a state we do not know.
   const removed = status === 'removed';
+  const chipUnderTitle = removed && narrow;
   // B+ rule 2: the lead genre, the one that dots the genre chip, colors the
   // image ring and the card's left edge. Decoration only; the chip names it.
   const genre = removed
@@ -216,13 +217,23 @@ export const EventRow = ({
           {removed ? (
             // Line 4 carries the explanation in place of the chips: the chip
             // alone says what, and this says why and how sure we are.
-            <p
-              data-testid="row-removed-line"
-              className="text-fg-muted"
-              style={{ fontSize: 12, lineHeight: 1.35, margin: '2px 0 0' }}
-            >
-              {copy.removedLine}
-            </p>
+            <>
+              {/* On a narrow row the wide "No longer listed" chip would take
+                  the price slot and crush the title to ~50px, so it moves
+                  under the title instead. */}
+              {chipUnderTitle && config.showsPrice && (
+                <div style={{ marginTop: 4 }}>
+                  <PriceStack show={show} surface={surface} narrow={narrow} />
+                </div>
+              )}
+              <p
+                data-testid="row-removed-line"
+                className="text-fg-muted"
+                style={{ fontSize: 12, lineHeight: 1.35, margin: '2px 0 0' }}
+              >
+                {copy.removedLine}
+              </p>
+            </>
           ) : (
             <MetaRow
               chips={chips}
@@ -232,7 +243,7 @@ export const EventRow = ({
           )}
         </div>
 
-        {config.showsPrice && (
+        {config.showsPrice && !chipUnderTitle && (
           <PriceStack show={show} surface={surface} narrow={narrow} />
         )}
 
