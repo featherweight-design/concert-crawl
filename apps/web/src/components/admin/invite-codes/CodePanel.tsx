@@ -80,6 +80,7 @@ export const CodePanel = ({
   return (
     <CodeSurface
       fullScreen
+      footerLayout="ruled"
       title={<CodeTitle code={code.code} />}
       label={code.code}
       subtitle={COPY.panel.byline(label, makerName(code))}

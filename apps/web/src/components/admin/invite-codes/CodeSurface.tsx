@@ -28,6 +28,7 @@ export const CodeSurface = ({
   onClose,
   fullScreen = false,
   dismissible = true,
+  footerLayout = 'end',
 }: {
   title: ReactNode;
   /** The accessible name when `title` is a node. */
@@ -38,6 +39,8 @@ export const CodeSurface = ({
   onClose: () => void;
   fullScreen?: boolean;
   dismissible?: boolean;
+  /** The desktop panel's footer layout; see `SidePanel`. */
+  footerLayout?: 'end' | 'ruled';
 }) => {
   const isPhone = useIsPhone();
   const sub = subtitle ? { subtitle } : {};
@@ -62,6 +65,7 @@ export const CodeSurface = ({
       title={title}
       {...sub}
       footer={footer}
+      footerLayout={footerLayout}
       onClose={onClose}
       dismissible={dismissible}
     >

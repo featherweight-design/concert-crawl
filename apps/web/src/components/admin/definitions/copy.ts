@@ -2110,7 +2110,9 @@ export const ADMIN_COPY = {
         d30: '30 days',
         d90: '90 days',
       },
-      stillAsItWas: (code: string) => `${code} is as it was.`,
+      // SaveFailedToast's "what is still saved", e.g. "REDROCKS is still active."
+      stillStatus: (code: string, status: string) =>
+        `${code} is still ${status.toLowerCase()}.`,
     },
     revoke: {
       title: (code: string) => `Revoke ${code}?`,
