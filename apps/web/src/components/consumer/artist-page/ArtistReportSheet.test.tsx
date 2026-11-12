@@ -96,7 +96,9 @@ describe('ArtistReportSheet form', () => {
 
     expect(screen.getByText(copy.sheet.matchLabel)).toBeTruthy();
     expect(screen.getByText(copy.sheet.matchMeta('R&B / Soul'))).toBeTruthy();
-    const link = screen.getByRole('link', { name: copy.sheet.matchLink });
+    const link = screen.getByRole('link', {
+      name: `${copy.sheet.matchLink} ${copy.sheet.newTab}`,
+    });
     expect(link.getAttribute('href')).toBe(match.spotifyUrl);
     expect(link.getAttribute('target')).toBe('_blank');
     expect(link.getAttribute('rel')).toContain('noopener');
@@ -213,7 +215,7 @@ describe('ArtistReportSheet form', () => {
 
   it('shows a rejected note inline on the note field', async () => {
     api.fileArtistReport.mockRejectedValue(
-      new ApiError(422, 'Please keep the note civil.'),
+      new ApiError(422, 'Please keep the note civil.', 'note_rejected'),
     );
     renderSheet();
 
@@ -228,6 +230,17 @@ describe('ArtistReportSheet form', () => {
     expect(
       screen.getByLabelText(copy.sheet.noteLabel).getAttribute('aria-invalid'),
     ).toBe('true');
+  });
+
+  it('shows our own words, not the server message, for any other 422', async () => {
+    api.fileArtistReport.mockRejectedValue(new ApiError(422, 'Invalid input'));
+    renderSheet();
+
+    pickReason('other');
+    send();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe(copy.sheet.noteError);
   });
 });
 

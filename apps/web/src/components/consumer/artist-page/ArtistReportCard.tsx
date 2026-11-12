@@ -28,9 +28,8 @@ export interface ArtistReportCardProps {
 
 /**
  * The wrong-artist card and its sheets. The card is the event page's
- * "Spot something off?" component, not a lookalike. Mounted once per page: the
- * host picks the rail or the foot of the column in JS, so a second copy never
- * reaches the accessibility tree.
+ * "Spot something off?" component, not a lookalike. Mounted once per page, at the
+ * foot of the main column on every viewport.
  *
  * The host keys this on the artist and the loaded report, so a different
  * artist or a refreshed report starts from the new props instead of this
@@ -54,6 +53,7 @@ export const ArtistReportCard = ({
     <>
       <ReportFooterLink
         flush
+        testId="artist-report-card"
         icon={<UserX size={18} strokeWidth={1.8} />}
         title={isReported ? copy.card.reportedTitle : copy.card.title}
         subtitle={
