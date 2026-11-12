@@ -9,6 +9,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { Panel } from '../image-slot';
+import { genreRing } from '../event-row/lib/genre-ring';
 
 const copy = CONSUMER_COPY.search;
 
@@ -148,11 +149,8 @@ export function RingArt({
         display: 'inline-flex',
         flexShrink: 0,
         borderRadius: 10,
-        // The neutral ring (no genre) is a bare hairline; only a genre color glows.
-        boxShadow:
-          ring === NEUTRAL_GENRE_COLOR
-            ? `0 0 0 1.25px ${ring}`
-            : `0 0 0 1.25px ${ring}, 0 0 10px color-mix(in oklch, ${ring} 35%, transparent)`,
+        // The neutral ring (no genre) is a bare hairline; genreRing drops its glow.
+        boxShadow: genreRing(ring),
       }}
     >
       <Panel

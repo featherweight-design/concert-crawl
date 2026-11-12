@@ -24,7 +24,9 @@ export default function MainLayout({
     // `hidden`) keeps the sticky desktop header working; the fixed
     // BottomNav/overlays are positioned against the viewport, so an ancestor
     // overflow:clip never hides them.
-    <div className="flex min-h-screen flex-col overflow-x-clip bg-bg">
+    // `page-ambient` (globals.css) is the B+ page glow: a fixed layer behind
+    // every page in this shell, `--bg` where a theme has no drawn glow.
+    <div className="page-ambient flex min-h-screen flex-col overflow-x-clip">
       {/* Wraps header and bottom nav so their two account triggers share one
           open state — otherwise a mobile tap could stack two menu sheets. */}
       <AccountMenuProvider>

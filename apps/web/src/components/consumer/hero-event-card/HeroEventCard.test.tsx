@@ -212,6 +212,10 @@ describe('HeroEventCard genre color', () => {
     expect(screen.getByTestId('hero-image-ring').style.boxShadow).toContain(
       'var(--genre-rock)',
     );
+    // The spotlight takes the shared row ring: 20px glow at 40%.
+    expect(screen.getByTestId('hero-image-ring').style.boxShadow).toContain(
+      '0 0 20px color-mix(in oklch, var(--genre-rock) 40%, transparent)',
+    );
     expect(screen.getByTestId('hero-event-card').style.background).toContain(
       'var(--genre-rock)',
     );

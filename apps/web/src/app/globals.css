@@ -130,6 +130,50 @@
   }
 }
 
+/* The ambient page background (B+ rule 1: the one soft glow per screen). A
+   theme-tinted radial top-left and a signal radial bottom-right over a
+   vertical gradient, value for value from the boards (`shelf-see-all-m`,
+   `nll-row-browse-d`, every Electric board's root frame). The board frame is
+   the viewport, so the glow is a fixed layer behind the page rather than the
+   shell's own background, which would stretch it down a long scroll.
+
+   Electric only, and the `:root` SSR fallback (also Electric): the HTML
+   boards are all Electric. The 03-themes boards draw a tinted glow on the
+   other eight themes, Light included, but give no values for it, so those
+   keep the flat `--bg` until Design supplies them. Static, so no motion
+   guard. */
+.page-ambient {
+  background-color: var(--bg);
+}
+
+:root:not([data-theme]) .page-ambient,
+:root[data-theme='electric'] .page-ambient {
+  /* Transparent so the fixed layer below (z-index -1, above the body's
+     canvas `--bg`) shows through. */
+  background-color: transparent;
+}
+
+:root:not([data-theme]) .page-ambient::before,
+:root[data-theme='electric'] .page-ambient::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      1100px 650px at 0% 0%,
+      rgba(188, 119, 242, 0.15),
+      transparent 65%
+    ),
+    radial-gradient(
+      900px 650px at 100% 100%,
+      rgba(122, 230, 255, 0.09),
+      transparent 60%
+    ),
+    linear-gradient(180deg, #0e1121, #070a1a);
+}
+
 @keyframes fbPulse {
   0%,
   100% {
