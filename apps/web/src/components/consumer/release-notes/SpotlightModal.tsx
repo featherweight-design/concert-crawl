@@ -79,14 +79,18 @@ export function SpotlightModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="spotlight-modal-title"
+        // B+ rule 7: the blue-to-pink top edge that follows the rounded top
+        // corners and fades down the sides (more-r3-feature_modal). The fill
+        // and the edge are one layered background, so the sheet-edge utility
+        // owns both, and the elevated fill comes in through --sheet-bg.
+        className="sheet-edge"
         style={{
+          ['--sheet-bg' as string]: 'var(--bg-elevated)',
           width: isMobile ? '100%' : 580,
           maxWidth: '100%',
           height: isMobile ? '100%' : 'auto',
           maxHeight: isMobile ? '100%' : '90vh',
-          background: 'var(--bg-elevated)',
           borderRadius: isMobile ? 0 : 20,
-          border: isMobile ? 'none' : '1px solid var(--border-strong)',
           boxShadow: isMobile ? 'none' : '0 32px 80px rgba(0,0,0,0.55)',
           overflow: 'hidden',
           display: 'flex',
@@ -495,14 +499,18 @@ export function SpotlightModal({
               style={{
                 all: 'unset',
                 cursor: 'pointer',
-                background: 'var(--signal)',
+                // The gradient pill with the signal glow, as drawn
+                // (more-r3-feature_modal, notif-tab-failed-m).
+                background:
+                  'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
                 color: 'var(--fg-on-accent)',
                 padding: '12px 20px',
                 borderRadius: 999,
                 fontWeight: 800,
                 fontSize: 14,
                 letterSpacing: '-0.01em',
-                boxShadow: '0 6px 16px var(--overlay-press)',
+                boxShadow:
+                  '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
@@ -532,14 +540,18 @@ export function SpotlightModal({
               style={{
                 all: 'unset',
                 cursor: 'pointer',
-                background: 'var(--signal)',
+                // The gradient pill with the signal glow, as drawn
+                // (more-r3-feature_modal, notif-tab-failed-m).
+                background:
+                  'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
                 color: 'var(--fg-on-accent)',
                 padding: '12px 20px',
                 borderRadius: 999,
                 fontWeight: 800,
                 fontSize: 14,
                 letterSpacing: '-0.01em',
-                boxShadow: '0 6px 16px var(--overlay-press)',
+                boxShadow:
+                  '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
               }}
             >
               {COPY.modal.fallbackCta}

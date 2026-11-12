@@ -75,6 +75,26 @@ describe('SpotlightModal', () => {
     expect(screen.getByText('Some founder note.')).toBeTruthy();
   });
 
+  it('wears the blue-to-pink top edge on the elevated fill (rule 7)', () => {
+    render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('sheet-edge');
+    expect(dialog.style.getPropertyValue('--sheet-bg')).toBe(
+      'var(--bg-elevated)',
+    );
+    // The edge layers own the fill and the border; no flat ones override them.
+    expect(dialog.style.background).toBe('');
+    expect(dialog.style.border).toBe('');
+  });
+
+  it('draws the primary CTA as the signal-to-accent gradient pill with a glow', () => {
+    render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
+    const primary = screen.getByRole('button', { name: /try it/i });
+    expect(primary.style.background).toContain('linear-gradient(135deg');
+    expect(primary.style.background).toContain('var(--accent)');
+    expect(primary.style.boxShadow).toContain('var(--signal)');
+  });
+
   it('returns null when release has no spotlight', () => {
     const releaseNoSpotlight: Release = {
       version: 'v0.4.0-beta',
