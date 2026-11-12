@@ -105,7 +105,12 @@ const UserMenuRows = ({ variant }: { variant: 'desktop' | 'phone' }) => {
         <RowIcon>
           <ExternalLink size={15} aria-hidden />
         </RowIcon>
-        <RowText title={copy.openApp} hint={copy.openAppHint} />
+        <RowText
+          title={copy.openApp}
+          hint={
+            variant === 'desktop' ? copy.openAppHint : copy.openAppHintPhone
+          }
+        />
       </Link>
       <div style={{ ...rowStyle, cursor: 'default' }}>
         <RowIcon>
@@ -171,7 +176,7 @@ export const SidebarUserMenu = ({ user }: { user: AdminShellUser }) => {
             position: 'absolute',
             left: 0,
             bottom: 'calc(100% + 8px)',
-            width: 330,
+            width: 332,
             zIndex: 50,
           }}
         >

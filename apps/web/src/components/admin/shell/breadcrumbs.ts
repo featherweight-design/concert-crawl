@@ -15,6 +15,9 @@ const subLabelFor = (item: NavItem, pathname: string): string => {
   if (pathname === '/admin/invite-codes/posters') {
     return ADMIN_COPY.inviteCodes.poster.tabs.posters;
   }
+  if (pathname.startsWith('/admin/invite-codes')) {
+    return ADMIN_COPY.shell.crumbs.inviteCodes;
+  }
   return ADMIN_COPY.shell.crumbs.details;
 };
 

@@ -39,7 +39,6 @@ describe('admin NAV', () => {
       'prices',
       'people',
       'feature-flags',
-      'invite-codes',
       'crawl-runs',
       'operations',
     ]);
@@ -95,7 +94,8 @@ describe('activeNavKey', () => {
     ['/admin/events/abc/edit', 'from=all-events', 'events'],
     ['/admin/venues/abc', '', 'venues'],
     ['/admin/users/abc', '', 'people'],
-    ['/admin/invite-codes/posters', '', 'invite-codes'],
+    ['/admin/invite-codes/posters', '', 'people'],
+    ['/admin/invite-codes', '', 'people'],
     ['/admin/crawl', '', 'crawl-runs'],
     ['/admin/feedback', '', 'operations'],
     ['/admin/feature-flags', '', 'feature-flags'],
