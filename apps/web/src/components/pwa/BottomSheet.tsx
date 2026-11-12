@@ -27,7 +27,7 @@ export const BottomSheet = ({
   const sheetRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<Element | null>(null);
   const titleId = useId();
-  const drag = useSheetDrag(onClose);
+  const drag = useSheetDrag(onClose, open);
 
   useEffect(() => {
     if (!open) return;

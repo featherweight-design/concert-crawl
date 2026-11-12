@@ -50,8 +50,14 @@ const stubViewport = (phone: boolean) => {
   }));
 };
 
-const Harness = ({ onDismiss }: { onDismiss: () => void }) => {
-  const drag = useSheetDrag(onDismiss);
+const Harness = ({
+  onDismiss,
+  open = true,
+}: {
+  onDismiss: () => void;
+  open?: boolean;
+}) => {
+  const drag = useSheetDrag(onDismiss, open);
   return (
     <div
       data-testid="sheet"
@@ -59,6 +65,7 @@ const Harness = ({ onDismiss }: { onDismiss: () => void }) => {
       onTransitionEnd={drag.onSheetTransitionEnd}
     >
       <div data-testid="zone" {...drag.zoneProps} />
+      <span data-testid="child" />
     </div>
   );
 };
@@ -119,6 +126,43 @@ describe('useSheetDrag', () => {
     expect(screen.getByTestId('sheet').style.transform).toBe('');
   });
 
+  it('ignores a transition that bubbles up from a child while settling', () => {
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(900);
+    render(<Harness onDismiss={vi.fn()} />);
+    const zone = drag(30);
+    fireEvent.pointerUp(zone, { pointerId: 1, clientY: 30 });
+    fireEvent.transitionEnd(screen.getByTestId('child'));
+    // Still settling: the child's own transition is not the sheet's.
+    expect(screen.getByTestId('sheet').style.transform).toBe('translateY(0px)');
+  });
+
+  it('goes straight to rest when released back where it started', () => {
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(900);
+    const onDismiss = vi.fn();
+    render(<Harness onDismiss={onDismiss} />);
+    const zone = drag(40);
+    // The finger comes back to its start: nothing to animate, so no settle
+    // phase that would wait on a transition that never fires.
+    fireEvent.pointerMove(zone, { pointerId: 1, clientY: 0 });
+    fireEvent.pointerUp(zone, { pointerId: 1, clientY: 0 });
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(screen.getByTestId('sheet').style.transform).toBe('');
+  });
+
+  it('clears a drag that was cut off by the sheet closing', () => {
+    const view = render(<Harness onDismiss={vi.fn()} />);
+    drag(90);
+    expect(screen.getByTestId('sheet').style.transform).toBe(
+      'translateY(90px)',
+    );
+    view.rerender(<Harness onDismiss={vi.fn()} open={false} />);
+    expect(screen.getByTestId('sheet').style.transform).toBe('');
+  });
+
   it('leaves a tap alone', () => {
     const onDismiss = vi.fn();
     render(<Harness onDismiss={onDismiss} />);
@@ -145,9 +189,11 @@ describe('useSheetDrag', () => {
     fireEvent.pointerUp(zone, { pointerId: 1, clientY: 200 });
     expect(onDismiss).not.toHaveBeenCalled();
     expect(screen.getByTestId('sheet').style.transform).toBe('');
+    // ...and the zone keeps normal touch scrolling there.
+    expect(screen.getByTestId('zone').style.touchAction).toBe('');
   });
 
-  it('keeps the touch for itself in the grab zone only', () => {
+  it('keeps the touch for itself in the grab zone only, on a phone', () => {
     render(<Harness onDismiss={vi.fn()} />);
     expect(screen.getByTestId('zone').style.touchAction).toBe('none');
     expect(screen.getByTestId('sheet').style.touchAction).toBe('');

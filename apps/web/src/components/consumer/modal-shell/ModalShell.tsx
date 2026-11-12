@@ -42,7 +42,7 @@ export function ModalShell({
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
-  const drag = useSheetDrag(onClose);
+  const drag = useSheetDrag(onClose, open);
 
   useEffect(() => {
     setMounted(true);

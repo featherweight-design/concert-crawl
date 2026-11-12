@@ -192,7 +192,7 @@ export const JumpPicker = ({
   // before the open-focus effect below, so the trap's container focus runs
   // first and the selected day takes focus after it.
   useFocusTrap(dialogRef, open);
-  const drag = useSheetDrag(onClose);
+  const drag = useSheetDrag(onClose, open);
 
   // Escape closes from anywhere, not only from inside the dialog, so the
   // scrim (aria-hidden, a pointer-only close) has a keyboard path too.
