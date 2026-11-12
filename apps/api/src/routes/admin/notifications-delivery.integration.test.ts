@@ -106,15 +106,13 @@ describe('GET /v1/admin/notifications/delivery', () => {
     const SECOND_MS = 1000;
     // Claimed seconds ago, Resend not answered yet: in flight, not failed.
     await logSendAt('failed', 30 * SECOND_MS);
-    // Past the grace period with no Resend id: a real failure.
+    // Past the grace period: a real failure.
     await logSendAt('failed', IN_FLIGHT_SEND_GRACE_MS + 60 * SECOND_MS);
-    // Young, but it carries a Resend id, so it was answered: it counts.
-    await logSendAt('failed', 30 * SECOND_MS, 're_answered');
     // A young sent row is never held back.
     await logSendAt('sent', 30 * SECOND_MS, 're_sent');
 
     const data = deliverySchema.parse(await (await get()).json()).data;
-    expect(data).toMatchObject({ sent: 1, failed: 2, suppressed: 0, other: 0 });
+    expect(data).toMatchObject({ sent: 1, failed: 1, suppressed: 0, other: 0 });
   });
 
   it('counts any status other than sent, failed or suppressed as other', async () => {

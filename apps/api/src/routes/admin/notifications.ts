@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import { and, count, eq, gte, isNotNull, lte, max, ne, or } from 'drizzle-orm';
+import { and, count, eq, gte, lte, max, ne, or } from 'drizzle-orm';
 import { db, emailSendLog } from '@concert-crawl/db';
 import type { AdminEmailDelivery } from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
@@ -37,10 +37,11 @@ const deliveryQuerySchema = z.object({
 });
 
 // The send path claims its email_send_log row as 'failed' before calling
-// Resend and flips it to 'sent' (with the Resend id) once Resend answers. A
-// 'failed' row with no Resend id younger than this is most likely a send
-// still in flight, so the delivery counts leave it out rather than show a
-// failure that is about to turn into a send.
+// Resend and flips it to 'sent' (with the Resend id) in one update once Resend
+// answers, so a 'failed' row never carries a Resend id and an in-flight claim
+// looks exactly like a real failure. Any 'failed' row younger than this is
+// held back from the delivery counts, so a send that failed outright also
+// shows up only after the grace period. That lag is accepted.
 export const IN_FLIGHT_SEND_GRACE_MS = 2 * 60_000;
 
 const KNOWN_DELIVERY_STATUSES = new Set(['sent', 'failed', 'suppressed']);
@@ -52,8 +53,8 @@ export const notificationsAdminRouter = new Hono<AdminVariables>();
 // status inside the window; lastSentAt is the newest 'sent' row at any age.
 // A row's created_at is when the send was claimed (it is written 'failed'
 // first and flipped to 'sent' on success), so it trails the real send by the
-// length of the Resend call, and a claim younger than IN_FLIGHT_SEND_GRACE_MS
-// is not yet counted as failed. Any status beyond the three known ones lands
+// length of the Resend call, and a 'failed' row younger than
+// IN_FLIGHT_SEND_GRACE_MS is not yet counted. Any status beyond the three known ones lands
 // in `other`. Read-only, so it writes no audit row.
 notificationsAdminRouter.get(
   '/delivery',
@@ -71,11 +72,10 @@ notificationsAdminRouter.get(
         .where(
           and(
             gte(emailSendLog.createdAt, since),
-            // Not an in-flight claim: not (failed, no Resend id, and
-            // younger than the grace period).
+            // Not a possible in-flight claim: not (failed and younger
+            // than the grace period).
             or(
               ne(emailSendLog.status, 'failed'),
-              isNotNull(emailSendLog.resendId),
               lte(emailSendLog.createdAt, inFlightSince),
             ),
           ),
