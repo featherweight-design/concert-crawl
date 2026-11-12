@@ -61,7 +61,7 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'changed',
-        text: "Offline looks like the app now: a quiet pill up top, the shows you've already looked at saved on your phone, and a note on My shows that your account needs a signal.",
+        text: "Offline looks like the app now: a quiet pill up top, and the shows you've already looked at saved on your phone.",
       },
       {
         kind: 'added',

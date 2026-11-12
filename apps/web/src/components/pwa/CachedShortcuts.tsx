@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { Panel } from '@/components/consumer/image-slot';
 import { GenreChips } from '@/components/consumer/GenreChips';
-import { formatShowTime } from '@/components/consumer/definitions/lib';
+import {
+  formatDollars,
+  formatShowTime,
+} from '@/components/consumer/definitions/lib';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import type { CachedEvent, CachedVenue } from '@/lib/pwa/cached-content';
 import { OFFLINE_COPY } from './definitions/copy';
@@ -24,9 +27,17 @@ const SECTION_LABEL_CLASS =
 // date. A bare YYYY-MM-DD is anchored at midday so `new Date` doesn't read it
 // as UTC midnight and show the previous day in Mountain time.
 const shortDate = (date: string): string | null => {
-  const parsed = new Date(date.includes('T') ? date : `${date}T12:00:00`);
+  // A timestamp is a real instant, shown in Mountain time. A bare date has no
+  // zone: read it at UTC midday and format it in UTC so no device zone can move
+  // it to a neighbouring day.
+  const bare = !date.includes('T');
+  const parsed = new Date(bare ? `${date}T12:00:00Z` : date);
   if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: bare ? 'UTC' : 'America/Denver',
+  });
 };
 
 /** "8:00 PM · Globe Hall", or "Globe Hall · Aug 14" when no time was cached. */
@@ -37,11 +48,11 @@ export const formatEventLine = (event: CachedEvent): string => {
   return short ? `${event.venue.name} · ${short}` : event.venue.name;
 };
 
-/** The price slot: a whole-dollar floor, or the quiet "tba". */
+/** The price slot: Browse's whole-dollar rounding, or the quiet "tba". */
 const formatPrice = (raw: string | null | undefined): string => {
   const value = raw == null ? Number.NaN : Number.parseFloat(raw);
   if (Number.isNaN(value)) return OFFLINE_COPY.fallback.priceTba;
-  return value === 0 ? OFFLINE_COPY.fallback.free : `$${value.toFixed(0)}`;
+  return value === 0 ? OFFLINE_COPY.fallback.free : formatDollars(value);
 };
 
 // One saved night, drawn the way Browse draws it (B+ `bp-s-offline_m`): the
@@ -105,7 +116,6 @@ export const CachedShortcuts = ({ events, venues }: CachedShortcutsProps) => {
           {OFFLINE_COPY.fallback.shortcutsLabel}
         </h2>
         <span
-          aria-hidden="true"
           className="rounded-md border border-warning px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-warning"
           style={{ fontFamily: 'var(--font-mono)' }}
         >

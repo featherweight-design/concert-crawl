@@ -28,7 +28,9 @@ export function PullToRefresh() {
   const refresh = useCallback(async () => {
     const floor = new Promise((resolve) => setTimeout(resolve, MIN_REFRESH_MS));
     // The server-rendered first page and the client's loaded pages are two
-    // sources of the same list; reload both.
+    // sources of the same list; ask for both. `router.refresh()` returns
+    // nothing to wait on, so only the client reload and the floor hold the
+    // indicator.
     router.refresh();
     await Promise.all([
       queryClient.refetchQueries({ queryKey: ['events'] }),

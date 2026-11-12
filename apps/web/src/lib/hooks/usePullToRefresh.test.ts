@@ -107,4 +107,82 @@ describe('usePullToRefresh', () => {
     });
     expect(scroll?.defaultPrevented).toBe(false);
   });
+
+  it('holds the indicator when a finger lifts during a refresh', async () => {
+    let settle: () => void = () => undefined;
+    const onRefresh = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    const { result } = renderHook(() => usePullToRefresh(onRefresh));
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + PULL_READY_PX * 2 + 4);
+      touch('touchend', 0);
+    });
+    expect(result.current.state).toBe('refreshing');
+    act(() => {
+      touch('touchend', 0);
+    });
+    expect(result.current.state).toBe('refreshing');
+    await act(async () => {
+      settle();
+    });
+    expect(result.current.state).toBe('idle');
+  });
+
+  it('resets, and never reloads, when the OS cancels the gesture', () => {
+    const onRefresh = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => usePullToRefresh(onRefresh));
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + PULL_READY_PX * 2 + 4);
+    });
+    expect(result.current.state).toBe('ready');
+    act(() => {
+      touch('touchcancel', 0);
+    });
+    expect(result.current.state).toBe('idle');
+    expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it('ignores a second finger so pinch-zoom is never blocked', () => {
+    const { result } = renderHook(() =>
+      usePullToRefresh(vi.fn().mockResolvedValue(undefined)),
+    );
+    const pinch = new Event('touchstart', { cancelable: true });
+    Object.defineProperty(pinch, 'touches', {
+      value: [{ clientY: 100 }, { clientY: 140 }],
+    });
+    let move: Event | undefined;
+    act(() => {
+      window.dispatchEvent(pinch);
+      move = touch('touchmove', 300);
+    });
+    expect(move?.defaultPrevented).toBe(false);
+    expect(result.current.state).toBe('idle');
+  });
+
+  it('lets go of a stuck refresh after the backstop', async () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() =>
+        usePullToRefresh(() => new Promise<void>(() => undefined)),
+      );
+      act(() => {
+        touch('touchstart', 100);
+        touch('touchmove', 100 + PULL_READY_PX * 2 + 4);
+        touch('touchend', 0);
+      });
+      expect(result.current.state).toBe('refreshing');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+      expect(result.current.state).toBe('idle');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
