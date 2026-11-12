@@ -1,3 +1,11 @@
+## [1.337.2](https://github.com/featherweight-design/concert-crawl/compare/v1.337.1...v1.337.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **crawler:** bound the fetch log, chunk page inserts, audit after the run row ([5b14cbe](https://github.com/featherweight-design/concert-crawl/commit/5b14cbec1b5a4b034faf734a11966d82c615af6c))
+* **crawler:** keep the audit on a failed run insert, restore browser page logging ([b6d2d0d](https://github.com/featherweight-design/concert-crawl/commit/b6d2d0da52a6c4aa5cb8c1170ea6b1767fb0ff4f))
+
 ## [1.337.1](https://github.com/featherweight-design/concert-crawl/compare/v1.337.0...v1.337.1) (2026-11-12)
 
 
