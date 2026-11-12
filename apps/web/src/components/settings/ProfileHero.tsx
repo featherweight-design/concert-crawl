@@ -196,7 +196,7 @@ export function ProfileHero({
       </div>
 
       <div className="flex flex-col gap-2 px-5 pb-4">
-        <div className="-mt-9">
+        <div className="relative z-10 -mt-9">
           <AvatarRing
             handle={handle}
             avatarColor={avatarColor}
