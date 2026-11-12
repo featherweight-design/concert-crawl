@@ -7,7 +7,18 @@ import {
   seatsTaken,
   userProfiles,
 } from '@concert-crawl/db';
-import { and, desc, eq, inArray, isNull, lte, max } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lte,
+  max,
+  or,
+} from 'drizzle-orm';
 import { zValidator } from '@hono/zod-validator';
 import { createClerkClient } from '@clerk/backend';
 import {
@@ -31,6 +42,10 @@ const clerkClient = createClerkClient({
 
 // The same ceiling the create route enforces.
 const MAX_INVITE_SEATS = 500;
+
+/** An expiry at or before `now` has ended the code. Null means never. */
+const isExpired = (expiresAt: Date | null, now: Date): boolean =>
+  expiresAt != null && expiresAt <= now;
 
 function generateCode(): string {
   // Format: BETA-XXXX-XXXX (uppercase hex, URL-safe)
@@ -127,12 +142,12 @@ inviteCodesAdminRouter.patch(
     if (!existing) {
       return ctx.json({ success: false, error: 'Invite code not found' }, 404);
     }
-    if (existing.revokedAt) {
+    const now = new Date();
+    // Edit is for live codes. An ended code comes back only through
+    // reactivate, so its audit says so.
+    if (existing.revokedAt || isExpired(existing.expiresAt, now)) {
       return ctx.json(
-        {
-          success: false,
-          error: 'Invite code is revoked; reactivate it first',
-        },
+        { success: false, error: 'Invite code has ended; reactivate it first' },
         409,
       );
     }
@@ -141,7 +156,14 @@ inviteCodesAdminRouter.patch(
     if (body.label !== undefined) changes.label = body.label;
     if (body.maxUses !== undefined) changes.maxUses = body.maxUses;
     if (body.expiresAt !== undefined) {
-      changes.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
+      const nextExpiry = body.expiresAt ? new Date(body.expiresAt) : null;
+      if (isExpired(nextExpiry, now)) {
+        return ctx.json(
+          { success: false, error: 'Pick an expiry in the future' },
+          400,
+        );
+      }
+      changes.expiresAt = nextExpiry;
     }
 
     const seatGuard =
@@ -152,15 +174,40 @@ inviteCodesAdminRouter.patch(
       .update(inviteCodes)
       .set(changes)
       .where(
-        and(eq(inviteCodes.id, id), isNull(inviteCodes.revokedAt), seatGuard),
+        and(
+          eq(inviteCodes.id, id),
+          isNull(inviteCodes.revokedAt),
+          or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
+          seatGuard,
+        ),
       )
       .returning();
 
     if (!updated) {
+      // The row changed under us: say why from its current state.
+      const [current] = await db
+        .select()
+        .from(inviteCodes)
+        .where(eq(inviteCodes.id, id));
+      if (!current) {
+        return ctx.json(
+          { success: false, error: 'Invite code not found' },
+          404,
+        );
+      }
+      if (current.revokedAt || isExpired(current.expiresAt, now)) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'Invite code has ended; reactivate it first',
+          },
+          409,
+        );
+      }
       return ctx.json(
         {
           success: false,
-          error: `Seats can't go below the ${seatsTaken(existing)} already used`,
+          error: `Seats can't go below the ${seatsTaken(current)} already used`,
         },
         409,
       );
@@ -200,8 +247,7 @@ inviteCodesAdminRouter.post(
       return ctx.json({ success: false, error: 'Invite code not found' }, 404);
     }
 
-    const expired = existing.expiresAt != null && existing.expiresAt <= now;
-    if (!existing.revokedAt && !expired) {
+    if (!existing.revokedAt && !isExpired(existing.expiresAt, now)) {
       return ctx.json(
         { success: false, error: 'Invite code is not ended' },
         409,
@@ -214,18 +260,39 @@ inviteCodesAdminRouter.post(
         : expiresAt
           ? new Date(expiresAt)
           : null;
-    if (nextExpiry != null && nextExpiry <= now) {
+    if (isExpired(nextExpiry, now)) {
       return ctx.json(
         { success: false, error: 'Pick an expiry in the future' },
         400,
       );
     }
 
+    // Only write over the state this request read, so a revoke or edit that
+    // lands in between isn't silently undone.
     const [updated] = await db
       .update(inviteCodes)
       .set({ revokedAt: null, revokedBy: null, expiresAt: nextExpiry })
-      .where(eq(inviteCodes.id, id))
+      .where(
+        and(
+          eq(inviteCodes.id, id),
+          existing.revokedAt
+            ? eq(inviteCodes.revokedAt, existing.revokedAt)
+            : isNull(inviteCodes.revokedAt),
+          existing.expiresAt
+            ? eq(inviteCodes.expiresAt, existing.expiresAt)
+            : isNull(inviteCodes.expiresAt),
+        ),
+      )
       .returning();
+    if (!updated) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Invite code changed while you were editing; try again',
+        },
+        409,
+      );
+    }
 
     ctx.set('auditAction', 'invite_code.reactivate');
     ctx.set('auditTargetId', id);
@@ -254,7 +321,7 @@ async function rolesFor(userIds: string[]): Promise<Map<string, Role>> {
       limit: userIds.length,
     });
     for (const user of result.data) {
-      const raw = (user.publicMetadata as { role?: unknown }).role;
+      const raw: unknown = user.publicMetadata['role'];
       roles.set(user.id, isRole(raw) ? raw : 'user');
     }
   } catch (err) {
@@ -285,29 +352,38 @@ inviteCodesAdminRouter.get(
       return ctx.json({ success: false, error: 'Invite code not found' }, 404);
     }
 
-    const rows = await db
-      .select({
-        userId: inviteCodeRedemptions.userId,
-        redeemedAt: inviteCodeRedemptions.redeemedAt,
-      })
-      .from(inviteCodeRedemptions)
-      .where(eq(inviteCodeRedemptions.codeId, id))
-      .orderBy(desc(inviteCodeRedemptions.redeemedAt));
+    const byCode = eq(inviteCodeRedemptions.codeId, id);
+    const [rows, [counted], legacyRow] = await Promise.all([
+      db
+        .select({
+          userId: inviteCodeRedemptions.userId,
+          redeemedAt: inviteCodeRedemptions.redeemedAt,
+        })
+        .from(inviteCodeRedemptions)
+        .where(byCode)
+        .orderBy(desc(inviteCodeRedemptions.redeemedAt))
+        .limit(limit),
+      db.select({ total: count() }).from(inviteCodeRedemptions).where(byCode),
+      existing.usedBy
+        ? db
+            .select({ userId: inviteCodeRedemptions.userId })
+            .from(inviteCodeRedemptions)
+            .where(
+              and(byCode, eq(inviteCodeRedemptions.userId, existing.usedBy)),
+            )
+        : Promise.resolve([]),
+    ]);
 
-    const people = rows.map((row) => ({
-      userId: row.userId,
-      redeemedAt: row.redeemedAt,
-    }));
-    if (
-      existing.usedBy &&
-      existing.usedAt &&
-      !people.some((person) => person.userId === existing.usedBy)
-    ) {
-      people.push({ userId: existing.usedBy, redeemedAt: existing.usedAt });
-      people.sort(
-        (left, right) => right.redeemedAt.getTime() - left.redeemedAt.getTime(),
-      );
-    }
+    // The legacy first user, when the redemptions table has no row for them.
+    const legacy =
+      existing.usedBy && existing.usedAt && legacyRow.length === 0
+        ? { userId: existing.usedBy, redeemedAt: existing.usedAt }
+        : null;
+    const people = legacy ? [...rows, legacy] : rows;
+    people.sort(
+      (left, right) => right.redeemedAt.getTime() - left.redeemedAt.getTime(),
+    );
+    const total = (counted?.total ?? 0) + (legacy ? 1 : 0);
 
     const page = people.slice(0, limit);
     const ids = page.map((person) => person.userId);
@@ -333,7 +409,7 @@ inviteCodesAdminRouter.get(
       role: roles.get(person.userId) ?? null,
       redeemedAt: person.redeemedAt.toISOString(),
     }));
-    const body: InviteCodeRedemptionsResponse = { data, total: people.length };
+    const body: InviteCodeRedemptionsResponse = { data, total };
     return ctx.json({ success: true, data: body });
   },
 );
@@ -388,33 +464,37 @@ inviteCodesAdminRouter.post(
 );
 
 // POST /v1/admin/invite-codes/:id/revoke — revoke a code
-inviteCodesAdminRouter.post('/:id/revoke', async (ctx) => {
-  const { id } = ctx.req.param();
-  const { userId } = getAuthUser(ctx);
+inviteCodesAdminRouter.post(
+  '/:id/revoke',
+  zValidator('param', codeIdParamSchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const { userId } = getAuthUser(ctx);
 
-  const [existing] = await db
-    .select()
-    .from(inviteCodes)
-    .where(eq(inviteCodes.id, id));
-  if (!existing) {
-    return ctx.json({ success: false, error: 'Invite code not found' }, 404);
-  }
-  if (existing.revokedAt) {
-    return ctx.json(
-      { success: false, error: 'Invite code already revoked' },
-      400,
-    );
-  }
+    const [existing] = await db
+      .select()
+      .from(inviteCodes)
+      .where(eq(inviteCodes.id, id));
+    if (!existing) {
+      return ctx.json({ success: false, error: 'Invite code not found' }, 404);
+    }
+    if (existing.revokedAt) {
+      return ctx.json(
+        { success: false, error: 'Invite code already revoked' },
+        400,
+      );
+    }
 
-  const [updated] = await db
-    .update(inviteCodes)
-    .set({ revokedAt: new Date(), revokedBy: userId })
-    .where(eq(inviteCodes.id, id))
-    .returning();
+    const [updated] = await db
+      .update(inviteCodes)
+      .set({ revokedAt: new Date(), revokedBy: userId })
+      .where(eq(inviteCodes.id, id))
+      .returning();
 
-  ctx.set('auditAction', 'invite_code.revoke');
-  ctx.set('auditTargetId', id);
-  ctx.set('auditActorId', userId);
+    ctx.set('auditAction', 'invite_code.revoke');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', userId);
 
-  return ctx.json({ success: true, data: updated });
-});
+    return ctx.json({ success: true, data: updated });
+  },
+);
