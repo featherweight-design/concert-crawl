@@ -47,6 +47,8 @@ export interface ReportFooterLinkProps {
   reportedChip?: string;
   /** Drops the page-gutter padding for a host that already has its own. */
   flush?: boolean;
+  /** A `data-testid` for the row's button, so inventories can tap it. */
+  testId?: string;
 }
 
 export const ReportFooterLink = ({
@@ -61,6 +63,7 @@ export const ReportFooterLink = ({
   reported = false,
   reportedChip,
   flush = false,
+  testId,
 }: ReportFooterLinkProps) => {
   const hasStatus = liveStatus !== null;
   const title = titleOverride ?? (hasStatus ? copy.titleHasStatus : copy.title);
@@ -133,6 +136,7 @@ export const ReportFooterLink = ({
       {/* Button row */}
       <button
         onClick={onOpen}
+        {...(testId === undefined ? {} : { 'data-testid': testId })}
         {...(reported ? { 'data-reported': 'true' } : {})}
         {...(signedOut ? { 'aria-label': signedOutName } : {})}
         style={{

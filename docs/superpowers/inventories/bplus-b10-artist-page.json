@@ -22,6 +22,22 @@
           "wait": "[data-testid=\"hero-band\"]"
         }
       ]
+    },
+    {
+      "id": "artist-report",
+      "label": "/artists/[slug]: wrong-artist report sheet",
+      "steps": [
+        {
+          "goto": "/artists/${CC_ARTIST_SLUG}",
+          "wait": "[data-testid=\"hero-band\"]"
+        },
+        {
+          "click": "[data-testid=\"artist-report-card\"]"
+        },
+        {
+          "waitDialog": "^(Not the right artist\\?|You.ve flagged this one\\.)$"
+        }
+      ]
     }
   ]
 }

@@ -27,6 +27,13 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }));
 
+// The page and the report card each mount a picker; only an open one draws,
+// carrying its entry so a test can tell which hand-off opened it.
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
+  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
+    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
+}));
+
 const { plan } = vi.hoisted(
   (): { plan: { current: PlanState | undefined } } => ({
     plan: { current: undefined },
@@ -442,7 +449,7 @@ describe('ArtistPageContent', () => {
     });
   });
 
-  // Wrong-artist report card. One card, placed by the viewport.
+  // Wrong-artist report card. One card, at the foot of the main column.
   describe('the wrong-artist card', () => {
     const copy = ARTIST_COPY.report;
     const signedIn: ArtistDetailResponse = { ...withShows, following: false };
@@ -489,23 +496,16 @@ describe('ArtistPageContent', () => {
       expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
     });
 
-    it('sits in the desktop rail under Follow', () => {
+    it('ends the main column on desktop too, not the rail', () => {
       setViewport(true);
       const { container } = render(<ArtistPageContent data={signedIn} />);
 
       expect(cards(container)).toHaveLength(1);
-      const rail = container.querySelector('.ap-rail');
-      expect(rail?.textContent).toContain(copy.card.title);
-      const follow = rail?.querySelector('button[aria-label]');
-      const card = cards(container)[0];
+      const column = container.querySelector('.ap-grid > div:last-child');
+      expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
       expect(
-        follow !== null &&
-          follow !== undefined &&
-          card !== undefined &&
-          (follow.compareDocumentPosition(card) &
-            Node.DOCUMENT_POSITION_FOLLOWING) !==
-            0,
-      ).toBe(true);
+        container.querySelector('.ap-rail')?.textContent ?? '',
+      ).not.toContain(copy.card.title);
     });
 
     it('names the artist in the card body', () => {
@@ -545,6 +545,21 @@ describe('ArtistPageContent', () => {
       fireEvent.click(getByText(copy.card.title));
 
       expect(document.body.textContent).toContain(copy.sheet.title);
+    });
+
+    it('opens the tier picker on its own entry for a signed-out tap', () => {
+      const { getByTestId, queryByTestId } = render(
+        <ArtistPageContent data={withShows} />,
+      );
+      expect(queryByTestId('tier-picker')).toBeNull();
+
+      fireEvent.click(getByTestId('artist-report-card'));
+
+      expect(getByTestId('tier-picker').getAttribute('data-entry')).toBe(
+        'logged-out-artist-report',
+      );
+      // The picker stands in for the sheet; no report form opens.
+      expect(document.body.textContent).not.toContain(copy.sheet.title);
     });
 
     it('still renders for a signed-out visitor, announcing the gate', () => {

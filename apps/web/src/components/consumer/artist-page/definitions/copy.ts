@@ -143,7 +143,9 @@ export const ARTIST_COPY = {
       matchMeta: (genres: string) => `ON SPOTIFY · ${genres}`,
       // The match was never genre-hydrated, so the meta line drops the genres.
       matchMetaNoGenres: 'ON SPOTIFY',
-      matchLink: 'Open in Spotify ↗',
+      matchLink: 'Open in Spotify',
+      matchLinkArrow: '↗',
+      newTab: '(opens in a new tab)',
       reasonsLabel: 'WHAT’S WRONG?',
       reasons: {
         different_artist: {
@@ -168,6 +170,8 @@ export const ARTIST_COPY = {
       linkHint:
         'In Spotify, open their profile, then Share and Copy link. It’s the fastest way for us to fix it.',
       linkError: 'That isn’t a Spotify artist link.',
+      // A 422 that is not moderation's: the server's own wording is not for fans.
+      noteError: 'We couldn’t send that note. Try changing it.',
       noteLabel: 'Anything else? (optional)',
       notePlaceholder: 'Where they’re from, what they play…',
       counter: (count: number, max: number) => `${count} / ${max}`,

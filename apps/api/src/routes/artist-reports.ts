@@ -75,8 +75,14 @@ artistReportsRouter.post(
     if (note) {
       const moderated = moderateNote(note);
       if (!moderated.ok) {
+        // `note_rejected` tells the client this message is moderation's,
+        // written for the fan, unlike the other 422s.
         return ctx.json(
-          { success: false, error: moderated.reason ?? 'Note rejected.' },
+          {
+            success: false,
+            error: moderated.reason ?? 'Note rejected.',
+            code: 'note_rejected',
+          },
           422,
         );
       }

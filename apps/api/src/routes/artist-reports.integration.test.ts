@@ -148,6 +148,7 @@ describe('artist reports — integration', () => {
         note: 'mail me at someone@example.com',
       });
       expect(email.status).toBe(422);
+      expect(await email.json()).toMatchObject({ code: 'note_rejected' });
       const long = await post(slug, { reason: 'other', note: 'x'.repeat(281) });
       expect(long.status).toBe(422);
       expect(await rows(artistId)).toHaveLength(0);

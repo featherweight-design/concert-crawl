@@ -136,8 +136,8 @@ export const ArtistPageContent = ({
     </>
   );
 
-  // Mounted once and placed by the same JS decision as the follow control:
-  // desktop puts it in the rail under Follow, mobile ends the page with it.
+  // Ends the main column on both viewports: the board puts it under Listen,
+  // and with no right column that is the column's foot, not the 208px rail.
   // Keyed on the artist and the loaded report so the card's own state resets
   // when either changes rather than going stale.
   const reportCard = (
@@ -207,7 +207,6 @@ export const ArtistPageContent = ({
                 <FollowBlock {...followProps} />
               </div>
             ) : null}
-            {isDesktop ? reportCard : null}
           </div>
           <div style={{ minWidth: 0 }}>
             {isDesktop ? titleBlock : null}
@@ -246,7 +245,7 @@ export const ArtistPageContent = ({
 
             {hasShows ? null : <div className="ap-block-player">{player}</div>}
 
-            {isDesktop ? null : reportCard}
+            {reportCard}
           </div>
         </div>
       </div>

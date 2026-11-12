@@ -32,9 +32,10 @@ export interface ReportResultSheetProps {
 }
 
 /**
- * The result sheet the price and status flows share: a rail with a coloured
- * dot and a code, a big title, a body, then stacked buttons. The wrong-artist
- * report uses it for sent, already reported and didn't go through.
+ * A report result sheet: a rail with a coloured dot and a code, a big title,
+ * a body, then stacked buttons. Only the wrong-artist report uses it for now
+ * (sent, already reported, didn't go through); moving EvidenceForm's
+ * ReportFiled onto it is a follow-up.
  */
 export const ReportResultSheet = ({
   open,
@@ -84,19 +85,40 @@ export const ReportResultSheet = ({
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
+            // A 44px hit area around the drawn 30px square; the negative
+            // margin keeps the rail's height and right edge as designed.
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
-              border: '1px solid var(--border-strong)',
+              width: 44,
+              height: 44,
+              margin: -7,
+              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: 'none',
               background: 'none',
-              color: 'var(--fg-muted)',
               cursor: 'pointer',
-              fontSize: 14,
-              lineHeight: 1,
             }}
           >
-            <span aria-hidden="true">×</span>
+            <span
+              aria-hidden="true"
+              style={{
+                width: 30,
+                height: 30,
+                boxSizing: 'border-box',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 8,
+                border: '1px solid var(--border-strong)',
+                color: 'var(--fg-muted)',
+                fontSize: 14,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </span>
           </button>
         </div>
         <h2
