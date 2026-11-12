@@ -24,12 +24,15 @@ interface ReleaseEntryProps {
   release: Release;
   isLatest?: boolean;
   onOpenSpotlight?: (release: Release) => void;
+  /** The spotlight strip is left off (its feature is off); the notes stay. */
+  spotlightHidden?: boolean;
 }
 
 export function ReleaseEntry({
   release,
   isLatest = false,
   onOpenSpotlight,
+  spotlightHidden = false,
 }: ReleaseEntryProps) {
   return (
     <div style={{ position: 'relative', paddingLeft: 36, paddingBottom: 36 }}>
@@ -101,7 +104,7 @@ export function ReleaseEntry({
       </div>
 
       {/* spotlight strip */}
-      {release.spotlight && (
+      {release.spotlight && !spotlightHidden && (
         <SpotlightStrip
           release={release}
           onOpen={() => onOpenSpotlight?.(release)}
