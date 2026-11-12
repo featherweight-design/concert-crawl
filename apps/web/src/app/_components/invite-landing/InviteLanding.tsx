@@ -91,7 +91,7 @@ export function InviteLanding({
         // Below 360 the lockup and the beta pill share one row, as the 320
         // board draws it (addendum 2, 15-320px/invite-320): 16px sides and a
         // 16px wordmark.
-        className="px-[22px] pt-5 max-[359px]:px-4 md:px-12 md:pt-7"
+        className="px-[22px] pt-5 max-[360px]:px-4 md:px-12 md:pt-7"
         style={{
           position: 'relative',
           display: 'flex',
@@ -102,7 +102,7 @@ export function InviteLanding({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CCMark size={26} />
-          <CCWordmark size={20} className="max-[359px]:!text-[16px]" />
+          <CCWordmark size={20} className="max-[360px]:!text-[16px]" />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <BetaPill />

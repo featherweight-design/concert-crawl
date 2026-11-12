@@ -35,7 +35,7 @@ export function InviteCodeField() {
       onSubmit={submit}
       // Below 360 the padding tightens so Redeem keeps its width beside the
       // field (addendum 2, 15-320px/invite-320).
-      className="p-1.5 pl-4 max-[359px]:pl-[14px]"
+      className="p-1.5 pl-4 max-[360px]:pl-[14px]"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -60,7 +60,7 @@ export function InviteCodeField() {
         spellCheck={false}
         // The placeholder stays on one line below 360 at 12px and 0.04em, as
         // the 320 board draws it. Typed text keeps 16px (no iOS zoom).
-        className="focus-visible:outline-none max-[359px]:placeholder:text-[12px] max-[359px]:placeholder:tracking-[0.04em]"
+        className="focus-visible:outline-none max-[360px]:placeholder:text-[12px] max-[360px]:placeholder:tracking-[0.04em]"
         style={{
           flex: 1,
           minWidth: 0,
@@ -76,7 +76,7 @@ export function InviteCodeField() {
       />
       <button
         type="submit"
-        className={`${FOCUS_RING} px-[18px] max-[359px]:px-4`}
+        className={`${FOCUS_RING} px-[18px] py-0 max-[360px]:px-4`}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
