@@ -228,6 +228,13 @@ describe.each([
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('lets a long unbroken handle wrap instead of running past the sheet', () => {
+    render(<Harness onClose={vi.fn()} />);
+    openSheet();
+    const handle = screen.getByText('@hugh');
+    expect(handle.style.overflowWrap).toBe('anywhere');
+  });
+
   it('never calls the delete request until DELETE is typed', () => {
     render(<Harness onClose={vi.fn()} />);
     openSheet();
