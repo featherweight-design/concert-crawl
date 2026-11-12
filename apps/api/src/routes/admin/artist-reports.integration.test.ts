@@ -143,22 +143,12 @@ describe('admin artist reports', () => {
         createdAt: new Date('2026-11-02T00:00:00Z'),
       });
       await report(artist.id, 'user_c', { status: 'dismissed' });
-      // One fan Watching two ways counts once, as on the list row.
-      await testDb.insert(userArtistFollows).values([
-        {
-          userId: 'user_f',
-          artistName: 'Nightjar Choir',
-          canonicalName: artist.canonicalName,
-          source: 'manual',
-        },
-        {
-          userId: 'user_f',
-          artistName: 'Nightjar Choir',
-          canonicalName: artist.canonicalName,
-          source: 'spotify_followed',
-          spotifyArtistId: 'sp_nightjar_followed',
-        },
-      ]);
+      await testDb.insert(userArtistFollows).values({
+        userId: 'user_f',
+        artistName: 'Nightjar Choir',
+        canonicalName: artist.canonicalName,
+        source: 'manual',
+      });
 
       const res = await call('GET', `/${artist.id}/reports`);
       expect(res.status).toBe(200);

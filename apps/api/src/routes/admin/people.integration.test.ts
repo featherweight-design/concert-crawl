@@ -74,7 +74,12 @@ vi.mock('@clerk/backend', () => ({
 }));
 
 import { eq } from 'drizzle-orm';
-import { auditLog } from '@concert-crawl/db';
+import {
+  auditLog,
+  inviteCodeRedemptions,
+  inviteCodes,
+  userProfiles,
+} from '@concert-crawl/db';
 import { createApp } from '../../app.js';
 import {
   clearTables,
@@ -128,6 +133,7 @@ interface ListBody {
       role: string;
       lastActiveAt: string | null;
       watching: number;
+      isTestAccount: boolean;
     }>;
     total: number;
     counts: Record<string, number>;
@@ -239,6 +245,84 @@ describe('admin people', () => {
     }));
     const res = await post('/user_a/sign-out-everywhere');
     expect(await res.json()).toEqual({ success: true, data: { revoked: 25 } });
+  });
+
+  it('lists only the people who redeemed a given invite code', async () => {
+    setAuth('admin');
+    clerk.users = [person('user_a'), person('user_b'), person('user_c')];
+    const [code] = await testDb
+      .insert(inviteCodes)
+      .values({ code: 'HIDIVE', createdBy: 'user_admin', maxUses: 5 })
+      .returning({ id: inviteCodes.id });
+    const [other] = await testDb
+      .insert(inviteCodes)
+      .values({ code: 'OTHER', createdBy: 'user_admin' })
+      .returning({ id: inviteCodes.id });
+    await testDb.insert(inviteCodeRedemptions).values([
+      { codeId: code?.id ?? '', userId: 'user_a' },
+      { codeId: code?.id ?? '', userId: 'user_c' },
+      { codeId: other?.id ?? '', userId: 'user_b' },
+    ]);
+
+    const res: ListBody = await (await get(`?code=${code?.id}`)).json();
+    expect(res.data.people.map((row) => row.id).sort()).toEqual([
+      'user_a',
+      'user_c',
+    ]);
+    expect(res.data.total).toBe(2);
+    const none: ListBody = await (
+      await get('?code=00000000-0000-0000-0000-000000000000')
+    ).json();
+    expect(none.data.people).toEqual([]);
+    expect((await get('?code=not-a-uuid')).status).toBe(400);
+  });
+
+  it('tags a person as a test account (creating the profile), audited, with the previous value for Undo', async () => {
+    setAuth('admin');
+    clerk.users = [person('user_a')];
+
+    const on = await post('/user_a/test-account', { isTest: true });
+    expect(on.status).toBe(200);
+    expect(await on.json()).toEqual({
+      success: true,
+      data: { isTest: true, previousIsTest: false },
+    });
+    const [profile] = await testDb
+      .select({ isTestAccount: userProfiles.isTestAccount })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, 'user_a'));
+    expect(profile?.isTestAccount).toBe(true);
+
+    const listed: ListBody = await (await get('')).json();
+    expect(listed.data.people[0]?.isTestAccount).toBe(true);
+
+    const off = await post('/user_a/test-account', { isTest: false });
+    expect(await off.json()).toEqual({
+      success: true,
+      data: { isTest: false, previousIsTest: true },
+    });
+    const audits = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'user.test_account.set'));
+    expect(audits.map((row) => row.metadata)).toEqual(
+      expect.arrayContaining([
+        { isTest: true, previousIsTest: false },
+        { isTest: false, previousIsTest: true },
+      ]),
+    );
+    expect(audits[0]?.targetId).toBe('user_a');
+  });
+
+  it('404s a test-account tag for an unknown person and refuses a bad body', async () => {
+    setAuth('admin');
+    expect(
+      (await post('/user_missing/test-account', { isTest: true })).status,
+    ).toBe(404);
+    clerk.users = [person('user_a')];
+    expect((await post('/user_a/test-account', { isTest: 'yes' })).status).toBe(
+      400,
+    );
   });
 
   it('pages through the scan', async () => {
