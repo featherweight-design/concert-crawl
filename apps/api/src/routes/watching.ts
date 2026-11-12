@@ -57,6 +57,7 @@ watchingRouter.get('/', async (ctx) => {
       // lifecycle (eventStatus): a cancelled show is not sold out.
       isSoldOut: isSoldOutSql(),
       imageUrl: events.imageUrl,
+      genre: events.genre,
       updatedAt: events.updatedAt,
       artistPhotoUrl: artists.photoUrl,
       venueName: venues.name,
@@ -126,6 +127,7 @@ watchingRouter.get('/', async (ctx) => {
     ),
     imageUrl: row.imageUrl ?? null,
     artistPhotoUrl: row.artistPhotoUrl ?? null,
+    genres: row.genre ?? [],
     attendingAt: row.attendingAt?.toISOString() ?? null,
   }));
 

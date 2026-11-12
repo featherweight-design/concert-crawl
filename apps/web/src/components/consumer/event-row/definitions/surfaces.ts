@@ -104,11 +104,12 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // decided on, so a tour name buys nothing and the room goes to the units the
   // row alone can state.
   //
-  // B+ dropped the Stale price chip everywhere, so provenance is the only chip
-  // left here. Staleness itself still drives the price surfaces that word it.
+  // B+ dropped the Stale price chip everywhere. Staleness itself still drives
+  // the price surfaces that word it. Provenance leads, as `bp-watching` draws
+  // it; genre follows (the more-st-rows board), within the two-chip budget.
   watching: {
     carries: [],
-    chipPriority: ['provenance'],
+    chipPriority: ['provenance', 'genre'],
     hasActionGutter: true,
     carded: true,
     showsDelta: true,

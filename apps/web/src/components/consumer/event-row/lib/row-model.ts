@@ -94,8 +94,8 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
     id: show.eventId,
     headliner: show.artist,
     fallbackTitle: show.artist,
-    // The watching payload carries no billing, tour or genre, so the row's
-    // support line and genre chip simply never appear on this surface.
+    // The watching payload carries no billing or tour, so the row's support
+    // line never appears on this surface. It does carry genres (B+ rule 2).
     supports: [],
     tourName: null,
     imageUrl: show.imageUrl,
@@ -129,7 +129,7 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
       show.savedPrice !== null
         ? { at: show.savedAt, price: Math.round(show.savedPrice) }
         : null,
-    genres: [],
+    genres: show.genres ?? [],
     isFollowed: false,
     crewGoing: null,
     // Every row on this list is watched by definition, so the tick would be on

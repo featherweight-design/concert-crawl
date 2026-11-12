@@ -140,6 +140,28 @@ describe('GET /v1/watching', () => {
     }
   });
 
+  // B+ rule 2: the row needs the genres to draw its genre edge and chip.
+  it("serializes the event's genres, and an empty list when it has none", async () => {
+    setAuth('user_genres');
+    const venue = await seedVenue({ slug: 'watching-genres' });
+    const genred = await seedEvent(venue.id, {
+      artist: 'Genred Act',
+      date: '2099-09-01',
+      genre: ['jazz', 'soul'],
+    });
+    const bare = await seedEvent(venue.id, {
+      artist: 'Bare Act',
+      date: '2099-09-02',
+      genre: null,
+    });
+    await seedUserEvent('user_genres', genred.id, { status: 'watching' });
+    await seedUserEvent('user_genres', bare.id, { status: 'watching' });
+
+    const res = await app.request('/v1/watching');
+    const body = (await res.json()) as { data: { genres: string[] }[] };
+    expect(body.data.map((row) => row.genres)).toEqual([['jazz', 'soul'], []]);
+  });
+
   it('returns watched upcoming shows after watching an event', async () => {
     setAuth('user_abc');
     const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' });

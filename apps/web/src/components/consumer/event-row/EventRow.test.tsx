@@ -429,11 +429,10 @@ describe('EventRow — the footer slot', () => {
  * height would come back as zero — an assertion that would pass whether or not
  * the reservation existed at all.
  *
- * Watching's only chip is `provenance` (B+ dropped the Stale chip), so its
- * ladder runs from no chips to one. The full two-chip budget is exercised on
- * Browse, which still has two chip kinds (`following` and `genre`). A Browse
- * row with no genre is unreachable in production, but it is the honest floor
- * for this ladder.
+ * Watching's chips are `provenance` then `genre` (B+ dropped the Stale chip),
+ * so its ladder runs from no chips to the full two-chip budget, as Browse's
+ * does with `following` and `genre`. A Browse row with no genre is unreachable
+ * in production, but it is the honest floor for this ladder.
  */
 describe('EventRow — Rule 3, the row reserves its own height', () => {
   const FRESH = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -486,6 +485,19 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     // No price at all, so the price slot reads "tba" and provenance has
     // nothing to report.
     makeShow({ price: null }),
+    // Genre alone: one chip.
+    makeShow({ price: null, genres: ['jazz'] }),
+    // Provenance and genre: the full two-chip budget.
+    makeShow({
+      genres: ['jazz'],
+      price: {
+        amount: 68,
+        isFloor: true,
+        source: 'boxoffice',
+        observedAt: FRESH,
+        isPending: false,
+      },
+    }),
   ];
 
   const browseLadder = [
@@ -497,10 +509,16 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
   // Asserted on the chip builder rather than on the rendered line, which has no
   // widths to fit against under jsdom. Without this the height claims below
   // would hold just as well over identical rows.
-  it('runs the Watching ladder from no chips to its one chip', () => {
+  it('runs the Watching ladder from no chips to the full two-chip budget', () => {
     expect(
       watchingLadder.map((show) => rowChips(show, 'watching').length),
-    ).toEqual([0, 1, 1, 0]);
+    ).toEqual([0, 1, 1, 0, 1, 2]);
+    // Provenance leads, as bp-watching draws it; genre follows.
+    const full = watchingLadder[watchingLadder.length - 1] ?? makeShow();
+    expect(rowChips(full, 'watching').map((chip) => chip.key)).toEqual([
+      'provenance',
+      'genre-jazz',
+    ]);
   });
 
   it('runs the Browse ladder from no chips to the full two-chip budget', () => {
@@ -509,7 +527,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     );
   });
 
-  it('holds one height across a Watching list with and without its chip', () => {
+  it('holds one height across a Watching list from no chips to the full budget', () => {
     expect(minHeights('watching', watchingLadder).size).toBe(1);
   });
 

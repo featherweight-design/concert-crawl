@@ -1267,6 +1267,12 @@ export interface WatchingShow {
   // resolves to the same picture Browse gives it. Null when the event has no
   // canonical headliner, or that headliner has no portrait yet.
   artistPhotoUrl: string | null;
+  /**
+   * The event's genres, so a Watching row carries the genre edge, ring and
+   * chip Browse gives the same show (B+ rule 2). Optional because an
+   * optimistic row has none to report until the server's row replaces it.
+   */
+  genres?: string[];
   // ISO when the user said "I'm going!", independent of watching (#70). The
   // 7-day nudge reads it to decide whether it has already been answered.
   attendingAt: string | null;

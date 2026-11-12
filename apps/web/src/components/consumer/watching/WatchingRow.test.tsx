@@ -240,3 +240,22 @@ describe('WatchingRow staleness', () => {
     expect(meta).not.toContain('Stale');
   });
 });
+
+// B+ rule 2: a watched show carries the same genre edge and chip Browse gives
+// it. The payload used to drop genres, so neither could ever render here.
+describe('WatchingRow genre', () => {
+  it('edges the card in the lead genre and carries its chip', () => {
+    const { container, getByTestId } = render(
+      <WatchingRow
+        show={{ ...baseShow, genres: ['jazz'] }}
+        onRemove={() => {}}
+      />,
+    );
+    const card = container.firstElementChild;
+    if (!(card instanceof HTMLElement)) throw new Error('no card');
+    expect(card.style.borderLeftColor).toBe('var(--genre-jazz)');
+    expect(getByTestId('row-meta').textContent?.toLowerCase()).toContain(
+      'jazz',
+    );
+  });
+});
