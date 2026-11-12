@@ -96,6 +96,65 @@ describe('GET /v1/history/past-shows', () => {
     expect(data.nextCursor).toBeNull();
   });
 
+  // The crawler can keep several rows for one night; listing each would let a
+  // reader stamp the same night twice, and `total` would count rows.
+  describe('one row per night', () => {
+    const seedNight = async () => {
+      const venue = await seedVenue();
+      const timed = await seedEvent(venue.id, {
+        artist: 'Beck',
+        date: '2026-10-01',
+        showTime: '19:00:00',
+        title: 'Beck at Red Rocks',
+      });
+      const untimed = await seedEvent(venue.id, {
+        artist: 'Beck',
+        date: '2026-10-01',
+        showTime: null,
+        title: 'Beck (ticketing listing)',
+      });
+      return { venue, timed, untimed };
+    };
+
+    it('lists a night once, and counts nights in `total`', async () => {
+      const { timed, untimed } = await seedNight();
+      const data = await getList();
+      expect(data.rows).toHaveLength(1);
+      expect(data.total).toBe(1);
+      // The lowest id stays when the caller attended neither.
+      const lowest = [timed.id, untimed.id].sort()[0];
+      expect(data.rows[0]?.eventId).toBe(lowest);
+    });
+
+    it('keeps the duplicate the caller stamped', async () => {
+      const { timed, untimed } = await seedNight();
+      const highest = [timed.id, untimed.id].sort()[1] ?? timed.id;
+      await seedUserEvent(USER_ID, highest, {
+        status: null,
+        attendingAt: new Date('2026-10-02T00:00:00Z'),
+      });
+      const data = await getList();
+      expect(data.rows).toHaveLength(1);
+      expect(data.rows[0]?.eventId).toBe(highest);
+      expect(data.rows[0]?.attendingAt).not.toBeNull();
+    });
+
+    it('keeps an early and a late show on one date as two nights', async () => {
+      const venue = await seedVenue();
+      await seedEvent(venue.id, {
+        artist: 'Beck',
+        date: '2026-10-01',
+        showTime: '16:00:00',
+      });
+      await seedEvent(venue.id, {
+        artist: 'Beck',
+        date: '2026-10-01',
+        showTime: '20:00:00',
+      });
+      expect((await getList()).rows).toHaveLength(2);
+    });
+  });
+
   it('fills attendingAt only for the caller', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: '2026-05-01' });
