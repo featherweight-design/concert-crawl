@@ -67,6 +67,12 @@ beforeEach(() => {
   );
 });
 
+/** Lets pending promise work (a token await, a fetch) run before asserting. */
+const settle = () =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
 /** A held response, released by the returned function. */
 const held = (body: unknown) => {
   let release = () => undefined as void;
@@ -176,7 +182,11 @@ describe('ArtistSearchPanel requests and states', () => {
     const first = held({ success: true, data: CANDIDATES });
     respond = () => first.response;
     renderPanel(false);
+    // The opening load awaits the token before it fetches, so wait for it.
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1));
     submit('Cashmere Cat');
+    // A submit that slipped through would fetch only after the token await.
+    await settle();
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
     first.release();
     expect(await screen.findByText('2 results')).toBeInTheDocument();
@@ -189,6 +199,7 @@ describe('ArtistSearchPanel requests and states', () => {
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
     await screen.findByText('2 results');
     submit('Cashmere Cat');
+    await settle();
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
   });
 
