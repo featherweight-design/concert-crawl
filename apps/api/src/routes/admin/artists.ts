@@ -236,8 +236,8 @@ artistsAdminRouter.get(
 
     const rows = await db
       // Named columns rather than `select()`: `spotifyCandidates` is the widest
-      // thing on the row and the table never renders it — the picker fetches
-      // candidates from its own endpoint when an admin opens one.
+      // thing on the row, so only To check (which draws candidates inline)
+      // reads it. Elsewhere the picker fetches them from its own endpoint.
       .select({
         id: artists.id,
         name: artists.name,
