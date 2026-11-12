@@ -317,7 +317,14 @@ export function AccountMenuProvider({
   }, [signOut]);
 
   // Derive user display values
-  const email = user?.emailAddresses[0]?.emailAddress ?? '';
+  // Addendum 2 item 25: @handle, else the display name. The email only stands
+  // in when the account has neither, so the row is never blank.
+  const identityLabel = avatarHandle
+    ? `@${avatarHandle}`
+    : (user?.fullName ??
+      user?.firstName ??
+      user?.emailAddresses[0]?.emailAddress ??
+      '');
 
   // CustomJwtSessionClaims is augmented in apps/web/src/types/clerk.d.ts — no cast needed
   const isAdmin = sessionClaims?.metadata?.role === 'admin';
@@ -327,7 +334,7 @@ export function AccountMenuProvider({
   const buildLabel = buildParts[0] ?? APP_VERSION;
 
   const bodyProps: MenuBodyProps = {
-    email,
+    identityLabel,
     isAdmin,
     buildLabel,
     submissionCount,
@@ -496,7 +503,7 @@ export function UserMenu() {
 // ── Shared props ──────────────────────────────────────────────────────────
 
 interface MenuBodyProps {
-  email: string;
+  identityLabel: string;
   isAdmin: boolean;
   buildLabel: string;
   onSettings: () => void;
@@ -684,7 +691,7 @@ function ThemeMenuRow() {
 // ── Menu body (shared between popover and sheet) ──────────────────────────
 
 function MenuBody({
-  email,
+  identityLabel,
   isAdmin,
   buildLabel,
   onSettings,
@@ -748,18 +755,6 @@ function MenuBody({
         >
           <span
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              fontWeight: 700,
-              color: 'var(--accent)',
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {CONSUMER_COPY.userMenu.identity.badge}
-          </span>
-          <span
-            style={{
               fontFamily: 'var(--font-ui)',
               fontSize: 14,
               fontWeight: 700,
@@ -770,7 +765,7 @@ function MenuBody({
               whiteSpace: 'nowrap',
             }}
           >
-            {email}
+            {identityLabel}
           </span>
         </div>
         <span

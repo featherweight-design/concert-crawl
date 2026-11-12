@@ -289,7 +289,7 @@ export function BottomNav() {
             )}
             {tab.icon}
             <span
-              className="whitespace-nowrap text-[10px] tracking-[0.03em]"
+              className="whitespace-nowrap text-[9px] tracking-[0.04em]"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontWeight: isActive ? 700 : 500,
