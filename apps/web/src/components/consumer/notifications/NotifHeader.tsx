@@ -264,8 +264,10 @@ export const NotifHeader = ({
                 // Addendum 2 (decided): a tab other than the open one carries
                 // a 6px accent dot while it holds an unread item. No number.
                 <>
+                  {/* The space sits outside the sr-only span: a name
+                      computed from the span alone drops its edge space. */}{' '}
                   <span className="sr-only">
-                    {` ${NOTIFICATIONS_COPY.tabUnread}`}
+                    {NOTIFICATIONS_COPY.tabUnread}
                   </span>
                   <span
                     aria-hidden="true"
