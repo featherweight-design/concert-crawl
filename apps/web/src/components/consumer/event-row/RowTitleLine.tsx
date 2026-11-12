@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { EVENT_ROW_COPY } from './definitions/copy';
 import { tourClauseFits } from './lib/tour-clause';
 
@@ -72,6 +72,12 @@ interface RowTitleLineProps {
    * status chip carries the state for a screen reader; the strike is visual.
    */
   struck?: boolean;
+  /**
+   * A status chip set inline after the title (sold out, B+ rows board). It
+   * takes the room a tour clause would, so the clause is dropped while it is
+   * there rather than measured against a line it no longer has.
+   */
+  trailing?: ReactNode;
 }
 
 /**
@@ -91,6 +97,7 @@ export const RowTitleLine = ({
   promotesTour = false,
   narrow = false,
   struck = false,
+  trailing,
 }: RowTitleLineProps) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -103,7 +110,7 @@ export const RowTitleLine = ({
   const lastWidthRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
 
-  const clause = showsTour && tourName ? tourName : null;
+  const clause = showsTour && tourName && trailing == null ? tourName : null;
   const promoted = promotesTour && tourName ? tourName : null;
   const title = promoted ?? headliner;
   const headSize = narrow ? RAMP.narrowHead : RAMP.head;
@@ -219,6 +226,10 @@ export const RowTitleLine = ({
       >
         {title}
       </div>
+
+      {trailing != null && (
+        <span className="flex shrink-0 self-center">{trailing}</span>
+      )}
 
       {clause !== null && fits && (
         <span

@@ -177,10 +177,34 @@ describe('EventRow — the price slot', () => {
         surface="browse"
       />,
     );
-    expect(screen.getByTestId('row-sold-out')).not.toBeNull();
     expect(screen.queryByText('$68')).toBeNull();
-    // The Following chip still gets its slot — sold out is not a chip.
+    // The Following chip still gets its slot — sold out is not a meta chip.
     expect(screen.getByTestId('row-meta').textContent).toContain('Following');
+  });
+
+  // B+ rows board: the chip sits inline after the headliner, and the price
+  // slot holds a lone dash with a spoken label.
+  it('sets the sold-out chip on the title line and dashes the price', () => {
+    render(
+      <EventRow show={makeShow({ status: 'soldout' })} surface="browse" />,
+    );
+    const chip = screen.getByTestId('row-sold-out');
+    expect(screen.getByTestId('row-title-line').contains(chip)).toBe(true);
+    expect(chip.textContent).toContain('Sold out');
+    const price = screen.getByTestId('row-sold-out-price');
+    expect(price.textContent).toContain('—');
+    expect(price.textContent).toContain('No price, sold out');
+    expect(price.contains(chip)).toBe(false);
+  });
+
+  it('drops the tour clause while the sold-out chip holds the title line', () => {
+    render(
+      <EventRow
+        show={makeShow({ status: 'soldout', tourName: 'Night Drive' })}
+        surface="browse"
+      />,
+    );
+    expect(screen.queryByTestId('row-tour-clause')).toBeNull();
   });
 
   it('shows the saved-price delta on Watching only', () => {
@@ -346,6 +370,13 @@ describe('EventRow — the three signals a suppressed row carries', () => {
     expect(screen.getByTestId('event-row').style.opacity).toBe('');
   });
 
+  it('leaves the artwork at full strength on a sold-out show', () => {
+    render(
+      <EventRow show={makeShow({ status: 'soldout' })} surface="watching" />,
+    );
+    expect(screen.getByTestId('row-image-ring').style.opacity).toBe('1');
+  });
+
   it('leaves the artwork at full strength on a live show', () => {
     render(<EventRow show={makeShow()} surface="watching" />);
     const art = screen
@@ -503,6 +534,41 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     it('edges a carded row in the lead genre color', () => {
       const { container } = render(
         <EventRow show={makeShow({ genres: ['jazz'] })} surface="watching" />,
+      );
+      const card = container.firstElementChild;
+      if (!(card instanceof HTMLElement)) throw new Error('no card');
+      expect(card.style.borderLeftColor).toBe('var(--genre-jazz)');
+    });
+
+    // B+ rule 3: a status takes the edge and wash; the ring keeps the genre.
+    it.each([
+      [{ lifecycle: 'cancelled' as const }, 'var(--danger)'],
+      [{ lifecycle: 'postponed' as const }, 'var(--warning)'],
+      [{ status: 'soldout' as const }, 'var(--accent)'],
+    ])('edges a carded row %o in its status color', (partial, token) => {
+      const { container } = render(
+        <EventRow
+          show={makeShow({ genres: ['jazz'], ...partial })}
+          surface="watching"
+        />,
+      );
+      const card = container.firstElementChild;
+      if (!(card instanceof HTMLElement)) throw new Error('no card');
+      expect(card.style.borderLeftColor).toBe(token);
+      expect(card.getAttribute('style')).toContain(
+        `color-mix(in oklch, ${token} 7%`,
+      );
+      expect(screen.getByTestId('row-image-ring').style.boxShadow).toContain(
+        'var(--genre-jazz)',
+      );
+    });
+
+    it('keeps the genre edge on a presale row, which has no show status', () => {
+      const { container } = render(
+        <EventRow
+          show={makeShow({ genres: ['jazz'], status: 'presale' })}
+          surface="watching"
+        />,
       );
       const card = container.firstElementChild;
       if (!(card instanceof HTMLElement)) throw new Error('no card');

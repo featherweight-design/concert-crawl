@@ -1,4 +1,5 @@
 import type { EventStatus } from '@concert-crawl/types';
+import type { ShowStatusChip } from '@/components/consumer/StatusChip';
 
 /** The price's own state, which is a different axis from the lifecycle. */
 export type RowPriceState = 'live' | 'soldout' | 'presale';
@@ -61,7 +62,24 @@ export function isStruck(status: RowStatus): boolean {
   return status === 'cancelled';
 }
 
-/** Whether the artwork dims. Every suppressed state, sold out included. */
+/**
+ * Whether the artwork dims: a show that is off, or No longer listed. Sold out
+ * and postponed keep full-strength art, as the B+ rows board draws them: the
+ * night is still happening.
+ */
 export function isFaded(status: RowStatus): boolean {
-  return status !== 'presale' && status !== 'price';
+  return status === 'cancelled' || status === 'removed';
+}
+
+/**
+ * The status that colors a carded row's left edge and wash (B+ rule 3), or
+ * null when the row has none and the edge falls back to the genre. Presale is
+ * a price state, not a show status, so it keeps the genre edge.
+ */
+export function rowEdgeStatus(
+  status: RowStatus,
+): Extract<ShowStatusChip, 'cancelled' | 'postponed' | 'soldout'> | null {
+  if (status === 'cancelled' || status === 'postponed' || status === 'soldout')
+    return status;
+  return null;
 }

@@ -18,6 +18,9 @@ export const EVENT_ROW_COPY = {
     fromPrefix: 'from',
     tba: 'tba',
     soldOut: 'Sold out',
+    // A sold-out row's price slot (B+ rows board): the chip moved to the
+    // title line, so the slot holds a lone placeholder dash.
+    soldOutPlaceholder: '—',
     // A move of a dollar or two is noise, not news. Saying so beats rendering
     // an arrow that implies the price moved somewhere worth reading.
     flat: 'flat',
@@ -86,6 +89,8 @@ export const EVENT_ROW_COPY = {
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
     // Replaces the visible "pending" marker, so it has to say what pending
     // means rather than repeat the word.
+    // Replaces the sold-out price slot's placeholder dash.
+    soldOutPrice: 'No price, sold out',
     pendingPrice: 'Submitted price, not confirmed yet',
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,
     savedDeltaUp: (amount: string) => `Up ${amount} since you started watching`,

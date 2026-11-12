@@ -15,7 +15,13 @@ import { EVENT_ROW_COPY as copy } from './definitions/copy';
 import { SURFACES, type RowSurface } from './definitions/surfaces';
 import { rowMin } from './definitions/row-min';
 import { rowChips, chipBudget } from './lib/row-chips';
-import { isFaded, isStruck, resolveRowStatus } from './lib/row-status';
+import {
+  isFaded,
+  isStruck,
+  resolveRowStatus,
+  rowEdgeStatus,
+} from './lib/row-status';
+import { StatusChip, statusColor } from '@/components/consumer/StatusChip';
 import { orderGenres } from './lib/order-genres';
 import { cardedEdge } from './lib/carded-edge';
 import type { EventRowShow } from './lib/row-model';
@@ -91,6 +97,10 @@ export const EventRow = ({
     ? NEUTRAL_GENRE_COLOR
     : (genreColor(orderGenres(show.genres, bucketMembers)[0]) ??
       NEUTRAL_GENRE_COLOR);
+  // B+ rule 3: a row with a status takes that status's color on its left edge
+  // and wash, from the same mapping its chip uses. The ring stays the genre's.
+  const edgeStatus = rowEdgeStatus(status);
+  const edge = edgeStatus === null ? genre : statusColor(edgeStatus);
 
   return (
     <div
@@ -107,7 +117,7 @@ export const EventRow = ({
           ? `13px ${config.hasActionGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
           : '13px 0',
         borderRadius: config.carded ? 12 : undefined,
-        ...(config.carded && !removed && cardedEdge(genre)),
+        ...(config.carded && !removed && cardedEdge(edge)),
         // The board draws the whole card dashed with no genre edge and no
         // wash: the row recedes rather than alarms.
         ...(config.carded && removed && { background: 'transparent' }),
@@ -136,8 +146,10 @@ export const EventRow = ({
               // The image ring: 1.25px in the genre's color plus a soft glow.
               // A box-shadow, so the clip above never cuts it.
               boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
-              // Sold out dims the artwork, never the row: a row-level opacity
-              // pushes --fg-muted below the AA contrast floor.
+              // Cancelled dims the artwork, never the row: a row-level opacity
+              // pushes --fg-muted below the AA contrast floor. Sold out keeps
+              // full-strength art, as the B+ rows board draws it: the night is
+              // still happening.
               // The ring dims with it, deliberately: it is decoration, and a
               // full-strength ring around dimmed art would outshine the show.
               opacity: isFaded(status) ? 0.55 : 1,
@@ -187,6 +199,13 @@ export const EventRow = ({
               promotesTour={config.promotesTour}
               narrow={narrow}
               struck={struck}
+              trailing={
+                status === 'soldout' ? (
+                  <span data-testid="row-sold-out">
+                    <StatusChip status="soldout" label={copy.price.soldOut} />
+                  </span>
+                ) : undefined
+              }
             />
             {/* Line 2. It stays inside the row's stretched anchor exactly as it
                 was, and the 3px is the column gap it used to inherit from
