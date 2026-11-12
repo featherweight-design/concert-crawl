@@ -6,6 +6,7 @@ import {
   posterFileName,
   posterImageUrl,
   publicEventUrl,
+  shareLink,
   systemShare,
   type ShareCapabilities,
 } from '@/lib/share/destinations';
@@ -201,6 +202,52 @@ describe('systemShare', () => {
       args,
     );
     expect(failed).toBe('failed');
+  });
+});
+
+describe('shareLink', () => {
+  const args = {
+    title: 'Concert Crawl',
+    text: 'Every Denver show in one calendar:',
+    url: 'https://concertcrawl.app',
+  };
+
+  it('reports unsupported where there is no share', async () => {
+    expect(await shareLink({}, args)).toBe('unsupported');
+  });
+
+  it('hands over the title, text and url, and never a file', async () => {
+    const share = vi.fn(async (_data: ShareData) => undefined);
+    expect(await shareLink({ share }, args)).toBe('shared');
+    expect(share).toHaveBeenCalledTimes(1);
+    expect(share).toHaveBeenCalledWith({
+      title: args.title,
+      text: args.text,
+      url: args.url,
+    });
+  });
+
+  it('calls share before its first await, so a click keeps its activation', () => {
+    const share = vi.fn(async (_data: ShareData) => undefined);
+    void shareLink({ share }, args);
+    expect(share).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a dismissed sheet as a cancel, not a failure', async () => {
+    const cancel = new Error('dismissed');
+    cancel.name = 'AbortError';
+    const share = vi.fn(async () => {
+      throw cancel;
+    });
+    expect(await shareLink({ share }, args)).toBe('cancelled');
+  });
+
+  it('reports a refusal as failed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const share = vi.fn(async () => {
+      throw new Error('boom');
+    });
+    expect(await shareLink({ share }, args)).toBe('failed');
   });
 });
 

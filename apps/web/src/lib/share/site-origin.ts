@@ -50,7 +50,9 @@ const toOrigin = (value: string): string | null => {
 };
 
 export const siteOrigin = (): string => {
-  const configured = present(process.env['NEXT_PUBLIC_SITE_URL']);
+  // Static dot access: Next inlines NEXT_PUBLIC_ vars into the client bundle
+  // only for a literal `process.env.NEXT_PUBLIC_X`, never a computed key.
+  const configured = present(process.env.NEXT_PUBLIC_SITE_URL);
   const fromConfig = configured === null ? null : toOrigin(configured);
   if (fromConfig !== null) return fromConfig;
 
@@ -64,6 +66,14 @@ export const siteOrigin = (): string => {
           vercelHost.includes('://') ? vercelHost : `https://${vercelHost}`,
         );
   if (fromVercel !== null) return fromVercel;
+
+  // In the browser the page's own origin beats localhost: VERCEL_URL is not
+  // exposed to the client, so an unset NEXT_PUBLIC_SITE_URL would otherwise
+  // put dev URLs into a QR code on a deployed site.
+  if (typeof window !== 'undefined') {
+    const fromWindow = toOrigin(window.location.origin);
+    if (fromWindow !== null) return fromWindow;
+  }
 
   return LOCAL_ORIGIN;
 };

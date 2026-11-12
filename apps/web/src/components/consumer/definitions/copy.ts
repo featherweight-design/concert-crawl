@@ -633,6 +633,9 @@ export const CONSUMER_COPY = {
       settings: 'Settings',
       admin: 'Admin',
       signOut: 'Sign out',
+      // The Share Concert Crawl sheet's row: last in You when signed in, first
+      // in App for a guest once the app is open.
+      shareApp: 'Share Concert Crawl',
     },
   },
 

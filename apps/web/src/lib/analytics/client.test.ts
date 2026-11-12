@@ -150,6 +150,18 @@ describe('web analytics client', () => {
     });
   });
 
+  it('captures the app share event with its destination and nothing else', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
+    const analytics = await loadModule();
+    analytics.initAnalytics(PROD);
+    analytics.track('app_share_destination_selected', {
+      destination: 'copy-link',
+    });
+    expect(mockCapture).toHaveBeenCalledWith('app_share_destination_selected', {
+      destination: 'copy-link',
+    });
+  });
+
   it('identify and reset delegate to posthog when enabled', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();

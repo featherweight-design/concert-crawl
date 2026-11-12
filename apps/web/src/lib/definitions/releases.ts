@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.69.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'Share Concert Crawl is in your account menu: a QR code of your own that you can show a friend or send, plus who has joined with it.',
+      },
+    ],
+  },
+  {
     version: 'v0.68.0-beta',
     date: 'Nov 12, 2026',
     headline: null,

@@ -10,7 +10,14 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { ArrowDownLeft, CornerUpRight, Eye, Tag, Users } from 'lucide-react';
+import {
+  ArrowDownLeft,
+  CornerUpRight,
+  Eye,
+  QrCode,
+  Tag,
+  Users,
+} from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useClerk } from '@clerk/nextjs';
 import { Avatar } from '@/components/settings/Avatar';
@@ -37,6 +44,8 @@ import {
   unreadCountOf,
   hasUnseen as hasUnseenNotifications,
 } from '@/lib/queries/use-notifications';
+import { ShareAppSheet } from '@/components/consumer/share-app/lazy';
+import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import { GetInCard } from './GetInCard';
 import { AccountMenuContext, useAccountMenu } from './account-menu-context';
 import type { AccountMenuState } from './account-menu-context';
@@ -177,6 +186,11 @@ export function AccountMenuProvider({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AccountMenuMode>('menu');
   const [isMobile, setIsMobile] = useState(false);
+  // Share Concert Crawl's sheet lives here, not in the menu body: the body
+  // unmounts when the menu closes, and the sheet has to outlive that.
+  const [shareOpen, setShareOpen] = useState(false);
+  // Stable: BottomSheet's focus effect depends on onClose.
+  const closeShare = useCallback(() => setShareOpen(false), []);
   const [liveSubmissionCount, setLiveSubmissionCount] = useState(0);
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
@@ -427,6 +441,12 @@ export function AccountMenuProvider({
       setMode('menu');
     },
     onDismiss: close,
+    // `close` hands focus back to the trigger first, so the sheet's own
+    // return-focus lands there rather than on the row that just unmounted.
+    onShareApp: () => {
+      close();
+      setShareOpen(true);
+    },
     onSettings: () => {
       // Deliberately not close(): this navigates away, so returning focus to a
       // trigger that is about to unmount would fight the destination page for it.
@@ -482,6 +502,11 @@ export function AccountMenuProvider({
             <UserMenuSheet {...bodyProps} />
           </>
         )}
+        <ShareAppSheet
+          open={shareOpen}
+          onClose={closeShare}
+          mode={isPublicBrowseEnabled() ? 'open' : 'invite'}
+        />
       </AccountMenuBodyContext.Provider>
     </AccountMenuContext.Provider>
   );
@@ -603,6 +628,8 @@ interface MenuBodyProps {
   onSettings: () => void;
   onSignOut: () => void;
   onDismiss: () => void;
+  /** Closes the menu and opens the Share Concert Crawl sheet. */
+  onShareApp: () => void;
   liveSubmissionCount: number;
   avatarHandle: string | null;
   avatarColor: AvatarColor | null;
@@ -786,6 +813,30 @@ function ThemeMenuRow() {
   );
 }
 
+// ── Share Concert Crawl row ──────────────────────────────────────────────
+
+// The same row in both bodies: the QR tile in accent, no meta text.
+function ShareAppRow({
+  onClick,
+  last = false,
+}: {
+  onClick: () => void;
+  last?: boolean;
+}) {
+  return (
+    <MenuRow
+      label={CONSUMER_COPY.userMenu.rows.shareApp}
+      onClick={onClick}
+      last={last}
+      leading={
+        <RowTile tint="var(--accent)">
+          <QrCode {...TILE_ICON_PROPS} />
+        </RowTile>
+      }
+    />
+  );
+}
+
 // ── Menu body (shared between popover and sheet) ──────────────────────────
 
 function MenuBody({
@@ -795,6 +846,7 @@ function MenuBody({
   onSettings,
   onSignOut,
   onDismiss,
+  onShareApp,
   liveSubmissionCount,
   avatarHandle,
   avatarColor,
@@ -809,6 +861,10 @@ function MenuBody({
         <GetInCard onNavigate={onDismiss} />
 
         <SectionLabel>{CONSUMER_COPY.userMenu.sections.app}</SectionLabel>
+        {/* A guest can share only once the app is open: before launch a link
+            to it is a link to the waitlist, and the invite code is a member's
+            own. */}
+        {isPublicBrowseEnabled() && <ShareAppRow onClick={onShareApp} />}
         <ThemeMenuRow />
         <MenuRow
           label={CONSUMER_COPY.userMenu.signedOut.howItWorks}
@@ -921,13 +977,13 @@ function MenuBody({
             }
           : {})}
         kbd="P"
-        last
         leading={
           <RowTile tint="var(--success)">
             <Tag {...TILE_ICON_PROPS} />
           </RowTile>
         }
       />
+      <ShareAppRow onClick={onShareApp} last />
 
       {/* App section */}
       <SectionLabel>{CONSUMER_COPY.userMenu.sections.app}</SectionLabel>
