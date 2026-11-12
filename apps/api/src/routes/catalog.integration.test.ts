@@ -8,7 +8,13 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { createApp } from '../app.js';
-import { clearTables, seedCrawlRun, seedVenue } from '../test/helpers/seed.js';
+import {
+  clearTables,
+  seedCrawlRun,
+  seedEvent,
+  seedPriceSubmission,
+  seedVenue,
+} from '../test/helpers/seed.js';
 import { testDb } from '../test/helpers/db.js';
 
 const app = createApp();
@@ -59,5 +65,17 @@ describe('GET /v1/catalog/generation — integration', () => {
       createdAt: new Date('2026-11-12T11:30:00Z'),
     });
     expect(await generation()).toBe(String(Date.parse('2026-11-12T11:30:00Z')));
+  });
+
+  it('moves when a community price submission lands', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedCrawlRun(venue.id, {
+      createdAt: new Date('2026-11-12T09:00:00Z'),
+    });
+    await seedPriceSubmission(event.id, 'user_1', {
+      createdAt: new Date('2026-11-12T12:15:00Z'),
+    });
+    expect(await generation()).toBe(String(Date.parse('2026-11-12T12:15:00Z')));
   });
 });
