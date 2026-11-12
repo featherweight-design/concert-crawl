@@ -39,9 +39,22 @@ const TRAIL = [
 interface PwaIconSvgProps {
   size: number;
   maskable?: boolean;
+  /**
+   * Rounded tile corners (28 at 128px) for the iPhone launch image, where the
+   * tile sits on the splash ground. The installable icons stay square: the
+   * platform masks them.
+   */
+  rounded?: boolean;
 }
 
-export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
+/** The launch tile's corner radius, 28 at 128px, in the 96-unit art. */
+export const STARTUP_TILE_RADIUS_UNITS = (28 / 128) * ICON_VIEWBOX;
+
+export function PwaIconSvg({
+  size,
+  maskable = false,
+  rounded = false,
+}: PwaIconSvgProps) {
   // Maskable: art inset into the safe zone. Order matters: `translate` before
   // `scale` composes as T·S, so the geometry scales first and the inset is
   // applied in unscaled units — keeping the art centered (equal MASKABLE_INSET
@@ -60,6 +73,7 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
       <rect
         width={ICON_VIEWBOX}
         height={ICON_VIEWBOX}
+        rx={rounded ? STARTUP_TILE_RADIUS_UNITS : undefined}
         fill={PWA_ICON_PALETTE.background}
       />
       <g transform={artTransform}>

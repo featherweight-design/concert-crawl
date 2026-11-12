@@ -28,6 +28,18 @@ describe('IosHowToSheet', () => {
     });
   });
 
+  it('ends with a decorative cyan arrow, centred, below Got it', () => {
+    render(<IosHowToSheet open onClose={vi.fn()} />);
+    const arrow = screen.getByTestId('ios-share-pointer');
+    expect(arrow.getAttribute('aria-hidden')).toBe('true');
+    expect(arrow.getAttribute('class')).toContain('mx-auto');
+    expect(arrow.getAttribute('class')).toContain('text-signal');
+    const done = screen.getByRole('button', { name: INSTALL_COPY.sheet.done });
+    expect(
+      done.compareDocumentPosition(arrow) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('closes on Got it, and no longer carries the dismissal note', () => {
     const onClose = vi.fn();
     render(<IosHowToSheet open onClose={onClose} />);

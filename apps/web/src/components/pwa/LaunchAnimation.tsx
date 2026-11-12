@@ -30,8 +30,20 @@ import { LAUNCH_COPY } from './definitions/copy';
 // every animation is the Web Animations API through `runMotion`, never
 // @keyframes.
 
-const SPLASH_BG = '#070A1A';
-const TILE_BG = '#171D3A';
+const SPLASH_BG = '#070A1A'; // fwd-allow-hex: board art colour
+const TILE_BG = '#171D3A'; // fwd-allow-hex: board art colour
+// The splash ground is fixed, so its ink is fixed too: on the Light theme the
+// theme tokens would put dark wordmark ink on this dark ground.
+const INK_LEAD = '#E8F3FF'; // fwd-allow-hex: board art colour
+const INK_ACCENT = '#FF7BD4'; // fwd-allow-hex: board art colour
+const INK_SIGNAL = '#7AE6FF'; // fwd-allow-hex: board art colour
+// Not drawn as a token on the board; read off bp-s-launch_k740_m.jpg.
+const INK_SUBTLE = '#5B6488'; // fwd-allow-hex: board art colour
+/** Core position on the full-size mark, from the boards (390 x 844 screen). */
+const CORE_FROM_CENTRE = { x: 55, y: -102 } as const;
+/** The core bloom: about 330px across, centred on the core (k740, k950). */
+const BLOOM_PX = 330;
+const BLOOM_PEAK = 0.55;
 const TILE_PX = 128;
 /** The mark's art is 96 units; its box at scale 1 is that 96px. */
 const MARK_PX = 96;
@@ -48,6 +60,32 @@ const EXPO_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const FAILSAFE_MS = LAUNCH_MS.total + 1500;
 
 const at = (ms: number) => ms / LAUNCH_MS.total;
+
+/** The core's spot on screen once the mark is full size. */
+export const coreAtFull = (vw: number, vh: number) => ({
+  x: vw / 2 + CORE_FROM_CENTRE.x,
+  y: vh / 2 + CORE_FROM_CENTRE.y,
+});
+
+/**
+ * The mark box's top-left corner. At the start the box is centred; at full
+ * size it is wherever puts the core on the board's spot, so it is not centred.
+ */
+export const markCorner = (
+  vw: number,
+  vh: number,
+  scale: number,
+  centred: boolean,
+) => {
+  if (centred) {
+    return {
+      x: vw / 2 - (MARK_PX * scale) / 2,
+      y: vh / 2 - (MARK_PX * scale) / 2,
+    };
+  }
+  const core = coreAtFull(vw, vh);
+  return { x: core.x - CORE.cx * scale, y: core.y - CORE.cy * scale };
+};
 
 export function LaunchAnimation() {
   const { enabled, loaded } = useFeatureFlag('launch-animation');
@@ -89,7 +127,13 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
   // Held in a ref so a parent re-render can never restart the timeline.
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
+  // The viewport is read once, so the first paint and the timeline agree.
+  const [view] = useState(() => ({
+    vw: window.innerWidth,
+    vh: window.innerHeight,
+  }));
   const rootRef = useRef<HTMLDivElement>(null);
+  const bloomRef = useRef<HTMLDivElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
   const markRef = useRef<HTMLDivElement>(null);
   const wordRef = useRef<HTMLDivElement>(null);
@@ -99,12 +143,13 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     const total = LAUNCH_MS.total;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    // Where the mark lands: the header logo's spot, measured from the centre.
-    const landX = LAUNCH_LANDING.left + LANDING_PX / 2 - vw / 2;
-    const landY = LAUNCH_LANDING.top + LANDING_PX / 2 - vh / 2;
-    const centred = (scale: number) => `translate(0px, 0px) scale(${scale})`;
+    const { vw, vh } = view;
+    // The box's transform origin is its top left (addendum 2 item 22), so a
+    // keyframe is a plain translate of that corner.
+    const startAt = markCorner(vw, vh, START_SCALE, true);
+    const fullAt = markCorner(vw, vh, FULL_SCALE, false);
+    const place = (corner: { x: number; y: number }, scale: number) =>
+      `translate(${corner.x}px, ${corner.y}px) scale(${scale})`;
     const animations: (Animation | null)[] = [];
     let cancelled = false;
     const run = (
@@ -130,18 +175,28 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
     // The mark: small, grows to 4.2× (expo out), holds, then shrinks into the
     // header logo's spot.
     run(markRef.current, [
-      { offset: 0, transform: centred(START_SCALE), opacity: 1 },
+      { offset: 0, transform: place(startAt, START_SCALE), opacity: 1 },
       {
         offset: at(LAUNCH_MS.growStart),
-        transform: centred(START_SCALE),
+        transform: place(startAt, START_SCALE),
         // WAAPI applies a keyframe's easing to the segment that STARTS there.
         easing: EXPO_OUT,
       },
-      { offset: at(LAUNCH_MS.growEnd), transform: centred(FULL_SCALE) },
-      { offset: at(LAUNCH_MS.shrinkStart), transform: centred(FULL_SCALE) },
+      {
+        offset: at(LAUNCH_MS.growEnd),
+        transform: place(fullAt, FULL_SCALE),
+      },
+      {
+        offset: at(LAUNCH_MS.shrinkStart),
+        transform: place(fullAt, FULL_SCALE),
+      },
       {
         offset: 1,
-        transform: `translate(${landX}px, ${landY}px) scale(${LANDING_PX / MARK_PX})`,
+        // Where the mark lands: the header logo's own corner.
+        transform: place(
+          { x: LAUNCH_LANDING.left, y: LAUNCH_LANDING.top },
+          LANDING_PX / MARK_PX,
+        ),
       },
     ]);
 
@@ -150,43 +205,54 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
     dotRefs.current.forEach((dot, index) => {
       const litAt = LAUNCH_MS.trailStart + LAUNCH_MS.trailStep * index;
       run(dot, [
-        { offset: 0, fill: 'var(--signal)', transform: 'scale(1)' },
-        { offset: at(litAt), fill: 'var(--signal)', transform: 'scale(1)' },
+        { offset: 0, fill: INK_SIGNAL, transform: 'scale(1)' },
+        { offset: at(litAt), fill: INK_SIGNAL, transform: 'scale(1)' },
         {
           offset: at(litAt + LAUNCH_MS.trailStep),
-          fill: 'var(--accent)',
+          fill: INK_ACCENT,
           transform: `scale(${SWELL})`,
         },
         {
           offset: at(litAt + LAUNCH_MS.trailStep * 2),
-          fill: 'var(--signal)',
+          fill: INK_SIGNAL,
           transform: 'scale(1)',
         },
-        { offset: 1, fill: 'var(--signal)', transform: 'scale(1)' },
+        { offset: 1, fill: INK_SIGNAL, transform: 'scale(1)' },
       ]);
     });
     const landed = LAUNCH_MS.trailStart + LAUNCH_MS.trailStep * TRAIL.length;
     run(coreRef.current, [
-      { offset: 0, fill: 'var(--signal)', transform: 'scale(1)' },
-      { offset: at(landed), fill: 'var(--signal)', transform: 'scale(1)' },
-      { offset: at(landed + LAUNCH_MS.trailStep), fill: 'var(--accent)' },
-      { offset: at(LAUNCH_MS.trailEnd), fill: 'var(--accent)' },
+      { offset: 0, fill: INK_SIGNAL, transform: 'scale(1)' },
+      { offset: at(landed), fill: INK_SIGNAL, transform: 'scale(1)' },
+      { offset: at(landed + LAUNCH_MS.trailStep), fill: INK_ACCENT },
+      { offset: at(LAUNCH_MS.trailEnd), fill: INK_ACCENT },
       {
         offset: at(LAUNCH_MS.coreBlueEnd),
-        fill: 'var(--signal)',
+        fill: INK_SIGNAL,
         transform: 'scale(1)',
       },
       {
         offset: at((LAUNCH_MS.pulseStart + LAUNCH_MS.pulseEnd) / 2),
-        fill: 'var(--signal)',
+        fill: INK_SIGNAL,
         transform: `scale(${CORE_PULSE})`,
       },
       {
         offset: at(LAUNCH_MS.pulseEnd),
-        fill: 'var(--signal)',
+        fill: INK_SIGNAL,
         transform: 'scale(1)',
       },
-      { offset: 1, fill: 'var(--signal)', transform: 'scale(1)' },
+      { offset: 1, fill: INK_SIGNAL, transform: 'scale(1)' },
+    ]);
+    // The core's bloom, the one sanctioned soft glow: it rises with the pulse
+    // and is gone by the end (about 680 to 1040ms on the boards).
+    run(bloomRef.current, [
+      { offset: 0, opacity: 0 },
+      { offset: at(LAUNCH_MS.pulseStart), opacity: 0 },
+      {
+        offset: at((LAUNCH_MS.pulseStart + LAUNCH_MS.pulseEnd) / 2),
+        opacity: BLOOM_PEAK,
+      },
+      { offset: 1, opacity: 0 },
     ]);
     haloRefs.current.forEach((ring) =>
       run(ring, [
@@ -255,9 +321,11 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
       window.clearTimeout(failsafe);
       animations.forEach((animation) => animation?.cancel());
     };
-  }, []);
+  }, [view]);
 
   const centre = `translate(-50%, -50%)`;
+  const bloomAt = coreAtFull(view.vw, view.vh);
+  const markStart = markCorner(view.vw, view.vh, START_SCALE, true);
 
   return (
     <div
@@ -287,16 +355,32 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
         }}
       />
       <div
+        ref={bloomRef}
+        data-testid="launch-bloom"
+        style={{
+          position: 'absolute',
+          left: bloomAt.x - BLOOM_PX / 2,
+          top: bloomAt.y - BLOOM_PX / 2,
+          width: BLOOM_PX,
+          height: BLOOM_PX,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${INK_ACCENT}59 0%, ${INK_ACCENT}00 70%)`,
+          opacity: 0,
+        }}
+      />
+      <div
         ref={markRef}
         data-testid="launch-mark"
         style={{
           position: 'absolute',
-          left: `calc(50% - ${MARK_PX / 2}px)`,
-          top: `calc(50% - ${MARK_PX / 2}px)`,
+          left: 0,
+          top: 0,
           width: MARK_PX,
           height: MARK_PX,
-          transform: `scale(${START_SCALE})`,
-          transformOrigin: 'center',
+          // Top-left origin, as the board's source has it: the keyframes
+          // translate the box's corner.
+          transformOrigin: '0 0',
+          transform: `translate(${markStart.x}px, ${markStart.y}px) scale(${START_SCALE})`,
         }}
       >
         <svg
@@ -314,7 +398,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
               }}
               {...CORE}
               r={ring.radius}
-              fill="var(--accent)"
+              fill={INK_ACCENT}
               opacity={ring.opacity}
               style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
             />
@@ -324,7 +408,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
             {...CORE}
             r={CORE_RADIUS}
             style={{
-              fill: 'var(--signal)',
+              fill: INK_SIGNAL,
               transformBox: 'fill-box',
               transformOrigin: 'center',
             }}
@@ -340,7 +424,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
               r={dot.radius}
               opacity={trailOpacity(index)}
               style={{
-                fill: 'var(--signal)',
+                fill: INK_SIGNAL,
                 transformBox: 'fill-box',
                 transformOrigin: 'center',
               }}
@@ -368,12 +452,12 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
             fontWeight: 900,
             fontSize: 34,
             letterSpacing: '-0.025em',
-            color: 'var(--fg)',
+            color: INK_LEAD,
             lineHeight: 1,
           }}
         >
           {BRAND_COPY.wordmark.lead}
-          <span style={{ color: 'var(--accent)' }}>
+          <span style={{ color: INK_ACCENT }}>
             {BRAND_COPY.wordmark.accent}
           </span>
         </span>
@@ -382,7 +466,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
             fontFamily: 'var(--font-mono)',
             fontSize: 12,
             letterSpacing: '0.4em',
-            color: 'var(--fg-subtle)',
+            color: INK_SUBTLE,
           }}
         >
           {LAUNCH_COPY.place}

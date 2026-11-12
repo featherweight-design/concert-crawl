@@ -8,7 +8,7 @@ vi.mock('@/lib/queries/use-feature-flags', () => ({
   useFeatureFlag: () => flagState,
 }));
 
-import { LaunchAnimation } from '../LaunchAnimation';
+import { LaunchAnimation, coreAtFull, markCorner } from '../LaunchAnimation';
 import { LAUNCH_FLAG_KEY, LAUNCH_PLAYED_KEY } from '@/lib/pwa/launch';
 
 const stubDisplay = (standalone: boolean, reduced = false) => {
@@ -72,13 +72,55 @@ describe('LaunchAnimation', () => {
   it('starts the mark at 128/96 (1.333x), centred on the viewport', () => {
     stubDisplay(true);
     stubStuckAnimate();
+    vi.stubGlobal('innerWidth', 390);
+    vi.stubGlobal('innerHeight', 844);
     window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const mark = screen.getByTestId('launch-mark');
     expect(mark?.style.width).toBe('96px');
-    expect(mark?.style.left).toBe('calc(50% - 48px)');
-    expect(mark?.style.top).toBe('calc(50% - 48px)');
-    expect(mark?.style.transform).toBe(`scale(${128 / 96})`);
+    expect(mark?.style.transformOrigin).toBe('0px 0px');
+    // Addendum 2 item 22: translate(131px, 358px) scale(1.333).
+    expect(mark?.style.transform).toBe(
+      `translate(131px, 358px) scale(${128 / 96})`,
+    );
+  });
+
+  it('puts the full-size core at about (250, 320), not the box centred', () => {
+    expect(coreAtFull(390, 844)).toEqual({ x: 250, y: 320 });
+    const corner = markCorner(390, 844, 4.2, false);
+    expect(corner.x).toBeCloseTo(-52.4, 1);
+    expect(corner.y).toBeCloseTo(219.2, 1);
+    expect(markCorner(390, 844, 128 / 96, true)).toEqual({ x: 131, y: 358 });
+  });
+
+  it('draws a 330px pink bloom centred on the core, hidden until it pulses', () => {
+    stubDisplay(true);
+    stubStuckAnimate();
+    vi.stubGlobal('innerWidth', 390);
+    vi.stubGlobal('innerHeight', 844);
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    render(<LaunchAnimation />);
+    const bloom = screen.getByTestId('launch-bloom');
+    expect(bloom.style.width).toBe('330px');
+    expect(bloom.style.left).toBe('85px');
+    expect(bloom.style.top).toBe('155px');
+    expect(bloom.style.opacity).toBe('0');
+    expect(bloom.style.background).toContain('radial-gradient');
+  });
+
+  it('draws in fixed brand colours, never theme tokens', () => {
+    stubDisplay(true);
+    stubStuckAnimate();
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    const { container } = render(<LaunchAnimation />);
+    const markup = container.innerHTML;
+    expect(markup).not.toContain('var(--fg)');
+    expect(markup).not.toContain('var(--signal)');
+    expect(markup).not.toContain('var(--accent)');
+    // jsdom normalises style colours to rgb().
+    expect(markup).toContain('color: rgb(232, 243, 255)');
+    expect(markup).toContain('color: rgb(255, 123, 212)');
+    expect(markup).toContain('fill: rgb(122, 230, 255)');
   });
 
   it('marks the session so a later mount is not a cold start', () => {
