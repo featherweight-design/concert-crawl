@@ -57,6 +57,16 @@ export interface PassportStampProps {
 export const shareStampSize = (width: number, height: number): number =>
   Math.min(width, height) * SHARE_STAMP_SHARE;
 
+/**
+ * The glow filter's id for one show, unique per show: every stamp on the wall
+ * carries its own glow colour. Stripping unsafe characters let two ids
+ * collide, and satori runs no hooks, so `useId` is out. Each code point of the
+ * full id is written in hex with a separator, which is stable, id-safe and
+ * one-to-one.
+ */
+export const passportGlowId = (id: string): string =>
+  `pp-glow-${Array.from(id, (char) => (char.codePointAt(0) ?? 0).toString(16)).join('-')}`;
+
 /** The venue's round stamp, as `one-stamp-m` draws it, at `size` px. */
 const RoundVenueStamp = ({
   show,
@@ -71,8 +81,7 @@ const RoundVenueStamp = ({
   const glyphKey = venueGlyphKey(show.venueSlug);
   const scale = size / SHARE_STAMP_VIEWBOX;
   const artInset = (CENTRE - SHARE_STAMP_INNER.radius) * scale;
-  // Unique per show: every stamp on the wall carries its own glow colour.
-  const glowId = `pp-glow-${show.id.replace(/[^A-Za-z0-9_-]/g, '')}`;
+  const glowId = passportGlowId(show.id);
 
   return (
     <div

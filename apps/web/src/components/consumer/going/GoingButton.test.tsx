@@ -5,6 +5,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { GoingButton } from './GoingButton';
 import { GOING_COPY } from './definitions/copy';
+import { pillInkFor } from './lib/pill-ink';
+import { ThemeProvider } from '@/theme';
 
 const SHOW = {
   eventId: 'ev1',
@@ -147,16 +149,50 @@ describe('GoingButton', () => {
     },
   );
 
-  it('fills with the venue colour only once committed', () => {
-    const { container: off } = render(<GoingButton show={SHOW} />);
-    const offBorder = off.querySelector('button')!.style.border;
-    expect(off.querySelector('[data-going-cta-stamp]')).toBeNull();
-    cleanup();
-    const { container: on } = render(<GoingButton show={SHOW} state="going" />);
-    const onBorder = on.querySelector('button')!.style.border;
-    expect(offBorder).toContain('var(--border-strong)');
-    expect(onBorder).not.toBe(offBorder);
+  it('leaves the uncommitted stub unfilled', () => {
+    const { container } = render(<GoingButton show={SHOW} />);
+    const button = container.querySelector('button');
+    expect(container.querySelector('[data-going-cta-stamp]')).toBeNull();
+    expect(button?.style.background).toBe('var(--surface-1)');
+    expect(button?.style.border).toContain('var(--border-strong)');
   });
+
+  // Both committed states fill with the venue's ring colour, exactly. The
+  // expected values go through a reference element so jsdom normalises the
+  // hex the same way it normalises the button's.
+  it.each(['going', 'past-yes'] as const)(
+    'fills %s with the venue ring colour',
+    (state) => {
+      const reference = document.createElement('span');
+      reference.style.background = CHURCH_RING;
+      reference.style.border = `1.5px solid ${CHURCH_RING}`;
+      const { container } = render(<GoingButton show={SHOW} state={state} />);
+      const button = container.querySelector('button');
+      expect(button?.style.background).toBe(reference.style.background);
+      expect(button?.style.border).toBe(reference.style.border);
+    },
+  );
+
+  // On Light, white `--fg-on-accent` on The Church's #FF6B8A is about 2.7:1,
+  // under AA. Both committed states take the contrast-picked ink instead.
+  it.each(['going', 'past-yes'] as const)(
+    'inks %s by contrast on Light, never --fg-on-accent',
+    (state) => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      try {
+        render(
+          <ThemeProvider>
+            <GoingButton show={SHOW} state={state} />
+          </ThemeProvider>,
+        );
+        const color = screen.getByRole('button').style.color;
+        expect(color).toBe(pillInkFor(CHURCH_RING, 'light').text);
+        expect(color).toBe('var(--fg)');
+      } finally {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    },
+  );
 
   // The bug Hugh reported: the stub took the artist's colour, so two nights
   // at one venue drew two different stamps.
@@ -184,7 +220,9 @@ describe('GoingButton', () => {
       const second = paint('Khruangbin');
       expect(first.ring).toBe(CHURCH_RING);
       expect(first.glyph).toBe(CHURCH_GLYPH);
-      expect(first.fill).not.toBe('');
+      const reference = document.createElement('span');
+      reference.style.background = CHURCH_RING;
+      expect(first.fill).toBe(reference.style.background);
       expect(second).toEqual(first);
     },
   );

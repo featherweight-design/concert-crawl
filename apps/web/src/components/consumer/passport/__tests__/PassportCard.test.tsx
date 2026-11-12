@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 import { PassportCard } from '../PassportCard';
+import { passportGlowId } from '../PassportStamp';
 import { PP_MODES } from '../definitions/modes';
 import { PASSPORT_COPY } from '../definitions/copy';
 import { THEMES, THEME_NAMES } from '@/theme/themes';
@@ -223,6 +224,23 @@ describe('<PassportCard /> (#85)', () => {
       const shadow = stamp.querySelector('feDropShadow');
       expect(shadow?.getAttribute('flood-color')).toBe('#FF6B8A');
       expect(shadow?.getAttribute('flood-opacity')).toBe('0.3');
+    });
+
+    // Stripping unsafe characters made `a.b` and `ab` share one filter id, so
+    // one stamp drew with the other's glow colour.
+    it('gives two ids that differ only in stripped characters distinct glows', () => {
+      expect(passportGlowId('a.b')).not.toBe(passportGlowId('ab'));
+      expect(passportGlowId('a b')).not.toBe(passportGlowId('a_b'));
+      expect(passportGlowId('show-1')).toBe(passportGlowId('show-1'));
+      expect(passportGlowId('a.b')).toMatch(/^[A-Za-z][\w-]*$/);
+      const { container } = mount({
+        shows: [
+          show(1, { id: 'x.1', venueSlug: CHURCH }),
+          show(2, { id: 'x1', venueSlug: 'bluebird-theater' }),
+        ],
+      });
+      const ids = [...container.querySelectorAll('filter')].map((el) => el.id);
+      expect(new Set(ids).size).toBe(2);
     });
 
     // Only the face changed: the tile keeps the card's slot, and the round
