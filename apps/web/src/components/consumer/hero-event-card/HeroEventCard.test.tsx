@@ -137,15 +137,20 @@ describe('HeroEventCard — band layout (#1525 PR 4)', () => {
     return found;
   };
 
-  // B+ boards: 97px at phone widths, 130 from sm. The ring owns the width and
-  // the panel fills it square.
-  it('renders a square panel at the board sizes, not a wide banner', () => {
+  // B+ boards: 97px at phone widths, 130 from sm. Each size is its own panel
+  // so each derives its own detail density.
+  it('renders a square panel per breakpoint, not a wide banner', () => {
     const { container } = render(<HeroEventCard event={baseEvent} />);
-    const ring = screen.getByTestId('hero-image-ring');
-    expect(ring.className).toContain('w-[97px]');
-    expect(ring.className).toContain('sm:w-[130px]');
-    expect(slot(container).style.width).toBe('100%');
-    expect(slot(container).style.aspectRatio).toBe('1 / 1');
+    const phone = container.querySelector<HTMLElement>('[data-hero-art="97"]');
+    const wide = container.querySelector<HTMLElement>('[data-hero-art="130"]');
+    expect(phone?.className).toBe('block sm:hidden');
+    expect(wide?.className).toBe('hidden sm:block');
+    const panelOf = (host: HTMLElement | null) =>
+      host?.querySelector<HTMLElement>('span[aria-hidden="true"]');
+    expect(panelOf(phone)?.style.width).toBe('97px');
+    expect(panelOf(phone)?.style.height).toBe('97px');
+    expect(panelOf(wide)?.style.width).toBe('130px');
+    expect(slot(container).style.width).toBe('97px');
   });
 
   // The mobile spotlight drops the "with ..." line; desktop keeps it.

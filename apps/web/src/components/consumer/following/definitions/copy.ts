@@ -64,6 +64,10 @@ export const FOLLOWING_COPY = {
   // there, and · is the house metadata separator, so the number needs no verb.
   yoursEyebrow: (count: number) => `Your artists · ${count}`,
   yoursTitle: 'Coming to Denver',
+  // The desktop rail stops at five whole cards; this is the way to the rest.
+  // It opens My shows ▸ Artists, which lists every follow.
+  yoursSeeAll: 'See all',
+  yoursSeeAllAria: 'See all your artists',
 
   // ── Shelf cards ───────────────────────────────────────────────────────
   shelfAria: 'Artists',

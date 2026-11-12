@@ -26,8 +26,8 @@ import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf';
 import { FlexArt } from '@/components/consumer/image-slot';
 import {
+  SHELF_CARD_ART_SCALE,
   SHELF_CARD_BOX_CLASS,
-  SHELF_RAIL_CAP_CLASS,
   SHELF_RAIL_GAP_CLASS,
 } from '@/components/consumer/definitions/constants';
 import {
@@ -90,12 +90,14 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
             `aspectRatio` property at all, which is what makes that regression
             unreachable rather than merely avoided.
 
-            `radius={0}`: the card shell already clips at 14px. */}
+            `radius={0}`: the card shell already clips at 14px. The scale is
+            the follow card's (SHELF_CARD_ART_SCALE): one box, one density. */}
         <FlexArt
           surface="event"
           name={pick.artist}
           artworkUrl={pick.imageUrl}
           photoUrl={pick.artistPhotoUrl}
+          scale={SHELF_CARD_ART_SCALE}
           radius={0}
         />
         <span
@@ -398,9 +400,11 @@ export const DiscoveryShelf = ({
               `max-w-[100vw]` + `overflow-hidden` remain as belt-and-
               suspenders for any other stray overflow. */}
           <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
+            {/* Not capped at lg like "Your artists": the picks have no page
+                that lists the rest, so the rail keeps scrolling. */}
             <ul
               aria-label={COPY.listAria}
-              className={`flex list-none overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0 ${SHELF_RAIL_GAP_CLASS} ${SHELF_RAIL_CAP_CLASS}`}
+              className={`flex list-none overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0 ${SHELF_RAIL_GAP_CLASS}`}
             >
               {data.picks.map((pick) => (
                 <TastePickCard key={pick.eventId} pick={pick} />

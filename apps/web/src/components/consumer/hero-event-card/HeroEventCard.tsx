@@ -13,6 +13,12 @@ import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighligh
 
 const copy = CONSUMER_COPY;
 
+/** The spotlight art per breakpoint (B+ boards): 97 below `sm`, 130 from it. */
+const HERO_ART_SIZES = [
+  { size: 97, className: 'block sm:hidden' },
+  { size: 130, className: 'hidden sm:block' },
+] as const;
+
 interface HeroEventCardProps {
   event: EventWithVenue;
   label?: string;
@@ -64,25 +70,29 @@ export function HeroEventCard({
         {/* A square panel rather than the wide banner this slot used to crop
             to. The old shape stretched a square source across ≈4:1 and lost
             whatever made it recognisable (#1525). The B+ boards size it 97px
-            at phone widths and 130 from `sm`, so the ring owns the width and
-            the panel fills it square. */}
+            at phone widths and 130 from `sm`. Each size is its own panel so
+            each takes the detail density its own size derives (97 is tile,
+            130 is hero); one panel at '100%' could only guess. The hidden one
+            is display:none, so its lazy image is never fetched. */}
         <div
           data-testid="hero-image-ring"
-          className="w-[97px] shrink-0 overflow-hidden rounded-[10px] sm:w-[130px]"
+          className="shrink-0 overflow-hidden rounded-[10px]"
           style={{
             boxShadow: `0 0 0 1.25px ${genre}, 0 0 12px color-mix(in oklch, ${genre} 35%, transparent)`,
           }}
         >
-          <Panel
-            surface="event"
-            name={event.artist}
-            artworkUrl={event.imageUrl}
-            photoUrl={event.artistPhotoUrl ?? null}
-            size="100%"
-            ratio="1 / 1"
-            scale="hero"
-            radius={10}
-          />
+          {HERO_ART_SIZES.map(({ size, className }) => (
+            <span key={size} data-hero-art={size} className={className}>
+              <Panel
+                surface="event"
+                name={event.artist}
+                artworkUrl={event.imageUrl}
+                photoUrl={event.artistPhotoUrl ?? null}
+                size={size}
+                radius={10}
+              />
+            </span>
+          ))}
         </div>
 
         <div className="min-w-0 flex-1">

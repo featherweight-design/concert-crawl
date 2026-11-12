@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 
 import { EventImage } from '../EventImage';
@@ -123,5 +123,47 @@ describe('<EventImage />', () => {
     fireEvent.error(photo(container)!);
     expect(photo(container)).toBeNull();
     expect(skeleton(container)).toBeNull();
+  });
+
+  // An image that settled before hydration never fires onLoad or onError into
+  // React, so the ref has to read its state.
+  describe('an image that settled before hydration', () => {
+    const settle = (naturalWidth: number) => {
+      const proto = HTMLImageElement.prototype;
+      const complete = vi.spyOn(proto, 'complete', 'get').mockReturnValue(true);
+      const width = vi
+        .spyOn(proto, 'naturalWidth', 'get')
+        .mockReturnValue(naturalWidth);
+      return () => {
+        complete.mockRestore();
+        width.mockRestore();
+      };
+    };
+
+    it('drops the skeleton for one that already painted', () => {
+      const restore = settle(640);
+      try {
+        const { container } = render(<EventImage src={venue} alt="Show A" />);
+        expect(srcOf(container)).toBe(venue);
+        expect(skeleton(container)).toBeNull();
+      } finally {
+        restore();
+      }
+    });
+
+    it('walks the chain for one that already failed', () => {
+      const restore = settle(0);
+      try {
+        const { container } = render(
+          <EventImage src={venue} artistPhotoUrl={portrait} alt="Show A" />,
+        );
+        // Both sources settled broken, so the chain ends at identity art and
+        // no skeleton is left standing.
+        expect(photo(container)).toBeNull();
+        expect(skeleton(container)).toBeNull();
+      } finally {
+        restore();
+      }
+    });
   });
 });
