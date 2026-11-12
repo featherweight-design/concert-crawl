@@ -564,6 +564,11 @@ describe('FilterBar multi-select Where and Vibe', () => {
     expect(where.textContent).toContain('Bluebird +1');
     const stack = within(where).getByTestId('segment-venue-stack');
     expect(stack.children).toHaveLength(2);
+    // The count is its own non-shrinking node, so a narrow segment
+    // ellipsises the name ("Red Ro…") and never hides the "+1".
+    const more = within(where).getByTestId('segment-more');
+    expect(more.textContent).toBe('+1');
+    expect(more).toHaveClass('shrink-0');
   });
 
   it('the Vibe segment reads "Electronic +1" over two stacked dots', () => {

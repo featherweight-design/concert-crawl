@@ -89,6 +89,8 @@ interface BarSegment {
   key: SegmentKey;
   eyebrow: string;
   value: string;
+  /** "+1": stays whole while the name before it ellipsises. */
+  suffix?: string;
   leading: ReactNode;
   active: boolean;
   clear: () => void;
@@ -342,7 +344,18 @@ export function FilterBar({
 
   const dimensionSegment = (key: FilterKey): BarSegment => {
     const values = filterValues[key];
-    const activeLabel = getSegmentLabel(key, values, venues, genres);
+    // The first pick's name and the "+N" count render apart, so a narrow
+    // segment ellipsises the name and never the count ("Red Ro… +1").
+    const activeLabel = getSegmentLabel(
+      key,
+      values.slice(0, 1),
+      venues,
+      genres,
+    );
+    const suffix =
+      activeLabel !== null && values.length > 1
+        ? copy.segment.moreSuffix(values.length - 1)
+        : undefined;
     // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
     // the genre dots for Vibe. It draws two; the stack shows the first two.
     let leading: ReactNode = null;
@@ -378,6 +391,7 @@ export function FilterBar({
       key,
       eyebrow: SEGMENT_LABEL[key],
       value: activeLabel ?? SEGMENT_PLACEHOLDER[key],
+      ...(suffix !== undefined && { suffix }),
       leading,
       active: values.length > 0,
       // The ✕ clears the whole dimension, every venue or vibe in it.
@@ -612,6 +626,9 @@ export function FilterBar({
               <FilterSegment
                 eyebrow={segment.eyebrow}
                 value={segment.value}
+                {...(segment.suffix !== undefined && {
+                  suffix: segment.suffix,
+                })}
                 leading={segment.leading}
                 active={segment.active}
                 open={openFilterKey === segment.key}

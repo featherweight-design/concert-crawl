@@ -742,6 +742,8 @@ export const CONSUMER_COPY = {
       // Where and Vibe are multi-select (addendum 2, item 6): the segment
       // names the first pick and counts the rest, "Bluebird +1".
       moreCount: (label: string, more: number) => `${label} +${more}`,
+      // The same "+1" as moreCount, drawn apart so the name can ellipsise.
+      moreSuffix: (more: number) => `+${more}`,
     },
 
     // The phone chip once Where or Vibe holds more than one value.
