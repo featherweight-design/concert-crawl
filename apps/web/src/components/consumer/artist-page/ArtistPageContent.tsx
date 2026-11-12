@@ -71,8 +71,8 @@ export const ArtistPageContent = ({
   const { artist, shows, past, history } = data;
   const hasShows = shows.length > 0;
   const genres = artistGenres(shows);
-  // The first genre that has a color, so an unbucketed lead genre never
-  // neutralises the ring while a bucketed one sits behind it.
+  // The lead bucket's color. Every bucket owns a token, so `find` only falls
+  // through to the neutral ring when there are no genres at all.
   const ring = genres.map(genreColor).find(Boolean) ?? NEUTRAL_GENRE_COLOR;
 
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,

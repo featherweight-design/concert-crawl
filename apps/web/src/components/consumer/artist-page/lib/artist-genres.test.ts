@@ -22,13 +22,17 @@ describe('artistGenres', () => {
     expect(artistGenres([])).toEqual([]);
   });
 
-  it('ranks by how many shows carry the genre', () => {
+  it('maps raw genres to their Vibe buckets', () => {
+    expect(artistGenres([show(['soul', 'rap'])])).toEqual(['jazz', 'hip-hop']);
+  });
+
+  it('ranks by how many shows carry the bucket', () => {
     expect(
-      artistGenres([show(['soul']), show(['r&b', 'soul']), show(['r&b'])]),
-    ).toEqual(['soul', 'r&b']);
+      artistGenres([show(['soul']), show(['r&b', 'blues']), show(['r&b'])]),
+    ).toEqual(['hip-hop', 'jazz']);
     expect(
-      artistGenres([show(['indie']), show(['r&b']), show(['r&b'])]),
-    ).toEqual(['r&b', 'indie']);
+      artistGenres([show(['indie']), show(['rap']), show(['r&b'])]),
+    ).toEqual(['hip-hop', 'indie']);
   });
 
   it('breaks a tie by the soonest show', () => {
@@ -38,31 +42,23 @@ describe('artistGenres', () => {
     ]);
   });
 
-  it('counts a genre once per show and caps the list', () => {
-    expect(artistGenres([show(['soul', 'soul', 'jazz', 'funk'])])).toEqual([
-      'soul',
-      'jazz',
-    ]);
-  });
-
-  it('counts case and whitespace variants as one genre, keeping the first spelling', () => {
+  it('counts a bucket once per show and caps the list', () => {
     expect(
-      artistGenres([show(['Soul ']), show(['soul']), show([' SOUL', 'jazz'])]),
-    ).toEqual(['Soul', 'jazz']);
-    // And once per show, however it is spelled there.
-    expect(artistGenres([show(['soul', 'Soul', 'jazz'])])).toEqual([
-      'soul',
-      'jazz',
-    ]);
+      artistGenres([show(['soul', 'funk', 'rock', 'pop']), show(['rock'])]),
+    ).toEqual(['rock', 'jazz']);
   });
 
-  it('skips blank genres', () => {
-    expect(artistGenres([show(['  ', 'soul'])])).toEqual(['soul']);
+  it('counts case and whitespace variants as one bucket', () => {
+    expect(
+      artistGenres([show(['Soul ']), show(['soul']), show([' SOUL', 'folk'])]),
+    ).toEqual(['jazz', 'folk']);
   });
 
-  it('keeps an unbucketed lead in first place; the page picks the ring past it', () => {
+  it('skips blank and unbucketed genres', () => {
+    expect(artistGenres([show(['  ', 'soul'])])).toEqual(['jazz']);
     expect(
       artistGenres([show(['chillwave', 'electronic']), show(['chillwave'])]),
-    ).toEqual(['chillwave', 'electronic']);
+    ).toEqual(['electronic']);
+    expect(artistGenres([show(['chillwave'])])).toEqual([]);
   });
 });

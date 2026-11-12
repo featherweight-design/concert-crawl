@@ -7,8 +7,11 @@
 // One deliberate departure from the board: it draws a round portrait, which
 // predates the tilted card the artist boards settled on. The skeleton draws
 // the card, because a circle that turns into a 4:5 card is the layout shift
-// rule 9 exists to prevent. Addendum 2 item 11 then drew it: 190 × 230 at −2.5°. Everything else is the board's: the name and line
-// bars, the follow pill, the section label and three carded rows.
+// rule 9 exists to prevent. Addendum 3 settled it as the loaded card exactly
+// (200 × 250 at −2° on mobile, the same radius and outline, on desktop too),
+// so it reads the loaded card's own ratio and frame rather than its own
+// numbers. Everything else is the board's: the name and line bars, the follow
+// pill, the section label and three carded rows.
 //
 // This stands in for the ARTIST PAYLOAD only. The Spotify embed has its own
 // loading clock: a third-party iframe must never hold the whole page grey.
@@ -17,13 +20,12 @@ import React from 'react';
 import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import {
   ARTIST_CARD_RADIUS,
+  ARTIST_CARD_RATIO,
   ArtistBackdrop,
   ArtistStageShell,
+  artistCardFrame,
 } from '@/components/consumer/artist-page/ArtistStage';
-import {
-  AP_SKELETON_CARD,
-  NF_FOLLOW_SIZES,
-} from '@/components/consumer/artist-page/definitions/constants';
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
 import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
@@ -71,14 +73,12 @@ const ArtistLoading = () => (
       card={
         <div
           data-testid="stage-card-skeleton"
-          // Mobile is the board's 190 × 230; desktop has no board, so it keeps
-          // filling the slot at 4:5.
-          className="mx-auto h-[230px] w-[190px] md:aspect-[4/5] md:h-auto md:w-full"
+          // Fills the same slot at the same ratio as the loaded card, wearing
+          // the ring an ungenred artist's card wears, so nothing moves when
+          // the data lands.
           style={{
-            transform: `rotate(${AP_SKELETON_CARD.tilt}deg)`,
-            borderRadius: ARTIST_CARD_RADIUS,
-            boxShadow: '0 0 0 1px var(--border-strong)',
-            overflow: 'hidden',
+            ...artistCardFrame(NEUTRAL_GENRE_COLOR),
+            aspectRatio: ARTIST_CARD_RATIO,
           }}
         >
           <SkeletonBlock height="100%" radius={ARTIST_CARD_RADIUS} />
