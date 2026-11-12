@@ -2,6 +2,7 @@ import type { StatusKind } from '@/components/admin/primitives';
 import type {
   AdminArtistRow,
   ArtistCandidate,
+  ArtistTab,
   ArtistWrite,
 } from './artists-api';
 
@@ -28,6 +29,18 @@ export const isToCheck = (row: AdminArtistRow): boolean =>
   row.matchStatus === 'unmatched' ||
   row.matchStatus === 'no_match' ||
   (row.matchStatus === 'matched' && row.autoMatchedAt !== null);
+
+/**
+ * Whether a row belongs in a tab, as the API lists it: a search lists every
+ * status, so each tab keeps only its own hits. Matched is the confirmed
+ * matches; an automatic one waits in To check as Check.
+ */
+export const belongsTo = (tab: ArtistTab, row: AdminArtistRow): boolean =>
+  tab === 'to_check'
+    ? isToCheck(row)
+    : tab === 'matched'
+      ? row.matchStatus === 'matched' && row.autoMatchedAt === null
+      : row.matchStatus === 'not_an_artist';
 
 export const KIND_TONE: Record<ToCheckKind, StatusKind> = {
   reported: 'warning',

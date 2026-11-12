@@ -65,7 +65,21 @@ beforeEach(() => {
   patchStatus = 200;
   listCalls = 0;
   patchGate = null;
-  listFor = () => ({ data: [row()], total: 1 });
+  listFor = (query) => ({
+    data: [
+      query.get('status') === 'not_an_artist'
+        ? row({
+            id: 'n1',
+            name: 'All My Friends Tour',
+            matchStatus: 'not_an_artist',
+            spotifyArtistId: null,
+            autoMatchedAt: null,
+            candidates: null,
+          })
+        : row(),
+    ],
+    total: 1,
+  });
   window.matchMedia = vi.fn().mockReturnValue({
     matches: false,
     addEventListener: () => undefined,
@@ -115,6 +129,24 @@ afterEach(() => {
 });
 
 describe('ArtistsClient', () => {
+  it('sends a Not artists row back with unmatched', async () => {
+    render(<ArtistsClient />);
+    fireEvent.click(await screen.findByRole('tab', { name: /Not artists/ }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'It’s an artist: All My Friends Tour',
+      }),
+    );
+    await waitFor(() => {
+      const patch = vi
+        .mocked(fetch)
+        .mock.calls.find(([, init]) => init?.method === 'PATCH');
+      expect(patch?.[1]?.body).toBe(
+        JSON.stringify({ spotifyArtistId: null, matchStatus: 'unmatched' }),
+      );
+    });
+  });
+
   it('draws a Check row with its counts', async () => {
     render(<ArtistsClient />);
     expect(

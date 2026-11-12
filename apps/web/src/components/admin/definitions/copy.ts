@@ -2539,7 +2539,27 @@ export const ADMIN_COPY = {
     /** A row's buttons name the artist for screen readers. */
     actionFor: (action: string, name: string) => `${action}: ${name}`,
     // Under "Couldn't change {name}", so the name isn't said twice.
-    stillToCheck: "It's still in To check.",
+    stillIn: (tab: string) => `It's still in ${tab}.`,
+    subtitleShort: 'The photo and genre fans see on every show.',
+    matchedMeta: (upcoming: number, following: number) =>
+      `${upcoming} upcoming · ${following} following`,
+    itsAnArtist: 'It’s an artist',
+    changeMatch: 'Change match',
+    menu: {
+      label: (name: string) => `More for ${name}`,
+      changeMatch: 'Change match…',
+      changeMatchLine: 'Pick another Spotify artist.',
+      notAnArtist: 'Not an artist…',
+      notAnArtistLine: 'A tour name, promoter, series or sports.',
+    },
+    emptyMatched: {
+      title: 'No matches yet',
+      body: 'Artists with a confirmed Spotify match land here.',
+    },
+    emptyNotArtists: {
+      title: 'Nothing marked',
+      body: 'Tours, promoters and series you mark land here.',
+    },
     itemLabel: 'artists',
   },
 
