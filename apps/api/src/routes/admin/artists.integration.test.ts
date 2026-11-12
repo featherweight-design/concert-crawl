@@ -278,7 +278,9 @@ describe('admin artists routes', () => {
       expect(res.status).toBe(200);
       expect(body.data).toEqual({
         to_check: 2,
-        toCheckWindows: { soon: 0, later: 0, none: 2 },
+        to_check_soon: 0,
+        to_check_later: 0,
+        to_check_none: 2,
         reported: 0,
         unmatched: 0,
         matched: 1,
@@ -380,7 +382,9 @@ describe('admin artists routes', () => {
       expect(body.data).toEqual({
         // Exhausted rows still wait on a person, so To check keeps them.
         to_check: 3,
-        toCheckWindows: { soon: 0, later: 0, none: 3 },
+        to_check_soon: 0,
+        to_check_later: 0,
+        to_check_none: 3,
         reported: 0,
         unmatched: 0,
         matched: 0,
@@ -478,27 +482,55 @@ describe('admin artists routes', () => {
       await seedShow('soon', SOON);
       await seedShow('later', LATER);
 
-      const names = async (window: string) =>
-        (await list(`status=to_check&window=${window}`)).map(
+      const names = async (query: string) =>
+        (await list(`status=to_check&${query}`)).map(
           (row) => row.canonicalName,
         );
-      expect(await names('soon')).toEqual(['soon']);
-      expect(await names('later')).toEqual(['later']);
-      // The window replaces `upcoming`, so No show lists past-only rows
-      // without the toggle.
-      expect(await names('none')).toEqual(['never']);
+      const counts = async (query: string) =>
+        (
+          await (
+            await app.request(`/v1/admin/artists/counts?${query}`, {
+              headers: ADMIN_HEADERS,
+            })
+          ).json()
+        ).data;
 
-      const counts = await (
-        await app.request('/v1/admin/artists/counts', {
-          headers: ADMIN_HEADERS,
-        })
-      ).json();
-      expect(counts.data.to_check).toBe(2);
-      expect(counts.data.toCheckWindows).toEqual({
-        soon: 1,
-        later: 1,
-        none: 1,
+      expect(await names('window=soon&upcoming=false')).toEqual(['soon']);
+      expect(await names('window=later&upcoming=false')).toEqual(['later']);
+      expect(await names('window=none&upcoming=false')).toEqual(['never']);
+      expect(await counts('upcoming=false')).toMatchObject({
+        to_check: 3,
+        to_check_soon: 1,
+        to_check_later: 1,
+        to_check_none: 1,
       });
+
+      // The window sits on top of `upcoming`, so with it on, No show is empty
+      // in both the list and its chip, and the chips add up to the tab.
+      expect(await names('window=none')).toEqual([]);
+      expect(await counts('')).toMatchObject({
+        to_check: 2,
+        to_check_soon: 1,
+        to_check_later: 1,
+        to_check_none: 0,
+      });
+    });
+
+    it('counts a fan Watching by hand and through Spotify once', async () => {
+      await seedArtist({ canonicalName: 'twice', matchStatus: 'matched' });
+      await seedShow('twice', SOON);
+      await testDb.insert(userArtistFollows).values([
+        { userId: 'fan_1', artistName: 'Twice', canonicalName: 'twice' },
+        {
+          userId: 'fan_1',
+          artistName: 'Twice',
+          canonicalName: 'twice',
+          source: 'spotify_followed',
+          spotifyArtistId: 'sp_twice',
+        },
+      ]);
+      const [row] = await list('status=matched');
+      expect(row?.watchingCount).toBe(1);
     });
 
     it('rejects an unknown window', async () => {
