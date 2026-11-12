@@ -7,13 +7,18 @@ const copy = ADMIN_COPY.health.cost;
 const WIDTH = 520;
 const HEIGHT = 124;
 const GAP = 2;
+/** The bars' baseline: the board leaves 4 units under it. */
+const BASE = 120;
 /** Headroom so the tallest bar never touches the top edge. */
 const TOP = 4;
+/** Days to come draw at a fixed 40% of the plot (48 of 120 on the board). */
+const FUTURE_HEIGHT = BASE * 0.4;
 
 const axisLabel = {
   fontFamily: "'JetBrains Mono', monospace",
   fontSize: 9.5,
   letterSpacing: '0.14em',
+  fontWeight: 500,
   textTransform: 'uppercase',
   color: 'var(--fg-subtle)',
 } satisfies React.CSSProperties;
@@ -39,16 +44,15 @@ export const CostByDay = ({
   const mean = spent.length > 0 ? total / spent.length : 0;
   const daily = budgetUsd === null ? null : budgetUsd / series.length;
   const scale = Math.max(...spent, daily ?? 0, 0.01);
-  const toHeight = (cost: number) => (cost / scale) * (HEIGHT - TOP);
+  const toHeight = (cost: number) => (cost / scale) * (BASE - TOP);
   const barWidth = (WIDTH - GAP * (series.length - 1)) / series.length;
-  // Days to come draw at the mean so far, or a third of the chart.
-  const futureHeight = mean > 0 ? toHeight(mean) : HEIGHT / 3;
-  const budgetY = daily === null ? null : HEIGHT - toHeight(daily);
+  const budgetY = daily === null ? null : BASE - toHeight(daily);
   const name = formatMonth(month);
 
   return (
     <Panel
       title={copy.title}
+      phoneCompact
       action={
         // The phone board has no "$x a day" or footnote (gap G12).
         <span
@@ -76,9 +80,9 @@ export const CostByDay = ({
                 <rect
                   key={day.date}
                   x={x}
-                  y={HEIGHT - futureHeight}
+                  y={BASE - FUTURE_HEIGHT}
                   width={barWidth}
-                  height={futureHeight}
+                  height={FUTURE_HEIGHT}
                   rx={2}
                   fill="none"
                   stroke="var(--border-strong)"
@@ -92,7 +96,7 @@ export const CostByDay = ({
               <rect
                 key={day.date}
                 x={x}
-                y={HEIGHT - height}
+                y={BASE - height}
                 width={barWidth}
                 height={height}
                 rx={2}
