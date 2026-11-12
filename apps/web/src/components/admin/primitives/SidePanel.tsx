@@ -71,7 +71,13 @@ const PanelBody = ({
     <div>
       <h2
         id={titleId}
-        style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--fg)' }}
+        style={{
+          margin: 0,
+          fontSize: 20,
+          fontWeight: 800,
+          color: 'var(--fg)',
+          overflowWrap: 'anywhere',
+        }}
       >
         {title}
       </h2>

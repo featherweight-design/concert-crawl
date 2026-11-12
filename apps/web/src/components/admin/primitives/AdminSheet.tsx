@@ -122,6 +122,7 @@ export const AdminSheet = ({
               fontSize: 18,
               fontWeight: 800,
               color: 'var(--fg)',
+              overflowWrap: 'anywhere',
             }}
           >
             {title}
