@@ -1233,8 +1233,6 @@ export const CONSUMER_COPY = {
     submissionsSection: 'Submitted prices',
     listsSection: 'Lists',
     dangerSection: 'Danger zone',
-    seeAllSubmissions: (submissionCount: number) =>
-      `See all ${submissionCount} →`,
     emailRow: 'Email',
     connectedAccountRow: 'Connected Account',
     passwordRow: 'Password',
@@ -1264,6 +1262,16 @@ export const CONSUMER_COPY = {
     submissionsTotal: (total: number) => `${total} total`,
     submissionsConfirmedSuffix: (confirmedCount: number) =>
       ` · ${confirmedCount} confirmed`,
+    // Mobile summary card: the cred half of "41 total · 41 confirmed · +41 cred".
+    submissionsCredSuffix: (cred: number) => ` · +${cred} cred`,
+    submissionsLatestLabel: 'Latest',
+    // The three stat tiles over the list (COPY.md: the stat labels).
+    submissionStats: {
+      submitted: 'Submitted',
+      confirmed: 'Confirmed',
+      cred: 'Cred earned',
+    },
+    submissionsBack: '← Settings',
     submissionsConfirmedSuffixDesktop: (confirmedCount: number) =>
       ` · ${confirmedCount} confirmed by other fans.`,
 
@@ -1322,7 +1330,6 @@ export const CONSUMER_COPY = {
     clerkPrivacyLink: "Clerk's Privacy Policy →",
 
     // ── ThemePickerInline ─────────────────────────────────────────
-    themeLabel: 'Theme',
     themeTapHint: 'tap to switch',
 
     // ── CredChip ──────────────────────────────────────────────────

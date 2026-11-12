@@ -22,16 +22,16 @@ export function StatusPill({ status }: StatusPillProps) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '2px 7px',
-        borderRadius: 999,
+        padding: '3px 8px',
+        borderRadius: 4,
         fontFamily: 'var(--font-mono)',
-        fontSize: 9,
+        fontSize: 10,
         fontWeight: 700,
-        letterSpacing: '0.10em',
+        letterSpacing: '0.12em',
         textTransform: 'uppercase' as const,
         color,
         background: `color-mix(in oklch, ${color} 10%, transparent)`,
-        border: `1px solid ${color}`,
+        border: `1px solid color-mix(in oklch, ${color} 70%, transparent)`,
       }}
     >
       {label}
