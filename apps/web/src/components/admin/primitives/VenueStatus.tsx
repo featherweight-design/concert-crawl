@@ -20,8 +20,9 @@ const CRAWLING: Record<VenueCrawling, { tone: string; label: string }> = {
   paused: { tone: 'var(--warning)', label: copy.crawling.paused },
   auto_paused: { tone: 'var(--danger)', label: copy.crawling.autoPaused },
   blocked: { tone: 'var(--danger)', label: copy.crawling.blocked },
+  // "Paused: robots.txt" in warning (#178 item 29, phone addendum Source).
   robots_disallowed: {
-    tone: 'var(--danger)',
+    tone: 'var(--warning)',
     label: copy.crawling.robotsDisallowed,
   },
 };
@@ -89,13 +90,23 @@ export type VenueStatusVenue = Pick<
 export const VenueStatus = ({
   venue,
   crawlingLabel,
+  inList = false,
 }: {
   venue: VenueStatusVenue;
   crawlingLabel?: string;
+  /**
+   * List cells say "Auto-paused" and put the failure count in the latest-run
+   * line; detail views and Needs you say "Auto-paused: 3 failures" (#178
+   * item 29).
+   */
+  inList?: boolean;
 }) => {
   const chips = deriveVenueStatusChips(venue);
   const onSite = ON_SITE[chips.onSite];
-  const crawling = CRAWLING[chips.crawling];
+  const crawling =
+    inList && chips.crawling === 'auto_paused'
+      ? { ...CRAWLING.auto_paused, label: copy.crawling.autoPausedShort }
+      : CRAWLING[chips.crawling];
   return (
     <span
       data-testid="venue-status"

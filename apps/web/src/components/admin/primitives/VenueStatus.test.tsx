@@ -67,4 +67,27 @@ describe('VenueStatus', () => {
       'Paused: awaiting reply',
     );
   });
+
+  it('shortens an auto-pause in list cells only', () => {
+    render(
+      <VenueStatus
+        inList
+        venue={{
+          ...venue,
+          crawlPausedAt: '2026-11-10T00:00:00Z',
+          consecutiveFailures: 3,
+        }}
+      />,
+    );
+    expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
+      /^Auto-paused$/,
+    );
+  });
+
+  it('reads a robots.txt disallow as a pause', () => {
+    render(<VenueStatus venue={{ ...venue, robotsTxtAllowed: false }} />);
+    expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
+      'Paused: robots.txt',
+    );
+  });
 });

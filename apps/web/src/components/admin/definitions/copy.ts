@@ -2620,8 +2620,9 @@ export const ADMIN_COPY = {
       crawling: 'Crawling',
       paused: 'Paused',
       autoPaused: 'Auto-paused: 3 failures',
+      autoPausedShort: 'Auto-paused',
       blocked: 'Blocked',
-      robotsDisallowed: 'robots.txt disallows',
+      robotsDisallowed: 'Paused: robots.txt',
     },
   },
   kind: {
@@ -2640,7 +2641,7 @@ export const ADMIN_COPY = {
     couldntLoad: {
       title: (page: string) => `Couldn't load ${page}`,
       titleGeneric: "Couldn't load this page",
-      body: "The API didn't answer in time. Nothing you decided is lost.",
+      body: "This page didn't load. Nothing you decided is lost.",
       tryAgain: 'Try again',
       openHealth: 'Open Health',
       errorId: (digest: string) => `Error ID: ${digest}`,

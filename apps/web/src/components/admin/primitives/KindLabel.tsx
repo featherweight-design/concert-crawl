@@ -18,7 +18,8 @@ const TONE: Record<Kind, string> = {
   event: 'var(--warning)',
   prices: 'var(--success)',
   bug: 'var(--danger)',
-  flag: 'var(--fg-subtle)',
+  // Info tone, like VENUE and SHOW (#178 item 29).
+  flag: 'var(--signal)',
   priceCheck: 'var(--danger)',
 };
 
