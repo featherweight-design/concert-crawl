@@ -389,6 +389,36 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
       expect(promoted?.heldForAdminAt).toBeNull();
     });
 
+    it('lets a held row promote on the next confirm once the setting is turned off, clearing the stamp', async () => {
+      await testDb
+        .insert(adminSettings)
+        .values({ id: 1, approvePricesMyself: true });
+      await confirm();
+      await testDb
+        .update(adminSettings)
+        .set({ approvePricesMyself: false })
+        .where(eq(adminSettings.id, 1));
+
+      setAuth('user_third');
+      const res = await app.request(confirmUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify(confirmBody),
+      });
+      const body = (await res.json()) as {
+        data: { submissionStatus: string };
+      };
+      expect(body.data.submissionStatus).toBe('corroborated');
+      const [row] = await testDb
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, submissionId));
+      expect(row?.heldForAdminAt).toBeNull();
+    });
+
     it('promotes as before when the setting is off', async () => {
       await testDb
         .insert(adminSettings)

@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import {
-  adminSettings,
   auditLog,
   db,
   events,
@@ -14,6 +13,10 @@ import {
 import { SP_POLICY } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 import { isImminentEvent } from '../lib/time.js';
+import {
+  confirmPromotionColumns,
+  readApprovePricesMyself,
+} from '../lib/price-hold.js';
 import {
   lockParent,
   settleCheckOnCounterPromotion,
@@ -182,33 +185,16 @@ priceSubmissionConfirmsRouter.post(
         // When it is on, a confirm that would promote stamps the row as held
         // instead and leaves it pending; the Needs you price batch (or the
         // approve button) promotes it through setSubmissionStatus.
-        const [setting] = await tx
-          .select({ hold: adminSettings.approvePricesMyself })
-          .from(adminSettings)
-          .limit(1);
-        const hold = setting?.hold ?? false;
+        // An update on a price under check is never held (lib/price-hold.ts).
+        const hold =
+          submission.disputedSubmissionId === null &&
+          (await readApprovePricesMyself(tx));
 
         const [updatedRow] = await tx
           .update(priceSubmissions)
           .set({
             corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
-            status: hold
-              ? priceSubmissions.status
-              : sql`CASE
-              WHEN ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
-                THEN 'corroborated'::price_submission_status
-              ELSE ${priceSubmissions.status}
-            END`,
-            ...(hold
-              ? {
-                  heldForAdminAt: sql`CASE
-                    WHEN ${priceSubmissions.status} = 'pending'
-                      AND ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
-                      THEN COALESCE(${priceSubmissions.heldForAdminAt}, now())
-                    ELSE ${priceSubmissions.heldForAdminAt}
-                  END`,
-                }
-              : {}),
+            ...confirmPromotionColumns(hold, confirmsRequired),
             updatedAt: sql`now()`,
           })
           .where(
