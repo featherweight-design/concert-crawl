@@ -8,7 +8,13 @@
       "steps": [
         {
           "goto": "/venues",
-          "wait": "h1"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "a[href^=\"/venues/\"]"
         }
       ]
     },
@@ -18,7 +24,13 @@
       "steps": [
         {
           "goto": "/venues/red-rocks-amphitheatre",
-          "wait": "h1"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"venue-name\"]"
         }
       ]
     },
@@ -28,7 +40,13 @@
       "steps": [
         {
           "goto": "/venues/ogden-theatre",
-          "wait": "h1"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"venue-name\"]"
         }
       ]
     },
@@ -38,7 +56,13 @@
       "steps": [
         {
           "goto": "/venues/the-church-nightclub",
-          "wait": "h1"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"venue-name\"]"
         }
       ]
     }
