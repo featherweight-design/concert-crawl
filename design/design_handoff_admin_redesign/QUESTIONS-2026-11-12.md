@@ -676,6 +676,19 @@ From the design-review sections of the admin PRs (#169 shell, #170 primitives, #
 | 07/user-menu-desktop (#169) | The popover is drawn without its anchor (the board crop shows only the menu). | [Design] Where does the desktop user menu open from? Built: above the sidebar's user card, 332px wide, as the board's width. |
 | 07-admin-more-no-pills (#169) | More lists Manage and System without an Invite codes row; #178 item 8 draws the interim row in the sidebar only. | [Design] Phones have no route to Invite codes until 5b (it's hidden from More as drawn, so it's reachable by URL). Add the interim row to More, or leave it URL-only on phones until 5b? |
 
+## Admin 1c Health: open after addendum 3 (lane a6, bp2)
+
+1c builds each of these absent, or as the nearest drawn state where a value is required, and records it in its Design review table.
+
+| board / PR | what it says | the question |
+| --- | --- | --- |
+| G3, Artists pill and panel title | The only pills drawn are "Synced 3:45 AM", "Behind" ("Last sync 2 days ago. Spotify answered slowly") and "Failing" ("Spotify said 401"). All are sync states. | [Design] Hugh ruled the Artists tile shows match counts only, with no sync state. Is there a pill at all? Is the panel still called "Artist sync"? Which count buckets fold into Matched and No match? |
+| G4, Site tile email-only | The values drawn are "All passing", "1 failing" and "Prod is down", with the detail "Prod smoke hourly, staging e2e, emails". All are smoke or e2e states. More's "Venues, cost, site checks" and addendum 2's "1 site check failing" also assume checks. | [Design] Hugh ruled the Site tile shows email delivery only. No email-only value, detail, failing state or threshold is drawn. What does the tile show? |
+| G5, budget not set | `llmMonthlyBudgetUsd` can be null. | [Design] No tile, chart line or panel state is drawn for a missing budget. What shows? |
+| G6, paused reason and venue groups | The grid draws "Levitt Pavilion · Awaiting reply". | [Design] + [eng/data] No paused reason is stored before 3c. Show a bare "Paused"? Hidden (active=false), blocked and robots.txt-disallowed venues have no group drawn. Where do they go? |
+| G12, phone omits panels | health-mobile has none of these: Artist sync, The site, "Open Needs you", the grid's "Crawl runs" link, the footer, "$x a day", the footnote, "All activity". | [Design] Is leaving them out on the phone deliberate? |
+| G14, phone loading and mid widths | 07/loading-health is desktop only. | [Design] There's no phone loading board. How do the tiles and columns reflow between 720 and about 1100? |
+
 ## From adm2 (2a backend scope ruling)
 
 | board / PR | what it says | the question |
