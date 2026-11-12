@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Copy, Printer } from 'lucide-react';
-import type {
-  AdminInviteCode,
-  InviteCodeRedemptionsResponse,
-} from '@concert-crawl/types';
+import type { InviteCodeRedemptionsResponse } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from '@/components/admin/primitives';
 import {
@@ -15,11 +12,12 @@ import {
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
 import { postersHref } from '@/lib/poster/posters-href';
-import type { CodesApi } from './codes-api';
+import type { CodesApi, ListedInviteCode } from './codes-api';
 import {
   codeLabel,
   isEnded,
   isMemberCode,
+  isReadOnlyCode,
   makerName,
   roleLabel,
   seatCap,
@@ -53,7 +51,7 @@ export const CodePanel = ({
   onReactivate,
   onClose,
 }: {
-  code: AdminInviteCode;
+  code: ListedInviteCode;
   status: InviteStatus;
   api: CodesApi;
   onCopy: () => void;
@@ -83,12 +81,14 @@ export const CodePanel = ({
   const ended = isEnded(status);
   const used = seatsTaken(code);
   const label = codeLabel(code);
-  // A member's share code: Revoke and who joined only (409 `member_code`).
   const member = isMemberCode(code);
+  // A member's share code, or a kind this build doesn't know: Revoke and who
+  // joined only, never Add seats or Reactivate.
+  const readOnly = isReadOnlyCode(code);
 
   let footer;
   if (ended) {
-    footer = member ? undefined : (
+    footer = readOnly ? undefined : (
       <AdminButton
         type="button"
         variant="outline"
@@ -116,7 +116,7 @@ export const CodePanel = ({
           footer
         ) : (
           <>
-            {onAddSeats && !member && (
+            {onAddSeats && !readOnly && (
               <AdminButton
                 type="button"
                 variant="outline"

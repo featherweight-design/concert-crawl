@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import { Check } from 'lucide-react';
-import type { InviteCode } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, useIsPhone } from '@/components/admin/primitives';
-import { CodeTakenError, type NewCode } from './codes-api';
+import { CodeTakenError, type ListedCode, type NewCode } from './codes-api';
 import {
   cleanCode,
   cleanLabel,
@@ -40,9 +39,9 @@ export const NewCodePanel = ({
   onCreated,
   onClose,
 }: {
-  create: (body: NewCode) => Promise<InviteCode>;
+  create: (body: NewCode) => Promise<ListedCode>;
   /** `posterNext` is true when Make a poster for it next was on. */
-  onCreated: (code: InviteCode, posterNext: boolean) => void;
+  onCreated: (code: ListedCode, posterNext: boolean) => void;
   onClose: () => void;
 }) => {
   const isPhone = useIsPhone();

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { ChevronRight, Search, X } from 'lucide-react';
-import type { AdminInviteCode } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -16,7 +15,7 @@ import {
   StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
-import { codesApi } from '../invite-codes/codes-api';
+import { codesApi, type ListedInviteCode } from '../invite-codes/codes-api';
 import { countPosters } from '../invite-codes/code-rules';
 import { PeopleTabs } from './PeopleTabs';
 import { PeopleRowsSkeleton } from './PeopleSkeleton';
@@ -222,7 +221,7 @@ export function PeopleClient({ code }: { code: string | null }) {
   const [result, setResult] = useState<PeoplePage | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [allCodes, setAllCodes] = useState<AdminInviteCode[] | null>(null);
+  const [allCodes, setAllCodes] = useState<ListedInviteCode[] | null>(null);
   // Only the newest request may draw; a slow older one is dropped.
   const latest = useRef(0);
 

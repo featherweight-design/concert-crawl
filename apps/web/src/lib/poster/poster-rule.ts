@@ -55,27 +55,31 @@ export const seatsTaken = (
 ): number =>
   Math.max(code.useCount, code.usedBy != null || code.usedAt != null ? 1 : 0);
 
+/**
+ * A code's kind as a reader may hold it: the API's, or a wider one such as the
+ * admin list's `unknown` for a kind this build doesn't know.
+ */
+interface KindField {
+  kind: string;
+}
+
 // `kind` is required, not optional: a caller that drops it from a projection
 // should fail to compile, not quietly treat a member code as a poster.
 type StatusFields = Pick<
   InviteCode,
-  | 'revokedAt'
-  | 'expiresAt'
-  | 'maxUses'
-  | 'useCount'
-  | 'usedBy'
-  | 'usedAt'
-  | 'kind'
->;
+  'revokedAt' | 'expiresAt' | 'maxUses' | 'useCount' | 'usedBy' | 'usedAt'
+> &
+  KindField;
 
 /**
  * Is this code a poster? An admin code that admits more than one person. The one
  * place that rule lives: a member's own share code has a high seat cap too, but
- * it is a person's, never a poster, so `kind` decides, not `maxUses` alone.
+ * it is a person's, never a poster, so `kind` decides, not `maxUses` alone. Only
+ * an admin code qualifies, so a kind this build doesn't know is never a poster.
  */
 export const isPosterCode = (
-  code: Pick<InviteCode, 'kind' | 'maxUses'>,
-): boolean => code.kind !== 'member' && code.maxUses > 1;
+  code: Pick<InviteCode, 'maxUses'> & KindField,
+): boolean => code.kind === 'admin' && code.maxUses > 1;
 
 export type InviteStatus = 'active' | 'full' | 'expired' | 'revoked';
 
