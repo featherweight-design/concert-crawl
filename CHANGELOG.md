@@ -1,3 +1,10 @@
+## [1.342.1](https://github.com/featherweight-design/concert-crawl/compare/v1.342.0...v1.342.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** read the day tile's tint the same way in both places ([2bec468](https://github.com/featherweight-design/concert-crawl/commit/2bec468ecde307f6946788fac44ebdd71ea92be5))
+
 # [1.342.0](https://github.com/featherweight-design/concert-crawl/compare/v1.341.1...v1.342.0) (2026-11-12)
 
 
