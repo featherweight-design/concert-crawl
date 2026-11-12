@@ -10,6 +10,7 @@ export * from './admin-queue-snoozes.js';
 export * from './crawl-triggers.js';
 export * from './users.js';
 export * from './social.js';
+export * from './user-event-dismissals.js';
 export * from './commerce.js';
 export * from './notifications.js';
 export * from './prices.js';

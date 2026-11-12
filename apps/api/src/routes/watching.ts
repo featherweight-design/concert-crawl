@@ -2,8 +2,15 @@
 import { Hono } from 'hono';
 import { listedOrDelisted } from '@concert-crawl/db/upcoming-events';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
-import { eq, and, gte, asc } from 'drizzle-orm';
-import { db, userEvents, events, venues, artists } from '@concert-crawl/db';
+import { eq, and, gte, asc, isNull, notExists, or } from 'drizzle-orm';
+import {
+  db,
+  userEvents,
+  userEventDismissals,
+  events,
+  venues,
+  artists,
+} from '@concert-crawl/db';
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
 import {
@@ -84,6 +91,24 @@ watchingRouter.get('/', async (ctx) => {
         // the flag on re-extraction, so a watch hidden here returns on its own if
         // the show comes back to the venue's calendar.
         listedOrDelisted(),
+        // A No longer listed show this person hid stays hidden for them; the
+        // show itself is unchanged for everyone else. The dismissal only counts
+        // while the show is delisted, so one that returns to the venue's
+        // calendar shows again, and is hidden again if it is delisted again.
+        or(
+          isNull(events.delistedAt),
+          notExists(
+            db
+              .select({ id: userEventDismissals.id })
+              .from(userEventDismissals)
+              .where(
+                and(
+                  eq(userEventDismissals.userId, authInfo.userId),
+                  eq(userEventDismissals.eventId, events.id),
+                ),
+              ),
+          ),
+        ),
       ),
     )
     .orderBy(asc(events.date), asc(events.showTime));
@@ -131,7 +156,77 @@ watchingRouter.get('/', async (ctx) => {
     attendingAt: row.attendingAt?.toISOString() ?? null,
   }));
 
+  // Per person (the dismissal filter above), so it is never cached across people.
   return ctx.json({ success: true, data });
+});
+
+// POST /v1/watching/:eventId/dismiss — hide a No longer listed show from my own
+// lists. It must be a show I am watching and that is delisted right now; the
+// show is unchanged for everyone else. Idempotent. DELETE below is the Undo.
+watchingRouter.post('/:eventId/dismiss', async (ctx) => {
+  const authInfo = getAuth(ctx);
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+  const parsed = idSchema.safeParse(ctx.req.param('eventId'));
+  if (!parsed.success) {
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
+  }
+  const eventId = parsed.data;
+
+  const [row] = await db
+    .select({ delistedAt: events.delistedAt })
+    .from(userEvents)
+    .innerJoin(events, eq(userEvents.eventId, events.id))
+    .where(
+      and(
+        eq(userEvents.userId, authInfo.userId),
+        eq(userEvents.eventId, eventId),
+        eq(userEvents.status, 'watching'),
+      ),
+    )
+    .limit(1);
+  // Not on my list, or not a show I watch: the same answer either way.
+  if (!row) {
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
+  }
+  if (row.delistedAt === null) {
+    return ctx.json(
+      {
+        success: false,
+        error: 'Only a show that is no longer listed can be hidden',
+        code: 'not_delisted',
+      },
+      409,
+    );
+  }
+
+  await db
+    .insert(userEventDismissals)
+    .values({ userId: authInfo.userId, eventId })
+    .onConflictDoNothing();
+  return ctx.json({ success: true, data: { dismissed: true } });
+});
+
+// DELETE /v1/watching/:eventId/dismiss — Undo: show it in my lists again.
+// Idempotent: nothing to undo is still a success.
+watchingRouter.delete('/:eventId/dismiss', async (ctx) => {
+  const authInfo = getAuth(ctx);
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+  const parsed = idSchema.safeParse(ctx.req.param('eventId'));
+  if (!parsed.success) {
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
+  }
+
+  await db
+    .delete(userEventDismissals)
+    .where(
+      and(
+        eq(userEventDismissals.userId, authInfo.userId),
+        eq(userEventDismissals.eventId, parsed.data),
+      ),
+    );
+  return ctx.json({ success: true, data: { dismissed: false } });
 });
 
 // PUT /v1/watching/:eventId — toggle watch on/off
