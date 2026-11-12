@@ -12,6 +12,19 @@ describe('PwaIconSvg', () => {
     expect(markup).not.toContain('transform=""');
   });
 
+  it('keeps the installable icon square, and rounds only the launch tile', () => {
+    expect(renderToStaticMarkup(<PwaIconSvg size={192} />)).not.toContain(
+      'rx=',
+    );
+    expect(
+      renderToStaticMarkup(<PwaIconSvg size={192} maskable />),
+    ).not.toContain('rx=');
+    // 28 at 128px is 21 units of the 96-unit art.
+    expect(renderToStaticMarkup(<PwaIconSvg size={128} rounded />)).toContain(
+      'rx="21"',
+    );
+  });
+
   it('insets and scales the art inside the safe zone for maskable icons', () => {
     const markup = renderToStaticMarkup(<PwaIconSvg size={192} maskable />);
     // (96 * (1 - 0.8)) / 2 = 9.6, subject to float representation.

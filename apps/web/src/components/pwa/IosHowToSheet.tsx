@@ -156,6 +156,21 @@ export const IosHowToSheet = ({ open, onClose }: IosHowToSheetProps) => (
       >
         {INSTALL_COPY.sheet.done}
       </button>
+      {/* Points down at Safari's Share button below the sheet. Decorative: the
+          first step already says where Share is. */}
+      <svg
+        data-testid="ios-share-pointer"
+        className="mx-auto mt-6 text-signal"
+        width="12"
+        height="24"
+        viewBox="0 0 12 24"
+        fill="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M6 0v16" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M0 14l6 10 6-10z" fill="currentColor" />
+      </svg>
     </div>
   </BottomSheet>
 );
