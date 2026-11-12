@@ -22,19 +22,23 @@ import {
 /** The roles the segment can set; `sub_admin` is never set here. */
 export type SettableRole = Exclude<Role, 'sub_admin'>;
 
-const JOIN_KINDS: ReadonlySet<unknown> = new Set([
-  'code',
-  'poster',
-  'founder',
-  'test',
-]);
+const JOIN_KINDS = ['code', 'poster', 'founder', 'test'] as const;
 
-const isJoinSource = (value: unknown): value is PersonJoinSource | null =>
-  value === null ||
-  (isRecord(value) &&
-    JOIN_KINDS.has(value['kind']) &&
-    isTextOrNull(value['code']) &&
-    isTextOrNull(value['label']));
+const isJoinKind = (value: unknown): value is PersonJoinSource['kind'] =>
+  JOIN_KINDS.some((kind) => kind === value);
+
+/**
+ * The join source, or null. A kind this build doesn't know (the API may add
+ * one) reads as no source: the head shows the date alone and the Invite code
+ * row is left out, rather than the page failing into Couldn't load.
+ */
+const joinSourceFrom = (value: unknown): PersonJoinSource | null =>
+  isRecord(value) &&
+  isJoinKind(value['kind']) &&
+  isTextOrNull(value['code']) &&
+  isTextOrNull(value['label'])
+    ? { kind: value['kind'], code: value['code'], label: value['label'] }
+    : null;
 
 const isRecent = (value: unknown): value is PersonRecent => {
   if (!isRecord(value) || !isText(value['at'])) return false;
@@ -66,7 +70,13 @@ const isStats = (value: unknown): value is PersonDetail['stats'] =>
   isCount(value['submittedPrices']) &&
   isCount(value['feedback']);
 
-const isPersonDetail = (value: unknown): value is PersonDetail =>
+/** Everything but the join source and Recent, which are read leniently. */
+type DetailRow = Omit<PersonDetail, 'joinSource' | 'recent'> & {
+  joinSource?: unknown;
+  recent: unknown[];
+};
+
+const isDetailRow = (value: unknown): value is DetailRow =>
   isRecord(value) &&
   isText(value['id']) &&
   isTextOrNull(value['handle']) &&
@@ -78,12 +88,10 @@ const isPersonDetail = (value: unknown): value is PersonDetail =>
   isText(value['emailMasked']) &&
   Array.isArray(value['signInMethods']) &&
   value['signInMethods'].every(isText) &&
-  isJoinSource(value['joinSource']) &&
   (value['codeRedeemerCount'] === null ||
     isCount(value['codeRedeemerCount'])) &&
   isStats(value['stats']) &&
-  Array.isArray(value['recent']) &&
-  value['recent'].every(isRecent);
+  Array.isArray(value['recent']);
 
 export const personApi = (getToken: GetToken) => {
   const base = (userId: string) =>
@@ -91,8 +99,13 @@ export const personApi = (getToken: GetToken) => {
   return {
     get: async (userId: string): Promise<PersonDetail> => {
       const data = await call(getToken, base(userId));
-      if (!isPersonDetail(data)) throw new Error('person');
-      return data;
+      if (!isDetailRow(data)) throw new Error('person');
+      return {
+        ...data,
+        joinSource: joinSourceFrom(data.joinSource),
+        // A Recent kind this build doesn't know is skipped, not fatal.
+        recent: data.recent.filter(isRecent),
+      };
     },
     /** The full email, audited as `user.email_shown`; '' when there is none. */
     showEmail: async (userId: string): Promise<string> => {
