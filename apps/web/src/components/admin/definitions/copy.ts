@@ -2138,7 +2138,7 @@ export const ADMIN_COPY = {
     reactivate: {
       title: (code: string) => `Reactivate ${code}?`,
       body: (code: string, max: number, used: number) =>
-        `People can join with ${code} again, up to its ${max} seats (${used} used).`,
+        `People can join with ${code} again, up to its ${max} ${max === 1 ? 'seat' : 'seats'} (${used} used).`,
       keep: 'Keep it ended',
       confirm: 'Reactivate',
     },
