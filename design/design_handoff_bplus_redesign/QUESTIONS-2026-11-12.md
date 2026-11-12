@@ -285,3 +285,9 @@ Pre-build audit of `design/design_handoff_edit_concerts` (17 boards), 57 rows: 3
 | 57. concerts_m, concerts_menu_d | The phone ⋯ is a bare ~16 px glyph at the row edge with no drawn hit area; the desktop open ⋯ box is ~30 px. The stamp tiles beside it are ~56 px, so only the ⋯ is in question. | [Design] Confirm a 44 px target for the ⋯. |
 
 Fully drawn (PR2 can be built to this): concerts_m, concerts_menu_d (open past-row menu), remove_sheet_m, remove_dialog_d, removed_m; PR3 phone boards event_went_m, event_remove_m, event_unmarked_m, event_stamped_m, artist_past_m; PR4 phone boards add_sheet_m, add_search_m, add_tapped_m, add_end_m, add_none_m, plus add_dialog_d (the only desktop one).
+
+## Late: B+ Settings (lane ec1, #154)
+
+| board / PR | what it says | the question |
+| --- | --- | --- |
+| more-s-d_profile and its five sibling Settings panels (B18a, #154) | The profile card is drawn only for an account with a handle. | [Design] What does the profile card look like with no handle, when there's no initial to fill the ring? Built as today: the plain dashed placeholder avatar, no gradient ring, and no cutout gap over the banner. Draw the ring, the banner overlap and the placeholder, or confirm. |
