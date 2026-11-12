@@ -76,6 +76,12 @@ settingsAdminRouter.patch(
     // One transaction so the audited "before" is the row this write replaced,
     // even when two admins save at once: the second waits on the row lock.
     const saved = await db.transaction(async (tx) => {
+      // Make sure row 1 exists so the lock below has something to hold, even
+      // for the very first save.
+      await tx
+        .insert(adminSettings)
+        .values({ id: SETTINGS_ROW_ID, updatedAt: new Date(0) })
+        .onConflictDoNothing();
       const [previous] = await tx
         .select()
         .from(adminSettings)
