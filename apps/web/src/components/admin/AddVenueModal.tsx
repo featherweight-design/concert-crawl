@@ -41,12 +41,28 @@ interface FieldError {
 
 interface AddVenueModalProps {
   onSuccess?: () => void;
-  fullWidth?: boolean;
+  /** The phone list draws the trigger as a square "+" (`04/venues-mobile`). */
+  iconOnly?: boolean;
 }
+
+/** The Venues head's call to action, as `04/venues-desktop` draws it. */
+const TRIGGER_STYLE = {
+  height: 36,
+  padding: '0 16px',
+  borderRadius: 9,
+  fontSize: 13.5,
+} as const;
+
+const ICON_TRIGGER_STYLE = {
+  ...TRIGGER_STYLE,
+  width: 36,
+  padding: 0,
+  flex: 'none',
+} as const;
 
 export function AddVenueModal({
   onSuccess,
-  fullWidth = false,
+  iconOnly = false,
 }: AddVenueModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -235,13 +251,16 @@ export function AddVenueModal({
   return (
     <>
       <AdminButton
-        variant="primary"
-        icon={Plus}
+        variant="gradient"
+        {...(iconOnly && {
+          icon: Plus,
+          'aria-label': ADMIN_COPY.addVenueModal.trigger,
+        })}
         type="button"
-        fullWidth={fullWidth}
+        style={iconOnly ? ICON_TRIGGER_STYLE : TRIGGER_STYLE}
         onClick={() => setOpen(true)}
       >
-        {ADMIN_COPY.addVenueModal.trigger}
+        {iconOnly ? null : ADMIN_COPY.addVenueModal.trigger}
       </AdminButton>
 
       <Dialog.Root

@@ -52,6 +52,21 @@ describe('VenueStatus', () => {
       'Hidden',
     );
     expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
+      'Not crawled',
+    );
+  });
+
+  it('names an auto-pause on a live venue', () => {
+    render(
+      <VenueStatus
+        venue={{
+          ...venue,
+          crawlPausedAt: '2026-11-10T00:00:00Z',
+          consecutiveFailures: 3,
+        }}
+      />,
+    );
+    expect(screen.getByTestId('venue-status-crawling')).toHaveTextContent(
       'Auto-paused: 3 failures',
     );
   });
