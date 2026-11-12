@@ -1,3 +1,15 @@
+# [1.341.0](https://github.com/featherweight-design/concert-crawl/compare/v1.340.0...v1.341.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* send multi-value filters as repeated keys and keep /v1/events lenient ([9a57080](https://github.com/featherweight-design/concert-crawl/commit/9a57080ea5b6067e7df85c21e59e6e827e3efb4a)), closes [#1698](https://github.com/featherweight-design/concert-crawl/issues/1698)
+
+
+### Features
+
+* let the Where and Vibe filters carry several values ([6b46835](https://github.com/featherweight-design/concert-crawl/commit/6b46835b74cb183ba7f35a5e77211de6f76d73ad)), closes [#1698](https://github.com/featherweight-design/concert-crawl/issues/1698)
+
 # [1.340.0](https://github.com/featherweight-design/concert-crawl/compare/v1.339.0...v1.340.0) (2026-11-12)
 
 
