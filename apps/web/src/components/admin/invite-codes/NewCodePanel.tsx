@@ -107,7 +107,8 @@ export const NewCodePanel = ({
             style={{
               height: isPhone ? 46 : 40,
               fontSize: isPhone ? 15 : 14,
-              flex: 1,
+              // The phone sheet stacks its footer; flex 1 would squash it.
+              ...(isPhone ? {} : { flex: 1 }),
               borderRadius: 9,
             }}
           >
