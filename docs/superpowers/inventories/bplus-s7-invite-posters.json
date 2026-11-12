@@ -1,0 +1,43 @@
+{
+ "feature": "Surface 7 \u00b7 invite posters (admin Posters tab, Night/Paper sheets)",
+ "note": "Boards: design/design_handoff_invite_poster/screens/admin-posters-desktop, admin-posters-mobile, poster-night, poster-paper, poster-night-tabs, admin-new-code-desktop. Admin role. /I/<code> hand-walked (code in URL).",
+ "widths": [
+  {
+   "label": "w320",
+   "width": 320,
+   "height": 568,
+   "touch": true
+  },
+  {
+   "label": "w390",
+   "width": 390,
+   "height": 844,
+   "touch": true
+  },
+  {
+   "label": "w640",
+   "width": 640,
+   "height": 900
+  },
+  {
+   "label": "w1300",
+   "width": 1300,
+   "height": 900
+  }
+ ],
+ "out": "/private/tmp/claude-501/-Users-huey-Projects-concert-crawl/45bcb9f6-4513-4bff-a96f-c53d3eb31b53/scratchpad/sheets/s7",
+ "rows": [
+  {
+   "id": "posters",
+   "label": "/admin/invite-codes/posters: default",
+   "steps": [
+    {
+     "goto": "/admin/invite-codes/posters",
+     "wait": "[data-testid=\"posters-tab\"]",
+     "settle": 2000
+    }
+   ],
+   "fullPage": true
+  }
+ ]
+}
