@@ -308,6 +308,21 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
       date: '2027-09-04',
       showTime: '20:00:00',
     });
+    // An even tally: the earlier show's genre wins, whatever order the rows
+    // come back in.
+    await seedArtist({ name: 'Genre Tie' });
+    await seedEvent(venue.id, {
+      artist: 'Genre Tie',
+      date: '2027-09-06',
+      showTime: '20:00:00',
+      genre: ['folk'],
+    });
+    await seedEvent(venue.id, {
+      artist: 'Genre Tie',
+      date: '2027-09-05',
+      showTime: '20:00:00',
+      genre: ['blues'],
+    });
 
     const read = async (query: string) => {
       const res = await app.request(`/v1/search/artists?q=${query}`);
@@ -318,6 +333,7 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
     };
     expect((await read('genre mix'))?.genre).toBe('hip-hop');
     expect((await read('genre none'))?.genre).toBeNull();
+    expect((await read('genre tie'))?.genre).toBe('blues');
   });
 
   // The date the row draws. It comes from `loadNextShowByCanonical`, the same
