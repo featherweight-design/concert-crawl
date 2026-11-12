@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
+import { meQueryKey } from '@/lib/queries/use-me';
 import { patchMe, checkHandleAvailability } from '@/lib/users';
 import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider';
 import { Avatar } from './Avatar';
@@ -126,6 +127,9 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
         const key = analyticsHandleQueryKey(userId);
         await queryClient.cancelQueries({ queryKey: key });
         queryClient.setQueryData(key, savedHandle);
+        // The shared profile read feeds the avatar in the menu and the nav, so
+        // the edited handle and colour must not be served from it.
+        await queryClient.invalidateQueries({ queryKey: meQueryKey(userId) });
       }
       router.refresh();
       if (onClose) {

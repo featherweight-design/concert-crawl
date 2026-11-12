@@ -1,9 +1,9 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import type { PlanState } from '@concert-crawl/types';
-import { fetchMe } from '@/lib/users';
+import { fetchMeShared } from './use-me';
 
 // Scoped by userId: the app-level QueryClient outlives sign-in sessions, so
 // an unscoped key could briefly serve the previous account's PlanState after
@@ -17,18 +17,16 @@ export const planStateQueryKey = (userId: string | null | undefined) =>
 // requireFeature() on the API.
 export function usePlanState() {
   const { getToken, isSignedIn, userId } = useAuth();
+  const queryClient = useQueryClient();
 
   return useQuery<PlanState>({
     queryKey: planStateQueryKey(userId),
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) {
-        // Throw rather than resolve null: a successful null would be cached
-        // as fresh for staleTime and pin entitlements locked for minutes
-        // after a transient token gap. An error lets React Query retry.
-        throw new Error('Auth token unavailable while fetching plan state');
-      }
-      const profile = await fetchMe(token);
+      // The shared read throws on a missing token rather than resolving null:
+      // a successful null would be cached as fresh for staleTime and pin
+      // entitlements locked for minutes after a transient token gap. An error
+      // lets React Query retry.
+      const profile = await fetchMeShared(queryClient, userId, getToken);
       return profile.planState;
     },
     enabled: !!isSignedIn,

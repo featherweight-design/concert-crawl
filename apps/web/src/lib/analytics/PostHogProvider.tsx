@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useQuery } from '@tanstack/react-query';
-import { fetchMe } from '@/lib/users';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchMeShared } from '@/lib/queries/use-me';
 import {
   initAnalytics,
   identifyUser,
@@ -36,6 +36,7 @@ export const analyticsHandleQueryKey = (userId: string | null) =>
 export function PostHogProvider({ children }: PostHogProviderProps) {
   const { isLoaded, user } = useUser();
   const { getToken } = useAuth();
+  const queryClient = useQueryClient();
   const userId = user?.id ?? null;
   const [analyticsOn, setAnalyticsOn] = useState(false);
 
@@ -53,9 +54,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
   const { data: handle, isSuccess } = useQuery<string | null>({
     queryKey: analyticsHandleQueryKey(userId),
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('Auth token unavailable for analytics');
-      const profile = await fetchMe(token);
+      const profile = await fetchMeShared(queryClient, userId, getToken);
       return profile.handle;
     },
     enabled: analyticsOn && userId !== null,

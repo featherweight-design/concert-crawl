@@ -25,8 +25,11 @@ vi.mock('next/navigation', () => ({
   usePathname: () => pathname.current,
 }));
 
-vi.mock('@/lib/users', () => ({
-  fetchMe: async () => ({ handle: 'hugh', avatarColor: 'signal' }),
+// The nav reads the shared profile through a query client this suite does not
+// mount, so the client and the shared read are both stood in for.
+vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({}) }));
+vi.mock('@/lib/queries/use-me', () => ({
+  fetchMeShared: async () => ({ handle: 'hugh', avatarColor: 'signal' }),
 }));
 
 // Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
