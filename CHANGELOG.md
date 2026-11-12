@@ -1,3 +1,15 @@
+# [1.356.0](https://github.com/featherweight-design/concert-crawl/compare/v1.355.0...v1.356.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **crawler:** bound page body inserts by bytes, sweep first, honour the expiry on read ([2ef038f](https://github.com/featherweight-design/concert-crawl/commit/2ef038f494f6c7e744f21aedeec67f826a1ce262))
+
+
+### Features
+
+* **crawler:** keep fetched page bodies for 14 days behind CRAWL_PAGE_BODIES ([52b3974](https://github.com/featherweight-design/concert-crawl/commit/52b3974652ba43e213809cd74d23edc81cceb6ee))
+
 # [1.355.0](https://github.com/featherweight-design/concert-crawl/compare/v1.354.0...v1.355.0) (2026-11-12)
 
 
