@@ -10,7 +10,6 @@ import {
   AdminButton,
   CouldntLoad,
   EmptyState,
-  PageSkeleton,
   StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
@@ -23,6 +22,7 @@ import { postersHref } from '@/lib/poster/posters-href';
 import { codesApi } from './codes-api';
 import { STATUS_KIND, codeLabel, makerName, shortDate } from './code-rules';
 import { MONO } from './code-styles';
+import { InviteCodesRowsSkeleton } from './InviteCodesSkeleton';
 import { SeatsBar } from './SeatsBar';
 
 const COPY = ADMIN_COPY.codesPage;
@@ -212,7 +212,7 @@ export function InviteCodesClient() {
   if (loadFailed) {
     body = <CouldntLoad page={COPY.tabs.codes} onRetry={() => void load()} />;
   } else if (codes == null) {
-    body = <PageSkeleton columns={6} rows={7} rowHeight={isPhone ? 92 : 57} />;
+    body = <InviteCodesRowsSkeleton />;
   } else if (codes.length === 0) {
     body = (
       <EmptyState
