@@ -324,6 +324,26 @@ describe('MyShowsArtistsContent', () => {
     ).not.toHaveLength(0);
   });
 
+  // The Artists empty card is the shared My shows empty card, with its own
+  // actions slot: the palette primary plus the Watching link under it.
+  it('draws the empty state through the shared card with both actions', () => {
+    render(<MyShowsArtistsContent artists={[]} scaRegion={false} />);
+
+    const card = screen.getAllByTestId('artists-empty-card')[0];
+    if (!(card instanceof HTMLElement)) throw new Error('no empty card');
+    const scope = within(card);
+    expect(scope.getByTestId('my-shows-empty-eyebrow')).toHaveTextContent(
+      COPY.empty.eyebrow,
+    );
+    expect(
+      scope.getByRole('link', { name: COPY.empty.primary }),
+    ).toBeInTheDocument();
+    expect(
+      scope.getByRole('link', { name: COPY.empty.secondary }),
+    ).toBeInTheDocument();
+    expect(scope.getByText(COPY.empty.body)).toHaveStyle({ maxWidth: '380px' });
+  });
+
   // A failed read is not a claim that the account is empty.
   it('renders an error rather than the empty state when the fetch failed', () => {
     render(<MyShowsArtistsContent artists={undefined} scaRegion={false} />);

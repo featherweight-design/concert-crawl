@@ -90,6 +90,7 @@ const watchedShow = (eventId: string): WatchingShow => ({
   attendingAt: null,
   updatedAt: '2026-07-19T00:00:00Z',
   priceObservedAt: null,
+  genres: [],
   imageUrl: null,
   artistPhotoUrl: null,
 });

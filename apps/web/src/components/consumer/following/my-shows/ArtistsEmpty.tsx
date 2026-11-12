@@ -12,6 +12,7 @@
 import Link from 'next/link';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
+import { MyShowsEmptyCard } from '@/components/consumer/history/MyShowsEmptyCard';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants';
 
@@ -61,7 +62,7 @@ const PeopleGlyph = () => (
 
 /** Three dashed rings, the middle one holding the people glyph. */
 const Badge = () => (
-  <span aria-hidden className="flex items-center">
+  <span className="flex items-center">
     {[0, 1, 2].map((idx) => (
       <span
         key={idx}
@@ -92,80 +93,42 @@ export const ArtistsEmpty = ({
   locked,
   desktop = false,
 }: ArtistsEmptyProps) => (
-  <div
-    data-testid="artists-empty-card"
-    className="flex flex-col items-center rounded-[18px] border border-dashed border-border-strong px-5 py-8 text-center sm:px-10 sm:py-10"
+  <MyShowsEmptyCard
+    testId="artists-empty-card"
     style={{ marginTop: desktop ? 8 : 4 }}
-  >
-    <div className="mb-5">
-      <Badge />
-    </div>
-
-    <p
-      style={{
-        margin: 0,
-        fontFamily: 'var(--font-mono)',
-        fontSize: 10.5,
-        fontWeight: 700,
-        letterSpacing: '0.2em',
-        textTransform: 'uppercase',
-        color: 'var(--signal)',
-      }}
-    >
-      {COPY.eyebrow}
-    </p>
-
-    <h2
-      style={{
-        margin: '10px 0 0',
-        fontFamily: 'var(--font-ui)',
-        fontSize: 'clamp(22px, 6.5vw, 30px)',
-        fontWeight: 900,
-        letterSpacing: '-0.03em',
-        lineHeight: 1.1,
-        color: 'var(--fg)',
-      }}
-    >
-      {COPY.headline}
-    </h2>
-
-    <p
-      style={{
-        margin: '10px 0 0',
-        maxWidth: 380,
-        fontSize: 14,
-        lineHeight: 1.55,
-        color: 'var(--fg-muted)',
-      }}
-    >
-      {COPY.body}
-    </p>
-
-    <div className="mt-5 flex flex-col items-center gap-3">
-      {/* Locked sends them to browse, which is a page. Unlocked is a search,
+    badge={<Badge />}
+    eyebrow={COPY.eyebrow}
+    tone="signal"
+    title={COPY.headline}
+    body={COPY.body}
+    bodyMaxWidth={380}
+    actions={
+      <>
+        {/* Locked sends them to browse, which is a page. Unlocked is a search,
           which is a palette. */}
-      {locked ? (
-        <Link href={BROWSE_HREF} className={FOCUS} style={primaryStyle}>
-          {COPY.primaryLocked}
+        {locked ? (
+          <Link href={BROWSE_HREF} className={FOCUS} style={primaryStyle}>
+            {COPY.primaryLocked}
+          </Link>
+        ) : (
+          <SearchLink className={FOCUS} style={primaryStyle}>
+            {COPY.primary}
+          </SearchLink>
+        )}
+        <Link
+          href={WATCHING_HREF}
+          className={`inline-flex min-h-[44px] items-center ${FOCUS}`}
+          style={{
+            color: 'var(--signal)',
+            fontSize: 15,
+            fontWeight: 700,
+            letterSpacing: '-0.01em',
+            textDecoration: 'none',
+          }}
+        >
+          {COPY.secondary}
         </Link>
-      ) : (
-        <SearchLink className={FOCUS} style={primaryStyle}>
-          {COPY.primary}
-        </SearchLink>
-      )}
-      <Link
-        href={WATCHING_HREF}
-        className={`inline-flex min-h-[44px] items-center ${FOCUS}`}
-        style={{
-          color: 'var(--signal)',
-          fontSize: 15,
-          fontWeight: 700,
-          letterSpacing: '-0.01em',
-          textDecoration: 'none',
-        }}
-      >
-        {COPY.secondary}
-      </Link>
-    </div>
-  </div>
+      </>
+    }
+  />
 );

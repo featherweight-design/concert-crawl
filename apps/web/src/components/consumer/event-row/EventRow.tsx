@@ -24,6 +24,7 @@ import {
 import { StatusChip, statusColor } from '@/components/consumer/StatusChip';
 import { orderGenres } from './lib/order-genres';
 import { cardedEdge } from './lib/carded-edge';
+import { genreRing } from './lib/genre-ring';
 import type { EventRowShow } from './lib/row-model';
 
 const NARROW_AT = 360;
@@ -145,7 +146,7 @@ export const EventRow = ({
             style={{
               // The image ring: 1.25px in the genre's color plus a soft glow.
               // A box-shadow, so the clip above never cuts it.
-              boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
+              boxShadow: genreRing(genre),
               // Cancelled dims the artwork, never the row: a row-level opacity
               // pushes --fg-muted below the AA contrast floor. Sold out keeps
               // full-strength art, as the B+ rows board draws it: the night is

@@ -72,6 +72,7 @@ const baseShow: WatchingShow = {
   watchStatus: 'live',
   updatedAt: new Date().toISOString(),
   priceObservedAt: null,
+  genres: [],
   imageUrl: 'https://venue.com/shows/radiohead.jpg',
   artistPhotoUrl: null,
   attendingAt: null,

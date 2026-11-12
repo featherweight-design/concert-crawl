@@ -50,7 +50,6 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
       amount: 68,
       isFloor: true,
       source: null,
-      observedAt: null,
       isPending: false,
     },
     saved: null,
@@ -148,7 +147,6 @@ describe('EventRow — the price slot', () => {
             amount: 0,
             isFloor: true,
             source: null,
-            observedAt: null,
             isPending: false,
           },
         })}
@@ -230,7 +228,7 @@ describe('EventRow — the price slot', () => {
   });
 
   it('marks an unconfirmed price rather than rendering it bare', () => {
-    const price = { amount: 68, isFloor: true, source: null, observedAt: null };
+    const price = { amount: 68, isFloor: true, source: null };
     const { rerender } = render(
       <EventRow
         show={makeShow({ price: { ...price, isPending: true } })}
@@ -435,9 +433,6 @@ describe('EventRow — the footer slot', () => {
  * in production, but it is the honest floor for this ladder.
  */
 describe('EventRow — Rule 3, the row reserves its own height', () => {
-  const FRESH = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const STALE = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-
   const minHeights = (
     surface: 'watching' | 'artist' | 'browse',
     shows: EventRowShow[],
@@ -451,34 +446,23 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     );
 
   const watchingLadder = [
-    // No chips at all: a fresh price with no corroborated source has no
+    // No chips at all: a price with no corroborated source has no
     // provenance, and MetaRow renders nothing.
     makeShow({
       price: {
         amount: 68,
         isFloor: true,
         source: null,
-        observedAt: FRESH,
         isPending: false,
       },
     }),
-    // One chip, provenance, which is all this surface can carry.
+    // One chip, provenance, which is all this surface can carry. A row price
+    // carries no age, so there is no Stale rung to add.
     makeShow({
       price: {
         amount: 68,
         isFloor: true,
         source: 'boxoffice',
-        observedAt: FRESH,
-        isPending: false,
-      },
-    }),
-    // An old price adds nothing now that Stale is gone: still the one chip.
-    makeShow({
-      price: {
-        amount: 68,
-        isFloor: true,
-        source: 'boxoffice',
-        observedAt: STALE,
         isPending: false,
       },
     }),
@@ -494,7 +478,6 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         amount: 68,
         isFloor: true,
         source: 'boxoffice',
-        observedAt: FRESH,
         isPending: false,
       },
     }),
@@ -512,7 +495,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
   it('runs the Watching ladder from no chips to the full two-chip budget', () => {
     expect(
       watchingLadder.map((show) => rowChips(show, 'watching').length),
-    ).toEqual([0, 1, 1, 0, 1, 2]);
+    ).toEqual([0, 1, 0, 1, 2]);
     // Provenance leads, as bp-watching draws it; genre follows.
     const full = watchingLadder[watchingLadder.length - 1] ?? makeShow();
     expect(rowChips(full, 'watching').map((chip) => chip.key)).toEqual([

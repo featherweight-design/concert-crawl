@@ -19,6 +19,8 @@ import {
   type VenueStampVariant,
 } from '@/components/consumer/venue-stamp';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { HISTORY_COPY } from './definitions/copy';
 import {
   HISTORY_DENSITY_CONFIG,
@@ -65,9 +67,8 @@ export const HistoryItem = ({
         gridTemplateColumns: `${cfg.artSize}px 1fr auto`,
         gap: cfg.gap,
         padding: `${cfg.padY}px ${cfg.padR}px ${cfg.padY}px ${cfg.padL}px`,
-        borderLeftWidth: 2,
-        borderLeftColor: genre,
-        backgroundImage: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, transparent), transparent 45%)`,
+        // Hover-safe: the surface color stays in the class so it can hover.
+        ...cardedEdge(genre, { hoverSafe: true }),
       }}
     >
       {/* The headliner's portrait, falling through to the generated artist
@@ -81,8 +82,7 @@ export const HistoryItem = ({
         style={{
           width: cfg.artSize,
           height: cfg.artSize,
-          // A box-shadow, so the clip never cuts the ring.
-          boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
+          boxShadow: genreRing(genre),
         }}
       >
         <Panel

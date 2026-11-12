@@ -30,6 +30,8 @@ import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artis
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { followDateLine } from '@/lib/following';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import type { FollowedArtist } from '@concert-crawl/types';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import {
@@ -78,6 +80,7 @@ export const ArtistManageRow = ({
       : ROW_ART_SIZE;
   const dateLine = followDateLine(artist.nextShow);
   const genre = genreColor(artist.nextShow?.genres[0]) ?? NEUTRAL_GENRE_COLOR;
+  const { background: genreFade, ...genreEdge } = cardedEdge(genre);
 
   return (
     <div
@@ -87,17 +90,11 @@ export const ArtistManageRow = ({
         alignItems: 'center',
         gap: 12,
         padding: card ? 12 : '11px 12px',
-        borderRadius: 12,
         border: '1px solid var(--border)',
-        borderLeftWidth: 2,
-        borderLeftColor: genre,
+        ...genreEdge,
         // Group 1 cards are the ones with a date; the tint is what
         // separates them from the reference list below.
-        ...(artist.nextShow === null
-          ? {}
-          : {
-              background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
-            }),
+        ...(artist.nextShow === null ? {} : { background: genreFade }),
       }}
     >
       <span
@@ -107,7 +104,7 @@ export const ArtistManageRow = ({
           width: art,
           height: art,
           // A box-shadow, so the clip never cuts the ring.
-          boxShadow: `0 0 0 1.25px ${genre}, 0 0 10px color-mix(in oklch, ${genre} 35%, transparent)`,
+          boxShadow: genreRing(genre),
         }}
       >
         <Panel

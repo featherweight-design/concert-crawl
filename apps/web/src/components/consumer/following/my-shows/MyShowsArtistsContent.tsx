@@ -23,6 +23,7 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo';
 import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
+import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { SHELF_NARROW_QUERY } from '@/components/consumer/following/definitions/constants';
 import { ArtistManageRow } from './ArtistManageRow';
 import { AlertsRow } from './AlertsRow';
@@ -327,7 +328,7 @@ const denseButton = {
 // B+ (`bp-artists`): the find action is the gradient pill.
 const densePrimary = {
   ...denseButton,
-  background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+  background: MY_SHOWS_GRADIENT,
   color: 'var(--fg-on-accent)',
   border: '1px solid transparent',
   borderRadius: 999,
