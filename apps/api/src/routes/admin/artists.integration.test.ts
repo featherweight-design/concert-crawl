@@ -112,6 +112,37 @@ describe('admin artists routes', () => {
       expect(body.data).toHaveLength(1);
     });
 
+    // `%` and `_` are LIKE wildcards; a search must match them literally.
+    it('matches LIKE metacharacters literally', async () => {
+      await seedArtist({ canonicalName: 'a_b', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'axb', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'a%c', matchStatus: 'ambiguous' });
+
+      const underscore = await app.request(
+        '/v1/admin/artists?search=_&upcoming=false',
+        { headers: ADMIN_HEADERS },
+      );
+      const underscoreBody = await underscore.json();
+      expect(underscore.status).toBe(200);
+      expect(
+        underscoreBody.data.map(
+          (row: { canonicalName: string }) => row.canonicalName,
+        ),
+      ).toEqual(['a_b']);
+
+      const percent = await app.request(
+        '/v1/admin/artists?search=%25&upcoming=false',
+        { headers: ADMIN_HEADERS },
+      );
+      const percentBody = await percent.json();
+      expect(percent.status).toBe(200);
+      expect(
+        percentBody.data.map(
+          (row: { canonicalName: string }) => row.canonicalName,
+        ),
+      ).toEqual(['a%c']);
+    });
+
     it('filters to the not_an_artist tombstones', async () => {
       await seedArtist({
         canonicalName: 'bass bingo night',

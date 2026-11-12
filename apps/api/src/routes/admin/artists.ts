@@ -9,6 +9,7 @@ import { Hono } from 'hono';
 import { createLogger } from '@concert-crawl/logger';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
+import { escapeLikePattern } from '../../lib/escape-like.js';
 import { z } from 'zod';
 import {
   and,
@@ -226,7 +227,7 @@ artistsAdminRouter.get(
     // `status`: the admin is looking for one named artist, and a row they have
     // to switch a toggle off to find is a row they will conclude is missing.
     const where = search
-      ? ilike(artists.canonicalName, `%${search}%`)
+      ? ilike(artists.canonicalName, `%${escapeLikePattern(search)}%`)
       : and(
           status ? statusFilter(status) : undefined,
           upcoming ? hasUpcomingShowExpr() : undefined,
