@@ -210,6 +210,29 @@ export const RESULT_META_STYLE: CSSProperties = {
   textOverflow: 'ellipsis',
 };
 
+/**
+ * "Venue · Fri, Nov 13" on one line where the VENUE gives way: the date is the
+ * part you scan for, so it never truncates ("Marquis Theater · Fr…" at 320).
+ */
+export function VenueDateLine({
+  venue,
+  date,
+}: {
+  venue: string;
+  date: string;
+}) {
+  return (
+    <span style={{ ...RESULT_META_STYLE, display: 'flex', minWidth: 0 }}>
+      <span
+        style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+      >
+        {venue}
+      </span>
+      <span style={{ flexShrink: 0, whiteSpace: 'pre' }}>{` · ${date}`}</span>
+    </span>
+  );
+}
+
 /** The price on the right: the figure in --fg, or a quiet TBA. */
 export function ResultPrice({ value }: { value: string | null | undefined }) {
   return (

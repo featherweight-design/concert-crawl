@@ -417,6 +417,9 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           <div
             style={{
               flex: 1,
+              // Without this the field keeps its content width at 320 and the
+              // clear button runs off the right edge.
+              minWidth: 0,
               ...SEARCH_FIELD_BOX,
               ...SEARCH_FIELD_GRADIENT_EDGE,
             }}
