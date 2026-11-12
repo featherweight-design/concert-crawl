@@ -11,6 +11,10 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 const SETTINGS_COPY = CONSUMER_COPY.settings;
 const DANGER_COPY = SETTINGS_COPY.dangerZone;
 
+// A handle is one unbroken token and can be long (52 characters on the audit
+// account), so it must be allowed to break anywhere or it runs past the sheet.
+const HANDLE_WRAP_STYLE = { overflowWrap: 'anywhere' } as const;
+
 interface DeleteAccountSheetProps {
   open: boolean;
   onClose: () => void;
@@ -127,7 +131,7 @@ export function DeleteAccountSheet({
             {handle ? (
               <>
                 {' '}
-                <strong>@{handle}</strong>,
+                <strong style={HANDLE_WRAP_STYLE}>@{handle}</strong>,
               </>
             ) : (
               ','
@@ -253,7 +257,7 @@ export function DeleteAccountSheet({
           {handle ? (
             <>
               {' '}
-              <strong>@{handle}</strong>,
+              <strong style={HANDLE_WRAP_STYLE}>@{handle}</strong>,
             </>
           ) : (
             ','
