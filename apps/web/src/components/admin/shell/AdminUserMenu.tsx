@@ -98,7 +98,7 @@ const UserMenuRows = ({ variant }: { variant: 'desktop' | 'phone' }) => {
         border: '1px solid var(--border-strong)',
         background: 'var(--bg-elevated)',
         padding: 6,
-        boxShadow: variant === 'desktop' ? 'var(--shadow-lg)' : 'none',
+        boxShadow: variant === 'desktop' ? 'var(--shadow-strong)' : 'none',
       }}
     >
       <Link href="/events" style={rowStyle}>

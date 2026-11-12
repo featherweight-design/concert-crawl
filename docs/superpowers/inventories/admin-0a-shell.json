@@ -1,30 +1,59 @@
 {
-  "feature": "Admin 0a · Shell",
+  "feature": "Admin 0a \u00b7 Shell",
   "note": "Plan row 0a. CONTACT_SHEET_ROLE=admin. Boards: 01-foundations/desktop-sidebar, mobile-one-nav; 07/more-mobile, user-menu-desktop, user-menu-mobile. By hand: the PRODUCTION badge (the kit refuses prod).",
   "widths": [
-    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
-    { "label": "phone", "width": 390, "height": 844, "touch": true },
-    { "label": "sm", "width": 640, "height": 900 },
-    { "label": "desktop", "width": 1300, "height": 900 }
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 740,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "sm",
+      "width": 640,
+      "height": 900
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
   ],
   "rows": [
     {
       "id": "home",
       "label": "/admin in the shell",
-      "steps": [{ "goto": "/admin", "wait": "[data-testid=\"admin-shell\"]" }]
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"admin-shell\"]"
+        }
+      ]
     },
     {
       "id": "venues",
       "label": "/admin/venues in the shell",
       "steps": [
-        { "goto": "/admin/venues", "wait": "[data-testid=\"admin-shell\"] h1" }
+        {
+          "goto": "/admin/venues",
+          "wait": "[data-testid=\"admin-shell\"] h1"
+        }
       ]
     },
     {
       "id": "review",
-      "label": "/admin/review (interim Needs you)",
+      "label": "/admin/review (interim Needs you; its phone layout has no h1, so it waits on the page title text)",
       "steps": [
-        { "goto": "/admin/review", "wait": "[data-testid=\"admin-shell\"] h1" }
+        {
+          "goto": "/admin/review",
+          "wait": "[data-testid=\"admin-shell\"] main >> text=\"Review\""
+        }
       ]
     },
     {
@@ -42,16 +71,27 @@
       "label": "/admin/more",
       "widths": ["phone-320", "phone", "sm"],
       "steps": [
-        { "goto": "/admin/more", "wait": "[data-testid=\"admin-more\"]" }
+        {
+          "goto": "/admin/more",
+          "wait": "[data-testid=\"admin-more\"]"
+        }
       ]
     },
     {
       "id": "user-menu",
       "label": "User menu open",
       "steps": [
-        { "goto": "/admin", "wait": "[data-testid=\"admin-shell\"]" },
-        { "click": "[data-testid=\"admin-user-menu-trigger\"]:visible" },
-        { "wait": "[data-testid=\"admin-user-menu\"]", "settle": 300 }
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"admin-shell\"]"
+        },
+        {
+          "click": "[data-testid=\"admin-user-menu-trigger\"]:visible"
+        },
+        {
+          "wait": "[data-testid=\"admin-user-menu\"]",
+          "settle": 300
+        }
       ]
     }
   ]
