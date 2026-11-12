@@ -280,21 +280,44 @@ describe('EventRow — lifecycle beats the price state', () => {
 });
 
 describe('EventRow — the three signals a suppressed row carries', () => {
-  it('strikes the date and the time, and never the venue', () => {
+  // B+ rows board: a cancelled row strikes and dims its headliner and leaves
+  // the date line alone.
+  it('strikes the headliner of a cancelled show, never line 3', () => {
     render(
       <EventRow
         show={makeShow({ lifecycle: 'cancelled' })}
         surface="watching"
       />,
     );
-    const line = screen.getByTestId('when-where');
-    const struck = Array.from(line.querySelectorAll('span')).filter(
-      (node) => node.style.textDecoration === 'line-through',
+    expect(screen.getByTestId('row-title').style.textDecoration).toBe(
+      'line-through',
     );
-    // Date, time, and the one separator between them. The separator before the
-    // venue joins a struck unit to an unstruck one, so it stays clean.
-    expect(struck).toHaveLength(3);
+    const line = screen.getByTestId('when-where');
+    expect(
+      Array.from(line.querySelectorAll('span')).filter(
+        (node) => node.style.textDecoration === 'line-through',
+      ),
+    ).toHaveLength(0);
     expect(screen.getByTestId('venue-name-link').style.textDecoration).toBe('');
+    // The state is still named in words for a screen reader.
+    expect(screen.getByText('This show has been cancelled')).toBeTruthy();
+  });
+
+  // Postponed still happens on another night, so nothing is struck.
+  it('strikes nothing on a postponed show', () => {
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'postponed' })}
+        surface="watching"
+      />,
+    );
+    expect(screen.getByTestId('row-title').style.textDecoration).toBe('');
+    const line = screen.getByTestId('when-where');
+    expect(
+      Array.from(line.querySelectorAll('span')).filter(
+        (node) => node.style.textDecoration === 'line-through',
+      ),
+    ).toHaveLength(0);
   });
 
   it('leaves line 3 unstruck on a sold-out show, which is still happening', () => {

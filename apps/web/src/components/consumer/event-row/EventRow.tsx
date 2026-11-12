@@ -186,6 +186,7 @@ export const EventRow = ({
               showsTour={config.showsTour}
               promotesTour={config.promotesTour}
               narrow={narrow}
+              struck={struck}
             />
             {/* Line 2. It stays inside the row's stretched anchor exactly as it
                 was, and the 3px is the column gap it used to inherit from
@@ -208,7 +209,6 @@ export const EventRow = ({
             venueName={show.venueName}
             venueSlug={show.venueSlug}
             narrow={narrow}
-            struck={struck}
           />
           {removed ? (
             // Line 4 carries the explanation in place of the chips: the chip

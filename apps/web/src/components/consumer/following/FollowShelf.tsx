@@ -25,7 +25,10 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { ShelfCard } from './ShelfCard';
 import { FOLLOWING_COPY } from './definitions/copy';
-import { SHELF_CARD_WIDTH } from '@/components/consumer/definitions/constants';
+import {
+  SHELF_RAIL_CAP_CLASS,
+  SHELF_RAIL_GAP_CLASS,
+} from '@/components/consumer/definitions/constants';
 import { SHELF_VISIBLE_CARDS } from './definitions/constants';
 import type { ShelfArtist, ShelfMode } from './definitions/types';
 import { readSessionSeed, shuffleWithSeed } from './lib/shuffle';
@@ -173,14 +176,16 @@ export const FollowShelf = ({
           and leak into the page's scrollWidth at 320px (the #33 mechanism).
           The scroller pads 12px on every side so a card's genre glow isn't
           clipped; from sm up a matching negative margin keeps the cards
-          aligned with the page. */}
+          aligned with the page. From lg the rail stops at the cards the
+          column holds whole, so nothing is drawn hard-clipped at its edge. */}
       <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:-mx-3 sm:max-w-[calc(100%+1.5rem)]">
-        <ul className="flex list-none gap-[10px] overflow-x-auto px-4 py-3 sm:px-3">
+        <ul
+          className={`flex list-none overflow-x-auto px-4 py-3 sm:px-3 ${SHELF_RAIL_GAP_CLASS} ${SHELF_RAIL_CAP_CLASS}`}
+        >
           {visible.map((artist) => (
             <ShelfCard
               key={artist.key}
               artist={artist}
-              width={SHELF_CARD_WIDTH}
               starter={mode === 'zero'}
               locked={locked}
               signedOut={signedOut}

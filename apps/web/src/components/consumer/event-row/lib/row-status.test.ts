@@ -91,11 +91,11 @@ describe('No longer listed', () => {
 });
 
 describe('isStruck', () => {
-  // Line 3 is struck for the two lifecycle states and nothing else. Sold out
-  // shares the dimmed artwork but is not struck: the night still happens.
-  it('strikes the two lifecycle outcomes only', () => {
+  // Only a cancelled show is struck (B+ rows board). Postponed still happens
+  // on another night, and sold out still happens on this one.
+  it('strikes a cancelled show only', () => {
     expect(isStruck('cancelled')).toBe(true);
-    expect(isStruck('postponed')).toBe(true);
+    expect(isStruck('postponed')).toBe(false);
     expect(isStruck('soldout')).toBe(false);
     expect(isStruck('presale')).toBe(false);
     expect(isStruck('price')).toBe(false);

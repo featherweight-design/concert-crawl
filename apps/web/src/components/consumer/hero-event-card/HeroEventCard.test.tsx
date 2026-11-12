@@ -137,10 +137,28 @@ describe('HeroEventCard — band layout (#1525 PR 4)', () => {
     return found;
   };
 
-  it('renders a 112px square panel, not a wide banner', () => {
+  // B+ boards: 97px at phone widths, 130 from sm. The ring owns the width and
+  // the panel fills it square.
+  it('renders a square panel at the board sizes, not a wide banner', () => {
     const { container } = render(<HeroEventCard event={baseEvent} />);
-    expect(slot(container).style.width).toBe('112px');
-    expect(slot(container).style.height).toBe('112px');
+    const ring = screen.getByTestId('hero-image-ring');
+    expect(ring.className).toContain('w-[97px]');
+    expect(ring.className).toContain('sm:w-[130px]');
+    expect(slot(container).style.width).toBe('100%');
+    expect(slot(container).style.aspectRatio).toBe('1 / 1');
+  });
+
+  // The mobile spotlight drops the "with ..." line; desktop keeps it.
+  it('hides the support line below sm and shows it from sm', () => {
+    render(
+      <HeroEventCard
+        event={{ ...baseEvent, supportingArtists: ['Opener One'] }}
+      />,
+    );
+    const support = screen.getByTestId('title-support');
+    expect(support.classList.contains('hidden')).toBe(true);
+    expect(support.classList.contains('sm:block')).toBe(true);
+    expect(support.textContent).toContain('Opener One');
   });
 
   it('has nothing that can outrun the card at 320px', () => {
@@ -191,6 +209,10 @@ describe('HeroEventCard genre color', () => {
     );
     expect(screen.getByTestId('hero-event-card').style.background).toContain(
       'var(--genre-rock)',
+    );
+    // The fill washes the genre off the image side, as a carded row does.
+    expect(screen.getByTestId('hero-event-card').style.background).toContain(
+      'color-mix(in oklch, var(--genre-rock) 20%, var(--surface-1))',
     );
     // MetaRow mounts a measuring copy beside the rendered chip, so every
     // chip node appears twice; the dot still takes only the lead genre.

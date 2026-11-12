@@ -25,6 +25,15 @@ const RAMP = {
   clauseDrop: 4,
 } as const;
 
+/**
+ * A cancelled row's headliner. A decoration plus the muted foreground rather
+ * than a row-level opacity, which would drag --fg-muted below the AA floor.
+ */
+const STRIKE = {
+  textDecoration: 'line-through',
+  textDecorationThickness: 1.5,
+} as const;
+
 /** Flex gap between the headliner and the clause. */
 const GAP = 7;
 
@@ -58,6 +67,11 @@ interface RowTitleLineProps {
   promotesTour?: boolean;
   /** The ≤360px step of the row ramp. */
   narrow?: boolean;
+  /**
+   * A cancelled show (B+ rows board): the headliner is struck and dimmed. The
+   * status chip carries the state for a screen reader; the strike is visual.
+   */
+  struck?: boolean;
 }
 
 /**
@@ -76,6 +90,7 @@ export const RowTitleLine = ({
   showsTour,
   promotesTour = false,
   narrow = false,
+  struck = false,
 }: RowTitleLineProps) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -196,8 +211,11 @@ export const RowTitleLine = ({
       )}
       <div
         data-testid="row-title"
-        className="min-w-0 truncate text-fg transition-colors group-hover/eventtitle:text-signal"
-        style={titleStyle}
+        data-struck={struck || undefined}
+        className={`min-w-0 truncate transition-colors group-hover/eventtitle:text-signal ${struck ? 'text-fg-muted' : 'text-fg'}`}
+        // The strike is a decoration on the title box only, so the measuring
+        // copy below keeps the same advance widths and the fit never moves.
+        style={struck ? { ...titleStyle, ...STRIKE } : titleStyle}
       >
         {title}
       </div>

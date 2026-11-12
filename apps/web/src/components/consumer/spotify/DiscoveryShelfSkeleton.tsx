@@ -5,14 +5,14 @@
 //   - events/loading.tsx (server)    — route fallback, reserves the shelf
 //                                      footprint so the shelf doesn't shove
 //                                      the page down when it paints
-// Box model mirrors TastePickCard VERBATIM (SHELF_CARD_WIDTH ·
-// SHELF_CARD_HEIGHT · 14 · surface-1 · border · flex-1 art · body pad
+// Box model mirrors TastePickCard VERBATIM (SHELF_CARD_BOX_CLASS · 14 ·
+// surface-1 · border · flex-1 art · body pad
 // 10/11/12 · gap 7) so real picks land with zero shift.
 
 import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import {
-  SHELF_CARD_HEIGHT,
-  SHELF_CARD_WIDTH,
+  SHELF_CARD_BOX_CLASS,
+  SHELF_RAIL_GAP_CLASS,
 } from '@/components/consumer/definitions/constants';
 import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay';
 import { SPOTIFY_COPY } from './definitions/copy';
@@ -54,10 +54,8 @@ const SkeletonBar = ({
 // One skeleton pick card — box-identical to TastePickCard.
 const SkeletonCard = ({ className = '' }: { className?: string }) => (
   <li
-    className={`relative flex shrink-0 flex-col overflow-hidden rounded-[14px] ${className}`}
+    className={`relative flex shrink-0 flex-col overflow-hidden rounded-[14px] ${SHELF_CARD_BOX_CLASS} ${className}`}
     style={{
-      width: SHELF_CARD_WIDTH,
-      height: SHELF_CARD_HEIGHT,
       background: 'var(--surface-1)',
       border: '1px solid var(--border)',
     }}
@@ -142,7 +140,7 @@ export const ShelfSkeletonHeader = ({ isTimeout }: { isTimeout: boolean }) => (
 export const ShelfSkeletonCards = () => (
   <ul
     aria-hidden
-    className="-mx-4 flex list-none gap-[11px] overflow-hidden px-4 pb-1 pt-0.5 sm:mx-0 sm:px-0"
+    className={`-mx-4 flex list-none overflow-hidden px-4 pb-1 pt-0.5 sm:mx-0 sm:px-0 ${SHELF_RAIL_GAP_CLASS}`}
   >
     <SkeletonCard />
     <SkeletonCard />

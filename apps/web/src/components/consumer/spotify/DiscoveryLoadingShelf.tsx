@@ -3,8 +3,9 @@
 // DiscoveryShelf LOADING state (design_handoff_discovery_loading). Fires on
 // the narrow gap: entitled + Spotify-connected + `useTastePicks()` still in
 // flight (cold hydration / no SSR seed / mid-session entitlement upgrade).
-// Box model mirrors TastePickCard VERBATIM (168 · 14 · surface-1 · border ·
-// image 116 · body pad 10/11/12 · gap 7) so real picks land with zero shift.
+// Box model mirrors TastePickCard VERBATIM (SHELF_CARD_BOX_CLASS · 14 ·
+// surface-1 · border · flex-1 art · body pad 10/11/12 · gap 7) so real picks
+// land with zero shift.
 // Timeout chip after 8s per the handoff — "slow", not "broken".
 
 import { useEffect, useState } from 'react';

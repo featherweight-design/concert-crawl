@@ -26,7 +26,8 @@ export default async function EventsLoading() {
     // overflow-x-clip mirrors page.tsx — the shelf skeleton's card row is
     // full-bleed (-mx-4) on mobile, and the browse page's horizontal overflow
     // regression (#33) came from exactly that row.
-    <main className="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+    // 1088 mirrors page.tsx: the B+ 1040 column plus its gutters.
+    <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
       {reserveShelf && <DiscoveryShelfSkeleton />}
       {/* B+ first load: chrome as text, data as skeletons, and the pink wave
           beside "Loading shows" in place of the old top progress bar. */}

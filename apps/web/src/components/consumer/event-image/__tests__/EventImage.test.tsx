@@ -94,4 +94,34 @@ describe('<EventImage />', () => {
 
     expect(srcOf(container)).toBe('https://example.test/b.jpg');
   });
+
+  // B+ loading state: an unloaded tile shows the skeleton block, never an
+  // empty pale box.
+  const skeleton = (root: HTMLElement) =>
+    root.querySelector('[data-testid="event-image-skeleton"]');
+
+  it('shows the skeleton until the photo loads', () => {
+    const { container } = render(<EventImage src={venue} alt="Show A" />);
+    expect(skeleton(container)).not.toBeNull();
+    fireEvent.load(photo(container)!);
+    expect(skeleton(container)).toBeNull();
+  });
+
+  it('brings the skeleton back for a new url on a reused instance', () => {
+    const { container, rerender } = render(
+      <EventImage src={venue} alt="Show A" />,
+    );
+    fireEvent.load(photo(container)!);
+    expect(skeleton(container)).toBeNull();
+
+    rerender(<EventImage src="https://example.test/b.jpg" alt="Show B" />);
+    expect(skeleton(container)).not.toBeNull();
+  });
+
+  it('drops the skeleton for identity art once the chain runs out', () => {
+    const { container } = render(<EventImage src={venue} alt="Show A" />);
+    fireEvent.error(photo(container)!);
+    expect(photo(container)).toBeNull();
+    expect(skeleton(container)).toBeNull();
+  });
 });

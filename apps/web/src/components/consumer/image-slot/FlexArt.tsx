@@ -10,7 +10,7 @@ import {
   SLOT_HAIRLINE,
   SLOT_RADIUS,
 } from './definitions/constants';
-import type { SlotSource } from './definitions/types';
+import type { SlotScale, SlotSource } from './definitions/types';
 import { slotSources } from './lib/slot-metrics';
 
 export type FlexArtProps = {
@@ -18,6 +18,11 @@ export type FlexArtProps = {
   alt?: string;
   minHeight?: number;
   radius?: number;
+  /**
+   * The identity mark's detail density. `tile` by default; a fill region that
+   * renders at card height, like the browse shelf's, asks for `hero`.
+   */
+  scale?: SlotScale;
   className?: string;
 } & SlotSource;
 
@@ -27,6 +32,7 @@ export const FlexArt = (props: FlexArtProps) => {
     alt = '',
     minHeight = FLEX_ART_MIN_HEIGHT,
     radius = SLOT_RADIUS.card,
+    scale = 'tile',
     className,
   } = props;
   const { primary, secondary } = slotSources(props);
@@ -54,7 +60,7 @@ export const FlexArt = (props: FlexArtProps) => {
           artistPhotoUrl={secondary}
           alt={alt}
           artist={name}
-          identityScale="tile"
+          identityScale={scale}
           className="h-full w-full"
         />
       </span>
