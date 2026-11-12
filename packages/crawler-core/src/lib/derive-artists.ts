@@ -155,8 +155,11 @@ export function splitListedSeparately(
   });
 }
 
+// Only when the title AS A WHOLE is a tribute or cover night. The word inside
+// a parenthesis is one act's note on a real bill ("Rio Rosa, LivSings (Beyonce
+// Tribute)"), which leaves the bill alone.
 export function isTributeTitle(title: string): boolean {
-  return TRIBUTE_TITLE.test(title);
+  return TRIBUTE_TITLE.test(title.replace(/\([^)]*\)/g, ' '));
 }
 
 // Words that mark a title as describing the EVENT rather than naming an act.
