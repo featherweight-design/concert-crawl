@@ -76,7 +76,13 @@ export type RederiveStrategy =
    * the bill is written empty ("tribute/cover → bill cleared"); the title stays
    * and the row stays visible.
    */
-  | 'tribute-or-cover';
+  | 'tribute-or-cover'
+  /**
+   * The ladder ruled "not a concert" and hiding is off (the default). The row is
+   * left exactly as it was: this pass repairs bills, and reclassifying a show
+   * is the crawl's call on its first sight of a row, not a repair's.
+   */
+  | 'non-concert-left';
 
 export interface RederiveChange {
   eventId: string;
@@ -126,6 +132,12 @@ export interface RederiveEventArtistsOptions {
    * can cost a call.
    */
   onlyFlattenedBillings?: boolean;
+  /**
+   * Hide rows the ladder rules "not a concert", as the crawl's INSERT path
+   * does. Off by default: a model answer that varies run to run must not hide a
+   * real show from a repair pass, so such a row is left untouched instead.
+   */
+  hideNonConcerts?: boolean;
   /**
    * Checked before each row. Returning true ends the pass at once, leaving the
    * remaining rows untouched. How the runner enforces a spend cap.
@@ -225,6 +237,7 @@ export async function rederiveEventArtists(
     'ai-use-refused': 0,
     'provenance-unknown': 0,
     'tribute-or-cover': 0,
+    'non-concert-left': 0,
   };
   const sample: RederiveChange[] = [];
   let scanned = 0;
@@ -338,6 +351,17 @@ export async function rederiveEventArtists(
       // a correct stored bill, so the row is left alone for the next run.
       if (result.headliners === null || result.supportingArtists === null) {
         strategies['adjudicator-unavailable'] += 1;
+        continue;
+      }
+
+      // "Not a concert" is a classification, not a bill. Unless hiding was
+      // asked for, the row is left as it is (neither hidden nor re-billed).
+      if (
+        result.isConcert === false &&
+        result.coversOtherArtists !== true &&
+        options.hideNonConcerts !== true
+      ) {
+        strategies['non-concert-left'] += 1;
         continue;
       }
 

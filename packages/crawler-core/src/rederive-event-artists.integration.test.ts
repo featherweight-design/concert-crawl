@@ -80,6 +80,7 @@ describe('rederive-event-artists integration', () => {
       adjudicate,
       adjudicationIntervalMs: 0,
       aiUseAllowed,
+      hideNonConcerts: true,
     });
 
   beforeEach(async () => {
@@ -295,6 +296,29 @@ describe('rederive-event-artists integration', () => {
     expect(result.scanned).toBe(1);
     expect(calls).toBe(1);
     expect(result.stopped).toBe(true);
+  });
+
+  it('leaves a row the adjudicator rules not a concert exactly as it was unless hiding is asked for', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      title: 'Concrete & Jerry Garcia',
+      artist: 'Concrete & Jerry Garcia',
+      canonicalArtist: 'concrete & jerry garcia',
+      canonicalTitle: 'concrete & jerry garcia',
+      date: '2026-09-02',
+    });
+    const result = await rederiveEventArtists({
+      dryRun: false,
+      adjudicate: stubAdjudicator(),
+      adjudicationIntervalMs: 0,
+      aiUseAllowed: async () => true,
+    });
+    const after = await readEvent(event.id);
+    expect(after.hiddenFromConsumer).toBe(false);
+    expect(after.canonicalHeadliners).toBeNull();
+    expect(result.hidden).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.strategies['non-concert-left']).toBe(1);
   });
 
   it('hides an event whose artist echoes its title and the adjudicator rejects', async () => {

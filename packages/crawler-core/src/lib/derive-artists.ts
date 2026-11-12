@@ -60,12 +60,21 @@ const GENERIC_TOKENS = new Set([
   'live band',
 ]);
 
+// "Telly & Friends" is the act Telly with company; the key drops that tail so
+// the two spellings are one act. The name as written is never changed by this.
 const nameKey = (name: string): string =>
   name
     .trim()
     .replace(/\s*\([^)]*\)\s*$/, '')
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/\s+(?:&|and|\+)\s+friends$/, '');
+
+// "Karl Denson's Tiny Universe (A Tribute to Jimmy Cliff)": a tribute note in
+// parentheses is about one act's set, not its name. It leaves the stored name.
+const TRIBUTE_NOTE = /\s*\([^)]*\b(?:tributes?|covers?)\b[^)]*\)/gi;
+const withoutTributeNote = (name: string): string =>
+  name.replace(TRIBUTE_NOTE, '').trim();
 
 // The acts a combined headliner is made of: "Brothers of Brass & Hot Like Mars"
 // and "A / B" both stand for several acts, and an act listed under them is the
@@ -95,6 +104,8 @@ export function tidyBill(
     const key = name.trim().toLowerCase();
     return key !== '' && !GENERIC_TOKENS.has(key);
   };
+  headliners = headliners.map(withoutTributeNote);
+  supportingArtists = supportingArtists.map(withoutTributeNote);
   const seenHeadliners = new Set<string>();
   const cleanHeadliners: string[] = [];
   for (const name of headliners) {

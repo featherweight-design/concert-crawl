@@ -573,6 +573,52 @@ describe('a cover or tribute night', () => {
   });
 });
 
+describe('a tribute note inside one act on a real bill', () => {
+  it.each([
+    'Joslyn & the Sweet Compression w/ Rio Rosa, LivSings (Beyonce Tribute)',
+    "Ziggy Marley & Stephen Marley with Buju Banton, Karl Denson's Tiny Universe (A Tribute to Jimmy Cliff), J Boog",
+  ])('does not settle "%s" as a tribute night', async (title) => {
+    const adjudicate = vi.fn(async () => ({
+      isConcert: true,
+      headliners: ['Headliner'],
+      supportingArtists: [],
+    }));
+    const result = await deriveArtists(
+      { ...base, title, observedPerformers: [title] },
+      adjudicate,
+    );
+    expect(adjudicate).toHaveBeenCalledTimes(1);
+    expect(result.coversOtherArtists).toBeUndefined();
+    expect(result.headliners).toEqual(['Headliner']);
+  });
+
+  it('drops the parenthetical note from the act name, keeping the act', () => {
+    expect(
+      tidyBill(
+        ['Ziggy Marley'],
+        ["Karl Denson's Tiny Universe (A Tribute to Jimmy Cliff)", 'J Boog'],
+      ),
+    ).toEqual({
+      headliners: ['Ziggy Marley'],
+      supportingArtists: ["Karl Denson's Tiny Universe", 'J Boog'],
+    });
+  });
+});
+
+describe('"X & Friends" is X', () => {
+  it('is not listed beside X', () => {
+    expect(
+      tidyBill(
+        ['Fenix Flexin'],
+        ['RANSTEEZ', 'Telly', 'Telly & Friends', 'Welo'],
+      ),
+    ).toEqual({
+      headliners: ['Fenix Flexin'],
+      supportingArtists: ['RANSTEEZ', 'Telly', 'Welo'],
+    });
+  });
+});
+
 describe('a joined name the venue lists as separate acts', () => {
   const ask = (title: string, performers: string[], headliners: string[]) =>
     deriveArtists(
