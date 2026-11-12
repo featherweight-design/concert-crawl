@@ -11,6 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ isSignedIn: true, getToken: async () => 'token' }),
+  useClerk: () => ({ signOut: vi.fn() }),
 }));
 vi.mock('@sentry/nextjs', () => ({
   captureException: () => 'evt',

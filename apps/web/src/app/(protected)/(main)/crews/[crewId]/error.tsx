@@ -1,53 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-
-import { EmptyState } from '@/components/consumer/empty-state';
-import { CREWS_COPY } from '@/components/consumer/crews';
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
-import { ErrorReport } from '@/components/consumer/error-report';
-
-export default function CrewError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  const onRetry = useErrorBoundaryRetry(reset);
-
-  useEffect(() => {
-    console.error('[crews] crew home boundary', error);
-  }, [error]);
-
-  return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col items-center gap-3 px-4 pb-10 pt-5">
-      <EmptyState
-        state="error"
-        density="dense"
-        eyebrow={CREWS_COPY.net.errCrewEyebrow}
-        title={CREWS_COPY.net.errCrewTitle}
-        body={CREWS_COPY.net.errCrewBody}
-      />
-      <button
-        type="button"
-        onClick={onRetry}
-        className="cursor-pointer"
-        style={{
-          minHeight: 44,
-          padding: '0 20px',
-          borderRadius: 999,
-          background: 'var(--signal)',
-          color: 'var(--fg-on-accent)',
-          border: 'none',
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13.5,
-          fontWeight: 700,
-        }}
-      >
-        {CREWS_COPY.net.retry}
-      </button>
-      <ErrorReport error={error} />
-    </div>
-  );
-}
+// The crew home boundary is the same standalone error page as every other
+// route (README B20a). A bad crew id never lands here: the page maps it to
+// not-found, so this only ever means a real failure.
+export { default } from '@/app/(protected)/error';
