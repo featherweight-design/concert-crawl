@@ -468,6 +468,10 @@ describe('Admin crawl routes', () => {
         '/v1/admin/crawl/runs/not-a-uuid/pages',
       );
       expect(bad.status).toBe(400);
+      const zero = await createApp().request(
+        `/v1/admin/crawl/runs/${RUN_ID}/pages?limit=0`,
+      );
+      expect(zero.status).toBe(400);
       const over = await createApp().request(
         `/v1/admin/crawl/runs/${RUN_ID}/pages?limit=201`,
       );

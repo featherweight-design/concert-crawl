@@ -293,11 +293,24 @@ crawlAdminRouter.get(
       return ctx.json({ success: false, error: 'Crawl run not found' }, 404);
     }
 
+    // Named columns, so a later column (a body pointer, say) can never reach
+    // an endpoint that promises metadata only. `id` breaks ties between rows
+    // flushed in one batch with the same timestamp.
     const pages = await db
-      .select()
+      .select({
+        id: crawlRunPages.id,
+        crawlRunId: crawlRunPages.crawlRunId,
+        url: crawlRunPages.url,
+        finalUrl: crawlRunPages.finalUrl,
+        httpStatus: crawlRunPages.httpStatus,
+        fetchMode: crawlRunPages.fetchMode,
+        bytes: crawlRunPages.bytes,
+        contentHash: crawlRunPages.contentHash,
+        fetchedAt: crawlRunPages.fetchedAt,
+      })
       .from(crawlRunPages)
       .where(eq(crawlRunPages.crawlRunId, id))
-      .orderBy(asc(crawlRunPages.fetchedAt))
+      .orderBy(asc(crawlRunPages.fetchedAt), asc(crawlRunPages.id))
       .limit(limit);
 
     return ctx.json({ success: true, data: pages });

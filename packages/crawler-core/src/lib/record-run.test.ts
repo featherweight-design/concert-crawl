@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
+import type { CrawlRunReason } from '@concert-crawl/db';
+import type { CrawlRunReason as ApiCrawlRunReason } from '@concert-crawl/types';
 import type { CrawlRunValues } from './record-run.js';
 
 const base = { venueId: '00000000-0000-4000-8000-000000000000' };
@@ -24,5 +26,13 @@ describe('CrawlRunValues', () => {
       failedWithoutReason,
       partialWithoutReason,
     ]).toHaveLength(4);
+  });
+});
+
+// The API's CrawlRunReason mirrors the DB enum by hand. This stops compiling
+// when one gains or loses a value the other lacks.
+describe('CrawlRunReason', () => {
+  it('is the same union in the DB enum and the API types', () => {
+    expectTypeOf<CrawlRunReason>().toEqualTypeOf<ApiCrawlRunReason>();
   });
 });
