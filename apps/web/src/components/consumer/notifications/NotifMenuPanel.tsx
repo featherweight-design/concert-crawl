@@ -50,7 +50,7 @@ export const NotifMenuPanel = ({
    * way out and it costs two gestures — back, then dismiss.
    */
   onClose?: () => void;
-  maxHeight?: number;
+  maxHeight?: number | string;
 }) => {
   const router = useRouter();
   const query = useNotifications();

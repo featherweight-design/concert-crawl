@@ -154,6 +154,61 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     expect(titles().sort()).toEqual(['P', 'R']);
   });
 
+  it('keeps one tab stop: only the selected tab is tabbable', () => {
+    render(<NotifBody state="ready" items={mixed} now={NOW} />);
+    expect(screen.getByRole('tab', { name: 'Shows' })).toHaveAttribute(
+      'tabindex',
+      '0',
+    );
+    expect(screen.getByRole('tab', { name: 'Alerts' })).toHaveAttribute(
+      'tabindex',
+      '-1',
+    );
+    expect(screen.getByRole('tab', { name: 'Prices' })).toHaveAttribute(
+      'tabindex',
+      '-1',
+    );
+  });
+
+  it('moves focus and selection with the arrow, Home and End keys', () => {
+    render(<NotifBody state="ready" items={mixed} now={NOW} />);
+    const shows = screen.getByRole('tab', { name: 'Shows' });
+    shows.focus();
+    fireEvent.keyDown(shows, { key: 'ArrowRight' });
+    const alerts = screen.getByRole('tab', { name: 'Alerts' });
+    expect(alerts).toHaveAttribute('aria-selected', 'true');
+    expect(alerts).toHaveFocus();
+    fireEvent.keyDown(alerts, { key: 'End' });
+    expect(screen.getByRole('tab', { name: 'Prices' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Prices' }), {
+      key: 'ArrowRight',
+    });
+    expect(screen.getByRole('tab', { name: 'Shows' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Shows' }), {
+      key: 'ArrowLeft',
+    });
+    expect(screen.getByRole('tab', { name: 'Prices' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Prices' }), {
+      key: 'Home',
+    });
+    expect(screen.getByRole('tab', { name: 'Shows' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('labels the panel by its tab even when that tab is empty', () => {
+    render(
+      <NotifBody
+        state="ready"
+        items={[notification({ category: 'watch.pricedrop' })]}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByRole('tabpanel', { name: 'Shows' })).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
+
   it('shows no tabs without a list', () => {
     render(<NotifBody state="ready" items={[]} now={NOW} />);
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();

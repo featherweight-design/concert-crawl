@@ -63,8 +63,10 @@ export const NotifHeader = ({
       flexShrink: 0,
     }}
   >
-    {/* B+ (`06-states/bp-s-notif_m`): the title is the page's heading, set
-        large, with the count and Mark all read on one line beneath it. */}
+    {/* B+ (`06-states/bp-s-notif_m`): the title is the panel's title, set
+        large, with the count and Mark all read on one line beneath it. It is a
+        span, not a heading element: the shell (dialog, sheet) already names
+        the surface, and the board draws no heading level. */}
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span
         style={{
@@ -184,6 +186,23 @@ export const NotifHeader = ({
       <div
         role="tablist"
         aria-label={NOTIFICATIONS_COPY.panelTitle}
+        onKeyDown={(event) => {
+          // WAI-ARIA tabs, automatic activation: arrows (wrapping), Home and
+          // End move focus and selection together.
+          const at = NOTIFICATION_TABS.indexOf(tab);
+          const last = NOTIFICATION_TABS.length - 1;
+          let to: number;
+          if (event.key === 'ArrowRight') to = at === last ? 0 : at + 1;
+          else if (event.key === 'ArrowLeft') to = at === 0 ? last : at - 1;
+          else if (event.key === 'Home') to = 0;
+          else if (event.key === 'End') to = last;
+          else return;
+          event.preventDefault();
+          const next = NOTIFICATION_TABS[to];
+          if (next === undefined) return;
+          onTab(next);
+          document.getElementById(notifTabId(next))?.focus();
+        }}
         style={{ display: 'flex', gap: 4, marginTop: 6 }}
       >
         {NOTIFICATION_TABS.map((key) => {
@@ -196,10 +215,16 @@ export const NotifHeader = ({
               id={notifTabId(key)}
               aria-selected={selected}
               aria-controls={NOTIF_TABPANEL_ID}
+              // Roving tabindex: one tab stop, arrows move within the list.
+              tabIndex={selected ? 0 : -1}
+              className="notif-hit44"
               onClick={() => onTab(key)}
               style={{
                 all: 'unset',
                 outline: 'revert',
+                // Inline `position` outranks `.notif-hit44`, so the 44px
+                // ::after anchors to the tab, not the panel.
+                position: 'relative',
                 cursor: 'pointer',
                 boxSizing: 'border-box',
                 minHeight: 32,

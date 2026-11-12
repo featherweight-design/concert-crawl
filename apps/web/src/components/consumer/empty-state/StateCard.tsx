@@ -1,5 +1,4 @@
 import { useId, type ReactNode } from 'react';
-import Link from 'next/link';
 
 /**
  * The B+ cyan-to-pink sweep a state card's one action wears, through the
@@ -8,9 +7,10 @@ import Link from 'next/link';
 export const STATE_CTA_GRADIENT =
   'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)), var(--accent))';
 
-type StateCardAction =
-  | { label: string; onClick: () => void; href?: undefined }
-  | { label: string; href: string; onClick?: (() => void) | undefined };
+interface StateCardAction {
+  label: string;
+  onClick: () => void;
+}
 
 interface StateCardProps {
   /** `signal` for an empty state, `danger` for a failure. */
@@ -154,20 +154,11 @@ export function StateCard({
       >
         {body}
       </span>
-      {action !== undefined &&
-        (action.href === undefined ? (
-          <button type="button" onClick={action.onClick} style={ACTION_STYLE}>
-            {action.label}
-          </button>
-        ) : (
-          <Link
-            href={action.href}
-            {...(action.onClick ? { onClick: action.onClick } : {})}
-            style={ACTION_STYLE}
-          >
-            {action.label}
-          </Link>
-        ))}
+      {action !== undefined && (
+        <button type="button" onClick={action.onClick} style={ACTION_STYLE}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

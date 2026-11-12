@@ -129,18 +129,23 @@ export const NotifBody = ({
             id={NOTIF_TABPANEL_ID}
             aria-labelledby={notifTabId(tab)}
           >
-            <div role="list" aria-label={NOTIFICATIONS_COPY.segments[tab]}>
-              {groups.map((group, index) => (
-                <div key={`${group.key}-${index}`} role="presentation">
-                  {group.key !== '' && <NotifDayDivider label={group.key} />}
-                  {group.items.map((item) => (
-                    <div role="listitem" key={item.id}>
-                      <NotifItem item={item} onOpen={onOpen} now={now} />
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
+            {/* A tab with nothing in it draws no list: Design drew no empty
+                state for a single tab, so the panel stays silent (the tab
+                still names itself through aria-labelledby). */}
+            {groups.length > 0 && (
+              <div role="list" aria-label={NOTIFICATIONS_COPY.segments[tab]}>
+                {groups.map((group, index) => (
+                  <div key={`${group.key}-${index}`} role="presentation">
+                    {group.key !== '' && <NotifDayDivider label={group.key} />}
+                    {group.items.map((item) => (
+                      <div role="listitem" key={item.id}>
+                        <NotifItem item={item} onOpen={onOpen} now={now} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
             <div
               style={{
                 padding: '8px 16px 16px',
