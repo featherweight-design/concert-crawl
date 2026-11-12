@@ -66,12 +66,17 @@ const CachedEventRow = ({ event }: { event: CachedEvent }) => {
       <Link
         href={`/events/${event.id}`}
         data-testid="cached-event-row"
-        className="flex min-h-[44px] items-center gap-3.5 rounded-2xl border border-border bg-surface-1 py-3 pl-3 pr-4 hover:bg-surface-2"
-        style={{ borderLeft: `3px solid ${ring}` }}
+        className="flex min-h-[44px] items-center gap-3.5 rounded-2xl border border-border py-3 pl-3 pr-4"
+        style={{
+          borderLeft: `2px solid ${ring}`,
+          background: `linear-gradient(90deg, color-mix(in oklch, ${ring} 10%, transparent), color-mix(in oklch, var(--surface-1) 55%, transparent) 45%)`,
+        }}
       >
         <span
           className="inline-flex shrink-0 rounded-xl"
-          style={{ boxShadow: `0 0 0 1.5px ${ring}` }}
+          style={{
+            boxShadow: `0 0 0 1.25px ${ring}, 0 0 20px color-mix(in oklch, ${ring} 40%, transparent)`,
+          }}
         >
           <Panel
             surface="event"
@@ -161,7 +166,7 @@ export const CachedShortcuts = ({ events, venues }: CachedShortcutsProps) => {
 };
 
 const TRY_AGAIN_CLASS =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full px-8 py-3 text-[17px] font-bold text-fg-on-accent';
+  'inline-flex h-[41px] items-center justify-center rounded-[14px] px-8 text-[17px] font-bold text-fg-on-accent';
 export const TRY_AGAIN_STYLE = {
   background: 'linear-gradient(135deg, var(--signal), var(--accent))',
   boxShadow: '0 8px 28px color-mix(in oklch, var(--signal) 22%, transparent)',
