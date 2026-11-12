@@ -82,9 +82,10 @@ export const BottomSheet = ({
 
   return (
     // z-[90] puts this in the dialog band alongside ModalShell's scrim. At the
-    // old z-50 it sat *below* the persistent feedback edge tab (z-80), which
-    // then drew over every sheet in the app and clipped controls inside it at
-    // narrow widths. A focus-trapping dialog outranks standing chrome.
+    // old z-50 it sat *below* the persistent feedback edge tab (then z-80, now
+    // z-35 under every sheet), which drew over every sheet in the app and
+    // clipped controls inside it at narrow widths. A focus-trapping dialog
+    // outranks standing chrome.
     <div className="fixed inset-0 z-[90]">
       <div
         className="fixed inset-0 bg-black/50"

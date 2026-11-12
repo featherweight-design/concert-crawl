@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 
 import { EventImage } from '../EventImage';
 
@@ -162,6 +162,47 @@ describe('<EventImage />', () => {
         expect(photo(container)).toBeNull();
         expect(skeleton(container)).toBeNull();
       } finally {
+        restore();
+      }
+    });
+
+    // Firefox reports naturalWidth 0 for a loaded SVG with no intrinsic size,
+    // so a zero width asks decode() before it gives the image up.
+    const withDecode = (decode: () => Promise<void>) => {
+      Object.defineProperty(HTMLImageElement.prototype, 'decode', {
+        value: decode,
+        configurable: true,
+      });
+      return () => {
+        Reflect.deleteProperty(HTMLImageElement.prototype, 'decode');
+      };
+    };
+
+    it('keeps a zero-width image that decodes', async () => {
+      const restore = settle(0);
+      const restoreDecode = withDecode(() => Promise.resolve());
+      try {
+        const { container } = render(
+          <EventImage src={venue} artistPhotoUrl={portrait} alt="Show A" />,
+        );
+        await waitFor(() => expect(skeleton(container)).toBeNull());
+        expect(srcOf(container)).toBe(venue);
+      } finally {
+        restoreDecode();
+        restore();
+      }
+    });
+
+    it('walks the chain for a zero-width image that will not decode', async () => {
+      const restore = settle(0);
+      const restoreDecode = withDecode(() => Promise.reject(new Error('x')));
+      try {
+        const { container } = render(
+          <EventImage src={venue} artistPhotoUrl={portrait} alt="Show A" />,
+        );
+        await waitFor(() => expect(photo(container)).toBeNull());
+      } finally {
+        restoreDecode();
         restore();
       }
     });

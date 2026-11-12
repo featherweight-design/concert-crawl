@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { IdentityArt } from '../identity-art/IdentityArt';
@@ -66,14 +66,26 @@ export function EventImage({
   // state instead: a painted image drops the skeleton, and a broken one
   // (complete with no pixels) walks the chain exactly as `onError` would, so
   // neither case strands the skeleton or skips the fallback.
-  const catchCompleted = (img: HTMLImageElement | null) => {
-    if (img === null || !img.complete || loadedSrc === active) return;
-    if (img.naturalWidth > 0) {
-      setLoadedSrc(active);
-      return;
-    }
-    onError();
-  };
+  // A zero width is not proof of a failure: an SVG with no intrinsic size
+  // loads with naturalWidth 0 in Firefox. `decode()` settles the question: it
+  // rejects only for an image that cannot be shown. Memoized on what it reads,
+  // so an unrelated re-render does not re-attach the ref and re-run the check.
+  const catchCompleted = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (img === null || !img.complete || loadedSrc === active) return;
+      const fail = () => setFailure({ key, attempt: attempt + 1 });
+      if (img.naturalWidth > 0) {
+        setLoadedSrc(active);
+        return;
+      }
+      if (typeof img.decode !== 'function') {
+        fail();
+        return;
+      }
+      img.decode().then(() => setLoadedSrc(active), fail);
+    },
+    [active, attempt, key, loadedSrc],
+  );
 
   if (active === null) {
     return (
