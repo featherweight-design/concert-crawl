@@ -28,6 +28,11 @@ export const NOTIFICATIONS_COPY = {
    * assistive tech, and the loading state speaks for itself.
    */
   countPending: '…',
+  /**
+   * Screen-reader suffix on a tab that holds an unread item (addendum 2: the
+   * sighted cue is a 6px dot, no number). Same word as the menu row's label.
+   */
+  tabUnread: 'unread',
   seeAll: (count: number): string =>
     count > 1 ? `See all ${count}` : 'See it',
   menuRow: 'Notifications',
