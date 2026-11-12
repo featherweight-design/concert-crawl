@@ -1,3 +1,16 @@
+# [1.332.0](https://github.com/featherweight-design/concert-crawl/compare/v1.331.2...v1.332.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **crawler:** a flattened multi-act headline escalates to the adjudicator ([68bc15f](https://github.com/featherweight-design/concert-crawl/commit/68bc15f2b8ac60263e44a1a8eac22a842cf8dafa))
+* **crawler:** keep the observed bill on an empty verdict and align the reuse gate ([78219dc](https://github.com/featherweight-design/concert-crawl/commit/78219dc4cc745b3204a8c4ee5866effda397e895))
+
+
+### Features
+
+* **crawler:** cost cap and flattened-only mode for the re-derivation pass ([9b81dc4](https://github.com/featherweight-design/concert-crawl/commit/9b81dc4c2555fb152a92620aba7f970bf840e486))
+
 ## [1.331.2](https://github.com/featherweight-design/concert-crawl/compare/v1.331.1...v1.331.2) (2026-11-12)
 
 
