@@ -2,117 +2,104 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import * as LucideIcons from 'lucide-react';
-import { NAV_V2, badgeCountFor, type AdminBadgeCounts } from './nav';
-import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
+import { MoreHorizontal } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import {
+  MORE_HREF,
+  TAB_BAR,
+  activeTabKey,
+  badgeCountFor,
+  navItem,
+  type AdminBadgeCounts,
+} from './nav';
+import { NeedsYouBadge } from './AdminSidebar';
 
-interface MobileBottomBarProps {
+export const TAB_BAR_HEIGHT = 64;
+
+/** The phone's 4-tab bar: Needs you, Venues, Events, More. */
+export const MobileBottomBar = ({
+  badgeCounts,
+}: {
   badgeCounts?: AdminBadgeCounts;
-}
-
-const NavIcon = ({ name, size }: { name: string; size: number }) => {
-  const Icon = (
-    LucideIcons as unknown as Record<
-      string,
-      React.ComponentType<{ size: number }>
-    >
-  )[name];
-  return Icon ? <Icon size={size} /> : null;
-};
-
-export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
+}) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // Review-parented sub-pages (e.g. the event editor) drop a `?from=<tab>`
-  // param on the URL so the Review tab we surface here matches the tab the
-  // admin came from (#1083). No signal → plain `/admin/review`.
-  const reviewHref = reviewHrefFromParam(searchParams?.get('from'));
-  const tabItems = NAV_V2.filter((item) => item.section === 'operations');
+  const activeKey = activeTabKey(pathname, searchParams);
 
   return (
     <nav
-      aria-label={ADMIN_COPY.shell.mobileBottomBar.navAriaLabel}
+      aria-label={ADMIN_COPY.shell.tabBar.ariaLabel}
+      data-testid="admin-tab-bar"
       style={{
         position: 'fixed',
         left: 0,
         right: 0,
         bottom: 0,
-        height: 64,
-        padding: '6px 6px 10px',
+        height: TAB_BAR_HEIGHT,
+        display: 'flex',
         background: 'var(--bg-elevated)',
         borderTop: '1px solid var(--border)',
-        display: 'grid',
-        gridTemplateColumns: `repeat(${tabItems.length}, 1fr)`,
-        gap: 4,
         zIndex: 40,
       }}
     >
-      {tabItems.map((item) => {
-        const active =
-          pathname === item.href ||
-          (item.href !== '/admin' && pathname.startsWith(item.href));
-        const count = badgeCountFor(item.key, badgeCounts);
-        const showBadge = item.badge !== undefined && count > 0;
-
-        const href = item.key === 'review' ? reviewHref : item.href;
+      {TAB_BAR.map((key) => {
+        const item = key === 'more' ? null : navItem(key);
+        const Icon = item ? item.icon : MoreHorizontal;
+        const label = item ? item.label : ADMIN_COPY.shell.tabBar.more;
+        const href = item ? item.href : MORE_HREF;
+        const active = key === activeKey;
+        const count = key === 'more' ? 0 : badgeCountFor(key, badgeCounts);
         return (
           <Link
-            key={item.key}
+            key={key}
             href={href}
+            aria-current={active ? 'page' : undefined}
             style={{
+              position: 'relative',
+              flex: 1,
+              minWidth: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 3,
-              padding: '4px 0',
-              borderRadius: 8,
+              gap: 4,
+              paddingTop: 10,
               textDecoration: 'none',
-              color: active ? 'var(--signal)' : 'var(--fg-muted)',
-              position: 'relative',
+              color: active ? 'var(--signal)' : 'var(--fg-subtle)',
             }}
           >
-            <div style={{ position: 'relative', display: 'flex' }}>
-              <NavIcon name={item.iconName} size={20} />
-              {showBadge && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -8,
-                    minWidth: 16,
-                    height: 16,
-                    padding: '0 4px',
-                    borderRadius: 8,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 9,
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color:
-                      item.badge?.kind === 'warning'
-                        ? 'var(--bg)'
-                        : 'var(--fg-on-accent, #fff)',
-                    background: `var(--${item.badge?.kind ?? 'danger'})`,
-                    boxShadow: '0 0 0 2px var(--bg-elevated)',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  {count > 9 ? '9+' : count}
-                </span>
-              )}
-            </div>
+            {active && (
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  width: 28,
+                  height: 2,
+                  borderRadius: 2,
+                  background: 'var(--signal)',
+                }}
+              />
+            )}
+            {count > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 5,
+                  left: 'calc(50% + 6px)',
+                }}
+              >
+                <NeedsYouBadge count={count} />
+              </span>
+            )}
+            <Icon size={22} aria-hidden />
             <span
               style={{
-                fontFamily: 'var(--admin-font, Inter, sans-serif)',
-                fontSize: 10,
-                fontWeight: active ? 700 : 600,
-                letterSpacing: '-0.005em',
+                fontSize: 11,
+                fontWeight: active ? 700 : 500,
+                whiteSpace: 'nowrap',
               }}
             >
-              {item.label}
+              {label}
             </span>
           </Link>
         );

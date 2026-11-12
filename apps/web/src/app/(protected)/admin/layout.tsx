@@ -1,16 +1,8 @@
 import './admin.css';
-import { requireAdminUser } from '@/lib/auth';
-import { auth } from '@clerk/nextjs/server';
+import { auth, requireAdminUser } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
 import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider';
 import { AdminShellClient } from '@/components/admin/shell/AdminShellClient';
-
-interface CrawlStatusVenue {
-  id: string;
-  name: string;
-  blockedAt: string | null;
-  lastRun: { status: string } | null;
-}
 
 interface ReviewCounts {
   eventFlags: number;
@@ -19,13 +11,13 @@ interface ReviewCounts {
   priceContests: number;
 }
 
-interface FeedbackCounts {
-  unread: number;
-}
-
-interface ReportedArtistsCount {
-  count: number;
-}
+/**
+ * Needs you's badge, interim until 2b: today's decision tabs in Review.
+ * Price coverage is a backlog, never a badge, so `prices` stays out
+ * (README "Where today's pages go").
+ */
+const needsYouCount = (counts: ReviewCounts): number =>
+  counts.eventFlags + counts.missing + counts.priceContests;
 
 export default async function AdminLayout({
   children,
@@ -36,64 +28,15 @@ export default async function AdminLayout({
   const { getToken } = await auth();
   const token = await getToken();
 
-  let blockedCrawls = 0;
-  let pendingReview = 0;
-  let unreadFeedback = 0;
-  let reportedArtists = 0;
-
+  let needsYou = 0;
   if (token) {
-    const [statusRes, reviewRes, feedbackRes, reportedRes] =
-      await Promise.allSettled([
-        apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
-        apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
-        apiClient.get<FeedbackCounts>('/v1/admin/feedback/counts', token),
-        apiClient.get<ReportedArtistsCount>(
-          '/v1/admin/artists/reports/count',
-          token,
-        ),
-      ]);
-
-    if (statusRes.status === 'fulfilled') {
-      blockedCrawls = statusRes.value.filter(
-        (venue) =>
-          (venue.blockedAt !== null && venue.lastRun?.status !== 'success') ||
-          venue.lastRun?.status === 'failed',
-      ).length;
-    } else {
-      console.warn('[admin layout] crawl status fetch failed', {
-        reason: statusRes.reason,
-      });
-    }
-
-    if (reviewRes.status === 'fulfilled') {
-      // Sidebar badge sums every triage tab so the nav signal moves in
-      // lock-step with the per-tab pills inside /admin/review. Spec
-      // §18 lock #1 requires priceContests to roll into this sum
-      // alongside the existing three (#697).
-      pendingReview =
-        reviewRes.value.eventFlags +
-        reviewRes.value.prices +
-        reviewRes.value.missing +
-        reviewRes.value.priceContests;
-    } else {
+    try {
+      needsYou = needsYouCount(
+        await apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
+      );
+    } catch (err) {
       console.warn('[admin layout] review counts fetch failed', {
-        reason: reviewRes.reason,
-      });
-    }
-
-    if (feedbackRes.status === 'fulfilled') {
-      unreadFeedback = feedbackRes.value.unread;
-    } else {
-      console.warn('[admin layout] feedback counts fetch failed', {
-        reason: feedbackRes.reason,
-      });
-    }
-
-    if (reportedRes.status === 'fulfilled') {
-      reportedArtists = reportedRes.value.count;
-    } else {
-      console.warn('[admin layout] reported artists count fetch failed', {
-        reason: reportedRes.reason,
+        reason: err,
       });
     }
   }
@@ -110,12 +53,7 @@ export default async function AdminLayout({
         }}
       >
         <AdminShellClient
-          badgeCounts={{
-            crawl: blockedCrawls,
-            review: pendingReview,
-            feedback: unreadFeedback,
-            artists: reportedArtists,
-          }}
+          badgeCounts={{ needsYou }}
           user={{ firstName: adminUser.firstName, email: adminUser.email }}
         >
           {children}
