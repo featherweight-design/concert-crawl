@@ -9,7 +9,7 @@ import {
   useContext,
 } from 'react';
 import Link from 'next/link';
-import { CornerUpRight, Eye, LogOut, Tag, Users } from 'lucide-react';
+import { ArrowDownLeft, CornerUpRight, Eye, Tag, Users } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useClerk } from '@clerk/nextjs';
 import { Avatar } from '@/components/settings/Avatar';
@@ -146,6 +146,7 @@ export type AccountMenuMode = 'menu' | 'notifications';
  */
 const PANEL_MAX_HEIGHT = 'min(700px, calc(100dvh - 88px))';
 const PANEL_WIDTH = 390;
+const IDENTITY_RING_SIZE = 46;
 
 /**
  * Owns the account menu's open state for every trigger in the app — the
@@ -796,12 +797,13 @@ function MenuBody({
           borderBottom: '1px solid var(--border)',
         }}
       >
-        {/* bp-account: a 42px two-colour ring in the user's pair. */}
+        {/* bp-account: the board's ring measures 92px on a 780px (@2x) shot,
+            so 46px, in the user's two-colour pair. */}
         <AvatarRing
           handle={avatarHandle}
           avatarColor={avatarColor}
           avatarSecondColor={avatarSecondColor}
-          size={42}
+          size={IDENTITY_RING_SIZE}
         />
         <div
           style={{
@@ -932,7 +934,8 @@ function MenuBody({
         onClick={onSignOut}
         leading={
           <RowTile tint="var(--warning)">
-            <LogOut {...TILE_ICON_PROPS} />
+            {/* bp-account draws a plain diagonal arrow, not the door glyph. */}
+            <ArrowDownLeft {...TILE_ICON_PROPS} />
           </RowTile>
         }
       />
