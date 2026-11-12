@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronRight } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { buildBreadcrumbs, type Crumb } from './breadcrumbs';
 import { usePageTitle } from './PageTitleContext';
@@ -51,7 +50,12 @@ export const AdminTopbar = () => {
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {index > 0 && (
-              <ChevronRight size={12} color="var(--fg-subtle)" aria-hidden />
+              <span
+                aria-hidden
+                style={{ color: 'var(--fg-subtle)', margin: '0 6px' }}
+              >
+                /
+              </span>
             )}
             {crumb.href ? (
               <Link
