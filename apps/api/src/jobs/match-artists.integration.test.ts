@@ -243,6 +243,32 @@ describe('runMatchArtists', () => {
     expect(row?.matchCheckedAt).toBeNull();
   });
 
+  it('keeps a not-an-artist ruling made while Spotify searches', async () => {
+    const id = await seedArtist({ canonicalName: 'nobody at all' });
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        await testDb
+          .update(artists)
+          .set({
+            matchStatus: 'not_an_artist',
+            hidden: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(artists.id, id));
+        // No candidates: the job's verdict would be no_match.
+        return [];
+      }),
+    });
+
+    expect(summary).toMatchObject({ noMatch: 0, ambiguous: 0 });
+    const row = await readArtist(id);
+    expect(row?.matchStatus).toBe('not_an_artist');
+    expect(row?.hidden).toBe(true);
+    expect(row?.matchAttempts).toBe(0);
+  });
+
   it('writes matched / ambiguous / no_match verdicts and stamps matchCheckedAt', async () => {
     const matchedId = await seedArtist({ canonicalName: 'khruangbin' });
     const ambiguousId = await seedArtist({ canonicalName: 'nirvana' });
