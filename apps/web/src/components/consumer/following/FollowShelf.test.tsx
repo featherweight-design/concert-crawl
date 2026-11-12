@@ -221,10 +221,9 @@ describe('FollowShelf', () => {
     expect(screen.getByText(FOLLOWING_COPY.starterAction)).toBeTruthy();
   });
 
-  // The head carries the count and nothing else: a "see them all" link beside
-  // it went the same way as the per-card check, because the My artists browse
-  // chip is already that filter.
-  it('some: names the follow count and offers no second filter', () => {
+  // The head carries the count and See all (addendum 2, #178 item 20), and
+  // each card opens the show it is advertising, not the artist's page.
+  it('some: names the follow count, with See all and the card as its links', () => {
     renderShelf({ mode: 'some', followCount: 4, artists: [artist()] });
     expect(screen.getByText(FOLLOWING_COPY.yoursEyebrow(4))).toBeTruthy();
     expect(screen.getByText(FOLLOWING_COPY.yoursTitle)).toBeTruthy();
@@ -232,9 +231,7 @@ describe('FollowShelf', () => {
     const hrefs = screen
       .getAllByRole('link')
       .map((node) => node.getAttribute('href'));
-    // One link, and it is the card's — the card opens the show it is
-    // advertising, not the artist's page.
-    expect(hrefs).toEqual(['/events/evt-ratbag']);
+    expect(hrefs).toEqual(['/events?filterFollowing=1', '/events/evt-ratbag']);
   });
 
   it('caps the starter shelf at the visible-card count', () => {
