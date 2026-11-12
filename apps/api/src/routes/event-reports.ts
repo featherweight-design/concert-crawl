@@ -30,6 +30,7 @@ import { isImminentEvent } from '../lib/time.js';
 import { clearSoldOut } from '../lib/clear-sold-out.js';
 import { apiLogger } from '../lib/logger.js';
 import { activeSoldOutWhere } from '../lib/sold-out.js';
+import { redactReportRow } from '../lib/report-privacy.js';
 
 const REPORT_STATUSES = [
   'sold-out',
@@ -297,14 +298,22 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
     }
   }
 
-  const enrichedReports = reportRows.map((report) => ({
-    ...report,
-    confirmsCount: confirmCountMap.get(report.id) ?? 0,
-    confirmsNeeded,
-    isReporter: report.reporterId === userId,
-    userHasConfirmed: confirmedByUser.has(report.id),
-    reporterHandle: handleMap.get(report.reporterId) ?? null,
-  }));
+  // The verified session decides what identity leaves: no handle and no one
+  // else's Clerk id for an anonymous caller (redactReportRow).
+  const isAuthed = userId !== null;
+  const enrichedReports = reportRows.map((report) =>
+    redactReportRow(
+      {
+        ...report,
+        confirmsCount: confirmCountMap.get(report.id) ?? 0,
+        confirmsNeeded,
+        isReporter: report.reporterId === userId,
+        userHasConfirmed: confirmedByUser.has(report.id),
+        reporterHandle: handleMap.get(report.reporterId) ?? null,
+      },
+      isAuthed,
+    ),
+  );
 
   return ctx.json({ success: true, data: enrichedReports });
 });

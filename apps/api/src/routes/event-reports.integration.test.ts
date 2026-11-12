@@ -24,6 +24,7 @@ import {
   seedEventReport,
   seedEventReportConfirm,
   seedUserEvent,
+  seedUserProfile,
   seedVenue,
 } from '../test/helpers/seed.js';
 
@@ -183,6 +184,56 @@ describe('GET /v1/events/:id/reports', () => {
     };
     expect(body.data[0]?.isReporter).toBe(true);
     expect(body.data[0]?.userHasConfirmed).toBe(false);
+  });
+
+  describe('reporter identity', () => {
+    type IdentityRow = {
+      isReporter: boolean;
+      reporterId: string | null;
+      reporterHandle: string | null;
+    };
+
+    beforeEach(async () => {
+      await seedUserProfile(REPORTER, { handle: 'sami' });
+    });
+
+    it('sends an anonymous caller neither the handle nor the Clerk id', async () => {
+      await seedEventReport(eventId, REPORTER);
+      const res = await app.request(`/v1/events/${eventId}/reports`);
+      const text = await res.text();
+      const body = JSON.parse(text) as { data: IdentityRow[] };
+
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0]?.reporterHandle).toBeNull();
+      expect(body.data[0]?.reporterId).toBeNull();
+      expect(body.data[0]?.isReporter).toBe(false);
+      expect(text).not.toContain(REPORTER);
+      expect(text).not.toContain('"sami"');
+    });
+
+    it("gives a signed-in viewer other people's handles but not their ids", async () => {
+      await seedEventReport(eventId, REPORTER);
+      setAuth(OTHER_USER);
+      const res = await app.request(`/v1/events/${eventId}/reports`);
+      const text = await res.text();
+      const body = JSON.parse(text) as { data: IdentityRow[] };
+
+      expect(body.data[0]?.reporterHandle).toBe('sami');
+      expect(body.data[0]?.reporterId).toBeNull();
+      expect(body.data[0]?.isReporter).toBe(false);
+      expect(text).not.toContain(REPORTER);
+    });
+
+    it('lets the reporter recognise their own report: isReporter and their own id', async () => {
+      await seedEventReport(eventId, REPORTER);
+      setAuth(REPORTER);
+      const res = await app.request(`/v1/events/${eventId}/reports`);
+      const body = (await res.json()) as { data: IdentityRow[] };
+
+      expect(body.data[0]?.isReporter).toBe(true);
+      expect(body.data[0]?.reporterId).toBe(REPORTER);
+      expect(body.data[0]?.reporterHandle).toBe('sami');
+    });
   });
 
   it('sets userHasConfirmed true when user has confirmed the report', async () => {

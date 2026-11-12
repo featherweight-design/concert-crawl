@@ -66,6 +66,8 @@ import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
 import { isSoldOutSql } from '../lib/sold-out.js';
 import { loadPromotedReportSummary } from '../lib/promoted-report.js';
+import { redactReporter } from '../lib/report-privacy.js';
+import { deriveStatusSource } from '../lib/event-status-source.js';
 import {
   aggregateByTier,
   deriveObservedAt,
@@ -751,6 +753,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const watchingCount = watchCountRow?.total ?? 0;
 
   const authInfo = getAuth(ctx);
+  // The verified session, never a client-supplied header. Decides every
+  // identity this response carries (reporter and price-submitter handles).
+  const isAuthed = Boolean(authInfo?.userId);
   let isWatching = false;
   let attendingAt: string | null = null;
   if (authInfo?.userId) {
@@ -983,8 +988,14 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       ].filter((uid): uid is string => uid !== null),
     ),
   );
+  // Privacy: a submitter's @handle is for signed-in viewers. The map is the one
+  // source of every price-submitter handle in this response (priceSubmitterHandle,
+  // counterSubmission.submitter, pendingSubmissions[].submitterHandle and the
+  // priceByTier headline, pending and counter submitters), so leaving it empty
+  // for an anonymous caller nulls all of them at once, and saves the lookup.
+  // Nothing else reads it: ownership (isSubmitter, viewerAction) goes by userId.
   const aggregateHandles = new Map<string, string>();
-  if (aggregateUserIds.length > 0) {
+  if (isAuthed && aggregateUserIds.length > 0) {
     const profileRows = await db
       .select({ userId: userProfiles.userId, handle: userProfiles.handle })
       .from(userProfiles)
@@ -1208,7 +1219,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     ...publicRow
   } = row;
 
-  markViewerScoped(ctx, authInfo?.userId != null);
+  markViewerScoped(ctx, isAuthed);
   return ctx.json({
     success: true,
     data: {
@@ -1241,8 +1252,18 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       counterSubmission,
       pendingSubmissions,
       priceByTier,
-      soldOutReport,
-      statusReport,
+      // A reporter's handle is for signed-in viewers: an anonymous answer (the
+      // one a shared cache may hold) carries the reports without it.
+      soldOutReport: redactReporter(soldOutReport, isAuthed),
+      statusReport: redactReporter(statusReport, isAuthed),
+      // Read the note on deriveStatusSource: 'admin' is inferred by
+      // elimination (no column records it), 'crawler' is never emitted, and an
+      // admin-resolved fan report reads as 'report', same as a confirmed one.
+      statusSource: deriveStatusSource({
+        status: row.status,
+        delistedAt: row.delistedAt,
+        hasPromotedReport: statusReport !== null,
+      }),
     },
   });
 });
