@@ -140,8 +140,9 @@ export const PendingReportBanner = ({
         ? copy.postponedLead
         : copy.availableLead;
 
-  // Tickets available is the green dashed pending card (addendum 2, item 14).
-  const lineStyle = kind === 'available' ? 'dashed' : 'solid';
+  // Pending is dashed in the status colour for every kind (README rule 3;
+  // more-st-ev_pending_canc_m, event-tickets-back-pending-m).
+  const lineStyle = 'dashed';
 
   const methodLabel = evidenceMethod
     ? (EVIDENCE_METHOD_LABELS[evidenceMethod] ?? evidenceMethod)
@@ -156,8 +157,8 @@ export const PendingReportBanner = ({
   return (
     <div
       style={{
-        borderRadius: 12,
-        background: tokens.bg,
+        borderRadius: 16,
+        background: 'var(--surface-1)',
         border: `1px ${lineStyle} ${tokens.border}`,
         overflow: 'hidden',
       }}
@@ -188,14 +189,11 @@ export const PendingReportBanner = ({
             color: tokens.color,
             textTransform: 'uppercase',
             letterSpacing: '0.08em',
-            ...(kind === 'available'
-              ? {
-                  padding: '3px 8px',
-                  borderRadius: 6,
-                  border: `1px solid ${tokens.border}`,
-                  background: tokens.bg,
-                }
-              : {}),
+            // The outlined pill, for every kind (more-st-ev_pending_canc_m).
+            padding: '3px 8px',
+            borderRadius: 6,
+            border: `1px solid ${tokens.border}`,
+            background: tokens.bg,
           }}
         >
           {kind === 'cancelled' ? (
@@ -338,125 +336,147 @@ export const PendingReportBanner = ({
             </div>
           </div>
         ) : (
-          <>
-            {/* Lead text */}
-            <p
+          <div style={{ display: 'flex', gap: 12 }}>
+            {/* The 40px icon tile beside the lead, as on the other kinds */}
+            <div
+              aria-hidden="true"
+              data-testid="pending-icon-tile"
               style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 700,
-                fontSize: 14.5,
-                color: 'var(--fg)',
-                letterSpacing: '-0.01em',
-                margin: '0 0 10px',
-                lineHeight: 1.4,
+                width: 40,
+                height: 40,
+                borderRadius: 11,
+                flex: 'none',
+                color: tokens.color,
+                background: tokens.bgStrong,
+                border: `1px solid ${tokens.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              {leadText}
-            </p>
-
-            {/* Evidence card */}
-            {evidenceLabel !== null && (
-              <div
+              <ReportGlyph kind={kind} size={19} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Lead text */}
+              <p
                 style={{
-                  marginBottom: 10,
-                  padding: '8px 10px',
-                  background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: 700,
+                  fontSize: 14.5,
+                  color: 'var(--fg)',
+                  letterSpacing: '-0.01em',
+                  margin: '0 0 10px',
+                  lineHeight: 1.4,
                 }}
               >
-                <LinkChainIcon />
-                <span
+                {leadText}
+              </p>
+
+              {/* Evidence card */}
+              {evidenceLabel !== null && (
+                <div
                   style={{
-                    flex: 1,
-                    minWidth: 0,
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    fontSize: 12.5,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.005em',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    marginBottom: 10,
+                    padding: '8px 10px',
+                    background:
+                      'color-mix(in oklab, var(--fg) 4%, transparent)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
                   }}
                 >
-                  {evidenceLabel}
-                </span>
-                {isSafeHttpUrl(evidenceUrl) ? (
-                  <a
-                    href={evidenceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: 9,
-                      fontWeight: 700,
-                      color: 'var(--fg-subtle)',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      textDecoration: 'none',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {copy.viewEvidenceLink}
-                  </a>
-                ) : (
+                  <LinkChainIcon />
                   <span
                     style={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: 9,
-                      color: 'var(--fg-subtle)',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      opacity: 0.4,
-                      flexShrink: 0,
+                      flex: 1,
+                      minWidth: 0,
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: 12.5,
+                      color: 'var(--fg)',
+                      letterSpacing: '-0.005em',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {copy.viewEvidenceLink}
+                    {evidenceLabel}
                   </span>
-                )}
-              </div>
-            )}
-
-            {/* Attribution */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                flexWrap: 'wrap',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 9,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              <span>{copy.attributionPrefix}</span>
-              {isReporter ? (
-                <span style={{ color: tokens.color, fontWeight: 700 }}>
-                  {copy.attributionSelf}
-                </span>
-              ) : reporter !== null ? (
-                <a
-                  href={reporter.url ?? '#'}
-                  className="ph-no-capture"
-                  style={{
-                    textDecoration: 'underline',
-                    textDecorationColor: 'var(--border-strong)',
-                    color: 'inherit',
-                  }}
-                >
-                  {reporter.handle}
-                </a>
-              ) : (
-                <span>{copy.reportedAnonymously}</span>
+                  {isSafeHttpUrl(evidenceUrl) ? (
+                    <a
+                      href={evidenceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: 'var(--fg-subtle)',
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        textDecoration: 'none',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {copy.viewEvidenceLink}
+                    </a>
+                  ) : (
+                    <span
+                      style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: 9,
+                        color: 'var(--fg-subtle)',
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        opacity: 0.4,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {copy.viewEvidenceLink}
+                    </span>
+                  )}
+                </div>
               )}
-              <span style={{ opacity: 0.5 }}>·</span>
-              <span>{timeAgo}</span>
+
+              {/* Attribution */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexWrap: 'wrap',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 9,
+                  color: 'var(--fg-muted)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                <span>{copy.attributionPrefix}</span>
+                {isReporter ? (
+                  <span style={{ color: tokens.color, fontWeight: 700 }}>
+                    {copy.attributionSelf}
+                  </span>
+                ) : reporter !== null ? (
+                  <a
+                    href={reporter.url ?? '#'}
+                    className="ph-no-capture"
+                    style={{
+                      textDecoration: 'underline',
+                      textDecorationColor: 'var(--border-strong)',
+                      color: 'inherit',
+                    }}
+                  >
+                    {reporter.handle}
+                  </a>
+                ) : (
+                  <span>{copy.reportedAnonymously}</span>
+                )}
+                <span style={{ opacity: 0.5 }}>·</span>
+                <span>{timeAgo}</span>
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* Action row — inside body, separated by borderTop */}

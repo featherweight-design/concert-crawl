@@ -8,6 +8,8 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const copy = REPORTING_COPY.pendingSoldOutCard;
 const tokens = REPORT_TOKENS['sold-out'];
+/** The dashed stroke and the outlined pill/chip edge, in the status colour. */
+const DASH_STROKE = `color-mix(in oklab, ${tokens.color} 60%, transparent)`;
 
 // ── Helper ────────────────────────────────────────────────────────
 
@@ -92,9 +94,11 @@ export const PendingSoldOutCard = ({
   return (
     <div
       style={{
-        borderRadius: 12,
+        // Pending is dashed, in the status colour, on a radius-16 card
+        // (README rule 3; more-st-ev_sold_pending_m).
+        borderRadius: 16,
         background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
+        border: `1px dashed ${DASH_STROKE}`,
         overflow: 'hidden',
       }}
     >
@@ -103,7 +107,7 @@ export const PendingSoldOutCard = ({
         style={{
           padding: '8px 14px',
           background: tokens.bgStrong,
-          borderBottom: `1px solid ${tokens.border}`,
+          borderBottom: `1px dashed ${DASH_STROKE}`,
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
@@ -111,12 +115,14 @@ export const PendingSoldOutCard = ({
           gap: 8,
         }}
       >
-        {/* Left: kind label (icon + text, borderless like PendingReportBanner) */}
+        {/* Left: the outlined "SOLD OUT · PENDING" pill, as drawn */}
         <span
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 8,
+            padding: '3px 9px',
+            borderRadius: 6,
+            border: `1px solid ${DASH_STROKE}`,
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: 10,
             fontWeight: 700,
@@ -126,28 +132,6 @@ export const PendingSoldOutCard = ({
             whiteSpace: 'nowrap',
           }}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 12 12"
-            fill="none"
-            aria-hidden="true"
-          >
-            <circle
-              cx="6"
-              cy="6"
-              r="4.5"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              fill="none"
-            />
-            <path
-              d="M3.5 8.5L8.5 3.5"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-            />
-          </svg>
           {copy.stripBadge}
         </span>
 
@@ -194,14 +178,14 @@ export const PendingSoldOutCard = ({
             flexWrap: 'wrap',
           }}
         >
-          {/* Strikethrough price */}
+          {/* The price stays at full strength: a pending report has not
+              taken it away yet (more-st-ev_sold_pending_m). */}
           <span
             style={{
               fontFamily: 'var(--font-ui)',
               fontWeight: 800,
               fontSize: 28,
-              color: 'var(--fg-subtle)',
-              textDecoration: 'line-through',
+              color: 'var(--fg)',
               letterSpacing: '-0.025em',
               lineHeight: 1.05,
             }}
@@ -209,16 +193,17 @@ export const PendingSoldOutCard = ({
             {priceStr}
           </span>
 
-          {/* Sold out pill — bottom-aligned in the price row */}
+          {/* Outlined "Sold out" chip — bottom-aligned in the price row */}
           <span
             style={{
-              background: tokens.color,
+              background: 'transparent',
+              border: `1px solid ${DASH_STROKE}`,
               borderRadius: 4,
               padding: '2px 7px',
               fontFamily: 'var(--font-mono)',
               fontSize: 9,
               fontWeight: 700,
-              color: 'var(--fg-on-accent)',
+              color: tokens.color,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
