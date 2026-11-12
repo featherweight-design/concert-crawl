@@ -33,6 +33,8 @@ const row = (index: number, over: Partial<HistoryShow> = {}): HistoryShow => {
     venueName: 'Globe Hall',
     venueSlug: 'globe-hall',
     venueCity: 'Denver',
+    venueTimezone: 'America/Denver',
+    rawShowTime: null,
     neighborhood: null,
     date,
     dateLabel: `Day ${index}`,

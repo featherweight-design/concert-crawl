@@ -23,6 +23,8 @@ const show = (
   venueName: 'Bluebird Theater',
   venueSlug: 'bluebird-theater',
   venueCity: 'Denver',
+  venueTimezone: 'America/Denver',
+  rawShowTime: null,
   neighborhood: null,
   date,
   dateLabel: 'Mon, Feb 22',
