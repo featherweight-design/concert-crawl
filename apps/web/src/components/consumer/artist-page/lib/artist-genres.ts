@@ -14,16 +14,25 @@ export const artistGenres = (
   shows: readonly ArtistShow[],
   limit = ARTIST_GENRE_LIMIT,
 ): string[] => {
-  const counts = new Map<string, number>();
+  // Keyed by a normalised form so "Soul", "soul " and "soul" count as one
+  // genre; the chip shows the first spelling we met.
+  const counts = new Map<string, { label: string; count: number }>();
   for (const show of shows) {
-    for (const genre of new Set(show.genres)) {
-      counts.set(genre, (counts.get(genre) ?? 0) + 1);
+    const seen = new Set<string>();
+    for (const raw of show.genres) {
+      const label = raw.trim();
+      const key = label.toLowerCase();
+      if (key === '' || seen.has(key)) continue;
+      seen.add(key);
+      const entry = counts.get(key);
+      if (entry) entry.count += 1;
+      else counts.set(key, { label, count: 1 });
     }
   }
   // Map iteration keeps insertion order and the sort is stable, so equal
   // counts stay in first-seen order.
-  return [...counts.entries()]
-    .sort((left, right) => right[1] - left[1])
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count)
     .slice(0, limit)
-    .map(([genre]) => genre);
+    .map(({ label }) => label);
 };

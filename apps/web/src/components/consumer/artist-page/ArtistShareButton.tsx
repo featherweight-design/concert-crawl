@@ -67,7 +67,6 @@ export const ArtistShareButton = ({
     const url = `${window.location.origin}/artists/${encodeURIComponent(slug)}`;
 
     if (typeof caps.share === 'function') {
-      track('artist_shared', { artistSlug: slug, destination: 'system' });
       // A dismissed OS sheet rejects with AbortError: a cancel, not a failure.
       const onError = (err: unknown) => {
         if (err instanceof Error && err.name === 'AbortError') return;
@@ -79,7 +78,14 @@ export const ArtistShareButton = ({
       };
       // `share` can throw synchronously as well as reject.
       try {
-        caps.share({ title: name, url }).catch(onError);
+        // Tracked only once the share went through: a dismissed or failed
+        // sheet is not a share.
+        caps
+          .share({ title: name, url })
+          .then(() =>
+            track('artist_shared', { artistSlug: slug, destination: 'system' }),
+          )
+          .catch(onError);
       } catch (err) {
         onError(err);
       }
@@ -88,10 +94,12 @@ export const ArtistShareButton = ({
 
     // No OS sheet (most desktop browsers): copy the link. `copyLink` reaches
     // `writeText` before its first await, so this is still inside the click.
-    track('artist_shared', { artistSlug: slug, destination: 'copy-link' });
-    void copyLink(caps, url).then((outcome) =>
-      setStatus(outcome === 'shared' ? 'copied' : 'failed'),
-    );
+    void copyLink(caps, url).then((outcome) => {
+      if (outcome === 'shared') {
+        track('artist_shared', { artistSlug: slug, destination: 'copy-link' });
+      }
+      setStatus(outcome === 'shared' ? 'copied' : 'failed');
+    });
   };
 
   return (

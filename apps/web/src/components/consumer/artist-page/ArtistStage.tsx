@@ -32,12 +32,13 @@ const GROUND_FADE =
 export const STARBURST_OPACITY = 0.08;
 const starburst = (ring: string) =>
   `repeating-conic-gradient(from 0deg at 50% 50%, ${ring} 0deg 4deg, transparent 4deg 12deg)`;
+// A mask reads only alpha, so `black` here means "opaque", not a color.
 const STARBURST_MASK =
-  'radial-gradient(circle at 50% 50%, #000 0%, #000 30%, transparent 70%)';
+  'radial-gradient(circle at 50% 50%, black 0%, black 30%, transparent 70%)';
 
 /** The genre ring on the card: 1.25px in the genre's color plus its glow. */
 export const artistRing = (ring: string): string =>
-  `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px rgb(0 0 0 / 0.6)`;
+  `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px var(--shadow-strong)`;
 
 /**
  * The washed backdrop. Decorative: everything it shows is the card in front of

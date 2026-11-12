@@ -44,4 +44,25 @@ describe('artistGenres', () => {
       'jazz',
     ]);
   });
+
+  it('counts case and whitespace variants as one genre, keeping the first spelling', () => {
+    expect(
+      artistGenres([show(['Soul ']), show(['soul']), show([' SOUL', 'jazz'])]),
+    ).toEqual(['Soul', 'jazz']);
+    // And once per show, however it is spelled there.
+    expect(artistGenres([show(['soul', 'Soul', 'jazz'])])).toEqual([
+      'soul',
+      'jazz',
+    ]);
+  });
+
+  it('skips blank genres', () => {
+    expect(artistGenres([show(['  ', 'soul'])])).toEqual(['soul']);
+  });
+
+  it('keeps an unbucketed lead in first place; the page picks the ring past it', () => {
+    expect(
+      artistGenres([show(['chillwave', 'electronic']), show(['chillwave'])]),
+    ).toEqual(['chillwave', 'electronic']);
+  });
 });

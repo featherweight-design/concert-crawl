@@ -509,6 +509,22 @@ describe('ArtistPageContent', () => {
       );
     });
 
+    it('rings the card in the first bucketed genre when the lead has no bucket', () => {
+      const data: ArtistDetailResponse = {
+        ...base,
+        shows: [
+          {
+            ...show('2026-11-10', 'Marquis Theater'),
+            genres: ['zzz-unbucketed', 'electronic'],
+          },
+        ],
+      };
+      const { container } = render(<ArtistPageContent data={data} />);
+      expect(card(container)?.style.boxShadow).toContain(
+        'var(--genre-electronic)',
+      );
+    });
+
     it('draws the neutral ring and no chips for an artist with no shows', () => {
       const { container } = render(<ArtistPageContent data={base} />);
       expect(card(container)?.style.boxShadow).toContain(
