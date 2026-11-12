@@ -27,6 +27,7 @@ import {
   hasDismissedPostWatchAsk,
   markPostWatchAskDismissed,
 } from '@/lib/pwa/post-watch-dismissal';
+import { whenFollowNudgeClosed } from '@/components/consumer/following/nudge/lib/nudge-presence';
 import { PostWatchSheet } from '@/components/pwa/PostWatchSheet';
 import { IosHowToSheet } from '@/components/pwa/IosHowToSheet';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -87,6 +88,8 @@ export function WatchShowButton({
   // once per component lifetime per successful watch.
   const askedThisSessionRef = useRef(false);
   const scheduledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cancels a sheet that is waiting for the follow nudge to close.
+  const cancelNudgeWaitRef = useRef<(() => void) | null>(null);
   // Latest known masterEnabled — kept in a ref so the 500ms setTimeout can
   // re-read it at fire time. Without this a fast-tap Watch before the
   // preferences query resolves would slip past the gate and open a sheet
@@ -175,6 +178,11 @@ export function WatchShowButton({
     // any pending timer so we don't open the ask for a show they just
     // stopped watching. Also reset the session guard so a subsequent
     // re-watch still qualifies.
+    if (wasWatching && cancelNudgeWaitRef.current !== null) {
+      cancelNudgeWaitRef.current();
+      cancelNudgeWaitRef.current = null;
+      askedThisSessionRef.current = false;
+    }
     if (wasWatching && scheduledTimerRef.current !== null) {
       clearTimeout(scheduledTimerRef.current);
       scheduledTimerRef.current = null;
@@ -208,7 +216,13 @@ export function WatchShowButton({
           // idempotent on the server side and a click "Turn on" would
           // just re-attach this device to their existing subscription.
           if (masterEnabledRef.current === true) return;
-          setPromptVariant(variant);
+          // The same watch may have raised the follow nudge. Never open on
+          // top of it: wait for it to close, then ask.
+          cancelNudgeWaitRef.current = whenFollowNudgeClosed(() => {
+            cancelNudgeWaitRef.current = null;
+            if (masterEnabledRef.current === true) return;
+            setPromptVariant(variant);
+          });
         }, 500);
       },
     });
@@ -219,6 +233,7 @@ export function WatchShowButton({
       if (scheduledTimerRef.current !== null) {
         clearTimeout(scheduledTimerRef.current);
       }
+      cancelNudgeWaitRef.current?.();
     },
     [],
   );

@@ -22,6 +22,7 @@ import {
   isFollowNudgeAnswered,
   markFollowNudgeAnswered,
 } from './nudge-dismissal';
+import { holdFollowNudgeOpen } from './nudge-presence';
 
 // Matches the mutationKey set in lib/queries/use-watch-toggle.ts.
 const WATCH_TOGGLE_MUTATION_KEY = 'watch-toggle';
@@ -109,6 +110,13 @@ export const useFirstWatchNudge = (
   useEffect(() => {
     if (!enabled) setTarget(null);
   }, [enabled]);
+
+  // While a card is up, the post-watch push sheet waits (nudge-presence).
+  const isOpen = target !== null;
+  useEffect(() => {
+    if (!isOpen) return;
+    return holdFollowNudgeOpen();
+  }, [isOpen]);
 
   useEffect(() => {
     // A signed-out visitor cannot have a watch toggle succeed, and nothing

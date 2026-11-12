@@ -123,6 +123,7 @@ import {
   markPostWatchAskDismissed,
 } from '@/lib/pwa/post-watch-dismissal';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { holdFollowNudgeOpen } from '@/components/consumer/following/nudge/lib/nudge-presence';
 
 const renderButton = () => {
   const client = new QueryClient({
@@ -194,6 +195,37 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
     expect(
       screen.getByRole('button', { name: /turn on notifications/i }),
     ).not.toBeNull();
+  });
+
+  it('waits for an open follow nudge to close, so two sheets never stack', async () => {
+    const releaseNudge = holdFollowNudgeOpen();
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(
+      screen.queryByRole('button', { name: /turn on notifications/i }),
+    ).toBeNull();
+
+    await act(async () => {
+      releaseNudge();
+    });
+    expect(
+      screen.getByRole('button', { name: /turn on notifications/i }),
+    ).not.toBeNull();
+  });
+
+  it('drops a sheet still waiting on the nudge when the button unmounts', async () => {
+    const releaseNudge = holdFollowNudgeOpen();
+    const { unmount } = renderButton();
+    fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    unmount();
+    // Releasing after unmount must not set state on the unmounted button.
+    expect(() => releaseNudge()).not.toThrow();
   });
 
   it('does not fire the sheet when un-watching an already-watching show', async () => {
