@@ -285,6 +285,12 @@ describe('ArtistsClient', () => {
   });
 
   it('never snaps a failed row back into a newer list', async () => {
+    // The row's show is in the next 60 days, so the server lists it under
+    // Show in 60 days and never under Later.
+    listFor = (query) =>
+      query.get('window') === 'later'
+        ? { data: [], total: 0 }
+        : { data: [row()], total: 1 };
     patchStatus = 500;
     const release = holdPatch();
     render(<ArtistsClient />);
@@ -295,6 +301,9 @@ describe('ArtistsClient', () => {
     await waitFor(() => expect(listCalls).toBe(2));
     release();
     expect(await screen.findByTestId('save-failed')).toBeTruthy();
+    // The newer list re-reads the server rather than taking the row back at
+    // its old index, and the server has no such row under Later.
+    await waitFor(() => expect(listCalls).toBe(3));
     expect(rowName('Kyle Emerson')).toBeNull();
   });
 
