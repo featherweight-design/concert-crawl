@@ -7,6 +7,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { adminQueueSnoozes, auditLog, db } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
 import { getAuthUser } from '../../middleware/auth.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { validationHook } from '../../lib/validator.js';
@@ -14,12 +15,15 @@ import type { AdminVariables } from './index.js';
 import { ANSWER_HANDLERS, NAVIGATION_SLUGS } from './lib/needs-you/answers.js';
 import {
   NEEDS_YOU_ANSWER_ACTION,
+  NEEDS_YOU_UNDO_ACTION,
   countNeedsYou,
   listNeedsYou,
   summarizeNeedsYou,
 } from './lib/needs-you/index.js';
 import { NEEDS_YOU_KINDS, parseItemKey } from './lib/needs-you/keys.js';
 import { loadNeedsYouItems } from './lib/needs-you/sources.js';
+
+const logger = createLogger('admin:needs-you');
 
 export const needsYouAdminRouter = new Hono<AdminVariables>();
 
@@ -227,8 +231,6 @@ needsYouAdminRouter.delete(
   },
 );
 
-export const NEEDS_YOU_UNDO_ACTION = 'needs_you.undo';
-
 const answerBodySchema = z.looseObject({
   answer: z.string().trim().min(1).max(64),
 });
@@ -299,29 +301,41 @@ needsYouAdminRouter.post(
     // Notifying and non-undoable answers record no prior state.
     const before =
       option.undoable && !option.notifiesFans ? outcome.before : null;
-    const [audit] = await db
-      .insert(auditLog)
-      .values({
-        actorId,
-        action: NEEDS_YOU_ANSWER_ACTION,
-        targetId: key,
-        metadata: {
-          slug,
-          kind: item.kind,
-          before,
-          params: outcome.params,
-          ...(outcome.result ? { result: outcome.result } : {}),
-        },
-      })
-      .returning({ id: auditLog.id });
+    // The answer has already committed by here. A failing audit insert is
+    // logged loudly and the answer still reports success (without an undo):
+    // a 500 would invite a retry of an action that already happened.
+    let auditId: string | null = null;
+    try {
+      const [audit] = await db
+        .insert(auditLog)
+        .values({
+          actorId,
+          action: NEEDS_YOU_ANSWER_ACTION,
+          targetId: key,
+          metadata: {
+            slug,
+            kind: item.kind,
+            before,
+            params: outcome.params,
+            ...(outcome.result ? { result: outcome.result } : {}),
+          },
+        })
+        .returning({ id: auditLog.id });
+      auditId = audit?.id ?? null;
+    } catch (err: unknown) {
+      logger.error(
+        { err, key, slug, actorId },
+        'needs-you answer applied but its audit row failed',
+      );
+    }
 
     return ctx.json({
       success: true,
       data: {
         key,
         slug,
-        auditId: audit?.id ?? null,
-        undoable: before !== null,
+        auditId,
+        undoable: before !== null && auditId !== null,
         ...(outcome.result ? { result: outcome.result } : {}),
       },
     });
