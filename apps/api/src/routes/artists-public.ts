@@ -107,7 +107,7 @@ const MAX_GENRE_FILTERS = 24;
 // The count cap alone still lets 24 megabyte-long values through into the
 // ARRAY[] predicate. The longest real bucket label is well under this, so the
 // ceiling is generous and still bounds the query. `filterVibe` on /v1/events
-// caps each of its values, and their count, the same way.
+// caps each of its values the same way.
 const MAX_GENRE_LENGTH = 64;
 
 const suggestionsQuerySchema = z.object({

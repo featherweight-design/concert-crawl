@@ -7,13 +7,16 @@
 // forwarded the page URL almost verbatim. `listEventsSchema` is a plain
 // (non-strict) Zod object, so the untranslated keys were stripped rather than
 // rejected — page 2 came back 200 with unfiltered rows appended to a filtered
-// page 1, under a banner still claiming the scope. The schema is strict now,
-// so a key this module forgets to translate is a 400, never a silent widening.
+// page 1, under a banner still claiming the scope. The schema stays lenient
+// (a 400 would break old PWA bundles and cached URLs); the guard is
+// EVENTS_QUERY_KEYS instead: the API builds its schema from it and logs any
+// other key, and this module's test asserts every key it emits is on the list.
 //
 // Scope flags are passed in rather than read off the URL: whether a viewer may
 // actually hold `taste` or `following` depends on a token and an entitlement,
 // which only the caller knows.
 
+import { parseListParam, type EventsQueryKey } from '@concert-crawl/types';
 import { filterWhenToDateRange } from '@/components/consumer/definitions/lib';
 
 /** Pagination plus the scope flags, which only the caller can decide. */
@@ -40,18 +43,27 @@ const read = (params: BrowseParams, key: string): string | undefined => {
 };
 
 // Where and Vibe are multi-select (Design addendum 2, item 6), so they read
-// EVERY value, from both shapes alike: repeated keys, a comma list, or the
-// legacy single value a bookmark carries. Blanks and repeats are dropped. The
-// two readers must agree on the whole list, not just its head, or Load More
-// appends rows from a different venue set than page 1 showed.
-const readList = (params: BrowseParams, key: string): string[] => {
-  const raw =
-    params instanceof URLSearchParams ? params.getAll(key) : params[key];
-  const values = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
-  const items = values
-    .flatMap((value) => value.split(','))
-    .filter((value) => value.trim() !== '');
-  return [...new Set(items)];
+// EVERY value of a repeated key, from both shapes alike, or the legacy single
+// value a bookmark carries. A comma is never a separator in the page URL: the
+// filter UI reads these keys with `searchParams.get`, and a comma list would
+// show it one value while the request asked for several. `parseListParam` is
+// the API's own rule (trim, drop blanks, dedupe, truncate to the cap), so the
+// list sent is the list the API applies. The two readers must agree on the
+// whole list, not just its head, or Load More appends rows from a different
+// venue set than page 1 showed.
+const readList = (params: BrowseParams, key: string): string[] =>
+  parseListParam(
+    params instanceof URLSearchParams ? params.getAll(key) : params[key],
+  );
+
+// A list goes out as a repeated key, one entry per value, which the API reads
+// as an array. A single value goes out exactly as it always did.
+const appendList = (
+  qs: URLSearchParams,
+  key: EventsQueryKey,
+  values: readonly string[],
+): void => {
+  for (const value of values) qs.append(key, value);
 };
 
 /**
@@ -71,13 +83,13 @@ export const buildEventsApiParams = (
   if (search) qs.set('search', search);
 
   // `filterWhere` is the chip. `venueSlug` is accepted too because the server
-  // component always did; nothing in the app links with it today. The API
-  // takes a list comma-separated, the format its other list params use, so a
-  // single value goes out exactly as it always did.
+  // component always did; nothing in the app links with it today.
   const whereList = readList(params, 'filterWhere');
-  const venueSlugs =
-    whereList.length > 0 ? whereList : readList(params, 'venueSlug');
-  if (venueSlugs.length > 0) qs.set('venueSlug', venueSlugs.join(','));
+  appendList(
+    qs,
+    'venueSlug',
+    whereList.length > 0 ? whereList : readList(params, 'venueSlug'),
+  );
 
   // `filterWhen` wins over an explicit from/to, which is what the server
   // component always did, and the window is taken as a PAIR. Resolving the two
@@ -94,8 +106,7 @@ export const buildEventsApiParams = (
   const filterPrice = read(params, 'filterPrice');
   if (filterPrice) qs.set('filterPrice', filterPrice);
 
-  const filterVibe = readList(params, 'filterVibe');
-  if (filterVibe.length > 0) qs.set('filterVibe', filterVibe.join(','));
+  appendList(qs, 'filterVibe', readList(params, 'filterVibe'));
 
   if (taste) qs.set('taste', '1');
   if (following) qs.set('following', '1');

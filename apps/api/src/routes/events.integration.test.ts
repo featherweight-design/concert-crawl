@@ -11,6 +11,7 @@ vi.mock('@hono/clerk-auth', () => ({
 import { events } from '@concert-crawl/db';
 import { STALE_AFTER_MS } from '@concert-crawl/types';
 import { createApp } from '../app.js';
+import { apiLogger } from '../lib/logger.js';
 import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
@@ -793,9 +794,7 @@ describe('GET /v1/events/:id — integration', () => {
     const list =
       (await // `venueSlug`, not `venueId`: the list schema is strict, and an
       // unknown key is a 400 rather than a silently ignored filter.
-      (
-        await app.request(`/v1/events?venueSlug=${venue.slug}`)
-      ).json()) as {
+      (await app.request(`/v1/events?venueSlug=${venue.slug}`)).json()) as {
         data: {
           data: Array<{
             id: string;
@@ -1614,7 +1613,9 @@ describe('GET /v1/events — filterVibe', () => {
 
   it('returns 400 for a filterVibe list item exceeding 100 characters', async () => {
     const longGenre = 'a'.repeat(101);
-    const res = await app.request(`/v1/events?filterVibe=rock,${longGenre}`);
+    const res = await app.request(
+      `/v1/events?filterVibe=rock&filterVibe=${longGenre}`,
+    );
     expect(res.status).toBe(400);
   });
 
@@ -2449,8 +2450,9 @@ describe('GET /v1/events — tonight stays listed after the UTC rollover', () =>
 });
 
 // Where and Vibe are multi-select (Design addendum 2, item 6): OR within a
-// filter, AND across filters. The list goes out comma-separated, a repeated
-// key is accepted too, and the legacy single value keeps working unchanged.
+// filter, AND across filters. A list goes out as a repeated key; venue slugs
+// may also come comma-separated, vibes never split, and the legacy single
+// value keeps working unchanged.
 describe('GET /v1/events — multi-value Where and Vibe', () => {
   beforeEach(async () => {
     await clearTables();
@@ -2504,16 +2506,7 @@ describe('GET /v1/events — multi-value Where and Vibe', () => {
     ]);
   });
 
-  it('ORs two venues', async () => {
-    await seedThreeVenues();
-    expect(await titlesFor('venueSlug=ogden,bluebird')).toEqual([
-      'Bluebird Punk',
-      'Ogden Jazz',
-      'Ogden Rock',
-    ]);
-  });
-
-  it('accepts two venues as a repeated key too', async () => {
+  it('ORs two venues sent as a repeated key', async () => {
     await seedThreeVenues();
     expect(await titlesFor('venueSlug=ogden&venueSlug=bluebird')).toEqual([
       'Bluebird Punk',
@@ -2522,23 +2515,62 @@ describe('GET /v1/events — multi-value Where and Vibe', () => {
     ]);
   });
 
+  it('also splits a comma list of venue slugs', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=ogden,bluebird')).toEqual([
+      'Bluebird Punk',
+      'Ogden Jazz',
+      'Ogden Rock',
+    ]);
+  });
+
+  it('trims a slug before matching it', async () => {
+    await seedThreeVenues();
+    expect(
+      await titlesFor('venueSlug=%20bluebird%20&venueSlug=no-such-venue'),
+    ).toEqual(['Bluebird Punk']);
+  });
+
   it('ignores an unknown slug alongside a known one', async () => {
     await seedThreeVenues();
-    expect(await titlesFor('venueSlug=no-such-venue,bluebird')).toEqual([
-      'Bluebird Punk',
-    ]);
+    expect(
+      await titlesFor('venueSlug=no-such-venue&venueSlug=bluebird'),
+    ).toEqual(['Bluebird Punk']);
   });
 
   it('returns nothing when no listed venue exists', async () => {
     await seedThreeVenues();
-    expect(await titlesFor('venueSlug=no-such-venue,nor-this')).toEqual([]);
+    expect(
+      await titlesFor('venueSlug=no-such-venue&venueSlug=nor-this'),
+    ).toEqual([]);
   });
 
-  it('ORs two vibes', async () => {
+  it('ORs two vibes sent as a repeated key', async () => {
     await seedThreeVenues();
-    expect(await titlesFor('filterVibe=jazz,punk')).toEqual([
+    expect(await titlesFor('filterVibe=jazz&filterVibe=punk')).toEqual([
       'Bluebird Punk',
       'Ogden Jazz',
+    ]);
+  });
+
+  it('never splits a vibe on commas, so a legacy raw genre matches exactly', async () => {
+    const venue = await seedVenue({ name: 'Swallow Hill', slug: 'swallow' });
+    await seedEvent(venue.id, {
+      artist: 'Artist 5',
+      title: 'Comma Genre',
+      genre: ['folk, americana'],
+      date: '2027-06-01',
+    });
+    await seedEvent(venue.id, {
+      artist: 'Artist 6',
+      title: 'Plain Folk',
+      genre: ['folk'],
+      date: '2027-06-01',
+    });
+
+    // Split, this would expand the `folk` bucket and match Plain Folk too.
+    expect(await titlesFor('filterVibe=folk%2C%20americana')).toEqual([
+      'Comma Genre',
     ]);
   });
 
@@ -2547,7 +2579,9 @@ describe('GET /v1/events — multi-value Where and Vibe', () => {
     // Ogden or Gothic, and rock or punk: Bluebird Punk is the wrong venue and
     // Ogden Jazz the wrong vibe.
     expect(
-      await titlesFor('venueSlug=ogden,gothic&filterVibe=rock,punk'),
+      await titlesFor(
+        'venueSlug=ogden&venueSlug=gothic&filterVibe=rock&filterVibe=punk',
+      ),
     ).toEqual(['Gothic Rock', 'Ogden Rock']);
   });
 
@@ -2560,29 +2594,61 @@ describe('GET /v1/events — multi-value Where and Vibe', () => {
 
   it('treats an empty list as no filter', async () => {
     await seedThreeVenues();
-    expect(await titlesFor('venueSlug=&filterVibe=,')).toHaveLength(4);
+    expect(
+      await titlesFor('venueSlug=&venueSlug=%20&filterVibe=&filterVibe=%20'),
+    ).toHaveLength(4);
   });
 
-  it('rejects an unknown param instead of ignoring it', async () => {
+  it('ignores an unknown key, with a warning, instead of rejecting it', async () => {
     await seedThreeVenues();
-    // The page-URL name, not the API's: before the schema was strict this
-    // came back 200 with the venue filter silently dropped (#1698).
-    const res = await app.request('/v1/events?filterWhere=ogden');
-    expect(res.status).toBe(400);
+    const warn = vi.spyOn(apiLogger, 'warn');
+    try {
+      // A 400 here would break old PWA bundles and cached URLs. The warning
+      // is how #1698's misnamed filter (the page-URL name, not the API's)
+      // would show up instead.
+      expect(await titlesFor('filterWhere=ogden')).toHaveLength(4);
+      expect(warn).toHaveBeenCalledWith(
+        { unknownKeys: ['filterWhere'] },
+        expect.any(String),
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 
-  it('caps each list at 25 values', async () => {
-    const slugs = (count: number): string =>
-      Array.from({ length: count }, (_, i) => `venue-${i}`).join(',');
+  it('does not warn when every key is known', async () => {
+    const warn = vi.spyOn(apiLogger, 'warn');
+    try {
+      await titlesFor('venueSlug=ogden&filterVibe=rock&limit=5');
+      expect(warn).not.toHaveBeenCalledWith(
+        expect.objectContaining({ unknownKeys: expect.anything() }),
+        expect.anything(),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
 
-    expect(
-      (await app.request(`/v1/events?venueSlug=${slugs(25)}`)).status,
-    ).toBe(200);
-    expect(
-      (await app.request(`/v1/events?venueSlug=${slugs(26)}`)).status,
-    ).toBe(400);
-    expect(
-      (await app.request(`/v1/events?filterVibe=${slugs(26)}`)).status,
-    ).toBe(400);
+  it('truncates a list past 25 values rather than rejecting it', async () => {
+    await seedThreeVenues();
+    const unknown = Array.from(
+      { length: 25 },
+      (_, i) => `venueSlug=venue-${i}`,
+    ).join('&');
+
+    // The 26th slug is the only real one, and truncation drops it.
+    expect(await titlesFor(`${unknown}&venueSlug=bluebird`)).toEqual([]);
+  });
+
+  it('dedupes before applying the cap', async () => {
+    await seedThreeVenues();
+    const repeats = Array.from({ length: 30 }, () => 'venueSlug=nope').join(
+      '&',
+    );
+
+    // 31 values but only 2 distinct, so bluebird survives the cap.
+    expect(await titlesFor(`${repeats}&venueSlug=bluebird`)).toEqual([
+      'Bluebird Punk',
+    ]);
   });
 });

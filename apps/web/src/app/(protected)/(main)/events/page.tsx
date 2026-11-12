@@ -62,22 +62,26 @@ interface BrowsePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-// The calendar's week-nav links carry every filter the viewer chose, minus the
-// list offset and the selected day. A repeated key (multi-select Where and
-// Vibe) keeps all its values; copying only string values would drop a
-// multi-value filter on the first week step.
-function weekNavParams(
+// Copy the page's params into a fresh URLSearchParams, minus the excluded
+// keys, for a link that keeps everything the viewer chose. A repeated key
+// (multi-select Where and Vibe) keeps all its values; copying only string
+// values would drop a multi-value filter on the first click.
+function copyParams(
   params: Record<string, string | string[] | undefined>,
+  exclude: readonly string[],
 ): URLSearchParams {
-  const navParams = new URLSearchParams();
+  const copied = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (key === 'offset' || key === 'selectedDate') continue;
-    if (typeof value === 'string') navParams.set(key, value);
+    if (exclude.includes(key)) continue;
+    if (typeof value === 'string') copied.set(key, value);
     else if (Array.isArray(value))
-      for (const entry of value) navParams.append(key, entry);
+      for (const entry of value) copied.append(key, entry);
   }
-  return navParams;
+  return copied;
 }
+
+// The calendar's week-nav links drop the list offset and the selected day.
+const WEEK_NAV_EXCLUDED = ['offset', 'selectedDate'] as const;
 
 async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
@@ -334,14 +338,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   // Everything the viewer already chose, minus the lens. Clearing the lens is
   // not a trip back to a bare /events.
-  const clearLensParams = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (key === 'crew') continue;
-    if (typeof value === 'string') clearLensParams.set(key, value);
-    else if (Array.isArray(value))
-      for (const entry of value) clearLensParams.append(key, entry);
-  }
-  const clearLensQuery = clearLensParams.toString();
+  const clearLensQuery = copyParams(params, ['crew']).toString();
   const clearLensHref = clearLensQuery
     ? `/events?${clearLensQuery}`
     : '/events';
@@ -461,7 +458,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const calPrevWeekHref: string | null =
     weekOffset > 0
       ? (() => {
-          const prevParams = weekNavParams(params);
+          const prevParams = copyParams(params, WEEK_NAV_EXCLUDED);
           prevParams.set('view', 'cal');
           const prevOffset = weekOffset - 1;
           if (prevOffset > 0) {
@@ -474,7 +471,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       : null;
 
   const calNextWeekHref = (() => {
-    const nextParams = weekNavParams(params);
+    const nextParams = copyParams(params, WEEK_NAV_EXCLUDED);
     nextParams.set('view', 'cal');
     nextParams.set('weekOffset', String(weekOffset + 1));
     return `/events?${nextParams.toString()}`;
