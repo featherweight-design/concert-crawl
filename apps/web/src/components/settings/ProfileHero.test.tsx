@@ -1,10 +1,27 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ProfileHero } from './ProfileHero';
 
-afterEach(cleanup);
+// jsdom has no matchMedia, and ProfileHero reads the viewport through it.
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const base = {
   handle: 'hugh',
