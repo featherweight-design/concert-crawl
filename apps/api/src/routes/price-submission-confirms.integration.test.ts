@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
-import { events, notifications, priceSubmissions } from '@concert-crawl/db';
+import {
+  auditLog,
+  events,
+  notifications,
+  priceSubmissions,
+} from '@concert-crawl/db';
 import { testDb } from '../test/helpers/db.js';
 import { fanoutPriceDrop } from '../lib/price-drop.js';
 import { observeBlocking, withLockHolder } from '../test/helpers/locks.js';
@@ -268,6 +273,51 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     expect(body.data.confirmed).toBe(true);
     expect(body.data.submissionStatus).toBe('corroborated');
     expect(body.data.confirmsCount).toBe(1);
+
+    // The promotion is the system's act: one audit row under system:prices.
+    const promoted = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'price.promoted'));
+    expect(promoted).toHaveLength(1);
+    expect(promoted[0]).toMatchObject({
+      actorId: 'system:prices',
+      targetId: submissionId,
+    });
+  });
+
+  it('writes no promotion audit row while the submission is still pending', async () => {
+    const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const imminentEvent = await seedEvent(
+      (await seedVenue({ slug: `venue-no-promo-${Date.now()}` })).id,
+      { date: imminentDate, artist: 'Still-Pending Artist' },
+    );
+    const pending = await seedPriceSubmission(
+      imminentEvent.id,
+      'user_pending_submitter',
+    );
+
+    setAuth(CONFIRMER);
+    const res = await app.request(
+      `/v1/events/${imminentEvent.id}/price-submissions/${pending.id}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify(confirmBody),
+      },
+    );
+    expect(res.status).toBe(200);
+    expect(
+      await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'price.promoted')),
+    ).toHaveLength(0);
   });
 
   it('returns 409 on duplicate confirm (imminent event, still pending after one confirm)', async () => {

@@ -1407,3 +1407,24 @@ export interface SpotifyTastePicksResponse {
  * sweep that never ran.
  */
 export const TRIAGE_NO_SWEEP = '—';
+
+// Admin-wide settings (one row). `llmMonthlyBudgetUsd` is null when no budget
+// is set; `updatedAt` and `updatedBy` are null until the first save.
+export interface AdminSettings {
+  llmMonthlyBudgetUsd: number | null;
+  approvePricesMyself: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+// One audit_log row as the admin reads it. `actor` is a handle or a `system:`
+// name, never a Clerk id.
+export interface AuditLogItem {
+  id: string;
+  actor: string;
+  actorKind: 'system' | 'admin';
+  action: string;
+  targetId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
