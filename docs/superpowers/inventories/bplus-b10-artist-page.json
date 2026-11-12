@@ -29,7 +29,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"stage-card\"]"
@@ -46,7 +46,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"artist-show-row\"]"
@@ -63,7 +63,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-empty-upcoming]"
@@ -79,7 +79,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"stage-card\"]"
