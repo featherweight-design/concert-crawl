@@ -15,9 +15,16 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const copy = CONSUMER_COPY.appHeader;
 
+// The active tab's edge runs full-strength from the signal through the accent
+// and tails off into the ordinary border colour (header-900, header-640).
 const ACTIVE_TAB_STYLE = {
   background:
-    'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, color-mix(in oklch, var(--signal) 60%, transparent), color-mix(in oklch, var(--accent) 60%, transparent)) border-box',
+    'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+} as const;
+
+// The desktop bar is a translucent wash over the page glow, not a solid.
+const DESKTOP_BAR_STYLE = {
+  background: 'color-mix(in oklch, var(--bg-elevated) 60%, transparent)',
 } as const;
 
 interface AppHeaderProps {
@@ -44,9 +51,18 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
   return (
     <header className="w-full">
       {/* ── Mobile bar (hidden sm+) ─────────────────────── */}
-      <div className="flex items-center justify-between bg-bg px-4 pb-2.5 pt-4 sm:hidden">
+      {/* No fill: the page glow shows through the phone header. */}
+      <div
+        data-testid="header-mobile"
+        className="flex items-center justify-between px-4 pb-2.5 pt-4 sm:hidden"
+      >
         <Link href="/events" className="flex shrink-0 items-center gap-2">
-          <CCMark size={28} />
+          <div
+            data-testid="header-mark-tile"
+            className="h-7 w-7 shrink-0 overflow-hidden rounded-[7px] border border-border-strong"
+          >
+            <CCMark size={26} />
+          </div>
           <span
             className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
             style={{ fontFamily: 'var(--font-ui)' }}
@@ -72,15 +88,24 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
       <SignInRail />
 
       {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
-      <div className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between border-b border-border bg-bg-elevated px-8 sm:flex">
+      <div
+        data-testid="header-desktop"
+        className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between gap-3 border-b border-border px-4 sm:flex md:px-6 lg:px-8"
+        style={DESKTOP_BAR_STYLE}
+      >
         {/* Left: logo + nav tabs */}
-        <div className="flex items-center gap-8">
-          <Link href="/events" className="flex items-center gap-2.5">
-            <div className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px]">
-              <CCMark size={32} />
+        <div className="flex min-w-0 items-center gap-3 lg:gap-8">
+          <Link href="/events" className="flex shrink-0 items-center gap-2.5">
+            <div
+              data-testid="header-mark-tile"
+              className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px] border border-border-strong"
+            >
+              <CCMark size={30} />
             </div>
+            {/* 640-767 shows the mark alone (addendum-3 rule 1). */}
             <span
-              className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
+              data-testid="header-wordmark"
+              className="hidden text-[17px] font-extrabold tracking-[-0.02em] text-fg md:inline"
               style={{ fontFamily: 'var(--font-ui)' }}
             >
               {copy.brand.name}
@@ -88,7 +113,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             </span>
           </Link>
 
-          <nav className="flex gap-1 overflow-x-auto">
+          <nav className="flex min-w-0 gap-0.5 overflow-x-auto lg:gap-1">
             {tabs.map((tab) => {
               const isActive = isTabActive(tab, pathname);
               return (
@@ -97,7 +122,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                   href={tab.href}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'shrink-0 rounded-lg border border-transparent px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
+                    'shrink-0 whitespace-nowrap rounded-[10px] border border-transparent px-[10px] py-[8px] text-[13px] lg:px-[14px] tracking-[-0.01em]',
                     isActive
                       ? 'font-bold text-fg'
                       : 'bg-transparent font-medium text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg',
@@ -116,7 +141,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
         </div>
 
         {/* Right: search bar + user avatar */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           {/* The PWA slots (Install, Offline) sit LEFT of search on desktop,
               as B+ `bp-account` draws them. On the phone bar they stay to the
               left of the search circle too. */}

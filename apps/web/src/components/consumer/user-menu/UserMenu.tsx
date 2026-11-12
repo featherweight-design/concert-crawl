@@ -13,6 +13,7 @@ import { CornerUpRight, Eye, LogOut, Tag, Users } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useClerk } from '@clerk/nextjs';
 import { Avatar } from '@/components/settings/Avatar';
+import { AvatarRing } from '@/components/settings/AvatarRing';
 import { ThemeSwatch } from '@/theme/ThemeSwatch';
 import { THEMES, THEME_META, THEME_NAMES } from '@/theme/themes';
 import { MiniMark } from '@/theme/MiniMark';
@@ -50,6 +51,18 @@ const AVATAR_COLORS: readonly AvatarColor[] = [
   'success',
   'warning',
 ];
+
+// bp-account: the popover edge runs left to right, signal blue to accent pink,
+// along the rounded top and fades down the sides into the ordinary border.
+// Four border-box layers, top first: the surface fill, a fade from clear to the
+// border colour over the top 40px, the horizontal gradient confined to those
+// 40px, and the border colour everywhere else.
+const POPOVER_EDGE_BACKGROUND = [
+  'linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box',
+  'linear-gradient(180deg, color-mix(in oklch, var(--border-strong) 0%, transparent), var(--border-strong)) border-box top / 100% 40px no-repeat',
+  'linear-gradient(90deg, var(--signal), var(--accent)) border-box top / 100% 40px no-repeat',
+  'linear-gradient(var(--border-strong), var(--border-strong)) border-box',
+].join(', ');
 
 interface CachedAvatar {
   handle: string | null;
@@ -142,6 +155,8 @@ export function AccountMenuProvider({
   const [submissionCount, setSubmissionCount] = useState(0);
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
+  const [avatarSecondColor, setAvatarSecondColor] =
+    useState<AvatarColor | null>(null);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
   const surfaceRef = useRef<HTMLDivElement>(null);
   // The element that opened the menu, so dismiss can hand focus back to it.
@@ -159,6 +174,9 @@ export function AccountMenuProvider({
     // so a previous account's cached handle/color or submission count can't
     // linger on a shared device until fetchMe resolves.
     setSubmissionCount(0);
+    // The second colour is not cached: it arrives with the profile fetch, and
+    // until then the ring draws the single colour.
+    setAvatarSecondColor(null);
     if (!userId) {
       // Signed-out: there's nothing to fetch, so resolve the loading state
       // immediately. Otherwise loading={!avatarLoaded} stays true forever and
@@ -297,6 +315,7 @@ export function AccountMenuProvider({
         if (!cancelled) {
           setAvatarHandle(profile.handle);
           setAvatarColor(profile.avatarColor);
+          setAvatarSecondColor(profile.avatarSecondColor);
           setSubmissionCount(profile.submissionCount);
           writeAvatarCache(userId, {
             handle: profile.handle,
@@ -346,6 +365,7 @@ export function AccountMenuProvider({
     submissionCount,
     avatarHandle,
     avatarColor,
+    avatarSecondColor,
     isSignedIn: isSignedIn === true,
     surfaceRef,
     open,
@@ -479,6 +499,7 @@ export function UserMenu() {
         }
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-busy={isSignedIn && !avatarLoaded ? true : undefined}
         className="relative shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
       >
         {isSignedIn ? (
@@ -486,6 +507,7 @@ export function UserMenu() {
             handle={avatarHandle}
             avatarColor={avatarColor}
             size={36}
+            edge="solid"
             loading={!avatarLoaded}
           />
         ) : (
@@ -518,6 +540,8 @@ interface MenuBodyProps {
   submissionCount: number;
   avatarHandle: string | null;
   avatarColor: AvatarColor | null;
+  /** The second colour of the user's pair; drawn by the identity card only. */
+  avatarSecondColor: AvatarColor | null;
   isSignedIn: boolean;
   open: boolean;
   mode: AccountMenuMode;
@@ -712,6 +736,7 @@ function MenuBody({
   submissionCount,
   avatarHandle,
   avatarColor,
+  avatarSecondColor,
   isSignedIn,
   onOpenNotifications,
   dragZone,
@@ -758,7 +783,13 @@ function MenuBody({
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <Avatar handle={avatarHandle} avatarColor={avatarColor} size={42} />
+        {/* bp-account: a 42px two-colour ring in the user's pair. */}
+        <AvatarRing
+          handle={avatarHandle}
+          avatarColor={avatarColor}
+          avatarSecondColor={avatarSecondColor}
+          size={42}
+        />
         <div
           style={{
             flex: 1,
@@ -930,8 +961,7 @@ function UserMenuPopover(props: MenuBodyProps) {
               // border is a signal-to-accent gradient that fades to the
               // ordinary hairline.
               border: '1.5px solid transparent',
-              background:
-                'linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, linear-gradient(180deg, var(--signal), color-mix(in oklch, var(--accent) 70%, transparent) 14%, var(--border-strong) 40%) border-box',
+              background: POPOVER_EDGE_BACKGROUND,
               borderRadius: 16,
             }),
         boxShadow: '0 24px 64px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.2)',

@@ -738,7 +738,9 @@ export const CONSUMER_COPY = {
     },
     nav: {
       tabs: [
-        { label: 'Browse', href: '/events' },
+        // An artist page is reached from Browse, and the boards light Browse
+        // there; it has no tab of its own.
+        { label: 'Browse', href: '/events', matchPrefixes: ['/artists'] },
         { label: 'Venues', href: '/venues' },
         // "My shows" is the container for Watching + History + Artists; the
         // href stays /watching because that is still the default landing
@@ -773,7 +775,12 @@ export const CONSUMER_COPY = {
     nav: {
       ariaLabel: 'Main navigation',
       tabs: [
-        { key: 'browse', label: 'browse', href: '/events' },
+        {
+          key: 'browse',
+          label: 'browse',
+          href: '/events',
+          matchPrefixes: ['/artists'],
+        },
         { key: 'venues', label: 'venues', href: '/venues' },
         {
           key: 'watching',

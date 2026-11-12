@@ -208,6 +208,60 @@ describe('AppHeader crews tab (#1226)', () => {
     ).toBe('page');
   });
 
+  // Chrome B17 fidelity.
+  it('shows the mark alone from 640 to 767 and the wordmark from md up', () => {
+    render(<AppHeader />);
+    const wordmark = screen.getByTestId('header-wordmark');
+    expect(wordmark.className).toContain('hidden');
+    expect(wordmark.className).toContain('md:inline');
+    // The mark is always there, in a 32px tile on the desktop bar.
+    const tiles = screen.getAllByTestId('header-mark-tile');
+    expect(tiles).toHaveLength(2);
+    const desktopTile = tiles[1];
+    expect(desktopTile?.className).toContain('h-8');
+    expect(desktopTile?.className).toContain('rounded-[7px]');
+    expect(desktopTile?.className).toContain('border');
+  });
+
+  it('gives the phone header no fill and the desktop bar a translucent one', () => {
+    render(<AppHeader />);
+    const phone = screen.getByTestId('header-mobile');
+    expect(phone.className).not.toMatch(/\bbg-/);
+    const desktop = screen.getByTestId('header-desktop');
+    expect(desktop.className).not.toMatch(/\bbg-bg/);
+    expect(desktop.className).toContain('border-b');
+  });
+
+  it('draws the active tab as a radius-10 pill with a gradient border', () => {
+    render(<AppHeader />);
+    const browse = screen.getByRole('link', { name: 'Browse' });
+    expect(browse.className).toContain('rounded-[10px]');
+    expect(browse.className).toContain('border-transparent');
+    expect(browse.getAttribute('style')).not.toBeNull();
+    const venues = screen.getByRole('link', { name: 'Venues' });
+    expect(venues.getAttribute('style')).toBeNull();
+  });
+
+  it('keeps every tab on one line so Crews cannot clip at 640', () => {
+    render(<AppHeader />);
+    for (const label of ['Browse', 'Venues', 'My shows', 'Crews']) {
+      const tab = screen.getByRole('link', { name: label });
+      expect(tab.className).toContain('whitespace-nowrap');
+      expect(tab.className).toContain('shrink-0');
+    }
+  });
+
+  it('lights Browse on an artist page', () => {
+    pathname.current = '/artists/some-band';
+    render(<AppHeader />);
+    expect(
+      screen.getByRole('link', { name: 'Browse' }).getAttribute('aria-current'),
+    ).toBe('page');
+    expect(
+      screen.getByRole('link', { name: 'Venues' }).getAttribute('aria-current'),
+    ).toBeNull();
+  });
+
   // B+ `bp-account`: on desktop the Install pill sits left of search.
   it('renders the PWA slots before the search button in the desktop bar', () => {
     render(<AppHeader rightSlots={<span data-testid="pwa-slot" />} />);
