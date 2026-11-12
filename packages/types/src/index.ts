@@ -1334,7 +1334,66 @@ export interface CheckoutSessionResponse {
 export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff';
 
 // Submission status as shown in the UI (mapped from DB enum)
-export type SubmissionDisplayStatus = 'confirmed' | 'pending' | 'disputed';
+export type SubmissionDisplayStatus =
+  | 'confirmed'
+  | 'pending'
+  | 'disputed'
+  // Stale and archived. Listed under All only, never under a status filter.
+  | 'closed';
+
+/**
+ * The one definition of how a stored submission status reads to the user
+ * (addendum-3 Submitted prices ruling). Live (`confirmed`) is the corroborated
+ * status, the only one a price is published under; there is no separate
+ * publish flag on a submission. Price checks is `disputed`; stale and archived
+ * are `closed`. Anything else is still pending.
+ */
+export const submissionDisplayStatus = (
+  dbStatus: string,
+): SubmissionDisplayStatus => {
+  if (dbStatus === 'corroborated') return 'confirmed';
+  if (dbStatus === 'disputed') return 'disputed';
+  if (dbStatus === 'stale' || dbStatus === 'archived') return 'closed';
+  return 'pending';
+};
+
+/**
+ * What every surface that shows a submitted-price count reads: the menu (live),
+ * the delete sheet (total, since every row goes), the Settings card (total and
+ * live) and the Submitted prices page (total, and each filter's own count).
+ */
+export interface SubmissionCounts {
+  /** Every row, whatever its status. */
+  total: number;
+  /** Published and corroborated. */
+  live: number;
+  pending: number;
+  /** Disputed. */
+  priceChecks: number;
+  /** Stale and archived: in `total` and under All, in no filter. */
+  closed: number;
+}
+
+/** Tallies display statuses (each entry stands for `count` rows, default 1). */
+export const tallySubmissionCounts = (
+  entries: Iterable<{ status: SubmissionDisplayStatus; count?: number }>,
+): SubmissionCounts => {
+  const counts: SubmissionCounts = {
+    total: 0,
+    live: 0,
+    pending: 0,
+    priceChecks: 0,
+    closed: 0,
+  };
+  for (const { status, count = 1 } of entries) {
+    counts.total += count;
+    if (status === 'confirmed') counts.live += count;
+    else if (status === 'disputed') counts.priceChecks += count;
+    else if (status === 'closed') counts.closed += count;
+    else counts.pending += count;
+  }
+  return counts;
+};
 
 // Full user profile as returned by GET /v1/users/me
 export interface UserProfileResponse {
@@ -1350,7 +1409,9 @@ export interface UserProfileResponse {
   displayRole: DisplayRole;
   roleBadge: RoleBadge | null;
   joined: string; // formatted "Apr 2026"
+  /** Every submission the account has made. Same as `submissionCounts.total`. */
   submissionCount: number;
+  submissionCounts: SubmissionCounts;
   cred: number; // lifetime cumulative confirmed-submission count
   // Founder window snapshot — evaluated server-side so the client never
   // does date math.

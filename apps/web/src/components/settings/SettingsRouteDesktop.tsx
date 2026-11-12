@@ -133,8 +133,9 @@ export function SettingsRouteDesktop({
   }, [editOpen]);
 
   const isAnon = !profile.handle;
-  // From the list itself, so the panel's counts agree with its filter chips:
-  // the list leaves stale rows out, `profile.submissionCount` does not.
+  // From the list itself, so the panel's counts agree with its filter chips.
+  // The list holds every row (stale and archived as `closed`), so its total is
+  // `profile.submissionCounts.total`.
   const submissionCounts = countsByFilter(submissions);
   const confirmedCount = submissionCounts.live;
 

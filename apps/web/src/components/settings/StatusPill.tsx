@@ -11,6 +11,8 @@ const STATUS_STYLE: Record<
   confirmed: { label: 'confirmed', color: 'var(--success)' },
   pending: { label: 'pending', color: 'var(--warning)' },
   disputed: { label: 'disputed', color: 'var(--danger)' },
+  // Stale or archived: listed under All only. Neutral, not a state to act on.
+  closed: { label: 'closed', color: 'var(--fg-muted)' },
 };
 
 const FALLBACK_STYLE = { label: 'pending', color: 'var(--warning)' };

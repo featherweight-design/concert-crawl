@@ -157,6 +157,13 @@ beforeEach(() => {
     handle: 'hugh',
     avatarColor: 'signal',
     submissionCount: 0,
+    submissionCounts: {
+      total: 0,
+      live: 0,
+      pending: 0,
+      priceChecks: 0,
+      closed: 0,
+    },
     theme: 'electric',
   });
   patchMe.mockReset();
@@ -463,6 +470,13 @@ describe('account menu identity (addendum 2 item 25)', () => {
       handle: null,
       avatarColor: null,
       submissionCount: 0,
+      submissionCounts: {
+        total: 0,
+        live: 0,
+        pending: 0,
+        priceChecks: 0,
+        closed: 0,
+      },
       theme: 'electric',
     });
     await renderChrome(<UserMenu />);
@@ -475,6 +489,13 @@ describe('account menu identity (addendum 2 item 25)', () => {
     handle: null,
     avatarColor: null,
     submissionCount: 0,
+    submissionCounts: {
+      total: 0,
+      live: 0,
+      pending: 0,
+      priceChecks: 0,
+      closed: 0,
+    },
     theme: 'electric',
   };
 

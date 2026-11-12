@@ -704,6 +704,58 @@ describe('GET /v1/users/me/submissions', () => {
   });
 });
 
+// Regression: the menu said 7 live, the delete sheet 7, the Settings card and
+// the Submitted prices page 5. One definition now: /me carries the breakdown,
+// and the list returns every row (stale and archived as `closed`).
+describe('submitted-price counts agree across /me and /me/submissions', () => {
+  it('counts every row once, with live meaning corroborated only', async () => {
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    for (const status of [
+      'corroborated',
+      'pending',
+      'pending',
+      'disputed',
+      'stale',
+      'archived',
+      'pending',
+    ] as const) {
+      await seedPriceSubmission(event.id, 'user_test123', { status });
+    }
+
+    const meRes = await app.request('/v1/users/me', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const me = (await meRes.json()) as {
+      data: {
+        submissionCount: number;
+        submissionCounts: Record<string, number>;
+      };
+    };
+    const listRes = await app.request('/v1/users/me/submissions', {
+      headers: { Authorization: 'Bearer test' },
+    });
+    const list = (await listRes.json()) as { data: Array<{ status: string }> };
+
+    expect(me.data.submissionCounts).toEqual({
+      total: 7,
+      live: 1,
+      pending: 3,
+      priceChecks: 1,
+      closed: 2,
+    });
+    expect(me.data.submissionCount).toBe(7);
+    // The page lists the same seven rows, and its filters tally the same.
+    expect(list.data).toHaveLength(me.data.submissionCounts['total']);
+    expect(list.data.filter((row) => row.status === 'closed')).toHaveLength(2);
+    expect(list.data.filter((row) => row.status === 'confirmed')).toHaveLength(
+      me.data.submissionCounts['live'] ?? -1,
+    );
+  });
+});
+
 describe('GET /v1/users/handle-availability', () => {
   beforeEach(async () => {
     setAuth();

@@ -26,7 +26,7 @@ export const SubmissionsSummaryCard = ({
   cred,
 }: SubmissionsSummaryCardProps) => {
   const latest = latestSubmission(submissions);
-  // Counted from the list the card opens, which leaves stale rows out.
+  // Counted from the list the card opens, which holds every row.
   const counts = countsByFilter(submissions);
   const confirmedCount = counts.live;
 

@@ -20,7 +20,6 @@ import type {
   DisplayRole,
   FounderWindowView,
   RoleBadge,
-  SubmissionDisplayStatus,
   UserProfileResponse,
   UserSubmissionItem,
   HandleAvailabilityResponse,
@@ -33,7 +32,11 @@ import { getStripeClient, isStripeConfigured } from '../lib/stripe.js';
 import { isClerkNotFound } from '../lib/clerk-errors.js';
 import { loadPlanContext } from '../lib/plan.js';
 import { resolveFounderWindowView } from './billing-founder-window.js';
-import { AVATAR_COLORS } from '@concert-crawl/types';
+import {
+  AVATAR_COLORS,
+  submissionDisplayStatus,
+  tallySubmissionCounts,
+} from '@concert-crawl/types';
 import { avatarColumns, avatarOf } from '../lib/avatar.js';
 
 export const usersRouter = new Hono();
@@ -81,12 +84,6 @@ const RESERVED_HANDLES = new Set([
 ]);
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
-
-function mapStatus(dbStatus: string): SubmissionDisplayStatus {
-  if (dbStatus === 'corroborated') return 'confirmed';
-  if (dbStatus === 'disputed') return 'disputed';
-  return 'pending';
-}
 
 function formatJoined(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -146,10 +143,19 @@ usersRouter.get('/me', async (ctx) => {
   );
   const { planState } = planContext;
 
-  const [submissionCountRow] = await db
-    .select({ value: count() })
+  // One read, one definition: every surface that shows a submitted-price count
+  // takes it from here (see SubmissionCounts), so none can disagree.
+  const submissionStatusRows = await db
+    .select({ status: priceSubmissions.status, value: count() })
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.userId, auth.userId));
+    .where(eq(priceSubmissions.userId, auth.userId))
+    .groupBy(priceSubmissions.status);
+  const submissionCounts = tallySubmissionCounts(
+    submissionStatusRows.map((row) => ({
+      status: submissionDisplayStatus(row.status),
+      count: row.value,
+    })),
+  );
 
   const [credRow] = await db
     .select({ priceCredScore: userCred.priceCredScore })
@@ -184,7 +190,8 @@ usersRouter.get('/me', async (ctx) => {
     displayRole,
     roleBadge,
     joined: formatJoined(accountCreatedAt ?? new Date()),
-    submissionCount: submissionCountRow?.value ?? 0,
+    submissionCount: submissionCounts.total,
+    submissionCounts,
     cred: credRow?.priceCredScore ?? 0,
     founderWindow: founderWindowView,
   };
@@ -321,26 +328,10 @@ usersRouter.patch(
   },
 );
 
-// GET /v1/users/me/submissions/count — count of non-stale price submissions for current user
-usersRouter.get('/me/submissions/count', async (ctx) => {
-  const auth = getAuth(ctx);
-  if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
-
-  const [row] = await db
-    .select({ value: count() })
-    .from(priceSubmissions)
-    .where(
-      and(
-        eq(priceSubmissions.userId, auth.userId),
-        ne(priceSubmissions.status, 'stale'),
-      ),
-    );
-
-  return ctx.json({ success: true, data: { count: row?.value ?? 0 } });
-});
-
-// GET /v1/users/me/submissions
+// GET /v1/users/me/submissions — every row, stale and archived included (they
+// read as `closed`, under All only). The old `/me/submissions/count` that left
+// stale rows out was a second, conflicting definition with no caller; counts
+// now come from GET /v1/users/me (`submissionCounts`).
 usersRouter.get('/me/submissions', async (ctx) => {
   const auth = getAuth(ctx);
   if (!auth?.userId)
@@ -379,12 +370,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .from(priceSubmissions)
     .leftJoin(events, eq(priceSubmissions.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(
-      and(
-        eq(priceSubmissions.userId, auth.userId),
-        ne(priceSubmissions.status, 'stale'),
-      ),
-    )
+    .where(eq(priceSubmissions.userId, auth.userId))
     .orderBy(desc(priceSubmissions.createdAt));
 
   const data: UserSubmissionItem[] = rows.map((row) => ({
@@ -399,7 +385,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     tier: row.tier,
     corroborationCount: row.corroborationCount,
     submittedAt: row.submittedAt.toISOString(),
-    status: mapStatus(row.status ?? 'pending'),
+    status: submissionDisplayStatus(row.status ?? 'pending'),
   }));
 
   return ctx.json({ success: true, data });

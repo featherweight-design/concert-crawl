@@ -333,7 +333,11 @@ export function AccountMenuProvider({
           setAvatarHandle(profile.handle);
           setAvatarColor(profile.avatarColor);
           setAvatarSecondColor(profile.avatarSecondColor);
-          setSubmissionCount(profile.submissionCount);
+          // The menu's meta reads "N live", so it takes the live count, not the
+          // total the delete sheet needs.
+          setSubmissionCount(profile.submissionCounts.live);
+          // (Web and API deploy separately; the API has sent this field since
+          // the same release, and the meta line is hidden at 0.)
           writeAvatarCache(userId, {
             handle: profile.handle,
             avatarColor: profile.avatarColor,
