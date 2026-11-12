@@ -7,14 +7,17 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
 import { shortDate } from '../invite-codes/code-rules';
-import type { AdminPerson, PeopleApi, PeoplePage } from './people-api';
+import type {
+  AdminPerson,
+  PeopleApi,
+  PeoplePage,
+  PeopleQuery,
+} from './people-api';
 
 const COPY = ADMIN_COPY.peoplePage;
 
 /** Rows per page; the API's most. */
 export const PAGE_SIZE = 100;
-/** Pages the Test accounts sweep reads before it stops. */
-const TEST_SWEEP_PAGES = 10;
 
 export const CHIPS = ['everyone', 'beta', 'promoter', 'admin', 'test'] as const;
 export type Chip = (typeof CHIPS)[number];
@@ -36,12 +39,24 @@ export const ROLE_KIND: Record<Role, StatusKind> = {
   sub_admin: 'accent',
 };
 
-/**
- * JOINED: the date only. HOLD: #240 adds the join source ("code REDROCKS",
- * "poster HIDIVE", "founder", "test"), which this one function will add.
- */
-export const joinedLabel = (person: AdminPerson): string | null =>
-  person.createdAt ? shortDate(person.createdAt) : null;
+/** How they came in, as `07/people` writes it: "code REDROCKS", "founder". */
+const joinSourceLabel = (person: AdminPerson): string | null => {
+  const source = person.joinSource;
+  if (!source) return null;
+  if (source.kind === 'founder') return COPY.joined.founder;
+  if (source.kind === 'test') return COPY.joined.test;
+  if (!source.code) return null;
+  return source.kind === 'poster'
+    ? COPY.joined.poster(source.code)
+    : COPY.joined.code(source.code);
+};
+
+/** JOINED: "Oct 2 · code REDROCKS", "Apr 23 · founder", or the date alone. */
+export const joinedLabel = (person: AdminPerson): string | null => {
+  const date = person.createdAt ? shortDate(person.createdAt) : null;
+  const source = joinSourceLabel(person);
+  return [date, source].filter(Boolean).join(' · ') || null;
+};
 
 const DAY_KEY = new Intl.DateTimeFormat('en-CA', {
   timeZone: DENVER_TIME_ZONE,
@@ -66,14 +81,15 @@ export const lastActiveLabel = (
 };
 
 /**
- * A chip's count. HOLD: the counts include test accounts (ruling #4 wants
- * them left out), and Test accounts has none; #240 adds `counts.test`.
+ * A chip's count. The API leaves test accounts out of the total and every
+ * role (ruling #4), so Everyone, the People tab and the footer agree; Test
+ * accounts reads `counts.test`.
  */
 export const chipCount = (
   chip: Chip,
   counts: Record<string, number> | undefined,
 ): number | null => {
-  if (!counts || chip === 'test') return null;
+  if (!counts) return null;
   return counts[chip === 'everyone' ? 'total' : chip] ?? 0;
 };
 
@@ -83,46 +99,20 @@ export interface PeopleFilters {
   code: string | null;
 }
 
-/**
- * One page of the list for the filters. HOLD: the API has no test filter, so
- * Test accounts reads every page and keeps the test accounts; #240's
- * `?test=only` replaces the sweep.
- */
-export const fetchPeople = async (
+/** One page of the list for the filters; Test accounts is `?test=only`. */
+export const fetchPeople = (
   api: PeopleApi,
   filters: PeopleFilters,
   page: number,
 ): Promise<PeoplePage> => {
-  const base = {
+  let chip: Pick<PeopleQuery, 'role' | 'test'> = {};
+  if (filters.chip === 'test') chip = { test: 'only' };
+  else if (filters.chip !== 'everyone') chip = { role: filters.chip };
+  return api.list({
     search: filters.search,
     ...(filters.code ? { code: filters.code } : {}),
+    ...chip,
     limit: PAGE_SIZE,
-  };
-  if (filters.chip !== 'test') {
-    return api.list({
-      ...base,
-      ...(filters.chip === 'everyone' ? {} : { role: filters.chip }),
-      offset: (page - 1) * PAGE_SIZE,
-    });
-  }
-  const first = await api.list({ ...base, offset: 0 });
-  // By id: the API's scan can refresh between pages and shift the order.
-  const seen = new Map(first.people.map((person) => [person.id, person]));
-  let truncated = first.truncated;
-  for (let read = 1; read * PAGE_SIZE < first.total; read += 1) {
-    if (read === TEST_SWEEP_PAGES) {
-      truncated = true;
-      break;
-    }
-    const next = await api.list({ ...base, offset: read * PAGE_SIZE });
-    if (next.people.length === 0) break;
-    for (const person of next.people) seen.set(person.id, person);
-  }
-  const tests = [...seen.values()].filter((person) => person.isTestAccount);
-  return {
-    ...first,
-    people: tests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    total: tests.length,
-    truncated,
-  };
+    offset: (page - 1) * PAGE_SIZE,
+  });
 };

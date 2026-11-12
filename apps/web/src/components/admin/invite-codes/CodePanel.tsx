@@ -244,7 +244,7 @@ export const CodePanel = ({
         {/* A3 5b row 8: opens People filtered to this code. */}
         {joined && joined.total > joined.data.length && (
           <Link
-            href={`/admin/people?code=${encodeURIComponent(code.id)}`}
+            href={`/admin/people?code=${encodeURIComponent(code.code)}`}
             prefetch={false}
             style={{
               display: 'inline-block',

@@ -267,8 +267,12 @@ export function PeopleClient({ code }: { code: string | null }) {
   };
 
   const now = new Date();
+  // `?code=` is the code as written ("REDROCKS"); an older link carries its id.
   const codeName = code
-    ? (allCodes?.find((each) => each.id === code)?.code ?? null)
+    ? (allCodes?.find(
+        (each) =>
+          each.id === code || each.code.toUpperCase() === code.toUpperCase(),
+      )?.code ?? null)
     : null;
 
   const searchBox = (

@@ -2031,6 +2031,13 @@ export const ADMIN_COPY = {
       sub_admin: 'Staff',
     },
     testTag: 'TEST',
+    // JOINED after the date: "Oct 2 · code REDROCKS".
+    joined: {
+      code: (code: string) => `code ${code}`,
+      poster: (code: string) => `poster ${code}`,
+      founder: 'founder',
+      test: 'test',
+    },
     active: {
       now: 'Now',
       yesterday: 'Yesterday',

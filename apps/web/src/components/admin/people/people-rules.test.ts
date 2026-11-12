@@ -3,6 +3,7 @@ import type { AdminPerson, PeopleApi, PeoplePage } from './people-api';
 import {
   chipCount,
   fetchPeople,
+  joinedLabel,
   lastActiveLabel,
   personHref,
 } from './people-rules';
@@ -16,6 +17,22 @@ const person = (id: string, isTestAccount = false): AdminPerson => ({
   lastActiveAt: null,
   watching: 0,
   isTestAccount,
+  joinSource: null,
+});
+
+describe('joinedLabel', () => {
+  it.each([
+    [{ kind: 'code', code: 'REDROCKS', label: null }, 'Oct 2 · code REDROCKS'],
+    [
+      { kind: 'poster', code: 'HIDIVE', label: 'Hi-Dive' },
+      'Oct 2 · poster HIDIVE',
+    ],
+    [{ kind: 'founder', code: null, label: null }, 'Oct 2 · founder'],
+    [{ kind: 'test', code: null, label: null }, 'Oct 2 · test'],
+    [null, 'Oct 2'],
+  ] as const)('%o reads %s', (joinSource, label) => {
+    expect(joinedLabel({ ...person('p1'), joinSource })).toBe(label);
+  });
 });
 
 describe('lastActiveLabel', () => {
@@ -37,14 +54,14 @@ describe('lastActiveLabel', () => {
 });
 
 describe('chipCount', () => {
-  const counts = { total: 214, beta: 38, admin: 2, promoter: 0 };
+  const counts = { total: 211, test: 3, beta: 38, admin: 2, promoter: 0 };
   it('reads Everyone from the total and a role from its count', () => {
-    expect(chipCount('everyone', counts)).toBe(214);
+    expect(chipCount('everyone', counts)).toBe(211);
     expect(chipCount('beta', counts)).toBe(38);
     expect(chipCount('promoter', counts)).toBe(0);
   });
-  it('has no count for Test accounts until the API sends one', () => {
-    expect(chipCount('test', counts)).toBeNull();
+  it('reads Test accounts from counts.test', () => {
+    expect(chipCount('test', counts)).toBe(3);
     expect(chipCount('everyone', undefined)).toBeNull();
   });
 });
@@ -70,22 +87,21 @@ describe('fetchPeople', () => {
     });
   });
 
-  it('sweeps every page for Test accounts and keeps only them', async () => {
-    const first = Array.from({ length: 100 }, (_, i) => person(`p${i}`));
-    const list = vi
-      .fn()
-      .mockResolvedValueOnce(
-        page([...first.slice(0, 99), person('t1', true)], 102),
-      )
-      .mockResolvedValueOnce(page([person('p100'), person('t2', true)], 102));
+  it('asks the API for test accounts only on the Test accounts chip', async () => {
+    const list = vi.fn().mockResolvedValue(page([person('t1', true)], 1));
     const result = await fetchPeople(
       { list },
       { search: '', chip: 'test', code: null },
       1,
     );
-    expect(list).toHaveBeenCalledTimes(2);
-    expect(result.people.map((each) => each.id)).toEqual(['t1', 't2']);
-    expect(result.total).toBe(2);
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(list).toHaveBeenCalledWith({
+      search: '',
+      test: 'only',
+      limit: 100,
+      offset: 0,
+    });
+    expect(result.people.map((each) => each.id)).toEqual(['t1']);
   });
 });
 
