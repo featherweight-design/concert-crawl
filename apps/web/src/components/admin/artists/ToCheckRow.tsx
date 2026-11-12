@@ -102,50 +102,30 @@ const CardText = ({ title, line }: { title: string; line: string | null }) => (
   </span>
 );
 
-/**
- * The Search card's state. `pending`: it opens the artist search, which lands
- * in 4c C. The rest are the load path for a searched row, which arrives
- * without the match job's candidates.
- */
-type SearchCardState = 'pending' | 'idle' | 'loading' | 'failed';
-
-const SEARCH_LINE: Record<SearchCardState, string> = {
-  pending: COPY.searchCard.line,
-  idle: COPY.searchCard.showCandidates,
-  loading: COPY.searchCard.loading,
-  failed: COPY.searchCard.failed,
-};
-
 const Card = ({
   card,
   selected,
   disabled,
   onSelect,
-  search,
   onSearch,
 }: {
   card: CandidateCard;
   selected: boolean;
   disabled: boolean;
   onSelect: (candidate: ArtistCandidate) => void;
-  search: SearchCardState;
   onSearch: () => void;
 }) => {
   if (card.type === 'search') {
-    const live = search === 'idle' || search === 'failed';
+    // Opens the artist search panel (`06/artists-search-opens-the-side-panel`).
     return (
       <button
         type="button"
-        disabled={!live || disabled}
+        disabled={disabled}
         onClick={onSearch}
-        style={{
-          ...CARD,
-          ...PLAIN_CARD,
-          ...(live ? { cursor: 'pointer' } : PENDING),
-        }}
+        style={{ ...CARD, ...PLAIN_CARD, cursor: 'pointer' }}
       >
         <ArtistPhoto url={null} size={34} />
-        <CardText title={COPY.searchCard.title} line={SEARCH_LINE[search]} />
+        <CardText title={COPY.searchCard.title} line={COPY.searchCard.line} />
       </button>
     );
   }
@@ -171,8 +151,9 @@ const Card = ({
 
 /**
  * One To check row (`06/artists-to-check`, `06/artists-mobile`). Desktop draws
- * the candidates inline to pick from. On the phone, Pick opens the same
- * cards and buttons under the row until the full-screen search lands (4c C).
+ * the candidates inline to pick from, with the Search card opening the
+ * artist search. On the phone, Pick and Search open the search full screen
+ * (ruling 12).
  */
 export const ToCheckRow = ({
   row,
@@ -181,6 +162,7 @@ export const ToCheckRow = ({
   busy,
   onWrite,
   onNotAnArtist,
+  onSearch,
 }: {
   row: AdminArtistRow;
   api: ArtistsApi;
@@ -188,19 +170,12 @@ export const ToCheckRow = ({
   busy: boolean;
   onWrite: (write: ArtistWrite) => void;
   onNotAnArtist: () => void;
+  /** Opens the artist search for this row. */
+  onSearch: () => void;
 }) => {
   const kind = toCheckKind(row);
-  // A searched row comes without candidates; the Search card loads them.
-  const [loaded, setLoaded] = useState<ArtistCandidate[] | null>(null);
-  const [search, setSearch] = useState<SearchCardState>(
-    row.candidates === null ? 'idle' : 'pending',
-  );
-  const cards = candidateCards(
-    loaded ? { ...row, candidates: loaded } : row,
-    kind,
-  );
+  const cards = candidateCards(row, kind);
   const [selectedId, setSelectedId] = useState(() => defaultSelection(cards));
-  const [picking, setPicking] = useState(false);
   const selected =
     cards
       .flatMap((card) => (card.type === 'artist' ? [card.candidate] : []))
@@ -210,23 +185,6 @@ export const ToCheckRow = ({
   const primaryLabel = keeps ? COPY.looksRight : COPY.useSelected;
   const named = (action: string) => COPY.actionFor(action, row.name);
   const show = showLine(row);
-
-  const loadCandidates = () => {
-    setSearch('loading');
-    api
-      .candidates(row.id)
-      .then((next) => {
-        const withLoaded = candidateCards({ ...row, candidates: next }, kind);
-        setLoaded(next);
-        setSelectedId((prev) => prev ?? defaultSelection(withLoaded));
-        // The card goes on to mean "search someone else" (4c C).
-        setSearch('pending');
-      })
-      .catch((err: unknown) => {
-        console.error('[admin artists] candidates failed', row.id, err);
-        setSearch('failed');
-      });
-  };
 
   const grid = (
     <div
@@ -246,8 +204,7 @@ export const ToCheckRow = ({
           selected={card.type === 'artist' && card.candidate.id === selectedId}
           disabled={busy}
           onSelect={(candidate) => setSelectedId(candidate.id)}
-          search={search}
-          onSearch={loadCandidates}
+          onSearch={onSearch}
         />
       ))}
     </div>
@@ -310,12 +267,11 @@ export const ToCheckRow = ({
           {isCheck && write ? (
             primary(PHONE_BUTTON)
           ) : (
-            // Until the full-screen search (ruling 12, 4c C), Pick opens the
-            // desktop row's cards and buttons under the row.
+            // Pick opens the artist search full screen (ruling 12).
             <AdminButton
               type="button"
-              aria-expanded={picking}
-              onClick={() => setPicking((prev) => !prev)}
+              disabled={busy}
+              onClick={onSearch}
               aria-label={named(COPY.pick)}
               style={{ ...TINT_BUTTON, ...PHONE_BUTTON }}
             >
@@ -325,22 +281,14 @@ export const ToCheckRow = ({
           <AdminButton
             type="button"
             icon={Search}
-            disabled
+            disabled={busy}
+            onClick={onSearch}
             aria-label={named(COPY.searchButton)}
-            style={{ ...SECONDARY_BUTTON, ...PHONE_BUTTON, ...PENDING }}
+            style={{ ...SECONDARY_BUTTON, ...PHONE_BUTTON }}
           >
             {COPY.searchButton}
           </AdminButton>
         </span>
-        {picking && !isCheck && (
-          <>
-            {grid}
-            <span style={{ display: 'flex', gap: 8 }}>
-              {primary(PHONE_BUTTON)}
-              {notAnArtist(PHONE_BUTTON)}
-            </span>
-          </>
-        )}
       </li>
     );
   }

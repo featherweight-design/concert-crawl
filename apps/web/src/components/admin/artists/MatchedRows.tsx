@@ -8,7 +8,6 @@ import { showLine } from './artist-rules';
 import { ArtistPhoto } from './ArtistPhoto';
 import {
   ELLIPSIS,
-  PENDING,
   PHONE_BUTTON,
   ROW_BUTTON,
   SECONDARY_BUTTON,
@@ -35,17 +34,19 @@ const PHONE_ROW = {
 
 /**
  * The Matched row's ⋯ (`11/artist-row-menu`) on the shared row menu. No photo
- * is held, so it draws Change match… (opens the artist search in 4c C) and
- * Not an artist….
+ * is held, so it draws Change match… (opens the artist search) and Not an
+ * artist….
  */
 const ArtistRowMenu = ({
   row,
   busy,
   onNotAnArtist,
+  onChangeMatch,
 }: {
   row: AdminArtistRow;
   busy: boolean;
   onNotAnArtist: () => void;
+  onChangeMatch: () => void;
 }) => (
   <RowMenu
     label={COPY.menu.label(row.name)}
@@ -56,8 +57,8 @@ const ArtistRowMenu = ({
         icon: Search,
         label: COPY.menu.changeMatch,
         hint: COPY.menu.changeMatchLine,
-        disabled: true,
-        onSelect: () => undefined,
+        disabled: busy,
+        onSelect: onChangeMatch,
       },
       {
         key: 'not-an-artist',
@@ -79,11 +80,14 @@ export const MatchedRow = ({
   isPhone,
   busy,
   onNotAnArtist,
+  onChangeMatch,
 }: {
   row: AdminArtistRow;
   isPhone: boolean;
   busy: boolean;
   onNotAnArtist: () => void;
+  /** Opens the artist search for this row. */
+  onChangeMatch: () => void;
 }) => {
   // The wire field is `watchingCount`, but it counts the artist's followers.
   const followerCount = row.watchingCount;
@@ -94,12 +98,12 @@ export const MatchedRow = ({
         <span style={{ fontSize: 15, fontWeight: 700 }}>{row.name}</span>
         <span style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>{meta}</span>
         <span style={{ display: 'flex', gap: 8 }}>
-          {/* Change match opens the artist search (4c C). */}
           <AdminButton
             type="button"
-            disabled
+            disabled={busy}
+            onClick={onChangeMatch}
             aria-label={COPY.actionFor(COPY.changeMatch, row.name)}
-            style={{ ...TINT_BUTTON, ...PHONE_BUTTON, ...PENDING }}
+            style={{ ...TINT_BUTTON, ...PHONE_BUTTON }}
           >
             {COPY.changeMatch}
           </AdminButton>
@@ -134,7 +138,12 @@ export const MatchedRow = ({
       <span style={{ fontSize: 12.5, color: 'var(--fg-muted)', width: 170 }}>
         {meta}
       </span>
-      <ArtistRowMenu row={row} busy={busy} onNotAnArtist={onNotAnArtist} />
+      <ArtistRowMenu
+        row={row}
+        busy={busy}
+        onNotAnArtist={onNotAnArtist}
+        onChangeMatch={onChangeMatch}
+      />
     </li>
   );
 };

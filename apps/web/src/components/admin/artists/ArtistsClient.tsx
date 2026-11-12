@@ -24,7 +24,8 @@ import {
   type ArtistWrite,
   type ShowWindow,
 } from './artists-api';
-import { belongsTo } from './artist-rules';
+import { belongsTo, primaryWrite } from './artist-rules';
+import { ArtistSearchPanel } from './ArtistSearchPanel';
 import { SECONDARY_BUTTON, gradientBorder } from './artist-styles';
 import { MatchedRow, NotArtistRow } from './MatchedRows';
 import { ToCheckRow } from './ToCheckRow';
@@ -327,6 +328,8 @@ export function ArtistsClient() {
   const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
   const [failed, setFailed] = useState<Pending | null>(null);
   const [confirming, setConfirming] = useState<AdminArtistRow | null>(null);
+  // The row the artist search is open for.
+  const [searching, setSearching] = useState<AdminArtistRow | null>(null);
   // Bumped on every load, so a stale response never lands over a newer one.
   const generation = useRef(0);
   // Rows saved out of To check, keyed to the load that was current then: a
@@ -629,6 +632,7 @@ export function ArtistsClient() {
               busy={busy.has(row.id)}
               onWrite={(write) => void runWrite(row, write)}
               onNotAnArtist={() => setConfirming(row)}
+              onSearch={() => setSearching(row)}
             />
           ) : tab === 'matched' ? (
             <MatchedRow
@@ -637,6 +641,7 @@ export function ArtistsClient() {
               isPhone={isPhone}
               busy={busy.has(row.id)}
               onNotAnArtist={() => setConfirming(row)}
+              onChangeMatch={() => setSearching(row)}
             />
           ) : (
             <NotArtistRow
@@ -706,6 +711,25 @@ export function ArtistsClient() {
     />
   );
 
+  const searchPanel = searching && (
+    <ArtistSearchPanel
+      row={searching}
+      api={api}
+      isPhone={isPhone}
+      onClose={() => setSearching(null)}
+      onUse={(candidate) => {
+        setSearching(null);
+        // Keeping the current match is Looks right; anything else is Use.
+        const write = primaryWrite(searching, candidate);
+        if (write) void runWrite(searching, write);
+      }}
+      onNotAnArtist={() => {
+        setSearching(null);
+        setConfirming(searching);
+      }}
+    />
+  );
+
   const confirm = confirming && (
     <ConfirmDialog
       title={COPY.notAnArtistConfirm.title(confirming.name)}
@@ -750,6 +774,7 @@ export function ArtistsClient() {
             {pager}
           </>,
         )}
+        {searchPanel}
         {confirm}
       </div>
     );
@@ -836,6 +861,7 @@ export function ArtistsClient() {
           {pager}
         </>,
       )}
+      {searchPanel}
       {confirm}
     </div>
   );

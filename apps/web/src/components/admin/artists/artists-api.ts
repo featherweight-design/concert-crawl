@@ -24,6 +24,11 @@ export interface ArtistCandidate {
   genres: string[] | null;
 }
 
+/** A search result: a candidate, and whether its name matches the row's. */
+export interface SearchCandidate extends ArtistCandidate {
+  isExactMatch: boolean;
+}
+
 export interface AdminArtistRow {
   id: string;
   name: string;
@@ -312,14 +317,36 @@ export const artistsApi = (getToken: GetToken) => ({
     return reports.filter(isReport);
   },
   /** The match job's saved candidates (cache-first on the server). */
-  candidates: async (id: string): Promise<ArtistCandidate[]> => {
+  /**
+   * The Spotify artists for one row. With no query it reads the match job's
+   * saved snapshot (cache-first on the server); a query searches Spotify
+   * live, which spends quota, so the panel sends one only on submit.
+   */
+  candidates: async (
+    id: string,
+    query?: string,
+  ): Promise<SearchCandidate[]> => {
+    const params = query ? `?${new URLSearchParams({ query }).toString()}` : '';
     const body = await request(
       getToken,
-      `${BASE}/${encodeURIComponent(id)}/candidates`,
+      `${BASE}/${encodeURIComponent(id)}/candidates${params}`,
     );
     const data = body['data'];
     if (!Array.isArray(data)) throw new ShapeError('candidates');
-    return data.filter(isCandidate);
+    return data.flatMap((value: unknown) =>
+      isCandidate(value) && isRecord(value)
+        ? [
+            {
+              id: value.id,
+              name: value.name,
+              imageUrl: value.imageUrl,
+              genres: value.genres,
+              // Absent on an older API: then unknown, so not exact.
+              isExactMatch: value['isExactMatch'] === true,
+            },
+          ]
+        : [],
+    );
   },
   counts: async (): Promise<ArtistCounts> => {
     const body = await request(getToken, `${BASE}/counts?upcoming=false`);

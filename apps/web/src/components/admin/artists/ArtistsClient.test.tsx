@@ -111,6 +111,19 @@ beforeEach(() => {
       }
       if (url.includes('/counts'))
         return json(200, { success: true, data: COUNTS });
+      if (url.includes('/candidates'))
+        return json(200, {
+          success: true,
+          data: [
+            {
+              id: 'sp9',
+              name: 'Search Pick',
+              imageUrl: 'https://img/sp9',
+              genres: ['garage'],
+              isExactMatch: false,
+            },
+          ],
+        });
       listCalls += 1;
       const { data, total } = listFor(new URL(url).searchParams);
       return json(200, { success: true, data, total });
@@ -281,6 +294,42 @@ describe('ArtistsClient', () => {
         expectedStatus: 'matched',
       });
     });
+  });
+
+  it('saves a pick from the artist search with the loaded status', async () => {
+    listFor = () => ({
+      data: [
+        row({
+          matchStatus: 'no_match',
+          spotifyArtistId: null,
+          autoMatchedAt: null,
+          candidates: [],
+        }),
+      ],
+      total: 1,
+    });
+    render(<ArtistsClient />);
+    // The No match row's Search card opens the panel.
+    fireEvent.click(await screen.findByRole('button', { name: /^Search/ }));
+    expect(
+      await screen.findByRole('dialog', {
+        name: 'Find the right Kyle Emerson',
+      }),
+    ).toBeTruthy();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Use: Search Pick' }),
+    );
+    await waitFor(() => {
+      const patch = vi
+        .mocked(fetch)
+        .mock.calls.find(([, init]) => init?.method === 'PATCH');
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({
+        spotifyArtistId: 'sp9',
+        photoUrl: 'https://img/sp9',
+        expectedStatus: 'no_match',
+      });
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('sends the original expected status again on Try again', async () => {
