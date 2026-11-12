@@ -46,7 +46,10 @@ const detailFor = (key: NavKey, data: AdminMoreDetails): string => {
         : details.crawlRuns(data.lastCrawlAt);
     case 'operations':
       return details.operations;
-    default:
+    case 'needs-you':
+    case 'venues':
+    case 'events':
+      // On the tab bar, so never a More row.
       return '';
   }
 };

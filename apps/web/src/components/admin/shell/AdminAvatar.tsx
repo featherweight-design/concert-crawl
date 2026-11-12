@@ -5,7 +5,7 @@ export interface AdminShellUser {
 
 /** No email in the UI (BUILD-CHECK 6): without a first name, the local part. */
 export const displayNameFor = (user: AdminShellUser): string =>
-  user.firstName ?? user.email.split('@')[0] ?? '';
+  user.firstName?.trim() || (user.email.split('@')[0] ?? '');
 
 /** The initial in an accent ring, as drawn on every admin board. */
 export const AdminAvatar = ({
