@@ -33,7 +33,7 @@ vi.mock('next/link', () => ({
   ),
 }));
 vi.mock('../identity-art/IdentityArt', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../identity-art/IdentityArt')>()),
+  ...(await importOriginal<Record<string, unknown>>()),
   IdentityArt: () => <div data-testid="identity-art" />,
 }));
 
