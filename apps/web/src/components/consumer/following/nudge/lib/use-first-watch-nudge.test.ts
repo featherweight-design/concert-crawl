@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { renderHook, act } from '@testing-library/react';
+
+import { whenFollowNudgeClosed } from './nudge-presence';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Minimal shape of the mutation-cache 'updated' notification the hook listens
@@ -127,6 +129,17 @@ describe('useFirstWatchNudge', () => {
     const { result } = renderHook(() => useFirstWatchNudge());
     act(() => emit(watchOn()));
     expect(result.current.target).toBeNull();
+  });
+
+  it('holds the push sheet back while its card is up', () => {
+    const { result } = renderHook(() => useFirstWatchNudge());
+    act(() => emit(watchOn()));
+    const pushSheet = vi.fn();
+    whenFollowNudgeClosed(pushSheet);
+    expect(pushSheet).not.toHaveBeenCalled();
+
+    act(() => result.current.answer());
+    expect(pushSheet).toHaveBeenCalledTimes(1);
   });
 
   it('closes and stays closed once answered', () => {
