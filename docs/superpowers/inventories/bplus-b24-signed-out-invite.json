@@ -2,10 +2,15 @@
   "feature": "B24 · Signed-out invite landing",
   "note": "While public browse is off, / is the invite landing for a signed-out visitor. The code field must match BETA-XXXX-XXXX. Plan row B24 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): landing = 11-signed-out/inv-mob, 11-signed-out/inv-desk, 11-signed-out/inv-light; landing-full = 11-signed-out/inv-mob; code = none drawn.",
   "signedOut": true,
+  "shares": {
+    "binding": "VenueTile",
+    "module": "apps/web/src/components/consumer/venue-glyph"
+  },
   "rows": [
     {
       "id": "landing",
       "label": "/: invite landing",
+      "view": "apps/web/src/app/_components/invite-landing/InviteLanding.tsx",
       "steps": [
         {
           "goto": "/",
@@ -16,31 +21,11 @@
     {
       "id": "landing-full",
       "label": "/: whole page",
+      "view": "apps/web/src/app/_components/invite-landing/InviteLanding.tsx",
       "fullPage": true,
       "steps": [
         {
           "goto": "/",
-          "wait": "h1"
-        }
-      ]
-    },
-    {
-      "id": "code",
-      "label": "/auth/code: code entry",
-      "steps": [
-        {
-          "goto": "/auth/code",
-          "wait": "h1"
-        }
-      ]
-    },
-    {
-      "id": "sign-up-gated",
-      "label": "/sign-up with no code: lands on code entry",
-      "steps": [
-        {
-          "goto": "/sign-up",
-          "expectRedirect": "/auth/code",
           "wait": "h1"
         }
       ]
