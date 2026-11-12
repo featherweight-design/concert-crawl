@@ -35,6 +35,11 @@ vi.mock('@/lib/api', () => ({
   publicApiClient: { get: (path: string) => mockPublicGet(path) },
 }));
 
+// Logged-out reads go through the shared catalog cache helper.
+vi.mock('@/lib/catalog-cache', () => ({
+  publicCatalogGet: (path: string) => mockPublicGet(path),
+}));
+
 // The renderer is a no-op so the test doesn't drag in its dependency tree.
 // `null` is a valid React node; an object literal would not be.
 vi.mock('@/components/consumer/event-detail', () => ({

@@ -134,8 +134,11 @@ describe('catalog cache', () => {
   it('keys "today" by the Mountain Time date, not the UTC one', () => {
     // 03:30Z on the 13th is still the evening of the 12th in Denver.
     expect(mountainDate(new Date('2026-11-13T03:30:00Z'))).toBe('2026-11-12');
-    // Across the fall DST change (2026-11-01): 06:30Z is 23:30 MDT on Oct 31.
-    expect(mountainDate(new Date('2026-11-01T06:30:00Z'))).toBe('2026-10-31');
-    expect(mountainDate(new Date('2026-11-01T07:30:00Z'))).toBe('2026-11-01');
+    // Midnight MDT (UTC-6) before the fall change on 2026-11-01 (02:00 MDT).
+    expect(mountainDate(new Date('2026-11-01T05:59:00Z'))).toBe('2026-10-31');
+    expect(mountainDate(new Date('2026-11-01T06:00:00Z'))).toBe('2026-11-01');
+    // Midnight MST (UTC-7) after it: the day is 25 hours long, not 24.
+    expect(mountainDate(new Date('2026-11-02T06:59:00Z'))).toBe('2026-11-01');
+    expect(mountainDate(new Date('2026-11-02T07:00:00Z'))).toBe('2026-11-02');
   });
 });
