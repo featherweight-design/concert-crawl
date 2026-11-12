@@ -73,7 +73,7 @@ describe('GoingButton', () => {
   it('renders the show date in past-yes, not the tap date', () => {
     render(<GoingButton show={SHOW} state="past-yes" />);
     expect(screen.getByRole('button')).toHaveTextContent(
-      'You went · Oct 14, 2026',
+      'You went · Wed, Oct 14',
     );
   });
 

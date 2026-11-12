@@ -301,11 +301,8 @@ export const EventDetailCtaBlock = ({
         {/* No children: CCTip's own info disc is the designed trigger, and it
             carries the open state and the 44px touch target that a hand-rolled
             glyph here would silently replace. */}
-        {/* A past night has nothing to explain: no going-vs-watch to weigh
-            (addendum 3, item 19). */}
-        {!isPast && (
-          <CCTip tip="going-vs-watch" placement="bottom" align="end" />
-        )}
+        {/* The boards draw the ⓘ on a past night too (event_stamped_m). */}
+        <CCTip tip="going-vs-watch" placement="bottom" align="end" />
       </div>
 
       {/* Full width down to 320px — the button ellipsizes its own label, so
