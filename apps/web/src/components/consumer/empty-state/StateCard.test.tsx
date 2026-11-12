@@ -40,7 +40,9 @@ describe('StateCard', () => {
     const tile = container.querySelector<HTMLElement>('span[aria-hidden]');
     expect(tile?.style.width).toBe('84px');
     expect(tile?.style.borderRadius).toBe('24px');
-    expect(tile?.style.boxShadow).not.toBe('');
+    expect(tile?.getAttribute('style')).toContain(
+      'box-shadow: 0 0 40px color-mix(in oklch, var(--danger) 20%, transparent)',
+    );
   });
 
   it('draws the empty ring dashed at 1.5px (B19a)', () => {

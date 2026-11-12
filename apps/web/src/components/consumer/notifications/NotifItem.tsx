@@ -118,15 +118,15 @@ export const NotifItem = ({
         </span>
       )}
       {crew === null ? (
-        <NotifTile category={item.category} read={!unread} size={30} />
+        <NotifTile category={item.category} size={30} />
       ) : (
         <span
           style={{
             display: 'inline-flex',
             flexShrink: 0,
-            // Same dim-when-read treatment the tile gets: the mark stays put,
-            // it just stops competing with the unread rows above it.
-            opacity: unread ? 1 : 0.55,
+            // The patch stands in for the category tile, and B19a tiles keep
+            // full colour when read (NotifTile), so the patch is never dimmed
+            // either: read state is the title weight and the missing wash.
           }}
         >
           <CrewPatch
