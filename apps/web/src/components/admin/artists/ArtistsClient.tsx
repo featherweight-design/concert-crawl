@@ -64,7 +64,7 @@ const Tabs = ({
     { key: 'matched', label: COPY.tabs.matched },
     {
       key: 'not_an_artist',
-      label: isPhone ? COPY.tabs.notArtistsShort : COPY.tabs.notArtists,
+      label: COPY.tabs.notArtists,
     },
   ];
   return (
@@ -370,7 +370,7 @@ export function ArtistsClient() {
   const toast = failed && (
     <SaveFailedToast
       what={failed.row.name}
-      saved={COPY.stillToCheck(failed.row.name)}
+      saved={COPY.stillToCheck}
       onRetry={() => void runWrite(failed.row, failed.write)}
     />
   );
