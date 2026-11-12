@@ -607,17 +607,16 @@ describe('GET /v1/artists/:slug — integration', () => {
       expect(data.history.count).toBe(1);
     });
 
-    it('keeps the duplicate the caller stamped, so the pill reads on', async () => {
-      const { timed, untimed } = await seedDuplicateNight();
-      const stamped = [timed.id, untimed.id].sort()[1] ?? timed.id;
-      await seedUserEvent('user_beck', stamped, {
+    it('keeps the timed row of the night, so a stamp on it reads on', async () => {
+      const { timed } = await seedDuplicateNight();
+      await seedUserEvent('user_beck', timed.id, {
         status: null,
         attendingAt: new Date('2026-10-02T00:00:00Z'),
       });
       authState.current = { userId: 'user_beck' };
       const data = await getPast();
       expect(data.past).toHaveLength(1);
-      expect(data.past[0]?.eventId).toBe(stamped);
+      expect(data.past[0]?.eventId).toBe(timed.id);
       expect(data.past[0]?.attending).toBe(true);
     });
   });

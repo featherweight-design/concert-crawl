@@ -79,61 +79,70 @@ export const loadPastShows = async ({
     );
   }
 
-  // One row per night (see dedupe-nights.ts for the rule): the crawler can keep
-  // several rows for one night, and listing each would let a reader stamp the
-  // same night three times. Done in SQL rather than on the page of rows so
-  // `total` and the cursor count nights, not rows. The row the caller stamped
-  // wins; otherwise the lowest id stays. Built here, not at module load, for
-  // the same reason as the venues alias below.
+  // One row per night (the rule is documented in dedupe-nights.ts): the crawler
+  // can keep several rows for one night, and listing each would let a reader
+  // stamp the same night three times. Done in the query rather than on a page
+  // of rows so `total` and the cursor count nights, not rows.
+  //
+  // The rows of one headliner at one venue on one date partition cleanly: timed
+  // rows group by their exact time, and a row with no time is absorbed by any
+  // timed row. Inside a group the caller's stamped row wins, then the lowest
+  // id, so exactly one row survives. A row survives unless some twin beats it.
+  // (Known limit: a twin that would lose to this row on search text can still
+  // suppress it; duplicates of one night carry the same text in practice.)
+  // Built here, not at module load, for the same reason as the venues alias
+  // below.
   const twin = alias(events, 'twin');
   const twinAttended = alias(userEvents, 'twin_attended');
-  const sameNight = and(
+  const callerAttendedThis = exists(
+    db
+      .select({ one: sql`1` })
+      .from(userEvents)
+      .where(
+        and(
+          eq(userEvents.eventId, events.id),
+          eq(userEvents.userId, userId),
+          isNotNull(userEvents.attendingAt),
+        ),
+      ),
+  );
+  const sameGroup = and(
     eq(twin.venueId, events.venueId),
     eq(twin.date, events.date),
     eq(twin.canonicalArtist, events.canonicalArtist),
     ne(twin.id, events.id),
     eq(twin.hiddenFromConsumer, false),
     ne(twin.status, 'cancelled'),
-    sql`(${twin.showTime} IS NOT DISTINCT FROM ${events.showTime} OR ${twin.showTime} IS NULL OR ${events.showTime} IS NULL)`,
+    sql`(${twin.showTime} IS NOT DISTINCT FROM ${events.showTime} OR (${events.showTime} IS NULL AND ${twin.showTime} IS NOT NULL))`,
   );
+  const beatsThisRow = sql`(
+    (${events.showTime} IS NULL AND ${twin.showTime} IS NOT NULL)
+    OR (
+      ${twin.showTime} IS NOT DISTINCT FROM ${events.showTime}
+      AND (
+        (${twinAttended.eventId} IS NOT NULL AND NOT ${callerAttendedThis})
+        OR (
+          (${twinAttended.eventId} IS NOT NULL) = ${callerAttendedThis}
+          AND ${twin.id} < ${events.id}
+        )
+      )
+    )
+  )`;
   conditions.push(
-    or(
+    not(
       exists(
         db
           .select({ one: sql`1` })
-          .from(userEvents)
-          .where(
+          .from(twin)
+          .leftJoin(
+            twinAttended,
             and(
-              eq(userEvents.eventId, events.id),
-              eq(userEvents.userId, userId),
-              isNotNull(userEvents.attendingAt),
+              eq(twinAttended.eventId, twin.id),
+              eq(twinAttended.userId, userId),
+              isNotNull(twinAttended.attendingAt),
             ),
-          ),
-      ),
-      and(
-        not(
-          exists(
-            db
-              .select({ one: sql`1` })
-              .from(twin)
-              .innerJoin(twinAttended, eq(twinAttended.eventId, twin.id))
-              .where(
-                and(
-                  sameNight,
-                  eq(twinAttended.userId, userId),
-                  isNotNull(twinAttended.attendingAt),
-                ),
-              ),
-          ),
-        ),
-        not(
-          exists(
-            db
-              .select({ one: sql`1` })
-              .from(twin)
-              .where(and(sameNight, lt(twin.id, events.id))),
-          ),
-        ),
+          )
+          .where(and(sameGroup, beatsThisRow)),
       ),
     ),
   );

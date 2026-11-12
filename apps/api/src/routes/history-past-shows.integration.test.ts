@@ -117,25 +117,23 @@ describe('GET /v1/history/past-shows', () => {
     };
 
     it('lists a night once, and counts nights in `total`', async () => {
-      const { timed, untimed } = await seedNight();
+      const { timed } = await seedNight();
       const data = await getList();
       expect(data.rows).toHaveLength(1);
       expect(data.total).toBe(1);
-      // The lowest id stays when the caller attended neither.
-      const lowest = [timed.id, untimed.id].sort()[0];
-      expect(data.rows[0]?.eventId).toBe(lowest);
+      // An untimed row is absorbed by the timed one.
+      expect(data.rows[0]?.eventId).toBe(timed.id);
     });
 
-    it('keeps the duplicate the caller stamped', async () => {
-      const { timed, untimed } = await seedNight();
-      const highest = [timed.id, untimed.id].sort()[1] ?? timed.id;
-      await seedUserEvent(USER_ID, highest, {
+    it('keeps the timed row of a night, with the caller’s stamp on it', async () => {
+      const { timed } = await seedNight();
+      await seedUserEvent(USER_ID, timed.id, {
         status: null,
         attendingAt: new Date('2026-10-02T00:00:00Z'),
       });
       const data = await getList();
       expect(data.rows).toHaveLength(1);
-      expect(data.rows[0]?.eventId).toBe(highest);
+      expect(data.rows[0]?.eventId).toBe(timed.id);
       expect(data.rows[0]?.attendingAt).not.toBeNull();
     });
 

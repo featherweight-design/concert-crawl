@@ -75,6 +75,8 @@ function matchSummary(
 // `history.count` is derived from the returned rows, so a LIMIT that hides
 // rows also lowers the count by design. A separate COUNT(*) would drift.
 const PAST_LIMIT = 50;
+/** Rows fetched per night wanted, so duplicate rows can be collapsed. */
+const PAST_DUPLICATE_HEADROOM = 3;
 const UPCOMING_LIMIT = 50;
 
 // Public, like every other /v1 read route. The plan described a
@@ -396,7 +398,9 @@ artistsPublicRouter.get(
         ),
       )
       .orderBy(desc(events.date), desc(events.showTime))
-      .limit(PAST_LIMIT);
+      // Fetched with headroom: duplicate rows of one night are collapsed below,
+      // and they must not eat the PAST_LIMIT window of distinct nights.
+      .limit(PAST_LIMIT * PAST_DUPLICATE_HEADROOM);
 
     // The cheapest corroborated tier, falling back to the denormalized scalar
     // whenever the event has no corroborated tier to aggregate — usually a
@@ -453,16 +457,16 @@ artistsPublicRouter.get(
     // rows for it (a venue page and a ticketing page, say), and past rows are
     // not under the unique index that stops that for upcoming ones. The row
     // the caller stamped wins, so "I went" never reads off beside their night.
-    const past: ArtistPastShow[] = dedupeNights(pastRows, attendedIds).map(
-      (row) => ({
+    const past: ArtistPastShow[] = dedupeNights(pastRows, attendedIds)
+      .slice(0, PAST_LIMIT)
+      .map((row) => ({
         eventId: row.eventId,
         iso: row.iso,
         venue: row.venue,
         venueSlug: row.venueSlug,
         city: row.city,
         attending: attendedIds ? attendedIds.has(row.eventId) : null,
-      }),
-    );
+      }));
 
     // The gate `search.ts` already applies and this route did not: an artist
     // is only real if at least one consumer-visible event bills them (#1343).

@@ -54,14 +54,34 @@ describe('dedupeNights', () => {
     expect(kept.map((row) => row.eventId)).toEqual(['b', 'other']);
   });
 
-  it('keeps the first duplicate when the caller attended none or several', () => {
-    const rows = [night('a'), night('b')];
+  it('keeps the lowest id when the caller attended none or several', () => {
+    // The lowest id wins whatever order the rows arrive in, so the artist page
+    // and the Add list agree on which row stands for a night.
+    const rows = [night('b'), night('a')];
     expect(dedupeNights(rows, new Set()).map((row) => row.eventId)).toEqual([
       'a',
     ]);
     expect(
       dedupeNights(rows, new Set(['a', 'b'])).map((row) => row.eventId),
     ).toEqual(['a']);
+  });
+
+  // An untimed row must not chain two real shows into one night.
+  it('keeps an early and a late show even when an untimed row sits beside them', () => {
+    const rows = [
+      night('a', { showTime: null }),
+      night('b', { showTime: '19:00:00' }),
+      night('c', { showTime: '21:00:00' }),
+    ];
+    expect(dedupeNights(rows).map((row) => row.eventId)).toEqual(['b', 'c']);
+  });
+
+  it('collapses untimed duplicates of a night that has no timed row', () => {
+    const rows = [
+      night('b', { showTime: null }),
+      night('a', { showTime: null }),
+    ];
+    expect(dedupeNights(rows).map((row) => row.eventId)).toEqual(['a']);
   });
 
   it('returns an empty list for no rows', () => {
