@@ -236,7 +236,12 @@ export const artistsApi = (getToken: GetToken) => ({
     window?: ShowWindow;
     search: string;
     offset: number;
-  }): Promise<{ rows: AdminArtistRow[]; total: number }> => {
+  }): Promise<{
+    rows: AdminArtistRow[];
+    total: number;
+    /** How many rows the page returned, malformed ones included. */
+    raw: number;
+  }> => {
     const query = new URLSearchParams({
       limit: String(PAGE_SIZE),
       offset: String(params.offset),
@@ -265,7 +270,7 @@ export const artistsApi = (getToken: GetToken) => ({
         data.length - rows.length,
       );
     }
-    return { rows, total };
+    return { rows, total, raw: data.length };
   },
   /** The open reports on one artist, oldest first. */
   reports: async (id: string): Promise<ArtistReport[]> => {

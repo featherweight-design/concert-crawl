@@ -33,6 +33,15 @@ const COPY = ADMIN_COPY.artists;
 
 const TABS_ORDER: ArtistTab[] = ['to_check', 'matched', 'not_an_artist'];
 
+/** The tab each write moves its row to. */
+const WRITE_DESTINATION: Record<ArtistWrite['kind'], ArtistTab> = {
+  use: 'matched',
+  confirm: 'matched',
+  keep: 'matched',
+  not_an_artist: 'not_an_artist',
+  its_an_artist: 'to_check',
+};
+
 const TAB_LABEL: Record<ArtistTab, string> = {
   to_check: COPY.tabs.toCheck,
   matched: COPY.tabs.matched,
@@ -67,25 +76,51 @@ const Count = ({ value, phone }: { value: number | null; phone: boolean }) =>
     </span>
   );
 
-/** To check, Matched, Not artists: underline tabs, or the phone's segments. */
+/** The tab panel's id, which every tab controls. */
+const PANEL_ID = 'artists-tab-panel';
+const tabId = (key: ArtistTab) => `artists-tab-${key}`;
+
+/** The key that moves selection, as the WAI-ARIA tabs pattern sets them. */
+const TAB_KEY_STEP: Record<string, (at: number, last: number) => number> = {
+  ArrowRight: (at, last) => (at === last ? 0 : at + 1),
+  ArrowLeft: (at, last) => (at === 0 ? last : at - 1),
+  Home: () => 0,
+  End: (_at, last) => last,
+};
+
+/**
+ * To check, Matched, Not artists: underline tabs, or the phone's segments.
+ * The ARIA tabs pattern: one tab in the Tab order (roving tabindex), arrows,
+ * Home and End move and select, and each tab controls the one panel.
+ */
 const Tabs = ({
   isPhone,
   counts,
   value,
   onChange,
+  tablistRef,
 }: {
   isPhone: boolean;
   counts: ArtistCounts | null;
   value: ArtistTab;
   onChange: (next: ArtistTab) => void;
+  tablistRef: React.RefObject<HTMLDivElement | null>;
 }) => {
-  const tabs: { key: ArtistTab; label: string }[] = [
-    { key: 'to_check', label: TAB_LABEL.to_check },
-    { key: 'matched', label: TAB_LABEL.matched },
-    { key: 'not_an_artist', label: TAB_LABEL.not_an_artist },
-  ];
+  const onTabKeyDown = (evt: React.KeyboardEvent<HTMLButtonElement>) => {
+    const move = TAB_KEY_STEP[evt.key];
+    if (!move) return;
+    evt.preventDefault();
+    const at = TABS_ORDER.indexOf(value);
+    const next = TABS_ORDER[move(at, TABS_ORDER.length - 1)];
+    if (!next) return;
+    onChange(next);
+    tablistRef.current
+      ?.querySelector<HTMLButtonElement>(`#${tabId(next)}`)
+      ?.focus();
+  };
   return (
     <div
+      ref={tablistRef}
       role="tablist"
       aria-label={COPY.tabs.label}
       style={
@@ -100,15 +135,19 @@ const Tabs = ({
           : { display: 'flex', gap: 4, borderBottom: '1px solid var(--border)' }
       }
     >
-      {tabs.map((tab) => {
-        const on = tab.key === value;
+      {TABS_ORDER.map((key) => {
+        const on = key === value;
         return (
           <button
-            key={tab.key}
+            key={key}
+            id={tabId(key)}
             type="button"
             role="tab"
             aria-selected={on}
-            onClick={() => onChange(tab.key)}
+            aria-controls={PANEL_ID}
+            tabIndex={on ? 0 : -1}
+            onClick={() => onChange(key)}
+            onKeyDown={onTabKeyDown}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -137,8 +176,8 @@ const Tabs = ({
                   }),
             }}
           >
-            {tab.label}
-            <Count value={counts ? counts[tab.key] : null} phone={isPhone} />
+            {TAB_LABEL[key]}
+            <Count value={counts ? counts[key] : null} phone={isPhone} />
           </button>
         );
       })}
@@ -281,10 +320,8 @@ export function ArtistsClient() {
   const [list, setList] = useState<{
     rows: AdminArtistRow[];
     total: number;
-    /** A search hit only rows that live in another tab. */
+    /** This page of a search hit only rows that live in other tabs. */
     elsewhere?: boolean;
-    /** This search page has none of the tab's rows, but more pages follow. */
-    morePages?: boolean;
   } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
@@ -368,18 +405,10 @@ export function ArtistsClient() {
       setList({
         rows,
         total: Math.max(0, next.total - dropped),
-        // Only when the API returned every hit: a capped page can hold this
-        // tab's matches further on.
-        elsewhere:
-          search !== '' &&
-          rows.length === 0 &&
-          fresh.length > 0 &&
-          next.total <= next.rows.length,
-        // A search page whose hits all live in other tabs, with more after it.
-        morePages:
-          search !== '' &&
-          rows.length === 0 &&
-          next.total > offset + next.rows.length,
+        // Per page: this page of the search returned hits, but none of them
+        // belong to this tab. Read off the raw page, before malformed rows
+        // were dropped, so a bad row never reads as "no hits".
+        elsewhere: search !== '' && rows.length === 0 && next.raw > 0,
       });
     } catch (err) {
       console.error('[admin artists] list failed', err);
@@ -394,6 +423,10 @@ export function ArtistsClient() {
   // A write's 409 reloads what is on screen now, not the tab it began on.
   const loadRef = useRef(load);
   loadRef.current = load;
+  // The tab on screen when a save answers, which may not be where it began.
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const tablistRef = useRef<HTMLDivElement | null>(null);
 
   // Saving the last row of a later page leaves that page empty: step back.
   useEffect(() => {
@@ -454,7 +487,7 @@ export function ArtistsClient() {
       requestAnimationFrame(() =>
         (
           listRef.current ??
-          document.querySelector<HTMLElement>(
+          tablistRef.current?.querySelector<HTMLElement>(
             '[role="tab"][aria-selected="true"]',
           )
         )?.focus(),
@@ -466,6 +499,22 @@ export function ArtistsClient() {
       resolved.current.set(row.id, generation.current);
       // A search pages through every status, where a save moves nothing.
       if (index >= 0 && !searched) removals.current.push(at);
+      // The row now belongs in its destination tab. Shown there, that tab
+      // reloads, since a load that ran mid-save left the row out. Shown
+      // anywhere else (a row can sit in two tabs), it leaves by id.
+      if (tabRef.current === WRITE_DESTINATION[write.kind]) {
+        void loadRef.current();
+      } else {
+        setList((prev) =>
+          prev && prev.rows.some((each) => each.id === row.id)
+            ? {
+                ...prev,
+                rows: prev.rows.filter((each) => each.id !== row.id),
+                total: Math.max(0, prev.total - 1),
+              }
+            : prev,
+        );
+      }
       loadCounts();
     } catch (err) {
       resolved.current.delete(row.id);
@@ -518,22 +567,18 @@ export function ArtistsClient() {
       search !== '' ? (
         <EmptyState
           title={
-            list.morePages
-              ? COPY.noResults.morePagesTitle
-              : list.elsewhere
-                ? COPY.noResults.elsewhereTitle(TAB_LABEL[tab])
-                : COPY.noResults.title
+            list.elsewhere
+              ? COPY.noResults.elsewhereTitle(TAB_LABEL[tab])
+              : COPY.noResults.title
           }
           body={
-            list.morePages
-              ? COPY.noResults.morePagesBody
-              : list.elsewhere
-                ? COPY.noResults.elsewhereBody(
-                    TABS_ORDER.filter((each) => each !== tab)
-                      .map((each) => TAB_LABEL[each])
-                      .join(COPY.noResults.or),
-                  )
-                : COPY.noResults.body
+            list.elsewhere
+              ? COPY.noResults.elsewhereBody(
+                  TABS_ORDER.filter((each) => each !== tab)
+                    .map((each) => TAB_LABEL[each])
+                    .join(COPY.noResults.or),
+                )
+              : COPY.noResults.body
           }
           action={
             <AdminButton
@@ -609,7 +654,24 @@ export function ArtistsClient() {
     setSearch('');
   };
   const tabs = (
-    <Tabs isPhone={isPhone} counts={counts} value={tab} onChange={changeTab} />
+    <Tabs
+      isPhone={isPhone}
+      counts={counts}
+      value={tab}
+      onChange={changeTab}
+      tablistRef={tablistRef}
+    />
+  );
+  /** Everything a tab shows, as the panel its tab controls. */
+  const panel = (gap: number, children: React.ReactNode) => (
+    <div
+      id={PANEL_ID}
+      role="tabpanel"
+      aria-labelledby={tabId(tab)}
+      style={{ display: 'flex', flexDirection: 'column', gap }}
+    >
+      {children}
+    </div>
   );
   const hasSearch = tab !== 'not_an_artist';
 
@@ -670,10 +732,15 @@ export function ArtistsClient() {
           />
         )}
         {tabs}
-        {tab === 'to_check' && search === '' && chips}
-        {toast}
-        {body}
-        {pager}
+        {panel(
+          10,
+          <>
+            {tab === 'to_check' && search === '' && chips}
+            {toast}
+            {body}
+            {pager}
+          </>,
+        )}
         {confirm}
       </div>
     );
@@ -704,51 +771,62 @@ export function ArtistsClient() {
         </p>
       </div>
       {tabs}
-      {toast}
-      {/* Matched draws its search above the card; Not artists has none. */}
-      {tab === 'matched' && (
-        <SearchBox value={searchInput} onChange={setSearchInput} width={260} />
-      )}
-      <div
-        style={{
-          borderRadius: 14,
-          border: '1px solid var(--border)',
-          background: 'var(--surface-1)',
-          // The ⋯ menu must not clip on the last rows; To check's toolbar
-          // and rows draw no fill past the radius, so nothing needs clipping.
-          overflow: tab === 'matched' ? 'visible' : 'hidden',
-        }}
-      >
-        {tab === 'to_check' && (
-          <div
-            style={{
-              padding: '12px 18px',
-              display: 'flex',
-              gap: 10,
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            {search === '' && chips}
-            <span style={{ flex: 1 }} />
+      {panel(
+        16,
+        <>
+          {toast}
+          {/* Matched draws its search above the card; Not artists has none. */}
+          {tab === 'matched' && (
             <SearchBox
               value={searchInput}
               onChange={setSearchInput}
-              width={220}
+              width={260}
             />
-          </div>
-        )}
-        {list != null && list.rows.length > 0 ? (
-          body
-        ) : (
+          )}
           <div
-            style={{ borderTop: '1px solid var(--border)', padding: '0 18px' }}
+            style={{
+              borderRadius: 14,
+              border: '1px solid var(--border)',
+              background: 'var(--surface-1)',
+              // The ⋯ menu is fixed-position, so clipping the card is safe.
+              overflow: 'hidden',
+            }}
           >
-            {body}
+            {tab === 'to_check' && (
+              <div
+                style={{
+                  padding: '12px 18px',
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                {search === '' && chips}
+                <span style={{ flex: 1 }} />
+                <SearchBox
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  width={220}
+                />
+              </div>
+            )}
+            {list != null && list.rows.length > 0 ? (
+              body
+            ) : (
+              <div
+                style={{
+                  borderTop: '1px solid var(--border)',
+                  padding: '0 18px',
+                }}
+              >
+                {body}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      {pager}
+          {pager}
+        </>,
+      )}
       {confirm}
     </div>
   );

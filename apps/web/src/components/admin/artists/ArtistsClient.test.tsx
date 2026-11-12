@@ -169,6 +169,41 @@ describe('ArtistsClient', () => {
     ).toBeTruthy();
   });
 
+  it('lists a row sent back by It’s an artist once its save lands, after a switch to To check mid-save', async () => {
+    const sentBack = row({
+      id: 'n1',
+      name: 'All My Friends Tour',
+      matchStatus: 'unmatched',
+      spotifyArtistId: null,
+      autoMatchedAt: null,
+      candidates: null,
+    });
+    listFor = (query) =>
+      query.get('status') === 'not_an_artist'
+        ? {
+            data: [{ ...sentBack, matchStatus: 'not_an_artist' }],
+            total: 1,
+          }
+        : // To check lists the row too: the server has it there already.
+          { data: [row(), sentBack], total: 2 };
+    const release = holdPatch();
+    render(<ArtistsClient />);
+    fireEvent.click(await screen.findByRole('tab', { name: /Not artists/ }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'It’s an artist: All My Friends Tour',
+      }),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /To check/ }));
+    // While the save is out, the To check load leaves the row out.
+    await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' });
+    expect(rowName('All My Friends Tour')).toBeNull();
+    release();
+    expect(
+      await screen.findByText('All My Friends Tour', { selector: 'div' }),
+    ).toBeTruthy();
+  });
+
   it('sends a Not artists row back with unmatched', async () => {
     render(<ArtistsClient />);
     fireEvent.click(await screen.findByRole('tab', { name: /Not artists/ }));
