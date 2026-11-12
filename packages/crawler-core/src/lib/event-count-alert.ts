@@ -244,7 +244,7 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     tags: {
       dropSeverity: severity,
       venueId: input.venueId,
-      ...(input.crawlRunId ? { crawlRunId: input.crawlRunId } : {}),
+      crawlRunId: input.crawlRunId,
     },
     dropSeverity: severity,
     guardsAteEverything,
