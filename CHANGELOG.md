@@ -1,3 +1,12 @@
+## [1.331.1](https://github.com/featherweight-design/concert-crawl/compare/v1.331.0...v1.331.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address the post-watch wait's code review and risk checklist ([935abf1](https://github.com/featherweight-design/concert-crawl/commit/935abf1adb95d5d5682e8a28332c2139d8f88983))
+* **web:** open the post-watch push sheet after the follow nudge, not over it ([73d103f](https://github.com/featherweight-design/concert-crawl/commit/73d103f8441ecdaf3fd1a6f4979e2fa9c37541c4))
+* **web:** tighten the post-watch wait after review ([e2d137d](https://github.com/featherweight-design/concert-crawl/commit/e2d137d1942d1bdfc63646852f13345d9b6a1be1))
+
 # [1.331.0](https://github.com/featherweight-design/concert-crawl/compare/v1.330.4...v1.331.0) (2026-11-12)
 
 
