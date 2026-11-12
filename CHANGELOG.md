@@ -1,3 +1,19 @@
+# [1.361.0](https://github.com/featherweight-design/concert-crawl/compare/v1.360.1...v1.361.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** person detail follows the concerts rules, matches codes in any case ([2eaa1b6](https://github.com/featherweight-design/concert-crawl/commit/2eaa1b69ec4127e49e80541f85aa2aa80561b173))
+* **web:** clearing the people code filter returns to the first page ([ab2096b](https://github.com/featherweight-design/concert-crawl/commit/ab2096beadec7bf87ca3ed04fec66af9ee53a91e))
+* **web:** no glow on the neutral artist ring in search ([baafe35](https://github.com/featherweight-design/concert-crawl/commit/baafe356e1b8a57f7189660a65592447a2514a2d))
+* **web:** people list marks reloads busy, caps search, pages and dedupes test accounts ([a82b383](https://github.com/featherweight-design/concert-crawl/commit/a82b383a94fb2630ea239365c2593de5383a4e35))
+
+
+### Features
+
+* **api:** admin People detail, join source, test accounts out of counts, code by string ([200a997](https://github.com/featherweight-design/concert-crawl/commit/200a997eb7058ced70995183f4a0eb02ae4c5515))
+* **web:** admin people list at /admin/people, filtered by code from see all ([e3e2551](https://github.com/featherweight-design/concert-crawl/commit/e3e2551d41bef00ed8558b9974a2baddf0500cf7))
+
 ## [1.360.1](https://github.com/featherweight-design/concert-crawl/compare/v1.360.0...v1.360.1) (2026-11-12)
 
 
