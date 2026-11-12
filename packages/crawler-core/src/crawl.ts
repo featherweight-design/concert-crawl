@@ -2038,8 +2038,9 @@ export async function crawlVenue(
         fetchLog,
       );
     } finally {
-      // After the run row (the audit points at it), but never lost if that
-      // insert throws: the venue is already paused or blocked by now.
+      // After the run row so a slow audit insert never delays recording the
+      // run, but still written if that insert throws: the venue is already
+      // paused or blocked by now.
       if (systemAction !== null) await recordSystemAction(systemAction);
     }
 
