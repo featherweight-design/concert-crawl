@@ -124,6 +124,33 @@ const delisted = makeShow({
   eventDelistedAt: '2099-07-10T00:00:00.000Z',
 });
 
+const later = makeShow({
+  userEventId: 'ue-later',
+  eventId: 'ev-later',
+  artist: 'Hotline TNT',
+  date: '2099-07-25',
+});
+
+// A promise the test settles by hand.
+const deferred = () => {
+  let resolve: (value: unknown) => void = () => {};
+  let reject: (reason: unknown) => void = () => {};
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
+// Pins the settle refetch so it never lands: whatever the list shows after a
+// failure was put there by the rollback, not by the server's next answer.
+const pinRefetch = () => getMock.mockReturnValue(new Promise(() => {}));
+
+const cachedIds = (client: QueryClient) =>
+  (
+    client.getQueryData<WatchingShow[]>(watchingQueryKey(TEST_USER_ID)) ?? []
+  ).map((row) => row.eventId);
+
 const setup = (shows: WatchingShow[]) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -238,8 +265,187 @@ describe('Watching: dismissing a No longer listed show', () => {
   });
 
   it('a failed POST puts the row back and raises the error toast', async () => {
-    postMock.mockRejectedValue(new ApiError(500, 'boom'));
+    const post = deferred();
+    postMock.mockReturnValue(post.promise);
+    pinRefetch();
+    const client = setup([live, delisted]);
+
+    fireEvent.click(dismissButton());
+    await waitFor(() => expect(cachedIds(client)).toEqual(['ev-live']));
+
+    await act(async () => post.reject(new ApiError(500, 'boom')));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(COPY.dismiss.failed, {
+        id: 'watching-dismiss',
+      }),
+    );
+    // The refetch never answered, so only the rollback could have done this.
+    expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll']);
+    expect(screen.getByText(delisted.artist)).toBeTruthy();
+    expect(undoToastMock).not.toHaveBeenCalled();
+  });
+
+  it('a 409 not_delisted puts the row back and says the show is listed again', async () => {
+    const post = deferred();
+    postMock.mockReturnValue(post.promise);
+    pinRefetch();
+    const client = setup([live, delisted]);
+
+    fireEvent.click(dismissButton());
+    await waitFor(() => expect(cachedIds(client)).toEqual(['ev-live']));
+
+    await act(async () =>
+      post.reject(new ApiError(409, 'Show is still listed', 'not_delisted')),
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(COPY.dismiss.stillListed, {
+        id: 'watching-dismiss',
+      }),
+    );
+    expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll']);
+    expect(screen.getByText(delisted.artist)).toBeTruthy();
+    expect(undoToastMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed Undo hides the row again and offers another go', async () => {
+    postMock.mockResolvedValue({ dismissed: true });
+    pinRefetch();
+    const client = setup([live, delisted]);
+
+    fireEvent.click(dismissButton());
+    await waitFor(() => expect(undoToastMock).toHaveBeenCalledTimes(1));
+
+    const del = deferred();
+    deleteMock.mockReturnValue(del.promise);
+    await act(async () => pressUndo());
+
+    // The Undo puts the row back at once...
+    await waitFor(() => expect(screen.getByText(delisted.artist)).toBeTruthy());
+
+    // ...and only the rollback takes it away again.
+    await act(async () => del.reject(new ApiError(500, 'boom')));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        COPY.dismiss.undoFailed,
+        expect.objectContaining({ id: 'watching-dismiss' }),
+      ),
+    );
+    expect(cachedIds(client)).toEqual(['ev-live']);
+    expect(screen.queryByText(delisted.artist)).toBeNull();
+  });
+
+  it('a fast second tap sends no second POST', async () => {
+    postMock.mockReturnValue(new Promise(() => {}));
+    pinRefetch();
     setup([live, delisted]);
+
+    const button = dismissButton();
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(postMock).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(postMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves focus to the next row when the dismissed row had one', async () => {
+    postMock.mockResolvedValue({ dismissed: true });
+    pinRefetch();
+    setup([live, delisted, later]);
+
+    const button = dismissButton();
+    button.focus();
+    fireEvent.click(button);
+
+    await waitFor(() => expect(undoToastMock).toHaveBeenCalledTimes(1));
+    const nextRow = document.querySelector('[data-watching-event="ev-later"]');
+    expect(nextRow).not.toBeNull();
+    expect(document.activeElement).not.toBe(document.body);
+    expect(nextRow?.contains(document.activeElement)).toBe(true);
+  });
+
+  it('moves focus to the list heading when the dismissed row was last', async () => {
+    postMock.mockResolvedValue({ dismissed: true });
+    pinRefetch();
+    setup([live, delisted]);
+
+    const button = dismissButton();
+    button.focus();
+    fireEvent.click(button);
+
+    await waitFor(() => expect(undoToastMock).toHaveBeenCalledTimes(1));
+    expect(document.activeElement).toBe(screen.getByTestId('watching-header'));
+  });
+
+  it('a refetch that lands mid-POST cannot bring the row back', async () => {
+    const post = deferred();
+    postMock.mockReturnValue(post.promise);
+    const client = setup([live, delisted]);
+
+    fireEvent.click(dismissButton());
+    await waitFor(() => expect(screen.queryByText(delisted.artist)).toBeNull());
+
+    // The server has not seen the POST yet, so this refetch still lists it.
+    getMock.mockResolvedValue([live, delisted]);
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: watchingQueryKey(TEST_USER_ID),
+      });
+    });
+    expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll']);
+    expect(screen.queryByText(delisted.artist)).toBeNull();
+
+    pinRefetch();
+    await act(async () => post.resolve({ dismissed: true }));
+
+    await waitFor(() => expect(undoToastMock).toHaveBeenCalledTimes(1));
+    expect(cachedIds(client)).toEqual(['ev-live']);
+    expect(screen.queryByText(delisted.artist)).toBeNull();
+  });
+
+  it('a failed POST puts back only its own row, at its old place', async () => {
+    const post = deferred();
+    postMock.mockReturnValue(post.promise);
+    pinRefetch();
+    const client = setup([live, delisted, later]);
+
+    fireEvent.click(dismissButton());
+    await waitFor(() =>
+      expect(cachedIds(client)).toEqual(['ev-live', 'ev-later']),
+    );
+
+    // Something else changes the list while the POST is out.
+    act(() => {
+      client.setQueryData<WatchingShow[]>(
+        watchingQueryKey(TEST_USER_ID),
+        (current) =>
+          current?.map((row) =>
+            row.eventId === 'ev-live' ? { ...row, currentPrice: 22 } : row,
+          ),
+      );
+    });
+
+    await act(async () => post.reject(new ApiError(500, 'boom')));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+
+    const rows =
+      client.getQueryData<WatchingShow[]>(watchingQueryKey(TEST_USER_ID)) ?? [];
+    expect(rows.map((row) => row.eventId)).toEqual([
+      'ev-live',
+      'ev-nll',
+      'ev-later',
+    ]);
+    // The other change survived the rollback.
+    expect(rows[0]?.currentPrice).toBe(22);
+  });
+
+  it('rejects a response body that is not the dismiss shape', async () => {
+    postMock.mockResolvedValue({ ok: true });
+    pinRefetch();
+    const client = setup([live, delisted]);
 
     fireEvent.click(dismissButton());
 
@@ -248,44 +454,7 @@ describe('Watching: dismissing a No longer listed show', () => {
         id: 'watching-dismiss',
       }),
     );
-    expect(screen.getByText(delisted.artist)).toBeTruthy();
+    expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll']);
     expect(undoToastMock).not.toHaveBeenCalled();
-  });
-
-  it('a 409 not_delisted puts the row back and says the show is listed again', async () => {
-    postMock.mockRejectedValue(
-      new ApiError(409, 'Show is still listed', 'not_delisted'),
-    );
-    setup([live, delisted]);
-
-    fireEvent.click(dismissButton());
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(COPY.dismiss.stillListed, {
-        id: 'watching-dismiss',
-      }),
-    );
-    expect(screen.getByText(delisted.artist)).toBeTruthy();
-    expect(undoToastMock).not.toHaveBeenCalled();
-  });
-
-  it('a failed Undo hides the row again and offers another go', async () => {
-    postMock.mockResolvedValue({ dismissed: true });
-    getMock.mockResolvedValue([live]);
-    setup([live, delisted]);
-
-    fireEvent.click(dismissButton());
-    await waitFor(() => expect(undoToastMock).toHaveBeenCalledTimes(1));
-
-    deleteMock.mockRejectedValue(new ApiError(500, 'boom'));
-    await act(async () => pressUndo());
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        COPY.dismiss.undoFailed,
-        expect.objectContaining({ id: 'watching-dismiss' }),
-      ),
-    );
-    expect(screen.queryByText(delisted.artist)).toBeNull();
   });
 });
