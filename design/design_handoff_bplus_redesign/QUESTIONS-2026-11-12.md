@@ -140,3 +140,36 @@ Contradictions #178 itself introduces. Build #178's ruling meanwhile.
 
 Lane 11's two rows (the 640 offline top nav and the 320 hero title) are already in "Undrawn widths (lane 11)".
 
+
+## Lane a6 (bp2): open after addendum 2 (#178)
+
+None of these was decided by the lane. Rows 2, 5 and 6 BLOCK; the rest are minor. Row 27 (the passport image route taking 16s) is an engineering check and is left out.
+
+| # | PR | Question | Left as |
+|---|---|---|---|
+| 1 | #121 (2f845c74) | A day whose shows carry no known genre: #178 says nothing. A strict reading of item 19 draws no dot; the strip currently draws one signal dot. | One signal dot (unchanged) |
+| 2 **BLOCKER** | #146 (f3931a84) | Caveat 7: item 20's 10-card sideways scroll contradicts the approved desktop board (5 cards in 960 of 1040, no scroll). | Built to #178 at every width; the desktop board is now stale |
+| 3 | #146 | When does "See all" show? Item title says "past five cards"; bullets give no condition. | Shows whenever "Your artists" renders |
+| 4 | #146 | Design open question 5: See all → My artists filter (built) or My shows ▸ Artists? | My artists filter (`filterFollowing=1`) |
+| 5 **BLOCKER** | B10 (d3ee6e96) | Item 27 wants the artist's own genres mapped to 16 buckets. The API has no artist-level genre (no column; a code comment says "artists carry no genre of their own"). The options are `match.genres` (Spotify, often null), a new API field, or a ruling that show genres are what Design meant. | Chips still derive from upcoming shows, as raw labels |
+| 6 **BLOCKER** | B10 | Item 11 calls 190 × 230 at −2.5° "the loaded card's size", but the loaded card is 200 × 250 at −2°. The skeleton now matches the board, so the page jumps slightly on load. Should the loaded card change too? | Skeleton 190×230/−2.5°; loaded card 200×250/−2° |
+| 7 | B10 | Desktop skeleton has no board for item 11. | −2.5° tilt applied on desktop too |
+| 8 | B10 | Skeleton corner radius and outline: the board has 18px and 2px, the build 16px and 1px. | Unchanged |
+| 9 | B10 | With Follow not sticky, should the back + name scroll bar stay? (It's on main; no board says.) | Kept |
+| 10 | B9b (fe8c0874) | Chip styling: the board draws 34px chips, 13px text, selected text in fg, and a 9px label. The shared ChipGroup (also used by SubmitPriceModal) differs. | Shared ChipGroup unchanged |
+| 11 | B9b | Submit gradient: the board is 135° with a glow; the build is 90° with none. | Unchanged |
+| 12 | #126 (d08cb972) | The mobile board `bp-m-watching_m` still draws "Going? In 3 days." on one line, but #178 rules the full "Going to this show?" heading. | #178's ruling; it wraps on phones |
+| 13 | #116 (7a5985a1) | #178 says each Upcoming row "carries its own date tile", but `bp-venue` draws the date as text on the row, with the artist photo on the left. | Board (no tile added) |
+| 14 | #116 | Light venue boards draw no venue tile by the name; the dark boards do. | Tile kept |
+| 15 | #116 | Light board back-button background 55% versus the shared BackChip's 82%; name 32px against 30px; stat values 20px/800 against 22px bold. | Unchanged |
+| 16 | #116 | Is the pale wash Light-only (as #178 says), or for every light-ground theme? | Light only |
+| 17 | #117 (d720785) | What does Done on the refused state do? It isn't drawn. | Closes the card, keeps the error ID |
+| 18 | #117 | 408 and 425: refused or temporary? #178 names only 429 and "a 4xx rejection". | Temporary (saved, retried) |
+| 19 | #117 | Routes outside `(main)` (`/me`, `/search`, admin), and errors in the `(main)` layout itself, still get the bare page. That conflicts with "only global-error is bare". | Bare |
+| 20 | #117 | Design open question 7: rate limit and rejection share one wording and the LIMIT code. | Shared |
+| 21 | #123 (c3d673ed) | Stamp face: the boards draw a solid outer ring, a dashed inner ring, a bare glyph and a straight date. The build uses the shared VenueStamp in a band, with the date on an arc ("one stamp everywhere"). | Shared VenueStamp |
+| 22 | #123 | NEXT ghost centre: the boards draw a greyed venue tile; the build uses the dashed stamp (README rule 4). | Dashed stamp |
+| 23 | #123 | Empty ID page shows "SINCE SEP 2026" and "4N4V" on the board, but an empty book has no data for either. | "since" omitted; 0N0V |
+| 24 | #123 | Up next on an empty desktop book isn't drawn. | Between the empty block and Venues collected |
+| 25 | #123 | The PNG share card still draws tilted square stamps. Does "everywhere" include it? | Unchanged |
+| 26 | #123 | The empty phone board says "Passport"; the build shows "Your Passport". | Unchanged |
