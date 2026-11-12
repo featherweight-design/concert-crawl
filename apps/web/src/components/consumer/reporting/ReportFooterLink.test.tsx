@@ -60,8 +60,8 @@ describe('ReportFooterLink', () => {
       subtitle: 'Photo or music from a different Puma Blue? Let us know.',
       footnote: 'A person checks every report.',
       ariaSignedOut: 'Wrong artist? Sign up to report',
-      reportedChip: 'UNDER REVIEW',
     };
+    const chip = 'UNDER REVIEW';
 
     it('takes its own words, tile and footnote', () => {
       render(<ReportFooterLink {...props} />);
@@ -73,7 +73,7 @@ describe('ReportFooterLink', () => {
       // The eyebrow is the event card's, reused.
       expect(screen.getByText(copy.eyebrow)).toBeTruthy();
       expect(screen.queryByText(copy.title)).toBe(null);
-      expect(screen.queryByText(props.reportedChip)).toBe(null);
+      expect(screen.queryByText(chip)).toBe(null);
     });
 
     it('announces its own gate when signed out', () => {
@@ -85,9 +85,11 @@ describe('ReportFooterLink', () => {
     });
 
     it('draws the reported state: dashed border and a chip for the chevron', () => {
-      const { container } = render(<ReportFooterLink {...props} reported />);
+      const { container } = render(
+        <ReportFooterLink {...props} reportedChip={chip} />,
+      );
 
-      expect(screen.getByText(props.reportedChip)).toBeTruthy();
+      expect(screen.getByText(chip)).toBeTruthy();
       expect(screen.getByRole('button').getAttribute('data-reported')).toBe(
         'true',
       );
@@ -97,7 +99,9 @@ describe('ReportFooterLink', () => {
 
     it('still opens when reported', () => {
       const onOpen = vi.fn();
-      render(<ReportFooterLink {...props} onOpen={onOpen} reported />);
+      render(
+        <ReportFooterLink {...props} onOpen={onOpen} reportedChip={chip} />,
+      );
 
       fireEvent.click(screen.getByRole('button'));
 

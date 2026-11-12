@@ -8,7 +8,7 @@ import { ARTIST_COPY } from './definitions/copy';
 import {
   REPORT_AMBER as AMBER,
   REPORT_MONO as MONO,
-} from './definitions/report-styles';
+} from '@/components/consumer/reporting/reportTokens';
 
 const copy = ARTIST_COPY.report;
 

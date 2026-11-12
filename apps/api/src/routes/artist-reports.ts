@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { artistReports, artists, db } from '@concert-crawl/db';
 import {
+  ARTIST_REPORT_LINK_MAX,
   ARTIST_REPORT_NOTE_MAX,
   ARTIST_REPORT_REASONS,
   ARTIST_SLUG_MAX_LENGTH,
@@ -27,7 +28,7 @@ const slugParamSchema = z.object({
 const reportBodySchema = z.object({
   reason: z.enum(ARTIST_REPORT_REASONS),
   // A pasted link. Blank counts as not given; anything else must parse.
-  spotifyLink: z.string().max(300).optional(),
+  spotifyLink: z.string().max(ARTIST_REPORT_LINK_MAX).optional(),
   note: z.string().max(ARTIST_REPORT_NOTE_MAX).optional(),
 });
 
