@@ -208,7 +208,9 @@ export type ArtistWrite =
   | { kind: 'confirm'; spotifyArtistId: string }
   /** Re-save the current match: closes its reports as dismissed. */
   | { kind: 'keep'; spotifyArtistId: string }
-  | { kind: 'not_an_artist' };
+  | { kind: 'not_an_artist' }
+  /** Back to To check; the same write un-hides its page. */
+  | { kind: 'its_an_artist' };
 
 const writeBody = (write: ArtistWrite) => {
   switch (write.kind) {
@@ -223,6 +225,8 @@ const writeBody = (write: ArtistWrite) => {
       return { spotifyArtistId: write.spotifyArtistId };
     case 'not_an_artist':
       return { spotifyArtistId: null, matchStatus: 'not_an_artist' };
+    case 'its_an_artist':
+      return { spotifyArtistId: null, matchStatus: 'unmatched' };
   }
 };
 

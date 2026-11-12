@@ -24,11 +24,25 @@ import {
   type ArtistWrite,
   type ShowWindow,
 } from './artists-api';
-import { isToCheck } from './artist-rules';
-import { PENDING, SECONDARY_BUTTON, gradientBorder } from './artist-styles';
+import { belongsTo } from './artist-rules';
+import { SECONDARY_BUTTON, gradientBorder } from './artist-styles';
+import { MatchedRow, NotArtistRow } from './MatchedRows';
 import { ToCheckRow } from './ToCheckRow';
 
 const COPY = ADMIN_COPY.artists;
+
+const TAB_LABEL: Record<ArtistTab, string> = {
+  to_check: COPY.tabs.toCheck,
+  matched: COPY.tabs.matched,
+  not_an_artist: COPY.tabs.notArtists,
+};
+
+/** The loaded row's height per tab, so the skeleton doesn't jump. */
+const ROW_HEIGHT: Record<ArtistTab, { phone: number; desktop: number }> = {
+  to_check: { phone: 138, desktop: 94 },
+  matched: { phone: 112, desktop: 68 },
+  not_an_artist: { phone: 112, desktop: 64 },
+};
 
 const WINDOWS: ShowWindow[] = ['soon', 'later', 'none'];
 const WINDOW_COUNT: Record<ShowWindow, keyof ArtistCounts> = {
@@ -55,17 +69,18 @@ const Count = ({ value, phone }: { value: number | null; phone: boolean }) =>
 const Tabs = ({
   isPhone,
   counts,
+  value,
+  onChange,
 }: {
   isPhone: boolean;
   counts: ArtistCounts | null;
+  value: ArtistTab;
+  onChange: (next: ArtistTab) => void;
 }) => {
   const tabs: { key: ArtistTab; label: string }[] = [
-    { key: 'to_check', label: COPY.tabs.toCheck },
-    { key: 'matched', label: COPY.tabs.matched },
-    {
-      key: 'not_an_artist',
-      label: COPY.tabs.notArtists,
-    },
+    { key: 'to_check', label: TAB_LABEL.to_check },
+    { key: 'matched', label: TAB_LABEL.matched },
+    { key: 'not_an_artist', label: TAB_LABEL.not_an_artist },
   ];
   return (
     <div
@@ -84,24 +99,23 @@ const Tabs = ({
       }
     >
       {tabs.map((tab) => {
-        const on = tab.key === 'to_check';
+        const on = tab.key === value;
         return (
           <button
             key={tab.key}
             type="button"
             role="tab"
             aria-selected={on}
-            // Matched and Not artists land in 4c B.
-            disabled={!on}
+            onClick={() => onChange(tab.key)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               whiteSpace: 'nowrap',
               fontFamily: 'inherit',
+              cursor: 'pointer',
               color: on ? 'var(--fg)' : 'var(--fg-muted)',
               border: 'none',
-              ...(on ? {} : PENDING),
               ...(isPhone
                 ? {
                     flex: 1,
@@ -244,17 +258,19 @@ interface Pending {
   row: AdminArtistRow;
   index: number;
   write: ArtistWrite;
+  tab: ArtistTab;
 }
 
 /**
- * 4c Artists (`06/artists-to-check`, `06/artists-mobile`): the page shell and
- * the To check tab. Matched and Not artists land in 4c B; the artist search
- * in 4c C.
+ * 4c Artists (`06/artists-to-check`, `06/artists-matched`,
+ * `06/artists-not-artists`, `06/artists-mobile`). The artist search lands in
+ * 4c C.
  */
 export function ArtistsClient() {
   const { getToken } = useAuth();
   const isPhone = useIsPhone();
   const api = useMemo(() => artistsApi(getToken), [getToken]);
+  const [tab, setTab] = useState<ArtistTab>('to_check');
   const [counts, setCounts] = useState<ArtistCounts | null>(null);
   const [showWindow, setShowWindow] = useState<ShowWindow>('soon');
   const [searchInput, setSearchInput] = useState('');
@@ -310,7 +326,7 @@ export function ArtistsClient() {
    * the pages before it, and no row is skipped.
    */
   const removals = useRef<{ key: string; page: number }[]>([]);
-  const filterKey = `${showWindow}|${search}`;
+  const filterKey = `${tab}|${showWindow}|${search}`;
 
   const load = useCallback(async () => {
     const mine = ++generation.current;
@@ -321,8 +337,8 @@ export function ArtistsClient() {
     ).length;
     try {
       const next = await api.list({
-        tab: 'to_check',
-        window: showWindow,
+        tab,
+        ...(tab === 'to_check' ? { window: showWindow } : {}),
         search,
         offset: Math.max(0, (page - 1) * PAGE_SIZE - shift),
       });
@@ -331,9 +347,10 @@ export function ArtistsClient() {
         (row) => (resolved.current.get(row.id) ?? -1) < mine,
       );
       const dropped = next.rows.length - fresh.length;
-      // A search lists every status; this tab keeps only its own rows, and
+      // A search lists every status; each tab keeps only its own rows, and
       // pages through the search's own total.
-      const rows = search === '' ? fresh : fresh.filter(isToCheck);
+      const rows =
+        search === '' ? fresh : fresh.filter((row) => belongsTo(tab, row));
       setList({
         rows,
         total: Math.max(0, next.total - dropped),
@@ -349,7 +366,7 @@ export function ArtistsClient() {
       console.error('[admin artists] list failed', err);
       if (mine === generation.current) setLoadFailed(true);
     }
-  }, [api, showWindow, search, page, filterKey]);
+  }, [api, tab, showWindow, search, page, filterKey]);
 
   useEffect(() => {
     void load();
@@ -379,7 +396,7 @@ export function ArtistsClient() {
     });
 
   /**
-   * Every write here moves the row out of To check, so it leaves at once and
+   * Every write here moves the row out of its tab, so it leaves at once and
    * comes back where it was if the save fails (rule 10). A 409 means the row
    * changed under the page: reload rather than retry a stale answer.
    */
@@ -431,7 +448,7 @@ export function ArtistsClient() {
           return { ...prev, rows, total: prev.total + 1 };
         });
       }
-      setFailed({ row, index, write });
+      setFailed({ row, index, write, tab });
     } finally {
       setRowBusy(row.id, false);
     }
@@ -440,7 +457,7 @@ export function ArtistsClient() {
   const toast = failed && (
     <SaveFailedToast
       what={failed.row.name}
-      saved={COPY.stillToCheck}
+      saved={COPY.stillIn(TAB_LABEL[failed.tab])}
       onRetry={() => void runWrite(failed.row, failed.write)}
     />
   );
@@ -453,7 +470,7 @@ export function ArtistsClient() {
       <PageSkeleton
         columns={isPhone ? 2 : 3}
         rows={isPhone ? 5 : 6}
-        rowHeight={isPhone ? 138 : 94}
+        rowHeight={ROW_HEIGHT[tab][isPhone ? 'phone' : 'desktop']}
       />
     );
   } else if (list.rows.length === 0) {
@@ -479,10 +496,14 @@ export function ArtistsClient() {
           }
         />
       ) : (
+        // Each tab reuses `artists-to-check-empty` with its own line.
         <EmptyState
           icon={Music}
-          title={COPY.empty.title}
-          body={COPY.empty[showWindow]}
+          {...(tab === 'to_check'
+            ? { title: COPY.empty.title, body: COPY.empty[showWindow] }
+            : tab === 'matched'
+              ? COPY.emptyMatched
+              : COPY.emptyNotArtists)}
         />
       );
   } else {
@@ -491,23 +512,56 @@ export function ArtistsClient() {
         ref={listRef}
         tabIndex={-1}
         data-testid="artists-list"
-        aria-label={COPY.tabs.toCheck}
+        aria-label={TAB_LABEL[tab]}
         style={{ listStyle: 'none', margin: 0, padding: 0, outline: 'none' }}
       >
-        {list.rows.map((row) => (
-          <ToCheckRow
-            key={row.id}
-            row={row}
-            api={api}
-            isPhone={isPhone}
-            busy={busy.has(row.id)}
-            onWrite={(write) => void runWrite(row, write)}
-            onNotAnArtist={() => setConfirming(row)}
-          />
-        ))}
+        {list.rows.map((row) =>
+          tab === 'to_check' ? (
+            <ToCheckRow
+              key={row.id}
+              row={row}
+              api={api}
+              isPhone={isPhone}
+              busy={busy.has(row.id)}
+              onWrite={(write) => void runWrite(row, write)}
+              onNotAnArtist={() => setConfirming(row)}
+            />
+          ) : tab === 'matched' ? (
+            <MatchedRow
+              key={row.id}
+              row={row}
+              isPhone={isPhone}
+              busy={busy.has(row.id)}
+              onNotAnArtist={() => setConfirming(row)}
+            />
+          ) : (
+            <NotArtistRow
+              key={row.id}
+              row={row}
+              isPhone={isPhone}
+              busy={busy.has(row.id)}
+              onItsAnArtist={() =>
+                void runWrite(row, { kind: 'its_an_artist' })
+              }
+            />
+          ),
+        )}
       </ul>
     );
   }
+
+  const changeTab = (next: ArtistTab) => {
+    if (next === tab) return;
+    setTab(next);
+    setPage(1);
+    // A search reads one tab's rows; the next tab starts unfiltered.
+    setSearchInput('');
+    setSearch('');
+  };
+  const tabs = (
+    <Tabs isPhone={isPhone} counts={counts} value={tab} onChange={changeTab} />
+  );
+  const hasSearch = tab !== 'not_an_artist';
 
   const chips = (
     <WindowChips
@@ -558,9 +612,15 @@ export function ArtistsClient() {
         >
           {counts ? COPY.toCheckCount(counts.to_check) : null}
         </p>
-        <SearchBox value={searchInput} onChange={setSearchInput} width="100%" />
-        <Tabs isPhone counts={counts} />
-        {search === '' && chips}
+        {hasSearch && (
+          <SearchBox
+            value={searchInput}
+            onChange={setSearchInput}
+            width="100%"
+          />
+        )}
+        {tabs}
+        {tab === 'to_check' && search === '' && chips}
         {toast}
         {body}
         {pager}
@@ -589,36 +649,45 @@ export function ArtistsClient() {
             color: 'var(--fg-muted)',
           }}
         >
-          {COPY.subtitle}
+          {/* Matched and Not artists drop the reports sentence. */}
+          {tab === 'to_check' ? COPY.subtitle : COPY.subtitleShort}
         </p>
       </div>
-      <Tabs isPhone={false} counts={counts} />
+      {tabs}
       {toast}
+      {/* Matched draws its search above the card; Not artists has none. */}
+      {tab === 'matched' && (
+        <SearchBox value={searchInput} onChange={setSearchInput} width={260} />
+      )}
       <div
         style={{
           borderRadius: 14,
           border: '1px solid var(--border)',
           background: 'var(--surface-1)',
-          overflow: 'hidden',
+          // The ⋯ menu must not clip on the last rows; To check's toolbar
+          // and rows draw no fill past the radius, so nothing needs clipping.
+          overflow: tab === 'matched' ? 'visible' : 'hidden',
         }}
       >
-        <div
-          style={{
-            padding: '12px 18px',
-            display: 'flex',
-            gap: 10,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          {search === '' && chips}
-          <span style={{ flex: 1 }} />
-          <SearchBox
-            value={searchInput}
-            onChange={setSearchInput}
-            width={220}
-          />
-        </div>
+        {tab === 'to_check' && (
+          <div
+            style={{
+              padding: '12px 18px',
+              display: 'flex',
+              gap: 10,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            {search === '' && chips}
+            <span style={{ flex: 1 }} />
+            <SearchBox
+              value={searchInput}
+              onChange={setSearchInput}
+              width={220}
+            />
+          </div>
+        )}
         {list != null && list.rows.length > 0 ? (
           body
         ) : (

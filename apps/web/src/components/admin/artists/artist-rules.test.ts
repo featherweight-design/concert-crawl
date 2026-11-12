@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AdminArtistRow, ArtistCandidate } from './artists-api';
 import {
+  belongsTo,
   candidateCards,
   defaultSelection,
   isToCheck,
@@ -56,6 +57,21 @@ describe('isToCheck', () => {
     expect(isToCheck(row({ matchStatus: 'matched' }))).toBe(false);
     expect(isToCheck(row({ matchStatus: 'not_an_artist' }))).toBe(false);
     expect(isToCheck(row({ matchStatus: 'no_match' }))).toBe(true);
+  });
+});
+
+describe('belongsTo', () => {
+  it('keeps an automatic match in To check, not Matched', () => {
+    const auto = row({
+      matchStatus: 'matched',
+      autoMatchedAt: '2026-11-01T00:00:00Z',
+    });
+    expect(belongsTo('to_check', auto)).toBe(true);
+    expect(belongsTo('matched', auto)).toBe(false);
+    expect(belongsTo('matched', row({ matchStatus: 'matched' }))).toBe(true);
+    expect(
+      belongsTo('not_an_artist', row({ matchStatus: 'not_an_artist' })),
+    ).toBe(true);
   });
 });
 

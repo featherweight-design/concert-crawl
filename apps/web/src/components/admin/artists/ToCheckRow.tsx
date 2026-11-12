@@ -25,12 +25,12 @@ import {
   ELLIPSIS,
   PENDING,
   PHONE_BUTTON,
-  PHOTO_PLACEHOLDER,
   ROW_BUTTON,
   SECONDARY_BUTTON,
   TINT_BUTTON,
   gradientBorder,
 } from './artist-styles';
+import { ArtistPhoto } from './ArtistPhoto';
 
 const COPY = ADMIN_COPY.artists;
 
@@ -63,36 +63,8 @@ const KindLine = ({
   );
 };
 
-/** The plain tile sits behind the photo, so one that fails to load still
- * draws the tile rather than a hole. */
 const Photo = ({ url }: { url: string | null }) => (
-  <span
-    aria-hidden
-    style={{
-      display: 'block',
-      width: 34,
-      height: 34,
-      flex: 'none',
-      borderRadius: '50%',
-      overflow: 'hidden',
-      background: PHOTO_PLACEHOLDER,
-    }}
-  >
-    {url && (
-      // A Spotify CDN photo at 34px; next/image would proxy it for nothing.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
-        alt=""
-        width={34}
-        height={34}
-        onError={(event) => {
-          event.currentTarget.style.display = 'none';
-        }}
-        style={{ display: 'block', objectFit: 'cover' }}
-      />
-    )}
-  </span>
+  <ArtistPhoto url={url} size={34} />
 );
 
 const CARD = {
