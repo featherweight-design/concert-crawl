@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { deleteAccount } from '@/lib/users';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
@@ -27,6 +28,7 @@ export function DeleteAccountSheet({
   const [failed, setFailed] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const { getToken } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
@@ -40,6 +42,32 @@ export function DeleteAccountSheet({
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, []);
+
+  // The same three things every other dialog here does, which this one never
+  // had: Tab stays inside, Escape closes it, and focus goes back to the control
+  // that opened it. Escape is ignored while the deletion request is in flight:
+  // closing then would hide the result of an action that is still running.
+  //
+  // Declared before the trap on purpose: effects run in order, and the opener
+  // must be read before the trap moves focus into the dialog.
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement;
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, [open]);
+
+  useFocusTrap(dialogRef, open);
+
+  useEffect(() => {
+    if (!open || loading) return;
+    const handleKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, loading, onClose]);
 
   useEffect(() => {
     if (open) {
@@ -83,6 +111,8 @@ export function DeleteAccountSheet({
         />
         {/* Dialog */}
         <div
+          ref={dialogRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-dialog-title"
@@ -190,6 +220,8 @@ export function DeleteAccountSheet({
       />
       {/* Sheet */}
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-sheet-title"
