@@ -800,7 +800,11 @@ export type EventReportEvidenceMethod =
 export interface EventReport {
   id: string;
   eventId: string;
-  reporterId: string;
+  /**
+   * The reporter's Clerk user id: sent only on the viewer's own report (see
+   * `isReporter`), null on everyone else's and for anonymous callers.
+   */
+  reporterId: string | null;
   status: EventReportStatus;
   evidenceMethod: EventReportEvidenceMethod;
   evidenceUrl: string | null;
@@ -970,8 +974,16 @@ export interface EventWatchersResponse {
 }
 
 // EventDetailResponse — single event detail with computed watch state
+/** Who wrote an event's cancelled or postponed status. */
+export type EventStatusSource = 'admin' | 'crawler' | 'report' | 'sweep';
+
 /** A promoted fan report as the event detail page shows it. */
 export interface PromotedReportSummary {
+  /**
+   * The reporter's public handle. Null for an anonymous caller (the API strips
+   * it: a fan's identity is for signed-in viewers) and for a reporter with no
+   * handle.
+   */
   reporterHandle: string | null;
   confirmsCount: number;
   reportedAt: string;
@@ -1051,6 +1063,12 @@ export interface EventDetailResponse extends EventWithVenue {
   // The promoted fan report behind a cancelled or postponed status. Null when
   // no fan report was promoted (an admin edit or the stale sweep set it).
   statusReport?: PromotedReportSummary | null;
+  // Where a cancelled or postponed status was written, as far as the data can
+  // say: 'sweep' (the stale sweep, delisted), 'report' (a promoted fan report),
+  // 'admin' (an admin edit: the only other writer). Null when the show is
+  // upcoming. 'crawler' is in the union for consumers but the API never emits
+  // it: the crawler writes no cancelled or postponed status.
+  statusSource?: EventStatusSource | null;
   // All pending submissions whenever any exist (PR 3 dropped the
   // "only when no corroborated price" gate so multi-tier pending stays
   // visible alongside corroborated tiers). Counter rows that surface via

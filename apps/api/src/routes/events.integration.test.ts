@@ -2,10 +2,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
+const { authState } = vi.hoisted(() => ({
+  authState: { current: null as { userId: string } | null },
+}));
+
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
-  getAuth: () => null,
+  getAuth: () => authState.current,
 }));
 
 import { events } from '@concert-crawl/db';
@@ -287,6 +291,7 @@ describe('GET /v1/events — integration', () => {
 
 describe('GET /v1/events/:id — integration', () => {
   beforeEach(async () => {
+    authState.current = null;
     await clearTables();
   });
 
@@ -304,7 +309,8 @@ describe('GET /v1/events/:id — integration', () => {
       expect(body.data.statusReport).toBeNull();
     });
 
-    it('carries the promoted report behind a cancellation: handle and confirms', async () => {
+    it('carries the promoted report behind a cancellation: handle and confirms, for a signed-in viewer', async () => {
+      authState.current = { userId: 'user_viewer' };
       const venue = await seedVenue();
       const event = await seedEvent(venue.id, { status: 'cancelled' });
       await seedUserProfile('user_reporter', { handle: 'sami' });
@@ -333,7 +339,87 @@ describe('GET /v1/events/:id — integration', () => {
       });
     });
 
+    it('strips the reporter handle for an anonymous caller but keeps the report', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+      await seedUserProfile('user_reporter', { handle: 'sami' });
+      const report = await seedEventReport(event.id, 'user_reporter', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+      await seedEventReportConfirm(report.id, 'user_confirm_a');
+
+      const res = await app.request(`/v1/events/${event.id}`);
+      const text = await res.text();
+      const body = JSON.parse(text) as {
+        data: {
+          statusReport: {
+            reporterHandle: string | null;
+            confirmsCount: number;
+          } | null;
+        };
+      };
+
+      expect(body.data.statusReport).toMatchObject({
+        reporterHandle: null,
+        confirmsCount: 1,
+      });
+      expect(text).not.toContain('"sami"');
+    });
+
+    it('strips the reporter handle from soldOutReport for an anonymous caller, keeps it for a signed-in one', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id);
+      await seedUserProfile('user_sold_out_reporter', { handle: 'ada' });
+      await seedEventReport(event.id, 'user_sold_out_reporter', {
+        status: 'sold-out',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+      type Body = {
+        data: {
+          priceStatus: string | null;
+          soldOutReport: { reporterHandle: string | null } | null;
+        };
+      };
+
+      const anon = await app.request(`/v1/events/${event.id}`);
+      const anonText = await anon.text();
+      const anonBody = JSON.parse(anonText) as Body;
+      expect(anonBody.data.priceStatus).toBe('soldout');
+      expect(anonBody.data.soldOutReport).not.toBeNull();
+      expect(anonBody.data.soldOutReport?.reporterHandle).toBeNull();
+      expect(anonText).not.toContain('"ada"');
+
+      authState.current = { userId: 'user_viewer' };
+      const authed = await app.request(`/v1/events/${event.id}`);
+      const authedBody = (await authed.json()) as Body;
+      expect(authedBody.data.soldOutReport?.reporterHandle).toBe('ada');
+    });
+
+    it('ignores a client-controlled header: only the verified session unlocks the handle', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+      await seedUserProfile('user_reporter', { handle: 'sami' });
+      await seedEventReport(event.id, 'user_reporter', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+
+      const res = await app.request(`/v1/events/${event.id}`, {
+        headers: { 'x-user-id': 'user_viewer', 'x-authenticated': 'true' },
+      });
+      const body = (await res.json()) as {
+        data: { statusReport: { reporterHandle: string | null } | null };
+      };
+
+      expect(body.data.statusReport?.reporterHandle).toBeNull();
+    });
+
     it('credits the latest promotion when more than one report was promoted', async () => {
+      authState.current = { userId: 'user_viewer' };
       const venue = await seedVenue();
       const event = await seedEvent(venue.id, { status: 'cancelled' });
       await seedUserProfile('user_early', { handle: 'early' });
@@ -376,6 +462,52 @@ describe('GET /v1/events/:id — integration', () => {
       const body = (await res.json()) as { data: { statusReport: unknown } };
 
       expect(body.data.statusReport).toBeNull();
+    });
+  });
+
+  describe('statusSource (who wrote a cancelled or postponed status)', () => {
+    const sourceOf = async (eventId: string): Promise<unknown> => {
+      const res = await app.request(`/v1/events/${eventId}`);
+      const body = (await res.json()) as { data: { statusSource?: unknown } };
+      return body.data.statusSource;
+    };
+
+    it('is null for an upcoming show', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id);
+      expect(await sourceOf(event.id)).toBeNull();
+    });
+
+    it("is 'sweep' for a delisted cancellation", async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, {
+        status: 'cancelled',
+        delistedAt: new Date(),
+      });
+      expect(await sourceOf(event.id)).toBe('sweep');
+    });
+
+    it("is 'report' when a promoted fan report is behind the status", async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'postponed' });
+      await seedEventReport(event.id, 'user_reporter', {
+        status: 'postponed',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+      expect(await sourceOf(event.id)).toBe('report');
+    });
+
+    it("is 'admin' for a cancelled show with no sweep mark and no promoted report", async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+      expect(await sourceOf(event.id)).toBe('admin');
+    });
+
+    it("never emits 'crawler'", async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'postponed' });
+      expect(await sourceOf(event.id)).not.toBe('crawler');
     });
   });
 
@@ -970,6 +1102,105 @@ describe('GET /v1/events/:id — integration', () => {
     expect(
       (body.data.pendingSubmissions ?? []).find((sub) => sub.id === counter.id),
     ).toBeUndefined();
+  });
+
+  describe('price-submitter handles (anonymous vs signed-in)', () => {
+    type HandleBody = {
+      data: {
+        priceSubmitterHandle: string | null;
+        counterSubmission: { submitter: { handle: string } | null } | null;
+        pendingSubmissions: Array<{
+          submitterHandle: string | null;
+          isSubmitter: boolean;
+        }> | null;
+        priceByTier: Array<{
+          headline: { submitterHandle: string | null } | null;
+          pending: Array<{ submitterHandle: string | null }>;
+          counterSubmission: { submitter: { handle: string } | null } | null;
+        }>;
+      };
+    };
+
+    const seedHandled = async (): Promise<string> => {
+      const venue = await seedVenue({ slug: 'handle-venue' });
+      const event = await seedEvent(venue.id, {
+        date: '2027-06-01',
+        priceSource: 'community',
+      });
+      await seedUserProfile('user_owner', { handle: 'owner' });
+      await seedUserProfile('user_challenger', { handle: 'challenger' });
+      await seedUserProfile('user_vip', { handle: 'vipfan' });
+      const parent = await seedPriceSubmission(event.id, 'user_owner', {
+        tier: 'GA',
+        priceMin: '40',
+        status: 'corroborated',
+      });
+      await seedPriceSubmission(event.id, 'user_challenger', {
+        tier: 'GA',
+        priceMin: '30',
+        status: 'pending',
+        disputedSubmissionId: parent.id,
+      });
+      await seedPriceSubmission(event.id, 'user_vip', {
+        tier: 'VIP',
+        priceMin: '120',
+        status: 'pending',
+      });
+      return event.id;
+    };
+
+    it('nulls every submitter handle for an anonymous caller, keeping the prices', async () => {
+      const eventId = await seedHandled();
+
+      const res = await app.request(`/v1/events/${eventId}`);
+      const text = await res.text();
+      const body = JSON.parse(text) as HandleBody;
+
+      expect(body.data.priceSubmitterHandle).toBeNull();
+      expect(body.data.counterSubmission).not.toBeNull();
+      expect(body.data.counterSubmission?.submitter).toBeNull();
+      expect(body.data.pendingSubmissions).toHaveLength(1);
+      expect(body.data.pendingSubmissions?.[0]?.submitterHandle).toBeNull();
+      const ga = body.data.priceByTier.find((tier) => tier.headline !== null);
+      expect(ga?.headline?.submitterHandle).toBeNull();
+      expect(ga?.counterSubmission?.submitter).toBeNull();
+      const vip = body.data.priceByTier.find((tier) => tier.headline === null);
+      expect(vip?.pending[0]?.submitterHandle).toBeNull();
+      for (const handle of ['owner', 'challenger', 'vipfan']) {
+        expect(text).not.toContain(`"${handle}"`);
+      }
+    });
+
+    it('keeps the handles for a signed-in caller', async () => {
+      const eventId = await seedHandled();
+      authState.current = { userId: 'user_viewer' };
+
+      const res = await app.request(`/v1/events/${eventId}`);
+      const body = (await res.json()) as HandleBody;
+
+      expect(body.data.priceSubmitterHandle).toBe('owner');
+      expect(body.data.counterSubmission?.submitter).toEqual({
+        handle: 'challenger',
+      });
+      expect(body.data.pendingSubmissions?.[0]?.submitterHandle).toBe('vipfan');
+      const ga = body.data.priceByTier.find((tier) => tier.headline !== null);
+      expect(ga?.headline?.submitterHandle).toBe('owner');
+      expect(ga?.counterSubmission?.submitter).toEqual({
+        handle: 'challenger',
+      });
+      const vip = body.data.priceByTier.find((tier) => tier.headline === null);
+      expect(vip?.pending[0]?.submitterHandle).toBe('vipfan');
+    });
+
+    it("still marks a signed-in viewer's own pending price as theirs", async () => {
+      const eventId = await seedHandled();
+      authState.current = { userId: 'user_vip' };
+
+      const res = await app.request(`/v1/events/${eventId}`);
+      const body = (await res.json()) as HandleBody;
+
+      expect(body.data.pendingSubmissions?.[0]?.isSubmitter).toBe(true);
+    });
   });
 
   it('lets a live price in the same tier lead over one under a check', async () => {
