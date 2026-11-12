@@ -44,7 +44,7 @@ export default async function InviteCodePostersPage({
   const cards: PosterCodeCard[] = codes
     .filter((code) => code.maxUses > 1)
     .map((code) => ({ code, status: inviteStatus(code, now) }))
-    .filter(({ status }) => status === 'active' || status === 'redeemed')
+    .filter(({ status }) => status === 'active' || status === 'full')
     .sort((left, right) =>
       right.code.createdAt.localeCompare(left.code.createdAt),
     )
@@ -57,7 +57,7 @@ export default async function InviteCodePostersPage({
         taken: seatsTaken(code),
         max: code.maxUses,
         expiresAt: code.expiresAt,
-        full: status === 'redeemed',
+        full: status === 'full',
         url,
         qr: status === 'active' ? qrPath(url) : null,
       };

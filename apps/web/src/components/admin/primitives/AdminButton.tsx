@@ -2,7 +2,14 @@ import { type ButtonHTMLAttributes } from 'react';
 import { type LucideIcon } from 'lucide-react';
 
 interface AdminButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'success';
+  variant?:
+    | 'primary'
+    | 'outline'
+    | 'ghost'
+    | 'danger'
+    | 'success'
+    | 'gradient'
+    | 'dangerOutline';
   size?: 'sm' | 'md';
   icon?: LucideIcon;
   iconRight?: LucideIcon;
@@ -37,6 +44,21 @@ const VARIANT_STYLES: Record<
     background: 'rgba(47,122,77,0.1)',
     color: 'var(--success)',
     border: '1px solid rgba(47,122,77,0.25)',
+  },
+  // The redesign's drawn call to action (`07/invite-codes` New code).
+  gradient: {
+    background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+    color: 'var(--bg)',
+    border: '1px solid transparent',
+    fontWeight: 700,
+  },
+  // The redesign's drawn destructive button: red outline, no fill
+  // (`07/revoke-asks-first`).
+  dangerOutline: {
+    background: 'transparent',
+    color: 'var(--danger)',
+    border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
+    fontWeight: 600,
   },
 };
 

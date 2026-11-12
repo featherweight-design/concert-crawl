@@ -2027,24 +2027,48 @@ export const ADMIN_COPY = {
     submitIdle: 'Generate Code',
   },
 
-  inviteCodes: {
-    mintButton: {
-      pending: 'Minting…',
-      idle: 'Mint code',
+  // 5b, boards 07/invite-codes* and addendum-3 12/code-taken-d.
+  codesPage: {
+    title: 'People',
+    subtitle:
+      'Invite codes let people in before launch. One code can seat many people.',
+    newCode: 'New code',
+    tabs: {
+      label: 'People',
+      people: 'People',
+      codes: 'Invite codes',
+      codesShort: 'Codes',
+      posters: 'Posters',
     },
-    // #1084 — legacy redemption rows carry `usedBy` but no `usedAt`, so
-    // the Redeemed date cell falls back to a plain textual marker to
-    // avoid blanking the column for those records.
-    redeemedWithoutDate: 'Redeemed',
-    // Multi-use (poster) codes: "3 of 50" in the list, and the mint form's
-    // optional label and seat count.
-    uses: (taken: number, max: number) => `${taken} of ${max}`,
-    labelPlaceholder: 'Label, e.g. Hi-Dive bathroom, Nov',
-    seatsLabel: 'Seats',
-    seatsMinted: (seats: number) => `${seats} seat${seats === 1 ? '' : 's'}`,
-    seatsHint:
-      'Seats: how many people one code admits, 1 to 500. 1 for a personal code.',
-    posterLink: 'Poster',
+    columns: {
+      code: 'CODE',
+      seats: 'SEATS USED',
+      expires: 'EXPIRES',
+      status: 'STATUS',
+      madeBy: 'MADE BY',
+    },
+    status: {
+      active: 'Active',
+      full: 'Full',
+      expired: 'Expired',
+      revoked: 'Revoked',
+    },
+    seatsUsed: (used: number, max: number) => `${used} of ${max}`,
+    never: 'Never',
+    expiresOn: (date: string | null) =>
+      date ? `Expires ${date}` : 'Expires never',
+    posterLabel: (label: string | null) =>
+      label ? `Poster · ${label}` : 'Poster',
+    formerAdmin: 'A former admin',
+    footer:
+      'Revoked and expired codes stay listed, so you can see who they brought in.',
+    empty: {
+      title: 'No invite codes yet',
+      body: 'Make one for a friend or a poster. Each can seat up to 500 people.',
+    },
+  },
+
+  inviteCodes: {
     poster: {
       tabs: { codes: 'Codes', posters: 'Posters', label: 'Invite codes' },
       title: 'Print a poster',
