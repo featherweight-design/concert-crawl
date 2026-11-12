@@ -126,9 +126,10 @@ describe('admin needs-you answers', () => {
       priceMin: '45',
     });
     const [item] = await itemsOf('price-batch');
-    expect(item?.key).toBe('price-batch:all');
+    expect(item?.key).toMatch(/^price-batch:[0-9a-f]{12}$/);
+    const batchKey = item?.key ?? '';
 
-    const res = await answer('price-batch:all', { answer: 'approve_all' });
+    const res = await answer(batchKey, { answer: 'approve_all' });
     expect(res.status).toBe(200);
     for (const submission of [first, second]) {
       const [approved] = await testDb
@@ -145,8 +146,8 @@ describe('admin needs-you answers', () => {
     expect(await auditRows('needs_you.answer')).toHaveLength(1);
 
     // The batch is now empty, so a second approve is a stale key.
-    expect(
-      (await answer('price-batch:all', { answer: 'approve_all' })).status,
-    ).toBe(404);
+    expect((await answer(batchKey, { answer: 'approve_all' })).status).toBe(
+      404,
+    );
   });
 });
