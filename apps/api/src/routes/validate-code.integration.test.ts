@@ -94,3 +94,29 @@ describe('POST /v1/auth/validate-code rate limit', () => {
     expect(statuses.filter((status) => status === 429)).toHaveLength(15);
   });
 });
+
+describe('POST /v1/auth/validate-code — custom codes (admin 5b)', () => {
+  beforeEach(async () => {
+    await clearTables();
+    await testDb.insert(inviteCodes).values([
+      { code: VALID, createdBy: 'user_admin', maxUses: 50 },
+      { code: 'REDROCKS', createdBy: 'user_admin', maxUses: 50 },
+    ]);
+  });
+
+  it('accepts a custom code in any case', async () => {
+    expect((await validate('REDROCKS', '203.0.113.20')).status).toBe(200);
+    expect((await validate('redrocks', '203.0.113.20')).status).toBe(200);
+  });
+
+  it('still accepts a generated code, in any case', async () => {
+    expect((await validate(VALID, '203.0.113.21')).status).toBe(200);
+    expect((await validate(VALID.toLowerCase(), '203.0.113.21')).status).toBe(
+      200,
+    );
+  });
+
+  it('answers an unknown custom code as not found', async () => {
+    expect((await validate('NOSUCHCODE', '203.0.113.22')).status).toBe(404);
+  });
+});

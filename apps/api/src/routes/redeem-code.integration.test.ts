@@ -207,6 +207,32 @@ describe('POST /v1/auth/redeem-code — the beta comp', () => {
 // A poster code admits up to `max_uses` accounts. The seat count is the claim,
 // so every case here reads it back from the row rather than trusting the
 // status alone.
+describe('POST /v1/auth/redeem-code — custom codes (admin 5b)', () => {
+  beforeEach(async () => {
+    authState.current = { userId: USER_ID };
+    mirrorCalls.length = 0;
+    vi.stubEnv('CLERK_SECRET_KEY', 'sk_test_fixture');
+    await clearTables();
+  });
+
+  it('redeems a custom code typed in any case', async () => {
+    await seedCode('REDROCKS', 50);
+
+    expect((await redeem('redRocks')).status).toBe(200);
+    expect(await comps()).toHaveLength(1);
+  });
+
+  it('still redeems a generated BETA- code typed in lower case', async () => {
+    await seedCode();
+
+    expect((await redeem(CODE.toLowerCase())).status).toBe(200);
+  });
+
+  it('refuses a value that is neither shape', async () => {
+    expect((await redeem('RED-ROCKS')).status).toBe(400);
+  });
+});
+
 describe('POST /v1/auth/redeem-code — multi-use codes', () => {
   const POSTER = 'BETA-P0ST-ER01';
 

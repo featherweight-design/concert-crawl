@@ -154,6 +154,69 @@ describe('GET /v1/admin/invite-codes', () => {
   });
 });
 
+describe('POST /v1/admin/invite-codes with a custom code', () => {
+  it('stores the code uppercase and audits it as custom', async () => {
+    setAuth('admin');
+    const { status, json } = await call('POST', '', {
+      code: 'GlobeHall',
+      label: 'Poster · Globe Hall',
+      maxUses: 50,
+    });
+    expect(status).toBe(201);
+    expect((json.data as InviteCode).code).toBe('GLOBEHALL');
+    expect(await auditActions()).toContain('invite_code.create');
+  });
+
+  it('answers a taken code with 409 and the lowest free number on the end', async () => {
+    setAuth('admin');
+    await seedCode({ code: 'REDROCKS' });
+    await seedCode({ code: 'REDROCKS2' });
+
+    const res = await app.request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'redrocks' }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      success: false,
+      error: 'code_taken',
+      code: 'REDROCKS',
+      suggestion: 'REDROCKS3',
+    });
+  });
+
+  it('trims a suggestion to fit 20 characters', async () => {
+    setAuth('admin');
+    const long = 'A'.repeat(20);
+    await seedCode({ code: long });
+
+    const res = await app.request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: long }),
+    });
+    expect((await res.json()).suggestion).toBe(`${'A'.repeat(19)}2`);
+  });
+
+  it.each(['ABC', 'A'.repeat(21), 'RED-ROCKS', 'BETAMAX', 'BETA-AB12-CD34'])(
+    'refuses %j as a custom code',
+    async (code) => {
+      setAuth('admin');
+      const { status } = await call('POST', '', { code });
+      expect(status).toBe(400);
+    },
+  );
+
+  it('still generates a BETA- code when none is given', async () => {
+    setAuth('admin');
+    const { json } = await call('POST', '', {});
+    expect((json.data as InviteCode).code).toMatch(
+      /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/,
+    );
+  });
+});
+
 describe('PATCH /v1/admin/invite-codes/:id', () => {
   it('edits label, seats and expiry, and audits it', async () => {
     setAuth('admin');

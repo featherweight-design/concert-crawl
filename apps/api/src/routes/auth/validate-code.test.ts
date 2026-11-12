@@ -55,10 +55,22 @@ describe('POST /v1/auth/validate-code', () => {
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: 'NOTVALID' }),
+      body: JSON.stringify({ code: 'NOT-VALID' }),
     });
     expect(res.status).toBe(400);
   });
+
+  it.each(['ABC', 'A'.repeat(21), 'BETAMAX', 'BETA-3C41'])(
+    'returns 400 for %j, which is neither code shape',
+    async (code) => {
+      const res = await app.request('/v1/auth/validate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      expect(res.status).toBe(400);
+    },
+  );
 
   it('returns 200 for valid code', async () => {
     const res = await app.request('/v1/auth/validate-code', {
