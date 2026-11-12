@@ -27,11 +27,14 @@ const querySchema = z.object({
 // microseconds and a JS Date keeps milliseconds, so rows are ordered and
 // compared on the millisecond-truncated time: the cursor then names exactly
 // the position it was read from, and no row is skipped or repeated.
-const createdMs = sql<Date>`date_trunc('milliseconds', ${auditLog.createdAt})`;
+// Built per call: some route tests mock drizzle-orm without `sql`, and a
+// module-level use would fail those suites on import.
+const createdMs = () => sql`date_trunc('milliseconds', ${auditLog.createdAt})`;
 
 // The same instant as epoch milliseconds, read as a double so the value never
 // depends on how a driver parses a timestamp expression.
-const createdEpochMs = sql<number>`(extract(epoch from ${createdMs}) * 1000)::float8`;
+const createdEpochMs = () =>
+  sql<number>`(extract(epoch from ${createdMs()}) * 1000)::float8`;
 
 const cursorSchema = z.object({ at: z.iso.datetime(), id: z.guid() });
 
@@ -79,7 +82,7 @@ auditLogAdminRouter.get(
         action: auditLog.action,
         targetId: auditLog.targetId,
         metadata: auditLog.metadata,
-        createdEpochMs,
+        createdEpochMs: createdEpochMs(),
       })
       .from(auditLog)
       .leftJoin(userProfiles, eq(userProfiles.userId, auditLog.actorId))
@@ -93,12 +96,15 @@ auditLogAdminRouter.get(
           after === null
             ? undefined
             : or(
-                lt(createdMs, after.at),
-                and(eq(createdMs, after.at), lt(auditLog.id, after.id)),
+                sql`${createdMs()} < ${after.at.toISOString()}::timestamptz`,
+                and(
+                  sql`${createdMs()} = ${after.at.toISOString()}::timestamptz`,
+                  lt(auditLog.id, after.id),
+                ),
               ),
         ),
       )
-      .orderBy(desc(createdMs), desc(auditLog.id))
+      .orderBy(desc(createdMs()), desc(auditLog.id))
       .limit(limit + 1);
 
     const page = rows.slice(0, limit);

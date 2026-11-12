@@ -555,6 +555,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'as crawl_triggers.triggered_by.',
   },
   {
+    tableName: 'admin_settings',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: ['updated_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Global admin config (one row). `updated_by` is the admin who last ' +
+      'saved it, not a customer, and stays as the record of who acted — same ' +
+      'basis as feature_flags.updated_by.',
+  },
+  {
     tableName: 'rate_limit_buckets',
     disposition: 'delete',
     userIdColumn: 'user_id',
