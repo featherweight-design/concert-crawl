@@ -736,6 +736,13 @@
       "when": 1794528000000,
       "tag": "0105_venue_pause_reason_and_resume",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1794614400000,
+      "tag": "0106_admin_settings_llm_budget_controls",
+      "breakpoints": true
     }
   ]
 }
