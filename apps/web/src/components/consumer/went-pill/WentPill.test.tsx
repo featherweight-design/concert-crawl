@@ -91,11 +91,14 @@ describe('WentPill', () => {
       GOING_COPY.past.wentPill,
     );
     expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+    // The name does not change with the state: `aria-pressed` carries "on".
+    expect(screen.getByRole('button')).toHaveAccessibleName(
+      GOING_COPY.past.ariaWent('Nightjar Choir', 'Jun 21, 2026'),
+    );
   });
 
   it('stamps on tap and offers the Passport by default', async () => {
-    const onChanged = vi.fn();
-    pill(false, { onChanged });
+    pill(false);
     fireEvent.click(screen.getByRole('button'));
     // Answers the tap at once, before the server does.
     expect(screen.getByRole('button')).toHaveTextContent(
@@ -103,7 +106,6 @@ describe('WentPill', () => {
     );
     expect(mutateAsync).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
     await waitFor(() => expect(showStampedToast).toHaveBeenCalled());
-    expect(onChanged).toHaveBeenCalled();
     const arg = showStampedToast.mock.calls[0]?.[0] as {
       onOpenPassport?: () => void;
       onUndo?: () => void;

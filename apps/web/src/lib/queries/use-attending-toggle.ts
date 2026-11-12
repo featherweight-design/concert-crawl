@@ -16,6 +16,7 @@ import type {
 import { apiClient } from '@/lib/api';
 import { watchingQueryKey } from './use-watching';
 import { historyQueryKey } from './use-history';
+import { pastShowsKeyPrefix } from './use-past-shows';
 
 export type AttendingToggleInput = {
   eventId: string;
@@ -110,6 +111,11 @@ export function useAttendingToggle() {
         queryKey: watchingQueryKey(userId),
       });
       void queryClient.invalidateQueries({ queryKey: historyQueryKey(userId) });
+      // The Add sheet's cached pages carry each night's `attendingAt`, so a
+      // stamp or an Undo must not leave a reopened sheet showing the old state.
+      void queryClient.invalidateQueries({
+        queryKey: pastShowsKeyPrefix(userId),
+      });
     },
   });
 }

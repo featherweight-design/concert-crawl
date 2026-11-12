@@ -210,19 +210,19 @@ describe('AddShowSheet', () => {
   describe('scopes', () => {
     it('switches the query when a scope is picked', () => {
       setup();
-      fireEvent.click(screen.getByRole('radio', { name: COPY.scopeVenues }));
+      fireEvent.click(screen.getByRole('button', { name: COPY.scopeVenues }));
       expect(usePastShows).toHaveBeenLastCalledWith(
         expect.objectContaining({ scope: 'venues' }),
       );
       expect(
-        screen.getByRole('radio', { name: COPY.scopeVenues }),
-      ).toHaveAttribute('aria-checked', 'true');
+        screen.getByRole('button', { name: COPY.scopeVenues }),
+      ).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('offers Artists I follow with the entitlement', () => {
       setup();
       expect(
-        screen.getByRole('radio', { name: COPY.scopeFollows }),
+        screen.getByRole('button', { name: COPY.scopeFollows }),
       ).toBeInTheDocument();
     });
 
@@ -230,9 +230,42 @@ describe('AddShowSheet', () => {
       followsActive = false;
       setup();
       expect(
-        screen.queryByRole('radio', { name: COPY.scopeFollows }),
+        screen.queryByRole('button', { name: COPY.scopeFollows }),
       ).toBeNull();
     });
+
+    // A venue or a scope can come back as one act without being "every show".
+    it('drops the "That’s every" footer once a scope is picked', () => {
+      setup();
+      fireEvent.change(screen.getByRole('searchbox'), {
+        target: { value: 'culture wars' },
+      });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      fireEvent.click(screen.getByRole('button', { name: COPY.scopeVenues }));
+      expect(screen.getByTestId('add-show-end')).toHaveTextContent(
+        COPY.endDivider(recordsStartShort()),
+      );
+    });
+  });
+
+  // A failed page must not wipe the rows already loaded.
+  it('keeps loaded rows and offers its own retry when a later page fails', () => {
+    const fetchNextPage = vi.fn();
+    usePastShows.mockReturnValue(
+      result({
+        isError: true,
+        isFetchNextPageError: true,
+        hasNextPage: true,
+        fetchNextPage,
+      }),
+    );
+    setup();
+    expect(screen.getByTestId('add-show-item')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(COPY.loadFailed);
+    fireEvent.click(screen.getByRole('button', { name: COPY.retry }));
+    expect(fetchNextPage).toHaveBeenCalled();
   });
 
   it('closes from Done', () => {
