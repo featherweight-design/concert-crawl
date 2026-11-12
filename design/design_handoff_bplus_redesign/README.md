@@ -140,6 +140,19 @@ These are the parts to build once and reuse.
 6. **Launch-screen startup images** need a build step for the iPhone sizes, plus a way to tell a cold standalone start apart from later opens (for example `display-mode: standalone` together with a session flag).
 7. **Status gaps already found** are documented in [`status-and-dispute-fixes.md`](status-and-dispute-fixes.md): Tickets available does nothing, the evidence answer is never sent, Watching maps cancelled to sold out, the confirm count is off by one, and the disputed card probably never renders.
 
+## Addendum 2 (2026-11-12)
+
+[`addendum-2/`](addendum-2/README.md) answers 29 questions engineering raised while building B+ and the admin redesign. Each item number has a drawn board or a written ruling. **Where an addendum-2 board or ruling differs from a board above, addendum 2 wins.** The main changes:
+
+- Notification tabs get a fixed category map.
+- Filters are single-select.
+- There is one round, untilted stamp everywhere, and the Passport is oldest first.
+- No longer listed has its own event page card and no notification.
+- Cancelled shows get a crawler-source line and are never offered Get tickets.
+- New boards: the Tickets available pending state, 320px fixes, desktop empty Passport, the desktop notifications panel, Light venue pages, the error page's refused report and in-app error, the shelf's See all, venue tiles in Submitted prices, and the Price check counter's How you found out.
+
+Open questions for design are listed at the end of that README.
+
 ## Open decisions (Hugh)
 
 - **"Follow / Following" on artist pages.** CLAUDE.md's locked vocabulary bans "Following", but the live artist and event pages use it. The designs keep what ships.
