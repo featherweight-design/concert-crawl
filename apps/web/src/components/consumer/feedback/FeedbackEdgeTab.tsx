@@ -44,14 +44,11 @@ export function FeedbackEdgeTab() {
             color: 'var(--fg)',
           }}
         >
-          {/* Transparent hit slop to the left of the tab. Tucked, only ~13px
-              of the tab shows, so this widens the tap target to 25px. It sits
-              inside the button, so it triggers the same click. */}
-          <span
-            aria-hidden="true"
-            data-testid="feedback-edge-tab-hit-slop"
-            className="absolute -left-3 top-0 hidden h-full w-3 max-xl:block"
-          />
+          {/* No transparent hit slop: tucked, only ~15px of the tab shows and
+              that sliver is the whole target. A slop would steal taps meant
+              for content within 12px of the edge (the same class of bug as
+              the venues click-through). The target-size shortfall is a Design
+              question: the tab is on no board. */}
           <span
             style={{
               width: 6,
