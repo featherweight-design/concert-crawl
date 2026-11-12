@@ -31,6 +31,10 @@ const KV_ROW = {
   padding: '6px 0',
 } as const;
 
+/** The panel's buttons as drawn: 12.5px semibold, 9px corners. */
+const BUTTON = { borderRadius: 9, fontSize: 12.5, fontWeight: 600 } as const;
+const SECONDARY = { ...BUTTON, background: 'var(--surface-2)' } as const;
+
 /** `07/a-code-in-flow`: the code, its seats, and who joined with it. */
 export const CodePanel = ({
   code,
@@ -82,7 +86,12 @@ export const CodePanel = ({
       onClose={onClose}
       footer={
         ended ? (
-          <AdminButton type="button" variant="outline" onClick={onReactivate}>
+          <AdminButton
+            type="button"
+            variant="outline"
+            onClick={onReactivate}
+            style={SECONDARY}
+          >
             {COPY.menu.reactivate}
           </AdminButton>
         ) : (
@@ -92,7 +101,7 @@ export const CodePanel = ({
                 type="button"
                 variant="outline"
                 onClick={onAddSeats}
-                style={{ background: 'var(--surface-2)', fontWeight: 600 }}
+                style={SECONDARY}
               >
                 {COPY.panel.addSeats}
               </AdminButton>
@@ -101,6 +110,7 @@ export const CodePanel = ({
               type="button"
               variant="dangerOutline"
               onClick={onRevoke}
+              style={BUTTON}
             >
               {COPY.menu.revoke}
             </AdminButton>
@@ -115,6 +125,7 @@ export const CodePanel = ({
             icon={Copy}
             onClick={onCopy}
             style={{
+              ...BUTTON,
               color: 'var(--signal)',
               background: 'color-mix(in srgb, var(--signal) 12%, transparent)',
               borderColor: 'color-mix(in srgb, var(--signal) 30%, transparent)',
@@ -132,9 +143,7 @@ export const CodePanel = ({
                 gap: 6,
                 height: 32,
                 padding: '0 12px',
-                borderRadius: 6,
-                fontSize: 13,
-                fontWeight: 600,
+                ...BUTTON,
                 textDecoration: 'none',
                 color: 'var(--fg)',
                 background: 'var(--surface-2)',
