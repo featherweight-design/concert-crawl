@@ -2448,6 +2448,138 @@ describe('crawlVenue — account-wide LLM refusals', () => {
   });
 });
 
+describe('crawlVenue — monthly LLM budget (admin 1c, G8b)', () => {
+  const storedVenue = (id: string) =>
+    stores.venues.find((row) => row.id === id);
+  // A page with no structured data, so the cascade reaches its LLM step.
+  const arrangeLlmPath = (venue: { websiteUrl: string }) => {
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+  };
+  const crawlWithBudget = (
+    venueId: string,
+    llmBudget: {
+      budgetUsd: number | null;
+      spentUsd: number;
+      stopWhenSpent: boolean;
+    } | null,
+  ) => crawlVenue(venueId, mockBrowser, undefined, [], false, llmBudget);
+  // Only the budget's structured lines; any other console.warn is ignored.
+  const budgetWarnings = (warnSpy: { mock: { calls: unknown[][] } }) =>
+    warnSpy.mock.calls.flatMap((call) => {
+      const text = String(call[0]);
+      if (!text.includes('"llm.budget_spent"')) return [];
+      return [JSON.parse(text) as Record<string, unknown>];
+    });
+
+  it('skips the LLM when spent with "If it runs out" on, as an account-wide failure', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 });
+    arrangeLlmPath(venue);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const run = await crawlWithBudget(venue.id, {
+      budgetUsd: 20,
+      spentUsd: 20.5,
+      stopWhenSpent: true,
+    });
+
+    expect(mockExtractWithLlm).not.toHaveBeenCalled();
+    expect(run.status).toBe('failed');
+    expect(run.reason).toBe('llm_account');
+    // Not a venue strike: the three-strikes update never ran (see the
+    // account-wide refusal tests for why "still 2" proves that).
+    expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2);
+    expect(storedVenue(venue.id)?.crawlPausedAt).toBeNull();
+    expect(budgetWarnings(warnSpy)).toEqual([
+      expect.objectContaining({ action: 'skipped', venueId: venue.id }),
+    ]);
+    warnSpy.mockRestore();
+  });
+
+  it('keeps using the LLM when spent with "If it runs out" off, and warns', async () => {
+    const venue = seedVenue();
+    arrangeLlmPath(venue);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const run = await crawlWithBudget(venue.id, {
+      budgetUsd: 20,
+      spentUsd: 25,
+      stopWhenSpent: false,
+    });
+
+    expect(mockExtractWithLlm).toHaveBeenCalledTimes(1);
+    expect(run.status).toBe('success');
+    expect(budgetWarnings(warnSpy)).toEqual([
+      {
+        event: 'llm.budget_spent',
+        action: 'continued',
+        venueId: venue.id,
+        spentUsd: 25,
+        budgetUsd: 20,
+      },
+    ]);
+    warnSpy.mockRestore();
+  });
+
+  it('uses the LLM without a warning under budget, even with the switch on', async () => {
+    const venue = seedVenue();
+    arrangeLlmPath(venue);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const run = await crawlWithBudget(venue.id, {
+      budgetUsd: 20,
+      spentUsd: 3,
+      stopWhenSpent: true,
+    });
+
+    expect(mockExtractWithLlm).toHaveBeenCalledTimes(1);
+    expect(run.status).toBe('success');
+    expect(budgetWarnings(warnSpy)).toEqual([]);
+    warnSpy.mockRestore();
+  });
+
+  it.each([
+    ['no budget set', { budgetUsd: null, spentUsd: 500, stopWhenSpent: true }],
+    ['budget never read', null],
+  ])('never stops the LLM with %s', async (_label, llmBudget) => {
+    const venue = seedVenue();
+    arrangeLlmPath(venue);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const run = await crawlWithBudget(venue.id, llmBudget);
+
+    expect(mockExtractWithLlm).toHaveBeenCalledTimes(1);
+    expect(run.status).toBe('success');
+    expect(budgetWarnings(warnSpy)).toEqual([]);
+    warnSpy.mockRestore();
+  });
+
+  it('leaves structured-data venues alone when spent with the switch on', async () => {
+    const venue = seedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_WITH_JSON_LD,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+
+    const run = await crawlWithBudget(venue.id, {
+      budgetUsd: 20,
+      spentUsd: 50,
+      stopWhenSpent: true,
+    });
+
+    expect(mockExtractWithLlm).not.toHaveBeenCalled();
+    expect(run.status).toBe('success');
+  });
+});
+
 describe('crawlVenue — failure reasons', () => {
   it('records robots_disallowed when robots.txt disallows the venue', async () => {
     const venue = seedVenue({ crawlMode: 'http' });

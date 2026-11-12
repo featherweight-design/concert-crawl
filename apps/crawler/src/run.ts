@@ -13,7 +13,10 @@ import {
   sweepStaleEvents,
   sweepExpiredPageBodies,
   tagEventsWithGenres,
+  llmBudgetVerdict,
+  readLlmBudgetStatus,
   type CrossVenueCandidate,
+  type LlmBudgetStatus,
   type VenueRunOutcome,
 } from '@concert-crawl/crawler-core';
 import { runPricePipeline } from '@concert-crawl/price-pipeline';
@@ -132,6 +135,37 @@ async function loadCrossVenueCandidates(): Promise<CrossVenueCandidate[]> {
     .select({ id: venues.id, slug: venues.slug, name: venues.name })
     .from(venues)
     .where(eq(venues.verified, true));
+}
+
+// The admin's monthly LLM budget, read once per run and handed to every
+// crawlVenue in it. A spent budget is warned about here, once per run; with
+// "If it runs out" off (the default) the crawl keeps using the LLM, and with it
+// on the cascade skips the LLM step. There is no admin notification channel for
+// budget warnings, so the warning is a log line and a Sentry log. A failed read
+// returns null, which leaves the LLM step running: the default behaviour.
+export async function loadLlmBudget(): Promise<LlmBudgetStatus | null> {
+  let status: LlmBudgetStatus;
+  try {
+    status = await readLlmBudgetStatus();
+  } catch (budgetErr: unknown) {
+    Sentry.captureException(budgetErr);
+    logger.error(
+      { budgetErr },
+      'LLM budget read failed; the LLM step runs as if under budget',
+    );
+    return null;
+  }
+  const verdict = llmBudgetVerdict(status);
+  if (verdict !== 'under') {
+    const fields = {
+      spent_usd: status.spentUsd,
+      budget_usd: status.budgetUsd,
+      action: verdict === 'over_stop' ? 'skip_llm' : 'continue_llm',
+    };
+    logger.warn(fields, 'Monthly LLM budget is spent');
+    Sentry.logger.warn('llm.budget_spent', fields);
+  }
+  return status;
 }
 
 async function isCrawlPaused(venueId: string): Promise<boolean> {
@@ -255,6 +289,7 @@ async function processTrigger(
   trigger: { id: string; venueId: string; force: boolean },
   getBrowser: () => Promise<Browser>,
   crossVenueCandidates: CrossVenueCandidate[],
+  llmBudget: LlmBudgetStatus | null,
 ): Promise<number> {
   let eventsInserted = 0;
   try {
@@ -264,6 +299,7 @@ async function processTrigger(
       undefined,
       crossVenueCandidates,
       trigger.force,
+      llmBudget,
     );
     if (crawlRun.status === 'failed') {
       const message = crawlRun.errorMessage ?? 'Crawl failed';
@@ -365,6 +401,9 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
   // landing page's ISR cache is worth busting proactively.
   let eventsInserted = 0;
   let crossVenueCandidates: CrossVenueCandidate[] | null = null;
+  // Read with the first claim, once per drain. undefined is "not read yet";
+  // null is a read that failed.
+  let llmBudget: LlmBudgetStatus | null | undefined;
 
   // Launch is deferred: a run of only http-mode venues never starts Chromium,
   // and every trigger in the drain shares the one browser. A launch failure
@@ -384,11 +423,13 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
       if (claimed.length === 0) break;
 
       crossVenueCandidates ??= await loadCrossVenueCandidates();
+      if (llmBudget === undefined) llmBudget = await loadLlmBudget();
       for (const trigger of claimed) {
         eventsInserted += await processTrigger(
           trigger,
           browser.get,
           crossVenueCandidates,
+          llmBudget,
         );
       }
       processed += claimed.length;
@@ -449,6 +490,7 @@ export async function runDailyCrawl(): Promise<{
   }
 
   const crossVenueCandidates = await loadCrossVenueCandidates();
+  const llmBudget = await loadLlmBudget();
 
   let succeeded = 0;
   let failed = 0;
@@ -467,7 +509,14 @@ export async function runDailyCrawl(): Promise<{
       const batch = activeVenues.slice(batchStart, batchStart + MAX_CONCURRENT);
       const results = await Promise.allSettled(
         batch.map((venue) =>
-          crawlVenue(venue.id, browser.get, undefined, crossVenueCandidates),
+          crawlVenue(
+            venue.id,
+            browser.get,
+            undefined,
+            crossVenueCandidates,
+            false,
+            llmBudget,
+          ),
         ),
       );
 

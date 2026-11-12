@@ -74,3 +74,9 @@ export {
   isAccountWideKind,
 } from './lib/crawl-error-class.js';
 export type { CrawlErrorKind } from './lib/crawl-error-class.js';
+export {
+  LlmBudgetSpentError,
+  llmBudgetVerdict,
+  readLlmBudgetStatus,
+} from './lib/llm-budget.js';
+export type { LlmBudgetStatus, LlmBudgetVerdict } from './lib/llm-budget.js';

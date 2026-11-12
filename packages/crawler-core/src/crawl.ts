@@ -37,6 +37,11 @@ import { extractJsonLd } from './lib/extractors/json-ld.js';
 import { extractTicketure } from './lib/extractors/ticketure.js';
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
 import {
+  LlmBudgetSpentError,
+  llmBudgetVerdict,
+  type LlmBudgetStatus,
+} from './lib/llm-budget.js';
+import {
   classifyCrawlError,
   isAccountWideKind,
 } from './lib/crawl-error-class.js';
@@ -283,6 +288,8 @@ async function runExtraction(
   finalUrl: string,
   timeZone: string,
   aiUseAllowed: boolean,
+  llmBudget: LlmBudgetStatus | null,
+  venueId: string,
 ): Promise<{
   normalizedEvents: NormalizedEvent[];
   strategy: 'structured_data' | 'llm';
@@ -311,6 +318,24 @@ async function runExtraction(
       throw new Error(
         `No structured data at ${finalUrl}, and robots.txt does not allow AI extraction`,
       );
+    }
+    // The admin's monthly LLM budget (lib/llm-budget.ts). Spent with "If it
+    // runs out" on: skip the LLM, which fails this run as account-wide (never
+    // a strike). Spent with it off, the default: extract anyway, and warn.
+    const verdict = llmBudgetVerdict(llmBudget);
+    if (verdict !== 'under' && llmBudget !== null) {
+      console.warn(
+        JSON.stringify({
+          event: 'llm.budget_spent',
+          action: verdict === 'over_stop' ? 'skipped' : 'continued',
+          venueId,
+          spentUsd: llmBudget.spentUsd,
+          budgetUsd: llmBudget.budgetUsd,
+        }),
+      );
+      if (verdict === 'over_stop') {
+        throw new LlmBudgetSpentError(llmBudget, finalUrl);
+      }
     }
     strategy = 'llm';
     const llmResult = await extractWithLlm(html, finalUrl);
@@ -420,6 +445,9 @@ export async function crawlVenue(
   // supportingArtists). Default false preserves the cost-saving skip path for
   // normal + scheduled crawls.
   force = false,
+  // The admin's monthly LLM budget, read once per crawl run by the caller
+  // (readLlmBudgetStatus). null means unknown or unread: the LLM step runs.
+  llmBudget: LlmBudgetStatus | null = null,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
   const id = crawlRunId ?? crypto.randomUUID();
@@ -842,6 +870,8 @@ export async function crawlVenue(
             browserResult.finalUrl,
             venue.timezone,
             await aiUseAllowedFor(browserResult.finalUrl),
+            llmBudget,
+            venueId,
           );
           resolvedMode = 'browser';
         }
@@ -851,6 +881,8 @@ export async function crawlVenue(
           finalUrl,
           venue.timezone,
           await aiUseAllowedFor(finalUrl),
+          llmBudget,
+          venueId,
         );
       }
     }

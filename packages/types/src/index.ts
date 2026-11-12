@@ -1763,8 +1763,9 @@ export interface AdminSettings {
   llmMonthlyBudgetUsd: number | null;
   // Percent of the monthly budget at which the admin is warned.
   llmBudgetWarnAtPercent: LlmBudgetWarnAtPercent;
-  // "If it runs out": on means keep crawling with HTML and JSON-LD only, and
-  // tell the admin.
+  // "If it runs out": on means stop the LLM once the monthly budget is spent
+  // and crawl with HTML and JSON-LD only; off (the default) means keep using
+  // the LLM and warn.
   llmBudgetFallbackToStructured: boolean;
   approvePricesMyself: boolean;
   updatedAt: string | null;
