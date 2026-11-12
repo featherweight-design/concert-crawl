@@ -1,3 +1,20 @@
+# [1.351.0](https://github.com/featherweight-design/concert-crawl/compare/v1.350.0...v1.351.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** close the invite code edit and reactivate gaps from review ([d755286](https://github.com/featherweight-design/concert-crawl/commit/d75528610c81c4a5e33cb47605a44365d83d45b8))
+* **api:** drop the orphaned comment and the unread trialEndsAt on PlanContext ([aa8274e](https://github.com/featherweight-design/concert-crawl/commit/aa8274effa8e2155d863fa57563709bab638d72e))
+* **api:** guard invite code revoke against a double press; test the redemptions dedupe ([1712505](https://github.com/featherweight-design/concert-crawl/commit/1712505a5170ba7233f5c06c1f4b635f7f594495))
+* **api:** hold on both confirm routes, never on a price-check update, clear the stamp when off ([7b1edf6](https://github.com/featherweight-design/concert-crawl/commit/7b1edf6a990272e9d53e5db1480e00ae1cfcc847))
+* **api:** remove the lifecycle nudge flags and the billing nudge routes ([2f6f063](https://github.com/featherweight-design/concert-crawl/commit/2f6f0635319d67fb4ae77b8bdb8c69c5cc87620c))
+
+
+### Features
+
+* **api:** hold a price that would promote while the admin approves prices themselves ([f721f37](https://github.com/featherweight-design/concert-crawl/commit/f721f379526d8bdd3e473ef54fa957008d8db15e))
+* **api:** invite code edit, reactivate and who joined for admin 5b ([865aadb](https://github.com/featherweight-design/concert-crawl/commit/865aadb58dd4bbf3bdd7417ff1809311871020d9))
+
 # [1.350.0](https://github.com/featherweight-design/concert-crawl/compare/v1.349.0...v1.350.0) (2026-11-12)
 
 
