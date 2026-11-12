@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -11,9 +11,19 @@ vi.mock('next/navigation', () => ({
 
 import { PullToRefresh } from './PullToRefresh';
 
+// jsdom has no matchMedia; the wave reads reduced motion through it.
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+});
+
 afterEach(() => {
   cleanup();
   refreshMock.mockReset();
+  vi.unstubAllGlobals();
 });
 
 const touch = (type: string, clientY: number) => {
