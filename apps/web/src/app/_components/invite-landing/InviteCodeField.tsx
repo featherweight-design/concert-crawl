@@ -9,7 +9,7 @@ import {
   FOCUS_RING,
   INVITE_FIELD_BORDER,
   INVITE_FIELD_SHADOW,
-  INVITE_GRADIENT,
+  REDEEM_GRADIENT,
 } from './definitions/styles';
 
 const COPY = LANDING_COPY.invite;
@@ -90,7 +90,7 @@ export function InviteCodeField() {
           minHeight: 44,
           border: 'none',
           borderRadius: 10,
-          background: INVITE_GRADIENT,
+          background: REDEEM_GRADIENT,
           color: 'var(--fg-on-accent)',
           fontFamily: 'Inter, system-ui',
           fontWeight: 800,

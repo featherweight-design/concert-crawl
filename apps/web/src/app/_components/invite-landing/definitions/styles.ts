@@ -3,6 +3,13 @@ export const INVITE_GRADIENT =
   'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)), var(--accent))';
 
 /**
+ * The Redeem button's fill, as invite-320 draws it: 135deg, cyan to a softened
+ * pink. The end stop is no token (the accent is #FF7BD4), so both stops are
+ * fixed board colours.
+ */
+export const REDEEM_GRADIENT = 'linear-gradient(135deg, #7AE6FF, #de96df)'; // fwd-allow-hex: board art colour
+
+/**
  * The invite code field's border: cyan to pink at 135deg, fading to the border
  * colour at the bottom right (invite-320 field).
  */
