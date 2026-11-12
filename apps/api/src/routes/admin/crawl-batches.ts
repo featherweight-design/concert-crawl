@@ -95,7 +95,8 @@ crawlBatchesAdminRouter.get(
   async (ctx) => {
     const { kind, limit } = ctx.req.valid('query');
     const now = new Date();
-    // A night a day, plus a margin for by-hand bursts and the edges.
+    // About a night a day, plus a margin at the edges. By-hand bursts in the
+    // window share the limit with the nights.
     const from = new Date(now.getTime() - (limit + 3) * DAY_MS);
     const { runs, triggers } = await readWindow(
       from,
@@ -130,13 +131,16 @@ crawlBatchesAdminRouter.get(
 
     const now = new Date();
     // A night is a Mountain Time date, so read a margin either side of it; a
-    // by-hand burst is read around its first trigger.
+    // by-hand burst is read around its first trigger. A night also reads back
+    // 40 days, because "Didn't start" is only derived once an earlier night
+    // with runs is in view.
     const center =
       parsed.kind === 'nightly'
         ? new Date(`${parsed.night}T12:00:00Z`)
         : new Date(parsed.epoch * 1000);
+    const lookBackDays = parsed.kind === 'nightly' ? 40 : 2;
     const { runs, triggers } = await readWindow(
-      new Date(center.getTime() - 2 * DAY_MS),
+      new Date(center.getTime() - lookBackDays * DAY_MS),
       new Date(center.getTime() + 2 * DAY_MS),
     );
 
@@ -145,23 +149,6 @@ crawlBatchesAdminRouter.get(
     );
     if (batch === undefined) {
       return ctx.json({ success: false, error: 'Batch not found' }, 404);
-    }
-    // A nightly read from a narrow window cannot say whether the night before
-    // it ran, so a "Didn't start" claim needs the list's wider view.
-    if (batch.didntStart && parsed.kind === 'nightly') {
-      const { runs: wide, triggers: wideTriggers } = await readWindow(
-        new Date(center.getTime() - 40 * DAY_MS),
-        new Date(center.getTime() + 2 * DAY_MS),
-      );
-      const confirmed = groupCrawlBatches({
-        runs: wide,
-        triggers: wideTriggers,
-        now,
-      }).find((candidate) => candidate.key === key);
-      if (confirmed === undefined) {
-        return ctx.json({ success: false, error: 'Batch not found' }, 404);
-      }
-      return ctx.json({ success: true, data: confirmed });
     }
     return ctx.json({ success: true, data: batch });
   },

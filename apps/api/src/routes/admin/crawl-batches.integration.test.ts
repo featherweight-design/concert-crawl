@@ -78,8 +78,8 @@ describe('admin crawl batches', () => {
     expect(res.status).toBe(200);
     const body: { data: CrawlBatch[] } = await res.json();
     const missingNight = denverDate(nightAt(3));
-    expect(body.data.map((batch) => batch.key).slice(0, 3)).toEqual(
-      expect.arrayContaining([`nightly:${missingNight}`]),
+    expect(body.data.map((batch) => batch.key)).toContain(
+      `nightly:${missingNight}`,
     );
     const missing = body.data.find((batch) => batch.night === missingNight);
     expect(missing).toMatchObject({ didntStart: true, startedAt: null });
@@ -170,6 +170,13 @@ describe('admin crawl batches', () => {
     });
     expect(body.data.runs[0]?.errorMessage).toHaveLength(500);
 
+    // A night with no runs that the list calls Didn't start has a detail too,
+    // however far from the nearest run.
+    await seedRun(venue.id, nightAt(5));
+    const missing = await get(`/nightly:${denverDate(nightAt(3))}`);
+    expect(missing.status).toBe(200);
+    const missingBody: { data: CrawlBatchDetail } = await missing.json();
+    expect(missingBody.data).toMatchObject({ didntStart: true, runs: [] });
     expect((await get('/nonsense')).status).toBe(400);
     expect((await get(`/nightly:${addDays(night, -60)}`)).status).toBe(404);
   });
