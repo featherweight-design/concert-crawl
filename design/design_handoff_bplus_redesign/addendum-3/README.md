@@ -96,7 +96,7 @@ The boards are built on the approved B+ kit, addendum 2's helpers, and the Edit 
 | 640 top nav while offline | Rule 1, `01/header-640`. |
 | 320 hero title | Rule 2, `01/hero-320-wrap`, `01/hero-320-long-word`. |
 | Status card on the public share page | **Ruling:** the same status card, read-only, with no Watching action. A No longer listed show also gets the NLL card. |
-| Source line for an admin-set status | Hugh. **Proposal:** "Confirmed by Concert Crawl · {age}". Until he rules, the drawn line ships. |
+| Source line for an admin-set status | **Decided with Hugh (2026-11-12):** "Confirmed by Concert Crawl · {age}". The wording goes through copy-review. |
 | Sold out "We'll watch it." | Hugh + Copy. |
 
 ## Lane ec1
@@ -193,7 +193,7 @@ The boards are built on the approved B+ kit, addendum 2's helpers, and the Edit 
 | 19 | **Ruling:** drop the ⓘ. |
 | 20 | **Confirmed.** |
 | 21 | Rule 3. |
-| 22 | **Ruling:** signed-out goes to sign-in (the app is free, so everyone signed in is entitled). Hugh to confirm. |
+| 22 | **Ruling:** signed-out goes to sign-in (the app is free, so everyone signed in is entitled). **Decided with Hugh (2026-11-12).** |
 | 23, 24 | Hugh. |
 | 25 | **Ruling:** signed-out shows the outline "I went" pill, and a tap goes to sign-in. Past 50, a "Show older" row loads the next 50. |
 | 26 | **Ruling:** the footnote stays. |
@@ -222,10 +222,10 @@ The boards are built on the approved B+ kit, addendum 2's helpers, and the Edit 
 | 56 | **Signed off.** The Undo toast is `role="status"`. The ⋯ menu uses arrow keys, and Esc returns focus to the ⋯. The pill uses `aria-pressed`. |
 | 57 | Rule 5, `04/menu-hit-target-m`. |
 
-## Proposals for Hugh
+## Decided with Hugh (2026-11-12)
 
-- The source line for an admin-set status: "Confirmed by Concert Crawl · {age}".
-- Signed-out taps go to sign-in everywhere (W3, Edit your Concerts 22 and 25), following the free decision.
+- **The source line for an admin-set status** is "Confirmed by Concert Crawl · {age}".
+- **Signed-out taps go to sign-in everywhere** (W3, Edit your Concerts 22 and 25). The tier picker is retired.
 
 ## Build-vs-design check
 

@@ -146,7 +146,7 @@ Each section keeps its row numbers in source order.
 | 14 | Clock trigger | Top 12. |
 | 15 | 8 AM, and a week | **Ruling:** both return at 8 AM MT. A week is the same weekday, 7 days on (`01/snooze-open-d`). |
 | 16 | Date picker | `01/snooze-until-a-date-d`, `01/snooze-until-a-date-m`. |
-| 17 | Not useful reason, no-venue items, back on | Reason: `01/not-useful-d`. Back on: `01/warnings-off-overview-d`. No-venue items: `01/snooze-no-venue-d` offers snooze only. That last one is a **proposal for Hugh**, since what Not useful means is his call. |
+| 17 | Not useful reason, no-venue items, back on | Reason: `01/not-useful-d`. Back on: `01/warnings-off-overview-d`. No-venue items: `01/snooze-no-venue-d` offers snooze only. **Decided with Hugh (2026-11-12):** Not useful shows only on items with a venue. |
 | 18 | Phone snooze | `01/item-menu-m`. |
 | 19 | All-clear sources, Snoozed | **Ruling:** the feed is Eng (1c Health). "Snoozed" counts every snoozed item, with the next one back (`01/all-clear-d`). |
 | 20 | Desktop all clear, filter empty | `01/all-clear-d`, `01/filter-empty-d`. They're different states. |
@@ -561,13 +561,14 @@ Each section keeps its row numbers in source order.
 | Re-crawl now on a paused venue | Hugh. |
 | Send reply sequencing | Hugh (top 15). |
 | venue-quiet baseline | Hugh / Eng (top 2). |
-| Venue notice | **Boards** `06/venue-notice-d`, `06/venue-notice-m`. The threshold is a **proposal for Hugh:** 5 or more shows at one venue drop in one run, or a quarter of its listings, whichever is fewer. Until he rules, 2a doesn't group. |
+| Venue notice | **Boards** `06/venue-notice-d`, `06/venue-notice-m`. **Decided with Hugh (2026-11-12):** one run that drops 5 or more shows at a venue, or a quarter of its listings (whichever is fewer), makes one venue notice. |
 
-## Proposals for Hugh
+## Decided with Hugh (2026-11-12)
 
-- **Not useful only on items with a venue.** Artist, price check, price batch and bug items get snooze only (`01/snooze-no-venue-d`).
-- **The venue-notice threshold** (adm2 row above).
-- **Disabled Send reply before Phase 6**, if that's the ruling. The pattern is drawn.
+- **Not useful shows only on items with a venue.** Artist, price check, price batch and bug items get Snooze only (`01/snooze-no-venue-d`).
+- **The venue notice:** one run that drops 5 or more shows at a venue, or a quarter of its listings, whichever is fewer.
+
+Still open: if Hugh rules Send reply stays disabled before Phase 6 (top 15), the disabled pattern is drawn.
 
 ## Build-vs-design check (for every lane using these boards)
 
