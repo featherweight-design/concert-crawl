@@ -1,3 +1,18 @@
+# [1.376.0](https://github.com/featherweight-design/concert-crawl/compare/v1.375.0...v1.376.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** list one row per night in the past lists ([b0f3fcd](https://github.com/featherweight-design/concert-crawl/commit/b0f3fcdb7e50be226f4a2b7049c056462e68ae96))
+* **api:** make the one-row-per-night rule a clean partition ([4cc5c35](https://github.com/featherweight-design/concert-crawl/commit/4cc5c354983bc98e9a9554882661ba26676b4032))
+* **api:** name the dedupe comparison parameters ([8247c95](https://github.com/featherweight-design/concert-crawl/commit/8247c953495e168852b19d945d12df92dbb82c34))
+* **web:** venue neon review fixes, marked hex, clear heroSource errors ([bd29af8](https://github.com/featherweight-design/concert-crawl/commit/bd29af8c079b6e7e2a09fa9e22a15adc36169b1b))
+
+
+### Features
+
+* **web:** multi-colour venue neon, per-venue halo and ground as the boards draw them ([09b3794](https://github.com/featherweight-design/concert-crawl/commit/09b3794e438eaf39988da119eb5a30204e2668ab))
+
 # [1.375.0](https://github.com/featherweight-design/concert-crawl/compare/v1.374.0...v1.375.0) (2026-11-12)
 
 
