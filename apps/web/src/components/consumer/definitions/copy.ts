@@ -1225,7 +1225,6 @@ export const CONSUMER_COPY = {
       // `deleteButtonArmed` / `deleteButtonDisabled`.
       deleteForeverButton: 'Delete forever',
     },
-    planSection: 'Your plan',
     appearanceSection: 'Appearance',
     accountSection: 'Account',
     submissionsSection: 'My submissions',
@@ -1250,11 +1249,6 @@ export const CONSUMER_COPY = {
     adminRow: 'Admin',
     profileSection: 'Profile',
     profileSectionSub: 'What other fans see when you submit a price.',
-    // Desktop labels this section "Plan"; mobile uses `planSection`
-    // ("Your plan"). Kept separate so neither shell silently changes.
-    planSectionDesktop: 'Plan',
-    // Shown to every plan, paid ones included, so it can't claim a price.
-    planSectionSubDesktop: "What you're on, and what it costs you.",
     appearanceSectionSub:
       'Three flavors. Pick the one that hurts your eyes least.',
     accountSectionSub:

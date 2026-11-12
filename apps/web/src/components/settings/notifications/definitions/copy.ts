@@ -41,12 +41,6 @@ export const NOTIFICATIONS_COPY = {
     },
     // Rendered uppercase in CSS so the accessible name stays readable.
     newBadge: 'New',
-    locked: {
-      title: 'New show alerts',
-      detail:
-        'Following artists is part of Premium. Upgrade and these switch on.',
-      cta: 'See Premium',
-    },
     // Only for a connected user: the same switches govern Spotify-sourced
     // artists, so nobody goes hunting for a second set in Connections.
     spotifyNote:
@@ -59,8 +53,10 @@ export const NOTIFICATIONS_COPY = {
   productEmail: {
     heading: 'Email from us',
     label: 'News, offers, and the occasional nudge',
-    onDetail: 'Rare. A discount, or a heads-up when a gift is running out.',
-    offDetail: 'Off.',
+    // Said only while the switch is off (B+ `more-s-d_notifications`). There is
+    // no billing in this app, so the board's "but billing" would be a false
+    // promise: the one thing that always reaches you is the account itself.
+    offDetail: 'Off. Nothing from us but account emails.',
   },
   watching: {
     heading: "Shows you're watching",

@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useId, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { nfLocked } from '@concert-crawl/entitlements';
 import {
   getPushDeviceState,
   subscribeToPush,
@@ -15,14 +14,11 @@ import {
   type PushDeviceState,
 } from '@/lib/push/client';
 import { isIosSafari, isStandalone } from '@/lib/pwa/beforeinstallprompt';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import {
   useNotificationPreferences,
   usePatchNotificationPreferences,
   type NotificationPreferences,
 } from '@/lib/queries/use-notification-preferences';
-import { usePlanState } from '@/lib/queries/use-plan-state';
 import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
 import { ToggleSwitch } from '../connections/ToggleSwitch';
 import { CrewActivityBlock } from './CrewActivityBlock';
@@ -47,33 +43,6 @@ const GroupHeading = ({ text }: { text: string }) => (
   </h3>
 );
 
-const LockGlyph = () => (
-  <svg
-    width="15"
-    height="15"
-    viewBox="0 0 15 15"
-    fill="none"
-    aria-hidden
-    focusable="false"
-  >
-    <rect
-      x="2.75"
-      y="6.5"
-      width="9.5"
-      height="6.75"
-      rx="1.75"
-      stroke="currentColor"
-      strokeWidth="1.4"
-    />
-    <path
-      d="M5 6.5V4.75a2.5 2.5 0 1 1 5 0V6.5"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 // Detail line under the master switch: shows "On" only when BOTH the server
 // preference has push enabled AND this device holds a live subscription. The
 // two are separately mutable — a user may flip master off on one device
@@ -96,17 +65,10 @@ interface NotificationsSectionProps {
    * both lives at the mount site, so the component stays layout-neutral.
    */
   variant?: 'mobile' | 'desktop';
-  /**
-   * Server-resolved SCA-region boolean, forwarded to the TierPickerSheet the
-   * locked artist card opens. Both settings shells already hold it for
-   * PlanPanel, so it is passed down rather than re-resolved here.
-   */
-  scaRegion?: boolean;
 }
 
 export const NotificationsSection = ({
   variant = 'mobile',
-  scaRegion = false,
 }: NotificationsSectionProps) => {
   // Per-instance, because `/me` mounts this section twice: the mobile shell and
   // the desktop one are both in the DOM with one CSS-hidden. A fixed id would
@@ -123,9 +85,7 @@ export const NotificationsSection = ({
   const { getToken } = useAuth();
   const { data: prefs, isLoading, isError } = useNotificationPreferences();
   const patch = usePatchNotificationPreferences();
-  const { data: planState, isPending: planPending } = usePlanState();
   const { data: spotify } = useSpotifyConnection();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [deviceState, setDeviceState] = useState<PushDeviceState | null>(null);
   // #1130 fix — surface a visible error when the toggle pipeline fails
   // (subscribe returns error, or PATCH throws). Previously the click just
@@ -167,12 +127,6 @@ export const NotificationsSection = ({
   const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? true;
   const productEmailsOn = prefs?.productEmailsEnabled ?? true;
 
-  // ONE gate for the whole artist group, asked through nfLocked rather than by
-  // testing a tier string — design R2 leaked a live Follow control to Supporter
-  // on six surfaces doing exactly that. Fails closed: a plan state that never
-  // arrives renders the locked card, which offers an upgrade, rather than live
-  // switches the API would then reject.
-  const artistsLocked = planState === undefined || nfLocked(planState);
   const spotifyConnected = spotify?.status === 'connected';
 
   const refreshDeviceState = useCallback(async () => {
@@ -506,17 +460,21 @@ export const NotificationsSection = ({
             <span className="text-sm font-semibold text-fg">
               {PRODUCT_EMAIL_COPY.label}
             </span>
-            <span id={rowIds.productEmail} className="text-xs text-fg-muted">
-              {productEmailsOn
-                ? PRODUCT_EMAIL_COPY.onDetail
-                : PRODUCT_EMAIL_COPY.offDetail}
-            </span>
+            {/* B+ `more-s-d_notifications` draws the off state with its
+                promise. On, there is nothing to promise, so no line. */}
+            {!productEmailsOn && (
+              <span id={rowIds.productEmail} className="text-xs text-fg-muted">
+                {PRODUCT_EMAIL_COPY.offDetail}
+              </span>
+            )}
           </div>
           <ToggleSwitch
             checked={productEmailsOn}
             onChange={(next) => onToggleSub({ productEmailsEnabled: next })}
             ariaLabel={PRODUCT_EMAIL_COPY.label}
-            ariaDescribedBy={rowIds.productEmail}
+            {...(productEmailsOn
+              ? {}
+              : { ariaDescribedBy: rowIds.productEmail })}
             disabled={patch.isPending}
           />
         </div>
@@ -532,131 +490,79 @@ export const NotificationsSection = ({
           channel that push does not carry must not have its only off-switch
           hidden behind the push master. The two push rows inside still do
           gate on it, because those two really are pushes. */}
-      {planPending ? (
-        <div aria-busy="true" className="flex flex-col gap-2">
-          <div className="h-4 w-32 rounded bg-surface-2" />
-          <div className="h-10 rounded-lg bg-surface-1" />
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <GroupHeading text={ARTISTS_COPY.heading} />
-
-          {artistsLocked ? (
-            // ONE locked card for the whole group, never three dead switches.
-            // A switch that does nothing is the worst version of this screen,
-            // and the card is the only place the upgrade gets offered here.
-            <div className="flex flex-col gap-3 rounded-xl border border-border-strong bg-surface-1 p-4">
-              <div className="flex items-start gap-3">
-                <span aria-hidden className="mt-0.5 shrink-0 text-signal">
-                  <LockGlyph />
-                </span>
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-sm font-semibold text-fg">
-                    {ARTISTS_COPY.locked.title}
-                  </span>
-                  <span className="mt-1 text-xs text-fg-muted">
-                    {ARTISTS_COPY.locked.detail}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPickerOpen(true)}
-                className="inline-flex min-h-[44px] w-fit items-center justify-center rounded-md border border-border-strong px-4 py-2 text-sm font-semibold text-fg"
-              >
-                {ARTISTS_COPY.locked.cta}
-              </button>
-            </div>
-          ) : (
-            <>
-              {masterOn && (
-                <div className="overflow-hidden rounded-lg border border-border bg-surface-1">
-                  <div className="flex min-h-[44px] items-center justify-between gap-3 px-4 py-3">
-                    <div className="flex min-w-0 flex-col">
-                      {/* No New badge here, unlike the digest row below: the
+      <div className="flex flex-col gap-2">
+        <GroupHeading text={ARTISTS_COPY.heading} />
+        {masterOn && (
+          <div className="overflow-hidden rounded-lg border border-border bg-surface-1">
+            <div className="flex min-h-[44px] items-center justify-between gap-3 px-4 py-3">
+              <div className="flex min-w-0 flex-col">
+                {/* No New badge here, unlike the digest row below: the
                           label already opens with the word "New", and the two
                           together read as one confused phrase. */}
-                      <span className="text-sm font-semibold text-fg">
-                        {ARTISTS_COPY.alerts.label}
-                      </span>
-                      <span
-                        id={rowIds.alerts}
-                        className="text-xs text-fg-muted"
-                      >
-                        {ARTISTS_COPY.alerts.detail}
-                      </span>
-                    </div>
-                    <ToggleSwitch
-                      checked={artistAlertsOn}
-                      onChange={(next) =>
-                        onToggleSub({ artistAlertsEnabled: next })
-                      }
-                      ariaLabel={ARTISTS_COPY.alerts.label}
-                      ariaDescribedBy={rowIds.alerts}
-                      disabled={patch.isPending}
-                    />
-                  </div>
-                  {/* Indented sub-row of the above, not a sibling: it only
-                      means anything while the alert it modifies is on. */}
-                  <div className="flex min-h-[44px] items-center justify-between gap-3 border-t border-border py-3 pl-[34px] pr-4">
-                    <div className="flex min-w-0 flex-col">
-                      <span className="text-sm font-semibold text-fg">
-                        {ARTISTS_COPY.autoWatch.label}
-                      </span>
-                      <span
-                        id={rowIds.autoWatch}
-                        className="text-xs text-fg-muted"
-                      >
-                        {ARTISTS_COPY.autoWatch.detail}
-                      </span>
-                    </div>
-                    <ToggleSwitch
-                      checked={artistAutoWatchOn}
-                      onChange={(next) =>
-                        onToggleSub({ artistAutoWatch: next })
-                      }
-                      ariaLabel={ARTISTS_COPY.autoWatch.label}
-                      ariaDescribedBy={rowIds.autoWatch}
-                      disabled={patch.isPending}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
-                <div className="flex min-w-0 flex-col">
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-fg">
-                    {ARTISTS_COPY.digest.label}
-                    <span className="rounded border border-signal px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.12em] text-signal">
-                      {ARTISTS_COPY.newBadge}
-                    </span>
-                  </span>
-                  <span id={rowIds.digest} className="text-xs text-fg-muted">
-                    {ARTISTS_COPY.digest.detail}
-                  </span>
-                </div>
-                <ToggleSwitch
-                  checked={weeklyDigestOn}
-                  onChange={(next) =>
-                    onToggleSub({ weeklyDigestEnabled: next })
-                  }
-                  ariaLabel={ARTISTS_COPY.digest.label}
-                  ariaDescribedBy={rowIds.digest}
-                  disabled={patch.isPending}
-                />
+                <span className="text-sm font-semibold text-fg">
+                  {ARTISTS_COPY.alerts.label}
+                </span>
+                <span id={rowIds.alerts} className="text-xs text-fg-muted">
+                  {ARTISTS_COPY.alerts.detail}
+                </span>
               </div>
+              <ToggleSwitch
+                checked={artistAlertsOn}
+                onChange={(next) => onToggleSub({ artistAlertsEnabled: next })}
+                ariaLabel={ARTISTS_COPY.alerts.label}
+                ariaDescribedBy={rowIds.alerts}
+                disabled={patch.isPending}
+              />
+            </div>
+            {/* Indented sub-row of the above, not a sibling: it only
+                      means anything while the alert it modifies is on. */}
+            <div className="flex min-h-[44px] items-center justify-between gap-3 border-t border-border py-3 pl-[34px] pr-4">
+              <div className="flex min-w-0 flex-col">
+                <span className="text-sm font-semibold text-fg">
+                  {ARTISTS_COPY.autoWatch.label}
+                </span>
+                <span id={rowIds.autoWatch} className="text-xs text-fg-muted">
+                  {ARTISTS_COPY.autoWatch.detail}
+                </span>
+              </div>
+              <ToggleSwitch
+                checked={artistAutoWatchOn}
+                onChange={(next) => onToggleSub({ artistAutoWatch: next })}
+                ariaLabel={ARTISTS_COPY.autoWatch.label}
+                ariaDescribedBy={rowIds.autoWatch}
+                disabled={patch.isPending}
+              />
+            </div>
+          </div>
+        )}
 
-              {/* One set of switches whatever filled the list — without this
-                  a Spotify user goes hunting for a second set in Connections. */}
-              {spotifyConnected && (
-                <p className="text-xs text-fg-muted">
-                  {ARTISTS_COPY.spotifyNote}
-                </p>
-              )}
-            </>
-          )}
+        <div className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-fg">
+              {ARTISTS_COPY.digest.label}
+              <span className="rounded border border-signal px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.12em] text-signal">
+                {ARTISTS_COPY.newBadge}
+              </span>
+            </span>
+            <span id={rowIds.digest} className="text-xs text-fg-muted">
+              {ARTISTS_COPY.digest.detail}
+            </span>
+          </div>
+          <ToggleSwitch
+            checked={weeklyDigestOn}
+            onChange={(next) => onToggleSub({ weeklyDigestEnabled: next })}
+            ariaLabel={ARTISTS_COPY.digest.label}
+            ariaDescribedBy={rowIds.digest}
+            disabled={patch.isPending}
+          />
         </div>
-      )}
+
+        {/* One set of switches whatever filled the list — without this
+                  a Spotify user goes hunting for a second set in Connections. */}
+        {spotifyConnected && (
+          <p className="text-xs text-fg-muted">{ARTISTS_COPY.spotifyNote}</p>
+        )}
+      </div>
 
       {/* ── Shows you're watching ──────────────────────────────────────── */}
       {masterOn && (
@@ -701,17 +607,6 @@ export const NotificationsSection = ({
           states: crew activity is bell-only and stays controllable with push
           switched fully off. */}
       <CrewActivityBlock />
-
-      <TierPickerSheet
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        // No 'follow' entry value exists yet — PR 10 adds it with the
-        // FOLLOW_ANCHOR copy. Until then this matches the artist page's
-        // locked follow tap so both reaches report on one dimension value.
-        entry="paywall"
-      />
     </section>
   );
 };
