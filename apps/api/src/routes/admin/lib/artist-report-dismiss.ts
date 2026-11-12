@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { artists, db } from '@concert-crawl/db';
+import { and, eq } from 'drizzle-orm';
+import { artistReports, artists, db } from '@concert-crawl/db';
 import { closeOpenArtistReports } from '../../../lib/artist-reports.js';
 
 /**
@@ -23,10 +23,20 @@ export const dismissArtistReports = async (
       .from(artists)
       .where(eq(artists.id, artistId));
     if (!artist) return null;
+    // The ids it is about to close, so a Needs you undo can reopen them.
+    const open = await tx
+      .select({ id: artistReports.id })
+      .from(artistReports)
+      .where(
+        and(
+          eq(artistReports.artistId, artistId),
+          eq(artistReports.status, 'open'),
+        ),
+      );
     const closed = await closeOpenArtistReports(tx, {
       artist,
       outcome: 'dismissed',
       resolvedBy,
     });
-    return { slug: artist.slug, closed };
+    return { slug: artist.slug, closed, closedIds: open.map((row) => row.id) };
   });
