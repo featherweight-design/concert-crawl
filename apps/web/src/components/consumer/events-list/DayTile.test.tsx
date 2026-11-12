@@ -22,4 +22,19 @@ describe('DayTile', () => {
       'var(--fg-muted)',
     );
   });
+
+  it('adds the month and takes a tinted gradient for a show tile', () => {
+    render(
+      <DayTile
+        date="2099-03-09"
+        today={false}
+        month
+        tint="var(--genre-soul)"
+      />,
+    );
+    const tile = screen.getByTestId('day-tile');
+    expect(tile.textContent).toBe('Mon9Mar');
+    expect(tile.style.background).toContain('var(--genre-soul)');
+    expect(tile.style.height).toBe('62px');
+  });
 });
