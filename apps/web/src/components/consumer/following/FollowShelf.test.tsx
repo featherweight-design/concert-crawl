@@ -33,6 +33,13 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlementState.current,
 }));
 
+// See all builds its href off the current Browse URL.
+const navState = { pathname: '/events', search: '' };
+vi.mock('next/navigation', () => ({
+  usePathname: () => navState.pathname,
+  useSearchParams: () => new URLSearchParams(navState.search),
+}));
+
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: undefined }),
 }));
@@ -97,6 +104,7 @@ describe('FollowShelf', () => {
       surface: 'visible-active',
     };
     toggle.mockClear();
+    navState.search = '';
   });
 
   // The follow shelf and the Spotify taste shelf compete for one slot on
@@ -131,24 +139,50 @@ describe('FollowShelf', () => {
     expect(art?.style.width).toBe('100%');
   });
 
-  // From lg "Your artists" stops at the cards the 1040 column holds whole.
   const many = (count: number) =>
     Array.from({ length: count }, (_, i) =>
       artist({ key: `k${i}`, name: `Act ${i}` }),
     );
 
-  it('caps your artists at whole cards', () => {
-    renderShelf({ mode: 'some', followCount: 7, artists: many(7) });
-    const rail = screen.getAllByTestId('shelf-card')[0]?.parentElement;
-    expect(rail?.className).toContain('lg:[&>li:nth-child(n+6)]:hidden');
+  // Addendum 2, item 20: up to ten cards that scroll sideways at every width,
+  // with no desktop cap and no end card.
+  it('shows up to ten of your artists on one scrolling rail', () => {
+    renderShelf({ mode: 'some', followCount: 12, artists: many(12) });
+    const cards = screen.getAllByTestId('shelf-card');
+    expect(cards).toHaveLength(10);
+    const rail = cards[0]?.parentElement;
+    expect(rail?.className).toContain('overflow-x-auto');
+    expect(rail?.className).not.toContain('nth-child');
   });
 
-  // The starter picks are a per-session shuffle no page lists, so the rail
-  // keeps scrolling rather than hiding cards it has nowhere to send.
-  it('leaves the starter rail uncapped', () => {
+  it('puts See all on the heading row, in the signal color', () => {
+    renderShelf({ mode: 'some', followCount: 7, artists: many(7) });
+    const seeAll = screen.getByTestId('shelf-see-all');
+    expect(seeAll.textContent).toBe(FOLLOWING_COPY.yoursSeeAll);
+    expect(seeAll.getAttribute('aria-label')).toBe(
+      FOLLOWING_COPY.yoursSeeAllAria,
+    );
+    expect(seeAll.style.color).toBe('var(--signal)');
+    expect(seeAll.parentElement?.querySelector('h2')?.textContent).toBe(
+      FOLLOWING_COPY.yoursTitle,
+    );
+  });
+
+  it('turns on the My artists filter, keeping the other Browse params', () => {
+    navState.search = 'filterVibe=jazz&offset=40';
+    renderShelf({ mode: 'some', followCount: 7, artists: many(7) });
+    const href = screen.getByTestId('shelf-see-all').getAttribute('href');
+    const url = new URL(href ?? '', 'https://example.test');
+    expect(url.pathname).toBe('/events');
+    expect(url.searchParams.get('filterFollowing')).toBe('1');
+    expect(url.searchParams.get('filterVibe')).toBe('jazz');
+    expect(url.searchParams.has('offset')).toBe(false);
+  });
+
+  // The starter picks aren't your artists, so there is no list to see all of.
+  it('gives the starter shelf no See all', () => {
     renderShelf({ mode: 'zero', artists: many(7) });
-    const rail = screen.getAllByTestId('shelf-card')[0]?.parentElement;
-    expect(rail?.className).not.toContain('nth-child');
+    expect(screen.queryByTestId('shelf-see-all')).toBeNull();
   });
 
   // The scale has to be passed, not derived: a fill region cannot tell the

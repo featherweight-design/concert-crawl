@@ -64,6 +64,10 @@ export const FOLLOWING_COPY = {
   // there, and · is the house metadata separator, so the number needs no verb.
   yoursEyebrow: (count: number) => `Your artists · ${count}`,
   yoursTitle: 'Coming to Denver',
+  // On the heading row (addendum 2, item 20): it turns on the My artists
+  // filter in Browse, the same list of shows in full.
+  yoursSeeAll: 'See all',
+  yoursSeeAllAria: 'See all shows by your artists',
 
   // ── Shelf cards ───────────────────────────────────────────────────────
   shelfAria: 'Artists',

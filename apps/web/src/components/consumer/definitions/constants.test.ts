@@ -5,9 +5,6 @@ import {
   SHELF_CARD_BOX_CLASS,
   SHELF_CARD_PHONE,
   SHELF_CARD_WIDE,
-  SHELF_RAIL_CAP_CLASS,
-  SHELF_RAIL_DESKTOP_CARDS,
-  SHELF_RAIL_DESKTOP_GAP,
 } from './constants';
 
 // The box has to be a literal class string for Tailwind's scanner, so these
@@ -24,20 +21,6 @@ describe('browse shelf card box', () => {
     expect(SHELF_CARD_BOX_CLASS).toContain(`sm:w-[${SHELF_CARD_WIDE.width}px]`);
     expect(SHELF_CARD_BOX_CLASS).toContain(
       `sm:h-[${SHELF_CARD_WIDE.height}px]`,
-    );
-  });
-
-  // The board lays five cards on 15px gaps in the 1040 column with room to
-  // spare, and a sixth would overrun it: that is what the cap encodes.
-  it('caps the desktop rail at the cards the column holds whole', () => {
-    const column = 1040;
-    const railOf = (cards: number) =>
-      cards * SHELF_CARD_WIDE.width + (cards - 1) * SHELF_RAIL_DESKTOP_GAP;
-    expect(railOf(SHELF_RAIL_DESKTOP_CARDS)).toBe(960);
-    expect(railOf(SHELF_RAIL_DESKTOP_CARDS)).toBeLessThanOrEqual(column);
-    expect(railOf(SHELF_RAIL_DESKTOP_CARDS + 1)).toBeGreaterThan(column);
-    expect(SHELF_RAIL_CAP_CLASS).toContain(
-      `nth-child(n+${SHELF_RAIL_DESKTOP_CARDS + 1})`,
     );
   });
 
