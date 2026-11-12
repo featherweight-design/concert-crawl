@@ -1,3 +1,11 @@
+## [1.364.1](https://github.com/featherweight-design/concert-crawl/compare/v1.364.0...v1.364.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** restore the admin artists to-check api reverted by 58ace36ca ([074c638](https://github.com/featherweight-design/concert-crawl/commit/074c6389889e9c8eaf1392966e84e3945f107ce5))
+* **web:** wrap long unbroken admin dialog titles inside the box ([adb4885](https://github.com/featherweight-design/concert-crawl/commit/adb48851e6b736b28c23b83ed0c3eeb0f4458103))
+
 # [1.364.0](https://github.com/featherweight-design/concert-crawl/compare/v1.363.0...v1.364.0) (2026-11-12)
 
 
