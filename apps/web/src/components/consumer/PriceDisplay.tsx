@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { PriceSource, SourceCategory } from '@concert-crawl/types';
 import { SubmitPriceModal } from '@/components/consumer/submit-price';
 import { gradientEdge } from '@/lib/gradient-edge';
@@ -831,22 +831,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   const byLine = submitter ? (
     <>
       {' by '}
-      {submitter.url ? (
-        <a
-          href={submitter.url}
-          className="ph-no-capture"
-          style={{
-            color: 'inherit',
-            textDecoration: 'underline',
-            textDecorationColor: 'var(--border-strong)',
-            textUnderlineOffset: 2,
-          }}
-        >
-          @{submitter.handle}
-        </a>
-      ) : (
-        <span className="ph-no-capture">@{submitter.handle}</span>
-      )}
+      <span className="ph-no-capture">@{submitter.handle}</span>
     </>
   ) : (
     <>
@@ -1254,13 +1239,73 @@ export function PriceDisplay({
       ? `$${Math.round(face)}–$${Math.round(faceMax)}`
       : formatUSD(allInFace, { whole: allInFace >= 10 });
 
-  // Mirrors what the footer's rows can draw. StillAccurateAction needs a stamp,
-  // so the stamp covers it.
-  const hasFooter =
-    Boolean(effectiveObservedAt) ||
-    (isCommunity && soldOut && priceObj.submitter != null) ||
-    (sourceName != null && sourceName !== '' && !isBoxOffice) ||
-    priceObj.verification != null;
+  // The footer's first row, derived once: the card draws the footer only when
+  // this list or the verification row has something in it.
+  const footerMono: React.CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 9,
+    color: 'var(--fg-subtle)',
+    letterSpacing: '0.04em',
+  };
+  const footerItems: { key: string; node: React.ReactNode }[] = [];
+  if (effectiveObservedAt) {
+    // StillAccurateAction is gated on the stamp the way MultiTierLiveCard
+    // gates it: with no observation there is nothing to call stale, and
+    // mounting it regardless makes every surface rendering a price depend on
+    // the app router even where the affordance can never appear.
+    footerItems.push({
+      key: 'stamp',
+      node: (
+        <>
+          <StaleStamp observedAt={effectiveObservedAt} />
+          <StillAccurateAction
+            eventId={eventId}
+            submissionId={priceSubmissionId}
+            observedAt={effectiveObservedAt}
+            {...(onSighted ? { onSighted } : {})}
+          />
+        </>
+      ),
+    });
+  }
+  // A sold-out community price names its submitter here. A live one does it in
+  // SubmitterAttribution above, and box office uses BoxOfficeAttribution.
+  if (isCommunity && soldOut && priceObj.submitter) {
+    footerItems.push({
+      key: 'submitter',
+      node: (
+        <span style={footerMono} className="ph-no-capture">
+          @{priceObj.submitter.handle}
+        </span>
+      ),
+    });
+  }
+  // Source name: primary and resale, and a community resale price (SeatGeek).
+  if (sourceName && !isBoxOffice) {
+    footerItems.push({
+      key: 'source',
+      node: sourceUrl ? (
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            ...footerMono,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            textDecoration: 'none',
+          }}
+        >
+          {sourceName}
+          <ExternalIcon />
+        </a>
+      ) : (
+        <span style={footerMono}>{sourceName}</span>
+      ),
+    });
+  }
+  const hasFooter = footerItems.length > 0 || priceObj.verification != null;
 
   return (
     <div
@@ -1287,9 +1332,10 @@ export function PriceDisplay({
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: PRICE_EYEBROW.size,
-              // The board's BOX OFFICE eyebrow is grey like TICKETS; the gold
-              // lives on the badge.
-              color: 'var(--fg-subtle)',
+              // The board's live BOX OFFICE eyebrow is grey like TICKETS; the
+              // gold lives on the badge. Sold out drops the badge and no board
+              // draws that state, so its eyebrow keeps the gold it had.
+              color: soldOut && isBoxOffice ? GOLD : 'var(--fg-subtle)',
               letterSpacing: PRICE_EYEBROW.tracking,
               textTransform: 'uppercase',
             }}
@@ -1537,132 +1583,28 @@ export function PriceDisplay({
             borderTop: '1px solid var(--border)',
           }}
         >
-          {/* Row 1: stale stamp, submitter handle (community/boxoffice), source name (primary/resale) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              flexWrap: 'wrap',
-            }}
-          >
-            <StaleStamp observedAt={effectiveObservedAt} />
-            {/* Gated on the stamp the way MultiTierLiveCard gates it: with no
-              observation there is nothing to call stale, and mounting the
-              action regardless makes every surface rendering a price depend on
-              the app router even where the affordance can never appear. */}
-            {effectiveObservedAt && (
-              <StillAccurateAction
-                eventId={eventId}
-                submissionId={priceSubmissionId}
-                observedAt={effectiveObservedAt}
-                {...(onSighted ? { onSighted } : {})}
-              />
-            )}
-            {/* Submitter handle — a sold-out community price only. A live one
-              names its submitter in SubmitterAttribution above, and boxoffice
-              uses BoxOfficeAttribution. */}
-            {isCommunity && soldOut && priceObj.submitter && (
-              <>
-                {effectiveObservedAt && (
-                  <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
-                    ·
-                  </span>
-                )}
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
-                    color: 'var(--fg-subtle)',
-                    letterSpacing: '0.04em',
-                  }}
-                  className="ph-no-capture"
-                >
-                  @{priceObj.submitter.handle}
-                </span>
-              </>
-            )}
-            {/* Source name — primary and resale tiers */}
-            {sourceName && !isCommunity && !isBoxOffice && (
-              <>
-                {effectiveObservedAt && (
-                  <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
-                    ·
-                  </span>
-                )}
-                {sourceUrl ? (
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      color: 'var(--fg-subtle)',
-                      textDecoration: 'none',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {sourceName}
-                    <ExternalIcon />
-                  </a>
-                ) : (
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      color: 'var(--fg-subtle)',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {sourceName}
-                  </span>
-                )}
-              </>
-            )}
-            {/* Source name for resale community tier (e.g. SeatGeek) */}
-            {sourceName && isCommunity && (
-              <>
-                <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
-                  ·
-                </span>
-                {sourceUrl ? (
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 3,
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      color: 'var(--fg-subtle)',
-                      textDecoration: 'none',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {sourceName}
-                    <ExternalIcon />
-                  </a>
-                ) : (
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      color: 'var(--fg-subtle)',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {sourceName}
-                  </span>
-                )}
-              </>
-            )}
-          </div>
+          {/* Row 1: stale stamp, sold-out submitter, source name, dot-separated */}
+          {footerItems.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              {footerItems.map((item, idx) => (
+                <Fragment key={item.key}>
+                  {idx > 0 && (
+                    <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
+                      ·
+                    </span>
+                  )}
+                  {item.node}
+                </Fragment>
+              ))}
+            </div>
+          )}
           {/* Row 2: verification — "Verified by the team" (admin) or "Verified by @handle" (fan) */}
           {priceObj.verification && (
             <div style={{ marginTop: 5 }}>
