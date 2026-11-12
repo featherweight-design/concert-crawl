@@ -151,6 +151,7 @@ Contradictions #178 itself introduces. Build #178's ruling meanwhile.
 | #154 avatar | #178 item 25 says "solid band". | [Design] A single-colour avatar draws a faint stripe overlay. Solid, or the stripe? |
 | #144 account row | Name from @handle or the display name. | [Design] What the row shows when the user has neither a handle nor a display name. |
 | #156 glyphs | Mail and document glyphs. | [Design] Not addressed by #178 item 25. Which glyphs? |
+| #143 launch animation, desktop standalone install | The landing point and sizes are drawn for phone only. | [Design] No board draws the animation in an installed desktop window. Where does it land, and at what sizes? |
 
 Lane 11's two rows (the 640 offline top nav and the 320 hero title) are already in "Undrawn widths (lane 11)".
 
