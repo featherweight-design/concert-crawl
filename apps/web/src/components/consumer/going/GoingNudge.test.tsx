@@ -6,6 +6,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { GoingNudge } from './GoingNudge';
 import { GOING_COPY } from './definitions/copy';
 import { stampColorsFor } from '@/components/consumer/venue-stamp';
+import { ThemeProvider } from '@/theme';
 
 afterEach(cleanup);
 
@@ -127,6 +128,39 @@ describe('GoingNudge', () => {
       /#a075ff|rgb\(160, 117, 255\)/,
     );
     expect(yes.getAttribute('style')).not.toContain('color-mix');
+  });
+
+  // The boards' `--bg` ink holds AA on the dark themes.
+  it('inks "Yes, going" in --bg on a dark theme', () => {
+    renderNudge();
+    const yes = screen.getByRole('button', { name: GOING_COPY.nudge.yes });
+    expect(yes.style.color).toBe('var(--bg)');
+  });
+
+  // On Light, `--bg` on Bluebird's #4DA3FF is 2.55:1 (the palest fills reach
+  // about 1.2:1, see pill-ink.test.ts), so the ink flips to
+  // `--fg` and the disc behind the check flips to the pale `--bg`.
+  it('inks "Yes, going" in --fg on Light, where --bg fails AA', () => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    try {
+      render(
+        <ThemeProvider>
+          <GoingNudge
+            show={{ ...SHOW, venueSlug: 'bluebird-theater' }}
+            onYes={vi.fn()}
+            onDismiss={vi.fn()}
+          />
+        </ThemeProvider>,
+      );
+      const yes = screen.getByRole('button', { name: GOING_COPY.nudge.yes });
+      expect(yes.style.color).toBe('var(--fg)');
+      expect(
+        screen.getByTestId('going-nudge-yes-icon').parentElement?.style
+          .background,
+      ).toBe('color-mix(in oklch, var(--bg) 85%, transparent)');
+    } finally {
+      document.documentElement.removeAttribute('data-theme');
+    }
   });
 
   // Audit row (`bp-watching`): the pill leads with the stamp motif, a dashed

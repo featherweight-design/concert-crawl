@@ -17,6 +17,8 @@ import type { WatchingShow } from '@concert-crawl/types';
 import { GOING_COPY } from './definitions/copy';
 import { VenueStamp, stampColorsFor } from '@/components/consumer/venue-stamp';
 import { daysUntilLabel } from '@/lib/going/nudge-window';
+import { useThemeName } from '@/theme';
+import { pillInkFor } from './lib/pill-ink';
 
 type GoingNudgeProps = {
   show: Pick<WatchingShow, 'artist' | 'date' | 'venueSlug' | 'venueName'>;
@@ -89,6 +91,10 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
   // colour the stamp takes once the night is attended. Pure hex, as the stamp
   // boards draw it; the banner's tints come from the same colour.
   const accent = stampColorsFor(show.venueSlug).ring;
+  // The boards draw `--bg` ink on that fill, all on dark themes. On Light the
+  // pale venue colours fall to about 1.2:1 with `--bg`, so the ink is picked
+  // by contrast: `--bg` where it reaches AA, else `--fg` (`pillInkFor`).
+  const ink = pillInkFor(accent, useThemeName());
 
   return (
     <div
@@ -172,7 +178,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           padding: '7px 12px 7px 7px',
           borderRadius: 999,
           background: accent,
-          color: 'var(--bg)',
+          color: ink.text,
           fontSize: 12,
           fontWeight: 800,
           letterSpacing: '-0.005em',
@@ -191,8 +197,9 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
             width: 18,
             height: 18,
             borderRadius: '50%',
-            // The pale disc the boards draw the stamp motif on.
-            background: 'color-mix(in oklch, var(--fg) 85%, transparent)',
+            // The pale disc the boards draw the stamp motif on: the token the
+            // ink did not take, so the check always contrasts with it.
+            background: `color-mix(in oklch, ${ink.disc} 85%, transparent)`,
           }}
         >
           <StampCheckIcon />

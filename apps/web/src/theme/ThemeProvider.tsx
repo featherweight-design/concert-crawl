@@ -74,6 +74,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The active theme's name for a component that only reads it, falling back to
+ * Electric (the `:root` SSR default) outside a provider rather than throwing.
+ */
+export function useThemeName(): ThemeName {
+  return useContext(ThemeContext)?.theme ?? 'electric';
+}
+
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
