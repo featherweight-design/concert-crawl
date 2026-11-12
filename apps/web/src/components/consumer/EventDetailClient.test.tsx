@@ -98,6 +98,9 @@ afterEach(() => {
   cleanup();
 });
 
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
+
 // Imported after mocks so vi.mock takes effect.
 import { EventDetailBanners, EventDetailPriceBlock } from './EventDetailClient';
 
@@ -379,6 +382,25 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
         />,
       );
       expect(screen.queryByText('Submit another price')).toBeNull();
+    });
+
+    // No longer listed is stored as cancelled, but nobody confirmed it, so the
+    // price surfaces keep inviting a submission (B+ A5, isCancelledForDetail).
+    it('is offered for a No longer listed event', () => {
+      render(
+        <EventDetailPriceBlock
+          event={buildBaseEvent({
+            status: 'cancelled',
+            delistedAt: '2026-11-04T10:00:00.000Z',
+            priceByTier: [
+              makeTierBlock({ tier: 'GA', headline: boxOfficeHeadline }),
+            ],
+          })}
+          reports={[]}
+          currentUserId={null}
+        />,
+      );
+      expect(screen.getByText('Submit another price')).toBeDefined();
     });
   });
 
@@ -1379,6 +1401,66 @@ describe('EventDetailBanners pending report', () => {
       />,
     );
     expect(screen.queryByText('1 of 2')).toBeNull();
+  });
+});
+
+describe('EventDetailBanners No longer listed', () => {
+  const delistedEvent = () =>
+    buildBaseEvent({
+      status: 'cancelled',
+      delistedAt: '2026-11-04T10:00:00.000Z',
+    });
+
+  it('mounts the neutral card and suppresses the red Cancelled banner', () => {
+    render(
+      <EventDetailBanners
+        event={delistedEvent()}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(
+      screen.getByRole('status', {
+        name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(REPORTING_COPY.liveReportBanner.headlines.cancelled),
+    ).toBeNull();
+  });
+
+  it('still shows the Cancelled banner for a confirmed cancellation', () => {
+    render(
+      <EventDetailBanners
+        event={buildBaseEvent({ status: 'cancelled', delistedAt: null })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(
+      screen.getByText(REPORTING_COPY.liveReportBanner.headlines.cancelled),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('status', {
+        name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
+      }),
+    ).toBeNull();
+  });
+
+  it('keeps a pending postponement report visible under the card', () => {
+    render(
+      <EventDetailBanners
+        event={delistedEvent()}
+        reports={[buildReport({ status: 'postponed', isReporter: true })]}
+        currentUserId="user-reporter"
+      />,
+    );
+    expect(
+      screen.getByRole('status', {
+        name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('Withdraw')).toBeTruthy();
   });
 });
 
