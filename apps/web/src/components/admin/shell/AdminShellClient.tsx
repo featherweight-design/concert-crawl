@@ -1,218 +1,98 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import * as LucideIcons from 'lucide-react';
-import { Menu } from 'lucide-react';
-import { AdminSidebar } from './AdminSidebar';
-import { AdminTopbar } from './AdminTopbar';
-import { MobileBottomBar } from './MobileBottomBar';
-import { MobileDrawer } from './MobileDrawer';
-import { AppSwitcher } from './AppSwitcher';
-import { NAV_V2, type AdminBadgeCounts } from './nav';
-import { PageTitleProvider, usePageTitle } from './PageTitleContext';
-
-const MOBILE_BREAKPOINT = 720;
+import { useEffect, useState } from 'react';
+import { AdminSidebar, SIDEBAR_WIDTH } from './AdminSidebar';
+import { AdminPhoneHeader, AdminTopbar } from './AdminTopbar';
+import { MobileBottomBar, TAB_BAR_HEIGHT } from './MobileBottomBar';
+import { MOBILE_BREAKPOINT, type AdminBadgeCounts } from './nav';
+import type { AdminShellUser } from './AdminAvatar';
 
 interface AdminShellClientProps {
   badgeCounts: AdminBadgeCounts;
-  user: { firstName: string | null; email: string };
+  user: AdminShellUser;
   children: React.ReactNode;
 }
 
-const NavIcon = ({ name, size }: { name: string; size: number }) => {
-  const Icon = (
-    LucideIcons as unknown as Record<
-      string,
-      React.ComponentType<{ size: number }>
-    >
-  )[name];
-  return Icon ? <Icon size={size} /> : null;
+const useIsPhone = (): boolean | null => {
+  const [isPhone, setIsPhone] = useState<boolean | null>(null);
+  useEffect(() => {
+    const query = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const update = () => setIsPhone(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return isPhone;
 };
 
-const MobileTopbar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
-  const { pageTitle } = usePageTitle();
-  const pathname = usePathname();
-  const activeItem = NAV_V2.find(
-    (item) =>
-      pathname === item.href ||
-      (item.href !== '/admin' && pathname.startsWith(item.href)),
-  );
-  const title = pageTitle ?? activeItem?.label ?? 'Admin';
-
-  return (
-    <header
+const PhoneShell = ({ badgeCounts, user, children }: AdminShellClientProps) => (
+  <div
+    style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}
+  >
+    <main
       style={{
-        height: 52,
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '0 14px',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--bg-elevated)',
+        flex: 1,
+        minWidth: 0,
+        overflowY: 'auto',
+        paddingBottom: TAB_BAR_HEIGHT + 20,
       }}
     >
-      <button
-        onClick={onMenuOpen}
-        aria-label="Open navigation menu"
-        style={{
-          padding: 8,
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'var(--fg-muted)',
-          borderRadius: 8,
-          display: 'flex',
-        }}
-      >
-        <Menu size={18} />
-      </button>
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-        }}
-      >
-        {activeItem && <NavIcon name={activeItem.iconName} size={16} />}
-        <span
-          style={{
-            fontFamily: 'var(--admin-font, Inter, sans-serif)',
-            fontSize: 15,
-            fontWeight: 700,
-            color: 'var(--fg)',
-            letterSpacing: '-0.01em',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {title}
-        </span>
-      </div>
-      <AppSwitcher size="sm" />
-    </header>
-  );
-};
+      <AdminPhoneHeader user={user} />
+      <div style={{ padding: '0 16px' }}>{children}</div>
+    </main>
+    <MobileBottomBar badgeCounts={badgeCounts} />
+  </div>
+);
 
-const ShellInner = ({
+const DesktopShell = ({
   badgeCounts,
   user,
-  isMobile,
   children,
-}: AdminShellClientProps & { isMobile: boolean }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+}: AdminShellClientProps) => (
+  <div style={{ display: 'flex', height: '100%', width: '100%' }}>
+    <AdminSidebar badgeCounts={badgeCounts} user={user} />
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <AdminTopbar />
+      <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+        {children}
+      </main>
+    </div>
+  </div>
+);
 
-  if (isMobile) {
+export const AdminShellClient = (props: AdminShellClientProps) => {
+  const isPhone = useIsPhone();
+
+  // Before the media query resolves, hold the sidebar's space so the page
+  // doesn't jump when the shell mounts.
+  if (isPhone === null) {
     return (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--bg)',
-          color: 'var(--fg)',
-          fontFamily: 'var(--admin-font, Inter, sans-serif)',
-          position: 'relative',
-        }}
-      >
-        <MobileTopbar onMenuOpen={() => setDrawerOpen(true)} />
-        <main
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '16px 14px 84px',
-            background: 'var(--bg)',
-          }}
-        >
-          {children}
-        </main>
-        <MobileBottomBar badgeCounts={badgeCounts} />
-        <MobileDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          badgeCounts={badgeCounts}
-          user={user}
-        />
+      <div style={{ display: 'flex', height: '100%', width: '100%' }}>
+        <div style={{ width: SIDEBAR_WIDTH, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>{props.children}</div>
       </div>
     );
   }
 
   return (
     <div
-      style={{
-        display: 'flex',
-        height: '100%',
-        width: '100%',
-      }}
+      data-testid="admin-shell"
+      style={{ display: 'flex', height: '100%', width: '100%' }}
     >
-      <AdminSidebar badgeCounts={badgeCounts} user={user} />
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <AdminTopbar />
-        <main
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '24px 28px',
-            background: 'var(--bg)',
-          }}
-        >
-          {children}
-        </main>
-      </div>
+      {isPhone ? <PhoneShell {...props} /> : <DesktopShell {...props} />}
     </div>
-  );
-};
-
-export const AdminShellClient = ({
-  badgeCounts,
-  user,
-  children,
-}: AdminShellClientProps) => {
-  const [isMobile, setIsMobile] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          height: '100%',
-          width: '100%',
-        }}
-      >
-        <div style={{ width: 240, flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>{children}</div>
-      </div>
-    );
-  }
-
-  return (
-    <PageTitleProvider>
-      <ShellInner badgeCounts={badgeCounts} user={user} isMobile={isMobile}>
-        {children}
-      </ShellInner>
-    </PageTitleProvider>
   );
 };

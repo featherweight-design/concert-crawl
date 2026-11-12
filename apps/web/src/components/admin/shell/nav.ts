@@ -1,114 +1,222 @@
-export type NavKind = 'danger' | 'warning' | 'signal';
+import {
+  Activity,
+  Calendar,
+  Flag,
+  Inbox,
+  KeyRound,
+  MapPin,
+  Music,
+  RefreshCw,
+  Tag,
+  Users,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-/** What the sidebar and bottom bar badge, keyed by the nav item's key. */
+/**
+ * Below this width the shell swaps the sidebar for the 4-tab bar. The 640
+ * column of every admin inventory therefore shows the phone shell on purpose:
+ * a 232px sidebar would leave 408px for tables (plan decision 16).
+ */
+export const MOBILE_BREAKPOINT = 720;
+
+/** The one badge in admin: decisions waiting in Needs you (plan decision 13). */
 export interface AdminBadgeCounts {
-  crawl: number;
-  review: number;
-  feedback: number;
-  /** Artists with an open wrong-artist report. */
-  artists: number;
+  needsYou: number;
 }
 
-export const badgeCountFor = (
-  key: string,
-  counts: AdminBadgeCounts | undefined,
-): number => {
-  if (!counts) return 0;
-  if (key === 'crawl') return counts.crawl;
-  if (key === 'review') return counts.review;
-  if (key === 'artists') return counts.artists;
-  if (key === 'feedback') return counts.feedback;
-  return 0;
-};
+export type NavGroup = 'primary' | 'manage' | 'system';
+
+export type NavKey =
+  | 'needs-you'
+  | 'health'
+  | 'venues'
+  | 'events'
+  | 'artists'
+  | 'prices'
+  | 'people'
+  | 'feature-flags'
+  | 'invite-codes'
+  | 'crawl-runs'
+  | 'operations';
 
 export interface NavItem {
-  key: string;
+  key: NavKey;
   label: string;
+  /**
+   * Interim hrefs until each page's phase lands (plan decision 14). Labels and
+   * order are final.
+   */
   href: string;
-  iconName: string;
-  badge?: {
-    count: number;
-    kind: NavKind;
-  };
-  section: 'operations' | 'account';
+  icon: LucideIcon;
+  group: NavGroup;
 }
 
-export const NAV_V2: NavItem[] = [
+const navCopy = ADMIN_COPY.shell.nav;
+
+export const NAV: NavItem[] = [
   {
-    key: 'dashboard',
-    label: 'Dashboard',
+    key: 'needs-you',
+    label: navCopy.needsYou,
+    href: '/admin/review',
+    icon: Inbox,
+    group: 'primary',
+  },
+  {
+    key: 'health',
+    label: navCopy.health,
     href: '/admin',
-    iconName: 'LayoutDashboard',
-    section: 'operations',
+    icon: Activity,
+    group: 'primary',
   },
   {
     key: 'venues',
-    label: 'Venues',
+    label: navCopy.venues,
     href: '/admin/venues',
-    iconName: 'MapPin',
-    section: 'operations',
+    icon: MapPin,
+    group: 'manage',
   },
   {
-    key: 'crawl',
-    label: 'Crawl',
-    href: '/admin/crawl',
-    iconName: 'RefreshCw',
-    badge: { count: 0, kind: 'danger' },
-    section: 'operations',
-  },
-  {
-    key: 'review',
-    label: 'Review',
-    href: '/admin/review',
-    iconName: 'CalendarCheck',
-    badge: { count: 0, kind: 'warning' },
-    section: 'operations',
+    key: 'events',
+    label: navCopy.events,
+    href: '/admin/review?tab=all-events',
+    icon: Calendar,
+    group: 'manage',
   },
   {
     key: 'artists',
-    label: 'Artists',
+    label: navCopy.artists,
     href: '/admin/artists',
-    iconName: 'Music',
-    badge: { count: 0, kind: 'warning' },
-    section: 'operations',
+    icon: Music,
+    group: 'manage',
   },
   {
-    key: 'feedback',
-    label: 'Feedback',
-    href: '/admin/feedback',
-    iconName: 'Inbox',
-    badge: { count: 0, kind: 'signal' },
-    section: 'operations',
+    key: 'prices',
+    label: navCopy.prices,
+    href: '/admin/review?tab=prices',
+    icon: Tag,
+    group: 'manage',
+  },
+  {
+    key: 'people',
+    label: navCopy.people,
+    href: '/admin/users',
+    icon: Users,
+    group: 'manage',
   },
   {
     key: 'feature-flags',
-    label: 'Feature flags',
+    label: navCopy.featureFlags,
     href: '/admin/feature-flags',
-    iconName: 'ToggleLeft',
-    section: 'account',
+    icon: Flag,
+    group: 'manage',
   },
   {
-    key: 'users',
-    label: 'Users',
-    href: '/admin/users',
-    iconName: 'Users',
-    section: 'account',
-  },
-  {
+    // Interim row until 5b moves invite codes under People, so the page is
+    // never orphaned (plan decision 14).
     key: 'invite-codes',
-    label: 'Invite codes',
+    label: navCopy.inviteCodes,
     href: '/admin/invite-codes',
-    iconName: 'Key',
-    section: 'account',
+    icon: KeyRound,
+    group: 'manage',
   },
   {
-    key: 'settings',
-    label: 'Settings',
-    href: '/admin/settings',
-    iconName: 'Settings',
-    section: 'account',
+    key: 'crawl-runs',
+    label: navCopy.crawlRuns,
+    href: '/admin/crawl',
+    icon: RefreshCw,
+    group: 'system',
+  },
+  {
+    key: 'operations',
+    label: navCopy.operations,
+    href: '/admin/feedback',
+    icon: Wrench,
+    group: 'system',
   },
 ];
 
-/** @deprecated Use NAV_V2 */
-export const NAV = NAV_V2;
+export const NAV_GROUPS: NavGroup[] = ['primary', 'manage', 'system'];
+
+export const navItem = (key: NavKey): NavItem => {
+  const item = NAV.find((candidate) => candidate.key === key);
+  if (!item) throw new Error(`Unknown admin nav key: ${key}`);
+  return item;
+};
+
+/** Only Needs you carries a badge. */
+export const badgeCountFor = (
+  key: NavKey,
+  counts: AdminBadgeCounts | undefined,
+): number => (key === 'needs-you' ? (counts?.needsYou ?? 0) : 0);
+
+/** The first three tabs of the phone tab bar; More covers the rest. */
+export const TAB_BAR: Array<NavKey | 'more'> = [
+  'needs-you',
+  'venues',
+  'events',
+  'more',
+];
+
+export const MORE_HREF = '/admin/more';
+
+const REVIEW_TAB_TO_KEY: Record<string, NavKey> = {
+  'all-events': 'events',
+  prices: 'prices',
+  submissions: 'prices',
+};
+
+/**
+ * Review's tabs are split across Needs you, Events and Prices until 2b, 4b
+ * and 4d move them. The event editor carries `?from=<review tab>`, so it
+ * follows the tab it was opened from and defaults to Events.
+ */
+const keyForReviewTab = (tab: string | null, fallback: NavKey): NavKey => {
+  if (tab === null) return fallback;
+  return REVIEW_TAB_TO_KEY[tab] ?? 'needs-you';
+};
+
+const PREFIXES: Array<[string, NavKey]> = [
+  ['/admin/venues', 'venues'],
+  ['/admin/artists', 'artists'],
+  ['/admin/prices', 'prices'],
+  ['/admin/users', 'people'],
+  ['/admin/people', 'people'],
+  ['/admin/feature-flags', 'feature-flags'],
+  ['/admin/invite-codes', 'invite-codes'],
+  ['/admin/crawl', 'crawl-runs'],
+  ['/admin/feedback', 'operations'],
+  ['/admin/operations', 'operations'],
+  ['/admin/settings', 'operations'],
+  ['/admin/needs-you', 'needs-you'],
+];
+
+const matchesPrefix = (pathname: string, prefix: string): boolean =>
+  pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+/** The nav item that owns a route, or null for More and unknown paths. */
+export const activeNavKey = (
+  pathname: string,
+  searchParams?: Pick<URLSearchParams, 'get'> | null,
+): NavKey | null => {
+  if (pathname === '/admin') return 'health';
+  if (matchesPrefix(pathname, '/admin/review')) {
+    if (pathname !== '/admin/review') return 'needs-you';
+    return keyForReviewTab(searchParams?.get('tab') ?? null, 'needs-you');
+  }
+  if (matchesPrefix(pathname, '/admin/events')) {
+    return keyForReviewTab(searchParams?.get('from') ?? null, 'events');
+  }
+  const match = PREFIXES.find(([prefix]) => matchesPrefix(pathname, prefix));
+  return match ? match[1] : null;
+};
+
+/** The phone tab bar's active tab: More owns every route but the first three. */
+export const activeTabKey = (
+  pathname: string,
+  searchParams?: Pick<URLSearchParams, 'get'> | null,
+): NavKey | 'more' => {
+  const key = activeNavKey(pathname, searchParams);
+  return key !== null && TAB_BAR.includes(key) ? key : 'more';
+};

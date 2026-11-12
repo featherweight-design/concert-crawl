@@ -245,6 +245,13 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
+    // The phone's More tab (admin 0a). It renders at every width.
+    id: 'admin-more',
+    path: '/admin/more',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
     id: 'admin-settings',
     path: '/admin/settings',
     tags: ['admin'],

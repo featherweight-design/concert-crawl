@@ -1,111 +1,121 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
-import Link from 'next/link';
-import { NAV_V2 } from './nav';
-import { buildBreadcrumbs } from './breadcrumbs';
-import { usePageTitle } from './PageTitleContext';
-import { AppSwitcher } from './AppSwitcher';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { buildBreadcrumbs, type Crumb } from './breadcrumbs';
+import { usePageTitle } from './PageTitleContext';
+import { EnvironmentBadge } from './EnvironmentBadge';
+import { PhoneUserMenu } from './AdminUserMenu';
+import type { AdminShellUser } from './AdminAvatar';
 
-const useBreadcrumbs = (pageTitle: string | null) => {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const crumbs = buildBreadcrumbs(pathname, NAV_V2, searchParams);
-  if (pageTitle && crumbs.length > 0) {
+const useCrumbs = (): Crumb[] => {
+  const { pageTitle } = usePageTitle();
+  const crumbs = buildBreadcrumbs(usePathname(), useSearchParams());
+  if (pageTitle && crumbs.length > 1) {
     return [...crumbs.slice(0, -1), { label: pageTitle }];
   }
   return crumbs;
 };
 
+/** Desktop: where you are, and which admin you're in. */
 export const AdminTopbar = () => {
-  const { pageTitle } = usePageTitle();
-  const crumbs = useBreadcrumbs(pageTitle);
-
+  const crumbs = useCrumbs();
   return (
     <header
       style={{
-        // Match the sidebar logo header (64px, `AdminSidebar.tsx`) so the
-        // two bottom borders sit on the same horizontal line where the
-        // columns meet — the 8px gap between them read as a misalignment.
-        height: 64,
+        height: 56,
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 24px',
-        gap: 16,
+        gap: 12,
+        padding: '0 28px',
         borderBottom: '1px solid var(--border)',
-        background: 'var(--bg-elevated)',
+        fontSize: 13.5,
       }}
     >
-      <div
+      <nav
+        aria-label={ADMIN_COPY.shell.topbar.breadcrumbAriaLabel}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
           flex: 1,
           minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
         }}
       >
-        <AppSwitcher />
-        <span
-          style={{
-            width: 1,
-            height: 18,
-            background: 'var(--border)',
-            flexShrink: 0,
-          }}
-        />
-        <nav
-          aria-label={ADMIN_COPY.shell.topbar.breadcrumbAriaLabel}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            minWidth: 0,
-          }}
-        >
-          {crumbs.map((crumb, idx) => (
-            <span
-              key={crumb.label}
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-            >
-              {idx > 0 && <ChevronRight size={12} color="var(--fg-subtle)" />}
-              {crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  style={{
-                    fontFamily: 'var(--admin-font, Inter, sans-serif)',
-                    fontSize: 13,
-                    fontWeight: idx === crumbs.length - 1 ? 600 : 500,
-                    color: 'var(--fg-muted)',
-                    textDecoration: 'none',
-                    letterSpacing: '-0.005em',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span
-                  style={{
-                    fontFamily: 'var(--admin-font, Inter, sans-serif)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.005em',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {crumb.label}
-                </span>
-              )}
-            </span>
-          ))}
-        </nav>
-      </div>
+        {crumbs.map((crumb, index) => (
+          <span
+            key={crumb.label}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            {index > 0 && (
+              <ChevronRight size={12} color="var(--fg-subtle)" aria-hidden />
+            )}
+            {crumb.href ? (
+              <Link
+                href={crumb.href}
+                style={{
+                  color: 'var(--fg-muted)',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span
+                aria-current="page"
+                style={{
+                  color: 'var(--fg)',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {crumb.label}
+              </span>
+            )}
+          </span>
+        ))}
+      </nav>
+      <EnvironmentBadge />
+    </header>
+  );
+};
+
+/** Phone: the page title and your avatar, which opens the user menu. */
+export const AdminPhoneHeader = ({ user }: { user: AdminShellUser }) => {
+  const crumbs = useCrumbs();
+  const title = crumbs[crumbs.length - 1]?.label ?? '';
+  return (
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '16px 16px 12px',
+      }}
+    >
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          fontSize: 24,
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
+          color: 'var(--fg)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {title}
+      </span>
+      <PhoneUserMenu user={user} />
     </header>
   );
 };

@@ -1,31 +1,114 @@
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { NAV, badgeCountFor } from './nav';
+import {
+  NAV,
+  NAV_GROUPS,
+  TAB_BAR,
+  MORE_HREF,
+  activeNavKey,
+  activeTabKey,
+  badgeCountFor,
+} from './nav';
 
-describe('NAV config', () => {
-  it('invite-codes item uses Key icon', () => {
-    const item = NAV.find((navItem) => navItem.key === 'invite-codes');
-    expect(item).toBeDefined();
-    expect(item?.iconName).toBe('Key');
+const ADMIN_APP_DIR = path.resolve(__dirname, '../../../app/(protected)/admin');
+
+const routeFileFor = (href: string): string => {
+  const pathname = href.split('?')[0] ?? href;
+  const rest = pathname.replace(/^\/admin\/?/, '');
+  return path.join(ADMIN_APP_DIR, rest, 'page.tsx');
+};
+
+describe('admin NAV', () => {
+  it('orders the groups primary, manage, system with no group split', () => {
+    const groups = NAV.map((item) => item.group);
+    const order = groups.filter(
+      (group, index) => index === 0 || groups[index - 1] !== group,
+    );
+    expect(order).toEqual(NAV_GROUPS);
   });
 
-  it('all operations items come before account items', () => {
-    const sections = NAV.map((navItem) => navItem.section);
-    const firstAccount = sections.indexOf('account');
-    const lastOperations = sections.lastIndexOf('operations');
-    expect(lastOperations).toBeLessThan(firstAccount);
+  it('lists the drawn order', () => {
+    expect(NAV.map((item) => item.key)).toEqual([
+      'needs-you',
+      'health',
+      'venues',
+      'events',
+      'artists',
+      'prices',
+      'people',
+      'feature-flags',
+      'invite-codes',
+      'crawl-runs',
+      'operations',
+    ]);
   });
 
-  it('dashboard is the first nav item', () => {
-    expect(NAV[0]?.key).toBe('dashboard');
+  it.each([...NAV.map((item) => item.href), MORE_HREF])(
+    'points %s at a route that exists',
+    (href) => {
+      expect(existsSync(routeFileFor(href))).toBe(true);
+    },
+  );
+
+  it('badges only Needs you', () => {
+    const counts = { needsYou: 14 };
+    for (const item of NAV) {
+      expect(badgeCountFor(item.key, counts)).toBe(
+        item.key === 'needs-you' ? 14 : 0,
+      );
+    }
+    expect(badgeCountFor('needs-you', undefined)).toBe(0);
   });
 
-  it('badges Artists with the open report count, in the warning colour', () => {
-    const item = NAV.find((navItem) => navItem.key === 'artists');
-    expect(item?.badge?.kind).toBe('warning');
-    const counts = { crawl: 1, review: 2, feedback: 3, artists: 4 };
-    expect(badgeCountFor('artists', counts)).toBe(4);
-    expect(badgeCountFor('feedback', counts)).toBe(3);
-    expect(badgeCountFor('artists', undefined)).toBe(0);
-    expect(badgeCountFor('venues', counts)).toBe(0);
+  it('never says Tools', () => {
+    const source = readFileSync(path.join(__dirname, 'nav.ts'), 'utf8');
+    expect(source).not.toMatch(/\bTools\b/);
+    expect(NAV.some((item) => /tools/i.test(item.label))).toBe(false);
+  });
+
+  it('has the 4-tab bar', () => {
+    expect(TAB_BAR).toEqual(['needs-you', 'venues', 'events', 'more']);
+  });
+});
+
+describe('activeNavKey', () => {
+  const params = (query: string) => new URLSearchParams(query);
+
+  it.each([
+    ['/admin', '', 'health'],
+    ['/admin/review', '', 'needs-you'],
+    ['/admin/review', 'tab=missing', 'needs-you'],
+    ['/admin/review', 'tab=all-events', 'events'],
+    ['/admin/review', 'tab=prices', 'prices'],
+    ['/admin/review', 'tab=submissions', 'prices'],
+    ['/admin/review/contests/abc', '', 'needs-you'],
+    ['/admin/events/abc/edit', '', 'events'],
+    ['/admin/events/abc/edit', 'from=event-flags', 'needs-you'],
+    ['/admin/events/abc/edit', 'from=all-events', 'events'],
+    ['/admin/venues/abc', '', 'venues'],
+    ['/admin/users/abc', '', 'people'],
+    ['/admin/invite-codes/posters', '', 'invite-codes'],
+    ['/admin/crawl', '', 'crawl-runs'],
+    ['/admin/feedback', '', 'operations'],
+    ['/admin/feature-flags', '', 'feature-flags'],
+    ['/admin/more', '', null],
+    ['/admin/venuesx', '', null],
+  ])('%s?%s is %s', (pathname, query, expected) => {
+    expect(activeNavKey(pathname, params(query))).toBe(expected);
+  });
+});
+
+describe('activeTabKey', () => {
+  it('makes More active for a route outside the first three tabs', () => {
+    expect(activeTabKey('/admin/feature-flags')).toBe('more');
+    expect(activeTabKey('/admin/more')).toBe('more');
+    expect(activeTabKey('/admin')).toBe('more');
+  });
+
+  it('keeps the first three tabs active on their own routes', () => {
+    expect(activeTabKey('/admin/review')).toBe('needs-you');
+    expect(activeTabKey('/admin/venues/abc')).toBe('venues');
+    expect(activeTabKey('/admin/events/abc/edit')).toBe('events');
   });
 });

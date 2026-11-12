@@ -1,55 +1,48 @@
-import type { NavItem } from './nav';
+import { NAV, activeNavKey, type NavItem } from './nav';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
 
 export interface Crumb {
   label: string;
   href?: string;
 }
 
+const subLabelFor = (item: NavItem, pathname: string): string => {
+  if (pathname === '/admin/venues/robots-audit') {
+    // The tool's crumb reads from its page title so the two cannot drift.
+    return ADMIN_COPY.robotsAudit.page.title;
+  }
+  if (item.key === 'venues') return ADMIN_COPY.shell.crumbs.editVenue;
+  if (pathname === '/admin/invite-codes/posters') {
+    return ADMIN_COPY.inviteCodes.poster.tabs.posters;
+  }
+  return ADMIN_COPY.shell.crumbs.details;
+};
+
+/** The section root a route lives under, ignoring interim query strings. */
+const isSectionRoot = (item: NavItem, pathname: string): boolean => {
+  const root = item.href.split('?')[0];
+  return (
+    pathname === root || (item.key === 'events' && pathname === '/admin/events')
+  );
+};
+
+/**
+ * The topbar crumbs: the section, then the page when it sits below the
+ * section. The section links back to its nav href, which carries the Review
+ * tab the event editor was opened from (#1083).
+ */
 export function buildBreadcrumbs(
   pathname: string,
-  nav: NavItem[],
-  searchParams?: URLSearchParams | null,
+  searchParams?: Pick<URLSearchParams, 'get'> | null,
 ): Crumb[] {
-  const section = nav.find((item) =>
-    item.href !== '/admin'
-      ? pathname.startsWith(item.href)
-      : pathname === '/admin',
-  );
-
-  if (!section) return [{ label: 'Admin', href: '/admin' }];
-
-  if (pathname === section.href) {
-    const adminCrumb: Crumb =
-      pathname === '/admin'
-        ? { label: 'Admin' }
-        : { label: 'Admin', href: '/admin' };
-    return [adminCrumb, { label: section.label }];
-  }
-
-  const sub = pathname.slice(section.href.length).replace(/^\//, '');
-  let subLabel = 'Details';
-  if (section.key === 'venues' && sub) {
-    // Every venues subpath except the robots audit tool is a venue detail page
-    // keyed by id, so the id case is the default and the tool is the exception.
-    // The tool's crumb reads from its page title so the two cannot drift.
-    subLabel =
-      sub === 'robots-audit' ? ADMIN_COPY.robotsAudit.page.title : 'Edit venue';
-  }
-
-  if (section.key === 'invite-codes' && sub === 'posters') {
-    subLabel = ADMIN_COPY.inviteCodes.poster.tabs.posters;
-  }
-
-  // Review subpages carry an optional `?from=<tab>` param so the breadcrumb
-  // returns the admin to whichever Review tab they came from (#1083). Only
-  // the Review section honours this — other sections keep their canonical
-  // parent href.
-  const sectionHref =
-    section.key === 'review'
-      ? reviewHrefFromParam(searchParams?.get('from'))
-      : section.href;
-
-  return [{ label: section.label, href: sectionHref }, { label: subLabel }];
+  if (pathname === '/admin/more')
+    return [{ label: ADMIN_COPY.shell.more.title }];
+  const key = activeNavKey(pathname, searchParams);
+  const item = key ? NAV.find((candidate) => candidate.key === key) : undefined;
+  if (!item) return [];
+  if (isSectionRoot(item, pathname)) return [{ label: item.label }];
+  return [
+    { label: item.label, href: item.href },
+    { label: subLabelFor(item, pathname) },
+  ];
 }

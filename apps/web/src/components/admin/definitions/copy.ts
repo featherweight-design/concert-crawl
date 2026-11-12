@@ -2144,40 +2144,68 @@ export const ADMIN_COPY = {
   },
 
   shell: {
-    sidebar: {
-      adminBadge: 'ADMIN',
-      sectionOperations: 'Operations',
-      sectionAccount: 'Account',
-      userRoleLabel: 'admin',
-      userMenuLabel: 'User menu',
-      signOut: 'Sign out',
-      collapse: 'Collapse',
-      toggleTitles: {
-        toRail: 'Switch to rail',
-        toAuto: 'Switch to auto',
-        toFull: 'Switch to full',
-      },
+    brand: { admin: 'ADMIN' },
+    nav: {
+      ariaLabel: 'Admin',
+      needsYou: 'Needs you',
+      health: 'Health',
+      venues: 'Venues',
+      events: 'Events',
+      artists: 'Artists',
+      prices: 'Prices',
+      people: 'People',
+      featureFlags: 'Feature flags',
+      inviteCodes: 'Invite codes',
+      crawlRuns: 'Crawl runs',
+      operations: 'Operations',
+      groups: { manage: 'MANAGE', system: 'SYSTEM' },
+      badgeAriaLabel: (count: number) =>
+        `${count} ${count === 1 ? 'decision' : 'decisions'} waiting`,
     },
-    appSwitcher: {
-      ariaLabel: 'App context',
-      userApp: 'User app',
-      userAppTitle: 'Open the consumer app in this tab',
-      admin: 'Admin',
-      adminTitle: 'You are here',
+    tabBar: { ariaLabel: 'Admin sections', more: 'More' },
+    more: {
+      title: 'More',
+      details: {
+        health: 'Venues, cost, site checks',
+        artists: (count: number) => `${count} to check`,
+        prices: (count: number) => `${count} missing a price`,
+        people: 'People, invite codes, posters',
+        featureFlags: (count: number) =>
+          `${count} ${count === 1 ? 'flag' : 'flags'}`,
+        inviteCodes: 'Codes and who joined',
+        crawlRuns: (time: string) => `Last run ${time}`,
+        crawlRunsNever: 'No runs yet',
+        operations: 'Feedback, emails, activity log',
+      },
+      countAriaLabel: (count: number) => `${count} to look at`,
+    },
+    userMenu: {
+      trigger: 'Your account',
+      role: 'ADMIN',
+      roleIn: (environment: string) => `ADMIN · ${environment}`,
+      openApp: 'Open Concert Crawl',
+      openAppHint: 'The fan app, signed in as you. Admin is in its menu.',
+      theme: 'Theme',
+      themeHint: (name: string) => `Follows your theme in the app: ${name}.`,
+      signOut: 'Sign out',
+      signOutHint: 'On this device.',
+    },
+    environment: {
+      staging: 'STAGING ADMIN',
+      production: 'PRODUCTION',
+      local: 'LOCAL',
+    },
+    environmentShort: {
+      staging: 'STAGING',
+      production: 'PRODUCTION',
+      local: 'LOCAL',
     },
     topbar: {
       breadcrumbAriaLabel: 'Breadcrumb',
     },
-    mobileDrawer: {
-      closeMenuAriaLabel: 'Close menu',
-      sectionOperations: 'Operations',
-      sectionAccount: 'Account',
-      userRoleLabel: 'admin',
-      signOutAriaLabel: 'Sign out',
-      signOutTitle: 'Sign out',
-    },
-    mobileBottomBar: {
-      navAriaLabel: 'Main navigation',
+    crumbs: {
+      editVenue: 'Edit venue',
+      details: 'Details',
     },
   },
 
