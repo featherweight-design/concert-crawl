@@ -179,14 +179,17 @@ export class StaleRowError extends Error {
 }
 
 /** The PATCH route's two 409 messages (`artist-match-update.ts`). */
-const STALE_REASONS: Record<string, StaleRowError['reason']> = {
-  'The artist has changed since it was loaded': 'status',
-  'The auto-match has changed since it was loaded': 'auto_match',
-};
+// A Map, not an object literal: an error string such as "toString" must not
+// find an inherited property.
+const STALE_REASONS = new Map<string, StaleRowError['reason']>([
+  ['The artist has changed since it was loaded', 'status'],
+  ['The auto-match has changed since it was loaded', 'auto_match'],
+]);
 
-const staleReason = (body: unknown): StaleRowError['reason'] => {
+/** Which guard a 409 body names; anything else is `unknown`. */
+export const staleReason = (body: unknown): StaleRowError['reason'] => {
   const error = isRecord(body) ? body['error'] : null;
-  return (isText(error) ? STALE_REASONS[error] : undefined) ?? 'unknown';
+  return (isText(error) ? STALE_REASONS.get(error) : undefined) ?? 'unknown';
 };
 
 export type GetToken = () => Promise<string | null>;
@@ -326,8 +329,11 @@ export const artistsApi = (getToken: GetToken) => ({
   },
   /**
    * `expectedStatus` is the status the row was loaded with (#266): the write
-   * lands only if the row still has it, else the route answers 409 and the
-   * page reloads rather than ruling on a row it never showed.
+   * lands only if the row's match status still has that value, else the
+   * route answers 409 and the page reloads. It pins the status only, not the
+   * Spotify identity: another tab repointing a matched row to a different
+   * artist (matched to matched) still passes the guard. Pinning the identity
+   * needs its own API field.
    */
   write: async (
     id: string,

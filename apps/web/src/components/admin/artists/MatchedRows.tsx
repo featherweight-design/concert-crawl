@@ -85,7 +85,9 @@ export const MatchedRow = ({
   busy: boolean;
   onNotAnArtist: () => void;
 }) => {
-  const meta = COPY.matchedMeta(row.upcomingCount, row.watchingCount);
+  // The wire field is `watchingCount`, but it counts the artist's followers.
+  const followerCount = row.watchingCount;
+  const meta = COPY.matchedMeta(row.upcomingCount, followerCount);
   if (isPhone) {
     return (
       <li style={PHONE_ROW}>

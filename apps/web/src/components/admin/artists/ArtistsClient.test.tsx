@@ -266,7 +266,7 @@ describe('ArtistsClient', () => {
     ).toBe(1);
   });
 
-  it('pins every write to the status the row was loaded with', async () => {
+  it('pins a Looks right confirm to the status the row was loaded with', async () => {
     render(<ArtistsClient />);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' }),
