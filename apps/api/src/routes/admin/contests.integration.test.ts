@@ -496,6 +496,121 @@ describe('GET /v1/admin/contests/prices', () => {
   });
 });
 
+// B+ B9: a price can hold several pending updates. The queue lists one row
+// per check, carrying the leading update; the detail lists them all.
+describe('admin contests with several pending updates on one price', () => {
+  beforeEach(async () => {
+    clearAuth();
+    await clearTables();
+  });
+
+  const seedMultiCounterCheck = async () => {
+    const venue = await seedVenue({
+      name: 'Multi Counter Venue',
+      slug: 'contest-multi-counter',
+    });
+    const event = await seedEvent(venue.id, { date: '2027-06-03' });
+    const parent = await seedPriceSubmission(event.id, 'multi-parent-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '44',
+      status: 'disputed',
+    });
+    const first = await seedPriceSubmission(event.id, 'multi-first-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '50',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      createdAt: new Date('2027-01-01T00:00:00Z'),
+    });
+    const confirmed = await seedPriceSubmission(event.id, 'multi-conf-u', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '52',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      corroborationCount: 2,
+      createdAt: new Date('2027-01-02T00:00:00Z'),
+    });
+    return { parent, first, confirmed };
+  };
+
+  it('lists one row per check, carrying the leading update and the open count', async () => {
+    setAdminAuth();
+    const { parent, confirmed } = await seedMultiCounterCheck();
+
+    const res = await app.request('/v1/admin/contests/prices', {
+      headers: ADMIN_HEADERS,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        items: Array<{
+          contestId: string;
+          counter: { id: string };
+          openCounterCount: number;
+        }>;
+        total: number;
+      };
+    };
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.total).toBe(1);
+    expect(body.data.items[0]?.contestId).toBe(parent.id);
+    expect(body.data.items[0]?.counter.id).toBe(confirmed.id);
+    expect(body.data.items[0]?.openCounterCount).toBe(2);
+  });
+
+  it('detail shows the leading update as the counter and lists every open one', async () => {
+    setAdminAuth();
+    const { parent, first, confirmed } = await seedMultiCounterCheck();
+
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        counter: { id: string };
+        pendingCounters: Array<{ id: string; priceMin: string }>;
+      };
+    };
+    expect(body.data.counter.id).toBe(confirmed.id);
+    expect(body.data.pendingCounters.map((row) => row.id)).toEqual([
+      confirmed.id,
+      first.id,
+    ]);
+  });
+
+  it('defers the leading update, the one the consumer card shows', async () => {
+    setAdminAuth();
+    const { parent, first, confirmed } = await seedMultiCounterCheck();
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/defer`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ reason: 'Need a screenshot of the listing.' }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const rows = await testDb
+      .select({
+        id: priceSubmissions.id,
+        kind: priceSubmissions.lastAdminActionKind,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.disputedSubmissionId, parent.id));
+    const kindById = new Map(rows.map((row) => [row.id, row.kind]));
+    expect(kindById.get(confirmed.id)).toBe('defer');
+    expect(kindById.get(first.id)).toBeNull();
+  });
+});
+
 describe('GET /v1/admin/contests/prices/:contestId', () => {
   beforeEach(async () => {
     clearAuth();
@@ -1363,82 +1478,165 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
     expect(body.error).toMatch(/source_category/i);
   });
 
-  it('archives orphaned pending counters against the same parent in the same transaction', async () => {
+  // B+ B9: several fans can each have an update pending on one price
+  // (migration 0099), so a check can hold more than one pending counter.
+  // One resolution decides the whole check; every other counter is
+  // archived as superseded.
+  it('archives every other pending counter against the same parent in the same transaction', async () => {
     setAdminAuth();
     const { event, parent, counter } = await seedContest();
-    // Stage an orphaned second pending counter by inserting it as archived
-    // (which the partial unique index does not constrain) and then flipping
-    // it to pending after dropping the index. §4.6 calls out orphan cleanup
-    // as a migration-window safety net — without the index drop the row is
-    // dead-by-construction, but we still want to exercise the cleanup branch.
-    const secondCounter = await seedPriceSubmission(event.id, 'orphan-u', {
+    const secondCounter = await seedPriceSubmission(event.id, 'second-fan', {
       tier: 'GA',
       vendor: 'AXS',
       sourceCategory: 'standard',
       priceMin: '60',
-      status: 'archived',
+      status: 'pending',
       disputedSubmissionId: parent.id,
     });
 
-    await testDb.execute(
-      sql`DROP INDEX IF EXISTS price_submissions_pending_counter_unique_idx`,
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Original counter wins; the other update is superseded.',
+        }),
+      },
     );
-    try {
-      await testDb
-        .update(priceSubmissions)
-        .set({ status: 'pending' })
-        .where(eq(priceSubmissions.id, secondCounter.id));
 
-      const res = await app.request(
-        `/v1/admin/contests/prices/${parent.id}/resolve`,
-        {
-          method: 'POST',
-          headers: ADMIN_HEADERS,
-          body: JSON.stringify({
-            resolution: 'challenger_wins',
-            reason: 'Original counter wins; orphan must be archived.',
-          }),
-        },
-      );
+    expect(res.status).toBe(200);
+    const counterAfter = await fetchSubmission(counter.id);
+    const secondAfter = await fetchSubmission(secondCounter.id);
+    expect(counterAfter.status).toBe('corroborated');
+    expect(secondAfter.status).toBe('archived');
+    // Reason text references the contest id (= parent.id) and uses
+    // "Superseded by contest resolution" — accurate regardless of
+    // which side won (parent_wins leaves the parent corroborated).
+    expect(secondAfter.archivedReason).toMatch(
+      /Superseded by contest resolution/i,
+    );
+    expect(secondAfter.archivedReason).toContain(parent.id);
+    // R5-1: every status flip during resolve must clear engagement signals.
+    expect(secondAfter.lastAdminActionKind).toBeNull();
+    expect(secondAfter.lastAdminActionAt).toBeNull();
+  });
 
-      expect(res.status).toBe(200);
-      const counterAfter = await fetchSubmission(counter.id);
-      const orphanAfter = await fetchSubmission(secondCounter.id);
-      expect(counterAfter.status).toBe('corroborated');
-      expect(orphanAfter.status).toBe('archived');
-      // Reason text references the contest id (= parent.id) and uses
-      // "Superseded by contest resolution" — accurate regardless of
-      // which side won (parent_wins leaves the parent corroborated, so
-      // the old "parent was archived" phrasing was wrong).
-      expect(orphanAfter.archivedReason).toMatch(
-        /Superseded by contest resolution/i,
-      );
-      expect(orphanAfter.archivedReason).toContain(parent.id);
-      // R5-1: every status flip during resolve must clear engagement
-      // signals so a previously-deferred row doesn't keep showing the
-      // "Admin requested more info" pill after the contest closes.
-      expect(orphanAfter.lastAdminActionKind).toBeNull();
-      expect(orphanAfter.lastAdminActionAt).toBeNull();
-    } finally {
-      // Always restore the index — even if assertions above failed. If the
-      // assertions failed mid-test, there may still be two pending counters
-      // referencing the same parent; archive any pending rows for this parent
-      // before recreating the partial unique index so the CREATE doesn't 23505.
-      await testDb
-        .update(priceSubmissions)
-        .set({ status: 'archived', archivedReason: 'test cleanup' })
-        .where(
-          and(
-            eq(priceSubmissions.disputedSubmissionId, parent.id),
-            eq(priceSubmissions.status, 'pending'),
-          ),
-        );
-      await testDb.execute(
-        sql`CREATE UNIQUE INDEX IF NOT EXISTS price_submissions_pending_counter_unique_idx
-            ON price_submissions (disputed_submission_id)
-            WHERE status = 'pending' AND disputed_submission_id IS NOT NULL`,
-      );
-    }
+  it('decides on the leading counter by default: most confirmations, then earliest filed', async () => {
+    setAdminAuth();
+    // seedContest's counter: corroborationCount 1, filed first.
+    const { event, parent, counter } = await seedContest();
+    const confirmed = await seedPriceSubmission(event.id, 'confirmed-fan', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '52',
+      priceMax: '52',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      corroborationCount: 2,
+    });
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'The confirmed update leads and wins.',
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect((await fetchSubmission(confirmed.id)).status).toBe('corroborated');
+    expect((await fetchSubmission(counter.id)).status).toBe('archived');
+    expect((await fetchEvent(event.id)).ticketPriceMin).toBe('52.00');
+  });
+
+  it('with equal confirmations the earliest-filed counter leads', async () => {
+    setAdminAuth();
+    const { event, parent, counter } = await seedContest();
+    const later = await seedPriceSubmission(event.id, 'later-fan', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '70',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      createdAt: new Date(counter.createdAt.getTime() + 60_000),
+    });
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'The first update filed wins the tie.',
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect((await fetchSubmission(counter.id)).status).toBe('corroborated');
+    expect((await fetchSubmission(later.id)).status).toBe('archived');
+  });
+
+  it('decides on the counter named by challengerId when given', async () => {
+    setAdminAuth();
+    const { event, parent, counter } = await seedContest();
+    const named = await seedPriceSubmission(event.id, 'named-fan', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '48',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+      createdAt: new Date(counter.createdAt.getTime() + 60_000),
+    });
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'The admin picked the second update.',
+          challengerId: named.id,
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect((await fetchSubmission(named.id)).status).toBe('corroborated');
+    expect((await fetchSubmission(counter.id)).status).toBe('archived');
+    expect((await fetchSubmission(parent.id)).status).toBe('archived');
+  });
+
+  it('refuses a challengerId that is not a pending counter on this price', async () => {
+    setAdminAuth();
+    const { parent } = await seedContest();
+
+    const res = await app.request(
+      `/v1/admin/contests/prices/${parent.id}/resolve`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution: 'challenger_wins',
+          reason: 'Naming an update that is not on this price.',
+          challengerId: parent.id,
+        }),
+      },
+    );
+
+    expect(res.status).toBe(409);
+    expect((await fetchSubmission(parent.id)).status).toBe('disputed');
   });
 
   it('writes notification rows for parent + challenger submitters', async () => {

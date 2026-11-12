@@ -1,7 +1,12 @@
 import { db, priceSubmissions } from '@concert-crawl/db';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, inArray } from 'drizzle-orm';
 import type { TierPriceBlock } from '@concert-crawl/types';
 import { buildPriceByTierMap } from './build-price-by-tier.js';
+import {
+  currentPriceCondition,
+  dropCheckedWhereLive,
+  underCheckSql,
+} from '../price-check.js';
 
 /**
  * The single query behind every list surface that shows a price.
@@ -9,6 +14,11 @@ import { buildPriceByTierMap } from './build-price-by-tier.js';
  * Every caller that needs "the price for these events" goes through here so
  * the selection rule lives in exactly one place. See #1365 for what happened
  * when it didn't.
+ *
+ * A price under an open price check is still the current price (B+ B9): its
+ * row is `disputed` while fans' updates wait, and it keeps leading its tier
+ * on Browse, the artist page and digests until the check is decided, unless
+ * a live price in the same tier outranks it. Same rule as the event page.
  */
 export async function loadPriceByTierByEventId(
   eventIds: string[],
@@ -30,14 +40,14 @@ export async function loadPriceByTierByEventId(
       updatedAt: priceSubmissions.updatedAt,
       lastSeenAt: priceSubmissions.lastSeenAt,
       corroborationCount: priceSubmissions.corroborationCount,
+      contested: underCheckSql(),
     })
     .from(priceSubmissions)
     .where(
-      and(
-        inArray(priceSubmissions.eventId, eventIds),
-        eq(priceSubmissions.status, 'corroborated'),
-      ),
+      and(inArray(priceSubmissions.eventId, eventIds), currentPriceCondition()),
     );
 
-  return buildPriceByTierMap(rows);
+  return buildPriceByTierMap(
+    dropCheckedWhereLive(rows, (row) => `${row.eventId}:${row.tier}`),
+  );
 }

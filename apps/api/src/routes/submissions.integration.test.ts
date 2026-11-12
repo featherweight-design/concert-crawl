@@ -15,7 +15,10 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
+import { eq } from 'drizzle-orm';
+import { priceSubmissions } from '@concert-crawl/db';
 import { createApp } from '../app.js';
+import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
   seedEvent,
@@ -323,12 +326,9 @@ describe('POST /v1/submissions/:id/dispute', () => {
     expect(body.data.vendor).toBe('AXS');
   });
 
-  it('rejects a 2nd pending counter against the same parent with 409', async () => {
-    // Spec §4.6: schema-enforced 1-pending-counter-per-parent invariant.
-    // First challenger files a counter → 201. Second challenger files a
-    // counter against the SAME parent → 409 from the app-level pre-insert
-    // check. (The DB partial unique index is the primary defence; this test
-    // exercises the clean 409 path consumers see.)
+  it('accepts a 2nd pending counter from a different fan against the same parent', async () => {
+    // B+ B9 (2026-11-11): several fans may each have an update pending on
+    // one price. Both counters land pending and the parent stays disputed.
     const parent = await seedPriceSubmission(eventId, 'user_owner', {
       tier: 'GA',
       vendor: 'AXS',
@@ -360,13 +360,49 @@ describe('POST /v1/submissions/:id/dispute', () => {
         body: JSON.stringify({ floor: 55 }),
       },
     );
+    expect(secondRes.status).toBe(201);
+
+    const counters = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.disputedSubmissionId, parent.id));
+    expect(counters.map((row) => row.status)).toEqual(['pending', 'pending']);
+    const [parentAfter] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id));
+    expect(parentAfter?.status).toBe('disputed');
+  });
+
+  it('rejects a 2nd pending counter from the SAME fan against the same parent with 409', async () => {
+    // One pending counter per (parent, submitter): nobody stacks their own.
+    const parent = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    });
+
+    setAuth('user_challenger_1');
+    const fileUpdate = (floor: number) =>
+      app.request(`/v1/submissions/${parent.id}/dispute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({ floor }),
+      });
+    expect((await fileUpdate(50)).status).toBe(201);
+    const secondRes = await fileUpdate(55);
     expect(secondRes.status).toBe(409);
     const body = (await secondRes.json()) as {
       success: boolean;
       error: string;
     };
     expect(body.success).toBe(false);
-    expect(body.error).toMatch(/already pending/i);
+    expect(body.error).toMatch(/already have an update pending/i);
   });
 });
 
@@ -480,6 +516,92 @@ describe('DELETE /v1/submissions/:id', () => {
       headers: { Authorization: 'Bearer test-token' },
     });
     expect(checkRes.status).toBe(404);
+  });
+});
+
+// B+ B9: withdrawing an update and a counter winning on confirms both end or
+// narrow a price check; the parent must never be left 'disputed' with nothing
+// pending, which every price surface reads as an admin denial.
+describe('price check lifecycle on a price with several updates', () => {
+  let eventId: string;
+
+  beforeEach(async () => {
+    clearAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    eventId = event.id;
+  });
+
+  async function seedCheck(counterUsers: string[]) {
+    const parent = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '44',
+      status: 'disputed',
+    });
+    const counters: Array<typeof parent> = [];
+    for (const [index, user] of counterUsers.entries()) {
+      counters.push(
+        await seedPriceSubmission(eventId, user, {
+          tier: 'GA',
+          vendor: 'AXS',
+          sourceCategory: 'standard',
+          priceMin: String(50 + index),
+          status: 'pending',
+          disputedSubmissionId: parent.id,
+        }),
+      );
+    }
+    return { parent, counters };
+  }
+
+  async function statusOf(id: string): Promise<string | undefined> {
+    const [row] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id));
+    return row?.status;
+  }
+
+  it('withdrawing the last pending update puts the price back to corroborated', async () => {
+    const { parent, counters } = await seedCheck(['user_rae']);
+    setAuth('user_rae');
+    const res = await app.request(`/v1/submissions/${counters[0]!.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(204);
+    expect(await statusOf(parent.id)).toBe('corroborated');
+  });
+
+  it('withdrawing one of two updates leaves the price under check', async () => {
+    const { parent, counters } = await seedCheck(['user_rae', 'user_sam']);
+    setAuth('user_rae');
+    const res = await app.request(`/v1/submissions/${counters[0]!.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(204);
+    expect(await statusOf(parent.id)).toBe('disputed');
+    expect(await statusOf(counters[1]!.id)).toBe('pending');
+  });
+
+  it('a counter promoted on confirms wins: parent and other updates are archived', async () => {
+    const { parent, counters } = await seedCheck(['user_rae', 'user_sam']);
+    setAuth('user_confirmer');
+    const res = await app.request(
+      `/v1/submissions/${counters[1]!.id}/confirm`,
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer test-token' },
+      },
+    );
+    expect(res.status).toBe(200);
+    expect(await statusOf(counters[1]!.id)).toBe('corroborated');
+    expect(await statusOf(parent.id)).toBe('archived');
+    expect(await statusOf(counters[0]!.id)).toBe('archived');
   });
 });
 

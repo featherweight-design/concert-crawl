@@ -17,6 +17,10 @@ import {
 import { moderateNote } from '../lib/moderate-note.js';
 import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
 import { idSchema } from '../lib/id-schema.js';
+import {
+  OWN_UPDATE_PENDING_ERROR,
+  hasPendingCounter,
+} from '../lib/price-check.js';
 
 const submissionBodySchema = z
   .object({
@@ -282,10 +286,12 @@ priceSubmissionsRouter.post(
 
     // Counter-creation path (CounterSubmitSheet posts here when challenging
     // a corroborated parent). This path has its own contract:
-    //   1. Parent must exist + be 'corroborated' (existing validation).
-    //   2. At most one pending counter per parent (spec §4.6) — both an
+    //   1. Parent must exist + be 'corroborated', or 'disputed' under an
+    //      open check (another fan's pending counter).
+    //   2. At most one pending counter per (parent, submitter) — both an
     //      app-level pre-check and a 23505 translation around the insert,
-    //      mirroring submissions.ts:149-176 + 216-232.
+    //      mirroring the /v1/submissions/:id/dispute route. Other fans may
+    //      file their own update while a check is open (B+ B9).
     //   3. Insert + parent-flip happen in the SAME transaction so the parent
     //      can never be left on 'corroborated' while a counter is pending.
     //   4. Slot identity (tier, vendor, sourceCategory) is INHERITED from
@@ -337,17 +343,15 @@ priceSubmissionsRouter.post(
         );
       }
 
-      // 1-pending-counter-per-parent invariant (spec §4.6). Checked BEFORE
-      // the 'corroborated' status guard so a second concurrent challenger
-      // sees the specific 409 "already pending" message instead of falling
-      // through to the 400 "Can only dispute a corroborated submission"
-      // (the parent flips to 'disputed' the moment the first counter lands).
-      // The DB partial unique index `price_submissions_pending_counter_unique_idx`
-      // (migration 0041) is the source of truth; this app-level SELECT
-      // returns a clean 409 instead of letting consumers see a raw
-      // unique_violation. The try/catch below catches the narrow race where
-      // two requests pass this check before either INSERT lands.
-      const [existingCounter] = await db
+      // One pending counter per (parent, submitter) (B+ B9, 2026-11-11):
+      // several fans may each have an update waiting on the same price, but
+      // nobody can stack their own. Checked BEFORE the status guard so a fan
+      // re-filing sees the specific 409 rather than a misleading 400. The
+      // partial unique index `price_submissions_pending_counter_user_unique_idx`
+      // (migration 0099) is the source of truth; this SELECT returns a clean
+      // 409, and the try/catch below covers the race where two requests from
+      // the same user pass it before either INSERT lands.
+      const [ownCounter] = await db
         .select({ id: priceSubmissions.id })
         .from(priceSubmissions)
         .where(
@@ -356,22 +360,26 @@ priceSubmissionsRouter.post(
               priceSubmissions.disputedSubmissionId,
               body.disputedSubmissionId,
             ),
+            eq(priceSubmissions.userId, userId),
             eq(priceSubmissions.status, 'pending'),
           ),
         )
         .limit(1);
-      if (existingCounter) {
+      if (ownCounter) {
         return ctx.json(
-          {
-            success: false,
-            error:
-              'Another challenge is already pending against this submission.',
-          },
+          { success: false, error: OWN_UPDATE_PENDING_ERROR },
           409,
         );
       }
 
-      if (disputed.status !== 'corroborated') {
+      // A price takes updates while it is live, or while it is already under
+      // a check another fan opened (the first counter flips it to 'disputed').
+      // A 'disputed' row with no pending counter is an admin denial, not a
+      // check, and takes none.
+      const underOpenCheck =
+        disputed.status === 'disputed' &&
+        (await hasPendingCounter(body.disputedSubmissionId));
+      if (disputed.status !== 'corroborated' && !underOpenCheck) {
         return ctx.json(
           {
             success: false,
@@ -436,11 +444,7 @@ priceSubmissionsRouter.post(
         // unique index into the same clean 409 the pre-insert SELECT returns.
         if (isPendingCounterUniqueViolation(err)) {
           return ctx.json(
-            {
-              success: false,
-              error:
-                'Another challenge is already pending against this submission.',
-            },
+            { success: false, error: OWN_UPDATE_PENDING_ERROR },
             409,
           );
         }

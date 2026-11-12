@@ -9,12 +9,17 @@ import { z } from 'zod';
  */
 export const PG_UNIQUE_VIOLATION = '23505' as const;
 
-const PENDING_COUNTER_UNIQUE_INDEX =
-  'price_submissions_pending_counter_unique_idx';
+// One pending counter per (parent, submitter), migration 0099. The 0041
+// one-per-parent index it replaced is still recognised for a database that
+// has not run 0099 yet.
+const PENDING_COUNTER_UNIQUE_INDEXES: readonly string[] = [
+  'price_submissions_pending_counter_user_unique_idx',
+  'price_submissions_pending_counter_unique_idx',
+];
 
 /**
- * Detect a Postgres unique_violation (SQLSTATE 23505) against the
- * `price_submissions_pending_counter_unique_idx` partial unique index.
+ * Detect a Postgres unique_violation (SQLSTATE 23505) against a pending-counter
+ * partial unique index (see PENDING_COUNTER_UNIQUE_INDEXES).
  *
  * Drizzle wraps the underlying postgres-js error in a DrizzleQueryError, so
  * the original `code` lives on `err.cause`. We check both so the translation
@@ -27,12 +32,14 @@ export function isPendingCounterUniqueViolation(err: unknown): boolean {
     if (typeof candidate !== 'object' || candidate === null) return false;
     const record = candidate as Record<string, unknown>;
     if (record['code'] !== PG_UNIQUE_VIOLATION) return false;
-    if (record['constraint_name'] === PENDING_COUNTER_UNIQUE_INDEX) return true;
-    if (record['constraint'] === PENDING_COUNTER_UNIQUE_INDEX) return true;
+    const constraintName = record['constraint_name'];
+    const constraint = record['constraint'];
     const message = record['message'];
-    return (
-      typeof message === 'string' &&
-      message.includes(PENDING_COUNTER_UNIQUE_INDEX)
+    return PENDING_COUNTER_UNIQUE_INDEXES.some(
+      (indexName) =>
+        constraintName === indexName ||
+        constraint === indexName ||
+        (typeof message === 'string' && message.includes(indexName)),
     );
   };
   if (matches(err)) return true;

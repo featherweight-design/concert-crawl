@@ -559,16 +559,13 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
     expect(reloadedParent?.status).toBe('corroborated');
   });
 
-  it('rejects a 2nd pending counter against the same parent with 409', async () => {
-    const venue = await seedVenue({
-      name: 'Dup Counter PS',
-      slug: 'dup-counter-ps',
-    });
+  // B+ B9 (2026-11-11): several fans may each have an update pending on one
+  // price, so a 2nd counter from a DIFFERENT fan lands even though the first
+  // already flipped the parent to 'disputed'. The same fan still can't stack.
+  async function seedCounterParent(slug: string) {
+    const venue = await seedVenue({ name: `Counter ${slug}`, slug });
     const event = await seedEvent(venue.id, { date: '2027-07-01' });
     await seedUserProfile('parent-user-ps', { handle: 'parent_ps' });
-    await seedUserProfile('chal-1-ps', { handle: 'chal1_ps' });
-    await seedUserProfile('chal-2-ps', { handle: 'chal2_ps' });
-
     const parent = await seedPriceSubmission(event.id, 'parent-user-ps', {
       tier: 'GA',
       vendor: 'AXS',
@@ -576,51 +573,70 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
       sourceCategory: 'standard',
       status: 'corroborated',
     });
-
-    setAuth('chal-1-ps');
-    const first = await app.request(
-      `/v1/events/${event.id}/price-submissions`,
-      {
+    const fileCounter = (userId: string, priceMin: number) => {
+      setAuth(userId);
+      return app.request(`/v1/events/${event.id}/price-submissions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer test-token',
         },
         body: JSON.stringify({
-          priceMin: 50,
+          priceMin,
           tier: 'GA',
           vendor: 'AXS',
           howFound: 'saw_listing',
           sourceCategory: 'standard',
           disputedSubmissionId: parent.id,
         }),
-      },
-    );
-    expect(first.status).toBe(201);
+      });
+    };
+    return { parent, fileCounter };
+  }
 
-    setAuth('chal-2-ps');
-    const second = await app.request(
-      `/v1/events/${event.id}/price-submissions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer test-token',
-        },
-        body: JSON.stringify({
-          priceMin: 60,
-          tier: 'GA',
-          vendor: 'AXS',
-          howFound: 'saw_listing',
-          sourceCategory: 'standard',
-          disputedSubmissionId: parent.id,
-        }),
-      },
-    );
+  it('accepts a 2nd pending counter from a different fan against the same parent', async () => {
+    const { parent, fileCounter } = await seedCounterParent('dup-counter-ps');
+
+    expect((await fileCounter('chal-1-ps', 50)).status).toBe(201);
+    const second = await fileCounter('chal-2-ps', 60);
+    expect(second.status).toBe(201);
+
+    const counters = await testDb
+      .select({
+        status: priceSubmissions.status,
+        priceMin: priceSubmissions.priceMin,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.disputedSubmissionId, parent.id));
+    expect(counters).toHaveLength(2);
+    expect(counters.every((row) => row.status === 'pending')).toBe(true);
+    const [reloadedParent] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id));
+    expect(reloadedParent?.status).toBe('disputed');
+  });
+
+  it('rejects a 2nd pending counter from the SAME fan against the same parent with 409', async () => {
+    const { fileCounter } = await seedCounterParent('same-fan-ps');
+
+    expect((await fileCounter('chal-1-ps', 50)).status).toBe(201);
+    const second = await fileCounter('chal-1-ps', 60);
     expect(second.status).toBe(409);
     const body = (await second.json()) as { success: boolean; error: string };
     expect(body.success).toBe(false);
-    expect(body.error).toMatch(/already pending/i);
+    expect(body.error).toMatch(/already have an update pending/i);
+  });
+
+  it('still refuses a counter on a disputed price with no open check (an admin denial)', async () => {
+    const { parent, fileCounter } = await seedCounterParent('denied-ps');
+    await testDb
+      .update(priceSubmissions)
+      .set({ status: 'disputed' })
+      .where(eq(priceSubmissions.id, parent.id));
+
+    const res = await fileCounter('chal-1-ps', 50);
+    expect(res.status).toBe(400);
   });
 
   it('flips the parent row to disputed when a counter is filed', async () => {
