@@ -122,6 +122,10 @@ export const userBilling = pgTable('user_billing', {
   // account_created_at + 14 days on first touch; NULL for pre-monetization
   // accounts that already consumed beta gifting.
   trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+  // The next three columns (takeover, day-13 banner, past-due banner) have no
+  // reader or writer since the go-free ruling removed the lifecycle nudges.
+  // Kept on purpose (dormant = keep tables); a contract migration drops them
+  // if billing never returns.
   // Trial-ended takeover single-fire predicate (#780 §2).
   lastTrialEndedShownAt: timestamp('last_trial_ended_shown_at', {
     withTimezone: true,
