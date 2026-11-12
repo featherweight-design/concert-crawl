@@ -50,19 +50,19 @@ jobs:
       - name: Detect code changes
         id: diff
         run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          code=false
+          # Fail open: anything that goes wrong reads as "code changed".
+          echo "code=true" >> "$GITHUB_OUTPUT"
+          [ "${{ github.event_name }}" = "pull_request" ] || exit 0
+          files=$(git diff --name-only HEAD^1 HEAD) || exit 0
+          [ -n "$files" ] || exit 0
           while IFS= read -r file; do
             case "$file" in
-              docs/*|.claude/*|*.md) ;;
-              *) code=true ;;
+              docs/*.md|docs/*.json|docs/*/*.md|docs/*/*.json|docs/*/*/*.md|docs/*/*/*.json|.claude/*|*.md) ;;
+              *) echo "code changed: $file"; exit 0 ;;
             esac
-          done < <(git diff --name-only HEAD^1 HEAD)
-          echo "code=$code" >> "$GITHUB_OUTPUT"
-          echo "code changed: $code"
+          done <<< "$files"
+          echo "docs only"
+          echo "code=false" >> "$GITHUB_OUTPUT"
 
   # Everything that is quick and shares an install: the dependency audit, lint,
   # typecheck, the unit tests of every workspace but web, and the scripts suites.
@@ -182,27 +182,32 @@ jobs:
       - name: Test
         run: pnpm --filter @concert-crawl/web run test --shard=${{ matrix.shard }}/2
 
-  # Keeps a check literally named "Test" for the branch-protection rule. It runs
-  # `if: always()`: without it this job would be skipped when a shard fails, and
-  # a skipped required check never resolves. A skipped shard is fine only when
-  # `changes` itself succeeded (a docs-only PR); if `changes` failed the shards
-  # skip too and that must fail here.
+  # Keeps a check literally named "Test" for the branch-protection rule, and it
+  # is the one required check that also gates Checks (lint, typecheck, the other
+  # workspaces' tests): a failure there fails this job whether or not `Checks` is
+  # itself required. It runs `if: always()`: without it this job would be skipped
+  # when a shard fails, and a skipped required check never resolves. A skipped
+  # job is fine only when `changes` itself succeeded (a docs-only PR); if
+  # `changes` failed the others skip too, and that must fail here.
   test:
     name: Test
-    needs: [changes, test-web]
+    needs: [changes, checks, test-web]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Check shard results
+      - name: Check results
         run: |
           echo "changes:    ${{ needs.changes.result }}"
+          echo "checks:     ${{ needs.checks.result }}"
           echo "web shards: ${{ needs.test-web.result }}"
           [ "${{ needs.changes.result }}" = "success" ] || exit 1
-          case "${{ needs.test-web.result }}" in
-            success|skipped) ;;
-            *) exit 1 ;;
-          esac
+          for result in "${{ needs.checks.result }}" "${{ needs.test-web.result }}"; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
 
   build:
     name: Build
