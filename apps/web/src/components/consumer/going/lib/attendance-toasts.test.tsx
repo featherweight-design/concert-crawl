@@ -5,6 +5,7 @@ import {
   showAttendanceError,
   showRemovedToast,
 } from './attendance-toasts';
+import { actionToastOptions } from '@/lib/action-toast';
 import { GOING_COPY } from '../definitions/copy';
 
 vi.mock('sonner', () => ({
@@ -36,6 +37,16 @@ describe('showRemovedToast', () => {
     if (!isAction(action)) throw new Error('expected an Undo action');
     action.onClick({} as never);
     expect(onUndo).toHaveBeenCalledTimes(1);
+  });
+
+  it('wears the shared action-toast style, so Undo is cyan like every action', () => {
+    showRemovedToast({ artist: 'Wednesday', onUndo: vi.fn() });
+
+    const [, options] = vi.mocked(toast).mock.calls[0] ?? [];
+    expect(options?.style).toBe(actionToastOptions.style);
+    expect(options?.actionButtonStyle).toBe(
+      actionToastOptions.actionButtonStyle,
+    );
   });
 
   it('carries no Undo when there is nothing to restore', () => {

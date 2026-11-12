@@ -10,6 +10,7 @@ import {
   Pagination,
 } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { actionToastOptions } from '@/lib/action-toast';
 import { EventFlagRow } from './EventFlagRow';
 import { EventFlagInspector } from './EventFlagInspector';
 import { BulkActionDock } from './BulkActionDock';
@@ -231,6 +232,7 @@ export const EventFlagsSection = ({
     }, 6000);
 
     toast(ADMIN_COPY.review.bulkToast.approved(ids.length), {
+      ...actionToastOptions,
       duration: 6000,
       action: {
         label: ADMIN_COPY.review.bulkToast.undo,
