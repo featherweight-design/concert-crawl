@@ -49,9 +49,16 @@ const StatusChip = ({ status }: { status: InviteStatus }) => (
   </StatusBadge>
 );
 
-const Count = ({ value }: { value: number | null }) =>
+/** A tab's count: 12px beside a desktop tab, 11px in a phone segment. */
+const Count = ({ value, phone }: { value: number | null; phone: boolean }) =>
   value == null ? null : (
-    <span style={{ fontSize: 12, color: 'var(--fg-subtle)', marginLeft: 6 }}>
+    <span
+      style={{
+        fontSize: phone ? 11 : 12,
+        color: 'var(--fg-subtle)',
+        marginLeft: phone ? 5 : 6,
+      }}
+    >
       {value}
     </span>
   );
@@ -136,7 +143,7 @@ const Tabs = ({
             }}
           >
             {tab.label}
-            <Count value={tab.count} />
+            <Count value={tab.count} phone={isPhone} />
           </Link>
         );
       })}
@@ -291,7 +298,7 @@ export function InviteCodesClient() {
               <th style={{ ...COLUMN_HEAD, width: 96 }}>
                 {COPY.columns.status}
               </th>
-              <th style={{ ...COLUMN_HEAD, width: 110 }}>
+              <th style={{ ...COLUMN_HEAD, width: 90 }}>
                 {COPY.columns.madeBy}
               </th>
             </tr>
