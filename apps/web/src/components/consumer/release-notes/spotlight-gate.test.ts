@@ -25,7 +25,7 @@ describe('spotlightAvailable', () => {
     const spotify = RELEASES.find(
       (entry) => entry.spotlight?.hero === 'spotify',
     );
-    expect(spotify).toBeDefined();
-    expect(spotlightAvailable(spotify ?? {}, false)).toBe(false);
+    if (spotify === undefined) throw new Error('the Spotify release is gone');
+    expect(spotlightAvailable(spotify, false)).toBe(false);
   });
 });
