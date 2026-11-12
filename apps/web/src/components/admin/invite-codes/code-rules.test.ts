@@ -1,14 +1,56 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cleanCode,
   codeLabel,
   expiresAtFor,
   initialExpiry,
   makerName,
   roleLabel,
+  seatsFloorError,
+  seatsFrom,
   shortDate,
+  suggestCode,
 } from './code-rules';
 
 const NOW = new Date('2026-11-12T12:00:00Z');
+
+describe('suggestCode', () => {
+  it('keeps letters and numbers, uppercased', () => {
+    expect(suggestCode('Red Rocks lot, Oct')).toBe('REDROCKSLOTOCT');
+    expect(suggestCode('Mira’s roommate 2')).toBe('MIRASROOMMATE2');
+  });
+
+  it('drops a typed "Poster ·" prefix, as GLOBEHALL is drawn', () => {
+    expect(suggestCode('Poster · Globe Hall')).toBe('GLOBEHALL');
+  });
+
+  it('cuts to 20 characters', () => {
+    expect(suggestCode('a'.repeat(30))).toHaveLength(20);
+  });
+
+  it('suggests nothing when the label has no letters', () => {
+    expect(suggestCode('')).toBe('');
+    expect(suggestCode('2026 · 11')).toBe('');
+  });
+
+  it('cleans a typed code the same way', () => {
+    expect(cleanCode('red-rocks 2')).toBe('REDROCKS2');
+  });
+});
+
+describe('seats', () => {
+  it('reads a preset, or Other within 1 to 500', () => {
+    expect(seatsFrom('1', '')).toBe(1);
+    expect(seatsFrom('other', '75')).toBe(75);
+    expect(seatsFrom('other', '501')).toBeNull();
+  });
+
+  it('says how many are used when seats go below that', () => {
+    expect(seatsFloorError(20, 23)).toBe('23 already used');
+    expect(seatsFloorError(23, 23)).toBeNull();
+    expect(seatsFloorError(null, 23)).toBeNull();
+  });
+});
 
 describe('codeLabel and makerName', () => {
   it('derives "Poster ·" for any code with more than one seat', () => {
