@@ -106,7 +106,13 @@ export const setSubmissionStatus = async (
 
     const [updated] = await tx
       .update(priceSubmissions)
-      .set({ status, updatedAt: sql`now()` })
+      .set({
+        status,
+        // An approved (or disputed, or staled) price is no longer waiting on
+        // the admin: clear the hold stamp.
+        heldForAdminAt: null,
+        updatedAt: sql`now()`,
+      })
       .where(eq(priceSubmissions.id, id))
       .returning();
 

@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import {
+  adminSettings,
   auditLog,
   events,
   notifications,
   priceSubmissions,
 } from '@concert-crawl/db';
 import { testDb } from '../test/helpers/db.js';
+import { setSubmissionStatus } from './admin/lib/price-submission-status.js';
 import { fanoutPriceDrop } from '../lib/price-drop.js';
 import { observeBlocking, withLockHolder } from '../test/helpers/locks.js';
 
@@ -319,6 +321,89 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         .from(auditLog)
         .where(eq(auditLog.action, 'price.promoted')),
     ).toHaveLength(0);
+  });
+
+  describe('with "I approve prices myself" on', () => {
+    const confirm = () => {
+      setAuth(CONFIRMER);
+      return app.request(confirmUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify(confirmBody),
+      });
+    };
+
+    it('holds a confirm that would promote: pending, stamped, event price untouched, no promotion audit', async () => {
+      await testDb
+        .insert(adminSettings)
+        .values({ id: 1, approvePricesMyself: true });
+      const [before] = await testDb
+        .select()
+        .from(events)
+        .where(eq(events.id, eventId));
+
+      const res = await confirm();
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: { confirmed: boolean; submissionStatus: string };
+      };
+      expect(body.data.confirmed).toBe(true);
+      expect(body.data.submissionStatus).toBe('pending');
+
+      const [held] = await testDb
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, submissionId));
+      expect(held?.status).toBe('pending');
+      expect(held?.heldForAdminAt).not.toBeNull();
+      expect(held?.corroborationCount).toBe(2);
+      const [after] = await testDb
+        .select()
+        .from(events)
+        .where(eq(events.id, eventId));
+      expect(after?.ticketPriceMin).toBe(before?.ticketPriceMin);
+      expect(
+        await testDb
+          .select()
+          .from(auditLog)
+          .where(eq(auditLog.action, 'price.promoted')),
+      ).toHaveLength(0);
+    });
+
+    it('leaves the admin approve path to promote it and clear the hold', async () => {
+      await testDb
+        .insert(adminSettings)
+        .values({ id: 1, approvePricesMyself: true });
+      await confirm();
+
+      const result = await setSubmissionStatus(submissionId, 'corroborated');
+      expect(result.ok).toBe(true);
+      const [promoted] = await testDb
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, submissionId));
+      expect(promoted?.status).toBe('corroborated');
+      expect(promoted?.heldForAdminAt).toBeNull();
+    });
+
+    it('promotes as before when the setting is off', async () => {
+      await testDb
+        .insert(adminSettings)
+        .values({ id: 1, approvePricesMyself: false });
+      const res = await confirm();
+      const body = (await res.json()) as {
+        data: { submissionStatus: string };
+      };
+      expect(body.data.submissionStatus).toBe('corroborated');
+      const [row] = await testDb
+        .select()
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, submissionId));
+      expect(row?.heldForAdminAt).toBeNull();
+    });
   });
 
   it('returns 409 on duplicate confirm (imminent event, still pending after one confirm)', async () => {

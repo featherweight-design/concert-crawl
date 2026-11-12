@@ -722,6 +722,13 @@
       "when": 1794355200000,
       "tag": "0103_admin_queue_snoozes",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1794441600000,
+      "tag": "0104_price_submissions_held_for_admin",
+      "breakpoints": true
     }
   ]
 }

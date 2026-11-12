@@ -12,6 +12,7 @@ import {
   isNotNull,
   isNull,
   lte,
+  or,
   sql,
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
@@ -517,16 +518,24 @@ const priceBatchItems: Adapter = async ({ now }) => {
       and(
         eq(priceSubmissions.status, 'pending'),
         isNull(priceSubmissions.disputedSubmissionId),
-        gte(
-          priceSubmissions.corroborationCount,
-          PRICE_BATCH_MIN_CORROBORATIONS,
-        ),
         // Only shows a fan can see: approving a price on a hidden or called-off
         // show changes nothing anybody reads.
         eq(events.hiddenFromConsumer, false),
         eq(events.status, 'upcoming'),
-        gte(events.date, addDays(today, PRICE_BATCH_MIN_DAYS)),
-        lte(events.date, addDays(today, PRICE_BATCH_MAX_DAYS)),
+        // A price held for the admin (the "approve prices myself" setting) is
+        // always the admin's to decide; any other waits for its corroborations
+        // and the product window.
+        or(
+          isNotNull(priceSubmissions.heldForAdminAt),
+          and(
+            gte(
+              priceSubmissions.corroborationCount,
+              PRICE_BATCH_MIN_CORROBORATIONS,
+            ),
+            gte(events.date, addDays(today, PRICE_BATCH_MIN_DAYS)),
+            lte(events.date, addDays(today, PRICE_BATCH_MAX_DAYS)),
+          ),
+        ),
       ),
     )
     .orderBy(asc(events.date), asc(priceSubmissions.id));

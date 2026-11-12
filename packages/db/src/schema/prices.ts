@@ -129,6 +129,10 @@ export const priceSubmissions = pgTable(
     // archived_reason does NOT imply status='archived' — query by status
     // for behavior, read archived_reason for the explanation.
     archivedReason: text('archived_reason'),
+    // Set when the confirmations would have promoted this price but the
+    // admin setting `approve_prices_myself` was on: it stays pending until an
+    // admin approves it (the Needs you price batch). Cleared on promotion.
+    heldForAdminAt: timestamp('held_for_admin_at', { withTimezone: true }),
     // Engagement-signal columns — surfaced via priceByTier[].counterSubmission
     // so consumers see a quiet "Admin requested more info" pill on the event
     // detail page after an admin defers the contest. `lastAdminActionKind`
