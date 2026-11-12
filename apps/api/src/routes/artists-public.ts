@@ -41,6 +41,7 @@ import { loadOpenReport } from './artist-reports.js';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
 import { isSoldOutSql } from '../lib/sold-out.js';
 import { billsCanonicalName } from '../lib/event-billing.js';
+import { dedupeNights } from '../lib/dedupe-nights.js';
 import {
   loadPriceByTierByEventId,
   lowestHeadlinePrice,
@@ -448,14 +449,20 @@ artistsPublicRouter.get(
       attendedIds = new Set(attendedRows.map((row) => row.eventId));
     }
 
-    const past: ArtistPastShow[] = pastRows.map((row) => ({
-      eventId: row.eventId,
-      iso: row.iso,
-      venue: row.venue,
-      venueSlug: row.venueSlug,
-      city: row.city,
-      attending: attendedIds ? attendedIds.has(row.eventId) : null,
-    }));
+    // One night at one venue is one show: the crawler can keep several event
+    // rows for it (a venue page and a ticketing page, say), and past rows are
+    // not under the unique index that stops that for upcoming ones. The row
+    // the caller stamped wins, so "I went" never reads off beside their night.
+    const past: ArtistPastShow[] = dedupeNights(pastRows, attendedIds).map(
+      (row) => ({
+        eventId: row.eventId,
+        iso: row.iso,
+        venue: row.venue,
+        venueSlug: row.venueSlug,
+        city: row.city,
+        attending: attendedIds ? attendedIds.has(row.eventId) : null,
+      }),
+    );
 
     // The gate `search.ts` already applies and this route did not: an artist
     // is only real if at least one consumer-visible event bills them (#1343).

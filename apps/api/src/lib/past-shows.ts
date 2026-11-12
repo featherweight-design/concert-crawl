@@ -16,6 +16,7 @@ import {
   isNull,
   lt,
   ne,
+  not,
   or,
   sql,
 } from 'drizzle-orm';
@@ -77,6 +78,65 @@ export const loadPastShows = async ({
       ),
     );
   }
+
+  // One row per night (see dedupe-nights.ts for the rule): the crawler can keep
+  // several rows for one night, and listing each would let a reader stamp the
+  // same night three times. Done in SQL rather than on the page of rows so
+  // `total` and the cursor count nights, not rows. The row the caller stamped
+  // wins; otherwise the lowest id stays. Built here, not at module load, for
+  // the same reason as the venues alias below.
+  const twin = alias(events, 'twin');
+  const twinAttended = alias(userEvents, 'twin_attended');
+  const sameNight = and(
+    eq(twin.venueId, events.venueId),
+    eq(twin.date, events.date),
+    eq(twin.canonicalArtist, events.canonicalArtist),
+    ne(twin.id, events.id),
+    eq(twin.hiddenFromConsumer, false),
+    ne(twin.status, 'cancelled'),
+    sql`(${twin.showTime} IS NOT DISTINCT FROM ${events.showTime} OR ${twin.showTime} IS NULL OR ${events.showTime} IS NULL)`,
+  );
+  conditions.push(
+    or(
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(userEvents)
+          .where(
+            and(
+              eq(userEvents.eventId, events.id),
+              eq(userEvents.userId, userId),
+              isNotNull(userEvents.attendingAt),
+            ),
+          ),
+      ),
+      and(
+        not(
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(twin)
+              .innerJoin(twinAttended, eq(twinAttended.eventId, twin.id))
+              .where(
+                and(
+                  sameNight,
+                  eq(twinAttended.userId, userId),
+                  isNotNull(twinAttended.attendingAt),
+                ),
+              ),
+          ),
+        ),
+        not(
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(twin)
+              .where(and(sameNight, lt(twin.id, events.id))),
+          ),
+        ),
+      ),
+    ),
+  );
 
   if (scope === 'venues') {
     // Built here, not at module load: route unit tests mock the db package
