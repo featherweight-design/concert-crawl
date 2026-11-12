@@ -1,3 +1,17 @@
+# [1.362.0](https://github.com/featherweight-design/concert-crawl/compare/v1.361.0...v1.362.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** delete guard counts under the venue lock, hide edge cases, audit keeps both ([70f7c28](https://github.com/featherweight-design/concert-crawl/commit/70f7c287f826ac74f26ecd5e73977142382d2a31))
+* **db:** declare the new venue admin columns in the user-data registry ([9f3314f](https://github.com/featherweight-design/concert-crawl/commit/9f3314f98b5b94f8f046976962ead4cc89214473))
+* **types:** close PersonDetail after merging the venue types ([b5ed547](https://github.com/featherweight-design/concert-crawl/commit/b5ed547bad23d905b6addaa72bd9058bc4d9a56c))
+
+
+### Features
+
+* **api:** admin venues 3a: hide reason, pause author, delete guard, robots refusal ([3df4346](https://github.com/featherweight-design/concert-crawl/commit/3df434635ab63aa12d1d5f116cc1b87f792081ef))
+
 # [1.361.0](https://github.com/featherweight-design/concert-crawl/compare/v1.360.1...v1.361.0) (2026-11-12)
 
 
