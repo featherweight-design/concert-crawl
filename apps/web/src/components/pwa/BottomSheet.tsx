@@ -13,8 +13,19 @@ interface BottomSheetProps {
   maxWidth?: number;
   /** Draws the close as this word (a drawn "Cancel") instead of the X icon. */
   closeText?: string;
+  /**
+   * Draws the blue-to-pink top edge on the centered dialog too (from `sm`
+   * up), not only on the phone sheet. Off by default so every other sheet
+   * keeps its plain bordered dialog.
+   */
+  edgeFromSm?: boolean;
   children: React.ReactNode;
 }
+
+// Whole class names, so Tailwind sees each one literally.
+const PHONE_EDGE = 'max-sm:sheet-edge';
+const DIALOG_PLAIN = 'sm:border sm:border-border sm:bg-surface-1';
+const DIALOG_EDGE = 'sheet-edge sm:[--sheet-bg:var(--surface-1)]';
 
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
@@ -28,6 +39,7 @@ export const BottomSheet = ({
   title,
   maxWidth,
   closeText,
+  edgeFromSm = false,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -119,7 +131,9 @@ export const BottomSheet = ({
         // query rather than a second tree, so the focus trap above is shared.
         // The width is a variable, not an interpolated class, so Tailwind
         // still sees both literal class names.
-        className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none max-sm:sheet-edge sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl sm:border sm:border-border sm:bg-surface-1 ${
+        className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl ${
+          edgeFromSm ? DIALOG_EDGE : `${PHONE_EDGE} ${DIALOG_PLAIN}`
+        } ${
           maxWidth === undefined ? 'sm:max-w-md' : 'sm:max-w-[var(--sheet-max)]'
         }`}
       >
