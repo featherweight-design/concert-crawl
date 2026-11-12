@@ -1,6 +1,6 @@
 {
   "feature": "A1 · event page defects: disputed-card lookup, pending count, Already reported, Add evidence and Edit",
-  "note": "Plan row A1 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): disputed = 08-prices-and-status/more-st-disputes_board; pending-mine = 08-prices-and-status/more-st-ev_pending_mine_m, 08-prices-and-status/more-st-ev_pending_canc_m. Walk by hand on staging (no kit verb reaches them yet): already-reported (08-prices-and-status/more-st-already_rep_m, 08-prices-and-status/more-p-already_m): needs a report already filed by the audit user; evidence (08-prices-and-status/more-st-evidence_m): press Add evidence and Edit; each works or is gone.",
+  "note": "Plan row A1 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): disputed = 08-prices-and-status/more-st-disputes_board; pending-mine = 08-prices-and-status/more-st-ev_pending_mine_m, 08-prices-and-status/more-st-ev_pending_canc_m. Walk by hand (state a sheet cannot set up): already-reported (08-prices-and-status/more-st-already_rep_m, 08-prices-and-status/more-p-already_m): needs a report already filed by the audit user; evidence (08-prices-and-status/more-st-evidence_m): press Add evidence and Edit; each works or is gone.",
   "rows": [
     {
       "id": "disputed",

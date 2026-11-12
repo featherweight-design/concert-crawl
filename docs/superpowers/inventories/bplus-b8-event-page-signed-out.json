@@ -1,0 +1,18 @@
+{
+  "feature": "B8 · Event page, signed out: the public /e/[id] behind the launch gate",
+  "note": "While public browse is off (NEXT_PUBLIC_PUBLIC_BROWSE unset), /e/[id] signed out lands on /sign-in; this row photographs that wall and fails the day browse opens, when it becomes the public page row (06-states/bp-s-public_m, 06-states/bp-s-public_d). Plan row B8 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Walk by hand (state a sheet cannot set up): public-gone (06-states/bp-s-public_gone_m).",
+  "signedOut": true,
+  "rows": [
+    {
+      "id": "public-gated",
+      "label": "/e/[id] signed out: the sign-in wall (launch gate)",
+      "steps": [
+        {
+          "goto": "/e/${CC_EVENT_ID}",
+          "expectRedirect": "/sign-in",
+          "wait": "input[name=\"identifier\"]"
+        }
+      ]
+    }
+  ]
+}

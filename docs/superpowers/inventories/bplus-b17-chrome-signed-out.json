@@ -1,6 +1,6 @@
 {
   "feature": "B17 · Chrome, signed out: the signed-out header",
-  "note": "Plan row B17 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): changelog = none drawn.",
+  "note": "While public browse is off (NEXT_PUBLIC_PUBLIC_BROWSE unset), a signed-out /events lands on /sign-in; the events-gated row photographs that wall and fails the day browse opens, which is when it becomes a real Browse row. Plan row B17 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): changelog = none drawn.",
   "signedOut": true,
   "rows": [
     {
@@ -10,6 +10,17 @@
         {
           "goto": "/changelog",
           "wait": "h1"
+        }
+      ]
+    },
+    {
+      "id": "events-gated",
+      "label": "/events signed out: the sign-in wall (launch gate)",
+      "steps": [
+        {
+          "goto": "/events",
+          "expectRedirect": "/sign-in",
+          "wait": "input[name=\"identifier\"]"
         }
       ]
     }

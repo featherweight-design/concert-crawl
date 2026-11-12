@@ -1,6 +1,6 @@
 {
   "feature": "B20 · Errors, 404, offline, feedback tab",
-  "note": "Plan row B20 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): offline-page = 06-states/bp-s-offline_m, 06-states/bp-s-offline_empty_m; offline-pill = 06-states/bp-s-offline_pill_m, 06-states/bp-s-offline_account_m; feedback = 06-states/bp-s-feedback_tab_m, 06-states/bp-s-feedback_m. Walk by hand on staging (no kit verb reaches them yet): not-found (06-states/bp-s-notfound_m, 06-states/bp-s-notfound_d): a 404 page returns HTTP 404 and the kit fails any goto >= 400; open /venues/no-such-venue by hand; feedback-done (06-states/bp-s-feedback_done_m): sending writes a row.",
+  "note": "Plan row B20 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): not-found = 06-states/bp-s-notfound_m, 06-states/bp-s-notfound_d; offline-page = 06-states/bp-s-offline_m, 06-states/bp-s-offline_empty_m; offline-pill = 06-states/bp-s-offline_pill_m, 06-states/bp-s-offline_account_m; feedback = 06-states/bp-s-feedback_tab_m, 06-states/bp-s-feedback_m. Walk by hand (state a sheet cannot set up): feedback-done (06-states/bp-s-feedback_done_m): sending writes a row.",
   "rows": [
     {
       "id": "offline-page",
@@ -39,7 +39,19 @@
         },
         {
           "click": "button[aria-label=\"Send feedback\"]",
-          "settle": 500
+          "settle": 500,
+          "waitDialog": "^Feedback$"
+        }
+      ]
+    },
+    {
+      "id": "not-found",
+      "label": "/venues/[slug] unknown: the 404 page",
+      "steps": [
+        {
+          "goto": "/venues/no-such-venue",
+          "expectStatus": 404,
+          "wait": "h1"
         }
       ]
     }

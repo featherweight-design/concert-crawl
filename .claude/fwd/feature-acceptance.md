@@ -4,8 +4,8 @@ These add to the plugin's `feature-acceptance` skill and win where they conflict
 
 ## The tools
 
-concert-crawl uses the fwd kit's tools, configured by the `featureAcceptance` block in `.claude/fwd.json`. There is no
-project copy of the contact sheet: a feature adds an inventory, never a script.
+concert-crawl uses the fwd kit's tools (kit 0.1.33), configured by the `featureAcceptance` block in `.claude/fwd.json`.
+There is no project copy of the contact sheet: a feature adds an inventory, never a script.
 
 ```
 node ~/.claude/fwd/skills/feature-acceptance/contact-sheet.mjs docs/superpowers/inventories/<file>.json
@@ -13,11 +13,19 @@ node ~/.claude/fwd/skills/feature-acceptance/check-shared.mjs  docs/superpowers/
 node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 ```
 
-- **Two targets.** The **pre-PR sheet** runs against the lane's dev server: `pnpm dev` (allowed; it is not a build),
-  then `--base http://localhost:3000`. The **staging sheet** (`baseUrl`, `https://staging.concertcrawl.app`) is the
-  post-merge audit and the close-out walk: merging to `main` deploys staging, so name the commit staging ran. Every
-  `productionUrl` origin (apex and `www`) is refused, and `sign-in.mjs` refuses any host but staging over https and
-  localhost over http.
+- **Two targets.** `baseUrl` is `http://localhost:3000`: the **pre-PR sheet** runs against the lane's dev server
+  (`pnpm dev`, allowed; it is not a build) with no flag. The **staging sheet** is the post-merge audit and the close-out
+  walk: pass `--base https://staging.concertcrawl.app`. Merging to `main` deploys staging, so name the commit staging
+  ran. Every `productionUrl` origin (`concertcrawl.app`, `www.concertcrawl.app`, `api.concertcrawl.app`) is refused,
+  and `sign-in.mjs` refuses any host but staging over https and localhost or 127.0.0.1 over http.
+- **The local stack.** The dev server signs in against the **Concert Crawl Staging** Clerk app's **development**
+  instance, with the same `E2E_AUDIT_*` credentials as staging, and its database is the Neon `scratch-contact-sheet`
+  branch, not the seeded Docker DB. Both are set in the operator's local env files; never read or print them.
+- **Theme passes.** `featureAcceptance.themes` photographs every sheet three times, each in a fresh context:
+  **Electric** (dark, the base), **Light**, and **Pulse** (the genre-theme pass). Each sets localStorage `cc-theme`
+  before the page's scripts run, which the inline script in `app/layout.tsx` reads before paint, and the kit reads
+  `<html data-theme>` back after every row, so a theme the page did not draw fails the cell. Files are
+  `<row>-<width>-<theme>.png`. An inventory's own `themes` replaces the set (B16 and B18 do; see App-shell pitfalls).
 - **Widths:** `phone` 390 (touch), `sm` 640, `desktop` 1300. 640 is Tailwind `sm`, the one shell breakpoint:
   below it AppHeader's mobile bar and BottomNav, from it the sticky TopNav and no BottomNav; filter chips open a
   bottom sheet below it and a popover from it. The B+ boards are drawn at 390 and 1300. The 320 mobile-first floor is
@@ -25,7 +33,8 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 - **Inventories:** `docs/superpowers/inventories/`, one file per plan row of
   `docs/superpowers/plans/2026-11-11-bplus-redesign.md` (`bplus-<row>-<slug>.json`; a row with signed-out surfaces has a
   separate `…-signed-out.json`, since `signedOut` is per inventory). Each inventory's `note` names the handoff boards
-  per row and the surfaces walked by hand. Ids that differ per account are `${CC_…}` environment variables (below).
+  per row and the surfaces still walked by hand: those need state a sheet cannot set up (a filed report, an empty
+  account, a throttled load, a real install prompt), not a missing verb. Ids that differ per account are `${CC_…}` environment variables (below).
 - **Output:** `contact-sheets/<inventory>/` at the repo root, gitignored.
 - **Token guard:** `tokens.declare` is `apps/web/src/app/globals.css`, `apps/web/src/theme/themes.ts` and
   `apps/web/src/app/layout.tsx` (next/font variables); `tokens.read` covers `apps/web/src/components/**` and
@@ -44,15 +53,21 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
   `E2E_AUDIT_ADMIN_EMAIL` and `E2E_AUDIT_ADMIN_PASSWORD` with `CONTACT_SHEET_ROLE=admin`. **They live in the
   operator's shell profile, not in any `.env`**; grepping `.env.local` finds nothing. Reference them by name only;
   never read, print or paste their values.
+- **Locally** the same credentials sign in to the Concert Crawl Staging Clerk app's development instance (the dev
+  server's keys). Its session cookie is still `__session`, which is what the shared flow waits for, so `signIn`
+  needs no local branch. The module keeps the kit's contract: it exports `signIn(page, { baseUrl })`, checks the host
+  before the browser leaves `about:blank`, throws on failure and prints no credential.
 - Staging is launch-gated (`NEXT_PUBLIC_PUBLIC_BROWSE` unset): signed out, `/events`, `/venues`, `/artists`,
   `/watching`, `/search` and `/e/[id]` redirect to `/sign-in`, and `/` is the invite landing. The kit fails a goto that
-  redirects or returns 400+, so those surfaces are walked by hand until browse opens.
+  redirects or returns 400+ unless the row says so: the signed-out rows that photograph the wall carry
+  `"expectRedirect": "/sign-in"` (B8 and B17 signed out), and fail the day browse opens, which is the cue to turn them
+  into the real public rows. A local dev server with public browse switched on fails them the same way.
 
 ## Environment
 
 | Variable                                        | Use                                             |
 | ----------------------------------------------- | ----------------------------------------------- |
-| `CONTACT_SHEET_BASE`                            | Overrides `baseUrl` (kit); keep it staging      |
+| `CONTACT_SHEET_BASE`                            | Overrides `baseUrl` (kit); never production     |
 | `E2E_AUDIT_USER_*`, `E2E_AUDIT_ADMIN_*`         | The sign-in account (names only)                |
 | `CONTACT_SHEET_ROLE`                            | `admin` signs in as the admin audit user        |
 | `CC_EVENT_ID`                                   | An upcoming event with prices                   |
@@ -62,14 +77,18 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 | `CC_REMOVED_EVENT_ID`                           | A5: a show the stale sweep removed              |
 | `CC_ARTIST_SLUG`                                | B10: an artist with upcoming shows              |
 | `CC_CREW_ID`                                    | B14: a crew the audit user is in                |
+| `CC_CREW_INVITE_TOKEN`                          | B14: a live invite token for that crew          |
 
-The kit expands `${VAR}` in `goto`, `clickRole` names, `fill` text and cookie values, and fails a row whose variable
-is unset. **It does not redact what it expands yet**, so no row may expand a secret: the crew invite page (its URL
-carries a live token) is walked by hand until redaction ships, and `CC_CREW_INVITE_TOKEN` is not used. Never paste a
-real token into an inventory or a PR body.
+The kit expands `${VAR}` in `goto`, `route`, `clickRole` names, `fill` text, `waitDialog` and cookie values, and fails
+a row whose variable is unset. **It redacts every expanded value**, and every variable whose name marks a credential
+(`TOKEN`, `INVITE`, `SECRET`, `PASSWORD`, …), from its console, failure notes and the sheet, so `CC_CREW_INVITE_TOKEN`
+is usable again: B14's `invite` row opens `/crew/join/${CC_CREW_INVITE_TOKEN}`. Redaction covers text, not pixels: the
+invite landing draws no token, but the crew home's invite sheet does, so no row opens it. Opening the landing does not
+spend the invite (joining does), so the row is safe in a themed inventory. Never paste a real token into an inventory
+or a PR body.
 
 **Picking the ids.** Each is a row already on the target (staging holds prod content, synced weekly; locally, the
-seeded dev DB). Pick each in the app as the audit user and copy it from the URL, so the account can see it:
+Neon `scratch-contact-sheet` branch). Pick each in the app as the audit user and copy it from the URL, so the account can see it:
 
 - `CC_EVENT_ID`: open Browse, pick an upcoming show with a price, copy the id from `/events/<id>`.
 - `CC_CANCELLED_EVENT_ID`, `CC_POSTPONED_EVENT_ID`, `CC_SOLD_OUT_EVENT_ID`: a show carrying that status chip in a
@@ -79,6 +98,7 @@ seeded dev DB). Pick each in the app as the audit user and copy it from the URL,
 - `CC_REMOVED_EVENT_ID`: a show on the audit user's Watching list that the stale sweep marked no longer listed.
 - `CC_ARTIST_SLUG`: open an artist from an event page, copy the slug from `/artists/<slug>`.
 - `CC_CREW_ID`: open Crews as the audit user (start one by hand if there is none), copy the id from `/crews/<id>`.
+- `CC_CREW_INVITE_TOKEN`: on that crew, open the invite sheet and copy the token from its `/crew/join/<token>` link.
 
 Export them in the shell for the run. They are ids, not secrets, but they stay out of committed files.
 
@@ -92,16 +112,23 @@ Export them in the shell for the run. They are ids, not secrets, but they stay o
 - **Pages render their own `<header>`** (desktop Settings, the invite landing), so `header` is not the shell either.
   The shell's search button is `header button[aria-label="Search"]:visible`; the palette it opens has no dialog role,
   so wait on its input, `input[placeholder="Search artists or venues…"]`.
-- **Service workers must be blocked** for anything that mocks network: the PWA worker answers fetches itself and a
-  `page.route` mock never fires. The kit has no mock verb and does not block workers; any project Playwright script
-  that mocks sets `serviceWorkers: 'block'`.
+- **Mocks.** The kit blocks service workers in every context, so a `route` mock fires. Mock only what the browser
+  fetches (server components fetch on the server, out of reach), and only failures: the API is another origin and
+  the kit sends no CORS headers, so a mocked success may be refused by the browser. B19's `notifications-error` row is
+  the pattern. Any project Playwright script outside the kit that mocks still sets `serviceWorkers: 'block'`.
+- **Dialogs.** `waitDialog` is a regex on the accessible name: anchor exact names (`^Account$`, `^Where filter$`,
+  `^What you missed$`, `^Feedback$`) and match a prefix where the name carries data (`^Jump to a date`, which ends
+  with the month).
+- **Error pages.** `expectStatus` photographs an error page at its status: B20's `not-found` row expects 404 from
+  `/venues/no-such-venue`.
 - **Themes:** nine (`apps/web/src/theme/themes.ts`: electric, jade, light; pulse, forge, bluenote, drip, cedar,
-  gloss), chosen by localStorage `cc-theme`, read by the inline script in `app/layout.tsx` before paint. A fresh
-  headless context has no key and a light colour scheme, so the sheet draws **Light**. The kit has no theme matrix:
-  for the Electric and genre-theme passes the plan asks of every screen PR, walk staging with the theme picked in
-  Settings, and say so in the Design review table.
+  gloss), chosen by localStorage `cc-theme`, read by the inline script in `app/layout.tsx` before paint. The three
+  passes (Electric, Light, Pulse) cover the plan's per-screen theme ask; another genre theme is a one-off inventory
+  `themes` override, not a fourth default pass.
 - **`/me` re-applies the account's theme.** It mounts `ThemeSync`, which sets the profile's saved theme over
-  `cc-theme`. Never set `cc-onboarding-theme-pending` to dodge it: `OnboardingThemeFlush` then PATCHes the account.
+  `cc-theme`, so the read-back would fail two of three passes there. B16 and B18 override `themes` with Electric
+  alone, which needs the audit account's saved theme to be **Electric** on staging and on the local branch. Never set
+  `cc-onboarding-theme-pending` to dodge it: `OnboardingThemeFlush` then PATCHes the account.
 
 ## Reading the boards (Hugh, 2026-11-11)
 
