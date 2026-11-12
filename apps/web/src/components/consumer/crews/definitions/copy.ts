@@ -254,7 +254,6 @@ export const CREWS_COPY = {
     noPastEyebrow: 'CLEAN SLATE',
     noPastTitle: 'No history yet.',
     noPastBody: 'Go to a show together and it lands here. Two of you, minimum.',
-    noPastRail: '0 nights',
 
     // 'ROSTER FULL' said the title's job; the eyebrow only places you.
     atCapEyebrow: 'ROSTER',
