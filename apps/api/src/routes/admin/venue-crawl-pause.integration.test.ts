@@ -139,6 +139,17 @@ describe('admin venue crawl pause', () => {
     expect(await pausedAt(venue.id)).toBeNull();
   });
 
+  it('refuses an impossible calendar date with 422, not a 500', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const res = await pause(venue.id, {
+      reason: 'site_broken_or_moved',
+      resume: { mode: 'on', date: '2099-02-30' },
+    });
+    expect(res.status).toBe(422);
+    expect(await pausedAt(venue.id)).toBeNull();
+  });
+
   it('clears the reason, note and resume date on resume', async () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });

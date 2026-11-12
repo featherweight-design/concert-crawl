@@ -386,6 +386,14 @@ export interface Venue {
   consecutiveFailures: number;
   blockedAt: string | null;
   crawlPausedAt: string | null;
+  // Why an admin paused the crawl and when it resumes by itself (Mountain Time
+  // calendar date); null for a pause with no reason or no date, and for a
+  // crawler auto-pause. The API always sends them; optional here only so
+  // existing fixtures keep compiling.
+  crawlPauseReason?:
+    'waiting_on_permission' | 'site_broken_or_moved' | 'other' | null;
+  crawlPauseNote?: string | null;
+  crawlResumeOn?: string | null;
   // Set when the venue's data was removed at its request; cleared on activation.
   removedAt: string | null;
   extractionStrategy: ExtractionStrategy | null;
