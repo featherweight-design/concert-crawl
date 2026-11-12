@@ -30,7 +30,7 @@ const isAlwaysPublic = createRouteMatcher([
   '/api/pwa/icon(.*)',
   // iOS fetches the launch stills (`<link rel="apple-touch-startup-image">`)
   // with no session, so they need the same exemption as the icons.
-  '/api/pwa/startup(.*)',
+  '/api/pwa/startup/(.*)',
   // The site social card. Its only consumer is an unfurl crawler following a
   // bare `concertcrawl.app` link, which carries no session — gating it renders
   // the card as a redirect to /sign-in, i.e. no card at all. It draws the

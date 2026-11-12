@@ -13,6 +13,11 @@ export interface StartupSize {
 }
 
 export const STARTUP_SIZES: readonly StartupSize[] = [
+  // iPhone 16 Pro Max, 16 Pro and Air. iOS does not fall back to its own
+  // splash for a device no media query matches, so each generation is listed.
+  { width: 1320, height: 2868, cssWidth: 440, cssHeight: 956, ratio: 3 },
+  { width: 1206, height: 2622, cssWidth: 402, cssHeight: 874, ratio: 3 },
+  { width: 1260, height: 2736, cssWidth: 420, cssHeight: 912, ratio: 3 },
   { width: 1290, height: 2796, cssWidth: 430, cssHeight: 932, ratio: 3 },
   { width: 1179, height: 2556, cssWidth: 393, cssHeight: 852, ratio: 3 },
   { width: 1284, height: 2778, cssWidth: 428, cssHeight: 926, ratio: 3 },
