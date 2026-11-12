@@ -27,7 +27,7 @@ const formatTimeAgo = (isoDate: string): string => {
 };
 
 // ── Color constants ──────────────────────────────────────────────
-const AZURE = 'oklch(0.62 0.12 240)'; // community tier
+const AZURE = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
 const GOLD = 'oklch(0.66 0.14 78)'; // box-office tier
 
 // ── Token shape ──────────────────────────────────────────────────
@@ -192,7 +192,8 @@ export const PendingCardB = ({
         overflow: 'hidden' as const,
         padding: 0,
         background: tok.bg,
-        border: `1px solid ${tok.border}`,
+        // Pending is dashed in the tier's colour (more-p-price_states).
+        border: `1px dashed ${tok.border}`,
         boxShadow: `inset 0 1px 0 color-mix(in oklab, ${GOLD} 40%, transparent)`,
       }
     : {
@@ -200,7 +201,7 @@ export const PendingCardB = ({
         overflow: 'hidden' as const,
         padding: 0,
         background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
+        border: `1px dashed ${tok.border}`,
         boxShadow: 'none',
       };
 
@@ -211,7 +212,7 @@ export const PendingCardB = ({
         style={{
           padding: '8px 14px',
           background: tok.strip,
-          borderBottom: `1px solid ${tok.stripBorder}`,
+          borderBottom: `1px dashed ${tok.stripBorder}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -520,7 +521,12 @@ export const PendingCardB = ({
                   gap: '6px',
                   padding: '7px 12px',
                   borderRadius: '8px',
-                  background: tok.color,
+                  // The Confirm price pill is the signal-to-accent gradient
+                  // with a soft glow, as drawn (more-p-price_states).
+                  background:
+                    'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
+                  boxShadow:
+                    '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
                   color: 'var(--fg-on-accent)',
                   fontFamily: 'Inter, system-ui',
                   fontWeight: 700,
