@@ -331,8 +331,10 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
+    // The id stays so earlier audit runs still line up; the page moved to
+    // /admin/people (admin 5a), and /admin/users redirects there.
     id: 'admin-users',
-    path: '/admin/users',
+    path: '/admin/people',
     tags: ['admin'],
     auth: 'admin',
   },
