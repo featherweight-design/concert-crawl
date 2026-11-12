@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useRef, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useDialogKeyboard } from './useDialogKeyboard';
 
@@ -23,6 +23,11 @@ export interface AdminSheetProps {
   dismissible?: boolean;
   /** Paint the footer bottom-up, so its first DOM child sits last. */
   footerReversed?: boolean;
+  /**
+   * Full screen only: a back link naming the page it returns to, in place of
+   * the close button (`06/artist-search-mobile` draws "‹ Artists").
+   */
+  backLabel?: string;
 }
 
 /**
@@ -40,6 +45,7 @@ export const AdminSheet = ({
   fullScreen = false,
   dismissible = true,
   footerReversed = false,
+  backLabel,
 }: AdminSheetProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -83,7 +89,28 @@ export const AdminSheet = ({
           borderRadius: fullScreen ? 0 : '18px 18px 0 0',
         }}
       >
-        {fullScreen ? (
+        {fullScreen && backLabel ? (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              alignSelf: 'flex-start',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '4px 0',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--fg-muted)',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            <ChevronLeft size={16} aria-hidden />
+            {backLabel}
+          </button>
+        ) : fullScreen ? (
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
               type="button"

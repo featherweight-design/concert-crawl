@@ -2656,13 +2656,21 @@ export const ADMIN_COPY = {
       `${count} wrong-artist ${count === 1 ? 'report' : 'reports'}`,
     matchedAutomatically: 'Matched automatically',
     candidates: (name: string) => `Spotify artists for ${name}`,
-    searchCard: {
-      title: 'Search',
-      line: 'Pick someone else',
-      // A searched row arrives without the match job's candidates.
-      showCandidates: 'Show candidates',
-      loading: 'Loading…',
-      failed: "Couldn't reach Spotify",
+    searchCard: { title: 'Search', line: 'Pick someone else' },
+    // The artist search (`06/artists-search-opens-the-side-panel`,
+    // `06/artist-search-mobile`).
+    searchPanel: {
+      title: (name: string) => `Find the right ${name}`,
+      forLine: (line: string) => `For ${line}`,
+      separator: ' · ',
+      inputLabel: 'Search Spotify by name',
+      exactName: 'Exact name',
+      results: (count: number) =>
+        `${count} ${count === 1 ? 'result' : 'results'}`,
+      loading: 'Searching Spotify…',
+      failed: "Couldn't reach Spotify.",
+      empty: 'No artist by that name. Try another spelling.',
+      use: 'Use',
     },
     // The open reports on a reported row: what Looks right would dismiss.
     reportList: {
