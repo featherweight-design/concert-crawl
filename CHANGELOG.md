@@ -1,3 +1,13 @@
+## [1.341.1](https://github.com/featherweight-design/concert-crawl/compare/v1.341.0...v1.341.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** review fixes for the tickets available pending report ([9063b6c](https://github.com/featherweight-design/concert-crawl/commit/9063b6cff346708a6a8c881e6779930fe82ba011))
+* **web:** tickets available banner folds evidence into the attribution line ([f6e33c0](https://github.com/featherweight-design/concert-crawl/commit/f6e33c0d55efc69f0386815b7f6fb2e552711d1c))
+* **web:** tickets available pending banner follows addendum 2 item 14 ([0c9ae2e](https://github.com/featherweight-design/concert-crawl/commit/0c9ae2e2a4206845ca67fd6170653317a0b6db4b))
+* **web:** wire tickets available on a live sold-out, send the confirm method (B+ A3 web) ([0435003](https://github.com/featherweight-design/concert-crawl/commit/0435003b3bd135685050ef5a5ec057d9a35b61b8))
+
 # [1.341.0](https://github.com/featherweight-design/concert-crawl/compare/v1.340.0...v1.341.0) (2026-11-12)
 
 
