@@ -5,9 +5,10 @@ import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
  * the same color at 40%, as the boards draw it (`shelf-see-all-m`, row and
  * spotlight thumbnails: `0 0 0 1.25px <genre>, 0 0 20px rgba(<genre>,0.4)`).
  * One recipe for every surface that frames its artwork in the lead genre:
- * event rows, the Tonight spotlight, Concerts, the followed-artist rows,
- * search results, the event stage and the offline shortcuts. A box-shadow, so
- * an `overflow-hidden` clip on the framed box never cuts it.
+ * event rows, the Tonight spotlight, Concerts, the passport's up-next stubs,
+ * the followed-artist rows, search results and the offline shortcuts. The
+ * event stage draws its own card ring (`stageRing`). A box-shadow, so an
+ * `overflow-hidden` clip on the framed box never cuts it.
  *
  * An ungenred show (the `NEUTRAL_GENRE_COLOR` fallback) keeps the 1.25px ring
  * and gets no glow, as `GenreDot` drops its glow for an unbucketed genre
