@@ -111,7 +111,14 @@ const mockEvaluateRunHealth = vi.fn<(outcomes: unknown[]) => unknown[]>(
   () => [],
 );
 const mockReportRunHealth = vi.fn().mockResolvedValue(undefined);
+// The monthly LLM budget, read once per run. Default: no budget set.
+const NO_LLM_BUDGET = { budgetUsd: null, spentUsd: 0, stopWhenSpent: false };
+const mockReadLlmBudgetStatus = vi.fn().mockResolvedValue(NO_LLM_BUDGET);
+// The verdict itself is unit-tested in crawler-core (llm-budget.test.ts).
+const mockLlmBudgetVerdict = vi.fn().mockReturnValue('under');
 vi.mock('@concert-crawl/crawler-core', () => ({
+  readLlmBudgetStatus: mockReadLlmBudgetStatus,
+  llmBudgetVerdict: mockLlmBudgetVerdict,
   crawlVenue: mockCrawlVenue,
   tagEventsWithGenres: mockTagEventsWithGenres,
   runArtistFanoutSafely: mockRunArtistFanoutSafely,
@@ -192,10 +199,86 @@ describe('runDailyCrawl', () => {
         expect.any(Function),
         undefined,
         expect.any(Array),
+        false,
+        NO_LLM_BUDGET,
       );
     }
     const providers = new Set(mockCrawlVenue.mock.calls.map((call) => call[1]));
     expect(providers.size).toBe(1);
+  });
+
+  describe('monthly LLM budget (admin 1c, G8b)', () => {
+    afterEach(() => {
+      mockReadLlmBudgetStatus.mockResolvedValue(NO_LLM_BUDGET);
+      mockLlmBudgetVerdict.mockReturnValue('under');
+    });
+
+    it('reads the budget once per run and hands it to every venue', async () => {
+      const spent = { budgetUsd: 20, spentUsd: 21, stopWhenSpent: false };
+      mockReadLlmBudgetStatus.mockResolvedValue(spent);
+      mockLlmBudgetVerdict.mockReturnValue('over_continue');
+
+      const { runDailyCrawl } = await import('./run.js');
+      await runDailyCrawl();
+
+      expect(mockReadLlmBudgetStatus).toHaveBeenCalledTimes(1);
+      expect(mockCrawlVenue).toHaveBeenCalledTimes(4);
+      for (const call of mockCrawlVenue.mock.calls) {
+        expect(call[5]).toBe(spent);
+      }
+      // Warned once for the run, not once per venue.
+      const budgetWarnings = mockSentryLoggerWarn.mock.calls.filter(
+        (call) => call[0] === 'llm.budget_spent',
+      );
+      expect(budgetWarnings).toEqual([
+        [
+          'llm.budget_spent',
+          { spent_usd: 21, budget_usd: 20, action: 'continue_llm' },
+        ],
+      ]);
+    });
+
+    it('says the LLM is skipped when "If it runs out" is on', async () => {
+      mockReadLlmBudgetStatus.mockResolvedValue({
+        budgetUsd: 20,
+        spentUsd: 20,
+        stopWhenSpent: true,
+      });
+      mockLlmBudgetVerdict.mockReturnValue('over_stop');
+
+      const { runDailyCrawl } = await import('./run.js');
+      await runDailyCrawl();
+
+      expect(mockSentryLoggerWarn).toHaveBeenCalledWith('llm.budget_spent', {
+        spent_usd: 20,
+        budget_usd: 20,
+        action: 'skip_llm',
+      });
+    });
+
+    it('does not warn under budget', async () => {
+      const { runDailyCrawl } = await import('./run.js');
+      await runDailyCrawl();
+
+      expect(mockSentryLoggerWarn).not.toHaveBeenCalledWith(
+        'llm.budget_spent',
+        expect.anything(),
+      );
+    });
+
+    it('crawls with no budget (null) when the read fails', async () => {
+      const readErr = new Error('db down');
+      mockReadLlmBudgetStatus.mockRejectedValue(readErr);
+
+      const { runDailyCrawl } = await import('./run.js');
+      await runDailyCrawl();
+
+      expect(mockSentryCaptureException).toHaveBeenCalledWith(readErr);
+      expect(mockCrawlVenue).toHaveBeenCalledTimes(4);
+      for (const call of mockCrawlVenue.mock.calls) {
+        expect(call[5]).toBeNull();
+      }
+    });
   });
 
   it('never launches Chromium unless a crawl asks for the browser provider', async () => {
@@ -688,6 +771,7 @@ describe('runTriggeredCrawls', () => {
       undefined,
       expect.any(Array),
       false,
+      NO_LLM_BUDGET,
     );
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-b',
@@ -695,7 +779,10 @@ describe('runTriggeredCrawls', () => {
       undefined,
       expect.any(Array),
       false,
+      NO_LLM_BUDGET,
     );
+    // One budget read for the whole drain, not one per trigger.
+    expect(mockReadLlmBudgetStatus).toHaveBeenCalledTimes(1);
     // Every trigger shares one provider, so at most one Chromium per run.
     const providers = new Set(mockCrawlVenue.mock.calls.map((call) => call[1]));
     expect(providers.size).toBe(1);

@@ -24,6 +24,15 @@ describe('classifyCrawlError', () => {
     expect(classifyCrawlError(credit).kind).toBe('llm_quota');
   });
 
+  it('recognises our own spent monthly LLM budget as the same class', () => {
+    const budget =
+      'LlmBudgetSpentError: No structured data at https://a.example/events, and the monthly LLM budget is spent ($20.50 of $20.00), so LLM extraction was skipped';
+    expect(classifyCrawlError(budget)).toEqual({
+      kind: 'llm_quota',
+      key: 'llm_quota',
+    });
+  });
+
   // Both verbatim from https://platform.claude.com/docs/en/api/rate-limits
   // (2026-11-10). A workspace spend limit and the tier's monthly spend cap are
   // as account-wide as the org limit: no venue caused them.

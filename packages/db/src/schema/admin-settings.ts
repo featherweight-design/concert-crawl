@@ -29,11 +29,12 @@ export const adminSettings = pgTable(
       .$type<LlmBudgetWarnAtPercent>()
       .notNull()
       .default(75),
-    // "If it runs out": on means keep crawling with HTML and JSON-LD only, and
-    // tell the admin. The board draws it on.
+    // "If it runs out": on means stop the LLM once the monthly budget is spent
+    // and crawl with HTML and JSON-LD only; off means keep using the LLM and
+    // warn. Off is the default (Hugh, 2026-11-12; migration 0112).
     llmBudgetFallbackToStructured: boolean('llm_budget_fallback_to_structured')
       .notNull()
-      .default(true),
+      .default(false),
     // The admin's "approve every price myself" choice. Stored here and read
     // back by the settings API; the price hold that acts on it ships with 2a.
     approvePricesMyself: boolean('approve_prices_myself')

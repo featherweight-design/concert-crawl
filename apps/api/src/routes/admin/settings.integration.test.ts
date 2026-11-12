@@ -76,7 +76,8 @@ describe('admin settings', () => {
     expect(((await res.json()) as SettingsBody).data).toEqual({
       llmMonthlyBudgetUsd: null,
       llmBudgetWarnAtPercent: 75,
-      llmBudgetFallbackToStructured: true,
+      // "If it runs out" is off by default: keep using the LLM, and warn.
+      llmBudgetFallbackToStructured: false,
       approvePricesMyself: false,
       updatedAt: null,
       updatedBy: null,
@@ -127,13 +128,13 @@ describe('admin settings', () => {
       before: {
         llmMonthlyBudgetUsd: 40,
         llmBudgetWarnAtPercent: 75,
-        llmBudgetFallbackToStructured: true,
+        llmBudgetFallbackToStructured: false,
         approvePricesMyself: false,
       },
       after: {
         llmMonthlyBudgetUsd: 40,
         llmBudgetWarnAtPercent: 75,
-        llmBudgetFallbackToStructured: true,
+        llmBudgetFallbackToStructured: false,
         approvePricesMyself: true,
       },
     });
@@ -145,19 +146,19 @@ describe('admin settings', () => {
 
     const res = await patch({
       llmBudgetWarnAtPercent: 90,
-      llmBudgetFallbackToStructured: false,
+      llmBudgetFallbackToStructured: true,
     });
     expect(res.status).toBe(200);
     expect(budgetControlsSchema.parse(await res.json()).data).toEqual({
       llmMonthlyBudgetUsd: 25,
       llmBudgetWarnAtPercent: 90,
-      llmBudgetFallbackToStructured: false,
+      llmBudgetFallbackToStructured: true,
     });
     expect(budgetControlsSchema.parse(await (await get()).json()).data).toEqual(
       {
         llmMonthlyBudgetUsd: 25,
         llmBudgetWarnAtPercent: 90,
-        llmBudgetFallbackToStructured: false,
+        llmBudgetFallbackToStructured: true,
       },
     );
 
@@ -170,11 +171,11 @@ describe('admin settings', () => {
     expect(row?.metadata).toMatchObject({
       before: {
         llmBudgetWarnAtPercent: 75,
-        llmBudgetFallbackToStructured: true,
+        llmBudgetFallbackToStructured: false,
       },
       after: {
         llmBudgetWarnAtPercent: 90,
-        llmBudgetFallbackToStructured: false,
+        llmBudgetFallbackToStructured: true,
       },
     });
   });

@@ -49,7 +49,8 @@ const toSettings = (row: AdminSettingsRow | undefined): AdminSettings => ({
   // says so; the default is only for "no row yet".
   llmBudgetWarnAtPercent:
     row?.llmBudgetWarnAtPercent ?? DEFAULT_LLM_BUDGET_WARN_AT_PERCENT,
-  llmBudgetFallbackToStructured: row?.llmBudgetFallbackToStructured ?? true,
+  // Off by default (Hugh, 2026-11-12): keep using the LLM past the budget.
+  llmBudgetFallbackToStructured: row?.llmBudgetFallbackToStructured ?? false,
   approvePricesMyself: row?.approvePricesMyself ?? false,
   updatedAt: row?.updatedAt.toISOString() ?? null,
   updatedBy: row?.updatedBy ?? null,

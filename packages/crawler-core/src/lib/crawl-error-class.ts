@@ -14,11 +14,14 @@ export interface CrawlErrorClass {
 // it. None says anything about the venue: every LLM-extracted venue fails
 // identically until the account recovers (2026-09-28: 8 of 20). The spend
 // limits (org or workspace, a 400) and the tier's monthly spend cap (a 429
-// carrying `enforced_spend_limit_reached`) are all the same class.
+// carrying `enforced_spend_limit_reached`) are all the same class. So is our
+// own monthly LLM budget with "If it runs out" switched on: the crawl skips
+// the LLM for every venue alike (LlmBudgetSpentError in lib/llm-budget.ts).
 const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
   /reached your (specified (workspace )?)?API usage limits/i,
   /enforced_spend_limit_reached/i,
   /credit balance is too low/i,
+  /monthly LLM budget is spent/i,
 ];
 
 // An ordinary rate-limit 429 is transient rather than a spend limit, but it is

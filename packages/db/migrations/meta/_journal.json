@@ -778,6 +778,13 @@
       "when": 1795100000000,
       "tag": "0111_invite_codes_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1795200000000,
+      "tag": "0112_admin_settings_llm_runout_default_off",
+      "breakpoints": true
     }
   ]
 }
