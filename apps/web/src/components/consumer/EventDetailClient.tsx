@@ -278,7 +278,9 @@ export function EventDetailBanners({
             body={
               liveReportStatus === 'cancelled'
                 ? REPORTING_COPY.liveReportBanner.cancelledBody[cancelledRefund]
-                : undefined
+                : liveReportStatus === 'postponed'
+                  ? REPORTING_COPY.liveReportBanner.postponedBody
+                  : REPORTING_COPY.liveReportBanner.soldOutBody
             }
           />
         )}

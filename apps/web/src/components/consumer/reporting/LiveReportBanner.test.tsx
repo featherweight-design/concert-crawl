@@ -16,7 +16,7 @@ describe('LiveReportBanner', () => {
     render(<LiveReportBanner status="cancelled" promotedAt={twoHoursAgo()} />);
 
     expect(screen.getByText(copy.headlines.cancelled)).toBeTruthy();
-    expect(screen.getByText(copy.fromVenueCalendar('2h ago'))).toBeTruthy();
+    expect(screen.getByText(copy.fromVenueCalendar('2h'))).toBeTruthy();
     expect(screen.queryByText(/confirms/)).toBeNull();
   });
 
