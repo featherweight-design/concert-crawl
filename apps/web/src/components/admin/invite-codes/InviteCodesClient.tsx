@@ -382,7 +382,7 @@ export function InviteCodesClient() {
           <h1
             style={{
               margin: 0,
-              fontSize: isPhone ? 24 : 26,
+              fontSize: isPhone ? 24 : 28,
               fontWeight: 800,
               letterSpacing: '-0.02em',
             }}
