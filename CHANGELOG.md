@@ -1,3 +1,20 @@
+# [1.377.0](https://github.com/featherweight-design/concert-crawl/compare/v1.376.0...v1.377.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** admin Panel radius 14 and 15px title, with a phone-compact variant ([c3a52ee](https://github.com/featherweight-design/concert-crawl/commit/c3a52ee9c5f1df536da1bf2b71562c2409a52a33))
+* **web:** anchor last night on the crawl cron, list blocked failures ([e117d93](https://github.com/featherweight-design/concert-crawl/commit/e117d931c6cd29e67411d44f37bec1ea5c23543e))
+* **web:** draw the 404 as its board does and add a global not-found ([5298b3b](https://github.com/featherweight-design/concert-crawl/commit/5298b3bc2efc6cfacbc69545fee03faea4805ad6))
+* **web:** drop the rule under admin Panel titles, as no board draws one ([17a853a](https://github.com/featherweight-design/concert-crawl/commit/17a853a51b75dfe80f60a73e452dc8625362aa70))
+* **web:** light My shows on the passport ([0879ffb](https://github.com/featherweight-design/concert-crawl/commit/0879ffbacf519b127a83273a296c01ebf1a473e7))
+* **web:** spell the hip-hop bucket Hip-hop, in sentence case, everywhere ([589d869](https://github.com/featherweight-design/concert-crawl/commit/589d86965c7707a278b686516e5b9397e288fb19))
+
+
+### Features
+
+* **web:** admin Health model, tiles and venue grid (admin 1c-2a) ([f58d59a](https://github.com/featherweight-design/concert-crawl/commit/f58d59a657f902ea89f99fda9176798075b47bd6))
+
 # [1.376.0](https://github.com/featherweight-design/concert-crawl/compare/v1.375.0...v1.376.0) (2026-11-12)
 
 
