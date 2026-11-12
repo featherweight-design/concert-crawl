@@ -144,13 +144,20 @@ redeemCodeRouter.post(
       limitKey,
       REDEEM_MAX_MISSES + 1,
       REDEEM_WINDOW_MS,
-      { onStoreError: 'deny' },
+      // Keyed on the account, so account deletion removes the bucket.
+      { onStoreError: 'deny', userId },
     );
-    if (!limit.allowed) {
+    const refuse = () => {
       const waitMs = limit.retryAfterMs || REDEEM_WINDOW_MS;
       ctx.header('Retry-After', String(Math.ceil(waitMs / 1000)));
       return ctx.json({ success: false, error: 'ratelimit' }, 429);
-    }
+    };
+    if (!limit.allowed) return refuse();
+    // The extra slot exists only to let a real code through after the misses
+    // run out. A miss in it is refused, so a guesser learns at most
+    // REDEEM_MAX_MISSES + 1 answers an hour.
+    const overMisses =
+      (limit.count ?? REDEEM_MAX_MISSES + 1) > REDEEM_MAX_MISSES;
 
     // The caller's own ledger row comes back with the code, so a repeat
     // redeem is recognised without a second query.
@@ -170,6 +177,7 @@ redeemCodeRouter.post(
       .where(eq(inviteCodes.code, code));
 
     if (!found) {
+      if (overMisses) return refuse();
       return ctx.json({ success: false, error: 'notfound' }, 404);
     }
     await refundRateLimit(limitKey);
