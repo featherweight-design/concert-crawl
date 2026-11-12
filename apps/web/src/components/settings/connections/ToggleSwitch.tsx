@@ -32,20 +32,27 @@ export const ToggleSwitch = ({
     aria-describedby={ariaDescribedBy}
     disabled={disabled}
     onClick={() => onChange(!checked)}
-    className="relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60"
+    className="relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 disabled:cursor-default disabled:opacity-60"
     style={{
-      background: checked ? 'var(--signal)' : 'var(--surface-3)',
+      // On is the signal-to-accent pair with a dark knob; off is a plain
+      // dark track with a pale knob.
+      background: checked
+        ? 'linear-gradient(90deg, var(--signal), var(--accent))'
+        : 'var(--surface-3)',
       border: checked
-        ? '1px solid var(--signal)'
+        ? '1px solid var(--accent)'
         : '1px solid var(--border-strong)',
+      transition: 'background var(--motion-fast) var(--motion-ease)',
     }}
   >
     <span
       aria-hidden
-      className="absolute top-[2px] h-[18px] w-[18px] rounded-full transition-all"
+      className="absolute top-[2px] h-[18px] w-[18px] rounded-full"
       style={{
         left: checked ? 18 : 2,
-        background: checked ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
+        background: checked ? 'var(--bg)' : 'var(--fg-muted)',
+        boxShadow: checked ? 'inset 0 0 0 2px var(--accent)' : undefined,
+        transition: 'left var(--motion-fast) var(--motion-ease)',
       }}
     />
   </button>
