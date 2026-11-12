@@ -410,7 +410,12 @@ artistsAdminRouter.patch(
     if (!result.ok) {
       return ctx.json({ success: false, error: result.error }, result.status);
     }
-    const { artist: updated, nextStatus, previousAutoMatchedAt } = result;
+    const {
+      artist: updated,
+      nextStatus,
+      previousAutoMatchedAt,
+      unhid,
+    } = result;
 
     ctx.set(
       'auditAction',
@@ -426,6 +431,8 @@ artistsAdminRouter.patch(
       // Which answer this replaced, so a confirmed or repointed best-effort
       // pick can be traced.
       previousAutoMatchedAt,
+      // "It's an artist" also made the artist's page public again.
+      ...(unhid ? { hidden: false } : {}),
     });
 
     return ctx.json({ success: true, data: updated });
