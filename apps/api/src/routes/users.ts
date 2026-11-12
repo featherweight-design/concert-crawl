@@ -351,6 +351,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     eventId: string;
     artist: string | null;
     venue: string | null;
+    venueSlug: string | null;
     date: string | null;
     priceMin: string;
     priceMax: string | null;
@@ -366,6 +367,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
       eventId: priceSubmissions.eventId,
       artist: displayHeadliner(),
       venue: venues.name,
+      venueSlug: venues.slug,
       date: events.date,
       priceMin: priceSubmissions.priceMin,
       priceMax: priceSubmissions.priceMax,
@@ -390,6 +392,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     eventId: row.eventId,
     artist: row.artist ?? 'Unknown',
     venue: row.venue ?? 'Unknown',
+    venueSlug: row.venueSlug,
     date: row.date ?? '',
     priceMin: Math.round(parseFloat(row.priceMin) * 100),
     priceMax: row.priceMax ? Math.round(parseFloat(row.priceMax) * 100) : null,
