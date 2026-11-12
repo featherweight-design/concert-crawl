@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 /**
  * Searchable Sentry tags shared by every app (web, API, crawler). Imported
  * through the `@concert-crawl/types/sentry-tags` subpath, like the privacy
@@ -31,14 +32,14 @@ export async function sentryUserHash(
   const secret = key?.trim();
   if (!secret || !userId) return undefined;
   const encoder = new TextEncoder();
-  const hmacKey = await globalThis.crypto.subtle.importKey(
+  const hmacKey = await crypto.subtle.importKey(
     'raw',
     encoder.encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign'],
   );
-  const signature = await globalThis.crypto.subtle.sign(
+  const signature = await crypto.subtle.sign(
     'HMAC',
     hmacKey,
     encoder.encode(userId),
