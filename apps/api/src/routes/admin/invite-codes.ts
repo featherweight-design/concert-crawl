@@ -485,11 +485,20 @@ inviteCodesAdminRouter.post(
       );
     }
 
+    // Guarded on still being live, so two admins pressing at once can't both
+    // write: the second sees no row and gets the same answer as a late press,
+    // and the audit names whoever actually revoked it.
     const [updated] = await db
       .update(inviteCodes)
       .set({ revokedAt: new Date(), revokedBy: userId })
-      .where(eq(inviteCodes.id, id))
+      .where(and(eq(inviteCodes.id, id), isNull(inviteCodes.revokedAt)))
       .returning();
+    if (!updated) {
+      return ctx.json(
+        { success: false, error: 'Invite code already revoked' },
+        400,
+      );
+    }
 
     ctx.set('auditAction', 'invite_code.revoke');
     ctx.set('auditTargetId', id);
