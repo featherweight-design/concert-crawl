@@ -41,9 +41,12 @@ export const HistoryItem = ({
   stamp = 'solid',
   menu,
   restored = false,
+  preview = false,
 }: {
   show: HistoryShow;
   density: HistoryDensity;
+  /** A look at the night inside another surface (the remove confirm): it goes nowhere when tapped. */
+  preview?: boolean;
   /** `dashed` for an upcoming night: the stamp it will become, and the upcoming menu. */
   stamp?: VenueStampVariant;
   /** The ⋯. Omit for a row with no actions. `onRemove` is "Not going anymore" on an upcoming row. */
@@ -72,7 +75,7 @@ export const HistoryItem = ({
 
   return (
     <div
-      data-testid="history-item"
+      data-testid={preview ? 'history-item-preview' : 'history-item'}
       className={`history-item group grid items-center rounded-xl border border-border bg-surface-1 transition-colors focus-within:bg-surface-2 hover:bg-surface-2 ${
         restored
           ? 'transition-[opacity,background-color] duration-[var(--motion-base)] ease-[var(--motion-ease)] starting:opacity-0'
@@ -88,6 +91,13 @@ export const HistoryItem = ({
     >
       <Link
         href={`/events/${show.eventId}`}
+        // A preview must not carry the reader off mid-confirm.
+        {...(preview
+          ? {
+              onClick: (ev: React.MouseEvent) => ev.preventDefault(),
+              tabIndex: -1,
+            }
+          : {})}
         className="grid min-w-0 items-center no-underline"
         style={{
           gridTemplateColumns: `${cfg.artSize}px 1fr`,

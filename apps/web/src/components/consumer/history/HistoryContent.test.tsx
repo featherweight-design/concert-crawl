@@ -7,7 +7,7 @@ import {
   screen,
   cleanup,
   fireEvent,
-  act,
+  waitFor,
 } from '@testing-library/react';
 import type { HistoryResponse, HistoryShow } from '@concert-crawl/types';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
@@ -35,10 +35,10 @@ vi.mock('@clerk/nextjs', () => ({
 // The mutation itself is exercised in use-attending-toggle.test.tsx; here the
 // list only has to call it with the right input and react to its callbacks.
 const toggle = vi.hoisted(() => ({
-  mutate: vi.fn(),
+  mutateAsync: vi.fn(),
 }));
 vi.mock('@/lib/queries/use-attending-toggle', () => ({
-  useAttendingToggle: () => ({ mutate: toggle.mutate }),
+  useAttendingToggle: () => ({ mutateAsync: toggle.mutateAsync }),
 }));
 
 const toasts = vi.hoisted(() => ({
@@ -419,7 +419,7 @@ describe('HistoryContent: taking a night out', () => {
   };
 
   afterEach(() => {
-    toggle.mutate.mockReset();
+    toggle.mutateAsync.mockReset();
     toasts.showRemovedToast.mockReset();
     toasts.showAttendanceError.mockReset();
   });
@@ -446,16 +446,18 @@ describe('HistoryContent: taking a night out', () => {
       screen.getByRole('button', { name: GOING_COPY.remove.keep }),
     );
 
-    expect(toggle.mutate).not.toHaveBeenCalled();
+    expect(toggle.mutateAsync).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('releases the night on confirm and keeps the sheet open, reading Removing…, until the server answers', () => {
+    // Never settles: the remove is still in flight.
+    toggle.mutateAsync.mockReturnValue(new Promise(() => {}));
     renderWithUpcoming();
     confirmRemoval('Artist a');
 
-    expect(toggle.mutate).toHaveBeenCalledTimes(1);
-    expect(toggle.mutate.mock.calls[0]?.[0]).toEqual({
+    expect(toggle.mutateAsync).toHaveBeenCalledTimes(1);
+    expect(toggle.mutateAsync.mock.calls[0]?.[0]).toEqual({
       eventId: 'a',
       going: false,
     });
@@ -464,31 +466,24 @@ describe('HistoryContent: taking a night out', () => {
     ).toBeDisabled();
   });
 
-  it('closes the sheet once the remove succeeds', () => {
+  it('closes the sheet once the remove succeeds', async () => {
+    toggle.mutateAsync.mockResolvedValue({ going: false, restore: null });
     renderWithUpcoming();
     confirmRemoval('Artist a');
 
-    act(() => {
-      toggle.mutate.mock.calls[0]?.[1].onSuccess({
-        going: false,
-        restore: null,
-      });
-    });
-
-    expect(
-      screen.queryByRole('dialog', { name: GOING_COPY.remove.title }),
-    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: GOING_COPY.remove.title }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
-  it('shows the failure in the sheet, not a toast, and Try again sends it again', () => {
+  it('shows the failure in the sheet, not a toast, and Try again sends it again', async () => {
+    toggle.mutateAsync.mockRejectedValue(new Error('offline'));
     renderWithUpcoming();
     confirmRemoval('Artist a');
 
-    act(() => {
-      toggle.mutate.mock.calls[0]?.[1].onError();
-    });
-
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       GOING_COPY.remove.failed,
     );
     expect(toasts.showAttendanceError).not.toHaveBeenCalled();
@@ -496,10 +491,12 @@ describe('HistoryContent: taking a night out', () => {
     fireEvent.click(
       screen.getByRole('button', { name: GOING_COPY.remove.retry }),
     );
-    expect(toggle.mutate).toHaveBeenCalledTimes(2);
+    expect(toggle.mutateAsync).toHaveBeenCalledTimes(2);
   });
 
-  it('takes an upcoming night out with no confirm, and toasts with Undo', () => {
+  it('takes an upcoming night out with no confirm, and toasts with Undo', async () => {
+    const restore = { attendingAt: '2026-12-01T02:00:00.000Z', token: 't2' };
+    toggle.mutateAsync.mockResolvedValue({ going: false, restore });
     renderWithUpcoming();
     openMenuFor('Artist up');
     fireEvent.click(
@@ -509,20 +506,20 @@ describe('HistoryContent: taking a night out', () => {
     );
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(toggle.mutate.mock.calls[0]?.[0]).toEqual({
+    expect(toggle.mutateAsync.mock.calls[0]?.[0]).toEqual({
       eventId: 'up',
       going: false,
     });
 
-    const restore = { attendingAt: '2026-12-01T02:00:00.000Z', token: 't2' };
-    toggle.mutate.mock.calls[0]?.[1].onSuccess({ going: false, restore });
+    await waitFor(() => expect(toasts.showRemovedToast).toHaveBeenCalled());
     expect(toasts.showRemovedToast.mock.calls[0]?.[0].artist).toBe('Artist up');
     expect(toasts.showRemovedToast.mock.calls[0]?.[0].onUndo).toBeTypeOf(
       'function',
     );
   });
 
-  it('raises the save failure as a toast when an upcoming release fails', () => {
+  it('raises the save failure as a toast when an upcoming release fails', async () => {
+    toggle.mutateAsync.mockRejectedValue(new Error('offline'));
     renderWithUpcoming();
     openMenuFor('Artist up');
     fireEvent.click(
@@ -531,9 +528,30 @@ describe('HistoryContent: taking a night out', () => {
       }),
     );
 
-    toggle.mutate.mock.calls[0]?.[1].onError();
+    await waitFor(() =>
+      expect(toasts.showAttendanceError).toHaveBeenCalledWith('save'),
+    );
+  });
 
-    expect(toasts.showAttendanceError).toHaveBeenCalledWith('save');
+  it('keeps both toasts and restore tokens when two nights are removed in a row', async () => {
+    const first = { attendingAt: '2026-05-14T02:00:00.000Z', token: 'a1' };
+    const second = { attendingAt: '2026-03-02T02:00:00.000Z', token: 'b1' };
+    toggle.mutateAsync
+      .mockResolvedValueOnce({ going: false, restore: first })
+      .mockResolvedValueOnce({ going: false, restore: second });
+    renderWithUpcoming();
+
+    confirmRemoval('Artist a');
+    await waitFor(() =>
+      expect(toasts.showRemovedToast).toHaveBeenCalledTimes(1),
+    );
+    confirmRemoval('Artist bb');
+    await waitFor(() =>
+      expect(toasts.showRemovedToast).toHaveBeenCalledTimes(2),
+    );
+
+    expect(toasts.showRemovedToast.mock.calls[0]?.[0].artist).toBe('Artist a');
+    expect(toasts.showRemovedToast.mock.calls[1]?.[0].artist).toBe('Artist bb');
   });
 
   it('opens Share this night from the menu', () => {
@@ -546,46 +564,49 @@ describe('HistoryContent: taking a night out', () => {
     expect(screen.getByTestId('share-sheet')).toBeInTheDocument();
   });
 
-  it('toasts with Undo that sends the restore token back', () => {
+  it('toasts with Undo that sends the restore token back', async () => {
+    const restore = { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' };
+    toggle.mutateAsync.mockResolvedValue({ going: false, restore });
     renderWithUpcoming();
     confirmRemoval('Artist a');
 
-    const restore = { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' };
-    toggle.mutate.mock.calls[0]?.[1].onSuccess({ going: false, restore });
+    await waitFor(() => expect(toasts.showRemovedToast).toHaveBeenCalled());
     const { artist, onUndo } = toasts.showRemovedToast.mock.calls[0]?.[0];
     expect(artist).toBe('Artist a');
 
     onUndo();
-    expect(toggle.mutate.mock.calls[1]?.[0]).toEqual({
+    await waitFor(() => expect(toggle.mutateAsync).toHaveBeenCalledTimes(2));
+    expect(toggle.mutateAsync.mock.calls[1]?.[0]).toEqual({
       eventId: 'a',
       going: true,
       restore,
     });
   });
 
-  it('toasts without Undo when the server returned no restore', () => {
+  it('toasts without Undo when the server returned no restore', async () => {
+    toggle.mutateAsync.mockResolvedValue({ going: false, restore: null });
     renderWithUpcoming();
     confirmRemoval('Artist a');
 
-    toggle.mutate.mock.calls[0]?.[1].onSuccess({
-      going: false,
-      restore: null,
-    });
-
+    await waitFor(() => expect(toasts.showRemovedToast).toHaveBeenCalled());
     expect(toasts.showRemovedToast.mock.calls[0]?.[0].onUndo).toBeNull();
   });
 
-  it('raises the undo failure when the restore fails', () => {
+  it('raises the undo failure when the restore fails', async () => {
+    toggle.mutateAsync
+      .mockResolvedValueOnce({
+        going: false,
+        restore: { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' },
+      })
+      .mockRejectedValueOnce(new Error('offline'));
     renderWithUpcoming();
     confirmRemoval('Artist a');
-    toggle.mutate.mock.calls[0]?.[1].onSuccess({
-      going: false,
-      restore: { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' },
-    });
+    await waitFor(() => expect(toasts.showRemovedToast).toHaveBeenCalled());
+
     toasts.showRemovedToast.mock.calls[0]?.[0].onUndo();
 
-    toggle.mutate.mock.calls[1]?.[1].onError();
-
-    expect(toasts.showAttendanceError).toHaveBeenCalledWith('undo');
+    await waitFor(() =>
+      expect(toasts.showAttendanceError).toHaveBeenCalledWith('undo'),
+    );
   });
 });

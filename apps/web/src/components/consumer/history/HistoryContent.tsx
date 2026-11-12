@@ -199,34 +199,46 @@ export const HistoryContent = ({
 
   // Takes the night out and raises the toast. Both halves end here, with and
   // without a confirm: a past night asks first, an upcoming one does not.
-  const release = (show: HistoryShow, onDone: (ok: boolean) => void) => {
-    toggle.mutate(
-      { eventId: show.eventId, going: false },
-      {
-        onSuccess: (result) => {
-          const restore = result.restore ?? null;
-          showRemovedToast({
-            artist: show.artist,
-            onUndo: restore
-              ? () => {
-                  setRestoredId(show.eventId);
-                  toggle.mutate(
-                    { eventId: show.eventId, going: true, restore },
-                    { onError: () => showAttendanceError('undo') },
-                  );
-                }
-              : null,
-          });
-          onDone(true);
-        },
-        onError: () => onDone(false),
-      },
-    );
+  //
+  // `mutateAsync`, not `mutate` with per-call callbacks: the hook has one
+  // observer, and React Query drops a call's callbacks when a newer call is
+  // made or the list unmounts. Two quick removes would otherwise lose the
+  // first one's toast and its restore token.
+  const undo = async (
+    show: HistoryShow,
+    restore: { attendingAt: string; token: string },
+  ) => {
+    try {
+      await toggle.mutateAsync({ eventId: show.eventId, going: true, restore });
+      // Set once the PUT has landed, so the row that the refetch brings back
+      // is the one that fades in.
+      setRestoredId(show.eventId);
+    } catch {
+      showAttendanceError('undo');
+    }
   };
 
-  const confirmRemove = (show: HistoryShow) => {
+  const release = async (show: HistoryShow): Promise<boolean> => {
+    try {
+      const result = await toggle.mutateAsync({
+        eventId: show.eventId,
+        going: false,
+      });
+      const restore = result.restore ?? null;
+      showRemovedToast({
+        artist: show.artist,
+        onUndo: restore ? () => void undo(show, restore) : null,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const confirmRemove = async (show: HistoryShow) => {
     setRemoving({ show, status: 'pending' });
-    release(show, (ok) => setRemoving(ok ? null : { show, status: 'failed' }));
+    const ok = await release(show);
+    setRemoving(ok ? null : { show, status: 'failed' });
   };
 
   const actionsFor =
@@ -236,7 +248,7 @@ export const HistoryContent = ({
         tense === 'past'
           ? () => setRemoving({ show, status: 'idle' })
           : () =>
-              release(show, (ok) => {
+              void release(show).then((ok) => {
                 if (!ok) showAttendanceError('save');
               }),
       onShare: () => setSharing(show),
@@ -317,7 +329,7 @@ export const HistoryContent = ({
           onClose={() => setRemoving(null)}
           show={removing.show}
           footnote="concerts"
-          onConfirm={() => confirmRemove(removing.show)}
+          onConfirm={() => void confirmRemove(removing.show)}
           pending={removing.status === 'pending'}
           failed={removing.status === 'failed'}
         />

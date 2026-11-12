@@ -137,6 +137,42 @@ describe('RowMenu', () => {
     });
   });
 
+  it('closes the menu when Open the show page is chosen', () => {
+    setup();
+    fireEvent.click(trigger());
+
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: HISTORY_COPY.menu.open }),
+    );
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('hands focus back to the trigger before an action runs', () => {
+    const { onRemove } = setup();
+    fireEvent.click(trigger());
+    onRemove.mockImplementation(() => {
+      expect(trigger()).toHaveFocus();
+    });
+
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: HISTORY_COPY.menu.remove }),
+    );
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not close when a press lands in the panel outside the menu list', () => {
+    setup();
+    fireEvent.click(trigger());
+    // The stubbed panel is the menu's parent: anything in it is inside.
+    const panel = screen.getByRole('menu').parentElement as HTMLElement;
+
+    fireEvent.pointerDown(panel);
+
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+  });
+
   it('calls onShare from the share item', () => {
     const { onShare } = setup();
     fireEvent.click(trigger());

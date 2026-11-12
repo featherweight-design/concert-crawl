@@ -86,7 +86,7 @@ export const RemoveConfirm = ({
         {GOING_COPY.remove.body}
       </p>
 
-      <HistoryItem show={show} density="compact" />
+      <HistoryItem show={show} density="compact" preview />
 
       {failed && !pending && (
         <p

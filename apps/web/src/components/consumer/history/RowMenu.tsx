@@ -62,7 +62,10 @@ export const RowMenu = ({
     const onPointerDown = (ev: PointerEvent) => {
       const target = ev.target;
       if (!(target instanceof Node)) return;
-      if (menuRef.current?.contains(target) || anchor?.contains(target)) return;
+      // The whole panel counts as inside, not just the menu: on a phone the
+      // sheet's title sits in it, and a tap there must not close the menu.
+      const panel = document.getElementById(panelId);
+      if (panel?.contains(target) || anchor?.contains(target)) return;
       setOpen(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
@@ -70,7 +73,7 @@ export const RowMenu = ({
       cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [open, anchor]);
+  }, [open, anchor, panelId]);
 
   const onMenuKeyDown = (ev: React.KeyboardEvent<HTMLDivElement>) => {
     const items = Array.from(
@@ -91,8 +94,12 @@ export const RowMenu = ({
     }
   };
 
+  // Focus goes back to the ⋯ before the action runs, so a sheet the action
+  // opens remembers it as the place to return to, and a menu item that
+  // unmounts never leaves focus on the page body.
   const pick = (action: () => void) => {
     setOpen(false);
+    anchor?.focus();
     action();
   };
 
@@ -122,6 +129,7 @@ export const RowMenu = ({
         role="menuitem"
         href={`/events/${eventId}`}
         className={`${ITEM_CLASS} ${itemSize}`}
+        onClick={() => setOpen(false)}
       >
         <CalendarIcon />
         <span className="min-w-0">
