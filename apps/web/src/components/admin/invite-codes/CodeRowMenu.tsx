@@ -43,26 +43,34 @@ export const CodeRowMenu = ({
   label: string;
   items: readonly CodeMenuItem[];
 }) => {
-  const [open, setOpen] = useState(false);
+  // Where the menu opens, measured from the trigger. Fixed rather than
+  // absolute, because the table scrolls inside its card and would clip it.
+  const [open, setOpen] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return undefined;
+    const close = () => setOpen(null);
     const handleClick = (evt: MouseEvent) => {
       if (
         evt.target instanceof Node &&
         !containerRef.current?.contains(evt.target)
       )
-        setOpen(false);
+        close();
     };
     const handleEscape = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') setOpen(false);
+      if (evt.key === 'Escape') close();
     };
     window.addEventListener('mousedown', handleClick);
     window.addEventListener('keydown', handleEscape);
+    // A fixed menu would drift from its row, so scrolling closes it.
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
     return () => {
       window.removeEventListener('mousedown', handleClick);
       window.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
     };
   }, [open]);
 
@@ -75,10 +83,15 @@ export const CodeRowMenu = ({
         type="button"
         aria-label={label}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={open !== null}
         onClick={(evt) => {
           evt.stopPropagation();
-          setOpen((prev) => !prev);
+          const rect = evt.currentTarget.getBoundingClientRect();
+          setOpen((prev) =>
+            prev
+              ? null
+              : { top: rect.bottom + 4, right: window.innerWidth - rect.right },
+          );
         }}
         style={{
           border: 'none',
@@ -96,9 +109,9 @@ export const CodeRowMenu = ({
         <div
           role="menu"
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            right: 0,
+            position: 'fixed',
+            top: open.top,
+            right: open.right,
             zIndex: 50,
             width: 320,
             padding: 6,
@@ -127,7 +140,7 @@ export const CodeRowMenu = ({
                   role="menuitem"
                   onClick={(evt) => {
                     evt.stopPropagation();
-                    setOpen(false);
+                    setOpen(null);
                     item.onSelect();
                   }}
                   style={{
