@@ -1,3 +1,21 @@
+# [1.346.0](https://github.com/featherweight-design/concert-crawl/compare/v1.345.0...v1.346.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address B7 review: row geometry, modal jump sheet, live status ([3c04820](https://github.com/featherweight-design/concert-crawl/commit/3c0482030be8b766e62e32d0b30a4c1fa0cfdccc))
+* **web:** anchor crew hero rings on the patch and hold skeleton geometry ([97c977a](https://github.com/featherweight-design/concert-crawl/commit/97c977ac75c4ddd9713eec166ed3e4f5d9f072c2))
+* **web:** count every genre bucket in the week strip's dots ([398a95b](https://github.com/featherweight-design/concert-crawl/commit/398a95baf8cee7bdc45e53e6ec955814a9e47360)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **web:** let a long inviter handle wrap on the crew invite ([a330db6](https://github.com/featherweight-design/concert-crawl/commit/a330db639cb90aeb47d80c4d99babc9979735959))
+* **web:** round the crew patch spokes so the hero hydrates ([6e30d00](https://github.com/featherweight-design/concert-crawl/commit/6e30d00d69182ae315f52868b815272e9a6519db))
+
+
+### Features
+
+* **web:** b+ crews restyle, host rename and crew-lens empty state (B14) ([844e589](https://github.com/featherweight-design/concert-crawl/commit/844e5892700cc89afd322cd037fb3adeacc26a85))
+* **web:** browse cal week strip, jump sheet, first-load wave and empty cards (B7) ([a6a7ba8](https://github.com/featherweight-design/concert-crawl/commit/a6a7ba8616ed4e78e38e62e61c36322c5e2c9dc6))
+* **web:** draw browse's first-load chrome as it looks live, inert ([14971d2](https://github.com/featherweight-design/concert-crawl/commit/14971d247b454c2e9e297ba5e07cb8fd5cdfb023))
+
 # [1.345.0](https://github.com/featherweight-design/concert-crawl/compare/v1.344.0...v1.345.0) (2026-11-12)
 
 
