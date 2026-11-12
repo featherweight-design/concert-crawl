@@ -13,6 +13,7 @@ const copy = CONSUMER_COPY.notFound;
  */
 export const NotFoundSurface = () => (
   <main
+    data-testid="not-found-surface"
     aria-label={copy.heading}
     style={{
       minHeight: '60vh',
