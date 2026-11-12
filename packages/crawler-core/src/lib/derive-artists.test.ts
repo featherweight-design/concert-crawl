@@ -363,6 +363,42 @@ describe('a lone observed name that joins several', () => {
     expect(result.adjudicated).toBe(false);
   });
 
+  it('keeps the observed bill when the adjudicator names nobody for a concert', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: [],
+      supportingArtists: [],
+    });
+
+    const result = await deriveArtists(clipse, adjudicate);
+
+    expect(result.headliners).toEqual(['Clipse & J.I.D']);
+    expect(result.isConcert).toBe(true);
+  });
+
+  it('honours a not-a-concert ruling', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: false,
+      headliners: [],
+      supportingArtists: [],
+    });
+
+    const result = await deriveArtists(clipse, adjudicate);
+
+    expect(result.isConcert).toBe(false);
+    expect(result.headliners).toEqual([]);
+  });
+
+  it('does not ask the verdict-reuse gate about a bill the extractor already split', () => {
+    expect(
+      wouldAdjudicate({
+        ...base,
+        title: 'Iron & Wine with Other Act',
+        observedPerformers: ['Iron & Wine', 'Other Act'],
+      }),
+    ).toBe(false);
+  });
+
   it('does not re-escalate a bill the extractor already split', async () => {
     const result = await deriveArtists(
       {

@@ -57,6 +57,15 @@ export function joinsSeveralNames(observed: string): boolean {
   return CO_BILLING_JOINERS.some((joiner) => observed.includes(joiner));
 }
 
+// Only a LONE observed name can be a flattened billing: a source that already
+// reported several headliners has split the bill itself, and is trusted. The
+// one place both the ladder and the verdict-reuse gate read, so they cannot
+// disagree.
+function isFlattenedBilling(observed: string[]): boolean {
+  const [only] = observed;
+  return observed.length === 1 && only !== undefined && joinsSeveralNames(only);
+}
+
 export function isSuspiciousObservation(
   observed: string,
   title: string,
@@ -87,13 +96,14 @@ export function wouldAdjudicate(event: {
   isConcert?: boolean;
 }): boolean {
   if (event.isConcert === false) return false;
-  const headliner = (event.observedPerformers ?? []).filter(
+  const observed = (event.observedPerformers ?? []).filter(
     (name) => name.trim().length > 0,
-  )[0];
+  );
+  const headliner = observed[0];
   if (headliner === undefined) return true;
   return (
     isSuspiciousObservation(headliner, event.title) ||
-    joinsSeveralNames(headliner)
+    isFlattenedBilling(observed)
   );
 }
 
@@ -170,23 +180,17 @@ export async function deriveArtists(
   // This is the venue's own structured field; an LLM re-reading the page title
   // is strictly downstream of it, and re-deriving here would make each event's
   // artist nondeterministic across nightly crawls.
-  const observedBill: DerivedArtists | null =
-    headliner === undefined
-      ? null
-      : {
-          headliners: observed,
-          supportingArtists: nonEmpty(event.observedSupportingArtists),
-          isConcert: true,
-          adjudicated: false,
-        };
+  const observedBill = (): DerivedArtists => ({
+    headliners: observed,
+    supportingArtists: nonEmpty(event.observedSupportingArtists),
+    isConcert: true,
+    adjudicated: false,
+  });
   // A lone observed name that joins several is escalated (see
   // CO_BILLING_JOINERS), but its observed bill stays the answer when no verdict
   // can be had, exactly as it was before the escalation existed. A bill the
   // extractor already split into several headliners is trusted as it is.
-  const joined =
-    headliner !== undefined &&
-    observed.length === 1 &&
-    joinsSeveralNames(headliner);
+  const joined = isFlattenedBilling(observed);
   if (
     headliner !== undefined &&
     !isSuspiciousObservation(headliner, event.title) &&
@@ -195,17 +199,12 @@ export async function deriveArtists(
     // The whole observed headline bill, not just its first element — a
     // co-headline set (#1203) is a real reading of the page and demoting its
     // second act to an opener would lose it.
-    return {
-      headliners: observed,
-      supportingArtists: nonEmpty(event.observedSupportingArtists),
-      isConcert: true,
-      adjudicated: false,
-    };
+    return observedBill();
   }
 
   // Step 2 — no signal, or the signal is the title wearing a performer's hat.
   if (adjudicate === null) {
-    if (joined && observedBill !== null) return observedBill;
+    if (joined) return observedBill();
     return {
       headliners: null,
       supportingArtists: null,
@@ -218,6 +217,14 @@ export async function deriveArtists(
       title: event.title,
       description: event.description,
     });
+    // The venue named somebody, and the adjudicator reads only the title and
+    // description. A verdict that bills nobody for a concert has not told us
+    // who the venue's own performer field should have been, so the observed
+    // bill stands. (A "not a concert" ruling is still honoured: that is a
+    // classification, not a missing name.)
+    if (joined && verdict.isConcert && verdict.headliners.length === 0) {
+      return observedBill();
+    }
     return {
       headliners: verdict.headliners,
       supportingArtists: mergeObservedSupporting(
@@ -242,7 +249,7 @@ export async function deriveArtists(
       title: event.title,
       error: err instanceof Error ? err.message : String(err),
     });
-    if (joined && observedBill !== null) return observedBill;
+    if (joined) return observedBill();
     return {
       headliners: null,
       supportingArtists: null,
