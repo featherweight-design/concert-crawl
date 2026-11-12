@@ -61,8 +61,10 @@ export const ARTIST_COPY = {
   historyNone: (since: string) =>
     `First time we've caught them. We only started looking in ${since}.`,
   historyOne: (venue: string) => `We've caught them once: ${venue}.`,
+  // Counts PAST shows only. It sits beside Upcoming, so the wording has to say
+  // so: "N shows on our map" read as upcoming dates.
   historyMany: (count: number, venues: string) =>
-    `${count} shows on our map: ${venues}.`,
+    `We've caught them ${count} times: ${venues}.`,
 
   // Past shows — crawl data only. Setlists and deep history were dropped with
   // #1170; this is the modest version, and it says out loud where it stops.

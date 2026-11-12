@@ -42,7 +42,9 @@ describe('historyLine', () => {
         count: 4,
         venues: ['Larimer Lounge', 'Globe Hall', 'the Bluebird'],
       }),
-    ).toBe('4 shows on our map: Larimer Lounge, Globe Hall & the Bluebird.');
+    ).toBe(
+      "We've caught them 4 times: Larimer Lounge, Globe Hall & the Bluebird.",
+    );
   });
 
   it('discloses the crawl window only in the zero phrasing', () => {
