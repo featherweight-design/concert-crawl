@@ -2,14 +2,18 @@ import Link from 'next/link';
 import { ChevronRight, Tag } from 'lucide-react';
 import { StatusPill } from './StatusPill';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { formatAgo, latestSubmission, priceLabelOf } from './submission-format';
+import {
+  countsByFilter,
+  formatAgo,
+  latestSubmission,
+  priceLabelOf,
+} from './submission-format';
 import type { UserSubmissionItem } from '@concert-crawl/types';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface SubmissionsSummaryCardProps {
   submissions: UserSubmissionItem[];
-  totalCount: number;
   cred: number;
 }
 
@@ -19,13 +23,12 @@ interface SubmissionsSummaryCardProps {
  */
 export const SubmissionsSummaryCard = ({
   submissions,
-  totalCount,
   cred,
 }: SubmissionsSummaryCardProps) => {
   const latest = latestSubmission(submissions);
-  const confirmedCount = submissions.filter(
-    (sub) => sub.status === 'confirmed',
-  ).length;
+  // Counted from the list the card opens, which leaves stale rows out.
+  const counts = countsByFilter(submissions);
+  const confirmedCount = counts.live;
 
   if (latest === undefined) {
     return (
@@ -66,7 +69,7 @@ export const SubmissionsSummaryCard = ({
             className="text-[10.5px] uppercase tracking-[0.1em] text-fg-muted"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            {SETTINGS_COPY.submissionsTotal(totalCount)}
+            {SETTINGS_COPY.submissionsTotal(counts.all)}
             {confirmedCount > 0 &&
               SETTINGS_COPY.submissionsConfirmedSuffix(confirmedCount)}
             {cred > 0 && SETTINGS_COPY.submissionsCredSuffix(cred)}

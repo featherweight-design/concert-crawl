@@ -18,7 +18,8 @@ export const formatDate = (iso: string): string => {
 };
 
 export const formatAgo = (iso: string): string => {
-  const diff = Date.now() - new Date(iso).getTime();
+  // A server stamp a few seconds ahead of this clock is "0m", never "-1m".
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
   const mins = Math.floor(diff / 60_000);
   if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);

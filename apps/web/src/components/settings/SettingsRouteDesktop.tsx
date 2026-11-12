@@ -12,6 +12,7 @@ import { SIGNAL_TO_ACCENT } from './definitions/styles';
 import { CredChip } from './CredChip';
 import { ThemePickerInline } from './ThemePickerInline';
 import { MySubmissionsList } from './MySubmissionsList';
+import { countsByFilter } from './submission-format';
 import { SubmissionStats } from './SubmissionStats';
 import { DangerZone } from './DangerZone';
 import { DataExportRow } from './DataExportRow';
@@ -135,9 +136,10 @@ export function SettingsRouteDesktop({
   }, [editOpen]);
 
   const isAnon = !profile.handle;
-  const confirmedCount = submissions.filter(
-    (sub) => sub.status === 'confirmed',
-  ).length;
+  // From the list itself, so the panel's counts agree with its filter chips:
+  // the list leaves stale rows out, `profile.submissionCount` does not.
+  const submissionCounts = countsByFilter(submissions);
+  const confirmedCount = submissionCounts.live;
 
   const profilePanel = (
     <div className="flex flex-col gap-5">
@@ -196,14 +198,14 @@ export function SettingsRouteDesktop({
         title={SETTINGS_COPY.submissionsSection}
         sub={
           <>
-            {SETTINGS_COPY.submissionsTotal(profile.submissionCount)}
+            {SETTINGS_COPY.submissionsTotal(submissionCounts.all)}
             {confirmedCount > 0 &&
               SETTINGS_COPY.submissionsConfirmedSuffixDesktop(confirmedCount)}
           </>
         }
       />
       <SubmissionStats
-        submitted={profile.submissionCount}
+        submitted={submissionCounts.all}
         confirmed={confirmedCount}
         cred={profile.cred}
       />

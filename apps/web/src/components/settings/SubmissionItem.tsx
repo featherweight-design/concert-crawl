@@ -25,7 +25,8 @@ export function SubmissionItem({
       className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
       style={isLast ? undefined : { borderBottom: '1px solid var(--border)' }}
     >
-      {/* The venue's tile: every submission has a venue, none has an image */}
+      {/* The venue's tile, none has an image. A submission whose event has no
+          venue row has no slug and wears VenueTile's name-keyed fallback. */}
       <VenueTile
         slug={submission.venueSlug ?? ''}
         name={submission.venue}

@@ -82,7 +82,6 @@ export function SettingsRoute({
           <SectionLabel>{SETTINGS_COPY.submissionsSection}</SectionLabel>
           <SubmissionsSummaryCard
             submissions={submissions}
-            totalCount={profile.submissionCount}
             cred={profile.cred}
           />
         </div>

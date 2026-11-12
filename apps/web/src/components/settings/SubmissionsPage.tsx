@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { MySubmissionsList } from './MySubmissionsList';
+import { countsByFilter } from './submission-format';
 import { SubmissionStats } from './SubmissionStats';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import type {
@@ -22,9 +23,9 @@ export const SubmissionsPage = ({
   profile,
   submissions,
 }: SubmissionsPageProps) => {
-  const confirmedCount = submissions.filter(
-    (sub) => sub.status === 'confirmed',
-  ).length;
+  // From the list itself, so the tiles agree with the filter counts below it:
+  // the list leaves stale rows out, `profile.submissionCount` does not.
+  const counts = countsByFilter(submissions);
 
   return (
     <>
@@ -42,8 +43,8 @@ export const SubmissionsPage = ({
       </div>
       <div className="flex flex-col gap-5 px-4 pb-24 pt-5">
         <SubmissionStats
-          submitted={profile.submissionCount}
-          confirmed={confirmedCount}
+          submitted={counts.all}
+          confirmed={counts.live}
           cred={profile.cred}
         />
         <MySubmissionsList submissions={submissions} />
