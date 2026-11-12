@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // The signed-in events/[id] page is an async server component, so its About
 // block is asserted through EventAbout, the component it renders.
 import { afterEach, describe, expect, it } from 'vitest';
