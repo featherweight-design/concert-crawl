@@ -1,6 +1,8 @@
 /**
  * The invite-codes admin's calls, from the browser with the Clerk token, as
- * the artists page makes them.
+ * the artists page makes them. Every payload is checked with a type guard
+ * before it's used (the web app carries no Zod), so a shape drift fails into
+ * Couldn't load rather than drawing bad rows.
  */
 import type { AdminInviteCode } from '@concert-crawl/types';
 
@@ -10,34 +12,62 @@ const BASE = '/v1/admin/invite-codes';
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
+const isText = (value: unknown): value is string => typeof value === 'string';
+const isTextOrNull = (value: unknown): value is string | null =>
+  value === null || typeof value === 'string';
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+export const isAdminInviteCode = (value: unknown): value is AdminInviteCode =>
+  isRecord(value) &&
+  isText(value['id']) &&
+  isText(value['code']) &&
+  isText(value['createdBy']) &&
+  isText(value['createdAt']) &&
+  isTextOrNull(value['usedBy']) &&
+  isTextOrNull(value['usedAt']) &&
+  isTextOrNull(value['expiresAt']) &&
+  isTextOrNull(value['revokedAt']) &&
+  isTextOrNull(value['revokedBy']) &&
+  isTextOrNull(value['label']) &&
+  isTextOrNull(value['createdByHandle']) &&
+  isTextOrNull(value['lastUsedAt']) &&
+  isCount(value['maxUses']) &&
+  isCount(value['useCount']);
+
+/** A payload that isn't the route's documented shape. Never shown as text. */
+class ShapeError extends Error {}
+
 export type GetToken = () => Promise<string | null>;
 
-const call = async <T>(getToken: GetToken, path: string): Promise<T> => {
+/** The envelope's `data`, unchecked; each caller narrows it with a guard. */
+const call = async (getToken: GetToken, path: string): Promise<unknown> => {
   const token = await getToken();
-  if (!token) throw new Error('Not signed in');
+  if (!token) throw new ShapeError('no token');
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const body: unknown = await res.json().catch(() => null);
-  const record = isRecord(body) ? body : {};
-  if (!res.ok || record['success'] !== true) {
-    const error = record['error'];
-    throw new Error(
-      typeof error === 'string' ? error : `Request failed (${res.status})`,
-    );
+  if (!res.ok || !isRecord(body) || body['success'] !== true) {
+    throw new ShapeError(`status ${res.status}`);
   }
-  // The envelope's payload is the route's documented shape; the fetch can't
-  // check it, so this is the one boundary cast, as in `apiClient`.
-  return record['data'] as T;
+  return body['data'];
 };
 
 export const codesApi = (getToken: GetToken) => ({
-  list: () => call<AdminInviteCode[]>(getToken, BASE),
+  list: async (): Promise<AdminInviteCode[]> => {
+    const data = await call(getToken, BASE);
+    if (!Array.isArray(data) || !data.every(isAdminInviteCode))
+      throw new ShapeError('codes');
+    return data;
+  },
   /** The People tab's count. */
-  peopleTotal: () =>
-    call<{ total: number }>(getToken, '/v1/admin/users?limit=1').then(
-      (res) => res.total,
-    ),
+  peopleTotal: async (): Promise<number> => {
+    const data = await call(getToken, '/v1/admin/users?limit=1');
+    if (!isRecord(data) || !isCount(data['total']))
+      throw new ShapeError('total');
+    return data['total'];
+  },
 });
 
 export type CodesApi = ReturnType<typeof codesApi>;

@@ -2064,7 +2064,9 @@ export const ADMIN_COPY = {
       'Revoked and expired codes stay listed, so you can see who they brought in.',
     empty: {
       title: 'No invite codes yet',
-      body: 'Make one for a friend or a poster. Each can seat up to 500 people.',
+      // `max` is the seat cap (`MAX_SEATS`, 500), so the line can't drift.
+      body: (max: number) =>
+        `Make one for a friend or a poster. Each can seat up to ${max} people.`,
     },
   },
 
