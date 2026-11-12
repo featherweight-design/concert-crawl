@@ -47,6 +47,20 @@ export const CodeRowMenu = ({
   // absolute, because the table scrolls inside its card and would clip it.
   const [open, setOpen] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const isOpen = open !== null;
+
+  const menuItems = () =>
+    Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
+    );
+
+  // Opening moves focus into the menu, on its first item.
+  useEffect(() => {
+    if (isOpen)
+      menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -59,7 +73,10 @@ export const CodeRowMenu = ({
         close();
     };
     const handleEscape = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') close();
+      if (evt.key !== 'Escape') return;
+      // Close, and hand focus back to the ⋯ that opened it.
+      close();
+      triggerRef.current?.focus();
     };
     window.addEventListener('mousedown', handleClick);
     window.addEventListener('keydown', handleEscape);
@@ -80,18 +97,25 @@ export const CodeRowMenu = ({
       style={{ position: 'relative', display: 'inline-block' }}
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         aria-haspopup="menu"
-        aria-expanded={open !== null}
+        aria-expanded={isOpen}
         onClick={(evt) => {
           evt.stopPropagation();
           const rect = evt.currentTarget.getBoundingClientRect();
-          setOpen((prev) =>
-            prev
-              ? null
-              : { top: rect.bottom + 4, right: window.innerWidth - rect.right },
-          );
+          // The menu's height from its drawn rows (9+28+9px each, plus the
+          // divider and padding), so it opens upward near the bottom.
+          const height = items.length * 50 + 26;
+          const below = rect.bottom + 4;
+          const top =
+            below + height > window.innerHeight
+              ? Math.max(8, rect.top - 4 - height)
+              : below;
+          // clientWidth leaves out the scrollbar, as `right` does.
+          const right = document.documentElement.clientWidth - rect.right;
+          setOpen((prev) => (prev ? null : { top, right }));
         }}
         style={{
           border: 'none',
@@ -107,7 +131,29 @@ export const CodeRowMenu = ({
       </button>
       {open && (
         <div
+          ref={menuRef}
           role="menu"
+          aria-label={label}
+          onKeyDown={(evt) => {
+            const all = menuItems();
+            const at = all.findIndex((el) => el === document.activeElement);
+            const step: Record<string, number> = {
+              ArrowDown: 1,
+              ArrowUp: -1,
+            };
+            if (evt.key in step) {
+              evt.preventDefault();
+              const next =
+                (at + (step[evt.key] ?? 0) + all.length) % all.length;
+              all[next]?.focus();
+            } else if (evt.key === 'Home' || evt.key === 'End') {
+              evt.preventDefault();
+              all[evt.key === 'Home' ? 0 : all.length - 1]?.focus();
+            } else if (evt.key === 'Tab') {
+              // Leaving the menu closes it rather than stranding it open.
+              setOpen(null);
+            }
+          }}
           style={{
             position: 'fixed',
             top: open.top,
@@ -138,6 +184,7 @@ export const CodeRowMenu = ({
                 <button
                   type="button"
                   role="menuitem"
+                  tabIndex={-1}
                   onClick={(evt) => {
                     evt.stopPropagation();
                     setOpen(null);

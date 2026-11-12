@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
@@ -202,7 +202,9 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   const [open, setOpen] = useState<Open | null>(null);
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copyNote, setCopyNote] = useState<string | null>(null);
+  // One revoke or reactivate at a time; a double click must not post twice.
+  const ending = useRef(false);
   const now = new Date();
 
   const load = useCallback(async () => {
@@ -230,17 +232,30 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     );
 
   const copyLink = (code: AdminInviteCode) => {
-    void navigator.clipboard?.writeText(`${origin}/i/${code.code}`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    const note = (text: string) => {
+      setCopyNote(text);
+      setTimeout(() => setCopyNote(null), 2000);
+    };
+    // `/i/<CODE>` is the typed short link; the proxy sends either case on.
+    const write = navigator.clipboard?.writeText(`${origin}/i/${code.code}`);
+    if (!write) {
+      note(COPY.menu.copyFailed);
+      return;
+    }
+    write.then(
+      () => note(COPY.menu.copied),
+      () => note(COPY.menu.copyFailed),
+    );
   };
 
-  // A failed change says so, with Try again (rule 10).
+  // A failed change says so, with Try again (rule 10), and reloads the list,
+  // since a refusal (409) usually means the code changed elsewhere.
   const runEnding = async (
     row: AdminInviteCode,
     action: () => Promise<InviteCode>,
   ) => {
+    if (ending.current) return;
+    ending.current = true;
     setPending(true);
     setFailure(null);
     try {
@@ -249,7 +264,9 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     } catch {
       setOpen(null);
       setFailure(failureFor(row, () => void runEnding(row, action)));
+      void load();
     } finally {
+      ending.current = false;
       setPending(false);
     }
   };
@@ -289,7 +306,8 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     }
     return [
       copy,
-      ...(row.maxUses > 1
+      // The Posters tab can only pick a live code with a seat left.
+      ...(row.maxUses > 1 && status === 'active'
         ? [
             {
               key: 'poster',
@@ -461,7 +479,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
                 </th>
                 <th
                   style={{ ...COLUMN_HEAD, width: 20, paddingRight: 18 }}
-                  aria-label={COPY.menu.trigger}
+                  aria-label={COPY.menu.columnLabel}
                 />
               </tr>
             </thead>
@@ -518,7 +536,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
                   </td>
                   <td style={{ ...CELL, paddingRight: 18 }}>
                     <CodeRowMenu
-                      label={COPY.menu.trigger}
+                      label={COPY.menu.trigger(row.code)}
                       items={menuItems(row, status)}
                     />
                   </td>
@@ -604,9 +622,15 @@ export function InviteCodesClient({ origin }: { origin: string }) {
       <div
         role="status"
         aria-live="polite"
-        style={{ fontSize: 12.5, color: 'var(--success)' }}
+        style={{
+          fontSize: 12.5,
+          color:
+            copyNote === COPY.menu.copyFailed
+              ? 'var(--danger)'
+              : 'var(--success)',
+        }}
       >
-        {copied ? COPY.menu.copied : null}
+        {copyNote}
       </div>
       {body}
 

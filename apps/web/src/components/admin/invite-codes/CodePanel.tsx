@@ -134,7 +134,8 @@ export const CodePanel = ({
           >
             {COPY.menu.copyLink}
           </AdminButton>
-          {!ended && code.maxUses > 1 && (
+          {/* The Posters tab can only pick a live code with a seat left. */}
+          {status === 'active' && code.maxUses > 1 && (
             <Link
               href={postersHref({ code: code.id })}
               prefetch={false}
