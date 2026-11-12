@@ -43,7 +43,6 @@ import {
 import { loadNextShowByCanonical } from '../../lib/artist-follows.js';
 import { closeOpenArtistReports } from '../../lib/artist-reports.js';
 import {
-  hasShowInNextDaysExpr,
   hasUpcomingShowExpr,
   nextShowDateExpr,
   nextShowVenueExpr,
@@ -107,19 +106,16 @@ const isToCheckExpr = (): SQL =>
 /**
  * The To check tab's show-date chips: a show in the next 60 days, a show
  * after that, or no show at all. 60 is the redesign's locked artist window
- * (README "Decided", the same length Needs you uses). "The next 60 days" is
- * today plus 59 more, so a show exactly 60 days out reads Later. Needs you's
- * horizon keeps its inclusive bound, which is why this uses its own
- * expression rather than `hasUpcomingShowExpr(60)`.
+ * (README "Decided", the same one Needs you uses). The bound is inclusive, as
+ * Needs you's is, so a show exactly 60 days out is Soon on both surfaces.
  */
 const SOON_WINDOW_DAYS = 60;
 const windowSchema = z.enum(['soon', 'later', 'none']);
-const soonShowExpr = (): SQL => hasShowInNextDaysExpr(SOON_WINDOW_DAYS);
 const windowFilter = (window: z.infer<typeof windowSchema>): SQL =>
   window === 'soon'
-    ? soonShowExpr()
+    ? hasUpcomingShowExpr(SOON_WINDOW_DAYS)
     : window === 'later'
-      ? sql`${hasUpcomingShowExpr()} and not ${soonShowExpr()}`
+      ? sql`${hasUpcomingShowExpr()} and not ${hasUpcomingShowExpr(SOON_WINDOW_DAYS)}`
       : sql`not ${hasUpcomingShowExpr()}`;
 
 // How many fans are Watching the artist: the list's column and the detail
@@ -351,7 +347,7 @@ artistsAdminRouter.get(
     // select list and the GROUP BY, so it cannot see the two as the same
     // expression and rejects the query.
     const upcomingOnly = upcoming ? hasUpcomingShowExpr() : undefined;
-    const soon = soonShowExpr();
+    const soon = hasUpcomingShowExpr(SOON_WINDOW_DAYS);
     const anyShow = hasUpcomingShowExpr();
     const [rows, [reportedRow], [toCheckRow]] = await Promise.all([
       db

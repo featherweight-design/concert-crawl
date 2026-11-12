@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
-import {
-  hasShowInNextDaysExpr,
-  hasUpcomingShowExpr,
-  nextShowDateExpr,
-} from './artist-upcoming.js';
+import { hasUpcomingShowExpr, nextShowDateExpr } from './artist-upcoming.js';
 
 const dialect = new PgDialect();
 const render = (expr: SQL) => dialect.sqlToQuery(expr);
@@ -28,14 +24,6 @@ describe('artist upcoming expressions', () => {
     const { sql: text, params } = render(hasUpcomingShowExpr(60));
     expect(text).toMatch(/<= \(.*::date \+ \$\d+::int\)/);
     expect(params).toContain(60);
-  });
-
-  it('bounds "the next N days" exclusively, leaving the inclusive bound alone', () => {
-    const { sql: text, params } = render(hasShowInNextDaysExpr(60));
-    expect(text).toMatch(/ < \(.*::date \+ \$\d+::int\)/);
-    expect(text).not.toMatch(/<= \(.*::date \+ \$\d+::int\)/);
-    expect(params).toContain(60);
-    expect(() => hasShowInNextDaysExpr(-1)).toThrow(RangeError);
   });
 
   it('asks the same question as the next-show date, bound or not', () => {

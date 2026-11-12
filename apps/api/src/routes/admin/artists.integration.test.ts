@@ -632,19 +632,21 @@ describe('admin artists routes', () => {
       expect(row?.watchingCount).toBe(1);
     });
 
-    it('counts the next 60 days as today plus 59 more', async () => {
+    // The window is Needs you's 60-day artist window (README "Decided"), so
+    // the two must agree on day 60: it counts as soon on both.
+    it('counts a show exactly 60 days out as soon, as Needs you does', async () => {
       const today = todayInDenver();
-      await seedArtist({ canonicalName: 'day 59', matchStatus: 'ambiguous' });
       await seedArtist({ canonicalName: 'day 60', matchStatus: 'ambiguous' });
-      await seedShow('day 59', addDays(today, 59));
+      await seedArtist({ canonicalName: 'day 61', matchStatus: 'ambiguous' });
       await seedShow('day 60', addDays(today, 60));
+      await seedShow('day 61', addDays(today, 61));
 
       const names = async (query: string) =>
         (await list(`status=to_check&${query}`)).map(
           (row) => row.canonicalName,
         );
-      expect(await names('window=soon')).toEqual(['day 59']);
-      expect(await names('window=later')).toEqual(['day 60']);
+      expect(await names('window=soon')).toEqual(['day 60']);
+      expect(await names('window=later')).toEqual(['day 61']);
 
       const res = await app.request('/v1/admin/artists/counts', {
         headers: ADMIN_HEADERS,
