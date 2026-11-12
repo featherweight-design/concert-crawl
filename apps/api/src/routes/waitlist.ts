@@ -4,6 +4,7 @@ import { validationHook } from '../lib/validator.js';
 import { z } from 'zod';
 import { db, waitlistEntries } from '@concert-crawl/db';
 import { checkRateLimit } from '../lib/rate-limit.js';
+import { clientIp } from '../lib/client-ip.js';
 
 const waitlistSchema = z.object({
   email: z.string().email(),
@@ -15,8 +16,7 @@ waitlistRouter.post(
   '/',
   zValidator('json', waitlistSchema, validationHook),
   async (ctx) => {
-    const ip =
-      ctx.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const ip = clientIp(ctx);
     // Fail open: the insert below is idempotent per email and the response never
     // reveals anything, so a brief unthrottled window only risks junk rows.
     const limit = await checkRateLimit(`waitlist:${ip}`, 5, 60 * 60 * 1000, {

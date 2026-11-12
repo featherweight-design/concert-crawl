@@ -1,6 +1,6 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
   signInviteCookie,
@@ -24,6 +24,40 @@ type ValidationResult =
         | 'server_error';
     };
 
+/**
+ * The visitor's address as Vercel reports it to this function. Vercel sets
+ * `x-vercel-forwarded-for` and `x-real-ip` to the same client IP and
+ * overwrites `x-forwarded-for` (https://vercel.com/docs/headers/request-headers).
+ */
+async function visitorIp(): Promise<string | undefined> {
+  const incoming = await headers();
+  for (const name of [
+    'x-vercel-forwarded-for',
+    'x-real-ip',
+    'x-forwarded-for',
+  ]) {
+    const first = incoming.get(name)?.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return undefined;
+}
+
+/**
+ * This action calls the API from the web function, so the API sees the web
+ * project's IP for every visitor and its per-IP miss limit would become one
+ * bucket for everyone. Forward the visitor's IP, vouched for by the shared
+ * service key; the API trusts `x-client-ip` only beside that key. Without the
+ * secret neither header is sent and the API falls back to the shared bucket,
+ * which fails safe (stricter, never looser).
+ */
+async function forwardedIpHeaders(): Promise<Record<string, string>> {
+  const serviceKey = process.env.INTERNAL_API_SECRET;
+  if (!serviceKey) return {};
+  const ip = await visitorIp();
+  if (!ip) return {};
+  return { 'x-client-ip': ip, 'x-service-key': serviceKey };
+}
+
 export async function validateAndSetInviteCode(
   code: string,
   // The `redirect_url` the middleware attached when it bounced an invite-gated
@@ -42,7 +76,10 @@ export async function validateAndSetInviteCode(
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
     const res = await fetch(`${apiUrl}/v1/auth/validate-code`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(await forwardedIpHeaders()),
+      },
       body: JSON.stringify({ code: normalizedCode }),
     });
 

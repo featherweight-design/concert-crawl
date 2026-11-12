@@ -5,7 +5,7 @@
 // Postgres bucket did: a valid code refunds its count, the miss after the
 // limit is refused, and a concurrent burst cannot run more lookups than the
 // limit allows.
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { inviteCodes } from '@concert-crawl/db';
 import { createApp } from '../app.js';
 import { testDb } from '../test/helpers/db.js';
@@ -92,6 +92,60 @@ describe('POST /v1/auth/validate-code rate limit', () => {
 
     expect(statuses.filter((status) => status === 404)).toHaveLength(10);
     expect(statuses.filter((status) => status === 429)).toHaveLength(15);
+  });
+});
+
+// The web server action calls this route from the web function, so every
+// visitor arrives from the web project's IP. It forwards the visitor's own
+// address as x-client-ip, vouched for by the service key.
+describe('POST /v1/auth/validate-code — forwarded visitor IP', () => {
+  const SERVICE_KEY = 'test-internal-secret';
+  const WEB_FUNCTION_IP = '192.0.2.50';
+
+  const fromWeb = (
+    code: string,
+    visitorIp: string,
+    serviceKey?: string,
+  ): Promise<Response> =>
+    app.request('/v1/auth/validate-code', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': WEB_FUNCTION_IP,
+        'x-client-ip': visitorIp,
+        ...(serviceKey ? { 'x-service-key': serviceKey } : {}),
+      },
+      body: JSON.stringify({ code }),
+    });
+
+  beforeEach(async () => {
+    vi.stubEnv('INTERNAL_API_SECRET', SERVICE_KEY);
+    await clearTables();
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('gives two visitors behind the web function separate buckets', async () => {
+    for (let i = 0; i < 11; i += 1) {
+      await fromWeb(miss(i), '198.51.100.1', SERVICE_KEY);
+    }
+    expect((await fromWeb(miss(50), '198.51.100.1', SERVICE_KEY)).status).toBe(
+      429,
+    );
+    expect((await fromWeb(miss(51), '198.51.100.2', SERVICE_KEY)).status).toBe(
+      404,
+    );
+  });
+
+  it('ignores x-client-ip sent without the service key', async () => {
+    // Each request names a fresh visitor IP, but without the key they all
+    // land in the web function's one bucket.
+    for (let i = 0; i < 11; i += 1) {
+      await fromWeb(miss(i), `198.51.100.${i + 10}`);
+    }
+    expect((await fromWeb(miss(60), '198.51.100.99')).status).toBe(429);
+    expect((await validate(miss(61), WEB_FUNCTION_IP)).status).toBe(429);
   });
 });
 
