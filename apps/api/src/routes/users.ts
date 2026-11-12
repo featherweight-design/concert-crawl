@@ -92,9 +92,6 @@ function formatJoined(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-// Optional narrowing input for the past-due banner predicate — invalid or
-// missing values fall back to null rather than 400.
-
 // The profile surface must not 500 over a billing read — a missing
 // founder_window singleton falls back to the pre-launch view.
 const FOUNDER_WINDOW_FALLBACK: FounderWindowView = {

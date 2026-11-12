@@ -22,7 +22,6 @@ const publicMetadataSchema = z.object({
 
 export interface PlanContext {
   planState: PlanState;
-  trialEndsAt: Date | null;
 }
 
 // Loads DB context and derives PlanState for an
@@ -102,7 +101,6 @@ export async function loadPlanContext(
 
   return {
     planState,
-    trialEndsAt,
   };
 }
 
