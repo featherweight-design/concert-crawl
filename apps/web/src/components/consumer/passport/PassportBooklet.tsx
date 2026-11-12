@@ -140,6 +140,8 @@ interface BookletViewProps {
   firstPage: number;
   onTurn: (firstPage: number) => void;
   className: string;
+  /** The pager row under the book. The empty book has none. */
+  pager: boolean;
 }
 
 function BookletView({
@@ -150,6 +152,7 @@ function BookletView({
   firstPage,
   onTurn,
   className,
+  pager,
 }: BookletViewProps) {
   const stack = layout === 'stack';
   const spreads = bookletSpreads(pages, layout);
@@ -181,7 +184,7 @@ function BookletView({
       ]
         .filter((part): part is string => part !== null)
         .join(' · ');
-  const showJump = !stack && stats.nights > STAMPS_PER_PAGE;
+  const showJump = pager && !stack && stats.nights > STAMPS_PER_PAGE;
 
   return (
     <div data-booklet-layout={layout} className={className}>
@@ -233,41 +236,43 @@ function BookletView({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <PagerButton
-          direction="previous"
-          disabled={current === 0}
-          onClick={() => go(current - 1)}
-        />
-        <span aria-hidden="true" className="flex items-center gap-1.5">
-          {spreads.map((_, index) => (
-            <span
-              key={index}
-              className="h-1.5 rounded-full"
-              style={{
-                width: index === current ? 28 : 6,
-                background:
-                  index === current
-                    ? 'linear-gradient(90deg, var(--signal), var(--accent))'
-                    : 'var(--border-strong)',
-                transition: 'width var(--motion-base) var(--motion-ease)',
-              }}
-            />
-          ))}
-        </span>
-        <span
-          aria-live="polite"
-          data-booklet-status=""
-          className={`min-w-0 flex-1 truncate ${MONO_LABEL}`}
-        >
-          {status}
-        </span>
-        <PagerButton
-          direction="next"
-          disabled={current === last}
-          onClick={() => go(current + 1)}
-        />
-      </div>
+      {pager && (
+        <div className="flex items-center gap-3">
+          <PagerButton
+            direction="previous"
+            disabled={current === 0}
+            onClick={() => go(current - 1)}
+          />
+          <span aria-hidden="true" className="flex items-center gap-1.5">
+            {spreads.map((_, index) => (
+              <span
+                key={index}
+                className="h-1.5 rounded-full"
+                style={{
+                  width: index === current ? 28 : 6,
+                  background:
+                    index === current
+                      ? 'linear-gradient(90deg, var(--signal), var(--accent))'
+                      : 'var(--border-strong)',
+                  transition: 'width var(--motion-base) var(--motion-ease)',
+                }}
+              />
+            ))}
+          </span>
+          <span
+            aria-live="polite"
+            data-booklet-status=""
+            className={`min-w-0 flex-1 truncate ${MONO_LABEL}`}
+          >
+            {status}
+          </span>
+          <PagerButton
+            direction="next"
+            disabled={current === last}
+            onClick={() => go(current + 1)}
+          />
+        </div>
+      )}
 
       {showJump && (
         <div className="flex flex-wrap items-center gap-2">
@@ -298,6 +303,11 @@ interface PassportBookletProps {
   pages: BookletPage[];
   identity: PassportIdentity;
   stats: PassportStats;
+  /**
+   * The pager row under the book. Off for the empty book (addendum 2 item 16,
+   * `passport-empty-d`), which draws one spread and no pager.
+   */
+  pager?: boolean;
 }
 
 /**
@@ -313,9 +323,17 @@ export function PassportBooklet({
   pages,
   identity,
   stats,
+  pager = true,
 }: PassportBookletProps) {
   const [firstPage, setFirstPage] = useState(0);
-  const shared = { pages, identity, stats, firstPage, onTurn: setFirstPage };
+  const shared = {
+    pages,
+    identity,
+    stats,
+    firstPage,
+    onTurn: setFirstPage,
+    pager,
+  };
   return (
     <section aria-label={COPY.bookletLabel}>
       <BookletView

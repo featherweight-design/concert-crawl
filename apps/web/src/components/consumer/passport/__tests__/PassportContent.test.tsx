@@ -203,11 +203,64 @@ describe('PassportContent', () => {
   it('shows the empty state rather than a blank card when nothing is attended', () => {
     renderContent({ past: [] });
 
-    expect(screen.getByText(COPY.emptyTitle)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: COPY.emptyCta })).toHaveAttribute(
-      'href',
-      '/events',
+    // The phone's card and the desktop block both render (CSS shows one).
+    expect(screen.getAllByText(COPY.emptyTitle)).toHaveLength(2);
+    const ctas = screen.getAllByRole('link', { name: COPY.emptyCta });
+    expect(ctas).toHaveLength(2);
+    for (const cta of ctas) expect(cta).toHaveAttribute('href', '/events');
+  });
+
+  // Addendum 2 item 16, `passport-empty-d`: the open book with four empty
+  // round slots, the ID page at 0 / 0 / —, the empty block beside it, every
+  // venue greyed, and no Share or Save image until there is a stamp.
+  it('draws the empty desktop Passport as the open book', () => {
+    renderContent({ past: [] });
+    const desktop = document.querySelector(
+      '[data-passport-empty-layout="desktop"]',
     );
+    expect(desktop).not.toBeNull();
+    const spread = desktop!.querySelector('[data-booklet-layout="spread"]');
+    expect(spread).not.toBeNull();
+    expect(spread!.querySelector('[data-booklet-leaf="id"]')).not.toBeNull();
+    expect(spread!.querySelectorAll('[data-booklet-empty]')).toHaveLength(4);
+    expect(spread!.querySelector('[data-booklet-stamp]')).toBeNull();
+    expect(spread).toHaveTextContent(COPY.pageLabel(1));
+    // ID page: 0 nights, 0 venues, no top genre.
+    const idPage = spread!.querySelector('[data-booklet-leaf="id"]');
+    expect(idPage).toHaveTextContent('0');
+    expect(idPage).toHaveTextContent('—');
+    // One spread and no pager.
+    expect(
+      screen.queryByRole('button', { name: COPY.previousPage }),
+    ).not.toBeInTheDocument();
+    expect(
+      desktop!.querySelector('[data-passport-empty="block"]'),
+    ).not.toBeNull();
+    expect(desktop).toHaveTextContent(COPY.collectedCount(0, 2));
+    expect(
+      desktop!.querySelectorAll('[data-venue-collected="no"]'),
+    ).toHaveLength(2);
+    expect(
+      screen.queryByRole('button', { name: COPY.shareLabel }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(COPY.saveLabel)).not.toBeInTheDocument();
+  });
+
+  // Item 4: the NEXT ghost sits right after the newest stamp, so in an empty
+  // book with a show ahead it takes the first slot.
+  it('puts the NEXT ghost in the first slot of an empty book', () => {
+    renderContent({
+      past: [],
+      upcoming: [row('up', '2026-11-21', { artist: 'Marian Hill' })],
+    });
+    const spread = document.querySelector(
+      '[data-passport-empty-layout="desktop"] [data-booklet-layout="spread"]',
+    );
+    const slots = spread!.querySelectorAll(
+      '[data-booklet-leaf="page-1"] > *:not(:last-child)',
+    );
+    expect(slots[0]).toHaveAttribute('data-booklet-next', 'up');
+    expect(spread!.querySelectorAll('[data-booklet-empty]')).toHaveLength(3);
   });
 
   // A resolving plan must not flash the lock screen at a Supporter.

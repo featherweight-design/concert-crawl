@@ -109,14 +109,52 @@ export const PassportContent = ({
   const upNext = <UpNextStubs queue={queue} today={today} />;
 
   if (past.length === 0) {
+    // Addendum 2 item 16. A phone keeps the approved empty card; from `sm` up
+    // it is the open, empty book (`passport-empty-d`): the ID page at
+    // 0 / 0 / —, four empty round slots, the empty block beside it and every
+    // venue greyed. Share and Save image wait for the first stamp.
+    const emptyStats = passportStats([]);
+    const emptyPages = bookletPages([], queue[0] ?? null);
+    const emptyVenues = collectedVenues(activeVenues, []);
     return (
       <Shell>
-        <header className="mb-6">
-          <PageTitle />
-        </header>
-        <div className="flex flex-col gap-8">
-          <PassportEmpty />
-          <div className="mx-auto w-full max-w-[460px]">{upNext}</div>
+        <div data-passport-empty-layout="phone" className="sm:hidden">
+          <header className="mb-6">
+            <PageTitle />
+          </header>
+          <div className="flex flex-col gap-8">
+            <PassportEmpty />
+            <div className="mx-auto w-full max-w-[460px]">{upNext}</div>
+          </div>
+        </div>
+        <div
+          data-passport-empty-layout="desktop"
+          className="hidden grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] sm:grid lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']"
+        >
+          <header className="flex flex-col gap-2 [grid-area:head]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+              {COPY.breadcrumb}
+            </p>
+            <PageTitle />
+            <p className="text-[15px] text-fg-muted">{COPY.pageSubtitle}</p>
+          </header>
+          <div className="min-w-0 [grid-area:book]">
+            <PassportBooklet
+              pages={emptyPages}
+              identity={identity}
+              stats={emptyStats}
+              pager={false}
+            />
+          </div>
+          <div className="flex min-w-0 flex-col gap-7 [grid-area:side]">
+            <PassportEmpty variant="block" />
+            {upNext}
+            <VenuesCollected
+              venues={emptyVenues.venues}
+              collected={emptyVenues.collected}
+              total={emptyVenues.total}
+            />
+          </div>
         </div>
       </Shell>
     );
