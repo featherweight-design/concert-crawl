@@ -1,6 +1,10 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { NotifPanelEdge } from './NotifPanelEdge';
+
+afterEach(cleanup);
 
 describe('NotifPanelEdge', () => {
   it('renders a decorative svg that follows the border box', () => {
