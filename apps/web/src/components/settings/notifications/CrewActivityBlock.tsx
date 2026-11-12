@@ -16,6 +16,12 @@ import { ToggleSwitch } from '../connections/ToggleSwitch';
 import { useCrews, useCrewMuteToggle } from '@/lib/queries/use-crew-mutes';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
+import {
+  GroupHeading,
+  ROW_CARD,
+  ROW_DETAIL,
+  ROW_LABEL,
+} from './NotificationRow';
 
 const COPY = NOTIFICATIONS_COPY.crew;
 
@@ -28,27 +34,20 @@ export const CrewActivityBlock = () => {
   // the section's one alert, and two live regions announcing at once on a
   // settings page is noise, not information.
   const body = isError ? (
-    <p className="text-xs text-fg-muted">{COPY.loadError}</p>
+    <p className={ROW_DETAIL}>{COPY.loadError}</p>
   ) : isLoading ? (
-    <div className="h-10 rounded-lg bg-surface-1" />
+    <div className="h-10 rounded-2xl bg-surface-1" />
   ) : crews === undefined || crews.length === 0 ? (
-    <p className="text-xs text-fg-muted">{COPY.empty}</p>
+    <p className={ROW_DETAIL}>{COPY.empty}</p>
   ) : (
     <div className="flex flex-col gap-2">
       {crews.map((crew) => {
         const audible = !crew.muted;
         return (
-          <div
-            key={crew.id}
-            className="flex items-center justify-between rounded-lg border border-border bg-surface-1 px-4 py-3"
-          >
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-semibold text-fg">
-                {crew.name}
-              </span>
-              <span className="text-xs text-fg-muted">
-                {audible ? COPY.on : COPY.off}
-              </span>
+          <div key={crew.id} className={ROW_CARD}>
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className={`${ROW_LABEL} truncate`}>{crew.name}</span>
+              <span className={ROW_DETAIL}>{audible ? COPY.on : COPY.off}</span>
             </div>
             <ToggleSwitch
               checked={audible}
@@ -70,9 +69,9 @@ export const CrewActivityBlock = () => {
   if (!crewsEnabled) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-extrabold text-fg">{COPY.heading}</h3>
-      <p className="text-xs text-fg-muted">{COPY.detail}</p>
+    <div className="flex flex-col gap-2.5">
+      <GroupHeading text={COPY.heading} />
+      <p className="text-[14px] leading-snug text-fg-muted">{COPY.detail}</p>
       {body}
     </div>
   );
