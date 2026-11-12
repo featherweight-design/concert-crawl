@@ -134,8 +134,8 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
       'aria-selected',
       'true',
     );
-    expect(screen.getByRole('tab', { name: 'Alerts' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Prices' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Alerts/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^Prices/ })).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
     expect(
       screen.getByText(NOTIFICATIONS_COPY.panelSub(6)),
@@ -144,13 +144,13 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
 
   it('puts artist.*, crew.* and unknown categories under Alerts', () => {
     render(<NotifBody state="ready" items={mixed} now={NOW} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Alerts' }));
+    fireEvent.click(screen.getByRole('tab', { name: /^Alerts/ }));
     expect(titles().sort()).toEqual(['A', 'C', 'U']);
   });
 
   it('puts pricedrop and contest.* under Prices, not Shows', () => {
     render(<NotifBody state="ready" items={mixed} now={NOW} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Prices' }));
+    fireEvent.click(screen.getByRole('tab', { name: /^Prices/ }));
     expect(titles().sort()).toEqual(['P', 'R']);
   });
 
@@ -160,11 +160,11 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
       'tabindex',
       '0',
     );
-    expect(screen.getByRole('tab', { name: 'Alerts' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: /^Alerts/ })).toHaveAttribute(
       'tabindex',
       '-1',
     );
-    expect(screen.getByRole('tab', { name: 'Prices' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: /^Prices/ })).toHaveAttribute(
       'tabindex',
       '-1',
     );
@@ -175,20 +175,20 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     const shows = screen.getByRole('tab', { name: 'Shows' });
     shows.focus();
     fireEvent.keyDown(shows, { key: 'ArrowRight' });
-    const alerts = screen.getByRole('tab', { name: 'Alerts' });
+    const alerts = screen.getByRole('tab', { name: /^Alerts/ });
     expect(alerts).toHaveAttribute('aria-selected', 'true');
     expect(alerts).toHaveFocus();
     fireEvent.keyDown(alerts, { key: 'End' });
-    expect(screen.getByRole('tab', { name: 'Prices' })).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Prices' }), {
+    expect(screen.getByRole('tab', { name: /^Prices/ })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: /^Prices/ }), {
       key: 'ArrowRight',
     });
     expect(screen.getByRole('tab', { name: 'Shows' })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Shows' }), {
       key: 'ArrowLeft',
     });
-    expect(screen.getByRole('tab', { name: 'Prices' })).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Prices' }), {
+    expect(screen.getByRole('tab', { name: /^Prices/ })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: /^Prices/ }), {
       key: 'Home',
     });
     expect(screen.getByRole('tab', { name: 'Shows' })).toHaveAttribute(
@@ -261,7 +261,10 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     // A screen reader hears the cue too.
     expect(
       screen.getByRole('tab', {
-        name: `${NOTIFICATIONS_COPY.segments.alerts} ${NOTIFICATIONS_COPY.tabUnread}`,
+        // Whitespace-tolerant: the accessible-name pass may pad the cue.
+        name: new RegExp(
+          `^${NOTIFICATIONS_COPY.segments.alerts}\\s+${NOTIFICATIONS_COPY.tabUnread}$`,
+        ),
       }),
     ).toBeInTheDocument();
     // The Prices item is read: no dot.
