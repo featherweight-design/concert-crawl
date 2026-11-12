@@ -1,3 +1,17 @@
+# [1.333.0](https://github.com/featherweight-design/concert-crawl/compare/v1.332.0...v1.333.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **crawler:** address the code review of the run reasons ([53ad516](https://github.com/featherweight-design/concert-crawl/commit/53ad516c0fbc138266707560baa1cb84eecea869))
+* **crawler:** page list returns every stored page; declined redirects are not failed pages ([2cba0e7](https://github.com/featherweight-design/concert-crawl/commit/2cba0e72725015099525dba87ebe695fda4087a7))
+* **db:** classify crawl_run_pages for account deletion ([6514060](https://github.com/featherweight-design/concert-crawl/commit/651406001a43ec2bdf5b429bf4cefa89d4aa6192))
+
+
+### Features
+
+* **crawler:** record why a run produced nothing and which pages it fetched ([c5b9719](https://github.com/featherweight-design/concert-crawl/commit/c5b97192112a7b348c9500fbb018b0bf1dc248f7))
+
 # [1.332.0](https://github.com/featherweight-design/concert-crawl/compare/v1.331.2...v1.332.0) (2026-11-12)
 
 
