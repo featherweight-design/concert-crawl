@@ -1447,7 +1447,7 @@ describe('EventDetailBanners No longer listed', () => {
     ).toBeNull();
   });
 
-  it('keeps a pending postponement report visible under the card', () => {
+  it('drops a pending postponement report under the card, as for any cancelled show', () => {
     render(
       <EventDetailBanners
         event={delistedEvent()}
@@ -1460,9 +1460,11 @@ describe('EventDetailBanners No longer listed', () => {
         name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
       }),
     ).toBeTruthy();
+    // A delisted show is a cancelled one underneath, and a cancelled show takes
+    // no pending report (a postponement claim on a show that is off is moot).
     expect(
-      screen.getByText(REPORTING_COPY.pendingReportBanner.postponedBadge),
-    ).toBeTruthy();
+      screen.queryByText(REPORTING_COPY.pendingReportBanner.postponedBadge),
+    ).toBeNull();
   });
 });
 
