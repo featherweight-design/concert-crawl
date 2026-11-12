@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/consumer/empty-state';
 import { EventsList } from '@/components/consumer/events-list';
 import { CalendarView } from '@/components/consumer/calendar-view/CalendarView';
 import {
+  browseShowCount,
   currentWeekDays,
   isToday,
   pickCalendarSelectedDate,
@@ -554,7 +555,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
             crews={crews}
             lensCount={lensFailed ? null : lensShows.length}
             followCount={followCount}
-            showCount={view === 'list' && !lensActive ? total : null}
+            showCount={browseShowCount({ total, lensActive })}
           />
         </Suspense>
       </div>
