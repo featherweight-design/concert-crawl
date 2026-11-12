@@ -6,6 +6,7 @@ import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
 import { venuesAdminRouter } from './venues.js';
 import { inviteCodesAdminRouter } from './invite-codes.js';
 import { crawlAdminRouter } from './crawl.js';
+import { crawlBatchesAdminRouter } from './crawl-batches.js';
 import { notificationsAdminRouter } from './notifications.js';
 import { eventsAdminRouter } from './events.js';
 import { pricesAdminRouter } from './prices.js';
@@ -152,6 +153,7 @@ adminRouter.get('/review/counts', async (ctx) => {
 adminRouter.route('/venues', venuesAdminRouter);
 adminRouter.route('/invite-codes', inviteCodesAdminRouter);
 adminRouter.route('/crawl', crawlAdminRouter);
+adminRouter.route('/crawl', crawlBatchesAdminRouter);
 adminRouter.route('/notifications', notificationsAdminRouter);
 adminRouter.route('/events', eventsAdminRouter);
 adminRouter.route('/prices', pricesAdminRouter);

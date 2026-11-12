@@ -490,6 +490,61 @@ export interface CrawlRunPage {
   fetchedAt: string;
 }
 
+// Crawl runs, grouped into batches for the admin Crawl runs list (1d). A batch
+// is derived, never stored: a night's scheduled runs, one burst of by-hand
+// triggers, or a night that should have run and did not ("Didn't start").
+export type CrawlBatchKind = 'nightly' | 'by_hand';
+
+export interface CrawlBatchRun {
+  id: string;
+  venueId: string;
+  venueName: string | null;
+  status: CrawlStatus;
+  reason: CrawlRunReason | null;
+  eventsFound: number;
+  eventsInserted: number;
+  durationMs: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface CrawlBatchCounts {
+  /** Runs that fetched and read the venue's page (or found it unchanged). */
+  ok: number;
+  /** Failed or partial runs, and skips that are not "page unchanged". */
+  notOk: number;
+  /** Runs that left the page alone because it had not changed. */
+  unchanged: number;
+  total: number;
+}
+
+export interface CrawlBatch {
+  /** `nightly:YYYY-MM-DD` (Mountain Time night) or `by_hand:<actor>:<epoch s>`. */
+  key: string;
+  kind: CrawlBatchKind;
+  /** First and last run (or trigger) time, ISO. Null for a night that never started. */
+  startedAt: string | null;
+  endedAt: string | null;
+  /** Mountain Time date of the night, for nightly batches. */
+  night: string | null;
+  /** Who queued a by-hand batch (a Clerk user id), null for nightly. */
+  actor: string | null;
+  venueCount: number;
+  counts: CrawlBatchCounts;
+  eventsFound: number;
+  eventsInserted: number;
+  /** Triggers queued but not yet run (by-hand only). */
+  pending: number;
+  /** A nightly that ran in more than one wave: the scheduled run, then a retry. */
+  retried: boolean;
+  /** A night with no scheduled run at all, derived, not stored. */
+  didntStart: boolean;
+}
+
+export interface CrawlBatchDetail extends CrawlBatch {
+  runs: CrawlBatchRun[];
+}
+
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {
