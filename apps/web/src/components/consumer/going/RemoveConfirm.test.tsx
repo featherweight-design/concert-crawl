@@ -78,6 +78,17 @@ describe('RemoveConfirm', () => {
     expect(dialog.querySelector('button svg')).toBeNull();
   });
 
+  it('shows the night as a preview that goes nowhere when tapped', () => {
+    setup();
+    expect(screen.getByTestId('history-item-preview')).toBeInTheDocument();
+    expect(screen.queryByTestId('history-item')).not.toBeInTheDocument();
+
+    const link = screen.getByRole('link', { hidden: true });
+    // fireEvent returns false when a handler called preventDefault.
+    expect(fireEvent.click(link)).toBe(false);
+    expect(link).toHaveAttribute('tabindex', '-1');
+  });
+
   it('draws the night without its own menu', () => {
     setup();
     expect(screen.queryByTestId('row-menu')).not.toBeInTheDocument();
