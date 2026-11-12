@@ -1,3 +1,25 @@
+# [1.372.0](https://github.com/featherweight-design/concert-crawl/compare/v1.371.0...v1.372.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** all sixteen vibes, the drawn selected row, and one loading dot ([5d6aad4](https://github.com/featherweight-design/concert-crawl/commit/5d6aad45e40d662a2b6df0f376ebc196666af5c8))
+* **web:** close filter popovers from their opener and return focus ([e12549e](https://github.com/featherweight-design/concert-crawl/commit/e12549e08bd81d5f621e937fe9468e89c76c9f7b))
+* **web:** filter bar popovers, labels and loading to the B+ boards ([5a5f2e0](https://github.com/featherweight-design/concert-crawl/commit/5a5f2e07e307f4f8670e10ba701ebb92247a0534))
+* **web:** filter bar review fixes: held multi-picks, stale-slug labels, list cap, CSS-only segments ([e66dc9f](https://github.com/featherweight-design/concert-crawl/commit/e66dc9f062d6c255545192bee639b4b7bf1b5ad4))
+* **web:** filter bar risk-checklist fixes ([9bf844c](https://github.com/featherweight-design/concert-crawl/commit/9bf844c52e95991c875eb6094920bf81438ee7d1))
+* **web:** keep the +N count visible when a filter segment ellipsises ([04fe626](https://github.com/featherweight-design/concert-crawl/commit/04fe6267433b84627ff5140815a847bb820ed3ed))
+* **web:** load jest-dom in the filter bar tests and hold lists only on list writes ([4fd5a1c](https://github.com/featherweight-design/concert-crawl/commit/4fd5a1cefee975b56d5af5ab22160e662edf2fa5))
+* **web:** match the filter bar to addendum 2's single-select boards ([e952e13](https://github.com/featherweight-design/concert-crawl/commit/e952e13283f81a537cde9b7e1cce2f5cf99c9035))
+* **web:** name the filter dimension on each phone chip ([5e0ddab](https://github.com/featherweight-design/concert-crawl/commit/5e0ddabc1e819f1d523ce38f43c3a10341189043))
+
+
+### Features
+
+* **web:** desktop segmented filter bar for browse ([a3fff7d](https://github.com/featherweight-design/concert-crawl/commit/a3fff7dced7d2fc1985c108504578271e1fa2231))
+* **web:** highlight every chosen vibe on rows and the hero (B+ B6a) ([77ecc33](https://github.com/featherweight-design/concert-crawl/commit/77ecc3332666b3957c26f12b6b64f20ad75eca47))
+* **web:** make Where and Vibe multi-select on the filter bar (B+ B6a) ([8320a27](https://github.com/featherweight-design/concert-crawl/commit/8320a2786d7e3e80afa2950736b28c11cbcce16c))
+
 # [1.371.0](https://github.com/featherweight-design/concert-crawl/compare/v1.370.0...v1.371.0) (2026-11-12)
 
 
