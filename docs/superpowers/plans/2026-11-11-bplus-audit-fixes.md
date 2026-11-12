@@ -165,7 +165,7 @@ None. Every ambiguity above resolved from a drawn pattern. au2's Mission Ballroo
 | severity | a6 | 11 | au2 | total |
 |---|---|---|---|---|
 | blocker | 0 | 0 | 1 | 1 |
-| major | 2 | 2 | 2 | 6 |
-| minor | 11 | 7 | 3 | 21 |
+| major | 3 | 3 | 2 | 8 |
+| minor | 14 | 7 | 3 | 24 |
 
-Counted from the runtime tables only; au2's static rows are separate. The a6 minors include the B6/B10/B17/B20 items, which ride with those screen PRs.
+Counted from the runtime tables only, including the 2026-11-12 re-run; au2's static rows are separate. The a6 minors include the B6/B10/B17/B20 items, which ride with those screen PRs.
