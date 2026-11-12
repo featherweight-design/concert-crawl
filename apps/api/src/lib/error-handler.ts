@@ -25,21 +25,36 @@ export const errorHandler: ErrorHandler = async (err, ctx) => {
     return ctx.json({ success: false, error: err.message }, err.status);
   }
 
-  const auth = getAuth(ctx);
-  const userHash = await sentryUserHash(
-    auth?.userId,
-    process.env['SENTRY_USER_HASH_KEY'],
-  );
-  const route = routePattern(ctx);
+  const tags = await requestTags(ctx);
   Sentry.withScope((scope) => {
-    if (route) scope.setTag('route', route);
-    scope.setTag('tier', sentryTier(auth?.sessionClaims));
-    if (userHash) scope.setTag('userHash', userHash);
+    scope.setTags(tags);
     Sentry.captureException(err, { extra: { requestId } });
   });
   apiLogger.error({ err, requestId }, 'Unhandled error');
   return ctx.json({ success: false, error: 'Internal server error' }, 500);
 };
+
+// The searchable tags for an unhandled error. Best effort: tagging must never
+// cost the error itself, so a failure anywhere in it (the auth context, a
+// malformed hash key, crypto rejecting) yields no tags and the caller still
+// captures and logs the original error.
+async function requestTags(ctx: Context): Promise<Record<string, string>> {
+  try {
+    const auth = getAuth(ctx);
+    const userHash = await sentryUserHash(
+      auth?.userId,
+      process.env['SENTRY_USER_HASH_KEY'],
+    );
+    const route = routePattern(ctx);
+    return {
+      ...(route ? { route } : {}),
+      tier: sentryTier(auth?.sessionClaims),
+      ...(userHash ? { userHash } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
 
 // The pattern of the route that handled the request (`/v1/events/:id`), not
 // the URL. Middleware registered as `/*` also matches, so the last non-wildcard
