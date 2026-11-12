@@ -127,11 +127,11 @@ The scratch data has **0 reported rows**, so the Reported queue, the expanded ro
 | 4 search | Search rows lack ring, edge and VenueTile | — | Ruled: B19 | 9d |
 | B18 | No sheet edge on DeleteAccountSheet and LifecycleSurface | minor | Add `sheet-edge` | a6 (B18) |
 | 2 | Status chip placement | — | The runtime check above supersedes it; the StatusPill→StatusChip swap is dropped | au2 |
-| 6 | Mission Ballroom disco-ball glyph vs the building | — | For Hugh/Design to glance at; not code | Design via Hugh |
+| 6 | Mission Ballroom disco-ball glyph vs the building | — | Settled: Hugh accepted it as drawn on 2026-11-11 | settled |
 
 ## Design via Hugh (meaningful undrawn gaps)
 
-None found in the runtime half. Every ambiguity above resolved from a drawn pattern. The only Design item is au2's Mission Ballroom glyph glance.
+None. Every ambiguity above resolved from a drawn pattern. au2's Mission Ballroom glyph question is settled: Hugh accepted the glyph as drawn on 2026-11-11.
 
 ## Needed before the unchecked cells can run (DB writes, orchestrator to route)
 
