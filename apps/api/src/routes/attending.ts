@@ -104,37 +104,46 @@ attendingRouter.put('/:eventId', async (ctx) => {
       date: events.date,
       status: events.status,
       firstMissingAt: events.firstMissingAt,
+      hiddenFromConsumer: events.hiddenFromConsumer,
     })
     .from(events)
-    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
+    .where(eq(events.id, eventId))
     .limit(1);
 
-  // An upcoming show keeps the strict #607 form: one the crawler stopped
-  // seeing is not markable as a night you are going to, even once the stale
-  // sweep brings it back on its detail page as No longer listed. A past one
-  // happened whatever the crawler later did with the listing, so only a
-  // cancelled show is refused. Same 404 as an unknown id either way.
-  const isPast = eventRow !== undefined && eventRow.date < todayInDenver();
-  const markable =
-    eventRow !== undefined &&
-    (isPast
-      ? eventRow.status !== 'cancelled'
-      : eventRow.firstMissingAt === null);
-
-  if (!markable) {
+  if (!eventRow) {
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 
-  if (
-    restore &&
-    !verifyRestoreToken({
-      userId: authInfo.userId,
-      eventId,
-      attendingAt: restore.attendingAt,
-      token: restore.token,
-    })
-  ) {
-    return ctx.json({ success: false, error: 'Restore expired' }, 400);
+  const isPast = eventRow.date < todayInDenver();
+
+  if (restore) {
+    // An Undo puts back what the signed token proves this user just removed,
+    // so it must not 404 if the show changed in the last minute (the crawler
+    // stopped seeing it, it was hidden). It never creates a new attendance.
+    if (
+      !verifyRestoreToken({
+        userId: authInfo.userId,
+        eventId,
+        attendingAt: restore.attendingAt,
+        token: restore.token,
+      })
+    ) {
+      return ctx.json({ success: false, error: 'Restore expired' }, 400);
+    }
+  } else {
+    // An upcoming show keeps the strict #607 form: one the crawler stopped
+    // seeing is not markable as a night you are going to, even once the stale
+    // sweep brings it back on its detail page as No longer listed. A past one
+    // happened whatever the crawler later did with the listing, so only a
+    // cancelled show is refused. Same 404 as an unknown id either way.
+    const markable =
+      !eventRow.hiddenFromConsumer &&
+      (isPast
+        ? eventRow.status !== 'cancelled'
+        : eventRow.firstMissingAt === null);
+    if (!markable) {
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
+    }
   }
 
   const [existing] = await db
@@ -235,6 +244,13 @@ attendingRouter.delete('/:eventId', async (ctx) => {
           eventId: parsed.data,
           attendingAt: removedIso,
         });
+
+  if (removedIso !== null && token === null) {
+    apiLogger.warn(
+      { userId: authInfo.userId, eventId: parsed.data },
+      'attendance removed without a restore token: INTERNAL_API_SECRET unset, so no Undo',
+    );
+  }
 
   const response: AttendingToggleResponse = {
     going: false,
