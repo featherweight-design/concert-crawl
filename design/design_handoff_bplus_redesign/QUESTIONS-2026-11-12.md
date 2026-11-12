@@ -122,6 +122,7 @@ Both of these already happen on main. Screenshots are available from lane 11 on 
 | #140, public /e/:id (PublicEventDetail) | The public mirror gets the NLL pill, the CTA gating and no strike. | [Design] It does NOT get the dashed NLL card. Should the public page show the card? |
 | #140 contrast | The NLL chip (9.5px mono) and the source line "NOT ON THE VENUE'S CALENDAR SINCE {date}" (9px mono) are drawn in #5A6788 (`--fg-subtle`). | [Design] That's about 3.17:1 on the card (#11162E) and about 3.49:1 on the page (#070A1A), both under the 4.5:1 AA bar for small text. Built as drawn. Keep, or raise the tone? |
 | #143 launch animation | Plays from the cached launch-animation flag (localStorage). | [Hugh product] A kill switch only takes effect one cold start later (the next session's fetch rewrites the cache). Is that delay acceptable? |
+| #139 more-r3-search_m_typed (phone search palette) | The phone board draws no clear (x) button beside the typed query; the desktop typed board draws only ESC. | [Design] Main's palette had a clear button on every viewport before #139. The phone field keeps it; the desktop one was removed to match the board. Keep it on phone, or remove it? |
 
 ## New from addendum 2 (#178)
 
