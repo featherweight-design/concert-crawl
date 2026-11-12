@@ -2611,8 +2611,9 @@ export const ADMIN_COPY = {
     // Under "Couldn't change {name}", so the name isn't said twice.
     stillIn: (tab: string) => `It's still in ${tab}.`,
     subtitleShort: 'The photo and genre fans see on every show.',
-    matchedMeta: (upcoming: number, watching: number) =>
-      `${upcoming} upcoming · ${watching} Watching`,
+    // Fans follow artists; Watching is for shows (locked vocabulary).
+    matchedMeta: (upcoming: number, followers: number) =>
+      `${upcoming} upcoming · ${followers} ${followers === 1 ? 'follower' : 'followers'}`,
     itsAnArtist: 'It’s an artist',
     changeMatch: 'Change match',
     menu: {

@@ -494,7 +494,9 @@ export function ArtistsClient() {
       );
     }
     try {
-      await api.write(row.id, write);
+      // The status the row was loaded with. A retry passes the same row, so
+      // it pins the same status rather than whatever the row became.
+      await api.write(row.id, write, row.matchStatus);
       // Loads from here on may list it again wherever it now belongs.
       resolved.current.set(row.id, generation.current);
       // A search pages through every status, where a save moves nothing.
@@ -519,6 +521,13 @@ export function ArtistsClient() {
     } catch (err) {
       resolved.current.delete(row.id);
       if (err instanceof StaleRowError) {
+        // The row changed since it was loaded: reload the tab on screen, with
+        // no snap-back and no Try again (it would only be refused again).
+        console.error(
+          '[admin artists] stale row, reloading',
+          row.id,
+          err.reason,
+        );
         void loadRef.current();
         loadCounts();
         return;

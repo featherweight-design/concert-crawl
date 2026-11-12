@@ -165,7 +165,29 @@ const isArtistCounts = (value: unknown): value is ArtistCounts =>
 class ShapeError extends Error {}
 
 /** The row changed under the page (a 409): reload, don't retry. */
-export class StaleRowError extends Error {}
+export class StaleRowError extends Error {
+  constructor(
+    /**
+     * Which guard refused the write: the row's status moved off the one the
+     * page loaded (`expectedStatus`), or the automatic pick moved
+     * (`confirmAutoMatch`). Both reload; the reason is for the log.
+     */
+    readonly reason: 'status' | 'auto_match' | 'unknown',
+  ) {
+    super(`stale row (${reason})`);
+  }
+}
+
+/** The PATCH route's two 409 messages (`artist-match-update.ts`). */
+const STALE_REASONS: Record<string, StaleRowError['reason']> = {
+  'The artist has changed since it was loaded': 'status',
+  'The auto-match has changed since it was loaded': 'auto_match',
+};
+
+const staleReason = (body: unknown): StaleRowError['reason'] => {
+  const error = isRecord(body) ? body['error'] : null;
+  return (isText(error) ? STALE_REASONS[error] : undefined) ?? 'unknown';
+};
 
 export type GetToken = () => Promise<string | null>;
 
@@ -187,7 +209,10 @@ const request = async (
         }
       : { headers: auth },
   );
-  if (res.status === 409) throw new StaleRowError();
+  if (res.status === 409) {
+    const conflict: unknown = await res.json().catch(() => null);
+    throw new StaleRowError(staleReason(conflict));
+  }
   const body: unknown = await res.json().catch((err: unknown) => {
     console.error('[admin artists] unreadable response', path, err);
     return null;
@@ -299,10 +324,19 @@ export const artistsApi = (getToken: GetToken) => ({
     if (!isArtistCounts(data)) throw new ShapeError('counts');
     return data;
   },
-  write: async (id: string, write: ArtistWrite): Promise<void> => {
+  /**
+   * `expectedStatus` is the status the row was loaded with (#266): the write
+   * lands only if the row still has it, else the route answers 409 and the
+   * page reloads rather than ruling on a row it never showed.
+   */
+  write: async (
+    id: string,
+    write: ArtistWrite,
+    expectedStatus: MatchStatus,
+  ): Promise<void> => {
     await request(getToken, `${BASE}/${encodeURIComponent(id)}`, {
       method: 'PATCH',
-      body: writeBody(write),
+      body: { ...writeBody(write), expectedStatus },
     });
   },
 });
