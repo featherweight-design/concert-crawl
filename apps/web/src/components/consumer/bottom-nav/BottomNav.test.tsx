@@ -207,4 +207,13 @@ describe('BottomNav crews slot (#1226)', () => {
     );
     expect(crews.querySelectorAll('circle')).toHaveLength(3);
   });
+
+  // B+: the current tab carries a short gradient bar on the nav's top edge.
+  it('draws the active bar on the current tab only', () => {
+    pathname.current = '/venues';
+    render(<BottomNav />);
+    const bars = screen.getAllByTestId('nav-active-bar');
+    expect(bars).toHaveLength(1);
+    expect(bars[0]?.closest('a')?.getAttribute('aria-current')).toBe('page');
+  });
 });

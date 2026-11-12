@@ -9,6 +9,7 @@ import {
   useContext,
 } from 'react';
 import Link from 'next/link';
+import { CornerUpRight, Eye, LogOut, Tag, Users } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth, useUser, useClerk } from '@clerk/nextjs';
 import { Avatar } from '@/components/settings/Avatar';
@@ -607,8 +608,8 @@ function ThemeMenuRow() {
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '12px 14px',
+          gap: 12,
+          padding: '10px 16px',
           borderBottom: pickerOpen ? 'none' : '1px solid var(--border)',
           width: '100%',
           boxSizing: 'border-box',
@@ -616,11 +617,14 @@ function ThemeMenuRow() {
         }}
         className="bg-transparent hover:bg-[var(--overlay-hover)]"
       >
+        <RowTile tint="var(--accent)">
+          <Eye {...TILE_ICON_PROPS} />
+        </RowTile>
         <span
           style={{
             flex: 1,
             fontFamily: 'var(--font-ui)',
-            fontSize: 13.5,
+            fontSize: 14.5,
             fontWeight: 600,
             color: 'var(--fg)',
             letterSpacing: '-0.005em',
@@ -814,6 +818,11 @@ function MenuBody({
           : {})}
         kbd="P"
         last
+        leading={
+          <RowTile tint="var(--success)">
+            <Tag {...TILE_ICON_PROPS} />
+          </RowTile>
+        }
       />
 
       {/* App section */}
@@ -824,11 +833,21 @@ function MenuBody({
       <MenuRow
         label={CONSUMER_COPY.userMenu.rows.howItWorks}
         href={CONSUMER_COPY.userMenu.rows.howItWorksHref}
+        leading={
+          <RowTile>
+            <CornerUpRight {...TILE_ICON_PROPS} />
+          </RowTile>
+        }
       />
       <MenuRow
         label={CONSUMER_COPY.userMenu.rows.settings}
         onClick={onSettings}
         last
+        leading={
+          <RowTile>
+            <Users {...TILE_ICON_PROPS} />
+          </RowTile>
+        }
       />
 
       {/* Admin section */}
@@ -842,21 +861,9 @@ function MenuBody({
             href="/admin"
             last
             leading={
-              <span
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: 6,
-                  background: 'var(--surface-2)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--signal)',
-                  flexShrink: 0,
-                }}
-              >
+              <RowTile tint="var(--signal)">
                 <ShieldIcon />
-              </span>
+              </RowTile>
             }
           />
         </>
@@ -869,6 +876,11 @@ function MenuBody({
         danger
         last
         onClick={onSignOut}
+        leading={
+          <RowTile tint="var(--warning)">
+            <LogOut {...TILE_ICON_PROPS} />
+          </RowTile>
+        }
       />
 
       {/* Status footer — routes to /changelog, shows unread dot */}
@@ -895,10 +907,23 @@ function UserMenuPopover(props: MenuBodyProps) {
         right: 0,
         top: 'calc(100% + 8px)',
         zIndex: 100,
-        width: isNotifMode(props) ? PANEL_WIDTH : 360,
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: 14,
+        ...(isNotifMode(props)
+          ? {
+              width: PANEL_WIDTH,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 14,
+            }
+          : {
+              width: 380,
+              // Lifted surface with a gradient edge (B+ `bp-account`): the
+              // border is a signal-to-accent gradient that fades to the
+              // ordinary hairline.
+              border: '1.5px solid transparent',
+              background:
+                'linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, linear-gradient(180deg, var(--signal), color-mix(in oklch, var(--accent) 70%, transparent) 14%, var(--border-strong) 40%) border-box',
+              borderRadius: 16,
+            }),
         boxShadow: '0 24px 64px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.2)',
         overflow: 'hidden',
         fontFamily: 'var(--font-ui)',
@@ -975,11 +1000,42 @@ function UserMenuSheet(props: MenuBodyProps) {
 
 // ── Primitives ────────────────────────────────────────────────────────────
 
+// The 30px rounded tile that leads a menu row (B+ `bp-account`): a quiet
+// elevated square with a tinted line glyph. Decorative; the label names the row.
+function RowTile({
+  children,
+  tint = 'var(--fg-muted)',
+}: {
+  children: React.ReactNode;
+  tint?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: 9,
+        background: 'var(--surface-2)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: tint,
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+const TILE_ICON_PROPS = { size: 15, strokeWidth: 1.75 } as const;
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        padding: '10px 14px 4px',
+        padding: '14px 16px 6px',
         fontFamily: 'var(--font-mono)',
         fontSize: 10,
         fontWeight: 700,
@@ -1022,8 +1078,8 @@ function MenuRow({
   const rowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    padding: '12px 14px',
+    gap: 12,
+    padding: '10px 16px',
     borderBottom: last ? 'none' : '1px solid var(--border)',
     cursor: 'pointer',
     width: '100%',
@@ -1057,7 +1113,7 @@ function MenuRow({
           flex: 1,
           minWidth: 0,
           fontFamily: 'var(--font-ui)',
-          fontSize: 13.5,
+          fontSize: 14.5,
           fontWeight: hot ? 800 : 600,
           color,
           letterSpacing: '-0.005em',
@@ -1090,9 +1146,9 @@ function MenuRow({
             fontSize: 10,
             fontWeight: 700,
             color: 'var(--fg-subtle)',
-            padding: '2px 6px',
-            borderRadius: 4,
-            border: '1px solid var(--border)',
+            padding: '3px 7px',
+            borderRadius: 5,
+            border: '1px solid var(--border-strong)',
             background: 'var(--surface-1)',
             letterSpacing: '0.08em',
           }}
@@ -1157,7 +1213,7 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 function ShieldIcon() {
   return (
-    <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
       <path
         d="M8 1.5l5.5 2v4.2c0 3.4-2.4 6.4-5.5 7.3-3.1-0.9-5.5-3.9-5.5-7.3V3.5L8 1.5z"
         stroke="currentColor"
