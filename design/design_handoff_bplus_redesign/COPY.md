@@ -20,7 +20,7 @@ Almost every screen reuses live copy word for word. The strings below are new or
 | Passport | NEXT STAMP, NEXT, VENUES COLLECTED, UP NEXT, SPREAD 1 OF 2, NEXT PAGE IS WAITING, SWIPE FOR PAGE 2, JUMP TO, the passport code line, + 1 more you're going to | |
 | What's new | All card copy | It's a feature page now, not a release log |
 | Show status | Report filed (screen), Already reported (screen), the What changed subtitle | Live has no success screen, and a second report shows a raw server error |
-| Show status | No longer listed (chip, row and notification) | For shows the crawler hasn't seen for 14 days. Never "Cancelled" |
+| Show status | No longer listed (chip, row and event page card: "The venue took this show down. It may be off."). No notification ([`addendum-2`](addendum-2/README.md) item 2) | For shows the crawler hasn't seen for 14 days. Never "Cancelled" |
 | Price submitted | Your price | The label on the pending stub on the success screen, which shows your price with its two confirm dots. Same label as the self-locked price card |
 | Beta invite page | GOT AN INVITE?, Redeem, No code yet?, `${venueCount} VENUES · CHECKED EVERY NIGHT`, THIS WEEK IN DENVER | The code placeholder is `BETA-XXXX-XXXX`, the real multi-use format (`2026-11-10-invite-code-posters.md`); the board's `CRAWL-XXXX` was a guess. The venue count is live data, never a hardcoded 21 |
 | Launch screen | DENVER | The only text |

@@ -1,0 +1,322 @@
+[
+ {
+  "section": "01-notification-tabs",
+  "name": "notif-shows-m",
+  "title": "What you missed · Shows",
+  "note": "Shows: changes to a show you’re Watching (cancelled, postponed or moved, sold out, tickets back).",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-notification-tabs",
+  "name": "notif-alerts-m",
+  "title": "What you missed · Alerts",
+  "note": "Alerts: new Denver dates from artists you follow, a fixed artist report, and crew news.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-notification-tabs",
+  "name": "notif-prices-m",
+  "title": "What you missed · Prices",
+  "note": "Prices: price drops on shows you’re Watching, and Price check results.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-stamps",
+  "name": "concerts-round-stamps-d",
+  "title": "Concerts · one round stamp",
+  "note": "Rule 4 wins: every Concerts row uses the round venue ring. The rounded-square stamp is gone.",
+  "w": 1280,
+  "h": 960
+ },
+ {
+  "section": "03-stamps",
+  "name": "concerts-round-stamps-m",
+  "title": "Concerts · one round stamp, mobile",
+  "note": "",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "04-passport-order",
+  "name": "passport-d",
+  "title": "Passport · page 1 oldest first, untilted",
+  "note": "Oldest first on every page, so the book reads like a book: page 1 starts with your first night. Stamps are round and untilted (rule 4).",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "04-passport-order",
+  "name": "passport-later-d",
+  "title": "Passport · spread 2, untilted",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "04-passport-order",
+  "name": "passport-m",
+  "title": "Passport · mobile, page 1 oldest first",
+  "note": "",
+  "w": 390,
+  "h": 1480
+ },
+ {
+  "section": "04-passport-order",
+  "name": "passport-later-m",
+  "title": "Passport · mobile, page 3",
+  "note": "",
+  "w": 390,
+  "h": 1240
+ },
+ {
+  "section": "06-filters-single-select",
+  "name": "filters-active-d",
+  "title": "Filters · active, single-select",
+  "note": "One venue and one vibe at a time. The segment names the choice in full (“Bluebird Theater”) with its one tile.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-filters-single-select",
+  "name": "filters-where-d",
+  "title": "Filters · Where, single-select",
+  "note": "Picking a venue replaces the last one. The chosen row gets the tint and a check, the same mark the Who list uses. No checkboxes.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "06-filters-single-select",
+  "name": "filters-active-m",
+  "title": "Filters · active chips, mobile",
+  "note": "Chips name the one venue and the one vibe.",
+  "w": 390,
+  "h": 1300
+ },
+ {
+  "section": "06-filters-single-select",
+  "name": "filters-sheet-m",
+  "title": "Filters sheet · single-select",
+  "note": "One tile lit under Where, one chip lit under Vibe.",
+  "w": 390,
+  "h": 1300
+ },
+ {
+  "section": "06-filters-single-select",
+  "name": "filters-venues-m",
+  "title": "Filters · All venues, single-select",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-admin-more-no-pills",
+  "name": "more-mobile",
+  "title": "Admin More · no count pills",
+  "note": "Only Needs you carries a badge. Counts move into the detail line as plain text.",
+  "w": 390,
+  "h": 800
+ },
+ {
+  "section": "08-admin-invite-codes-row",
+  "name": "desktop-sidebar-interim",
+  "title": "Admin sidebar · interim Invite codes row",
+  "note": "Interim only, from 0a until 5b moves Invite codes into People as a tab. Then this row goes.",
+  "w": 232,
+  "h": 900
+ },
+ {
+  "section": "10-admin-couldnt-load",
+  "name": "couldnt-load",
+  "title": "Admin · couldn’t load, one line",
+  "note": "One line for a timeout and a render error alike.",
+  "w": 1280,
+  "h": 560
+ },
+ {
+  "section": "11-artist-skeleton",
+  "name": "load-artist-m",
+  "title": "Artist page · loading",
+  "note": "The skeleton is the tilted 4:5 card in the hero, at the loaded card’s size and angle, so nothing shifts when the photo lands.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "12-no-longer-listed",
+  "name": "event-nll-m",
+  "title": "Event · No longer listed, mobile",
+  "note": "Not cancelled: no strike, no grey photo, no red. A grey dashed card says the venue took it down. Tickets and Watch stay.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "12-no-longer-listed",
+  "name": "event-nll-d",
+  "title": "Event · No longer listed, desktop",
+  "note": "",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "13-cancelled-variants",
+  "name": "event-cancelled-by-crawler-m",
+  "title": "Cancelled · from the venue, no fan report",
+  "note": "Same banner. The source line names the venue’s calendar instead of a reporter and confirms.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "13-cancelled-variants",
+  "name": "event-cancelled-venue-link-m",
+  "title": "Cancelled · no ticket link, venue site only",
+  "note": "The CTA is the venue website. Never Get tickets on a cancelled show.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "13-cancelled-variants",
+  "name": "event-cancelled-no-link-m",
+  "title": "Cancelled · no link at all",
+  "note": "Disabled, as live: No tickets available.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "14-tickets-available",
+  "name": "event-tickets-back-pending-m",
+  "title": "Tickets available · pending",
+  "note": "Only offered on a live sold-out show. While pending, the sold-out card and CTA stay as they are.",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "14-tickets-available",
+  "name": "event-tickets-back-live-m",
+  "title": "Tickets available · confirmed",
+  "note": "Confirmed means the sold-out flag clears and the page is back to normal: price, Get tickets, Watch. No banner.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "15-320px",
+  "name": "browse-320",
+  "title": "Browse at 320",
+  "note": "Filters A at 320: Filters and My artists fit on one line; rows truncate the venue.",
+  "w": 320,
+  "h": 1100
+ },
+ {
+  "section": "15-320px",
+  "name": "browse-active-320",
+  "title": "Browse at 320 · filters on",
+  "note": "Active chips run off the right edge and scroll, like the shelf.",
+  "w": 320,
+  "h": 1100
+ },
+ {
+  "section": "15-320px",
+  "name": "offline-pill-320",
+  "title": "Offline pill at 320",
+  "note": "Under 360px the pill drops “· cached OK” and reads Offline, so search keeps its spot.",
+  "w": 320,
+  "h": 844
+ },
+ {
+  "section": "15-320px",
+  "name": "calendar-320",
+  "title": "Calendar at 320",
+  "note": "",
+  "w": 320,
+  "h": 900
+ },
+ {
+  "section": "15-320px",
+  "name": "invite-320",
+  "title": "Invite landing at 320",
+  "note": "",
+  "w": 320,
+  "h": 900
+ },
+ {
+  "section": "16-undrawn-pages",
+  "name": "passport-empty-d",
+  "title": "Passport · empty, desktop",
+  "note": "The open book with four empty round slots, the empty block beside it, and 0 of 21 venues.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "16-undrawn-pages",
+  "name": "passport-empty-m",
+  "title": "Passport · empty, mobile, untilted",
+  "note": "The approved empty board with its slots untilted (rule 4).",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "16-undrawn-pages",
+  "name": "notifications-panel-d",
+  "title": "Notifications · desktop panel",
+  "note": "The account menu panel swaps to What you missed (as live NotifMenuPanel), with Menu as the way back. Same tabs and rows as mobile.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "16-undrawn-pages",
+  "name": "venue-light-m",
+  "title": "Venue page · Light, mobile",
+  "note": "The neon glyph hero on Light: the backdrop goes pale and the glyph keeps its colors.",
+  "w": 390,
+  "h": 1300
+ },
+ {
+  "section": "16-undrawn-pages",
+  "name": "venue-light-d",
+  "title": "Venue page · Light, desktop",
+  "note": "",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "18-error-page",
+  "name": "error-report-refused-m",
+  "title": "Error page · report refused",
+  "note": "Rate-limited or rejected: not saved on the device and not retried, unlike Signal lost.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "18-error-page",
+  "name": "error-in-app-m",
+  "title": "Error inside the app (route error)",
+  "note": "A route error renders inside the app layout, so the header and bottom nav stay. Only global-error is the bare page.",
+  "w": 390,
+  "h": 1100
+ },
+ {
+  "section": "20-browse-shelf",
+  "name": "shelf-see-all-m",
+  "title": "Coming to Denver · See all",
+  "note": "See all sits on the heading row. The shelf stops at 10 cards.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "24-submitted-prices",
+  "name": "submitted-prices-m",
+  "title": "Submitted prices · venue tiles",
+  "note": "No artist images: each row uses its venue tile. Title is Submitted prices (locked vocabulary).",
+  "w": 390,
+  "h": 1200
+ },
+ {
+  "section": "28-price-check-counter",
+  "name": "counter-how-found-m",
+  "title": "Price check counter · how you found out",
+  "note": "The required How you found out chips sit above Submit; the honesty footnote sits under it.",
+  "w": 390,
+  "h": 1000
+ }
+]

@@ -221,6 +221,18 @@ Each sits at the end of its section's folder, under the same names as the canvas
 
 [`phone-addendum/`](phone-addendum/README.md) closes the four READINESS phone gaps with 38 boards: Merge duplicates (stacked compare, full screen), Inspect a fetched page (phone-reachable, What we read first), Add a venue start, Nobody asked yet and Gone live, and the venue Source tab. Each has default, loading, empty and save-failed states, with defaults also drawn at 320. Canvas: https://claude.ai/artifact/WQbv4EBMjHykGBW5s9xBug.
 
+## Addendum 2 (2026-11-12)
+
+Admin items 7 to 10 and 29 of [`../design_handoff_bplus_redesign/addendum-2/`](../design_handoff_bplus_redesign/addendum-2/README.md) change this handoff:
+
+- More has no count pills. The counts move into the detail lines.
+- The sidebar gets an interim Invite codes row until 5b.
+- The Needs you badge counts decisions only.
+- "Couldn't load" uses one line for every failure.
+- Item 29 sets display names, the robots.txt and auto-pause chips, and skeleton row heights.
+
+Where addendum 2 differs from a board here, addendum 2 wins.
+
 ## Engineering needs to build
 
 Each section's canvas card lists these. This is the full list in one place. None is a design task, and some need a schema change. Every migration is expand/contract.
