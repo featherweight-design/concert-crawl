@@ -982,7 +982,7 @@ export interface EventWatchersResponse {
 
 // EventDetailResponse — single event detail with computed watch state
 /** Who wrote an event's cancelled or postponed status. */
-export type EventStatusSource = 'admin' | 'crawler' | 'report' | 'sweep';
+export type EventStatusSource = 'admin' | 'report' | 'sweep';
 
 /** A promoted fan report as the event detail page shows it. */
 export interface PromotedReportSummary {
@@ -1073,8 +1073,8 @@ export interface EventDetailResponse extends EventWithVenue {
   // Where a cancelled or postponed status was written, as far as the data can
   // say: 'sweep' (the stale sweep, delisted), 'report' (a promoted fan report),
   // 'admin' (an admin edit: the only other writer). Null when the show is
-  // upcoming. 'crawler' is in the union for consumers but the API never emits
-  // it: the crawler writes no cancelled or postponed status.
+  // upcoming. There is no 'crawler': it writes no cancelled or postponed
+  // status. 'admin' is inferred by elimination, no column records it.
   statusSource?: EventStatusSource | null;
   // All pending submissions whenever any exist (PR 3 dropped the
   // "only when no corroborated price" gate so multi-tier pending stays

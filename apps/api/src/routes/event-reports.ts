@@ -31,6 +31,7 @@ import { clearSoldOut } from '../lib/clear-sold-out.js';
 import { apiLogger } from '../lib/logger.js';
 import { activeSoldOutWhere } from '../lib/sold-out.js';
 import { redactReportRow } from '../lib/report-privacy.js';
+import { markViewerScopedRead } from '../lib/edge-cache.js';
 
 const REPORT_STATUSES = [
   'sold-out',
@@ -248,6 +249,11 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
       and(eq(eventReports.eventId, eventId), isNull(eventReports.resolvedAt)),
     );
 
+  // The answer differs by viewer (handles, ids, isReporter, userHasConfirmed):
+  // a signed-in one is held by no shared cache, an anonymous one may be. Set
+  // on every 2xx, after the reads, never on the 404 above.
+  markViewerScopedRead(ctx, userId !== null);
+
   if (reportRows.length === 0) {
     return ctx.json({ success: true, data: [] });
   }
@@ -286,7 +292,8 @@ eventReportsRouter.get('/:id/reports', clerkAuth, async (ctx) => {
   // Batch-lookup reporter handles for attribution display
   const reporterIds = [...new Set(reportRows.map((rpt) => rpt.reporterId))];
   const handleMap = new Map<string, string>();
-  if (reporterIds.length > 0) {
+  // An anonymous caller never sees a handle (redactReportRow), so don't read them.
+  if (userId !== null && reporterIds.length > 0) {
     const profiles = await db
       .select({ userId: userProfiles.userId, handle: userProfiles.handle })
       .from(userProfiles)

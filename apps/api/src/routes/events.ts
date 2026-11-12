@@ -777,7 +777,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
   // Detect a promoted sold-out report — drives the confirmed sold-out UI.
   // Same predicate as isSoldOutSql, so detail and every row agree.
-  const soldOutReport = await loadPromotedReportSummary(id, 'sold-out');
+  const soldOutReport = await loadPromotedReportSummary(id, 'sold-out', {
+    includeHandle: isAuthed,
+  });
   const priceStatus: 'live' | 'soldout' | null = soldOutReport
     ? 'soldout'
     : null;
@@ -787,7 +789,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // promoted (an admin edit or the stale sweep set it).
   const statusReport =
     row.status === 'cancelled' || row.status === 'postponed'
-      ? await loadPromotedReportSummary(id, row.status)
+      ? await loadPromotedReportSummary(id, row.status, {
+          includeHandle: isAuthed,
+        })
       : null;
 
   // Flat-field declarations — populated below from the same in-memory data
@@ -1253,7 +1257,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       pendingSubmissions,
       priceByTier,
       // A reporter's handle is for signed-in viewers: an anonymous answer (the
-      // one a shared cache may hold) carries the reports without it.
+      // one a shared cache may hold) carries the reports without it. The loader
+      // already skips the lookup for them; redactReporter is the backstop.
       soldOutReport: redactReporter(soldOutReport, isAuthed),
       statusReport: redactReporter(statusReport, isAuthed),
       // Read the note on deriveStatusSource: 'admin' is inferred by

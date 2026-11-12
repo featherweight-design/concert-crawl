@@ -186,6 +186,41 @@ describe('GET /v1/events/:id/reports', () => {
     expect(body.data[0]?.userHasConfirmed).toBe(false);
   });
 
+  describe('cache headers (the answer differs by viewer)', () => {
+    it('lets a shared cache hold an anonymous answer, keyed on Authorization', async () => {
+      await seedEventReport(eventId, REPORTER);
+      const res = await app.request(`/v1/events/${eventId}/reports`);
+      expect(res.headers.get('Cache-Control')).toContain('s-maxage=');
+      expect(res.headers.get('Cache-Control')).toContain('public');
+      expect(res.headers.get('Vary')).toContain('Authorization');
+    });
+
+    it('keeps a signed-in answer out of every shared cache', async () => {
+      await seedEventReport(eventId, REPORTER);
+      setAuth(OTHER_USER);
+      const res = await app.request(`/v1/events/${eventId}/reports`);
+      expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+      expect(res.headers.get('Vary')).toContain('Authorization');
+    });
+
+    it('marks the empty list too, and keeps a bad-token request private', async () => {
+      const empty = await app.request(`/v1/events/${eventId}/reports`);
+      expect(empty.headers.get('Cache-Control')).toContain('public');
+      const tokenised = await app.request(`/v1/events/${eventId}/reports`, {
+        headers: { Authorization: 'Bearer expired' },
+      });
+      expect(tokenised.headers.get('Cache-Control')).toBe('private, no-store');
+    });
+
+    it('sets no cache header on a 404', async () => {
+      const res = await app.request(
+        '/v1/events/00000000-0000-0000-0000-000000000000/reports',
+      );
+      expect(res.status).toBe(404);
+      expect(res.headers.get('Cache-Control') ?? '').not.toContain('s-maxage');
+    });
+  });
+
   describe('reporter identity', () => {
     type IdentityRow = {
       isReporter: boolean;
