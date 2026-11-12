@@ -20,6 +20,14 @@ import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 /** The shared EventRow's narrow threshold, measured on the row itself. */
 export const ARTIST_ROW_NARROW_AT = 360;
 
+/**
+ * Below this the right-hand price slot costs the venue its name: at a 320
+ * viewport (a 292px row) "tba" and the eye leave the name about 90px, so it
+ * read "Red Rocks / Amphithe…". A 360 viewport (a 328px row) is the same
+ * story. A 390 viewport is a 358px row and keeps the board's layout as is.
+ */
+export const ARTIST_ROW_TIGHT_AT = 340;
+
 const SEPARATOR = EVENT_ROW_COPY.glyphs.separator;
 
 interface ArtistShowRowProps {
@@ -42,6 +50,11 @@ interface ArtistShowRowProps {
  * narrow head size and WRAPS to a second line, and the meta line keeps the
  * time whole and DROPS the city, the way WhenWhere's ladder drops a unit
  * before it lets a fixed one shrink.
+ *
+ * At the tightest widths (a 320 or 360 viewport) the price leaves its column
+ * and joins the meta line, the way EventRow moves a wide status chip under the
+ * title rather than crushing the title column. That hands the venue the slot's
+ * width, so the name wraps whole and is never clamped.
  */
 export const ArtistShowRow = ({
   show,
@@ -50,6 +63,7 @@ export const ArtistShowRow = ({
 }: ArtistShowRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const [narrow, setNarrow] = useState(false);
+  const [tight, setTight] = useState(false);
 
   // Measured, not passed in, exactly as EventRow does it.
   useEffect(() => {
@@ -60,6 +74,7 @@ export const ArtistShowRow = ({
       // A zero width is an unlaid-out row, not a 0px one.
       if (width <= 0) return;
       setNarrow(width <= ARTIST_ROW_NARROW_AT);
+      setTight(width <= ARTIST_ROW_TIGHT_AT);
     };
     remeasure();
     if (typeof ResizeObserver === 'undefined') return;
@@ -107,7 +122,7 @@ export const ArtistShowRow = ({
           <span className="sr-only">{`${row.dateLabel}, `}</span>
           <span
             data-testid="artist-show-venue"
-            data-lines={narrow ? 2 : 1}
+            data-lines={tight ? 'all' : narrow ? 2 : 1}
             className={narrow ? 'min-w-0' : 'truncate'}
             style={{
               fontFamily: 'Inter, system-ui',
@@ -116,21 +131,28 @@ export const ArtistShowRow = ({
               lineHeight: narrow ? 1.2 : undefined,
               letterSpacing: '-0.01em',
               textDecoration: struck ? 'line-through' : 'none',
-              // Narrow: two whole lines of name beat one clipped one.
-              ...(narrow && {
-                display: '-webkit-box',
-                WebkitBoxOrient: 'vertical',
-                WebkitLineClamp: 2,
-                overflow: 'hidden',
+              // Tight: the price has moved under the name, so the name has
+              // the room to wrap whole. Nothing clamps it.
+              ...(tight && {
                 overflowWrap: 'break-word',
                 hyphens: 'auto',
               }),
+              // Narrow: two whole lines of name beat one clipped one.
+              ...(narrow &&
+                !tight && {
+                  display: '-webkit-box',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 2,
+                  overflow: 'hidden',
+                  overflowWrap: 'break-word',
+                  hyphens: 'auto',
+                }),
             }}
           >
             {show.venue}
           </span>
         </Link>
-        {(time !== null || city !== null) && (
+        {(time !== null || city !== null || tight) && (
           <div
             data-testid="artist-show-meta"
             className="flex min-w-0 items-baseline"
@@ -161,10 +183,20 @@ export const ArtistShowRow = ({
                 {city}
               </span>
             )}
+            {/* The price keeps its own type; only the line it sits on moves.
+                It takes the line's trailing edge, under where its column was. */}
+            {tight && (
+              <div
+                data-testid="artist-show-price-under"
+                className="ml-auto flex shrink-0 font-sans normal-case tracking-normal"
+              >
+                <PriceStack show={row} surface="artist" narrow />
+              </div>
+            )}
           </div>
         )}
       </div>
-      <PriceStack show={row} surface="artist" narrow />
+      {!tight && <PriceStack show={row} surface="artist" narrow />}
       {/* Above the stretched link, so the eye stays its own control. */}
       <div className="relative z-[2] flex shrink-0 items-center justify-center">
         <WatchShowButton eventId={show.eventId} artist={artist} />
