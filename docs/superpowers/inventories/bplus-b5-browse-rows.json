@@ -1,10 +1,15 @@
 {
   "feature": "B5 · Browse 1: rows, Tonight spotlight, Coming to Denver, day headers, List/Cal toggle",
   "note": "Plan row B5 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): browse = 02-mobile/bp-m-browse_m, 01-core/bp-browse, 03-themes/bp-t-light-browse_m, 03-themes/bp-td-light-browse, 03-themes/bp-t-electric-browse_m, 03-themes/bp-td-electric-browse; browse-scrolled = 02-mobile/bp-m-browse_m, 01-core/bp-browse; browse-full = 06-states/bp-s-loadmore_m.",
+  "shares": {
+    "binding": "EventRow",
+    "module": "apps/web/src/components/consumer/event-row"
+  },
   "rows": [
     {
       "id": "browse",
       "label": "/events: first screen",
+      "view": "apps/web/src/components/consumer/events-list/EventsList.tsx",
       "steps": [
         {
           "goto": "/events",
@@ -15,6 +20,7 @@
     {
       "id": "browse-scrolled",
       "label": "/events: day headers further down",
+      "view": "apps/web/src/components/consumer/events-list/EventsList.tsx",
       "steps": [
         {
           "goto": "/events",
@@ -31,6 +37,7 @@
     {
       "id": "browse-full",
       "label": "/events: whole first page",
+      "view": "apps/web/src/components/consumer/events-list/EventsList.tsx",
       "fullPage": true,
       "steps": [
         {

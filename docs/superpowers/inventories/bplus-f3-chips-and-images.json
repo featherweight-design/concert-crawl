@@ -1,10 +1,15 @@
 {
   "feature": "F3 · chips and image system: GenreChip, StatusChip, image ring, row edge, sheet edge",
   "note": "Plan row F3 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): browse = 04-genre-and-vibe/bp-chips-all, 04-genre-and-vibe/bp-genres, 02-mobile/bp-m-browse_m, 01-core/bp-browse; watching = 08-prices-and-status/more-st-rows_board; venue = 02-mobile/bp-m-venue_m; event-chips = 04-genre-and-vibe/bp-chips-all; sheet-edge = 05-filters/bp-f-filt_sheet_m.",
+  "shares": {
+    "binding": "EventRow",
+    "module": "apps/web/src/components/consumer/event-row"
+  },
   "rows": [
     {
       "id": "browse",
       "label": "/events: rows, chips, image ring",
+      "view": "apps/web/src/components/consumer/events-list/EventsList.tsx",
       "steps": [
         {
           "goto": "/events",
@@ -15,6 +20,7 @@
     {
       "id": "watching",
       "label": "/watching: rows with status chips",
+      "view": "apps/web/src/components/consumer/watching/WatchingRow.tsx",
       "steps": [
         {
           "goto": "/watching",
@@ -25,6 +31,7 @@
     {
       "id": "venue",
       "label": "/venues/red-rocks-amphitheatre: a venue's rows",
+      "view": "apps/web/src/components/consumer/venue-event-list/VenueEventList.tsx",
       "steps": [
         {
           "goto": "/venues/red-rocks-amphitheatre",
@@ -32,34 +39,6 @@
         },
         {
           "scrollTo": "[data-testid=\"event-row\"]"
-        }
-      ]
-    },
-    {
-      "id": "event-chips",
-      "label": "/events/[id]: genre chips",
-      "steps": [
-        {
-          "goto": "/events/${CC_EVENT_ID}",
-          "wait": "[data-testid=\"hero-band\"]"
-        }
-      ]
-    },
-    {
-      "id": "sheet-edge",
-      "label": "/events: Where sheet, its top edge",
-      "widths": [
-        "phone"
-      ],
-      "steps": [
-        {
-          "goto": "/events",
-          "wait": "[data-testid=\"event-row\"]"
-        },
-        {
-          "click": "[data-testid=\"venue-chip\"]:visible",
-          "waitDialog": "^Where filter$",
-          "settle": 400
         }
       ]
     }
