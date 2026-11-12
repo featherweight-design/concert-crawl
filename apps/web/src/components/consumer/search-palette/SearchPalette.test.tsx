@@ -347,7 +347,7 @@ describe('SearchPalette — B+ dialog', () => {
     const dialog = screen.getByRole('dialog', { name: 'Search' });
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(
-      screen.getByRole('textbox', { name: /Search artists or venues/ }),
+      screen.getByRole('combobox', { name: /Search artists or venues/ }),
     ).toBeTruthy();
   });
 
@@ -412,7 +412,7 @@ describe('SearchPalette — B+ dialog', () => {
     try {
       trigger.focus();
       const { rerender } = render(<SearchPalette open onClose={onClose} />);
-      screen.getByRole('textbox').focus();
+      screen.getByRole('combobox').focus();
       rerender(<SearchPalette open={false} onClose={onClose} />);
       expect(document.activeElement).toBe(trigger);
     } finally {
