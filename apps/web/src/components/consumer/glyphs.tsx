@@ -107,19 +107,32 @@ export const StarGlyph = ({
 );
 
 // Eyebrow
+/**
+ * The price cards' measured scale (more-p-price_states, at 4x): every drawn
+ * price has a 25px cap height, which is Inter at 34px, and every TICKETS /
+ * BOX OFFICE eyebrow is 9.5px mono at 0.14em.
+ */
+export const PRICE_HEADLINE_SIZE = 34;
+export const PRICE_EYEBROW = { size: '9.5px', tracking: '0.14em' } as const;
+
 export const Eyebrow = ({
   children,
   color = 'var(--fg-subtle)',
+  size = '9px',
+  tracking = '0.06em',
 }: {
   children: React.ReactNode;
   color?: string;
+  /** Defaults to the general eyebrow; the price cards pass PRICE_EYEBROW. */
+  size?: string;
+  tracking?: string;
 }) => (
   <div
     style={{
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '9px',
+      fontSize: size,
       color,
-      letterSpacing: '0.06em',
+      letterSpacing: tracking,
       textTransform: 'uppercase',
     }}
   >
