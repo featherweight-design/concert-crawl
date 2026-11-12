@@ -66,7 +66,10 @@ const DesktopShell = ({
       }}
     >
       <AdminTopbar />
-      <main style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+      <main
+        data-admin-content
+        style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}
+      >
         {children}
       </main>
     </div>

@@ -2155,7 +2155,6 @@ export const ADMIN_COPY = {
       prices: 'Prices',
       people: 'People',
       featureFlags: 'Feature flags',
-      inviteCodes: 'Invite codes',
       crawlRuns: 'Crawl runs',
       operations: 'Operations',
       groups: { manage: 'MANAGE', system: 'SYSTEM' },
@@ -2172,7 +2171,6 @@ export const ADMIN_COPY = {
         people: 'People, invite codes, posters',
         featureFlags: (count: number) =>
           `${count} ${count === 1 ? 'flag' : 'flags'}`,
-        inviteCodes: 'Codes and who joined',
         crawlRuns: (time: string) => `Last run ${time}`,
         crawlRunsNever: 'No runs yet',
         operations: 'Feedback, emails, activity log',
@@ -2184,7 +2182,9 @@ export const ADMIN_COPY = {
       role: 'ADMIN',
       roleIn: (environment: string) => `ADMIN · ${environment}`,
       openApp: 'Open Concert Crawl',
-      openAppHint: 'The fan app, signed in as you. Admin is in its menu.',
+      openAppHint:
+        'The fan app, signed in as you. Admin stays one tap away in your menu there.',
+      openAppHintPhone: 'The fan app, signed in as you. Admin is in its menu.',
       theme: 'Theme',
       themeHint: (name: string) => `Follows your theme in the app: ${name}.`,
       signOut: 'Sign out',
@@ -2204,6 +2204,7 @@ export const ADMIN_COPY = {
       breadcrumbAriaLabel: 'Breadcrumb',
     },
     crumbs: {
+      inviteCodes: 'Invite codes',
       editVenue: 'Edit venue',
       details: 'Details',
     },

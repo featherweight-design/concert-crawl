@@ -3,7 +3,6 @@ import {
   Calendar,
   Flag,
   Inbox,
-  KeyRound,
   MapPin,
   Music,
   RefreshCw,
@@ -37,7 +36,6 @@ export type NavKey =
   | 'prices'
   | 'people'
   | 'feature-flags'
-  | 'invite-codes'
   | 'crawl-runs'
   | 'operations';
 
@@ -113,15 +111,6 @@ export const NAV: NavItem[] = [
     group: 'manage',
   },
   {
-    // Interim row until 5b moves invite codes under People, so the page is
-    // never orphaned (plan decision 14).
-    key: 'invite-codes',
-    label: navCopy.inviteCodes,
-    href: '/admin/invite-codes',
-    icon: KeyRound,
-    group: 'manage',
-  },
-  {
     key: 'crawl-runs',
     label: navCopy.crawlRuns,
     href: '/admin/crawl',
@@ -184,7 +173,9 @@ const PREFIXES: Array<[string, NavKey]> = [
   ['/admin/users', 'people'],
   ['/admin/people', 'people'],
   ['/admin/feature-flags', 'feature-flags'],
-  ['/admin/invite-codes', 'invite-codes'],
+  // Invite codes and Posters are People tabs (README IA); until 5b moves them,
+  // their routes sit under People and are reached from People's own page.
+  ['/admin/invite-codes', 'people'],
   ['/admin/crawl', 'crawl-runs'],
   ['/admin/feedback', 'operations'],
   ['/admin/operations', 'operations'],

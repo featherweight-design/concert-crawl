@@ -4,7 +4,7 @@ import { Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { CCMark } from '@/components/brand/cc-mark';
-import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { BRAND_COPY } from '@/components/brand/definitions/copy';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   NAV,
@@ -162,7 +162,20 @@ export const AdminSidebar = ({
           <CCMark size={28} />
         </span>
         <span style={{ lineHeight: 1.1 }}>
-          <CCWordmark size={15} />
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              color: 'var(--fg)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {BRAND_COPY.wordmark.lead}
+            <span style={{ color: 'var(--accent)' }}>
+              {BRAND_COPY.wordmark.accent}
+            </span>
+          </span>
           <span
             style={{
               ...mono,

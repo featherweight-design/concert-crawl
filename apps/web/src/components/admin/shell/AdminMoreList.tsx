@@ -38,8 +38,6 @@ const detailFor = (key: NavKey, data: AdminMoreDetails): string => {
       return data.featureFlags === null
         ? ADMIN_COPY.shell.nav.featureFlags
         : details.featureFlags(data.featureFlags);
-    case 'invite-codes':
-      return details.inviteCodes;
     case 'crawl-runs':
       return data.lastCrawlAt === null
         ? details.crawlRunsNever
