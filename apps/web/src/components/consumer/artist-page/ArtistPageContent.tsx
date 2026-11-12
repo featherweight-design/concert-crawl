@@ -136,8 +136,8 @@ export const ArtistPageContent = ({
     </>
   );
 
-  // Ends the main column on both viewports: the board puts it under Listen,
-  // and with no right column that is the column's foot, not the 208px rail.
+  // Ends the main column on both viewports, after the shows when there are
+  // any: the board puts it at the column's foot, not in the 208px rail.
   // Keyed on the artist and the loaded report so the card's own state resets
   // when either changes rather than going stale.
   const reportCard = (
