@@ -16,7 +16,7 @@ describe('requestLandingRevalidationSafely', () => {
     delete process.env['ADMIN_URL'];
   });
 
-  it('posts the landing path with the shared secret when events were inserted', async () => {
+  it('posts the landing path and the catalog tag with the shared secret when events were inserted', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(null, { status: 204 }));
@@ -27,7 +27,7 @@ describe('requestLandingRevalidationSafely', () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe('https://concertcrawl.app/api/revalidate');
     expect(init?.method).toBe('POST');
-    expect(init?.body).toBe(JSON.stringify({ path: '/' }));
+    expect(init?.body).toBe(JSON.stringify({ path: '/', tags: ['catalog'] }));
     expect(
       init?.headers && 'x-revalidate-token' in init.headers
         ? init.headers['x-revalidate-token']
