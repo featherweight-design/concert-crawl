@@ -1482,7 +1482,9 @@ describe('EventDetailBanners pending Tickets available report', () => {
         currentUserId={null}
       />,
     );
-    fireEvent.click(screen.getByText('Tickets still available?'));
+    fireEvent.click(
+      screen.getByText(REPORTING_COPY.pendingReportBanner.footerQuestion),
+    );
 
     const group = screen.getByRole('radiogroup');
     expect(within(group).queryByText('Tickets available')).toBeNull();
