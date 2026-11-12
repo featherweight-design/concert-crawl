@@ -6,6 +6,11 @@ vi.mock('@/lib/api', () => ({
   ApiError: class ApiError extends Error {},
 }));
 
+// Logged-out reads go through the shared catalog cache helper.
+vi.mock('@/lib/catalog-cache', () => ({
+  publicCatalogGet: (path: string) => mockGet(path),
+}));
+
 // Denver's today pinned to 2026-11-11.
 vi.mock('@/lib/time', () => ({
   denverTodayUtcMs: () => Date.UTC(2026, 10, 11),

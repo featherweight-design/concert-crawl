@@ -21,6 +21,11 @@ vi.mock('@/lib/api', () => ({
   publicApiClient: { get: (path: string) => mockPublicGet(path) },
 }));
 
+// Logged-out reads go through the shared catalog cache helper.
+vi.mock('@/lib/catalog-cache', () => ({
+  publicCatalogGet: (path: string) => mockPublicGet(path),
+}));
+
 vi.mock('@/components/consumer/event-detail', () => ({
   PublicEventDetail: () => null,
 }));
