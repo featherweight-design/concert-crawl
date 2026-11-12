@@ -283,6 +283,10 @@ describe('VenuesList Select', () => {
     fireEvent.click(other);
     expect(other).not.toBeChecked();
 
+    // `fanOut` starts each call a microtask after the click (its worker pool
+    // awaits before sending), so `finish` only exists once the call is out.
+    // Resolving before that resolved the no-op default and left it hanging.
+    await waitFor(() => expect(recrawlVenue).toHaveBeenCalledTimes(1));
     finish({ ok: true });
     await waitFor(() => expect(other).toBeEnabled());
   });
