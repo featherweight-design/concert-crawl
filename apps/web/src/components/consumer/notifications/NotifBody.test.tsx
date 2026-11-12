@@ -258,6 +258,12 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     // Opens on Shows: its own rows show their dots, so the tab does not.
     expect(screen.queryByTestId('notif-tab-dot-shows')).toBeNull();
     expect(screen.getByTestId('notif-tab-dot-alerts')).toBeInTheDocument();
+    // A screen reader hears the cue too.
+    expect(
+      screen.getByRole('tab', {
+        name: `${NOTIFICATIONS_COPY.segments.alerts} ${NOTIFICATIONS_COPY.tabUnread}`,
+      }),
+    ).toBeInTheDocument();
     // The Prices item is read: no dot.
     expect(screen.queryByTestId('notif-tab-dot-prices')).toBeNull();
   });

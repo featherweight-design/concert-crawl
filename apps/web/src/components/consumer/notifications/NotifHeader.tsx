@@ -263,18 +263,23 @@ export const NotifHeader = ({
               {!selected && unreadTabs?.has(key) === true && (
                 // Addendum 2 (decided): a tab other than the open one carries
                 // a 6px accent dot while it holds an unread item. No number.
-                <span
-                  aria-hidden="true"
-                  data-testid={`notif-tab-dot-${key}`}
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: 'var(--accent)',
-                    flex: 'none',
-                    marginLeft: 6,
-                  }}
-                />
+                <>
+                  <span className="sr-only">
+                    {` ${NOTIFICATIONS_COPY.tabUnread}`}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    data-testid={`notif-tab-dot-${key}`}
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: 'var(--accent)',
+                      flex: 'none',
+                      marginLeft: 6,
+                    }}
+                  />
+                </>
               )}
             </button>
           );
