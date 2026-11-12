@@ -134,14 +134,15 @@ export const stageRing = (ring: string): string =>
     ? `0 0 0 2px ${ring}`
     : `0 0 0 2px ${ring}, 0 0 0 7px color-mix(in oklch, ${ring} 16%, transparent), 0 30px 70px color-mix(in oklch, ${ring} 40%, transparent)`;
 
-// The mobile headline size (addendum 3 rule 2). The step is the floor at 320
-// and the size still grows with the viewport up to 44px, as before. Static
-// class strings so Tailwind sees them.
+// The mobile headline size (addendum 3 rule 2). The step is the exact size at
+// 320 (the boards draw 38 and 30 there): each step's vw term is step/3.2, so
+// it is the step at a 320px viewport and still grows with the viewport up to
+// 44px, as before. Static class strings so Tailwind sees them.
 const STAGE_HEAD_DEFAULT = '[--stage-head:clamp(32px,10vw,44px)]';
 const STAGE_HEAD_STEP: Record<TitleStep, string> = {
-  38: '[--stage-head:clamp(38px,10vw,44px)]',
-  30: '[--stage-head:clamp(30px,10vw,44px)]',
-  26: '[--stage-head:clamp(26px,10vw,44px)]',
+  38: '[--stage-head:clamp(38px,11.875vw,44px)]',
+  30: '[--stage-head:clamp(30px,9.375vw,44px)]',
+  26: '[--stage-head:clamp(26px,8.125vw,44px)]',
 };
 
 export type StageShellProps = {
