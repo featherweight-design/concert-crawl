@@ -2028,6 +2028,61 @@ export const ADMIN_COPY = {
   },
 
   // 5b, boards 07/invite-codes* and addendum-3 12/code-taken-d.
+  peoplePage: {
+    title: 'People',
+    subtitle:
+      'Handles, not emails. Open someone to change their role or what they can try early.',
+    phoneSubtitle: (total: number) => `${total} · handles, not emails`,
+    search: 'Search by handle',
+    chips: {
+      label: 'Who to show',
+      everyone: 'Everyone',
+      beta: 'Beta',
+      promoter: 'Promoter',
+      admin: 'Admin',
+      test: 'Test accounts',
+      testShort: 'Test',
+    },
+    // Undrawn: the list opened from a code's "See all N".
+    codeChip: (code: string | null) => (code ? `Code ${code}` : 'This code'),
+    clearCode: 'Remove this filter',
+    columns: {
+      person: 'PERSON',
+      role: 'ROLE',
+      joined: 'JOINED',
+      lastActive: 'LAST ACTIVE',
+      watching: 'WATCHING',
+    },
+    roles: {
+      user: 'Member',
+      beta: 'Beta',
+      promoter: 'Promoter',
+      admin: 'Admin',
+      sub_admin: 'Staff',
+    },
+    testTag: 'TEST',
+    active: {
+      now: 'Now',
+      yesterday: 'Yesterday',
+      minutes: (count: number) => `${count}m ago`,
+      hours: (count: number) => `${count}h ago`,
+      days: (count: number) => `${count}d ago`,
+      // The phone's line: "Active 2h ago", "Active yesterday".
+      phone: (when: string) => `Active ${when.toLowerCase()}`,
+    },
+    footer: (shown: number, total: number) =>
+      `${shown} of ${total} · newest activity first`,
+    // Undrawn: the pager under a list longer than one page.
+    itemLabel: 'people',
+    // Undrawn: the API stops reading accounts past its cap.
+    truncated:
+      'Not everyone is listed: there are more people than this list can read.',
+    noResults: {
+      title: 'Nobody matches',
+      body: 'Check the spelling of the handle, or clear the filters.',
+      clear: 'Clear filters',
+    },
+  },
   codesPage: {
     title: 'People',
     subtitle:
@@ -2103,6 +2158,7 @@ export const ADMIN_COPY = {
         sub_admin: 'Staff',
       },
       addSeats: 'Add seats',
+      seeAll: (joined: number) => `See all ${joined}`,
       // Undrawn: someone who joined before picking a handle.
       noHandle: 'No handle yet',
     },

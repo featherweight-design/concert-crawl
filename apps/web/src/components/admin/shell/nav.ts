@@ -101,7 +101,7 @@ export const NAV: NavItem[] = [
   {
     key: 'people',
     label: navCopy.people,
-    href: '/admin/users',
+    href: '/admin/people',
     icon: Users,
     group: 'manage',
   },

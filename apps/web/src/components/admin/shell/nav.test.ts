@@ -95,6 +95,8 @@ describe('activeNavKey', () => {
     ['/admin/events/abc/edit', 'from=all-events', 'events'],
     ['/admin/venues/abc', '', 'venues'],
     ['/admin/users/abc', '', 'people'],
+    ['/admin/people', '', 'people'],
+    ['/admin/people', 'code=abc', 'people'],
     ['/admin/invite-codes/posters', '', 'invite-codes'],
     ['/admin/crawl', '', 'crawl-runs'],
     ['/admin/feedback', '', 'operations'],

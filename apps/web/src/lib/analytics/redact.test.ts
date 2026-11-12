@@ -41,6 +41,16 @@ describe('redactAnalyticsString', () => {
     );
   });
 
+  it("redacts the Clerk id from the People route's person page", () => {
+    expect(
+      redactAnalyticsString('https://concertcrawl.app/admin/people/user_2abc'),
+    ).toBe('https://concertcrawl.app/admin/people/[redacted]');
+    // The list itself carries no id; its ?code= query is dropped.
+    expect(redactAnalyticsString('/admin/people?code=abc')).toBe(
+      '/admin/people',
+    );
+  });
+
   it('drops the query string of a root-relative path', () => {
     expect(redactAnalyticsString('/search?q=private-text')).toBe('/search');
   });

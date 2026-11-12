@@ -16,8 +16,15 @@ const Bar = ({ width, height }: { width: number; height: number }) => (
  * The list's loading rows (`07/loading-invite-codes`): a card with a header
  * bar, then six rows of title, sub, chip and three columns, fading out. No
  * hooks, so the route's `loading.tsx` renders it on the server.
+ * `07/loading-people` draws the same rows with an avatar and two columns.
  */
-export const InviteCodesRowsSkeleton = () => (
+export const InviteCodesRowsSkeleton = ({
+  avatar = false,
+  tail = TAIL,
+}: {
+  avatar?: boolean;
+  tail?: readonly number[];
+} = {}) => (
   <div
     data-testid="page-skeleton"
     aria-busy="true"
@@ -43,6 +50,11 @@ export const InviteCodesRowsSkeleton = () => (
           opacity: 1 - row * 0.12,
         }}
       >
+        {avatar && (
+          <span style={{ flex: 'none' }}>
+            <SkeletonBlock width={32} height={32} radius={999} />
+          </span>
+        )}
         <div
           style={{
             flex: 1,
@@ -58,8 +70,8 @@ export const InviteCodesRowsSkeleton = () => (
         <span style={{ flex: '0 0 70px' }}>
           <SkeletonBlock height={20} radius={999} />
         </span>
-        {TAIL.map((tail) => (
-          <Bar key={tail} width={tail} height={11} />
+        {tail.map((width) => (
+          <Bar key={width} width={width} height={11} />
         ))}
       </div>
     ))}

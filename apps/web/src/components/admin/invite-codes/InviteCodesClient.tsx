@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { Plus, Ticket } from 'lucide-react';
@@ -23,9 +22,11 @@ import {
 } from '@/lib/poster/poster-rule';
 import { postersHref } from '@/lib/poster/posters-href';
 import { codesApi, type CodeEdit } from './codes-api';
+import { PeopleTabs } from '../people/PeopleTabs';
 import {
   STATUS_KIND,
   codeLabel,
+  countPosters,
   isEnded,
   makerName,
   shortDate,
@@ -83,108 +84,6 @@ const StatusChip = ({ status }: { status: InviteStatus }) => (
     {COPY.status[status]}
   </StatusBadge>
 );
-
-/** A tab's count: 12px beside a desktop tab, 11px in a phone segment. */
-const Count = ({ value, phone }: { value: number | null; phone: boolean }) =>
-  value == null ? null : (
-    <span
-      style={{
-        fontSize: phone ? 11 : 12,
-        color: 'var(--fg-subtle)',
-        marginLeft: phone ? 5 : 6,
-      }}
-    >
-      {value}
-    </span>
-  );
-
-/** People, Invite codes, Posters: underline tabs, or the phone's segments. */
-const Tabs = ({
-  isPhone,
-  counts,
-}: {
-  isPhone: boolean;
-  counts: {
-    people: number | null;
-    codes: number | null;
-    posters: number | null;
-  };
-}) => {
-  const tabs = [
-    {
-      key: 'people',
-      href: '/admin/users',
-      label: COPY.tabs.people,
-      count: counts.people,
-    },
-    {
-      key: 'codes',
-      href: '/admin/invite-codes',
-      label: isPhone ? COPY.tabs.codesShort : COPY.tabs.codes,
-      count: counts.codes,
-    },
-    {
-      key: 'posters',
-      href: postersHref(),
-      label: COPY.tabs.posters,
-      count: counts.posters,
-    },
-  ];
-  return (
-    <nav
-      aria-label={COPY.tabs.label}
-      style={
-        isPhone
-          ? {
-              display: 'flex',
-              padding: 3,
-              borderRadius: 10,
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border)',
-            }
-          : { display: 'flex', gap: 4, borderBottom: '1px solid var(--border)' }
-      }
-    >
-      {tabs.map((tab) => {
-        const on = tab.key === 'codes';
-        return (
-          <Link
-            key={tab.key}
-            href={tab.href}
-            prefetch={false}
-            aria-current={on ? 'page' : undefined}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              textDecoration: 'none',
-              color: on ? 'var(--fg)' : 'var(--fg-muted)',
-              ...(isPhone
-                ? {
-                    flex: 1,
-                    height: 32,
-                    borderRadius: 7,
-                    fontSize: 12.5,
-                    background: on ? 'var(--bg-elevated)' : 'transparent',
-                  }
-                : {
-                    height: 40,
-                    padding: '0 14px',
-                    fontSize: 14,
-                    borderBottom: `2px solid ${on ? 'var(--signal)' : 'transparent'}`,
-                  }),
-            }}
-          >
-            {tab.label}
-            <Count value={tab.count} phone={isPhone} />
-          </Link>
-        );
-      })}
-    </nav>
-  );
-};
 
 /**
  * 5b Invite codes (`07/invite-codes`, `07/invite-codes-mobile`): the list,
@@ -357,10 +256,6 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     row,
     status: inviteStatus(row, now),
   }));
-  const posters = rows.filter(
-    ({ row, status }) =>
-      row.maxUses > 1 && (status === 'active' || status === 'full'),
-  ).length;
   const openRow =
     open && open.kind !== 'new'
       ? codes?.find((row) => row.id === open.id)
@@ -624,12 +519,13 @@ export function InviteCodesClient({ origin }: { origin: string }) {
           {newButton}
         </div>
       )}
-      <Tabs
+      <PeopleTabs
+        active="codes"
         isPhone={isPhone}
         counts={{
           people,
           codes: codes?.length ?? null,
-          posters: codes ? posters : null,
+          posters: codes ? countPosters(codes, now) : null,
         }}
       />
       {isPhone && newButton}

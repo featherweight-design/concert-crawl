@@ -80,7 +80,8 @@ export const initAnalytics = (hostname?: string): void => {
       // the options below only keep element text and attributes, so a
       // captured button still says what it was. Not on /admin: its rows carry
       // other readers' ids and contact details in text and hrefs. (Pageviews
-      // still run there; ./redact takes the id out of /admin/users/<id>.)
+      // still run there; ./redact takes the id out of /admin/users/<id> and
+      // /admin/people/<id>.)
       autocapture: { url_ignorelist: [ADMIN_URL] },
       mask_all_text: false,
       mask_all_element_attributes: false,

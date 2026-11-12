@@ -241,7 +241,21 @@ export const CodePanel = ({
             );
           })}
         </ul>
-        {/* HELD: "See all N" waits for the 5a People route (A3 5b row 8). */}
+        {/* A3 5b row 8: opens People filtered to this code. */}
+        {joined && joined.total > joined.data.length && (
+          <Link
+            href={`/admin/people?code=${encodeURIComponent(code.id)}`}
+            prefetch={false}
+            style={{
+              display: 'inline-block',
+              fontSize: 12.5,
+              color: 'var(--signal)',
+              textDecoration: 'none',
+            }}
+          >
+            {COPY.panel.seeAll(joined.total)}
+          </Link>
+        )}
       </div>
     </CodeSurface>
   );

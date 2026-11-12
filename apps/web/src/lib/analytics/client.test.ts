@@ -270,6 +270,7 @@ describe('web analytics client', () => {
     for (const href of [
       'https://concertcrawl.app/admin',
       'https://concertcrawl.app/admin/users/user_2abc',
+      'https://concertcrawl.app/admin/people?code=abc',
       'https://concertcrawl.app/admin?tab=x',
     ]) {
       expect(ADMIN_URL.test(href)).toBe(true);
