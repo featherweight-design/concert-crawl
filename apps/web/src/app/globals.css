@@ -440,18 +440,9 @@
 }
 /* ── In-app notifications (#737) ──────────────────────────────────────────
    The panel is a port of design_handoff_in_app_notifications, whose components
-   style themselves inline. These four rules are the ones inline styles cannot
-   express — a keyframe, :hover/:focus-visible, and a pseudo-element — so they
+   style themselves inline. These rules are the ones inline styles cannot
+   express — :hover/:focus-visible and a pseudo-element — so they
    live here rather than in the notifications directory. */
-
-@keyframes notifSweep {
-  0% {
-    background-position: -220% 0;
-  }
-  100% {
-    background-position: 320% 0;
-  }
-}
 
 .notif-row {
   transition: background 0.12s ease;
@@ -501,10 +492,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notif-shimmer {
-    animation: none !important;
-    background: var(--surface-2) !important;
-  }
   /* The pip stops pulsing but must NOT disappear — it is the only visual
      carrier of "there is something unread" in the chrome. */
   .notif-pip {

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import Link from 'next/link';
 
 /**
@@ -67,10 +67,14 @@ export function StateCard({
   role,
 }: StateCardProps) {
   const ink = tone === 'danger' ? 'var(--danger)' : 'var(--signal)';
+  // The title is the card's heading, and names the card when it carries a role
+  // (an alert would otherwise be read as three unstructured runs of text).
+  const titleId = useId();
 
   return (
     <div
       role={role}
+      {...(role === undefined ? {} : { 'aria-labelledby': titleId })}
       data-testid="state-card"
       style={{
         display: 'flex',
@@ -126,8 +130,10 @@ export function StateCard({
       >
         {eyebrow}
       </span>
-      <span
+      <h2
+        id={titleId}
         style={{
+          margin: 0,
           fontSize: 24,
           fontWeight: 900,
           letterSpacing: '-0.035em',
@@ -136,7 +142,7 @@ export function StateCard({
         }}
       >
         {title}
-      </span>
+      </h2>
       <span
         style={{
           fontSize: 14,
