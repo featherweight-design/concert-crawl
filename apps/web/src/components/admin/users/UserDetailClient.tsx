@@ -41,7 +41,7 @@ interface UserDetailClientProps {
 export const UserDetailClient = ({ user }: UserDetailClientProps) => {
   const backLink = (
     <Link
-      href="/admin/users"
+      href="/admin/people"
       style={{
         display: 'inline-flex',
         alignItems: 'center',

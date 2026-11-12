@@ -19,8 +19,9 @@ import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties';
 
 const URL_START = /^(?:https?:\/\/|\/)/i;
 
-// The admin's user page is addressed by another reader's Clerk id.
-const ADMIN_USER_PATH = /(\/admin\/users\/)[^/?#]+/g;
+// The admin's person page is addressed by another reader's Clerk id, under
+// /admin/users/<id> today and /admin/people/<id> once 5a moves it.
+const ADMIN_USER_PATH = /(\/admin\/(?:users|people)\/)[^/?#]+/g;
 
 export const redactAnalyticsString = (value: string): string =>
   redactInviteTokens(

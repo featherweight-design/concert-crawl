@@ -12,7 +12,11 @@ import {
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
-import { parseSeats, type InviteStatus } from '@/lib/poster/poster-rule';
+import {
+  inviteStatus,
+  parseSeats,
+  type InviteStatus,
+} from '@/lib/poster/poster-rule';
 
 const COPY = ADMIN_COPY.codesPage;
 
@@ -26,6 +30,16 @@ export const STATUS_KIND: Record<InviteStatus, StatusKind> = {
   expired: 'warning',
   revoked: 'danger',
 };
+
+/** The Posters tab's count: live or full codes with more than one seat. */
+export const countPosters = (
+  codes: readonly AdminInviteCode[],
+  now: Date,
+): number =>
+  codes.filter((code) => {
+    const status = inviteStatus(code, now);
+    return code.maxUses > 1 && (status === 'active' || status === 'full');
+  }).length;
 
 /** An ended code is one Reactivate can bring back; Full is not ended. */
 export const isEnded = (status: InviteStatus): boolean =>

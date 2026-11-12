@@ -18,13 +18,14 @@ const BASE = '/v1/admin/invite-codes';
 /** How long a call may hang before it fails into Couldn't load or the toast. */
 const REQUEST_TIMEOUT_MS = 15_000;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const isText = (value: unknown): value is string => typeof value === 'string';
-const isTextOrNull = (value: unknown): value is string | null =>
+export const isText = (value: unknown): value is string =>
+  typeof value === 'string';
+export const isTextOrNull = (value: unknown): value is string | null =>
   value === null || typeof value === 'string';
-const isCount = (value: unknown): value is number =>
+export const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
 const isRoleOrNull = (value: unknown): value is Role | null =>
@@ -88,8 +89,11 @@ export interface NewCode {
 
 export type GetToken = () => Promise<string | null>;
 
-/** The envelope's `data`, unchecked; each caller narrows it with a guard. */
-const call = async (
+/**
+ * The envelope's `data`, unchecked; each caller narrows it with a guard. The
+ * People list (`../people/people-api`) makes its calls through it too.
+ */
+export const call = async (
   getToken: GetToken,
   path: string,
   init: { method?: string; body?: unknown } = {},
@@ -137,9 +141,9 @@ export const codesApi = (getToken: GetToken) => ({
       throw new ShapeError('codes');
     return data;
   },
-  /** The People tab's count. */
+  /** The People tab's count, as the People list counts everyone. */
   peopleTotal: async (): Promise<number> => {
-    const data = await call(getToken, '/v1/admin/users?limit=1');
+    const data = await call(getToken, '/v1/admin/people?limit=1');
     if (!isRecord(data) || !isCount(data['total']))
       throw new ShapeError('total');
     return data['total'];

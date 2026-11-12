@@ -16,6 +16,7 @@ import { MonoLabel } from '@/components/admin/primitives';
 import type { FeedbackItem } from './FeedbackRow';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
+import { personHref } from '@/components/admin/people/people-rules';
 
 const REPO = 'featherweight-design/concert-crawl';
 const MT_TIMEZONE = 'America/Denver';
@@ -568,10 +569,7 @@ export function FeedbackExpanded({
           {ADMIN_COPY.feedback.expanded.actions.openInGitHub}
         </a>
 
-        <a
-          href={`/admin/users/${item.userId}`}
-          style={actionLinkStyle('ghost')}
-        >
+        <a href={personHref(item.userId)} style={actionLinkStyle('ghost')}>
           <User size={13} />
           View {handle}
           <ChevronRight size={12} />
