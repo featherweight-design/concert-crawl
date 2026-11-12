@@ -1460,7 +1460,9 @@ describe('EventDetailBanners No longer listed', () => {
         name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
       }),
     ).toBeTruthy();
-    expect(screen.getByText('Withdraw')).toBeTruthy();
+    expect(
+      screen.getByText(REPORTING_COPY.pendingReportBanner.postponedBadge),
+    ).toBeTruthy();
   });
 });
 
