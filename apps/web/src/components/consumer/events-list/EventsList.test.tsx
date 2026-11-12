@@ -102,6 +102,16 @@ describe('EventsList day groups', () => {
     expect(headings()).toEqual(['Tonight']);
   });
 
+  it('ignores from beside a filterWhen chip, as the API request does', () => {
+    searchString = 'filterWhen=next-week&from=2020-01-01';
+    pages = [
+      { data: [eventOn('old', '2026-11-10'), eventOn('today', '2026-11-11')] },
+    ];
+    renderList();
+
+    expect(headings()).toEqual(['Tonight']);
+  });
+
   it('shows an earlier day when the URL asked for one on purpose', () => {
     searchString = 'from=2026-11-10';
     pages = [

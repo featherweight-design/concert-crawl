@@ -70,10 +70,13 @@ export const EventsList = ({
   );
 
   // The earliest day Browse may show: Denver's today, unless the URL asked for
-  // an earlier start on purpose. A payload that was cached on an earlier day
-  // (the offline fallback serves one) still carries that day's rows; they would
-  // otherwise sit above "Tonight".
-  const startParam = searchParams.get('from');
+  // an earlier start on purpose. The service worker answers /v1/events from its
+  // cache when offline or stalled, and that copy may be from an earlier day:
+  // its first rows would otherwise sit above "Tonight". A `filterWhen` chip
+  // outranks `from` (see buildEventsApiParams), so `from` is ignored beside one.
+  const startParam = searchParams.get('filterWhen')
+    ? null
+    : searchParams.get('from');
   const today = localDateString('America/Denver');
   const firstDay = startParam && startParam < today ? startParam : today;
 
