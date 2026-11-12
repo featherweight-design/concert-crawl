@@ -110,7 +110,7 @@ export const RoleSegment = ({
   onPick: (role: SettableRole) => void;
 }) => (
   <div
-    role="radiogroup"
+    role="group"
     aria-label={COPY.role}
     style={{
       display: 'inline-flex',
@@ -129,8 +129,7 @@ export const RoleSegment = ({
         <button
           key={each}
           type="button"
-          role="radio"
-          aria-checked={on}
+          aria-pressed={on}
           disabled={disabled}
           onClick={() => onPick(each)}
           style={{

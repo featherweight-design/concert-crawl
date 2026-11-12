@@ -12,5 +12,7 @@ interface PageProps {
 export default async function AdminPersonPage({ params }: PageProps) {
   await requireAdminUser();
   const { userId } = await params;
-  return <PersonClient userId={userId} />;
+  // Keyed, so opening another person starts from a clean page: no revealed
+  // email or late response carries over.
+  return <PersonClient key={userId} userId={userId} />;
 }

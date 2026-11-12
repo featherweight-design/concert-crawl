@@ -2034,7 +2034,7 @@ export const ADMIN_COPY = {
     emailShown: 'Shown to you · logged',
     emailShownNote:
       'Shown for this visit only, and written to the Activity log with your handle. Hidden again when you leave the page.',
-    emailFailed: 'The email didn’t load. Try again.',
+    emailFailed: 'Couldn’t show the email. Try again.',
     signsInWith: 'Signs in with',
     inviteCode: 'Invite code',
     inviteCodeCount: (code: string, count: number) =>
@@ -2042,7 +2042,7 @@ export const ADMIN_COPY = {
     testAccount: 'Test account',
     testAccountCaption:
       'Left out of counts, Beta and Needs you. Any role can be one.',
-    testAccountFailed: 'The test account tag didn’t change. Try again.',
+    testAccountFailed: 'Not saved, so the switch is back where it was.',
     recentTitle: 'Recent',
     recent: {
       price: (range: string, artist: string, venue: string) =>

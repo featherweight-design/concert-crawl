@@ -48,7 +48,7 @@ type Notice =
  * and Recent, with the ⋯ menu. Loads in the browser with the admin's token.
  */
 export function PersonClient({ userId }: { userId: string }) {
-  const { getToken } = useAuth();
+  const { getToken, userId: viewerId } = useAuth();
   const isPhone = useIsPhone();
   const { setPageTitle } = usePageTitle();
   const api = useMemo(() => personApi(getToken), [getToken]);
@@ -107,10 +107,14 @@ export function PersonClient({ userId }: { userId: string }) {
   if (!person || !name) return <PersonSkeleton />;
 
   const now = new Date();
+  const isSelf = viewerId === userId;
 
   const applyRole = async (to: SettableRole, undoable: boolean) => {
     setRoleBusy(true);
     setRoleError(null);
+    // Any change retires the last Undo: it would send a role from before it.
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    setNotice(null);
     try {
       const result = await api.setRole(userId, to);
       setPerson((prev) => (prev ? { ...prev, role: result.role } : prev));
@@ -183,7 +187,9 @@ export function PersonClient({ userId }: { userId: string }) {
     }
   };
 
-  const menu = (
+  // Your own page has no ⋯: the API won't sign you out of the session you
+  // are using, and the menu's other item waits on 4d (HOLD).
+  const menu = isSelf ? null : (
     <CodeRowMenu
       label={COPY.menu.label(name)}
       width={300}
@@ -461,6 +467,7 @@ export function PersonClient({ userId }: { userId: string }) {
             <AdminButton
               type="button"
               variant="outline"
+              disabled={roleBusy}
               onClick={() => undo(notice.from)}
               style={{
                 height: 30,
