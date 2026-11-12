@@ -161,6 +161,11 @@ describe('errorHandler', () => {
       );
       expect(apiLogger.error).toHaveBeenCalledTimes(1);
       expect(tags.has('userHash')).toBe(false);
+      // The tags that do not depend on the hash survive, and the failure is
+      // logged rather than silent.
+      expect(tags.get('route')).toBe('/boom');
+      expect(tags.has('tier')).toBe(true);
+      expect(apiLogger.warn).toHaveBeenCalledTimes(1);
     } finally {
       importKey.mockRestore();
     }
