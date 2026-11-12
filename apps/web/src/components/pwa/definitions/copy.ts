@@ -96,3 +96,8 @@ export const OFFLINE_COPY = {
     },
   },
 } as const;
+
+// The launch animation's only text (B+ COPY.md: Launch screen, "DENVER").
+export const LAUNCH_COPY = {
+  place: 'DENVER',
+} as const;

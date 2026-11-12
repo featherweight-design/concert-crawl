@@ -17,6 +17,7 @@ import { LANDING_COPY } from '@/app/_components/definitions/copy';
 import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
 import { siteOrigin } from '@/lib/share/site-origin';
 import { BRAND_PAPER } from '@/lib/definitions/brand';
+import { startupImageLinks } from '@/lib/pwa/startup-images';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -97,6 +98,13 @@ export const metadata: Metadata = {
     capable: true,
     title: 'Concert Crawl',
     statusBarStyle: 'black-translucent',
+    // The iPhone launch stills (B+ B23): the plain icon on #070A1A, so the
+    // system splash matches the launch animation's first frame. Behind a
+    // build-time switch because they replace iOS's own splash for everyone;
+    // the animation itself is behind the `launch-animation` flag.
+    ...(process.env['NEXT_PUBLIC_LAUNCH_STARTUP_IMAGES'] === '1'
+      ? { startupImage: startupImageLinks() }
+      : {}),
   },
   icons: {
     // The SVG must lead: declaring `icons` overrides Next's automatic

@@ -3,7 +3,8 @@ import type { PremiumFeature } from './index.js';
 // Its own namespace, deliberately not an alias of PremiumFeature: a flag must
 // be able to name a feature with no entitlement (release-notes) and a feature
 // that does not exist yet.
-export type FeatureFlagKey = 'spotify-sync' | 'crews' | 'release-notes';
+export type FeatureFlagKey =
+  'spotify-sync' | 'crews' | 'release-notes' | 'launch-animation';
 
 export interface FeatureFlagDefinition {
   key: FeatureFlagKey;
@@ -42,6 +43,14 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     entitlement: null,
     defaultEnabled: true,
   },
+  'launch-animation': {
+    key: 'launch-animation',
+    label: 'Launch animation',
+    description:
+      'The pink-trail animation that plays when the installed app is opened cold.',
+    entitlement: null,
+    defaultEnabled: false,
+  },
 };
 
 // Takes `unknown` so it can guard values arriving from real boundaries — DB
@@ -58,6 +67,7 @@ export const featureFlagDefaults = (): Record<FeatureFlagKey, boolean> => ({
   'spotify-sync': FEATURE_FLAGS['spotify-sync'].defaultEnabled,
   crews: FEATURE_FLAGS.crews.defaultEnabled,
   'release-notes': FEATURE_FLAGS['release-notes'].defaultEnabled,
+  'launch-animation': FEATURE_FLAGS['launch-animation'].defaultEnabled,
 });
 
 // Well-defined only because the registry test forbids two flags naming the
