@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cleanCode,
   codeLabel,
+  codeProblem,
   expiresAtFor,
   initialExpiry,
   makerName,
@@ -31,6 +32,20 @@ describe('suggestCode', () => {
   it('suggests nothing when the label has no letters', () => {
     expect(suggestCode('')).toBe('');
     expect(suggestCode('2026 · 11')).toBe('');
+  });
+
+  it('never suggests a code the API refuses', () => {
+    expect(suggestCode('Beta testers')).toBe('');
+    expect(suggestCode('Hi')).toBe('');
+  });
+
+  it('names what is wrong with a typed code', () => {
+    expect(codeProblem('')).toBeNull();
+    expect(codeProblem('GLOBEHALL')).toBeNull();
+    expect(codeProblem('ABC')).toBe(
+      '4 to 20 letters and numbers. Not case-sensitive.',
+    );
+    expect(codeProblem('BETATEST')).toBe("Codes can't start with BETA.");
   });
 
   it('cleans a typed code the same way', () => {

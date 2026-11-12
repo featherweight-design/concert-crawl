@@ -2113,9 +2113,13 @@ export const ADMIN_COPY = {
       code: 'Code',
       codeHint:
         'Letters and numbers. Suggested from the label; change it if you like.',
-      codeTaken: (code: string, suggestion: string) =>
-        `${code} is already a code. Try ${suggestion}.`,
+      codeTaken: (code: string, suggestion: string | null) =>
+        suggestion
+          ? `${code} is already a code. Try ${suggestion}.`
+          : `${code} is already a code.`,
       codeRule: '4 to 20 letters and numbers. Not case-sensitive.',
+      // Undrawn: the API reserves the generated codes' prefix.
+      codeReserved: (prefix: string) => `Codes can't start with ${prefix}.`,
       seats: 'Seats',
       other: 'Other',
       otherLabel: 'Seats, 1 to 500',

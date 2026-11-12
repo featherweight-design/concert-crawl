@@ -2,7 +2,13 @@
  * The invite-codes admin's pure rules (5b): what a code's row says, what a new
  * code is suggested from, and which expiry choice a form starts on.
  */
-import type { AdminInviteCode, Role } from '@concert-crawl/types';
+import {
+  CUSTOM_INVITE_CODE_MAX_LENGTH,
+  RESERVED_INVITE_CODE_PREFIX,
+  isCustomInviteCode,
+  type AdminInviteCode,
+  type Role,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
@@ -11,7 +17,7 @@ import { parseSeats, type InviteStatus } from '@/lib/poster/poster-rule';
 const COPY = ADMIN_COPY.codesPage;
 
 /** Longest custom code the API takes. */
-export const MAX_CODE_LENGTH = 20;
+export const MAX_CODE_LENGTH = CUSTOM_INVITE_CODE_MAX_LENGTH;
 
 /** Status chip tones, from `07/invite-codes`. */
 export const STATUS_KIND: Record<InviteStatus, StatusKind> = {
@@ -55,11 +61,21 @@ export const roleLabel = (role: Role | null): string | null =>
  */
 export const suggestCode = (label: string): string => {
   if (!/[a-z]/i.test(label)) return '';
-  return label
+  const code = label
     .replace(/^\s*poster\s*·\s*/i, '')
     .replace(/[^a-z0-9]/gi, '')
     .toUpperCase()
     .slice(0, MAX_CODE_LENGTH);
+  // Never suggest what the API refuses: under 4 characters, or a BETA start.
+  return isCustomInviteCode(code) ? code : '';
+};
+
+/** A typed code's problem, or null: too short, or the reserved BETA start. */
+export const codeProblem = (code: string): string | null => {
+  if (code === '' || isCustomInviteCode(code)) return null;
+  return code.startsWith(RESERVED_INVITE_CODE_PREFIX)
+    ? COPY.form.codeReserved(RESERVED_INVITE_CODE_PREFIX)
+    : COPY.form.codeRule;
 };
 
 /** What a typed code becomes: letters and numbers only, uppercased. */

@@ -8,6 +8,7 @@ import { AdminButton, useIsPhone } from '@/components/admin/primitives';
 import { CodeTakenError, type NewCode } from './codes-api';
 import {
   cleanCode,
+  codeProblem,
   expiresAtFor,
   seatsFrom,
   suggestCode,
@@ -56,7 +57,8 @@ export const NewCodePanel = ({
 
   const code = typedCode ?? suggestCode(label);
   const seats = seatsFrom(seatsChoice, typedSeats);
-  const codeOk = code === '' || code.length >= 4;
+  const problem = codeProblem(code);
+  const codeOk = problem === null;
   const canMake = seats != null && codeOk && !pending;
   const offerPoster = seats != null && seats > 1;
 
@@ -157,7 +159,7 @@ export const NewCodePanel = ({
               <Hint>{COPY.codeRule}</Hint>
             </>
           ) : (
-            <Hint>{codeOk ? COPY.codeHint : COPY.codeRule}</Hint>
+            <Hint>{problem ?? COPY.codeHint}</Hint>
           )}
         </Field>
         <SeatsField
