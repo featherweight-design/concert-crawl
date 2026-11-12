@@ -41,17 +41,25 @@ export const errorHandler: ErrorHandler = async (err, ctx) => {
 async function requestTags(ctx: Context): Promise<Record<string, string>> {
   try {
     const auth = getAuth(ctx);
-    const userHash = await sentryUserHash(
-      auth?.userId,
-      process.env['SENTRY_USER_HASH_KEY'],
-    );
     const route = routePattern(ctx);
-    return {
+    const tags: Record<string, string> = {
       ...(route ? { route } : {}),
       tier: sentryTier(auth?.sessionClaims),
-      ...(userHash ? { userHash } : {}),
     };
-  } catch {
+    // The hash is the one step that can reject (a bad key, crypto
+    // unavailable), so it gets its own guard and the other tags survive it.
+    try {
+      const userHash = await sentryUserHash(
+        auth?.userId,
+        process.env['SENTRY_USER_HASH_KEY'],
+      );
+      if (userHash) tags['userHash'] = userHash;
+    } catch (err) {
+      apiLogger.warn({ err }, 'Sentry user hash failed; leaving it off');
+    }
+    return tags;
+  } catch (err) {
+    apiLogger.warn({ err }, 'Sentry tagging failed; sending without tags');
     return {};
   }
 }
