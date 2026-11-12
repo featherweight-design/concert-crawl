@@ -7,7 +7,7 @@
 // closing the popover.
 
 import { useEffect, useRef, useState } from 'react';
-import type { VenuePublic } from '@concert-crawl/types';
+import { MAX_LIST_PARAM_VALUES, type VenuePublic } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { CheckboxMark } from './CheckboxMark';
@@ -47,6 +47,9 @@ export function VenueOptionGrid({
     inputRef.current?.focus();
   }, []);
 
+  // The API keeps the first 25 values of a list and drops the rest, so at the
+  // cap an unticked row is disabled rather than accepting a pick it ignores.
+  const atCap = selected.length >= MAX_LIST_PARAM_VALUES;
   const needle = query.trim().toLowerCase();
   const shown = venues
     .filter((venue) => venue.name.toLowerCase().includes(needle))
@@ -86,16 +89,18 @@ export function VenueOptionGrid({
         <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5">
           {shown.map((venue) => {
             const active = selected.includes(venue.slug);
+            const disabled = atCap && !active;
             return (
               <button
                 key={venue.slug}
                 type="button"
                 role="checkbox"
                 aria-checked={active}
+                disabled={disabled}
                 data-testid="venue-option"
                 onClick={() => onToggle(venue.slug)}
                 // The board tints a checked row with the signal at 8%.
-                className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-3"
+                className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                 style={
                   active
                     ? {

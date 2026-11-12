@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.64.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'Browse has a new filter bar on desktop, and you can pick more than one venue or vibe.',
+      },
+    ],
+  },
+  {
     version: 'v0.63.0-beta',
     date: 'Nov 12, 2026',
     headline: null,

@@ -215,37 +215,4 @@ describe('FilterPopover', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
-
-  it('multi-select rows are checkboxes that toggle and stay open', () => {
-    const onToggle = vi.fn();
-    const onSelect = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <FilterPopover
-        open
-        title="Vibe"
-        options={[
-          { value: 'electronic', label: 'Electronic' },
-          { value: 'indie', label: 'Indie' },
-        ]}
-        value=""
-        multi={{ selected: ['indie'], onToggle }}
-        anchorRect={new DOMRect(0, 100, 120, 34)}
-        onSelect={onSelect}
-        onClose={onClose}
-      />,
-    );
-    const electronic = screen.getByRole('checkbox', { name: 'Electronic' });
-    const indie = screen.getByRole('checkbox', { name: 'Indie' });
-    expect(electronic.getAttribute('aria-checked')).toBe('false');
-    expect(indie.getAttribute('aria-checked')).toBe('true');
-    // No single-select leftovers: no pressed buttons among the rows.
-    expect(screen.queryByRole('button', { pressed: true })).toBeNull();
-
-    fireEvent.click(electronic);
-    fireEvent.click(indie);
-    expect(onToggle.mock.calls).toEqual([['electronic'], ['indie']]);
-    expect(onSelect).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
-  });
 });

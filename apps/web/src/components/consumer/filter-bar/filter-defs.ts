@@ -68,8 +68,9 @@ export const compareVenueNames = (left: string, right: string): number =>
   venueSortName(left).localeCompare(venueSortName(right));
 
 /**
- * The Vibe popover's order (`bp-vibe-vibe_pop_d`), read row by row across its
- * two columns. A bucket missing here sorts after these, alphabetically.
+ * The Vibe popover's and phone sheet's order (`bp-vibe-vibe_pop_d`,
+ * `bp-vibe-vibe_sheet_m`), read row by row across the popover's two columns.
+ * Every bucket, always: no board hides a bucket without shows.
  */
 export const VIBE_ORDER: readonly string[] = [
   'electronic',
@@ -89,16 +90,6 @@ export const VIBE_ORDER: readonly string[] = [
   'classical',
   'comedy',
 ];
-
-export const orderVibes = (genres: readonly string[]): string[] => {
-  const rank = (genre: string) => {
-    const index = VIBE_ORDER.indexOf(genre);
-    return index === -1 ? VIBE_ORDER.length : index;
-  };
-  return [...genres].sort(
-    (left, right) => rank(left) - rank(right) || left.localeCompare(right),
-  );
-};
 
 function genreLabel(genre: string): string {
   return genre.replace(
@@ -153,9 +144,27 @@ export const toggleValue = (
     : [...values, value];
 
 /**
- * The desktop segment's value: the first pick's label, then "+N" for the rest
- * ("Bluebird +1"). Null when nothing set resolves to a label, so the segment
- * falls back to its placeholder.
+ * The label of the first pick that resolves, and how many other picks there
+ * are. A stale slug (a venue since removed) is skipped for the name but still
+ * counted, so "Bluebird +1" stays honest about the URL. Null when no pick
+ * resolves, so the segment falls back to its placeholder.
+ */
+export function getFirstResolvedLabel(
+  key: FilterKey,
+  values: readonly string[],
+  venues: VenuePublic[],
+  genres: string[] = [],
+): { label: string; rest: number } | null {
+  for (const value of values) {
+    const label = getActiveFilterLabel(key, value, venues, genres);
+    if (label !== null) return { label, rest: values.length - 1 };
+  }
+  return null;
+}
+
+/**
+ * The desktop segment's value: the first resolving pick's label, then "+N"
+ * for the rest ("Bluebird +1").
  */
 export function getSegmentLabel(
   key: FilterKey,
@@ -163,13 +172,11 @@ export function getSegmentLabel(
   venues: VenuePublic[],
   genres: string[] = [],
 ): string | null {
-  const first = values[0];
-  if (first === undefined) return null;
-  const label = getActiveFilterLabel(key, first, venues, genres);
-  if (label === null) return null;
-  return values.length > 1
-    ? copy.segment.moreCount(label, values.length - 1)
-    : label;
+  const resolved = getFirstResolvedLabel(key, values, venues, genres);
+  if (resolved === null) return null;
+  return resolved.rest > 0
+    ? copy.segment.moreCount(resolved.label, resolved.rest)
+    : resolved.label;
 }
 
 /**

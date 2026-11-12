@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import { MAX_LIST_PARAM_VALUES } from '@concert-crawl/types';
 import { createPortal } from 'react-dom';
 import { useModalDialog } from '@/lib/hooks/useModalDialog';
 import { useOnPhone, useSheetDrag } from '@/lib/hooks/useSheetDrag';
@@ -127,6 +128,11 @@ export function FilterSheet({
                 key={option.value}
                 label={option.label}
                 active={multi.selected.includes(option.value)}
+                // At the API's list cap an unticked row takes no more picks.
+                disabled={
+                  !multi.selected.includes(option.value) &&
+                  multi.selected.length >= MAX_LIST_PARAM_VALUES
+                }
                 checkbox
                 onClick={() => multi.onToggle(option.value)}
               />
@@ -154,6 +160,7 @@ interface OptionButtonProps {
   active: boolean;
   /** A multi-select row: checkbox semantics and the drawn checkbox. */
   checkbox?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -161,6 +168,7 @@ function OptionButton({
   label,
   active,
   checkbox = false,
+  disabled = false,
   onClick,
 }: OptionButtonProps) {
   return (
@@ -168,8 +176,9 @@ function OptionButton({
       type="button"
       role={checkbox ? 'checkbox' : undefined}
       aria-checked={checkbox ? active : undefined}
+      disabled={disabled}
       onClick={onClick}
-      className="flex w-full items-center justify-between text-left"
+      className="flex w-full items-center justify-between text-left disabled:opacity-40"
       style={{
         padding: '13px 20px',
         fontSize: 16,
