@@ -77,7 +77,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               borderRadius: 8,
               background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)',
               backdropFilter: 'blur(6px)',
-              fontFamily: 'var(--font-sans)',
+              fontFamily: 'var(--font-ui)',
               fontWeight: 900,
               fontSize: 24,
               letterSpacing: '0.02em',
@@ -211,7 +211,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                 </span>
                 <span
                   style={{
-                    fontFamily: 'var(--font-sans)',
+                    fontFamily: 'var(--font-ui)',
                     fontSize: 22,
                     fontWeight: 700,
                     letterSpacing: '-0.02em',
@@ -270,7 +270,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               borderRadius: 7,
               background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)',
               backdropFilter: 'blur(6px)',
-              fontFamily: 'var(--font-sans)',
+              fontFamily: 'var(--font-ui)',
               fontWeight: 900,
               fontSize: 18,
               letterSpacing: '0.02em',
@@ -372,7 +372,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                 </span>
                 <span
                   style={{
-                    fontFamily: 'var(--font-sans)',
+                    fontFamily: 'var(--font-ui)',
                     fontSize: 18,
                     fontWeight: 700,
                     letterSpacing: '-0.02em',

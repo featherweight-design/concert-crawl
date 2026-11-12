@@ -109,7 +109,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
           </span>
           <span
             style={{
-              fontFamily: 'var(--font-sans)',
+              fontFamily: 'var(--font-ui)',
               fontSize: 22,
               fontWeight: 700,
               letterSpacing: '-0.02em',
@@ -139,7 +139,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
           </span>
           <span
             style={{
-              fontFamily: 'var(--font-sans)',
+              fontFamily: 'var(--font-ui)',
               fontSize: 22,
               fontWeight: 700,
               letterSpacing: '-0.02em',
@@ -197,7 +197,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
           <div className="flex flex-col items-end gap-0.5">
             <span
               style={{
-                fontFamily: 'var(--font-sans)',
+                fontFamily: 'var(--font-ui)',
                 fontWeight: 700,
                 fontSize: 16,
                 color: 'var(--signal)',

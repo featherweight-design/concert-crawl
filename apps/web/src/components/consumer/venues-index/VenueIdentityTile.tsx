@@ -53,7 +53,7 @@ export function VenueIdentityTile({ name, size = 72 }: VenueIdentityTileProps) {
           borderRadius: chipBorderRadius,
           background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)',
           backdropFilter: 'blur(4px)',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-ui)',
           fontWeight: 900,
           fontSize: small ? 9 : 10,
           letterSpacing: '0.04em',
