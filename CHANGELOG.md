@@ -1,3 +1,11 @@
+## [1.360.1](https://github.com/featherweight-design/concert-crawl/compare/v1.360.0...v1.360.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** enforce the other-needs-a-note rule in the pause body type ([9dd92d3](https://github.com/featherweight-design/concert-crawl/commit/9dd92d33f23fb7e8065609b0550913781ecb8063))
+* **web:** send the full crawl-pause body from pauseCrawling ([6fff4fe](https://github.com/featherweight-design/concert-crawl/commit/6fff4fe614b733d6d19fec68eda5aea56b30c30b))
+
 # [1.360.0](https://github.com/featherweight-design/concert-crawl/compare/v1.359.0...v1.360.0) (2026-11-12)
 
 
