@@ -15,7 +15,7 @@ import {
   seedVenue,
 } from '../../../../test/helpers/seed.js';
 import { testDb } from '../../../../test/helpers/db.js';
-import { loadNeedsYouItems } from './index.js';
+import { loadNeedsYouItems } from './sources.js';
 import { keepThisMatch, noPhoto, pickRightArtist } from './answers-artists.js';
 import { addDays, denverDate } from './keys.js';
 
