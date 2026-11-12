@@ -14,7 +14,6 @@ import {
   gte,
   ilike,
   inArray,
-  isNotNull,
   isNull,
   lte,
   or,
@@ -38,11 +37,11 @@ import {
 } from '@concert-crawl/push';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
-import { classifyMissing } from './lib/classify-missing.js';
 import {
-  movedCandidateExpr,
-  parseMovedCandidate,
-} from './lib/moved-candidate.js';
+  missingEventsSelect,
+  missingEventsWhere,
+  withMissingClassification,
+} from './lib/missing-events.js';
 import { idSchema } from '../../lib/id-schema.js';
 
 const eventIdSchema = z.object({ id: idSchema });
@@ -401,110 +400,6 @@ eventsAdminRouter.get(
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id));
 
-    // Missing branch needs three per-row signals computed over the FULL venue
-    // data (not the current page): whether a live sibling still covers this show,
-    // the venue's crawl "event horizon", and how many missing rows cluster at the
-    // venue. Correlated subqueries reference the outer `events` row.
-    const missingSelect = db
-      .select({
-        id: events.id,
-        title: events.title,
-        artist: events.artist,
-        date: events.date,
-        doorsTime: events.doorsTime,
-        showTime: events.showTime,
-        ticketPriceMin: events.ticketPriceMin,
-        ticketPriceMax: events.ticketPriceMax,
-        confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
-        verified: events.verified,
-        hiddenFromConsumer: events.hiddenFromConsumer,
-        isConcertReviewNeeded: events.isConcertReviewNeeded,
-        status: events.status,
-        extractionStrategy: events.extractionStrategy,
-        sourceUrl: events.sourceUrl,
-        // The missing list links out to the venue so an admin can confirm a
-        // disappearance without hand-searching. eventUrl is the show's own
-        // page — a 404 or a cancellation notice settles it in one click —
-        // and sourceUrl is the calendar fallback when we never got one.
-        eventUrl: events.eventUrl,
-        genre: events.genre,
-        createdAt: events.createdAt,
-        lastSeenAt: events.lastSeenAt,
-        firstMissingAt: events.firstMissingAt,
-        venueId: events.venueId,
-        venueName: venues.name,
-        isSoldOut: isSoldOutSql(),
-        // Live sibling: same show still crawled under another row (headliner
-        // containment — mirrors scripts/2026-07-19-missing-event-orphan-cleanup.sql).
-        hasLiveSibling: sql<boolean>`EXISTS (
-          SELECT 1 FROM events sib
-          WHERE sib.venue_id = ${events.venueId}
-            AND sib.date = ${events.date}
-            AND sib.status = 'upcoming'
-            AND sib.first_missing_at IS NULL
-            AND sib.hidden_from_consumer = false
-            AND sib.id <> ${events.id}
-            AND ${events.canonicalArtist} <> '' AND sib.canonical_artist <> ''
-            AND ${events.canonicalTitle} <> '' AND sib.canonical_title <> ''
-            AND ( strpos(sib.canonical_title, ${events.canonicalArtist}) > 0
-               OR strpos(${events.canonicalTitle}, sib.canonical_artist) > 0 )
-        )`,
-        // Event horizon: furthest date the crawl currently reaches at this venue.
-        venueHorizon: sql<string | null>`(
-          SELECT MAX(h.date) FROM events h
-          WHERE h.venue_id = ${events.venueId}
-            AND h.status = 'upcoming'
-            AND h.first_missing_at IS NULL
-            AND h.hidden_from_consumer = false
-            AND h.date >= ${today}
-        )`,
-        // Cluster size: admin-visible missing rows at this venue (matches the
-        // missing whereClause population below).
-        clusterCount: sql<number>`(
-          SELECT COUNT(*)::int FROM events c
-          WHERE c.venue_id = ${events.venueId}
-            AND c.first_missing_at IS NOT NULL
-            AND c.status = 'upcoming'
-            AND c.date >= ${today}
-            AND c.hidden_from_consumer = false
-        )`,
-        // Relocation suggestion: a newly-created row that looks like this
-        // same show on another night, or in another room. Read-only — the
-        // admin confirms it, nothing here applies it.
-        movedCandidate: movedCandidateExpr(today),
-      })
-      .from(events)
-      .leftJoin(venues, eq(events.venueId, venues.id));
-
-    // Strip the internal classification signals from the API response and
-    // expose only `classification` (derived) + `clusterCount` (kept).
-    const withClassification = <
-      TRow extends {
-        date: string;
-        venueHorizon: string | null;
-        hasLiveSibling: boolean;
-        movedCandidate: unknown;
-      },
-    >(
-      rows: TRow[],
-    ) =>
-      rows.map(({ venueHorizon, hasLiveSibling, movedCandidate, ...row }) => {
-        const moved = parseMovedCandidate(movedCandidate);
-        return {
-          ...row,
-          classification: classifyMissing({
-            date: row.date,
-            venueHorizon,
-            hasLiveSibling,
-            movedCandidateId: moved?.id ?? null,
-          }),
-          // The whole suggestion, or null. Nested rather than flattened so
-          // the confirm step can name the show it is about to merge onto
-          // without a second request per row.
-          movedCandidate: moved,
-        };
-      });
-
     // PR 5 filter clauses. Each is undefined when its param is omitted, which
     // drizzle's `and()` treats as a no-op — so callers compose freely.
     const queryLike = query ? `%${query}%` : null;
@@ -556,12 +451,7 @@ eventsAdminRouter.get(
     // stops appearing in crawls is not actionable — it should drop out of
     // the missing queue and the review/counts pill in lock-step.
     const whereClause = missing
-      ? and(
-          isNotNull(events.firstMissingAt),
-          eq(events.status, 'upcoming'),
-          gte(events.date, today),
-          eq(events.hiddenFromConsumer, false),
-        )
+      ? missingEventsWhere(today)
       : and(
           ...viewClauses(view),
           verified === undefined ? undefined : eq(events.verified, verified),
@@ -573,10 +463,10 @@ eventsAdminRouter.get(
         );
 
     // Keep the two branches fully separate so Drizzle's inferred types narrow
-    // correctly for withClassification (which requires venueHorizon +
-    // hasLiveSibling — fields only present in missingSelect).
+    // correctly for withMissingClassification (which requires venueHorizon +
+    // hasLiveSibling — fields only present in missingEventsSelect).
     if (missing) {
-      const missingQuery = missingSelect
+      const missingQuery = missingEventsSelect(today)
         .where(whereClause)
         .orderBy(asc(events.date), desc(events.firstMissingAt))
         .limit(limit)
@@ -584,7 +474,10 @@ eventsAdminRouter.get(
 
       if (!count) {
         const rows = await missingQuery;
-        return ctx.json({ success: true, data: withClassification(rows) });
+        return ctx.json({
+          success: true,
+          data: withMissingClassification(rows),
+        });
       }
 
       const countQuery = db
@@ -597,7 +490,7 @@ eventsAdminRouter.get(
       const total = countResult[0]?.total ?? 0;
       return ctx.json({
         success: true,
-        data: { rows: withClassification(rows), total },
+        data: { rows: withMissingClassification(rows), total },
       });
     }
 

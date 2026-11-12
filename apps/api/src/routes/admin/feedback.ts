@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
-import { eq, desc, sql } from 'drizzle-orm';
+import { and, eq, desc, sql } from 'drizzle-orm';
 import { db, feedback } from '@concert-crawl/db';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
@@ -15,6 +15,7 @@ const listQuerySchema = z.object({
   status: z
     .enum(['unread', 'read', 'flagged', 'issue_opened', 'resolved', 'archived'])
     .optional(),
+  category: z.enum(['bug', 'idea', 'praise', 'other']).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 
@@ -33,12 +34,17 @@ feedbackAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { status, limit } = ctx.req.valid('query');
+    const { status, category, limit } = ctx.req.valid('query');
 
     const rows = await db
       .select()
       .from(feedback)
-      .where(status ? eq(feedback.status, status) : undefined)
+      .where(
+        and(
+          status ? eq(feedback.status, status) : undefined,
+          category ? eq(feedback.category, category) : undefined,
+        ),
+      )
       .orderBy(desc(feedback.createdAt))
       .limit(limit);
 
