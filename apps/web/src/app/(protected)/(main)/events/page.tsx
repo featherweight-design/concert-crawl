@@ -1,3 +1,4 @@
+import { perfRoute } from '@/lib/perf/timing';
 import { Suspense } from 'react';
 import { headers } from 'next/headers';
 import type {
@@ -112,7 +113,7 @@ async function fetchGenres(token: string | null): Promise<string[]> {
     : publicApiClient.get<string[]>('/v1/events/genres');
 }
 
-export default async function BrowsePage({ searchParams }: BrowsePageProps) {
+async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
   const view = params['view'] === 'cal' ? 'cal' : 'list';
 
@@ -681,3 +682,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     </main>
   );
 }
+
+// Logged as one `perf.route` line when PERF_TIMING=1 (lib/perf/timing.ts).
+export default perfRoute('events', BrowsePageInner);

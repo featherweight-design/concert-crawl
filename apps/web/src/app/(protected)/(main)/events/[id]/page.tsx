@@ -1,3 +1,4 @@
+import { perfRoute } from '@/lib/perf/timing';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
@@ -143,9 +144,7 @@ async function fetchRelatedById(
   }
 }
 
-export default async function EventDetailPage({
-  params,
-}: EventDetailPageProps) {
+async function EventDetailPageInner({ params }: EventDetailPageProps) {
   const { id } = await params;
   const { getToken, userId, sessionClaims } = await auth();
   const token = await getToken();
@@ -475,3 +474,6 @@ export default async function EventDetailPage({
     </div>
   );
 }
+
+// Logged as one `perf.route` line when PERF_TIMING=1 (lib/perf/timing.ts).
+export default perfRoute('event-detail', EventDetailPageInner);

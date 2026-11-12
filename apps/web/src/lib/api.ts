@@ -1,3 +1,5 @@
+import { startApiTimer, type ApiTimer } from './perf/timing';
+
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 /**
  * The shared-secret header the API trusts from this server: `x-service-key`
@@ -88,15 +90,27 @@ async function request<T>(
     : {};
   const serviceHeaders = serviceKeyHeaders();
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-      ...serviceHeaders,
-      ...options.headers,
-    },
-  });
+  const timer = startApiTimer(options.method ?? 'GET', path, token !== null);
+  try {
+    return await readResponse<T>(
+      await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+          ...serviceHeaders,
+          ...options.headers,
+        },
+      }),
+      timer,
+    );
+  } finally {
+    timer.done();
+  }
+}
+
+async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
+  timer.headers(res.status);
 
   // 204 No Content — no body to parse; return undefined as T. The admin
   // mark-available endpoint uses this status; callers that care receive
