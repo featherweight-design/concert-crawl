@@ -9,6 +9,10 @@ interface BottomSheetProps {
   onClose: () => void;
   /** Rendered as an sr-only heading and used as aria-labelledby target. */
   title: string;
+  /** Modal width in px from `sm` up. Omit for the default `max-w-md`. */
+  maxWidth?: number;
+  /** Draws the close as this word (a drawn "Cancel") instead of the X icon. */
+  closeText?: string;
   children: React.ReactNode;
 }
 
@@ -22,6 +26,8 @@ export const BottomSheet = ({
   open,
   onClose,
   title,
+  maxWidth,
+  closeText,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -104,7 +110,16 @@ export const BottomSheet = ({
         // A bottom sheet on mobile, a centered modal from sm up: anchored to the
         // bottom edge of a wide viewport it read as a stray drawer. One media
         // query rather than a second tree, so the focus trap above is shared.
-        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none max-sm:sheet-edge sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:max-w-md sm:rounded-2xl sm:border sm:border-border sm:bg-surface-1"
+        // The width is a variable, not an interpolated class, so Tailwind
+        // still sees both literal class names.
+        className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none max-sm:sheet-edge sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl sm:border sm:border-border sm:bg-surface-1 ${
+          maxWidth === undefined ? 'sm:max-w-md' : 'sm:max-w-[var(--sheet-max)]'
+        }`}
+        style={
+          maxWidth === undefined
+            ? undefined
+            : ({ '--sheet-max': `${maxWidth}px` } as React.CSSProperties)
+        }
       >
         <h2 id={titleId} className="sr-only">
           {title}
@@ -120,12 +135,22 @@ export const BottomSheet = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label={OVERLAY_COPY.close}
-            className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center bg-transparent text-fg-muted"
+            aria-label={
+              closeText === undefined ? OVERLAY_COPY.close : undefined
+            }
+            className={`inline-flex h-11 shrink-0 cursor-pointer items-center justify-center bg-transparent text-fg-muted ${
+              closeText === undefined
+                ? 'w-11'
+                : 'min-w-11 px-3 text-[13px] font-semibold'
+            }`}
           >
-            <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border">
-              <CloseIcon />
-            </span>
+            {closeText === undefined ? (
+              <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border">
+                <CloseIcon />
+              </span>
+            ) : (
+              closeText
+            )}
           </button>
         </div>
         {children}

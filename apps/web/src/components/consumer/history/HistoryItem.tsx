@@ -8,8 +8,13 @@
 // B+ (rule 4): a night you went to gets the solid Passport stamp, and a night
 // still ahead gets the dashed stamp it will become. Rule 2: the lead genre
 // colours the image ring and the card's left edge, as on every carded row.
-// There is no remove affordance — past attendance isn't editable in v1
-// (handoff §Deliberate exclusions).
+//
+// The row is a <div>. The link wraps the art and the text; the stamp and the ⋯
+// menu are its siblings, because a button inside an <a> is invalid and would
+// open the show as well as the menu.
+//
+// Text wraps rather than truncating (addendum 3, ruling 4): at 320 the meta line
+// takes a fourth line and the date is never cut.
 
 import Link from 'next/link';
 import type { HistoryShow } from '@concert-crawl/types';
@@ -26,6 +31,7 @@ import {
   HISTORY_DENSITY_CONFIG,
   type HistoryDensity,
 } from './definitions/constants';
+import { RowMenu } from './RowMenu';
 
 export type { HistoryDensity } from './definitions/constants';
 
@@ -33,11 +39,17 @@ export const HistoryItem = ({
   show,
   density,
   stamp = 'solid',
+  menu,
+  restored = false,
 }: {
   show: HistoryShow;
   density: HistoryDensity;
-  /** `dashed` for an upcoming night: the stamp it will become. */
+  /** `dashed` for an upcoming night: the stamp it will become, and the upcoming menu. */
   stamp?: VenueStampVariant;
+  /** The ⋯. Omit for a row with no actions. `onRemove` is "Not going anymore" on an upcoming row. */
+  menu?: { onRemove: () => void; onShare: () => void } | undefined;
+  /** An Undone night: it fades back into its month slot (addendum 3, ruling 12). */
+  restored?: boolean;
 }) => {
   const cfg = HISTORY_DENSITY_CONFIG[density];
   const genre = genreColor(show.genre) ?? NEUTRAL_GENRE_COLOR;
@@ -59,86 +71,98 @@ export const HistoryItem = ({
       : [];
 
   return (
-    <Link
-      href={`/events/${show.eventId}`}
+    <div
       data-testid="history-item"
-      className="history-item grid items-center rounded-xl border border-border bg-surface-1 no-underline transition-colors hover:bg-surface-2"
+      className={`history-item group grid items-center rounded-xl border border-border bg-surface-1 transition-colors focus-within:bg-surface-2 hover:bg-surface-2 ${
+        restored
+          ? 'transition-[opacity,background-color] duration-[var(--motion-base)] ease-[var(--motion-ease)] starting:opacity-0'
+          : ''
+      }`}
       style={{
-        gridTemplateColumns: `${cfg.artSize}px 1fr auto`,
+        gridTemplateColumns: `1fr auto${menu ? ' auto' : ''}`,
         gap: cfg.gap,
         padding: `${cfg.padY}px ${cfg.padR}px ${cfg.padY}px ${cfg.padL}px`,
         // Hover-safe: the surface color stays in the class so it can hover.
         ...cardedEdge(genre, { hoverSafe: true }),
       }}
     >
-      {/* The headliner's portrait, falling through to the generated artist
-          mark when there is none. `surface="artist"` on purpose, and it is a
-          shorter chain than Browse and Watching draw: those are `event`
-          surfaces that try the event's own artwork first. A night is filed
-          under who played it, so that stage is deliberately absent here. */}
-      <span
-        data-testid="history-image-ring"
-        className="block overflow-hidden rounded-md"
+      <Link
+        href={`/events/${show.eventId}`}
+        className="grid min-w-0 items-center no-underline"
         style={{
-          width: cfg.artSize,
-          height: cfg.artSize,
-          boxShadow: genreRing(genre),
+          gridTemplateColumns: `${cfg.artSize}px 1fr`,
+          gap: cfg.gap,
         }}
       >
-        <Panel
-          surface="artist"
-          name={show.artist}
-          photoUrl={show.artistPhotoUrl}
-          size={cfg.artSize}
-        />
-      </span>
+        {/* The headliner's portrait, falling through to the generated artist
+            mark when there is none. `surface="artist"` on purpose, and it is a
+            shorter chain than Browse and Watching draw: those are `event`
+            surfaces that try the event's own artwork first. A night is filed
+            under who played it, so that stage is deliberately absent here. */}
+        <span
+          data-testid="history-image-ring"
+          className="block overflow-hidden rounded-md"
+          style={{
+            width: cfg.artSize,
+            height: cfg.artSize,
+            boxShadow: genreRing(genre),
+          }}
+        >
+          <Panel
+            surface="artist"
+            name={show.artist}
+            photoUrl={show.artistPhotoUrl}
+            size={cfg.artSize}
+          />
+        </span>
 
-      <span
-        style={{
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: density === 'roomy' ? 4 : 2,
-        }}
-      >
         <span
-          className="truncate"
           style={{
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 700,
-            fontSize: cfg.titleSize,
-            letterSpacing: '-0.01em',
-            color: 'var(--fg)',
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: density === 'roomy' ? 4 : 2,
           }}
         >
-          {show.artist}
-        </span>
-        <span
-          className="truncate"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: cfg.metaSize,
-            letterSpacing: '0.02em',
-            color: 'var(--fg-muted)',
-          }}
-        >
-          {meta}
-        </span>
-        {detail.length > 0 && (
           <span
-            className="truncate"
+            className="break-words"
             style={{
-              marginTop: 4,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10.5,
-              letterSpacing: '0.02em',
-              color: 'var(--fg-subtle)',
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 700,
+              fontSize: cfg.titleSize,
+              letterSpacing: '-0.01em',
+              color: 'var(--fg)',
             }}
           >
-            {detail.join(' · ')}
+            {show.artist}
           </span>
-        )}
-      </span>
+          <span
+            className="break-words"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: cfg.metaSize,
+              letterSpacing: '0.02em',
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {meta}
+          </span>
+          {detail.length > 0 && (
+            <span
+              className="break-words"
+              style={{
+                marginTop: 4,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10.5,
+                letterSpacing: '0.02em',
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              {detail.join(' · ')}
+            </span>
+          )}
+        </span>
+      </Link>
 
       {/* Decorative; the row's text already names the venue. */}
       <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -150,6 +174,18 @@ export const HistoryItem = ({
           size={cfg.stampSize}
         />
       </span>
-    </Link>
+
+      {menu && (
+        <RowMenu
+          tense={stamp === 'dashed' ? 'upcoming' : 'past'}
+          artist={show.artist}
+          venue={show.venueName}
+          dateLabel={show.dateLabel}
+          eventId={show.eventId}
+          onRemove={menu.onRemove}
+          onShare={menu.onShare}
+        />
+      )}
+    </div>
   );
 };

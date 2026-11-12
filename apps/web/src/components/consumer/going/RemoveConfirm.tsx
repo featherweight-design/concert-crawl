@@ -1,0 +1,149 @@
+'use client';
+
+// "Didn't make it?": the confirm before a past night leaves Concerts
+// (edit-concerts handoff: remove_sheet_m on phone, remove_dialog_d from sm).
+//
+// One component for both, because BottomSheet is already a bottom sheet below
+// `sm` and a centred dialog from it. The Concerts list and the event page both
+// open it and differ only in the footnote.
+
+import type { HistoryShow } from '@concert-crawl/types';
+import { BottomSheet } from '@/components/pwa/BottomSheet';
+import { HistoryItem } from '@/components/consumer/history/HistoryItem';
+import { GOING_COPY } from './definitions/copy';
+
+const DIALOG_WIDTH = 480;
+
+const noop = () => {};
+
+interface RemoveConfirmProps {
+  open: boolean;
+  onClose: () => void;
+  show: HistoryShow;
+  /** Which "Changed your mind?" line sits under the buttons. */
+  footnote: 'concerts' | 'show-page';
+  onConfirm: () => void;
+  /** A remove is in flight: the button reads "Removing…" and both buttons are inert. */
+  pending?: boolean;
+  /** The last remove failed: an inline error shows and the button reads "Try again". */
+  failed?: boolean;
+}
+
+export const RemoveConfirm = ({
+  open,
+  onClose,
+  show,
+  footnote,
+  onConfirm,
+  pending = false,
+  failed = false,
+}: RemoveConfirmProps) => (
+  <BottomSheet
+    open={open}
+    // Nothing dismisses it while a remove is in flight, so the answer lands
+    // in a sheet that is still there.
+    onClose={pending ? noop : onClose}
+    title={GOING_COPY.remove.title}
+    maxWidth={DIALOG_WIDTH}
+    closeText={GOING_COPY.remove.cancel}
+  >
+    <div className="flex flex-col gap-3 pt-1">
+      <span
+        className="uppercase"
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10.5,
+          fontWeight: 700,
+          letterSpacing: '0.14em',
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        {GOING_COPY.eyebrow.past}
+      </span>
+      {/* The sheet's own sr-only heading names the dialog; this is the drawn
+          title, so it stays a plain element rather than a second heading. */}
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 700,
+          fontSize: 22,
+          letterSpacing: '-0.02em',
+          color: 'var(--fg)',
+        }}
+      >
+        {GOING_COPY.remove.title}
+      </span>
+      <p
+        className="m-0"
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: 'var(--fg-muted)',
+        }}
+      >
+        {GOING_COPY.remove.body}
+      </p>
+
+      <HistoryItem show={show} density="compact" />
+
+      {failed && !pending && (
+        <p
+          role="alert"
+          className="m-0 flex items-start gap-2.5 rounded-xl border px-3.5 py-3"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 14,
+            lineHeight: 1.4,
+            color: 'var(--fg)',
+            borderColor: 'color-mix(in oklab, var(--danger) 45%, transparent)',
+            background: 'color-mix(in oklab, var(--danger) 10%, var(--bg))',
+          }}
+        >
+          <span aria-hidden="true" style={{ color: 'var(--danger)' }}>
+            ✕
+          </span>
+          {GOING_COPY.remove.failed}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={pending}
+          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl border-0 px-4 text-[15px] font-bold disabled:cursor-default disabled:opacity-60"
+          style={{ background: 'var(--danger)', color: 'var(--bg)' }}
+        >
+          {pending
+            ? GOING_COPY.remove.busy
+            : failed
+              ? GOING_COPY.remove.retry
+              : GOING_COPY.remove.confirm}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={pending}
+          className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-xl border border-[var(--border-strong)] bg-transparent px-4 text-[15px] font-semibold text-[var(--fg)] disabled:cursor-default disabled:opacity-50"
+        >
+          {GOING_COPY.remove.keep}
+        </button>
+      </div>
+
+      <p
+        className="m-0 text-center"
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: 12,
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        {footnote === 'concerts'
+          ? GOING_COPY.remove.footnoteConcerts
+          : GOING_COPY.remove.footnoteShowPage}
+      </p>
+    </div>
+  </BottomSheet>
+);
