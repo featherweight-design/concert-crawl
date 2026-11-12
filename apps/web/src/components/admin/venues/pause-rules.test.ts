@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { VenueWithEventCount } from '@concert-crawl/types';
 import {
   addDays,
   buildPauseBody,
@@ -12,6 +11,7 @@ import {
   resumeDate,
   shiftMonth,
   type PausedVenue,
+  type RecrawlFacts,
 } from './pause-rules';
 
 const TODAY = '2026-11-12';
@@ -154,16 +154,15 @@ describe('pause rules', () => {
 
 describe('bulk rules', () => {
   it('re-crawls only a live, verified venue that is crawling', () => {
-    const base = {
+    const row = (over: Partial<RecrawlFacts>): RecrawlFacts => ({
       active: true,
       verified: true,
       crawlPausedAt: null,
       blockedAt: null,
       consecutiveFailures: 0,
       robotsTxtAllowed: true,
-    };
-    // fixture: the rule reads only these fields
-    const row = (over: object) => ({ ...base, ...over }) as VenueWithEventCount;
+      ...over,
+    });
     expect(canRecrawl(row({}))).toBe(true);
     expect(canRecrawl(row({ crawlPausedAt: TODAY }))).toBe(false);
     expect(
@@ -188,5 +187,24 @@ describe('bulk rules', () => {
       failed: ['b', 'c', 'd'],
       inlineError: 'Pick a date after today',
     });
+  });
+
+  it('keeps at most three calls out at once, and every id still goes', async () => {
+    let out = 0;
+    let most = 0;
+    const sent: string[] = [];
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    const result = await fanOut(ids, async (id) => {
+      out += 1;
+      most = Math.max(most, out);
+      sent.push(id);
+      await Promise.resolve();
+      await Promise.resolve();
+      out -= 1;
+      return { ok: true };
+    });
+    expect(most).toBe(3);
+    expect([...sent].sort()).toEqual(ids);
+    expect(result.failed).toEqual([]);
   });
 });

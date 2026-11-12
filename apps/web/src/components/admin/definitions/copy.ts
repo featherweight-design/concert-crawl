@@ -486,6 +486,12 @@ export const ADMIN_COPY = {
       // No hour: the daily crawl's cron is `7 9 * * *` UTC, which is 02:07
       // MST in winter and 03:07 MDT in summer.
       recrawlNoneDone: 'The nightly crawl still runs.',
+      // A re-crawl that failed for a reason other than the API refusing it
+      // (a 5xx, the network): the request itself didn't land.
+      recrawlErrored: 'The request didn’t go through.',
+      // The cause first, then what is still true: "Pick a date after today.
+      // The other one is paused."
+      withCause: (cause: string, rest: string) => `${cause}. ${rest}`,
       names: (names: readonly string[]) =>
         names.length > 3
           ? `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`

@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -176,7 +177,9 @@ describe('VenuesList Select', () => {
 
   it('re-crawls each venue and reports the ones the API refused', async () => {
     recrawlVenue.mockImplementation((id: string) =>
-      Promise.resolve(id !== 'Bluebird'),
+      Promise.resolve(
+        id === 'Bluebird' ? { ok: false, status: 409 } : { ok: true },
+      ),
     );
     render(<VenuesList venues={mixed} />);
     fireEvent.click(screen.getByRole('button', { name: COPY.select }));
@@ -188,6 +191,168 @@ describe('VenuesList Select', () => {
     expect(recrawlVenue).toHaveBeenCalledTimes(2);
     expect(toast).toHaveTextContent(BULK.recrawlFailed('Bluebird'));
     expect(toast).toHaveTextContent(BULK.othersDone(1, 'queued'));
+    // A refusal is not an error: no "didn't go through" line.
+    expect(toast).not.toHaveTextContent(BULK.recrawlErrored);
+  });
+
+  it('says a re-crawl that threw did not go through', async () => {
+    recrawlVenue.mockImplementation((id: string) =>
+      id === 'Bluebird'
+        ? Promise.reject(new Error('network'))
+        : Promise.resolve({ ok: true }),
+    );
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Globe Hall');
+    fireEvent.click(screen.getByRole('button', { name: BULK.recrawl(2) }));
+
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(BULK.recrawlFailed('Bluebird'));
+    expect(toast).toHaveTextContent(BULK.recrawlErrored);
+  });
+
+  it('sends Re-crawl only to the venues it can run on', async () => {
+    recrawlVenue.mockResolvedValue({ ok: true });
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Levitt');
+    check('Globe Hall');
+    fireEvent.click(screen.getByRole('button', { name: BULK.recrawl(2) }));
+
+    await waitFor(() => expect(recrawlVenue).toHaveBeenCalledTimes(2));
+    expect(recrawlVenue.mock.calls.map(([id]) => id).sort()).toEqual([
+      'Bluebird',
+      'Globe Hall',
+    ]);
+    // What landed leaves the selection; Levitt was never sent, so stays out too.
+    await waitFor(() =>
+      expect(screen.getByText(BULK.selected(0))).toBeInTheDocument(),
+    );
+  });
+
+  it('drops picks a search hides, so the bar acts only on what is shown', () => {
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Levitt');
+    expect(screen.getByText(BULK.selected(2))).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(COPY.search), {
+      target: { value: 'blue' },
+    });
+    const bar = within(screen.getByTestId('select-bar'));
+    expect(bar.getByText(BULK.selected(1))).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: BULK.pause(1) })).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText(COPY.search), {
+      target: { value: '' },
+    });
+    expect(screen.getByLabelText(COPY.selectVenue('Levitt'))).not.toBeChecked();
+    expect(screen.getByLabelText(COPY.selectVenue('Bluebird'))).toBeChecked();
+  });
+
+  it('drops picks a filter chip hides', () => {
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Levitt');
+    fireEvent.click(screen.getByRole('button', { name: /^Paused/ }));
+    expect(screen.getByText(BULK.selected(1))).toBeInTheDocument();
+    expect(screen.getByLabelText(COPY.selectVenue('Levitt'))).toBeChecked();
+  });
+
+  it('holds the picks still while a bulk action is out', async () => {
+    let finish: (value: { ok: true }) => void = () => {};
+    recrawlVenue.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    fireEvent.click(screen.getByRole('button', { name: BULK.recrawl(1) }));
+
+    const other = screen.getByLabelText(COPY.selectVenue('Globe Hall'));
+    expect(other).toBeDisabled();
+    expect(screen.getByLabelText(COPY.selectAll)).toBeDisabled();
+    expect(screen.getByRole('button', { name: BULK.clear })).toBeDisabled();
+    fireEvent.click(other);
+    expect(other).not.toBeChecked();
+
+    finish({ ok: true });
+    await waitFor(() => expect(other).toBeEnabled());
+  });
+
+  it('leaves no toast, panel or picks behind on Done after a failure', async () => {
+    pauseCrawling.mockResolvedValue({ ok: false, error: null });
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    fireEvent.click(screen.getByRole('button', { name: BULK.pause(1) }));
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.pausePanel.submit }),
+    );
+    await screen.findByTestId('save-failed');
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.done }));
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    expect(screen.getByText(BULK.selected(0))).toBeInTheDocument();
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+  });
+
+  it('leaves Select when the window narrows to the phone', async () => {
+    // Every component asking `useIsPhone` hears the change, as in a browser.
+    const listeners = new Set<() => void>();
+    const onChange = () => listeners.forEach((listener) => listener());
+    const query = {
+      matches: false,
+      addEventListener: (_: string, listener: () => void) => {
+        listeners.add(listener);
+      },
+      removeEventListener: (_: string, listener: () => void) => {
+        listeners.delete(listener);
+      },
+    };
+    window.matchMedia = vi.fn().mockReturnValue(query);
+    pauseCrawling.mockResolvedValue({ ok: false, error: null });
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    fireEvent.click(screen.getByRole('button', { name: BULK.pause(1) }));
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.pausePanel.submit }),
+    );
+    await screen.findByTestId('save-failed');
+
+    query.matches = true;
+    act(() => onChange());
+    expect(screen.queryByTestId('select-bar')).toBeNull();
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+
+    query.matches = false;
+    act(() => onChange());
+    expect(
+      screen.getByRole('button', { name: COPY.select }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('select-bar')).toBeNull();
+  });
+
+  it('shows the head checkbox as mixed while only some rows are picked', () => {
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    const all = screen.getByLabelText<HTMLInputElement>(COPY.selectAll);
+    expect(all.indeterminate).toBe(false);
+    check('Bluebird');
+    expect(all.indeterminate).toBe(true);
+    expect(all).not.toBeChecked();
+    fireEvent.click(all);
+    expect(all.indeterminate).toBe(false);
+    expect(all).toBeChecked();
   });
 
   it('reopens the bulk panel with the refusal inline when Try again is refused', async () => {

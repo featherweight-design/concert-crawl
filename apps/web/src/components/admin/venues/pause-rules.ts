@@ -177,11 +177,22 @@ export type PauseOutcome = { ok: true } | { ok: false; error: string | null };
 
 /**
  * Re-crawl is for a live venue we're crawling. Paused and auto-paused venues
- * wait on Resume (orchestrator ruling, bulk too); blocked and robots-disallowed
- * ones are refused by the crawl rules, and the API refuses hidden and
- * unverified venues.
+ * wait on Resume (orchestrator ruling, bulk too), and the API refuses hidden
+ * and unverified ones. Blocked and robots-disallowed venues the API would
+ * take, but we leave them out on purpose: a blocked site's 403 or 429 would
+ * come straight back, and a disallow is never overridden (crawl rules).
  */
-export const canRecrawl = (venue: VenueWithEventCount): boolean => {
+export type RecrawlFacts = Pick<
+  VenueWithEventCount,
+  | 'active'
+  | 'verified'
+  | 'crawlPausedAt'
+  | 'blockedAt'
+  | 'consecutiveFailures'
+  | 'robotsTxtAllowed'
+>;
+
+export const canRecrawl = (venue: RecrawlFacts): boolean => {
   const { onSite, crawling } = deriveVenueStatusChips(venue);
   return onSite === 'live' && crawling === 'crawling' && venue.verified;
 };
@@ -193,16 +204,46 @@ export interface FanOutResult {
   inlineError: string | null;
 }
 
+/** At most this many bulk calls are out at once. */
+export const FAN_OUT_LIMIT = 3;
+
 /**
  * Bulk actions have no endpoint of their own, so each id is sent alone (rule
  * 10 then reports the ones that failed). A thrown call and a refused one both
- * count as failed.
+ * count as failed. Calls run at most `FAN_OUT_LIMIT` at a time: each
+ * re-crawl dispatches the crawler workflow, so N picks must not mean N
+ * dispatches at once. The real fix is one batched wake on the API (a backend
+ * item, reported); this only bounds the burst.
  */
 export const fanOut = async (
   ids: readonly string[],
   send: (id: string) => Promise<PauseOutcome>,
+  limit: number = FAN_OUT_LIMIT,
 ): Promise<FanOutResult> => {
-  const settled = await Promise.allSettled(ids.map((id) => send(id)));
+  const settled: PromiseSettledResult<PauseOutcome>[] = new Array(ids.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < ids.length) {
+      const index = next++;
+      const id = ids[index];
+      if (id === undefined) continue;
+      settled[index] = await Promise.resolve()
+        .then(() => send(id))
+        .then(
+          (value): PromiseFulfilledResult<PauseOutcome> => ({
+            status: 'fulfilled',
+            value,
+          }),
+          (reason: unknown): PromiseRejectedResult => ({
+            status: 'rejected',
+            reason,
+          }),
+        );
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, ids.length) }, () => worker()),
+  );
   const failed: string[] = [];
   let inlineError: string | null = null;
   settled.forEach((result, index) => {
