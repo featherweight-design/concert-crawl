@@ -284,7 +284,7 @@ export function EventDetailBanners({
       <div className="mb-3 mt-3">
         {/* The stale sweep's cancellation: a neutral card, never the red
             Cancelled banner (B+ A5). */}
-        {delisted && <NoLongerListedCard />}
+        {delisted && <NoLongerListedCard delistedAt={event.delistedAt} />}
         {/* Live (promoted) report banner */}
         {liveReportStatus !== null && (
           <LiveReportBanner
