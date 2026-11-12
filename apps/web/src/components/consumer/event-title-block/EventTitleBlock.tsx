@@ -31,6 +31,12 @@ interface EventTitleBlockProps {
    * No longer listed rather than Cancelled.
    */
   delistedAt?: string | null | undefined;
+  /**
+   * The page draws the No longer listed card under the hero, so the hero carries
+   * no chip of its own (event-nll-m). Left off where no such card renders, so a
+   * delisted show still says so.
+   */
+  delistedCardBelow?: boolean | undefined;
   maxInline?: number | null;
   headlinerAs?: 'h1' | 'div';
   /**
@@ -73,6 +79,7 @@ export const EventTitleBlock = ({
   surface,
   status = 'upcoming',
   delistedAt = null,
+  delistedCardBelow = false,
   maxInline = null,
   headlinerAs = 'div',
   artistSlug = null,
@@ -108,7 +115,11 @@ export const EventTitleBlock = ({
   // below carries it (event-nll-m).
   const hasPill =
     status !== 'upcoming' &&
-    !(surface === 'detail' && isDelisted(status, delistedAt));
+    !(
+      surface === 'detail' &&
+      delistedCardBelow &&
+      isDelisted(status, delistedAt)
+    );
   // B+ (`08-prices-and-status/more-st-ev_canc_m`): on the detail page the
   // status chip sits under the title, not in the tour row above it.
   const pillBelow = surface === 'detail';

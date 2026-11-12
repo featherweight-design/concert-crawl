@@ -355,13 +355,30 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
       expect(title.className).toContain('text-fg-muted');
     });
 
-    it('keeps a No longer listed title at full strength, unstruck, with no chip under it', () => {
+    it('keeps a No longer listed title at full strength and unstruck', () => {
       renderCancelled('2026-11-04T10:00:00.000Z');
       const title = screen.getByText('Wednesday');
       expect(title.style.textDecoration).toBe('');
       expect(title.className).not.toContain('text-fg-muted');
-      // The dashed card below carries the status (event-nll-m).
+    });
+
+    it('draws no chip under a No longer listed title when the page draws the card below, and one when it does not', () => {
+      const { unmount } = render(
+        <EventTitleBlock
+          headliner="Wednesday"
+          supportingArtists={[]}
+          tourName={null}
+          surface="detail"
+          status="cancelled"
+          delistedAt="2026-11-04T10:00:00.000Z"
+          delistedCardBelow
+        />,
+      );
       expect(screen.queryByTestId('status-pill-removed')).toBeNull();
+      unmount();
+
+      renderCancelled('2026-11-04T10:00:00.000Z');
+      expect(screen.getByTestId('status-pill-removed')).toBeDefined();
     });
 
     it('keeps a postponed title at full strength', () => {

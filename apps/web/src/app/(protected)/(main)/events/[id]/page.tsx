@@ -299,6 +299,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           fallbackTitle={event.title}
           status={event.status}
           delistedAt={event.delistedAt}
+          delistedCardBelow
           surface="detail"
           headlinerAs="h1"
           artistSlug={event.artistSlug}
