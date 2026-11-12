@@ -149,6 +149,17 @@ describe('RowTitleLine', () => {
     expect(title.style.textDecoration).toBe('');
   });
 
+  // B+ rows board: a cancelled show strikes and dims its headliner.
+  it('strikes and dims the headliner when struck', () => {
+    render(
+      <RowTitleLine headliner="The Grouch" tourName={null} showsTour struck />,
+    );
+    const title = screen.getByTestId('row-title');
+    expect(title.style.textDecoration).toBe('line-through');
+    expect(title.className).toContain('text-fg-muted');
+    expect(title.className).not.toMatch(/(^|\s)text-fg(\s|$)/);
+  });
+
   it('takes the narrow step of the ramp at ≤360px', () => {
     const { rerender } = render(
       <RowTitleLine headliner="Wednesday" tourName={null} showsTour />,

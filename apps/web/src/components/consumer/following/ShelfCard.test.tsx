@@ -13,7 +13,6 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
 }));
 
 import { ShelfCard } from './ShelfCard';
-import { SHELF_CARD_WIDTH } from '@/components/consumer/definitions/constants';
 import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
 
 const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
@@ -33,7 +32,6 @@ const renderCard = (overrides: Partial<ShelfArtist> = {}, starter = false) =>
   render(
     <ShelfCard
       artist={artist(overrides)}
-      width={SHELF_CARD_WIDTH}
       starter={starter}
       locked={false}
       signedOut={false}

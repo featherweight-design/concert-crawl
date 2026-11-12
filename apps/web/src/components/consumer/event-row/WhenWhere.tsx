@@ -32,24 +32,11 @@ interface WhenWhereProps {
   venueName: string;
   venueSlug: string;
   narrow: boolean;
-  /**
-   * The one strike a cancelled or postponed row carries. It lands on the date
-   * and the time only, because they are what stopped being true. The venue
-   * still exists, and striking a linked place name reads as a broken link.
-   */
-  struck?: boolean;
 }
 
-// A decoration rather than a colour swap, so the strike never borrows
-// --fg-subtle. The 0.8 softens the struck unit itself, which is the point: the
-// date and the time stopped being true. It is scoped to these two spans only,
-// and the *row* still carries no opacity of its own, which is what would drag
-// --fg-muted below the AA floor.
-const STRIKE = {
-  textDecoration: 'line-through',
-  textDecorationThickness: 1,
-  opacity: 0.8,
-} as const;
+// Line 3 is never struck. A cancelled row strikes its headliner instead (B+
+// rows board, RowTitleLine); a struck date read as "the date changed", which is
+// the postponed story, not the cancelled one.
 
 /**
  * Line 3. The units it renders come from the surface (Rule 1); the level it
@@ -67,7 +54,6 @@ export const WhenWhere = ({
   venueName,
   venueSlug,
   narrow,
-  struck = false,
 }: WhenWhereProps) => {
   const TYPE = typeAt(narrow);
   const boxRef = useRef<HTMLParagraphElement>(null);
@@ -129,35 +115,24 @@ export const WhenWhere = ({
   // Each part carries its own stable key: the list shrinks and grows as the
   // level changes, so an index key would let React reuse the venue's node for
   // the time.
-  const parts: { key: string; node: React.ReactNode; struck: boolean }[] = [];
+  const parts: { key: string; node: React.ReactNode }[] = [];
   if (showsDateUnit) {
     // Date and time never shrink; the venue is the only unit allowed to
     // ellipsis, because losing the date is the bug this system exists to fix.
     parts.push({
       key: 'date',
-      node: (
-        <span style={{ flexShrink: 0, ...(struck ? STRIKE : {}) }}>
-          {dateText}
-        </span>
-      ),
-      struck,
+      node: <span style={{ flexShrink: 0 }}>{dateText}</span>,
     });
   }
   if (showsTime) {
     parts.push({
       key: 'time',
-      node: (
-        <span style={{ flexShrink: 0, ...(struck ? STRIKE : {}) }}>
-          {timeLabel}
-        </span>
-      ),
-      struck,
+      node: <span style={{ flexShrink: 0 }}>{timeLabel}</span>,
     });
   }
   if (showsVenue) {
     parts.push({
       key: 'venue',
-      struck: false,
       node: (
         <Link
           href={`/venues/${venueSlug}`}
@@ -185,23 +160,7 @@ export const WhenWhere = ({
       {parts.map((part, index) => (
         <React.Fragment key={part.key}>
           {index > 0 && (
-            <span
-              aria-hidden
-              style={{
-                flexShrink: 0,
-                opacity: 0.4,
-                // A separator is struck only when both units it joins are, so
-                // the line breaks cleanly before the venue instead of running
-                // the strike into it. It takes the strike's thickness but keeps
-                // its own 0.4, which is dimmer than the strike's own 0.8.
-                ...(part.struck && parts[index - 1]?.struck
-                  ? {
-                      textDecoration: STRIKE.textDecoration,
-                      textDecorationThickness: STRIKE.textDecorationThickness,
-                    }
-                  : {}),
-              }}
-            >
+            <span aria-hidden style={{ flexShrink: 0, opacity: 0.4 }}>
               {SEPARATOR}
             </span>
           )}

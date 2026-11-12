@@ -4,34 +4,40 @@
 // and by the skeleton that reserves the slot before either paints
 // (spotify/DiscoveryShelfSkeleton.tsx).
 
-/** Card width, in px. Flat across viewports; 168 renders at the 320px baseline. */
-export const SHELF_CARD_WIDTH = 168;
+/**
+ * The card box at phone widths (below `sm`), in px. Sized to the B+ board
+ * (bp-m-browse_m): 148 x 271 at 390, which leaves the Browse spotlight above
+ * the fold. The old flat 168 x 309 pushed it below.
+ */
+export const SHELF_CARD_PHONE = { width: 148, height: 271 } as const;
+
+/** The card box from `sm` up, in px. The B+ desktop board (bp-browse). */
+export const SHELF_CARD_WIDE = { width: 180, height: 288 } as const;
 
 /**
- * Card height, in px, and the reason it is a number rather than a consequence.
+ * Both boxes as one class string, because the switch is a breakpoint and an
+ * inline style cannot carry one. Written out literally so Tailwind's scanner
+ * sees every class; a test pins it to the two objects above.
  *
- * Both cards used to size themselves from content: art was `flex-1` over a
- * `min-h` floor, which has no intrinsic height of its own, so the card was as
- * tall as its text plus whatever the tallest image in the row dragged it to.
- * That made the taste card's height a function of one hotlinked image's aspect
- * ratio (a portrait poster took the whole row to 362px, a square one to 279px)
- * and pinned the follow card to the 116px floor at 202px, because its art is
- * absolutely positioned and contributes nothing. Two cards meant to be
- * interchangeable in one slot were 77px apart, and neither matched the 210px
- * the skeleton reserved.
- *
- * A definite height fixes all three at once: with the column's height settled,
- * `flex-1` art resolves against it instead of against the image, so no source
- * asset can move the box.
- *
- * The number itself is now derived rather than chosen. #1525 pins the follow
- * card's art to 3:4, which at 168 wide is 224px, and its three-row body renders
- * at 84.17px in Chromium (16.67 name + 15 date + 16.5 price, two 7px gaps, 22px
- * of padding). Rounded up so nothing clips, that is the height below. The ratio
- * is the fixed side of this equation — if the body ever grows, this constant
- * moves and the 3:4 does not.
+ * The height is still a number rather than a consequence, for the reason it
+ * always was: both cards used to size themselves from content, so one
+ * hotlinked portrait poster could drag the whole row to 362px. With the box
+ * settled, the art is a fill region that takes whatever the body leaves, and no
+ * source asset can move the card.
  */
-const SHELF_CARD_ART_H = (SHELF_CARD_WIDTH * 4) / 3;
-const SHELF_CARD_BODY_H = 85;
+export const SHELF_CARD_BOX_CLASS =
+  'w-[148px] h-[271px] sm:w-[180px] sm:h-[288px]';
 
-export const SHELF_CARD_HEIGHT = SHELF_CARD_ART_H + SHELF_CARD_BODY_H;
+/** Gap between cards: the boards' 11 at phone widths and 15 from `sm` up. */
+export const SHELF_RAIL_GAP_CLASS = 'gap-[11px] sm:gap-[15px]';
+
+/**
+ * How many whole cards the desktop rail shows. The B+ desktop column (1040)
+ * holds five 180px cards and their gaps exactly; a sixth was drawn hard-clipped
+ * at the column edge. From `lg` the rail stops at five, so every card on screen
+ * is a whole one. Below `lg` the rail scrolls and the peek is the affordance.
+ */
+export const SHELF_RAIL_DESKTOP_CARDS = 5;
+
+/** Hides every card past `SHELF_RAIL_DESKTOP_CARDS` from `lg` up. */
+export const SHELF_RAIL_CAP_CLASS = 'lg:[&>li:nth-child(n+6)]:hidden';

@@ -49,7 +49,11 @@ export function HeroEventCard({
       className="relative overflow-hidden rounded-[14px]"
       style={{
         border: '1.5px solid transparent',
-        background: `linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(120deg, ${genre}, var(--accent)) border-box`,
+        // The fill carries a genre wash off the image side, as a carded row
+        // does (EventRow), stronger here because the spotlight is the one card
+        // on the page meant to read warm. The light theme showed the old flat
+        // fill most plainly.
+        background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 20%, var(--surface-1)), var(--surface-1) 55%) padding-box, linear-gradient(120deg, ${genre}, var(--accent)) border-box`,
         boxShadow: `0 0 28px color-mix(in oklch, ${genre} 22%, transparent)`,
       }}
     >
@@ -59,10 +63,12 @@ export function HeroEventCard({
       >
         {/* A square panel rather than the wide banner this slot used to crop
             to. The old shape stretched a square source across ≈4:1 and lost
-            whatever made it recognisable (#1525). */}
+            whatever made it recognisable (#1525). The B+ boards size it 97px
+            at phone widths and 130 from `sm`, so the ring owns the width and
+            the panel fills it square. */}
         <div
           data-testid="hero-image-ring"
-          className="shrink-0 overflow-hidden rounded-[10px]"
+          className="w-[97px] shrink-0 overflow-hidden rounded-[10px] sm:w-[130px]"
           style={{
             boxShadow: `0 0 0 1.25px ${genre}, 0 0 12px color-mix(in oklch, ${genre} 35%, transparent)`,
           }}
@@ -72,7 +78,9 @@ export function HeroEventCard({
             name={event.artist}
             artworkUrl={event.imageUrl}
             photoUrl={event.artistPhotoUrl ?? null}
-            size={112}
+            size="100%"
+            ratio="1 / 1"
+            scale="hero"
             radius={10}
           />
         </div>
@@ -107,6 +115,7 @@ export function HeroEventCard({
             status={event.status}
             surface="hero"
             maxInline={3}
+            supportClassName="hidden sm:block"
           />
           <div
             className="mt-2 flex items-center gap-1.5 text-fg-muted"

@@ -482,7 +482,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     // overflow-x-clip contains the DiscoveryShelf's full-bleed carousel (which
     // uses -mx-4 + overflow-x-auto to reach the viewport edge on mobile) so its
     // horizontal scroll never leaks to the page and breaks the 320px baseline.
-    <main className="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+    // 1088 is the B+ board's 1040 content column plus the 24px gutters
+    // either side; the fallback and the page must share it or the shelf
+    // shifts when the route resolves.
+    <main className="mx-auto w-full max-w-[1088px] flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
       <PullToRefresh />
       {/* Broken-Spotify-link notice — renders nothing unless the connection
           is in an error/revoked state. */}

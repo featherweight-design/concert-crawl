@@ -49,13 +49,16 @@ export function resolveRowStatus(
 }
 
 /**
- * Whether line 3 takes the strike. Sold out is deliberately excluded: it shares
- * the dimmed artwork, but the date and time it names are still going to happen.
- * No longer listed is excluded too: nothing says the show is off, so nothing
- * on the row may say the date stopped being true.
+ * Whether the headliner takes the strike (B+ rows board, more-st-rows). Only a
+ * cancelled show: the night is off, so its title is struck and dimmed. The date
+ * line is left alone, because striking it read as "the date changed", which is
+ * the postponed story. Postponed is not struck at all: the show still happens,
+ * and its pill already says the date moved. Sold out is not struck either; the
+ * night it names is still going ahead. No longer listed is not struck: nothing
+ * says the show is off.
  */
 export function isStruck(status: RowStatus): boolean {
-  return status === 'cancelled' || status === 'postponed';
+  return status === 'cancelled';
 }
 
 /** Whether the artwork dims. Every suppressed state, sold out included. */

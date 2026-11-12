@@ -4,10 +4,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf';
 import { SPOTIFY_COPY } from './definitions/copy';
-import {
-  SHELF_CARD_HEIGHT,
-  SHELF_CARD_WIDTH,
-} from '@/components/consumer/definitions/constants';
+import { SHELF_CARD_BOX_CLASS } from '@/components/consumer/definitions/constants';
 
 const COPY = SPOTIFY_COPY.discovery.loading;
 
@@ -29,8 +26,9 @@ describe('DiscoveryLoadingShelf', () => {
     const cards = screen.getAllByTestId('shelf-skeleton-card');
     expect(cards.length).toBeGreaterThan(0);
     for (const card of cards) {
-      expect(card.style.width).toBe(`${SHELF_CARD_WIDTH}px`);
-      expect(card.style.height).toBe(`${SHELF_CARD_HEIGHT}px`);
+      for (const cls of SHELF_CARD_BOX_CLASS.split(' ')) {
+        expect(card.classList.contains(cls)).toBe(true);
+      }
     }
   });
 

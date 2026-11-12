@@ -57,6 +57,12 @@ interface EventTitleBlockProps {
    * beside it on desktop.
    */
   centered?: boolean;
+  /**
+   * Classes for a wrapper around the supporting line, for a surface that shows
+   * it only at some widths. The B+ mobile spotlight drops the "with ..." line
+   * below `sm` and keeps it on desktop. Omitted, the line renders unwrapped.
+   */
+  supportClassName?: string;
 }
 
 export const EventTitleBlock = ({
@@ -74,6 +80,7 @@ export const EventTitleBlock = ({
   linkArtists = false,
   headSize,
   centered = false,
+  supportClassName,
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface];
   // `detail` is the surface that renders on the event stage's wash (B8), the
@@ -100,6 +107,17 @@ export const EventTitleBlock = ({
   const Headliner = headlinerAs;
   const showLegacyFallback =
     isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner;
+
+  const supportingLine = (
+    <SupportingLine
+      artists={openers}
+      surface={surface}
+      maxInline={maxInline}
+      dim={dim}
+      slugs={supportingArtistSlugs}
+      linkArtists={linkArtists}
+    />
+  );
 
   return (
     <div
@@ -168,16 +186,14 @@ export const EventTitleBlock = ({
         )}
       </Headliner>
 
-      {hasOpeners && (
-        <SupportingLine
-          artists={openers}
-          surface={surface}
-          maxInline={maxInline}
-          dim={dim}
-          slugs={supportingArtistSlugs}
-          linkArtists={linkArtists}
-        />
-      )}
+      {hasOpeners &&
+        (supportClassName === undefined ? (
+          supportingLine
+        ) : (
+          <div data-testid="title-support" className={supportClassName}>
+            {supportingLine}
+          </div>
+        ))}
 
       {pillBelow && hasPill && (
         <div className="flex" style={{ marginTop: 2 }}>

@@ -26,8 +26,9 @@ import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf';
 import { FlexArt } from '@/components/consumer/image-slot';
 import {
-  SHELF_CARD_HEIGHT,
-  SHELF_CARD_WIDTH,
+  SHELF_CARD_BOX_CLASS,
+  SHELF_RAIL_CAP_CLASS,
+  SHELF_RAIL_GAP_CLASS,
 } from '@/components/consumer/definitions/constants';
 import {
   formatPrice,
@@ -69,8 +70,7 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
   const price = formatPrice(pick.ticketPriceMin, null);
   return (
     <li
-      className="flex shrink-0"
-      style={{ width: SHELF_CARD_WIDTH, height: SHELF_CARD_HEIGHT }}
+      className={`flex shrink-0 ${SHELF_CARD_BOX_CLASS}`}
       data-testid="taste-pick-card"
     >
       <Link
@@ -82,10 +82,10 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
         }}
       >
         {/* A FILL REGION, and deliberately not a ratio (#1525 §2 / R3). The
-            follow card beside this one is pinned to 3:4; this one cannot be.
-            Its art absorbs whatever the show info leaves — the body has one
-            row more than the follow card's, so the two cards share an outer box
-            while their art does not — and pinning an aspect here is exactly
+            follow card beside this one is a fill region too (B+). Its art
+            absorbs whatever the show info leaves — the body has one row more
+            than the follow card's, so the two cards share an outer box while
+            their art does not — and pinning an aspect here is exactly
             what stretched the row in #763 r4. `FlexArt` carries no
             `aspectRatio` property at all, which is what makes that regression
             unreachable rather than merely avoided.
@@ -400,7 +400,7 @@ export const DiscoveryShelf = ({
           <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
             <ul
               aria-label={COPY.listAria}
-              className="flex list-none gap-[11px] overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0"
+              className={`flex list-none overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0 ${SHELF_RAIL_GAP_CLASS} ${SHELF_RAIL_CAP_CLASS}`}
             >
               {data.picks.map((pick) => (
                 <TastePickCard key={pick.eventId} pick={pick} />

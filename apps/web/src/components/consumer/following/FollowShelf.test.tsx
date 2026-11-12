@@ -60,10 +60,7 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
 import { FollowShelf } from './FollowShelf';
 import { FOLLOWING_COPY } from './definitions/copy';
-import {
-  SHELF_CARD_HEIGHT,
-  SHELF_CARD_WIDTH,
-} from '@/components/consumer/definitions/constants';
+import { SHELF_CARD_BOX_CLASS } from '@/components/consumer/definitions/constants';
 
 const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   key: 'k1',
@@ -114,36 +111,44 @@ describe('FollowShelf', () => {
     const cards = screen.getAllByTestId('shelf-card');
     expect(cards).toHaveLength(2);
     for (const card of cards) {
-      expect(card.style.width).toBe(`${SHELF_CARD_WIDTH}px`);
-      expect(card.style.height).toBe(`${SHELF_CARD_HEIGHT}px`);
+      for (const cls of SHELF_CARD_BOX_CLASS.split(' ')) {
+        expect(card.classList.contains(cls)).toBe(true);
+      }
     }
   });
 
-  // #1525 §2 — the follow shelf is the one slot in the product that takes 3:4.
-  it('pins the card art to 3:4', () => {
+  // B+: the art is a fill region inside the shared box, as the taste card's
+  // is. A 3:4 pin made the box a consequence of the width, and at the board's
+  // sizes 3:4 art plus the body overran the card.
+  it('lets the card art fill what the body leaves', () => {
     renderShelf({ artists: [artist()] });
 
     const card = screen.getByTestId('shelf-card');
     const art = card.querySelector<HTMLElement>('a > span');
     expect(art).not.toBeNull();
-    expect(art?.style.aspectRatio).toBe('3 / 4');
+    expect(art?.style.aspectRatio).toBe('');
+    expect(art?.style.flex).toContain('1');
     expect(art?.style.width).toBe('100%');
-
-    // The shared box is art + body, so the ratio and the height cannot drift
-    // apart: 168 wide at 3:4 is 224, and the card is that plus its body.
-    expect(SHELF_CARD_HEIGHT).toBeGreaterThan((SHELF_CARD_WIDTH * 4) / 3);
   });
 
-  // The scale has to be passed, not derived: `size="100%"` cannot tell `Panel`
-  // that this slot renders at 224px, so left alone it would fall to `tile` and
-  // draw a 224px card at tile density.
+  // From lg the rail stops at the cards the 1040 column holds whole, so no
+  // sixth card is drawn hard-clipped at its edge.
+  it('caps the desktop rail at whole cards', () => {
+    renderShelf({ artists: [artist()] });
+    const rail = screen.getByTestId('shelf-card').parentElement;
+    expect(rail?.className).toContain('lg:[&>li:nth-child(n+6)]:hidden');
+  });
+
+  // The scale has to be passed, not derived: a fill region cannot tell the
+  // identity mark how big it renders, so left alone it would fall to `tile`
+  // and draw a ~200px card at tile density.
   it('asks for hero-scale detail rather than letting the size derive it', () => {
     const name = 'Neal Francis';
     renderShelf({ artists: [artist({ name })] });
 
     const drawn = screen
       .getByTestId('shelf-card')
-      .querySelector('a > span > div')?.innerHTML;
+      .querySelector('a > span > span > div')?.innerHTML;
 
     const at = (scale: 'hero' | 'tile') =>
       render(<IdentityArt name={name} kind="artist" scale={scale} />).container

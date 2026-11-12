@@ -23,13 +23,13 @@
 import { useId } from 'react';
 import Link from 'next/link';
 import { formatPrice } from '@/components/consumer/definitions/lib';
-import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants';
+import { SHELF_CARD_BOX_CLASS } from '@/components/consumer/definitions/constants';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import {
   NF_FOLLOW_SIZES,
   NF_TAP_MIN,
 } from '@/components/consumer/artist-page/definitions/constants';
-import { Panel } from '@/components/consumer/image-slot';
+import { FlexArt } from '@/components/consumer/image-slot';
 import { genreColor } from '@/lib/genre-color';
 import { FollowDateLine } from './FollowDateLine';
 import { FOLLOWING_COPY } from './definitions/copy';
@@ -91,7 +91,6 @@ const LockGlyph = () => (
 
 interface ShelfCardProps {
   artist: ShelfArtist;
-  width: number;
   /**
    * The starter shelf, where nothing is followed yet. It is the only mode that
    * draws a follow badge: on "Your artists" the badge could only ever say
@@ -114,7 +113,6 @@ interface ShelfCardProps {
 
 export const ShelfCard = ({
   artist,
-  width,
   starter,
   locked,
   signedOut,
@@ -146,26 +144,24 @@ export const ShelfCard = ({
 
   const body = (
     <>
-      {/* 3:4, pinned. This is the only slot in the product that takes that
-          ratio (#1525 §2) — the shelf is a portrait card, and unlike the taste
-          pick beside it, its art can declare a shape because nothing hotlinked
-          sizes it.
+      {/* A fill region: the art takes whatever the body leaves inside the
+          shared box (B+ boards: 148 x 271 at phone widths, 180 x 288 from
+          `sm`). The old 3:4 pin (#1525 §2) made the box a consequence of the
+          width, and at the board's sizes 3:4 art plus the body overruns the
+          card. The taste card beside this one was already a fill region, so
+          the two now share the box and the art model.
 
-          `scale="hero"` because `size="100%"` cannot tell `Panel` how big it
-          renders, and 224px is hero territory by the slot metrics' own 112px
-          threshold. Left to derive it would fall to `tile` and draw this card
-          at tile density: fewer stripes, fewer rings, a coarser halftone than a
-          224px box wants.
+          `scale="hero"` because a fill region cannot tell the identity mark
+          how big it renders, and at ~186-203px it is hero territory by the
+          slot metrics' own 112px threshold.
 
           `radius={0}` because the card shell already clips with a 14px radius;
           rounding the art too would round the corners that sit against the
           body. */}
-      <Panel
+      <FlexArt
         surface="artist"
         name={artist.name}
         photoUrl={artist.photoUrl}
-        size="100%"
-        ratio="3 / 4"
         scale="hero"
         radius={0}
       />
@@ -233,8 +229,8 @@ export const ShelfCard = ({
 
   return (
     <li
-      className="relative flex shrink-0"
-      style={{ width, height: SHELF_CARD_HEIGHT, listStyle: 'none' }}
+      className={`relative flex shrink-0 ${SHELF_CARD_BOX_CLASS}`}
+      style={{ listStyle: 'none' }}
       data-testid="shelf-card"
     >
       {href !== null ? (

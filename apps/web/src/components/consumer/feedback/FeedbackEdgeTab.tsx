@@ -19,7 +19,11 @@ export function FeedbackEdgeTab() {
           position: 'fixed',
           right: 0,
           top: '44%',
-          zIndex: 80,
+          // Under every sheet and its scrim: the filter and verify sheets sit
+          // at 40/50 and ModalShell at 90/100, and at 80 the tab drew over the
+          // first two. Over page content, which is the board's (it overlaps
+          // the content edge by design, bp-s-feedback_tab_m).
+          zIndex: 35,
           padding: '12px 6px',
           background: 'var(--surface-1)',
           border: '1px solid var(--border-strong)',
