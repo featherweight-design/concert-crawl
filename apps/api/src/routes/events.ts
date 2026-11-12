@@ -60,7 +60,11 @@ import {
 } from '../lib/event-billing.js';
 import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
-import { activeSoldOutWhere, isSoldOutSql } from '../lib/sold-out.js';
+import {
+  activePromotedReportWhere,
+  activeSoldOutWhere,
+  isSoldOutSql,
+} from '../lib/sold-out.js';
 import {
   aggregateByTier,
   deriveObservedAt,
@@ -745,6 +749,46 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     };
   }
 
+  // Where a cancelled or postponed status came from. A promoted fan report
+  // carries its reporter and confirms; with none, the crawler read it off the
+  // venue's calendar. The status card's source line names whichever it was.
+  let statusReport: {
+    reporterHandle: string | null;
+    confirmsCount: number;
+    reportedAt: string;
+  } | null = null;
+
+  if (row.status === 'cancelled' || row.status === 'postponed') {
+    const [statusReportRow] = await db
+      .select({
+        id: eventReports.id,
+        reporterId: eventReports.reporterId,
+        createdAt: eventReports.createdAt,
+      })
+      .from(eventReports)
+      .where(activePromotedReportWhere(id, row.status))
+      .orderBy(desc(eventReports.createdAt))
+      .limit(1);
+
+    if (statusReportRow) {
+      const [statusConfirmRow] = await db
+        .select({ total: count() })
+        .from(eventReportConfirms)
+        .where(eq(eventReportConfirms.reportId, statusReportRow.id));
+      const [statusReporter] = await db
+        .select({ handle: userProfiles.handle })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, statusReportRow.reporterId))
+        .limit(1);
+      statusReport = {
+        reporterHandle: statusReporter?.handle ?? null,
+        // Raw confirm-row count, as soldOutReport counts it.
+        confirmsCount: statusConfirmRow?.total ?? 0,
+        reportedAt: statusReportRow.createdAt.toISOString(),
+      };
+    }
+  }
+
   // Flat-field declarations — populated below from the same in-memory data
   // that feeds priceByTier so the two payload shapes can't drift. The flat
   // fields are deprecated; PR 4 migrates the consumer UI to priceByTier and
@@ -1202,6 +1246,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       pendingSubmissions,
       priceByTier,
       soldOutReport,
+      statusReport,
     },
   });
 });

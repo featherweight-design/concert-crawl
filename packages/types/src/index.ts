@@ -931,6 +931,13 @@ export interface EventDetailResponse extends EventWithVenue {
     confirmsCount: number;
     reportedAt: string;
   } | null;
+  // The promoted fan report behind a cancelled or postponed status. Null when
+  // the status came from the crawler (the venue's own calendar).
+  statusReport?: {
+    reporterHandle: string | null;
+    confirmsCount: number;
+    reportedAt: string;
+  } | null;
   // All pending submissions whenever any exist (PR 3 dropped the
   // "only when no corroborated price" gate so multi-tier pending stays
   // visible alongside corroborated tiers). Counter rows that surface via

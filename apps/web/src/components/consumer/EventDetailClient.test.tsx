@@ -1310,6 +1310,39 @@ function buildReport(overrides: Partial<EventReport> = {}): EventReport {
   };
 }
 
+describe('EventDetailBanners live status source', () => {
+  it('credits the fan report behind a promoted cancellation', () => {
+    render(
+      <EventDetailBanners
+        event={{
+          ...buildBaseEvent(),
+          status: 'cancelled',
+          statusReport: {
+            reporterHandle: 'sami',
+            confirmsCount: 3,
+            reportedAt: new Date().toISOString(),
+          },
+        }}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByText(/Reported by @sami · 3 confirms/)).toBeTruthy();
+    expect(screen.queryByText(/venue's calendar/)).toBeNull();
+  });
+
+  it("names the venue's calendar when no fan report is behind it", () => {
+    render(
+      <EventDetailBanners
+        event={{ ...buildBaseEvent(), status: 'postponed', statusReport: null }}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByText(/From the venue's calendar/)).toBeTruthy();
+  });
+});
+
 describe('EventDetailBanners pending report', () => {
   // The API never counts the reporter toward the threshold (a reporter can't
   // confirm their own report), so the banner shows the confirms as they are.
