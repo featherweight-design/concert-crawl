@@ -29,16 +29,21 @@ export default async function AdminLayout({
   const token = await getToken();
 
   let needsYou = 0;
+  let handle: string | null = null;
   if (token) {
-    try {
-      needsYou = needsYouCount(
-        await apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
-      );
-    } catch (err) {
+    const [review, me] = await Promise.allSettled([
+      apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
+      // The handle is the display name's second choice (#178 item 29).
+      apiClient.get<{ handle: string | null }>('/v1/users/me', token),
+    ]);
+    if (review.status === 'fulfilled') {
+      needsYou = needsYouCount(review.value);
+    } else {
       console.warn('[admin layout] review counts fetch failed', {
-        reason: err,
+        reason: review.reason,
       });
     }
+    if (me.status === 'fulfilled') handle = me.value.handle;
   }
 
   return (
@@ -54,7 +59,11 @@ export default async function AdminLayout({
       >
         <AdminShellClient
           badgeCounts={{ needsYou }}
-          user={{ firstName: adminUser.firstName, email: adminUser.email }}
+          user={{
+            firstName: adminUser.firstName,
+            handle,
+            email: adminUser.email,
+          }}
         >
           {children}
         </AdminShellClient>

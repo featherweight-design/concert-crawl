@@ -3,6 +3,7 @@ import {
   Calendar,
   Flag,
   Inbox,
+  Lock,
   MapPin,
   Music,
   RefreshCw,
@@ -36,6 +37,7 @@ export type NavKey =
   | 'prices'
   | 'people'
   | 'feature-flags'
+  | 'invite-codes'
   | 'crawl-runs'
   | 'operations';
 
@@ -101,6 +103,16 @@ export const NAV: NavItem[] = [
     label: navCopy.people,
     href: '/admin/users',
     icon: Users,
+    group: 'manage',
+  },
+  {
+    // Interim row from 0a until 5b makes Invite codes a tab inside People
+    // (#178 item 8, `desktop-sidebar-interim`): after People, lock icon, no
+    // badge.
+    key: 'invite-codes',
+    label: navCopy.inviteCodes,
+    href: '/admin/invite-codes',
+    icon: Lock,
     group: 'manage',
   },
   {
@@ -173,9 +185,7 @@ const PREFIXES: Array<[string, NavKey]> = [
   ['/admin/users', 'people'],
   ['/admin/people', 'people'],
   ['/admin/feature-flags', 'feature-flags'],
-  // Invite codes and Posters are People tabs (README IA); until 5b moves them,
-  // their routes sit under People and are reached from People's own page.
-  ['/admin/invite-codes', 'people'],
+  ['/admin/invite-codes', 'invite-codes'],
   ['/admin/crawl', 'crawl-runs'],
   ['/admin/feedback', 'operations'],
   ['/admin/operations', 'operations'],

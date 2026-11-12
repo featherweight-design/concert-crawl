@@ -2155,6 +2155,7 @@ export const ADMIN_COPY = {
       prices: 'Prices',
       people: 'People',
       featureFlags: 'Feature flags',
+      inviteCodes: 'Invite codes',
       crawlRuns: 'Crawl runs',
       operations: 'Operations',
       groups: { manage: 'MANAGE', system: 'SYSTEM' },
@@ -2166,16 +2167,16 @@ export const ADMIN_COPY = {
       title: 'More',
       details: {
         health: 'Venues, cost, site checks',
-        artists: (count: number) => `${count} to check`,
+        artists: (count: number) =>
+          `${count} ${count === 1 ? 'artist' : 'artists'} to check`,
         prices: (count: number) => `${count} missing a price`,
         people: 'People, invite codes, posters',
         featureFlags: (count: number) =>
           `${count} ${count === 1 ? 'flag' : 'flags'}`,
-        crawlRuns: (time: string) => `Last run ${time}`,
-        crawlRunsNever: 'No runs yet',
-        operations: 'Feedback, emails, activity log',
+        crawlRuns: (when: string) => `Last run ${when}`,
+        operations: (count: number) => `${count} feedback to read`,
+        operationsDescription: 'Feedback, emails, activity log',
       },
-      countAriaLabel: (count: number) => `${count} to look at`,
     },
     userMenu: {
       trigger: 'Your account',
@@ -2204,7 +2205,6 @@ export const ADMIN_COPY = {
       breadcrumbAriaLabel: 'Breadcrumb',
     },
     crumbs: {
-      inviteCodes: 'Invite codes',
       editVenue: 'Edit venue',
       details: 'Details',
     },

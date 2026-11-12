@@ -1,11 +1,20 @@
 export interface AdminShellUser {
   firstName: string | null;
+  handle: string | null;
   email: string;
 }
 
-/** No email in the UI (BUILD-CHECK 6): without a first name, the local part. */
+/** "hugh@…" to "hu•••": enough to tell two admins apart, never the address. */
+const maskedLocalPart = (email: string): string =>
+  `${(email.split('@')[0] ?? '').slice(0, 2)}•••`;
+
+/**
+ * First name, else @handle, else the masked email local part (#178 item 29).
+ * Never a Clerk id or an address (rule 7).
+ */
 export const displayNameFor = (user: AdminShellUser): string =>
-  user.firstName?.trim() || (user.email.split('@')[0] ?? '');
+  user.firstName?.trim() ||
+  (user.handle ? `@${user.handle}` : maskedLocalPart(user.email));
 
 /** The initial in an accent ring, as drawn on every admin board. */
 export const AdminAvatar = ({
@@ -33,6 +42,6 @@ export const AdminAvatar = ({
       lineHeight: 1,
     }}
   >
-    {displayNameFor(user).charAt(0).toUpperCase()}
+    {displayNameFor(user).replace(/^@/, '').charAt(0).toUpperCase()}
   </span>
 );
