@@ -1370,6 +1370,13 @@ export interface WatchingShow {
   attendingAt: string | null;
 }
 
+// WatchingDismissResponse — returned by POST (dismissed: true) and DELETE
+// (dismissed: false, the Undo) /v1/watching/:eventId/dismiss: hide a No longer
+// listed show from my own Watching list. A 409 carries `code: 'not_delisted'`.
+export interface WatchingDismissResponse {
+  dismissed: boolean;
+}
+
 // WatchToggleResponse — returned by PUT /v1/watching/:eventId
 export interface WatchToggleResponse {
   watching: boolean;
