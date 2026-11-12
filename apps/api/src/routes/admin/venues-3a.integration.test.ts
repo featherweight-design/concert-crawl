@@ -23,6 +23,7 @@ import {
   seedCrawlRun,
   seedEvent,
   seedUserEvent,
+  seedUserProfile,
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -132,6 +133,62 @@ describe('admin venues API, redesign 3a', () => {
       expect((await venueRow(venue.id))?.crawlPausedBy).toBe('admin_a');
       await json('DELETE', `venues/${venue.id}/crawl-pause`);
       expect((await venueRow(venue.id))?.crawlPausedBy).toBeNull();
+    });
+
+    it('names who paused it and who hid it on the list and the detail: a handle, else "a former admin", else null', async () => {
+      const paused = await seedVenue({
+        name: 'Paused By Hugh',
+        slug: 'p-hugh',
+      });
+      const gone = await seedVenue({ name: 'Paused By Gone', slug: 'p-gone' });
+      const hidden = await seedVenue({
+        name: 'Hidden By Hugh',
+        slug: 'h-hugh',
+      });
+      const auto = await seedVenue({
+        name: 'Auto Paused',
+        slug: 'auto',
+        crawlPausedAt: new Date('2026-11-01T00:00:00Z'),
+      });
+      await seedUserProfile('admin_hugh', { handle: 'hugh' });
+      setAuth('admin_hugh');
+      await json('POST', `venues/${paused.id}/crawl-pause`, {
+        reason: 'waiting_on_permission',
+      });
+      await json('PATCH', `venues/${hidden.id}`, {
+        active: false,
+        hideReason: 'venue_closed',
+      });
+      // An admin whose account (and profile) is gone.
+      setAuth('admin_gone');
+      await json('POST', `venues/${gone.id}/crawl-pause`, {
+        reason: 'waiting_on_permission',
+      });
+
+      const list = (await (await json('GET', 'venues')).json()) as {
+        data: {
+          id: string;
+          crawlPausedByName: string | null;
+          hiddenByName: string | null;
+        }[];
+      };
+      const row = (id: string) => list.data.find((item) => item.id === id);
+      expect(row(paused.id)).toMatchObject({
+        crawlPausedByName: 'hugh',
+        hiddenByName: null,
+      });
+      expect(row(gone.id)?.crawlPausedByName).toBe('a former admin');
+      expect(row(hidden.id)).toMatchObject({
+        crawlPausedByName: null,
+        hiddenByName: 'hugh',
+      });
+      // A crawler auto-pause has no pauser at all.
+      expect(row(auto.id)?.crawlPausedByName).toBeNull();
+
+      const detail = (await (
+        await json('GET', `venues/${paused.id}`)
+      ).json()) as { data: { crawlPausedByName: string | null } };
+      expect(detail.data.crawlPausedByName).toBe('hugh');
     });
   });
 
