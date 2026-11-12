@@ -17,6 +17,7 @@ import {
 } from '@concert-crawl/crawler-core';
 import { runPricePipeline } from '@concert-crawl/price-pipeline';
 import { requestLandingRevalidationSafely } from './revalidate.js';
+import { crawlTags } from './crawl-tags.js';
 
 const logger = createLogger('crawler');
 // Triggers are claimed one at a time, so a single process never holds more
@@ -27,17 +28,6 @@ const logger = createLogger('crawler');
 // unboundedly many venues (#1352, #1353).
 const MAX_CONCURRENT = 1;
 
-// Searchable Sentry tags for a crawl failure. Ids are uuids, not personal
-// data; an id that is not known at the call site is left off.
-function crawlTags(
-  venueId: string | undefined,
-  crawlRunId?: string,
-): Record<string, string> {
-  return {
-    ...(venueId ? { venueId } : {}),
-    ...(crawlRunId ? { crawlRunId } : {}),
-  };
-}
 const DEFAULT_TRIGGER_DRAIN_MAX = 1;
 // The fallback when CRAWL_TRIGGER_BUDGET_MS is unset. The GitHub Actions jobs
 // always set it, sized to their own timeouts (crawler-run.yml). The budget
