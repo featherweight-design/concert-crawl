@@ -55,6 +55,13 @@ describe('NotifBody — panel states', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('draws Mark all read inert while loading, as the board does', () => {
+    render(<NotifBody state="loading" onMarkAll={vi.fn()} now={NOW} />);
+    expect(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
+    ).toBeDisabled();
+  });
+
   it('drops the header subtitle in the error state too', () => {
     render(<NotifBody state="error" unreadCount={4} now={NOW} />);
     expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull();
@@ -291,6 +298,7 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     const card = screen.getByTestId('state-card');
     expect(card).toHaveTextContent(NOTIFICATIONS_COPY.segments.shows);
     expect(card).toHaveTextContent(NOTIFICATIONS_COPY.tabEmpty.shows);
+    expect(screen.queryByText(NOTIFICATIONS_COPY.endOfList)).toBeNull();
   });
 
   it('gives sold out the accent tag and price checks the warning tag (B19a)', () => {

@@ -182,7 +182,9 @@ export function StateCard({
               : '-0.025em'
             : '-0.035em',
           lineHeight: 1.1,
-          textWrap: 'balance',
+          // The failed board's title wraps greedily ("Couldn’t reach the /
+          // crawl."); balance would split it "reach / the crawl."
+          textWrap: tab && tone === 'danger' ? 'wrap' : 'balance',
           ...(tab
             ? {
                 marginTop: 8,
