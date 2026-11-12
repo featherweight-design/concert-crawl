@@ -1,6 +1,6 @@
 {
   "feature": "B20a · Something went wrong page",
-  "note": "No route reaches error.tsx or global-error.tsx on demand, so the error page itself is walked by hand until B20a gives staging a trigger and a row here. Plan row B20a of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): events-baseline = none drawn. Walk by hand on staging (no kit verb reaches them yet): prompt (12-error-page/err-m-prompt, 12-error-page/err-d-prompt, 12-error-page/err-m-form, 12-error-page/err-m-sending, 12-error-page/err-m-sent, 12-error-page/err-m-failed); signed-out (12-error-page/err-m-signedout, 12-error-page/err-d-signedout); themes (12-error-page/err-t-electric, 12-error-page/err-t-light, 12-error-page/err-t-pulse).",
+  "note": "No route reaches error.tsx or global-error.tsx on demand, so the error page itself is walked by hand until B20a gives staging a trigger and a row here. Plan row B20a of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): events-baseline = none drawn. Walk by hand (state a sheet cannot set up): prompt (12-error-page/err-m-prompt, 12-error-page/err-d-prompt, 12-error-page/err-m-form, 12-error-page/err-m-sending, 12-error-page/err-m-sent, 12-error-page/err-m-failed); signed-out (12-error-page/err-m-signedout, 12-error-page/err-d-signedout); themes (12-error-page/err-t-electric, 12-error-page/err-t-light, 12-error-page/err-t-pulse).",
   "rows": [
     {
       "id": "events-baseline",

@@ -1,6 +1,6 @@
 {
   "feature": "A3 · Tickets available report and the confirm method",
-  "note": "Plan row A3 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): sold-out = 08-prices-and-status/more-st-ev_sold_m, 08-prices-and-status/more-st-ev_sold_pending_m. Walk by hand on staging (no kit verb reaches them yet): confirm-report (08-prices-and-status/more-st-confirm_rep_m, 06-states/bp-s-confirm_self_m): needs a report to confirm.",
+  "note": "Plan row A3 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): sold-out = 08-prices-and-status/more-st-ev_sold_m, 08-prices-and-status/more-st-ev_sold_pending_m. Walk by hand (state a sheet cannot set up): confirm-report (08-prices-and-status/more-st-confirm_rep_m, 06-states/bp-s-confirm_self_m): needs a report to confirm.",
   "rows": [
     {
       "id": "sold-out",

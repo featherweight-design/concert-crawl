@@ -1,6 +1,16 @@
 {
   "feature": "B16 · Avatar Mix two UI and the profile banner",
-  "note": "Plan row B16 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): edit = 07-more-screens/more-s-e_mix, 07-more-screens/more-s-edit_d; settings-banner = 07-more-screens/more-s-d_profile, 07-more-screens/more-s-settings_m.",
+  "note": "/me mounts ThemeSync, which re-applies the account's saved theme, so this sheet runs one theme pass, Electric, and the audit account's saved theme must be Electric (the read-back fails the cell otherwise). Plan row B16 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): edit = 07-more-screens/more-s-e_mix, 07-more-screens/more-s-edit_d; settings-banner = 07-more-screens/more-s-d_profile, 07-more-screens/more-s-settings_m.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
   "rows": [
     {
       "id": "edit",

@@ -1,6 +1,6 @@
 {
   "feature": "B22 · PWA surfaces: install slot, iPhone sheets, offline pill and states, pull-to-refresh",
-  "note": "Plan row B22 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): offline-pill = 06-states/bp-s-offline_pill_m; offline-page = 06-states/bp-s-offline_m. Walk by hand on staging (no kit verb reaches them yet): install (06-states/bp-s-install_m, 06-states/bp-s-install_android_m, 06-states/bp-s-install_d, 06-states/bp-s-install_dismissed_m): needs a real beforeinstallprompt; ios-sheets (06-states/bp-s-install_ios_m, 06-states/bp-s-push_ios_m): needs iOS Safari; pull (06-states/bp-s-pull_m): touch; walk on Hugh's Android in Brave.",
+  "note": "Plan row B22 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): offline-pill = 06-states/bp-s-offline_pill_m; offline-page = 06-states/bp-s-offline_m. Walk by hand (state a sheet cannot set up): install (06-states/bp-s-install_m, 06-states/bp-s-install_android_m, 06-states/bp-s-install_d, 06-states/bp-s-install_dismissed_m): needs a real beforeinstallprompt; ios-sheets (06-states/bp-s-install_ios_m, 06-states/bp-s-push_ios_m): needs iOS Safari; pull (06-states/bp-s-pull_m): touch; walk on Hugh's Android in Brave.",
   "rows": [
     {
       "id": "offline-pill",

@@ -2,7 +2,12 @@
   "ownApp": true,
   "uiSweep": "pnpm --filter @concert-crawl/e2e audit:sweep",
   "featureAcceptance": {
-    "baseUrl": "https://staging.concertcrawl.app",
+    "baseUrl": "http://localhost:3000",
+    "productionUrl": [
+      "https://concertcrawl.app",
+      "https://www.concertcrawl.app",
+      "https://api.concertcrawl.app"
+    ],
     "widths": [
       {
         "label": "phone",
@@ -19,6 +24,32 @@
         "label": "desktop",
         "width": 1300,
         "height": 900
+      }
+    ],
+    "themes": [
+      {
+        "label": "electric",
+        "dataTheme": "electric",
+        "storage": {
+          "cc-theme": "electric"
+        },
+        "colorScheme": "dark"
+      },
+      {
+        "label": "light",
+        "dataTheme": "light",
+        "storage": {
+          "cc-theme": "light"
+        },
+        "colorScheme": "light"
+      },
+      {
+        "label": "pulse",
+        "dataTheme": "pulse",
+        "storage": {
+          "cc-theme": "pulse"
+        },
+        "colorScheme": "dark"
       }
     ],
     "pageScope": "",
@@ -46,14 +77,10 @@
         "apps/web/src/components/**/*.{ts,tsx}"
       ],
       "hexFails": false
-    },
-    "productionUrl": [
-      "https://concertcrawl.app",
-      "https://www.concertcrawl.app"
-    ]
+    }
   },
   "orchestrator": {
-    "maxLanes": 2,
-    "note": "Hugh's standing rule (2026-11-11): 2 lanes while CC and The 99 both run, up to 4 when only one does. The machine runs out of memory beyond that."
+    "maxLanes": 3,
+    "note": "3 per orchestrator while both projects run (Hugh, 2026-11-11, after the arm64 switch)."
   }
 }

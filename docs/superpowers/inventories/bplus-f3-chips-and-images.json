@@ -48,7 +48,9 @@
     {
       "id": "sheet-edge",
       "label": "/events: Where sheet, its top edge",
-      "widths": ["phone"],
+      "widths": [
+        "phone"
+      ],
       "steps": [
         {
           "goto": "/events",
@@ -56,7 +58,7 @@
         },
         {
           "click": "[data-testid=\"venue-chip\"]:visible",
-          "waitDialog": "Where filter",
+          "waitDialog": "^Where filter$",
           "settle": 400
         }
       ]

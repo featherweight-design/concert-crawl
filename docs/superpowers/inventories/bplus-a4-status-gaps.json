@@ -1,6 +1,6 @@
 {
   "feature": "A4 · Report filed sheet, cancelled and postponed CTAs, Sold out chip in rows",
-  "note": "Plan row A4 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): cancelled-cta = 08-prices-and-status/more-st-ev_canc_m, 08-prices-and-status/more-st-ev_canc_d; postponed-cta = 08-prices-and-status/more-st-ev_post_m; sold-out-chip = 08-prices-and-status/more-st-rows_board. Walk by hand on staging (no kit verb reaches them yet): filed (08-prices-and-status/more-st-filed_m): shown right after filing a report.",
+  "note": "Plan row A4 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): cancelled-cta = 08-prices-and-status/more-st-ev_canc_m, 08-prices-and-status/more-st-ev_canc_d; postponed-cta = 08-prices-and-status/more-st-ev_post_m; sold-out-chip = 08-prices-and-status/more-st-rows_board. Walk by hand (state a sheet cannot set up): filed (08-prices-and-status/more-st-filed_m): shown right after filing a report.",
   "rows": [
     {
       "id": "cancelled-cta",

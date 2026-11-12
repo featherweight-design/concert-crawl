@@ -32,8 +32,8 @@
         },
         {
           "click": "button[aria-label^=\"Account menu\"]:visible",
-          "wait": "[role=\"dialog\"]",
-          "settle": 400
+          "settle": 400,
+          "waitDialog": "^Account$"
         }
       ]
     }

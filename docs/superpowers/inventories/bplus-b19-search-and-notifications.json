@@ -1,6 +1,6 @@
 {
   "feature": "B19 · Search palette, notifications panel and their states",
-  "note": "Plan row B19 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): palette = 07-more-screens/more-r3-palette, 07-more-screens/more-r3-search_m; palette-no-results = 06-states/bp-s-empty_search_m; search-page = 07-more-screens/more-r3-search_m; notifications = 06-states/bp-s-notif_m, 06-states/bp-s-notif_empty_m. Walk by hand on staging (no kit verb reaches them yet): palette-typed (07-more-screens/more-r3-palette_typed, 07-more-screens/more-r3-search_m_typed): results carry no selector the page behind cannot also match; notif-states (06-states/bp-s-notif_load_m, 06-states/bp-s-notif_error_m).",
+  "note": "Plan row B19 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): palette = 07-more-screens/more-r3-palette, 07-more-screens/more-r3-search_m; palette-no-results = 06-states/bp-s-empty_search_m; search-page = 07-more-screens/more-r3-search_m; notifications = 06-states/bp-s-notif_m, 06-states/bp-s-notif_empty_m; notifications-error = 06-states/bp-s-notif_error_m (the notifications API is mocked to 503; a mocked success would need CORS headers the kit cannot send, since the API is another origin). Walk by hand (state a sheet cannot set up): palette-typed (07-more-screens/more-r3-palette_typed, 07-more-screens/more-r3-search_m_typed): results carry no selector the page behind cannot also match; notif-loading (06-states/bp-s-notif_load_m): a transient state.",
   "rows": [
     {
       "id": "palette",
@@ -56,13 +56,44 @@
         },
         {
           "click": "button[aria-label^=\"Account menu\"]:visible",
-          "wait": "[role=\"dialog\"]"
+          "waitDialog": "^Account$"
         },
         {
           "clickRole": "button",
           "name": "^Notifications",
-          "wait": "[role=\"dialog\"]:has-text(\"What you missed\")",
-          "settle": 400
+          "settle": 400,
+          "waitDialog": "^What you missed$"
+        }
+      ]
+    },
+    {
+      "id": "notifications-error",
+      "label": "/events: Notifications, the API failing",
+      "steps": [
+        {
+          "route": "**/v1/notifications**",
+          "status": 503,
+          "body": {
+            "success": false,
+            "error": "contact sheet"
+          }
+        },
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "click": "button[aria-label^=\"Account menu\"]:visible",
+          "waitDialog": "^Account$"
+        },
+        {
+          "clickRole": "button",
+          "name": "^Notifications",
+          "waitDialog": "^What you missed$"
+        },
+        {
+          "wait": "[role=\"dialog\"]:has-text(\"Couldn't reach the crawl.\")",
+          "settle": 300
         }
       ]
     }

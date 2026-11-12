@@ -1,6 +1,6 @@
 {
   "feature": "B23 · Launch animation and iPhone startup images (flagged)",
-  "note": "The launch runs only on a cold standalone start behind its flag, which no headless context reproduces. Plan row B23 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): events-baseline = none drawn. Walk by hand on staging (no kit verb reaches them yet): launch (06-states/bp-s-launch_k0_m, 06-states/bp-s-launch_k300_m, 06-states/bp-s-launch_k740_m, 06-states/bp-s-launch_k1100_m, 06-states/bp-s-launch_slow_m); platforms (06-states/bp-s-launch_android_m, 06-states/bp-s-launch_ios0_m, 06-states/bp-s-pwa_icons).",
+  "note": "The launch runs only on a cold standalone start behind its flag, which no headless context reproduces. Plan row B23 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): events-baseline = none drawn. Walk by hand (state a sheet cannot set up): launch (06-states/bp-s-launch_k0_m, 06-states/bp-s-launch_k300_m, 06-states/bp-s-launch_k740_m, 06-states/bp-s-launch_k1100_m, 06-states/bp-s-launch_slow_m); platforms (06-states/bp-s-launch_android_m, 06-states/bp-s-launch_ios0_m, 06-states/bp-s-pwa_icons).",
   "rows": [
     {
       "id": "events-baseline",

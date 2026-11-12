@@ -1,6 +1,6 @@
 {
   "feature": "B7 · Browse 3: Cal week strip and jump picker, skeletons, empty and filtered-empty",
-  "note": "Plan row B7 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): cal = 06-states/bp-s-cal_m, 06-states/bp-s-cal_d; jump = 06-states/bp-s-cal_jump_m; filtered-empty = 06-states/bp-s-empty_filtered_m. Walk by hand on staging (no kit verb reaches them yet): skeleton (06-states/bp-s-load_browse_m, 06-states/bp-s-load_browse_d, 06-states/bp-s-wave_board): loading.tsx shows only during a client navigation; throttle and navigate; cal-empty (06-states/bp-s-cal_empty_m): step the week strip to an empty week.",
+  "note": "Plan row B7 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): cal = 06-states/bp-s-cal_m, 06-states/bp-s-cal_d; jump = 06-states/bp-s-cal_jump_m; filtered-empty = 06-states/bp-s-empty_filtered_m. Walk by hand (state a sheet cannot set up): skeleton (06-states/bp-s-load_browse_m, 06-states/bp-s-load_browse_d, 06-states/bp-s-wave_board): loading.tsx shows only during a client navigation; throttle and navigate; cal-empty (06-states/bp-s-cal_empty_m): step the week strip to an empty week.",
   "rows": [
     {
       "id": "cal",
@@ -23,8 +23,8 @@
         {
           "clickRole": "button",
           "name": "Jump to a date$",
-          "wait": "[role=\"dialog\"][aria-label^=\"Jump to a date\"]",
-          "settle": 300
+          "settle": 300,
+          "waitDialog": "^Jump to a date"
         }
       ]
     },

@@ -1,6 +1,6 @@
 {
   "feature": "B10 · Artist page and its skeleton",
-  "note": "Plan row B10 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): artist = 09-artist/artist-m-noburst-puma, 09-artist/artist-burst-puma, 09-artist/artist-light; artist-full = 09-artist/artist-m-noburst-toki, 09-artist/artist-burst-toki. Walk by hand on staging (no kit verb reaches them yet): skeleton (06-states/bp-s-load_artist_m): throttle and navigate.",
+  "note": "Plan row B10 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): artist = 09-artist/artist-m-noburst-puma, 09-artist/artist-burst-puma, 09-artist/artist-light; artist-full = 09-artist/artist-m-noburst-toki, 09-artist/artist-burst-toki. Walk by hand (state a sheet cannot set up): skeleton (06-states/bp-s-load_artist_m): throttle and navigate.",
   "rows": [
     {
       "id": "artist",

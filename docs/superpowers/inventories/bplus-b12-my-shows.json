@@ -1,6 +1,6 @@
 {
   "feature": "B12 · My shows: Watching, Concerts, Artists with the stamp",
-  "note": "Plan row B12 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): watching = 02-mobile/bp-m-watching_m, 01-core/bp-watching; concerts = 02-mobile/bp-m-concerts_m, 01-core/bp-concerts; artists = 02-mobile/bp-m-artists_m, 01-core/bp-artists. Walk by hand on staging (no kit verb reaches them yet): empties (06-states/bp-s-empty_watching_m, 06-states/bp-s-empty_concerts_m, 06-states/bp-s-empty_artists_m): needs an account with nothing watched; skeletons (06-states/bp-s-load_watching_m, 06-states/bp-s-load_concerts_m, 06-states/bp-s-load_artists_m): throttle and navigate.",
+  "note": "Plan row B12 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): watching = 02-mobile/bp-m-watching_m, 01-core/bp-watching; concerts = 02-mobile/bp-m-concerts_m, 01-core/bp-concerts; artists = 02-mobile/bp-m-artists_m, 01-core/bp-artists. Walk by hand (state a sheet cannot set up): empties (06-states/bp-s-empty_watching_m, 06-states/bp-s-empty_concerts_m, 06-states/bp-s-empty_artists_m): needs an account with nothing watched; skeletons (06-states/bp-s-load_watching_m, 06-states/bp-s-load_concerts_m, 06-states/bp-s-load_artists_m): throttle and navigate.",
   "rows": [
     {
       "id": "watching",

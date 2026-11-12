@@ -33,6 +33,17 @@
           "wait": "h1"
         }
       ]
+    },
+    {
+      "id": "sign-up-gated",
+      "label": "/sign-up with no code: lands on code entry",
+      "steps": [
+        {
+          "goto": "/sign-up",
+          "expectRedirect": "/auth/code",
+          "wait": "h1"
+        }
+      ]
     }
   ]
 }

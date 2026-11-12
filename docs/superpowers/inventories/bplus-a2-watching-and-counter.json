@@ -1,6 +1,6 @@
 {
   "feature": "A2 · Watching status mapping and the counter sheet",
-  "note": "Plan row A2 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): watching = 02-mobile/bp-m-watching_m, 01-core/bp-watching, 08-prices-and-status/more-st-rows_board; cancelled-event = 08-prices-and-status/more-st-ev_canc_m, 08-prices-and-status/more-st-ev_canc_d. Walk by hand on staging (no kit verb reaches them yet): counter (08-prices-and-status/more-st-counter_m, 08-prices-and-status/more-st-counter_done_m): tier and vendor locked to the parent's.",
+  "note": "Plan row A2 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): watching = 02-mobile/bp-m-watching_m, 01-core/bp-watching, 08-prices-and-status/more-st-rows_board; cancelled-event = 08-prices-and-status/more-st-ev_canc_m, 08-prices-and-status/more-st-ev_canc_d. Walk by hand (state a sheet cannot set up): counter (08-prices-and-status/more-st-counter_m, 08-prices-and-status/more-st-counter_done_m): tier and vendor locked to the parent's.",
   "rows": [
     {
       "id": "watching",

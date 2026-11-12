@@ -1,6 +1,6 @@
 {
   "feature": "B13 · Passport booklet and the Up next stub",
-  "note": "Plan row B13 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): passport = 07-more-screens/more-r3-passport_m, 07-more-screens/more-r3-passport, 07-more-screens/more-r3-passport_book_m, 07-more-screens/more-r3-passport_book; passport-full = 07-more-screens/more-r3-passport_book_m. Walk by hand on staging (no kit verb reaches them yet): empty (06-states/bp-s-empty_passport_m): needs an account with no concerts.",
+  "note": "Plan row B13 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): passport = 07-more-screens/more-r3-passport_m, 07-more-screens/more-r3-passport, 07-more-screens/more-r3-passport_book_m, 07-more-screens/more-r3-passport_book; passport-full = 07-more-screens/more-r3-passport_book_m. Walk by hand (state a sheet cannot set up): empty (06-states/bp-s-empty_passport_m): needs an account with no concerts.",
   "rows": [
     {
       "id": "passport",

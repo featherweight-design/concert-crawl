@@ -1,6 +1,16 @@
 {
   "feature": "B18 · Settings restyle",
-  "note": "/me mounts ThemeSync, which re-applies the account's saved theme: these cells show the audit account's theme whatever else is set. Plan row B18 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): settings = 07-more-screens/more-s-settings_m, 07-more-screens/more-s-d_account, 07-more-screens/more-s-d_appearance, 07-more-screens/more-s-d_notifications, 07-more-screens/more-s-d_zone; settings-full = 07-more-screens/more-s-d_submissions, 07-more-screens/more-s-submissions_m.",
+  "note": "/me mounts ThemeSync, which re-applies the account's saved theme, so this sheet runs one theme pass, Electric, and the audit account's saved theme must be Electric (the read-back fails the cell otherwise). Plan row B18 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): settings = 07-more-screens/more-s-settings_m, 07-more-screens/more-s-d_account, 07-more-screens/more-s-d_appearance, 07-more-screens/more-s-d_notifications, 07-more-screens/more-s-d_zone; settings-full = 07-more-screens/more-s-d_submissions, 07-more-screens/more-s-submissions_m.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
   "rows": [
     {
       "id": "settings",

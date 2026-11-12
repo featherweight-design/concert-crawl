@@ -22,7 +22,7 @@
         },
         {
           "click": "[data-testid=\"venue-chip\"]:visible",
-          "waitDialog": "Where filter",
+          "waitDialog": "^Where filter$",
           "settle": 400
         }
       ]
@@ -38,7 +38,7 @@
         {
           "clickRole": "button",
           "name": "^Vibe",
-          "waitDialog": "Vibe filter",
+          "waitDialog": "^Vibe filter$",
           "settle": 400
         }
       ]
