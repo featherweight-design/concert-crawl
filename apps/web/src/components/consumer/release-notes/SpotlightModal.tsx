@@ -183,6 +183,7 @@ export function SpotlightModal({
             under the art. */}
         <div
           ref={heroRef}
+          data-testid="spotlight-hero"
           style={{
             position: 'relative',
             height: stageHeight,
