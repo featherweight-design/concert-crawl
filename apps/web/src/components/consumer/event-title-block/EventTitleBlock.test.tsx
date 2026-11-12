@@ -3,7 +3,6 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from './EventTitleBlock';
 
 describe('EventTitleBlock', () => {
@@ -349,11 +348,35 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
       );
     });
 
-    it('does not strike a No longer listed title, and the pill says so', () => {
+    it('strikes a confirmed cancellation with a 3px line and dims it', () => {
+      renderCancelled(null);
+      const title = screen.getByText('Wednesday');
+      expect(title.style.textDecorationThickness).toBe('3px');
+      expect(title.className).toContain('text-fg-muted');
+    });
+
+    it('keeps a No longer listed title at full strength, unstruck, with no chip under it', () => {
       renderCancelled('2026-11-04T10:00:00.000Z');
-      expect(screen.getByText('Wednesday').style.textDecoration).toBe('');
-      expect(screen.getByTestId('status-pill-removed').textContent).toBe(
-        CONSUMER_COPY.noLongerListedLabel,
+      const title = screen.getByText('Wednesday');
+      expect(title.style.textDecoration).toBe('');
+      expect(title.className).not.toContain('text-fg-muted');
+      // The dashed card below carries the status (event-nll-m).
+      expect(screen.queryByTestId('status-pill-removed')).toBeNull();
+    });
+
+    it('keeps a postponed title at full strength', () => {
+      render(
+        <EventTitleBlock
+          headliner="Wednesday"
+          supportingArtists={[]}
+          tourName={null}
+          surface="detail"
+          status="postponed"
+          delistedAt={null}
+        />,
+      );
+      expect(screen.getByText('Wednesday').className).not.toContain(
+        'text-fg-muted',
       );
     });
   });

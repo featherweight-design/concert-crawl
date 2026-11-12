@@ -92,7 +92,7 @@ export const EventTitleBlock = ({
   // Only a cancelled show is dimmed. Postponed and No longer listed keep the
   // name at full strength: nothing says they are off (more-st-ev_post_m,
   // event-nll-m).
-  const dim = status === 'cancelled';
+  const dim = status === 'cancelled' && !isDelisted(status, delistedAt);
   const openers = supportingArtists ?? [];
   const hasOpeners = openers.length > 0;
   // `null` marks a legacy/pre-recrawl row (the crawler never wrote this field);
