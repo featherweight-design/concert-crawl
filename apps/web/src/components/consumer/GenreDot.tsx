@@ -2,6 +2,8 @@ import { genreColor } from '@/lib/genre-color';
 
 interface GenreDotProps {
   genre: string;
+  /** 7px on a chip; the Vibe popover's rows draw a larger dot. */
+  size?: number;
 }
 
 /**
@@ -17,7 +19,7 @@ export const genreDotGlow = (color: string): string =>
  * never carries it alone. An unbucketed genre gets the flat `--fg-subtle` dot
  * and no glow: the boards only draw glowing dots in a genre's color.
  */
-export const GenreDot = ({ genre }: GenreDotProps) => {
+export const GenreDot = ({ genre, size = 7 }: GenreDotProps) => {
   const color = genreColor(genre);
   return (
     <span
@@ -25,8 +27,8 @@ export const GenreDot = ({ genre }: GenreDotProps) => {
       data-testid="genre-dot"
       className="inline-block shrink-0 rounded-full"
       style={{
-        width: 7,
-        height: 7,
+        width: size,
+        height: size,
         background: color ?? 'var(--fg-subtle)',
         ...(color !== null && { boxShadow: genreDotGlow(color) }),
       }}

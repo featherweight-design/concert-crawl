@@ -6,6 +6,7 @@
 // sibling button, never nested inside the opener.
 
 import type { ReactNode, Ref } from 'react';
+import { cn } from '@/lib/utils';
 
 const Chevron = () => (
   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -67,7 +68,8 @@ export function FilterSegment({
       ref={anchorRef}
       data-segment={eyebrow}
       className="flex min-w-0 flex-1 items-center rounded-[10px] transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2"
-      style={open ? { background: 'var(--surface-2)' } : undefined}
+      // The open segment sits a step above the bar (`bp-f-filt_where_d`).
+      style={open ? { background: 'var(--surface-3)' } : undefined}
     >
       <button
         ref={openerRef}
@@ -76,7 +78,12 @@ export function FilterSegment({
         aria-expanded={open}
         aria-haspopup="dialog"
         data-testid={testId}
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch py-2 pr-2 pl-3.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
+        // Once active the ✕ follows, with its own inset, so the value keeps
+        // that width ("Bluebird +1" whole at the board's 175px segment).
+        className={cn(
+          'flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch py-2 pl-3.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]',
+          active ? 'pr-0' : 'pr-2',
+        )}
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span
@@ -93,8 +100,12 @@ export function FilterSegment({
           </span>
           <span className="flex min-w-0 items-center gap-1.5">
             {leading}
+            {/* The name and its "+1" are one run of text with no flex gap
+                between them, so they sit one word space apart, as the board
+                sets "Bluebird +1". The name alone ellipsises. */}
             <span
-              className="truncate"
+              data-testid="segment-value"
+              className="flex min-w-0"
               style={{
                 fontFamily: 'var(--font-ui)',
                 fontSize: 15,
@@ -103,26 +114,16 @@ export function FilterSegment({
                 color: 'var(--fg)',
               }}
             >
-              {value}
+              <span className="truncate">{value}</span>
+              {suffix !== undefined && (
+                <span
+                  data-testid="segment-more"
+                  className="shrink-0 whitespace-pre"
+                >
+                  {` ${suffix}`}
+                </span>
+              )}
             </span>
-            {/* A whitespace-only node: no flex item, so the gap spaces it on
-                screen, but the text still reads "Bluebird +1". */}
-            {suffix !== undefined && ' '}
-            {suffix !== undefined && (
-              <span
-                data-testid="segment-more"
-                className="shrink-0"
-                style={{
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  letterSpacing: '-0.01em',
-                  color: 'var(--fg)',
-                }}
-              >
-                {suffix}
-              </span>
-            )}
           </span>
         </span>
         {!active && (
@@ -136,7 +137,7 @@ export function FilterSegment({
           type="button"
           onClick={onClear}
           aria-label={clearLabel}
-          className="mr-2 inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-fg-subtle transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:text-fg focus-visible:outline focus-visible:outline-2"
+          className="mr-1.5 inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-fg-subtle transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:text-fg focus-visible:outline focus-visible:outline-2"
         >
           <ClearGlyph />
         </button>

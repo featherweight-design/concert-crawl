@@ -58,6 +58,72 @@ describe('getPopoverLeft', () => {
   it('never starts left of the margin', () => {
     expect(getPopoverLeft(0, 620, 1280)).toBe(16);
   });
+
+  it("right-aligns to the bar's edge rather than running past it", () => {
+    // bp-f-filt_where_d: Where opens at 616, the bar ends at 1160.
+    expect(getPopoverLeft(616, 620, 1280, 1160)).toBe(540);
+    // vibe_pop_d: Vibe opens at 976, the same edge.
+    expect(getPopoverLeft(976, 560, 1280, 1160)).toBe(600);
+  });
+
+  it('stays under its anchor when it already ends inside the bar', () => {
+    expect(getPopoverLeft(300, 260, 1280, 1160)).toBe(300);
+  });
+
+  it('still keeps the viewport margin when the bound is further out', () => {
+    expect(getPopoverLeft(900, 620, 1280, 1300)).toBe(644);
+  });
+});
+
+describe('FilterPopover body and footer', () => {
+  const renderWith = (props: {
+    inset?: 'list' | 'wide';
+    footer?: React.ReactNode;
+  }) =>
+    render(
+      <FilterPopover
+        open
+        title="Vibe"
+        options={[{ value: 'indie', label: 'Indie' }]}
+        value=""
+        anchorRect={new DOMRect(0, 100, 120, 34)}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+        {...props}
+      />,
+    );
+
+  it('pins the footer outside the scrolling body', () => {
+    renderWith({ inset: 'wide', footer: <button type="button">Go</button> });
+    const body = screen.getByTestId('filter-popover-body');
+    const footer = screen.getByTestId('filter-popover-footer');
+    expect(body.contains(footer)).toBe(false);
+    expect(footer).toHaveClass('justify-end', 'px-4');
+  });
+
+  it('draws no footer when none is given', () => {
+    renderWith({});
+    expect(screen.queryByTestId('filter-popover-footer')).toBeNull();
+  });
+
+  it('a wide body sits on the 16px inset with a 16px foot outside the scroll', () => {
+    renderWith({ inset: 'wide' });
+    expect(screen.getByTestId('filter-popover')).toHaveClass('pb-4');
+    expect(screen.getByTestId('filter-popover-body')).toHaveClass('px-4');
+  });
+
+  it('a plain list keeps its own row padding', () => {
+    renderWith({});
+    expect(screen.getByTestId('filter-popover')).toHaveClass('pb-2');
+    expect(screen.getByTestId('filter-popover-body')).toHaveClass('px-2');
+  });
+
+  it("sits on the board's raised surface", () => {
+    renderWith({});
+    expect(screen.getByTestId('filter-popover').className).toContain(
+      '[--sheet-bg:var(--surface-2)]',
+    );
+  });
 });
 
 describe('FilterPopover', () => {

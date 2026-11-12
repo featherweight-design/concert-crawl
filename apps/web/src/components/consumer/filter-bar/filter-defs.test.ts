@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { VenuePublic } from '@concert-crawl/types';
+import { BUCKET_LABELS, type VenuePublic } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { vibeKind } from './VibeOptionGrid';
 import {
+  VIBE_ORDER,
+  compareVenueNames,
+  orderVibes,
   getActiveFilterCount,
   getActiveFilterLabel,
   getChipLabel,
@@ -76,5 +80,61 @@ describe('multi-select labels (addendum 2, item 6)', () => {
         vibe: [],
       }),
     ).toBe(2);
+  });
+});
+
+describe('compareVenueNames', () => {
+  it('ignores a leading "The", as bp-f-filt_where_d orders them', () => {
+    const names = [
+      'The Junkyard',
+      'Bluebird Theater',
+      'The Black Box',
+      'Ball Arena',
+      'Hi-Dive',
+      'The Church Nightclub',
+    ];
+    expect([...names].sort(compareVenueNames)).toEqual([
+      'Ball Arena',
+      'The Black Box',
+      'Bluebird Theater',
+      'The Church Nightclub',
+      'Hi-Dive',
+      'The Junkyard',
+    ]);
+  });
+
+  it('only drops "The" as a whole leading word', () => {
+    expect(['Theatre X', 'The Ogden', 'Atlas'].sort(compareVenueNames)).toEqual(
+      ['Atlas', 'The Ogden', 'Theatre X'],
+    );
+  });
+});
+
+describe('orderVibes', () => {
+  it('follows the vibe_pop_d order, row by row', () => {
+    expect(orderVibes([...VIBE_ORDER].reverse())).toEqual([...VIBE_ORDER]);
+    expect(VIBE_ORDER.slice(0, 4)).toEqual([
+      'electronic',
+      'hip-hop',
+      'pop',
+      'indie',
+    ]);
+  });
+
+  it('puts a bucket the board does not name last, alphabetically', () => {
+    expect(orderVibes(['zydeco', 'indie', 'blues', 'electronic'])).toEqual([
+      'electronic',
+      'indie',
+      'blues',
+      'zydeco',
+    ]);
+  });
+
+  it('covers every vibe bucket and gives each its line', () => {
+    expect([...VIBE_ORDER].sort()).toEqual([...BUCKET_LABELS]);
+    for (const bucket of BUCKET_LABELS) {
+      expect(vibeKind(bucket)).toBeTruthy();
+      expect(vibeKind(bucket)).not.toContain('—');
+    }
   });
 });

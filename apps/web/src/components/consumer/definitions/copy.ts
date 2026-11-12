@@ -755,6 +755,8 @@ export const CONSUMER_COPY = {
     showCount: (count: number) => `${count} ${count === 1 ? 'show' : 'shows'}`,
     showCountMatch: (count: number) =>
       `${count} ${count === 1 ? 'show matches' : 'shows match'}`,
+    // The count line while Browse loads (`load_browse_d`).
+    showCountPending: '… shows',
     clearAll: 'Clear all',
 
     // Desktop filter popovers
@@ -766,6 +768,29 @@ export const CONSUMER_COPY = {
       whereNoMatch: 'No venue by that name.',
       vibeSub:
         "Every genre has a color. It's the dot on each show, and the glow around its photo.",
+      // The line under each Vibe option, keyed by genre bucket
+      // (`bp-vibe-vibe_pop_d`).
+      vibeKinds: {
+        electronic: 'house, techno, bass, ambient',
+        'hip-hop': 'rap, r&b, grime',
+        pop: 'k-pop, pop rock',
+        indie: 'indie, bedroom pop',
+        rock: 'alternative, garage, psych',
+        metal: 'metalcore, doom, darkwave',
+        punk: 'post-punk, emo, ska',
+        folk: 'americana, bluegrass',
+        country: 'country, outlaw',
+        jazz: 'blues, soul, funk',
+        latin: 'reggaeton, cumbia',
+        reggae: 'dub, dancehall',
+        jam: 'jam, improv',
+        world: 'afrobeat, global',
+        classical: 'orchestral, choral',
+        comedy: 'stand-up',
+      } satisfies Record<string, string>,
+      // The Vibe popover's footer button, with the events response's total.
+      vibeShow: (count: number) =>
+        `Show ${count} ${count === 1 ? 'show' : 'shows'}`,
     },
   },
 

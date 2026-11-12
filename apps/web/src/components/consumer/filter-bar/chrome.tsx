@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
-import { ChipDivider } from './ChipDivider';
+import { ChipDivider, SegmentDivider } from './ChipDivider';
 import { FILTER_DEFS, FILTER_ORDER } from './filter-defs';
 
 // The FilterBar's look, shared by the live bar and Browse's first-load
@@ -139,13 +140,161 @@ export const followChipStyle = (active: boolean): CSSProperties => ({
   color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
 });
 
+export const LockGlyph = () => (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+    <rect
+      x="2.2"
+      y="5.4"
+      width="7.6"
+      height="5"
+      rx="1.2"
+      stroke="currentColor"
+      strokeWidth="1.3"
+    />
+    <path
+      d="M4 5.4V4a2 2 0 014 0v1.4"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+/**
+ * The My artists switch's track, drawn rather than a native checkbox so it
+ * can lock. Off: 30×18, `s3` fill, `border-strong` edge, a 12px `fg-muted`
+ * knob (`browse-active-320.html`, `bp-f-filt_d`). On: the signal.
+ */
+export const SwitchTrack = ({
+  on,
+  locked,
+}: {
+  on: boolean;
+  locked: boolean;
+}) => (
+  <span
+    aria-hidden
+    data-testid="switch-track"
+    className="relative inline-flex shrink-0 items-center"
+    style={{
+      width: 30,
+      height: 18,
+      borderRadius: 9,
+      background: on ? 'var(--signal)' : 'var(--surface-3)',
+      border: locked
+        ? '1px dashed var(--border-strong)'
+        : `1px solid ${on ? 'var(--signal)' : 'var(--border-strong)'}`,
+      color: 'var(--fg-subtle)',
+    }}
+  >
+    {locked ? (
+      <span className="mx-auto inline-flex">
+        <LockGlyph />
+      </span>
+    ) : (
+      <span
+        className="absolute rounded-full transition-[left] duration-[var(--motion-fast)] ease-[var(--motion-ease)]"
+        style={{
+          top: 2,
+          left: on ? 14 : 2,
+          width: 12,
+          height: 12,
+          background: on ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+        }}
+      />
+    )}
+  </span>
+);
+
+/** A segment's mono eyebrow: signal once its filter is on. */
+export const segmentEyebrowStyle = (active: boolean): CSSProperties => ({
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  color: active ? 'var(--signal)' : 'var(--fg-subtle)',
+});
+
+/** A segment's value under its eyebrow. */
+export const segmentValueStyle = (muted: boolean): CSSProperties => ({
+  fontFamily: 'var(--font-ui)',
+  fontSize: 15,
+  fontWeight: 600,
+  letterSpacing: '-0.01em',
+  color: muted ? 'var(--fg-subtle)' : 'var(--fg)',
+});
+
+/** The desktop bar and the count line under it, from sm up. */
+export const SEGMENT_BLOCK_CLASS = 'hidden flex-col gap-2.5 sm:flex';
+
+/** The segmented bar itself (`bp-f-filt_d`, `bp-f-filt_active_d`). */
+export const SEGMENT_BAR_CLASS =
+  'flex items-stretch rounded-[14px] border p-1 transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)]';
+export const segmentBarStyle = (active: boolean): CSSProperties => ({
+  // The bar sits on the elevated fill; the open segment on `s3` above it.
+  background: 'var(--bg-elevated)',
+  minHeight: 62,
+  // At rest a `border-strong` hairline. With any filter or scope on, the
+  // whole bar's edge takes the signal.
+  borderColor: active
+    ? 'color-mix(in oklab, var(--signal) 55%, var(--border-strong))'
+    : 'var(--border-strong)',
+});
+
+/** The "N shows" row under the bar. */
+export const COUNT_ROW_CLASS = 'flex min-h-[22px] items-center gap-3';
+export const COUNT_LINE_STYLE: CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  color: 'var(--fg-subtle)',
+};
+
+/** The preview bar's resting segments after My artists, in the bar's order. */
+const PREVIEW_SEGMENTS: readonly { eyebrow: string; value: string }[] = [
+  { eyebrow: copy.segment.whoEyebrow, value: CREWS_COPY.lens.pickerNone },
+  { eyebrow: FILTER_DEFS.when.label, value: copy.segment.whenPlaceholder },
+  { eyebrow: FILTER_DEFS.where.label, value: FILTER_DEFS.where.placeholder },
+  { eyebrow: copy.segment.priceEyebrow, value: FILTER_DEFS.price.placeholder },
+  { eyebrow: FILTER_DEFS.vibe.label, value: FILTER_DEFS.vibe.placeholder },
+];
+
+/** One resting segment of the preview bar, drawn as FilterSegment lays out. */
+const PreviewSegment = ({
+  eyebrow,
+  value,
+}: {
+  eyebrow: string;
+  value: string;
+}) => (
+  <span
+    data-preview-segment={eyebrow}
+    className="flex min-w-0 flex-1 items-center gap-2 rounded-[10px] py-2 pr-2 pl-3.5"
+  >
+    <span className="flex min-w-0 flex-1 flex-col gap-1">
+      <span style={segmentEyebrowStyle(false)}>{eyebrow}</span>
+      <span className="truncate" style={segmentValueStyle(false)}>
+        {value}
+      </span>
+    </span>
+    <span className="shrink-0 text-fg-subtle">
+      <IconChevDown size={11} />
+    </span>
+  </span>
+);
+
 /**
  * The FilterBar at rest, inert: the heading, the List/Cal toggle on List, and
  * the chip row with every filter at its placeholder. Browse's route fallback
  * draws it while the page loads, so the chrome is already in place (B+ rule 9,
- * `load_browse_m`/`load_browse_d`). Nothing here is a control: the copies are
- * spans, hidden from assistive tech and out of the tab order, so nothing that
- * looks tappable sits there doing nothing.
+ * `load_browse_m`/`load_browse_d`). From sm up it draws the segmented bar at
+ * rest and the count line under it, the same block heights the live bar
+ * takes, so nothing below moves when the page lands. Nothing here is a
+ * control: the copies are spans, hidden from assistive tech and out of the
+ * tab order, so nothing that looks tappable sits there doing nothing.
  */
 interface FilterBarPreviewProps {
   /**
@@ -190,7 +339,11 @@ export const FilterBarPreview = ({
         ))}
       </span>
     </div>
-    <div className={CHIP_ROW_CLASS} style={CHIP_ROW_STYLE}>
+    <div
+      data-testid="filter-bar-preview-chips"
+      className={`${CHIP_ROW_CLASS} sm:hidden`}
+      style={CHIP_ROW_STYLE}
+    >
       {showFollowChip && (
         <>
           <span className={FOLLOW_CHIP_CLASS} style={followChipStyle(false)}>
@@ -211,6 +364,36 @@ export const FilterBarPreview = ({
           <IconChevDown size={11} />
         </span>
       ))}
+    </div>
+    {/* `bp-s-load_browse_d`: the segmented bar at rest, every segment the
+        board draws (My artists off, Who, When, Where, Price, Vibe), and
+        "… shows" where the count will land. */}
+    <div data-testid="filter-bar-preview-bar" className={SEGMENT_BLOCK_CLASS}>
+      <div className={SEGMENT_BAR_CLASS} style={segmentBarStyle(false)}>
+        <span className="flex shrink-0 items-center gap-2.5 rounded-[10px] px-3.5">
+          <SwitchTrack on={false} locked={false} />
+          <span className="flex flex-col items-start gap-1">
+            <span style={segmentEyebrowStyle(false)}>
+              {FOLLOWING_COPY.chip}
+            </span>
+            <span
+              className="whitespace-nowrap"
+              style={segmentValueStyle(false)}
+            >
+              {copy.segment.followOff}
+            </span>
+          </span>
+        </span>
+        {PREVIEW_SEGMENTS.map(({ eyebrow, value }) => (
+          <Fragment key={eyebrow}>
+            <SegmentDivider />
+            <PreviewSegment eyebrow={eyebrow} value={value} />
+          </Fragment>
+        ))}
+      </div>
+      <div className={COUNT_ROW_CLASS}>
+        <span style={COUNT_LINE_STYLE}>{copy.showCountPending}</span>
+      </div>
     </div>
   </div>
 );

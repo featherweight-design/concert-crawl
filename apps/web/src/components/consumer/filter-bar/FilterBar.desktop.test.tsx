@@ -339,6 +339,147 @@ describe('FilterBar desktop segmented bar', () => {
     expect(within(dialog).getAllByTestId('genre-dot')).toHaveLength(2);
   });
 
+  it('Vibe lays its options out in the board order, two columns, each with its line', () => {
+    renderBar({ genres: ['comedy', 'indie', 'hip-hop', 'electronic'] });
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    const dialog = screen.getByRole('dialog', { name: /filter$/ });
+    const rows = within(dialog).getAllByTestId('vibe-option');
+    expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual([
+      'Electronic',
+      'Hip-Hop',
+      'Indie',
+      'Comedy',
+    ]);
+    expect(rows[0]?.parentElement).toHaveClass('grid-cols-2');
+    expect(
+      within(dialog)
+        .getAllByTestId('vibe-option-kind')
+        .map((node) => node.textContent),
+    ).toEqual([
+      copy.popover.vibeKinds.electronic,
+      copy.popover.vibeKinds['hip-hop'],
+      copy.popover.vibeKinds.indie,
+      copy.popover.vibeKinds.comedy,
+    ]);
+  });
+
+  it('a checked Vibe row takes its genre color for its edge and its box', () => {
+    searchParams.current = new URLSearchParams('filterVibe=electronic');
+    renderBar();
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    const dialog = screen.getByRole('dialog', { name: /filter$/ });
+    const electronic = within(dialog).getByRole('checkbox', {
+      name: 'Electronic',
+    });
+    const indie = within(dialog).getByRole('checkbox', { name: 'Indie' });
+    expect(electronic.style.borderColor).toContain('var(--genre-electronic)');
+    expect(electronic.style.background).toContain('var(--genre-electronic)');
+    expect(indie.style.borderColor).toBe('transparent');
+    const box = within(electronic).getByTestId('checkbox-mark');
+    expect(box.style.background).toBe('var(--genre-electronic)');
+  });
+
+  it('Vibe ends on "Show N shows" with the events total, which closes it', () => {
+    renderBar();
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    const footer = screen.getByTestId('filter-popover-footer');
+    // Pinned outside the scrolling list, so it never scrolls away.
+    expect(screen.getByTestId('filter-popover-body').contains(footer)).toBe(
+      false,
+    );
+    const show = within(footer).getByRole('button', {
+      name: copy.popover.vibeShow(214),
+    });
+    fireEvent.click(show);
+    expect(screen.queryByRole('dialog', { name: /filter$/ })).toBeNull();
+  });
+
+  it('Vibe leaves the button out when there is no count to show', () => {
+    renderBar({ showCount: null });
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    expect(screen.queryByTestId('filter-popover-footer')).toBeNull();
+    expect(screen.queryByTestId('vibe-show')).toBeNull();
+  });
+
+  it('Where sorts venues ignoring a leading "The", row by row', () => {
+    renderBar({
+      venues: [
+        venue('bluebird-theater', 'Bluebird Theater', 'Capitol Hill'),
+        venue('the-black-box', 'The Black Box', 'Baker'),
+        venue('ball-arena', 'Ball Arena', 'Central'),
+        venue('the-church', 'The Church Nightclub', 'Capitol Hill'),
+      ],
+    });
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    expect(
+      screen
+        .getAllByTestId('venue-option-name')
+        .map((node) => node.textContent),
+    ).toEqual([
+      'Ball Arena',
+      'The Black Box',
+      'Bluebird Theater',
+      'The Church Nightclub',
+    ]);
+  });
+
+  it('Where and Vibe right-align to the bar instead of running past it', () => {
+    const innerWidth = window.innerWidth;
+    window.innerWidth = 1280;
+    const rect = vi
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockImplementation(function measure(this: Element) {
+        if (this.getAttribute('data-testid') === 'filter-segment-bar') {
+          return new DOMRect(120, 176, 1040, 66);
+        }
+        const segment = this.getAttribute('data-segment');
+        if (segment === copy.whereLabel) return new DOMRect(616, 180, 180, 56);
+        if (segment === copy.vibeLabel) return new DOMRect(976, 180, 180, 56);
+        return new DOMRect(0, 0, 0, 0);
+      });
+    try {
+      renderBar();
+      fireEvent.click(screen.getByTestId('venue-chip'));
+      let popover = screen.getByTestId('filter-popover');
+      // bp-f-filt_where_d: 620 wide, its right edge on the bar's at 1160.
+      expect(popover.style.left).toBe('540px');
+      expect(popover.style.width).toBe('620px');
+      fireEvent.click(screen.getByTestId('venue-chip'));
+
+      fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+      popover = screen.getByTestId('filter-popover');
+      // vibe_pop_d: 560 wide, the same right edge.
+      expect(popover.style.left).toBe('600px');
+      expect(popover.style.width).toBe('560px');
+    } finally {
+      rect.mockRestore();
+      window.innerWidth = innerWidth;
+    }
+  });
+
+  it('keeps a foot margin outside the scrolling list, so no row is clipped at the edge', () => {
+    renderBar();
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    const popover = screen.getByTestId('filter-popover');
+    const body = screen.getByTestId('filter-popover-body');
+    expect(popover).toHaveClass('pb-4');
+    expect(body.className).not.toMatch(/\bpb-/);
+    expect(body).toHaveClass('overflow-y-auto', 'px-4');
+  });
+
+  it('draws the whole bar edge in the signal once a filter is on', () => {
+    renderBar();
+    const bar = screen.getByTestId('filter-segment-bar');
+    expect(bar.getAttribute('data-active')).toBeNull();
+    expect(bar.style.borderColor).toBe('var(--border-strong)');
+    cleanup();
+    searchParams.current = new URLSearchParams('filterPrice=under-25');
+    renderBar();
+    const active = screen.getByTestId('filter-segment-bar');
+    expect(active.getAttribute('data-active')).toBe('true');
+    expect(active.style.borderColor).toContain('var(--signal)');
+  });
+
   it('the popover Clear resets its filter', () => {
     searchParams.current = new URLSearchParams('filterPrice=under-25');
     renderBar();
@@ -567,8 +708,40 @@ describe('FilterBar multi-select Where and Vibe', () => {
     // The count is its own non-shrinking node, so a narrow segment
     // ellipsises the name ("Red Ro…") and never hides the "+1".
     const more = within(where).getByTestId('segment-more');
-    expect(more.textContent).toBe('+1');
+    expect(more.textContent).toBe(' +1');
     expect(more).toHaveClass('shrink-0');
+  });
+
+  it('sets "+1" one word space after the name, with no flex gap between', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    const where = screen.getByTestId('venue-chip');
+    const value = within(where).getByTestId('segment-value');
+    // The name and the count share one run: the space is a real space,
+    // kept by whitespace-pre, not a flex gap that reads as two.
+    expect(value.className).not.toMatch(/\bgap-/);
+    expect(value.textContent).toBe('Bluebird +1');
+    const more = within(where).getByTestId('segment-more');
+    expect(more.parentElement).toBe(value);
+    expect(more).toHaveClass('whitespace-pre');
+    // Only the name ellipsises.
+    expect(value.firstElementChild).toHaveClass('truncate');
+  });
+
+  it('draws the Where pair as the board does: two 18px tiles', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    const stack = within(screen.getByTestId('venue-chip')).getByTestId(
+      'segment-venue-stack',
+    );
+    expect(stack.children).toHaveLength(2);
+    for (const tile of Array.from(stack.children)) {
+      expect(tile.getAttribute('width')).toBe('18');
+    }
   });
 
   it('the Vibe segment reads "Electronic +1" over two stacked dots', () => {
