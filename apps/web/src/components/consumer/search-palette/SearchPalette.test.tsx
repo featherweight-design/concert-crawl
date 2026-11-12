@@ -191,7 +191,14 @@ describe('SearchPalette', () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
   });
 
+  it('draws only ESC beside the typed query on desktop, no clear button', () => {
+    render(<SearchPalette open={true} onClose={onClose} />);
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+  });
+
   it('leaves Enter to a focused control inside the panel', () => {
+    // The phone field keeps its clear button, so that is the control to focus.
+    stubMatchMedia(true);
     render(<SearchPalette open={true} onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     screen.getByRole('button', { name: 'Clear' }).focus();
