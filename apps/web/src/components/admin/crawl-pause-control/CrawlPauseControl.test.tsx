@@ -85,6 +85,34 @@ describe('CrawlPauseControl', () => {
     await waitFor(() => expect(mockPauseCrawling).toHaveBeenCalledTimes(2));
   });
 
+  it('reopens the panel with the refusal inline when Try again is refused', async () => {
+    mockPauseCrawling
+      .mockResolvedValueOnce({ ok: false, error: null })
+      .mockResolvedValueOnce({ ok: false, error: 'Pick a date after today' });
+    render(<CrawlPauseControl venue={venue()} showCount={1} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.pauseButton }));
+    fireEvent.click(
+      screen.getByRole('radio', { name: PANEL.reasons.site_broken_or_moved }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(screen.queryByText(PANEL.title('Ball Arena'))).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Pick a date after today');
+    expect(screen.getByText(PANEL.title('Ball Arena'))).toBeTruthy();
+    // It reopens on the choices that were sent.
+    expect(
+      (
+        screen.getByRole('radio', {
+          name: PANEL.reasons.site_broken_or_moved,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+  });
+
   it('says who paused it, when and why, and resumes it', async () => {
     render(
       <CrawlPauseControl
@@ -112,6 +140,7 @@ describe('CrawlPauseControl', () => {
       <CrawlPauseControl
         venue={venue({
           crawlPausedAt: '2026-10-28T15:00:00.000Z',
+          crawlPauseReason: null,
           consecutiveFailures: 3,
         })}
         showCount={14}

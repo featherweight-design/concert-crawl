@@ -50,10 +50,13 @@ describe('SidePanel', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
   });
 
-  it('holds still mid-request', () => {
+  it('holds still mid-request, its X included', () => {
     const onClose = renderPanel({ dismissible: false });
     fireEvent.click(screen.getByTestId('side-panel-scrim'));
     fireEvent.keyDown(document, { key: 'Escape' });
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(close).toBeDisabled();
+    fireEvent.click(close);
     expect(onClose).not.toHaveBeenCalled();
   });
 

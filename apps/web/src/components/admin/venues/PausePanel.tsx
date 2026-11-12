@@ -17,6 +17,7 @@ import {
   RESUME_CHOICES,
   addDays,
   buildPauseBody,
+  formFromBody,
   isPickable,
   monthGrid,
   resumeDate,
@@ -41,6 +42,11 @@ export interface PausePanelProps {
    * or null once the caller has taken it from here.
    */
   onSubmit: (body: CrawlPauseRequest) => Promise<string | null>;
+  /**
+   * A body the API refused after the panel closed (a Try again whose date has
+   * since passed): the panel reopens on it, with the refusal shown inline.
+   */
+  refused?: { body: CrawlPauseRequest; error: string } | null;
 }
 
 const LABEL: CSSProperties = {
@@ -144,6 +150,7 @@ const Calendar = ({
         <button
           type="button"
           aria-label={COPY.previousMonth}
+          data-pause-control
           disabled={month <= first}
           onClick={() => setMonth(shiftMonth(month, -1))}
           style={{ ...ICON_BUTTON, opacity: month <= first ? 0.35 : 1 }}
@@ -167,6 +174,7 @@ const Calendar = ({
         <button
           type="button"
           aria-label={COPY.nextMonth}
+          data-pause-control
           disabled={month >= last}
           onClick={() => setMonth(shiftMonth(month, 1))}
           style={{ ...ICON_BUTTON, opacity: month >= last ? 0.35 : 1 }}
@@ -203,6 +211,7 @@ const Calendar = ({
             <button
               key={date}
               type="button"
+              data-pause-control
               disabled={!pickable}
               aria-pressed={on}
               aria-label={formatISODate(`${date}T12:00:00Z`, 'UTC', {
@@ -244,17 +253,23 @@ const Calendar = ({
  * bottom sheet on the phone (`01/pause-crawling`, rule 4). WHY radios, the
  * Other note, and RESUME chips with a calendar in place. Sends the full body.
  */
-export const PausePanel = ({ venues, onClose, onSubmit }: PausePanelProps) => {
+export const PausePanel = ({
+  venues,
+  onClose,
+  onSubmit,
+  refused,
+}: PausePanelProps) => {
   const isPhone = useIsPhone();
   const noteId = useId();
   const [today] = useState(() => localDateString(DENVER_TIME_ZONE));
-  const [reason, setReason] = useState<CrawlPauseReason>(
-    'waiting_on_permission',
+  const [start] = useState(() => formFromBody(refused?.body ?? null));
+  const [reason, setReason] = useState<CrawlPauseReason>(start.reason);
+  const [note, setNote] = useState(start.note);
+  const [choice, setChoice] = useState<ResumeChoice>(start.choice);
+  const [picked, setPicked] = useState<string | null>(start.picked);
+  const [error, setError] = useState<string | null>(
+    refused ? COPY.dateError(refused.error) : null,
   );
-  const [note, setNote] = useState('');
-  const [choice, setChoice] = useState<ResumeChoice>('manual');
-  const [picked, setPicked] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const body = buildPauseBody(reason, note, choice, picked);
@@ -281,7 +296,11 @@ export const PausePanel = ({ venues, onClose, onSubmit }: PausePanelProps) => {
         style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
       >
         {PAUSE_REASONS.map((key) => (
-          <label key={key} style={optionStyle(reason === key, isPhone)}>
+          <label
+            key={key}
+            data-pause-option
+            style={optionStyle(reason === key, isPhone)}
+          >
             <input
               type="radio"
               name={`${noteId}-reason`}
@@ -331,6 +350,7 @@ export const PausePanel = ({ venues, onClose, onSubmit }: PausePanelProps) => {
             key={key}
             type="button"
             aria-pressed={choice === key}
+            data-pause-control
             onClick={() => {
               setChoice(key);
               setError(null);
@@ -393,15 +413,29 @@ export const PausePanel = ({ venues, onClose, onSubmit }: PausePanelProps) => {
   const subtitle = only ? COPY.body(shows) : COPY.bodyMany(shows);
 
   if (isPhone) {
-    // `01/pause-crawling`: the sheet has no Cancel; the scrim and the grab
-    // handle close it.
+    // `01/pause-crawling` draws no Cancel, and the bottom sheet has no close of
+    // its own (its grab handle is decoration), so a labelled Cancel sits under
+    // the button: the desktop panel's own way out.
     return (
       <AdminSheet
         onClose={onClose}
         title={title}
         subtitle={subtitle}
         dismissible={!pending}
-        footer={pauseButton}
+        footer={
+          <>
+            {pauseButton}
+            <AdminButton
+              type="button"
+              variant="ghost"
+              disabled={pending}
+              onClick={onClose}
+              style={{ height: 40, fontSize: 14, fontWeight: 600 }}
+            >
+              {COPY.cancel}
+            </AdminButton>
+          </>
+        }
       >
         {content}
       </AdminSheet>

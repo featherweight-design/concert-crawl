@@ -103,11 +103,26 @@ export type PausedVenue = Pick<
   | 'consecutiveFailures'
 > & { crawlPausedByName?: string | null };
 
+/** The reason as the line says it; an Other note loses its own full stop. */
+const reasonText = (venue: PausedVenue): string | null => {
+  const reason = venue.crawlPauseReason ?? null;
+  if (reason === 'other') {
+    return venue.crawlPauseNote?.trim().replace(/\.+$/, '') || null;
+  }
+  return reason === null ? null : PAUSE_LINE.reasons[reason];
+};
+
 /**
  * The paused state line, as the ⋯ menu draws it (`A3/03/venue-menu-states`):
- * "Paused by Hugh, Oct 28: waiting on permission." An auto-pause has nobody
- * behind it: "Auto-paused after 3 failures." (its "Try a re-crawl first." is
- * HOLD). Null when the venue isn't paused.
+ * "Paused by Hugh, Oct 28: waiting on permission." Null when not paused.
+ *
+ * An auto-pause is told by its missing reason, not its missing name: every
+ * admin pause path requires a reason (`pauseBodySchema`), and the crawler's
+ * auto-pause writes none (crawler-core `crawl.ts`), while a name goes missing
+ * for other reasons (an admin keeping an auto-pause keeps the crawler as the
+ * pauser). It reads "Auto-paused after 3 failures." ("Try a re-crawl first."
+ * is HOLD). A reasonless pause under 3 failures is a hand pause from before
+ * reasons existed.
  */
 export const pausedStateLine = (venue: PausedVenue): string | null => {
   if (venue.crawlPausedAt === null) return null;
@@ -115,21 +130,42 @@ export const pausedStateLine = (venue: PausedVenue): string | null => {
     month: 'short',
     day: 'numeric',
   });
-  if (venue.crawlPausedByName) {
-    const reason = venue.crawlPauseReason;
-    const text =
-      reason === 'other'
-        ? // The line ends in its own full stop, so a note's is dropped.
-          venue.crawlPauseNote?.trim().replace(/\.+$/, '') || null
-        : reason
-          ? PAUSE_LINE.reasons[reason]
-          : null;
-    return PAUSE_LINE.pausedBy(venue.crawlPausedByName, date, text);
-  }
-  if (venue.consecutiveFailures >= AUTO_PAUSE_FAILURES) {
+  const name = venue.crawlPausedByName ?? null;
+  const why = reasonText(venue);
+  if (why === null && venue.consecutiveFailures >= AUTO_PAUSE_FAILURES) {
     return PAUSE_LINE.autoPaused;
   }
-  return PAUSE_LINE.pausedSince(date);
+  if (name !== null) return PAUSE_LINE.pausedBy(name, date, why);
+  return why === null
+    ? PAUSE_LINE.pausedSince(date)
+    : PAUSE_LINE.pausedSinceBecause(date, why);
+};
+
+/**
+ * The form a body was sent from, to reopen the panel on a refused one. With
+ * no body, the phone board's defaults (`01/pause-crawling`): Waiting on
+ * permission, When I say.
+ */
+export const formFromBody = (
+  body: CrawlPauseRequest | null,
+): {
+  reason: CrawlPauseReason;
+  note: string;
+  choice: ResumeChoice;
+  picked: string | null;
+} => {
+  const resume = body?.resume;
+  return {
+    reason: body?.reason ?? 'waiting_on_permission',
+    note: body?.note ?? '',
+    choice:
+      resume?.mode === 'on'
+        ? 'date'
+        : resume?.mode === 'in_days'
+          ? 'twoWeeks'
+          : 'manual',
+    picked: resume?.mode === 'on' ? resume.date : null,
+  };
 };
 
 /** What a pause attempt came back with (see `pauseCrawling`). */
