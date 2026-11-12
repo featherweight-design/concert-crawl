@@ -70,6 +70,7 @@ const row = (
   artistPhotoUrl: null,
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
+  venueCity: 'Denver',
   neighborhood: null,
   date,
   dateLabel: 'Thu, May 14',
