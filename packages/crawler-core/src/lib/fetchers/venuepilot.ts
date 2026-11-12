@@ -414,6 +414,7 @@ async function venuePilotFetch(
   if (crawlDelayMs === null) {
     throw new CrawlSkipError(
       `robots.txt Crawl-delay for ${ENDPOINT} exceeds the cap; not crawled`,
+      'robots_crawl_delay',
     );
   }
 
