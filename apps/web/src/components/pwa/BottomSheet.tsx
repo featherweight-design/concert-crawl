@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from 'react';
 import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy';
+import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 
 interface BottomSheetProps {
   open: boolean;
@@ -26,6 +27,7 @@ export const BottomSheet = ({
   const sheetRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<Element | null>(null);
   const titleId = useId();
+  const drag = useSheetDrag(onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -97,6 +99,8 @@ export const BottomSheet = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        style={drag.sheetStyle}
+        onTransitionEnd={drag.onSheetTransitionEnd}
         // A bottom sheet on mobile, a centered modal from sm up: anchored to the
         // bottom edge of a wide viewport it read as a stray drawer. One media
         // query rather than a second tree, so the focus trap above is shared.
@@ -109,8 +113,10 @@ export const BottomSheet = ({
             backdrop can be a sliver, so the sheet carries its own close. It
             mirrors the 30px bordered close in ModalShell headers, inside a 44px
             hit area pulled into the padding so the visible box sits in the
-            corner. First in DOM order, so it is also where focus lands. */}
-        <div className="-mr-3 -mt-3 flex justify-end">
+            corner. First in DOM order, so it is also where focus lands. The row
+            is the drag-down grab zone: no handle is drawn for this sheet, so
+            nothing new is visible. */}
+        <div className="-mr-3 -mt-3 flex justify-end" {...drag.zoneProps}>
           <button
             type="button"
             onClick={onClose}

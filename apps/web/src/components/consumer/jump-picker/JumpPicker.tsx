@@ -18,6 +18,7 @@ import {
 } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import {
   addMonths,
   columnOf,
@@ -191,6 +192,7 @@ export const JumpPicker = ({
   // before the open-focus effect below, so the trap's container focus runs
   // first and the selected day takes focus after it.
   useFocusTrap(dialogRef, open);
+  const drag = useSheetDrag(onClose);
 
   // Escape closes from anywhere, not only from inside the dialog, so the
   // scrim (aria-hidden, a pointer-only close) has a keyboard path too.
@@ -398,48 +400,54 @@ export const JumpPicker = ({
         boxSizing: 'border-box',
         color: 'var(--fg)',
         fontFamily: 'Inter, system-ui',
+        ...drag.sheetStyle,
       }}
+      onTransitionEnd={drag.onSheetTransitionEnd}
     >
-      {/* drag handle: the phone sheet's affordance, decoration only */}
-      <div
-        aria-hidden="true"
-        className="mx-auto mb-2 sm:hidden"
-        style={{
-          width: 40,
-          height: 4,
-          borderRadius: 4,
-          background: 'var(--border-strong)',
-        }}
-      />
-
-      {/* title + close */}
-      <div className="flex items-center justify-between gap-2">
-        <h2
+      {/* The handle and the title row are the phone sheet's drag-down grab
+          zone (a no-op from sm up, where this is a popover). */}
+      <div {...drag.zoneProps}>
+        {/* drag handle: the phone sheet's affordance */}
+        <div
+          aria-hidden="true"
+          className="mx-auto mb-2 sm:hidden"
           style={{
-            fontWeight: 900,
-            fontSize: 20,
-            letterSpacing: '-0.02em',
-            lineHeight: 1.1,
+            width: 40,
+            height: 4,
+            borderRadius: 4,
+            background: 'var(--border-strong)',
           }}
-        >
-          {CONSUMER_COPY.jumpPickerDialogPrefix}
-        </h2>
-        <button
-          type="button"
-          className="cjp-chev"
-          onClick={onClose}
-          aria-label={CONSUMER_COPY.jumpPickerClose}
-          style={chevBtn}
-        >
-          <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
-            <path
-              d="M2 2l9 9M11 2l-9 9"
-              stroke="var(--fg-muted)"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+        />
+
+        {/* title + close */}
+        <div className="flex items-center justify-between gap-2">
+          <h2
+            style={{
+              fontWeight: 900,
+              fontSize: 20,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.1,
+            }}
+          >
+            {CONSUMER_COPY.jumpPickerDialogPrefix}
+          </h2>
+          <button
+            type="button"
+            className="cjp-chev"
+            onClick={onClose}
+            aria-label={CONSUMER_COPY.jumpPickerClose}
+            style={chevBtn}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+              <path
+                d="M2 2l9 9M11 2l-9 9"
+                stroke="var(--fg-muted)"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* month pager: the month on the left, chevrons on the right */}
