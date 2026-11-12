@@ -217,6 +217,10 @@ Each sits at the end of its section's folder, under the same names as the canvas
 - **06 Events, Artists, Prices:** Add a show by hand, Merge duplicates, the venue and status filter popovers, Past shows, Edit price on desktop, Artists Matched and Not artists tabs, Reject a submitted price, and Artists, Submitted prices and Price checks on mobile.
 - **07:** the Crawl runs page (desktop, run detail panel, Crawl all dialog, running state, mobile); role change with Undo, Email revealed, the Person ⋯ menu; Edit an invite code and Reactivate; adding a person to a flag and a flag on mobile; the error report and venue suggestion panels and the Done tab; Test email sent; Not found, Signed out and Offline.
 
+### Phone addendum (2026-11-12)
+
+[`phone-addendum/`](phone-addendum/README.md) closes the four READINESS phone gaps with 38 boards: Merge duplicates (stacked compare, full screen), Inspect a fetched page (phone-reachable, What we read first), Add a venue start, Nobody asked yet and Gone live, and the venue Source tab. Each has default, loading, empty and save-failed states, with defaults also drawn at 320. Canvas: https://claude.ai/artifact/WQbv4EBMjHykGBW5s9xBug.
+
 ## Engineering needs to build
 
 Each section's canvas card lists these. This is the full list in one place. None is a design task, and some need a schema change. Every migration is expand/contract.
