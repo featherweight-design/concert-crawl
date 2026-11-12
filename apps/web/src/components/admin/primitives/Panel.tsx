@@ -27,8 +27,13 @@ export const Panel = ({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: 10,
-          padding: '14px 18px',
-          borderBottom: '1px solid var(--border)',
+          // No rule under the title: no admin board draws one (survey of all
+          // 291 HTML boards, #293). A line under a title on a board is the
+          // first list row's own top border, which the body draws. Without
+          // the rule, a padded body's own top padding is the gap, so the
+          // header keeps a bottom pad only over a flush (padding 0) body.
+          padding:
+            padding === 0 || padding === '0' ? '14px 18px' : '14px 18px 0',
         }}
       >
         <div
