@@ -1,6 +1,6 @@
 {
   "feature": "B10 · Artist page: stage with tilted card and genre ring, Follow in the hero, Upcoming in Denver rows, framed Spotify card, skeleton",
-  "note": "Plan row B10 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): artist and artist-full = 09-artist/artist-m-noburst-puma and 09-artist/artist-m-noburst-toki at phone (no starburst), 09-artist/artist-burst-puma and 09-artist/artist-burst-toki at desktop (starburst at 8%), 09-artist/artist-light under the light theme. The burst and no-burst variants are the same route at the two widths, so they are not separate rows; following versus not following is the audit user's own state on the artist, so set it by hand before the run. artist-empty has no board: it is the copy-only empty Upcoming block under the same stage. artist-report = the W3 wrong-artist report card at the column foot. Walk by hand (state a sheet cannot set up): Share (the hero's top-right disc) opens the OS share sheet, which no headless browser draws, and its copy-link fallback depends on the runner's clipboard permission, so neither result is a stable cell; tap it on a phone and on desktop Chrome and check Link copied. Also by hand: skeleton (06-states/bp-s-load_artist_m): throttle and navigate from an event page. CC_ARTIST_SLUG is an artist with upcoming shows; CC_ARTIST_SLUG_NO_SHOWS is one with none (open one from a past show's event page, or search for an artist whose page says Nothing on the calendar).",
+  "note": "Plan row B10 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): artist and artist-full = 09-artist/artist-m-noburst-puma and 09-artist/artist-m-noburst-toki at phone (no starburst), 09-artist/artist-burst-puma and 09-artist/artist-burst-toki at desktop (starburst at 8%), 09-artist/artist-light under the light theme. The burst and no-burst variants are the same route at the two widths, so they are not separate rows; following versus not following is the audit user's own state on the artist, so set it by hand before the run. artist-empty has no board: it is the copy-only empty Upcoming block under the same stage. artist-report = the W3 wrong-artist report card at the column foot. Walk by hand (state a sheet cannot set up): Share (the hero's top-right disc) opens the OS share sheet, which no headless browser draws, and its copy-link fallback depends on the runner's clipboard permission, so neither result is a stable cell; tap it on a phone and on desktop Chrome and check Link copied. Also by hand: skeleton (06-states/bp-s-load_artist_m): throttle and navigate from an event page. CC_ARTIST_SLUG is an artist with upcoming shows, at least one of them not part of a run (an artist whose only dates are one multi-night run draws the run group and never the date-tile row the boards show); CC_ARTIST_SLUG_NO_SHOWS is one with none (open one from a past show's event page, or search for an artist whose page says Nothing on the calendar).",
   "themes": [
     {
       "label": "electric",
@@ -33,6 +33,9 @@
         },
         {
           "wait": "[data-testid=\"stage-card\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         }
       ]
     },
@@ -49,7 +52,36 @@
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
-          "wait": "[data-testid=\"artist-show-row\"]"
+          "wait": "[data-show-item]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
+        }
+      ]
+    },
+    {
+      "id": "artist-listen",
+      "label": "/artists/[slug]: the framed Spotify card in the viewport (a full-page capture paints the cross-origin embed blank at phone widths)",
+      "steps": [
+        {
+          "goto": "/artists/${CC_ARTIST_SLUG}",
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-show-item]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
+        },
+        {
+          "scrollTo": "iframe[data-plate]"
+        },
+        {
+          "wait": "iframe[data-plate] >> internal:control=enter-frame >> button",
+          "settle": 1500
         }
       ]
     },
@@ -67,6 +99,9 @@
         },
         {
           "wait": "[data-empty-upcoming]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         }
       ]
     },
@@ -83,6 +118,9 @@
         },
         {
           "wait": "[data-testid=\"stage-card\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         },
         {
           "scrollTo": "[data-testid=\"artist-report-card\"]"
