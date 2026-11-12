@@ -60,6 +60,14 @@ export function formatShowTime(timeStr: string | null): string | null {
 }
 
 /**
+ * `formatShowTime` without a zero minute: "6 PM", but "6:30 PM". For the
+ * tighter meta lines, where the B+ boards drop the ":00".
+ */
+export function formatShowTimeShort(timeStr: string | null): string | null {
+  return formatShowTime(timeStr)?.replace(/:00(?=\s)/u, '') ?? null;
+}
+
+/**
  * One dollar amount, the way every consumer surface shows one. Prices reach the
  * client as `parseFloat` output, so rounding here is what stops a `$15.5` from
  * reaching a price chip on any surface that forgets to round for itself.

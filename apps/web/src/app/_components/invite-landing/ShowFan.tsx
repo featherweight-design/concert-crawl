@@ -24,7 +24,7 @@ const SLOT_POSE: Record<
 };
 
 const metaLine = (show: InviteShow): string =>
-  [show.tonight ? COPY.tonight : show.dateShort, show.showTime, show.venue]
+  [show.tonight ? COPY.tonight : show.dateShort, show.showTimeShort, show.venue]
     .filter((part) => part !== '')
     .join(' · ');
 

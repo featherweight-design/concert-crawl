@@ -101,7 +101,21 @@ export function InviteLanding({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CCMark size={26} />
+          {/* The app-icon tile, as the B+ invite boards draw it: the mark in a
+              7px-radius tile with a hairline, so it reads as an icon on any
+              theme's ground rather than a bare glyph. */}
+          <span
+            data-testid="invite-app-icon"
+            style={{
+              display: 'block',
+              flex: 'none',
+              borderRadius: 7,
+              overflow: 'hidden',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <CCMark size={28} />
+          </span>
           <CCWordmark size={20} className="max-[360px]:!text-[16px]" />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -211,7 +225,11 @@ export function InviteLanding({
 
           {venues !== null && venues.length > 0 && (
             <div className="mt-3 flex flex-col items-center gap-3 md:items-start">
-              <div className="flex flex-wrap justify-center gap-2 md:justify-start">
+              {/* 6px gaps, as both boards space the row: twelve 34px tiles
+                  (474px) then fit the 480px column on one line, where 8px
+                  gaps (496px) wrapped the twelfth. It still wraps in a
+                  narrower column (768-1100), which no board draws. */}
+              <div className="flex flex-wrap justify-center gap-1.5 md:justify-start">
                 {venues.slice(0, DESKTOP_TILES).map((venue, index) => (
                   <span
                     key={venue.slug}

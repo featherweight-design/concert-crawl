@@ -71,6 +71,17 @@ describe('app/page — the private-beta landing data', () => {
     expect(shows.map((show) => show.tonight)).toEqual([true, false, false]);
   });
 
+  it('formats times as the B+ boards do: "8:00 PM" ticker, "8 PM" card', async () => {
+    const { props } = await render();
+    const [first] = props['inviteShows'] as {
+      showTime: string;
+      showTimeShort: string;
+    }[];
+    // Intl may put a narrow no-break space before the period.
+    expect(first?.showTime.replace(/\s/gu, ' ')).toBe('8:00 PM');
+    expect(first?.showTimeShort.replace(/\s/gu, ' ')).toBe('8 PM');
+  });
+
   it('counts only venues with upcoming shows, and skips the week probe', async () => {
     const { props } = await render();
     expect(props['inviteVenues']).toEqual([{ slug: 'busy', name: 'Busy' }]);

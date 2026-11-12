@@ -4,6 +4,8 @@ import {
   formatDollars,
   formatEventDate,
   formatPrice,
+  formatShowTime,
+  formatShowTimeShort,
   dateGroupLabel,
   isEventPast,
   isToday,
@@ -340,5 +342,23 @@ describe('isEventPast (#72)', () => {
     isEventPast('2026-08-02', 'America/New_York');
 
     expect(mockLocalDate).toHaveBeenCalledWith('America/New_York');
+  });
+});
+
+// Intl may separate the period with a narrow no-break space; compare words.
+const words = (value: string | null) => value?.replace(/\s/gu, ' ') ?? null;
+
+describe('formatShowTime / formatShowTimeShort (B24 invite landing)', () => {
+  it('keeps the minutes for the ticker and drops a zero minute for the card', () => {
+    expect(words(formatShowTime('18:00:00'))).toBe('6:00 PM');
+    expect(words(formatShowTimeShort('18:00:00'))).toBe('6 PM');
+  });
+
+  it('keeps real minutes on the card', () => {
+    expect(words(formatShowTimeShort('19:30:00'))).toBe('7:30 PM');
+  });
+
+  it('is null when the venue lists no time', () => {
+    expect(formatShowTimeShort(null)).toBeNull();
   });
 });
