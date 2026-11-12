@@ -1,4 +1,11 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const avatarColorEnum = pgEnum('avatar_color', [
   'signal',
@@ -28,6 +35,10 @@ export const userProfiles = pgTable('user_profiles', {
   // The avatar pair (B+ "Mix two"). NULL means a solid avatar in avatarColor.
   avatarSecondColor: avatarColorEnum('avatar_second_color'),
   theme: userThemeEnum('theme').notNull().default('electric'),
+  // Set by an admin (People, 5a) on accounts that are ours or testers', so the
+  // admin counts can leave them out (they join on this). Clerk metadata cannot
+  // be queried in SQL, which is why the tag lives here.
+  isTestAccount: boolean('is_test_account').notNull().default(false),
   // Set when the user dismisses the Spotify connect nudge (spec §8) so it
   // renders once. NULL = never shown/dismissed.
   spotifyNudgeSeenAt: timestamp('spotify_nudge_seen_at', {

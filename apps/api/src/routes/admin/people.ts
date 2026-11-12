@@ -13,10 +13,16 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { createClerkClient } from '@clerk/backend';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { db, userEvents, userProfiles } from '@concert-crawl/db';
+import {
+  db,
+  inviteCodeRedemptions,
+  userEvents,
+  userProfiles,
+} from '@concert-crawl/db';
 import type { Role } from '@concert-crawl/types';
 import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types';
 import { isClerkNotFound } from '../../lib/clerk-errors.js';
+import { idSchema } from '../../lib/id-schema.js';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
 
@@ -119,6 +125,8 @@ const iso = (ms: number | null): string | null =>
 const listQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   role: z.enum(['admin', 'sub_admin', 'promoter', 'beta', 'user']).optional(),
+  // Only people who redeemed this invite code (5b's "See all" on a code).
+  code: idSchema.optional(),
   sort: z.enum(['last-active', 'newest']).default('last-active'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).max(100_000).default(0),
@@ -137,19 +145,42 @@ peopleAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { search, role, sort, limit, offset } = ctx.req.valid('query');
+    const { search, role, code, sort, limit, offset } = ctx.req.valid('query');
     const scan = await scanClerkUsers(Date.now());
 
     const profiles = await db
-      .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+      .select({
+        userId: userProfiles.userId,
+        handle: userProfiles.handle,
+        isTestAccount: userProfiles.isTestAccount,
+      })
       .from(userProfiles);
     const handleOf = new Map(
       profiles.map((profile) => [profile.userId, profile.handle]),
     );
+    const testAccounts = new Set(
+      profiles
+        .filter((profile) => profile.isTestAccount)
+        .map((profile) => profile.userId),
+    );
+
+    // An unknown code simply matches nobody.
+    const redeemers =
+      code === undefined
+        ? null
+        : new Set(
+            (
+              await db
+                .select({ userId: inviteCodeRedemptions.userId })
+                .from(inviteCodeRedemptions)
+                .where(eq(inviteCodeRedemptions.codeId, code))
+            ).map((row) => row.userId),
+          );
 
     const needle = (search ?? '').toLowerCase();
     const matches = (user: ScannedUser): boolean => {
       if (role !== undefined && user.role !== role) return false;
+      if (redeemers !== null && !redeemers.has(user.id)) return false;
       if (needle === '') return true;
       // An email matches only as the whole address, so search cannot be used
       // to read a masked email out piece by piece without the audited Show
@@ -210,6 +241,7 @@ peopleAdminRouter.get(
           createdAt: iso(user.createdAt),
           lastActiveAt: iso(user.lastActiveAt),
           watching: watching.get(user.id) ?? 0,
+          isTestAccount: testAccounts.has(user.id),
         })),
         total: filtered.length,
         counts,
@@ -293,6 +325,59 @@ peopleAdminRouter.post(
     ctx.set('auditActorId', actorId);
     ctx.set('auditMeta', { revoked });
     return ctx.json({ success: true, data: { revoked } });
+  },
+);
+
+const testAccountBodySchema = z.object({ isTest: z.boolean() });
+
+// POST /v1/admin/people/:userId/test-account — tag or untag a person as a test
+// account (ours or a tester's), so the admin counts can leave them out. The
+// response carries the previous value, so the caller can offer Undo.
+peopleAdminRouter.post(
+  '/:userId/test-account',
+  zValidator('param', userIdParamSchema, validationHook),
+  zValidator('json', testAccountBodySchema, validationHook),
+  async (ctx) => {
+    const { userId } = ctx.req.valid('param');
+    const { isTest } = ctx.req.valid('json');
+
+    try {
+      await clerkClient.users.getUser(userId);
+    } catch (err: unknown) {
+      if (isClerkNotFound(err)) {
+        return ctx.json({ success: false, error: 'Person not found' }, 404);
+      }
+      throw err;
+    }
+
+    // A person may have no profile row yet (they are created on first use),
+    // so the tag is an upsert.
+    const previousIsTest = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ isTestAccount: userProfiles.isTestAccount })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, userId))
+        .for('update');
+      const previous = existing?.isTestAccount ?? false;
+      // Tagging what is already tagged writes nothing.
+      if (existing === undefined || previous !== isTest) {
+        await tx
+          .insert(userProfiles)
+          .values({ userId, isTestAccount: isTest })
+          .onConflictDoUpdate({
+            target: userProfiles.userId,
+            set: { isTestAccount: isTest, updatedAt: new Date() },
+          });
+      }
+      return previous;
+    });
+    if (previousIsTest !== isTest) forgetPeopleScan();
+
+    ctx.set('auditAction', 'user.test_account.set');
+    ctx.set('auditTargetId', userId);
+    ctx.set('auditActorId', getAuth(ctx)?.userId ?? 'unknown');
+    ctx.set('auditMeta', { isTest, previousIsTest });
+    return ctx.json({ success: true, data: { isTest, previousIsTest } });
   },
 );
 
