@@ -21,7 +21,7 @@
           "wait": ":is(#notifications, main h2):visible"
         },
         {
-          "settle": 2500
+          "wait": "body:not(:has(#notifications [aria-busy=\"true\"]))"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "wait": ":is(#notifications, main h2):visible"
         },
         {
-          "settle": 2500
+          "wait": "body:not(:has(#notifications [aria-busy=\"true\"]))"
         }
       ]
     },
