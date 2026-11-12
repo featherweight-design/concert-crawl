@@ -52,15 +52,13 @@ describe('AdminLayout', () => {
       email: 'h@x.test',
     });
     getToken.mockResolvedValue('token');
-    apiGet.mockResolvedValue({
-      eventFlags: 2,
-      prices: 200,
-      missing: 3,
-      priceContests: 1,
-    });
+    apiGet.mockImplementation(async (path: string) =>
+      path === '/v1/users/me'
+        ? { handle: 'hugh' }
+        : { eventFlags: 2, prices: 200, missing: 3, priceContests: 1 },
+    );
     render(await AdminLayout({ children: <p>page</p> }));
     expect(screen.getByTestId('shell')).toHaveAttribute('data-needs-you', '6');
-    expect(apiGet).toHaveBeenCalledTimes(1);
     expect(apiGet).toHaveBeenCalledWith('/v1/admin/review/counts', 'token');
   });
 

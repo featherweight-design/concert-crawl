@@ -35,15 +35,8 @@ describe('buildBreadcrumbs', () => {
 
   it('labels the invite codes Posters page Posters', () => {
     expect(buildBreadcrumbs('/admin/invite-codes/posters')).toEqual([
-      { label: 'People', href: '/admin/users' },
+      { label: 'Invite codes', href: '/admin/invite-codes' },
       { label: 'Posters' },
-    ]);
-  });
-
-  it('puts Invite codes under People, as the IA draws it', () => {
-    expect(buildBreadcrumbs('/admin/invite-codes')).toEqual([
-      { label: 'People', href: '/admin/users' },
-      { label: 'Invite codes' },
     ]);
   });
 

@@ -16,7 +16,7 @@ vi.mock('@clerk/nextjs', () => ({ useClerk: () => ({ signOut }) }));
 
 import { AdminSidebar } from './AdminSidebar';
 
-const user = { firstName: 'Hugh', email: 'h@x.test' };
+const user = { firstName: 'Hugh', handle: 'hugh', email: 'h@x.test' };
 
 const renderAt = (pathname: string, search = '', needsYou = 0) => {
   nav.pathname = pathname;

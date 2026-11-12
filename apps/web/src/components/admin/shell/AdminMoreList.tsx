@@ -7,56 +7,71 @@ import { ChevronRight, ExternalLink, LogOut } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { NAV, TAB_BAR, type NavGroup, type NavKey } from './nav';
 
-/** What each More row says under its name. Missing numbers fall back to words. */
+/**
+ * What each More row says under its name (#178 item 7): a count as plain
+ * text, never a pill, and the row's description when the count is zero or
+ * unknown. Only Needs you carries a badge.
+ */
 export interface AdminMoreDetails {
-  failingVenues: number | null;
+  /** The Artists review list: no Spotify match or a suspect one. */
   artistsToCheck: number | null;
   missingPrices: number | null;
   featureFlags: number | null;
   feedbackToRead: number | null;
-  /** Mountain Time, already formatted, e.g. "3:00 AM". */
-  lastCrawlAt: string | null;
+  /** The latest daily crawl's start, already formatted in Mountain Time. */
+  lastCrawl: string | null;
 }
 
 const details = ADMIN_COPY.shell.more.details;
 
+const counted = (
+  count: number | null,
+  line: (n: number) => string,
+  fallback: string,
+): string => (count !== null && count > 0 ? line(count) : fallback);
+
 const detailFor = (key: NavKey, data: AdminMoreDetails): string => {
   switch (key) {
     case 'health':
+      // "N site checks failing" needs the site-check source 1c is waiting on;
+      // until then the row reads its description, as #178 draws for zero.
       return details.health;
     case 'artists':
-      return data.artistsToCheck === null
-        ? ADMIN_COPY.shell.nav.artists
-        : details.artists(data.artistsToCheck);
+      return counted(
+        data.artistsToCheck,
+        details.artists,
+        ADMIN_COPY.shell.nav.artists,
+      );
     case 'prices':
-      return data.missingPrices === null
-        ? ADMIN_COPY.shell.nav.prices
-        : details.prices(data.missingPrices);
+      return counted(
+        data.missingPrices,
+        details.prices,
+        ADMIN_COPY.shell.nav.prices,
+      );
     case 'people':
       return details.people;
+    case 'invite-codes':
+      return '';
     case 'feature-flags':
-      return data.featureFlags === null
-        ? ADMIN_COPY.shell.nav.featureFlags
-        : details.featureFlags(data.featureFlags);
+      return counted(
+        data.featureFlags,
+        details.featureFlags,
+        ADMIN_COPY.shell.nav.featureFlags,
+      );
     case 'crawl-runs':
-      return data.lastCrawlAt === null
-        ? details.crawlRunsNever
-        : details.crawlRuns(data.lastCrawlAt);
+      return data.lastCrawl === null ? '' : details.crawlRuns(data.lastCrawl);
     case 'operations':
-      return details.operations;
+      return counted(
+        data.feedbackToRead,
+        details.operations,
+        details.operationsDescription,
+      );
     case 'needs-you':
     case 'venues':
     case 'events':
       // On the tab bar, so never a More row.
       return '';
   }
-};
-
-/** Plain counts, never badges: only Needs you carries a badge (rule 1). */
-const countFor = (key: NavKey, data: AdminMoreDetails): number => {
-  if (key === 'health') return data.failingVenues ?? 0;
-  if (key === 'operations') return data.feedbackToRead ?? 0;
-  return 0;
 };
 
 const MORE_GROUPS: Array<Exclude<NavGroup, 'primary'>> = ['manage', 'system'];
@@ -113,7 +128,6 @@ export const AdminMoreList = ({ data }: { data: AdminMoreDetails }) => {
           </div>
           {itemsFor(group).map((item) => {
             const Icon = item.icon;
-            const count = countFor(item.key, data);
             return (
               <Link
                 key={item.key}
@@ -160,21 +174,6 @@ export const AdminMoreList = ({ data }: { data: AdminMoreDetails }) => {
                     {detailFor(item.key, data)}
                   </span>
                 </span>
-                {count > 0 && (
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--fg-muted)',
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    <span aria-hidden>{count}</span>
-                    <span className="sr-only">
-                      {ADMIN_COPY.shell.more.countAriaLabel(count)}
-                    </span>
-                  </span>
-                )}
                 <ChevronRight size={16} color="var(--fg-subtle)" aria-hidden />
               </Link>
             );
