@@ -54,17 +54,53 @@ describe('StandaloneError', () => {
     expect(screen.getByText(copy.errorBody)).toBeTruthy();
   });
 
-  it('shows no chip when there is no id, and survives a missing clipboard', () => {
-    const { rerender } = render(<StandaloneError onRetry={vi.fn()} />);
-    expect(screen.queryByText(copy.errorIdLabel)).toBeNull();
-
-    rerender(<StandaloneError errorId="abc" onRetry={vi.fn()} />);
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: undefined,
+  describe('the error ID chip', () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const setClipboard = (value: unknown) =>
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value,
+      });
+    afterEach(() => {
+      // Put the real property back so later tests see what they started with.
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
     });
-    expect(() =>
-      fireEvent.click(screen.getByRole('button', { name: /abc/ })),
-    ).not.toThrow();
+
+    it('is not drawn when there is no id', () => {
+      render(<StandaloneError onRetry={vi.fn()} />);
+      expect(screen.queryByText(copy.errorIdLabel)).toBeNull();
+    });
+
+    it('copies the id and says so', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      setClipboard({ writeText });
+      render(<StandaloneError errorId="abc" onRetry={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /abc/ }));
+
+      expect(writeText).toHaveBeenCalledWith('abc');
+      expect(await screen.findByText(copy.copiedErrorId)).toBeTruthy();
+    });
+
+    it('survives a missing clipboard', () => {
+      setClipboard(undefined);
+      render(<StandaloneError errorId="abc" onRetry={vi.fn()} />);
+
+      expect(() =>
+        fireEvent.click(screen.getByRole('button', { name: /abc/ })),
+      ).not.toThrow();
+    });
+
+    it('survives a refused write', async () => {
+      const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+      setClipboard({ writeText });
+      render(<StandaloneError errorId="abc" onRetry={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /abc/ }));
+      await Promise.resolve();
+
+      expect(screen.queryByText(copy.copiedErrorId)).toBeNull();
+    });
   });
 });

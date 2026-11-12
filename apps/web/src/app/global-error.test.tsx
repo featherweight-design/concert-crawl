@@ -14,9 +14,7 @@ describe('global-error', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const error = Object.assign(new Error('boom'), { digest: '4471' });
 
-    render(<GlobalError error={error} reset={vi.fn()} />, {
-      container: document.documentElement,
-    });
+    render(<GlobalError error={error} reset={vi.fn()} />);
 
     expect(
       screen.getByRole('heading', { name: CONSUMER_COPY.error.errorHeading }),
