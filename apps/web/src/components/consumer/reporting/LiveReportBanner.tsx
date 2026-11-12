@@ -103,6 +103,8 @@ export interface LiveReportBannerProps {
   promotedAt: string; // ISO
   confirmCount?: number;
   reporter?: { handle: string; url: string } | null;
+  /** The card's second sentence, under the headline (cancelled only). */
+  body?: string | undefined;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -112,6 +114,7 @@ export const LiveReportBanner = ({
   promotedAt,
   confirmCount,
   reporter,
+  body,
 }: LiveReportBannerProps) => {
   const token = REPORT_TOKENS[status];
   const Glyph = GLYPHS_16[status];
@@ -121,8 +124,10 @@ export const LiveReportBanner = ({
 
   const subLabel = (() => {
     // A crawled change has no reporter and no confirms, so "0 confirms" would
-    // read as a report nobody backed. It keeps only its age.
-    if (reporter == null && confirmCount === undefined) return timeAgo;
+    // read as a report nobody backed. It names the venue's calendar instead.
+    if (reporter == null && confirmCount === undefined) {
+      return copy.fromVenueCalendar(timeAgo);
+    }
     const confirms = confirmCount ?? 0;
     if (reporter != null) {
       return copy.reportedBy(reporter.handle, confirms, timeAgo);
@@ -177,6 +182,18 @@ export const LiveReportBanner = ({
         >
           {headline}
         </span>
+        {body !== undefined && (
+          <span
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '13.5px',
+              color: 'var(--fg-muted)',
+              lineHeight: 1.45,
+            }}
+          >
+            {body}
+          </span>
+        )}
         {/* "Reported by @x": analytics autocapture skips it. */}
         <span
           className="ph-no-capture"

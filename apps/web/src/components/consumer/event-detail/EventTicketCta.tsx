@@ -57,11 +57,16 @@ const linkStyle = {
   whiteSpace: 'nowrap',
 } satisfies React.CSSProperties;
 
-// A cancelled show's link (refund info, or the venue's page): outlined, never
-// the filled primary.
+// A cancelled show's link is outlined, never the filled primary: refund info
+// in the danger tone, the venue's page in the neutral border (addendum 2,
+// 13-cancelled-variants/event-cancelled-venue-link).
 const CANCELLED_LINK_STYLE = {
   ...linkStyle,
   border: '1.5px solid color-mix(in oklab, var(--danger) 50%, transparent)',
+} satisfies React.CSSProperties;
+const CANCELLED_VENUE_LINK_STYLE = {
+  ...linkStyle,
+  border: '1px solid var(--border-strong)',
 } satisfies React.CSSProperties;
 
 interface EventTicketCtaProps {
@@ -129,10 +134,10 @@ export const EventTicketCta = ({
         target="_blank"
         rel="noopener noreferrer"
         className={`${linkClass} text-fg`}
-        style={CANCELLED_LINK_STYLE}
+        style={CANCELLED_VENUE_LINK_STYLE}
       >
         {copy.visitVenueWebsite}
-        <ExternalLinkIcon />
+        <ChevronRight size={16} aria-hidden />
       </a>
     );
   }

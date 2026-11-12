@@ -12,11 +12,24 @@ const twoHoursAgo = () => new Date(Date.now() - 2 * 3600_000).toISOString();
 afterEach(cleanup);
 
 describe('LiveReportBanner', () => {
-  it('keeps only the age for a crawled cancellation, no "0 confirms"', () => {
+  it('names the venue calendar on a crawled cancellation, no "0 confirms"', () => {
     render(<LiveReportBanner status="cancelled" promotedAt={twoHoursAgo()} />);
 
     expect(screen.getByText(copy.headlines.cancelled)).toBeTruthy();
+    expect(screen.getByText(copy.fromVenueCalendar('2h ago'))).toBeTruthy();
     expect(screen.queryByText(/confirms/)).toBeNull();
+  });
+
+  it('renders the second sentence under the headline when given one', () => {
+    render(
+      <LiveReportBanner
+        status="cancelled"
+        promotedAt={twoHoursAgo()}
+        body={copy.cancelledBody.venue}
+      />,
+    );
+
+    expect(screen.getByText(copy.cancelledBody.venue)).toBeTruthy();
   });
 
   it('keeps the confirms on a sold-out report that carries a count', () => {

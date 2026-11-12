@@ -219,6 +219,9 @@ export default async function EventDetailPage({
       event={event}
       reports={reports}
       currentUserId={userId ?? null}
+      // Same choice as the cancelled CTA below: refund info from the vendor
+      // when there's a ticket link, else the venue's page.
+      cancelledRefund={!safeTicketUrl && ctaHref ? 'venue' : 'vendor'}
     />
   );
 

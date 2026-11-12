@@ -185,6 +185,16 @@ export const REPORTING_COPY = {
       `Reported by @${handle} · ${confirmCount} confirms · ${timeAgo}`,
     reportedAnonymous: (confirmCount: number, timeAgo: string) =>
       `${confirmCount} confirms · ${timeAgo}`,
+    // A status the crawler read off the venue's own calendar: no reporter, no
+    // confirms (addendum 2, 13-cancelled-variants/event-cancelled-by-crawler).
+    fromVenueCalendar: (timeAgo: string) =>
+      `From the venue's calendar · ${timeAgo}`,
+    // A cancelled card's second sentence names who handles the refund: the
+    // ticket vendor, or the venue when its website is the only link we have.
+    cancelledBody: {
+      vendor: "The show's off. Contact your ticket vendor for refund details.",
+      venue: "The show's off. Check with the venue about refunds.",
+    },
   },
 
   // ── PendingSoldOutCard ───────────────────────────────────────────
