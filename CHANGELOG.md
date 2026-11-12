@@ -1,3 +1,13 @@
+## [1.335.1](https://github.com/featherweight-design/concert-crawl/compare/v1.335.0...v1.335.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** build the cancelled card's source line and venue CTA to addendum 2 ([a8e9698](https://github.com/featherweight-design/concert-crawl/commit/a8e969851309290a565c2bc0549d7d65ac6394d8))
+* **web:** lead a cancelled show with its status card ([3b0dc91](https://github.com/featherweight-design/concert-crawl/commit/3b0dc917a127ad8870a4b32f3dfb6d96f5186422))
+* **web:** lead a postponed show with its status card too, and hoist the CTA ([717d5b7](https://github.com/featherweight-design/concert-crawl/commit/717d5b723efb6babb5ae17db024a2fe42bec68e5))
+* **web:** match the cancelled card's sentence to the CTA's sold-out order ([36c9658](https://github.com/featherweight-design/concert-crawl/commit/36c96583e33ea52dc7664c3be2df5689eae60ed4))
+
 # [1.335.0](https://github.com/featherweight-design/concert-crawl/compare/v1.334.1...v1.335.0) (2026-11-12)
 
 
