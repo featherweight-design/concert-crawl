@@ -183,7 +183,11 @@ describe('GET /v1/events', () => {
     // priceByTier corroborated-rows query — closes #787. Terminal at .where().
     // mockEvent.priceSource is 'structured_data' so the community-vendor query
     // is skipped, but the priceByTier query runs for every visible event ID.
-    // Empty array → priceByTier ends up null for the row.
+    // Empty array → priceByTier ends up null for the row. The loader's
+    // price-under-check EXISTS subquery (currentPriceCondition) is built
+    // first — its .where() runs while the batch query's arguments are
+    // evaluated, never awaited on its own.
+    mockDb.where.mockReturnValueOnce(mockDb); // subquery
     mockDb.where.mockResolvedValueOnce([]);
 
     const res = await createApp().request('/v1/events');

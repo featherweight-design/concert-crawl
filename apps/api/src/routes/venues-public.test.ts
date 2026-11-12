@@ -209,7 +209,10 @@ describe('GET /v1/venues/:slug', () => {
     // events: select().from().where().orderBy().limit() → [mockEvent]
     mockDb.where.mockReturnValueOnce(mockDb);
     mockDb.limit.mockResolvedValueOnce([mockEvent]);
-    // priceByTier batch: select().from().where() → no corroborated rows
+    // priceByTier batch (the shared loader): its price-under-check EXISTS
+    // subquery's .where() runs first while the batch query's arguments are
+    // evaluated, then select().from().where() → no rows.
+    mockDb.where.mockReturnValueOnce(mockDb); // subquery
     mockDb.where.mockResolvedValueOnce([]);
 
     const res = await createApp().request('/v1/venues/test-venue');
@@ -235,9 +238,14 @@ describe('GET /v1/venues/:slug', () => {
     mockDb.limit.mockResolvedValueOnce([
       { ...mockEvent, ticketPriceMin: '439', priceSource: 'community' },
     ]);
-    // vendor lookup (community events): select().from().where().orderBy() → []
+    // vendor lookup (community events): its price-under-check EXISTS
+    // subquery's .where() runs first, then select().from().where().orderBy()
+    // → []
+    mockDb.where.mockReturnValueOnce(mockDb); // subquery
     mockDb.where.mockReturnValueOnce(mockDb);
     mockDb.orderBy.mockResolvedValueOnce([]);
+    // priceByTier batch (the shared loader): its subquery's .where() first.
+    mockDb.where.mockReturnValueOnce(mockDb); // subquery
     // priceByTier batch: two corroborated tiers for this event. GA $94 is the
     // cheapest; VIP $439 was confirmed later. compareBlocks sorts cheapest
     // headline first, so priceByTier[0] must be the $94 GA block.
