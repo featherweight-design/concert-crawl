@@ -37,6 +37,7 @@ import { AccountMenuContext, useAccountMenu } from './account-menu-context';
 import type { AccountMenuState } from './account-menu-context';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
+import type { SheetDragZone } from '@/lib/hooks/useSheetDrag';
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
 
@@ -520,6 +521,12 @@ interface MenuBodyProps {
   onBackToMenu: () => void;
   onNavigateAway: () => void;
   surfaceRef: React.RefObject<HTMLDivElement | null>;
+  /**
+   * The phone sheet's drag-down grab zone for the identity card. The board
+   * draws no handle on this sheet, so the card is what you pull. The desktop
+   * popover passes nothing.
+   */
+  dragZone?: SheetDragZone;
 }
 
 /**
@@ -703,6 +710,7 @@ function MenuBody({
   avatarColor,
   isSignedIn,
   onOpenNotifications,
+  dragZone,
 }: MenuBodyProps) {
   if (!isSignedIn) {
     return (
@@ -736,7 +744,9 @@ function MenuBody({
     <>
       {/* Identity card */}
       <div
+        {...dragZone}
         style={{
+          ...dragZone?.style,
           padding: '14px 14px 12px',
           display: 'flex',
           alignItems: 'center',
@@ -1008,7 +1018,10 @@ function UserMenuSheet(props: MenuBodyProps) {
             : { overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }
         }
       >
-        <MenuShellContent props={props} panelClosable />
+        <MenuShellContent
+          props={{ ...props, dragZone: drag.zoneProps }}
+          panelClosable
+        />
       </div>
     </div>
   );
