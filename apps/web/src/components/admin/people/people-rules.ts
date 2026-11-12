@@ -26,6 +26,23 @@ export type Chip = (typeof CHIPS)[number];
 export const personHref = (userId: string): string =>
   `/admin/users/${encodeURIComponent(userId)}`;
 
+/** People who joined with a code (5b's "See all N"), by the code as written. */
+export const peopleWithCodeHref = (code: string): string =>
+  `/admin/people?code=${encodeURIComponent(code)}`;
+
+/**
+ * The code a `?code=` names, as written: the param is the code ("REDROCKS"),
+ * or its id on a link made before it was.
+ */
+export const codeNameFor = (
+  param: string,
+  codes: readonly { id: string; code: string }[] | null,
+): string | null =>
+  codes?.find(
+    (each) =>
+      each.id === param || each.code.toUpperCase() === param.toUpperCase(),
+  )?.code ?? null;
+
 /**
  * Role chip tones, from `07/people`: Beta signal, Admin accent, Member
  * neutral. Promoter and Staff are undrawn (🔸 in the design review): Staff

@@ -19,6 +19,7 @@ import {
   roleLabel,
   shortDate,
 } from './code-rules';
+import { peopleWithCodeHref } from '../people/people-rules';
 import { CodeSurface, CodeTitle } from './CodeSurface';
 import { SeatsBar } from './SeatsBar';
 
@@ -244,7 +245,7 @@ export const CodePanel = ({
         {/* A3 5b row 8: opens People filtered to this code. */}
         {joined && joined.total > joined.data.length && (
           <Link
-            href={`/admin/people?code=${encodeURIComponent(code.code)}`}
+            href={peopleWithCodeHref(code.code)}
             prefetch={false}
             style={{
               display: 'inline-block',
