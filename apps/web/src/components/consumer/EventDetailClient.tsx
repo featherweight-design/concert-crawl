@@ -31,6 +31,7 @@ import { PendingStack } from '@/components/consumer/multi-tier/PendingStack';
 import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner';
 import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard';
 import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner';
+import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
 import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink';
 import { ReportSheet } from '@/components/consumer/reporting/ReportSheet';
 import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm';
@@ -149,11 +150,21 @@ function findPendingReport(
 // Renders above the event title: LiveReportBanner when the event is promoted,
 // PendingReportBanner when there is an unresolved community report.
 
+interface EventDetailBannersProps extends EventDetailSharedProps {
+  /**
+   * Who handles a cancelled show's refund, from the CTA's own link choice:
+   * the vendor (a ticket URL) or the venue (only its page). Picks the card's
+   * second sentence. Defaults to the vendor, as the no-link board does.
+   */
+  cancelledRefund?: 'vendor' | 'venue';
+}
+
 export function EventDetailBanners({
   event,
   reports,
   currentUserId: _currentUserId,
-}: EventDetailSharedProps) {
+  cancelledRefund = 'vendor',
+}: EventDetailBannersProps) {
   const { getToken } = useAuth();
   const router = useRouter();
   const [confirmSheetOpen, setConfirmSheetOpen] = useState(false);
@@ -264,6 +275,11 @@ export function EventDetailBanners({
               ? { confirmCount: liveConfirmCount }
               : {})}
             reporter={liveReporter}
+            body={
+              liveReportStatus === 'cancelled'
+                ? REPORTING_COPY.liveReportBanner.cancelledBody[cancelledRefund]
+                : undefined
+            }
           />
         )}
 
