@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { formatInviteCodeInput, isCompleteInviteCode } from './invite-code';
+import {
+  charactersRemaining,
+  formatInviteCodeInput,
+  isCompleteInviteCode,
+} from './invite-code';
+
+describe('charactersRemaining', () => {
+  it.each([
+    ['BETA-3F', 7],
+    ['BETA', 10],
+    ['RED', 1],
+    ['B', 3],
+  ])('counts %j as %i short', (value, remaining) => {
+    expect(charactersRemaining(value)).toBe(remaining);
+  });
+});
 
 describe('formatInviteCodeInput', () => {
   it.each([

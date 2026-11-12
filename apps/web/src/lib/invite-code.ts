@@ -1,7 +1,23 @@
 import {
   CUSTOM_INVITE_CODE_MAX_LENGTH,
+  CUSTOM_INVITE_CODE_MIN_LENGTH,
+  RESERVED_INVITE_CODE_PREFIX,
   isInviteCodeShape,
 } from '@concert-crawl/types';
+
+/** `BETA-XXXX-XXXX`, dashes included. */
+const GENERATED_INVITE_CODE_LENGTH = 14;
+
+/**
+ * How many characters an incomplete code still needs, for the hint under the
+ * field. A value heading for the generated shape counts toward its 14; any
+ * other value is a custom code short of its minimum of 4. (`B`, `BE` and `BET`
+ * could be either, and count toward the shorter goal.)
+ */
+export const charactersRemaining = (value: string): number =>
+  value.startsWith(RESERVED_INVITE_CODE_PREFIX)
+    ? GENERATED_INVITE_CODE_LENGTH - value.length
+    : Math.max(CUSTOM_INVITE_CODE_MIN_LENGTH - value.length, 0);
 
 /**
  * An invite code is either generated, `BETA-XXXX-XXXX`, or custom: 4 to 20

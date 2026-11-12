@@ -76,7 +76,7 @@ export const LANDING_COPY = {
   invite: {
     eyebrow: 'Got an invite?',
     fieldLabel: 'Invite code',
-    placeholder: 'BETA-XXXX-XXXX',
+    placeholder: 'Your code',
     redeem: 'Redeem',
     noCode: 'No code yet?',
     signInPrompt: 'Already have an account?',
