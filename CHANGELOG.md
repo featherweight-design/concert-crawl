@@ -1,3 +1,28 @@
+# [1.355.0](https://github.com/featherweight-design/concert-crawl/compare/v1.354.0...v1.355.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** key ip limits to a canonical /64 and share one service-key check ([7223b2e](https://github.com/featherweight-design/concert-crawl/commit/7223b2e4977cb92edbbf0529d3acd65c31385e48))
+* key invite-code miss limit to the visitor ip, not the web function ([8561b11](https://github.com/featherweight-design/concert-crawl/commit/8561b11a05b068016570ea6eca4a3be64af90361))
+* **web:** address the review on the invite codes list (5b A) ([70f6afa](https://github.com/featherweight-design/concert-crawl/commit/70f6afaa2342a64bd697a7a7b9407cb5b5fb14a8))
+* **web:** draw the invite codes loading state in the board's shape (5b A) ([2151dbf](https://github.com/featherweight-design/concert-crawl/commit/2151dbffd7e8e7835b169dde170fea4979f53149))
+* **web:** leave the phone title to the shell bar and mark the loaded list (5b A) ([5824d1c](https://github.com/featherweight-design/concert-crawl/commit/5824d1c214ea3c815b63387bb1d607ff0314dc20))
+* **web:** match the drawn made-by width and phone tab counts (5b A) ([b0c13fe](https://github.com/featherweight-design/concert-crawl/commit/b0c13fe42cdc65b1f74455f9ff4c4854c93fed60))
+* **web:** set the invite codes title at the drawn 28px (5b A) ([ef3ac9d](https://github.com/featherweight-design/concert-crawl/commit/ef3ac9d1f884d70d50509936b7d62eeeb7f4b7a1))
+* **web:** sheet drag review fixes and tests ([cf397c5](https://github.com/featherweight-design/concert-crawl/commit/cf397c5ca340507e58c1e8700c2f75e3a5605415))
+* **web:** show the not-yet-wired New code as unavailable (5b A) ([8302835](https://github.com/featherweight-design/concert-crawl/commit/830283528fa860a7df67c373dd682c45c7ebb608))
+* **web:** the sheet drag hook no longer needs window.matchMedia ([00bc2c0](https://github.com/featherweight-design/concert-crawl/commit/00bc2c050984d1cc2c72cc19c9f952d4226e573f))
+
+
+### Features
+
+* **api:** tag test accounts and filter the people list by invite code ([58ace36](https://github.com/featherweight-design/concert-crawl/commit/58ace36ca4ba844e14c9f7b5403cd1ba10af0f8e))
+* **web:** drag a mobile menu or sheet down to close it ([dca193b](https://github.com/featherweight-design/concert-crawl/commit/dca193bc4bbc81ea0d284c5d4fa29876061ffbe2))
+* **web:** rebuild the invite codes list on the admin redesign (5b A) ([4d27b2a](https://github.com/featherweight-design/concert-crawl/commit/4d27b2a82c9cbcd1340d0d0fa0e12bb19b6795f9))
+* **web:** release note for drag-down sheets ([607de58](https://github.com/featherweight-design/concert-crawl/commit/607de58f6418d11fd2f88eb4b1439a13ab62b16c))
+* **web:** the account menu sheet is pulled by its identity card ([76c109d](https://github.com/featherweight-design/concert-crawl/commit/76c109da4dd0e511aead777f77aea3dae24bd62b))
+
 # [1.354.0](https://github.com/featherweight-design/concert-crawl/compare/v1.353.0...v1.354.0) (2026-11-12)
 
 
