@@ -764,6 +764,13 @@
       "when": 1794900000000,
       "tag": "0109_venue_hidden_reason_and_paused_by",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1795000000000,
+      "tag": "0110_user_event_dismissals",
+      "breakpoints": true
     }
   ]
 }

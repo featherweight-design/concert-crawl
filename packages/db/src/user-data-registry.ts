@@ -95,6 +95,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'Excluded from the generic export — see WATCHING_EXPORT_KEY below.',
   },
   {
+    tableName: 'user_event_dismissals',
+    disposition: 'delete',
+    userIdColumn: 'user_id',
+    otherUserIdColumns: [],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Which No longer listed shows a person hid from their own lists. A ' +
+      'preference with no value to anyone else, removed with the account; ' +
+      'not part of the generic export, like the Watching rows it qualifies.',
+  },
+  {
     tableName: 'user_artist_follows',
     disposition: 'delete',
     userIdColumn: 'user_id',
