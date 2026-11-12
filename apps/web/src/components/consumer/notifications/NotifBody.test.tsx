@@ -701,7 +701,7 @@ describe('NotifBody — B+ states', () => {
   it('draws five skeleton rows to the board measurements (addendum 3)', () => {
     const { container } = render(<NotifBody state="loading" now={NOW} />);
     const rows = Array.from(
-      container.querySelectorAll<HTMLElement>('[role="status"] > div'),
+      container.querySelectorAll<HTMLElement>('[role="status"] ~ div'),
     );
     expect(rows.map((row) => row.style.opacity)).toEqual([
       '1',

@@ -844,14 +844,17 @@ describe.each([
     ).toBeInTheDocument();
   });
 
-  it('renders the loading state as a polite busy region', async () => {
+  it('renders the loading state as a polite status region', async () => {
     signIn();
     fetchNotifications.mockReturnValue(new Promise(() => {}));
     await openPanel();
-    const busy = screen
+    const status = screen
       .getAllByRole('status')
-      .find((el) => el.getAttribute('aria-busy') === 'true');
-    expect(busy).toBeTruthy();
+      .find((el) => el.textContent === NOTIFICATIONS_COPY.loading);
+    expect(status).toBeTruthy();
+    expect(status?.getAttribute('aria-live')).toBe('polite');
+    expect(status?.hasAttribute('aria-busy')).toBe(false);
+    expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
     expect(screen.queryByRole('list')).toBeNull();
   });
 });
