@@ -1,3 +1,13 @@
+## [1.334.1](https://github.com/featherweight-design/concert-crawl/compare/v1.334.0...v1.334.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address the 320 review: 360 boundary, Redeem padding, exact class test ([2957ceb](https://github.com/featherweight-design/concert-crawl/commit/2957ceb42b47bbffdeb36258896ae43a39f8b1c9))
+* **web:** address the 320px fix review ([1c350bb](https://github.com/featherweight-design/concert-crawl/commit/1c350bbac384d6e083c6a0cd5128fafbe1c13196))
+* **web:** build the 320 offline pill and invite field to Design's addendum 2 ([02cf3d5](https://github.com/featherweight-design/concert-crawl/commit/02cf3d5fd2c8ccf0863e8afacb281f63bc5a8cd8))
+* **web:** keep the offline pill and the invite landing inside 320px ([74b8c0b](https://github.com/featherweight-design/concert-crawl/commit/74b8c0bac357a3c0f05e2039d94265f3dc120fc0))
+
 # [1.334.0](https://github.com/featherweight-design/concert-crawl/compare/v1.333.0...v1.334.0) (2026-11-12)
 
 
