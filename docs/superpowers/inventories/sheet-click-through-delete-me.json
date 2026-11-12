@@ -1,0 +1,50 @@
+{
+  "feature": "Delete-account sheet focus handling (/me)",
+  "note": "Focus trap, Escape and focus return are keyboard behaviours a screenshot cannot show (unit tests and a hand walk cover them). This sheet proves only that the OPEN state still renders at 320 and 390. /me mounts ThemeSync, which re-applies the account's saved theme (Drip on this scratch account), so one Drip pass runs. Read-only: the confirm input is never touched.",
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 640,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    }
+  ],
+  "themes": [
+    {
+      "label": "drip",
+      "dataTheme": "drip",
+      "storage": {
+        "cc-theme": "drip"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "delete-account-sheet",
+      "label": "/me: delete-account sheet open",
+      "steps": [
+        {
+          "goto": "/me",
+          "settle": 1000
+        },
+        {
+          "clickRole": "button",
+          "name": "Delete my account"
+        },
+        {
+          "waitDialog": "Delete your account"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}

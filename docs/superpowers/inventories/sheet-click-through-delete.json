@@ -1,0 +1,46 @@
+{
+  "feature": "Filter sheet portal and delete-account sheet focus handling",
+  "note": "This PR portals the mobile filter sheet to the body and adds a focus trap, Escape and focus return to the delete-account sheet. Those are DOM and keyboard behaviours a screenshot cannot show; they are covered by unit tests and a hand walk. These sheets prove only that the OPEN states still render at 320 and 390 in Electric, Light and Pulse after the change. All rows are read-only: the delete form is never filled or submitted. The /me delete-account row is in sheet-click-through-delete-me.json: /me re-applies the account's saved theme (Drip on this scratch account), so it runs one Drip pass.",
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 640,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    }
+  ],
+  "rows": [
+    {
+      "id": "venues-filter-sheet",
+      "label": "/venues: capacity filter sheet open",
+      "steps": [
+        {
+          "goto": "/venues",
+          "settle": 1000
+        },
+        {
+          "wait": "button:has-text(\"Any capacity\"):visible"
+        },
+        {
+          "settle": 2000
+        },
+        {
+          "clickRole": "button",
+          "name": "Any capacity"
+        },
+        {
+          "waitDialog": "filter$"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
