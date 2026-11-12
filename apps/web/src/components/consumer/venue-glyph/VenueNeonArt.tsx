@@ -11,7 +11,7 @@ import { GlyphGradient, GlyphShapes } from './VenueGlyph';
  * sign, and its pale gradients vanish on the Light theme's ground. The page
  * blends the panel into the theme with its own scrim.
  */
-const NIGHT_GROUND = '#0B0D1F';
+const NIGHT_GROUND = '#0B0D1F'; // fwd-allow-hex: board art colour
 
 interface VenueNeonArtProps {
   glyphKey: VenueGlyphKey;
