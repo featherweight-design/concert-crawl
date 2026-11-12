@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
-import { Avatar } from './Avatar';
+import { Bell, Eye, Link2, Ticket, Users, X, Tag } from 'lucide-react';
+import { AvatarRing } from './AvatarRing';
+import { PanelHeading } from './PanelHeading';
+import { ProfileHero } from './ProfileHero';
+import { SIGNAL_TO_ACCENT } from './definitions/styles';
 import { CredChip } from './CredChip';
 import { ThemePickerInline } from './ThemePickerInline';
 import { MySubmissionsList } from './MySubmissionsList';
@@ -17,6 +21,7 @@ import { NotificationsSection } from './notifications/NotificationsSection';
 import { NOTIFICATIONS_COPY } from './notifications/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
+import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark';
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark';
 import type {
@@ -25,6 +30,7 @@ import type {
 } from '@concert-crawl/types';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
+const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
 
 type NavSection =
   | 'profile'
@@ -59,85 +65,13 @@ export const resolveSection = (
 };
 
 const NAV_ICONS: Record<NavSection, React.ReactNode> = {
-  profile: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="6" r="2.6" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M2.5 13.5c.6-2.3 2.7-3.5 5.5-3.5s4.9 1.2 5.5 3.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  submissions: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M5 4h8M5 8h8M5 12h8"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  appearance: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="6" cy="6" r=".9" fill="currentColor" />
-      <circle cx="10" cy="6" r=".9" fill="currentColor" />
-      <circle cx="11" cy="9" r=".9" fill="currentColor" />
-    </svg>
-  ),
-  connections: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M6.8 9.2l2.4-2.4M8.5 4.5l1-1a2.3 2.3 0 013.2 3.2l-1 1M7.5 8.3l-1 1a2.3 2.3 0 003.2 3.2l1-1"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  notifications: (
-    // Bell glyph — small enough to match the neighboring 16px icons.
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M8 2v.8M5 6a3 3 0 016 0v3l1.2 2H3.8L5 9V6z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M6.5 12.5a1.5 1.5 0 003 0"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  account: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M8 2L3 4v4.5c0 3.3 2.5 5.4 5 6 2.5-.6 5-2.7 5-6V4L8 2z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  danger: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M3 5h10M6 5V3.5h4V5M5 5l.7 8.5h4.6L11 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
+  profile: <Users size={16} aria-hidden />,
+  submissions: <Tag size={16} aria-hidden />,
+  appearance: <Eye size={16} aria-hidden />,
+  connections: <Link2 size={16} aria-hidden />,
+  notifications: <Bell size={16} aria-hidden />,
+  account: <Ticket size={16} aria-hidden />,
+  danger: <X size={16} aria-hidden />,
 };
 
 interface SettingsRouteDesktopProps {
@@ -197,74 +131,31 @@ export function SettingsRouteDesktop({
 
   const profilePanel = (
     <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-[22px] font-extrabold text-fg">
-          {SETTINGS_COPY.profileSection}
-        </h2>
-        <p className="text-[13px] text-fg-muted">
-          {SETTINGS_COPY.profileSectionSub}
-        </p>
-      </div>
-      {/* Identity card */}
-      <div className="flex items-start gap-3.5 rounded-2xl border border-border bg-surface-1 p-4">
-        <Avatar
-          handle={profile.handle}
-          avatarColor={profile.avatarColor}
-          size={56}
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="min-w-0 break-words text-[20px] font-black tracking-[-0.02em] text-fg">
-            {profile.handle ? (
-              <>
-                <span className="font-bold text-fg-muted">@</span>
-                {profile.handle}
-              </>
-            ) : (
-              SETTINGS_COPY.anonymousLabel
-            )}
-          </span>
-          <span
-            className="text-[11px] font-semibold text-fg-muted"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {profile.city || SETTINGS_COPY.cityFallback} ·{' '}
-            {SETTINGS_COPY.heroJoinedLabel} {profile.joined}
-          </span>
-          <div className="mt-0.5">
-            <CredChip cred={profile.cred} size="sm" showTooltip />
-          </div>
-          {isAnon && (
-            <span className="mt-0.5 text-[11px] italic text-fg-subtle">
-              {SETTINGS_COPY.heroAnonLead}{' '}
-              <em>{SETTINGS_COPY.anonymousLabel}</em>.{' '}
-              {SETTINGS_COPY.heroAnonTail}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={openEdit}
-          className="shrink-0 cursor-pointer rounded-lg border px-3 py-1.5 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-          style={{
-            background: 'var(--surface-2)',
-            borderColor: 'var(--border-strong)',
-          }}
-        >
-          {SETTINGS_COPY.heroEditButton}
-        </button>
-      </div>
+      <PanelHeading
+        title={SETTINGS_COPY.profileSection}
+        sub={SETTINGS_COPY.profileSectionSub}
+      />
+      <ProfileHero
+        layout="card"
+        handle={profile.handle}
+        avatarColor={profile.avatarColor}
+        avatarSecondColor={profile.avatarSecondColor}
+        displayRole={profile.displayRole}
+        roleBadge={profile.roleBadge}
+        city={profile.city}
+        joined={profile.joined}
+        cred={profile.cred}
+        onEdit={openEdit}
+      />
       {/* Context info card */}
       {!isAnon ? (
-        <div className="rounded-xl border border-border bg-surface-1 px-4 py-3.5 text-[13px] leading-relaxed text-fg-muted">
+        <div className="rounded-xl border border-border bg-surface-1 px-5 py-4 text-[14px] leading-relaxed text-fg-muted">
           {SETTINGS_COPY.handleExplainerLead}{' '}
           <strong style={{ color: 'var(--signal)' }}>@{profile.handle}</strong>{' '}
           {SETTINGS_COPY.handleExplainerTail}
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface-1 px-4 py-4">
+        <div className="rounded-xl border border-border bg-surface-1 px-5 py-4">
           <p className="text-[14px] font-semibold text-fg">
             {SETTINGS_COPY.anonymousCardLead}{' '}
             <em>{SETTINGS_COPY.anonymousCardLabel}</em>
@@ -291,16 +182,16 @@ export function SettingsRouteDesktop({
 
   const submissionsPanel = (
     <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-[22px] font-extrabold text-fg">
-          {SETTINGS_COPY.submissionsSection}
-        </h2>
-        <p className="text-[13px] text-fg-muted">
-          {SETTINGS_COPY.submissionsTotal(profile.submissionCount)}
-          {confirmedCount > 0 &&
-            SETTINGS_COPY.submissionsConfirmedSuffixDesktop(confirmedCount)}
-        </p>
-      </div>
+      <PanelHeading
+        title={SETTINGS_COPY.submissionsSection}
+        sub={
+          <>
+            {SETTINGS_COPY.submissionsTotal(profile.submissionCount)}
+            {confirmedCount > 0 &&
+              SETTINGS_COPY.submissionsConfirmedSuffixDesktop(confirmedCount)}
+          </>
+        }
+      />
       <MySubmissionsList
         submissions={submissions}
         totalCount={profile.submissionCount}
@@ -329,94 +220,119 @@ export function SettingsRouteDesktop({
       {/* Sidebar + Panel */}
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="w-60 shrink-0 border-r border-border bg-bg-elevated">
-          <div className="sticky top-14 flex flex-col p-3">
-            {/* User mini card */}
-            <div
-              className="mb-3 flex items-center gap-2.5 rounded-xl p-2.5"
-              style={{ background: 'var(--surface-1)' }}
-            >
-              <Avatar
-                handle={profile.handle}
-                avatarColor={profile.avatarColor}
-                size={36}
-              />
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-[13px] font-bold text-fg">
-                  {profile.handle
-                    ? `@${profile.handle}`
-                    : SETTINGS_COPY.anonymousLabel}
-                </span>
-                <span
-                  className="text-[10px] text-fg-muted"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                >
-                  {profile.city || SETTINGS_COPY.cityFallback} ·{' '}
-                  {SETTINGS_COPY.heroJoinedLabel} {profile.joined}
-                </span>
-                <CredChip cred={profile.cred} size="sm" />
+        <aside className="w-64 shrink-0 border-r border-border bg-bg-elevated">
+          <div className="sticky top-14 flex h-[calc(100vh-3.5rem)] flex-col">
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3.5">
+              {/* User mini card */}
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface-1 p-3">
+                <AvatarRing
+                  handle={profile.handle}
+                  avatarColor={profile.avatarColor}
+                  avatarSecondColor={profile.avatarSecondColor}
+                  size={40}
+                />
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="truncate text-[15px] font-extrabold text-fg">
+                    {profile.handle
+                      ? `@${profile.handle}`
+                      : SETTINGS_COPY.anonymousLabel}
+                  </span>
+                  <span
+                    className="truncate text-[10px] text-fg-muted"
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                  >
+                    {profile.city || SETTINGS_COPY.cityFallback} ·{' '}
+                    {SETTINGS_COPY.heroJoinedLabel} {profile.joined}
+                  </span>
+                  <div>
+                    <CredChip cred={profile.cred} size="sm" />
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Nav items */}
-            <div className="flex flex-col gap-0.5">
-              {navItems.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveSection(key)}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                  style={{
-                    background:
-                      activeSection === key
-                        ? 'var(--surface-2)'
-                        : 'transparent',
-                    color:
-                      key === 'danger'
-                        ? 'var(--danger)'
-                        : activeSection === key
-                          ? 'var(--fg)'
-                          : 'var(--fg-muted)',
-                    fontWeight: activeSection === key ? 700 : 500,
-                  }}
-                >
-                  {NAV_ICONS[key]}
-                  {label}
-                </button>
-              ))}
+              {/* Nav items. The active one carries a left edge and a wash
+                  fading out to the right; Danger zone keeps its own red. */}
+              <nav aria-label={SETTINGS_COPY.desktopNavAriaLabel}>
+                <ul className="flex flex-col gap-1">
+                  {navItems.map(({ key, label }) => {
+                    const active = activeSection === key;
+                    const tone =
+                      key === 'danger' ? 'var(--danger)' : 'var(--signal)';
+                    return (
+                      <li key={key}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveSection(key)}
+                          aria-current={active ? 'page' : undefined}
+                          className="relative flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-[14px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                          style={{
+                            background: active
+                              ? `linear-gradient(90deg, color-mix(in oklch, ${tone} 16%, var(--surface-1)), transparent)`
+                              : 'transparent',
+                            color:
+                              key === 'danger'
+                                ? 'var(--danger)'
+                                : active
+                                  ? 'var(--fg)'
+                                  : 'var(--fg-muted)',
+                            fontWeight: active ? 700 : 500,
+                          }}
+                        >
+                          {active && (
+                            <span
+                              aria-hidden
+                              className="absolute inset-y-0 left-0 w-0.5 rounded-full"
+                              style={{
+                                background:
+                                  key === 'danger'
+                                    ? 'var(--danger)'
+                                    : SIGNAL_TO_ACCENT,
+                              }}
+                            />
+                          )}
+                          <span
+                            className="flex shrink-0"
+                            style={{
+                              color: active ? tone : undefined,
+                            }}
+                          >
+                            {NAV_ICONS[key]}
+                          </span>
+                          {label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
             </div>
+            <UserMenuVersionFooter
+              build={APP_VERSION.split(' · ')[0] ?? APP_VERSION}
+            />
           </div>
         </aside>
 
         {/* Panel */}
-        <main className="flex-1 px-8 py-8">
-          <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <main className="min-w-0 flex-1 px-8 py-10">
+          <div style={{ maxWidth: 660, margin: '0 auto' }}>
             {activeSection === 'profile' && profilePanel}
 
             {activeSection === 'appearance' && (
               <div className="flex flex-col gap-5">
-                <div>
-                  <h2 className="text-[22px] font-extrabold text-fg">
-                    {SETTINGS_COPY.appearanceSection}
-                  </h2>
-                  <p className="text-[13px] text-fg-muted">
-                    {SETTINGS_COPY.appearanceSectionSub}
-                  </p>
-                </div>
+                <PanelHeading
+                  title={SETTINGS_COPY.appearanceSection}
+                  sub={SETTINGS_COPY.appearanceSectionSub}
+                />
                 <ThemePickerInline />
               </div>
             )}
 
             {activeSection === 'connections' && spotifyEnabled && (
               <div className="flex flex-col gap-5">
-                <div>
-                  <h2 className="text-[22px] font-extrabold text-fg">
-                    {SPOTIFY_COPY.connectEntry.sectionTitle}
-                  </h2>
-                  <p className="text-[13px] text-fg-muted">
-                    {SPOTIFY_COPY.connectEntry.sectionSub}
-                  </p>
-                </div>
+                <PanelHeading
+                  title={SPOTIFY_COPY.connectEntry.sectionTitle}
+                  sub={SPOTIFY_COPY.connectEntry.sectionSub}
+                />
                 <ConnectionsPanel />
               </div>
             )}
@@ -429,14 +345,10 @@ export function SettingsRouteDesktop({
 
             {activeSection === 'account' && (
               <div className="flex flex-col gap-5">
-                <div>
-                  <h2 className="text-[22px] font-extrabold text-fg">
-                    {SETTINGS_COPY.accountSection}
-                  </h2>
-                  <p className="text-[13px] text-fg-muted">
-                    {SETTINGS_COPY.accountSectionSub}
-                  </p>
-                </div>
+                <PanelHeading
+                  title={SETTINGS_COPY.accountSection}
+                  sub={SETTINGS_COPY.accountSectionSub}
+                />
                 <div className="flex flex-col gap-1.5">
                   <div className="flex flex-col rounded-xl border border-border bg-surface-1">
                     {/* Email row */}
@@ -620,14 +532,10 @@ export function SettingsRouteDesktop({
 
             {activeSection === 'danger' && (
               <div className="flex flex-col gap-5">
-                <div>
-                  <h2 className="text-[22px] font-extrabold text-fg">
-                    {SETTINGS_COPY.dangerSection}
-                  </h2>
-                  <p className="text-[13px] text-fg-muted">
-                    {SETTINGS_COPY.dangerSectionSub}
-                  </p>
-                </div>
+                <PanelHeading
+                  title={SETTINGS_COPY.dangerSection}
+                  sub={SETTINGS_COPY.dangerSectionSub}
+                />
                 <DangerZone
                   handle={profile.handle}
                   submissionCount={profile.submissionCount}

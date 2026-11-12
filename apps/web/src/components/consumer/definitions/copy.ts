@@ -1227,7 +1227,9 @@ export const CONSUMER_COPY = {
     },
     appearanceSection: 'Appearance',
     accountSection: 'Account',
-    submissionsSection: 'My submissions',
+    // COPY.md ruling 5: the boards title this "My submissions", but the locked
+    // word is Submitted prices.
+    submissionsSection: 'Submitted prices',
     listsSection: 'Lists',
     dangerSection: 'Danger zone',
     seeAllSubmissions: (submissionCount: number) =>
@@ -1250,10 +1252,11 @@ export const CONSUMER_COPY = {
     profileSection: 'Profile',
     profileSectionSub: 'What other fans see when you submit a price.',
     appearanceSectionSub:
-      'Three flavors. Pick the one that hurts your eyes least.',
+      'Nine themes. Pick the one that hurts your eyes least.',
     accountSectionSub:
       'Your account credentials are managed securely. Click any row to update.',
     dangerSectionSub: 'The exits.',
+    desktopNavAriaLabel: 'Settings sections',
     editProfileDialogAriaLabel: 'Edit profile',
     // Shown when a profile has no city set.
     cityFallback: '—',

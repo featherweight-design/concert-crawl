@@ -11,6 +11,8 @@
 
 export const NOTIFICATIONS_COPY = {
   heading: 'Notifications',
+  // Desktop sub-page subtitle (B+ `more-s-d_notifications`, COPY.md).
+  subhead: 'What reaches you, and how.',
   master: 'Push notifications',
   masterOnDetail: 'On for this device',
   masterOffDetail: 'Off',

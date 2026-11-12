@@ -22,6 +22,7 @@ import {
 import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
 import { ToggleSwitch } from '../connections/ToggleSwitch';
 import { CrewActivityBlock } from './CrewActivityBlock';
+import { PanelHeading } from '../PanelHeading';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
 
 const ARTISTS_COPY = NOTIFICATIONS_COPY.artists;
@@ -278,19 +279,22 @@ export const NotificationsSection = ({
   // PR-7): a push preferences outage has nothing to do with crew activity,
   // which is bell-only, and returning early would take the only mute control
   // off the page with it.
-  const heading = (
-    <h2
-      id={headingId}
-      className={
-        variant === 'desktop'
-          ? 'text-lg font-extrabold text-fg'
-          : 'text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle'
-      }
-      style={variant === 'mobile' ? { fontFamily: 'var(--font-mono)' } : {}}
-    >
-      {NOTIFICATIONS_COPY.heading}
-    </h2>
-  );
+  const heading =
+    variant === 'desktop' ? (
+      <PanelHeading
+        id={headingId}
+        title={NOTIFICATIONS_COPY.heading}
+        sub={NOTIFICATIONS_COPY.subhead}
+      />
+    ) : (
+      <h2
+        id={headingId}
+        className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {NOTIFICATIONS_COPY.heading}
+      </h2>
+    );
 
   if (isError) {
     return (

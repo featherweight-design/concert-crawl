@@ -74,6 +74,7 @@ export function SettingsRoute({
           <ProfileHero
             handle={profile.handle}
             avatarColor={profile.avatarColor}
+            avatarSecondColor={profile.avatarSecondColor}
             displayRole={profile.displayRole}
             roleBadge={profile.roleBadge}
             city={profile.city}
