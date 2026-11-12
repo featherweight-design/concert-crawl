@@ -14,6 +14,7 @@ import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
 import {
   inviteStatus,
+  isPosterCode,
   parseSeats,
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
@@ -38,11 +39,7 @@ export const countPosters = (
 ): number =>
   codes.filter((code) => {
     const status = inviteStatus(code, now);
-    return (
-      code.kind !== 'member' &&
-      code.maxUses > 1 &&
-      (status === 'active' || status === 'full')
-    );
+    return isPosterCode(code) && (status === 'active' || status === 'full');
   }).length;
 
 /** An ended code is one Reactivate can bring back; Full is not ended. */
@@ -64,12 +61,9 @@ export const shortDate = (iso: string): string =>
  * stored. A member's own share code is not a poster whatever its seat cap.
  */
 export const codeLabel = (
-  code: Pick<AdminInviteCode, 'label' | 'maxUses'> &
-    Partial<Pick<AdminInviteCode, 'kind'>>,
+  code: Pick<AdminInviteCode, 'label' | 'maxUses' | 'kind'>,
 ): string | null =>
-  code.kind !== 'member' && code.maxUses > 1
-    ? COPY.posterLabel(code.label)
-    : code.label;
+  isPosterCode(code) ? COPY.posterLabel(code.label) : code.label;
 
 export const makerName = (code: Pick<AdminInviteCode, 'createdByHandle'>) =>
   code.createdByHandle ? `@${code.createdByHandle}` : COPY.formerAdmin;

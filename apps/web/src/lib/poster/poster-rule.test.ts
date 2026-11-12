@@ -18,6 +18,7 @@ import {
 
 const NOW = new Date('2026-11-10T12:00:00Z');
 const open = {
+  kind: 'admin' as const,
   revokedAt: null,
   expiresAt: null,
   maxUses: 50,

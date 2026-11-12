@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { authState } = vi.hoisted(() => ({
-  authState: { current: null as { userId: string } | null },
+  authState: {
+    current: null as {
+      userId: string;
+      sessionClaims?: { metadata?: { role?: string } };
+    } | null,
+  },
 }));
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -18,6 +23,7 @@ import { clearTables, seedUserProfile } from '../test/helpers/seed.js';
 import { testDb } from '../test/helpers/db.js';
 import { MEMBER_CODE_SEATS } from '../lib/invite-code-generation.js';
 import { loadJoinSources } from './admin/lib/people-detail.js';
+import { deleteUserData } from '../lib/user-data.js';
 
 const app = createApp();
 const as = (userId: string | null): void => {
@@ -127,6 +133,38 @@ describe('GET /v1/me/invite', () => {
     expect(JSON.stringify(after)).not.toContain('joiner_');
   });
 
+  it('leaves test accounts out of the count and the strip', async () => {
+    await read();
+    const [row] = await memberRows('user_a');
+    const codeId = row?.id ?? '';
+    await seedUserProfile('real_1', { handle: 'real1' });
+    await seedUserProfile('tester_1', {
+      handle: 'tester1',
+      isTestAccount: true,
+    });
+    await testDb.insert(inviteCodeRedemptions).values([
+      { codeId, userId: 'real_1' },
+      { codeId, userId: 'tester_1' },
+      { codeId, userId: 'no_profile' },
+    ]);
+    const after = await body(await read());
+    expect(after.joined.count).toBe(2);
+    expect(after.joined.faces.map((face) => face.handle)).not.toContain(
+      'tester1',
+    );
+  });
+
+  it('goes with the account: deleting it removes the code, so the link stops admitting people', async () => {
+    await read();
+    const [row] = await memberRows('user_a');
+    await testDb
+      .insert(inviteCodeRedemptions)
+      .values({ codeId: row?.id ?? '', userId: 'joiner_1' });
+    await deleteUserData('user_a');
+    expect(await memberRows('user_a')).toHaveLength(0);
+    expect(await testDb.select().from(inviteCodeRedemptions)).toHaveLength(0);
+  });
+
   it('is rate limited per account', async () => {
     let last = 200;
     for (let index = 0; index < 31; index += 1) {
@@ -142,6 +180,23 @@ describe('a member code in the admin surfaces', () => {
   beforeEach(async () => {
     as('user_a');
     await clearTables();
+  });
+
+  it('cannot be edited by an admin, only revoked', async () => {
+    await read();
+    const [row] = await memberRows('user_a');
+    authState.current = {
+      userId: 'admin_1',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    const res = await app.request(`/v1/admin/invite-codes/${row?.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maxUses: 50 }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'member_code' });
+    expect((await memberRows('user_a'))[0]?.maxUses).toBe(MEMBER_CODE_SEATS);
   });
 
   it('reads as a member join source for people who joined with it, not a poster', async () => {

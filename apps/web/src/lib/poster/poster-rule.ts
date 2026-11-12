@@ -55,13 +55,27 @@ export const seatsTaken = (
 ): number =>
   Math.max(code.useCount, code.usedBy != null || code.usedAt != null ? 1 : 0);
 
-// `kind` is optional so a caller holding only the status fields still works; an
-// absent kind reads as an admin code, which is what every code was before it.
+// `kind` is required, not optional: a caller that drops it from a projection
+// should fail to compile, not quietly treat a member code as a poster.
 type StatusFields = Pick<
   InviteCode,
-  'revokedAt' | 'expiresAt' | 'maxUses' | 'useCount' | 'usedBy' | 'usedAt'
-> &
-  Partial<Pick<InviteCode, 'kind'>>;
+  | 'revokedAt'
+  | 'expiresAt'
+  | 'maxUses'
+  | 'useCount'
+  | 'usedBy'
+  | 'usedAt'
+  | 'kind'
+>;
+
+/**
+ * Is this code a poster? An admin code that admits more than one person. The one
+ * place that rule lives: a member's own share code has a high seat cap too, but
+ * it is a person's, never a poster, so `kind` decides, not `maxUses` alone.
+ */
+export const isPosterCode = (
+  code: Pick<InviteCode, 'kind' | 'maxUses'>,
+): boolean => code.kind !== 'member' && code.maxUses > 1;
 
 export type InviteStatus = 'active' | 'full' | 'expired' | 'revoked';
 
@@ -85,9 +99,7 @@ export const inviteStatus = (code: StatusFields, now: Date): InviteStatus => {
  * never lands on the Posters tab, whatever its `maxUses`.
  */
 export const isPrintable = (code: StatusFields, now: Date): boolean =>
-  code.kind !== 'member' &&
-  code.maxUses > 1 &&
-  inviteStatus(code, now) === 'active';
+  isPosterCode(code) && inviteStatus(code, now) === 'active';
 
 /**
  * Characters one line of the poster's venue list is counted as holding. 10.5 px

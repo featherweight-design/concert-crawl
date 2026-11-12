@@ -521,7 +521,9 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'it, so this is not the unowned table it looks like. The row survives ' +
       'with `used_by` nulled: a redeemed code must not become redeemable again ' +
       'just because its redeemer left. `created_by` and `revoked_by` are ' +
-      'admins and are untouched.',
+      'admins and are untouched, except on a member share code (kind ' +
+      "'member'), where `created_by` is the member: deleteUserData removes " +
+      'that code with the account, so the link stops admitting people.',
   },
   {
     tableName: 'invite_code_redemptions',

@@ -16,6 +16,7 @@ import {
 } from '@/components/admin/primitives';
 import {
   inviteStatus,
+  isPosterCode,
   MAX_SEATS,
   seatsTaken,
   type InviteStatus,
@@ -220,7 +221,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     return [
       copy,
       // The Posters tab can only pick a live code with a seat left.
-      ...(row.kind !== 'member' && row.maxUses > 1 && status === 'active'
+      ...(isPosterCode(row) && status === 'active'
         ? [
             {
               key: 'poster',
