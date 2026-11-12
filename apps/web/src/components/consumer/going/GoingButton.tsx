@@ -373,14 +373,9 @@ export const GoingButton = ({
     // then it is the whole fill (`event-past-d`). A verb never sits on --danger.
     background: isOn ? accent : 'var(--surface-1)',
     border: `1.5px solid ${isOn ? accent : 'var(--border-strong)'}`,
-    color:
-      state === 'past-yes'
-        ? 'var(--fg-on-accent)'
-        : isOn
-          ? ink.text
-          : isDeclined
-            ? 'var(--fg-subtle)'
-            : 'var(--fg)',
+    // Both committed states sit on the venue fill, so both take the
+    // contrast-picked ink: `--fg-on-accent` is white, under AA on Light.
+    color: isOn ? ink.text : isDeclined ? 'var(--fg-subtle)' : 'var(--fg)',
     fontFamily: 'var(--font-ui)',
     fontWeight: 700,
     fontSize: sizes.font,
