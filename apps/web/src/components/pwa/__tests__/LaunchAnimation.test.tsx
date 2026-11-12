@@ -82,7 +82,8 @@ describe('LaunchAnimation', () => {
     render(<LaunchAnimation />);
     const mark = screen.getByTestId('launch-mark');
     expect(mark?.style.width).toBe('96px');
-    expect(mark?.style.transformOrigin).toBe('0px 0px');
+    // jsdom serialises a zero origin as '0 0'; a browser may say '0px 0px'.
+    expect(['0 0', '0px 0px']).toContain(mark?.style.transformOrigin);
     // Addendum 2 item 22: translate(131px, 358px) scale(1.333).
     expect(mark?.style.transform).toBe(
       `translate(131px, 358px) scale(${128 / 96})`,
@@ -100,9 +101,15 @@ describe('LaunchAnimation', () => {
   it('scales the core offset with the viewport so a narrow screen is not cropped', () => {
     const board = markCorner(390, 844, 4.2, false);
     const narrow = markCorner(320, 568, 4.2, false);
-    // Relative to each viewport's centre, the narrow corner sits no further
-    // left than the board's does.
-    expect(narrow.x - 320 / 2).toBeGreaterThanOrEqual(board.x - 390 / 2);
+    // The art is a fixed 4.2 x 96 = 403px wide, so only the core offset moves
+    // the left edge. Board: 55 - 302.4 = -247.4 from centre. At 320 wide the
+    // offset scales by 320/390 = 0.8205 (45.13), giving -257.27. The clamp's
+    // floor (0.8) caps the extra shift at 55 * 0.2 = 11px, so the narrow edge
+    // is never more than 11px further left than the board's.
+    const maxShift = 55 * (1 - 0.8);
+    expect(narrow.x - 320 / 2).toBeGreaterThanOrEqual(
+      board.x - 390 / 2 - maxShift,
+    );
     expect(coreAtFull(320, 568).x).toBeLessThan(160 + 55);
     expect(coreAtFull(320, 568).x).toBeGreaterThan(160);
   });
