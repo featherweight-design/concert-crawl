@@ -1,13 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type {
   CSSProperties,
   PointerEvent as ReactPointerEvent,
   TransitionEvent as ReactTransitionEvent,
 } from 'react';
 import { prefersReducedMotion } from '@/lib/motion';
-import { useMediaQuery } from './useMediaQuery';
 
 /** Finger travel below this is still a tap, so a close button keeps its click. */
 export const DRAG_START_PX = 8;
@@ -27,6 +32,22 @@ export const shouldDismiss = (distance: number, elapsedMs: number): boolean => {
 // The sheet layout switches to a centred modal at 640px; only the bottom sheet
 // is a drag-down surface.
 const SHEET_QUERY = '(max-width: 639px)';
+
+// Not `useMediaQuery`: that one calls `window.matchMedia` outright, and a sheet
+// rendered where there is none (a jsdom test of a surface that merely contains a
+// sheet) must stay a plain sheet rather than throw.
+const useOnPhone = (): boolean => {
+  const subscribe = useCallback((onChange: () => void) => {
+    const mql = window.matchMedia?.(SHEET_QUERY);
+    mql?.addEventListener?.('change', onChange);
+    return () => mql?.removeEventListener?.('change', onChange);
+  }, []);
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia?.(SHEET_QUERY).matches ?? false,
+    () => false,
+  );
+};
 
 interface ActiveDrag {
   pointerId: number;
@@ -69,7 +90,7 @@ export type SheetDragZone = SheetDrag['zoneProps'];
  * middle of a drag or a settle never leaves the sheet pushed down on reopen.
  */
 export function useSheetDrag(onDismiss: () => void, open = true): SheetDrag {
-  const onPhone = useMediaQuery(SHEET_QUERY);
+  const onPhone = useOnPhone();
   const [offset, setOffset] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
   const active = useRef<ActiveDrag | null>(null);
