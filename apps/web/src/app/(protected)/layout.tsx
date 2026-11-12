@@ -2,7 +2,6 @@ import { SentryTierTag } from '@/components/auth/SentryTierTag';
 import { FeedbackEdgeTabGate } from '@/components/consumer/feedback';
 import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush';
 import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate';
-import { LifecycleNudgesGate } from '@/components/consumer/lifecycle-nudges';
 import { FollowNudgeGate } from '@/components/consumer/following/nudge/FollowNudgeGate';
 
 interface ProtectedLayoutProps {
@@ -25,7 +24,6 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       <FeedbackEdgeTabGate />
       <FeatureDropPillGate />
       <OnboardingThemeFlush />
-      <LifecycleNudgesGate />
       <FollowNudgeGate />
       <SentryTierTag />
     </>

@@ -132,7 +132,6 @@ ${
     row('8px 26px 20px', ctaInner),
     footerRow({
       family: 'digest',
-      showManage: false,
       note: FOOTER_NOTE,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),
@@ -166,7 +165,6 @@ ${
     text: renderTextShell({
       body: text,
       family: 'digest',
-      showManage: false,
       note: FOOTER_NOTE,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),

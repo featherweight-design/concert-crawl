@@ -15,7 +15,6 @@ import {
   escapeHtml,
   familyUnsubscribeLabel,
   notificationsUrl,
-  planUrl,
   type EmailFamily,
 } from './layout.js';
 
@@ -39,7 +38,6 @@ ${eyebrow === undefined ? '' : `<td style="text-align: right; vertical-align: mi
 // ── EmFooter ─────────────────────────────────────────────────
 interface FooterInput {
   family: EmailFamily;
-  showManage: boolean;
   note?: string;
   // Per-family one-click unsubscribe URL (digest family, #763 §8.2). When
   // absent, the per-family link falls back to the Settings page like every
@@ -49,7 +47,6 @@ interface FooterInput {
 
 export const footerRow = ({
   family,
-  showManage,
   note,
   unsubscribeUrl,
 }: FooterInput): string =>
@@ -59,7 +56,6 @@ ${note === undefined ? '' : `<div style="font-family: ${FONT}; font-size: 11.5px
 <a href="${escapeHtml(unsubscribeUrl ?? notificationsUrl())}" style="color: ${ME.muted}; text-decoration: underline;">${familyUnsubscribeLabel(family)}</a>
 <span style="color: ${ME.subtle};"> · </span>
 <a href="${escapeHtml(notificationsUrl())}" style="color: ${ME.subtle}; text-decoration: underline;">all email settings</a>
-${showManage ? `<span style="color: ${ME.subtle};"> · </span><a href="${escapeHtml(planUrl())}" style="color: ${ME.subtle}; text-decoration: underline;">manage subscription</a>` : ''}
 </div>
 <div style="font-family: ${MONO}; font-size: 9.5px; color: ${ME.subtle}; margin-top: 12px; letter-spacing: 0.06em;">${LEGAL_LINE}</div>
 </td></tr>`;
