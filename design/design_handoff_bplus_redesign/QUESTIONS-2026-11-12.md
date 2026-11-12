@@ -113,6 +113,15 @@ Both of these already happen on main. Screenshots are available from lane 11 on 
 | 08-prices-and-status/more-st-ev_canc_m, _post_m; addendum 2 13-cancelled-variants/* | The signed-in event page leads with the status card for a cancelled or postponed show. The public share page (/e/:id, PublicEventDetail, a6's B8) mounts no status card, only the cancelled CTA (Refund info, or the outlined Visit venue website). | [Design] Does the public share page show the same status card, a reduced one, or none? This is how main behaves today. |
 | addendum 2 13-cancelled-variants/event-cancelled-by-crawler-m (item 13) | "FROM THE VENUE'S CALENDAR · 2H" for a cancellation from the crawler. | [Design] + [Hugh product] The crawler never writes cancelled or postponed: crawls upsert upcoming shows, the Live Nation fetcher drops cancelled rows, and the only automatic path (the stale sweep) renders as No longer listed. So a cancelled or postponed card with no fan report comes from an admin edit. What source line should an admin-set status show: "Confirmed by Concert Crawl", only the age, or the venue's-calendar line? Until answered, the drawn venue's-calendar line ships. |
 
+## From lane ec1 (No longer listed, launch animation)
+
+| board / PR | what it says | the question |
+| --- | --- | --- |
+| #140 event-nll-m, event-nll-d | Only the event page is drawn for a No longer listed show. | [Design] The Watching and Browse ROW for a delisted show isn't drawn. It's built as a dashed row with one explanation line, replacing the whole meta row (genre, provenance, crew, watching chips) and dropping the genre edge and wash. What should the row keep? |
+| #140, public /e/:id (PublicEventDetail) | The public mirror gets the NLL pill, the CTA gating and no strike. | [Design] It does NOT get the dashed NLL card. Should the public page show the card? |
+| #140 contrast | The NLL chip (9.5px mono) and the source line "NOT ON THE VENUE'S CALENDAR SINCE {date}" (9px mono) are drawn in #5A6788 (`--fg-subtle`). | [Design] That's about 3.17:1 on the card (#11162E) and about 3.49:1 on the page (#070A1A), both under the 4.5:1 AA bar for small text. Built as drawn. Keep, or raise the tone? |
+| #143 launch animation | Plays from the cached launch-animation flag (localStorage). | [Hugh product] A kill switch only takes effect one cold start later (the next session's fetch rewrites the cache). Is that delay acceptable? |
+
 ## New from addendum 2 (#178)
 
 Contradictions #178 itself introduces. Build #178's ruling meanwhile.
