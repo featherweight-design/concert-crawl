@@ -49,6 +49,7 @@ export const UpcomingShows = ({
             <RunGroup
               key={`run-${item.venueSlug}-${firstIso(item)}`}
               venue={item.venue}
+              venueSlug={item.venueSlug}
               city={item.city}
               shows={item.shows}
               artist={name}

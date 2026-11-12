@@ -61,8 +61,27 @@ export const AP_STICKY_BAR_H = 56;
  */
 export const AP_STICKY_AFTER = AP_BAND_H - AP_STICKY_BAR_H;
 
-/** Spotify embed heights (consumed by PR-F). */
-export const EMBED_H = { compact: 152, tall: 352 } as const;
+/**
+ * The venue icon beside the venue's name on every Upcoming item (B+
+ * `09-artist`: "Upcoming comes first, with venue icons"): a single row and a
+ * run's header share it, so the two never drift apart.
+ */
+export const AP_VENUE_TILE = 22;
+
+/**
+ * Spotify artist-embed heights. `compact` and `tall` are Spotify's documented
+ * 152 and 352; `wholeTracks` is the one the page draws.
+ *
+ * Measured inside the embed (2026-11-12, Playwright, at 346 and 380 wide):
+ * - Below 352 Spotify keeps its 152 layout, whose track list is a fixed 81px
+ *   scroller of 23px rows, so a fourth row is always cut in half. No height
+ *   changes that.
+ * - From 352 it switches to the list layout: the list starts at 200, its rows
+ *   at 208 on a ~51px pitch, and the list runs to the frame's bottom edge. At
+ *   352 the third row is cut 10px short.
+ * - 362 ends the frame on the third row's bottom edge: three whole tracks.
+ */
+export const EMBED_H = { compact: 152, tall: 352, wholeTracks: 362 } as const;
 
 /**
  * Follow-button geometry, from the R3 scale-and-weight handoff. One table so

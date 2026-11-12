@@ -17,6 +17,8 @@ import { VenueTile } from '@/components/consumer/venue-glyph';
 import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
+import { AP_VENUE_TILE } from './definitions/constants';
+
 /** The shared EventRow's narrow threshold, measured on the row itself. */
 export const ARTIST_ROW_NARROW_AT = 360;
 
@@ -118,7 +120,11 @@ export const ArtistShowRow = ({
             textDecoration: 'none',
           }}
         >
-          <VenueTile slug={show.venueSlug} name={show.venue} size={22} />
+          <VenueTile
+            slug={show.venueSlug}
+            name={show.venue}
+            size={AP_VENUE_TILE}
+          />
           <span className="sr-only">{`${row.dateLabel}, `}</span>
           <span
             data-testid="artist-show-venue"

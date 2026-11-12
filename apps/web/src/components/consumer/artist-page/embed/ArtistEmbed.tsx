@@ -92,7 +92,9 @@ export const ArtistEmbed = ({
         <iframe
           src={`https://open.spotify.com/embed/artist/${spotifyArtistId}`}
           title={ARTIST_COPY.playerTitle(name)}
-          height={EMBED_H.compact}
+          // Whole tracks only: Spotify's own scroller cuts a row in half at
+          // both of its documented heights (see `EMBED_H`).
+          height={EMBED_H.wholeTracks}
           loading="lazy"
           allow="encrypted-media"
           // The plate is the only value we send Spotify, and it has to be a

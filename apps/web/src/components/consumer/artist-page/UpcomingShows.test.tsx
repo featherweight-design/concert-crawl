@@ -199,6 +199,39 @@ describe('UpcomingShows', () => {
     expect(container.querySelectorAll('a')).toHaveLength(3);
   });
 
+  // B+ `09-artist`: every Upcoming item carries its venue icon, a run's
+  // header included, at the single row's size.
+  it("gives a run's header the venue icon a single row carries", () => {
+    const { container } = render(
+      <UpcomingShows
+        photoUrl={null}
+        name="mike."
+        shows={[
+          show('2026-08-01', 'Hi-Dive'),
+          show('2026-09-05', 'Red Rocks Amphitheatre'),
+          show('2026-09-06', 'Red Rocks Amphitheatre'),
+          show('2026-09-07', 'Red Rocks Amphitheatre'),
+          show('2026-09-08', 'Red Rocks Amphitheatre'),
+        ]}
+      />,
+    );
+    const runTile = container.querySelector(
+      '[data-testid="artist-run-head"] svg',
+    );
+    const rowTile = container.querySelector(
+      '[data-testid="artist-show-row"] a svg',
+    );
+    expect(runTile).not.toBeNull();
+    expect(rowTile).not.toBeNull();
+    expect(runTile?.getAttribute('width')).toBe(rowTile?.getAttribute('width'));
+    expect(runTile?.getAttribute('height')).toBe(
+      rowTile?.getAttribute('height'),
+    );
+    // Before the name, as on the single row.
+    const head = container.querySelector('[data-testid="artist-run-head"]');
+    expect(head?.firstElementChild?.querySelector('svg')).toBe(runTile);
+  });
+
   it('draws every item as a card, with no rules between them', () => {
     const { container } = render(
       <UpcomingShows
