@@ -63,6 +63,12 @@ describe('ReleaseEntry', () => {
     expect(screen.getByText('Feature drop · announcement')).toBeTruthy();
   });
 
+  it('leaves the strip off when its spotlight is hidden, and keeps the notes', () => {
+    render(<ReleaseEntry release={SPOTLIGHT_RELEASE} spotlightHidden />);
+    expect(screen.queryByText('Feature drop · announcement')).toBeNull();
+    expect(screen.getByText('Price submission feature.')).toBeTruthy();
+  });
+
   it('calls onOpenSpotlight when spotlight strip clicked', () => {
     const onOpenSpotlight = vi.fn();
     render(
