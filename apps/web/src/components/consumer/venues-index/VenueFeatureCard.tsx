@@ -195,7 +195,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               </span>
               <span
                 className="flex items-center gap-1 whitespace-nowrap"
-                style={{ color: 'var(--signal)' }}
+                style={{ color: 'var(--signal)', textTransform: 'none' }}
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                   <path
@@ -356,7 +356,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
             <span>{venue.neighborhood ?? venue.city}</span>
             <span
               className="flex items-center gap-1"
-              style={{ color: 'var(--signal)' }}
+              style={{ color: 'var(--signal)', textTransform: 'none' }}
             >
               <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                 <path
