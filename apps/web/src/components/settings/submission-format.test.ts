@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { UserSubmissionItem } from '@concert-crawl/types';
 import {
   countsByFilter,
+  formatAgo,
   groupByMonth,
   latestSubmission,
   matchesFilter,
@@ -22,6 +23,20 @@ const sub = (id: string, submittedAt: string): UserSubmissionItem => ({
   corroborationCount: 1,
   submittedAt,
   status: 'confirmed',
+});
+
+describe('formatAgo', () => {
+  it('never goes negative when the server stamp is ahead of this clock', () => {
+    expect(formatAgo(new Date(Date.now() + 90_000).toISOString())).toBe('0m');
+  });
+
+  it('counts minutes, hours, days and weeks back', () => {
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    expect(formatAgo(ago(5 * 60_000))).toBe('5m');
+    expect(formatAgo(ago(3 * 3_600_000))).toBe('3h');
+    expect(formatAgo(ago(2 * 86_400_000))).toBe('2d');
+    expect(formatAgo(ago(15 * 86_400_000))).toBe('2w');
+  });
 });
 
 describe('priceLabelOf', () => {
