@@ -29,9 +29,9 @@ describe('GET /v1/catalog/generation — integration', () => {
     expect(await generation()).toBe('0');
   });
 
-  it('carries no personal data and may be cached for a minute', async () => {
+  it('carries no personal data and is not cached by a shared cache (the web holds it for a minute)', async () => {
     const res = await app.request('/v1/catalog/generation');
-    expect(res.headers.get('cache-control')).toBe('public, max-age=60');
+    expect(res.headers.get('cache-control')).toBe('no-store');
     expect(Object.keys((await res.json()).data)).toEqual(['generation']);
   });
 

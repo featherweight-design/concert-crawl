@@ -11,8 +11,10 @@ export const catalogRouter = new Hono();
 // dependence on a revalidate call having fired. Moving when nothing user-visible
 // changed (a skipped crawl, an unrelated admin action) only costs a refetch.
 //
-// Public and tiny. `Cache-Control` matches the web's own 60 s read of it; the
-// answer carries no personal data, so a shared cache may hold it.
+// Public and tiny, no personal data. `no-store`: the web reads it through its own
+// 60 s cache, and a second cache window here would stack staleness to two
+// minutes. A run row is inserted when a venue's crawl finishes, after its events
+// are written, so a read that sees the new stamp sees the new events.
 catalogRouter.get('/generation', async (ctx) => {
   const [[crawl], [audit]] = await Promise.all([
     db.select({ latest: max(crawlRuns.createdAt) }).from(crawlRuns),
@@ -22,6 +24,6 @@ catalogRouter.get('/generation', async (ctx) => {
     value ? [value.getTime()] : [],
   );
   const generation = stamps.length > 0 ? String(Math.max(...stamps)) : '0';
-  ctx.header('Cache-Control', 'public, max-age=60');
+  ctx.header('Cache-Control', 'no-store');
   return ctx.json({ success: true, data: { generation } });
 });
