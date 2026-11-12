@@ -5,9 +5,8 @@ import { WatchShowButton } from '../watch-show-button';
 import { formatShowTime, venueShort } from '../definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '../event-title-block';
-import { bucketMembersFor } from '@concert-crawl/types';
 import { MetaRow } from '../event-row/MetaRow';
-import { orderGenres } from '../event-row/lib/order-genres';
+import { orderGenres, vibeBucketMembers } from '../event-row/lib/order-genres';
 import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
@@ -24,15 +23,15 @@ interface HeroEventCardProps {
   event: EventWithVenue;
   label?: string;
   isWatching?: boolean;
-  /** The active Vibe filter, so the hero leads with the genre the rows do. */
-  filterVibe?: string | undefined;
+  /** Every chosen Vibe, so the hero leads with the genres the rows do. */
+  filterVibes?: readonly string[] | undefined;
 }
 
 export function HeroEventCard({
   event,
   label = copy.heroTonight,
   isWatching = false,
-  filterVibe,
+  filterVibes = [],
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime);
   // Present only for connected viewers (#763 PR 6) — swaps the eyebrow badge.
@@ -46,7 +45,7 @@ export function HeroEventCard({
   // way the rows order it so an active Vibe filter leads both.
   const [leadGenre, secondGenre] = orderGenres(
     event.genre ?? [],
-    bucketMembersFor(filterVibe),
+    vibeBucketMembers(filterVibes),
   );
   const genre = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
 

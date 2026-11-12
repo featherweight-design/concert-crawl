@@ -1,15 +1,16 @@
 import { perfRoute } from '@/lib/perf/timing';
 import { Suspense } from 'react';
 import { headers } from 'next/headers';
-import type {
-  ArtistSuggestion,
-  CrewShow,
-  CrewSummary,
-  EventsAvailabilityResponse,
-  EventsListResponse,
-  SpotifyTastePicksResponse,
-  VenuePublic,
-  WatchingShow,
+import {
+  parseListParam,
+  type ArtistSuggestion,
+  type CrewShow,
+  type CrewSummary,
+  type EventsAvailabilityResponse,
+  type EventsListResponse,
+  type SpotifyTastePicksResponse,
+  type VenuePublic,
+  type WatchingShow,
 } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
 import { publicCatalogGet } from '@/lib/catalog-cache';
@@ -670,15 +671,9 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
           <HeroEventCard
             event={heroEvent}
             isWatching={watchedIds.has(heroEvent.id)}
-            filterVibe={
-              // The first value, as the list rows read it via
-              // `searchParams.get`, while the UI is still single-select.
-              typeof params['filterVibe'] === 'string'
-                ? params['filterVibe']
-                : Array.isArray(params['filterVibe'])
-                  ? params['filterVibe'][0]
-                  : undefined
-            }
+            // Every chosen vibe, read with the list rule the request and the
+            // rows use, so the hero leads with the genres they do.
+            filterVibes={parseListParam(params['filterVibe'])}
           />
         </div>
       )}

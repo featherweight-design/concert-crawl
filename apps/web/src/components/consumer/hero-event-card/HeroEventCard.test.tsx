@@ -195,7 +195,21 @@ describe('HeroEventCard genre color', () => {
     render(
       <HeroEventCard
         event={{ ...baseEvent, genre: ['indie pop', 'garage rock'] }}
-        filterVibe="rock"
+        filterVibes={['rock']}
+      />,
+    );
+    expect(screen.getByTestId('hero-image-ring').style.boxShadow).toContain(
+      'var(--genre-rock)',
+    );
+  });
+
+  // Addendum 3, lane a6 row 41: every chosen vibe is highlighted, so a
+  // match on the second pick leads too.
+  it('leads with a genre matched by any chosen vibe', () => {
+    render(
+      <HeroEventCard
+        event={{ ...baseEvent, genre: ['indie pop', 'garage rock'] }}
+        filterVibes={['jazz', 'rock']}
       />,
     );
     expect(screen.getByTestId('hero-image-ring').style.boxShadow).toContain(

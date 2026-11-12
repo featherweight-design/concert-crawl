@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderGenres } from './order-genres';
+import { orderGenres, vibeBucketMembers } from './order-genres';
 
 const ROCK = ['rock', 'classic rock', 'hard rock', 'garage rock'];
 
@@ -57,5 +57,30 @@ describe('orderGenres', () => {
   it('handles a single genre and an empty array', () => {
     expect(orderGenres(['indie'], ROCK)).toEqual(['indie']);
     expect(orderGenres([], ROCK)).toEqual([]);
+  });
+
+  // Addendum 3, lane a6 row 41: with several vibes chosen, every match leads,
+  // in the row's own order, before any unmatched genre.
+  it('leads with every matched genre when several vibes are chosen', () => {
+    expect(
+      orderGenres(['folk', 'jazz', 'garage rock'], [...ROCK, 'jazz']),
+    ).toEqual(['jazz', 'garage rock']);
+  });
+});
+
+describe('vibeBucketMembers', () => {
+  it('unions the buckets of every chosen vibe', () => {
+    const members = vibeBucketMembers(['rock', 'jazz']);
+    expect(members).toContain('garage rock');
+    expect(members).toContain('jazz');
+  });
+
+  it('skips a value that is no bucket', () => {
+    expect(vibeBucketMembers(['dubstep-ish', 'jazz'])).toContain('jazz');
+  });
+
+  it('is null when nothing resolves, so nothing reorders', () => {
+    expect(vibeBucketMembers([])).toBeNull();
+    expect(vibeBucketMembers(['dubstep-ish'])).toBeNull();
   });
 });

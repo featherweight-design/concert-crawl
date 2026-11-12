@@ -2,7 +2,11 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types';
+import {
+  parseListParam,
+  type EventWithVenue,
+  type EventsListResponse,
+} from '@concert-crawl/types';
 import { useEvents } from '@/lib/queries/use-events';
 import { useWatching } from '@/lib/queries/use-watching';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
@@ -34,7 +38,8 @@ export const EventsList = ({
   // Read here rather than passed down from the server page: the list refetches
   // on a client-side filter change, so a server-rendered prop would name the
   // previous filter while the rows below it answer the current one.
-  const filterVibe = searchParams.get('filterVibe') ?? undefined;
+  // Every chosen vibe (a repeated key), by the list rule the request uses.
+  const filterVibes = parseListParam(searchParams.getAll('filterVibe'));
 
   // Build a stable query key from URL params (strip offset — managed by pagination)
   const searchParamsString = useMemo(() => {
@@ -119,7 +124,7 @@ export const EventsList = ({
                         isWatching: effectiveWatchedIds.has(event.id),
                       })}
                       surface="browse"
-                      filterVibe={filterVibe}
+                      filterVibes={filterVibes}
                     />
                   ))}
                 </div>
