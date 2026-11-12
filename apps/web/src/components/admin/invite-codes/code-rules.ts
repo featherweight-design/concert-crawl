@@ -70,6 +70,13 @@ export const suggestCode = (label: string): string => {
   return isCustomInviteCode(code) ? code : '';
 };
 
+/**
+ * The label to store: trimmed, without a typed "Poster ·" prefix, which the
+ * list derives (A3 5b r3) and would otherwise draw twice. Empty is null.
+ */
+export const cleanLabel = (typed: string): string | null =>
+  typed.replace(/^\s*poster\s*·\s*/i, '').trim() || null;
+
 /** A typed code's problem, or null: too short, or the reserved BETA start. */
 export const codeProblem = (code: string): string | null => {
   if (code === '' || isCustomInviteCode(code)) return null;

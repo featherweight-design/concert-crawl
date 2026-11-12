@@ -8,6 +8,7 @@ import { AdminButton, useIsPhone } from '@/components/admin/primitives';
 import { CodeTakenError, type NewCode } from './codes-api';
 import {
   cleanCode,
+  cleanLabel,
   codeProblem,
   expiresAtFor,
   seatsFrom,
@@ -51,6 +52,7 @@ export const NewCodePanel = ({
   const [typedSeats, setTypedSeats] = useState('');
   const [expiry, setExpiry] = useState<ExpiryChoice>('d90');
   const [posterNext, setPosterNext] = useState(true);
+  const [toggleFocus, setToggleFocus] = useState(false);
   const [taken, setTaken] = useState<CodeTakenError | null>(null);
   const [failed, setFailed] = useState(false);
   const [pending, setPending] = useState(false);
@@ -68,10 +70,11 @@ export const NewCodePanel = ({
     setTaken(null);
     setFailed(false);
     const expiresAt = expiresAtFor(expiry, new Date());
+    const storedLabel = cleanLabel(label);
     try {
       const made = await create({
         maxUses: seats,
-        ...(label.trim() ? { label: label.trim() } : {}),
+        ...(storedLabel ? { label: storedLabel } : {}),
         ...(expiresAt ? { expiresAt } : {}),
         ...(code ? { code } : {}),
       });
@@ -88,8 +91,11 @@ export const NewCodePanel = ({
     <CodeSurface
       title={COPY.newTitle}
       label={COPY.newTitle}
-      onClose={onClose}
-      dismissible={!pending}
+      // Dismissal stays on and is refused here while saving: toggling the
+      // surface's `dismissible` re-runs its focus trap and drops focus.
+      onClose={() => {
+        if (!pending) onClose();
+      }}
       footer={
         <>
           <AdminButton
@@ -139,7 +145,8 @@ export const NewCodePanel = ({
             maxLength={20}
             autoCapitalize="characters"
             spellCheck={false}
-            aria-invalid={taken ? true : undefined}
+            aria-invalid={taken || problem ? true : undefined}
+            aria-describedby="new-code-code-hint"
             onChange={(evt) => {
               setTaken(null);
               setTypedCode(cleanCode(evt.target.value));
@@ -151,16 +158,18 @@ export const NewCodePanel = ({
               borderColor: taken ? 'var(--danger)' : 'var(--border-strong)',
             }}
           />
-          {taken ? (
-            <>
-              <Hint tone="var(--danger)">
-                {COPY.codeTaken(taken.code, taken.suggestion)}
-              </Hint>
-              <Hint>{COPY.codeRule}</Hint>
-            </>
-          ) : (
-            <Hint>{problem ?? COPY.codeHint}</Hint>
-          )}
+          <div id="new-code-code-hint">
+            {taken ? (
+              <>
+                <Hint tone="var(--danger)" alert>
+                  {COPY.codeTaken(taken.code, taken.suggestion)}
+                </Hint>
+                <Hint>{COPY.codeRule}</Hint>
+              </>
+            ) : (
+              <Hint>{problem ?? COPY.codeHint}</Hint>
+            )}
+          </div>
         </Field>
         <SeatsField
           presets={PRESETS}
@@ -185,11 +194,18 @@ export const NewCodePanel = ({
               type="checkbox"
               checked={posterNext}
               onChange={(evt) => setPosterNext(evt.target.checked)}
+              // The real box is hidden, so the drawn one shows keyboard focus.
+              onFocus={(evt) =>
+                setToggleFocus(evt.currentTarget.matches(':focus-visible'))
+              }
+              onBlur={() => setToggleFocus(false)}
               style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
             />
             <span
               aria-hidden
               style={{
+                outline: toggleFocus ? '2px solid var(--signal)' : 'none',
+                outlineOffset: 2,
                 width: 18,
                 height: 18,
                 marginTop: 1,

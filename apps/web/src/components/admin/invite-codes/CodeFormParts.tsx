@@ -32,12 +32,19 @@ export const Hint = ({
   children,
   tone = 'var(--fg-subtle)',
   id,
+  alert = false,
 }: {
   children: ReactNode;
   tone?: string;
   id?: string;
+  /** An error that appears after an action, announced as it appears. */
+  alert?: boolean;
 }) => (
-  <div id={id} style={{ fontSize: 12, color: tone, marginTop: 5 }}>
+  <div
+    id={id}
+    role={alert ? 'alert' : undefined}
+    style={{ fontSize: 12, color: tone, marginTop: 5 }}
+  >
     {children}
   </div>
 );
@@ -175,6 +182,9 @@ export const ExpiryPills = ({
 
 export type SeatsChoice = `${number}` | 'other';
 
+/** One seats field is open at a time, so a fixed id is unique. */
+const SEATS_ERROR_ID = 'code-seats-error';
+
 /**
  * Seats pills plus Other's number field. `typed` is Other's text; the parsed
  * count is the caller's, so the floor error can sit under it.
@@ -221,6 +231,7 @@ export const SeatsField = ({
           max={500}
           aria-label={COPY.otherLabel}
           aria-invalid={error ? true : undefined}
+          aria-describedby={error ? SEATS_ERROR_ID : undefined}
           value={typed}
           onChange={(evt) => onTyped(evt.target.value)}
           style={{
@@ -232,7 +243,11 @@ export const SeatsField = ({
         />
       )}
     </div>
-    {error ? <Hint tone="var(--danger)">{error}</Hint> : null}
+    {error ? (
+      <Hint id={SEATS_ERROR_ID} tone="var(--danger)" alert>
+        {error}
+      </Hint>
+    ) : null}
     <Hint>{hint}</Hint>
   </Field>
 );
