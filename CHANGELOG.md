@@ -1,3 +1,37 @@
+# [1.344.0](https://github.com/featherweight-design/concert-crawl/compare/v1.343.0...v1.344.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **admin:** an empty first name falls back like a missing one ([cb88f80](https://github.com/featherweight-design/concert-crawl/commit/cb88f806784be2fb98fc8b520b19ad117688ae1f))
+* **admin:** apply addendum 2 to the shell ([cf72e33](https://github.com/featherweight-design/concert-crawl/commit/cf72e335528b3384ec5f665d6503bd0401646570)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **admin:** keep the interim invite codes row out of More ([32f4aa3](https://github.com/featherweight-design/concert-crawl/commit/32f4aa353f3a87e3d045808f4f7312f9bbce1414)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **admin:** match the shell boards, drop the undrawn Invite codes row ([9e4751d](https://github.com/featherweight-design/concert-crawl/commit/9e4751d7be649b4c2ac60cb464f5c2d9b38d67cd))
+* **admin:** pre-mount shell scrolls and hides the rail on phones, tab bar clears the home indicator ([7722006](https://github.com/featherweight-design/concert-crawl/commit/77220064b42367b7ad37f5293560d1ce8c3958c9))
+* **admin:** slash crumbs, declared shadow token, no email in the user card ([302a7fe](https://github.com/featherweight-design/concert-crawl/commit/302a7fe8b4cae0373c9e8844ac7f0c63d26496e0))
+* **crawler:** drop a dead crawlRunId guard, document GIT_SHA ([9a99a4d](https://github.com/featherweight-design/concert-crawl/commit/9a99a4db541ea66ff1e2187efe7c82475edc684d))
+* **web:** collapse the icon tile's line box and null a malformed show time ([f7f6d97](https://github.com/featherweight-design/concert-crawl/commit/f7f6d978b505dae2c403a6a9246244f457ee2756))
+* **web:** draw the invite landing's icon tile, venue row and times as B+ does ([f1a269a](https://github.com/featherweight-design/concert-crawl/commit/f1a269a096c5dfcdd793af0b1dede58c4f0c79d4))
+* **web:** heading semantics on state cards, drop dead notif shimmer css, one loading announcement ([beb0327](https://github.com/featherweight-design/concert-crawl/commit/beb03271c098c22795d9dc8b8f7e3e64a04ff4f9))
+* **web:** hold the event skeleton's shape and cover the stage props ([fa89a41](https://github.com/featherweight-design/concert-crawl/commit/fa89a417f8e5d8d5ae614153789917e1ac41e66e))
+* **web:** keep the word break before the unread cue in a tab's accessible name ([0d16fe4](https://github.com/featherweight-design/concert-crawl/commit/0d16fe42153332327376bd31bd8312ebd299f332))
+* **web:** notification tabs get roving tabindex, 44px targets and a viewport-clamped panel ([f50bd11](https://github.com/featherweight-design/concert-crawl/commit/f50bd11a51d2b86837f88e817820a0715634caa3))
+* **web:** notifications empty and error states draw the tab row, 0 new and Poll failed ([a916fcd](https://github.com/featherweight-design/concert-crawl/commit/a916fcd72caf1583a4a97da7a6b598c0bc1171e9))
+* **web:** re-scope the gone page's eyebrow so it doesn't restate the heading ([db3f026](https://github.com/featherweight-design/concert-crawl/commit/db3f026a3d743325e2ef1e354afd82dc2b05bcab))
+* **web:** the notifications error eyebrow says what happened, not how ([da342bd](https://github.com/featherweight-design/concert-crawl/commit/da342bd7fc205840be532c49693c0471a23a24df))
+
+
+### Features
+
+* **admin:** new shell with sidebar, 4-tab bar, More, user menu and environment badge ([a739d6b](https://github.com/featherweight-design/concert-crawl/commit/a739d6bdd838ede9f7de79bd641e3d0d676464ef))
+* **crawler:** add the app tag to every crawler event ([e9b9db9](https://github.com/featherweight-design/concert-crawl/commit/e9b9db96d7ef3bb397719a3a98620792b2f16752))
+* **crawler:** tag Sentry events with release, venueId, crawlRunId and dropSeverity ([e143a48](https://github.com/featherweight-design/concert-crawl/commit/e143a48abce8fb36db1030afa96e33e93c9770ac))
+* **web:** event page stage with washed backdrop, tilted card and countdown (B+ B8) ([c40d569](https://github.com/featherweight-design/concert-crawl/commit/c40d569e09665d09f9b88d5331f9c1323cb8edd7))
+* **web:** notification tabs carry an unread dot (addendum 2 decision) ([c425d2d](https://github.com/featherweight-design/concert-crawl/commit/c425d2d1b8bc00f856220c18690e8cdd97f378c7))
+* **web:** notifications panel gets its Shows, Alerts and Prices tabs (addendum 2) ([2a13c60](https://github.com/featherweight-design/concert-crawl/commit/2a13c60b28ec98cc63ddaf9a86929cd54ed0fa3a))
+* **web:** restyle the notifications panel and its states for b+ (B19) ([43ca0fc](https://github.com/featherweight-design/concert-crawl/commit/43ca0fcfa132e45f9e7eccb5d2095e6d31a317f4))
+* **web:** unread notification tabs get a screen reader cue ([f8230b6](https://github.com/featherweight-design/concert-crawl/commit/f8230b61a36bd210bfb56382bf66cfe629aab841))
+
 # [1.343.0](https://github.com/featherweight-design/concert-crawl/compare/v1.342.3...v1.343.0) (2026-11-12)
 
 
