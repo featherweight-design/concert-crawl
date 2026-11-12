@@ -3,17 +3,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 
-const flagState = { enabled: true, isLoading: false, loaded: true };
-vi.mock('@/lib/queries/use-feature-flags', () => ({
-  useFeatureFlag: () => flagState,
-}));
-
+// Deliberately no feature-flag mock and no QueryClientProvider: the animation
+// has no switch, so it must mount and play with nothing around it.
 import { LaunchAnimation, coreAtFull, markCorner } from '../LaunchAnimation';
-import {
-  LAUNCH_FLAG_KEY,
-  LAUNCH_MS,
-  LAUNCH_PLAYED_KEY,
-} from '@/lib/pwa/launch';
+import { LAUNCH_MS, LAUNCH_PLAYED_KEY } from '@/lib/pwa/launch';
 
 const stubDisplay = (standalone: boolean, reduced = false) => {
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -22,9 +15,6 @@ const stubDisplay = (standalone: boolean, reduced = false) => {
 };
 
 beforeEach(() => {
-  flagState.enabled = true;
-  flagState.isLoading = false;
-  flagState.loaded = true;
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
@@ -50,18 +40,16 @@ const stubStuckAnimate = () => {
 describe('LaunchAnimation', () => {
   it('goes at once when there is no Web Animations API to wait on', () => {
     stubDisplay(true);
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     // jsdom has none: an opaque overlay with nothing to end it must not mount
     // over a usable app.
     expect(screen.queryByTestId('launch-animation')).toBeNull();
   });
 
-  it('draws over a cold standalone start when the cached flag is on, then goes', () => {
+  it('draws over a first ever cold standalone start with no flag provider, then goes', () => {
     vi.useFakeTimers();
     stubDisplay(true);
     stubStuckAnimate();
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const overlay = screen.getByTestId('launch-animation');
     expect(overlay.getAttribute('aria-hidden')).toBe('true');
@@ -78,7 +66,6 @@ describe('LaunchAnimation', () => {
     stubStuckAnimate();
     vi.stubGlobal('innerWidth', 390);
     vi.stubGlobal('innerHeight', 844);
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const mark = screen.getByTestId('launch-mark');
     expect(mark?.style.width).toBe('96px');
@@ -129,7 +116,6 @@ describe('LaunchAnimation', () => {
         cancel: () => undefined,
       } as unknown as Animation;
     }) as unknown as typeof Element.prototype.animate;
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const frames = bloomFrames[0] ?? [];
     const settled = frames.find(
@@ -149,7 +135,6 @@ describe('LaunchAnimation', () => {
     stubStuckAnimate();
     vi.stubGlobal('innerWidth', 390);
     vi.stubGlobal('innerHeight', 844);
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const bloom = screen.getByTestId('launch-bloom');
     expect(bloom.style.width).toBe('330px');
@@ -162,7 +147,6 @@ describe('LaunchAnimation', () => {
   it('draws in fixed brand colours, never theme tokens', () => {
     stubDisplay(true);
     stubStuckAnimate();
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     const { container } = render(<LaunchAnimation />);
     const markup = container.innerHTML;
     expect(markup).not.toContain('var(--fg)');
@@ -176,7 +160,6 @@ describe('LaunchAnimation', () => {
 
   it('marks the session so a later mount is not a cold start', () => {
     stubDisplay(true);
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     const first = render(<LaunchAnimation />);
     expect(window.sessionStorage.getItem(LAUNCH_PLAYED_KEY)).toBe('1');
     first.unmount();
@@ -189,42 +172,19 @@ describe('LaunchAnimation', () => {
     ['reduced motion', () => stubDisplay(true, true)],
   ])('stays out of %s', (_label, setup) => {
     setup();
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     expect(screen.queryByTestId('launch-animation')).toBeNull();
   });
 
-  it('does not play on the first ever cold start: the flag is not cached yet', () => {
+  it('plays on the very first cold start: there is nothing to cache or wait for', () => {
     stubDisplay(true);
+    stubStuckAnimate();
     render(<LaunchAnimation />);
-    expect(screen.queryByTestId('launch-animation')).toBeNull();
-    // ...but the answer is stored for the next one.
-    expect(window.localStorage.getItem(LAUNCH_FLAG_KEY)).toBe('1');
-  });
-
-  it('never stores the registry default before the flag has loaded', () => {
-    stubDisplay(true);
-    flagState.isLoading = true;
-    flagState.loaded = false;
-    flagState.enabled = false;
-    render(<LaunchAnimation />);
-    expect(window.localStorage.getItem(LAUNCH_FLAG_KEY)).toBeNull();
-  });
-
-  it('does not overwrite the cached flag after a failed fetch', () => {
-    stubDisplay(true);
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
-    // Offline cold start: not pending, no data, registry default false.
-    flagState.isLoading = false;
-    flagState.loaded = false;
-    flagState.enabled = false;
-    render(<LaunchAnimation />);
-    expect(window.localStorage.getItem(LAUNCH_FLAG_KEY)).toBe('1');
+    expect(screen.getByTestId('launch-animation')).toBeTruthy();
   });
 
   it('does not dismiss the overlay when the effect is cancelled on unmount', async () => {
     stubDisplay(true);
-    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     let reject: (reason: unknown) => void = () => undefined;
     const finished = new Promise<Animation>((_resolve, rej) => {
       reject = rej;

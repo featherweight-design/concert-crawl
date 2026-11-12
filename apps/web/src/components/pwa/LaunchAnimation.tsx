@@ -9,10 +9,8 @@ import {
   trailOpacity,
 } from '@/components/brand/cc-mark';
 import { BRAND_COPY } from '@/components/brand/definitions/copy';
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { prefersReducedMotion, runMotion } from '@/lib/motion';
 import {
-  LAUNCH_FLAG_KEY,
   LAUNCH_LANDING,
   LAUNCH_MS,
   LAUNCH_PLAYED_KEY,
@@ -109,7 +107,6 @@ export const markCorner = (
 };
 
 export function LaunchAnimation() {
-  const { enabled, loaded } = useFeatureFlag('launch-animation');
   const [playing, setPlaying] = useState(false);
 
   // The cold-start decision, once, on mount, from what is already on the device.
@@ -123,23 +120,12 @@ export function LaunchAnimation() {
       shouldPlayLaunch({
         standalone,
         alreadyPlayed,
-        flagCached: readStored('local', LAUNCH_FLAG_KEY) === '1',
         reducedMotion: prefersReducedMotion(),
       })
     ) {
       setPlaying(true);
     }
   }, []);
-
-  // Declared after the decision effect on purpose: effects run in order, and the
-  // decision must read the PREVIOUS start's cached answer before this one
-  // overwrites it.
-  // Remember the flag's answer for the next cold start. Only once the fetch
-  // has really returned data: neither the registry default before it nor the
-  // fallback after a failed one (offline cold start) may overwrite it.
-  useEffect(() => {
-    if (loaded) writeStored('local', LAUNCH_FLAG_KEY, enabled ? '1' : '0');
-  }, [enabled, loaded]);
 
   return playing ? <LaunchStage onDone={() => setPlaying(false)} /> : null;
 }

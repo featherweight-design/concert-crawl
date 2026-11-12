@@ -23,7 +23,6 @@ describe('loadFeatureFlags', () => {
     await expect(loadFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
-      'launch-animation': false,
       'release-notes': true,
     });
   });
@@ -40,10 +39,25 @@ describe('loadFeatureFlags', () => {
     const flags = await loadFeatureFlags();
     expect(Object.keys(flags).sort()).toEqual([
       'crews',
-      'launch-animation',
       'release-notes',
       'spotify-sync',
     ]);
+  });
+
+  // The launch animation's flag was removed 2026-11-12 but its row stays in
+  // the table (contract later): it must read as an unknown key, not break the
+  // loader or surface in the map.
+  it('ignores the leftover launch-animation row', async () => {
+    selectRows.mockResolvedValue([
+      { key: 'launch-animation', enabled: true },
+      { key: 'crews', enabled: true },
+    ]);
+    const flags = await loadFeatureFlags();
+    expect(flags).toEqual({
+      'spotify-sync': false,
+      crews: true,
+      'release-notes': true,
+    });
   });
 
   it('serves the memo rather than re-querying', async () => {
@@ -66,7 +80,6 @@ describe('loadFeatureFlags', () => {
     await expect(loadFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
-      'launch-animation': false,
       'release-notes': true,
     });
   });

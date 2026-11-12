@@ -30,9 +30,8 @@ export default function MainLayout({
       {/* Wraps header and bottom nav so their two account triggers share one
           open state — otherwise a mobile tap could stack two menu sheets. */}
       <AccountMenuProvider>
-        {/* Cold start of the installed app only, and only while the
-            `launch-animation` flag is on; draws over the page without
-            blocking it. */}
+        {/* Cold start of the installed app only, no switch; draws over the
+            page without blocking it. */}
         <LaunchAnimation />
         {/* Above the header AND the page body: the header's two search
             triggers and the "find artists to follow" row in a page must open

@@ -1,12 +1,9 @@
 // When the launch animation plays (B+ README rule 12): on a cold start of an
-// installed app, never in a browser tab, never under reduced motion, and only
-// while the `launch-animation` flag is on. The flag arrives over the network
-// after first paint, so the last answer is kept on the device and read
-// synchronously on the next cold start: the animation must never hold the app
-// waiting for a flag.
+// installed app, never in a browser tab, never under reduced motion. It has no
+// switch and waits on nothing: the decision reads only what is already on the
+// device, so the animation can never hold the app.
 
 export const LAUNCH_PLAYED_KEY = 'cc-launch-played';
-export const LAUNCH_FLAG_KEY = 'cc-launch-flag';
 
 /** Every beat of the timeline, in ms from frame 0 (README rule 12). */
 export const LAUNCH_MS = {
@@ -32,18 +29,14 @@ export interface LaunchInputs {
   standalone: boolean;
   /** `sessionStorage` already holds the marker: not a cold start. */
   alreadyPlayed: boolean;
-  /** The last flag answer stored on this device. */
-  flagCached: boolean;
   reducedMotion: boolean;
 }
 
 export const shouldPlayLaunch = ({
   standalone,
   alreadyPlayed,
-  flagCached,
   reducedMotion,
-}: LaunchInputs): boolean =>
-  standalone && !alreadyPlayed && flagCached && !reducedMotion;
+}: LaunchInputs): boolean => standalone && !alreadyPlayed && !reducedMotion;
 
 export const isStandaloneDisplay = (): boolean => {
   if (typeof window === 'undefined') return false;

@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.66.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'The app now opens with the launch animation.',
+      },
+    ],
+  },
+  {
     version: 'v0.65.0-beta',
     date: 'Nov 12, 2026',
     headline: null,
