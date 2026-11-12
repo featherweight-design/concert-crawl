@@ -493,6 +493,11 @@ export function FilterBar({
               aria-expanded={isOpen}
               aria-haspopup="dialog"
             >
+              {/* The chip shows only its value ("Any vibe", or "Red Rocks"
+                  once set), so a screen reader heard no dimension. The hidden
+                  label names it the way the desktop segment's eyebrow does:
+                  "Vibe Any vibe" at every width. */}
+              <span className="sr-only">{FILTER_DEFS[key].label} </span>
               <span style={{ whiteSpace: 'nowrap' }}>{displayLabel}</span>
               <IconChevDown size={11} />
             </button>
