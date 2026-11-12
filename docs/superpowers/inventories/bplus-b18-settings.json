@@ -46,7 +46,7 @@
       "steps": [
         {
           "goto": "/me/submissions",
-          "wait": "h1:visible"
+          "wait": ":is(h1, main h2):visible"
         }
       ]
     }
