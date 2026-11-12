@@ -40,6 +40,25 @@ const SPOKE_REACH = 420;
 const LAYER = SPOKE_REACH * 2 + 20;
 const MID = LAYER / 2;
 
+/** Two decimals: far below a pixel, and identical on server and client. */
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * The spoke ends, computed once and rounded. Node and the browser can disagree
+ * in the 16th digit of a cos or sin, and an unrounded coordinate then fails
+ * hydration on every crew home ("attributes didn't match").
+ */
+export const SPOKE_ENDS = Array.from({ length: SPOKES }, (_, i) => {
+  const angle = (i * 2 * Math.PI) / SPOKES;
+  return {
+    key: i,
+    x1: round2(MID + Math.cos(angle) * 60),
+    y1: round2(MID + Math.sin(angle) * 60),
+    x2: round2(MID + Math.cos(angle) * SPOKE_REACH),
+    y2: round2(MID + Math.sin(angle) * SPOKE_REACH),
+  };
+});
+
 /**
  * The patch's own motif, carried out across the hero card (B+ rule 1): its
  * rings and spokes in the crew's two chord colours, centred on the patch. This
@@ -79,20 +98,17 @@ const PatchRings = ({
             strokeOpacity={index === 1 ? 0.35 : 0.16}
           />
         ))}
-        {Array.from({ length: SPOKES }, (_, i) => {
-          const angle = (i * 2 * Math.PI) / SPOKES;
-          return (
-            <line
-              key={i}
-              x1={MID + Math.cos(angle) * 60}
-              y1={MID + Math.sin(angle) * 60}
-              x2={MID + Math.cos(angle) * SPOKE_REACH}
-              y2={MID + Math.sin(angle) * SPOKE_REACH}
-              stroke={pri}
-              strokeOpacity="0.12"
-            />
-          );
-        })}
+        {SPOKE_ENDS.map((end) => (
+          <line
+            key={end.key}
+            x1={end.x1}
+            y1={end.y1}
+            x2={end.x2}
+            y2={end.y2}
+            stroke={pri}
+            strokeOpacity="0.12"
+          />
+        ))}
       </g>
     </svg>
   );
