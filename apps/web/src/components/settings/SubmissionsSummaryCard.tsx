@@ -85,10 +85,17 @@ export const SubmissionsSummaryCard = ({
         >
           {SETTINGS_COPY.submissionsLatestLabel}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[14px] text-fg-muted">
-          <strong className="font-extrabold text-fg">{latest.artist}</strong>{' '}
-          {priceLabelOf(latest)} ·{' '}
-          {SETTINGS_COPY.submissionAge(formatAgo(latest.submittedAt))}
+        {/* The artist gives way, the price never does: it is the point of the
+            row. The age drops below 360px, where the status pill needs the room. */}
+        <span className="flex min-w-0 flex-1 items-baseline gap-1 text-[14px] text-fg-muted">
+          <strong className="min-w-0 truncate font-extrabold text-fg">
+            {latest.artist}
+          </strong>
+          <span className="shrink-0">{priceLabelOf(latest)}</span>
+          <span className="shrink-0 max-[359px]:hidden">
+            {' · '}
+            {SETTINGS_COPY.submissionAge(formatAgo(latest.submittedAt))}
+          </span>
         </span>
         <StatusPill status={latest.status} />
       </div>
