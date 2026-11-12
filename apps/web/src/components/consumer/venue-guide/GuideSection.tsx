@@ -71,18 +71,13 @@ export const GuideSection = ({
         accessibility.body.trim().length === 0 ? (
           <AccessPlaceholderRow first />
         ) : (
-          <GuideChipRow
-            chipType="accessibility"
-            body={accessibility.body}
-            first
-          />
+          <GuideChipRow chipType="accessibility" body={accessibility.body} />
         ))}
-      {otherChips.map((chip, index) => (
+      {otherChips.map((chip) => (
         <GuideChipRow
           key={chip.chipType}
           chipType={chip.chipType}
           body={chip.body}
-          first={accessibility === undefined && index === 0}
         />
       ))}
     </div>

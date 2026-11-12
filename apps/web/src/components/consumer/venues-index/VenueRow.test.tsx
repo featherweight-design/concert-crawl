@@ -102,4 +102,46 @@ describe('VenueFeatureCard', () => {
     expect(container.querySelector('[data-venue-neon]')).toBeNull();
     expect(getAllByText('NR').length).toBe(2);
   });
+
+  it('sets the FLAGSHIP chip in neon yellow on both cards', () => {
+    const { getAllByTestId } = render(
+      <VenueFeatureCard
+        venue={makeVenue({
+          name: 'Red Rocks Amphitheatre',
+          slug: 'red-rocks-amphitheatre',
+        })}
+      />,
+    );
+    const chips = getAllByTestId('flagship-chip');
+    expect(chips).toHaveLength(2);
+    chips.forEach((chip) => {
+      expect(chip.style.color).toBe('rgb(255, 227, 107)');
+    });
+  });
+
+  it('gives both cards a gradient edge and a glow', () => {
+    const { getByTestId } = render(<VenueFeatureCard venue={makeVenue({})} />);
+    ['venue-feature-card-desktop', 'venue-feature-card-mobile'].forEach(
+      (id) => {
+        const card = getByTestId(id);
+        expect(card.style.border).toContain('transparent');
+        expect(card.style.background).toContain('border-box');
+        expect(card.style.boxShadow).not.toBe('');
+      },
+    );
+  });
+
+  it('puts one gradient span on the name in each card', () => {
+    const { container } = render(
+      <VenueFeatureCard
+        venue={makeVenue({
+          name: 'Red Rocks Amphitheatre',
+          slug: 'red-rocks-amphitheatre',
+        })}
+      />,
+    );
+    expect(
+      container.querySelectorAll('[data-venue-name-gradient]'),
+    ).toHaveLength(2);
+  });
 });

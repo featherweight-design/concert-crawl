@@ -731,3 +731,17 @@
       border-box,
     linear-gradient(90deg, var(--signal), var(--accent)) border-box;
 }
+
+/* The distinctive words of a venue's name (components/consumer/venue-name).
+   Dark themes take the signal-to-accent pair; the light theme takes the
+   board's darker pair (venue-light-m.html), as its signal would wash out. */
+.venue-name-gradient {
+  background-image: linear-gradient(90deg, var(--signal), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+:root[data-theme='light'] .venue-name-gradient {
+  background-image: linear-gradient(90deg, #0080a0, #e0297a);
+}

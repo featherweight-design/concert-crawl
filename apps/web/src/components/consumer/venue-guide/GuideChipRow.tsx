@@ -7,19 +7,16 @@ const copy = CONSUMER_COPY.venueGuide;
 interface GuideChipRowProps {
   chipType: GuideChipKey;
   body: string;
-  /** First row in its column — suppresses the hairline separator above it. */
-  first?: boolean;
 }
 
-export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
+export const GuideChipRow = ({ chipType, body }: GuideChipRowProps) => {
   const isAccessibility = chipType === 'accessibility';
 
-  // The separator is a class, not an inline style, so the two-column desktop
-  // grid can drop it wholesale at `sm:` — each column starts fresh there and a
-  // leading hairline would read as a stray rule.
+  // The board draws no rules between guide rows, on mobile or desktop, so
+  // there is no separator class at any width.
   return (
     <div
-      className={`flex min-w-0 gap-3 sm:border-t-0 ${first ? '' : 'border-t border-border'}`}
+      className="flex min-w-0 gap-3"
       style={{ padding: '12px 0' }}
       data-testid={`guide-chip-${chipType}`}
     >

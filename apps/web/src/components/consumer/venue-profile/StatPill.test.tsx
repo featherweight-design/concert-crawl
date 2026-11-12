@@ -7,21 +7,28 @@ import { StatPill } from './StatPill';
 
 afterEach(cleanup);
 
-// Design addendum 2 (#178) item 17: a stat value that doesn't fit its column
-// wraps to a second line. It never shrinks and never truncates.
+// A long single word (a venue type) scales to its column and never breaks
+// mid-word; a short value keeps the full size.
 describe('StatPill', () => {
-  it('wraps a long value instead of truncating it', () => {
-    render(<StatPill label="Type" value="Amphitheater" />);
-    const value = screen.getByTestId('stat-value');
-    expect(value.textContent).toBe('Amphitheater');
-    expect(value).not.toHaveClass('truncate');
-    expect(value.style.whiteSpace).not.toBe('nowrap');
-    expect(value.style.textOverflow).toBe('');
-    expect(value.style.overflowWrap).toBe('break-word');
-  });
+  it.each(['Amphitheatre', 'Auditorium', 'Amphitheater'])(
+    'never breaks %s mid-word and never truncates it',
+    (type) => {
+      render(<StatPill label="Type" value={type} />);
+      const value = screen.getByTestId('stat-value');
+      expect(value.textContent).toBe(type);
+      expect(value).not.toHaveClass('truncate');
+      expect(value.style.whiteSpace).not.toBe('nowrap');
+      expect(value.style.textOverflow).toBe('');
+      expect(value.style.overflowWrap).toBe('normal');
+      expect(value.dataset.longWord).toBe('true');
+      expect(value.style.fontSize).toContain('cqw');
+    },
+  );
 
-  it('keeps the value at its full size', () => {
-    render(<StatPill label="Type" value="Amphitheater" />);
-    expect(screen.getByTestId('stat-value').style.fontSize).toBe('22px');
+  it('keeps a short value at its full size', () => {
+    render(<StatPill label="Type" value="Club" />);
+    const value = screen.getByTestId('stat-value');
+    expect(value.style.fontSize).toBe('22px');
+    expect(value.dataset.longWord).toBeUndefined();
   });
 });

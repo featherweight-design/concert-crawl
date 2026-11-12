@@ -65,14 +65,18 @@ describe('VenueTile', () => {
     expect(svg?.querySelectorAll('path').length).toBeGreaterThan(0);
   });
 
-  it('hands a venue with no glyph to its identity tile', () => {
+  it('draws a neutral glyphless tile for a venue with no glyph', () => {
     const { container } = render(
       <VenueTile slug="new-venue" name="The New Room" />,
     );
     const tile = container.querySelector('[data-venue-tile]');
     expect(tile?.getAttribute('data-venue-tile')).toBe('fallback');
     expect(tile?.getAttribute('aria-hidden')).toBe('true');
-    expect(container.querySelector('svg[viewBox="0 0 96 96"]')).toBeNull();
+    expect(tile?.getAttribute('viewBox')).toBe('0 0 96 96');
+    const rect = tile?.querySelector('rect');
+    expect(rect?.getAttribute('rx')).toBe('22.2');
+    expect(rect?.getAttribute('fill')).toBe('#11162E');
+    expect(tile?.querySelector('path')).toBeNull();
   });
 
   it('keeps the glyph ground the art was drawn on, whatever the theme', () => {
