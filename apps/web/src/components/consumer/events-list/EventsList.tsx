@@ -7,6 +7,7 @@ import { useEvents } from '@/lib/queries/use-events';
 import { useWatching } from '@/lib/queries/use-watching';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { dateGroupLabel, isToday } from '@/components/consumer/definitions/lib';
+import { localDateString } from '@/lib/time';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { DayTile } from './DayTile';
 
@@ -68,16 +69,25 @@ export const EventsList = ({
     [data],
   );
 
+  // The earliest day Browse may show: Denver's today, unless the URL asked for
+  // an earlier start on purpose. A payload that was cached on an earlier day
+  // (the offline fallback serves one) still carries that day's rows; they would
+  // otherwise sit above "Tonight".
+  const startParam = searchParams.get('from');
+  const today = localDateString('America/Denver');
+  const firstDay = startParam && startParam < today ? startParam : today;
+
   // Group events by date for display
   const groups = useMemo(() => {
     const grouped = new Map<string, EventWithVenue[]>();
     for (const event of events) {
+      if (event.date < firstDay) continue;
       const key = event.date;
       if (!grouped.has(key)) grouped.set(key, []);
       grouped.get(key)!.push(event);
     }
     return grouped;
-  }, [events]);
+  }, [events, firstDay]);
 
   // Fall back to initialWatchedIds while the watching cache loads
   const effectiveWatchedIds =

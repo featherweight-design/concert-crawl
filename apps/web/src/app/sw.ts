@@ -4,12 +4,7 @@
 // declarations (self, addEventListener, etc.) between DOM and WebWorker.
 import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import {
-  ExpirationPlugin,
-  NetworkOnly,
-  Serwist,
-  StaleWhileRevalidate,
-} from 'serwist';
+import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from 'serwist';
 import {
   isApiOrigin,
   isPublicCacheableApi,
@@ -77,8 +72,16 @@ const publicApiCache = {
     isApiOrigin(url.origin, apiOrigin) &&
     !request.headers.has('Authorization') &&
     isPublicCacheableApi(url),
-  handler: new StaleWhileRevalidate({
+  // NetworkFirst, not stale-while-revalidate: several of these answers are
+  // relative to "today" on the server (the event list's default start, a
+  // venue's upcoming events, an event's related shows) while the URL says
+  // nothing about the day, so a cached copy replayed after midnight Mountain
+  // is yesterday's list. Online, the network always answers; the cache is the
+  // offline fallback, and the timeout covers a connection that is up but
+  // stalled.
+  handler: new NetworkFirst({
     cacheName: 'public-api',
+    networkTimeoutSeconds: 4,
     plugins: [
       new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 }),
     ],
