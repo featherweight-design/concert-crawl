@@ -37,7 +37,7 @@ import {
 } from '../lib/event-billing.js';
 
 import { venueSlug } from '../lib/venue-slug-schema.js';
-import { markPublicRead } from '../lib/edge-cache.js';
+import { markPublicRead, markViewerScopedRead } from '../lib/edge-cache.js';
 import { isSoldOutSql } from '../lib/sold-out.js';
 import { loadPriceByTierByEventId } from '../lib/price-aggregation/index.js';
 import { currentPriceCondition, underCheckSql } from '../lib/price-check.js';
@@ -352,12 +352,7 @@ venuesPublicRouter.get(
 
     // `viewerHasAttended` is the one viewer-scoped field: a signed-in answer
     // stays out of any shared cache, an anonymous one (always null there) may be held.
-    if (authInfo?.userId) {
-      ctx.header('Vary', 'Authorization', { append: true });
-      ctx.header('Cache-Control', 'private, no-store');
-    } else {
-      markPublicRead(ctx);
-    }
+    markViewerScopedRead(ctx, Boolean(authInfo?.userId));
     return ctx.json({
       success: true,
       data: {

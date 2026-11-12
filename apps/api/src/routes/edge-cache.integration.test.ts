@@ -42,6 +42,15 @@ describe('edge cache headers on public reads', () => {
     }
   });
 
+  it('keeps the CORS Vary beside Authorization', async () => {
+    const res = await app.request('/v1/events/genres', {
+      headers: { Origin: 'http://localhost:3000' },
+    });
+    const vary = (res.headers.get('vary') ?? '').toLowerCase();
+    expect(vary).toContain('authorization');
+    expect(vary).toContain('origin');
+  });
+
   it('lets the edge hold an anonymous list, event, related and venue page', async () => {
     for (const path of [
       '/v1/events?limit=5',
