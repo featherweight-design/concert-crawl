@@ -59,7 +59,7 @@ export interface ArtistPastShow {
 
 /**
  * `count` MUST equal `past.length` and `venues` MUST be drawn from `past` —
- * the history line ("N shows on our map — X, Y and Z") is rendered from this
+ * the history line ("We've caught them N times: X, Y and Z") is rendered from this
  * object while the list below it is rendered from `past`, so any drift makes
  * the page contradict itself. Both are computed from one query.
  */

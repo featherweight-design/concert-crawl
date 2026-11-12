@@ -179,7 +179,7 @@ Mobile content column overlaps the plate's lower edge via `margin-top: -26px`; c
 | `count === 0`                            | `historyNone(since)` — "First time we've caught them. We only started looking in {since}." |
 | `count === 1` **and** `venues[0]` truthy | `historyOne(venue)` — "We've caught them once: {venue}."                                   |
 | `count === 1` **and no venue**           | falls back to `historyNone` (never "once — once")                                          |
-| `count >= 2`                             | `historyMany(n, venues)` — "{n} shows on our map: {venues}."                               |
+| `count >= 2`                             | `historyMany(n, venues)` — "We've caught them {n} times: {venues}."                        |
 
 `joinList`: 1 → `a`; 2 → `a & b`; 3+ → `a, b & c` (Oxford-less serial with `&`).
 
@@ -552,7 +552,7 @@ layout shift.**
 | `followingAria(name)`    | `Following {name}. Activate to stop following.`                                                                 | follow `aria-label`                        |
 | `historyNone(since)`     | `First time we've caught them. We only started looking in {since}.`                                             | history line                               |
 | `historyOne(venue)`      | `We've caught them once: {venue}.`                                                                              | history line                               |
-| `historyMany(n, venues)` | `{n} shows on our map: {venues}.`                                                                               | history line                               |
+| `historyMany(n, venues)` | `We've caught them {n} times: {venues}.`                                                                        | history line                               |
 | `pastTitle`              | `Previously`                                                                                                    | past section head                          |
 | `pastNote(since)`        | `Concert Crawl started crawling in {since}. Shows before that aren't tracked.`                                  | past section closer                        |
 | `playerRail`             | `Player · Spotify`                                                                                              | embed rail, left                           |
