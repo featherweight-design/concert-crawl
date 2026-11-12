@@ -8,6 +8,7 @@ import { EventTitleBlock } from '../event-title-block';
 import { bucketMembersFor } from '@concert-crawl/types';
 import { MetaRow } from '../event-row/MetaRow';
 import { orderGenres } from '../event-row/lib/order-genres';
+import { genreRing } from '../event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
 
@@ -78,7 +79,7 @@ export function HeroEventCard({
           data-testid="hero-image-ring"
           className="shrink-0 overflow-hidden rounded-[10px]"
           style={{
-            boxShadow: `0 0 0 1.25px ${genre}, 0 0 12px color-mix(in oklch, ${genre} 35%, transparent)`,
+            boxShadow: genreRing(genre),
           }}
         >
           {HERO_ART_SIZES.map(({ size, className }) => (
