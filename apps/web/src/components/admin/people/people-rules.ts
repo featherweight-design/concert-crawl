@@ -25,7 +25,8 @@ export const personHref = (userId: string): string =>
 
 /**
  * Role chip tones, from `07/people`: Beta signal, Admin accent, Member
- * neutral. Promoter and Staff are undrawn.
+ * neutral. Promoter and Staff are undrawn (🔸 in the design review): Staff
+ * takes Admin's tone, as staff are admins; Promoter takes a tone of its own.
  */
 export const ROLE_KIND: Record<Role, StatusKind> = {
   user: 'neutral',
@@ -105,17 +106,23 @@ export const fetchPeople = async (
     });
   }
   const first = await api.list({ ...base, offset: 0 });
-  const people = [...first.people];
+  // By id: the API's scan can refresh between pages and shift the order.
+  const seen = new Map(first.people.map((person) => [person.id, person]));
   let truncated = first.truncated;
-  for (let read = 1; people.length < first.total; read += 1) {
+  for (let read = 1; read * PAGE_SIZE < first.total; read += 1) {
     if (read === TEST_SWEEP_PAGES) {
       truncated = true;
       break;
     }
     const next = await api.list({ ...base, offset: read * PAGE_SIZE });
     if (next.people.length === 0) break;
-    people.push(...next.people);
+    for (const person of next.people) seen.set(person.id, person);
   }
-  const tests = people.filter((person) => person.isTestAccount);
-  return { ...first, people: tests, total: tests.length, truncated };
+  const tests = [...seen.values()].filter((person) => person.isTestAccount);
+  return {
+    ...first,
+    people: tests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    total: tests.length,
+    truncated,
+  };
 };
