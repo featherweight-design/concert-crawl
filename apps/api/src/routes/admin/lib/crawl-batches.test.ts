@@ -38,7 +38,7 @@ const trigger = (
   ...over,
 });
 
-// 12:00Z on Nov 12 is 5 AM Mountain (MST), before the 6 AM deadline.
+// 20:00Z on Nov 12 is 1 PM Mountain (MST), after the 6 AM deadline.
 const NOW = new Date('2026-11-12T20:00:00Z');
 
 const keys = (batches: { key: string }[]) => batches.map((batch) => batch.key);
