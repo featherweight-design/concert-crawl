@@ -67,7 +67,9 @@ export const EditCodePanel = ({
         `[aria-label="${COPY.seats}"] [aria-checked="true"]`,
       )
       ?.focus();
-  }, [focusSeats]);
+    // Re-run when the surface swaps to the phone sheet: its focus trap mounts
+    // afterwards and would otherwise leave focus on Label.
+  }, [focusSeats, isPhone]);
 
   const used = seatsTaken(code);
   const seats = seatsFrom(seatsChoice, typed);
@@ -101,7 +103,14 @@ export const EditCodePanel = ({
             onClick={save}
             fullWidth={isPhone}
             variant="gradient"
-            style={{ height: 40, fontSize: 14, flex: 1, borderRadius: 9 }}
+            // The phone sheet stacks its footer, where flex 1 would squash
+            // the button's height.
+            style={{
+              height: 40,
+              fontSize: 14,
+              borderRadius: 9,
+              ...(isPhone ? {} : { flex: 1 }),
+            }}
           >
             {COPY.save}
           </AdminButton>
