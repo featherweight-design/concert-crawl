@@ -31,10 +31,11 @@ export const NotifTile = ({
         background: 'var(--surface-2)',
         border: '1px solid var(--border)',
         color: ink,
-        // A read row dims the tile rather than dropping it: the glyph is the
-        // fastest scan cue in the list, and removing it would re-sort the eye.
-        opacity: read ? 0.55 : 1,
+        // B19a (`notif-shows-m`): a read row keeps its full-colour tile. The
+        // glyph is the fastest scan cue in the list; read state is carried by
+        // the row's title weight and the missing wash, not by the tile.
       }}
+      data-read={read ? 'true' : undefined}
     >
       <NotifGlyph name={glyph} size={size * 0.57} />
     </span>

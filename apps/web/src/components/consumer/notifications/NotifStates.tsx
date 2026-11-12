@@ -21,6 +21,7 @@ import { StateCard } from '@/components/consumer/empty-state/StateCard';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
 import { NotifDayDivider } from './NotifDayDivider';
 import { NotifGlyph } from './glyphs';
+import type { NotificationTab } from './definitions/categories';
 
 /** Each skeleton row fades a step further, so the list trails off. */
 const ROW_FADE = 0.16;
@@ -101,6 +102,17 @@ export const NotifEmpty = ({
           ? undefined
           : { label: NOTIFICATIONS_COPY.emptyAction, onClick: onAction }
       }
+    />
+  </div>
+);
+
+/** One tab with nothing in it (B19a `notif-tab-empty-m`): ring, tab eyebrow, one line. */
+export const NotifTabEmpty = ({ tab }: { tab: NotificationTab }) => (
+  <div style={{ padding: '16px 16px 24px' }}>
+    <StateCard
+      icon={<NotifGlyph name="bell" size={24} />}
+      eyebrow={NOTIFICATIONS_COPY.segments[tab]}
+      title={NOTIFICATIONS_COPY.tabEmpty[tab]}
     />
   </div>
 );

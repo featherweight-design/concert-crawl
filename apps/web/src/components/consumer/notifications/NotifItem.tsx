@@ -10,7 +10,7 @@
 // body to 2. 64px is a floor, not a target — rows run ~92–116px.
 //
 // UNREAD IS SIGNALLED FOUR WAYS, never by colour alone (WCAG 1.4.1): a 2px
-// left rail in the category ink, a --surface-1 row fill, a 700-weight title,
+// left rail in the category ink, a 4% ink wash, a 700-weight title,
 // and a trailing dot. Any one of them can be missed; all four cannot.
 
 import { useId } from 'react';
@@ -99,33 +99,19 @@ export const NotifItem = ({
         display: 'flex',
         gap: 10,
         alignItems: 'flex-start',
-        padding: compact ? '11px 14px 11px 12px' : '14px 16px 14px 14px',
+        padding: compact ? '11px 14px' : '14px 16px',
         minHeight: 64,
-        // The tint below sits at z-index -1; isolation keeps it inside this
-        // row, over the row's fill and under its content.
-        position: 'relative',
-        isolation: 'isolate',
         cursor: onOpen === undefined ? 'default' : 'pointer',
-        background: unread ? 'var(--surface-1)' : 'transparent',
-        borderLeft: `2px solid ${unread ? cat.ink : 'transparent'}`,
+        // B19a (`notif-shows-m`): an unread row is a flat 4% wash of its
+        // category ink across the whole row, with a 2px inset rail on the
+        // left (an inset shadow, so it takes no layout width).
+        background: unread
+          ? `color-mix(in srgb, ${cat.ink} 4%, transparent)`
+          : 'transparent',
+        boxShadow: unread ? `inset 2px 0 0 ${cat.ink}` : 'none',
         borderBottom: '1px solid var(--border)',
       }}
     >
-      {/* B+ (`bp-s-notif_m`): an unread row washes in from its rail in the
-          category ink. A layer rather than the row's own background, so the
-          row keeps its --surface-1 fill as the solid unread signal. */}
-      {unread && (
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: -1,
-            pointerEvents: 'none',
-            background: `linear-gradient(90deg, color-mix(in oklch, ${cat.ink} 11%, transparent), transparent 70%)`,
-          }}
-        />
-      )}
       {onOpen !== undefined && namesSomeone && (
         <span id={labelId} hidden className="ph-no-capture">
           {itemLabel(item, now)}

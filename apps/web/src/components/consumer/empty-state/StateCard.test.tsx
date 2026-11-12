@@ -33,6 +33,25 @@ describe('StateCard', () => {
     expect(screen.getByRole('alert', { name: 'Try again' })).toBeTruthy();
   });
 
+  it('draws the danger tile 84px with a glow (B19a)', () => {
+    const { container } = render(
+      <StateCard tone="danger" icon={<i />} eyebrow="e" title="t" body="b" />,
+    );
+    const tile = container.querySelector<HTMLElement>('span[aria-hidden]');
+    expect(tile?.style.width).toBe('84px');
+    expect(tile?.style.borderRadius).toBe('24px');
+    expect(tile?.style.boxShadow).not.toBe('');
+  });
+
+  it('draws the empty ring dashed at 1.5px (B19a)', () => {
+    const { container } = render(
+      <StateCard icon={<i />} eyebrow="e" title="t" />,
+    );
+    const ring = container.querySelector<HTMLElement>('span[aria-hidden]');
+    expect(ring?.style.width).toBe('96px');
+    expect(ring?.style.border).toContain('1.5px dashed');
+  });
+
   it('adds no label when the card has no role', () => {
     render(<StateCard icon={<i />} eyebrow="e" title="t" body="b" />);
     expect(

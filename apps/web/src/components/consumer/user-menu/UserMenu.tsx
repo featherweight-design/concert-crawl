@@ -28,6 +28,7 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { AnonDisc } from '@/components/consumer/app-header/AnonDisc';
 import { InboxStrip } from '@/components/consumer/notifications/InboxStrip';
 import { NotifMenuPanel } from '@/components/consumer/notifications/NotifMenuPanel';
+import { NotifPanelEdge } from '@/components/consumer/notifications/NotifPanelEdge';
 import { NotifPip } from '@/components/consumer/notifications/NotifPip';
 import { NOTIFICATIONS_COPY } from '@/components/consumer/notifications/definitions/copy';
 import {
@@ -147,6 +148,9 @@ export type AccountMenuMode = 'menu' | 'notifications';
 const PANEL_MAX_HEIGHT = 'min(700px, calc(100dvh - 88px))';
 const PANEL_WIDTH = 390;
 const IDENTITY_RING_SIZE = 46;
+/** `notifications-panel-d`: inset ring plus the deep drop shadow. */
+const NOTIF_PANEL_SHADOW =
+  '0 0 0 1px rgba(255,255,255,0.04) inset, 0 30px 80px rgba(0,0,0,0.6)'; // fwd-allow-hex: board art colour
 
 /**
  * Owns the account menu's open state for every trigger in the app — the
@@ -967,9 +971,12 @@ function UserMenuPopover(props: MenuBodyProps) {
         ...(isNotifMode(props)
           ? {
               width: PANEL_WIDTH,
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 14,
+              // `notifications-panel-d`: surface-2 fill, hairline border,
+              // radius 18, inset ring; the gradient top edge is the child.
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 18,
+              boxShadow: NOTIF_PANEL_SHADOW,
             }
           : {
               width: 380,
@@ -980,12 +987,18 @@ function UserMenuPopover(props: MenuBodyProps) {
               background: POPOVER_EDGE_BACKGROUND,
               borderRadius: 16,
             }),
-        boxShadow: '0 24px 64px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.2)',
+        ...(isNotifMode(props)
+          ? {}
+          : {
+              boxShadow:
+                '0 24px 64px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.2)',
+            }),
         overflow: 'hidden',
         fontFamily: 'var(--font-ui)',
         color: 'var(--fg)',
       }}
     >
+      {isNotifMode(props) && <NotifPanelEdge />}
       <MenuShellContent props={props} panelMaxHeight={PANEL_MAX_HEIGHT} />
     </div>
   );
