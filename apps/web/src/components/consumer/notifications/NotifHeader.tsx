@@ -34,11 +34,20 @@ export const NotifHeader = ({
   showClose = false,
   tab,
   onTab,
+  empty = false,
+  showMarkAll = false,
 }: {
   count: number;
   /**
-   * The active tab. Supplied only when there is a list to filter (addendum 2,
-   * item 1); with no list there is nothing to switch between, so no tabs.
+   * B+ draws the empty state's readout as "0 NEW" in --signal (not "All caught
+   * up.", which the eyebrow below already says).
+   */
+  empty?: boolean | undefined;
+  /** B+ draws Mark all read on the empty and error states too. */
+  showMarkAll?: boolean | undefined;
+  /**
+   * The active tab. The empty and error states draw the tab row as well
+   * (addendum 2, item 1 boards), so it shows whenever the caller supplies it.
    */
   tab?: NotificationTab | undefined;
   onTab?: ((next: NotificationTab) => void) | undefined;
@@ -135,9 +144,9 @@ export const NotifHeader = ({
           <NMono
             size={10.5}
             ls="0.18em"
-            color={count > 0 ? 'var(--signal)' : 'var(--fg-muted)'}
+            color={count > 0 || empty ? 'var(--signal)' : 'var(--fg-muted)'}
           >
-            {count > 0
+            {count > 0 || empty
               ? NOTIFICATIONS_COPY.panelSub(count)
               : NOTIFICATIONS_COPY.markedAll}
           </NMono>
@@ -149,7 +158,7 @@ export const NotifHeader = ({
           </span>
         )}
       </span>
-      {count > 0 && onMarkAll !== undefined && (
+      {(count > 0 || showMarkAll) && onMarkAll !== undefined && (
         <button
           type="button"
           className="notif-hit44"
