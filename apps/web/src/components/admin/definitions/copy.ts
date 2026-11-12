@@ -439,6 +439,8 @@ export const ADMIN_COPY = {
       site_broken_or_moved: 'site down or moved',
     },
     moreOk: (count: number) => `${count} more, all OK`,
+    /** A row cell's column name, read before its value by screen readers. */
+    cellName: (column: string) => `${column}: `,
     noMatch: 'No venues match the current filter.',
   },
 
