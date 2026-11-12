@@ -35,4 +35,24 @@ describe('VenueHero', () => {
         ?.childElementCount,
     ).toBeGreaterThan(0);
   });
+
+  // Addendum 2 item 16: on Light the backdrop goes pale; the glyph is not
+  // recoloured. The wash is gated on the Light theme alone.
+  it('washes the backdrop pale on the Light theme only', () => {
+    const { container } = render(
+      <VenueHero slug="the-church-nightclub" name="The Church Nightclub" />,
+    );
+    const wash = container.querySelector(
+      '[data-testid="venue-hero-light-wash"]',
+    );
+    expect(wash).not.toBeNull();
+    expect(wash).toHaveClass('hidden', '[[data-theme=light]_&]:block');
+    expect(wash?.getAttribute('style')).toContain('var(--bg) 45%');
+    // The glyph is drawn in its own gradient, not a theme colour.
+    expect(
+      container
+        .querySelector('svg[data-venue-glyph="church"]')
+        ?.innerHTML.includes('var(--'),
+    ).toBe(false);
+  });
 });

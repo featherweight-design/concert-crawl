@@ -41,6 +41,18 @@ export function VenueHero({ slug, name }: VenueHeroProps) {
         style={{ background: 'linear-gradient(transparent, var(--bg))' }}
         aria-hidden
       />
+      {/* Light theme only (design addendum 2 #178 item 16, \`venue-light-*\`):
+          the backdrop goes pale under a wash of the ground, and the neon
+          glyph keeps its own colours. */}
+      <div
+        data-testid="venue-hero-light-wash"
+        className="pointer-events-none absolute inset-0 hidden [[data-theme=light]_&]:block"
+        style={{
+          background:
+            'linear-gradient(180deg, color-mix(in srgb, var(--bg) 10%, transparent), color-mix(in srgb, var(--bg) 45%, transparent) 50%, var(--bg))',
+        }}
+        aria-hidden
+      />
       {/* Floating back button */}
       <BackChip top={56} fallbackHref="/events" />
     </div>
