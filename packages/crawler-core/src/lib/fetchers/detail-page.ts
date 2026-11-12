@@ -126,6 +126,16 @@ async function fetchTextLanded(
       },
     });
   } catch (err) {
+    // A request that threw before any response (a timeout, a reset) is the
+    // page that explains the run. One robots.txt or our own origin rule
+    // declined was never requested, so it is not a failed page.
+    if (
+      !(err instanceof RobotsDisallowedError) &&
+      !(err instanceof CrawlSkipError) &&
+      !(err instanceof DetailPageFetchError)
+    ) {
+      fetchLog?.record({ url, mode: 'http' });
+    }
     if (err instanceof RobotsDisallowedError) {
       throw new DetailPageFetchError(
         0,

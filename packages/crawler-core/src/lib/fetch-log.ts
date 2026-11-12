@@ -16,8 +16,15 @@ export interface FetchLogEntry {
   fetchedAt: Date;
 }
 
-/** A run keeps its first this-many pages, plus every failed request. */
+/** A run keeps its first this-many pages, plus its failed requests. */
 export const MAX_FETCH_LOG_ENTRIES = 50;
+
+/**
+ * Failed requests are kept past the page cap, since they explain a run, but
+ * only up to this many: a crawl that hits hundreds of 404s or timeouts must not
+ * grow the log, and the one insert that flushes it, without bound.
+ */
+export const MAX_FETCH_LOG_FAILURES = 200;
 
 export interface FetchRecord {
   url: string;
@@ -30,13 +37,19 @@ export interface FetchRecord {
 
 export class FetchLog {
   private readonly items: FetchLogEntry[] = [];
+  private failures = 0;
 
   record(page: FetchRecord): void {
-    // The cap bounds the successful pages. A failed request is always kept:
-    // it is the page that explains the run, and a run that fails late would
-    // otherwise show 50 healthy pages and no cause.
+    // The page cap bounds the successful pages. A failed request is kept past
+    // it, since it is the page that explains the run (a run that fails late
+    // would otherwise show 50 healthy pages and no cause), up to its own cap.
     const failed = page.httpStatus === undefined || page.httpStatus >= 400;
-    if (!failed && this.items.length >= MAX_FETCH_LOG_ENTRIES) return;
+    if (failed) {
+      if (this.failures >= MAX_FETCH_LOG_FAILURES) return;
+      this.failures += 1;
+    } else if (this.items.length - this.failures >= MAX_FETCH_LOG_ENTRIES) {
+      return;
+    }
     this.items.push({
       url: page.url,
       finalUrl: page.finalUrl ?? null,

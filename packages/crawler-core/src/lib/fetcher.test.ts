@@ -14,6 +14,7 @@ import type {
   Route,
 } from 'playwright';
 import * as robots from './robots.js';
+import { FetchLog } from './fetch-log.js';
 
 // jitter(0) = 0, so tests that pass crawlDelayMs 0 never wait. Pinning random
 // keeps any test that does pass a delay deterministic.
@@ -242,6 +243,59 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
       fetchPage('https://example.com', makeMockBrowser(page), 0),
     ).rejects.toThrow('robots.txt disallows redirect target');
     expect(page.content).not.toHaveBeenCalled();
+  });
+
+  it('does not log a page for a redirect robots.txt declined', async () => {
+    const page = makeMockPage({
+      goto: vi
+        .fn()
+        .mockResolvedValue(
+          makeResponse(200, 'https://example.com/final', [
+            'https://example.com',
+            'https://example.com/private',
+          ]),
+        ),
+    });
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.endsWith('/private'),
+    );
+    const log = new FetchLog();
+
+    await expect(
+      fetchPage(
+        'https://example.com',
+        makeMockBrowser(page),
+        0,
+        'networkidle',
+        undefined,
+        log,
+      ),
+    ).rejects.toThrow('robots.txt disallows redirect target');
+    expect(log.entries).toHaveLength(0);
+  });
+
+  it('logs a page that never answered', async () => {
+    const page = makeMockPage({
+      goto: vi.fn().mockRejectedValue(makeTimeoutError('Navigation timeout')),
+    });
+    const log = new FetchLog();
+
+    await expect(
+      fetchPage(
+        'https://example.com',
+        makeMockBrowser(page),
+        0,
+        'networkidle',
+        undefined,
+        log,
+      ),
+    ).rejects.toThrow('Navigation timeout');
+    expect(log.entries).toHaveLength(1);
+    expect(log.entries[0]).toMatchObject({
+      url: 'https://example.com',
+      httpStatus: null,
+      fetchMode: 'browser',
+    });
   });
 
   it('reports a block even when the redirect chain passed a disallowed URL', async () => {
