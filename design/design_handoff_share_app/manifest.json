@@ -3,7 +3,7 @@
   "section": "01-where-it-lives",
   "name": "menu-m",
   "title": "Account menu · phone",
-  "note": "One new row, last in You: Share Concert Crawl, with the QR tile in accent. YOUR INVITE says what it is before launch.",
+  "note": "One new row, last in You: Share Concert Crawl, with the QR tile in accent.",
   "w": 390,
   "h": 920
  },
@@ -43,7 +43,7 @@
   "section": "02-the-share-sheet",
   "name": "fullscreen-m",
   "title": "Full screen",
-  "note": "Tap the code or Full screen. Always white, whatever the theme, so it scans in a dark room. Keeps the screen awake (Wake Lock) until Done.",
+  "note": "Opened by Full screen (tapping the code is a hidden shortcut, no icon). Always white at full contrast, whatever the theme. Keeps the screen awake until Done. Web pages can’t set brightness, so the foot asks for it.",
   "w": 390,
   "h": 844
  },
