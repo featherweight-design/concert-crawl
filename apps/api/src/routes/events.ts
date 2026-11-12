@@ -13,8 +13,6 @@ import {
   userProfiles,
   priceSubmissions,
   submissionConfirms,
-  eventReports,
-  eventReportConfirms,
 } from '@concert-crawl/db';
 import {
   listedOrDelisted,
@@ -60,11 +58,8 @@ import {
 } from '../lib/event-billing.js';
 import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
-import {
-  activePromotedReportWhere,
-  activeSoldOutWhere,
-  isSoldOutSql,
-} from '../lib/sold-out.js';
+import { isSoldOutSql } from '../lib/sold-out.js';
+import { loadPromotedReportSummary } from '../lib/promoted-report.js';
 import {
   aggregateByTier,
   deriveObservedAt,
@@ -706,88 +701,18 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
   // Detect a promoted sold-out report — drives the confirmed sold-out UI.
   // Same predicate as isSoldOutSql, so detail and every row agree.
-  const [soldOutReportRow] = await db
-    .select({
-      id: eventReports.id,
-      reporterId: eventReports.reporterId,
-      createdAt: eventReports.createdAt,
-    })
-    .from(eventReports)
-    .where(activeSoldOutWhere(id))
-    .orderBy(desc(eventReports.createdAt))
-    .limit(1);
+  const soldOutReport = await loadPromotedReportSummary(id, 'sold-out');
+  const priceStatus: 'live' | 'soldout' | null = soldOutReport
+    ? 'soldout'
+    : null;
 
-  let priceStatus: 'live' | 'soldout' | null = null;
-  let soldOutReport: {
-    reporterHandle: string | null;
-    confirmsCount: number;
-    reportedAt: string;
-  } | null = null;
-
-  if (soldOutReportRow) {
-    priceStatus = 'soldout';
-
-    const [confirmCountRow] = await db
-      .select({ total: count() })
-      .from(eventReportConfirms)
-      .where(eq(eventReportConfirms.reportId, soldOutReportRow.id));
-
-    const confirmsCount = confirmCountRow?.total ?? 0;
-
-    const [reporterProfile] = await db
-      .select({ handle: userProfiles.handle })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, soldOutReportRow.reporterId))
-      .limit(1);
-
-    soldOutReport = {
-      reporterHandle: reporterProfile?.handle ?? null,
-      // Raw confirm-row count — matches GET /v1/events/:id/reports so the
-      // promoted soldOutReport surface stays consistent across endpoints.
-      confirmsCount,
-      reportedAt: soldOutReportRow.createdAt.toISOString(),
-    };
-  }
-
-  // Where a cancelled or postponed status came from. A promoted fan report
-  // carries its reporter and confirms; with none, the crawler read it off the
-  // venue's calendar. The status card's source line names whichever it was.
-  let statusReport: {
-    reporterHandle: string | null;
-    confirmsCount: number;
-    reportedAt: string;
-  } | null = null;
-
-  if (row.status === 'cancelled' || row.status === 'postponed') {
-    const [statusReportRow] = await db
-      .select({
-        id: eventReports.id,
-        reporterId: eventReports.reporterId,
-        createdAt: eventReports.createdAt,
-      })
-      .from(eventReports)
-      .where(activePromotedReportWhere(id, row.status))
-      .orderBy(desc(eventReports.createdAt))
-      .limit(1);
-
-    if (statusReportRow) {
-      const [statusConfirmRow] = await db
-        .select({ total: count() })
-        .from(eventReportConfirms)
-        .where(eq(eventReportConfirms.reportId, statusReportRow.id));
-      const [statusReporter] = await db
-        .select({ handle: userProfiles.handle })
-        .from(userProfiles)
-        .where(eq(userProfiles.userId, statusReportRow.reporterId))
-        .limit(1);
-      statusReport = {
-        reporterHandle: statusReporter?.handle ?? null,
-        // Raw confirm-row count, as soldOutReport counts it.
-        confirmsCount: statusConfirmRow?.total ?? 0,
-        reportedAt: statusReportRow.createdAt.toISOString(),
-      };
-    }
-  }
+  // Where a cancelled or postponed status came from: the promoted fan report
+  // behind it, with its reporter and confirms, or null when no fan report was
+  // promoted (an admin edit or the stale sweep set it).
+  const statusReport =
+    row.status === 'cancelled' || row.status === 'postponed'
+      ? await loadPromotedReportSummary(id, row.status)
+      : null;
 
   // Flat-field declarations — populated below from the same in-memory data
   // that feeds priceByTier so the two payload shapes can't drift. The flat

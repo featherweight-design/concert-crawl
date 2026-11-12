@@ -856,6 +856,13 @@ export interface EventWatchersResponse {
 }
 
 // EventDetailResponse — single event detail with computed watch state
+/** A promoted fan report as the event detail page shows it. */
+export interface PromotedReportSummary {
+  reporterHandle: string | null;
+  confirmsCount: number;
+  reportedAt: string;
+}
+
 export interface EventDetailResponse extends EventWithVenue {
   // #1115 PR-G — artist-page entry points. The headliner's `artists.slug`, or
   // null when the projection has no row for that canonical name (an unresolved
@@ -926,18 +933,10 @@ export interface EventDetailResponse extends EventWithVenue {
       } & PriceCheckFields)
     | null;
   // Promoted sold-out report — present when a community sold-out report was confirmed
-  soldOutReport?: {
-    reporterHandle: string | null;
-    confirmsCount: number;
-    reportedAt: string;
-  } | null;
+  soldOutReport?: PromotedReportSummary | null;
   // The promoted fan report behind a cancelled or postponed status. Null when
-  // the status came from the crawler (the venue's own calendar).
-  statusReport?: {
-    reporterHandle: string | null;
-    confirmsCount: number;
-    reportedAt: string;
-  } | null;
+  // no fan report was promoted (an admin edit or the stale sweep set it).
+  statusReport?: PromotedReportSummary | null;
   // All pending submissions whenever any exist (PR 3 dropped the
   // "only when no corroborated price" gate so multi-tier pending stays
   // visible alongside corroborated tiers). Counter rows that surface via
