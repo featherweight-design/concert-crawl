@@ -2613,4 +2613,47 @@ export const ADMIN_COPY = {
       failed: "Couldn't save that. Nothing was changed.",
     },
   },
+  // --- Admin redesign primitives (plan row 0b) ---
+  venueStatus: {
+    onSite: { live: 'Live', hidden: 'Hidden', draft: 'Draft' },
+    crawling: {
+      crawling: 'Crawling',
+      paused: 'Paused',
+      autoPaused: 'Auto-paused: 3 failures',
+      blocked: 'Blocked',
+      robotsDisallowed: 'robots.txt disallows',
+    },
+  },
+  kind: {
+    show: 'SHOW',
+    venue: 'VENUE',
+    artist: 'ARTIST',
+    event: 'EVENT',
+    prices: 'PRICES',
+    bug: 'BUG',
+    flag: 'FLAG',
+    priceCheck: 'PRICE CHECK',
+  },
+  panel: { close: 'Close' },
+  confirm: { cancel: 'Cancel' },
+  states: {
+    couldntLoad: {
+      title: (page: string) => `Couldn't load ${page}`,
+      titleGeneric: "Couldn't load this page",
+      body: 'Something broke while loading it. Nothing you decided is lost.',
+      tryAgain: 'Try again',
+      openHealth: 'Open Health',
+      errorId: (digest: string) => `Error ID: ${digest}`,
+    },
+    saveFailed: {
+      title: (what: string) => `Couldn't change ${what}`,
+      body: (saved: string) => `${saved} Nothing changed.`,
+      tryAgain: 'Try again',
+    },
+    notFound: {
+      title: "That page isn't here",
+      body: 'It may have moved or been deleted.',
+      back: 'Back to Health',
+    },
+  },
 } as const;
