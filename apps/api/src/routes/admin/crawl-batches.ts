@@ -6,8 +6,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { and, desc, gte, lt } from 'drizzle-orm';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { crawlRuns, crawlTriggers, db, venues } from '@concert-crawl/db';
 import type { CrawlBatch, CrawlBatchDetail } from '@concert-crawl/types';
 import { validationHook } from '../../lib/validator.js';
@@ -21,7 +20,7 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // A run row's error text is the whole message the crawl threw; the list only
-// needs the start of it.
+// needs the start of it, cut in SQL so the rest never leaves the database.
 const MAX_ERROR_CHARS = 500;
 
 const listQuerySchema = z.object({
@@ -46,7 +45,10 @@ const readWindow = async (
         eventsFound: crawlRuns.eventsFound,
         eventsInserted: crawlRuns.eventsInserted,
         durationMs: crawlRuns.durationMs,
-        errorMessage: crawlRuns.errorMessage,
+        // The first of the message only: a run stores everything the crawl threw.
+        errorMessage: sql<
+          string | null
+        >`left(${crawlRuns.errorMessage}, ${MAX_ERROR_CHARS})`,
         createdAt: crawlRuns.createdAt,
       })
       .from(crawlRuns)
@@ -71,10 +73,7 @@ const readWindow = async (
       ),
   ]);
   return {
-    runs: runRows.map((row) => ({
-      ...row,
-      errorMessage: row.errorMessage?.slice(0, MAX_ERROR_CHARS) ?? null,
-    })),
+    runs: runRows,
     triggers: triggerRows,
   };
 };
