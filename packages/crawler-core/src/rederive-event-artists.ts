@@ -69,7 +69,13 @@ export type RederiveStrategy =
    * cannot check every page the row's text came from. Left as it was; the
    * nightly crawl re-derives it with full provenance.
    */
-  | 'provenance-unknown';
+  | 'provenance-unknown'
+  /**
+   * The adjudicator ruled the listing a cover or tribute night whose names are
+   * the artists being covered. A real artist must never be attached to it, and
+   * the stored bill is not erased either: the row is left exactly as it was.
+   */
+  | 'tribute-or-cover';
 
 export interface RederiveChange {
   eventId: string;
@@ -77,6 +83,8 @@ export interface RederiveChange {
   strategy: RederiveStrategy;
   headliners: string[];
   supportingArtists: string[];
+  /** The bill the row stores now, so a change list reads as before and after. */
+  before: { headliners: string[]; supportingArtists: string[] };
   /** True when the verdict was "not a concert" and the row gets hidden. */
   hides: boolean;
 }
@@ -215,6 +223,7 @@ export async function rederiveEventArtists(
     'adjudicator-unavailable': 0,
     'ai-use-refused': 0,
     'provenance-unknown': 0,
+    'tribute-or-cover': 0,
   };
   const sample: RederiveChange[] = [];
   let scanned = 0;
@@ -331,6 +340,14 @@ export async function rederiveEventArtists(
         continue;
       }
 
+      // A cover or tribute night is left exactly as it is: the real artists in
+      // its title are the ones being honored, and an empty bill would erase
+      // whatever is stored.
+      if (result.coversOtherArtists === true) {
+        strategies['tribute-or-cover'] += 1;
+        continue;
+      }
+
       derived += 1;
       const strategy: RederiveStrategy = result.adjudicated
         ? 'adjudicated'
@@ -369,6 +386,10 @@ export async function rederiveEventArtists(
           strategy,
           headliners: result.headliners,
           supportingArtists: result.supportingArtists,
+          before: {
+            headliners: row.headliners ?? [],
+            supportingArtists: row.supportingArtists ?? [],
+          },
           hides,
         });
       }

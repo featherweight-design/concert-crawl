@@ -238,7 +238,12 @@ export const ARTIST_RULES = `- If artist is unclear, derive it from the event ti
   - "Skillet: Comatose 20 Years, Still Screaming Tour" → artist "Skillet", tourName "Comatose 20 Years, Still Screaming Tour", supportingArtists []
 - When you cannot tell whether a comma separates two acts or sits inside one act's name, prefer keeping the name whole rather than fragmenting a real act.
 - Recurring series brands: when a title pairs a venue's recurring event brand with a rotating guest ("BASS BINGO – Wooli Edition", "BPM BINGO! Dombresky Edition", "Film on the Rocks: Sinners", "Emo Night: Fall Out Boy Edition"), artist is the SERIES BRAND alone — "BASS BINGO", "BPM BINGO", "Film on the Rocks", "Emo Night". Never the guest, and never the full compound title. This overrides the null-artist rule above even for bingo, trivia and screening nights: a recurring brand is a real, stable name rather than an invented performer, and it keeps two different series running the same night at the same venue from collapsing into each other. The brand is the one part of the billing that stays identical between crawls, so anything else produces a different artist each night and splits one show into several. Put the guest in supportingArtists only when the guest is a live performing act; for a recorded-music or screening night leave supportingArtists empty.
-- The series rule applies to the artist field only. Classification (isConcert) still follows the concert rules — a recurring DJ-driven or screening brand stays NOT a concert even though it now carries a stable artist string.`;
+- The series rule applies to the artist field only. Classification (isConcert) still follows the concert rules — a recurring DJ-driven or screening brand stays NOT a concert even though it now carries a stable artist string.
+- A series brand fills the bill ONLY when the listing names no performer at all. As soon as any act is named (Feat., Ft., w/, with, a lineup after a dash or colon), the series brand or event name is NOT an act: "Open House Feat. Peazy w/ GLOX" → headliners ["Peazy"], never "Open House". An event or room name (an open house, a showcase, a night, a vendor market) is not a performer either.
+- A promoter, presenter, collective, radio station or series that PRESENTS the bill is not a performing act. "KGNU Presents Haute & Freddy: Big Disgrace Tour" → KGNU is not on the bill. When a collective presents a night that names its performers, the performers are the bill, not the collective.
+- Never drop an act the listing names. When the title fuses two listings or runs one name into the next ("... Big Disgrace Tour Rubin Brothers"), every named act still belongs on the bill; do not replace one named act with another. If the venue's own performer field is supplied, every act in it must appear in headliners or supportingArtists (a joined name like "Haute & Freddy" may be one act or two: judge by the rules above).
+- Cover and tribute nights: when the names in the listing are the artists whose music is being COVERED or HONORED (a "Cover Show", "Tributes to ...", "plays the music of ...", "Night of ...") and the acts actually performing are not named, those names are NOT on the bill. Return EMPTY headliners and supportingArtists, and set coversOtherArtists to true where the tool has that field. A tribute act that IS named and performs ("Strangelove — The Depeche Mode Experience") is the headliner; the artist it honors is never listed.
+- Words that are not acts never appear on a bill: "Friends", "& Friends" alone, "Special Guests", "More", "TBA", "Surprise Set", "DJs". "Hirshi & Friends" is the act "Hirshi & Friends" as written or the act "Hirshi"; it is never a separate act called "Friends".`;
 
 const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
 
@@ -621,8 +626,18 @@ const ADJUDICATE_TOOL: Anthropic.Tool = {
         description:
           'Opening / supporting acts in billing order, excluding everything in headliners. Empty array when there are no named openers.',
       },
+      coversOtherArtists: {
+        type: 'boolean',
+        description:
+          'true when the names in the listing are the artists whose music is being covered or honored (a cover show, a tribute night) and the acts actually performing are not named. Then headliners and supportingArtists MUST be empty. false for any bill whose named acts are the performers, including a named tribute act.',
+      },
     },
-    required: ['isConcert', 'headliners', 'supportingArtists'],
+    required: [
+      'isConcert',
+      'headliners',
+      'supportingArtists',
+      'coversOtherArtists',
+    ],
   },
 };
 
@@ -651,11 +666,21 @@ const AdjudicatedNames = NameList.transform((names) => {
   return unique;
 });
 
-const AdjudicationSchema = z.object({
-  isConcert: z.boolean(),
-  headliners: AdjudicatedNames,
-  supportingArtists: AdjudicatedNames,
-});
+// `coversOtherArtists` defaults to false so an older model answer without it
+// still parses. When true the bill is forced empty whatever else the model
+// said: the names it listed are the artists being covered, never performers.
+const AdjudicationSchema = z
+  .object({
+    isConcert: z.boolean(),
+    headliners: AdjudicatedNames,
+    supportingArtists: AdjudicatedNames,
+    coversOtherArtists: z.boolean().default(false),
+  })
+  .transform((verdict) =>
+    verdict.coversOtherArtists
+      ? { ...verdict, headliners: [], supportingArtists: [] }
+      : verdict,
+  );
 
 const ADJUDICATE_PROMPT = `You are reading ONE event listing from a music venue and answering two questions about it: is this a legitimate concert, and if so, who is on the bill. The second answer follows from the first.
 
@@ -682,9 +707,16 @@ ${IS_CONCERT_RULES}`;
 export const adjudicateEventWithUsage = async ({
   title,
   description,
+  venuePerformers,
 }: {
   title: string;
   description: string | undefined;
+  /**
+   * The performer field the venue's own listing reported, when it named one that
+   * is not just the title. Context for the verdict: every act in it must stay on
+   * the bill, which the title alone cannot show.
+   */
+  venuePerformers?: readonly string[] | undefined;
 }): Promise<{
   verdict: z.infer<typeof AdjudicationSchema>;
   usage: TokenUsage;
@@ -709,6 +741,10 @@ export const adjudicateEventWithUsage = async ({
         content: `Title: ${title}${
           description != null && description.trim() !== ''
             ? `\nDescription: ${description}`
+            : ''
+        }${
+          venuePerformers !== undefined && venuePerformers.length > 0
+            ? `\nPerformer field from the venue's listing: ${venuePerformers.join(' | ')}`
             : ''
         }`,
       },
@@ -743,7 +779,12 @@ export const adjudicateEventWithUsage = async ({
   };
   if (!parsed.data.isConcert) {
     return {
-      verdict: { isConcert: false, headliners: [], supportingArtists: [] },
+      verdict: {
+        isConcert: false,
+        headliners: [],
+        supportingArtists: [],
+        coversOtherArtists: false,
+      },
       usage,
     };
   }
@@ -754,5 +795,6 @@ export const adjudicateEventWithUsage = async ({
 export const adjudicateEvent = async (input: {
   title: string;
   description: string | undefined;
+  venuePerformers?: readonly string[] | undefined;
 }): Promise<z.infer<typeof AdjudicationSchema>> =>
   (await adjudicateEventWithUsage(input)).verdict;

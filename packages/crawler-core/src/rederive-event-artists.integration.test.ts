@@ -109,6 +109,63 @@ describe('rederive-event-artists integration', () => {
     expect(result.strategies.observed).toBe(1);
   });
 
+  it('leaves a cover or tribute night exactly as it is, on a real run too', async () => {
+    const venue = await seedVenue();
+    const title =
+      "Halloween Cover Show: The B52's + Wire + Misfits + The Monks + Beat Happening";
+    const event = await seedEvent(venue.id, {
+      title,
+      artist: title,
+      canonicalArtist: title.toLowerCase(),
+      canonicalTitle: title.toLowerCase(),
+      date: '2026-10-31',
+    });
+    const adjudicate: Adjudicator = vi.fn(async () => ({
+      isConcert: true,
+      headliners: [],
+      supportingArtists: [],
+      coversOtherArtists: true,
+    }));
+
+    const result = await run(adjudicate, false);
+
+    const after = await readEvent(event.id);
+    // Nothing written: no real artist attached, and no stored bill erased.
+    expect(after.headliners).toBeNull();
+    expect(after.supportingArtists).toBeNull();
+    expect(after.hiddenFromConsumer).toBe(false);
+    expect(result.strategies['tribute-or-cover']).toBe(1);
+    expect(result.updated).toBe(0);
+    expect(result.sample).toHaveLength(0);
+  });
+
+  it('lists each change with the bill it replaces', async () => {
+    const venue = await seedVenue();
+    await seedEvent(venue.id, {
+      title: 'Clipse & J.I.D',
+      artist: 'Clipse & J.I.D',
+      canonicalArtist: 'clipse & j.i.d',
+      canonicalTitle: 'clipse & j.i.d',
+      date: '2026-11-12',
+    });
+    const adjudicate: Adjudicator = vi.fn(async () => ({
+      isConcert: true,
+      headliners: ['Clipse', 'J.I.D'],
+      supportingArtists: ['Friends', 'Clipse'],
+    }));
+
+    const result = await run(adjudicate, true);
+
+    expect(result.sample).toHaveLength(1);
+    expect(result.sample[0]).toMatchObject({
+      title: 'Clipse & J.I.D',
+      // The verdict's generic word and doubled act are cleaned before the list.
+      headliners: ['Clipse', 'J.I.D'],
+      supportingArtists: [],
+      before: { headliners: [], supportingArtists: [] },
+    });
+  });
+
   it('splits a billing a structured source flattened into one name (Clipse & J.I.D, Galdive & rum.gold)', async () => {
     const venue = await seedVenue();
     const clipse = await seedEvent(venue.id, {

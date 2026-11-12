@@ -3,6 +3,7 @@ import {
   deriveArtists,
   isSuspiciousObservation,
   joinsSeveralNames,
+  tidyBill,
   wouldAdjudicate,
 } from './derive-artists.js';
 
@@ -428,5 +429,158 @@ describe('a lone observed name that joins several', () => {
     ['Earth, Wind and Fire', false],
   ])('joinsSeveralNames(%s) is %s', (observed, expected) => {
     expect(joinsSeveralNames(observed)).toBe(expected);
+  });
+});
+
+describe('tidyBill: generic words and doubled acts never reach a stored bill', () => {
+  it('drops generic words as acts', () => {
+    expect(
+      tidyBill(
+        ['Hirshi & Friends'],
+        ['Friends', 'Special Guests', 'TBA', 'Zen'],
+      ),
+    ).toEqual({ headliners: ['Hirshi & Friends'], supportingArtists: ['Zen'] });
+    expect(tidyBill(['Friends'], [])).toEqual({
+      headliners: [],
+      supportingArtists: [],
+    });
+    // Only a whole generic word goes: a real act whose name contains one stays.
+    expect(tidyBill(['Friends of Mine'], [])).toEqual({
+      headliners: ['Friends of Mine'],
+      supportingArtists: [],
+    });
+  });
+
+  it('removes a supporting act already listed as a headliner', () => {
+    expect(tidyBill(['Blakkfish'], ['blakkfish', 'Opener'])).toEqual({
+      headliners: ['Blakkfish'],
+      supportingArtists: ['Opener'],
+    });
+  });
+
+  it('removes a supporting act that is a member of a combined headliner', () => {
+    expect(
+      tidyBill(
+        ['Brothers of Brass & Hot Like Mars', 'Zen Selekta / LivSings'],
+        [
+          'Brothers of Brass',
+          'Hot Like Mars',
+          'Zen Selekta',
+          'LivSings',
+          'Real Opener',
+        ],
+      ),
+    ).toEqual({
+      headliners: [
+        'Brothers of Brass & Hot Like Mars',
+        'Zen Selekta / LivSings',
+      ],
+      supportingArtists: ['Real Opener'],
+    });
+  });
+
+  it('ignores a trailing parenthetical when comparing', () => {
+    expect(
+      tidyBill(['LivSings'], ['LivSings (Beyonce Tribute)', 'Other']),
+    ).toEqual({
+      headliners: ['LivSings'],
+      supportingArtists: ['Other'],
+    });
+  });
+
+  it('keeps each supporting act once', () => {
+    expect(tidyBill(['A'], ['B', 'b', 'C'])).toEqual({
+      headliners: ['A'],
+      supportingArtists: ['B', 'C'],
+    });
+  });
+});
+
+describe('a cover or tribute night', () => {
+  const coverTitle =
+    "Halloween Cover Show: The B52's + Wire + Misfits + The Monks + Beat Happening";
+
+  it('bills nobody, and says so, when the adjudicator rules the names are the covered artists', async () => {
+    const adjudicate = vi.fn(async () => ({
+      isConcert: true,
+      headliners: [],
+      supportingArtists: [],
+      coversOtherArtists: true,
+    }));
+    const result = await deriveArtists(
+      { ...base, title: coverTitle, observedPerformers: [coverTitle] },
+      adjudicate,
+    );
+    expect(result).toMatchObject({
+      headliners: [],
+      supportingArtists: [],
+      adjudicated: true,
+      coversOtherArtists: true,
+    });
+  });
+
+  it('does not fall back to the observed names for a cover night', async () => {
+    const title =
+      'Night 0 Tributes to Steely Dan, Grateful Dead & Tyler Childers';
+    const result = await deriveArtists(
+      { ...base, title, observedPerformers: ['Steely Dan & Grateful Dead'] },
+      async () => ({
+        isConcert: true,
+        headliners: [],
+        supportingArtists: [],
+        coversOtherArtists: true,
+      }),
+    );
+    expect(result.headliners).toEqual([]);
+    expect(result.coversOtherArtists).toBe(true);
+  });
+});
+
+describe('what the adjudicator is given', () => {
+  it("passes the venue's own performer field, so a named act cannot vanish unseen", async () => {
+    const adjudicate = vi.fn(async () => ({
+      isConcert: true,
+      headliners: ['Haute', 'Freddy'],
+      supportingArtists: ['Rubin Brothers'],
+    }));
+    await deriveArtists(
+      {
+        ...base,
+        title: 'KGNU Presents Haute & Freddy Big Disgrace Tour Rubin Brothers',
+        observedPerformers: ['Haute & Freddy'],
+      },
+      adjudicate,
+    );
+    expect(adjudicate).toHaveBeenCalledWith(
+      expect.objectContaining({ venuePerformers: ['Haute & Freddy'] }),
+    );
+  });
+
+  it('does not pass a performer field that only echoes the title', async () => {
+    const adjudicate = vi.fn(async () => ({
+      isConcert: true,
+      headliners: ['X'],
+      supportingArtists: [],
+    }));
+    await deriveArtists(
+      { ...base, title: 'Open House', observedPerformers: ['Open House'] },
+      adjudicate,
+    );
+    expect(adjudicate).toHaveBeenCalledWith(
+      expect.objectContaining({ venuePerformers: [] }),
+    );
+  });
+
+  it('cleans the verdict: no "Friends" act and no act listed twice', async () => {
+    const result = await deriveArtists(
+      { ...base, title: 'Hirshi & Friends + Opener' },
+      async () => ({
+        isConcert: true,
+        headliners: ['Hirshi & Friends'],
+        supportingArtists: ['Friends', 'Hirshi', 'Opener'],
+      }),
+    );
+    expect(result.headliners).toEqual(['Hirshi & Friends']);
+    expect(result.supportingArtists).toEqual(['Opener']);
   });
 });

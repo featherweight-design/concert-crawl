@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs';
 import {
   adjudicateEventWithUsage,
   calculateCost,
@@ -36,21 +37,43 @@ const parseLimit = (): number | undefined => {
 // cumulative cost is logged as it grows. `--only-flattened` reads only rows
 // whose artist joins names with " & " or " + ", the rows the flattened-billing
 // rule can change, so every row read is a row that can cost a call.
-const parseMaxCost = (): number | undefined => {
+// The spend ceiling is built in: with no flag the pass stops at $6, and a flag
+// can only lower it. A run that could spend more than $6 cannot be asked for.
+const HARD_MAX_COST_USD = 6;
+
+const parseMaxCost = (): number => {
   const flag = process.argv.find((arg) => arg.startsWith('--max-cost-usd='));
-  if (flag === undefined) return undefined;
+  if (flag === undefined) return HARD_MAX_COST_USD;
   const raw = flag.slice('--max-cost-usd='.length);
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`--max-cost-usd expects a positive number, got "${raw}"`);
   }
+  if (value > HARD_MAX_COST_USD) {
+    throw new Error(
+      `--max-cost-usd cannot exceed the built-in $${HARD_MAX_COST_USD} cap, got ${value}`,
+    );
+  }
   return value;
 };
+
+// `--summary-file=PATH` writes the whole change list as a Markdown table: in a
+// workflow, GITHUB_STEP_SUMMARY, so the run page shows every row the pass would
+// touch (or did) before anyone decides to apply.
+const parseSummaryFile = (): string | undefined => {
+  const flag = process.argv.find((arg) => arg.startsWith('--summary-file='));
+  return flag === undefined ? undefined : flag.slice('--summary-file='.length);
+};
+
+const cell = (text: string): string => text.replace(/\|/g, '\\|');
+const names = (list: readonly string[]): string =>
+  list.length === 0 ? '(none)' : list.join(', ');
 
 async function main(): Promise<void> {
   const dryRun = !process.argv.includes('--apply');
   const limit = parseLimit();
   const maxCostUsd = parseMaxCost();
+  const summaryFile = parseSummaryFile();
   const onlyFlattenedBillings = process.argv.includes('--only-flattened');
   let spentUsd = 0;
   let calls = 0;
@@ -58,7 +81,7 @@ async function main(): Promise<void> {
   console.warn(
     `[rederive-event-artists] starting — ${dryRun ? 'DRY RUN' : 'APPLY'}${
       limit === undefined ? '' : ` limit=${limit}`
-    }${maxCostUsd === undefined ? '' : ` max-cost-usd=${maxCostUsd}`}${
+    } max-cost-usd=${maxCostUsd}${
       onlyFlattenedBillings ? ' only-flattened' : ''
     }`,
   );
@@ -78,8 +101,9 @@ async function main(): Promise<void> {
     },
     limit,
     onlyFlattenedBillings,
-    shouldStop: () => maxCostUsd !== undefined && spentUsd >= maxCostUsd,
-    sampleSize: 1000,
+    shouldStop: () => spentUsd >= maxCostUsd,
+    // Every change, not a sample: the summary is the list an apply is judged by.
+    sampleSize: Number.MAX_SAFE_INTEGER,
   });
   if (result.stopped) {
     console.warn(
@@ -113,6 +137,35 @@ async function main(): Promise<void> {
     console.warn(
       '[rederive-event-artists] dry run — nothing written. Re-run with --apply.',
     );
+  }
+
+  if (summaryFile !== undefined) {
+    const lines = [
+      `## Repair event artists — ${dryRun ? 'DRY RUN (nothing written)' : 'APPLIED'}`,
+      '',
+      `Scanned ${result.scanned} · derived ${result.derived} · ` +
+        `${dryRun ? 'would update' : 'updated'} ${result.updated} · ` +
+        `hidden ${result.hidden} · Haiku calls ${calls} · $${spentUsd.toFixed(4)} ` +
+        `of the $${maxCostUsd} cap${result.stopped ? ' (COST CAP HIT, the pass stopped early)' : ''}`,
+      '',
+      'Strategies: ' +
+        Object.entries(result.strategies)
+          .map(([name, count]) => `${name} ${count}`)
+          .join(' · '),
+      '',
+      `### Changes (${result.sample.length})`,
+      '',
+      '| Title | Strategy | Before: headliners / supporting | After: headliners / supporting |',
+      '|---|---|---|---|',
+      ...result.sample.map(
+        (change) =>
+          `| ${cell(change.title)}${change.hides ? ' **HIDE**' : ''} | ${change.strategy} | ` +
+          `${cell(names(change.before.headliners))} / ${cell(names(change.before.supportingArtists))} | ` +
+          `${cell(names(change.headliners))} / ${cell(names(change.supportingArtists))} |`,
+      ),
+      '',
+    ];
+    appendFileSync(summaryFile, `${lines.join('\n')}\n`);
   }
 }
 
