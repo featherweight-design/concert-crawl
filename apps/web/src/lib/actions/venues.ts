@@ -12,6 +12,7 @@ import type {
   VenuePlatform,
 } from '@concert-crawl/types';
 import type { PauseOutcome } from '@/components/admin/venues/pause-rules';
+import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl';
 import { buildUpdateVenueBody } from './build-update-venue-body';
 
 async function getToken(): Promise<string> {
@@ -76,9 +77,13 @@ export async function createVenueAndCrawl(
   if (!result.success || !result.data) return result;
 
   try {
-    await apiClient.post(`/v1/admin/crawl/${result.data.id}`, token, {});
-  } catch {
+    await triggerVenueCrawl(result.data.id, token);
+  } catch (err: unknown) {
     // Crawl trigger failure is non-fatal — venue was created
+    console.warn('createVenueAndCrawl: first crawl not queued', {
+      id: result.data.id,
+      err,
+    });
   }
 
   return result;
@@ -183,16 +188,20 @@ export async function pauseCrawling(
   return { ok: true };
 }
 
-// Queues one venue's crawl now (POST /v1/admin/crawl/:id). A failure carries
-// the API's status: 400 (hidden or unverified) and 409 (paused) are the API
-// refusing that venue; anything else is an error, logged as one. A failure
-// before any response (the network) still throws.
+// Queues one venue's crawl now, through the same `triggerVenueCrawl` the
+// venue page's Re-crawl uses (POST /v1/admin/crawl/:id). A failure carries the
+// API's status: 400 (hidden or unverified) and 409 (paused, or robots.txt
+// disallows it: `robots_disallowed`) are the API refusing that venue;
+// anything else is an error, logged as one. A failure before any response
+// (the network) still throws. A queued crawl refreshes the venue's pages.
 export async function recrawlVenue(
   id: string,
 ): Promise<{ ok: true } | { ok: false; status: number }> {
   const token = await getToken();
   try {
-    await apiClient.post(`/v1/admin/crawl/${id}`, token, {});
+    await triggerVenueCrawl(id, token);
+    revalidatePath('/admin/venues');
+    revalidatePath(`/admin/venues/${id}`);
     return { ok: true };
   } catch (err: unknown) {
     if (!(err instanceof ApiError)) throw err;

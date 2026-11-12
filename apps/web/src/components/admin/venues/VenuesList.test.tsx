@@ -93,6 +93,7 @@ describe('VenuesList Select', () => {
       crawlPausedAt: PAUSED,
       consecutiveFailures: 3,
     }),
+    venue('Blocked', { verified: true, blockedAt: PAUSED }),
   ];
   const check = (name: string) =>
     fireEvent.click(screen.getByLabelText(COPY.selectVenue(name)));
@@ -132,10 +133,97 @@ describe('VenuesList Select', () => {
     const bar = within(screen.getByTestId('select-bar'));
     expect(bar.getByRole('button', { name: BULK.recrawl(0) })).toBeDisabled();
     expect(bar.getByText(BULK.recrawlPaused)).toBeInTheDocument();
-    expect(bar.getByRole('button', { name: BULK.pause(2) })).toBeEnabled();
+    // Neither is being crawled, so Pause has nothing to pause either.
+    expect(bar.getByRole('button', { name: BULK.pause(0) })).toBeDisabled();
+    expect(bar.getByText(BULK.pauseSkipped(2))).toBeInTheDocument();
 
     check('Bluebird');
     expect(bar.getByRole('button', { name: BULK.recrawl(1) })).toBeEnabled();
+  });
+
+  it('gives a plain count, not the paused reason, when a blocked venue is left out', () => {
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Levitt');
+    check('Blocked');
+    const bar = within(screen.getByTestId('select-bar'));
+    expect(bar.queryByText(BULK.recrawlPaused)).toBeNull();
+    expect(bar.getByText(BULK.recrawlSkipped(2))).toBeInTheDocument();
+  });
+
+  it('pauses only the venues being crawled out of a mixed selection', async () => {
+    pauseCrawling.mockResolvedValue({ ok: true });
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Levitt');
+    check('Junkyard');
+    const bar = within(screen.getByTestId('select-bar'));
+    expect(bar.getByText(BULK.pauseSkipped(2))).toBeInTheDocument();
+    fireEvent.click(bar.getByRole('button', { name: BULK.pause(1) }));
+    expect(
+      screen.getByText(ADMIN_COPY.pausePanel.title('Bluebird')),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.pausePanel.submit }),
+    );
+    await waitFor(() => expect(pauseCrawling).toHaveBeenCalledTimes(1));
+    expect(pauseCrawling).toHaveBeenCalledWith('Bluebird', {
+      reason: 'waiting_on_permission',
+      resume: { mode: 'manual' },
+    });
+  });
+
+  it('sends a mixed 422-and-error failure to the toast, not the panel', async () => {
+    pauseCrawling.mockImplementation((id: string) =>
+      Promise.resolve(
+        id === 'Bluebird'
+          ? { ok: false, error: 'Pick a date after today' }
+          : { ok: false, error: null },
+      ),
+    );
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Globe Hall');
+    fireEvent.click(screen.getByRole('button', { name: BULK.pause(2) }));
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.pausePanel.submit }),
+    );
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast).toHaveTextContent(
+      'Pick a date after today. Crawling is as it was. Nothing changed.',
+    );
+    expect(screen.queryByText(ADMIN_COPY.pausePanel.titleMany(2))).toBeNull();
+  });
+
+  it('tries again only on failed venues still in view, and names the rest', async () => {
+    pauseCrawling.mockImplementation((id: string) =>
+      Promise.resolve(
+        id === 'Bluebird' ? { ok: true } : { ok: false, error: null },
+      ),
+    );
+    render(<VenuesList venues={mixed} />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.select }));
+    check('Bluebird');
+    check('Globe Hall');
+    fireEvent.click(screen.getByRole('button', { name: BULK.pause(2) }));
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.pausePanel.submit }),
+    );
+    const toast = await screen.findByTestId('save-failed');
+    expect(pauseCrawling).toHaveBeenCalledTimes(2);
+
+    fireEvent.change(screen.getByLabelText(COPY.search), {
+      target: { value: 'blue' },
+    });
+    fireEvent.click(within(toast).getByRole('button', { name: 'Try again' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('save-failed')).toHaveTextContent(
+        BULK.notRetried('Globe Hall'),
+      ),
+    );
+    expect(pauseCrawling).toHaveBeenCalledTimes(2);
   });
 
   it('pauses each venue and names the ones that failed, which stay selected', async () => {
@@ -209,7 +297,11 @@ describe('VenuesList Select', () => {
 
     const toast = await screen.findByTestId('save-failed');
     expect(toast).toHaveTextContent(BULK.recrawlFailed('Bluebird'));
-    expect(toast).toHaveTextContent(BULK.recrawlErrored);
+    // The whole sentence, so a doubled full stop can't slip back in.
+    expect(toast).toHaveTextContent(
+      'The request didn’t go through. The other one is queued. Nothing changed.',
+    );
+    expect(toast).not.toHaveTextContent('..');
   });
 
   it('sends Re-crawl only to the venues it can run on', async () => {
@@ -280,6 +372,8 @@ describe('VenuesList Select', () => {
     expect(other).toBeDisabled();
     expect(screen.getByLabelText(COPY.selectAll)).toBeDisabled();
     expect(screen.getByRole('button', { name: BULK.clear })).toBeDisabled();
+    // Done too: the request settles into Select's state.
+    expect(screen.getByRole('button', { name: COPY.done })).toBeDisabled();
     fireEvent.click(other);
     expect(other).not.toBeChecked();
 
@@ -336,7 +430,8 @@ describe('VenuesList Select', () => {
     query.matches = true;
     act(() => onChange());
     expect(screen.queryByTestId('select-bar')).toBeNull();
-    expect(screen.queryByTestId('save-failed')).toBeNull();
+    // The failure stays said on the phone; it never vanishes unsaid.
+    expect(screen.getByTestId('save-failed')).toBeInTheDocument();
 
     query.matches = false;
     act(() => onChange());
