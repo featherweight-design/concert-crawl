@@ -6,6 +6,7 @@ import {
   latestRunLine,
   matchesFilter,
   needsByVenue,
+  parseNeedsYou,
   sortWorstFirst,
   type VenueListRow,
 } from './venue-list-rules';
@@ -85,6 +86,31 @@ describe('venue list rules', () => {
     ]);
     // A dot is not OK, so it never folds away.
     expect(foldOk(sorted).shown.map((row) => row.name)).toContain('Dot');
+  });
+
+  it('ranks a hidden venue with a dot as the dot, not as hidden', () => {
+    const sorted = sortWorstFirst([
+      venue('Hidden', { active: false }),
+      venue('Paused', { crawlPausedAt: PAUSED }),
+      venue('Hidden dot', { active: false, needsLook: true }),
+    ]);
+    expect(sorted.map((row) => row.name)).toEqual([
+      'Hidden dot',
+      'Paused',
+      'Hidden',
+    ]);
+  });
+
+  it('accepts a Needs you reply only when each item has a venueId', () => {
+    expect(
+      parseNeedsYou([{ venueId: 'a', kind: 'bug' }, { venueId: null }]),
+    ).toEqual([{ venueId: 'a' }, { venueId: null }]);
+    expect(parseNeedsYou([])).toEqual([]);
+    expect(parseNeedsYou({ data: [] })).toBeNull();
+    expect(parseNeedsYou(null)).toBeNull();
+    expect(parseNeedsYou([{ venueId: 42 }])).toBeNull();
+    expect(parseNeedsYou([{ kind: 'bug' }])).toBeNull();
+    expect(parseNeedsYou(['a'])).toBeNull();
   });
 
   it('counts every Needs you item with a venue, of any kind, per venue', () => {

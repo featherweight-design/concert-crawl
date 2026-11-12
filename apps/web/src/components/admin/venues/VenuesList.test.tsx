@@ -95,6 +95,52 @@ describe('VenuesList', () => {
     expect(screen.getAllByTestId('venue-row')).toHaveLength(2);
   });
 
+  it('names the dot for screen readers', () => {
+    render(
+      <VenuesList venues={twelveOk} needsYou={[{ venueId: 'Venue 03' }]} />,
+    );
+    expect(screen.getByTestId('needs-you-dot')).toHaveTextContent(
+      COPY.needsYouDot,
+    );
+  });
+
+  it('draws the dot after the name on the phone card', () => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    render(
+      <VenuesList venues={twelveOk} needsYou={[{ venueId: 'Venue 03' }]} />,
+    );
+    const card = screen
+      .getAllByTestId('venue-row')
+      .find((row) => row.getAttribute('data-venue-id') === 'Venue 03');
+    expect(card).toBeDefined();
+    const dot = within(card!).getByTestId('needs-you-dot');
+    expect(dot).toHaveTextContent(COPY.needsYouDot);
+    // After the name, as `04/venues-mobile` draws it.
+    const name = within(card!).getByText('Venue 03');
+    expect(
+      name.compareDocumentPosition(dot) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('falls back to All if Needs you drops while Needs a look is on', () => {
+    const { rerender } = render(
+      <VenuesList venues={twelveOk} needsYou={[{ venueId: 'Venue 03' }]} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Needs a look/ }));
+    expect(screen.getAllByTestId('venue-row')).toHaveLength(1);
+
+    rerender(<VenuesList venues={twelveOk} needsYou={null} />);
+    expect(screen.getAllByTestId('venue-row')).toHaveLength(10);
+    expect(screen.getByRole('button', { name: /^All/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   it('renders the list without dots or the chip when Needs you failed', () => {
     render(<VenuesList venues={twelveOk} needsYou={null} />);
     expect(screen.getAllByTestId('venue-row')).toHaveLength(10);

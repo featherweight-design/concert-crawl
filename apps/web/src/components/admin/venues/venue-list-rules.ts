@@ -41,6 +41,28 @@ export type RankedVenue = VenueWithEventCount & { needsLook?: boolean };
  * that list being uncapped (it returns every open item). If it is ever paged,
  * this must switch to a per-venue count from `/needs-you/count`.
  */
+/**
+ * The boundary check on `GET /v1/admin/needs-you`: the list reads only each
+ * item's `venueId`, so that is what must hold. Anything else (not an array,
+ * an item without a string-or-null `venueId`) is null, the "no dots, no chip"
+ * path, rather than a wrong dot.
+ */
+export const parseNeedsYou = (
+  raw: unknown,
+): Pick<NeedsYouItem, 'venueId'>[] | null => {
+  if (!Array.isArray(raw)) return null;
+  const items: Pick<NeedsYouItem, 'venueId'>[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null || !('venueId' in item)) {
+      return null;
+    }
+    const { venueId } = item;
+    if (venueId !== null && typeof venueId !== 'string') return null;
+    items.push({ venueId });
+  }
+  return items;
+};
+
 export const needsByVenue = (
   items: readonly Pick<NeedsYouItem, 'venueId'>[],
 ): Map<string, number> => {
@@ -214,7 +236,9 @@ const OK_RANK = 6;
  */
 export const worstRank = (venue: RankedVenue): number => {
   const { onSite, crawling } = deriveVenueStatusChips(venue);
-  if (onSite === 'hidden') return 5;
+  // Something waiting in Needs you outranks a quiet hidden venue: the chip
+  // counts it, so the list mustn't bury it among the hidden ones.
+  if (onSite === 'hidden') return venue.needsLook === true ? 3 : 5;
   if (crawling === 'blocked') return 0;
   if (crawling === 'auto_paused') return 1;
   if (crawling === 'crawling' && isFailing(venue)) return 2;

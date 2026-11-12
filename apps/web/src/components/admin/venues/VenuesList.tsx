@@ -361,7 +361,11 @@ export const VenuesList = ({
 }) => {
   const router = useRouter();
   const isPhone = useIsPhone();
-  const [filter, setFilter] = useState<VenueFilter>('all');
+  const [chosenFilter, setFilter] = useState<VenueFilter>('all');
+  // "Needs a look" without the Needs you list would hide every row with no
+  // chip left to clear it, so it falls back to All.
+  const filter: VenueFilter =
+    chosenFilter === 'needsLook' && needsYou === null ? 'all' : chosenFilter;
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(false);
 

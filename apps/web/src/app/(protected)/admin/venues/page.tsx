@@ -1,8 +1,10 @@
-import type { NeedsYouItem } from '@concert-crawl/types';
 import { auth, requireAdminUser } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
 import { VenuesList } from '@/components/admin/venues/VenuesList';
-import type { VenueListRow } from '@/components/admin/venues/venue-list-rules';
+import {
+  parseNeedsYou,
+  type VenueListRow,
+} from '@/components/admin/venues/venue-list-rules';
 
 export default async function AdminVenuesPage() {
   await requireAdminUser();
@@ -13,7 +15,8 @@ export default async function AdminVenuesPage() {
   // A failed load renders "Couldn't load Venues" in the list, not the
   // generic boundary, so Try again re-runs only this fetch. The Needs you
   // list only adds the dots and the "Needs a look" chip, so its failure is
-  // not the page's: the list renders without them.
+  // not the page's: the list renders without them. Its shape is checked
+  // here, at the boundary; a mismatch takes the same path as a failure.
   const [venues, needsYou] = await Promise.all([
     apiClient
       .get<VenueListRow[]>('/v1/admin/venues', token)
@@ -22,7 +25,14 @@ export default async function AdminVenuesPage() {
         return null;
       }),
     apiClient
-      .get<NeedsYouItem[]>('/v1/admin/needs-you', token)
+      .get<unknown>('/v1/admin/needs-you', token)
+      .then((raw) => {
+        const parsed = parseNeedsYou(raw);
+        if (parsed === null) {
+          console.error('[admin/venues] needs-you: unexpected shape');
+        }
+        return parsed;
+      })
       .catch((err: unknown) => {
         console.error('[admin/venues] needs-you failed:', err);
         return null;
