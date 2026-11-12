@@ -472,8 +472,11 @@ const priceCheckItems: Adapter = async ({ now }) => {
       and(
         eq(priceSubmissions.status, 'pending'),
         isNotNull(priceSubmissions.disputedSubmissionId),
-        // A price check on a show that has happened decides nothing a fan
-        // will see, and would rank first for being the soonest date.
+        // A price check on a show that has happened, or one a fan cannot see,
+        // decides nothing anybody reads, and a past one would rank first for
+        // being the soonest date. The parent's own status is left to the
+        // contest list this mirrors (routes/admin/contests.ts).
+        eq(events.hiddenFromConsumer, false),
         gte(events.date, today),
       ),
     );
@@ -517,6 +520,10 @@ const priceBatchItems: Adapter = async ({ now }) => {
           priceSubmissions.corroborationCount,
           PRICE_BATCH_MIN_CORROBORATIONS,
         ),
+        // Only shows a fan can see: approving a price on a hidden or called-off
+        // show changes nothing anybody reads.
+        eq(events.hiddenFromConsumer, false),
+        eq(events.status, 'upcoming'),
         gte(events.date, addDays(today, PRICE_BATCH_MIN_DAYS)),
         lte(events.date, addDays(today, PRICE_BATCH_MAX_DAYS)),
       ),
