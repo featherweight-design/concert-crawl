@@ -1,3 +1,12 @@
+## [1.356.1](https://github.com/featherweight-design/concert-crawl/compare/v1.356.0...v1.356.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** one modal-dialog hook, delete sheet in the dialog z-band, tests on both layouts ([d7aaa67](https://github.com/featherweight-design/concert-crawl/commit/d7aaa6766d4e4dd5ddd84f014d71217e6e3964f7))
+* **web:** portal the mobile filter sheet to the body ([f948ef5](https://github.com/featherweight-design/concert-crawl/commit/f948ef5f4de0b8e18c1b183e126aa78578c201a4))
+* **web:** the delete account sheet traps Tab, closes on Escape and returns focus ([c5b79e5](https://github.com/featherweight-design/concert-crawl/commit/c5b79e5cd690c1ff8dfcefe329ef8cbd99e47aed))
+
 # [1.356.0](https://github.com/featherweight-design/concert-crawl/compare/v1.355.0...v1.356.0) (2026-11-12)
 
 
