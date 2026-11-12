@@ -1,11 +1,15 @@
 {
   "feature": "B13 · Passport booklet and the Up next stub",
-  "note": "Plan row B13 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): passport = 07-more-screens/more-r3-passport_m, 07-more-screens/more-r3-passport, 07-more-screens/more-r3-passport_book_m, 07-more-screens/more-r3-passport_book; passport-full = 07-more-screens/more-r3-passport_book_m. Walk by hand (state a sheet cannot set up): empty (06-states/bp-s-empty_passport_m): needs an account with no concerts. Both rows need a signed-in account with attended (past) shows: an account without them renders the empty state, so the booklet wait fails rather than photographing the skeleton. The settle lets the signed-in header load before the photo. The last wait holds until nothing is aria-busy: Save image prepares the share card after mount.",
+  "note": "Plan row B13 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): passport = 07-more-screens/more-r3-passport_m, 07-more-screens/more-r3-passport, 07-more-screens/more-r3-passport_book_m, 07-more-screens/more-r3-passport_book; passport-full = 07-more-screens/more-r3-passport_book_m. Walk by hand (state a sheet cannot set up): empty (06-states/bp-s-empty_passport_m): needs an account with no concerts. Both rows need a signed-in account with attended (past) shows: an account without them renders the empty state, so the booklet wait fails rather than photographing the skeleton. The settle lets the signed-in header load before the photo. The last wait holds until nothing is aria-busy: Save image prepares the share card after mount. Each row first requests /passport/square: a fresh dev server compiles that route on first hit (about 15s), which outlasted the not-busy wait on Save image.",
   "rows": [
     {
       "id": "passport",
       "label": "/passport: the booklet",
       "steps": [
+        {
+          "goto": "/passport/square",
+          "expectStatus": 200
+        },
         {
           "goto": "/passport",
           "settle": 1500
@@ -26,6 +30,10 @@
       "label": "/passport: whole page, Up next stub",
       "fullPage": true,
       "steps": [
+        {
+          "goto": "/passport/square",
+          "expectStatus": 200
+        },
         {
           "goto": "/passport",
           "settle": 1500
