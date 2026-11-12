@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { Plus, Ticket } from 'lucide-react';
-import type { AdminInviteCode, InviteCode } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -21,7 +20,13 @@ import {
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
 import { postersHref } from '@/lib/poster/posters-href';
-import { codesApi, type CodeEdit } from './codes-api';
+import {
+  codesApi,
+  isAdminCode,
+  type CodeEdit,
+  type ListedCode,
+  type ListedInviteCode,
+} from './codes-api';
 import { PeopleTabs } from '../people/PeopleTabs';
 import {
   STATUS_KIND,
@@ -29,7 +34,6 @@ import {
   codeLabel,
   countPosters,
   isEnded,
-  isMemberCode,
   makerName,
   seatCap,
   shortDate,
@@ -59,7 +63,7 @@ interface Failure {
   retry: () => void;
 }
 
-const failureFor = (row: AdminInviteCode, retry: () => void): Failure => ({
+const failureFor = (row: ListedInviteCode, retry: () => void): Failure => ({
   code: row.code,
   saved: COPY.form.stillStatus(
     row.code,
@@ -99,7 +103,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   const router = useRouter();
   const isPhone = useIsPhone();
   const api = useMemo(() => codesApi(getToken), [getToken]);
-  const [codes, setCodes] = useState<AdminInviteCode[] | null>(null);
+  const [codes, setCodes] = useState<ListedInviteCode[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [people, setPeople] = useState<number | null>(null);
   const [open, setOpen] = useState<Open | null>(null);
@@ -129,12 +133,12 @@ export function InviteCodesClient({ origin }: { origin: string }) {
       .catch(() => undefined);
   }, [api, load]);
 
-  const replace = (row: AdminInviteCode) =>
+  const replace = (row: ListedInviteCode) =>
     setCodes((rows) =>
       rows ? rows.map((each) => (each.id === row.id ? row : each)) : rows,
     );
 
-  const copyLink = (code: AdminInviteCode) => {
+  const copyLink = (code: ListedInviteCode) => {
     const note = (text: string) => {
       setCopyNote(text);
       setTimeout(() => setCopyNote(null), 2000);
@@ -152,7 +156,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   };
 
   // A failed save snaps the row back and says so (rule 10).
-  const saveEdit = async (row: AdminInviteCode, edit: CodeEdit) => {
+  const saveEdit = async (row: ListedInviteCode, edit: CodeEdit) => {
     setOpen(null);
     setFailure(null);
     replace({ ...row, ...edit });
@@ -169,8 +173,8 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   // A failed change says so, with Try again (rule 10), and reloads the list,
   // since a refusal (409) usually means the code changed elsewhere.
   const runEnding = async (
-    row: AdminInviteCode,
-    action: () => Promise<InviteCode>,
+    row: ListedInviteCode,
+    action: () => Promise<ListedCode>,
   ) => {
     if (ending.current) return;
     ending.current = true;
@@ -190,7 +194,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   };
 
   const menuItems = (
-    row: AdminInviteCode,
+    row: ListedInviteCode,
     status: InviteStatus,
   ): RowMenuItem[] => {
     const host = origin.replace(/^https?:\/\//, '');
@@ -565,19 +569,21 @@ export function InviteCodesClient({ origin }: { origin: string }) {
           status={inviteStatus(openRow, now)}
           api={api}
           onCopy={() => copyLink(openRow)}
-          // A member's share code takes no seats (409 `member_code`).
+          // A read-only code (a member's, or an unknown kind) takes no seats.
           onAddSeats={
-            isMemberCode(openRow)
-              ? undefined
-              : () =>
+            isAdminCode(openRow)
+              ? () =>
                   setOpen({ kind: 'edit', id: openRow.id, focusSeats: true })
+              : undefined
           }
           onRevoke={() => setOpen({ kind: 'revoke', id: openRow.id })}
           onReactivate={() => setOpen({ kind: 'reactivate', id: openRow.id })}
           onClose={() => setOpen(null)}
         />
       )}
-      {openRow && open?.kind === 'edit' && (
+      {/* Edit and Reactivate are an admin code's only: never mounted for a
+          read-only one, whatever opened them. */}
+      {openRow && isAdminCode(openRow) && open?.kind === 'edit' && (
         <EditCodePanel
           code={openRow}
           now={now}
@@ -596,7 +602,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
           }
         />
       )}
-      {openRow && open?.kind === 'reactivate' && (
+      {openRow && isAdminCode(openRow) && open?.kind === 'reactivate' && (
         <ReactivateConfirm
           code={openRow}
           now={now}

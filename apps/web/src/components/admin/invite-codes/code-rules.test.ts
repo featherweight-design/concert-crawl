@@ -146,6 +146,29 @@ describe('codeActions', () => {
     expect(codeActions(member, 'revoked')).toEqual(['copy', 'joined']);
     expect(codeActions(member, 'expired')).toEqual(['copy', 'joined']);
   });
+
+  it('treats a kind this build does not know as read-only, and never a poster', () => {
+    const unknown = { kind: 'unknown' as const, maxUses: 50 };
+    expect(codeActions(unknown, 'active')).toEqual([
+      'copy',
+      'joined',
+      'revoke',
+    ]);
+    expect(codeActions(unknown, 'revoked')).toEqual(['copy', 'joined']);
+  });
+});
+
+describe('codeLabel on an unknown kind', () => {
+  it('shows the stored label as it is: no "Personal", no "Poster ·"', () => {
+    expect(
+      codeLabel({
+        label: 'Front door',
+        maxUses: 50,
+        kind: 'unknown',
+        createdByHandle: 'jules',
+      }),
+    ).toBe('Front door');
+  });
 });
 
 describe('shortDate', () => {

@@ -6,12 +6,12 @@ import {
   CUSTOM_INVITE_CODE_MAX_LENGTH,
   RESERVED_INVITE_CODE_PREFIX,
   isCustomInviteCode,
-  type AdminInviteCode,
   type Role,
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { StatusKind } from '@/components/admin/primitives';
 import { DENVER_TIME_ZONE } from '@/lib/time';
+import type { ListedInviteCode } from './codes-api';
 import {
   inviteStatus,
   isPosterCode,
@@ -34,7 +34,7 @@ export const STATUS_KIND: Record<InviteStatus, StatusKind> = {
 
 /** The Posters tab's count: live or full codes with more than one seat. */
 export const countPosters = (
-  codes: readonly AdminInviteCode[],
+  codes: readonly ListedInviteCode[],
   now: Date,
 ): number =>
   codes.filter((code) => {
@@ -57,15 +57,27 @@ export const shortDate = (iso: string): string =>
   SHORT_DATE.format(new Date(iso));
 
 /** A member's own share code (the share sheet's), not an admin's. */
-export const isMemberCode = (code: Pick<AdminInviteCode, 'kind'>): boolean =>
+export const isMemberCode = (code: Pick<ListedInviteCode, 'kind'>): boolean =>
   code.kind === 'member';
 
 /**
+ * Read-only here: Edit, Add seats and Reactivate are not offered. A member's
+ * share code (PATCH answers 409 `member_code`), and a kind this build doesn't
+ * know, whose rules it can't assume.
+ */
+export const isReadOnlyCode = (code: Pick<ListedInviteCode, 'kind'>): boolean =>
+  code.kind !== 'admin';
+
+/**
  * A poster is any admin code with more than one seat; the prefix is never
- * stored. A member's own share code is not a poster whatever its seat cap.
+ * stored. A member's own share code is not a poster whatever its seat cap, and
+ * a kind this build doesn't know shows its stored label as it is.
  */
 export const codeLabel = (
-  code: Pick<AdminInviteCode, 'label' | 'maxUses' | 'kind' | 'createdByHandle'>,
+  code: Pick<
+    ListedInviteCode,
+    'label' | 'maxUses' | 'kind' | 'createdByHandle'
+  >,
 ): string | null => {
   // A member's own share code reads as whose it is: "Personal · @mira".
   if (isMemberCode(code)) return COPY.memberLabel(code.createdByHandle);
@@ -77,8 +89,8 @@ export const codeLabel = (
  * yet, never a former admin: the code ends with the account.
  */
 export const makerName = (
-  code: Pick<AdminInviteCode, 'createdByHandle'> &
-    Partial<Pick<AdminInviteCode, 'kind'>>,
+  code: Pick<ListedInviteCode, 'createdByHandle'> &
+    Partial<Pick<ListedInviteCode, 'kind'>>,
 ) => {
   if (code.createdByHandle) return `@${code.createdByHandle}`;
   return code.kind === 'member' ? COPY.panel.noHandle : COPY.formerAdmin;
@@ -90,7 +102,7 @@ export const makerName = (
  * cap, as the share sheet draws an unlimited code.
  */
 export const seatCap = (
-  code: Pick<AdminInviteCode, 'kind' | 'maxUses'>,
+  code: Pick<ListedInviteCode, 'kind' | 'maxUses'>,
 ): number | null => (isMemberCode(code) ? null : code.maxUses);
 
 /** What a code's ⋯ menu offers, in drawn order. */
@@ -98,24 +110,26 @@ export type CodeAction =
   'copy' | 'poster' | 'joined' | 'edit' | 'revoke' | 'reactivate';
 
 /**
- * The actions a code offers. A member code is not an admin's to edit, add
- * seats to or bring back (the API answers 409 `member_code`), so Revoke and
- * who joined are all it keeps.
+ * The actions a code offers. A read-only code (a member's share code, or a
+ * kind this build doesn't know) keeps Copy link, See who joined and Revoke,
+ * and never offers Edit or Reactivate. The API refuses an edit to a member
+ * code (PATCH, 409 `member_code`) but not yet a reactivate: that guard is a
+ * backend follow-up, so this page is what keeps Reactivate off a member code.
  */
 export const codeActions = (
-  code: Pick<AdminInviteCode, 'kind' | 'maxUses'>,
+  code: Pick<ListedInviteCode, 'kind' | 'maxUses'>,
   status: InviteStatus,
 ): CodeAction[] => {
-  const member = isMemberCode(code);
+  const readOnly = isReadOnlyCode(code);
   if (isEnded(status)) {
-    return member ? ['copy', 'joined'] : ['copy', 'joined', 'reactivate'];
+    return readOnly ? ['copy', 'joined'] : ['copy', 'joined', 'reactivate'];
   }
   return [
     'copy',
     // The Posters tab can only pick a live code with a seat left.
     ...(isPosterCode(code) && status === 'active' ? ['poster' as const] : []),
     'joined',
-    ...(member ? [] : ['edit' as const]),
+    ...(readOnly ? [] : ['edit' as const]),
     'revoke',
   ];
 };

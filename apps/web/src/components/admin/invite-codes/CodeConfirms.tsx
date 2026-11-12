@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { AdminInviteCode } from '@concert-crawl/types';
+import type { ListedInviteCode } from './codes-api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { ConfirmDialog } from '@/components/admin/primitives';
 import { seatsTaken } from '@/lib/poster/poster-rule';
@@ -23,7 +24,8 @@ export const RevokeConfirm = ({
   onConfirm,
   onCancel,
 }: {
-  code: AdminInviteCode;
+  // Revoke applies to every kind, so it takes a list row as it is.
+  code: ListedInviteCode;
   pending: boolean;
   onConfirm: () => void;
   onCancel: () => void;

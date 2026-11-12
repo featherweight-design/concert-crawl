@@ -108,6 +108,17 @@ describe('CodePanel on a member share code', () => {
     expect(screen.queryByText(/10000|10,000/)).not.toBeInTheDocument();
   });
 
+  it('keeps Revoke at Full, the 10,000 cap, and reads "10,000 joined"', async () => {
+    renderPanel(memberCode({ useCount: 10_000 }), 'full');
+    expect(
+      await screen.findByRole('button', { name: 'Revoke…' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Add seats' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('10,000 joined')).toBeInTheDocument();
+  });
+
   it('still offers an admin code Add seats, and Reactivate once ended', async () => {
     renderPanel(code(), 'active');
     expect(

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { adminInviteCodeFrom, inviteCodeFrom } from './codes-api';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { adminInviteCodeFrom, codesApi, inviteCodeFrom } from './codes-api';
 
 const wire = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -25,8 +25,49 @@ describe('inviteCodeFrom', () => {
     expect(inviteCodeFrom(wire)?.kind).toBe('admin');
   });
 
-  it('refuses a kind this build does not know', () => {
-    expect(inviteCodeFrom({ ...wire, kind: 'venue' })).toBeNull();
+  it('keeps a kind this build does not know, as unknown', () => {
+    expect(inviteCodeFrom({ ...wire, kind: 'venue' })?.kind).toBe('unknown');
+  });
+
+  it('refuses a kind that is not a string', () => {
+    expect(inviteCodeFrom({ ...wire, kind: 7 })).toBeNull();
+  });
+});
+
+describe('codesApi.list', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const listOf = async (rows: unknown[]) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: rows }), {
+            status: 200,
+          }),
+      ),
+    );
+    return codesApi(async () => 'token').list();
+  };
+  const row = { ...wire, createdByHandle: 'mira', lastUsedAt: null };
+
+  it('keeps the whole list when one row has an unknown kind', async () => {
+    const codes = await listOf([
+      { ...row, kind: 'admin' },
+      { ...row, id: 'b', kind: 'venue' },
+    ]);
+    expect(codes.map((code) => code.kind)).toEqual(['admin', 'unknown']);
+  });
+
+  it('reads a list with no kinds at all (a pre-member API) as admin codes', async () => {
+    const codes = await listOf([row]);
+    expect(codes[0]?.kind).toBe('admin');
+  });
+
+  it('still fails the list on a malformed row', async () => {
+    await expect(listOf([{ ...row, code: 7 }])).rejects.toThrow();
   });
 });
 

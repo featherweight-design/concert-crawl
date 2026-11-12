@@ -34,19 +34,38 @@ const isRoleOrNull = (value: unknown): value is Role | null =>
 const isCodeKind = (value: unknown): value is InviteCode['kind'] =>
   value === 'admin' || value === 'member';
 
-/**
- * Fills a code's `kind` in place. An API from before member codes sends none,
- * and every code was an admin's then; a kind this build doesn't know is left
- * for the guard to refuse. Runs before the guard, so the guard can be honest.
- */
-const withKind = (value: unknown): unknown =>
-  isRecord(value) && value['kind'] === undefined
-    ? { ...value, kind: 'admin' }
-    : value;
+/** A code's kind here: one this build knows, or `unknown` for one it doesn't. */
+export type ListedKind = InviteCode['kind'] | 'unknown';
 
-const isInviteCodeShape = (value: unknown): value is InviteCode =>
-  isRecord(value) &&
-  isCodeKind(value['kind']) &&
+/**
+ * A code as this page holds it. Same as the API's type except that a kind this
+ * build doesn't know is kept, as `unknown`, rather than failing the list or a
+ * write: the page treats it as read-only, as it does a member code.
+ */
+export type ListedCode = Omit<InviteCode, 'kind'> & { kind: ListedKind };
+export type ListedInviteCode = Omit<AdminInviteCode, 'kind'> & {
+  kind: ListedKind;
+};
+
+/**
+ * Fills a code's `kind` before the guard reads it. An API from before member
+ * codes sends none, and every code was an admin's then; a string this build
+ * doesn't know becomes `unknown`. Anything else (a number, say) is left for
+ * the guard to refuse.
+ */
+const withKind = (value: unknown): unknown => {
+  if (!isRecord(value)) return value;
+  const kind = value['kind'];
+  if (kind === undefined) return { ...value, kind: 'admin' };
+  if (isText(kind) && !isCodeKind(kind)) return { ...value, kind: 'unknown' };
+  return value;
+};
+
+const isListedKind = (value: unknown): value is ListedKind =>
+  isCodeKind(value) || value === 'unknown';
+
+/** The fields every code carries, `kind` aside. */
+const hasCodeFields = (value: Record<string, unknown>): boolean =>
   isText(value['id']) &&
   isText(value['code']) &&
   isText(value['createdBy']) &&
@@ -60,23 +79,40 @@ const isInviteCodeShape = (value: unknown): value is InviteCode =>
   isCount(value['maxUses']) &&
   isCount(value['useCount']);
 
-const isAdminInviteCodeShape = (value: unknown): value is AdminInviteCode =>
-  isInviteCodeShape(value) &&
+const isListedCodeShape = (value: unknown): value is ListedCode =>
+  isRecord(value) && isListedKind(value['kind']) && hasCodeFields(value);
+
+const isListedInviteCodeShape = (value: unknown): value is ListedInviteCode =>
   isRecord(value) &&
   isTextOrNull(value['createdByHandle']) &&
-  isTextOrNull(value['lastUsedAt']);
+  isTextOrNull(value['lastUsedAt']) &&
+  isListedCodeShape(value);
 
-/** One code from the API, its missing `kind` read as admin; null if malformed. */
-export const inviteCodeFrom = (value: unknown): InviteCode | null => {
+/**
+ * One code from the API: a missing `kind` reads as admin, one this build
+ * doesn't know as `unknown`. Null if malformed.
+ */
+export const inviteCodeFrom = (value: unknown): ListedCode | null => {
   const code = withKind(value);
-  return isInviteCodeShape(code) ? code : null;
+  return isListedCodeShape(code) ? code : null;
 };
 
 /** One list row from the API, as `inviteCodeFrom`; null if malformed. */
-export const adminInviteCodeFrom = (value: unknown): AdminInviteCode | null => {
+export const adminInviteCodeFrom = (
+  value: unknown,
+): ListedInviteCode | null => {
   const code = withKind(value);
-  return isAdminInviteCodeShape(code) ? code : null;
+  return isListedInviteCodeShape(code) ? code : null;
 };
+
+/**
+ * Is this an admin's code, so Edit, Add seats and Reactivate apply? A member's
+ * share code and a kind this build doesn't know are read-only here.
+ */
+export const isAdminCode = (
+  code: ListedInviteCode,
+): code is ListedInviteCode & AdminInviteCode & { kind: 'admin' } =>
+  code.kind === 'admin';
 
 const isRedemption = (value: unknown): value is InviteCodeRedemption =>
   isRecord(value) &&
@@ -166,19 +202,20 @@ export const call = async (
 };
 
 /** One code back from a write. */
-const oneCode = async (pending: Promise<unknown>): Promise<InviteCode> => {
+const oneCode = async (pending: Promise<unknown>): Promise<ListedCode> => {
   const code = inviteCodeFrom(await pending);
   if (!code) throw new ShapeError('code');
   return code;
 };
 
 export const codesApi = (getToken: GetToken) => ({
-  list: async (): Promise<AdminInviteCode[]> => {
+  list: async (): Promise<ListedInviteCode[]> => {
     const data = await call(getToken, BASE);
     if (!Array.isArray(data)) throw new ShapeError('codes');
     const codes = data.map(adminInviteCodeFrom);
-    // One malformed row fails the whole list into Couldn't load.
-    if (!codes.every((code): code is AdminInviteCode => code !== null))
+    // A malformed row fails the whole list into Couldn't load. An unknown
+    // kind is not malformed: it is kept, as `unknown`, and drawn read-only.
+    if (!codes.every((code): code is ListedInviteCode => code !== null))
       throw new ShapeError('codes');
     return codes;
   },
