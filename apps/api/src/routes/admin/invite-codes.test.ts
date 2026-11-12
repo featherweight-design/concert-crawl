@@ -188,7 +188,7 @@ describe('Admin invite code routes', () => {
   it('POST /v1/admin/invite-codes/:id/revoke sets revokedAt and returns 200', async () => {
     adminAuth();
     const res = await createApp().request(
-      '/v1/admin/invite-codes/code-1/revoke',
+      '/v1/admin/invite-codes/00000000-0000-4000-8000-000000000001/revoke',
       {
         method: 'POST',
       },

@@ -216,6 +216,25 @@ describe('PATCH /v1/admin/invite-codes/:id', () => {
     );
   });
 
+  it('refuses an expired code: only reactivate brings it back', async () => {
+    setAuth('admin');
+    const code = await seedCode({ expiresAt: daysFromNow(-1) });
+    const { status } = await call('PATCH', `/${code.id}`, {
+      expiresAt: daysFromNow(30).toISOString(),
+    });
+    expect(status).toBe(409);
+    expect(await auditActions()).toEqual([]);
+  });
+
+  it('refuses an expiry in the past', async () => {
+    setAuth('admin');
+    const code = await seedCode();
+    const { status } = await call('PATCH', `/${code.id}`, {
+      expiresAt: daysFromNow(-1).toISOString(),
+    });
+    expect(status).toBe(400);
+  });
+
   it('refuses an empty body, unknown fields and a bad id', async () => {
     setAuth('admin');
     const code = await seedCode();
