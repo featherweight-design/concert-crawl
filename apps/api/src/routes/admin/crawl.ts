@@ -272,7 +272,9 @@ crawlAdminRouter.get(
 // GET /v1/admin/crawl/runs/:id/pages — the pages a run fetched, oldest first.
 // Metadata only (URL, status, mode, size, content hash); never a body.
 const pagesQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(50),
+  // A run stores up to 50 pages plus every failed request, so the default
+  // reads them all.
+  limit: z.coerce.number().int().min(1).max(200).default(200),
 });
 
 crawlAdminRouter.get(
