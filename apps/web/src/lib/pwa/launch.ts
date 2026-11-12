@@ -18,7 +18,6 @@ export const LAUNCH_MS = {
   trailStep: 32,
   wordStart: 400,
   wordEnd: 580,
-  coreBlueStart: 600,
   coreBlueEnd: 690,
   pulseStart: 680,
   pulseEnd: 840,
