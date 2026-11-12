@@ -16,11 +16,22 @@ export const GOING_COPY = {
     default: "I'm going!",
     going: 'Going',
     pastYes: (date: string) => `You went · ${date}`,
-    pastNo: "Didn't make it",
+    // A past night you have not stamped yet: the same pill as the artist page's
+    // "I went" (event_unmarked_m).
+    pastNo: 'I went',
     ariaGoing: 'Going to this show',
     ariaNotGoing: 'Mark that you are going to this show',
     stateChangeGoing: 'Marked as going',
     stateChangeReleased: 'No longer going',
+  },
+  // The lines under the past button (event_unmarked_m, event_stamped_m).
+  past: {
+    hint: (venue: string) =>
+      `Were you there? Tap it and the night lands in your Concerts with its ${venue} stamp.`,
+    removeLead: "Didn't make it?",
+    removeLink: 'Remove it from Concerts',
+    // The pill's name for assistive tech (addendum 3, item 33).
+    ariaWent: (artist: string, date: string) => `I went to ${artist}, ${date}`,
   },
   // The going-vs-watch distinction lives in the shared CCTip registry under
   // `going-vs-watch`, not here: it is the same explanation on every surface
@@ -48,7 +59,7 @@ export const GOING_COPY = {
     line: 'Needs a paid plan.',
   },
   // Taking a past night back out (edit-concerts handoff, COPY.md "Remove
-  // confirm"). The title is `button.pastNo` with a question mark.
+  // confirm").
   remove: {
     title: "Didn't make it?",
     body: "Take it out of your Concerts. Its stamp comes off your Passport, your stats drop it, and your crews won't see you there.",
@@ -65,6 +76,8 @@ export const GOING_COPY = {
   toast: {
     removed: (artist: string) => `${artist} is out of your Concerts.`,
     undo: 'Undo',
+    stamped: (artist: string) => `Stamped. ${artist} is in your Concerts.`,
+    openPassport: 'Open Passport',
     // New, not in COPY.md (plan D7). Goes through copy-review.
     saveFailed: "Didn't save. Try again.",
     undoFailed: "Couldn't undo that. Open the show to add it back.",
