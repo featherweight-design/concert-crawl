@@ -8,6 +8,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type { LlmBudgetWarnAtPercent } from '@concert-crawl/types';
 
 // The one row of admin-wide settings (id is always 1). No row means every
 // setting is at its default: the API reads and upserts through id = 1.
@@ -22,7 +23,10 @@ export const adminSettings = pgTable(
     }),
     // "Warn me at" on the LLM budget panel: a percent of the monthly budget,
     // one of 50, 75 or 90 (the board's three chips; 75 is drawn selected).
+    // The CHECK below holds the column to those three, which is what lets the
+    // column type narrow to LlmBudgetWarnAtPercent.
     llmBudgetWarnAtPercent: smallint('llm_budget_warn_at_percent')
+      .$type<LlmBudgetWarnAtPercent>()
       .notNull()
       .default(75),
     // "If it runs out": on means keep crawling with HTML and JSON-LD only, and

@@ -21,3 +21,10 @@ DO $$ BEGIN
     CHECK ("llm_budget_warn_at_percent" IN (50, 75, 90));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+--> statement-breakpoint
+-- Admin redesign 1c: the Health tile's email delivery counts. Both of its
+-- queries lead on created_at (a window of status counts, and the newest
+-- 'sent' row), so created_at leads and status rides along. Expand-only.
+-- Down: DROP INDEX IF EXISTS email_send_log_created_at_status_idx;
+CREATE INDEX IF NOT EXISTS "email_send_log_created_at_status_idx"
+  ON "email_send_log" ("created_at", "status");

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import { count, eq, gte, max } from 'drizzle-orm';
+import { and, count, eq, gte, isNotNull, lte, max, ne, or } from 'drizzle-orm';
 import { db, emailSendLog } from '@concert-crawl/db';
 import type { AdminEmailDelivery } from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
@@ -36,6 +36,15 @@ const deliveryQuerySchema = z.object({
   hours: z.coerce.number().int().min(1).max(168).default(24),
 });
 
+// The send path claims its email_send_log row as 'failed' before calling
+// Resend and flips it to 'sent' (with the Resend id) once Resend answers. A
+// 'failed' row with no Resend id younger than this is most likely a send
+// still in flight, so the delivery counts leave it out rather than show a
+// failure that is about to turn into a send.
+export const IN_FLIGHT_SEND_GRACE_MS = 2 * 60_000;
+
+const KNOWN_DELIVERY_STATUSES = new Set(['sent', 'failed', 'suppressed']);
+
 export const notificationsAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/notifications/delivery?hours=24 — transactional email outcomes
@@ -43,19 +52,34 @@ export const notificationsAdminRouter = new Hono<AdminVariables>();
 // status inside the window; lastSentAt is the newest 'sent' row at any age.
 // A row's created_at is when the send was claimed (it is written 'failed'
 // first and flipped to 'sent' on success), so it trails the real send by the
-// length of the Resend call. Read-only, so it writes no audit row.
+// length of the Resend call, and a claim younger than IN_FLIGHT_SEND_GRACE_MS
+// is not yet counted as failed. Any status beyond the three known ones lands
+// in `other`. Read-only, so it writes no audit row.
 notificationsAdminRouter.get(
   '/delivery',
   zValidator('query', deliveryQuerySchema, validationHook),
   async (ctx) => {
     const { hours } = ctx.req.valid('query');
-    const since = new Date(Date.now() - hours * 3_600_000);
+    const now = Date.now();
+    const since = new Date(now - hours * 3_600_000);
+    const inFlightSince = new Date(now - IN_FLIGHT_SEND_GRACE_MS);
 
     const [byStatus, lastSent] = await Promise.all([
       db
         .select({ status: emailSendLog.status, total: count() })
         .from(emailSendLog)
-        .where(gte(emailSendLog.createdAt, since))
+        .where(
+          and(
+            gte(emailSendLog.createdAt, since),
+            // Not an in-flight claim: not (failed, no Resend id, and
+            // younger than the grace period).
+            or(
+              ne(emailSendLog.status, 'failed'),
+              isNotNull(emailSendLog.resendId),
+              lte(emailSendLog.createdAt, inFlightSince),
+            ),
+          ),
+        )
         .groupBy(emailSendLog.status),
       db
         .select({ at: max(emailSendLog.createdAt) })
@@ -72,6 +96,9 @@ notificationsAdminRouter.get(
       sent: totalFor('sent'),
       failed: totalFor('failed'),
       suppressed: totalFor('suppressed'),
+      other: byStatus
+        .filter((row) => !KNOWN_DELIVERY_STATUSES.has(row.status))
+        .reduce((sum, row) => sum + row.total, 0),
       hours,
     };
     return ctx.json({ success: true, data });

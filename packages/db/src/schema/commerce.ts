@@ -260,6 +260,12 @@ export const emailSendLog = pgTable(
     templateDedupeUniqueIdx: uniqueIndex(
       'email_send_log_template_dedupe_unique_idx',
     ).on(table.templateKey, table.dedupeKey),
+    // The admin delivery tile: status counts inside a created_at window, and
+    // the newest 'sent' row at any age (a backward scan filtered on status).
+    createdAtStatusIdx: index('email_send_log_created_at_status_idx').on(
+      table.createdAt,
+      table.status,
+    ),
   }),
 );
 
