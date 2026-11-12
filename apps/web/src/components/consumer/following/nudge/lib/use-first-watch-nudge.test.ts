@@ -142,6 +142,14 @@ describe('useFirstWatchNudge', () => {
     expect(pushSheet).toHaveBeenCalledTimes(1);
   });
 
+  it("doesn't hold the push sheet for event detail's inline card", () => {
+    renderHook(() => useFirstWatchNudge('evt-1'));
+    act(() => emit(watchOn()));
+    const pushSheet = vi.fn();
+    whenFollowNudgeClosed(pushSheet);
+    expect(pushSheet).toHaveBeenCalledTimes(1);
+  });
+
   it('closes and stays closed once answered', () => {
     const { result } = renderHook(() => useFirstWatchNudge());
     act(() => emit(watchOn()));

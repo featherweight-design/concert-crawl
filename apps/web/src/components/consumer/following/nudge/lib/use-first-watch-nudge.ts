@@ -111,12 +111,20 @@ export const useFirstWatchNudge = (
     if (!enabled) setTarget(null);
   }, [enabled]);
 
-  // While a card is up, the post-watch push sheet waits (nudge-presence).
-  const isOpen = target !== null;
+  // Signed out, the nudge has no account to follow with; drop it (and its
+  // hold) rather than leave it up for whoever signs in next.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isSignedIn) setTarget(null);
+  }, [isSignedIn]);
+
+  // While the floating card is up, the post-watch push sheet waits
+  // (nudge-presence). A scoped consumer's card is inline on event detail and
+  // never overlays the sheet, so only the unscoped one holds.
+  const floatingOpen = eventId === undefined && target !== null;
+  useEffect(() => {
+    if (!floatingOpen) return;
     return holdFollowNudgeOpen();
-  }, [isOpen]);
+  }, [floatingOpen]);
 
   useEffect(() => {
     // A signed-out visitor cannot have a watch toggle succeed, and nothing
