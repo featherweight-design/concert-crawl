@@ -5,6 +5,11 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # The merge queue builds a temporary merge_group ref and waits on the
+  # required checks (Install dependencies, Lint, Test, Typecheck, Build,
+  # Security audit), all of which live in this workflow. Without this
+  # trigger nothing reports and every queued PR stalls.
+  merge_group:
 
 permissions: read-all
 
