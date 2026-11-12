@@ -5,6 +5,10 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import GlobalError from './global-error';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 afterEach(cleanup);
 
 describe('global-error', () => {
