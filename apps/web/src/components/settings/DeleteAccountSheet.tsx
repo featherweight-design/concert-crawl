@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { deleteAccount } from '@/lib/users';
-import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useModalDialog } from '@/lib/hooks/useModalDialog';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
@@ -43,38 +43,18 @@ export function DeleteAccountSheet({
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  // The same three things every other dialog here does, which this one never
-  // had: Tab stays inside, Escape closes it, and focus goes back to the control
-  // that opened it. Escape is ignored while the deletion request is in flight:
-  // closing then would hide the result of an action that is still running.
-  //
-  // Declared before the trap on purpose: effects run in order, and the opener
-  // must be read before the trap moves focus into the dialog.
+  // Tab stays inside, Escape closes it, focus goes back to the opener: the same
+  // three things every other dialog here does, which this one never had. Escape
+  // is ignored while the deletion request is in flight: closing then would hide
+  // the result of an action that is still running.
+  useModalDialog(dialogRef, open, onClose, !loading);
+
   useEffect(() => {
     if (!open) return;
-    const opener = document.activeElement;
-    return () => {
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
-    };
-  }, [open]);
-
-  useFocusTrap(dialogRef, open);
-
-  useEffect(() => {
-    if (!open || loading) return;
-    const handleKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [open, loading, onClose]);
-
-  useEffect(() => {
-    if (open) {
-      setInputValue('');
-      setFailed(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    setInputValue('');
+    setFailed(false);
+    const focusInput = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(focusInput);
   }, [open]);
 
   async function handleDelete() {
@@ -105,7 +85,7 @@ export function DeleteAccountSheet({
       <>
         {/* Scrim */}
         <div
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-[90]"
           style={{ background: 'rgba(0,0,0,0.6)' }}
           onClick={onClose}
         />
@@ -116,7 +96,7 @@ export function DeleteAccountSheet({
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-dialog-title"
-          className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl p-6"
+          className="fixed left-1/2 top-1/2 z-[90] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl p-6"
           style={{
             background: 'var(--bg)',
             border: '1px solid var(--border)',
@@ -214,7 +194,7 @@ export function DeleteAccountSheet({
     <>
       {/* Scrim */}
       <div
-        className="fixed inset-0 z-50"
+        className="fixed inset-0 z-[90]"
         style={{ background: 'rgba(0,0,0,0.5)' }}
         onClick={onClose}
       />
@@ -229,7 +209,7 @@ export function DeleteAccountSheet({
         // other sheets use it). Its gradient is the sheet's border and its
         // fill, so no inline background or border-top here, either of which
         // would paint over it.
-        className="sheet-edge fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-5 rounded-t-[22px] p-6 [--sheet-bg:var(--bg-elevated)]"
+        className="sheet-edge fixed bottom-0 left-0 right-0 z-[90] flex flex-col gap-5 rounded-t-[22px] p-6 [--sheet-bg:var(--bg-elevated)]"
         style={{
           maxWidth: '480px',
           margin: '0 auto',

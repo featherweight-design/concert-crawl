@@ -3,7 +3,14 @@
 import '@testing-library/jest-dom';
 import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { DeleteAccountSheet } from './DeleteAccountSheet';
 
@@ -22,11 +29,10 @@ vi.mock('@/lib/users', () => ({
   deleteAccount: (token: string) => mockDeleteAccount(token),
 }));
 
-// The phone sheet is the branch this fixes: not a 640px-and-up media match.
-beforeEach(() => {
-  mockDeleteAccount.mockReset();
+// The sheet reads one media query (640px and up) to pick its layout.
+const stubViewport = (desktop: boolean) => {
   vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
-    matches: false,
+    matches: desktop,
     media: query,
     onchange: null,
     addEventListener: () => undefined,
@@ -35,10 +41,15 @@ beforeEach(() => {
     removeListener: () => undefined,
     dispatchEvent: () => false,
   }));
+};
+
+beforeEach(() => {
+  mockDeleteAccount.mockReset();
 });
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -69,12 +80,21 @@ const openSheet = () => {
   return trigger;
 };
 
-describe('DeleteAccountSheet (phone sheet)', () => {
-  it('moves focus into the dialog when it opens', () => {
+describe.each([
+  { layout: 'phone sheet', desktop: false },
+  { layout: 'desktop dialog', desktop: true },
+])('DeleteAccountSheet ($layout)', ({ desktop }) => {
+  beforeEach(() => stubViewport(desktop));
+
+  it('moves focus into the dialog when it opens, then to the confirm input', () => {
+    vi.useFakeTimers();
     render(<Harness onClose={vi.fn()} />);
     openSheet();
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    expect(screen.getByRole('dialog')).toHaveFocus();
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getByRole('textbox')).toHaveFocus();
   });
 
   it('closes on Escape and hands focus back to the control that opened it', () => {
@@ -107,7 +127,7 @@ describe('DeleteAccountSheet (phone sheet)', () => {
     expect(first).toHaveFocus();
   });
 
-  it('ignores Escape while the deletion request is in flight', () => {
+  it('ignores Escape while the deletion request is in flight', async () => {
     // Never settles: the sheet stays in its deleting state.
     mockDeleteAccount.mockReturnValue(new Promise(() => undefined));
     const onClose = vi.fn();
@@ -118,6 +138,10 @@ describe('DeleteAccountSheet (phone sheet)', () => {
     });
     fireEvent.click(
       screen.getByRole('button', { name: DANGER_COPY.deleteForeverButton }),
+    );
+    // The request really went out, so this is the in-flight state.
+    await waitFor(() =>
+      expect(mockDeleteAccount).toHaveBeenCalledWith('token'),
     );
     expect(
       screen.getByRole('button', { name: DANGER_COPY.deletingButton }),
