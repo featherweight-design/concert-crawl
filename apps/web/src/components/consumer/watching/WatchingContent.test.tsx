@@ -12,6 +12,9 @@ vi.mock('@/lib/queries/use-watching', () => ({
 vi.mock('@/lib/queries/use-watch-toggle', () => ({
   useWatchToggle: () => ({ mutate: vi.fn() }),
 }));
+vi.mock('@/lib/queries/use-watching-dismiss', () => ({
+  useWatchingDismiss: () => ({ mutateAsync: vi.fn() }),
+}));
 vi.mock('./WatchingRow', () => ({
   WatchingRow: () => <div data-testid="watching-row" />,
 }));

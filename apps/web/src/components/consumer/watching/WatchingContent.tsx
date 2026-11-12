@@ -13,8 +13,16 @@ import {
   MY_SHOWS_HEADER_RULE_STYLE,
 } from '@/components/consumer/history/definitions/constants';
 import { denverTodayUtcMs } from '@/lib/time';
+import { toast } from 'sonner';
+import { ApiError } from '@/lib/api';
+import { useWatchingDismiss } from '@/lib/queries/use-watching-dismiss';
+import { showUndoToast } from '@/components/consumer/going/lib/attendance-toasts';
 
 const COPY = CONSUMER_COPY.watching;
+
+// One dismiss toast at a time: a new one replaces the last rather than
+// stacking (addendum 3, ruling 7).
+const DISMISS_TOAST_ID = 'watching-dismiss';
 
 interface WatchingContentProps {
   initialShows: WatchingShow[];
@@ -144,6 +152,56 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
     [shows, toggle],
   );
 
+  // The No longer listed dismiss. The row leaves the cache at once
+  // (useWatchingDismiss), the Undo toast waits for the server's yes, and any
+  // failure puts the row back. `mutateAsync` rather than per-call callbacks:
+  // React Query drops a call's callbacks when a newer call is made, and two
+  // quick dismisses would lose the first one's toast.
+  const dismissal = useWatchingDismiss();
+
+  const restore = useCallback(
+    async (show: WatchingShow) => {
+      try {
+        await dismissal.mutateAsync({ show, dismissed: false });
+      } catch {
+        // A failed Undo is the error toast (addendum 3, ruling 32), with one
+        // more go at it, since the Undo toast it replaced is gone.
+        toast.error(COPY.dismiss.undoFailed, {
+          id: DISMISS_TOAST_ID,
+          action: {
+            label: COPY.dismiss.retry,
+            onClick: () => void restore(show),
+          },
+        });
+      }
+    },
+    [dismissal],
+  );
+
+  const handleDismiss = useCallback(
+    async (show: WatchingShow) => {
+      try {
+        await dismissal.mutateAsync({ show, dismissed: true });
+        showUndoToast({
+          id: DISMISS_TOAST_ID,
+          message: COPY.dismiss.hidden(show.artist),
+          undoLabel: COPY.dismiss.undo,
+          onUndo: () => void restore(show),
+        });
+      } catch (err) {
+        const stillListed =
+          err instanceof ApiError &&
+          err.status === 409 &&
+          err.code === 'not_delisted';
+        toast.error(
+          stillListed ? COPY.dismiss.stillListed : COPY.dismiss.failed,
+          { id: DISMISS_TOAST_ID },
+        );
+      }
+    },
+    [dismissal, restore],
+  );
+
   const { drops, spikes, soldOut } = countChanges(displayedShows);
   const groups = groupShows(displayedShows);
 
@@ -267,6 +325,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
                     key={show.userEventId}
                     show={show}
                     onRemove={handleRemove}
+                    onDismiss={(dismissed) => void handleDismiss(dismissed)}
                   />
                 ))}
               </div>
