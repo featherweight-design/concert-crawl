@@ -2543,8 +2543,8 @@ export const ADMIN_COPY = {
     stillIn: (tab: string) => `It's still in ${tab}.`,
     subtitleShort: 'The photo and genre fans see on every show.',
     // Fans follow artists; Watching is for shows (locked vocabulary).
-    matchedMeta: (upcoming: number, followers: number) =>
-      `${upcoming} upcoming · ${followers} ${followers === 1 ? 'follower' : 'followers'}`,
+    matchedMeta: (upcoming: number, followerCount: number) =>
+      `${upcoming} upcoming · ${followerCount} ${followerCount === 1 ? 'follower' : 'followers'}`,
     itsAnArtist: 'It’s an artist',
     changeMatch: 'Change match',
     menu: {
