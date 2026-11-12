@@ -42,15 +42,15 @@
  {
   "section": "04-passport-order",
   "name": "passport-d",
-  "title": "Passport · page 1 oldest first, untilted",
-  "note": "Oldest first on every page, so the book reads like a book: page 1 starts with your first night. Stamps are round and untilted (rule 4).",
+  "title": "Passport · page 1 oldest first",
+  "note": "Oldest first on every page, so the book reads like a book: page 1 starts with your first night. Stamps are round and keep their hand-stamped tilt inside the booklet only.",
   "w": 1280,
   "h": 900
  },
  {
   "section": "04-passport-order",
   "name": "passport-later-d",
-  "title": "Passport · spread 2, untilted",
+  "title": "Passport · spread 2",
   "note": "",
   "w": 1280,
   "h": 900
@@ -70,46 +70,6 @@
   "note": "",
   "w": 390,
   "h": 1240
- },
- {
-  "section": "06-filters-single-select",
-  "name": "filters-active-d",
-  "title": "Filters · active, single-select",
-  "note": "One venue and one vibe at a time. The segment names the choice in full (“Bluebird Theater”) with its one tile.",
-  "w": 1280,
-  "h": 900
- },
- {
-  "section": "06-filters-single-select",
-  "name": "filters-where-d",
-  "title": "Filters · Where, single-select",
-  "note": "Picking a venue replaces the last one. The chosen row gets the tint and a check, the same mark the Who list uses. No checkboxes.",
-  "w": 1280,
-  "h": 900
- },
- {
-  "section": "06-filters-single-select",
-  "name": "filters-active-m",
-  "title": "Filters · active chips, mobile",
-  "note": "Chips name the one venue and the one vibe.",
-  "w": 390,
-  "h": 1300
- },
- {
-  "section": "06-filters-single-select",
-  "name": "filters-sheet-m",
-  "title": "Filters sheet · single-select",
-  "note": "One tile lit under Where, one chip lit under Vibe.",
-  "w": 390,
-  "h": 1300
- },
- {
-  "section": "06-filters-single-select",
-  "name": "filters-venues-m",
-  "title": "Filters · All venues, single-select",
-  "note": "",
-  "w": 390,
-  "h": 844
  },
  {
   "section": "07-admin-more-no-pills",
@@ -250,8 +210,8 @@
  {
   "section": "16-undrawn-pages",
   "name": "passport-empty-m",
-  "title": "Passport · empty, mobile, untilted",
-  "note": "The approved empty board with its slots untilted (rule 4).",
+  "title": "Passport · empty, mobile",
+  "note": "The approved empty board, unchanged: the empty slots keep the booklet’s tilt.",
   "w": 390,
   "h": 844
  },

@@ -35,10 +35,11 @@ Live canvas: https://claude.ai/artifact/DjFFjh1j5Nt9G9hJ7CWCm2. The phone addend
 
 ### 3. Stamps: tilted squares or one round stamp?
 
-**README rule 4 wins:** one stamp, round, never tilted, everywhere.
+**One round stamp everywhere. It is straight everywhere except inside the Passport booklet** (Hugh, 2026-11-12). There the stamps keep their slight hand-stamped tilt, so it feels like a real passport. This refines README rule 4.
 
-- **Drawn:** `03-stamps/concerts-round-stamps-d` and `-m`. Every Concerts row and the Passport teaser use the round venue ring.
-- **Drawn:** `04-passport-order/*`. The booklet stamps are round and untilted too.
+- **Drawn:** `03-stamps/concerts-round-stamps-d` and `-m`. Every Concerts row and the Passport teaser use the round venue ring, straight.
+- **Drawn:** `04-passport-order/*`. The booklet stamps are round and keep the booklet's tilts (−8°, 6°, 4°, −5°, repeating by slot).
+- The rest of the app (Watching, Concerts, the teaser, the stub's NEXT slot, Up next) stays straight.
 - The rounded-square variant (`shape=1`) is retired. Don't build it.
 
 ### 4. Passport booklet: newest first on page 1, oldest first later?
@@ -52,15 +53,14 @@ Live canvas: https://claude.ai/artifact/DjFFjh1j5Nt9G9hJ7CWCm2. The phone addend
 
 **As built is fine.** The board and live copy are right: the heading **"Going to this show?"** plus the line **"In N days."** (`whenInDays`). The README's "Going? In N days." was shorthand for that one-line layout, not new copy.
 
-### 6. Filters are drawn multi-select, but Hugh ruled single-select
+### 6. Filters are drawn multi-select, but were they ruled single-select?
 
-**Drawn single-select:** `06-filters-single-select/*` (desktop active bar, desktop Where popover, mobile active chips, mobile sheet, mobile All venues).
+**No. Multi-select is intended** (Hugh, 2026-11-12), so the approved boards stand: `05-filters/bp-f-filt_active_d`, `bp-f-filt_where_d`, `filt_m_active`, `filt_sheet_m` and `filt_venues_m`.
 
-- **Where** and **Vibe** hold one value each, matching `filterWhere` and `filterVibe` today.
-- Picking a venue replaces the last one. The chosen row gets the signal tint and a check on the right, the same mark the Who list (crew lens) already uses. There are no checkboxes.
-- The desktop segment names the choice ("Bluebird", "Electronic") with its one tile or dot. Long venue names use the short name, like the mobile tile labels do ("Bluebird", not "Bluebird Theater").
-- The mobile chips read "Bluebird" and "Electronic", each with its × to clear.
-- This closes data-contract gap 1 in the B+ README: ship single-select.
+- **Where** and **Vibe** take several values. They show "Bluebird +1" with stacked tiles and "Electronic +1" with stacked dots on desktop, and "2 venues" and "2 vibes" chips on mobile.
+- The venue list uses checkboxes, as drawn.
+- This settles data-contract gap 1 in the B+ README: widen `filterWhere` and `filterVibe` (`filter-bar/filter-defs.ts`) to lists. A show matches if it is at **any** chosen venue and has **any** chosen vibe. Different filters still combine with AND.
+- Nothing is redrawn for this item.
 
 ### 7. Admin More: yellow count pills on Health and Operations
 
@@ -139,7 +139,7 @@ Live canvas: https://claude.ai/artifact/DjFFjh1j5Nt9G9hJ7CWCm2. The phone addend
 **Drawn:** `16-undrawn-pages/*`.
 
 - **Desktop empty Passport:** the open book with four empty round slots and the ID page at 0 / 0 / —, the empty block beside it ("No stamps yet", Find a show), and 0 of 21 venues, all greyed. Share and Save image are hidden until there's a stamp.
-- **Mobile empty Passport:** the approved board, with its four slots untilted (rule 4).
+- **Mobile empty Passport:** the approved board, unchanged. The empty slots keep the booklet's tilt (item 3).
 - **Desktop notifications:** the account menu panel swaps to What you missed, as the live `NotifMenuPanel` does. It is 390 wide under the avatar, with Menu as the way back, and has the same tabs and rows as mobile. It scrolls inside the panel, up to 700px tall.
 - **Light venue hero:** the backdrop goes pale and the neon glyph keeps its own colors. The theme does not recolor the glyph. Drawn at mobile and desktop.
 
@@ -267,12 +267,11 @@ Engineering should build the ruling above until these are answered.
 
 1. **Tickets available, confirmed (14):** should the price card carry a short "Tickets back" line for a day, or is back to normal enough? We drew back to normal.
 2. **Notification tabs (1):** should each tab show its own unread dot? None is drawn, and the header total is the only count.
-3. **Passport tilt (3, 4):** rule 4 says never tilted, so the booklet lost its hand-stamped tilt. Hugh may want the slight tilt back inside the booklet only.
-4. **No longer listed (2, 12):** the No longer listed plan asked whether a quiet, non-alert notice should exist. We ruled no notification, following Hugh's earlier decision.
-5. **See all on the shelf (20):** it turns on My artists in Browse. The alternative is the Artists tab in My shows.
-6. **Founder eyebrow (25):** dropped for lack of data. Should early members get a mark later?
-7. **Refused report (18):** one state covers both a rate limit and a rejection. Do they need different words?
-8. **The truncated items (17, 18, 24 to 29):** please check that our reading of each question matches what was asked.
+3. **No longer listed (2, 12):** the No longer listed plan asked whether a quiet, non-alert notice should exist. We ruled no notification, following Hugh's earlier decision.
+4. **See all on the shelf (20):** it turns on My artists in Browse. The alternative is the Artists tab in My shows.
+5. **Founder eyebrow (25):** dropped for lack of data. Should early members get a mark later?
+6. **Refused report (18):** one state covers both a rate limit and a rejection. Do they need different words?
+7. **The truncated items (17, 18, 24 to 29):** please check that our reading of each question matches what was asked.
 
 ## Files
 
