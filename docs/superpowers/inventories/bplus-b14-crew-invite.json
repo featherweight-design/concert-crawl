@@ -1,5 +1,5 @@
 {
-  "feature": "B14 \u00b7 Crew invite landing (its own inventory: one theme, so a run stays inside the invite lookup's 30-per-10-minutes budget)",
+  "feature": "B14 · Crew invite landing (its own inventory: one theme, so a run stays inside the invite lookup's 30-per-10-minutes budget)",
   "themes": [
     {
       "label": "electric",
@@ -17,6 +17,9 @@
       "steps": [
         {
           "goto": "/crew/join/${CC_CREW_INVITE_TOKEN}",
+          "settle": 1000
+        },
+        {
           "wait": "button:has-text(\"Join \")"
         }
       ]

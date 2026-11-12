@@ -142,6 +142,7 @@ export const CrewHero = ({
               first; `order` lifts the count line above it on screen. */}
           <div className="relative z-[1] flex min-w-0 flex-col gap-2">
             <h1
+              data-testid="crew-name"
               style={{
                 margin: 0,
                 fontFamily: 'var(--font-ui)',
