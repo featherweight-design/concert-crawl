@@ -398,7 +398,9 @@ export const PausePanel = ({
       disabled={body === null || pending}
       onClick={() => void submit()}
       style={{
-        flex: 1,
+        // The sheet's footer is a column, where `flex: 1` would zero the
+        // height; there the button keeps its drawn 46px.
+        flex: isPhone ? 'none' : 1,
         height: isPhone ? 46 : 42,
         borderRadius: 9,
         fontSize: isPhone ? 15 : 14,
