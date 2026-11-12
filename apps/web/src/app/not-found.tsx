@@ -6,8 +6,10 @@
 // the theme, and the chrome components read the session themselves (they serve
 // the public routes too), so the same pieces draw the signed-out variant when
 // there is no session. Left out on purpose: the install slot, the launch
-// animation and the post-signup seam, which belong to a page the app opened,
-// not to a path that does not exist.
+// animation and the post-signup seam, and the (protected) layout's gates (the
+// feedback edge tab, the Feature drop pill, the follow nudge, the onboarding
+// theme flush, the Sentry tier tag). All of those belong to a page the app
+// opened, not to a path that does not exist.
 import { AppHeader } from '@/components/consumer/app-header';
 import { BottomNav } from '@/components/consumer/bottom-nav';
 import { NotFoundSurface } from '@/components/consumer/not-found-surface';
