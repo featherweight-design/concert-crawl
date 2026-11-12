@@ -117,9 +117,11 @@ describe('<EventStage />', () => {
     expect(card.style.getPropertyValue('--past-shadow')).toContain('0 0 0 2px');
     expect(card.innerHTML).toContain('max-sm:grayscale');
     // The genre ring is still the default from `sm` up.
-    expect(card.style.getPropertyValue('--stage-shadow')).toContain(
+    // (Not an inline `--stage-shadow`, which would beat the phone override.)
+    expect(card.style.getPropertyValue('--genre-shadow')).toContain(
       '2px var(--genre-rock)',
     );
+    expect(card.style.getPropertyValue('--stage-shadow')).toBe('');
   });
 
   it('keeps an ordinary night on its inline genre ring', () => {

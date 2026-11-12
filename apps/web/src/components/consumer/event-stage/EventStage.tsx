@@ -300,7 +300,9 @@ export const EventStage = ({
         <div
           data-testid="stage-card"
           className={
-            venueRing ? 'max-sm:[--stage-shadow:var(--past-shadow)]' : undefined
+            venueRing
+              ? '[--stage-shadow:var(--genre-shadow)] max-sm:[--stage-shadow:var(--past-shadow)]'
+              : undefined
           }
           style={
             {
@@ -311,7 +313,7 @@ export const EventStage = ({
               // inline ring.
               ...(venueRing
                 ? {
-                    '--stage-shadow': stageRing(ring),
+                    '--genre-shadow': stageRing(ring),
                     '--past-shadow': stageRing(venueRing),
                     boxShadow: 'var(--stage-shadow)',
                   }
