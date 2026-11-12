@@ -133,7 +133,7 @@ describe('GET /v1/admin/feedback', () => {
   it('filters by category alongside status', async () => {
     adminAuth();
     const { db } = await import('@concert-crawl/db');
-    const { and, eq } = await import('drizzle-orm');
+    const { and } = await import('drizzle-orm');
     vi.mocked(db.select().from().where().orderBy().limit).mockResolvedValueOnce(
       [mockFeedbackRow],
     );
@@ -141,8 +141,10 @@ describe('GET /v1/admin/feedback', () => {
       '/v1/admin/feedback?status=unread&category=bug',
     );
     expect(res.status).toBe(200);
-    expect(vi.mocked(eq)).toHaveBeenCalledWith('category', 'bug');
-    expect(vi.mocked(and)).toHaveBeenCalled();
+    expect(vi.mocked(and)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ col: 'status', val: 'unread' }),
+      expect.objectContaining({ col: 'category', val: 'bug' }),
+    );
   });
 
   it('rejects an unknown category', async () => {

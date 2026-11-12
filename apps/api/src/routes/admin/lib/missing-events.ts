@@ -63,7 +63,7 @@ export const missingEventsSelect = (today: string) =>
         AND h.date >= ${today}
     )`,
       // Cluster size: admin-visible missing rows at this venue (matches the
-      // missing whereClause population below).
+      // population `missingEventsWhere` selects: keep the two in step).
       clusterCount: sql<number>`(
       SELECT COUNT(*)::int FROM events c
       WHERE c.venue_id = ${events.venueId}

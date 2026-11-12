@@ -9,6 +9,34 @@ import { artists, events, venues } from '@concert-crawl/db';
 import { billsCanonicalName } from './event-billing.js';
 import { todayInDenver } from './time.js';
 
+// The FROM and WHERE both expressions share, so "has an upcoming show" and "the
+// soonest upcoming show" can never disagree about which shows count.
+const upcomingShowsFrom = (withinDays: number | undefined): SQL => sql`
+    FROM ${events}
+    JOIN ${venues}
+      ON ${events.venueId} = ${venues.id}
+     AND ${venues.active} = true
+    WHERE ${billsCanonicalName(artists.canonicalName)}
+      AND ${events.hiddenFromConsumer} = false
+      AND ${events.firstMissingAt} IS NULL
+      AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
+      AND ${events.date} >= ${todayInDenver()}
+      ${upcomingBound(withinDays)}`;
+
+// Optional upper bound on the show date, in days from Denver today. Absent, the
+// predicate is unbounded, which is what every existing caller wants. A bound
+// that is not a whole, non-negative number of days is a caller bug, so it
+// throws here rather than reaching Postgres as an invalid integer.
+const upcomingBound = (withinDays: number | undefined): SQL => {
+  if (withinDays === undefined) return sql``;
+  if (!Number.isInteger(withinDays) || withinDays < 0) {
+    throw new RangeError(
+      `withinDays must be a whole number >= 0, got ${withinDays}`,
+    );
+  }
+  return sql`AND ${events.date} <= (${todayInDenver()}::date + ${withinDays}::int)`;
+};
+
 /**
  * Correlated EXISTS against the `artists` row in the enclosing query.
  *
@@ -29,44 +57,15 @@ import { todayInDenver } from './time.js';
  * `event-billing.ts` for why the raw `canonical_artist` column is only a
  * fallback.
  */
-export const hasUpcomingShowExpr = (withinDays?: number): SQL<boolean> => {
-  return sql`EXISTS (
-    SELECT 1
-    FROM ${events}
-    JOIN ${venues}
-      ON ${events.venueId} = ${venues.id}
-     AND ${venues.active} = true
-    WHERE ${billsCanonicalName(artists.canonicalName)}
-      AND ${events.hiddenFromConsumer} = false
-      AND ${events.firstMissingAt} IS NULL
-      AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
-      AND ${events.date} >= ${todayInDenver()}
-      ${upcomingBound(withinDays)}
-  )`;
-};
-
-// Optional upper bound on the show date, in days from Denver today. Absent, the
-// predicate is unbounded, which is what every existing caller wants.
-const upcomingBound = (withinDays: number | undefined): SQL =>
-  withinDays === undefined
-    ? sql``
-    : sql`AND ${events.date} <= (${todayInDenver()}::date + ${withinDays}::int)`;
+export const hasUpcomingShowExpr = (withinDays?: number): SQL<boolean> =>
+  sql`EXISTS (SELECT 1 ${upcomingShowsFrom(withinDays)})`;
 
 /**
  * The soonest date `hasUpcomingShowExpr` would accept for this artist, or null.
- * Same predicate, so a row that passes the filter always has a date to show.
+ * Built from the same fragment, so a row that passes the filter always has a
+ * date to show.
  */
 export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
-  sql<string | null>`(
-    SELECT MIN(${events.date})
-    FROM ${events}
-    JOIN ${venues}
-      ON ${events.venueId} = ${venues.id}
-     AND ${venues.active} = true
-    WHERE ${billsCanonicalName(artists.canonicalName)}
-      AND ${events.hiddenFromConsumer} = false
-      AND ${events.firstMissingAt} IS NULL
-      AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
-      AND ${events.date} >= ${todayInDenver()}
-      ${upcomingBound(withinDays)}
-  )`;
+  sql<
+    string | null
+  >`(SELECT MIN(${events.date}) ${upcomingShowsFrom(withinDays)})`;
