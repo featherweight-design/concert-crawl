@@ -87,7 +87,9 @@ describe('perf timing', () => {
   it('reduces ids and names in the path, and drops a fragment', () => {
     expect(redactQuery('/v1/artists/some-band')).toBe('/v1/artists/:id');
     expect(redactQuery('/v1/events/123?q=x#top')).toBe('/v1/events/:id?q');
-    expect(redactQuery('/v1/events/genres')).toBe('/v1/events/genres');
+    // Deeper segments are all reduced: a static name cannot be told from a slug.
+    expect(redactQuery('/v1/events/genres')).toBe('/v1/events/:id');
+    expect(redactQuery('/v1/events')).toBe('/v1/events');
   });
 
   it('logs nothing in a browser', () => {
