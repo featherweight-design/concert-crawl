@@ -59,7 +59,9 @@ export const HISTORY_DENSITY_CONFIG: Record<
   },
 };
 
-// The B+ brand gradient for the one figure on each My shows header that gets
-// it: the Watching count, and Top venue on Concerts. Inline-clipped to text.
+// The B+ brand gradient across My shows: the one header figure that gets it
+// (the Watching count, Top venue on Concerts, clipped to text), the current
+// tab's hairline, and the filled CTAs (the empty cards and the Artists find
+// pill).
 export const MY_SHOWS_GRADIENT =
   'linear-gradient(90deg, var(--signal), var(--accent))';

@@ -274,6 +274,19 @@ describe('fromWatchingShow', () => {
     ).toEqual([]);
   });
 
+  // An API older than the field (a deploy race, or a rollback of the API
+  // alone) sends no `genres`, and the unparsed payload must not crash the row.
+  it('reads a missing genres list from an older API as none', () => {
+    // Through JSON, exactly as apiClient hands the payload over: typed, but
+    // never checked. The replacer drops `genres` as the older API would.
+    const show: WatchingShow = JSON.parse(
+      JSON.stringify(baseWatchingShow, (key, value: unknown) =>
+        key === 'genres' ? undefined : value,
+      ),
+    );
+    expect(fromWatchingShow(show).genres).toEqual([]);
+  });
+
   // Dropping the portrait here sent every artwork-less watched show to
   // IdentityArt while Browse rendered the same show with a real face.
   it('carries the headliner portrait so the row matches Browse', () => {
