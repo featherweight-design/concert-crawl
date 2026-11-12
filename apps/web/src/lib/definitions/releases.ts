@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.62.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: 'On your phone, drag a menu or sheet down to close it.',
+      },
+    ],
+  },
+  {
     version: 'v0.61.0-beta',
     date: 'Nov 12, 2026',
     headline: null,
