@@ -271,7 +271,9 @@ export function OptionButton({
         borderRadius: 8,
         color: active ? 'var(--fg)' : 'var(--fg-muted)',
         fontWeight: active ? 700 : 500,
-        background: active ? 'var(--surface-2)' : 'transparent',
+        background: active
+          ? 'color-mix(in oklab, var(--signal) 8%, transparent)'
+          : 'transparent',
       }}
       onMouseEnter={(event) => {
         if (active) return;

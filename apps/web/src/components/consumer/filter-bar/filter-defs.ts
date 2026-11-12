@@ -1,5 +1,6 @@
 import type { VenuePublic } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { venueShort } from '@/components/consumer/definitions/lib';
 
 const copy = CONSUMER_COPY.filterBar;
 
@@ -93,6 +94,10 @@ export function getActiveFilterLabel(
   genres: string[] = [],
 ): string | null {
   if (key === 'vibe') return genreLabel(value);
+  if (key === 'where') {
+    const venue = venues.find((candidate) => candidate.slug === value);
+    return venue ? venueShort(venue.name) : null;
+  }
   const match = getFilterOptions(key, venues, genres).find(
     (option) => option.value === value,
   );

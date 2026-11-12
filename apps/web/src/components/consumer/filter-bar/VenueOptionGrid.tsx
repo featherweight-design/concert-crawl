@@ -100,19 +100,29 @@ export function VenueOptionGrid({
                 onClick={() => onPick(venue.slug)}
                 aria-pressed={active}
                 className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2"
-                style={active ? { background: 'var(--surface-2)' } : undefined}
+                style={
+                  active
+                    ? {
+                        background:
+                          'color-mix(in oklab, var(--signal) 8%, transparent)',
+                      }
+                    : undefined
+                }
               >
                 <VenueTile slug={venue.slug} name={venue.name} size={28} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span
                     data-testid="venue-option-name"
                     className="truncate text-[13.5px] text-fg"
-                    style={{ fontWeight: active ? 700 : 600 }}
+                    style={{ fontWeight: active ? 800 : 600 }}
                   >
                     {venue.name}
                   </span>
                   {venue.neighborhood && (
-                    <span className="truncate text-[11.5px] text-fg-subtle">
+                    <span
+                      className="truncate text-fg-subtle"
+                      style={{ fontSize: active ? 11 : 11.5 }}
+                    >
                       {venue.neighborhood}
                     </span>
                   )}
