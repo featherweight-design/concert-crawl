@@ -2,8 +2,8 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import { CrewPatch } from './CrewPatch';
-import { crewIdentity } from './lib/crew-identity';
+import { CrewPatch, patchRimMetrics } from './CrewPatch';
+import { crewIdentity, CREW_CHORD_TOKENS } from './lib/crew-identity';
 
 /**
  * The patch carries generated ids (clipPath, pattern) that differ per mount by
@@ -82,33 +82,101 @@ describe('CrewPatch rendering', () => {
     }
   });
 
-  it('rims the hero patch in its chord colour, 3px, with an outer glow; the smaller scales keep the neutral rim', () => {
-    const rim = (scale: 'hero' | 'tile') => {
+  it('scales the rim and glow from the 56px kit (addendum 4, item 2)', () => {
+    expect(patchRimMetrics(16)).toEqual({
+      rimWidthPx: 1,
+      rimWidthUnits: 6.25,
+      radiusPx: 4,
+      glowBlurPx: null,
+    });
+    expect(patchRimMetrics(18)).toEqual({
+      rimWidthPx: 1,
+      rimWidthUnits: 5.556,
+      radiusPx: 4.5,
+      glowBlurPx: null,
+    });
+    expect(patchRimMetrics(56)).toEqual({
+      rimWidthPx: 1.5,
+      rimWidthUnits: 2.679,
+      radiusPx: 14,
+      glowBlurPx: 8,
+    });
+    expect(patchRimMetrics(96)).toEqual({
+      rimWidthPx: 2.571,
+      rimWidthUnits: 2.679,
+      radiusPx: 24,
+      glowBlurPx: 13.714,
+    });
+  });
+
+  it('draws the rim in the secondary at 60%, glowing from 56px up only', () => {
+    const crewId = 'crew-alpha';
+    const secondary = `var(${
+      CREW_CHORD_TOKENS[crewIdentity(crewId, 0).chord].secondary
+    })`;
+    const rim = (size: number) => {
       const { container, unmount } = render(
-        <CrewPatch crewId="crew-alpha" scale={scale} />,
+        <CrewPatch crewId={crewId} size={size} scale="hero" />,
       );
       const svg = container.querySelector('svg') as SVGElement;
       const rects = Array.from(container.querySelectorAll('svg > rect'));
       const edge = rects[rects.length - 1] as SVGRectElement;
+      const clip = container.querySelector('clipPath rect') as SVGRectElement;
       const result = {
         stroke: edge.getAttribute('stroke'),
+        opacity: edge.getAttribute('stroke-opacity'),
         width: edge.getAttribute('stroke-width'),
+        x: edge.getAttribute('x'),
+        rx: edge.getAttribute('rx'),
+        clipRx: clip.getAttribute('rx'),
         filter: svg.style.filter,
       };
       unmount();
       return result;
     };
 
-    const hero = rim('hero');
-    expect(hero.stroke).toMatch(/^var\(--/);
-    expect(hero.stroke).not.toBe('var(--border-strong)');
-    expect(hero.width).toBe('3');
-    expect(hero.filter).toContain('drop-shadow');
+    const at16 = rim(16);
+    expect(at16).toMatchObject({
+      stroke: secondary,
+      opacity: '0.6',
+      width: '6.25',
+      x: '3.125',
+      rx: '21.875',
+      clipRx: '25',
+      filter: '',
+    });
 
-    const tile = rim('tile');
-    expect(tile.stroke).toBe('var(--border-strong)');
-    expect(tile.width).toBe('2');
-    expect(tile.filter).toBe('');
+    const at18 = rim(18);
+    expect(at18).toMatchObject({ width: '5.556', clipRx: '25', filter: '' });
+
+    const at56 = rim(56);
+    expect(at56).toMatchObject({
+      stroke: secondary,
+      opacity: '0.6',
+      width: '2.679',
+      clipRx: '25',
+    });
+    expect(at56.filter).toContain('drop-shadow(0 0 8px');
+    expect(at56.filter).toContain(`${secondary} 35%`);
+
+    const at96 = rim(96);
+    expect(at96).toMatchObject({ width: '2.679', clipRx: '25' });
+    expect(at96.filter).toContain('drop-shadow(0 0 13.714px');
+    expect(at96.filter).toContain(`${secondary} 35%`);
+  });
+
+  it('keys the glow on size, not scale', () => {
+    const filterOf = (size: number, scale: 'hero' | 'tile' | 'micro') => {
+      const { container, unmount } = render(
+        <CrewPatch crewId="crew-alpha" size={size} scale={scale} />,
+      );
+      const filter = (container.querySelector('svg') as SVGElement).style
+        .filter;
+      unmount();
+      return filter;
+    };
+    expect(filterOf(55, 'hero')).toBe('');
+    expect(filterOf(64, 'tile')).toContain('drop-shadow');
   });
 
   it('honours the requested pixel size', () => {

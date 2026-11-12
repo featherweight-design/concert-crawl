@@ -315,7 +315,41 @@ const SIGIL_RENDERERS: Record<
   ),
 };
 
-const SQUIRCLE_RADIUS = 28;
+/** The patch is drawn in a 0-100 viewBox; one pixel is 100/size units. */
+const VIEWBOX = 100;
+/** The B+ kit draws the patch at 56px; every rim value scales from there. */
+const KIT_SIZE = 56;
+/** Corner radius = size x 14/56, which is a constant 25 viewBox units. */
+const SQUIRCLE_RADIUS = (VIEWBOX * 14) / KIT_SIZE;
+/** Patches this size and up get the glow; smaller ones sit in chip rows. */
+const GLOW_MIN_SIZE = 56;
+
+const round3 = (value: number): number => Math.round(value * 1000) / 1000;
+
+export interface PatchRimMetrics {
+  /** Rim stroke in CSS pixels: size x 1.5/56, never under 1px. */
+  rimWidthPx: number;
+  /** The same stroke in viewBox units, which is what the SVG draws. */
+  rimWidthUnits: number;
+  /** Corner radius in CSS pixels: size x 14/56. */
+  radiusPx: number;
+  /** Glow blur in CSS pixels (size x 8/56), or null under 56px. */
+  glowBlurPx: number | null;
+}
+
+/**
+ * The rim and glow for a patch drawn at `size` pixels (B+ addendum 4,
+ * `02/patch-rim-spec`). Exported so the maths is testable without a layout.
+ */
+export function patchRimMetrics(size: number): PatchRimMetrics {
+  const rimWidthPx = Math.max(1, (size * 1.5) / KIT_SIZE);
+  return {
+    rimWidthPx: round3(rimWidthPx),
+    rimWidthUnits: round3((rimWidthPx * VIEWBOX) / size),
+    radiusPx: round3((size * 14) / KIT_SIZE),
+    glowBlurPx: size >= GLOW_MIN_SIZE ? round3((size * 8) / KIT_SIZE) : null,
+  };
+}
 
 /**
  * The generated emblem for a crew: a sew-on patch, not a poster. Every colour
@@ -341,6 +375,10 @@ export function CrewPatch({
   const showWeave = scale !== 'micro';
   const hero = scale === 'hero';
   const sw = hero ? 1.6 : 2.2;
+  const rim = patchRimMetrics(size);
+  // The rim sits inside the patch edge, as the board draws it: its outer edge
+  // is the silhouette, so the radius stays size x 14/56 at every width.
+  const rimInset = rim.rimWidthUnits / 2;
 
   return (
     <svg
@@ -353,19 +391,19 @@ export function CrewPatch({
         display: 'block',
         flexShrink: 0,
         overflow: 'visible',
-        // The soft glow in the chord colour that goes with the hero rim.
-        filter: hero
-          ? `drop-shadow(0 0 14px color-mix(in oklch, ${pri} 45%, transparent))`
-          : undefined,
+        // The glow is the rim's secondary at 35%, from 56px up only. Under
+        // that the patch sits in rows of chips, where a glow reads as selected.
+        filter:
+          rim.glowBlurPx === null
+            ? undefined
+            : `drop-shadow(0 0 ${rim.glowBlurPx}px color-mix(in srgb, ${sec} 35%, transparent))`,
       }}
     >
       <defs>
         <clipPath id={`${uid}-clip`}>
           <rect
-            x="2"
-            y="2"
-            width="96"
-            height="96"
+            width={VIEWBOX}
+            height={VIEWBOX}
             rx={SQUIRCLE_RADIUS}
             ry={SQUIRCLE_RADIUS}
           />
@@ -373,10 +411,8 @@ export function CrewPatch({
       </defs>
       <g clipPath={`url(#${uid}-clip)`}>
         <rect
-          x="2"
-          y="2"
-          width="96"
-          height="96"
+          width={VIEWBOX}
+          height={VIEWBOX}
           rx={SQUIRCLE_RADIUS}
           ry={SQUIRCLE_RADIUS}
           fill="var(--surface-2)"
@@ -390,18 +426,18 @@ export function CrewPatch({
         {SIGIL_RENDERERS[identity.sigil]({ pri, sec })}
       </g>
       <rect
-        x="2"
-        y="2"
-        width="96"
-        height="96"
-        rx={SQUIRCLE_RADIUS}
-        ry={SQUIRCLE_RADIUS}
+        x={rimInset}
+        y={rimInset}
+        width={VIEWBOX - rim.rimWidthUnits}
+        height={VIEWBOX - rim.rimWidthUnits}
+        rx={SQUIRCLE_RADIUS - rimInset}
+        ry={SQUIRCLE_RADIUS - rimInset}
         fill="none"
-        // The hero patch's rim is drawn in the crew's chord colour, about 3px,
-        // with a soft outer glow and no stitch (bp-s-invite_m, bp-s-invite_d);
-        // the smaller scales keep the quiet neutral rim.
-        stroke={hero ? pri : 'var(--border-strong)'}
-        strokeWidth={hero ? 3 : 2}
+        // The rim is the crew's colour at every size (B+ addendum 4, item 2):
+        // the chord's secondary at 60%. A neutral rim made every crew alike.
+        stroke={sec}
+        strokeOpacity="0.6"
+        strokeWidth={rim.rimWidthUnits}
       />
     </svg>
   );
