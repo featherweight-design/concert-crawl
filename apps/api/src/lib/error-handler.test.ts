@@ -6,6 +6,8 @@ import { z } from 'zod';
 
 // Sentry mock must be hoisted before the module under test imports it,
 // mirroring apps/api/src/routes/admin/prices.integration.test.ts:5-14.
+const tags = vi.hoisted(() => new Map<string, string>());
+
 vi.mock('@sentry/hono/node', async () => {
   const actual =
     await vi.importActual<typeof import('@sentry/hono/node')>(
@@ -14,6 +16,12 @@ vi.mock('@sentry/hono/node', async () => {
   return {
     ...actual,
     captureException: vi.fn(),
+    // Runs the callback against a recording scope so tests can read the tags.
+    withScope: vi.fn((callback: (scope: unknown) => void) =>
+      callback({
+        setTag: (key: string, value: string) => tags.set(key, value),
+      }),
+    ),
   };
 });
 
@@ -32,6 +40,9 @@ function appWithHandler() {
     zValidator('json', z.object({ name: z.string() })),
     (ctx) => ctx.json({ success: true }),
   );
+  app.get('/users/:id/boom', () => {
+    throw new Error('kaboom');
+  });
   app.get('/boom', () => {
     throw new Error('kaboom');
   });
@@ -45,6 +56,8 @@ function appWithHandler() {
 describe('errorHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    tags.clear();
+    delete process.env['SENTRY_USER_HASH_KEY'];
   });
 
   // The production regression: 12 Sentry error-level events (CONCERT-CRAWL-API-A/B)
@@ -96,4 +109,53 @@ describe('errorHandler', () => {
     expect(apiLogger.warn).toHaveBeenCalled();
     expect(apiLogger.error).not.toHaveBeenCalled();
   });
+
+  it('tags the route pattern, never the raw URL', async () => {
+    await appWithHandler().request('/users/user_abc123/boom');
+
+    expect(tags.get('route')).toBe('/users/:id/boom');
+    expect([...tags.values()].join(' ')).not.toContain('user_abc123');
+  });
+
+  it('tags tier unknown and omits userHash for an anonymous request', async () => {
+    process.env['SENTRY_USER_HASH_KEY'] = 'test-key';
+    await appWithHandler().request('/boom');
+
+    expect(tags.get('tier')).toBe('unknown');
+    expect(tags.has('userHash')).toBe(false);
+  });
+
+  it('tags tier and a hashed user, never the raw Clerk id', async () => {
+    process.env['SENTRY_USER_HASH_KEY'] = 'test-key';
+    const app = signedInApp({ metadata: { plan: 'Supporter' } });
+    await app.request('/boom');
+
+    expect(tags.get('tier')).toBe('supporter');
+    expect(tags.get('userHash')).toMatch(/^[0-9a-f]{16}$/);
+    expect([...tags.values()].join(' ')).not.toContain('user_2abcSECRET');
+    expect(captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves userHash off when the key is unset', async () => {
+    await signedInApp({}).request('/boom');
+
+    expect(tags.has('userHash')).toBe(false);
+    expect(captureException).toHaveBeenCalledTimes(1);
+  });
 });
+
+function signedInApp(sessionClaims: unknown) {
+  const app = new Hono();
+  app.use('*', async (ctx, next) => {
+    ctx.set(
+      'clerkAuth' as never,
+      { userId: 'user_2abcSECRET', sessionClaims } as never,
+    );
+    await next();
+  });
+  app.get('/boom', () => {
+    throw new Error('kaboom');
+  });
+  app.onError(errorHandler);
+  return app;
+}
