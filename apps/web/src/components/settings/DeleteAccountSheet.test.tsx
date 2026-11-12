@@ -59,7 +59,13 @@ beforeAll(() => {
 // hook reads max-width (phone): they are opposites.
 const stubViewport = (desktop: boolean) => {
   vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
-    matches: query.includes('min-width') ? desktop : !desktop,
+    // Only the two layout queries answer true; reduced motion stays off so the
+    // animated settle path is the one exercised.
+    matches: query.includes('min-width')
+      ? desktop
+      : query.includes('max-width')
+        ? !desktop
+        : false,
     media: query,
     onchange: null,
     addEventListener: () => undefined,
@@ -105,6 +111,15 @@ const openSheet = () => {
   trigger.focus();
   fireEvent.click(trigger);
   return trigger;
+};
+
+// The handle is the sheet's only grab zone: the first div in the dialog.
+const dragHandle = () => {
+  const handle = screen.getByRole('dialog').querySelector('div');
+  if (handle === null) throw new Error('the sheet should have a handle');
+  fireEvent.pointerDown(handle, { pointerId: 1, clientY: 0 });
+  fireEvent.pointerMove(handle, { pointerId: 1, clientY: 180 });
+  fireEvent.pointerUp(handle, { pointerId: 1, clientY: 180 });
 };
 
 // The two layouts word their delete button differently: the phone sheet names
@@ -192,13 +207,7 @@ describe.each([
     const onClose = vi.fn();
     render(<Harness onClose={onClose} />);
     openSheet();
-    // The heading is part of the grab zone, as is the handle above it.
-    const zone = screen.getByRole('heading', {
-      name: DANGER_COPY.confirmHeading,
-    });
-    fireEvent.pointerDown(zone, { pointerId: 1, clientY: 0 });
-    fireEvent.pointerMove(zone, { pointerId: 1, clientY: 180 });
-    fireEvent.pointerUp(zone, { pointerId: 1, clientY: 180 });
+    dragHandle();
     // The desktop dialog is not a bottom sheet: nothing moves, nothing closes.
     expect(onClose).toHaveBeenCalledTimes(desktop ? 0 : 1);
   });
@@ -215,12 +224,7 @@ describe.each([
     await waitFor(() =>
       expect(mockDeleteAccount).toHaveBeenCalledWith('token'),
     );
-    const zone = screen.getByRole('heading', {
-      name: DANGER_COPY.confirmHeading,
-    });
-    fireEvent.pointerDown(zone, { pointerId: 1, clientY: 0 });
-    fireEvent.pointerMove(zone, { pointerId: 1, clientY: 180 });
-    fireEvent.pointerUp(zone, { pointerId: 1, clientY: 180 });
+    dragHandle();
     expect(onClose).not.toHaveBeenCalled();
   });
 
