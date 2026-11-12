@@ -15,8 +15,7 @@
 // Mode is decided on the SERVER from the SSR follow seed, so the slot never
 // renders one shelf and swaps to another after a client fetch lands.
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import { useAuth } from '@clerk/nextjs';
 import type { PickerEntry } from '@concert-crawl/types';
@@ -28,7 +27,6 @@ import { ShelfCard } from './ShelfCard';
 import { FOLLOWING_COPY } from './definitions/copy';
 import {
   SHELF_RAIL_CAP_CLASS,
-  SHELF_RAIL_DESKTOP_CARDS,
   SHELF_RAIL_GAP_CLASS,
 } from '@/components/consumer/definitions/constants';
 import { SHELF_VISIBLE_CARDS } from './definitions/constants';
@@ -51,12 +49,10 @@ const ShelfHead = ({
   eyebrow,
   title,
   body,
-  action,
 }: {
   eyebrow: string;
   title: string;
   body?: string;
-  action?: ReactNode;
 }) => (
   <div className="mb-[11px] flex items-end justify-between gap-3">
     <div className="flex min-w-0 flex-col gap-[5px]">
@@ -86,7 +82,6 @@ const ShelfHead = ({
         </p>
       )}
     </div>
-    {action}
   </div>
 );
 
@@ -160,12 +155,11 @@ export const FollowShelf = ({
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
-  // From lg the rail stops at the cards the column holds whole. Only "Your
-  // artists" takes that cap, because only it has somewhere to send the rest:
-  // My shows ▸ Artists (/following) lists every follow. The starter shelf's
-  // picks are a per-session shuffle no page lists, so it keeps scrolling.
+  // From lg the rail stops at the cards the column holds whole, as the board
+  // draws it. Only "Your artists" takes that cap: My shows ▸ Artists
+  // (/following) lists every follow. The starter shelf's picks are a
+  // per-session shuffle no page lists, so it keeps scrolling.
   const capped = mode === 'some';
-  const overflows = capped && visible.length > SHELF_RAIL_DESKTOP_CARDS;
 
   return (
     <section aria-label={FOLLOWING_COPY.shelfAria} className="mb-5 pt-1.5">
@@ -179,25 +173,6 @@ export const FollowShelf = ({
         <ShelfHead
           eyebrow={FOLLOWING_COPY.yoursEyebrow(followCount)}
           title={FOLLOWING_COPY.yoursTitle}
-          action={
-            overflows && (
-              <Link
-                href="/following"
-                aria-label={FOLLOWING_COPY.yoursSeeAllAria}
-                data-testid="shelf-see-all"
-                className="hidden shrink-0 items-center gap-[5px] font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal lg:inline-flex"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.1em',
-                  color: 'var(--signal)',
-                }}
-              >
-                {FOLLOWING_COPY.yoursSeeAll}
-                <ChevronGlyph />
-              </Link>
-            )
-          }
         />
       )}
 
