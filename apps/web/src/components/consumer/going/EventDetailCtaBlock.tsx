@@ -40,7 +40,9 @@ const OPTIMISTIC_STAMP = 'optimistic';
 export type GoingCtaEvent = Pick<
   EventDetailResponse,
   'id' | 'artist' | 'date' | 'status' | 'attendingAt'
-> & { venue: Pick<EventDetailResponse['venue'], 'timezone'> };
+> & {
+  venue: Pick<EventDetailResponse['venue'], 'timezone' | 'slug' | 'name'>;
+};
 
 export const EventDetailCtaBlock = ({
   event,
@@ -241,7 +243,13 @@ export const EventDetailCtaBlock = ({
         </div>
       ) : (
         <GoingButton
-          show={{ eventId: event.id, artist: event.artist, date: event.date }}
+          show={{
+            eventId: event.id,
+            artist: event.artist,
+            date: event.date,
+            venueSlug: event.venue.slug,
+            venueName: event.venue.name,
+          }}
           state={state}
           size="lg"
           fullWidth

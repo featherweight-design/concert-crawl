@@ -43,7 +43,11 @@ const event = (over: Partial<GoingCtaEvent> = {}): GoingCtaEvent => ({
   date: '2099-10-14',
   status: 'upcoming',
   attendingAt: null,
-  venue: { timezone: 'America/Denver' },
+  venue: {
+    timezone: 'America/Denver',
+    slug: 'the-church-nightclub',
+    name: 'The Church Nightclub',
+  },
   ...over,
 });
 

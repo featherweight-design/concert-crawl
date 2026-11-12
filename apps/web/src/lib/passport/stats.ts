@@ -11,6 +11,8 @@ export interface AttendedShow {
   id: string;
   artist: string;
   venue: string;
+  /** Picks the stamp's glyph and colours (B+ rule 4: a stamp is its venue's). */
+  venueSlug: string;
   genre: string | null;
   /** The event's local calendar date, `YYYY-MM-DD`. */
   date: string;

@@ -3,17 +3,25 @@
 // The "I'm going!" commitment CTA (#70), from
 // design_handoff_concert_history/going-cta.jsx:77-182.
 //
-// The button is shaped like a ticket stub, and on `going` it fills with the
-// artist's accent and snaps the glyph into the stub hole — so the button
-// visually *becomes* the stamp it will be in History.
+// The button is shaped like a ticket stub, and once committed it fills with
+// the venue's stamp colour and snaps the venue's stamp into the stub hole — so
+// the button visually *becomes* the stamp it will be in Concerts. The B+ board
+// (`addendum-3/04/event-past-d`) draws it: the venue's ring colour as the
+// fill, a dark hole holding the venue glyph in a double-ringed rounded square,
+// and dark ink. Two artists at one venue get the same stub.
 //
 // `past-yes` / `past-no` are read-only displays, not affordances: the
 // retroactive "I went, actually" toggle is out of scope for v1.
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
+import { venueGlyphKey } from '@/components/consumer/venue-glyph';
+import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
+import { stampColorsFor, stampGlowFor } from '@/lib/passport/stamp';
+import { useThemeName } from '@/theme';
 import { GOING_COPY } from './definitions/copy';
-import { stampAccentFor, stampGlyphFor } from './lib/stamp';
+import { pillInkFor } from './lib/pill-ink';
 
 export type GoingButtonState =
   | 'default'
@@ -27,7 +35,15 @@ export type GoingButtonState =
 export type GoingButtonSize = 'sm' | 'md' | 'lg';
 
 type GoingButtonProps = {
-  show: { eventId: string; artist: string; date: string };
+  show: {
+    eventId: string;
+    artist: string;
+    date: string;
+    /** Picks the stub's stamp glyph and colours. */
+    venueSlug: string;
+    /** For a venue with no glyph, whose identity art fills the stamp. */
+    venueName: string;
+  };
   state?: GoingButtonState;
   size?: GoingButtonSize;
   fullWidth?: boolean;
@@ -48,8 +64,22 @@ export const GOING_BUTTON_SIZES: Record<
 > = {
   sm: { height: 36, padX: 12, font: 12, gap: 6, hole: 28, radius: 8 },
   md: { height: 44, padX: 16, font: 13.5, gap: 8, hole: 32, radius: 9 },
-  lg: { height: 52, padX: 20, font: 15, gap: 10, hole: 38, radius: 10 },
+  // `event-past-d`: a 50px stub, a 50px hole holding a 36px stamp, 8px gap.
+  lg: { height: 50, padX: 20, font: 15, gap: 8, hole: 36, radius: 10 },
 };
+
+// The stub's stamp, in the board's own 36-unit box (`event-past-d`), scaled
+// to the hole: a solid outer and a solid inner rounded square in the venue's
+// ring colour, and the bare glyph at 40% in its glyph colour, with a glow.
+export const STUB_STAMP_VIEWBOX = 36;
+export const STUB_STAMP_OUTER = { inset: 1.5, radius: 7.2, stroke: 2 };
+export const STUB_STAMP_INNER = { inset: 6, radius: 4.7, stroke: 0.9 };
+const STUB_GLYPH_OFFSET = 10.8;
+const STUB_GLYPH_SCALE = 0.6;
+const STUB_GLYPH_STROKE = 1.8;
+const STUB_GLOW_BLUR = 5;
+/** The perforation's ink on the filled stub, as a share of the label ink. */
+const PERFORATION_INK = 35;
 
 const MIN_TAP_TARGET = 44;
 
@@ -130,6 +160,106 @@ const CheckIcon = ({ size }: { size: number }) => (
   </svg>
 );
 
+/**
+ * The venue's stamp in the stub hole, as `event-past-d` draws it. Exported so
+ * any other stub (the "You went" tile) draws the same stamp.
+ */
+export const StubStamp = ({
+  venueSlug,
+  venueName,
+  size,
+}: {
+  venueSlug: string;
+  venueName: string;
+  size: number;
+}) => {
+  const colors = stampColorsFor(venueSlug);
+  const glyphKey = venueGlyphKey(venueSlug);
+  const scale = size / STUB_STAMP_VIEWBOX;
+  const innerSide = STUB_STAMP_VIEWBOX - STUB_STAMP_INNER.inset * 2;
+  return (
+    <span
+      data-going-cta-stamp=""
+      style={{
+        position: 'relative',
+        display: 'block',
+        width: size,
+        height: size,
+        flexShrink: 0,
+      }}
+    >
+      {glyphKey === null && (
+        <span
+          data-going-cta-stamp-fallback=""
+          style={{
+            position: 'absolute',
+            inset: STUB_STAMP_INNER.inset * scale,
+            borderRadius: STUB_STAMP_INNER.radius * scale,
+            overflow: 'hidden',
+          }}
+        >
+          <IdentityArt
+            name={venueName}
+            kind="venue"
+            scale="tile"
+            grain={0.08}
+            width="100%"
+            height="100%"
+          />
+        </span>
+      )}
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${STUB_STAMP_VIEWBOX} ${STUB_STAMP_VIEWBOX}`}
+        aria-hidden="true"
+        focusable="false"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'block',
+          filter: stampGlowFor(colors.ring, STUB_GLOW_BLUR),
+        }}
+      >
+        <rect
+          data-going-cta-stamp-ring=""
+          x={STUB_STAMP_OUTER.inset}
+          y={STUB_STAMP_OUTER.inset}
+          width={STUB_STAMP_VIEWBOX - STUB_STAMP_OUTER.inset * 2}
+          height={STUB_STAMP_VIEWBOX - STUB_STAMP_OUTER.inset * 2}
+          rx={STUB_STAMP_OUTER.radius}
+          fill="none"
+          stroke={colors.ring}
+          strokeWidth={STUB_STAMP_OUTER.stroke}
+        />
+        <rect
+          data-going-cta-stamp-inner-ring=""
+          x={STUB_STAMP_INNER.inset}
+          y={STUB_STAMP_INNER.inset}
+          width={innerSide}
+          height={innerSide}
+          rx={STUB_STAMP_INNER.radius}
+          fill="none"
+          stroke={colors.ring}
+          strokeWidth={STUB_STAMP_INNER.stroke}
+        />
+        {glyphKey !== null && (
+          <g
+            data-going-cta-stamp-glyph={glyphKey}
+            transform={`translate(${STUB_GLYPH_OFFSET} ${STUB_GLYPH_OFFSET}) scale(${STUB_GLYPH_SCALE})`}
+          >
+            <GlyphShapes
+              glyphKey={glyphKey}
+              paint={colors.glyph}
+              strokeWidth={STUB_GLYPH_STROKE}
+            />
+          </g>
+        )}
+      </svg>
+    </span>
+  );
+};
+
 export const GoingButton = ({
   show,
   state = 'default',
@@ -139,8 +269,12 @@ export const GoingButton = ({
   onChange,
 }: GoingButtonProps) => {
   const sizes = GOING_BUTTON_SIZES[size];
-  const accent = stampAccentFor(show.artist);
-  const glyph = stampGlyphFor(show.artist);
+  // The venue's ring colour, never the artist's: the stub is the stamp the
+  // night becomes, and a stamp is its venue's (B+ rule 4).
+  const accent = stampColorsFor(show.venueSlug).ring;
+  // The board draws dark ink on the fill. On Light the pale venue colours
+  // fall under AA with `--bg`, so the ink is picked by contrast (#220).
+  const ink = pillInkFor(accent, useThemeName());
 
   const isPast = state === 'past-yes' || state === 'past-no';
   const isOn = state === 'going' || state === 'past-yes';
@@ -235,23 +369,18 @@ export const GoingButton = ({
     maxWidth: '100%',
     height: sizes.height,
     borderRadius: sizes.radius,
-    // The forward action reads on --signal; the accent only ever appears once
-    // the night is committed. A verb never sits on --danger.
-    // "You went" is a solid fill in the stamp colour with a dark label
-    // (event-past-remove-d); "Going" keeps the tint.
-    background:
-      state === 'past-yes'
-        ? accent
-        : isOn
-          ? `color-mix(in oklch, ${accent} 22%, var(--surface-1))`
-          : 'var(--surface-1)',
+    // The venue colour only ever appears once the night is committed, and
+    // then it is the whole fill (`event-past-d`). A verb never sits on --danger.
+    background: isOn ? accent : 'var(--surface-1)',
     border: `1.5px solid ${isOn ? accent : 'var(--border-strong)'}`,
     color:
       state === 'past-yes'
         ? 'var(--fg-on-accent)'
-        : isDeclined
-          ? 'var(--fg-subtle)'
-          : 'var(--fg)',
+        : isOn
+          ? ink.text
+          : isDeclined
+            ? 'var(--fg-subtle)'
+            : 'var(--fg)',
     fontFamily: 'var(--font-ui)',
     fontWeight: 700,
     fontSize: sizes.font,
@@ -259,9 +388,6 @@ export const GoingButton = ({
     // `pending` blocks a second tap but is deliberately invisible: the caller
     // commits optimistically, so dimming here would undo the point of it.
     opacity: isDeclined ? 0.7 : 1,
-    boxShadow: isOn
-      ? `0 8px 24px -10px color-mix(in oklch, ${accent} 70%, transparent)`
-      : 'none',
     transition:
       'background 160ms, border-color 160ms, color 160ms, opacity 150ms',
   };
@@ -307,6 +433,7 @@ export const GoingButton = ({
         )}
 
         <span
+          data-going-cta-hole=""
           style={{
             width: sizes.height,
             height: '100%',
@@ -314,54 +441,25 @@ export const GoingButton = ({
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            // Filled, the hole is the page's dark ground (`event-past-d`),
+            // rounded to the stub's inner corner since the stub doesn't clip.
+            background: isOn ? 'var(--bg)' : undefined,
+            borderRadius: isOn
+              ? `${sizes.radius - 1.5}px 0 0 ${sizes.radius - 1.5}px`
+              : undefined,
             borderRight: `1.5px dashed ${
               isOn
-                ? `color-mix(in oklch, ${accent} 75%, transparent)`
+                ? `color-mix(in oklch, ${ink.text} ${PERFORATION_INK}%, transparent)`
                 : 'var(--border-strong)'
             }`,
           }}
         >
           {isOn ? (
-            <svg
-              width={sizes.hole}
-              height={sizes.hole}
-              viewBox="0 0 24 24"
-              style={{ display: 'block' }}
-              aria-hidden="true"
-              focusable="false"
-            >
-              {glyph === 'star' && (
-                <polygon
-                  transform="translate(12 12) scale(0.7) translate(-12 -12)"
-                  points="12,2 14.35,8.76 21.51,8.91 15.8,13.24 17.88,20.09 12,16 6.12,20.09 8.2,13.24 2.49,8.91 9.65,8.76"
-                  fill={accent}
-                />
-              )}
-              {glyph === 'diamond' && (
-                <polygon
-                  transform="translate(12 12) scale(0.75) translate(-12 -12)"
-                  points="12,2 22,12 12,22 2,12"
-                  fill={accent}
-                />
-              )}
-              {glyph === 'ring' && (
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="6.6"
-                  fill="none"
-                  stroke={accent}
-                  strokeWidth="2.6"
-                />
-              )}
-              {glyph === 'triangle' && (
-                <polygon
-                  transform="translate(12 12) scale(0.7) translate(-12 -12)"
-                  points="12,3 21,19 3,19"
-                  fill={accent}
-                />
-              )}
-            </svg>
+            <StubStamp
+              venueSlug={show.venueSlug}
+              venueName={show.venueName}
+              size={sizes.hole}
+            />
           ) : (
             <svg
               width={sizes.hole - 8}

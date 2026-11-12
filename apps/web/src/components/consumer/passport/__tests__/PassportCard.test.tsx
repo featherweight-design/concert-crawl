@@ -19,6 +19,7 @@ const show = (
   id: `show-${index}`,
   artist: `Artist ${index}`,
   venue: `Venue ${index}`,
+  venueSlug: `venue-${index}`,
   genre: 'punk',
   date: '2026-03-14',
   priceFinal: 20,
@@ -154,6 +155,114 @@ describe('<PassportCard /> (#85)', () => {
         ).not.toThrow();
         cleanup();
       }
+    });
+  });
+
+  // B+ addendum 3 rule 4 (question 25: "the PNG share card too"): the wall is
+  // the shared round stamp in the venue's colours, drawn as `04/one-stamp-m`.
+  describe('venue stamps', () => {
+    const CHURCH = 'the-church-nightclub';
+    const stampOf = (container: HTMLElement, id: string): Element => {
+      const stamp = container.querySelector(`[data-passport-stamp="${id}"]`);
+      if (!stamp) throw new Error(`no stamp for ${id}`);
+      return stamp;
+    };
+
+    it('gives two artists at one venue the same colours, whoever played', () => {
+      const { container } = mount({
+        shows: [
+          show(1, { artist: 'TOKiMONSTA', venueSlug: CHURCH }),
+          show(2, { artist: 'Khruangbin', venueSlug: CHURCH }),
+        ],
+      });
+      const paints = ['show-1', 'show-2'].map((id) => {
+        const stamp = stampOf(container, id);
+        return {
+          ring: stamp
+            .querySelector('[data-passport-stamp-ring]')
+            ?.getAttribute('stroke'),
+          glyph: stamp
+            .querySelector('[data-passport-stamp-glyph] > g')
+            ?.getAttribute('stroke'),
+        };
+      });
+      // The Church on the boards: rings #FF6B8A (`to`), glyph #A075FF (`from`).
+      expect(paints[0]).toEqual({ ring: '#FF6B8A', glyph: '#A075FF' });
+      expect(paints[1]).toEqual(paints[0]);
+    });
+
+    it("draws the board's round double ring, the bare glyph and the glow", () => {
+      const { container } = mount({
+        shows: [show(1, { venueSlug: CHURCH })],
+      });
+      const stamp = stampOf(container, 'show-1');
+      const svg = stamp.querySelector('svg');
+      expect(svg?.getAttribute('viewBox')).toBe('0 0 58 58');
+      const outer = stamp.querySelector('[data-passport-stamp-ring]');
+      expect(outer?.getAttribute('r')).toBe('27.5');
+      expect(outer?.getAttribute('stroke-width')).toBe('2');
+      expect(outer?.getAttribute('fill')).toBe('none');
+      expect(outer?.getAttribute('stroke-dasharray')).toBeNull();
+      const inner = stamp.querySelector('[data-passport-stamp-inner-ring]');
+      expect(inner?.getAttribute('r')).toBe('23');
+      expect(inner?.getAttribute('stroke-width')).toBe('0.9');
+      expect(inner?.getAttribute('stroke-dasharray')).toBe('2.5 2.5');
+      expect(inner?.getAttribute('fill')).toBe('none');
+      const glyph = stamp.querySelector('[data-passport-stamp-glyph]');
+      expect(glyph?.getAttribute('data-passport-stamp-glyph')).toBe('church');
+      // The glyph at 40% of the stamp (23.2 of 58), centred.
+      const [tx, ty, sc] = (glyph?.getAttribute('transform') ?? '')
+        .match(/-?[\d.]+/g)
+        ?.map(Number) ?? [NaN, NaN, NaN];
+      expect(tx).toBeCloseTo(17.4);
+      expect(ty).toBeCloseTo(17.4);
+      expect(sc).toBeCloseTo(23.2 / 24);
+      expect(
+        glyph?.querySelector(':scope > g')?.getAttribute('stroke-width'),
+      ).toBe('1.8');
+      const shadow = stamp.querySelector('feDropShadow');
+      expect(shadow?.getAttribute('flood-color')).toBe('#FF6B8A');
+      expect(shadow?.getAttribute('flood-opacity')).toBe('0.3');
+    });
+
+    // Only the face changed: the tile keeps the card's slot, and the round
+    // stamp sits centred inside it.
+    it("keeps the card's slot and puts the round face inside it", () => {
+      const cfg = PP_MODES.share;
+      const wallWidth = cfg.width - cfg.pad * 2;
+      const tileWidth = (wallWidth - cfg.gap * (cfg.cols - 1)) / cfg.cols;
+      const { container } = mount({ shows: [show(1, { venueSlug: CHURCH })] });
+      const tile = stampOf(container, 'show-1');
+      if (!(tile instanceof HTMLElement)) throw new Error('tile is not html');
+      expect(parseFloat(tile.style.width)).toBeCloseTo(tileWidth);
+      expect(tile.style.borderRadius).toBe(`${cfg.stampRadius}px`);
+      const face = tile.querySelector<HTMLElement>(
+        '[data-passport-stamp-face]',
+      );
+      const tileHeight = parseFloat(tile.style.height);
+      expect(parseFloat(face?.style.width ?? '')).toBeCloseTo(
+        Math.min(tileWidth, tileHeight) * 0.6,
+      );
+      expect(tile.textContent).toContain('Artist 1');
+      expect(tile.textContent).toContain('MAR');
+    });
+
+    it('is straight on the share card, never tilted', () => {
+      const { container } = mount({ shows: shows(4) });
+      for (const stamp of container.querySelectorAll('[data-passport-stamp]')) {
+        expect(stamp.getAttribute('style') ?? '').not.toMatch(/rotate/);
+      }
+    });
+
+    it('falls back to the venue art inside the rings for a venue with no glyph', () => {
+      const { container } = mount({
+        shows: [show(1, { venueSlug: 'no-such-venue' })],
+      });
+      const stamp = stampOf(container, 'show-1');
+      expect(stamp.querySelector('[data-passport-stamp-glyph]')).toBeNull();
+      expect(
+        stamp.querySelector('[data-passport-stamp-fallback]'),
+      ).not.toBeNull();
     });
   });
 
