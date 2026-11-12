@@ -462,16 +462,53 @@ describe('admin artists routes', () => {
     });
 
     it('orders soonest show first within a rank and carries the next show', async () => {
-      await seedArtist({ canonicalName: 'late', matchStatus: 'ambiguous' });
-      await seedArtist({ canonicalName: 'early', matchStatus: 'ambiguous' });
-      await seedShow('late', LATER);
-      await seedShow('early', SOON);
+      // Named against the date order, so only the date sort can pass.
+      await seedArtist({ canonicalName: 'aaa late', matchStatus: 'ambiguous' });
+      await seedArtist({
+        canonicalName: 'zzz early',
+        matchStatus: 'ambiguous',
+      });
+      await seedShow('aaa late', LATER);
+      await seedShow('zzz early', SOON);
 
       const rows = await list('status=to_check');
-      expect(rows.map((row) => row.canonicalName)).toEqual(['early', 'late']);
+      expect(rows.map((row) => row.canonicalName)).toEqual([
+        'zzz early',
+        'aaa late',
+      ]);
       expect(rows[0]?.nextShow).toEqual({
         date: SOON,
-        venueName: 'Venue for early',
+        venueName: 'Venue for zzz early',
+      });
+    });
+
+    it('takes the venue of the earlier set when two shows share the next date', async () => {
+      await seedArtist({ canonicalName: 'two sets', matchStatus: 'ambiguous' });
+      const late = await seedVenue({
+        name: 'Aaa Late Room',
+        slug: 'late-room',
+      });
+      const early = await seedVenue({
+        name: 'Zzz Early Room',
+        slug: 'early-room',
+      });
+      await seedEvent(late.id, {
+        artist: 'two sets',
+        canonicalArtist: 'two sets',
+        date: SOON,
+        showTime: '21:00',
+      });
+      await seedEvent(early.id, {
+        artist: 'two sets',
+        canonicalArtist: 'two sets',
+        date: SOON,
+        showTime: '18:00',
+      });
+
+      const [row] = await list('status=to_check');
+      expect(row?.nextShow).toEqual({
+        date: SOON,
+        venueName: 'Zzz Early Room',
       });
     });
 
