@@ -435,6 +435,28 @@ describe('account menu identity (addendum 2 item 25)', () => {
     expect(screen.queryByText(/founder/i)).toBeNull();
   });
 
+  it('draws the identity ring at the board size (46px)', async () => {
+    signIn();
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    const dialog = screen.getByRole('dialog');
+    const ring = Array.from(
+      dialog.querySelectorAll<HTMLElement>('[aria-hidden="true"]'),
+    ).find((el) => el.style.width === '46px' && el.style.height === '46px');
+    expect(ring).toBeDefined();
+  });
+
+  it('leads Sign out with the board arrow glyph, not the door', async () => {
+    signIn();
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    const row = screen.getByRole('button', { name: 'Sign out' });
+    expect(row.querySelector('.lucide-arrow-down-left')).not.toBeNull();
+    expect(row.querySelector('.lucide-log-out')).toBeNull();
+  });
+
   it('shows the email, as main does, when there is no handle or display name', async () => {
     signIn();
     fetchMe.mockResolvedValue({

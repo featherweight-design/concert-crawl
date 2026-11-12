@@ -35,9 +35,9 @@ describe('FeedbackEdgeTab', () => {
   it('carries the phone tuck and the focus-within and active slide-out classes', () => {
     render(<FeedbackEdgeTab />);
     const anchor = screen.getByTestId('feedback-edge-tab-anchor');
-    expect(anchor.className).toContain('max-sm:translate-x-3');
-    expect(anchor.className).toContain('max-sm:focus-within:translate-x-0');
-    expect(anchor.className).toContain('max-sm:active:translate-x-0');
+    expect(anchor.className).toContain('max-xl:translate-x-3');
+    expect(anchor.className).toContain('max-xl:focus-within:translate-x-0');
+    expect(anchor.className).toContain('max-xl:active:translate-x-0');
   });
 
   it('carries a 12px transparent hit slop on phones and a focus-visible ring class', () => {

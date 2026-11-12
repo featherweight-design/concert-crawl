@@ -11,12 +11,12 @@ export function FeedbackEdgeTab() {
     <>
       {/* The fixed anchor is a wrapper so the phone inset can be a class: the
           button's `all: unset` would beat any class on the button itself.
-          Under 640 the tab is half tucked behind the screen edge so it stops
+          Under 1280 the tab is half tucked behind the screen edge so it stops
           covering page text (venue titles, artist rows at 390), and slides out
-          on focus or press. From 640 up it sits flush as drawn. */}
+          on focus or press. From 1280 up it sits flush as drawn. */}
       <div
         data-testid="feedback-edge-tab-anchor"
-        className="fixed right-0 top-[44%] z-[35] transition-transform duration-[var(--motion-fast)] ease-[var(--motion-ease)] max-sm:translate-x-3 max-sm:focus-within:translate-x-0 max-sm:active:translate-x-0 rounded-l-[10px] [&:has(:focus-visible)]:outline [&:has(:focus-visible)]:outline-2 [&:has(:focus-visible)]:outline-offset-2 [&:has(:focus-visible)]:outline-[var(--signal)]"
+        className="fixed right-0 top-[70%] z-[35] transition-transform duration-[var(--motion-fast)] ease-[var(--motion-ease)] max-xl:translate-x-3 max-xl:focus-within:translate-x-0 max-xl:active:translate-x-0 rounded-l-[10px] [&:has(:focus-visible)]:outline [&:has(:focus-visible)]:outline-2 [&:has(:focus-visible)]:outline-offset-2 [&:has(:focus-visible)]:outline-[var(--signal)]"
       >
         <button
           type="button"
@@ -50,7 +50,7 @@ export function FeedbackEdgeTab() {
           <span
             aria-hidden="true"
             data-testid="feedback-edge-tab-hit-slop"
-            className="absolute -left-3 top-0 hidden h-full w-3 max-sm:block"
+            className="absolute -left-3 top-0 hidden h-full w-3 max-xl:block"
           />
           <span
             style={{
