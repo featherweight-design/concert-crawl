@@ -33,18 +33,33 @@ const fitArtist = (artist: string): string => {
     : upper;
 };
 
+/**
+ * The booklet's hand-stamped tilts, by slot (addendum 2 item 3, Hugh
+ * 2026-11-12): round stamps stay straight everywhere except inside the
+ * Passport booklet, where each slot keeps its tilt, repeating every four.
+ */
+export const BOOKLET_TILTS = [-8, 6, 4, -5] as const;
+
+export const slotTilt = (slotIndex: number): number =>
+  BOOKLET_TILTS[slotIndex % BOOKLET_TILTS.length] ?? 0;
+
+const tiltStyle = (tilt: number) =>
+  tilt === 0 ? undefined : `rotate(${tilt}deg)`;
+
 interface BookletStampProps {
   show: HistoryShow;
   size: number;
+  /** Degrees; the slot's booklet tilt. */
+  tilt?: number;
 }
 
 /**
  * A night in the booklet: the one Passport stamp (B+ rule 4, the venue ring
- * with its glyph, never tilted) inside an ink band that prints who played and
- * the date. The band is the booklet's frame around the stamp, not a second
- * stamp, so it takes the stamp's own ink.
+ * with its glyph) inside an ink band that prints who played and the date. The
+ * band is the booklet's frame around the stamp, not a second stamp, so it
+ * takes the stamp's own ink. The whole stamp takes its slot's booklet tilt.
  */
-export function BookletStamp({ show, size }: BookletStampProps) {
+export function BookletStamp({ show, size, tilt = 0 }: BookletStampProps) {
   const uid = useId().replace(/:/g, '');
   const ink = stampInkFor(show.artist);
   const date = stampDateParts(show.date);
@@ -63,6 +78,7 @@ export function BookletStamp({ show, size }: BookletStampProps) {
         width: size,
         height: size,
         flexShrink: 0,
+        transform: tiltStyle(tilt),
       }}
     >
       <svg
@@ -134,7 +150,7 @@ export function BookletStamp({ show, size }: BookletStampProps) {
 }
 
 /** The slot the next stamp lands in: a faint ring, its dashed stamp, the date. */
-export function NextSlot({ show, size }: BookletStampProps) {
+export function NextSlot({ show, size, tilt = 0 }: BookletStampProps) {
   const date = stampDateParts(show.date);
   return (
     <span
@@ -142,7 +158,7 @@ export function NextSlot({ show, size }: BookletStampProps) {
       aria-label={`${COPY.nextStamp}: ${show.artist}, ${show.venueName}, ${show.dateLabel}`}
       role="img"
       className="flex flex-col items-center justify-center gap-1.5 rounded-full border border-dashed border-border-strong"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, transform: tiltStyle(tilt) }}
     >
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-signal">
         {COPY.nextSlot}
@@ -164,13 +180,13 @@ export function NextSlot({ show, size }: BookletStampProps) {
 }
 
 /** A slot no night has reached yet. */
-export function EmptySlot({ size }: { size: number }) {
+export function EmptySlot({ size, tilt = 0 }: { size: number; tilt?: number }) {
   return (
     <span
       aria-hidden="true"
       data-booklet-empty=""
       className="block rounded-full border border-dashed border-border"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, transform: tiltStyle(tilt) }}
     />
   );
 }
