@@ -1,3 +1,27 @@
+# [1.364.0](https://github.com/featherweight-design/concert-crawl/compare/v1.363.0...v1.364.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** a long handle wraps in the make-admin card ([69a212a](https://github.com/featherweight-design/concert-crawl/commit/69a212ac8efd2eea3441eaac19b7aa7b4bb2e26f))
+* **web:** address the review on the stamps PR ([7009a38](https://github.com/featherweight-design/concert-crawl/commit/7009a38b30c2305d254416a8c1ec610a2ded6945))
+* **web:** an unknown join source kind reads as no source, not a failed list ([42bc48d](https://github.com/featherweight-design/concert-crawl/commit/42bc48dade7b961777e297be6d38d5f0c704a1bb))
+* **web:** going pill text by contrast ([90d4a92](https://github.com/featherweight-design/concert-crawl/commit/90d4a926fd3e61ddc32126d41447c25dc843dda6))
+* **web:** invite review fixes, pill contrast on Light, fan fits 320 ([16e49e8](https://github.com/featherweight-design/concert-crawl/commit/16e49e8edd685f50a6cb19554c1534cbae75daec))
+* **web:** keep the up next ghost date off the share-card weight sweep ([f785241](https://github.com/featherweight-design/concert-crawl/commit/f78524144722b0da16c0cec46be99a50481f4acd))
+* **web:** offline review fixes, hit area, row hover, tile fit ([7dcd671](https://github.com/featherweight-design/concert-crawl/commit/7dcd6712bf45b059a7afb992bec271c100774223))
+* **web:** person page retires stale undo, hides self sign out, reads new kinds leniently ([355870c](https://github.com/featherweight-design/concert-crawl/commit/355870c6ee389b8c3c1b33ac1e40792dcc4238f2))
+* **web:** stamps take their venue's colours and the boards' double ring ([9b42676](https://github.com/featherweight-design/concert-crawl/commit/9b42676f9befce1c9e56c0787d9e4fd214db673f))
+
+
+### Features
+
+* **web:** invite landing fidelity, fan cards, beta pill, wash, code field, proof tile ([cdfc644](https://github.com/featherweight-design/concert-crawl/commit/cdfc6449f05fa5ea7638c521b874ef5ef5d39396))
+* **web:** invite Redeem gradient, fan card size, TONIGHT pill ([aa83e3d](https://github.com/featherweight-design/concert-crawl/commit/aa83e3def1acd922294b7c21e2eee9696f269163))
+* **web:** offline page fidelity, cached rows, tile glyphs, try again, pill glow ([6eb3f35](https://github.com/featherweight-design/concert-crawl/commit/6eb3f351c0d2d33babd23b2086d714330ac1df77))
+* **web:** people list shows join source, test-free counts and the test chip from the api ([a04b16e](https://github.com/featherweight-design/concert-crawl/commit/a04b16ef6fb46ed75bcd144cf80e470c879a30a8))
+* **web:** person page at /admin/people/:id with role, undo, account and sign out ([e6ace93](https://github.com/featherweight-design/concert-crawl/commit/e6ace93c60b42b7be6d47b3724cc1121506a4675))
+
 # [1.363.0](https://github.com/featherweight-design/concert-crawl/compare/v1.362.0...v1.363.0) (2026-11-12)
 
 
