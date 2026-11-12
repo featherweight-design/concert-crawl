@@ -184,3 +184,86 @@ None of these was decided by the lane. Rows 2, 5 and 6 BLOCK; the rest are minor
 | 34 | B9b price check update sheet (more-st-counter_m, more-st-counter_done_m) | The rail tile glyph is drawn as a cyan-to-pink line with a pink dot on a lighter square. Please confirm the glyph. | The CCMark brand mark at 22px (as SubmitPriceModal) |
 | 35 | B9b price check update sheet (more-st-counter_m, more-st-counter_done_m) | The ring around the amber status dot looks neutral grey on the board. Grey or amber? | An amber tint |
 | 36 | B9b price check update sheet (more-st-counter_m, more-st-counter_done_m) | No board for the already-in-review sheet or the error rail tone. | The same tile and close as the other states, "Price update · Waiting"; the error rail in --danger (SubmitPriceModal uses --warning) |
+
+## Edit your Concerts (lane cf pre-audit)
+
+Pre-build audit of `design/design_handoff_edit_concerts` (17 boards), 57 rows: 38 [Design], 16 [Hugh product], 8 [eng/data] (some rows carry two tags). Heaviest gaps: undrawn states (loading, error, empty, signed-out), no desktop boards for the event page and most of the Add sheet, and the unruled records start (CRAWL_SINCE). Hugh's rule applies: nothing undrawn gets built, so each [Design] or [Hugh product] row blocks its piece. Rows 1, 8, 53 and 57 were re-checked against the board images.
+
+### PR2: Concerts list (menus, remove confirm, Undo toast)
+
+| board | what it says | the question |
+| --- | --- | --- |
+| 1. concerts_m, concerts_menu_d, remove_dialog_d | README: desktop ⋯ shows on hover, focus and while open. Both desktop boards draw a ⋯ on every row, not only the one whose menu is open. | [Design] Always visible on desktop, or hover-only? |
+| 2. concerts_m | README: tapping ⋯ on a past row goes straight to the confirm sheet. Share this night and Open the show page exist only in the desktop menu. | [Design] How does a phone user share a past night? Is dropping Share on phone intended? |
+| 3. concerts_m, concerts_menu_d | Upcoming rows have a ⋯; no board shows what it opens. README: "opens today's un-going", but HistoryItem has no menu today. Plan D3 invents a three-item menu with a no-confirm remove. | [Design] Items, wording and confirm for the upcoming menu. |
+| 4. concerts_m | At 390 rows already wrap to 3 lines. No 320 board. HistoryItem has three densities (compact, cozy, roomy); boards show one. | [Design] Row layout at 320, and which densities get the ⋯? |
+| 5. remove_sheet_m, remove_dialog_d, event_remove_m | Only Concerts has a post-remove board (removed_m). After confirming on the event page nothing shows the page state or toast. | [Design] Draw the event page after removal (button back to "I went"?) and the Undo toast there. |
+| 6. removed_m | Only the list below the stats is shown; stats, Passport card and Export count are cropped. README: "the stats drop". Plan: removing the last past show falls to an empty state. | [Design] Draw stats and Passport after a remove, and the empty/zero state. |
+| 7. removed_m | No desktop toast; on phone it sits above the bottom nav over a row. | [Design] Desktop toast position and stacking. |
+| 8. concerts_m, concerts_menu_d | Stats read 5 nights / 5 venues / 5 artists and Export reads 5 nights: that reconciles as 4 past rows plus the upcoming Marian Hill (Bluebird). But the Passport card also reads "5 nights · 5 venues" while drawing 4 stamps, none for Bluebird. | [Design] Does the Passport count include upcoming shows, or is its 5 sample-data slip (should be 4)? |
+| 9. remove_sheet_m, remove_dialog_d, README | Body says "your crews won't see you there": static copy for everyone. | [Hugh product] Do crews and "who's watching" see past stamps at all? If not, wrong for users with no crews. |
+| 10. remove_sheet_m, remove_dialog_d | Both "Cancel" (top right) and "Keep it". No pending, disabled or failed state for "Remove from Concerts". | [Design] Dual dismiss intended? Draw in-flight and failed states. |
+| 11. README, removed_m | Undo lasts ~6 s; if the restore token is missing (secret unset, D9) or expired there is no Undo. Toast without action undrawn. | [Design] Draw the toast without Undo. |
+| 12. README, removed_m | Undo restores the original attendingAt. Where the row reappears and its enter/exit motion are undrawn. | [Design] Confirm it returns to its month slot. |
+| 13. README, plan D8 | Restore needs `restore: {attendingAt, token}` from DELETE, which is PR1 (held on the CRAWL_SINCE ruling). PRs are not stacked. | [eng/data] PR2 cannot deliver Undo until PR1 merges. Confirm order. |
+| 14. plan D14, concerts_menu_d | Share this night opens ShareSheet. HistoryShow lacks venueCity, venueTimezone, rawShowTime; the share handle comes from Clerk. No board shows the share output for a past show. | [Design] + [eng/data] Is the existing poster right for a night attended? |
+| 15. concerts_menu_d | Menu sits below the ⋯; no flip near the viewport bottom, no focus ring drawn. | [Design] Draw flip and keyboard focus. |
+| 16. README, concerts_m | Removing a past show that has a submitted price ($160 tile) is unspecified. | [Hugh product] Price stays, drops or orphans? |
+| 17. plan Step 0, README | CRAWL_SINCE = 'March 2026' is unverified; Hugh has not ruled. The "back to March 2026" row text in concerts_m / concerts_menu_d depends on it. | [Hugh product] + [eng/data] Real records start. |
+
+### PR3: "I went" on the event page and artist page
+
+| board | what it says | the question |
+| --- | --- | --- |
+| 18. event_unmarked_m vs concerts_m, event_went_m, add_sheet_m, add_dialog_d | Culture Wars (Nov 7) is marked in several boards and unmarked in event_unmarked_m. | [Design] Deliberate state switching or conflicting sample data? |
+| 19. event_unmarked_m, event_went_m | An "ⓘ" at top right of the THAT NIGHT card; not in README or COPY. | [Design] What does it open; strings? |
+| 20. event_*_m | Hero chip "4 DAYS AGO" is a twin of B+ DAYS AWAY, not in code yet. | [Design] If B+ is not on main the chip is not built (plan allows). Confirm. |
+| 21. event_* chips, COPY | `{N} DAYS AGO` drawn only for 4. Singular, same day, yesterday, and the cutoff to "months ago" undrawn. | [Design] Spec the range and 0/1-day wording. |
+| 22. README, plan D7 | Signed-out on public event/artist pages: boards are signed-in only. Plan D7 sends signed-out to tier-picker-on-tap; after go-free the right destination is probably sign-in. Also signed-in without the concert-history entitlement. | [Design] + [Hugh product] Destination for signed-out and non-entitled; draw it. |
+| 23. event_stamped_m vs add_tapped_m | Same string "Stamped. {artist} is in your Concerts." carries Open Passport on the event page and Undo in the Add sheet. | [Hugh product] Intentional that the event page toast has no Undo? |
+| 24. README, plan WentPill | Pill toggle removes with no confirm; Concerts and the event page confirm. | [Hugh product] Is no-confirm-on-the-pill signed off? |
+| 25. artist_past_m | Signed-in only. Signed-out (attending: null), loading, rollback undrawn; no desktop board. PAST_LIMIT = 50 and the endpoint is capped. | [Design] Draw the signed-out pill; what happens beyond 50? |
+| 26. artist_past_m | README: live footnote stays ("Concert Crawl started crawling in March 2026"). Rows read "2026 · DENVER" (no venue-level start). | [Design] Does the footnote stay when pills make it an editing surface? |
+| 27. artist_past_m, artists-public.ts:326 | Artist-page past list filters isNull(firstMissingAt); the Add sheet and past PUT include missing rows. A show stampable in Add may never appear in the artist page's list. | [Hugh product] Divergence accepted? (plan says unchanged) |
+| 28. artist_past_m, README | Past rows are plain text, no link out. ArtistPastShow has no `attending` today; plan D2 adds it. | [eng/data] Data source missing; PR1 item. |
+| 29. README | Event page 404s for past events with first_missing_at (out of scope in plan). A user who stamped such a show in Add gets a Concerts row linking to a 404; "Open the show page" and the "Tap I went again" footnote dead-end. | [Hugh product] + [eng/data] Accepted? Decide row link and footnote for those shows. |
+| 30. README | A show dated today (MT) is not past until tomorrow, so no "I went" for tonight's show until the next day. | [Hugh product] Accept? |
+| 31. README, event_remove_m | No desktop board for the event page past states (marked, unmarked, stamped, remove dialog). | [Design] Draw. |
+
+### PR4: Add a show you went to
+
+| board | what it says | the question |
+| --- | --- | --- |
+| 32. add_sheet_m, add_dialog_d, README, plan 4.2 | Loading, list error, offline, paging, failed tap (pill rollback), failed Undo undrawn. Plan D7 fills them with SkeletonBlock and toast.error (nearest drawn pattern). | [Design] Draw them. |
+| 33. COPY | No strings for loadFailed, retry, saveFailed, undoFailed, the pill's accessible name (must include artist and date), search-clear label, "1 SHOW" singular. | [Design] Add before copy-review. |
+| 34. add_search_m, add_none_m, add_end_m, add_tapped_m | Dashed records note only on add_sheet_m; gone on the others. README: "a dashed note at the top of the Add sheet". Scroll/hide-while-searching undefined. | [Design] Spec when it appears. |
+| 35. add_search_m, README | "That's every Culture Wars show in Denver since March 2026" drawn for a single-artist search. Plan's rule (all rows share an artist, no next page) is an invention. Venue search, mixed results, My venues, Artists I follow undrawn. | [Design] Spec when the footer shows. |
+| 36. add_none_m, README | "Not in our records." drawn only for a typed query under All Denver. Empty My venues (a new user, the likeliest) and empty Artists I follow undrawn; the body copy would be wrong there. | [Design] Draw empty scope states. |
+| 37. add_none_m, plan D12 | Example "phish red rocks 2019" implies artist+venue+year search; D12 runs ilike per field, so "culture wars gothic" misses. No accent folding (gutierrez vs Gutiérrez). | [eng/data] Define search semantics or change the example. |
+| 38. add_sheet_m, add_end_m | Long venue names truncate with an ellipsis and take the date with them; the date is what the user picks by. Concerts rows wrap instead. | [Design] Truncation rule. |
+| 39. add_sheet_m, add_tapped_m | Tapping Went off has no board or wording; README says toast and Undo but only the stamped toast is drawn. Multi-tap and stacked toasts undrawn. | [Design] Draw the unmark toast and multi-tap. |
+| 40. add_tapped_m | Toast over the sheet bottom; above or inside the sheet? Clears on Done? | [Design] Spec. |
+| 41. add_end_m, add_sheet_m | Rows are not links, so no way to open the show to verify before stamping. | [Hugh product] Confirm no verify path. |
+| 42. README | "My venues" = venues in the user's Concerts; a new user has none. App already has venue-following data. | [Hugh product] Attended-only or followed venues too? |
+| 43. README, plan 4.2 | "Artists I follow" hidden without the `following` entitlement; boards always draw three chips. | [Design] Draw the two-chip layout. |
+| 44. README, add_sheet_m | Sheet "tall on mobile": height, drag-to-dismiss, keyboard shrinking the sheet when search is focused, sticky header undrawn. add_end_m implies sticky. | [Design] Spec. |
+| 45. add_dialog_d | Desktop only for the open list; search/end/none/tapped have no desktop board. | [Design] Draw, or accept B+ desktop. |
+| 46. README, add_end_m | "THE START OF OUR RECORDS" / "since March 2026" assume one start for all venues; later-onboarded venues break it. Not verified here. | [Hugh product] + [eng/data] Does the start vary per venue; any first-crawl data? |
+| 47. plan, README | Step 0 query (d) may show many past rows with first_missing_at (duplicates). Plan has no dedupe; boards show none. | [Hugh product] Decide before PR4 if the share is large. |
+| 48. README | Who may stamp, and how many, unstated: any past show since the start, any number, no proof, free for all tiers? | [Hugh product] Confirm no cap, no proof, tier. |
+| 49. README, plan | A stamped show has attendingAt = now. Whether Passport, HistoryHeader stats and ICS export order by event date or by attendingAt is unstated. | [eng/data] Verify sort keys. |
+| 50. plan 4.3 | Add row on the empty Concerts state is undrawn (plan flags it). | [Design] Design or Hugh decides. |
+| 51. plan | Release note entry owed (releases.ts), no spotlight. | [Hugh product] Copy-review. |
+
+### Cross-cutting
+
+| board | what it says | the question |
+| --- | --- | --- |
+| 52. All boards | Electric dark only; the app has 9 themes incl. light; pill colours (yellow, orange, cyan) unchecked for contrast on a light ground. | [Design] Draw or accept a theme check. |
+| 53. README vs plan D5, concerts_m, concerts_menu_d | Stamp shape varies with no rule: Culture Wars and Parra for Cuva (November) are square double-border, Doja Cat and Hermanos Gutiérrez (October) round dashed, and the same Parra stamp is round in the Passport card. README: fill is the venue's stamp colour; plan D5 reads that as stampAccentFor(artist). | [Design] Which colour rule, and what decides the shape? |
+| 54. ask_m | Optional board "for three days after a show" shows Nov 7 with the question while event boards say 4 DAYS AGO (today Nov 11). README says not approved. | [Hugh product] Skip until Hugh says yes. |
+| 55. plan D3, D6, D7 | Resolve undrawn desktop/states by "nearest drawn pattern", which Hugh's rule forbids. The plan's design-review table lists "Gap: none" against rows that have gaps. | [Design] Re-file D3, D6, D7 and the empty-Concerts Add row as Design gaps. |
+| 56. README, READINESS | Screen-reader behaviour for a 6 s Undo, ⋯ menu keyboard behaviour, aria-pressed on the pill are text-only. | [Design] Sign-off. |
+| 57. concerts_m, concerts_menu_d | The phone ⋯ is a bare ~16 px glyph at the row edge with no drawn hit area; the desktop open ⋯ box is ~30 px. The stamp tiles beside it are ~56 px, so only the ⋯ is in question. | [Design] Confirm a 44 px target for the ⋯. |
+
+Fully drawn (PR2 can be built to this): concerts_m, concerts_menu_d (open past-row menu), remove_sheet_m, remove_dialog_d, removed_m; PR3 phone boards event_went_m, event_remove_m, event_unmarked_m, event_stamped_m, artist_past_m; PR4 phone boards add_sheet_m, add_search_m, add_tapped_m, add_end_m, add_none_m, plus add_dialog_d (the only desktop one).
