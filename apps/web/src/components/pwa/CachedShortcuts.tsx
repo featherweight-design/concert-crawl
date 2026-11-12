@@ -66,7 +66,9 @@ const CachedEventRow = ({ event }: { event: CachedEvent }) => {
       <Link
         href={`/events/${event.id}`}
         data-testid="cached-event-row"
-        className="flex min-h-[44px] items-center gap-3.5 rounded-2xl border border-border py-3 pl-3 pr-4"
+        // The inline wash would hide a bg-* hover class, so hover is a ::before
+        // overlay above it, and focus-visible gets the signal outline.
+        className="relative flex min-h-[44px] items-center gap-3.5 rounded-2xl border border-border py-3 pl-3 pr-4 before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:bg-[color-mix(in_oklch,var(--fg)_6%,transparent)] before:opacity-0 before:transition-opacity before:duration-[var(--motion-fast)] before:ease-[var(--motion-ease)] before:content-[''] hover:before:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
         style={{
           borderLeft: `2px solid ${ring}`,
           background: `linear-gradient(90deg, color-mix(in oklch, ${ring} 10%, transparent), color-mix(in oklch, var(--surface-1) 55%, transparent) 45%)`,
@@ -166,7 +168,8 @@ export const CachedShortcuts = ({ events, venues }: CachedShortcutsProps) => {
 };
 
 const TRY_AGAIN_CLASS =
-  'inline-flex h-[41px] items-center justify-center rounded-[14px] px-8 text-[17px] font-bold text-fg-on-accent';
+  // 41px as the board draws it; the ::before extends the hit area to 44px.
+  "relative inline-flex h-[41px] items-center justify-center rounded-[14px] px-8 text-[17px] font-bold text-fg-on-accent before:absolute before:inset-x-0 before:-inset-y-[1.5px] before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal";
 export const TRY_AGAIN_STYLE = {
   background: 'linear-gradient(135deg, var(--signal), var(--accent))',
   boxShadow: '0 8px 28px color-mix(in oklch, var(--signal) 22%, transparent)',

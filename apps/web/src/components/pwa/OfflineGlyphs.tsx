@@ -56,11 +56,13 @@ export const NoSignalTile = () => (
 /**
  * A tile with a lone dot: nothing saved yet. Same build as the error mark's
  * dark core (halo, solid ring, dark core), drawn in the tile's own 84px space
- * so it sits upper right of the centre.
+ * so it sits upper right of the centre. The svg is 82px (the tile minus its 1px
+ * border each side) over the board's 84 viewBox, so it scales with under 1px of
+ * drift and never overflows onto the border.
  */
 export const NothingCachedTile = () => (
   <span aria-hidden="true" style={TILE_STYLE}>
-    <svg width="84" height="84" viewBox="0 0 84 84" fill="none">
+    <svg width="82" height="82" viewBox="0 0 84 84" fill="none">
       <circle
         data-testid="core-halo"
         cx="56"
