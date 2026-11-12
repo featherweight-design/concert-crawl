@@ -947,6 +947,46 @@ describe('admin artists routes', () => {
       expect(body.data.hidden).toBe(true);
     });
 
+    it("un-hides a not-an-artist row sent back as unmatched (It's an artist)", async () => {
+      const id = await seedArtist({
+        canonicalName: 'bassline events',
+        matchStatus: 'not_an_artist',
+        hidden: true,
+      });
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: null,
+          matchStatus: 'unmatched',
+        }),
+      });
+      const body = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(body.data.matchStatus).toBe('unmatched');
+      expect(body.data.hidden).toBe(false);
+    });
+
+    it('keeps a hidden row hidden when it goes unmatched from anything but not-an-artist', async () => {
+      const id = await seedArtist({
+        canonicalName: 'hidden by hand',
+        matchStatus: 'no_match',
+        hidden: true,
+      });
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: null,
+          matchStatus: 'unmatched',
+        }),
+      });
+      expect((await res.json()).data.hidden).toBe(true);
+    });
+
     it('leaves visibility alone on any other ruling', async () => {
       const id = await seedArtist({
         canonicalName: 'nirvana',

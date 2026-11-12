@@ -148,7 +148,16 @@ export const applyArtistMatch = async (
         // slot on the bill and its own page. Deriving the switch from the
         // verdict is one-directional on purpose: re-matching a row later does
         // not un-hide it, because unhiding is its own deliberate admin action.
-        ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
+        // The one exception is that action: "It's an artist" on the Not artists
+        // tab (admin redesign 4c) sends the row back to To check as
+        // `unmatched`, and undoes the hide the verdict set in the same write,
+        // so the row is never half-restored.
+        ...(nextStatus === 'not_an_artist'
+          ? { hidden: true }
+          : existing.matchStatus === 'not_an_artist' &&
+              nextStatus === 'unmatched'
+            ? { hidden: false }
+            : {}),
       })
       // A confirm re-checks at the write, not just at the read above: the
       // match job can repoint the row in between.
