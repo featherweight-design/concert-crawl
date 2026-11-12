@@ -3,6 +3,7 @@
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { stampColorsFor } from '@/lib/passport/stamp';
 import { GoingButton } from './GoingButton';
 import { GOING_COPY } from './definitions/copy';
 
@@ -61,6 +62,15 @@ describe('GoingButton', () => {
     expect(
       container.querySelector('[data-venue-stamp="dashed"]'),
     ).not.toBeNull();
+  });
+
+  // event_stamped_m: the bar is filled in the VENUE's colour, with a ✓.
+  it('fills a stamped night in its venue colour, not the artist hash', () => {
+    const venue = { slug: 'gothic-theatre', name: 'Gothic Theatre' };
+    render(<GoingButton show={{ ...SHOW, venue }} state="past-yes" />);
+    const button = screen.getByRole('button');
+    expect(button.style.background).toBe(stampColorsFor(venue.slug).ring);
+    expect(button.querySelector('svg path[d^="M20 6"]')).not.toBeNull();
   });
 
   it('carries the focus-ring class that restores :focus-visible', () => {

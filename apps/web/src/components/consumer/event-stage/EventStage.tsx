@@ -7,7 +7,7 @@
 // It replaces `HeroBand` on the two event surfaces only. The artist page keeps
 // the band until its own restyle, so this is a sibling rather than a rewrite.
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { EventStatus } from '@concert-crawl/types';
 import { EventImage } from '@/components/consumer/event-image';
 import { Panel } from '@/components/consumer/image-slot';
@@ -15,6 +15,7 @@ import type { SlotSource } from '@/components/consumer/image-slot';
 import { slotSources } from '@/components/consumer/image-slot/lib/slot-metrics';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { gradientEdge } from '@/lib/gradient-edge';
+import { stampColorsFor } from '@/lib/passport/stamp';
 import { stageMetaParts } from './lib/meta';
 
 type EventSlotSource = Extract<SlotSource, { surface: 'event' }>;
@@ -52,12 +53,19 @@ const RAYS_MASK =
 export const StageBackdrop = ({
   art,
   desaturated = false,
+  rayColor,
 }: {
   /** Absent on the loading skeleton, which draws the wash alone. */
   art?: { name: string } & EventSlotSource;
   /** A cancelled show's hero, drained of colour (more-st-ev_canc_m). */
   desaturated?: boolean;
+  /** A past night's rays, in its venue's colour, stronger than the accent's. */
+  rayColor?: string;
 }) => {
+  const rays =
+    rayColor === undefined
+      ? RAYS
+      : `repeating-conic-gradient(from 0deg at 50% 66%, color-mix(in oklch, ${rayColor} 26%, transparent) 0deg 3deg, transparent 3deg 11deg)`;
   const hasSource = art !== undefined;
   const { primary, secondary } = art
     ? slotSources(art)
@@ -98,7 +106,7 @@ export const StageBackdrop = ({
           <div
             className="absolute inset-0 sm:hidden"
             style={{
-              background: RAYS,
+              background: rays,
               maskImage: RAYS_MASK,
               WebkitMaskImage: RAYS_MASK,
             }}
@@ -249,6 +257,13 @@ export type EventStageProps = {
   countdown: string | null;
   /** A cancelled show's hero is desaturated; every other status keeps its colour. */
   status?: EventStatus;
+  /**
+   * The venue whose stamp colours a past night's hero on a phone
+   * (event_unmarked_m, event_stamped_m): a greyscale photo, the venue's ring
+   * and glow, and venue-coloured rays. From `sm` up the hero keeps its colour
+   * and genre ring, as event-past-d draws it. Omit for a night that is not past.
+   */
+  pastVenueSlug?: string;
   children: ReactNode;
   back?: ReactNode;
   actions?: ReactNode;
@@ -259,6 +274,7 @@ export const EventStage = ({
   leadGenre,
   countdown,
   status,
+  pastVenueSlug,
   children,
   back,
   actions,
@@ -266,10 +282,16 @@ export const EventStage = ({
 }: EventStageProps) => {
   const ring = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
   const desaturated = status === 'cancelled';
+  const venueRing =
+    pastVenueSlug === undefined ? null : stampColorsFor(pastVenueSlug).ring;
   return (
     <StageShell
       backdrop={
-        <StageBackdrop art={{ name, ...source }} desaturated={desaturated} />
+        <StageBackdrop
+          art={{ name, ...source }}
+          desaturated={desaturated}
+          {...(venueRing ? { rayColor: venueRing } : {})}
+        />
       }
       back={back}
       actions={actions}
@@ -277,12 +299,26 @@ export const EventStage = ({
       card={
         <div
           data-testid="stage-card"
-          style={{
-            borderRadius: STAGE_CARD_RADIUS,
-            transform: `rotate(${STAGE_CARD_TILT}deg)`,
-            boxShadow: stageRing(ring),
-            filter: desaturated ? STAGE_DESATURATE : undefined,
-          }}
+          className={
+            venueRing ? 'max-sm:[--stage-shadow:var(--past-shadow)]' : undefined
+          }
+          style={
+            {
+              borderRadius: STAGE_CARD_RADIUS,
+              transform: `rotate(${STAGE_CARD_TILT}deg)`,
+              // A past night swaps its genre ring for the venue's below `sm`,
+              // through two custom properties; every other card keeps the
+              // inline ring.
+              ...(venueRing
+                ? {
+                    '--stage-shadow': stageRing(ring),
+                    '--past-shadow': stageRing(venueRing),
+                    boxShadow: 'var(--stage-shadow)',
+                  }
+                : { boxShadow: stageRing(ring) }),
+              filter: desaturated ? STAGE_DESATURATE : undefined,
+            } as CSSProperties
+          }
         >
           <Panel
             {...source}
@@ -291,6 +327,7 @@ export const EventStage = ({
             ratio="4 / 5"
             radius={STAGE_CARD_RADIUS}
             scale="hero"
+            {...(venueRing ? { className: 'max-sm:grayscale' } : {})}
           />
         </div>
       }

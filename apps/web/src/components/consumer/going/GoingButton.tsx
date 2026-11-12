@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { VenueStamp } from '@/components/consumer/venue-stamp/VenueStamp';
 import { GOING_COPY } from './definitions/copy';
+import { stampColorsFor } from '@/lib/passport/stamp';
 import { stampAccentFor, stampGlyphFor } from './lib/stamp';
 
 export type GoingButtonState =
@@ -156,10 +157,15 @@ export const GoingButton = ({
   onChange,
 }: GoingButtonProps) => {
   const sizes = GOING_BUTTON_SIZES[size];
-  const accent = stampAccentFor(show.artist);
+  const isPast = state === 'past-yes' || state === 'past-no';
+  // A stamped night is filled in its venue's colour, as the stamp beside it is
+  // inked (event_stamped_m); every other state keeps the artist's accent.
+  const accent =
+    isPast && show.venue
+      ? stampColorsFor(show.venue.slug).ring
+      : stampAccentFor(show.artist);
   const glyph = stampGlyphFor(show.artist);
 
-  const isPast = state === 'past-yes' || state === 'past-no';
   const isOn = state === 'going' || state === 'past-yes';
   // A stamped night reads as a fact; the way back out is the "Remove it" line
   // under the button. An unstamped past night is a live "I went" tap.
@@ -350,7 +356,6 @@ export const GoingButton = ({
             <VenueStamp
               venueSlug={show.venue.slug}
               venueName={show.venue.name}
-              seed={show.artist}
               variant={state === 'past-yes' ? 'solid' : 'dashed'}
               size={sizes.hole}
             />
@@ -429,7 +434,7 @@ export const GoingButton = ({
             justifyContent: fullWidth ? 'center' : 'flex-start',
           }}
         >
-          {state === 'going' && (
+          {(state === 'going' || state === 'past-yes') && (
             <CheckIcon size={Math.round(sizes.font * 0.95)} />
           )}
           <span
