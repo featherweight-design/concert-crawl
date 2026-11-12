@@ -154,10 +154,12 @@ export const PublicEventDetail = ({
           headlinerAs="h1"
           headSize="var(--stage-head)"
           centered
-        />
-        <GenreChips
-          genres={event.genre}
-          className="mt-3 justify-center sm:justify-start"
+          beforePill={
+            <GenreChips
+              genres={event.genre}
+              className="mt-3 justify-center sm:justify-start"
+            />
+          }
         />
         <EventStageMeta
           date={event.date}
