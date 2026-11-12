@@ -47,7 +47,7 @@ export const errorHandler: ErrorHandler = async (err, ctx) => {
 function routePattern(ctx: Context): string | undefined {
   const match = matchedRoutes(ctx)
     .map((route) => route.path)
-    .filter((path) => path !== '/*')
+    .filter((path) => path !== '/*' && path !== '*')
     .at(-1);
   return match;
 }
