@@ -1,6 +1,6 @@
 {
   "feature": "B20 · Errors, 404, offline, feedback tab",
-  "note": "Plan row B20 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): not-found = 06-states/bp-s-notfound_m, 06-states/bp-s-notfound_d; offline-page = 06-states/bp-s-offline_m, 06-states/bp-s-offline_empty_m; offline-pill = 06-states/bp-s-offline_pill_m, 06-states/bp-s-offline_account_m; feedback = 06-states/bp-s-feedback_tab_m, 06-states/bp-s-feedback_m. Walk by hand (state a sheet cannot set up): feedback-done (06-states/bp-s-feedback_done_m): sending writes a row. Unknown venue and artist slugs are soft 404s by design (ruled 2026-11-11): /venues/[slug] and /artists/[slug] each have a loading.tsx, so the response streams a 200 before the page's notFound() runs, and Next injects a robots noindex meta in place of the status. A real 404 would cost the loading skeleton or a request per view in the proxy. Their rows expect 200 and wait for the not-found surface. The kit's wait is visible-only, so the head meta cannot be asserted here: check `meta[name=\"robots\"][content*=\"noindex\"]` on the walk. /e/[id] has no loading.tsx and keeps a real 404.",
+  "note": "Plan row B20 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): not-found = 06-states/bp-s-notfound_m, 06-states/bp-s-notfound_d; offline-page = 06-states/bp-s-offline_m, 06-states/bp-s-offline_empty_m; offline-pill = 06-states/bp-s-offline_pill_m, 06-states/bp-s-offline_account_m; feedback = 06-states/bp-s-feedback_tab_m, 06-states/bp-s-feedback_m. Walk by hand (state a sheet cannot set up): feedback-done (06-states/bp-s-feedback_done_m): sending writes a row. Unknown venue and artist slugs are soft 404s by design (ruled 2026-11-11): /venues/[slug] and /artists/[slug] each have a loading.tsx, so the response streams a 200 before the page's notFound() runs, and Next injects a robots noindex meta in place of the status. A real 404 would cost the loading skeleton or a request per view in the proxy. Their rows expect 200 and wait for the not-found surface. Each row asserts the injected robots noindex meta (expectMeta). /e/[id] has no loading.tsx and keeps a real 404.",
   "rows": [
     {
       "id": "offline-page",
@@ -58,6 +58,10 @@
           "goto": "/venues/no-such-venue",
           "expectStatus": 200,
           "wait": "[data-testid=\"not-found-surface\"]"
+        },
+        {
+          "expectMeta": "robots",
+          "content": "noindex"
         }
       ]
     },
@@ -69,6 +73,10 @@
           "goto": "/artists/no-such-artist",
           "expectStatus": 200,
           "wait": "[data-testid=\"not-found-surface\"]"
+        },
+        {
+          "expectMeta": "robots",
+          "content": "noindex"
         }
       ]
     }
