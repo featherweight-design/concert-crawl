@@ -501,7 +501,8 @@ describe('HistoryContent: taking a night out', () => {
     openMenuFor('Artist up');
     fireEvent.click(
       screen.getByRole('menuitem', {
-        name: HISTORY_COPY.menu.removeUpcoming,
+        // On a phone the item's name carries its subline too.
+        name: new RegExp(`^${HISTORY_COPY.menu.removeUpcoming}`),
       }),
     );
 
@@ -524,7 +525,8 @@ describe('HistoryContent: taking a night out', () => {
     openMenuFor('Artist up');
     fireEvent.click(
       screen.getByRole('menuitem', {
-        name: HISTORY_COPY.menu.removeUpcoming,
+        // On a phone the item's name carries its subline too.
+        name: new RegExp(`^${HISTORY_COPY.menu.removeUpcoming}`),
       }),
     );
 
