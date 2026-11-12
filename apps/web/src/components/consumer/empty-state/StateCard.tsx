@@ -28,6 +28,13 @@ interface StateCardProps {
    */
   framed?: boolean;
   role?: 'alert' | 'status' | undefined;
+  /**
+   * `notif-tab` draws the addendum-3 notification tab boards' measurements
+   * (`notif-tab-empty-m`, `notif-tab-failed-m`): 9.5px eyebrow, explicit
+   * margins instead of a flex gap, and the board's own title, body and action
+   * sizes. Every other caller keeps the default.
+   */
+  variant?: 'default' | 'notif-tab';
 }
 
 const ACTION_STYLE: React.CSSProperties = {
@@ -52,6 +59,23 @@ const ACTION_STYLE: React.CSSProperties = {
 };
 
 /**
+ * The failed board's Retry: 12/24 padding, r12, 14.5px, a 135deg sweep that
+ * ends on the signal/accent mix and a 22% signal glow. The 44px floor stays
+ * (the board draws ~42px; the repo's tap-target rule wins by 2px).
+ */
+const TAB_ACTION_STYLE: React.CSSProperties = {
+  ...ACTION_STYLE,
+  marginTop: 0,
+  padding: '12px 24px',
+  borderRadius: 12,
+  fontSize: 14.5,
+  letterSpacing: 0,
+  background:
+    'linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)))',
+  boxShadow: '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+};
+
+/**
  * The B+ empty and error state (`06-states/bp-s-notif_empty_m`,
  * `bp-s-notif_error_m`, `bp-s-empty_search_m`): an icon in a dashed ring (or a
  * tinted tile for a failure), a mono eyebrow, a heavy title, a muted body and
@@ -66,7 +90,9 @@ export function StateCard({
   action,
   framed = true,
   role,
+  variant = 'default',
 }: StateCardProps) {
+  const tab = variant === 'notif-tab';
   const ink = tone === 'danger' ? 'var(--danger)' : 'var(--signal)';
   // The title is the card's heading, and names the card when it carries a role
   // (an alert would otherwise be read as three unstructured runs of text).
@@ -82,12 +108,20 @@ export function StateCard({
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        gap: 10,
-        padding: framed ? '34px 22px 30px' : '34px 22px',
+        gap: tab ? 0 : 10,
+        padding: tab
+          ? framed
+            ? '34px 18px 30px'
+            : '30px 22px'
+          : framed
+            ? '34px 22px 30px'
+            : '34px 22px',
         borderRadius: 18,
         border: framed ? '1px dashed var(--border-strong)' : 'none',
         background: framed
-          ? 'linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 70%, transparent), transparent)'
+          ? tab
+            ? 'color-mix(in oklch, var(--surface-1) 45%, transparent)'
+            : 'linear-gradient(180deg, color-mix(in oklch, var(--surface-1) 70%, transparent), transparent)'
           : 'transparent',
         fontFamily: 'var(--font-ui)',
         color: 'var(--fg)',
@@ -98,7 +132,7 @@ export function StateCard({
         style={{
           width: tone === 'danger' ? 84 : 96,
           height: tone === 'danger' ? 84 : 96,
-          marginBottom: 12,
+          marginBottom: tab ? 0 : 12,
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -126,11 +160,12 @@ export function StateCard({
       <span
         style={{
           fontFamily: 'var(--font-mono)',
-          fontSize: 10.5,
+          fontSize: tab ? 9.5 : 10.5,
           fontWeight: 700,
-          letterSpacing: '0.2em',
+          letterSpacing: tab ? '0.16em' : '0.2em',
           textTransform: 'uppercase',
           color: ink,
+          ...(tab ? { marginTop: tone === 'danger' ? 18 : 16 } : {}),
         }}
       >
         {eyebrow}
@@ -139,11 +174,21 @@ export function StateCard({
         id={titleId}
         style={{
           margin: 0,
-          fontSize: 24,
+          fontSize: tab && tone === 'danger' ? 28 : 24,
           fontWeight: 900,
-          letterSpacing: '-0.035em',
+          letterSpacing: tab
+            ? tone === 'danger'
+              ? '-0.03em'
+              : '-0.025em'
+            : '-0.035em',
           lineHeight: 1.1,
           textWrap: 'balance',
+          ...(tab
+            ? {
+                marginTop: 8,
+                ...(tone === 'danger' ? { maxWidth: 320 } : {}),
+              }
+            : {}),
         }}
       >
         {title}
@@ -151,18 +196,23 @@ export function StateCard({
       {body !== undefined && (
         <span
           style={{
-            fontSize: 14,
+            fontSize: tab && tone === 'danger' ? 14.5 : 14,
             lineHeight: 1.5,
             color: 'var(--fg-muted)',
-            maxWidth: 300,
+            maxWidth: tab && tone === 'danger' ? 320 : 300,
             textWrap: 'pretty',
+            ...(tab ? { marginTop: tone === 'danger' ? 10 : 8 } : {}),
           }}
         >
           {body}
         </span>
       )}
       {action !== undefined && (
-        <button type="button" onClick={action.onClick} style={ACTION_STYLE}>
+        <button
+          type="button"
+          onClick={action.onClick}
+          style={tab ? { ...TAB_ACTION_STYLE, marginTop: 22 } : ACTION_STYLE}
+        >
           {action.label}
         </button>
       )}

@@ -678,12 +678,75 @@ describe('NotifItem', () => {
 
 // B19: the B+ state boards (`06-states/bp-s-notif_*`).
 describe('NotifBody — B+ states', () => {
-  it('labels the loading skeleton with the Catching up divider', () => {
+  it('speaks the loading sentence and draws no Catching up divider (addendum 3)', () => {
     render(<NotifBody state="loading" now={NOW} />);
     const status = screen.getByRole('status');
     expect(
-      within(status).getByText(NOTIFICATIONS_COPY.loadingVisible),
+      within(status).getByText(NOTIFICATIONS_COPY.loading),
     ).toBeInTheDocument();
+    expect(
+      within(status).queryByText(NOTIFICATIONS_COPY.loadingVisible),
+    ).toBeNull();
+  });
+
+  it('draws five skeleton rows to the board measurements (addendum 3)', () => {
+    const { container } = render(<NotifBody state="loading" now={NOW} />);
+    const rows = Array.from(
+      container.querySelectorAll<HTMLElement>('[role="status"] > div'),
+    );
+    expect(rows.map((row) => row.style.opacity)).toEqual([
+      '1',
+      '0.82',
+      '0.64',
+      '0.46',
+      '0.28',
+    ]);
+    expect(rows[0]?.style.padding).toBe('13px 16px');
+    expect(rows[0]?.style.borderTop).toBe('1px solid var(--border)');
+  });
+
+  it('draws the failed card to the board measurements (addendum 3)', () => {
+    render(<NotifBody state="error" onRetry={() => undefined} now={NOW} />);
+    const card = screen.getByTestId('state-card');
+    expect(card.style.padding).toBe('30px 22px');
+    const tile = card.querySelector<HTMLElement>('span[aria-hidden="true"]');
+    expect(tile?.style.width).toBe('84px');
+    expect(tile?.style.borderRadius).toBe('24px');
+    const retry = within(card).getByRole('button', {
+      name: NOTIFICATIONS_COPY.errorAction,
+    });
+    expect(retry.style.padding).toBe('12px 24px');
+    expect(retry.style.borderRadius).toBe('12px');
+    expect(retry.style.marginTop).toBe('22px');
+  });
+
+  it('adds the Prices body under the Prices empty tab and none under Shows (addendum 3)', () => {
+    render(
+      <NotifBody
+        state="ready"
+        items={[notification({ category: 'watch.cancelled' })]}
+        now={NOW}
+      />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Prices/ }));
+    expect(screen.getByTestId('state-card')).toHaveTextContent(
+      NOTIFICATIONS_COPY.tabEmptyBody.prices,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Alerts/ }));
+    expect(screen.getByTestId('state-card')).not.toHaveTextContent(
+      NOTIFICATIONS_COPY.tabEmptyBody.prices,
+    );
+  });
+
+  it('buckets an unknown category under Alerts with a dot on that tab (addendum 3)', () => {
+    render(
+      <NotifBody
+        state="ready"
+        items={[notification({ category: 'future.thing' as never })]}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByTestId('notif-tab-dot-alerts')).toBeInTheDocument();
   });
 
   it('holds the count with a placeholder hidden from assistive tech while loading', () => {
