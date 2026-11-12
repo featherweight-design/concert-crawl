@@ -17,6 +17,7 @@ import { getAuthUser } from '../../middleware/auth.js';
 import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
+import { queueVenueCrawl } from './lib/crawl-trigger.js';
 
 const logger = createLogger('admin:crawl');
 
@@ -182,40 +183,26 @@ crawlAdminRouter.post(
   async (ctx) => {
     const { venueId } = ctx.req.valid('param');
 
-    const [venue] = await db
-      .select()
-      .from(venues)
-      .where(eq(venues.id, venueId));
+    const force = await parseForce(ctx);
+    const actor = getAuthUser(ctx).userId;
+    const queued = await queueVenueCrawl(venueId, actor, force);
 
-    if (!venue) {
+    if (queued.ok === 'not_found') {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
-
-    if (!venue.active || !venue.verified) {
+    if (queued.ok === 'not_crawlable') {
       return ctx.json(
         { success: false, error: 'Venue must be active and verified to crawl' },
         400,
       );
     }
-
-    // A queued trigger on a paused venue would only write a skipped run, so
-    // say so now. The crawler pauses a venue itself at its third failure;
-    // resuming it is the recovery step.
-    if (venue.crawlPausedAt !== null) {
+    if (queued.ok === 'paused') {
       return ctx.json(
         { success: false, error: 'Crawling is paused for this venue' },
         409,
       );
     }
-
-    const force = await parseForce(ctx);
-    const inserted = await db
-      .insert(crawlTriggers)
-      .values({ venueId, triggeredBy: getAuthUser(ctx).userId, force })
-      .returning();
-
-    const trigger = inserted[0];
-    if (!trigger) {
+    if (queued.ok === 'failed') {
       return ctx.json(
         { success: false, error: 'Failed to create crawl trigger' },
         500,
@@ -224,11 +211,12 @@ crawlAdminRouter.post(
 
     ctx.set('auditAction', 'crawl.trigger');
     ctx.set('auditTargetId', venueId);
-    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    ctx.set('auditActorId', actor);
 
-    dispatchCrawlerInBackground();
-
-    return ctx.json({ success: true, data: { triggerId: trigger.id } }, 202);
+    return ctx.json(
+      { success: true, data: { triggerId: queued.triggerId } },
+      202,
+    );
   },
 );
 
