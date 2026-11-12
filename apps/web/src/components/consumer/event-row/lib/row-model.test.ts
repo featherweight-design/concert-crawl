@@ -262,14 +262,20 @@ describe('fromWatchingShow', () => {
     expect(fromWatchingShow(baseWatchingShow).isWatching).toBe(false);
   });
 
+  // An optimistic row carries no `genres` key at all (exact optional types).
+  const withoutGenres = ({
+    genres: _genres,
+    ...rest
+  }: typeof baseWatchingShow) => rest;
+
   // B+ rule 2: the genre edge, ring and chip all read these.
   it('carries the genres, and none for an optimistic row without them', () => {
     expect(
       fromWatchingShow({ ...baseWatchingShow, genres: ['jazz'] }).genres,
     ).toEqual(['jazz']);
-    expect(
-      fromWatchingShow({ ...baseWatchingShow, genres: undefined }).genres,
-    ).toEqual([]);
+    expect(fromWatchingShow(withoutGenres(baseWatchingShow)).genres).toEqual(
+      [],
+    );
   });
 
   // Dropping the portrait here sent every artwork-less watched show to
