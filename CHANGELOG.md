@@ -1,3 +1,10 @@
+## [1.336.1](https://github.com/featherweight-design/concert-crawl/compare/v1.336.0...v1.336.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** one predicate for both upcoming-show expressions and a guard on the bound ([34dc29e](https://github.com/featherweight-design/concert-crawl/commit/34dc29e597256f007bc9c7ada6e930c028df4fba))
+
 # [1.336.0](https://github.com/featherweight-design/concert-crawl/compare/v1.335.1...v1.336.0) (2026-11-12)
 
 
