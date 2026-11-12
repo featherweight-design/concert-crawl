@@ -1561,12 +1561,16 @@ export type LlmBudgetWarnAtPercent =
 // What `GET /v1/admin/notifications/delivery` returns for the Health page's
 // "The site" tile: transactional email outcomes from `email_send_log` in the
 // last `hours` hours. `lastSentAt` is the newest sent row at any age, or null
-// when nothing has ever been sent.
+// when nothing has ever been sent. `failed` leaves out sends still waiting on
+// Resend (claimed moments ago, not yet answered).
 export interface AdminEmailDelivery {
   lastSentAt: string | null;
   sent: number;
   failed: number;
   suppressed: number;
+  // Rows in the window with any status other than the three above, so an
+  // unexpected status shows up instead of vanishing from the totals.
+  other: number;
   hours: number;
 }
 

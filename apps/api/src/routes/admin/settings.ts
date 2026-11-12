@@ -22,12 +22,6 @@ export const MAX_LLM_MONTHLY_BUDGET_USD = 1000;
 // The board draws 75% selected; the column defaults to it too.
 const DEFAULT_LLM_BUDGET_WARN_AT_PERCENT: LlmBudgetWarnAtPercent = 75;
 
-function isLlmBudgetWarnAtPercent(
-  value: unknown,
-): value is LlmBudgetWarnAtPercent {
-  return LLM_BUDGET_WARN_AT_PERCENTS.some((percent) => percent === value);
-}
-
 const patchSchema = z
   .object({
     // null clears the budget.
@@ -36,8 +30,8 @@ const patchSchema = z
       .gt(0)
       .max(MAX_LLM_MONTHLY_BUDGET_USD)
       .nullable(),
-    llmBudgetWarnAtPercent: z.number().refine(isLlmBudgetWarnAtPercent, {
-      message: 'Pick 50, 75 or 90',
+    llmBudgetWarnAtPercent: z.literal(LLM_BUDGET_WARN_AT_PERCENTS, {
+      error: 'Pick 50, 75 or 90',
     }),
     llmBudgetFallbackToStructured: z.boolean(),
     approvePricesMyself: z.boolean(),
@@ -48,25 +42,28 @@ const patchSchema = z
     message: 'Send at least one setting',
   });
 
-// The column's CHECK keeps it to the three choices; the guard only narrows.
-const warnAtPercentOf = (
-  row: AdminSettingsRow | undefined,
-): LlmBudgetWarnAtPercent => {
-  const stored = row?.llmBudgetWarnAtPercent;
-  return isLlmBudgetWarnAtPercent(stored)
-    ? stored
-    : DEFAULT_LLM_BUDGET_WARN_AT_PERCENT;
-};
-
 const toSettings = (row: AdminSettingsRow | undefined): AdminSettings => ({
   llmMonthlyBudgetUsd:
     row?.llmMonthlyBudgetUsd == null ? null : Number(row.llmMonthlyBudgetUsd),
-  llmBudgetWarnAtPercent: warnAtPercentOf(row),
+  // The column's CHECK holds it to the three choices, and its Drizzle type
+  // says so; the default is only for "no row yet".
+  llmBudgetWarnAtPercent:
+    row?.llmBudgetWarnAtPercent ?? DEFAULT_LLM_BUDGET_WARN_AT_PERCENT,
   llmBudgetFallbackToStructured: row?.llmBudgetFallbackToStructured ?? true,
   approvePricesMyself: row?.approvePricesMyself ?? false,
   updatedAt: row?.updatedAt.toISOString() ?? null,
   updatedBy: row?.updatedBy ?? null,
 });
+
+// What the settings.update audit row records: every setting toSettings
+// returns, minus the row's own bookkeeping. Built by subtraction, so a new
+// setting joins the audit without anyone remembering to add it.
+type AuditedSettings = Omit<AdminSettings, 'updatedAt' | 'updatedBy'>;
+const toAuditedSettings = ({
+  updatedAt: _updatedAt,
+  updatedBy: _updatedBy,
+  ...settings
+}: AdminSettings): AuditedSettings => settings;
 
 const readRow = async (): Promise<AdminSettingsRow | undefined> => {
   const [row] = await db.select().from(adminSettings).limit(1);
@@ -85,26 +82,20 @@ settingsAdminRouter.patch(
     const { userId } = getAuthUser(ctx);
     const updatedAt = new Date();
 
+    // The parsed patch carries only the keys that were sent, so it spreads
+    // straight in; only the budget needs reshaping, into the numeric column's
+    // string.
+    const { llmMonthlyBudgetUsd, ...sentSettings } = patch;
     const values = {
-      ...(patch.llmMonthlyBudgetUsd === undefined
+      ...sentSettings,
+      ...(llmMonthlyBudgetUsd === undefined
         ? {}
         : {
             llmMonthlyBudgetUsd:
-              patch.llmMonthlyBudgetUsd === null
+              llmMonthlyBudgetUsd === null
                 ? null
-                : patch.llmMonthlyBudgetUsd.toFixed(2),
+                : llmMonthlyBudgetUsd.toFixed(2),
           }),
-      ...(patch.llmBudgetWarnAtPercent === undefined
-        ? {}
-        : { llmBudgetWarnAtPercent: patch.llmBudgetWarnAtPercent }),
-      ...(patch.llmBudgetFallbackToStructured === undefined
-        ? {}
-        : {
-            llmBudgetFallbackToStructured: patch.llmBudgetFallbackToStructured,
-          }),
-      ...(patch.approvePricesMyself === undefined
-        ? {}
-        : { approvePricesMyself: patch.approvePricesMyself }),
       updatedAt,
       updatedBy: userId,
     };
@@ -140,18 +131,8 @@ settingsAdminRouter.patch(
     ctx.set('auditTargetId', 'admin_settings');
     ctx.set('auditActorId', userId);
     ctx.set('auditMeta', {
-      before: {
-        llmMonthlyBudgetUsd: before.llmMonthlyBudgetUsd,
-        llmBudgetWarnAtPercent: before.llmBudgetWarnAtPercent,
-        llmBudgetFallbackToStructured: before.llmBudgetFallbackToStructured,
-        approvePricesMyself: before.approvePricesMyself,
-      },
-      after: {
-        llmMonthlyBudgetUsd: after.llmMonthlyBudgetUsd,
-        llmBudgetWarnAtPercent: after.llmBudgetWarnAtPercent,
-        llmBudgetFallbackToStructured: after.llmBudgetFallbackToStructured,
-        approvePricesMyself: after.approvePricesMyself,
-      },
+      before: toAuditedSettings(before),
+      after: toAuditedSettings(after),
     });
 
     return ctx.json({ success: true, data: after });

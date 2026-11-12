@@ -19,6 +19,7 @@ vi.mock('@hono/clerk-auth', () => ({
 import { z } from 'zod';
 import { auditLog, emailSendLog } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
+import { IN_FLIGHT_SEND_GRACE_MS } from './notifications.js';
 import { clearTables } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 
@@ -38,6 +39,7 @@ const deliverySchema = z.object({
     sent: z.number(),
     failed: z.number(),
     suppressed: z.number(),
+    other: z.number(),
     hours: z.number(),
   }),
 });
@@ -53,18 +55,26 @@ const validationErrorSchema = z.object({
 const HOUR_MS = 3_600_000;
 let nonce = 0;
 
-async function logSend(status: string, hoursAgo: number): Promise<Date> {
+async function logSendAt(
+  status: string,
+  msAgo: number,
+  resendId: string | null = null,
+): Promise<Date> {
   nonce += 1;
-  const createdAt = new Date(Date.now() - hoursAgo * HOUR_MS);
+  const createdAt = new Date(Date.now() - msAgo);
   await testDb.insert(emailSendLog).values({
     templateKey: 'spotify_digest',
     userId: `user_${nonce}`,
     dedupeKey: `delivery_${nonce}`,
     status,
+    resendId,
     createdAt,
   });
   return createdAt;
 }
+
+const logSend = (status: string, hoursAgo: number): Promise<Date> =>
+  logSendAt(status, hoursAgo * HOUR_MS);
 
 describe('GET /v1/admin/notifications/delivery', () => {
   beforeEach(async () => {
@@ -86,8 +96,38 @@ describe('GET /v1/admin/notifications/delivery', () => {
       sent: 0,
       failed: 0,
       suppressed: 0,
+      other: 0,
       hours: 24,
     });
+  });
+
+  it('leaves a failed claim still inside the grace period out of failed', async () => {
+    setAuth('admin');
+    const SECOND_MS = 1000;
+    // Claimed seconds ago, Resend not answered yet: in flight, not failed.
+    await logSendAt('failed', 30 * SECOND_MS);
+    // Past the grace period with no Resend id: a real failure.
+    await logSendAt('failed', IN_FLIGHT_SEND_GRACE_MS + 60 * SECOND_MS);
+    // Young, but it carries a Resend id, so it was answered: it counts.
+    await logSendAt('failed', 30 * SECOND_MS, 're_answered');
+    // A young sent row is never held back.
+    await logSendAt('sent', 30 * SECOND_MS, 're_sent');
+
+    const data = deliverySchema.parse(await (await get()).json()).data;
+    expect(data).toMatchObject({ sent: 1, failed: 2, suppressed: 0, other: 0 });
+  });
+
+  it('counts any status other than sent, failed or suppressed as other', async () => {
+    setAuth('admin');
+    await logSend('sent', 1);
+    await logSend('bounced', 2);
+    await logSend('queued', 3);
+    await logSend('queued', 4);
+    // Outside the window, so not counted.
+    await logSend('bounced', 30);
+
+    const data = deliverySchema.parse(await (await get()).json()).data;
+    expect(data).toMatchObject({ sent: 1, failed: 0, suppressed: 0, other: 3 });
   });
 
   it('counts each status inside the window and leaves older rows out', async () => {
