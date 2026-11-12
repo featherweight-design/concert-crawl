@@ -6,11 +6,13 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ArtistPageContent } from '@/components/consumer/artist-page/ArtistPageContent';
-import { ArtistStageShell } from '@/components/consumer/artist-page/ArtistStage';
 import {
-  AP_SKELETON_CARD,
-  NF_FOLLOW_SIZES,
-} from '@/components/consumer/artist-page/definitions/constants';
+  ARTIST_CARD_RADIUS,
+  ARTIST_CARD_RATIO,
+  ARTIST_CARD_TILT,
+  ArtistStageShell,
+} from '@/components/consumer/artist-page/ArtistStage';
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
 
 import ArtistLoading from './loading';
@@ -81,17 +83,34 @@ describe('artist route skeleton', () => {
   it("draws the portrait as the tilted card, not the board's old circle", () => {
     const { getByTestId } = render(<ArtistLoading />);
     const card = getByTestId('stage-card-skeleton');
-    expect(card.style.transform).toBe(`rotate(${AP_SKELETON_CARD.tilt}deg)`);
+    expect(card.style.transform).toBe(`rotate(${ARTIST_CARD_TILT}deg)`);
   });
 
-  // Addendum 2 item 11 (`11-artist-skeleton/load-artist-m`).
-  it('draws the mobile card at 190 × 230, tilted −2.5°', () => {
-    expect(AP_SKELETON_CARD).toEqual({ width: 190, height: 230, tilt: -2.5 });
-    const { getByTestId } = render(<ArtistLoading />);
-    const card = getByTestId('stage-card-skeleton');
-    expect(card.className).toContain('w-[190px]');
-    expect(card.className).toContain('h-[230px]');
-    expect(card.style.transform).toBe('rotate(-2.5deg)');
+  // Addendum 3: the skeleton is the loaded card exactly, 200 × 250 at −2° in
+  // the 200px mobile slot, with the same radius and outline, on desktop too.
+  it('matches the loaded card: 4:5 in the same slot, −2°, same radius and outline', () => {
+    expect(ARTIST_CARD_TILT).toBe(-2);
+    expect(ARTIST_CARD_RATIO).toBe('4 / 5');
+
+    const skeleton = render(<ArtistLoading />).getByTestId(
+      'stage-card-skeleton',
+    );
+    const loaded = render(<ArtistPageContent data={LOADED} />).getByTestId(
+      'stage-card',
+    );
+
+    expect(skeleton.style.aspectRatio).toBe('4 / 5');
+    // No width or height of its own on any viewport: it fills the slot the
+    // loaded card fills.
+    expect(skeleton.className).toBe('');
+    expect(skeleton.parentElement?.className).toBe(
+      loaded.parentElement?.className,
+    );
+    // LOADED has no shows, so its ring is the neutral one the skeleton wears.
+    expect(skeleton.style.transform).toBe(loaded.style.transform);
+    expect(skeleton.style.borderRadius).toBe(loaded.style.borderRadius);
+    expect(skeleton.style.boxShadow).toBe(loaded.style.boxShadow);
+    expect(skeleton.style.borderRadius).toBe(`${ARTIST_CARD_RADIUS}px`);
   });
 
   it('keeps the back control live while the data loads', () => {

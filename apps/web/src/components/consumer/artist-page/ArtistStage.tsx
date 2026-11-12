@@ -8,7 +8,7 @@
 // They live here rather than in a shared module because B8 is not on main yet
 // and PRs never stack; once both have merged, the two stages fold into one.
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { EventImage } from '@/components/consumer/event-image';
 import { Panel } from '@/components/consumer/image-slot';
@@ -39,6 +39,20 @@ const STARBURST_MASK =
 /** The genre ring on the card: 1.25px in the genre's color plus its glow. */
 export const artistRing = (ring: string): string =>
   `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px var(--shadow-strong)`;
+
+/**
+ * The card's shape: it fills its slot (200px wide on mobile) at 4:5, so 200 ×
+ * 250 there. Shared with the loading skeleton (addendum 3), which must land
+ * exactly where the loaded card does.
+ */
+export const ARTIST_CARD_RATIO = '4 / 5';
+
+/** The card's frame: radius, tilt and ring. The skeleton wears the same. */
+export const artistCardFrame = (ring: string): CSSProperties => ({
+  borderRadius: ARTIST_CARD_RADIUS,
+  transform: `rotate(${ARTIST_CARD_TILT}deg)`,
+  boxShadow: artistRing(ring),
+});
 
 /**
  * The washed backdrop. Decorative: everything it shows is the card in front of
@@ -187,20 +201,13 @@ export const ArtistStage = ({
     actions={actions}
     aside={aside}
     card={
-      <div
-        data-testid="stage-card"
-        style={{
-          borderRadius: ARTIST_CARD_RADIUS,
-          transform: `rotate(${ARTIST_CARD_TILT}deg)`,
-          boxShadow: artistRing(ring),
-        }}
-      >
+      <div data-testid="stage-card" style={artistCardFrame(ring)}>
         <Panel
           surface="artist"
           photoUrl={photoUrl}
           name={name}
           size="100%"
-          ratio="4 / 5"
+          ratio={ARTIST_CARD_RATIO}
           radius={ARTIST_CARD_RADIUS}
           scale="hero"
         />
