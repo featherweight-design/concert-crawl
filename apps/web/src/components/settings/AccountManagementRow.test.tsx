@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { AccountManagementRow } from './AccountManagementRow';
 
 const mockUseClerk = vi.fn(() => ({ openUserProfile: vi.fn() }));
@@ -13,6 +13,40 @@ vi.mock('@clerk/nextjs', () => ({
 }));
 
 describe('AccountManagementRow', () => {
+  // A test below swaps in its own spy; every test starts from the default.
+  beforeEach(() => {
+    mockUseClerk.mockReturnValue({ openUserProfile: vi.fn() });
+  });
+
+  it('opens Clerk profile when the email row is pressed', () => {
+    const openUserProfile = vi.fn();
+    mockUseClerk.mockReturnValue({ openUserProfile });
+    mockUseUser.mockReturnValue({
+      user: { passwordEnabled: false, externalAccounts: [] },
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    const row = screen.getByText('test@example.com').closest('button');
+    expect(row).not.toBeNull();
+    if (row === null) return;
+    fireEvent.click(row);
+    expect(openUserProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('insets the rows 16px on mobile and 20px on the desktop panel', () => {
+    mockUseUser.mockReturnValue({
+      user: { passwordEnabled: false, externalAccounts: [] },
+    });
+    const mobile = render(<AccountManagementRow email="test@example.com" />);
+    expect(
+      screen.getByText('test@example.com').closest('button')?.className,
+    ).toContain('px-4');
+    mobile.unmount();
+    render(<AccountManagementRow email="test@example.com" variant="desktop" />);
+    expect(
+      screen.getByText('test@example.com').closest('button')?.className,
+    ).toContain('px-5');
+  });
+
   it('shows email row', () => {
     mockUseUser.mockReturnValue({
       user: { passwordEnabled: false, externalAccounts: [] },
