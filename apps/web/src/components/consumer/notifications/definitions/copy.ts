@@ -70,6 +70,14 @@ export const NOTIFICATIONS_COPY = {
     alerts: 'No alerts.',
     prices: 'No price news.',
   },
+  /**
+   * The line under a tab's empty title. The board draws the Prices tab only;
+   * Shows and Alerts have no drawn body, so they draw none.
+   */
+  tabEmptyBody: {
+    prices:
+      'When a show you’re Watching drops in price, or a Price check you sent is settled, it shows up here.',
+  },
 } as const;
 
 /** Where the empty-state CTA sends someone with nothing to catch up on. */

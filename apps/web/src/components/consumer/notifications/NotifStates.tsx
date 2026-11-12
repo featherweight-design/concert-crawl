@@ -1,9 +1,9 @@
 // The panel's three non-list states (#737, restyled for B+ in B19): loading,
 // empty, error.
 //
-// LOADING is a skeleton that holds a real row's shape (README rule 9) under a
-// "Catching up…" divider (`06-states/bp-s-notif_load_m`), and the rows fade
-// down the panel the way the board draws them. The sweep is the app's one
+// LOADING is a skeleton that holds a real row's shape (README rule 9), five
+// rows fading down the panel as `addendum-3/03/notif-tab-loading-m` draws them
+// (no divider above them). The sweep is the app's one
 // skeleton sweep (`SkeletonBlock`), static under reduced motion. The spoken
 // form is one visually-hidden sentence inside a single role="status"/aria-busy
 // region, not one per skeleton.
@@ -19,12 +19,11 @@
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { StateCard } from '@/components/consumer/empty-state/StateCard';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
-import { NotifDayDivider } from './NotifDayDivider';
 import { NotifGlyph } from './glyphs';
 import type { NotificationTab } from './definitions/categories';
 
-/** Each skeleton row fades a step further, so the list trails off. */
-const ROW_FADE = 0.16;
+/** Each skeleton row fades a step further (1, .82, .64, .46, .28). */
+const ROW_FADE = 0.18;
 
 export const NotifSkeletonRow = ({
   opacity = 1,
@@ -37,26 +36,24 @@ export const NotifSkeletonRow = ({
       display: 'flex',
       gap: 12,
       alignItems: 'flex-start',
-      padding: '14px 16px 14px 14px',
-      minHeight: 64,
-      borderLeft: '2px solid transparent',
-      borderBottom: '1px solid var(--border)',
+      padding: '13px 16px',
+      borderTop: '1px solid var(--border)',
       opacity,
     }}
   >
-    <SkeletonBlock width={30} height={30} radius={10} />
+    <SkeletonBlock width={30} height={30} radius={9} />
     <div
       style={{
         flex: 1,
         minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 7,
       }}
     >
-      <SkeletonBlock width="66%" height={12} radius={6} />
-      <SkeletonBlock width="86%" height={10} radius={5} />
-      <SkeletonBlock width={60} height={8} radius={4} />
+      <SkeletonBlock width="70%" height={13} radius={6} />
+      <SkeletonBlock width="90%" height={10} radius={6} />
+      <SkeletonBlock width={60} height={8} radius={6} />
     </div>
   </div>
 );
@@ -74,14 +71,13 @@ export const NotifLoading = ({ rows = 5 }: { rows?: number | undefined }) => (
     >
       {NOTIFICATIONS_COPY.loading}
     </span>
-    {/* The hidden sentence above is the spoken form; the visible divider is
-        decoration, so it is hidden from assistive tech rather than read as a
-        second loading message. */}
-    <div aria-hidden="true">
-      <NotifDayDivider label={NOTIFICATIONS_COPY.loadingVisible} />
-    </div>
+    {/* B19a (`notif-tab-loading-m`) draws the tab row over the skeleton rows
+        directly, with no "Catching up…" divider between them. */}
     {Array.from({ length: rows }).map((_, i) => (
-      <NotifSkeletonRow key={i} opacity={Math.max(0.2, 1 - i * ROW_FADE)} />
+      <NotifSkeletonRow
+        key={i}
+        opacity={Math.max(0.2, Number((1 - i * ROW_FADE).toFixed(2)))}
+      />
     ))}
   </div>
 );
@@ -110,9 +106,13 @@ export const NotifEmpty = ({
 export const NotifTabEmpty = ({ tab }: { tab: NotificationTab }) => (
   <div style={{ padding: '16px 16px 24px' }}>
     <StateCard
-      icon={<NotifGlyph name="bell" size={24} />}
+      variant="notif-tab"
+      icon={<NotifGlyph name="bell" size={30} />}
       eyebrow={NOTIFICATIONS_COPY.segments[tab]}
       title={NOTIFICATIONS_COPY.tabEmpty[tab]}
+      body={
+        tab === 'prices' ? NOTIFICATIONS_COPY.tabEmptyBody.prices : undefined
+      }
     />
   </div>
 );
@@ -127,7 +127,8 @@ export const NotifError = ({
       role="alert"
       tone="danger"
       framed={false}
-      icon={<NotifGlyph name="bell" size={24} />}
+      variant="notif-tab"
+      icon={<NotifGlyph name="bell" size={34} />}
       eyebrow={NOTIFICATIONS_COPY.errorEyebrow}
       title={NOTIFICATIONS_COPY.error}
       body={NOTIFICATIONS_COPY.errorBody}
