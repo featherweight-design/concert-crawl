@@ -336,18 +336,31 @@ describe('FilterBar desktop segmented bar', () => {
     fireEvent.click(screen.getByTestId('filter-segment-vibe'));
     const dialog = screen.getByRole('dialog', { name: /filter$/ });
     expect(within(dialog).getByText(copy.popover.vibeSub)).toBeTruthy();
-    expect(within(dialog).getAllByTestId('genre-dot')).toHaveLength(2);
+    expect(within(dialog).getAllByTestId('genre-dot')).toHaveLength(16);
   });
 
-  it('Vibe lays its options out in the board order, two columns, each with its line', () => {
-    renderBar({ genres: ['comedy', 'indie', 'hip-hop', 'electronic'] });
+  it('Vibe lists all 16 buckets in the board order, shows or not, two columns, each with its line', () => {
+    // Only two buckets have shows; vibe_pop_d still draws every one.
+    renderBar({ genres: ['comedy', 'indie'] });
     fireEvent.click(screen.getByTestId('filter-segment-vibe'));
     const dialog = screen.getByRole('dialog', { name: /filter$/ });
     const rows = within(dialog).getAllByTestId('vibe-option');
     expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual([
       'Electronic',
       'Hip-Hop',
+      'Pop',
       'Indie',
+      'Rock',
+      'Metal',
+      'Punk',
+      'Folk',
+      'Country',
+      'Jazz',
+      'Latin',
+      'Reggae',
+      'Jam',
+      'World',
+      'Classical',
       'Comedy',
     ]);
     expect(rows[0]?.parentElement).toHaveClass('grid-cols-2');
@@ -355,12 +368,15 @@ describe('FilterBar desktop segmented bar', () => {
       within(dialog)
         .getAllByTestId('vibe-option-kind')
         .map((node) => node.textContent),
-    ).toEqual([
-      copy.popover.vibeKinds.electronic,
-      copy.popover.vibeKinds['hip-hop'],
-      copy.popover.vibeKinds.indie,
-      copy.popover.vibeKinds.comedy,
-    ]);
+    ).toEqual(Object.values(copy.popover.vibeKinds));
+  });
+
+  it('an empty bucket can be picked and simply narrows to it', () => {
+    renderBar({ genres: ['indie'] });
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    const dialog = screen.getByRole('dialog', { name: /filter$/ });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Jazz' }));
+    expect(lastQuery().getAll('filterVibe')).toEqual(['jazz']);
   });
 
   it('a checked Vibe row takes its genre color for its edge and its box', () => {
@@ -377,6 +393,42 @@ describe('FilterBar desktop segmented bar', () => {
     expect(indie.style.borderColor).toBe('transparent');
     const box = within(electronic).getByTestId('checkbox-mark');
     expect(box.style.background).toBe('var(--genre-electronic)');
+  });
+
+  it('a checked Vibe row is drawn as vibe_pop_d measures it', () => {
+    // Sampled from the board: a 1px edge at ~60% of the genre color, a ~10%
+    // tint over the popover, a 20px box filled in the genre color with a dark
+    // check. Unchecked rows keep an untinted, outlined box.
+    searchParams.current = new URLSearchParams(
+      'filterVibe=electronic&filterVibe=hip-hop',
+    );
+    renderBar();
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    const dialog = screen.getByRole('dialog', { name: /filter$/ });
+    for (const [name, token] of [
+      ['Electronic', 'var(--genre-electronic)'],
+      ['Hip-Hop', 'var(--genre-hip-hop)'],
+    ] as const) {
+      const row = within(dialog).getByRole('checkbox', { name });
+      expect(row.style.borderWidth).toBe('1px');
+      expect(row.style.borderStyle).toBe('solid');
+      expect(row.style.borderColor).toBe(
+        `color-mix(in oklab, ${token} 60%, transparent)`,
+      );
+      expect(row.style.background).toBe(
+        `color-mix(in oklab, ${token} 10%, transparent)`,
+      );
+      const box = within(row).getByTestId('checkbox-mark');
+      expect(box.style.width).toBe('20px');
+      expect(box.style.background).toBe(token);
+      const check = box.querySelector('path');
+      expect(check?.getAttribute('stroke')).toBe('var(--fg-on-accent)');
+    }
+    const pop = within(dialog).getByRole('checkbox', { name: 'Pop' });
+    expect(pop.style.background).toBe('');
+    const popBox = within(pop).getByTestId('checkbox-mark');
+    expect(popBox.style.background).toBe('transparent');
+    expect(popBox.querySelector('path')).toBeNull();
   });
 
   it('Vibe ends on "Show N shows" with the events total, which closes it', () => {

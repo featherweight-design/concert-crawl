@@ -781,7 +781,6 @@ export function FilterBar({
             />
           ) : openDimension === 'vibe' ? (
             <VibeOptionGrid
-              genres={genres}
               selected={filterValues.vibe}
               onToggle={(genre) => toggleFilterValue('vibe', genre)}
             />
