@@ -1,3 +1,21 @@
+# [1.331.0](https://github.com/featherweight-design/concert-crawl/compare/v1.330.4...v1.331.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** add the brand mark to the report rail and the dot to the sent stub ([e7d794b](https://github.com/featherweight-design/concert-crawl/commit/e7d794bdb875709ab0ba4095f7a40b0c4c9e1ff7))
+* **web:** address artist report review findings ([80a78cb](https://github.com/featherweight-design/concert-crawl/commit/80a78cb371f6093446646a73c0095738a0b868aa))
+* **web:** address the artist report code review ([c139b84](https://github.com/featherweight-design/concert-crawl/commit/c139b847499e095efebb4643449fca4b6fe04aa2))
+* **web:** address the artist report risk checklist ([6d68f52](https://github.com/featherweight-design/concert-crawl/commit/6d68f522c5b57bbc9d6daade243e3d8083e922db))
+* **web:** announce the dismissal note, name the how-to sheet once, test both ([3ff30d4](https://github.com/featherweight-design/concert-crawl/commit/3ff30d496a82f98ab1f5d5e0b34c75594f8c87c6))
+
+
+### Features
+
+* **web:** give the artist report gate its own tier-picker entry ([7267e13](https://github.com/featherweight-design/concert-crawl/commit/7267e13b1e36c4b8fd343f2b007d6b4c3e11d155))
+* **web:** report a wrong artist match from the artist page ([5ecf612](https://github.com/featherweight-design/concert-crawl/commit/5ecf61218999620ff17eef7b0360e40fbea357e0))
+* **web:** the B+ install slot and iPhone sheets (B22a) ([ca9b27b](https://github.com/featherweight-design/concert-crawl/commit/ca9b27be77d7ab5ebda21d304437bff29abe815c))
+
 ## [1.330.4](https://github.com/featherweight-design/concert-crawl/compare/v1.330.3...v1.330.4) (2026-11-12)
 
 
