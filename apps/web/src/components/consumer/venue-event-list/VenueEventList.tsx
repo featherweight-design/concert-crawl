@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { EventWithVenue } from '@concert-crawl/types';
 import { EventRow, fromEventWithVenue } from '../event-row';
 import { CONSUMER_COPY } from '../definitions/copy';
-import { dateGroupLabel } from '../definitions/lib';
+import { dateGroupLabel, isToday } from '../definitions/lib';
+import { DayTile } from '../events-list/DayTile';
 
 interface VenueEventListProps {
   events: EventWithVenue[];
@@ -55,21 +56,20 @@ export function VenueEventList({
     <div className="flex flex-col gap-6">
       {Array.from(groups.entries()).map(([date, dateEvents]) => {
         const label = dateGroupLabel(date);
-        const isTonight = label.toLowerCase() === 'tonight';
         return (
           <section key={date} aria-label={label}>
-            <div
-              className="mb-2.5 flex items-baseline gap-2.5 px-4 pb-2"
-              style={{ borderBottom: '1px solid var(--border)' }}
-            >
+            {/* The Browse day header (B+): rows are drawn the Browse way, so
+                their groups lead with the same date tile. */}
+            <div className="mb-3 flex items-center gap-3">
+              <DayTile date={date} today={isToday(date)} />
               <h2
                 className="shrink-0 leading-none"
                 style={{
                   fontFamily: 'Inter, system-ui',
-                  fontWeight: 900,
-                  fontSize: 18,
+                  fontWeight: 800,
+                  fontSize: 20,
                   letterSpacing: '-0.02em',
-                  color: isTonight ? 'var(--accent)' : 'var(--fg)',
+                  color: 'var(--fg)',
                 }}
               >
                 {label}
@@ -78,8 +78,8 @@ export function VenueEventList({
                 className="shrink-0 uppercase text-fg-subtle"
                 style={{
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.06em',
+                  fontSize: 10.5,
+                  letterSpacing: '0.12em',
                 }}
               >
                 {CONSUMER_COPY.showCount(dateEvents.length)}
