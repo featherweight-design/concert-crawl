@@ -19,6 +19,8 @@ import {
   seedEvent,
   seedUserProfile,
   seedPriceSubmission,
+  seedEventReport,
+  seedEventReportConfirm,
 } from '../test/helpers/seed.js';
 
 const app = createApp();
@@ -249,6 +251,71 @@ describe('GET /v1/events — integration', () => {
 describe('GET /v1/events/:id — integration', () => {
   beforeEach(async () => {
     await clearTables();
+  });
+
+  describe('statusReport (where a cancelled or postponed status came from)', () => {
+    it('is null for a crawled cancellation: no promoted fan report', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+
+      const res = await app.request(`/v1/events/${event.id}`);
+      const body = (await res.json()) as {
+        data: { statusReport: unknown };
+      };
+
+      expect(res.status).toBe(200);
+      expect(body.data.statusReport).toBeNull();
+    });
+
+    it('carries the promoted report behind a cancellation: handle and confirms', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+      await seedUserProfile('user_reporter', { handle: 'sami' });
+      const report = await seedEventReport(event.id, 'user_reporter', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+      await seedEventReportConfirm(report.id, 'user_confirm_a');
+      await seedEventReportConfirm(report.id, 'user_confirm_b');
+
+      const res = await app.request(`/v1/events/${event.id}`);
+      const body = (await res.json()) as {
+        data: {
+          statusReport: {
+            reporterHandle: string | null;
+            confirmsCount: number;
+            reportedAt: string;
+          } | null;
+        };
+      };
+
+      expect(body.data.statusReport).toMatchObject({
+        reporterHandle: 'sami',
+        confirmsCount: 2,
+      });
+    });
+
+    it('ignores a pending or rejected report, and a report of another status', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'postponed' });
+      await seedEventReport(event.id, 'user_a', { status: 'postponed' });
+      await seedEventReport(event.id, 'user_b', {
+        status: 'postponed',
+        resolution: 'rejected',
+        resolvedAt: new Date(),
+      });
+      await seedEventReport(event.id, 'user_c', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+
+      const res = await app.request(`/v1/events/${event.id}`);
+      const body = (await res.json()) as { data: { statusReport: unknown } };
+
+      expect(body.data.statusReport).toBeNull();
+    });
   });
 
   it('404s when the event is hidden from consumers (PR 6)', async () => {

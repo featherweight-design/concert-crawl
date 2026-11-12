@@ -246,18 +246,27 @@ export function EventDetailBanners({
         ? 'postponed'
         : null;
 
-  // Derive reporter info from the promoted sold-out report when present
+  // The promoted fan report behind the live status: sold out's own report,
+  // or the one behind a cancelled or postponed status. With none, the status
+  // came from the venue's calendar and the card says so.
+  const liveFanReport =
+    liveReportStatus === 'sold-out'
+      ? (event.soldOutReport ?? null)
+      : liveReportStatus !== null
+        ? (event.statusReport ?? null)
+        : null;
+
   const liveReporter = (() => {
-    if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
-      const handle = event.soldOutReport.reporterHandle;
+    if (liveFanReport != null) {
+      const handle = liveFanReport.reporterHandle;
       return handle != null ? { handle, url: '' } : null;
     }
     return null;
   })();
 
   const liveConfirmCount = (() => {
-    if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
-      return event.soldOutReport.confirmsCount;
+    if (liveFanReport != null) {
+      return liveFanReport.confirmsCount;
     }
     return undefined;
   })();

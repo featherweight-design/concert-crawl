@@ -21,12 +21,23 @@ export function isSoldOutSql() {
   )`;
 }
 
-/** The same rule as a WHERE on `event_reports` itself, for one event. */
-export function activeSoldOutWhere(eventId: string): SQL | undefined {
+/**
+ * A promoted, resolved fan report of one status on one event: the report an
+ * admin (or the confirm threshold) turned into the event's live state.
+ */
+export function activePromotedReportWhere(
+  eventId: string,
+  status: 'sold-out' | 'cancelled' | 'postponed',
+): SQL | undefined {
   return and(
     eq(eventReports.eventId, eventId),
-    eq(eventReports.status, 'sold-out'),
+    eq(eventReports.status, status),
     isNotNull(eventReports.resolvedAt),
     eq(eventReports.resolution, 'promoted'),
   );
+}
+
+/** The sold-out rule as a WHERE on `event_reports` itself, for one event. */
+export function activeSoldOutWhere(eventId: string): SQL | undefined {
+  return activePromotedReportWhere(eventId, 'sold-out');
 }
