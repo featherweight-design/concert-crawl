@@ -15,6 +15,7 @@ import {
   gt,
   inArray,
   isNull,
+  like,
   lte,
   max,
   or,
@@ -60,25 +61,40 @@ function generateCode(): string {
 }
 
 // The unique constraint on `invite_codes.code` (drizzle's default name for
-// `.unique()`), which a custom code can race into after the pre-check.
+// `.unique()`). It is the only check that a custom code is free: the insert
+// either lands or trips it, so there is no window between a check and a write.
 const INVITE_CODE_UNIQUE = 'invite_codes_code_unique';
+
+// Suffixes tried for a suggestion: up to three digits, 2 to 999.
+const MAX_SUGGESTION_SUFFIX = 999;
 
 /**
  * A free code to offer when `code` is taken: the code with the lowest free
  * number on the end ("REDROCKS2"), trimmed to fit the 20-character limit.
- * Null when every candidate checked is taken too.
+ * One query reads every code sharing the shortest stem a suffix could leave,
+ * so a busy name ("REDROCKS2" to "REDROCKS40") still gets an answer. Null
+ * only when all 998 are taken.
  */
 const suggestFreeCode = async (code: string): Promise<string | null> => {
-  const candidates = Array.from({ length: 8 }, (_, idx) => {
-    const suffix = String(idx + 2);
+  const candidateFor = (num: number): string => {
+    const suffix = String(num);
     return `${code.slice(0, CUSTOM_INVITE_CODE_MAX_LENGTH - suffix.length)}${suffix}`;
-  });
+  };
+  const stem = code.slice(
+    0,
+    CUSTOM_INVITE_CODE_MAX_LENGTH - String(MAX_SUGGESTION_SUFFIX).length,
+  );
   const taken = await db
     .select({ code: inviteCodes.code })
     .from(inviteCodes)
-    .where(inArray(inviteCodes.code, candidates));
+    // Codes are letters and numbers only, so the stem has no LIKE wildcards.
+    .where(like(inviteCodes.code, `${stem}%`));
   const takenSet = new Set(taken.map((row) => row.code));
-  return candidates.find((candidate) => !takenSet.has(candidate)) ?? null;
+  for (let num = 2; num <= MAX_SUGGESTION_SUFFIX; num += 1) {
+    const candidate = candidateFor(num);
+    if (!takenSet.has(candidate)) return candidate;
+  }
+  return null;
 };
 
 const codeTakenResponse = async (code: string) => ({
@@ -473,19 +489,8 @@ inviteCodesAdminRouter.post(
       maxUses,
     } = ctx.req.valid('json');
 
-    // The insert is the real check: the unique constraint refuses a code that
-    // was taken between this pre-check and the write. The pre-check only lets
-    // the common case answer without relying on an error.
-    if (customCode) {
-      const [existing] = await db
-        .select({ id: inviteCodes.id })
-        .from(inviteCodes)
-        .where(eq(inviteCodes.code, customCode));
-      if (existing) {
-        return ctx.json(await codeTakenResponse(customCode), 409);
-      }
-    }
-
+    // A taken custom code is answered from the unique constraint (see
+    // INVITE_CODE_UNIQUE), never from a separate check.
     let code: typeof inviteCodes.$inferSelect | undefined;
     try {
       [code] = await db

@@ -164,7 +164,37 @@ describe('POST /v1/admin/invite-codes with a custom code', () => {
     });
     expect(status).toBe(201);
     expect((json.data as InviteCode).code).toBe('GLOBEHALL');
-    expect(await auditActions()).toContain('invite_code.create');
+    const [audit] = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'invite_code.create'));
+    expect(audit?.metadata).toMatchObject({ custom: true, maxUses: 50 });
+  });
+
+  it('answers a code taken by an earlier create from the unique constraint', async () => {
+    setAuth('admin');
+    expect((await call('POST', '', { code: 'TWICE' })).status).toBe(201);
+    const res = await app.request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'twice' }),
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json()).suggestion).toBe('TWICE2');
+  });
+
+  it('suggests past a run of taken numbers', async () => {
+    setAuth('admin');
+    await seedCode({ code: 'BUSY' });
+    for (let num = 2; num <= 12; num += 1) {
+      await seedCode({ code: `BUSY${num}` });
+    }
+    const res = await app.request('/v1/admin/invite-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'BUSY' }),
+    });
+    expect((await res.json()).suggestion).toBe('BUSY13');
   });
 
   it('answers a taken code with 409 and the lowest free number on the end', async () => {

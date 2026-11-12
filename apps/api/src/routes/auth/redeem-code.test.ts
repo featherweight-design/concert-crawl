@@ -24,6 +24,13 @@ const { mockGetAuth, mockCode, mockDb } = vi.hoisted(() => ({
 // does not join. The flag tells the chain which shape to resolve.
 let joined = false;
 
+// The miss limit is covered against a real store in
+// redeem-code.integration.test.ts; here it always allows.
+vi.mock('../../lib/rate-limit.js', () => ({
+  checkRateLimit: vi.fn(async () => ({ allowed: true, count: 1 })),
+  refundRateLimit: vi.fn(async () => undefined),
+}));
+
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),

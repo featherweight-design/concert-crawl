@@ -49,13 +49,6 @@ function violatesIndex(candidate: unknown, indexName: string): boolean {
  * surface as `constraint_name`, `constraint`, or embedded in the message —
  * we sniff all three.
  */
-/** Whether `err` (or its `cause`) is a unique violation on `indexName`. */
-export function isUniqueViolationOn(err: unknown, indexName: string): boolean {
-  if (violatesIndex(err, indexName)) return true;
-  const wrapped = causeSchema.safeParse(err);
-  return wrapped.success && violatesIndex(wrapped.data.cause, indexName);
-}
-
 export function pendingCounterViolation(err: unknown): 'own' | 'any' | null {
   const candidates = [err, causeOf(err)];
   if (candidates.some((cand) => violatesIndex(cand, OWN_PENDING_COUNTER_INDEX)))
@@ -68,6 +61,13 @@ export function pendingCounterViolation(err: unknown): 'own' | 'any' | null {
 function causeOf(err: unknown): unknown {
   const withCause = causeSchema.safeParse(err);
   return withCause.success ? withCause.data.cause : undefined;
+}
+
+/** Whether `err` (or its `cause`) is a unique violation on `indexName`. */
+export function isUniqueViolationOn(err: unknown, indexName: string): boolean {
+  return [err, causeOf(err)].some((candidate) =>
+    violatesIndex(candidate, indexName),
+  );
 }
 
 /** SQLSTATEs a client can simply retry: deadlock and serialization failure. */

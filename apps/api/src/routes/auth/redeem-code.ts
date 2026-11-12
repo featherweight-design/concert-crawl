@@ -15,6 +15,7 @@ import { isInviteCodeShape, normalizeInviteCode } from '@concert-crawl/types';
 import { and, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { apiLogger } from '../../lib/logger.js';
 import { clerkAuth, requireAuth, getAuthUser } from '../../middleware/auth.js';
+import { checkRateLimit, refundRateLimit } from '../../lib/rate-limit.js';
 
 const redeemSchema = z.object({
   // Either shape, uppercased first (see validate-code.ts).
@@ -117,6 +118,10 @@ const mirrorBetaComp = async (userId: string): Promise<void> => {
   }
 };
 
+/** Wrong codes one account may try per hour. Codes that exist never count. */
+const REDEEM_MAX_MISSES = 10;
+const REDEEM_WINDOW_MS = 60 * 60 * 1000;
+
 /** Thrown inside the claim to roll it back: this person already holds a seat. */
 class AlreadyRedeemed extends Error {}
 
@@ -128,6 +133,24 @@ redeemCodeRouter.post(
   async (ctx) => {
     const { userId } = getAuthUser(ctx);
     const { code } = ctx.req.valid('json');
+
+    // Custom codes are short and often words (REDROCKS), so guessing them is
+    // practical in a way 36^8 BETA- codes never were. Validate has had a miss
+    // limit all along; redeem gets the same one, keyed on the account rather
+    // than an IP the caller can set. As there, every attempt counts first and
+    // a code that exists refunds its count, so a real code never spends it.
+    const limitKey = `redeem-code:${userId}`;
+    const limit = await checkRateLimit(
+      limitKey,
+      REDEEM_MAX_MISSES + 1,
+      REDEEM_WINDOW_MS,
+      { onStoreError: 'deny' },
+    );
+    if (!limit.allowed) {
+      const waitMs = limit.retryAfterMs || REDEEM_WINDOW_MS;
+      ctx.header('Retry-After', String(Math.ceil(waitMs / 1000)));
+      return ctx.json({ success: false, error: 'ratelimit' }, 429);
+    }
 
     // The caller's own ledger row comes back with the code, so a repeat
     // redeem is recognised without a second query.
@@ -149,6 +172,7 @@ redeemCodeRouter.post(
     if (!found) {
       return ctx.json({ success: false, error: 'notfound' }, 404);
     }
+    await refundRateLimit(limitKey);
     const { invite } = found;
 
     // Idempotent: already redeemed by this user, which only the ledger can
