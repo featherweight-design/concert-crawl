@@ -231,6 +231,16 @@ describe('POST /v1/auth/redeem-code — custom codes (admin 5b)', () => {
   it('refuses a value that is neither shape', async () => {
     expect((await redeem('RED-ROCKS')).status).toBe(400);
   });
+
+  it('limits one account to ten wrong codes an hour, and a real code never counts', async () => {
+    await seedCode('REDROCKS', 50);
+    for (let i = 0; i < 10; i += 1) {
+      expect((await redeem(`GUESS${i}`)).status).toBe(404);
+    }
+    // The extra slot lets a real code through after ten misses.
+    expect((await redeem('REDROCKS')).status).toBe(200);
+    expect((await redeem('GUESS10')).status).toBe(429);
+  });
 });
 
 describe('POST /v1/auth/redeem-code — multi-use codes', () => {

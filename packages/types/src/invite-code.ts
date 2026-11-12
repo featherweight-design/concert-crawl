@@ -10,11 +10,13 @@
 /** A generated code: `BETA-XXXX-XXXX`. */
 export const GENERATED_INVITE_CODE_PATTERN = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
-/** A custom code: 4 to 20 letters and numbers. */
-export const CUSTOM_INVITE_CODE_PATTERN = /^[A-Z0-9]{4,20}$/;
-
 export const CUSTOM_INVITE_CODE_MIN_LENGTH = 4;
 export const CUSTOM_INVITE_CODE_MAX_LENGTH = 20;
+
+/** A custom code: 4 to 20 letters and numbers. */
+export const CUSTOM_INVITE_CODE_PATTERN = new RegExp(
+  `^[A-Z0-9]{${CUSTOM_INVITE_CODE_MIN_LENGTH},${CUSTOM_INVITE_CODE_MAX_LENGTH}}$`,
+);
 
 /**
  * A custom code may not start with `BETA`. The entry field formats anything
@@ -27,13 +29,11 @@ export const RESERVED_INVITE_CODE_PREFIX = 'BETA';
 export const normalizeInviteCode = (raw: string): string =>
   raw.trim().toUpperCase();
 
-/** Whether a normalized value is a whole code of either shape. */
-export const isInviteCodeShape = (code: string): boolean =>
-  GENERATED_INVITE_CODE_PATTERN.test(code) ||
-  (CUSTOM_INVITE_CODE_PATTERN.test(code) &&
-    !code.startsWith(RESERVED_INVITE_CODE_PREFIX));
-
 /** Whether a normalized value is an allowed custom code. */
 export const isCustomInviteCode = (code: string): boolean =>
   CUSTOM_INVITE_CODE_PATTERN.test(code) &&
   !code.startsWith(RESERVED_INVITE_CODE_PREFIX);
+
+/** Whether a normalized value is a whole code of either shape. */
+export const isInviteCodeShape = (code: string): boolean =>
+  GENERATED_INVITE_CODE_PATTERN.test(code) || isCustomInviteCode(code);

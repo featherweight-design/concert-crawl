@@ -337,3 +337,28 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     );
   });
 });
+
+describe('the code screen accepts both code shapes (admin 5b custom codes)', () => {
+  const sentCode = (): unknown => {
+    const init = vi.mocked(fetch).mock.calls[0]?.[1];
+    return JSON.parse(String(init?.body)).code;
+  };
+
+  it('sends a custom code uppercased', async () => {
+    await runToRedirect(() => validateAndSetInviteCode('redRocks'));
+    expect(sentCode()).toBe('REDROCKS');
+  });
+
+  it('still sends a generated code, typed in lower case', async () => {
+    await runToRedirect(() => validateAndSetInviteCode(CODE.toLowerCase()));
+    expect(sentCode()).toBe(CODE);
+  });
+
+  it('refuses a value that is neither shape without calling the API', async () => {
+    expect(await validateAndSetInviteCode('RED-ROCKS')).toEqual({
+      ok: false,
+      error: 'invalid_format',
+    });
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+});
