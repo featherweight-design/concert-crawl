@@ -25,6 +25,7 @@ import { crewsRouter } from './crews.js';
 import { crewInvitesRouter } from './crew-invites.js';
 import { feedbackRouter } from './feedback.js';
 import { flagsRouter } from './flags.js';
+import { catalogRouter } from './catalog.js';
 import { searchRouter } from './search.js';
 import { spotifyRouter } from './spotify.js';
 import { mePushRouter } from './me-push.js';
@@ -62,6 +63,7 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/crew-invites', crewInvitesRouter);
   app.route('/v1/feedback', feedbackRouter);
   app.route('/v1/flags', flagsRouter);
+  app.route('/v1/catalog', catalogRouter);
   app.route('/v1/search', searchRouter);
   app.route('/v1/spotify', spotifyRouter);
   app.route('/v1/me', mePushRouter);
