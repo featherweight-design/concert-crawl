@@ -55,7 +55,8 @@ describe('EventTicketCta', () => {
     const link = screen.getByRole('link', { name: copy.visitVenueWebsite });
     // Outlined in the neutral border, never the filled primary: nothing to buy.
     expect(link.style.background).toBe('');
-    expect(link.style.border).toBe('1px solid var(--border-strong)');
+    // jsdom's cssstyle can drop a shorthand holding var(), so read the attribute.
+    expect(link.getAttribute('style')).toContain('var(--border-strong)');
   });
 
   it('falls back to no tickets when a cancelled show has no link', () => {

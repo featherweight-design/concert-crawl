@@ -219,9 +219,14 @@ export default async function EventDetailPage({
       event={event}
       reports={reports}
       currentUserId={userId ?? null}
-      // Same choice as the cancelled CTA below: refund info from the vendor
-      // when there's a ticket link, else the venue's page.
-      cancelledRefund={!safeTicketUrl && ctaHref ? 'venue' : 'vendor'}
+      // Same order as the cancelled CTA below (EventTicketCta): a ticket link
+      // is refund info from the vendor; sold out comes before the venue's
+      // page; only then does the venue's page take the CTA.
+      cancelledRefund={
+        !safeTicketUrl && event.priceStatus !== 'soldout' && ctaHref
+          ? 'venue'
+          : 'vendor'
+      }
     />
   );
 
