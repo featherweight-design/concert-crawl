@@ -21,8 +21,16 @@ export const artistMatchBodySchema = z
     // still the row's current, unconfirmed answer. A stale page must never
     // write an old guess over a newer match.
     confirmAutoMatch: z.literal(true).optional(),
+    // The status the page showed when the admin decided. A human decision can
+    // sit on screen for minutes; with this the write lands only if the row is
+    // still in that status, so a ruling made against a stale row is refused
+    // rather than applied over whatever is there now.
+    expectedStatus: matchStatusSchema.optional(),
   })
   .strict();
+
+const ARTIST_CHANGED = 'The artist has changed since it was loaded';
+const AUTO_MATCH_CHANGED = 'The auto-match has changed since it was loaded';
 
 export type ArtistMatchBody = z.infer<typeof artistMatchBodySchema>;
 
@@ -89,16 +97,27 @@ export const applyArtistMatch = async (
   if (!existing) {
     return { ok: false, status: 404, error: 'Artist not found' };
   }
+
+  // "It's an artist": the one write that lifts the hide a not-an-artist
+  // verdict set. Any other write leaves `hidden` as it is, on purpose.
+  const unhide =
+    existing.matchStatus === 'not_an_artist' && nextStatus === 'unmatched';
+  // There is no implicit status guard: a harmless concurrent change, such as
+  // the match job moving a row from unmatched to ambiguous, must never refuse
+  // an admin's answer. A client that wants the write to land only on the row
+  // it showed sends `expectedStatus`, checked here and again at the write.
+  if (
+    body.expectedStatus !== undefined &&
+    existing.matchStatus !== body.expectedStatus
+  ) {
+    return { ok: false, status: 409, error: ARTIST_CHANGED };
+  }
   if (
     body.confirmAutoMatch === true &&
     (existing.autoMatchedAt === null ||
       existing.spotifyArtistId !== body.spotifyArtistId)
   ) {
-    return {
-      ok: false,
-      status: 409,
-      error: 'The auto-match has changed since it was loaded',
-    };
+    return { ok: false, status: 409, error: AUTO_MATCH_CHANGED };
   }
 
   // The cached photo belongs to the Spotify identity it was fetched for, so
@@ -123,16 +142,6 @@ export const applyArtistMatch = async (
   // that changed what the page shows is a fix. "Looks right" on an
   // auto-match, or a save that repeats the current answer, says the page was
   // right all along, so it dismisses instead: no notification.
-  const unhide =
-    existing.matchStatus === 'not_an_artist' && nextStatus === 'unmatched';
-  // Any other ruling except not-an-artist writes over the status it read. If
-  // another admin ruled the row not-an-artist in between, that write set
-  // `hidden`, and an id-only write here would leave the row `unmatched` (or
-  // matched) and still hidden: a verdict nobody gave. So the write re-checks
-  // the status it read. A not-an-artist ruling needs no guard, since it sets
-  // the hide itself whatever came before.
-  const guardStatus =
-    body.confirmAutoMatch !== true && !unhide && nextStatus !== 'not_an_artist';
   const changedThePage =
     body.confirmAutoMatch !== true &&
     (identityChanged ||
@@ -171,25 +180,25 @@ export const applyArtistMatch = async (
             ? { hidden: false }
             : {}),
       })
-      // A confirm re-checks at the write, not just at the read above: the
-      // match job can repoint the row in between. So does the un-hide: if
-      // another admin re-ruled the row meanwhile, its hide is no longer the
-      // verdict's to lift.
+      // Every check above is repeated at the write, since the row can change
+      // in between. A confirm: the match job can repoint the row. The
+      // un-hide: if another admin re-ruled the row meanwhile, its hide is no
+      // longer the verdict's to lift. And `expectedStatus`, when the client
+      // sent it. Nothing else is pinned.
       .where(
-        body.confirmAutoMatch === true
-          ? and(
-              eq(artists.id, id),
-              isNotNull(artists.autoMatchedAt),
-              eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
-            )
-          : unhide
-            ? and(eq(artists.id, id), eq(artists.matchStatus, 'not_an_artist'))
-            : guardStatus
-              ? and(
-                  eq(artists.id, id),
-                  eq(artists.matchStatus, existing.matchStatus),
-                )
-              : eq(artists.id, id),
+        and(
+          eq(artists.id, id),
+          body.confirmAutoMatch === true
+            ? and(
+                isNotNull(artists.autoMatchedAt),
+                eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
+              )
+            : undefined,
+          unhide ? eq(artists.matchStatus, 'not_an_artist') : undefined,
+          body.expectedStatus !== undefined
+            ? eq(artists.matchStatus, body.expectedStatus)
+            : undefined,
+        ),
       )
       .returning();
     if (row) {
@@ -203,19 +212,21 @@ export const applyArtistMatch = async (
   });
 
   if (!updated) {
-    return body.confirmAutoMatch === true
-      ? {
-          ok: false,
-          status: 409,
-          error: 'The auto-match has changed since it was loaded',
-        }
-      : unhide || guardStatus
-        ? {
-            ok: false,
-            status: 409,
-            error: 'The artist has changed since it was loaded',
-          }
-        : { ok: false, status: 404, error: 'Artist not found' };
+    // No row matched: either it is gone, or a guard refused it. Read it again
+    // to tell the two apart.
+    const [current] = await db
+      .select({ id: artists.id })
+      .from(artists)
+      .where(eq(artists.id, id));
+    if (!current) {
+      return { ok: false, status: 404, error: 'Artist not found' };
+    }
+    return {
+      ok: false,
+      status: 409,
+      error:
+        body.confirmAutoMatch === true ? AUTO_MATCH_CHANGED : ARTIST_CHANGED,
+    };
   }
 
   return {

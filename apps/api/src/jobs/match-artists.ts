@@ -355,7 +355,7 @@ export const runMatchArtists = async (
         }
       }
 
-      await db
+      const written = await db
         .update(artists)
         .set({
           matchStatus: result.status,
@@ -366,7 +366,13 @@ export const runMatchArtists = async (
           spotifyCandidatesFetchedAt: checkedAt,
           updatedAt: checkedAt,
         })
-        .where(eq(artists.id, row.id));
+        // A human answer given while Spotify was searching wins, as on the
+        // auto-match write above. Unguarded, a not-an-artist ruling made
+        // mid-search was overwritten to ambiguous or no_match while its hide
+        // stayed, leaving a hidden row back in the queue as if undecided.
+        .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
+        .returning({ id: artists.id });
+      if (written.length === 0) continue;
       if (result.status === 'ambiguous') {
         summary.ambiguous += 1;
       } else {

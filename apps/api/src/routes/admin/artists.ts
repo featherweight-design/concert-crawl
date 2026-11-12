@@ -122,12 +122,8 @@ const windowFilter = (window: z.infer<typeof windowSchema>): SQL =>
 // panel's count, so the two can't disagree. Listening history is not a follow
 // (the artist page's own rule), so Spotify top-artist rows are left out. A fan
 // can follow both by hand and through Spotify, so users are counted, not rows.
-const watchingFollowsOf = (canonicalName: SQL | string): SQL =>
-  sql`${userArtistFollows.canonicalName} = ${canonicalName} and ${userArtistFollows.source} <> 'spotify_top'`;
-const watchingUsersCount = (): SQL<number> =>
-  sql<number>`count(distinct ${userArtistFollows.userId})::int`;
 const watchingCountExpr = (canonicalName: SQL | string): SQL<number> =>
-  sql<number>`(select ${watchingUsersCount()} from ${userArtistFollows} where ${watchingFollowsOf(canonicalName)})`;
+  sql<number>`(select count(distinct ${userArtistFollows.userId})::int from ${userArtistFollows} where ${userArtistFollows.canonicalName} = ${canonicalName} and ${userArtistFollows.source} <> 'spotify_top')`;
 
 // The outer row's canonical name, qualified for the same reason as
 // `outerArtistId`.
@@ -192,7 +188,13 @@ const listQuerySchema = z
       message: '`window` is only valid with status=to_check',
       path: ['window'],
     },
-  );
+  )
+  // A search ignores `status` and would ignore `window` with it, so a window
+  // sent alongside one is a filter the response silently drops. Refuse it.
+  .refine((query) => query.window === undefined || query.search === undefined, {
+    message: '`window` cannot be combined with `search`',
+    path: ['window'],
+  });
 
 /**
  * Exhausted rows move OUT of the queue they came from rather than sitting in
@@ -754,12 +756,14 @@ artistsAdminRouter.get(
       )
       .orderBy(asc(artistReports.createdAt), asc(artistReports.id));
 
-    // The list's Watching count, built from the same fragments so the row and
-    // the panel agree, counted straight off the follows for this one name.
+    // The list's Watching count, the same expression so the row and the panel
+    // agree, bound to this name rather than correlated to an artists row, so
+    // it needs no second artists query. The FROM only gives the scalar a row
+    // to ride on; with no follows at all there is no row, and that reads 0.
     const [followers] = await db
-      .select({ total: watchingUsersCount() })
+      .select({ total: watchingCountExpr(artist.canonicalName) })
       .from(userArtistFollows)
-      .where(watchingFollowsOf(artist.canonicalName));
+      .limit(1);
     // Next show: the list computes it in SQL (`nextShowDateExpr` and
     // `nextShowVenueExpr`), this panel through `loadNextShowByCanonical`. Kept
     // apart on purpose: this response's `nextShow` is the loader's

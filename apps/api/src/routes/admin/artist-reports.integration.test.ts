@@ -27,7 +27,12 @@ import {
 } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
 import { testDb } from '../../test/helpers/db.js';
-import { clearTables, seedArtist } from '../../test/helpers/seed.js';
+import {
+  clearTables,
+  seedArtist,
+  seedEvent,
+  seedVenue,
+} from '../../test/helpers/seed.js';
 
 const app = createApp();
 
@@ -185,6 +190,56 @@ describe('admin artist reports', () => {
         followerCount: 1,
         nextShow: null,
       });
+    });
+
+    // The list computes the next show in SQL and the panel through
+    // `loadNextShowByCanonical`, so the two are pinned to agree. Two shows on
+    // the same day, seeded latest first, so only the shared date, show time,
+    // id order can make them agree.
+    it('shows the same next show as the list row', async () => {
+      await report(artist.id, 'user_a');
+      const lateRoom = await seedVenue({
+        name: 'Aaa Late Room',
+        slug: 'aaa-late-room',
+      });
+      const earlyRoom = await seedVenue({
+        name: 'Zzz Early Room',
+        slug: 'zzz-early-room',
+      });
+      await seedEvent(lateRoom.id, {
+        artist: 'Nightjar Choir',
+        canonicalArtist: artist.canonicalName,
+        date: '2099-01-01',
+        showTime: '21:00',
+      });
+      await seedEvent(earlyRoom.id, {
+        artist: 'Nightjar Choir',
+        canonicalArtist: artist.canonicalName,
+        date: '2099-01-01',
+        showTime: '18:00',
+      });
+
+      const list = await call('GET', '?status=reported');
+      const listed = (await list.json()) as {
+        data: {
+          id: string;
+          nextShow: { date: string; venueName: string | null } | null;
+        }[];
+      };
+      const row = listed.data.find((entry) => entry.id === artist.id);
+      expect(row?.nextShow).toEqual({
+        date: '2099-01-01',
+        venueName: 'Zzz Early Room',
+      });
+
+      const panel = await call('GET', `/${artist.id}/reports`);
+      const { data } = (await panel.json()) as {
+        data: { matched: { nextShow: { iso: string; venue: string } | null } };
+      };
+      expect({
+        date: data.matched.nextShow?.iso,
+        venueName: data.matched.nextShow?.venue,
+      }).toEqual(row?.nextShow);
     });
 
     it('counts Watching off the follows alone, as the list row does', async () => {

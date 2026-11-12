@@ -635,26 +635,55 @@ describe('admin artists routes', () => {
     // The window is Needs you's 60-day artist window (README "Decided"), so
     // the two must agree on day 60: it counts as soon on both.
     it('counts a show exactly 60 days out as soon, as Needs you does', async () => {
-      const today = todayInDenver();
-      await seedArtist({ canonicalName: 'day 60', matchStatus: 'ambiguous' });
-      await seedArtist({ canonicalName: 'day 61', matchStatus: 'ambiguous' });
-      await seedShow('day 60', addDays(today, 60));
-      await seedShow('day 61', addDays(today, 61));
+      // Midday in Denver, so this test's "today" and the one the route binds
+      // into its SQL (`todayInDenver()`, computed in JS from `Date`) are the
+      // same day however long the requests take. Only `Date` is faked; the DB
+      // driver's timers stay real.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2030-06-15T12:00:00-06:00'));
+      try {
+        const today = todayInDenver();
+        expect(today).toBe('2030-06-15');
+        await seedArtist({ canonicalName: 'day 60', matchStatus: 'ambiguous' });
+        await seedArtist({ canonicalName: 'day 61', matchStatus: 'ambiguous' });
+        await seedShow('day 60', addDays(today, 60));
+        await seedShow('day 61', addDays(today, 61));
 
-      const names = async (query: string) =>
-        (await list(`status=to_check&${query}`)).map(
-          (row) => row.canonicalName,
-        );
-      expect(await names('window=soon')).toEqual(['day 60']);
-      expect(await names('window=later')).toEqual(['day 61']);
+        const names = async (query: string) =>
+          (await list(`status=to_check&${query}`)).map(
+            (row) => row.canonicalName,
+          );
+        expect(await names('window=soon')).toEqual(['day 60']);
+        expect(await names('window=later')).toEqual(['day 61']);
 
-      const res = await app.request('/v1/admin/artists/counts', {
-        headers: ADMIN_HEADERS,
-      });
-      expect((await res.json()).data).toMatchObject({
-        to_check_soon: 1,
-        to_check_later: 1,
-      });
+        const res = await app.request('/v1/admin/artists/counts', {
+          headers: ADMIN_HEADERS,
+        });
+        expect((await res.json()).data).toMatchObject({
+          to_check_soon: 1,
+          to_check_later: 1,
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('rejects a window with a search, which ignores it', async () => {
+      for (const query of [
+        'status=to_check&window=soon&search=nirvana',
+        'window=later&search=nirvana',
+      ]) {
+        const res = await app.request(`/v1/admin/artists?${query}`, {
+          headers: ADMIN_HEADERS,
+        });
+        expect(res.status).toBe(400);
+      }
+      // An empty search is no search, so the window still applies.
+      const ok = await app.request(
+        '/v1/admin/artists?status=to_check&window=soon&search=',
+        { headers: ADMIN_HEADERS },
+      );
+      expect(ok.status).toBe(200);
     });
 
     it('rejects a window off the To check tab', async () => {
@@ -1272,47 +1301,146 @@ describe('admin artists routes', () => {
       expect(row?.matchCheckedAt).not.toBeNull();
     });
 
-    it('409s rather than leave a row hidden when a not-an-artist ruling lands mid-write', async () => {
-      const id = await seedArtist({
-        canonicalName: 'nirvana',
-        matchStatus: 'ambiguous',
+    describe('concurrent changes and expectedStatus', () => {
+      // Runs `between` after the request has read the row and before it
+      // writes: the window another admin or the match job can land in.
+      const patchWithChangeBeforeWrite = async (
+        id: string,
+        body: Record<string, unknown>,
+        between: () => Promise<unknown>,
+      ): Promise<Response> => {
+        const realTransaction = testDb.transaction.bind(testDb);
+        const transactionSpy = vi
+          .spyOn(testDb, 'transaction')
+          .mockImplementationOnce(async (run, config) => {
+            await between();
+            return realTransaction(run, config);
+          });
+        try {
+          return await app.request(`/v1/admin/artists/${id}`, {
+            method: 'PATCH',
+            headers: ADMIN_HEADERS,
+            body: JSON.stringify(body),
+          });
+        } finally {
+          transactionSpy.mockRestore();
+        }
+      };
+      const setStatus = (id: string, matchStatus: 'unmatched' | 'ambiguous') =>
+        testDb.update(artists).set({ matchStatus }).where(eq(artists.id, id));
+      const readRow = async (id: string) =>
+        (await testDb.select().from(artists).where(eq(artists.id, id)))[0];
+
+      it('lands over a harmless concurrent change when no expectedStatus is sent', async () => {
+        const id = await seedArtist({
+          canonicalName: 'nirvana',
+          matchStatus: 'unmatched',
+        });
+
+        // The match job moves the row on while the admin's answer is in flight.
+        const res = await patchWithChangeBeforeWrite(
+          id,
+          { spotifyArtistId: null, matchStatus: 'no_match' },
+          () => setStatus(id, 'ambiguous'),
+        );
+
+        expect(res.status).toBe(200);
+        expect((await readRow(id))?.matchStatus).toBe('no_match');
       });
 
-      // Another admin rules the row not-an-artist after this request read it
-      // and before it writes.
-      const realTransaction = testDb.transaction.bind(testDb);
-      const transactionSpy = vi
-        .spyOn(testDb, 'transaction')
-        .mockImplementationOnce(async (run, config) => {
-          await testDb
-            .update(artists)
-            .set({ matchStatus: 'not_an_artist', hidden: true })
-            .where(eq(artists.id, id));
-          return realTransaction(run, config);
+      it('409s when the row changed under a sent expectedStatus mid-write', async () => {
+        const id = await seedArtist({
+          canonicalName: 'nirvana',
+          matchStatus: 'ambiguous',
         });
-      try {
+
+        const res = await patchWithChangeBeforeWrite(
+          id,
+          {
+            spotifyArtistId: null,
+            matchStatus: 'no_match',
+            expectedStatus: 'ambiguous',
+          },
+          () => setStatus(id, 'unmatched'),
+        );
+
+        expect(res.status).toBe(409);
+        expect((await res.json()).error).toBe(
+          'The artist has changed since it was loaded',
+        );
+        expect((await readRow(id))?.matchStatus).toBe('unmatched');
+      });
+
+      it('409s a stale expectedStatus before writing anything', async () => {
+        const id = await seedArtist({
+          canonicalName: 'nirvana',
+          matchStatus: 'unmatched',
+        });
+
+        const res = await app.request(`/v1/admin/artists/${id}`, {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({
+            spotifyArtistId: 'sp_nirvana',
+            expectedStatus: 'ambiguous',
+          }),
+        });
+
+        expect(res.status).toBe(409);
+        expect((await res.json()).error).toBe(
+          'The artist has changed since it was loaded',
+        );
+        expect((await readRow(id))?.matchStatus).toBe('unmatched');
+      });
+
+      it('writes when expectedStatus still holds', async () => {
+        const id = await seedArtist({
+          canonicalName: 'nirvana',
+          matchStatus: 'ambiguous',
+        });
+
+        const res = await app.request(`/v1/admin/artists/${id}`, {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({
+            spotifyArtistId: 'sp_nirvana',
+            expectedStatus: 'ambiguous',
+          }),
+        });
+
+        expect(res.status).toBe(200);
+        expect((await readRow(id))?.matchStatus).toBe('matched');
+      });
+
+      it('404s rather than 409s when the row is deleted mid-write', async () => {
+        const id = await seedArtist({
+          canonicalName: 'nirvana',
+          matchStatus: 'ambiguous',
+        });
+
+        const res = await patchWithChangeBeforeWrite(
+          id,
+          { spotifyArtistId: null, expectedStatus: 'ambiguous' },
+          () => testDb.delete(artists).where(eq(artists.id, id)),
+        );
+
+        expect(res.status).toBe(404);
+      });
+
+      it('rejects an expectedStatus that is not a match status', async () => {
+        const id = await seedArtist({ canonicalName: 'nirvana' });
+
         const res = await app.request(`/v1/admin/artists/${id}`, {
           method: 'PATCH',
           headers: ADMIN_HEADERS,
           body: JSON.stringify({
             spotifyArtistId: null,
-            matchStatus: 'unmatched',
+            expectedStatus: 'exhausted',
           }),
         });
-        expect(res.status).toBe(409);
-        expect((await res.json()).error).toBe(
-          'The artist has changed since it was loaded',
-        );
-      } finally {
-        transactionSpy.mockRestore();
-      }
 
-      const [row] = await testDb
-        .select()
-        .from(artists)
-        .where(eq(artists.id, id));
-      expect(row?.matchStatus).toBe('not_an_artist');
-      expect(row?.hidden).toBe(true);
+        expect(res.status).toBe(400);
+      });
     });
 
     it('404s an unknown artist', async () => {
