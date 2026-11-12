@@ -227,9 +227,22 @@ const pastShowsQuerySchema = z
   .object({
     ['q']: z.string().trim().max(80).optional(),
     scope: z.enum(['all', 'venues', 'follows']).default('all'),
+    // `<date>_<uuid>`, both halves must be real: Postgres throws on a bad
+    // date or uuid, which would be a 500 for a client-supplied string.
     cursor: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}_[0-9a-f-]{36}$/)
+      .regex(
+        /^\d{4}-\d{2}-\d{2}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      )
+      .refine((value) => {
+        const date = value.slice(0, 10);
+        const parsed = new Date(`${date}T00:00:00Z`);
+        // An invalid Date throws from toISOString, so test it first.
+        return (
+          !Number.isNaN(parsed.getTime()) &&
+          parsed.toISOString().slice(0, 10) === date
+        );
+      })
       .optional(),
   })
   .strict();

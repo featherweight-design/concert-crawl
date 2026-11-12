@@ -218,5 +218,16 @@ describe('GET /v1/history/past-shows', () => {
     expect(
       (await app.request('/v1/history/past-shows?cursor=junk')).status,
     ).toBe(400);
+    // Right shape, impossible values: Postgres would throw, so it is a 400.
+    const uuid = '00000000-0000-4000-8000-000000000000';
+    for (const cursor of [
+      `2026-13-45_${uuid}`,
+      `2026-02-30_${uuid}`,
+      `2026-05-01_${'-'.repeat(36)}`,
+    ]) {
+      expect(
+        (await app.request(`/v1/history/past-shows?cursor=${cursor}`)).status,
+      ).toBe(400);
+    }
   });
 });
