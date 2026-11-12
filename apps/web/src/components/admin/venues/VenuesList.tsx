@@ -4,6 +4,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Search, X } from 'lucide-react';
+import type { NeedsYouItem } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AddVenueModal } from '@/components/admin/AddVenueModal';
 import {
@@ -15,6 +16,7 @@ import {
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import {
   VENUE_FILTERS,
+  needsByVenue,
   crawlingLabel,
   foldOk,
   latestRunLine,
@@ -200,11 +202,35 @@ const DesktopRow = ({
       className="hover:bg-[var(--surface-2)]"
       style={{ ...ROW, gridTemplateColumns: COLUMNS }}
     >
-      {/* HOLD: the Needs you dot waits on 2a (ruling 18). */}
-      <span aria-hidden />
+      {/* `04/venues-desktop`: the Needs you dot, in its 8px column. */}
+      <span style={{ display: 'flex' }}>
+        {venue.needsLook && <NeedsYouDot halo />}
+      </span>
       <RowCells venue={venue} />
     </Link>
   );
+
+/**
+ * The pink Needs you dot (`04/venues-desktop`, `04/venues-mobile`): 8px in
+ * the accent, with a 3px halo on desktop. Screen readers hear its name.
+ */
+const NeedsYouDot = ({ halo = false }: { halo?: boolean }) => (
+  <span
+    data-testid="needs-you-dot"
+    style={{
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      flex: 'none',
+      background: 'var(--accent)',
+      boxShadow: halo
+        ? '0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)'
+        : undefined,
+    }}
+  >
+    <span className="sr-only">{COPY.needsYouDot}</span>
+  </span>
+);
 
 const RowCells = ({ venue }: { venue: VenueListRow }) => (
   <>
@@ -297,9 +323,12 @@ const PhoneCard = ({ venue }: { venue: VenueListRow }) => (
       }}
     >
       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ ...ELLIPSIS, flex: 1, fontSize: 15, fontWeight: 700 }}>
+        <span style={{ ...ELLIPSIS, fontSize: 15, fontWeight: 700 }}>
           {venue.name}
         </span>
+        {/* `04/venues-mobile`: the dot follows the name, without the halo. */}
+        {venue.needsLook && <NeedsYouDot />}
+        <span style={{ flex: 1 }} />
         <span
           style={{
             fontSize: 12.5,
@@ -322,15 +351,35 @@ const PhoneCard = ({ venue }: { venue: VenueListRow }) => (
  * the ⋯ menu land in parts 3 and 4. `venues` is null when the list failed to
  * load.
  */
-export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
+export const VenuesList = ({
+  venues,
+  needsYou = null,
+}: {
+  venues: VenueListRow[] | null;
+  /** Open Needs you items; null when that list didn't load. */
+  needsYou?: readonly Pick<NeedsYouItem, 'venueId'>[] | null;
+}) => {
   const router = useRouter();
   const isPhone = useIsPhone();
   const [filter, setFilter] = useState<VenueFilter>('all');
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(false);
 
-  // The API leaves taken-down venues out (row 11).
-  const listed = useMemo(() => venues ?? [], [venues]);
+  // The API leaves taken-down venues out (row 11). Each row learns whether it
+  // has an item in Needs you; without that list, no row does.
+  const listed = useMemo(() => {
+    const rows = venues ?? [];
+    if (needsYou === null) return rows;
+    const counts = needsByVenue(needsYou);
+    return rows.map((venue) => ({
+      ...venue,
+      needsLook: counts.has(venue.id),
+    }));
+  }, [venues, needsYou]);
+  // Without the Needs you list the chip would filter on nothing, so it goes.
+  const filters = VENUE_FILTERS.filter(
+    (key) => key !== 'needsLook' || needsYou !== null,
+  );
   const upcoming = listed.reduce((sum, venue) => sum + venue.eventCount, 0);
   const sorted = useMemo(
     () =>
@@ -508,7 +557,7 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
           scrollbarWidth: 'none',
         }}
       >
-        {VENUE_FILTERS.map((key) => {
+        {filters.map((key) => {
           const on = filter === key;
           return (
             <button

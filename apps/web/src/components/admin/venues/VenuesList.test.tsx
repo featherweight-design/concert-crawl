@@ -75,6 +75,34 @@ describe('VenuesList', () => {
     expect(screen.getByTestId('empty-state')).toBeInTheDocument();
   });
 
+  it('dots the venues with a Needs you item and filters to them', () => {
+    const items = [
+      { venueId: 'Venue 03' },
+      { venueId: 'Venue 07' },
+      { venueId: 'Venue 07' },
+      { venueId: null },
+    ];
+    render(<VenuesList venues={twelveOk} needsYou={items} />);
+    expect(screen.getAllByTestId('needs-you-dot')).toHaveLength(2);
+    // Ruling 19: the dotted rows rise above the OK ones.
+    const rows = screen.getAllByTestId('venue-row');
+    expect(rows[0]).toHaveAttribute('data-venue-id', 'Venue 03');
+    expect(rows[1]).toHaveAttribute('data-venue-id', 'Venue 07');
+
+    const chip = screen.getByRole('button', { name: /^Needs a look/ });
+    expect(chip).toHaveTextContent('2');
+    fireEvent.click(chip);
+    expect(screen.getAllByTestId('venue-row')).toHaveLength(2);
+  });
+
+  it('renders the list without dots or the chip when Needs you failed', () => {
+    render(<VenuesList venues={twelveOk} needsYou={null} />);
+    expect(screen.getAllByTestId('venue-row')).toHaveLength(10);
+    expect(screen.queryByTestId('needs-you-dot')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Needs a look/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Paused/ })).toBeInTheDocument();
+  });
+
   it("says Couldn't load and retries", () => {
     render(<VenuesList venues={null} />);
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));

@@ -507,10 +507,13 @@ export const ADMIN_COPY = {
     filtersLabel: 'Filter venues',
     filters: {
       all: 'All',
+      needsLook: 'Needs a look',
       paused: 'Paused',
       hidden: 'Hidden',
       disallowed: 'Disallowed',
     },
+    // The pink dot's name for screen readers; the dot itself is decoration.
+    needsYouDot: 'In Needs you',
     columns: {
       venue: 'Venue',
       onSite: 'On the site',
