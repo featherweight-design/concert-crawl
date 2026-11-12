@@ -73,7 +73,12 @@ export const NotifLoading = ({ rows = 5 }: { rows?: number | undefined }) => (
     >
       {NOTIFICATIONS_COPY.loading}
     </span>
-    <NotifDayDivider label={NOTIFICATIONS_COPY.loadingVisible} />
+    {/* The hidden sentence above is the spoken form; the visible divider is
+        decoration, so it is hidden from assistive tech rather than read as a
+        second loading message. */}
+    <div aria-hidden="true">
+      <NotifDayDivider label={NOTIFICATIONS_COPY.loadingVisible} />
+    </div>
     {Array.from({ length: rows }).map((_, i) => (
       <NotifSkeletonRow key={i} opacity={Math.max(0.2, 1 - i * ROW_FADE)} />
     ))}
