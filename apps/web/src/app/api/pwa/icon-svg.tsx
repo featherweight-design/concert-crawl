@@ -47,8 +47,14 @@ interface PwaIconSvgProps {
   rounded?: boolean;
 }
 
-/** The launch tile's corner radius, 28 at 128px, in the 96-unit art. */
-export const STARTUP_TILE_RADIUS_UNITS = (28 / 128) * ICON_VIEWBOX;
+/** The splash ground the launch tile sits on (board art colour). */
+export const PWA_SPLASH_BACKGROUND = '#070A1A'; // fwd-allow-hex: board art colour
+/** The launch tile's size in CSS px, and its corner radius at that size. */
+export const STARTUP_TILE_CSS_PX = 128;
+export const STARTUP_TILE_RADIUS_CSS_PX = 28;
+/** The same corner radius in the 96-unit art. */
+export const STARTUP_TILE_RADIUS_UNITS =
+  (STARTUP_TILE_RADIUS_CSS_PX / STARTUP_TILE_CSS_PX) * ICON_VIEWBOX;
 
 export function PwaIconSvg({
   size,
