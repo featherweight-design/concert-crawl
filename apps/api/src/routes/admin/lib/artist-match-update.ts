@@ -27,8 +27,9 @@ export const artistMatchBodySchema = z
     // minutes) is refused with a 409. When it is omitted, nothing pins the
     // status and that race stays open: the last write wins. So the race is
     // closed only for callers that send it. The Needs you artist answers send
-    // the status their item showed; the 4c admin page will. It pins the status
-    // only, not the Spotify identity.
+    // the status of the item they just loaded (their key already refuses a
+    // stale click); the 4c admin page will send what its screen showed. It
+    // pins the status only, not the Spotify identity.
     expectedStatus: matchStatusSchema.optional(),
   })
   .strict();

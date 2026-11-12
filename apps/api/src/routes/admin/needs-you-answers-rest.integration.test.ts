@@ -106,6 +106,33 @@ describe('admin needs-you answers', () => {
     expect(await auditRows('needs_you.undo')).toHaveLength(1);
   });
 
+  it('refuses an artist answer whose key names a status the row has since left, writing nothing', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const artist = await seedArtist({
+      name: 'Moved On',
+      matchStatus: 'ambiguous',
+      spotifyArtistId: 'sp-moved',
+    });
+    await seedEvent(venue.id, { artist: artist.name, date: inDays(10) });
+    const [item] = await itemsOf('artist');
+    expect(item?.key).toBe(`artist:${artist.id}:ambiguous`);
+    // Another admin rules on it while this one's screen still shows it.
+    await testDb
+      .update(artists)
+      .set({ matchStatus: 'no_match', spotifyArtistId: null })
+      .where(eq(artists.id, artist.id));
+
+    const res = await answer(item?.key ?? '', { answer: 'no_photo' });
+    expect(res.status).toBe(404);
+    const [row] = await testDb
+      .select()
+      .from(artists)
+      .where(eq(artists.id, artist.id));
+    expect(row?.matchStatus).toBe('no_match');
+    expect(await auditRows('needs_you.answer')).toHaveLength(0);
+  });
+
   it('approve_all promotes every batch submission once, through the approve path', async () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
