@@ -80,6 +80,9 @@ async function main(): Promise<void> {
   const maxCostUsd = parseMaxCost();
   const summaryFile = parseSummaryFile();
   const onlyFlattenedBillings = process.argv.includes('--only-flattened');
+  // Off unless asked: a repair pass fixes bills and never hides a show on a
+  // model's "not a concert" (it varied run to run and hid real concerts).
+  const hideNonConcerts = process.argv.includes('--hide-non-concerts');
   let spentUsd = 0;
   let calls = 0;
 
@@ -106,6 +109,7 @@ async function main(): Promise<void> {
     },
     limit,
     onlyFlattenedBillings,
+    hideNonConcerts,
     shouldStop: () => spentUsd >= maxCostUsd,
     // Every change, not a sample: the summary is the list an apply is judged by.
     sampleSize: Number.MAX_SAFE_INTEGER,
