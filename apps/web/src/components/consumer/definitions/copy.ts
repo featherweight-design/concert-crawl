@@ -1522,7 +1522,7 @@ export const CONSUMER_COPY = {
     // price's check (until migration 0100 lets several fans file one each).
     updatePendingHeading: 'Already waiting.',
     updatePendingBody:
-      'An update is already waiting on this price. Check back once it’s reviewed.',
+      'Another fan’s update is ahead of yours. Check back once it’s reviewed.',
     errorHeading: "Didn't go through.",
     errorBody:
       "Couldn't reach the server. Your inputs are still here. Try again or come back later.",
