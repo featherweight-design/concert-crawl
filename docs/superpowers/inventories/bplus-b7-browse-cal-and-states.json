@@ -8,6 +8,9 @@
       "steps": [
         {
           "goto": "/events?view=cal",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
@@ -21,11 +24,13 @@
       "steps": [
         {
           "goto": "/events?view=cal",
+          "settle": 1500
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
-          "wait": "[data-testid=\"day-tile\"]",
-          "settle": 1500
+          "wait": "[data-testid=\"day-tile\"]"
         },
         {
           "clickRole": "button",
@@ -41,6 +46,9 @@
       "steps": [
         {
           "goto": "/events?search=zzqx-contact-sheet",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
