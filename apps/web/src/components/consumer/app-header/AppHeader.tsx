@@ -16,7 +16,6 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 const copy = CONSUMER_COPY.appHeader;
 
 const ACTIVE_TAB_STYLE = {
-  border: '1px solid transparent',
   background:
     'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, color-mix(in oklch, var(--signal) 60%, transparent), color-mix(in oklch, var(--accent) 60%, transparent)) border-box',
 } as const;
@@ -98,14 +97,15 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                   href={tab.href}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'shrink-0 rounded-lg px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
+                    'shrink-0 rounded-lg border border-transparent px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
                     isActive
                       ? 'font-bold text-fg'
                       : 'bg-transparent font-medium text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg',
                   )}
                   // B+ draws the active tab as a bordered pill whose edge runs
-                  // from the signal to the accent. The transparent border lets
-                  // the gradient show through; the fill sits inside it.
+                  // from the signal to the accent. Every tab carries the same
+                  // transparent border so the row never shifts; the active tab
+                  // only swaps its background to show the gradient through it.
                   style={isActive ? ACTIVE_TAB_STYLE : undefined}
                 >
                   {tab.label}
