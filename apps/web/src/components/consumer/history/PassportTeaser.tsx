@@ -40,64 +40,70 @@ const TeaserBody = ({
 }: {
   stats: HistoryStats;
   shows: readonly HistoryShow[];
-}) => (
-  <>
-    <span className="flex min-w-0 flex-1 flex-col gap-1">
-      <span
-        style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: 15.5,
-          fontWeight: 800,
-          letterSpacing: '-0.015em',
-          color: 'var(--fg)',
-        }}
-      >
-        {COPY.headline}
-      </span>
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10.5,
-          fontWeight: 500,
-          letterSpacing: '0.02em',
-          color: 'var(--fg-muted)',
-        }}
-      >
-        {COPY.summary(stats.nights, stats.venues, stats.topGenre)}
-      </span>
-      {PASSPORT_ROUTE !== null && (
+}) => {
+  const stamps = teaserStampsFor(shows);
+  return (
+    <>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '-0.005em',
-            color: 'var(--accent)',
+            fontSize: 15.5,
+            fontWeight: 800,
+            letterSpacing: '-0.015em',
+            color: 'var(--fg)',
           }}
         >
-          {COPY.link}
+          {COPY.headline}
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10.5,
+            fontWeight: 500,
+            letterSpacing: '0.02em',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {COPY.summary(stats.nights, stats.venues, stats.topGenre)}
+        </span>
+        {PASSPORT_ROUTE !== null && (
+          <span
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '-0.005em',
+              color: 'var(--accent)',
+            }}
+          >
+            {COPY.link}
+          </span>
+        )}
+      </span>
+      {/* Decorative — the stat line above already carries every fact. With no
+        stamps the column would be a bare dashed rule, so it is left out. */}
+      {stamps.length > 0 && (
+        <span
+          aria-hidden
+          data-testid="passport-teaser-stamps"
+          className="grid shrink-0 grid-cols-2 gap-1.5 self-stretch border-l border-dashed border-border-strong pl-3.5"
+          style={{ alignContent: 'center' }}
+        >
+          {stamps.map((show) => (
+            <VenueStamp
+              key={show.venueSlug}
+              venueSlug={show.venueSlug}
+              venueName={show.venueName}
+              seed={show.artist}
+              size={40}
+            />
+          ))}
         </span>
       )}
-    </span>
-    {/* Decorative — the stat line above already carries every fact. */}
-    <span
-      aria-hidden
-      data-testid="passport-teaser-stamps"
-      className="grid shrink-0 grid-cols-2 gap-1.5 self-stretch border-l border-dashed border-border-strong pl-3.5"
-      style={{ alignContent: 'center' }}
-    >
-      {teaserStampsFor(shows).map((show) => (
-        <VenueStamp
-          key={show.venueSlug}
-          venueSlug={show.venueSlug}
-          venueName={show.venueName}
-          seed={show.artist}
-          size={40}
-        />
-      ))}
-    </span>
-  </>
-);
+    </>
+  );
+};
 
 const SHELL =
   'flex items-center gap-3.5 overflow-hidden rounded-[14px] px-[18px] py-4 no-underline';

@@ -108,6 +108,20 @@ describe('PassportTeaser stamps', () => {
     }
   });
 
+  // Without a stamp the column is only its dashed left rule.
+  it('drops the stamp column when there are no shows to stamp', () => {
+    render(<PassportTeaser stats={STATS} shows={[]} />);
+
+    expect(screen.queryByTestId('passport-teaser-stamps')).toBeNull();
+    expect(screen.getByText(COPY.headline)).toBeInTheDocument();
+  });
+
+  it('keeps the stamp column when there is a show to stamp', () => {
+    render(<PassportTeaser stats={STATS} shows={SHOWS} />);
+
+    expect(screen.getByTestId('passport-teaser-stamps')).toBeInTheDocument();
+  });
+
   it('caps the block at four stamps', () => {
     const slugs = [
       'larimer-lounge',

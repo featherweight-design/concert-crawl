@@ -27,7 +27,6 @@ export interface RowPrice {
   isFloor: boolean;
   /** null is a crawled price with no corroborated submission: no chip. */
   source: SourceCategory | null;
-  observedAt: string | null;
   /**
    * A submitted price nobody has corroborated yet, shown because a number the
    * reader can sanity-check beats "tba". The row marks it; it never renders
@@ -114,9 +113,6 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
             amount: Math.round(show.currentPrice),
             isFloor: true,
             source: show.priceSourceCategory,
-            // A crawled price carries no submission timestamp; the last crawl
-            // is what last confirmed the number (#1366).
-            observedAt: show.priceObservedAt ?? show.updatedAt,
             // This payload only ever carries resolved prices.
             isPending: false,
           }
@@ -129,7 +125,7 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
       show.savedPrice !== null
         ? { at: show.savedAt, price: Math.round(show.savedPrice) }
         : null,
-    genres: show.genres ?? [],
+    genres: show.genres,
     isFollowed: false,
     crewGoing: null,
     // Every row on this list is watched by definition, so the tick would be on
@@ -158,7 +154,6 @@ export function fromEventWithVenue(
           amount: Math.round(headline.price),
           isFloor: true,
           source: headline.sourceCategory,
-          observedAt: headline.observedAt,
           isPending: headline.isPending,
         }
       : legacyAmount !== null && Number.isFinite(legacyAmount)
@@ -166,7 +161,6 @@ export function fromEventWithVenue(
             amount: Math.round(legacyAmount),
             isFloor: true,
             source: null,
-            observedAt: null,
             isPending: false,
           }
         : null;
@@ -244,7 +238,6 @@ export function fromArtistShow(
             // sends the amount alone — no provenance and no observation time —
             // so the price renders bare.
             source: null,
-            observedAt: null,
             isPending: false,
           }
         : null,

@@ -21,6 +21,7 @@ const show = (overrides: Partial<WatchingShow>): WatchingShow => ({
   watchStatus: 'live',
   updatedAt: '2026-11-01T00:00:00.000Z',
   priceObservedAt: null,
+  genres: [],
   imageUrl: null,
   artistPhotoUrl: null,
   attendingAt: null,

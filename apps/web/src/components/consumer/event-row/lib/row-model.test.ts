@@ -118,9 +118,10 @@ describe('fromEventWithVenue', () => {
       amount: 68,
       isFloor: true,
       source: 'standard',
-      observedAt: '2026-08-01T00:00:00Z',
       isPending: false,
     });
+    // Nothing on a row reads a price's age, so the row model keeps none.
+    expect(price).not.toHaveProperty('observedAt');
   });
 
   it('prefers the tier headline over the legacy scalar', () => {
@@ -146,7 +147,6 @@ describe('fromEventWithVenue', () => {
       amount: 25,
       isFloor: true,
       source: null,
-      observedAt: null,
       isPending: false,
     });
   });
@@ -230,6 +230,7 @@ const baseWatchingShow: WatchingShow = {
   watchStatus: 'live',
   updatedAt: '2026-06-24T00:00:00Z',
   priceObservedAt: null,
+  genres: [],
   imageUrl: null,
   artistPhotoUrl: null,
   attendingAt: null,
@@ -262,20 +263,15 @@ describe('fromWatchingShow', () => {
     expect(fromWatchingShow(baseWatchingShow).isWatching).toBe(false);
   });
 
-  // An optimistic row carries no `genres` key at all (exact optional types).
-  const withoutGenres = ({
-    genres: _genres,
-    ...rest
-  }: typeof baseWatchingShow) => rest;
-
-  // B+ rule 2: the genre edge, ring and chip all read these.
-  it('carries the genres, and none for an optimistic row without them', () => {
+  // B+ rule 2: the genre edge, ring and chip all read these. An optimistic
+  // row carries `genres: []` until the server's row replaces it.
+  it('carries the genres, and none for an optimistic row', () => {
     expect(
       fromWatchingShow({ ...baseWatchingShow, genres: ['jazz'] }).genres,
     ).toEqual(['jazz']);
-    expect(fromWatchingShow(withoutGenres(baseWatchingShow)).genres).toEqual(
-      [],
-    );
+    expect(
+      fromWatchingShow({ ...baseWatchingShow, genres: [] }).genres,
+    ).toEqual([]);
   });
 
   // Dropping the portrait here sent every artwork-less watched show to

@@ -65,6 +65,8 @@ export function useWatchToggle() {
         priceObservedAt: null,
         imageUrl: null,
         artistPhotoUrl: null,
+        // Nothing to report until the server's row replaces this one.
+        genres: [],
         attendingAt: null,
       };
       const next = isCurrentlyWatching

@@ -6,11 +6,11 @@
 // left-aligned status-rail layout used across the app; these boards draw a
 // different shape for My shows only.
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { MY_SHOWS_GRADIENT } from './definitions/constants';
 
-interface MyShowsEmptyCardProps {
+interface MyShowsEmptyCardBaseProps {
   /** Decorative art above the eyebrow. */
   badge: ReactNode;
   eyebrow: string;
@@ -18,8 +18,22 @@ interface MyShowsEmptyCardProps {
   tone: 'accent' | 'signal';
   title: string;
   body: string;
-  cta: { label: string; href: string };
+  /** The body line's measure. Artists' board sets it a little wider. */
+  bodyMaxWidth?: number;
+  testId?: string;
+  style?: CSSProperties;
 }
+
+/**
+ * Either the one gradient link Watching and Concerts draw, or `actions`: a
+ * slot for a surface whose primary is not a plain link (Artists opens the
+ * search palette) or that adds a secondary under it.
+ */
+type MyShowsEmptyCardProps = MyShowsEmptyCardBaseProps &
+  (
+    | { cta: { label: string; href: string }; actions?: never }
+    | { actions: ReactNode; cta?: never }
+  );
 
 export const MyShowsEmptyCard = ({
   badge,
@@ -27,11 +41,16 @@ export const MyShowsEmptyCard = ({
   tone,
   title,
   body,
+  bodyMaxWidth = 360,
+  testId = 'my-shows-empty-card',
+  style,
   cta,
+  actions,
 }: MyShowsEmptyCardProps) => (
   <div
-    data-testid="my-shows-empty-card"
+    data-testid={testId}
     className="flex flex-col items-center rounded-[18px] border border-dashed border-border-strong px-5 py-8 text-center sm:px-10 sm:py-10"
+    style={style}
   >
     <div aria-hidden className="mb-5 flex justify-center">
       {badge}
@@ -66,7 +85,7 @@ export const MyShowsEmptyCard = ({
     <p
       style={{
         margin: '10px 0 0',
-        maxWidth: 360,
+        maxWidth: bodyMaxWidth,
         fontFamily: 'var(--font-ui)',
         fontSize: 14,
         lineHeight: 1.55,
@@ -75,21 +94,25 @@ export const MyShowsEmptyCard = ({
     >
       {body}
     </p>
-    <Link
-      href={cta.href}
-      className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-[14px] px-6 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-      style={{
-        backgroundImage: MY_SHOWS_GRADIENT,
-        color: 'var(--fg-on-accent)',
-        fontFamily: 'var(--font-ui)',
-        fontSize: 15,
-        fontWeight: 800,
-        letterSpacing: '-0.01em',
-        boxShadow:
-          '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
-      }}
-    >
-      {cta.label}
-    </Link>
+    {cta === undefined ? (
+      <div className="mt-5 flex flex-col items-center gap-3">{actions}</div>
+    ) : (
+      <Link
+        href={cta.href}
+        className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-[14px] px-6 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        style={{
+          backgroundImage: MY_SHOWS_GRADIENT,
+          color: 'var(--fg-on-accent)',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 15,
+          fontWeight: 800,
+          letterSpacing: '-0.01em',
+          boxShadow:
+            '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+        }}
+      >
+        {cta.label}
+      </Link>
+    )}
   </div>
 );

@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { rowChips, chipBudget } from './row-chips';
 import type { EventRowShow } from './row-model';
 
-const HOUR = 60 * 60 * 1000;
-
 function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
   return {
     id: 'evt-1',
@@ -30,12 +28,13 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
   };
 }
 
-function priceObservedHoursAgo(hours: number, source: 'boxoffice' | null) {
+// A row price carries no observation time: with the Stale chip gone, nothing
+// on a row reads a price's age.
+function priceFrom(source: 'boxoffice' | null) {
   return {
     amount: 68,
     isFloor: true,
     source,
-    observedAt: new Date(Date.now() - hours * HOUR).toISOString(),
     isPending: false,
   };
 }
@@ -63,7 +62,7 @@ describe('rowChips', () => {
 
   it('offers no provenance on Browse, whatever the price', () => {
     const chips = rowChips(
-      makeShow({ price: priceObservedHoursAgo(48, 'boxoffice') }),
+      makeShow({ price: priceFrom('boxoffice') }),
       'browse',
     );
     expect(chips).toEqual([]);
@@ -72,7 +71,7 @@ describe('rowChips', () => {
   // B+ dropped the Stale price chip everywhere: an old price is no chip at all.
   it('offers no Stale chip on Watching, however old the price', () => {
     const chips = rowChips(
-      makeShow({ price: priceObservedHoursAgo(24 * 30, 'boxoffice') }),
+      makeShow({ price: priceFrom('boxoffice') }),
       'watching',
     );
     expect(chips.map((chip) => chip.key)).toEqual(['provenance']);
@@ -89,25 +88,19 @@ describe('rowChips', () => {
       'crewLens',
       'artist',
     ] as const) {
-      const chips = rowChips(
-        makeShow({ price: priceObservedHoursAgo(24 * 30, null) }),
-        surface,
-      );
+      const chips = rowChips(makeShow({ price: priceFrom(null) }), surface);
       expect(chips.map((chip) => chip.label).join('|')).not.toContain('Stale');
     }
   });
 
   it('offers no provenance for a crawled price, which has none', () => {
-    const chips = rowChips(
-      makeShow({ price: priceObservedHoursAgo(2, null) }),
-      'watching',
-    );
+    const chips = rowChips(makeShow({ price: priceFrom(null) }), 'watching');
     expect(chips).toEqual([]);
   });
 
   it('labels provenance the way admin does, and leaves box office neutral', () => {
     const [chip] = rowChips(
-      makeShow({ price: priceObservedHoursAgo(2, 'boxoffice') }),
+      makeShow({ price: priceFrom('boxoffice') }),
       'watching',
     );
     expect(chip?.label).toBe('Box office');
@@ -116,7 +109,7 @@ describe('rowChips', () => {
 
   it('carries the provenance meaning for screen readers, not just the label', () => {
     const [chip] = rowChips(
-      makeShow({ price: priceObservedHoursAgo(2, 'boxoffice') }),
+      makeShow({ price: priceFrom('boxoffice') }),
       'watching',
     );
     expect(chip?.srLabel).toBe('Price source: Box office');
