@@ -35,8 +35,9 @@ export function InviteCodeField() {
       onSubmit={submit}
       style={{
         display: 'flex',
-        // Below 380 the code needs the whole row (14 mono characters), so
-        // Redeem takes a full-width row under it instead of squeezing it.
+        // Lets Redeem take its own row below 390: its `w-full` there forces
+        // the wrap, so the 14-character code keeps the whole first row.
+        // Without flexWrap the full-width button would crush the input.
         flexWrap: 'wrap',
         alignItems: 'center',
         gap: 8,
@@ -76,7 +77,7 @@ export function InviteCodeField() {
       />
       <button
         type="submit"
-        className={`${FOCUS_RING} max-[379px]:w-full`}
+        className={`${FOCUS_RING} max-[389px]:w-full`}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

@@ -56,7 +56,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           <button
             onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border-strong"
           >
             <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
           </button>

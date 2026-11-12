@@ -24,7 +24,7 @@ export const OfflinePill = () => {
         aria-hidden="true"
         className="h-2 w-2 shrink-0 rounded-full bg-warning"
       />
-      <span className="truncate">{OFFLINE_COPY.pillLabel}</span>
+      <span className="min-w-[3.25rem] truncate">{OFFLINE_COPY.pillLabel}</span>
     </div>
   );
 };
