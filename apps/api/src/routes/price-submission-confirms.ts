@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import {
+  adminSettings,
   auditLog,
   db,
   events,
@@ -177,15 +178,37 @@ priceSubmissionConfirmsRouter.post(
           .where(eq(priceSubmissions.id, submissionId))
           .for('update');
 
+        // The admin's "I approve prices myself" setting (no row, no hold).
+        // When it is on, a confirm that would promote stamps the row as held
+        // instead and leaves it pending; the Needs you price batch (or the
+        // approve button) promotes it through setSubmissionStatus.
+        const [setting] = await tx
+          .select({ hold: adminSettings.approvePricesMyself })
+          .from(adminSettings)
+          .limit(1);
+        const hold = setting?.hold ?? false;
+
         const [updatedRow] = await tx
           .update(priceSubmissions)
           .set({
             corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
-            status: sql`CASE
+            status: hold
+              ? priceSubmissions.status
+              : sql`CASE
               WHEN ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
                 THEN 'corroborated'::price_submission_status
               ELSE ${priceSubmissions.status}
             END`,
+            ...(hold
+              ? {
+                  heldForAdminAt: sql`CASE
+                    WHEN ${priceSubmissions.status} = 'pending'
+                      AND ${priceSubmissions.corroborationCount} + 1 >= ${confirmsRequired}
+                      THEN COALESCE(${priceSubmissions.heldForAdminAt}, now())
+                    ELSE ${priceSubmissions.heldForAdminAt}
+                  END`,
+                }
+              : {}),
             updatedAt: sql`now()`,
           })
           .where(

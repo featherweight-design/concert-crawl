@@ -204,6 +204,24 @@ describe('Needs you sources and ranking', () => {
       expect(items.filter((row) => row.kind === 'price-batch')).toEqual([]);
     });
 
+    it('always holds a price held for the admin, whatever its corroborations and date', async () => {
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const far = await seedEvent(venue.id, {
+        artist: 'Far',
+        date: inDays(45),
+      });
+      const held = await seedPriceSubmission(far.id, 'user-1', {
+        corroborationCount: 1,
+        heldForAdminAt: new Date(),
+      });
+
+      const items = await listNeedsYou({ now: now() });
+      const [batch] = items.filter((row) => row.kind === 'price-batch');
+      expect(batch?.kind === 'price-batch' && batch.submissionIds).toEqual([
+        held.id,
+      ]);
+    });
+
     it('is absent when the show is outside 2-30 days', async () => {
       const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
       const tooSoon = await seedEvent(venue.id, {
