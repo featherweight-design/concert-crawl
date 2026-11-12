@@ -13,8 +13,8 @@ const COPY = SHARE_APP_COPY;
 const QR_PAPER = '#ffffff'; // fwd-allow-hex: board art colour
 const QR_INK = '#070a1a'; // fwd-allow-hex: board art colour
 
-/** The QR tile's side: 204px of code in 6px of paper, 196px of code at 320. */
-const TILE = 'h-[208px] w-[208px] min-[360px]:h-[216px] min-[360px]:w-[216px]';
+/** The QR tile's side: 204px of code in 6px of paper, 184px of code at 320. */
+const TILE = 'h-[196px] w-[196px] min-[360px]:h-[216px] min-[360px]:w-[216px]';
 
 export interface TicketFace {
   handle: string | null;
@@ -67,7 +67,7 @@ export const ShareTicket = ({
 const Notch = ({ side }: { side: 'left' | 'right' }) => (
   <span
     aria-hidden="true"
-    className={`absolute -top-[9px] h-[18px] w-[18px] rounded-full border border-border bg-surface-2 ${
+    className={`absolute -top-[9px] h-[18px] w-[18px] rounded-full border border-border bg-[var(--sheet-bg)] ${
       side === 'left' ? '-left-[9px]' : '-right-[9px]'
     }`}
   />
@@ -115,7 +115,7 @@ const TicketBodyView = ({ body }: { body: TicketBody }) => {
     return (
       <div
         role="status"
-        className="flex min-h-[244px] w-[208px] flex-col items-center justify-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-border-strong p-[18px] text-center min-[360px]:w-[216px]"
+        className="flex min-h-[244px] w-[196px] flex-col items-center justify-center gap-3 rounded-[14px] border-[1.5px] border-dashed border-border-strong p-[18px] text-center min-[360px]:w-[216px]"
       >
         <QrCode size={28} strokeWidth={1.5} className="text-fg-subtle" />
         <span className="text-[13.5px] leading-[1.45] text-fg-muted">
@@ -144,13 +144,13 @@ const TicketBodyView = ({ body }: { body: TicketBody }) => {
           aria-label={body.ariaLabel}
           viewBox={`0 0 ${body.qr.size} ${body.qr.size}`}
           shapeRendering="crispEdges"
-          className="block h-[196px] w-[196px] min-[360px]:h-[204px] min-[360px]:w-[204px]"
+          className="block h-[184px] w-[184px] min-[360px]:h-[204px] min-[360px]:w-[204px]"
         >
           <rect width={body.qr.size} height={body.qr.size} fill={QR_PAPER} />
           <path d={body.qr.path} fill={QR_INK} />
         </svg>
       </div>
-      <span className="mt-3 max-w-full break-all text-center font-mono text-[11.5px] font-semibold tracking-[0.04em] text-fg-muted">
+      <span className="mt-3 max-w-full break-all text-center font-mono text-[10.5px] min-[360px]:text-[11.5px] font-semibold tracking-[0.04em] text-fg-muted">
         {body.shownUrl}
       </span>
     </>

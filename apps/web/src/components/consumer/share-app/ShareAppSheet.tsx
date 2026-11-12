@@ -194,6 +194,8 @@ export const ShareAppSheet = ({
       edgeFromSm
       closeVariant="bare"
       inset="tight"
+      raised
+      tall
     >
       {/* Grabber: decorative, phone only. The sheet closes by its X, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}
@@ -245,7 +247,13 @@ export const ShareAppSheet = ({
       </div>
 
       {/* Polite, and always mounted so a change is announced. */}
-      <div role="status" aria-live="polite">
+      {/* The sheet's 24px plus 26 = the 50px the phone board leaves under the
+          presses, or the home-indicator inset when that is larger. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="max-sm:pb-[max(26px,env(safe-area-inset-bottom))]"
+      >
         {status === 'copied' && (
           <span className="sr-only">{SHARE_COPY.copyLinkDone}</span>
         )}

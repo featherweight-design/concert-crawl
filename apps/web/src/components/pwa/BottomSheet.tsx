@@ -30,6 +30,18 @@ interface BottomSheetProps {
    * round, for boards drawn on a 20px gutter.
    */
   inset?: 'default' | 'tight';
+  /**
+   * Paints the sheet one step lighter than the default: surface-2 on the phone
+   * sheet, bg-elevated on the centered dialog (the share boards). Needs
+   * `edgeFromSm`, which is what reads the fill.
+   */
+  raised?: boolean;
+  /**
+   * Lets the phone sheet grow to 40px under the top of the viewport instead of
+   * 85vh, so a board drawn to fit a short screen does. From `sm` up the cap is
+   * still 85vh.
+   */
+  tall?: boolean;
   children: React.ReactNode;
 }
 
@@ -37,6 +49,8 @@ interface BottomSheetProps {
 const PHONE_EDGE = 'max-sm:sheet-edge';
 const DIALOG_PLAIN = 'sm:border sm:border-border sm:bg-surface-1';
 const DIALOG_EDGE = 'sheet-edge sm:[--sheet-bg:var(--surface-1)]';
+const RAISED_EDGE =
+  'sheet-edge [--sheet-bg:var(--surface-2)] sm:[--sheet-bg:var(--bg-elevated)]';
 
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
@@ -53,6 +67,8 @@ export const BottomSheet = ({
   edgeFromSm = false,
   closeVariant = 'boxed',
   inset = 'default',
+  raised = false,
+  tall = false,
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -144,10 +160,16 @@ export const BottomSheet = ({
         // query rather than a second tree, so the focus trap above is shared.
         // The width is a variable, not an interpolated class, so Tailwind
         // still sees both literal class names.
-        className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl ${
-          inset === 'tight' ? 'px-5 pb-6 pt-5' : 'p-6'
+        className={`fixed inset-x-0 bottom-0 ${
+          tall ? 'max-h-[calc(100dvh-40px)] sm:max-h-[85vh]' : 'max-h-[85vh]'
+        } overflow-y-auto rounded-t-2xl ${
+          inset === 'tight' ? 'px-4 pb-6 pt-5 min-[360px]:px-5' : 'p-6'
         } shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl ${
-          edgeFromSm ? DIALOG_EDGE : `${PHONE_EDGE} ${DIALOG_PLAIN}`
+          edgeFromSm
+            ? raised
+              ? RAISED_EDGE
+              : DIALOG_EDGE
+            : `${PHONE_EDGE} ${DIALOG_PLAIN}`
         } ${
           maxWidth === undefined ? 'sm:max-w-md' : 'sm:max-w-[var(--sheet-max)]'
         }`}
