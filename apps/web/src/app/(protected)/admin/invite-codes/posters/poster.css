@@ -577,8 +577,10 @@
   border-color: var(--signal);
   background: var(--surface-2);
 }
+/* Phone: Look is a plain two-segment toggle. The small and thumb rules sit at
+   two classes so the later `.pt-copy small` (one class) can't show them. */
 .pt-look .pt-thumb,
-.pt-look small,
+.pt-look .pt-copy small,
 .pt-look .pt-radio {
   display: none;
 }
@@ -748,6 +750,15 @@
 .pt-narrow {
   display: none;
 }
+.pt-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--fg-muted);
+  text-decoration: none;
+}
 .pt-preview {
   display: flex;
   flex-direction: column;
@@ -898,6 +909,9 @@
    segmented control, and QR plus Print pin above the shell's 64px bottom
    bar. */
 @media (max-width: 720px) {
+  .pt-tabs {
+    display: none;
+  }
   .pt-grid {
     padding-bottom: 72px;
   }
@@ -923,8 +937,14 @@
 }
 
 @media (min-width: 721px) {
-  .pt-more {
+  .pt-more,
+  .pt-back {
     display: none;
+  }
+  /* The board draws Print poster first and wider, then QR as SVG. */
+  .pt-solid {
+    order: -1;
+    flex: 1.6;
   }
   .pt-looks {
     flex-direction: column;
@@ -941,7 +961,7 @@
   .pt-look .pt-thumb {
     display: flex;
   }
-  .pt-look small {
+  .pt-look .pt-copy small {
     display: block;
   }
   .pt-look .pt-radio {
