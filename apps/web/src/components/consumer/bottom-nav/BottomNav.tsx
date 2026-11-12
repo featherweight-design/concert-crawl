@@ -263,7 +263,7 @@ export function BottomNav() {
             key={tab.key}
             href={tab.href}
             aria-current={isActive ? 'page' : undefined}
-            className="flex flex-col items-center justify-center gap-[3px]"
+            className="relative flex flex-col items-center justify-center gap-[3px]"
             // No fixed per-slot width: five slots share the bar by flex, so the
             // labels stay whole at 320px instead of being clipped to a budget.
             // 56 is a floor, not a width, and it matches the account trigger
@@ -274,9 +274,22 @@ export function BottomNav() {
               color: isActive ? 'var(--signal)' : 'var(--fg-subtle)',
             }}
           >
+            {/* B+ marks the current tab with a short gradient bar on the nav's
+                top edge, above the icon. */}
+            {isActive && (
+              <span
+                aria-hidden="true"
+                data-testid="nav-active-bar"
+                className="absolute left-1/2 top-0 h-[2px] w-7 -translate-x-1/2 rounded-b-full"
+                style={{
+                  background:
+                    'linear-gradient(90deg, var(--signal), var(--accent))',
+                }}
+              />
+            )}
             {tab.icon}
             <span
-              className="whitespace-nowrap text-[9px] tracking-[0.04em]"
+              className="whitespace-nowrap text-[10px] tracking-[0.03em]"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontWeight: isActive ? 700 : 500,

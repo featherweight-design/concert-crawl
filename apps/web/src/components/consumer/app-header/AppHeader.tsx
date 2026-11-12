@@ -15,6 +15,12 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const copy = CONSUMER_COPY.appHeader;
 
+const ACTIVE_TAB_STYLE = {
+  border: '1px solid transparent',
+  background:
+    'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, color-mix(in oklch, var(--signal) 60%, transparent), color-mix(in oklch, var(--accent) 60%, transparent)) border-box',
+} as const;
+
 interface AppHeaderProps {
   /**
    * Top-right chrome slot. Callers pass components that live to the left of
@@ -94,9 +100,13 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                   className={cn(
                     'shrink-0 rounded-lg px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
                     isActive
-                      ? 'bg-surface-2 font-bold text-fg'
+                      ? 'font-bold text-fg'
                       : 'bg-transparent font-medium text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg',
                   )}
+                  // B+ draws the active tab as a bordered pill whose edge runs
+                  // from the signal to the accent. The transparent border lets
+                  // the gradient show through; the fill sits inside it.
+                  style={isActive ? ACTIVE_TAB_STYLE : undefined}
                 >
                   {tab.label}
                 </Link>
@@ -107,6 +117,10 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
 
         {/* Right: search bar + user avatar */}
         <div className="flex items-center gap-3">
+          {/* The PWA slots (Install, Offline) sit LEFT of search on desktop,
+              as B+ `bp-account` draws them. On the phone bar they stay to the
+              left of the search circle too. */}
+          {rightSlots}
           <button
             onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
@@ -124,7 +138,6 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             </span>
           </button>
 
-          {rightSlots}
           {/* Not passed through rightSlots — that prop is the PWA slot host and
               the auth pair's position in the bar is fixed, not caller-chosen. */}
           <AuthCtaPair />

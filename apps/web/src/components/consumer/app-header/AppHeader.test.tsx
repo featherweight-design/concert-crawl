@@ -207,4 +207,17 @@ describe('AppHeader crews tab (#1226)', () => {
         .getAttribute('aria-current'),
     ).toBe('page');
   });
+
+  // B+ `bp-account`: on desktop the Install pill sits left of search.
+  it('renders the PWA slots before the search button in the desktop bar', () => {
+    render(<AppHeader rightSlots={<span data-testid="pwa-slot" />} />);
+    const slot = screen.getAllByTestId('pwa-slot').at(-1);
+    const search = screen.getAllByRole('button', { name: /search/i }).at(-1);
+    expect(slot).toBeDefined();
+    expect(search).toBeDefined();
+    if (slot === undefined || search === undefined) return;
+    expect(
+      slot.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
