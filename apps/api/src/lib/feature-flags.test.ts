@@ -23,6 +23,7 @@ describe('loadFeatureFlags', () => {
     await expect(loadFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
+      'launch-animation': false,
       'release-notes': true,
     });
   });
@@ -39,6 +40,7 @@ describe('loadFeatureFlags', () => {
     const flags = await loadFeatureFlags();
     expect(Object.keys(flags).sort()).toEqual([
       'crews',
+      'launch-animation',
       'release-notes',
       'spotify-sync',
     ]);
@@ -64,6 +66,7 @@ describe('loadFeatureFlags', () => {
     await expect(loadFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
+      'launch-animation': false,
       'release-notes': true,
     });
   });
