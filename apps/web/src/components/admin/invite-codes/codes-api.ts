@@ -65,7 +65,8 @@ class ShapeError extends Error {}
 export class CodeTakenError extends Error {
   constructor(
     public readonly code: string,
-    public readonly suggestion: string,
+    /** Null when the API found no free variant to offer. */
+    public readonly suggestion: string | null,
   ) {
     super('code_taken');
     this.name = 'CodeTakenError';
@@ -112,7 +113,7 @@ const call = async (
     isRecord(body) &&
     body['error'] === 'code_taken' &&
     isText(body['code']) &&
-    isText(body['suggestion'])
+    isTextOrNull(body['suggestion'])
   ) {
     throw new CodeTakenError(body['code'], body['suggestion']);
   }
