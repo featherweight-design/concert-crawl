@@ -10,23 +10,37 @@
 // the Vercel logs UI filtered on `perf.`. Never logs a token, a header or a
 // query value (a search term can be personal).
 
-const enabled = (): boolean => process.env['PERF_TIMING'] === '1';
+// Server only: the browser never logs, and never pays for a timer.
+const enabled = (): boolean =>
+  typeof window === 'undefined' && process.env['PERF_TIMING'] === '1';
 
 const roundMs = (ms: number): number => Math.round(ms * 10) / 10;
 
-/** The path with the query values dropped: `/v1/events?q=x&page=2` becomes
- * `/v1/events?q&page`. */
+/** The path as it is safe to log: no fragment, no query values, and any
+ * segment that is an id or a name (a UUID, a number, anything after the first
+ * two segments) is reduced to `:id`. `/v1/artists/some-band?q=x&page=2`
+ * becomes `/v1/artists/:id?q&page`. */
 export const redactQuery = (path: string): string => {
-  const at = path.indexOf('?');
-  if (at === -1) return path;
-  const names = path
+  const noFragment = path.split('#')[0] ?? '';
+  const at = noFragment.indexOf('?');
+  const pathname = at === -1 ? noFragment : noFragment.slice(0, at);
+  const segments = pathname
+    .split('/')
+    .map((segment, index) =>
+      index <= 2 && !/^\d+$/.test(segment)
+        ? segment
+        : segment === ''
+          ? ''
+          : ':id',
+    )
+    .join('/');
+  if (at === -1) return segments;
+  const names = noFragment
     .slice(at + 1)
     .split('&')
     .map((pair) => pair.split('=')[0] ?? '')
     .filter((name) => name !== '');
-  return names.length === 0
-    ? path.slice(0, at)
-    : `${path.slice(0, at)}?${names.join('&')}`;
+  return names.length === 0 ? segments : `${segments}?${names.join('&')}`;
 };
 
 const log = (line: Record<string, unknown>): void => {

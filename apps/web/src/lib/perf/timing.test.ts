@@ -83,4 +83,23 @@ describe('perf timing', () => {
     expect(redactQuery('/v1/events?')).toBe('/v1/events');
     expect(redactQuery('/v1/events?a=1&b=&c')).toBe('/v1/events?a&b&c');
   });
+
+  it('reduces ids and names in the path, and drops a fragment', () => {
+    expect(redactQuery('/v1/artists/some-band')).toBe('/v1/artists/:id');
+    expect(redactQuery('/v1/events/123?q=x#top')).toBe('/v1/events/:id?q');
+    expect(redactQuery('/v1/events/genres')).toBe('/v1/events/genres');
+  });
+
+  it('logs nothing in a browser', () => {
+    process.env['PERF_TIMING'] = '1';
+    vi.stubGlobal('window', {});
+    try {
+      const timer = startApiTimer('GET', '/v1/events', false);
+      timer.headers(200);
+      timer.done();
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

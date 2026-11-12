@@ -41,7 +41,9 @@ for (const [kind, base, path] of targets) {
     const res = await fetch(`${base}${path}`, { redirect: 'manual' });
     const ttfb = performance.now() - started;
     await res.arrayBuffer();
-    times.push(ttfb);
+    // A redirect or an error answers fast and would flatter the table.
+    if (res.status >= 300) times.push(Number.NaN);
+    else times.push(ttfb);
     console.log(
       [
         kind.padEnd(4),
@@ -54,8 +56,16 @@ for (const [kind, base, path] of targets) {
       ].join('  '),
     );
   }
-  times.sort((left, right) => left - right);
-  console.log(
-    `      ${path}  median ${percentile(times, 0.5).toFixed(0)} ms, worst ${times[times.length - 1].toFixed(0)} ms`,
-  );
+  const good = times.filter((time) => !Number.isNaN(time));
+  if (good.length < times.length) {
+    console.log(
+      `      ${path}  WARNING: ${times.length - good.length} non-2xx run(s) left out of the summary`,
+    );
+  }
+  good.sort((left, right) => left - right);
+  if (good.length > 0) {
+    console.log(
+      `      ${path}  median ${percentile(good, 0.5).toFixed(0)} ms, worst ${good[good.length - 1].toFixed(0)} ms (run 1 is often cold: read the rows, not just the median)`,
+    );
+  }
 }
