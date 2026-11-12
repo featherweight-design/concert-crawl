@@ -6,6 +6,7 @@ export * from './artists.js';
 export * from './crawl-runs.js';
 export * from './crawl-run-pages.js';
 export * from './admin-settings.js';
+export * from './admin-queue-snoozes.js';
 export * from './crawl-triggers.js';
 export * from './users.js';
 export * from './social.js';
