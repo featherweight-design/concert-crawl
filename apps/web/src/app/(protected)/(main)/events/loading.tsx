@@ -1,6 +1,9 @@
 import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
-import { BrowseSkeleton } from '@/components/consumer/browse-skeleton';
+import {
+  BrowseSkeleton,
+  ShelfSlotSkeletonGate,
+} from '@/components/consumer/browse-skeleton';
 import { DiscoveryShelfSkeleton } from '@/components/consumer/spotify/DiscoveryShelfSkeleton';
 import { FollowShelfSkeleton } from '@/components/consumer/following/FollowShelfSkeleton';
 import { SHELF_HINT_COOKIE, shouldReserveShelf } from '@/lib/shelf-hint';
@@ -32,8 +35,17 @@ export default async function EventsLoading() {
       {/* One shelf slot, as on the page: the follow shelf holds it for every
           list view the server can answer for, and the Spotify taste shelf
           only when the follow seed comes back unknown, which the hint below
-          is the only evidence of. */}
-      {reserveShelf ? <DiscoveryShelfSkeleton /> : <FollowShelfSkeleton />}
+          is the only evidence of. The slot only exists in the list view with
+          no crew lens (isShelfSlotOpen), which only the URL can tell. A
+          signed-out visitor provably follows nobody, so their follow shelf
+          is the zero (starter) one, with its body line. */}
+      <ShelfSlotSkeletonGate>
+        {reserveShelf ? (
+          <DiscoveryShelfSkeleton />
+        ) : (
+          <FollowShelfSkeleton withBody={userId === null} />
+        )}
+      </ShelfSlotSkeletonGate>
       {/* B+ first load: chrome as text, data as skeletons, and the pink wave
           beside "Loading shows" in place of the old top progress bar. */}
       <BrowseSkeleton />

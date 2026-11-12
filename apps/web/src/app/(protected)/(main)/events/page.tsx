@@ -55,6 +55,7 @@ import {
   seedFollowedArtists,
   suggestionsToShelfArtists,
 } from '@/lib/following';
+import { browseViewFromParam, isShelfSlotOpen } from '@/lib/browse-shelf-slot';
 
 const copy = CONSUMER_COPY;
 
@@ -116,7 +117,7 @@ async function fetchGenres(): Promise<string[]> {
 
 async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   const params = await searchParams;
-  const view = params['view'] === 'cal' ? 'cal' : 'list';
+  const view = browseViewFromParam(params['view']);
 
   // `filterWhen` → concrete from/to now happens inside buildEventsApiParams,
   // so both readers resolve the same window from the same shorthand. The
@@ -400,8 +401,8 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     token === null ? 0 : (follows?.length ?? null);
 
   // The shelf only exists in the browse list, and the crew lens replaces that
-  // list wholesale — a shelf above someone else's feed is a non sequitur.
-  const shelfSlotOpen = view === 'list' && !lensActive;
+  // list wholesale. loading.tsx gates its skeleton on the same rule.
+  const shelfSlotOpen = isShelfSlotOpen({ view, lensActive });
   // `zero` recruits, so it runs for logged-out visitors too (their badges
   // render locked and hand off to the tier picker). Unknown gets no shelf: the
   // Spotify taste shelf still has the slot in that case.
@@ -535,8 +536,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
           scaRegion={scaRegion}
         />
       ) : (
-        view === 'list' &&
-        !lensActive && (
+        shelfSlotOpen && (
           <DiscoveryShelf
             {...(initialTastePicks !== undefined && {
               initialPicks: initialTastePicks,
