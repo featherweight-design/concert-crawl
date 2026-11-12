@@ -19,6 +19,17 @@ interface BottomSheetProps {
    * keeps its plain bordered dialog.
    */
   edgeFromSm?: boolean;
+  /**
+   * `bare` draws the close as a plain X with no bordered box (inside the same
+   * 44px hit area). Default `boxed` keeps the bordered close every other sheet
+   * wears.
+   */
+  closeVariant?: 'boxed' | 'bare';
+  /**
+   * `tight` is 20px side padding (24px bottom) instead of the default 24px all
+   * round, for boards drawn on a 20px gutter.
+   */
+  inset?: 'default' | 'tight';
   children: React.ReactNode;
 }
 
@@ -40,6 +51,8 @@ export const BottomSheet = ({
   maxWidth,
   closeText,
   edgeFromSm = false,
+  closeVariant = 'boxed',
+  inset = 'default',
   children,
 }: BottomSheetProps) => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -131,7 +144,9 @@ export const BottomSheet = ({
         // query rather than a second tree, so the focus trap above is shared.
         // The width is a variable, not an interpolated class, so Tailwind
         // still sees both literal class names.
-        className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl ${
+        className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl ${
+          inset === 'tight' ? 'px-5 pb-6 pt-5' : 'p-6'
+        } shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl ${
           edgeFromSm ? DIALOG_EDGE : `${PHONE_EDGE} ${DIALOG_PLAIN}`
         } ${
           maxWidth === undefined ? 'sm:max-w-md' : 'sm:max-w-[var(--sheet-max)]'
@@ -147,7 +162,12 @@ export const BottomSheet = ({
             corner. First in DOM order, so it is also where focus lands. The row
             is the drag-down grab zone: no handle is drawn for this sheet, so
             nothing new is visible. */}
-        <div className="-mr-3 -mt-3 flex justify-end" {...drag.zoneProps}>
+        <div
+          className={`flex justify-end ${
+            inset === 'tight' ? '-mr-2.5' : '-mr-3 -mt-3'
+          }`}
+          {...drag.zoneProps}
+        >
           <button
             type="button"
             onClick={onClose}
@@ -161,9 +181,13 @@ export const BottomSheet = ({
             }`}
           >
             {closeText === undefined ? (
-              <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border">
-                <CloseIcon />
-              </span>
+              closeVariant === 'bare' ? (
+                <CloseIcon size={18} />
+              ) : (
+                <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border">
+                  <CloseIcon />
+                </span>
+              )
             ) : (
               closeText
             )}
@@ -175,10 +199,10 @@ export const BottomSheet = ({
   );
 };
 
-const CloseIcon = () => (
+const CloseIcon = ({ size = 13 }: { size?: number }) => (
   <svg
-    width="13"
-    height="13"
+    width={size}
+    height={size}
     viewBox="0 0 12 12"
     fill="none"
     aria-hidden="true"

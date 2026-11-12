@@ -192,6 +192,8 @@ export const ShareAppSheet = ({
       title={titleText}
       maxWidth={DIALOG_WIDTH}
       edgeFromSm
+      closeVariant="bare"
+      inset="tight"
     >
       {/* Grabber: decorative, phone only. The sheet closes by its X, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}
@@ -218,16 +220,26 @@ export const ShareAppSheet = ({
         <ShareTicket body={body} lower={lower} />
       </div>
 
-      <div className="mt-4 flex flex-col gap-2.5">
+      {/* Board: the lead press on its own line, then a row of half-width
+          presses. Full screen (PR 3) joins that row beside Copy link, which
+          then loses its lone full width. 🔸 Until then Copy link is alone in
+          the row. Nothing here may shrink: a short viewport scrolls the sheet. */}
+      <div className="mt-4 flex flex-col gap-2.5 [&>*]:shrink-0">
         {shareLeads ? (
           <>
             {sharePress(true)}
-            <div className="flex gap-2.5">{copyPress(false)}</div>
+            <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
+              {copyPress(false)}
+            </div>
           </>
         ) : (
           <>
             {copyPress(true)}
-            {canShare && sharePress(false)}
+            {canShare && (
+              <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
+                {sharePress(false)}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -260,7 +272,10 @@ export const ShareAppSheet = ({
 };
 
 const PRESS =
-  'flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-3.5 text-[15px] disabled:cursor-default disabled:opacity-50';
+  // No `flex-1` here: in the column that sets the flex-basis to 0 and the
+  // press collapses to its content. Height is fixed and never shrinks; the
+  // rows give their presses `flex-1` for the width split.
+  'flex h-12 min-h-12 w-full shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-3.5 text-[15px] disabled:cursor-default disabled:opacity-[.45]';
 
 /**
  * One press. `primary` wears the blue-to-pink fill and leads; the rest are
