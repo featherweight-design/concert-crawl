@@ -75,7 +75,100 @@ describe('ArtistShowRow', () => {
 
   it('puts the time and city on the second line', () => {
     render(<ArtistShowRow show={show()} artist="Puma Blue" photoUrl={null} />);
-    expect(screen.getByText(/^7:00\sPM · Denver$/)).toBeTruthy();
+    expect(screen.getByTestId('artist-show-meta').textContent).toMatch(
+      /^7:00\sPM·Denver$/,
+    );
+  });
+
+  // At 320 the text column is under 100px. The board's rows read whole, so a
+  // narrow row follows EventRow's rules: wrap the name, keep the time, drop
+  // the city. Before this, all three ellipsised ("Fiddle…", "6:00 PM · D…").
+  describe('on a narrow row (320 viewport)', () => {
+    const atWidth = (width: number) =>
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        width,
+        height: 80,
+        right: width,
+        bottom: 80,
+        toJSON: () => ({}),
+      });
+
+    it('wraps the venue name instead of truncating it', () => {
+      const spy = atWidth(288);
+      try {
+        render(
+          <ArtistShowRow
+            show={show({ venue: "Fiddler's Green Amphitheatre" })}
+            artist="Puma Blue"
+            photoUrl={null}
+          />,
+        );
+        expect(screen.getByTestId('artist-show-row').dataset.narrow).toBe(
+          'true',
+        );
+        const venue = screen.getByTestId('artist-show-venue');
+        expect(venue.className).not.toContain('truncate');
+        expect(venue.dataset.lines).toBe('2');
+        expect(venue.textContent).toBe("Fiddler's Green Amphitheatre");
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('keeps the time whole and drops the city', () => {
+      const spy = atWidth(288);
+      try {
+        render(
+          <ArtistShowRow show={show()} artist="Puma Blue" photoUrl={null} />,
+        );
+        const time = screen.getByTestId('artist-show-time');
+        expect(time.textContent).toMatch(/^7:00\sPM$/);
+        expect(time.style.flexShrink).toBe('0');
+        expect(screen.queryByTestId('artist-show-city')).toBeNull();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('keeps the city when there is no time to show', () => {
+      const spy = atWidth(288);
+      try {
+        render(
+          <ArtistShowRow
+            show={show({ showTime: null })}
+            artist="Puma Blue"
+            photoUrl={null}
+          />,
+        );
+        expect(screen.getByTestId('artist-show-city').textContent).toBe(
+          'Denver',
+        );
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('keeps the wide layout on a wide row', () => {
+      const spy = atWidth(600);
+      try {
+        render(
+          <ArtistShowRow show={show()} artist="Puma Blue" photoUrl={null} />,
+        );
+        expect(
+          screen.getByTestId('artist-show-row').dataset.narrow,
+        ).toBeUndefined();
+        expect(screen.getByTestId('artist-show-venue').className).toContain(
+          'truncate',
+        );
+        expect(screen.getByTestId('artist-show-city')).toBeTruthy();
+      } finally {
+        spy.mockRestore();
+      }
+    });
   });
 
   it('drops the time when the crawl found none', () => {

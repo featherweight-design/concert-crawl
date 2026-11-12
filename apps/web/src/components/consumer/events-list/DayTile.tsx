@@ -1,5 +1,8 @@
 import { formatEventDate } from '@/components/consumer/definitions/lib';
 
+/** The month tile's size classes, shared with the artist skeleton's row. */
+export const MONTH_TILE_SIZE = 'h-[58px] w-12 md:h-[62px] md:w-14';
+
 interface DayTileProps {
   /** The group's `YYYY-MM-DD`, as Browse keys its date groups. */
   date: string;
@@ -31,10 +34,13 @@ export const DayTile = ({ date, today, month = false, tint }: DayTileProps) => {
       aria-hidden
       data-testid="day-tile"
       data-today={today || undefined}
-      className="inline-flex shrink-0 flex-col items-center justify-center"
+      // The month tile follows the artist boards per viewport: 48 × 58 on
+      // mobile (`09-artist/artist-m-*`), 56 × 62 on desktop (`artist-burst-*`).
+      // Classes, not a hook, so the server render already has the right size.
+      className={`inline-flex shrink-0 flex-col items-center justify-center${month ? ` ${MONTH_TILE_SIZE}` : ''}`}
       style={{
-        width: month ? 56 : 48,
-        height: month ? 62 : 48,
+        width: month ? undefined : 48,
+        height: month ? undefined : 48,
         borderRadius: month ? 12 : 10,
         background: filled
           ? `linear-gradient(${tint !== undefined ? '160deg' : '135deg'}, ${tint ?? 'var(--signal)'}, var(--accent))`

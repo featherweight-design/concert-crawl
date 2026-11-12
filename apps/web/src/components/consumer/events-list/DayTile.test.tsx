@@ -3,7 +3,7 @@
 import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { DayTile } from './DayTile';
+import { DayTile, MONTH_TILE_SIZE } from './DayTile';
 
 describe('DayTile', () => {
   it('shows the weekday over the day number', () => {
@@ -35,6 +35,8 @@ describe('DayTile', () => {
     const tile = screen.getByTestId('day-tile');
     expect(tile.textContent).toBe('Mon9Mar');
     expect(tile.style.background).toContain('var(--genre-soul)');
-    expect(tile.style.height).toBe('62px');
+    // 48 × 58 on mobile, 56 × 62 from md (B+ `09-artist` boards).
+    expect(tile.className).toContain(MONTH_TILE_SIZE);
+    expect(tile.style.height).toBe('');
   });
 });
