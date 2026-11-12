@@ -10,7 +10,17 @@ import { createLogger } from '@concert-crawl/logger';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import { and, asc, eq, ne, ilike, isNull, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  ne,
+  ilike,
+  inArray,
+  isNull,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import {
   artistReports,
   artists,
@@ -32,7 +42,11 @@ import {
 } from '../../lib/artist-exhaustion.js';
 import { loadNextShowByCanonical } from '../../lib/artist-follows.js';
 import { closeOpenArtistReports } from '../../lib/artist-reports.js';
-import { hasUpcomingShowExpr } from '../../lib/artist-upcoming.js';
+import {
+  hasUpcomingShowExpr,
+  nextShowDateExpr,
+  upcomingShowCountExpr,
+} from '../../lib/artist-upcoming.js';
 import {
   dedupeCandidates,
   toCandidateSnapshot,
@@ -74,7 +88,45 @@ const listFilterSchema = z.union([
   // Artists a fan says we matched to the wrong act. Orthogonal to the match
   // status, like the other derived buckets: a row can be reported in any state.
   z.literal('reported'),
+  // The redesign's To check tab: every row a human still has to decide, in
+  // one list. See `isToCheckExpr`.
+  z.literal('to_check'),
 ]);
+
+/**
+ * The To check tab (admin redesign 4c): unsure, unmatched and no-match rows,
+ * auto-matched rows waiting for a human glance, and any row with an open
+ * wrong-artist report. Exhausted rows stay in: the job stopped asking, which
+ * leaves the decision to a person, not settled.
+ */
+const isToCheckExpr = (): SQL =>
+  sql`(${inArray(artists.matchStatus, ['unmatched', 'ambiguous', 'no_match'])} or (${isAutoMatchedExpr()}) or ${openReportOn()})`;
+
+/**
+ * The To check tab's show-date chips: a show in the next 60 days, a show
+ * after that, or no show at all. 60 is the redesign's locked artist window
+ * (README "Decided", the same one Needs you uses).
+ */
+const SOON_WINDOW_DAYS = 60;
+const windowSchema = z.enum(['soon', 'later', 'none']);
+const windowFilter = (window: z.infer<typeof windowSchema>): SQL =>
+  window === 'soon'
+    ? hasUpcomingShowExpr(SOON_WINDOW_DAYS)
+    : window === 'later'
+      ? sql`${hasUpcomingShowExpr()} and not ${hasUpcomingShowExpr(SOON_WINDOW_DAYS)}`
+      : sql`not ${hasUpcomingShowExpr()}`;
+
+// Who is Watching the artist. Listening history is not a follow (the artist
+// page's own rule), so Spotify top-artist rows are left out.
+const watchingCountExpr = (): SQL<number> =>
+  sql<number>`(select count(*)::int from ${userArtistFollows} where ${userArtistFollows.canonicalName} = "artists"."canonical_name" and ${userArtistFollows.source} <> 'spotify_top')`;
+
+// To check is ordered by what needs a decision most: reported rows, then
+// unsure, then no match or not yet checked, then the auto-matched rows that
+// only want a glance (the order the board draws). Soonest show first within
+// each, so the 60-day window reads as a work list.
+const toCheckRankExpr = (): SQL<number> =>
+  sql<number>`case when ${openReportOn()} then 0 when ${eq(artists.matchStatus, 'ambiguous')} then 1 when ${isAutoMatchedExpr()} then 3 else 2 end`;
 
 // The outer id is written out qualified: inside a subquery drizzle renders a
 // bare column name, which would bind to the inner table's own `id`.
@@ -102,6 +154,8 @@ const upcomingParamSchema = z
 const listQuerySchema = z.object({
   status: listFilterSchema.optional(),
   upcoming: upcomingParamSchema,
+  // When set, replaces `upcoming`: the window already says which shows count.
+  window: windowSchema.optional(),
   // An empty `search=` is what a controlled input sends when the admin clears
   // it, and that means "no filter" — not a bad request.
   search: z
@@ -130,17 +184,19 @@ const listQuerySchema = z.object({
  * reason.
  */
 const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
-  status === 'reported'
-    ? openReportOn()
-    : status === 'exhausted'
-      ? isExhaustedBucketExpr()
-      : status === 'auto_matched'
-        ? isAutoMatchedExpr()
-        : status === 'matched'
-          ? isConfirmedMatchExpr()
-          : isExhaustibleStatus(status)
-            ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
-            : eq(artists.matchStatus, status);
+  status === 'to_check'
+    ? isToCheckExpr()
+    : status === 'reported'
+      ? openReportOn()
+      : status === 'exhausted'
+        ? isExhaustedBucketExpr()
+        : status === 'auto_matched'
+          ? isAutoMatchedExpr()
+          : status === 'matched'
+            ? isConfirmedMatchExpr()
+            : isExhaustibleStatus(status)
+              ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
+              : eq(artists.matchStatus, status);
 
 const artistIdSchema = z.object({ id: idSchema });
 
@@ -156,7 +212,8 @@ artistsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { status, search, limit, offset, upcoming } = ctx.req.valid('query');
+    const { status, search, limit, offset, upcoming, window } =
+      ctx.req.valid('query');
 
     // A search ignores the upcoming filter for the same reason it ignores
     // `status`: the admin is looking for one named artist, and a row they have
@@ -165,8 +222,13 @@ artistsAdminRouter.get(
       ? ilike(artists.canonicalName, `%${search}%`)
       : and(
           status ? statusFilter(status) : undefined,
-          upcoming ? hasUpcomingShowExpr() : undefined,
+          window
+            ? windowFilter(window)
+            : upcoming
+              ? hasUpcomingShowExpr()
+              : undefined,
         );
+    const toCheck = !search && status === 'to_check';
 
     const rows = await db
       // Named columns rather than `select()`: `spotifyCandidates` is the widest
@@ -189,6 +251,15 @@ artistsAdminRouter.get(
         // changed, and it can only do that if it knows the bucket it came from.
         isExhausted: isExhaustedBucketExpr(),
         openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`,
+        upcomingCount: upcomingShowCountExpr(),
+        watchingCount: watchingCountExpr(),
+        nextShowDate: nextShowDateExpr(),
+        // The To check row shows its candidates inline (redesign 4c), from
+        // the snapshot the match job already took. Other tabs never render
+        // them, so they skip the widest column on the row.
+        candidates: toCheck
+          ? artists.spotifyCandidates
+          : sql<SpotifyCandidateSnapshot[] | null>`null`,
       })
       .from(artists)
       .where(where)
@@ -197,9 +268,24 @@ artistsAdminRouter.get(
       // `name` is not unique — only `canonicalName` and `slug` are — so it
       // needs a tiebreaker, or two artists sharing a display name can straddle
       // a page boundary and be shown twice or not at all.
-      .orderBy(asc(artists.name), asc(artists.id))
+      // To check is a work list instead: see `toCheckRankExpr`.
+      .orderBy(
+        ...(toCheck
+          ? [asc(toCheckRankExpr()), sql`${nextShowDateExpr()} asc nulls last`]
+          : []),
+        asc(artists.name),
+        asc(artists.id),
+      )
       .limit(limit)
       .offset(offset);
+
+    // Venue for the next show. The date comes from the row (the same predicate
+    // as the filter); the venue needs the billing walk, done once per page.
+    const nextShows = await loadNextShowByCanonical(
+      rows
+        .filter((row) => row.nextShowDate !== null)
+        .map((row) => row.canonicalName),
+    );
 
     // The page needs to know whether a next page exists, and the filtered total
     // is the only thing that answers it — a full page of rows is equally
@@ -211,7 +297,16 @@ artistsAdminRouter.get(
 
     return ctx.json({
       success: true,
-      data: rows,
+      data: rows.map(({ nextShowDate, ...row }) => {
+        const show = nextShows.get(row.canonicalName);
+        return {
+          ...row,
+          nextShow:
+            nextShowDate === null
+              ? null
+              : { date: nextShowDate, venueName: show?.venue ?? null },
+        };
+      }),
       total: totalRow?.total ?? 0,
     });
   },
@@ -255,7 +350,31 @@ artistsAdminRouter.get(
       .from(artists)
       .where(and(openReportOn(), upcoming ? hasUpcomingShowExpr() : undefined));
 
+    // The To check tab and its show-date chips (redesign 4c). The tab count
+    // honours `upcoming` like every other chip. The three windows partition
+    // every To check row by its next show, so they ignore `upcoming`: "No show"
+    // only has rows when past-only artists are included.
+    const soon = hasUpcomingShowExpr(SOON_WINDOW_DAYS);
+    const anyShow = hasUpcomingShowExpr();
+    const [toCheckRow] = await db
+      .select({
+        total: upcoming
+          ? sql<number>`count(*) filter (where ${anyShow})::int`
+          : sql<number>`count(*)::int`,
+        soon: sql<number>`count(*) filter (where ${soon})::int`,
+        later: sql<number>`count(*) filter (where ${anyShow} and not ${soon})::int`,
+        none: sql<number>`count(*) filter (where not ${anyShow})::int`,
+      })
+      .from(artists)
+      .where(isToCheckExpr());
+
     const counts = {
+      to_check: toCheckRow?.total ?? 0,
+      toCheckWindows: {
+        soon: toCheckRow?.soon ?? 0,
+        later: toCheckRow?.later ?? 0,
+        none: toCheckRow?.none ?? 0,
+      },
       reported: reportedRow?.total ?? 0,
       unmatched: 0,
       matched: 0,

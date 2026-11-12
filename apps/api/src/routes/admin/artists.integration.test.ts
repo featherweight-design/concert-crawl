@@ -19,7 +19,14 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
-import { artists, auditLog, events, venues } from '@concert-crawl/db';
+import {
+  artistReports,
+  artists,
+  auditLog,
+  events,
+  userArtistFollows,
+  venues,
+} from '@concert-crawl/db';
 import { createApp } from '../../app.js';
 import { testDb } from '../../test/helpers/db.js';
 import { seedEvent, seedVenue } from '../../test/helpers/seed.js';
@@ -65,6 +72,9 @@ describe('admin artists routes', () => {
     await testDb.delete(events);
     await testDb.delete(venues);
     await testDb.delete(artists);
+    // No FK from either to artists, so they are cleared by hand.
+    await testDb.delete(artistReports);
+    await testDb.delete(userArtistFollows);
     setAdminAuth();
   });
 
@@ -267,6 +277,8 @@ describe('admin artists routes', () => {
 
       expect(res.status).toBe(200);
       expect(body.data).toEqual({
+        to_check: 2,
+        toCheckWindows: { soon: 0, later: 0, none: 2 },
         reported: 0,
         unmatched: 0,
         matched: 1,
@@ -366,6 +378,9 @@ describe('admin artists routes', () => {
       const body = await res.json();
 
       expect(body.data).toEqual({
+        // Exhausted rows still wait on a person, so To check keeps them.
+        to_check: 3,
+        toCheckWindows: { soon: 0, later: 0, none: 3 },
         reported: 0,
         unmatched: 0,
         matched: 0,
@@ -375,6 +390,172 @@ describe('admin artists routes', () => {
         exhausted: 2,
         auto_matched: 0,
       });
+    });
+  });
+
+  describe('the To check tab (redesign 4c)', () => {
+    // Ten days out sits inside the 60-day window wherever Denver's date falls
+    // against UTC; 2099 sits after it.
+    const SOON = new Date(Date.now() + 10 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const LATER = '2099-01-01';
+
+    const list = async (query: string) => {
+      const res = await app.request(`/v1/admin/artists?${query}`, {
+        headers: ADMIN_HEADERS,
+      });
+      expect(res.status).toBe(200);
+      return (await res.json()).data as Array<Record<string, unknown>>;
+    };
+
+    const seedShow = async (canonical: string, date: string) => {
+      const venue = await seedVenue({
+        name: `Venue for ${canonical}`,
+        slug: `venue-${canonical}-${date}`,
+      });
+      await seedEvent(venue.id, {
+        artist: canonical,
+        canonicalArtist: canonical,
+        date,
+      });
+    };
+
+    it('lists every undecided row and leaves decided ones out', async () => {
+      await seedArtist({ canonicalName: 'unsure', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'unseen', matchStatus: 'unmatched' });
+      await seedArtist({ canonicalName: 'nothing', matchStatus: 'no_match' });
+      await seedArtist({
+        canonicalName: 'auto',
+        matchStatus: 'matched',
+        autoMatchedAt: new Date(),
+      });
+      await seedArtist({ canonicalName: 'confirmed', matchStatus: 'matched' });
+      await seedArtist({
+        canonicalName: 'a tour',
+        matchStatus: 'not_an_artist',
+      });
+      const reportedId = await seedArtist({
+        canonicalName: 'reported',
+        matchStatus: 'matched',
+      });
+      await testDb.insert(artistReports).values({
+        artistId: reportedId,
+        reporterId: 'fan_1',
+        reason: 'different_artist',
+      });
+
+      const rows = await list('status=to_check&upcoming=false');
+      // Reported first, then unsure, then unchecked or no match, then the
+      // auto-matched glance; alphabetical within a rank when no show orders it.
+      expect(rows.map((row) => row.canonicalName)).toEqual([
+        'reported',
+        'unsure',
+        'nothing',
+        'unseen',
+        'auto',
+      ]);
+    });
+
+    it('orders soonest show first within a rank and carries the next show', async () => {
+      await seedArtist({ canonicalName: 'late', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'early', matchStatus: 'ambiguous' });
+      await seedShow('late', LATER);
+      await seedShow('early', SOON);
+
+      const rows = await list('status=to_check');
+      expect(rows.map((row) => row.canonicalName)).toEqual(['early', 'late']);
+      expect(rows[0]?.nextShow).toEqual({
+        date: SOON,
+        venueName: 'Venue for early',
+      });
+    });
+
+    it('filters by show window', async () => {
+      await seedArtist({ canonicalName: 'soon', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'later', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'never', matchStatus: 'ambiguous' });
+      await seedShow('soon', SOON);
+      await seedShow('later', LATER);
+
+      const names = async (window: string) =>
+        (await list(`status=to_check&window=${window}`)).map(
+          (row) => row.canonicalName,
+        );
+      expect(await names('soon')).toEqual(['soon']);
+      expect(await names('later')).toEqual(['later']);
+      // The window replaces `upcoming`, so No show lists past-only rows
+      // without the toggle.
+      expect(await names('none')).toEqual(['never']);
+
+      const counts = await (
+        await app.request('/v1/admin/artists/counts', {
+          headers: ADMIN_HEADERS,
+        })
+      ).json();
+      expect(counts.data.to_check).toBe(2);
+      expect(counts.data.toCheckWindows).toEqual({
+        soon: 1,
+        later: 1,
+        none: 1,
+      });
+    });
+
+    it('rejects an unknown window', async () => {
+      const res = await app.request('/v1/admin/artists?window=someday', {
+        headers: ADMIN_HEADERS,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns upcoming and Watching counts, and candidates only on To check', async () => {
+      await seedArtist({
+        canonicalName: 'popular',
+        matchStatus: 'matched',
+        spotifyCandidates: [
+          {
+            id: 'sp1',
+            name: 'Popular',
+            imageUrl: null,
+            genres: null,
+            spotifyUrl: null,
+          },
+        ],
+      });
+      await seedShow('popular', SOON);
+      await seedShow('popular', LATER);
+      await testDb.insert(userArtistFollows).values([
+        { userId: 'fan_1', artistName: 'Popular', canonicalName: 'popular' },
+        { userId: 'fan_2', artistName: 'Popular', canonicalName: 'popular' },
+        {
+          userId: 'fan_3',
+          artistName: 'Popular',
+          canonicalName: 'popular',
+          source: 'spotify_top',
+          rank: 1,
+        },
+      ]);
+
+      const [matched] = await list('status=matched');
+      expect(matched?.upcomingCount).toBe(2);
+      // Listening history is not Watching.
+      expect(matched?.watchingCount).toBe(2);
+      expect(matched?.candidates).toBeNull();
+
+      await testDb
+        .update(artists)
+        .set({ matchStatus: 'ambiguous' })
+        .where(eq(artists.canonicalName, 'popular'));
+      const [toCheck] = await list('status=to_check');
+      expect(toCheck?.candidates).toEqual([
+        {
+          id: 'sp1',
+          name: 'Popular',
+          imageUrl: null,
+          genres: null,
+          spotifyUrl: null,
+        },
+      ]);
     });
   });
 
