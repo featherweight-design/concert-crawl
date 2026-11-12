@@ -33,7 +33,12 @@ describe('server-side getFeatureFlags', () => {
     });
     get.mockImplementationOnce(async () => {
       order.push('fetch');
-      return { 'spotify-sync': false, crews: true, 'release-notes': true };
+      return {
+        'spotify-sync': false,
+        crews: true,
+        'launch-animation': false,
+        'release-notes': true,
+      };
     });
 
     await isFeatureEnabled('crews');
@@ -56,6 +61,7 @@ describe('server-side getFeatureFlags', () => {
     get.mockResolvedValue({
       'spotify-sync': false,
       crews: true,
+      'launch-animation': false,
       'release-notes': true,
     });
     await expect(isFeatureEnabled('crews')).resolves.toBe(true);
@@ -66,6 +72,7 @@ describe('server-side getFeatureFlags', () => {
     await expect(getFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
+      'launch-animation': false,
       'release-notes': true,
     });
   });

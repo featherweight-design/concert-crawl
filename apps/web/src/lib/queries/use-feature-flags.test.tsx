@@ -22,6 +22,7 @@ describe('useFeatureFlags', () => {
     get.mockResolvedValue({
       'spotify-sync': false,
       crews: true,
+      'launch-animation': false,
       'release-notes': true,
     });
     const { result } = renderHook(() => useFeatureFlags(), { wrapper });

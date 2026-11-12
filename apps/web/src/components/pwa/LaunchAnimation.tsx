@@ -50,12 +50,6 @@ export function LaunchAnimation() {
   const { enabled, isLoading } = useFeatureFlag('launch-animation');
   const [playing, setPlaying] = useState(false);
 
-  // Remember the flag's answer for the next cold start. Only once it has really
-  // arrived: the registry default before the fetch must not overwrite it.
-  useEffect(() => {
-    if (!isLoading) writeStored('local', LAUNCH_FLAG_KEY, enabled ? '1' : '0');
-  }, [enabled, isLoading]);
-
   // The cold-start decision, once, on mount, from what is already on the device.
   useEffect(() => {
     const standalone = isStandaloneDisplay();
@@ -74,6 +68,15 @@ export function LaunchAnimation() {
       setPlaying(true);
     }
   }, []);
+
+  // Declared after the decision effect on purpose: effects run in order, and the
+  // decision must read the PREVIOUS start's cached answer before this one
+  // overwrites it.
+  // Remember the flag's answer for the next cold start. Only once it has really
+  // arrived: the registry default before the fetch must not overwrite it.
+  useEffect(() => {
+    if (!isLoading) writeStored('local', LAUNCH_FLAG_KEY, enabled ? '1' : '0');
+  }, [enabled, isLoading]);
 
   return playing ? <LaunchStage onDone={() => setPlaying(false)} /> : null;
 }
