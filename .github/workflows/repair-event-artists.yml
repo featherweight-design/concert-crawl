@@ -14,13 +14,19 @@ name: Repair event artists
 # - `environment: production` holds the job behind that environment's
 #   protection rules (required reviewers) before any secret is released.
 # - The Haiku spend is capped at $6 inside the script (a built-in ceiling a
-#   flag cannot raise); the pass stops early and says so if it hits it.
+#   flag cannot raise); the cap is checked before each row, so a pass can end
+#   at most one adjudication over it, and it stops early and says so if it hits it.
+# - An apply run lists exactly what it wrote in its own summary. Haiku is not
+#   deterministic, so an apply can differ from the dry run before it: read the
+#   dry run's list as what to expect, and the apply run's list as the record.
 # - Dispatches never overlap: one repair at a time.
 #
 # What it changes: headliners, supporting artists (and their canonical forms),
 # and the hidden flag for a "not a concert" verdict, on events whose bill the
 # ladder re-derives differently. `artist`, `canonical_artist` and the dedup key
-# are never written. A cover or tribute night is left exactly as it is.
+# are never written. A cover or tribute night has its bill cleared (written
+# empty, never NULL), keeps its title and stays visible; each such row is listed
+# in the summary as "tribute/cover → bill cleared".
 
 on:
   workflow_dispatch:

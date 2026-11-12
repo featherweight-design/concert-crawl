@@ -33,6 +33,8 @@ describe('rederive-event-artists integration', () => {
       supportingArtists?: string[];
       hiddenFromConsumer?: boolean;
       canonicalHeadliners?: string[] | null;
+      headliners?: string[] | null;
+      canonicalSupporting?: string[] | null;
     },
   ) => {
     const [event] = await db
@@ -47,6 +49,8 @@ describe('rederive-event-artists integration', () => {
         supportingArtists: values.supportingArtists ?? null,
         hiddenFromConsumer: values.hiddenFromConsumer ?? false,
         canonicalHeadliners: values.canonicalHeadliners ?? null,
+        headliners: values.headliners ?? null,
+        canonicalSupporting: values.canonicalSupporting ?? null,
       })
       .returning();
     return event!;
@@ -109,16 +113,21 @@ describe('rederive-event-artists integration', () => {
     expect(result.strategies.observed).toBe(1);
   });
 
-  it('leaves a cover or tribute night exactly as it is, on a real run too', async () => {
+  it('clears the real artists a live crawl attached to a cover night: bill empty, title and visibility kept', async () => {
     const venue = await seedVenue();
     const title =
       "Halloween Cover Show: The B52's + Wire + Misfits + The Monks + Beat Happening";
     const event = await seedEvent(venue.id, {
       title,
-      artist: title,
-      canonicalArtist: title.toLowerCase(),
+      // What the live extraction stored: the honored artists as the bill.
+      artist: "The B-52's",
+      canonicalArtist: "the b-52's",
       canonicalTitle: title.toLowerCase(),
       date: '2026-10-31',
+      headliners: ["The B-52's"],
+      canonicalHeadliners: ["the b-52's"],
+      supportingArtists: ['Wire', 'Misfits'],
+      canonicalSupporting: ['wire', 'misfits'],
     });
     const adjudicate: Adjudicator = vi.fn(async () => ({
       isConcert: true,
@@ -127,16 +136,39 @@ describe('rederive-event-artists integration', () => {
       coversOtherArtists: true,
     }));
 
+    const dry = await run(adjudicate, true);
+    // The dry run lists it, as a cleared bill, and writes nothing.
+    expect(dry.sample).toHaveLength(1);
+    expect(dry.sample[0]).toMatchObject({
+      strategy: 'tribute-or-cover',
+      headliners: [],
+      supportingArtists: [],
+      before: {
+        headliners: ["The B-52's"],
+        supportingArtists: ['Wire', 'Misfits'],
+      },
+      hides: false,
+    });
+    expect((await readEvent(event.id)).headliners).toEqual(["The B-52's"]);
+
     const result = await run(adjudicate, false);
 
     const after = await readEvent(event.id);
-    // Nothing written: no real artist attached, and no stored bill erased.
-    expect(after.headliners).toBeNull();
-    expect(after.supportingArtists).toBeNull();
+    // EMPTY, not NULL: an empty array is "ran, nobody billed", which every
+    // artist page and follow match reads as no act; NULL would fall back to the
+    // title.
+    expect(after.headliners).toEqual([]);
+    expect(after.canonicalHeadliners).toEqual([]);
+    expect(after.supportingArtists).toEqual([]);
+    expect(after.canonicalSupporting).toEqual([]);
+    // The title and the dedup keys stay, and the show stays on the calendar.
+    expect(after.title).toBe(title);
+    expect(after.artist).toBe("The B-52's");
+    expect(after.canonicalArtist).toBe("the b-52's");
     expect(after.hiddenFromConsumer).toBe(false);
     expect(result.strategies['tribute-or-cover']).toBe(1);
-    expect(result.updated).toBe(0);
-    expect(result.sample).toHaveLength(0);
+    expect(result.updated).toBe(1);
+    expect(result.hidden).toBe(0);
   });
 
   it('lists each change with the bill it replaces', async () => {
