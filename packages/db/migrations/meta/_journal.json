@@ -729,6 +729,13 @@
       "when": 1794441600000,
       "tag": "0104_price_submissions_held_for_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1794528000000,
+      "tag": "0105_venue_pause_reason_and_resume",
+      "breakpoints": true
     }
   ]
 }

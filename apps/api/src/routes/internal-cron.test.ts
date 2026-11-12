@@ -39,6 +39,9 @@ const makeJobs = () => ({
   pruneNotifications: vi.fn<InternalCronJobs['pruneNotifications']>(
     async () => ({ deleted: 3 }),
   ),
+  venueAutoResume: vi.fn<InternalCronJobs['venueAutoResume']>(async () => ({
+    resumed: [{ venueId: 'v1' }],
+  })),
 });
 
 const makeApp = (jobs: InternalCronJobs) => {
@@ -52,6 +55,7 @@ const PATHS = [
   '/v1/internal/cron/spotify-weekly',
   '/v1/internal/cron/crawler-daily',
   '/v1/internal/cron/notification-prune',
+  '/v1/internal/cron/venue-auto-resume',
 ] as const;
 
 const expectNothingRan = (jobs: ReturnType<typeof makeJobs>) => {
@@ -60,6 +64,7 @@ const expectNothingRan = (jobs: ReturnType<typeof makeJobs>) => {
   expect(jobs.startDailyCrawl).not.toHaveBeenCalled();
   expect(jobs.auditDailyCrawl).not.toHaveBeenCalled();
   expect(jobs.pruneNotifications).not.toHaveBeenCalled();
+  expect(jobs.venueAutoResume).not.toHaveBeenCalled();
 };
 
 describe('internal cron routes', () => {
@@ -183,6 +188,17 @@ describe('internal cron routes', () => {
     const [now] = jobs.pruneNotifications.mock.calls[0] ?? [];
     expect(now?.getTime()).toBeGreaterThanOrEqual(before);
     expect(jobs.matchArtists).not.toHaveBeenCalled();
+  });
+
+  it('runs the venue auto-resume and reports how many it resumed', async () => {
+    const jobs = makeJobs();
+    const res = await makeApp(jobs).request(PATHS[4], {
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, resumed: 1 });
+    expect(jobs.venueAutoResume).toHaveBeenCalledTimes(1);
+    expect(jobs.startDailyCrawl).not.toHaveBeenCalled();
   });
 });
 

@@ -90,7 +90,72 @@ describe('admin venue crawl pause', () => {
     const audit = await latestAuditRow();
     expect(audit?.action).toBe('venue.crawl_pause');
     expect(audit?.targetId).toBe(venue.id);
-    expect(audit?.metadata).toMatchObject({ reason: 'awaiting API access' });
+    // A free-text reason from before the reason list becomes Other + a note.
+    expect(audit?.metadata).toMatchObject({
+      reason: 'other',
+      note: 'awaiting API access',
+    });
+  });
+
+  it('stores the reason, note and a resume date, and shows them on the venue', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+
+    const res = await pause(venue.id, {
+      reason: 'waiting_on_permission',
+      note: 'Ticketmaster migration; check back Monday.',
+      resume: { mode: 'in_days', days: 14 },
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await testDb
+      .select({
+        reason: venues.crawlPauseReason,
+        note: venues.crawlPauseNote,
+        resumeOn: venues.crawlResumeOn,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id));
+    expect(row?.reason).toBe('waiting_on_permission');
+    expect(row?.note).toBe('Ticketmaster migration; check back Monday.');
+    expect(row?.resumeOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(await latestAuditRow()).toMatchObject({
+      metadata: { reason: 'waiting_on_permission', resumeOn: row?.resumeOn },
+    });
+  });
+
+  it('refuses Other without a note, and a resume date that is not in the future', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    expect((await pause(venue.id, { reason: 'other' })).status).toBe(400);
+    const yesterday = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const res = await pause(venue.id, {
+      reason: 'site_broken_or_moved',
+      resume: { mode: 'on', date: yesterday },
+    });
+    expect(res.status).toBe(422);
+    expect(await pausedAt(venue.id)).toBeNull();
+  });
+
+  it('clears the reason, note and resume date on resume', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    await pause(venue.id, {
+      reason: 'site_broken_or_moved',
+      resume: { mode: 'in_days', days: 7 },
+    });
+    expect((await resume(venue.id)).status).toBe(200);
+    const [row] = await testDb
+      .select({
+        reason: venues.crawlPauseReason,
+        note: venues.crawlPauseNote,
+        resumeOn: venues.crawlResumeOn,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id));
+    expect(row).toEqual({ reason: null, note: null, resumeOn: null });
   });
 
   it('requires a non-blank reason', async () => {
