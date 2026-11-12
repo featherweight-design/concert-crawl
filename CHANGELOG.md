@@ -1,3 +1,27 @@
+# [1.357.0](https://github.com/featherweight-design/concert-crawl/compare/v1.356.1...v1.357.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address the review on the invite code menus and panel (5b B) ([9dd8eba](https://github.com/featherweight-design/concert-crawl/commit/9dd8ebafe1c55cc67c001bfe48007f9986568bad))
+* **web:** agree the singular revoke line and match the no-handle copy (5b B) ([d7c2baf](https://github.com/featherweight-design/concert-crawl/commit/d7c2baff78ff5938702009c0b83cb5037b18d878))
+* **web:** draw the code panel footer and confirm buttons as on the boards (5b B) ([14af135](https://github.com/featherweight-design/concert-crawl/commit/14af135601beee26084106e5a121d5ddf443c851))
+* **web:** guard the panel's payloads and open the row menu above the scrolling table (5b B) ([2676129](https://github.com/featherweight-design/concert-crawl/commit/2676129b8d9b7d3671f283a98ada178a48133bb8))
+* **web:** keep ids out of perf logs, server-only timer, flag non-2xx in measure script ([9e99c6c](https://github.com/featherweight-design/concert-crawl/commit/9e99c6cd3311e6945e695e1166614f7a1931ad32))
+* **web:** keep the row menu open while its table settles (5b B) ([8429e3b](https://github.com/featherweight-design/concert-crawl/commit/8429e3babdc626398d310355c773f8ba2b0aba27))
+* **web:** say 1 seat, not 1 seats, when reactivating (5b B) ([cfd7da2](https://github.com/featherweight-design/concert-crawl/commit/cfd7da20fa3926cf647ab38ccbcc1cc932eca492))
+* **web:** set the code panel buttons at the drawn size and corners (5b B) ([7d29bfd](https://github.com/featherweight-design/concert-crawl/commit/7d29bfd076afcf7a7f87c247becb8461b01bd6b1))
+
+
+### Features
+
+* **web:** add invite code menus, panel and revoke/reactivate (5b B) ([756f799](https://github.com/featherweight-design/concert-crawl/commit/756f79959703152c3e665ad51e70caae2d3685e8))
+
+
+### Performance Improvements
+
+* **web:** log server time per API call and page behind PERF_TIMING ([960319d](https://github.com/featherweight-design/concert-crawl/commit/960319de3c0cfa7b6162c95d8185c709991afc65))
+
 ## [1.356.1](https://github.com/featherweight-design/concert-crawl/compare/v1.356.0...v1.356.1) (2026-11-12)
 
 
