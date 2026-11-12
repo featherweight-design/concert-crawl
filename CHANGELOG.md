@@ -1,3 +1,19 @@
+# [1.358.0](https://github.com/featherweight-design/concert-crawl/compare/v1.357.0...v1.358.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** cards keep their soft halo and flat glyph, the arena moon is its own layer ([e4bdeb2](https://github.com/featherweight-design/concert-crawl/commit/e4bdeb23c2a342ccd94d88a666e5624900ff8f4a))
+* **web:** draw the crews screens as the B14 boards do ([09221ed](https://github.com/featherweight-design/concert-crawl/commit/09221ed82049fa503b817aa5e68588fddc26aa0e))
+* **web:** draw the What's new modal with the gradient top edge and CTA ([f6a9a34](https://github.com/featherweight-design/concert-crawl/commit/f6a9a34c032fd9023bc2339cc6c43f197731605d))
+* **web:** move the arena moon clear of the venue back chip ([ab77b7d](https://github.com/featherweight-design/concert-crawl/commit/ab77b7df88826930a75085058345d9efe46d3cc8))
+* **web:** venue hero glyph measured from the board, outdoor sky warms to the horizon ([88e513e](https://github.com/featherweight-design/concert-crawl/commit/88e513e0aec05830ac17ad9407b561bfae23026e))
+
+
+### Features
+
+* **web:** venue hero backdrop settings, hero glyph size, halo and neon fill ([252d27a](https://github.com/featherweight-design/concert-crawl/commit/252d27ae346e11c9af95eea192cc90e534761924))
+
 # [1.357.0](https://github.com/featherweight-design/concert-crawl/compare/v1.356.1...v1.357.0) (2026-11-12)
 
 
