@@ -227,7 +227,10 @@ export function FilterPopover({
       // Consumed on its first match, so a later scroll that happens to land
       // on the same offset still closes. Within a pixel, for fractional
       // scroll positions on zoomed or high-density screens.
-      const pageScroll = target === document || target === window;
+      // A page scroll targets the document (or the window), never an element.
+      // Not `target === window`: under vitest's jsdom `window` is the Node
+      // global, not the Window object an event reports as its target.
+      const pageScroll = !(target instanceof Element);
       const scrolledTo = scrolledToRef.current;
       if (
         pageScroll &&
