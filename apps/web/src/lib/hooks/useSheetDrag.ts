@@ -32,6 +32,8 @@ interface ActiveDrag {
 
 type Phase = 'idle' | 'dragging' | 'settling';
 
+export type SheetDragZone = SheetDrag['zoneProps'];
+
 interface SheetDrag {
   /** Spread on the grab zone: the handle strip or the sheet's header. */
   zoneProps: {
