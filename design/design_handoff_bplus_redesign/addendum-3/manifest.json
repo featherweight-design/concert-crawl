@@ -1,0 +1,266 @@
+[
+ {
+  "section": "01-widths",
+  "name": "header-640",
+  "title": "Header at 640, offline",
+  "note": "Search becomes an icon, the pill drops “· cached OK”, the wordmark becomes the mark.",
+  "w": 640,
+  "h": 300
+ },
+ {
+  "section": "01-widths",
+  "name": "header-900",
+  "title": "Header at 900, offline",
+  "note": "Search is an icon until 1024; the wordmark stays.",
+  "w": 900,
+  "h": 300
+ },
+ {
+  "section": "01-widths",
+  "name": "header-1100",
+  "title": "Header at 1100, offline",
+  "note": "From 1024 up: the full header, as drawn.",
+  "w": 1100,
+  "h": 160
+ },
+ {
+  "section": "01-widths",
+  "name": "hero-320-wrap",
+  "title": "Event hero at 320 · wraps",
+  "note": "Titles wrap at spaces.",
+  "w": 320,
+  "h": 500
+ },
+ {
+  "section": "01-widths",
+  "name": "hero-320-long-word",
+  "title": "Event hero at 320 · one long word",
+  "note": "A single word that can’t fit steps down to 30, then 26; never ellipsis.",
+  "w": 320,
+  "h": 500
+ },
+ {
+  "section": "02-no-longer-listed-rows",
+  "name": "nll-row-watching-m",
+  "title": "Watching · a No longer listed row",
+  "note": "Dashed card, no genre edge or wash; the chip and source line replace the meta row.",
+  "w": 390,
+  "h": 520
+ },
+ {
+  "section": "02-no-longer-listed-rows",
+  "name": "nll-row-browse-d",
+  "title": "Browse · a No longer listed row",
+  "note": "",
+  "w": 1040,
+  "h": 220
+ },
+ {
+  "section": "03-notification-tab-states",
+  "name": "notif-tab-empty-m",
+  "title": "What you missed · an empty tab",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-notification-tab-states",
+  "name": "notif-tab-loading-m",
+  "title": "What you missed · loading",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-notification-tab-states",
+  "name": "notif-tab-failed-m",
+  "title": "What you missed · couldn’t load",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "upcoming-menu-m",
+  "title": "Concerts · upcoming row ⋯",
+  "note": "A sheet: Open the show page, Share this show, Not going anymore.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "past-menu-m",
+  "title": "Concerts · past row ⋯",
+  "note": "The phone gets the desktop menu too, so Share is reachable.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "upcoming-menu-d",
+  "title": "Concerts · upcoming row ⋯, desktop",
+  "note": "",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "menu-flip-focus-d",
+  "title": "Concerts · menu flipped, keyboard focus",
+  "note": "Flips up near the window bottom; focus is the signal ring.",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "removed-top-m",
+  "title": "Concerts · after a remove",
+  "note": "Stats, Passport and Export all drop to 4.",
+  "w": 390,
+  "h": 1500
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "removed-no-undo-m",
+  "title": "Removed · no Undo",
+  "note": "When no restore token comes back, the toast has no action.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "removed-last-m",
+  "title": "Removed the last night",
+  "note": "The empty Concerts state, with the Add row under it.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "removed-d",
+  "title": "Removed · desktop toast",
+  "note": "Bottom center of the content, one at a time.",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "remove-busy-m",
+  "title": "Remove · in flight",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "remove-failed-m",
+  "title": "Remove · failed",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "event-after-remove-m",
+  "title": "Event page · after removing",
+  "note": "Back to I went, with the Undo toast.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "event-past-d",
+  "title": "Past event · desktop, marked",
+  "note": "THAT NIGHT replaces YOUR MOVE in the same column.",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "event-past-remove-d",
+  "title": "Past event · desktop remove dialog",
+  "note": "",
+  "w": 1280,
+  "h": 1100
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-loading-m",
+  "title": "Add a show · loading",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-error-m",
+  "title": "Add a show · couldn’t load",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-tap-failed-m",
+  "title": "Add a show · stamp failed",
+  "note": "The pill rolls back; the toast offers Retry.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-unmark-m",
+  "title": "Add a show · Went tapped off",
+  "note": "Unmarking gets its own toast with Undo.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-my-venues-empty-m",
+  "title": "Add a show · My venues empty",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-two-scopes-m",
+  "title": "Add a show · two scopes",
+  "note": "Without Artists I follow.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-search-d",
+  "title": "Add a show · desktop search",
+  "note": "",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "add-tapped-d",
+  "title": "Add a show · desktop, stamped",
+  "note": "",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "one-stamp-m",
+  "title": "Concerts · one stamp shape",
+  "note": "Round, straight, in the venue’s color, on every row.",
+  "w": 390,
+  "h": 1500
+ },
+ {
+  "section": "04-edit-your-concerts",
+  "name": "menu-hit-target-m",
+  "title": "Concerts · ⋯ tap target",
+  "note": "44 px target, 18 px glyph.",
+  "w": 390,
+  "h": 1500
+ }
+]
