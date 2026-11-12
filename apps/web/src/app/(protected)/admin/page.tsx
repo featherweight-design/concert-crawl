@@ -41,7 +41,12 @@ export default async function AdminHealthPage() {
 
   const now = new Date();
   const month = monthToDate(now);
-  const load = <T,>(path: string) => apiClient.get<T>(path, token);
+  // Names the endpoint, so error.tsx and Sentry say which load broke the page.
+  const load = <T,>(path: string) =>
+    apiClient.get<T>(path, token).catch((err: unknown) => {
+      console.error(`[admin] Health failed to load ${path}:`, err);
+      throw new Error(`Failed to load ${path}`, { cause: err });
+    });
 
   const [status, venues, costs, settings, artists, delivery, needsYou, triage] =
     await Promise.all([
@@ -70,6 +75,11 @@ export default async function AdminHealthPage() {
 
   const lastNight = lastNightWindow(now);
   const budgetUsd = settings.llmMonthlyBudgetUsd;
+  // Summed from this month's own days, not `costs.totalUsd`: if the API's
+  // "today" has crossed midnight into the next month, its window drops the
+  // 1st and adds a day of next month, and the total would carry both.
+  const series = monthSeries(costs.days, month);
+  const mtdUsd = series.reduce((sum, day) => sum + (day.costUsd ?? 0), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -79,9 +89,9 @@ export default async function AdminHealthPage() {
         artists={artistsTile(artists)}
         cost={{
           month: month.month,
-          mtdUsd: costs.totalUsd,
+          mtdUsd,
           budgetUsd,
-          ...costTile(costs.totalUsd, budgetUsd, month),
+          ...costTile(mtdUsd, budgetUsd, month),
         }}
         delivery={delivery}
       />
@@ -92,7 +102,7 @@ export default async function AdminHealthPage() {
             crawlRunsHref={navItem('crawl-runs').href}
           />
           <CostByDay
-            series={monthSeries(costs.days, month)}
+            series={series}
             month={month.month}
             budgetUsd={budgetUsd}
           />

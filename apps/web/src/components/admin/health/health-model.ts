@@ -1,5 +1,6 @@
 import type { CrawlRun, DailyCost, Venue } from '@concert-crawl/types';
 import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
+import { formatCost } from '@/components/admin/primitives/utils';
 
 // Pure derivations for the Health page (admin 1c). No React, no fetches:
 // the page loads, these decide.
@@ -288,9 +289,15 @@ export const groupVenues = (
   return groups;
 };
 
-/** Board money: "$15", "$4.12", "$0.37". */
-export const formatUsd = (value: number): string =>
-  Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
+/**
+ * Board money: "$15", "$4.12", "$0.37". Real spend under a cent falls back to
+ * the admin `formatCost` ("$0.0042") so it never reads as "$0.00" (#874).
+ */
+export const formatUsd = (value: number): string => {
+  if (Number.isInteger(value)) return `$${value}`;
+  if (value > 0 && value < 0.005) return formatCost(value);
+  return `$${value.toFixed(2)}`;
+};
 
 export const formatMtTime = (iso: string): string =>
   new Intl.DateTimeFormat('en-US', {

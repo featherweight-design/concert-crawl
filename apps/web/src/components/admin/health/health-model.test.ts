@@ -3,6 +3,7 @@ import {
   artistsTile,
   costTile,
   crawlTileState,
+  formatUsd,
   groupVenues,
   lastNightWindow,
   monthSeries,
@@ -218,5 +219,17 @@ describe('groupVenues', () => {
     expect(names('paused')).toEqual(['Levitt']);
     expect(names('quiet')).toEqual(['Ball Arena']);
     expect(names('ok')).toEqual(['Alpha', 'Zed']);
+  });
+});
+
+describe('formatUsd', () => {
+  it('draws board money to the cent', () => {
+    expect(formatUsd(15)).toBe('$15');
+    expect(formatUsd(4.123)).toBe('$4.12');
+    expect(formatUsd(0.37)).toBe('$0.37');
+  });
+
+  it('never hides real spend under a cent as $0.00 (#874)', () => {
+    expect(formatUsd(0.0042)).toBe('$0.0042');
   });
 });
