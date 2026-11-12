@@ -8,10 +8,16 @@
       "steps": [
         {
           "goto": "/events",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         }
       ]
     },
@@ -21,10 +27,16 @@
       "steps": [
         {
           "goto": "/events",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         },
         {
           "click": "[data-testid=\"venue-chip\"]:visible",
@@ -39,10 +51,16 @@
       "steps": [
         {
           "goto": "/events",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         },
         {
           "clickRole": "button",
@@ -58,10 +76,16 @@
       "steps": [
         {
           "goto": "/events?filterWhere=red-rocks-amphitheatre&filterWhen=this-week",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         }
       ]
     },
@@ -71,10 +95,16 @@
       "steps": [
         {
           "goto": "/events?filterWhere=red-rocks-amphitheatre&filterWhere=ogden-theatre&filterVibe=electronic&filterVibe=indie",
+          "settle": 1000
+        },
+        {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
-          "wait": "[data-testid=\"venue-chip\"]:visible"
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "wait": "header button[aria-label^=\"Account menu\"]:visible > div:not(:empty), nav[aria-label=\"Main navigation\"] button[aria-label^=\"Account menu\"]:visible span > div:not(:empty)"
         }
       ]
     }
