@@ -2068,6 +2068,64 @@ export const ADMIN_COPY = {
       body: (max: number) =>
         `Make one for a friend or a poster. Each can seat up to ${max} people.`,
     },
+    menu: {
+      trigger: 'Code actions',
+      copyLink: 'Copy link',
+      copyLinkEnded: 'Shows “This code has ended” when opened.',
+      copied: 'Link copied',
+      makePoster: 'Make a poster',
+      makePosterHint: 'Opens Posters with this code picked.',
+      seeWhoJoined: 'See who joined',
+      seeWhoJoinedHint: (joined: number) =>
+        `Opens the code: ${joined} ${joined === 1 ? 'person' : 'people'}.`,
+      revoke: 'Revoke…',
+      revokeHint: 'Nobody new can join. Asks first.',
+      reactivate: 'Reactivate…',
+      reactivateHint: 'Lets people join again. Asks first.',
+    },
+    panel: {
+      byline: (label: string | null, maker: string) =>
+        label ? `${label} · made by ${maker}` : `Made by ${maker}`,
+      expires: 'Expires',
+      lastUsed: 'Last used',
+      whoJoined: (joined: number) => `Who joined with it · ${joined}`,
+      joined: (date: string, role: string | null) =>
+        role ? `Joined ${date} · ${role}` : `Joined ${date}`,
+      roles: {
+        admin: 'Admin',
+        promoter: 'Promoter',
+        beta: 'Beta',
+        sub_admin: 'Staff',
+      },
+      addSeats: 'Add seats',
+      // Undrawn: someone who joined before picking a handle.
+      noHandle: 'No handle',
+    },
+    form: {
+      expires: 'Expires',
+      keep: (date: string) => `Keep ${date}`,
+      expiry: {
+        never: 'Never',
+        d7: '7 days',
+        d30: '30 days',
+        d90: '90 days',
+      },
+      stillAsItWas: (code: string) => `${code} is as it was.`,
+    },
+    revoke: {
+      title: (code: string) => `Revoke ${code}?`,
+      body: (code: string, joined: number) =>
+        `Nobody new can join with ${code}. The ${joined} ${joined === 1 ? 'person' : 'people'} who already joined keep their accounts. A poster with this code will show “This code has ended” when scanned.`,
+      keep: 'Keep it',
+      confirm: 'Revoke',
+    },
+    reactivate: {
+      title: (code: string) => `Reactivate ${code}?`,
+      body: (code: string, max: number, used: number) =>
+        `People can join with ${code} again, up to its ${max} seats (${used} used).`,
+      keep: 'Keep it ended',
+      confirm: 'Reactivate',
+    },
   },
 
   inviteCodes: {
@@ -2689,6 +2747,7 @@ export const ADMIN_COPY = {
     bug: 'BUG',
     flag: 'FLAG',
     priceCheck: 'PRICE CHECK',
+    inviteCode: 'INVITE CODE',
   },
   panel: { close: 'Close' },
   confirm: { cancel: 'Cancel' },
