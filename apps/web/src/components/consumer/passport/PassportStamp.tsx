@@ -159,11 +159,15 @@ const RoundVenueStamp = ({
               data-passport-stamp-glyph={glyphKey}
               transform={`translate(${GLYPH_OFFSET} ${GLYPH_OFFSET}) scale(${GLYPH_BOX / 24})`}
             >
-              <GlyphShapes
-                glyphKey={glyphKey}
-                paint={colors.glyph}
-                strokeWidth={SHARE_STAMP_GLYPH_STROKE}
-              />
+              {/* Called, not mounted: satori accepts only intrinsic elements
+                  inside an <svg>, so a component element there throws and the
+                  whole card 500s. `GlyphShapes` is a pure, hook-free render of
+                  a <g>, so calling it yields the same intrinsic tree. */}
+              {GlyphShapes({
+                glyphKey,
+                paint: colors.glyph,
+                strokeWidth: SHARE_STAMP_GLYPH_STROKE,
+              })}
             </g>
           )}
         </g>
