@@ -103,7 +103,7 @@ export const StageBackdrop = ({
 
 /** The genre ring on a card: 1.25px in the genre's color plus its glow. */
 export const stageRing = (ring: string): string =>
-  `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px rgb(0 0 0 / 0.6)`;
+  `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px var(--shadow-strong)`;
 
 export type StageShellProps = {
   backdrop: ReactNode;

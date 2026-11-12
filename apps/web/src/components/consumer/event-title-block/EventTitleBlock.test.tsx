@@ -98,6 +98,65 @@ describe('EventTitleBlock', () => {
     ).toBeInTheDocument();
   });
 
+  it('sizes the headline from headSize when passed, else from the surface ramp', () => {
+    const { rerender } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        headlinerAs="h1"
+        surface="detail"
+        headSize="48px"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1 }).style.fontSize).toBe(
+      '48px',
+    );
+    rerender(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1 }).style.fontSize).toBe(
+      '34px',
+    );
+  });
+
+  it('centers the block on mobile and returns it to the start edge from sm only when centered', () => {
+    const centeredClasses = [
+      'items-center',
+      'text-center',
+      'sm:items-start',
+      'sm:text-left',
+    ];
+    const { rerender } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        headlinerAs="h1"
+        surface="detail"
+        centered
+      />,
+    );
+    const block = () => screen.getByRole('heading', { level: 1 }).parentElement;
+    expect(block()).toHaveClass(...centeredClasses);
+    rerender(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    );
+    for (const cls of centeredClasses) expect(block()).not.toHaveClass(cls);
+  });
+
   // B+ reverses the old no-strike rule on the event page: the board
   // (`08-prices-and-status/more-st-ev_canc_m`) strikes a cancelled title and
   // draws the status chip under it. Postponed is never struck, and the hero

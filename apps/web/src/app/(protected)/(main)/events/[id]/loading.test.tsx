@@ -20,6 +20,18 @@ describe('event detail loading (B+ rule 9)', () => {
     expect(screen.getByTestId('stage-column')).toBeDefined();
   });
 
+  it('stacks the column as the loaded page does: countdown, name, genres, meta', () => {
+    render(<EventDetailLoading />);
+    const column = screen.getByTestId('stage-column');
+    const [eyebrow, title, genres, meta] = Array.from(column.children);
+    // The countdown slot carries the loaded pill's overlap of the card's foot.
+    expect(eyebrow?.className).toContain('-mt-7');
+    expect(title?.getAttribute('data-testid')).toBe('stage-skeleton-title');
+    expect(genres?.getAttribute('data-testid')).toBe('stage-skeleton-genres');
+    expect(meta?.getAttribute('data-testid')).toBe('stage-skeleton-meta');
+    expect(column.children).toHaveLength(4);
+  });
+
   it('renders the chrome immediately: the back control is live', () => {
     render(<EventDetailLoading />);
     expect(

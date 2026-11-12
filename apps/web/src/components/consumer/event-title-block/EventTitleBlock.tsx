@@ -76,9 +76,10 @@ export const EventTitleBlock = ({
   centered = false,
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface];
-  // `detail` is the surface that renders inside `HeroBand`, over generated
-  // artwork. `--fg-subtle` measures 3.49:1 on flat ground and less over art,
-  // so the dimmed variants step up there. See SupportingLine, which makes the
+  // `detail` is the surface that renders on the event stage's wash (B8), the
+  // blurred photo tinted in the theme's two colors. `--fg-subtle` measures
+  // 3.49:1 on flat ground and less over the wash, so the dimmed variants step
+  // up there. See SupportingLine, which makes the
   // same call for the line below these.
   const dimQuiet = surface === 'detail' ? 'text-fg-muted' : 'text-fg-subtle';
   const dim = status !== 'upcoming';
