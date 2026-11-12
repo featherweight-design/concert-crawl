@@ -1331,13 +1331,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             bottom: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'var(--ink)',
+            background: 'var(--fg)',
             borderRadius: 12,
             padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            boxShadow: 'var(--shadow-lg)',
+            boxShadow: 'var(--shadow-strong)',
             zIndex: 50,
           }}
         >
@@ -1364,7 +1364,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontFamily: "'Inter', sans-serif",
               fontSize: 13,
               fontWeight: 600,
-              color: 'var(--paper)',
+              color: 'var(--bg)',
             }}
           >
             {ADMIN_COPY.events.bulkActions.eventsSelected}
@@ -1388,7 +1388,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
               fontWeight: 600,
-              color: 'var(--paper)',
+              color: 'var(--bg)',
               background: 'transparent',
               border: 'none',
               cursor: processing !== null ? 'not-allowed' : 'pointer',
@@ -1409,7 +1409,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
               fontWeight: 600,
-              color: 'var(--paper)',
+              color: 'var(--bg)',
               opacity: processing !== null ? 0.5 : 0.85,
               background: 'transparent',
               border: 'none',
@@ -1430,7 +1430,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
               fontWeight: 600,
-              color: 'var(--paper)',
+              color: 'var(--bg)',
               opacity: processing !== null ? 0.5 : 0.85,
               background: 'transparent',
               border: 'none',
@@ -1449,7 +1449,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--paper)',
+              color: 'var(--bg)',
               display: 'flex',
               alignItems: 'center',
             }}

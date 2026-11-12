@@ -254,7 +254,7 @@ export const VenueGuideBlock = ({
           <p
             style={{
               margin: 0,
-              fontFamily: 'var(--font-sans)',
+              fontFamily: 'var(--font-ui)',
               fontSize: 12.5,
               color: 'var(--fg-muted)',
               lineHeight: 1.5,
@@ -274,7 +274,7 @@ export const VenueGuideBlock = ({
                   'color-mix(in oklab, var(--danger) 10%, transparent)',
                 border:
                   '1px solid color-mix(in oklab, var(--danger) 32%, transparent)',
-                fontFamily: 'var(--font-sans)',
+                fontFamily: 'var(--font-ui)',
                 fontSize: 12.5,
                 color: 'var(--fg)',
                 lineHeight: 1.5,
@@ -307,7 +307,7 @@ export const VenueGuideBlock = ({
               <label
                 htmlFor="venue-guide-insider-tip"
                 style={{
-                  fontFamily: 'var(--font-sans)',
+                  fontFamily: 'var(--font-ui)',
                   fontSize: 12.5,
                   fontWeight: 700,
                   color: 'var(--fg)',
@@ -375,7 +375,7 @@ export const VenueGuideBlock = ({
               <p
                 style={{
                   margin: 0,
-                  fontFamily: 'var(--font-sans)',
+                  fontFamily: 'var(--font-ui)',
                   fontSize: 12,
                   color: 'var(--fg)',
                   lineHeight: 1.5,
@@ -465,7 +465,7 @@ export const VenueGuideBlock = ({
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: 7,
-                          fontFamily: 'var(--font-sans)',
+                          fontFamily: 'var(--font-ui)',
                           fontSize: 12.5,
                           fontWeight: 700,
                           color: 'var(--fg)',
@@ -550,7 +550,7 @@ export const VenueGuideBlock = ({
               role="status"
               style={{
                 margin: 0,
-                fontFamily: 'var(--font-sans)',
+                fontFamily: 'var(--font-ui)',
                 fontSize: 12,
                 fontWeight: status.failed ? 600 : 400,
                 color: status.failed ? 'var(--danger)' : 'var(--fg-muted)',
@@ -571,7 +571,7 @@ export const VenueGuideBlock = ({
             >
               <span
                 style={{
-                  fontFamily: 'var(--font-sans)',
+                  fontFamily: 'var(--font-ui)',
                   fontSize: 11.5,
                   color: 'var(--fg-muted)',
                 }}
@@ -583,7 +583,7 @@ export const VenueGuideBlock = ({
                   <span
                     style={{
                       flexBasis: '100%',
-                      fontFamily: 'var(--font-sans)',
+                      fontFamily: 'var(--font-ui)',
                       fontSize: 12,
                       color: 'var(--fg)',
                       lineHeight: 1.5,
@@ -637,7 +637,7 @@ export const VenueGuideBlock = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                fontFamily: 'var(--font-sans)',
+                fontFamily: 'var(--font-ui)',
                 fontSize: 11.5,
                 color: 'var(--fg-subtle)',
               }}
@@ -685,7 +685,7 @@ const TEXTAREA_STYLE: CSSProperties = {
   borderRadius: 8,
   border: '1px solid var(--border-strong)',
   background: 'var(--bg-elevated)',
-  fontFamily: 'var(--font-sans)',
+  fontFamily: 'var(--font-ui)',
   fontSize: 13,
   fontWeight: 500,
   color: 'var(--fg)',
@@ -696,7 +696,7 @@ const TEXTAREA_STYLE: CSSProperties = {
 const HELP_STYLE: CSSProperties = {
   margin: 0,
   marginTop: 6,
-  fontFamily: 'var(--font-sans)',
+  fontFamily: 'var(--font-ui)',
   fontSize: 11.5,
   lineHeight: 1.45,
   color: 'var(--fg-muted)',
