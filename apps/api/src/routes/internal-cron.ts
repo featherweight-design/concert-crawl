@@ -14,6 +14,7 @@ import * as Sentry from '@sentry/hono/node';
 import { auditLog, db } from '@concert-crawl/db';
 import { runMatchArtists } from '../jobs/match-artists.js';
 import { runSpotifyWeekly } from '../jobs/spotify-weekly.js';
+import { runVenueAutoResume } from '../jobs/venue-auto-resume.js';
 import {
   startDailyCrawl,
   type DailyCrawlResult,
@@ -30,6 +31,7 @@ export interface InternalCronJobs {
   startDailyCrawl: (now: Date) => Promise<DailyCrawlResult>;
   auditDailyCrawl: (result: DailyCrawlResult) => Promise<void>;
   pruneNotifications: (now: Date) => Promise<{ deleted: number }>;
+  venueAutoResume: (now: Date) => Promise<{ resumed: unknown[] }>;
 }
 
 // The audit_log actor for an action no person took. Admin rows carry a Clerk
@@ -53,6 +55,7 @@ const defaultJobs: InternalCronJobs = {
   startDailyCrawl: (now) => startDailyCrawl(now),
   auditDailyCrawl,
   pruneNotifications: (now) => pruneNotifications(db, now),
+  venueAutoResume: (now) => runVenueAutoResume(now),
 };
 
 // A skip is a correct outcome. A failure answers 503 so it shows as failed in
@@ -162,6 +165,14 @@ export const createInternalCronRouter = (
   router.get('/notification-prune', async (ctx) => {
     const { deleted } = await jobs.pruneNotifications(new Date());
     return ctx.json({ success: true, deleted });
+  });
+
+  // Resumes venues paused until a date that has come, ahead of the daily
+  // crawl (vercel.json schedules it earlier the same morning).
+  router.get('/venue-auto-resume', async (ctx) => {
+    const { resumed } = await jobs.venueAutoResume(new Date());
+    apiLogger.info({ resumed: resumed.length }, 'venue-auto-resume: done');
+    return ctx.json({ success: true, resumed: resumed.length });
   });
 
   router.get('/spotify-weekly', async (ctx) => {

@@ -1,9 +1,12 @@
 // Needs you answers: failing and blocked venues. See answer-kit.ts for the handler shape.
 
-import { z } from 'zod';
 import type { NeedsYouKind } from '@concert-crawl/types';
 import { queueVenueCrawl } from '../crawl-trigger.js';
-import { pauseVenueCrawl } from '../venue-crawl-pause.js';
+import {
+  pauseBodySchema,
+  pauseVenueCrawl,
+  resolvePauseDetails,
+} from '../venue-crawl-pause.js';
 import { define, fail, noParams } from './answer-kit.js';
 
 export const reCrawl = (
@@ -44,14 +47,16 @@ export const pauseAnswer = (
   define({
     slug,
     kinds: [kind],
-    schema: z.object({ reason: z.string().trim().min(1).max(500) }),
+    schema: pauseBodySchema,
     run: async (item, params) => {
       if (item.venueId === null) return fail(422, 'This item has no venue');
-      const paused = await pauseVenueCrawl(item.venueId);
+      const resolved = resolvePauseDetails(params, new Date());
+      if (!resolved.ok) return fail(422, resolved.error);
+      const paused = await pauseVenueCrawl(item.venueId, resolved.details);
       if (!paused) return fail(404, 'Venue not found');
       return {
         ok: true,
-        params: { reason: params.reason },
+        params: { ...resolved.details },
         before: null,
         result: { alreadyPaused: paused.existing.crawlPausedAt !== null },
       };

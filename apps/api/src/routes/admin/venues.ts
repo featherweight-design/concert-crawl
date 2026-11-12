@@ -54,7 +54,11 @@ import type { AdminVariables } from './index.js';
 import { venueGuideAdminRouter } from './venue-guide.js';
 import { TRIAGE_CONDITIONS } from './lib/triage.js';
 import { idSchema } from '../../lib/id-schema.js';
-import { pauseVenueCrawl } from './lib/venue-crawl-pause.js';
+import {
+  pauseBodySchema,
+  pauseVenueCrawl,
+  resolvePauseDetails,
+} from './lib/venue-crawl-pause.js';
 import { todayInDenver } from '../../lib/time.js';
 
 const createVenueSchema = z.object({
@@ -1098,24 +1102,22 @@ const crawlPauseParamSchema = z.object({
   id: idSchema,
 });
 
-const crawlPauseSchema = z.object({
-  // Why the venue is paused, kept in the audit log: "venue asked us to stop",
-  // "awaiting VenuePilot API access". Required so a pause is never unexplained.
-  reason: z.string().trim().min(1).max(500),
-});
-
 // POST /v1/admin/venues/:id/crawl-pause — stop every crawl of a venue while
 // its shows stay published. Idempotent: pausing a paused venue keeps the
 // original timestamp.
 venuesAdminRouter.post(
   '/:id/crawl-pause',
   zValidator('param', crawlPauseParamSchema, validationHook),
-  zValidator('json', crawlPauseSchema, validationHook),
+  zValidator('json', pauseBodySchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
-    const { reason } = ctx.req.valid('json');
+    const body = ctx.req.valid('json');
+    const resolved = resolvePauseDetails(body, new Date());
+    if (!resolved.ok) {
+      return ctx.json({ success: false, error: resolved.error }, 422);
+    }
 
-    const result = await pauseVenueCrawl(id);
+    const result = await pauseVenueCrawl(id, resolved.details);
     if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
@@ -1125,7 +1127,9 @@ venuesAdminRouter.post(
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', {
-      reason,
+      reason: resolved.details.reason,
+      note: resolved.details.note,
+      resumeOn: resolved.details.resumeOn,
       alreadyPaused: existing.crawlPausedAt !== null,
     });
 
@@ -1152,7 +1156,12 @@ venuesAdminRouter.delete(
       if (!existing) return null;
       const [updated] = await tx
         .update(venues)
-        .set({ crawlPausedAt: null })
+        .set({
+          crawlPausedAt: null,
+          crawlPauseReason: null,
+          crawlPauseNote: null,
+          crawlResumeOn: null,
+        })
         .where(eq(venues.id, id))
         .returning();
       return { existing, venue: updated };
@@ -1180,6 +1189,12 @@ const PRICE_NOTIFICATION_CATEGORIES = [
   'contest.needs_info',
 ];
 
+const removeVenueSchema = z.object({
+  // Why the venue is removed, kept in the audit log: "venue asked us to stop".
+  // Required so a removal is never unexplained.
+  reason: z.string().trim().min(1).max(500),
+});
+
 // POST /v1/admin/venues/:id/remove — honour a venue's removal request, the
 // one /bot promises within 30 days. Takes the venue's shows off the site
 // (active = false, which every public query joins on), stops every crawl
@@ -1192,7 +1207,7 @@ const PRICE_NOTIFICATION_CATEGORIES = [
 venuesAdminRouter.post(
   '/:id/remove',
   zValidator('param', crawlPauseParamSchema, validationHook),
-  zValidator('json', crawlPauseSchema, validationHook),
+  zValidator('json', removeVenueSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const { reason } = ctx.req.valid('json');
