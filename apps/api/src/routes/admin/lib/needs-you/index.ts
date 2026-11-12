@@ -11,6 +11,7 @@ import { filterSnoozed, loadActiveSnoozes } from './snoozes.js';
 import { loadNeedsYouItems } from './sources.js';
 
 export const NEEDS_YOU_ANSWER_ACTION = 'needs_you.answer';
+export const NEEDS_YOU_UNDO_ACTION = 'needs_you.undo';
 
 /** Visible items: sources, minus snoozes and Not useful, in queue order. */
 export const listNeedsYou = async ({
