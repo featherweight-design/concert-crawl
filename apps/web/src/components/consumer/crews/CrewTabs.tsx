@@ -115,8 +115,18 @@ export const CrewTabs = ({
                 minHeight: 34,
                 padding: wide ? '7px 12px' : '7px 6px',
                 borderRadius: 8,
-                background: selected ? 'var(--surface-2)' : 'transparent',
-                border: `1px solid var(--${selected ? 'border-strong' : 'border'})`,
+                // The active tab wears the cyan-to-pink hairline, as the
+                // My shows tabs do (more-r3-crew_home_m, crew_been_m).
+                ...(selected
+                  ? {
+                      border: '1px solid transparent',
+                      background:
+                        'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+                    }
+                  : {
+                      background: 'transparent',
+                      border: '1px solid var(--border)',
+                    }),
                 fontFamily: 'var(--font-ui)',
                 fontSize: 12.5,
                 // Weight is identical in both states on purpose: a bolder

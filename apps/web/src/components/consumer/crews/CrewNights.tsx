@@ -162,12 +162,11 @@ export const CrewNights = ({ shows, wide, viewerId }: CrewNightsProps) => {
   if (shows.length === 0) {
     return (
       <EmptyState
-        state="no-data"
-        density="dense"
+        layout="card"
+        glyph="tickets"
         eyebrow={COPY.empty.noPastEyebrow}
         title={COPY.empty.noPastTitle}
         body={COPY.empty.noPastBody}
-        railLabel={COPY.empty.noPastRail}
       />
     );
   }
