@@ -117,6 +117,7 @@ export * from './events-query.js';
 
 // Event status
 export * from './event-status.js';
+export * from './records-start.js';
 import type { EventStatus } from './event-status.js';
 
 /**
@@ -1284,6 +1285,10 @@ export interface WatchToggleResponse {
 export interface AttendingToggleResponse {
   going: boolean;
   attendingAt: string | null; // ISO, null when released
+  // DELETE only: a short-lived token that lets the caller put back exactly the
+  // attendance it just removed (the Undo toast). Null when nothing was removed
+  // or the server cannot sign one, in which case the client shows no Undo.
+  restore?: { attendingAt: string; token: string } | null;
 }
 
 // One attended night — GET /v1/history. dateLabel and showTime arrive
@@ -1306,6 +1311,30 @@ export interface HistoryShow {
   priceFinal: number | null; // last observed face price
   genre: string | null; // single word, drives "top genre"
   attendingAt: string; // ISO — non-null by construction on this surface
+  // Share-this-night inputs (a PosterSource needs the venue's place and clock).
+  venueCity: string;
+  venueTimezone: string;
+  rawShowTime: string | null; // HH:MM:SS wall-clock, as stored
+}
+
+// GET /v1/history/past-shows — the Add-a-show list. Scope narrows the list.
+export type PastShowsScope = 'all' | 'venues' | 'follows';
+
+export interface PastShowRow {
+  eventId: string;
+  artist: string;
+  artistPhotoUrl: string | null;
+  venueName: string;
+  venueSlug: string;
+  date: string; // YYYY-MM-DD
+  dateLabel: string; // "Mon, Oct 20"
+  attendingAt: string | null; // the caller's own stamp, null if not marked
+}
+
+export interface PastShowsResponse {
+  rows: PastShowRow[];
+  total: number;
+  nextCursor: string | null;
 }
 
 export interface HistoryStats {

@@ -54,6 +54,9 @@ const show = (eventId: string, date: string): HistoryShow => ({
   priceFinal: 22,
   genre: 'indie',
   attendingAt: `${date}T02:00:00.000Z`,
+  venueCity: 'Denver',
+  venueTimezone: 'America/Denver',
+  rawShowTime: null,
 });
 
 const year = new Date().getFullYear();

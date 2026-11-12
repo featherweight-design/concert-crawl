@@ -15,6 +15,9 @@ const show = (overrides: Partial<HistoryShow> = {}): HistoryShow => ({
   priceFinal: 45,
   genre: 'psych',
   attendingAt: '2026-05-01T00:00:00.000Z',
+  venueCity: 'Denver',
+  venueTimezone: 'America/Denver',
+  rawShowTime: '20:00:00',
   ...overrides,
 });
 
@@ -137,5 +140,25 @@ describe('computeHistoryStats', () => {
     ]);
     expect(stats.first).toBe('2026-01-02');
     expect(stats.last).toBe('2026-06-10');
+  });
+
+  // Regression (edit your Concerts D10): stamping a night from long ago today
+  // must not move "since" to today. `first` reads the event dates, never
+  // `attendingAt`.
+  it('reads first and last from the show dates, not from when they were stamped', () => {
+    const stats = computeHistoryStats([
+      show({
+        eventId: 'old',
+        date: '2026-04-10',
+        attendingAt: '2026-11-11T18:00:00.000Z',
+      }),
+      show({
+        eventId: 'new',
+        date: '2026-09-01',
+        attendingAt: '2026-09-02T00:00:00.000Z',
+      }),
+    ]);
+    expect(stats.first).toBe('2026-04-10');
+    expect(stats.last).toBe('2026-09-01');
   });
 });

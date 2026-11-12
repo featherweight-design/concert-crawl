@@ -122,6 +122,7 @@ const payload = (
       venue: 'Globe Hall',
       venueSlug: 'globe-hall',
       city: 'Denver',
+      attending: null,
     },
   ],
   history: { count: 2, venues: ['Larimer Lounge', 'Globe Hall'] },

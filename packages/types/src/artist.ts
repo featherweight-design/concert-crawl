@@ -53,6 +53,8 @@ export interface ArtistPastShow {
   venue: string;
   venueSlug: string;
   city: string | null;
+  /** The caller's own attendance: null when signed out. */
+  attending: boolean | null;
 }
 
 /**

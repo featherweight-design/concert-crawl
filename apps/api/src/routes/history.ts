@@ -26,10 +26,14 @@
 // venue_id narrowing rides the events PK join. No new index needed for #764.
 
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db, artists, userEvents, events, venues } from '@concert-crawl/db';
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types';
+import { validationHook } from '../lib/validator.js';
+import { loadPastShows } from '../lib/past-shows.js';
 import { requireFeature } from '../middleware/entitlement.js';
 import type { EntitlementVariables } from '../middleware/entitlement.js';
 import {
@@ -105,6 +109,8 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       venueName: venues.name,
       venueSlug: venues.slug,
       neighborhood: venues.neighborhood,
+      venueCity: venues.city,
+      venueTimezone: venues.timezone,
     })
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
@@ -156,6 +162,9 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       priceFinal: parsePrice(row.ticketPriceMin ?? null),
       genre: row.genre?.[0] ?? null,
       attendingAt: row.attendingAt.toISOString(),
+      venueCity: row.venueCity,
+      venueTimezone: row.venueTimezone,
+      rawShowTime: row.showTime ?? null,
     };
 
     if (row.date < row.today) {
@@ -213,3 +222,42 @@ historyRouter.get('/', async (ctx) => {
 
   return ctx.json({ success: true, data });
 });
+
+const pastShowsQuerySchema = z
+  .object({
+    ['q']: z.string().trim().max(80).optional(),
+    scope: z.enum(['all', 'venues', 'follows']).default('all'),
+    cursor: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}_[0-9a-f-]{36}$/)
+      .optional(),
+  })
+  .strict();
+
+// The Add-a-show list. The follows scope has its own entitlement, the same
+// gate `following=1` meets on the events list.
+historyRouter.use('/past-shows', requireFeature('concert-history'));
+historyRouter.get(
+  '/past-shows',
+  async (ctx, next) =>
+    ctx.req.query('scope') === 'follows'
+      ? requireFeature('following')(ctx, next)
+      : next(),
+  zValidator('query', pastShowsQuerySchema, validationHook),
+  async (ctx) => {
+    const authInfo = getAuth(ctx);
+    if (!authInfo?.userId)
+      return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+
+    const query = ctx.req.valid('query');
+    const { scope, cursor } = query;
+    const search = query['q'];
+    const data = await loadPastShows({
+      userId: authInfo.userId,
+      search: search === '' ? undefined : search,
+      scope,
+      cursor,
+    });
+    return ctx.json({ success: true, data });
+  },
+);

@@ -26,6 +26,7 @@ import {
   seedArtist,
   seedEvent,
   seedPriceSubmission,
+  seedUserEvent,
   seedVenue,
 } from '../test/helpers/seed.js';
 
@@ -522,5 +523,53 @@ describe('GET /v1/artists/:slug — integration', () => {
     expect(res.status).toBe(404);
     const body: ErrorBody = await res.json();
     expect(body).toEqual({ success: false, error: 'Artist not found' });
+  });
+
+  describe('past[].attending', () => {
+    const seedPastArtist = async () => {
+      await seedArtist({ name: 'Wren Hollow', canonicalName: 'wren hollow' });
+      const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+      const first = await seedEvent(venue.id, {
+        artist: 'Wren Hollow',
+        date: '2026-05-01',
+      });
+      const second = await seedEvent(venue.id, {
+        artist: 'Wren Hollow',
+        date: '2026-05-02',
+      });
+      return { first, second };
+    };
+
+    const attendingByEvent = async (): Promise<Map<string, boolean | null>> => {
+      const res = await getArtist('wren-hollow');
+      const body = (await res.json()) as SuccessBody;
+      return new Map(
+        body.data.past.map((show) => [show.eventId, show.attending]),
+      );
+    };
+
+    it('is null for every row when signed out', async () => {
+      const { first, second } = await seedPastArtist();
+      const map = await attendingByEvent();
+      expect(map.get(first.id)).toBeNull();
+      expect(map.get(second.id)).toBeNull();
+    });
+
+    it('is true for a marked show and false for the rest, and never reflects another user', async () => {
+      const { first, second } = await seedPastArtist();
+      await seedUserEvent('user_other', second.id, {
+        status: null,
+        attendingAt: new Date('2026-05-03T00:00:00Z'),
+      });
+      await seedUserEvent('user_artist_attending', first.id, {
+        status: null,
+        attendingAt: new Date('2026-05-03T00:00:00Z'),
+      });
+      authState.current = { userId: 'user_artist_attending' };
+
+      const map = await attendingByEvent();
+      expect(map.get(first.id)).toBe(true);
+      expect(map.get(second.id)).toBe(false);
+    });
   });
 });

@@ -123,6 +123,7 @@ const withPast: ArtistDetailResponse = {
       venue: 'Larimer Lounge',
       venueSlug: 'larimer-lounge',
       city: 'Denver',
+      attending: null,
     },
   ],
   history: { count: 1, venues: ['Larimer Lounge'] },
