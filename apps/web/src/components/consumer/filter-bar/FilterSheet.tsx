@@ -1,6 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalDialog } from '@/lib/hooks/useModalDialog';
+import { useOnPhone, useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import type { FilterOption } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
@@ -27,6 +30,15 @@ export function FilterSheet({
   onSelect,
   onClose,
 }: FilterSheetProps) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const onPhone = useOnPhone();
+  // Tab trap, Escape and focus return only while the sheet is actually showing:
+  // the venue filter bar keeps it mounted but hidden (`sm:hidden`) at desktop
+  // width while the popover is open, and a trap on a hidden dialog would block
+  // Tab on the page.
+  useModalDialog(dialogRef, open && onPhone, onClose);
+  const drag = useSheetDrag(onClose, open);
+
   // Never rendered by the server (it only opens after a tap), so `document` is
   // always there once this gets past the early return.
   if (!open) return null;
@@ -47,6 +59,8 @@ export function FilterSheet({
       />
 
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={`${title} filter`}
@@ -56,14 +70,23 @@ export function FilterSheet({
           paddingTop: 8,
           paddingBottom: 28,
           boxShadow: '0 -20px 60px rgba(0,0,0,0.4)',
+          ...drag.sheetStyle,
         }}
+        onTransitionEnd={drag.onSheetTransitionEnd}
       >
-        <div className="flex justify-center" style={{ padding: '8px 0 4px' }}>
+        {/* The handle and the title are the drag-down grab zone. */}
+        <div
+          {...drag.zoneProps}
+          className="flex justify-center"
+          style={{ ...drag.zoneProps.style, padding: '8px 0 4px' }}
+        >
           <div className="h-1 w-9 rounded-full bg-border-strong" />
         </div>
 
         <div
+          {...drag.zoneProps}
           style={{
+            ...drag.zoneProps.style,
             padding: '10px 20px 14px',
             fontFamily: 'var(--font-mono)',
             fontSize: 10,

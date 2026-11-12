@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import Link from 'next/link';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -82,5 +82,84 @@ describe('FilterSheet', () => {
   it('draws nothing when closed', () => {
     renderBesideCards({ open: false });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+// jsdom has no PointerEvent, and React reads pointerId and clientY off it.
+beforeAll(() => {
+  if (typeof window.PointerEvent !== 'undefined') return;
+  class PointerEventStub extends MouseEvent {
+    pointerId: number;
+    pointerType: string;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 1;
+      this.pointerType = init.pointerType ?? 'touch';
+    }
+  }
+  Object.defineProperty(window, 'PointerEvent', {
+    value: PointerEventStub,
+    configurable: true,
+  });
+});
+
+const stubPhone = (phone: boolean) => {
+  vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
+    matches: phone && query.includes('max-width'),
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
+};
+
+describe('FilterSheet on a phone', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('is dragged down by its handle to dismiss', () => {
+    stubPhone(true);
+    const { onClose } = renderBesideCards({});
+    const handle = screen
+      .getByRole('dialog', { name: 'Capacity filter' })
+      .querySelector('div');
+    expect(handle).not.toBeNull();
+    if (handle === null) return;
+    fireEvent.pointerDown(handle, { pointerId: 1, clientY: 0 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientY: 160 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientY: 160 });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on Escape and keeps Tab inside', () => {
+    stubPhone(true);
+    const { onClose } = renderBesideCards({});
+    const dialog = screen.getByRole('dialog', { name: 'Capacity filter' });
+    expect(dialog).toHaveFocus();
+    const last = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button:not(:disabled)'),
+    ).pop();
+    last?.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    // Wrapped to the first control inside the sheet, not out behind the scrim.
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    expect(document.activeElement).not.toBe(last);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('FilterSheet kept mounted but hidden at desktop width', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('does not trap Tab, close on Escape or take focus', () => {
+    stubPhone(false);
+    const { onClose } = renderBesideCards({});
+    const dialog = screen.getByRole('dialog', { name: 'Capacity filter' });
+    expect(dialog).not.toHaveFocus();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

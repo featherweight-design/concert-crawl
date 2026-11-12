@@ -36,7 +36,7 @@ const SHEET_QUERY = '(max-width: 639px)';
 // Not `useMediaQuery`: that one calls `window.matchMedia` outright, and a sheet
 // rendered where there is none (a jsdom test of a surface that merely contains a
 // sheet) must stay a plain sheet rather than throw.
-const useOnPhone = (): boolean => {
+export const useOnPhone = (): boolean => {
   const subscribe = useCallback((onChange: () => void) => {
     const mql = window.matchMedia?.(SHEET_QUERY);
     mql?.addEventListener?.('change', onChange);

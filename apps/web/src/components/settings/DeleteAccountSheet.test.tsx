@@ -2,7 +2,15 @@
 
 import '@testing-library/jest-dom';
 import { useState } from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterEach,
+} from 'vitest';
 import {
   render,
   screen,
@@ -29,10 +37,29 @@ vi.mock('@/lib/users', () => ({
   deleteAccount: (token: string) => mockDeleteAccount(token),
 }));
 
-// The sheet reads one media query (640px and up) to pick its layout.
+// jsdom has no PointerEvent, and React reads pointerId and clientY off it.
+beforeAll(() => {
+  if (typeof window.PointerEvent !== 'undefined') return;
+  class PointerEventStub extends MouseEvent {
+    pointerId: number;
+    pointerType: string;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 1;
+      this.pointerType = init.pointerType ?? 'touch';
+    }
+  }
+  Object.defineProperty(window, 'PointerEvent', {
+    value: PointerEventStub,
+    configurable: true,
+  });
+});
+
+// The sheet reads min-width (640px and up) to pick its layout, and the drag
+// hook reads max-width (phone): they are opposites.
 const stubViewport = (desktop: boolean) => {
   vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
-    matches: desktop,
+    matches: query.includes('min-width') ? desktop : !desktop,
     media: query,
     onchange: null,
     addEventListener: () => undefined,
@@ -159,6 +186,42 @@ describe.each([
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('is dragged down to dismiss on the phone sheet only', () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    openSheet();
+    // The heading is part of the grab zone, as is the handle above it.
+    const zone = screen.getByRole('heading', {
+      name: DANGER_COPY.confirmHeading,
+    });
+    fireEvent.pointerDown(zone, { pointerId: 1, clientY: 0 });
+    fireEvent.pointerMove(zone, { pointerId: 1, clientY: 180 });
+    fireEvent.pointerUp(zone, { pointerId: 1, clientY: 180 });
+    // The desktop dialog is not a bottom sheet: nothing moves, nothing closes.
+    expect(onClose).toHaveBeenCalledTimes(desktop ? 0 : 1);
+  });
+
+  it('does not dismiss on a drag while the deletion request is in flight', async () => {
+    mockDeleteAccount.mockReturnValue(new Promise(() => undefined));
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    openSheet();
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'DELETE' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: armedLabel }));
+    await waitFor(() =>
+      expect(mockDeleteAccount).toHaveBeenCalledWith('token'),
+    );
+    const zone = screen.getByRole('heading', {
+      name: DANGER_COPY.confirmHeading,
+    });
+    fireEvent.pointerDown(zone, { pointerId: 1, clientY: 0 });
+    fireEvent.pointerMove(zone, { pointerId: 1, clientY: 180 });
+    fireEvent.pointerUp(zone, { pointerId: 1, clientY: 180 });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('never calls the delete request until DELETE is typed', () => {

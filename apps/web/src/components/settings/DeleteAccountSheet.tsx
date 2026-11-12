@@ -5,6 +5,7 @@ import { useAuth, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { deleteAccount } from '@/lib/users';
 import { useModalDialog } from '@/lib/hooks/useModalDialog';
+import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
@@ -48,6 +49,12 @@ export function DeleteAccountSheet({
   // is ignored while the deletion request is in flight: closing then would hide
   // the result of an action that is still running.
   useModalDialog(dialogRef, open, onClose, !loading);
+
+  // Drag-down dismiss on the phone sheet (the shared hook is a no-op from sm
+  // up). Like Escape, it does nothing while the request is in flight.
+  const drag = useSheetDrag(() => {
+    if (!loading) onClose();
+  }, open);
 
   useEffect(() => {
     if (!open) return;
@@ -216,15 +223,22 @@ export function DeleteAccountSheet({
           boxShadow: '0 -24px 60px -10px rgba(0,0,0,0.5)',
           maxHeight: '90svh',
           overflowY: 'auto',
+          ...drag.sheetStyle,
         }}
+        onTransitionEnd={drag.onSheetTransitionEnd}
       >
-        {/* Drag handle */}
-        <div className="mx-auto h-1 w-10 rounded-full bg-border" />
+        {/* Drag handle: the grab zone with the heading below it. The padding
+            and the matching negative margin widen the target to 28px without
+            moving anything. */}
+        <div {...drag.zoneProps} className="-my-3 py-3">
+          <div className="mx-auto h-1 w-10 rounded-full bg-border" />
+        </div>
 
         <h2
+          {...drag.zoneProps}
           id="delete-sheet-title"
           className="text-fg"
-          style={{ fontSize: 20, fontWeight: 900 }}
+          style={{ ...drag.zoneProps.style, fontSize: 20, fontWeight: 900 }}
         >
           {DANGER_COPY.confirmHeading}
         </h2>
