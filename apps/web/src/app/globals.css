@@ -482,6 +482,15 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* Admin Pause panel (3a): the chips, month arrows and days are `all: unset`,
+   and each reason's radio is visually hidden inside its row, so the ring goes
+   on the control, or on the row while its radio has keyboard focus. */
+[data-pause-control]:focus-visible,
+[data-pause-option]:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 /* ── In-app notifications (#737) ──────────────────────────────────────────
    The panel is a port of design_handoff_in_app_notifications, whose components
    style themselves inline. These rules are the ones inline styles cannot

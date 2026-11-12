@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   buildPauseBody,
+  formFromBody,
   isPickable,
   monthGrid,
   pausedStateLine,
@@ -90,9 +91,60 @@ describe('pause rules', () => {
     expect(pausedStateLine(paused({ crawlPausedByName: 'Hugh' }))).toBe(
       'Paused by Hugh, Oct 28.',
     );
-    expect(pausedStateLine(paused({ consecutiveFailures: 3 }))).toBe(
-      'Auto-paused after 3 failures.',
-    );
     expect(pausedStateLine(paused({}))).toBe('Paused since Oct 28.');
+  });
+
+  it('tells an auto-pause by its missing reason, not its missing name', () => {
+    const paused = (over: Partial<PausedVenue>): PausedVenue => ({
+      crawlPausedAt: '2026-10-28T15:00:00Z',
+      crawlPauseReason: null,
+      crawlPauseNote: null,
+      consecutiveFailures: 3,
+      crawlPausedByName: null,
+      ...over,
+    });
+    // The crawler's auto-pause writes no reason and no pauser.
+    expect(pausedStateLine(paused({}))).toBe('Auto-paused after 3 failures.');
+    // A hand pause on a failing venue, by an admin since deleted: still theirs.
+    expect(
+      pausedStateLine(
+        paused({
+          crawlPausedByName: 'a former admin',
+          crawlPauseReason: 'site_broken_or_moved',
+        }),
+      ),
+    ).toBe('Paused by a former admin, Oct 28: site is broken or moved.');
+    // An admin kept an auto-pause: a reason now, but the crawler stays the
+    // pauser, so there is no name. Not an auto-pause any more.
+    expect(
+      pausedStateLine(paused({ crawlPauseReason: 'waiting_on_permission' })),
+    ).toBe('Paused since Oct 28: waiting on permission.');
+  });
+
+  it('reopens the form a body was sent from', () => {
+    expect(formFromBody(null)).toEqual({
+      reason: 'waiting_on_permission',
+      note: '',
+      choice: 'manual',
+      picked: null,
+    });
+    expect(
+      formFromBody({
+        reason: 'other',
+        note: 'moved',
+        resume: { mode: 'on', date: '2026-11-16' },
+      }),
+    ).toEqual({
+      reason: 'other',
+      note: 'moved',
+      choice: 'date',
+      picked: '2026-11-16',
+    });
+    expect(
+      formFromBody({
+        reason: 'site_broken_or_moved',
+        resume: { mode: 'in_days', days: 14 },
+      }).choice,
+    ).toBe('twoWeeks');
   });
 });

@@ -44,16 +44,20 @@ const PanelBody = ({
   footer,
   footerLayout = 'end',
   onClose,
-}: Omit<SidePanelProps, 'width' | 'inline' | 'dismissible'> & {
+  dismissible = true,
+}: Omit<SidePanelProps, 'width' | 'inline'> & {
   titleId: string;
 }) => (
   <>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {eyebrow}
       <span style={{ flex: 1 }} />
+      {/* Mid-request the ✕ is off too, like the scrim and Escape, so a reply
+          the panel still has to show (a refused date) isn't closed away. */}
       <button
         type="button"
         onClick={onClose}
+        disabled={!dismissible}
         aria-label={ADMIN_COPY.panel.close}
         style={{
           display: 'flex',
@@ -62,7 +66,8 @@ const PanelBody = ({
           borderRadius: 8,
           background: 'transparent',
           color: 'var(--fg-muted)',
-          cursor: 'pointer',
+          cursor: dismissible ? 'pointer' : 'default',
+          opacity: dismissible ? 1 : 0.45,
         }}
       >
         <X size={18} aria-hidden />
@@ -184,7 +189,7 @@ const OverlayPanel = ({
           boxShadow: 'var(--shadow-strong)',
         }}
       >
-        <PanelBody {...props} titleId={titleId} />
+        <PanelBody {...props} dismissible={dismissible} titleId={titleId} />
       </div>
     </div>
   );

@@ -30,6 +30,10 @@ export const CrawlPauseControl = ({
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [failedBody, setFailedBody] = useState<CrawlPauseRequest | null>(null);
+  const [refused, setRefused] = useState<{
+    body: CrawlPauseRequest;
+    error: string;
+  } | null>(null);
   const paused = venue.crawlPausedAt !== null;
 
   const pause = async (body: CrawlPauseRequest): Promise<string | null> => {
@@ -42,6 +46,18 @@ export const CrawlPauseControl = ({
     setFailedBody(outcome.ok ? null : body);
     router.refresh();
     return null;
+  };
+
+  // Try again from the toast. A refusal now (a date that has since passed)
+  // reopens the panel on the same choices with the refusal inline, instead of
+  // vanishing with the toast.
+  const retry = async (body: CrawlPauseRequest) => {
+    setFailedBody(null);
+    const error = await pause(body);
+    if (error !== null) {
+      setRefused({ body, error });
+      setOpen(true);
+    }
   };
 
   const resume = () => {
@@ -90,7 +106,14 @@ export const CrawlPauseControl = ({
           size="sm"
           icon={paused ? Play : Pause}
           disabled={isPending}
-          onClick={paused ? resume : () => setOpen(true)}
+          onClick={
+            paused
+              ? resume
+              : () => {
+                  setRefused(null);
+                  setOpen(true);
+                }
+          }
           type="button"
         >
           {paused ? COPY.resumeButton : COPY.pauseButton}
@@ -100,17 +123,18 @@ export const CrawlPauseControl = ({
         <SaveFailedToast
           what={COPY.failedWhat(venue.name)}
           saved={COPY.failedSaved}
-          onRetry={() => {
-            setFailedBody(null);
-            void pause(failedBody);
-          }}
+          onRetry={() => void retry(failedBody)}
         />
       )}
       {open && (
         <PausePanel
           venues={[{ id: venue.id, name: venue.name, eventCount: showCount }]}
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false);
+            setRefused(null);
+          }}
           onSubmit={pause}
+          refused={refused}
         />
       )}
     </div>

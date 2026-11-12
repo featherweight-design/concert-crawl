@@ -494,10 +494,11 @@ export const ADMIN_COPY = {
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
-    // The auto-resume job runs at 08:40 UTC (01:40 MT) on the resume date, so
-    // that date's own 3 AM MT crawl is the first one.
+    // The auto-resume job runs at 08:40 UTC on the resume date, before the
+    // daily crawl (Vercel cron `7 9 * * *`: 02:07 MST, 03:07 MDT), so that
+    // date's own crawl is the first one. No hour: it moves with daylight time.
     resumesOn: (date: string) =>
-      `Resumes ${date}, and is crawled at 3 AM that morning.`,
+      `Resumes ${date}, and is crawled early that morning.`,
     submit: 'Pause crawling',
     cancel: 'Cancel',
     // The API's 422s, shown inline (spec: Pause panel). Every refusal but
@@ -928,6 +929,9 @@ export const ADMIN_COPY = {
           reason
             ? `Paused by ${name}, ${date}: ${reason}.`
             : `Paused by ${name}, ${date}.`,
+        // An admin kept an auto-pause: a reason, but the crawler paused it.
+        pausedSinceBecause: (date: string, reason: string) =>
+          `Paused since ${date}: ${reason}.`,
         autoPaused: 'Auto-paused after 3 failures.',
         reasons: {
           waiting_on_permission: 'waiting on permission',

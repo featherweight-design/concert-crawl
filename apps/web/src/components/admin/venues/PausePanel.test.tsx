@@ -91,6 +91,74 @@ describe('PausePanel', () => {
     );
   });
 
+  it('counts from Denver’s today on a Denver evening, when UTC is already tomorrow', async () => {
+    // Nov 13 02:00 UTC is Nov 12, 7 PM in Denver.
+    vi.setSystemTime(new Date('2026-11-13T02:00:00Z'));
+    const onSubmit = vi.fn().mockResolvedValue(null);
+    render(<PausePanel venues={ONE} onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.resumeChoices.twoWeeks }),
+    );
+    expect(screen.getByText(COPY.resumesOn('Thu, Nov 26'))).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.resumeChoices.date }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Thursday, November 12' }),
+    ).toBeDisabled();
+    const first = screen.getByRole('button', { name: 'Friday, November 13' });
+    expect(first).toBeEnabled();
+    fireEvent.click(first);
+    fireEvent.click(submitButton());
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        reason: 'waiting_on_permission',
+        resume: { mode: 'on', date: '2026-11-13' },
+      }),
+    );
+  });
+
+  it('gives the phone sheet a Cancel, since its handle is decoration', () => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
+    const onClose = vi.fn();
+    render(<PausePanel venues={ONE} onClose={onClose} onSubmit={vi.fn()} />);
+    expect(screen.getByTestId('admin-sheet')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: COPY.cancel }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('reopens on a refused body with its refusal inline', () => {
+    render(
+      <PausePanel
+        venues={ONE}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        refused={{
+          body: {
+            reason: 'waiting_on_permission',
+            resume: { mode: 'on', date: '2026-11-13' },
+          },
+          error: 'Pick a date after today',
+        }}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Pick a date after today',
+    );
+    expect(
+      screen.getByRole('button', { name: COPY.resumeChoices.date }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: 'Friday, November 13' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('titles a bulk pause by its count and sums the shows', () => {
     render(
       <PausePanel

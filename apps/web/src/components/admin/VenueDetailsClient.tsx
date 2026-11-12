@@ -2621,7 +2621,7 @@ export function VenueDetailsClient({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <CrawlPauseControl
               venue={venue}
-              showCount={crawlHealth.eventsTracked}
+              showCount={venue.deleteBlockers?.upcomingShows ?? 0}
             />
 
             <div

@@ -493,6 +493,9 @@ export interface VenueWithCrawlHealth extends Venue {
   // The API always sends them; optional here so existing fixtures compile.
   crawlPausedByName?: string | null;
   hiddenByName?: string | null;
+  // The detail's delete guard counts, which also give its upcoming show count
+  // (shows today or later, Mountain Time). Optional for the same reason.
+  deleteBlockers?: VenueDeleteBlockers;
 }
 
 // VenueRobotsStatus — robots.txt audit row for the admin audit page.
