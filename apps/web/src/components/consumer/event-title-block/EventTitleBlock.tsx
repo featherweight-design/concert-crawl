@@ -198,6 +198,9 @@ export const EventTitleBlock = ({
             !isDelisted(status, delistedAt)
               ? '3px'
               : undefined,
+          // Wraps at spaces, never inside a word (addendum 3 rule 2).
+          overflowWrap: 'normal',
+          wordBreak: 'normal',
           fontSize: headSize ?? ramp.head,
           fontWeight: surface === 'detail' ? 900 : 800,
           letterSpacing: surface === 'detail' ? '-0.03em' : '-0.02em',

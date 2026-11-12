@@ -125,6 +125,21 @@ describe('EventTitleBlock', () => {
     );
   });
 
+  it('wraps at spaces and never breaks inside a word (addendum 3 rule 2)', () => {
+    render(
+      <EventTitleBlock
+        headliner="Superorganism"
+        supportingArtists={[]}
+        tourName={null}
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    );
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title.style.wordBreak).toBe('normal');
+    expect(title.style.overflowWrap).toBe('normal');
+  });
+
   it('centers the block on mobile and returns it to the start edge from sm only when centered', () => {
     const centeredClasses = [
       'items-center',

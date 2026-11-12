@@ -16,6 +16,7 @@ import { slotSources } from '@/components/consumer/image-slot/lib/slot-metrics';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { gradientEdge } from '@/lib/gradient-edge';
 import { stampColorsFor } from '@/lib/passport/stamp';
+import { titleStepPx, type TitleStep } from '@/lib/title-step';
 import { stageMetaParts } from './lib/meta';
 
 type EventSlotSource = Extract<SlotSource, { surface: 'event' }>;
@@ -133,7 +134,22 @@ export const stageRing = (ring: string): string =>
     ? `0 0 0 2px ${ring}`
     : `0 0 0 2px ${ring}, 0 0 0 7px color-mix(in oklch, ${ring} 16%, transparent), 0 30px 70px color-mix(in oklch, ${ring} 40%, transparent)`;
 
+// The mobile headline size (addendum 3 rule 2). The step is the floor at 320
+// and the size still grows with the viewport up to 44px, as before. Static
+// class strings so Tailwind sees them.
+const STAGE_HEAD_DEFAULT = '[--stage-head:clamp(32px,10vw,44px)]';
+const STAGE_HEAD_STEP: Record<TitleStep, string> = {
+  38: '[--stage-head:clamp(38px,10vw,44px)]',
+  30: '[--stage-head:clamp(30px,10vw,44px)]',
+  26: '[--stage-head:clamp(26px,10vw,44px)]',
+};
+
 export type StageShellProps = {
+  /**
+   * The headline's mobile step, from the headliner's longest word. Absent on
+   * the skeleton, which keeps the default.
+   */
+  titleStep?: TitleStep;
   backdrop: ReactNode;
   /** The tilted card, already sized to fill its slot. */
   card: ReactNode;
@@ -156,6 +172,7 @@ export const StageShell = ({
   children,
   back,
   actions,
+  titleStep,
 }: StageShellProps) => (
   <div
     data-testid="hero-band"
@@ -175,7 +192,7 @@ export const StageShell = ({
             about breakpoints. */}
       <div
         data-testid="stage-column"
-        className="mt-4 flex w-full min-w-0 flex-col items-center text-center [--stage-head:clamp(32px,10vw,44px)] sm:mt-0 sm:w-auto sm:flex-1 sm:items-start sm:text-left sm:[--stage-head:64px]"
+        className={`mt-4 flex w-full min-w-0 flex-col items-center text-center ${titleStep === undefined ? STAGE_HEAD_DEFAULT : STAGE_HEAD_STEP[titleStep]} sm:mt-0 sm:w-auto sm:flex-1 sm:items-start sm:text-left sm:[--stage-head:64px]`}
       >
         {eyebrow && (
           <div className="relative z-[2] -mt-7 mb-4 sm:mt-0 sm:mb-3">
@@ -303,6 +320,7 @@ export const EventStage = ({
       }
       back={back}
       actions={actions}
+      titleStep={titleStepPx(name)}
       eyebrow={countdown ? <StageCountdown label={countdown} /> : null}
       card={
         <div
