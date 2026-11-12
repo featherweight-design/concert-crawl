@@ -33,11 +33,8 @@
       "steps": [
         {
           "goto": "/admin/invite-codes/posters",
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible",
+          "wait": "[data-testid=\"posters-tab\"]",
           "settle": 2000
-        },
-        {
-          "wait": "[data-testid=\"posters-tab\"]"
         }
       ],
       "fullPage": true
