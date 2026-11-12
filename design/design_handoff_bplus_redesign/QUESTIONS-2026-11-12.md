@@ -193,6 +193,11 @@ None of these was decided by the lane. Rows 2, 5 and 6 BLOCK; the rest are minor
 | 34 | B9b price check update sheet (more-st-counter_m, more-st-counter_done_m) | The rail tile glyph is drawn as a cyan-to-pink line with a pink dot on a lighter square. Please confirm the glyph. | The CCMark brand mark at 22px (as SubmitPriceModal) |
 | 35 | B9b price check update sheet (more-st-counter_m, more-st-counter_done_m) | The ring around the amber status dot looks neutral grey on the board. Grey or amber? | An amber tint |
 | 36 | B9b price check update sheet (more-st-counter_m, more-st-counter_done_m) | No board for the already-in-review sheet or the error rail tone. | The same tile and close as the other states, "Price update · Waiting"; the error rail in --danger (SubmitPriceModal uses --warning) |
+| 37 | Filter bar multi-select (#113, addendum 2 item 6) | The desktop Vibe popover with several picks isn't drawn. | The same checkbox rows as Where |
+| 38 | Filter bar multi-select (#113, addendum 2 item 6) | The stacked tiles and dots for 3 or more picks aren't drawn; only "+1" is. | The first two in URL order, labelled "Bluebird +N" |
+| 39 | Filter bar multi-select (bp-f-filt_where_d) | The board shows two venues checked while the bar still reads "Any venue" and "214 shows". Read as a staging slip; the segment label follows filt_active_d. Please confirm. | The segment label follows filt_active_d |
+| 40 | Filter bar multi-select (#113) | Whether the popover's Clear keeps the popover open isn't drawn. | Clear closes the popover |
+| 41 | Filter bar multi-select (EventRow, CalendarView, hero) | The row chip's genre highlight uses only the first chosen vibe. Should it highlight every chosen vibe? | The first only |
 
 ## Edit your Concerts (lane cf pre-audit)
 
