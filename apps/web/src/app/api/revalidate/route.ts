@@ -15,6 +15,14 @@ type RevalidatablePath = (typeof REVALIDATABLE_PATHS)[number];
 // `paths: string[]` variant can be added later without a breaking change.
 // Hand-written rather than Zod: apps/web carries no Zod dependency, and one
 // allowlisted string field does not justify adding one.
+const readRevalidatablePath = (body: unknown): RevalidatablePath | null => {
+  if (typeof body !== 'object' || body === null || !('path' in body)) {
+    return null;
+  }
+  const { path } = body;
+  return REVALIDATABLE_PATHS.find((allowed) => allowed === path) ?? null;
+};
+
 // Tags the same allowlist rule covers: only the catalog cache's own tag.
 const REVALIDATABLE_TAGS = ['catalog'] as const;
 
@@ -27,14 +35,6 @@ const readRevalidatableTags = (body: unknown): RevalidatableTag[] => {
   const { tags } = body;
   if (!Array.isArray(tags)) return [];
   return REVALIDATABLE_TAGS.filter((allowed) => tags.includes(allowed));
-};
-
-const readRevalidatablePath = (body: unknown): RevalidatablePath | null => {
-  if (typeof body !== 'object' || body === null || !('path' in body)) {
-    return null;
-  }
-  const { path } = body;
-  return REVALIDATABLE_PATHS.find((allowed) => allowed === path) ?? null;
 };
 
 const tokensMatch = (provided: string, expected: string): boolean => {
