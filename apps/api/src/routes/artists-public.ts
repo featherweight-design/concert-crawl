@@ -8,6 +8,7 @@ import {
   artists,
   events,
   userArtistFollows,
+  userEvents,
   venues,
 } from '@concert-crawl/db';
 import {
@@ -17,6 +18,7 @@ import {
   eq,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   ne,
@@ -422,12 +424,37 @@ artistsPublicRouter.get(
       isSoldOut: row.isSoldOut,
     }));
 
+    // The caller's own attendance over the past rows we are about to return,
+    // in one query. Null when signed out, as `following` is.
+    const authInfo = getAuth(ctx);
+    let attendedIds: Set<string> | null = null;
+    if (authInfo?.userId) {
+      const attendedRows =
+        pastRows.length === 0
+          ? []
+          : await db
+              .select({ eventId: userEvents.eventId })
+              .from(userEvents)
+              .where(
+                and(
+                  eq(userEvents.userId, authInfo.userId),
+                  isNotNull(userEvents.attendingAt),
+                  inArray(
+                    userEvents.eventId,
+                    pastRows.map((row) => row.eventId),
+                  ),
+                ),
+              );
+      attendedIds = new Set(attendedRows.map((row) => row.eventId));
+    }
+
     const past: ArtistPastShow[] = pastRows.map((row) => ({
       eventId: row.eventId,
       iso: row.iso,
       venue: row.venue,
       venueSlug: row.venueSlug,
       city: row.city,
+      attending: attendedIds ? attendedIds.has(row.eventId) : null,
     }));
 
     // The gate `search.ts` already applies and this route did not: an artist
@@ -462,7 +489,6 @@ artistsPublicRouter.get(
       if (!historyVenues.includes(row.venue)) historyVenues.push(row.venue);
     }
 
-    const authInfo = getAuth(ctx);
     let following: boolean | null = null;
     if (authInfo?.userId) {
       // `manual` and `spotify_followed` are both follows the user performed;

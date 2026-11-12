@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { and, eq, isNull } from 'drizzle-orm';
+import { z } from 'zod';
 import { db, userEvents, events } from '@concert-crawl/db';
 import type { AttendingToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
@@ -10,6 +11,25 @@ import type { EntitlementVariables } from '../middleware/entitlement.js';
 import { releaseAttendance } from '../lib/user-events.js';
 import { notifyCrewGoing } from '../lib/crew-notifications.js';
 import { idSchema } from '../lib/id-schema.js';
+import { todayInDenver } from '../lib/time.js';
+import {
+  signRestoreToken,
+  verifyRestoreToken,
+} from '../lib/attendance-restore.js';
+
+// The only body PUT accepts: an Undo of a removal, proven by the token the
+// DELETE handed back. Strict, so a stray field is a 400 rather than ignored.
+const putBodySchema = z
+  .object({
+    restore: z
+      .object({
+        attendingAt: z.iso.datetime(),
+        token: z.string().min(1).max(200),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
 
 // Returns null rather than throwing: this runs AFTER the attendance write has
 // committed, so a transient read failure must not turn an action that already
@@ -48,6 +68,11 @@ attendingRouter.use('*', requireFeature('concert-history'));
 // PUT /v1/attending/:eventId — mark attendance. Idempotent: a second call
 // leaves the original timestamp alone, so History keeps the moment the user
 // actually committed.
+//
+// A show dated before today (Mountain) is "I went": it may be marked even when
+// the crawler stopped seeing it, a cancelled or hidden one is not markable, and
+// it never pings the crew (they were told about the plan, not the memory). An
+// optional `restore` puts back the attendance a DELETE just removed.
 attendingRouter.put('/:eventId', async (ctx) => {
   const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
@@ -59,24 +84,57 @@ attendingRouter.put('/:eventId', async (ctx) => {
   }
   const eventId = parsed.data;
 
-  // The consumer-visibility pair, at its strict #607 form: a show the crawler
-  // stopped seeing is not markable as a night you are going to, even once the
-  // stale sweep brings it back on its detail page as No longer listed.
-  // Un-going lives on DELETE and is unaffected.
+  const rawBody = await ctx.req.text();
+  let bodyJson: unknown = {};
+  if (rawBody.trim() !== '') {
+    try {
+      bodyJson = JSON.parse(rawBody);
+    } catch {
+      return ctx.json({ success: false, error: 'Invalid body' }, 400);
+    }
+  }
+  const body = putBodySchema.safeParse(bodyJson);
+  if (!body.success) {
+    return ctx.json({ success: false, error: 'Invalid body' }, 400);
+  }
+  const restore = body.data.restore;
+
   const [eventRow] = await db
-    .select({ id: events.id })
+    .select({
+      date: events.date,
+      status: events.status,
+      firstMissingAt: events.firstMissingAt,
+    })
     .from(events)
-    .where(
-      and(
-        eq(events.id, eventId),
-        eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
-      ),
-    )
+    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
     .limit(1);
 
-  if (!eventRow) {
+  // An upcoming show keeps the strict #607 form: one the crawler stopped
+  // seeing is not markable as a night you are going to, even once the stale
+  // sweep brings it back on its detail page as No longer listed. A past one
+  // happened whatever the crawler later did with the listing, so only a
+  // cancelled show is refused. Same 404 as an unknown id either way.
+  const isPast = eventRow !== undefined && eventRow.date < todayInDenver();
+  const markable =
+    eventRow !== undefined &&
+    (isPast
+      ? eventRow.status !== 'cancelled'
+      : eventRow.firstMissingAt === null);
+
+  if (!markable) {
     return ctx.json({ success: false, error: 'Event not found' }, 404);
+  }
+
+  if (
+    restore &&
+    !verifyRestoreToken({
+      userId: authInfo.userId,
+      eventId,
+      attendingAt: restore.attendingAt,
+      token: restore.token,
+    })
+  ) {
+    return ctx.json({ success: false, error: 'Restore expired' }, 400);
   }
 
   const [existing] = await db
@@ -98,7 +156,7 @@ attendingRouter.put('/:eventId', async (ctx) => {
     return ctx.json({ success: true, data: response });
   }
 
-  const attendingAt = new Date();
+  const attendingAt = restore ? new Date(restore.attendingAt) : new Date();
 
   // `claimed` is empty when a concurrent request won the transition. The
   // `existing` check above is a read-then-write and so cannot settle a double
@@ -133,7 +191,8 @@ attendingRouter.put('/:eventId', async (ctx) => {
   // a notification problem cannot fail an attendance that already landed.
   // Only the request that actually won the transition fans out, so neither a
   // sequential re-tap nor two concurrent ones can notify a crew twice.
-  if (claimed.length > 0) {
+  // A past show or a restore is not news: the crew heard about the plan.
+  if (claimed.length > 0 && !isPast && !restore) {
     await notifyCrewGoing({ actorUserId: authInfo.userId, eventId });
   }
 
@@ -162,8 +221,28 @@ attendingRouter.delete('/:eventId', async (ctx) => {
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
   }
 
-  await releaseAttendance(authInfo.userId, parsed.data);
+  const { removedAttendingAt } = await releaseAttendance(
+    authInfo.userId,
+    parsed.data,
+  );
 
-  const response: AttendingToggleResponse = { going: false, attendingAt: null };
+  const removedIso = removedAttendingAt?.toISOString() ?? null;
+  const token =
+    removedIso === null
+      ? null
+      : signRestoreToken({
+          userId: authInfo.userId,
+          eventId: parsed.data,
+          attendingAt: removedIso,
+        });
+
+  const response: AttendingToggleResponse = {
+    going: false,
+    attendingAt: null,
+    restore:
+      removedIso !== null && token !== null
+        ? { attendingAt: removedIso, token }
+        : null,
+  };
   return ctx.json({ success: true, data: response });
 });

@@ -1,11 +1,13 @@
 // Artist page (#1115) tuning values. These are DATA, not copy — nothing in
 // here is customer-facing prose.
 
+import { recordsStartLabel } from '@concert-crawl/types';
+
 /**
  * The start of the crawl window. Interpolated into every history string, so a
  * licensed backfill changes this one value and no copy is touched.
  */
-export const CRAWL_SINCE = 'March 2026';
+export const CRAWL_SINCE = recordsStartLabel();
 
 /** Minimum nights at one venue before a cluster earns the word "run". */
 export const RESIDENCY_MIN = 3;

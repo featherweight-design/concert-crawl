@@ -17,6 +17,7 @@ const past = (iso: string, venue: string): ArtistPastShow => ({
   venue,
   venueSlug: venue.toLowerCase(),
   city: 'Denver',
+  attending: null,
 });
 
 describe('PastShows', () => {

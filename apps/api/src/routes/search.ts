@@ -17,6 +17,7 @@ import {
   portraitCanonicalName,
 } from '../lib/event-billing.js';
 import { todayInDenver } from '../lib/time.js';
+import { escapeLikePattern } from '../lib/escape-like.js';
 
 export const searchRouter = new Hono();
 
@@ -102,11 +103,6 @@ const UPCOMING_STATUSES = new Set(['upcoming', 'cancelled', 'postponed']);
 // than an object because the param name (`q`) is a single character, which the
 // repo's `id-length` rule bans as an object key.
 const artistSearchQuerySchema = z.string().trim().min(2).max(200);
-
-// `%` and `_` are LIKE metacharacters. Left unescaped, a search for "50%" would
-// silently become a wildcard match rather than a literal one.
-const escapeLikePattern = (raw: string): string =>
-  raw.replace(/[\\%_]/g, (char) => `\\${char}`);
 
 // GET /v1/search/artists?q= — artists with their own page, no auth required.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so a

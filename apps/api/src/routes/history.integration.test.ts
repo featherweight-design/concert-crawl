@@ -452,4 +452,39 @@ describe('GET /v1/history/export.ics', () => {
     // DTSTAMP is generation time, never derived from the show date.
     expect(text).not.toContain('DTSTAMP:20260601T000000Z');
   });
+
+  it('carries the venue place and clock a share poster needs', async () => {
+    setAuth();
+    await seedSupporter();
+    const venue = await seedVenue({
+      name: 'Ogden Theatre',
+      slug: 'ogden',
+      city: 'Denver',
+    });
+    const event = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2026-06-01',
+      showTime: '20:00:00',
+    });
+    await seedUserEvent(USER_ID, event.id, {
+      status: null,
+      attendingAt: ATTENDED,
+    });
+
+    const res = await app.request('/v1/history');
+    const body: {
+      data: {
+        past: {
+          venueCity: string;
+          venueTimezone: string;
+          rawShowTime: string | null;
+        }[];
+      };
+    } = await res.json();
+    expect(body.data.past[0]).toMatchObject({
+      venueCity: 'Denver',
+      venueTimezone: 'America/Denver',
+      rawShowTime: '20:00:00',
+    });
+  });
 });

@@ -42,6 +42,11 @@ export const releaseWatch = async (
   return { deleted: false };
 };
 
+export interface ReleaseAttendanceResult extends ReleaseWatchResult {
+  /** The attendance that was removed, so the caller can offer an Undo. */
+  removedAttendingAt: Date | null;
+}
+
 /**
  * Mirror of {@link releaseWatch} for the attendance side: drop the attendance,
  * preserving any Watching relationship on the row.
@@ -49,23 +54,27 @@ export const releaseWatch = async (
 export const releaseAttendance = async (
   userId: string,
   eventId: string,
-): Promise<ReleaseWatchResult> => {
+): Promise<ReleaseAttendanceResult> => {
   const [existing] = await db
-    .select({ id: userEvents.id, status: userEvents.status })
+    .select({
+      id: userEvents.id,
+      status: userEvents.status,
+      attendingAt: userEvents.attendingAt,
+    })
     .from(userEvents)
     .where(and(eq(userEvents.userId, userId), eq(userEvents.eventId, eventId)))
     .limit(1);
 
-  if (!existing) return { deleted: false };
+  if (!existing) return { deleted: false, removedAttendingAt: null };
 
   if (existing.status === null) {
     await db.delete(userEvents).where(eq(userEvents.id, existing.id));
-    return { deleted: true };
+    return { deleted: true, removedAttendingAt: existing.attendingAt };
   }
 
   await db
     .update(userEvents)
     .set({ attendingAt: null })
     .where(eq(userEvents.id, existing.id));
-  return { deleted: false };
+  return { deleted: false, removedAttendingAt: existing.attendingAt };
 };

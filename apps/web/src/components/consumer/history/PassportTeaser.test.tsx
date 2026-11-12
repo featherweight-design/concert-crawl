@@ -25,6 +25,9 @@ const show = (eventId: string, artist: string): HistoryShow => ({
   priceFinal: null,
   genre: 'indie',
   attendingAt: '2026-05-14T02:00:00.000Z',
+  venueCity: 'Denver',
+  venueTimezone: 'America/Denver',
+  rawShowTime: null,
 });
 
 const STATS: HistoryStats = {
