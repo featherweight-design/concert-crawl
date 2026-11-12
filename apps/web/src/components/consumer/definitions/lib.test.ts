@@ -361,4 +361,9 @@ describe('formatShowTime / formatShowTimeShort (B24 invite landing)', () => {
   it('is null when the venue lists no time', () => {
     expect(formatShowTimeShort(null)).toBeNull();
   });
+
+  it('is null, not a throw, for a malformed time', () => {
+    expect(formatShowTime('soon')).toBeNull();
+    expect(formatShowTimeShort('8:xx')).toBeNull();
+  });
 });
