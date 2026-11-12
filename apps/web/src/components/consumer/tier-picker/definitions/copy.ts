@@ -234,7 +234,6 @@ export const TIER_PICKER_COPY = {
     },
   },
   entry: {
-    compare: 'Compare plans →',
     ariaLabel: 'Tier picker',
   },
   // Payment failure surfaces (design table failure-surfaces.md, PR 4.4).
