@@ -2,6 +2,7 @@ import { perfRoute } from '@/lib/perf/timing';
 import { Suspense } from 'react';
 import { headers } from 'next/headers';
 import type {
+  ArtistSuggestion,
   CrewShow,
   CrewSummary,
   EventsAvailabilityResponse,
@@ -283,6 +284,34 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
         : [],
   );
 
+  // Two reads that used to wait their turn behind the batch below, started with
+  // it (perf audit rec 5):
+  //
+  // - Calendar view's availability window needs only the date and the token.
+  //   A failure degrades to a client fetch, as before.
+  // - A signed-out visitor provably follows nobody (0 is a fact, see
+  //   `followCount`), so the zero-follow shelf's suggestions are known to be
+  //   wanted before anything resolves. They need the list view and no crew lens
+  //   (a lens needs a token). `seedArtistSuggestions` never throws.
+  const availabilityPromise: Promise<EventsAvailabilityResponse | undefined> =
+    view === 'cal'
+      ? (() => {
+          const availabilityWindow = pickerWindow(today);
+          return fetchAvailability(
+            availabilityWindow.from,
+            availabilityWindow.to,
+            token,
+          ).catch((err: unknown) => {
+            console.error('availability prefetch failed', err);
+            return undefined;
+          });
+        })()
+      : Promise.resolve(undefined);
+  const anonymousSuggestionsPromise: Promise<ArtistSuggestion[] | undefined> =
+    token === null && view === 'list'
+      ? seedArtistSuggestions(SHELF_SUGGESTION_POOL)
+      : Promise.resolve(undefined);
+
   const [
     eventsFetch,
     venues,
@@ -292,6 +321,8 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     crews,
     follows,
     requestHeaders,
+    initialAvailability,
+    anonymousSuggestions,
   ] = await Promise.all([
     eventsPromise,
     fetchVenues(),
@@ -301,6 +332,8 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     crewsPromise,
     followsPromise,
     headers(),
+    availabilityPromise,
+    anonymousSuggestionsPromise,
   ]);
   const eventsResult = eventsFetch.response;
   const tasteApplied = eventsFetch.tasteApplied;
@@ -343,23 +376,10 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     ? `/events?${clearLensQuery}`
     : '/events';
 
-  // SSR-prefetch the availability window (date→count) for the jump picker so
-  // react-query is seeded and all in-picker month paging is client-side. Only
-  // needed in calendar view; a failure degrades gracefully to a client fetch.
-  let initialAvailability: EventsAvailabilityResponse | undefined;
-  if (view === 'cal') {
-    const availabilityWindow = pickerWindow(today);
-    try {
-      initialAvailability = await fetchAvailability(
-        availabilityWindow.from,
-        availabilityWindow.to,
-        token,
-      );
-    } catch (err) {
-      console.error('availability prefetch failed', err);
-      initialAvailability = undefined;
-    }
-  }
+  // The availability window (date→count) for the jump picker is prefetched in
+  // the first batch above, so react-query is seeded and all in-picker month
+  // paging is client-side; `initialAvailability` is undefined outside calendar
+  // view or when the prefetch failed.
 
   // ── Follow surfaces (native following PR 4) ──────────────────────────
   //
@@ -384,13 +404,16 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
         ? 'zero'
         : 'some';
 
-  // Serial by necessity: we can't know the follow count until the seed lands,
-  // and fetching suggestions unconditionally would tax every browse load with
-  // a call the large majority of viewers never see the result of. Same shape
-  // as the fetchCrewShows await above.
+  // A signed-out visitor's suggestions were started in the first batch. A signed
+  // in viewer's follow count is not known until the seed lands, and fetching
+  // suggestions for everyone would tax every browse load with a call most never
+  // see the result of, so that one stays serial. Same shape as the
+  // fetchCrewShows await above.
   const suggestions =
     shelfMode === 'zero'
-      ? await seedArtistSuggestions(SHELF_SUGGESTION_POOL)
+      ? token === null
+        ? anonymousSuggestions
+        : await seedArtistSuggestions(SHELF_SUGGESTION_POOL)
       : undefined;
 
   const shelfArtists =
