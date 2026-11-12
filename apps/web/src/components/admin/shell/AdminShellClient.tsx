@@ -39,7 +39,7 @@ const PhoneShell = ({ badgeCounts, user, children }: AdminShellClientProps) => (
         flex: 1,
         minWidth: 0,
         overflowY: 'auto',
-        paddingBottom: TAB_BAR_HEIGHT + 20,
+        paddingBottom: `calc(${TAB_BAR_HEIGHT + 20}px + env(safe-area-inset-bottom))`,
       }}
     >
       <AdminPhoneHeader user={user} />
@@ -76,13 +76,19 @@ const DesktopShell = ({
 export const AdminShellClient = (props: AdminShellClientProps) => {
   const isPhone = useIsPhone();
 
-  // Before the media query resolves, hold the sidebar's space so the page
-  // doesn't jump when the shell mounts.
+  // Before the media query resolves, reserve the sidebar's space only where
+  // the sidebar will appear (CSS knows the width before JS does), and keep the
+  // page scrollable like the resolved shells.
   if (isPhone === null) {
     return (
       <div style={{ display: 'flex', height: '100%', width: '100%' }}>
-        <div style={{ width: SIDEBAR_WIDTH, flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>{props.children}</div>
+        <div
+          className="admin-shell-rail-placeholder"
+          style={{ width: SIDEBAR_WIDTH, flexShrink: 0 }}
+        />
+        <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+          {props.children}
+        </main>
       </div>
     );
   }

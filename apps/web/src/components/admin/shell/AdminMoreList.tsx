@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useClerk } from '@clerk/nextjs';
 import { ChevronRight, ExternalLink, LogOut } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { NAV, type NavGroup, type NavKey } from './nav';
+import { NAV, TAB_BAR, type NavGroup, type NavKey } from './nav';
 
 /** What each More row says under its name. Missing numbers fall back to words. */
 export interface AdminMoreDetails {
@@ -65,9 +65,8 @@ const MORE_GROUPS: Array<Exclude<NavGroup, 'primary'>> = ['manage', 'system'];
  * tab bar has no room for it (`07/more-mobile`).
  */
 const itemsFor = (group: Exclude<NavGroup, 'primary'>) => {
-  const tabbed: NavKey[] = ['needs-you', 'venues', 'events'];
   const items = NAV.filter(
-    (item) => item.group === group && !tabbed.includes(item.key),
+    (item) => item.group === group && !TAB_BAR.includes(item.key),
   );
   if (group !== 'manage') return items;
   const health = NAV.filter((item) => item.key === 'health');

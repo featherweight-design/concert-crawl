@@ -15,7 +15,7 @@ import {
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 /**
- * Below this width the shell swaps the sidebar for the 4-tab bar. The 640
+ * At or below this width the shell swaps the sidebar for the 4-tab bar. The 640
  * column of every admin inventory therefore shows the phone shell on purpose:
  * a 232px sidebar would leave 408px for tables (plan decision 16).
  */
