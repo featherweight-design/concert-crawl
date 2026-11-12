@@ -77,7 +77,12 @@ export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
 export const nextShowVenueExpr = (): SQL<string | null> =>
   sql<
     string | null
-  >`(SELECT ${venues.name} ${upcomingShowsFrom(undefined)} ORDER BY ${events.date}, ${events.showTime} NULLS LAST, ${events.id} LIMIT 1)`;
+  >`(SELECT ${venues.name} ${upcomingShowsFrom(undefined)} ORDER BY ${eventsColumn('date')}, ${eventsColumn('show_time')} NULLS LAST, ${eventsColumn('id')} LIMIT 1)`;
+
+// Written out qualified: inside a subquery drizzle renders a bare column name,
+// and `id` exists on both `events` and the joined `venues`.
+const eventsColumn = (column: 'date' | 'show_time' | 'id'): SQL =>
+  sql.raw(`"events"."${column}"`);
 
 /**
  * How many shows `hasUpcomingShowExpr` would accept for this artist. Built
