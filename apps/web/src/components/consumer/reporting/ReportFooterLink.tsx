@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { REPORTING_COPY } from './definitions/copy';
-import { REPORT_TOKENS } from './reportTokens';
+import { REPORT_AMBER as AMBER } from './reportTokens';
 
 const copy = REPORTING_COPY.reportFooterLink;
 
@@ -12,10 +12,6 @@ const STATUS_LABELS: Record<'sold-out' | 'cancelled' | 'postponed', string> = {
   cancelled: 'cancelled',
   postponed: 'postponed',
 };
-
-// The amber the report family already uses; the tile and the reported state
-// share it so every "Spot something off?" card reads as one family.
-const AMBER = REPORT_TOKENS.postponed;
 
 export interface ReportFooterLinkProps {
   /** Event page only. The artist card leaves it out. */
@@ -40,10 +36,10 @@ export interface ReportFooterLinkProps {
   /** The accessible name when `signedOut`, for a card with its own title. */
   ariaSignedOut?: string;
   /**
-   * The viewer already has a report open: a dashed amber border and a chip in
-   * place of the chevron. Still tappable; the host decides what it opens.
+   * The viewer already has a report open: a dashed amber border and this chip
+   * in place of the chevron. One prop, so the state can't be half-set. Still
+   * tappable; the host decides what it opens.
    */
-  reported?: boolean;
   reportedChip?: string;
   /** Drops the page-gutter padding for a host that already has its own. */
   flush?: boolean;
@@ -60,11 +56,11 @@ export const ReportFooterLink = ({
   subtitle: subtitleOverride,
   footnote,
   ariaSignedOut,
-  reported = false,
   reportedChip,
   flush = false,
   testId,
 }: ReportFooterLinkProps) => {
+  const reported = reportedChip !== undefined;
   const hasStatus = liveStatus !== null;
   const title = titleOverride ?? (hasStatus ? copy.titleHasStatus : copy.title);
   const subtitle =
@@ -186,7 +182,7 @@ export const ReportFooterLink = ({
           </div>
         )}
 
-        {reported && reportedChip !== undefined ? (
+        {reportedChip !== undefined ? (
           <span
             style={{
               marginLeft: '8px',

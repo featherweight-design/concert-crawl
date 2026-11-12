@@ -35,6 +35,11 @@ const conflictSummary = (reason: ArtistReportReason): ArtistReportSummary => ({
 
 type Outcome = 'sent' | 'error' | null;
 
+/** Why a send failed, so the error sheet says what actually happened. */
+type ErrorKind = 'network' | 'busy' | 'signedOut';
+
+class SignedOutError extends Error {}
+
 export interface ArtistReportSheetProps {
   open: boolean;
   onClose: () => void;
@@ -70,11 +75,16 @@ export const ArtistReportSheet = ({
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawFailed, setWithdrawFailed] = useState(false);
+  const [errorKind, setErrorKind] = useState<ErrorKind>('network');
   const inFlight = useRef(false);
+  // Bumped on every close, so a request that settles after the sheet closed
+  // cannot write its result into the next opening.
+  const opening = useRef(0);
 
   const close = () => {
     // A closed sheet reopens on the form (or on Already reported), never on a
     // result from the last time it was open.
+    opening.current += 1;
     setOutcome(null);
     setWithdrawFailed(false);
     onClose();
@@ -86,9 +96,10 @@ export const ArtistReportSheet = ({
     setSending(true);
     setLinkError(null);
     setNoteError(null);
+    const thisOpening = opening.current;
     try {
       const token = await getToken();
-      if (token === null) throw new Error('Not signed in');
+      if (token === null) throw new SignedOutError();
       const trimmedLink = link.trim();
       const trimmedNote = note.trim();
       const summary = await fileArtistReport(
@@ -104,11 +115,15 @@ export const ArtistReportSheet = ({
       setReason(null);
       setLink('');
       setNote('');
-      setOutcome('sent');
+      if (opening.current === thisOpening) setOutcome('sent');
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         // One open report per artist: this is Already reported, not a failure.
         onReported(conflictSummary(reason));
+        // As after a send: those answers are spent, so the next report starts clean.
+        setReason(null);
+        setLink('');
+        setNote('');
         setOutcome(null);
       } else if (err instanceof ApiError && err.status === 422) {
         // The server decides what a Spotify link is and what a note may say.
@@ -122,8 +137,16 @@ export const ArtistReportSheet = ({
           setNoteError(copy.sheet.noteError);
         }
         setOutcome(null);
-      } else {
+      } else if (opening.current === thisOpening) {
         console.warn('artist report failed', err);
+        setErrorKind(
+          err instanceof SignedOutError ||
+            (err instanceof ApiError && err.status === 401)
+            ? 'signedOut'
+            : err instanceof ApiError && err.status === 429
+              ? 'busy'
+              : 'network',
+        );
         setOutcome('error');
       }
     } finally {
@@ -234,7 +257,13 @@ export const ArtistReportSheet = ({
         rail={copy.error.rail}
         code={copy.error.code}
         title={copy.error.title}
-        body={copy.error.body}
+        body={
+          errorKind === 'busy'
+            ? copy.error.bodyBusy
+            : errorKind === 'signedOut'
+              ? copy.error.bodySignedOut
+              : copy.error.body
+        }
         closeLabel={copy.closeAria}
         actions={
           <>

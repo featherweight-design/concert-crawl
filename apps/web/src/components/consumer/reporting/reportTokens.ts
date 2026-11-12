@@ -35,3 +35,13 @@ export const REPORT_TOKENS = {
 
 export type ReportTokenKey = keyof typeof REPORT_TOKENS;
 export type ReportToken = (typeof REPORT_TOKENS)[ReportTokenKey];
+
+/** The report family's amber: the result rail, the reported card and the sent stub. */
+export const REPORT_AMBER = REPORT_TOKENS.postponed;
+
+/** The report family's mono caps label. Callers add their own size. */
+export const REPORT_MONO = {
+  fontFamily: 'JetBrains Mono, monospace',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.08em',
+};

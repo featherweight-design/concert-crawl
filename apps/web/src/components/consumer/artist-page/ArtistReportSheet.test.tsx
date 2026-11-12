@@ -294,6 +294,28 @@ describe('ArtistReportSheet results', () => {
     });
   });
 
+  it('clears the answers after a 409, as after a send', async () => {
+    api.fileArtistReport.mockRejectedValue(
+      new ApiError(409, 'You already have an open report', 'report_exists'),
+    );
+    const { onReported } = renderSheet();
+
+    pickReason('wrong_photo');
+    fireEvent.change(screen.getByLabelText(copy.sheet.noteLabel), {
+      target: { value: 'not them' },
+    });
+    send();
+
+    await waitFor(() => expect(onReported).toHaveBeenCalledTimes(1));
+    // The host here never flips to Already reported, so the form stays up.
+    await waitFor(() =>
+      expect(screen.getByLabelText(copy.sheet.noteLabel)).toHaveProperty(
+        'value',
+        '',
+      ),
+    );
+  });
+
   it('opens on Already reported when a report is already open', () => {
     renderSheet({ reported: summary });
 
@@ -365,7 +387,7 @@ describe('ArtistReportSheet results', () => {
     });
   });
 
-  it('sends a rate limit or a server error to the same Didn’t go through sheet', async () => {
+  it('says to wait, not that the server was unreachable, on a rate limit', async () => {
     api.fileArtistReport.mockRejectedValue(new ApiError(429, 'Slow down'));
     renderSheet();
 
@@ -373,6 +395,42 @@ describe('ArtistReportSheet results', () => {
     send();
 
     expect(await screen.findByText(copy.error.title)).toBeTruthy();
+    expect(screen.getByText(copy.error.bodyBusy)).toBeTruthy();
+    expect(screen.queryByText(copy.error.body)).toBe(null);
+  });
+
+  it('says the fan was signed out when the session is gone', async () => {
+    api.fileArtistReport.mockRejectedValue(new ApiError(401, 'Unauthorized'));
+    renderSheet();
+
+    pickReason('other');
+    send();
+
+    expect(await screen.findByText(copy.error.bodySignedOut)).toBeTruthy();
+  });
+
+  it('drops a result that lands after the sheet was closed', async () => {
+    let fail: (err: Error) => void = () => {};
+    api.fileArtistReport.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+    );
+    const { onClose } = renderSheet();
+
+    pickReason('wrong_photo');
+    send();
+    fireEvent.click(screen.getByRole('button', { name: copy.sheet.close }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    fail(new TypeError('Failed to fetch'));
+
+    // The host keeps it open here, so the next opening is this render.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: copy.sheet.submit }),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText(copy.error.title)).toBe(null);
   });
 
   it('closes from the error sheet', async () => {

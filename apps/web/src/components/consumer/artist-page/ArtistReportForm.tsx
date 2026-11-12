@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ARTIST_REPORT_LINK_MAX,
   ARTIST_REPORT_NOTE_MAX,
   ARTIST_REPORT_REASONS,
   type ArtistMatchSummary,
@@ -17,7 +18,7 @@ import { ARTIST_COPY } from './definitions/copy';
 import {
   REPORT_AMBER as AMBER,
   REPORT_MONO as MONO,
-} from './definitions/report-styles';
+} from '@/components/consumer/reporting/reportTokens';
 
 const copy = ARTIST_COPY.report;
 
@@ -414,6 +415,7 @@ export const ArtistReportForm = ({
             autoCapitalize="none"
             spellCheck={false}
             value={link}
+            maxLength={ARTIST_REPORT_LINK_MAX}
             onChange={(evt) => onLink(evt.target.value)}
             placeholder={copy.sheet.linkPlaceholder}
             aria-invalid={linkError !== null}

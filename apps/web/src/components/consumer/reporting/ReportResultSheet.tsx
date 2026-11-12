@@ -5,16 +5,9 @@ import type { ReactNode } from 'react';
 import { CCMark } from '@/components/brand/cc-mark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 
-import { REPORT_TOKENS } from './reportTokens';
+import { REPORT_AMBER as AMBER, REPORT_MONO } from './reportTokens';
 
-const AMBER = REPORT_TOKENS.postponed;
-
-const MONO = {
-  fontFamily: 'JetBrains Mono, monospace',
-  fontSize: 9,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.08em',
-};
+const MONO = { ...REPORT_MONO, fontSize: 9 };
 
 export interface ReportResultSheetProps {
   open: boolean;

@@ -210,6 +210,12 @@ export const ARTIST_COPY = {
       code: 'ERR',
       title: 'Didn’t go through.',
       body: 'Couldn’t reach the server. Your answers are still here. Try again or come back later.',
+      // A 429: the server answered, so "couldn't reach" would be false.
+      bodyBusy:
+        'That’s a lot of reports in a short time. Your answers are still here. Try again in an hour.',
+      // No session token: the fan needs to sign in again, not retry.
+      bodySignedOut:
+        'You’re signed out. Your answers are still here. Sign in again, then send it.',
       retry: 'Try again',
       close: 'Close',
     },

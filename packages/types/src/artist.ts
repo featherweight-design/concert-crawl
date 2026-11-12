@@ -103,6 +103,8 @@ export const ARTIST_REPORT_REASONS = [
 export type ArtistReportReason = (typeof ARTIST_REPORT_REASONS)[number];
 
 export const ARTIST_REPORT_NOTE_MAX = 280;
+/** The longest Spotify link the report accepts; the form caps its input to match. */
+export const ARTIST_REPORT_LINK_MAX = 300;
 
 export interface ArtistReportSummary {
   id: string;

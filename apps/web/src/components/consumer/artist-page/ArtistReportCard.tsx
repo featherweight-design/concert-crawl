@@ -61,8 +61,7 @@ export const ArtistReportCard = ({
         }
         footnote={isReported ? copy.card.reportedFootnote : copy.card.footnote}
         ariaSignedOut={copy.card.ariaSignedOut}
-        reported={isReported}
-        reportedChip={copy.card.reportedChip}
+        {...(isReported ? { reportedChip: copy.card.reportedChip } : {})}
         signedOut={signedOut}
         onOpen={() => setOpen(true)}
       />
