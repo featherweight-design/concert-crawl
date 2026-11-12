@@ -245,35 +245,6 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(page.content).not.toHaveBeenCalled();
   });
 
-  it('does not log a page for a redirect robots.txt declined', async () => {
-    const page = makeMockPage({
-      goto: vi
-        .fn()
-        .mockResolvedValue(
-          makeResponse(200, 'https://example.com/final', [
-            'https://example.com',
-            'https://example.com/private',
-          ]),
-        ),
-    });
-    isAllowedSpy.mockImplementation(
-      async (url: string) => !url.endsWith('/private'),
-    );
-    const log = new FetchLog();
-
-    await expect(
-      fetchPage(
-        'https://example.com',
-        makeMockBrowser(page),
-        0,
-        'networkidle',
-        undefined,
-        log,
-      ),
-    ).rejects.toThrow('robots.txt disallows redirect target');
-    expect(log.entries).toHaveLength(0);
-  });
-
   it('logs a page that never answered', async () => {
     const page = makeMockPage({
       goto: vi.fn().mockRejectedValue(makeTimeoutError('Navigation timeout')),

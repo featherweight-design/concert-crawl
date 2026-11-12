@@ -2021,22 +2021,27 @@ export async function crawlVenue(
 
     const durationMs = Date.now() - startedAt;
 
-    const crawlRun = await insertCrawlRun(
-      {
-        id,
-        venueId,
-        status: 'failed',
-        reason: failureReason(err, isAccountWide),
-        robotsTxtBlocked: 'no',
-        eventsFound: 0,
-        eventsInserted: 0,
-        errorMessage: String(err),
-        durationMs,
-      },
-      fetchLog,
-    );
-
-    if (systemAction !== null) await recordSystemAction(systemAction);
+    let crawlRun: Awaited<ReturnType<typeof insertCrawlRun>>;
+    try {
+      crawlRun = await insertCrawlRun(
+        {
+          id,
+          venueId,
+          status: 'failed',
+          reason: failureReason(err, isAccountWide),
+          robotsTxtBlocked: 'no',
+          eventsFound: 0,
+          eventsInserted: 0,
+          errorMessage: String(err),
+          durationMs,
+        },
+        fetchLog,
+      );
+    } finally {
+      // After the run row (the audit points at it), but never lost if that
+      // insert throws: the venue is already paused or blocked by now.
+      if (systemAction !== null) await recordSystemAction(systemAction);
+    }
 
     reportFailure({
       event: 'crawl.failed',

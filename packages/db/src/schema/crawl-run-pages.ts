@@ -9,8 +9,8 @@ import {
 import { crawlRuns } from './crawl-runs.js';
 
 // One row per page a crawl run fetched: metadata only, never the body (bodies
-// wait for a retention decision). Capped at 50 per run by crawler-core's
-// FetchLog. Rows go with their run.
+// wait for a retention decision). Bounded by crawler-core's FetchLog:
+// 50 successful pages plus up to 200 failures per run. Rows go with their run.
 export const crawlRunPages = pgTable(
   'crawl_run_pages',
   {

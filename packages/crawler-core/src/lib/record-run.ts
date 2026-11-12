@@ -14,6 +14,9 @@ export type CrawlRunValues = Omit<NewCrawlRun, 'status' | 'reason'> &
     | { status: 'failed' | 'partial' | 'skipped'; reason: CrawlRunReason }
   );
 
+// About nine columns a row: 500 rows is under 5,000 parameters.
+export const PAGE_INSERT_CHUNK = 500;
+
 /**
  * The one writer of `crawl_runs`. Inserts the run, then its fetched-page
  * records. The page rows are metadata: a failure writing them is reported and
@@ -50,6 +53,3 @@ export async function insertCrawlRun(
   }
   return crawlRun;
 }
-
-// Nine columns a row: 500 rows is 4,500 parameters.
-export const PAGE_INSERT_CHUNK = 500;
