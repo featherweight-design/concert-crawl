@@ -179,7 +179,11 @@ export default async function VenueProfilePage({
           {hasStats && (
             <div className="mt-5">
               <div className="h-px bg-border" />
-              <div className="flex gap-4 py-4">
+              {/* Three equal columns (addendum 2 item 17). */}
+              <div
+                data-testid="venue-stats"
+                className="grid grid-cols-3 gap-4 py-4"
+              >
                 <StatPill label="Capacity" value={capacityFormatted} />
                 <StatPill
                   label="Upcoming"

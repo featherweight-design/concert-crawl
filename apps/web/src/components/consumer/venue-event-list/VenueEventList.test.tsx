@@ -12,14 +12,6 @@ vi.mock('../event-row', () => ({
   fromEventWithVenue: (event: EventWithVenue) => ({ id: event.id }),
 }));
 
-vi.mock('../definitions/lib', () => ({
-  dateGroupLabel: (date: string) => {
-    if (date === '2099-07-15') return 'Tonight';
-    if (date === '2099-07-16') return 'Tomorrow';
-    return `Day ${date}`;
-  },
-}));
-
 import { VenueEventList } from './VenueEventList';
 
 function makeEvent(overrides: Partial<EventWithVenue>): EventWithVenue {
@@ -61,36 +53,24 @@ function makeEvent(overrides: Partial<EventWithVenue>): EventWithVenue {
   };
 }
 
-describe('VenueEventList date grouping', () => {
-  it('renders one section per unique event.date with the date label', () => {
+// Design addendum 2 (#178) item 17: Upcoming is ungrouped, as `bp-venue`
+// draws it. Each row states its own date; there are no date headers.
+describe('VenueEventList', () => {
+  it('renders one flat list with no date-group sections or headers', () => {
     const events = [
       makeEvent({ id: 'a', date: '2099-07-15' }),
       makeEvent({ id: 'b', date: '2099-07-15' }),
       makeEvent({ id: 'c', date: '2099-07-16' }),
     ];
-    const { getAllByRole } = render(<VenueEventList events={events} />);
-
-    const sections = getAllByRole('region');
-    expect(sections.length).toBe(2);
-    expect(sections[0]?.getAttribute('aria-label')).toBe('Tonight');
-    expect(sections[1]?.getAttribute('aria-label')).toBe('Tomorrow');
+    const { queryAllByRole, container } = render(
+      <VenueEventList events={events} />,
+    );
+    expect(queryAllByRole('region')).toEqual([]);
+    expect(queryAllByRole('heading')).toEqual([]);
+    expect(container.textContent).not.toMatch(/\d+ shows?/);
   });
 
-  it('renders show count per group with correct pluralization', () => {
-    const events = [
-      makeEvent({ id: 'a', date: '2099-07-15' }),
-      makeEvent({ id: 'b', date: '2099-07-15' }),
-      makeEvent({ id: 'c', date: '2099-07-16' }),
-    ];
-    const { getAllByRole } = render(<VenueEventList events={events} />);
-    const sections = getAllByRole('region');
-
-    expect(sections[0]?.textContent).toContain('2 shows');
-    expect(sections[1]?.textContent).toContain('1 show');
-    expect(sections[1]?.textContent).not.toContain('1 shows');
-  });
-
-  it('renders every event under its date group', () => {
+  it('keeps the events in the order given', () => {
     const events = [
       makeEvent({ id: 'a', date: '2099-07-15' }),
       makeEvent({ id: 'b', date: '2099-07-16' }),
@@ -100,13 +80,13 @@ describe('VenueEventList date grouping', () => {
     const cards = getAllByTestId('event-row');
     expect(cards.map((node) => node.getAttribute('data-event-id'))).toEqual([
       'a',
-      'c',
       'b',
+      'c',
     ]);
   });
 
   it('renders nothing when events array is empty', () => {
-    const { queryAllByRole } = render(<VenueEventList events={[]} />);
-    expect(queryAllByRole('region')).toEqual([]);
+    const { container } = render(<VenueEventList events={[]} />);
+    expect(container.firstChild).toBeNull();
   });
 });

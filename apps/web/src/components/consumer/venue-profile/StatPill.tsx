@@ -6,7 +6,7 @@ interface StatPillProps {
 
 export function StatPill({ label, value, signal = false }: StatPillProps) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <span
         className="text-fg-subtle"
         style={{
@@ -18,11 +18,14 @@ export function StatPill({ label, value, signal = false }: StatPillProps) {
       >
         {label}
       </span>
-      {/* A free-text value (venue type) can be one long word; at 320 each
-          pill is ~84px, so it truncates rather than overflowing the row. */}
+      {/* Design addendum 2 (#178) item 17: a value that doesn't fit its
+          column wraps to a second line. It never shrinks or truncates; a
+          single long word (a venue type) breaks rather than overflowing. */}
       <span
-        className="truncate font-bold"
+        data-testid="stat-value"
+        className="font-bold"
         style={{
+          overflowWrap: 'break-word',
           fontSize: '22px',
           lineHeight: 1,
           color: signal ? 'var(--signal)' : 'var(--fg)',

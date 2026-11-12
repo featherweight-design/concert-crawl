@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { EventWithVenue } from '@concert-crawl/types';
 import { EventRow, fromEventWithVenue } from '../event-row';
-import { CONSUMER_COPY } from '../definitions/copy';
-import { dateGroupLabel, isToday } from '../definitions/lib';
-import { DayTile } from '../events-list/DayTile';
 
 interface VenueEventListProps {
   events: EventWithVenue[];
@@ -20,16 +17,6 @@ export function VenueEventList({
 }: VenueEventListProps) {
   const highlightRef = useRef<HTMLDivElement>(null);
   const watchedSet = new Set(watchedIds);
-
-  const groups = useMemo(() => {
-    const grouped = new Map<string, EventWithVenue[]>();
-    for (const event of events) {
-      const key = event.date;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(event);
-    }
-    return grouped;
-  }, [events]);
 
   useEffect(() => {
     if (!highlightId || !highlightRef.current) return;
@@ -50,59 +37,26 @@ export function VenueEventList({
     }
   }, [highlightId]);
 
-  if (groups.size === 0) return null;
+  if (events.length === 0) return null;
 
+  // Design addendum 2 (#178) item 17: Upcoming is ungrouped. A venue's list is
+  // short and each row states its own date (the venue surface carries only the
+  // venue), so there are no date headers, as `bp-venue` draws it.
   return (
-    <div className="flex flex-col gap-6">
-      {Array.from(groups.entries()).map(([date, dateEvents]) => {
-        const label = dateGroupLabel(date);
-        return (
-          <section key={date} aria-label={label}>
-            {/* The Browse day header (B+): rows are drawn the Browse way, so
-                their groups lead with the same date tile. */}
-            <div className="mb-3 flex items-center gap-3">
-              <DayTile date={date} today={isToday(date)} />
-              <h2
-                className="shrink-0 leading-none"
-                style={{
-                  fontFamily: 'Inter, system-ui',
-                  fontWeight: 800,
-                  fontSize: 20,
-                  letterSpacing: '-0.02em',
-                  color: 'var(--fg)',
-                }}
-              >
-                {label}
-              </h2>
-              <span
-                className="shrink-0 uppercase text-fg-subtle"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10.5,
-                  letterSpacing: '0.12em',
-                }}
-              >
-                {CONSUMER_COPY.showCount(dateEvents.length)}
-              </span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {dateEvents.map((event) => (
-                <div
-                  key={event.id}
-                  ref={event.id === highlightId ? highlightRef : undefined}
-                >
-                  <EventRow
-                    show={fromEventWithVenue(event, {
-                      isWatching: watchedSet.has(event.id),
-                    })}
-                    surface="venue"
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+    <div className="flex flex-col gap-2">
+      {events.map((event) => (
+        <div
+          key={event.id}
+          ref={event.id === highlightId ? highlightRef : undefined}
+        >
+          <EventRow
+            show={fromEventWithVenue(event, {
+              isWatching: watchedSet.has(event.id),
+            })}
+            surface="venue"
+          />
+        </div>
+      ))}
     </div>
   );
 }
