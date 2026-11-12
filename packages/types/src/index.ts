@@ -420,6 +420,14 @@ export interface Venue {
   crawlPauseReason?: CrawlPauseReason | null;
   crawlPauseNote?: string | null;
   crawlResumeOn?: string | null;
+  // Who paused the crawl (an admin's user id; null for a crawler auto-pause) and
+  // why, when and by whom the venue was hidden from the site. Explanations only:
+  // `crawlPausedAt` and `active` stay the switches. The API always sends them.
+  crawlPausedBy?: string | null;
+  hiddenAt?: string | null;
+  hiddenBy?: string | null;
+  hiddenReason?: VenueHideReason | null;
+  hiddenNote?: string | null;
   // Set when the venue's data was removed at its request; cleared on activation.
   removedAt: string | null;
   extractionStrategy: ExtractionStrategy | null;
@@ -456,6 +464,16 @@ export interface VenueWithEventCount extends Venue {
   // The venue's own columns describe whether crawling is enabled, not whether
   // it is producing anything — a venue skipping every night still reads Active.
   lastRunStatus: CrawlStatus | null;
+  // The latest run in full (status, reason, time, counts, a cut error), for the
+  // list's one-line "Failed: calendar block not found" column. Null with
+  // `lastRunStatus` when the venue has never crawled.
+  latestRun: VenueLatestRun | null;
+  // Who paused the crawl or hid the venue, by name: the admin's handle, or
+  // "a former admin" when they have none. Null when nobody did (a crawler
+  // auto-pause, a venue not paused or hidden); the user id is `crawlPausedBy`
+  // and `hiddenBy` on the venue itself.
+  crawlPausedByName: string | null;
+  hiddenByName: string | null;
 }
 
 // CrawlHealth — 7-day crawl health stats returned by GET /v1/admin/venues/:id

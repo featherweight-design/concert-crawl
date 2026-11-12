@@ -44,9 +44,13 @@ import {
   platformRequiresVenueId,
 } from '@concert-crawl/types';
 import type {
+  CrawlRunReason,
+  CrawlStatus,
   PlatformProbeResult,
+  VenueLatestRun,
   VenueRobotsStatus,
 } from '@concert-crawl/types';
+import { adminNamesOf, nameOf } from './lib/admin-names.js';
 import { getAuthUser } from '../../middleware/auth.js';
 import { apiLogger } from '../../lib/logger.js';
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js';
@@ -224,15 +228,15 @@ export const updateVenueSchema = createVenueSchema
 const latestRunOf = (
   run:
     | {
-        status: string;
-        reason: string | null;
+        status: CrawlStatus;
+        reason: CrawlRunReason | null;
         at: Date;
         eventsFound: number;
         eventsInserted: number;
         errorMessage: string | null;
       }
     | undefined,
-) =>
+): VenueLatestRun | null =>
   run === undefined
     ? null
     : {
@@ -296,6 +300,12 @@ venuesAdminRouter.get('/', async (ctx) => {
 
   const latestByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]));
 
+  // "Paused by Hugh", "Hidden by a former admin": the handle of whoever paused
+  // or hid it, one lookup for the whole list.
+  const adminNames = await adminNamesOf(
+    allVenues.flatMap((venue) => [venue.crawlPausedBy, venue.hiddenBy]),
+  );
+
   const venuesWithCounts = allVenues.map((venue) => ({
     ...venue,
     eventCount: countByVenueId.get(venue.id) ?? 0,
@@ -303,6 +313,8 @@ venuesAdminRouter.get('/', async (ctx) => {
     // The latest run in full, for the list's one-line "Failed: calendar block
     // not found" / "OK · 3:04 AM · 2 new" column.
     latestRun: latestRunOf(latestByVenueId.get(venue.id)),
+    crawlPausedByName: nameOf(adminNames, venue.crawlPausedBy),
+    hiddenByName: nameOf(adminNames, venue.hiddenBy),
   }));
 
   return ctx.json({ success: true, data: venuesWithCounts });
@@ -458,9 +470,17 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   // What a delete would destroy, for the ⋯ menu to say so before it is tried.
   const blockers = await deleteBlockers(id);
 
+  const adminNames = await adminNamesOf([venue.crawlPausedBy, venue.hiddenBy]);
+
   return ctx.json({
     success: true,
-    data: { ...venue, crawlHealth, deleteBlockers: blockers },
+    data: {
+      ...venue,
+      crawlHealth,
+      deleteBlockers: blockers,
+      crawlPausedByName: nameOf(adminNames, venue.crawlPausedBy),
+      hiddenByName: nameOf(adminNames, venue.hiddenBy),
+    },
   });
 });
 
