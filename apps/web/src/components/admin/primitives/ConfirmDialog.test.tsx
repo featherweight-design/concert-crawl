@@ -57,6 +57,12 @@ describe('ConfirmDialog', () => {
     ).toBeVisible();
   });
 
+  it('opens on Cancel on the phone, never on a dangerous action', () => {
+    setPhone(true);
+    renderDialog({ tone: 'danger' });
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+  });
+
   it('cancels on Escape, but not while pending', () => {
     const first = renderDialog();
     fireEvent.keyDown(document, { key: 'Escape' });

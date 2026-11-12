@@ -68,10 +68,13 @@ export const ConfirmDialog = ({
         subtitle={body}
         onClose={onCancel}
         dismissible={!pending}
+        footerReversed
         footer={
+          // Cancel comes first in the DOM, so the trap opens on it rather than
+          // on an action that may be irreversible; it still renders below.
           <>
-            {confirm}
             {cancel}
+            {confirm}
           </>
         }
       >

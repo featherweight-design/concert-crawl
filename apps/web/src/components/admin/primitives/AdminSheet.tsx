@@ -21,6 +21,8 @@ export interface AdminSheetProps {
   fullScreen?: boolean;
   /** False mid-request: the scrim and Escape stop closing it. */
   dismissible?: boolean;
+  /** Paint the footer bottom-up, so its first DOM child sits last. */
+  footerReversed?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export const AdminSheet = ({
   footer,
   fullScreen = false,
   dismissible = true,
+  footerReversed = false,
 }: AdminSheetProps) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -73,7 +76,8 @@ export const AdminSheet = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
-          padding: fullScreen ? '16px 16px 22px' : '8px 16px 22px',
+          // Clear the home indicator in a standalone PWA.
+          padding: `${fullScreen ? 16 : 8}px 16px calc(22px + env(safe-area-inset-bottom))`,
           background: 'var(--bg-elevated)',
           borderTop: fullScreen ? 'none' : '1px solid var(--border-strong)',
           borderRadius: fullScreen ? 0 : '18px 18px 0 0',
@@ -139,7 +143,13 @@ export const AdminSheet = ({
           {children}
         </div>
         {footer && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: footerReversed ? 'column-reverse' : 'column',
+              gap: 8,
+            }}
+          >
             {footer}
           </div>
         )}

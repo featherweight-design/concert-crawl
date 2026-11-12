@@ -39,6 +39,11 @@ export const AUTO_PAUSE_FAILURES = 3;
  *
  * `draft` arrives with 3c's `went_live_at`; until then every venue is live or
  * hidden.
+ *
+ * Known limit until 3c's `crawl_paused_reason`: nothing records who paused a
+ * venue, so a pause with 3+ failures on the counter reads as the automatic
+ * one. The crawler only sets `crawlPausedAt` on the third failure, so that is
+ * the common case; a hand pause after a failing streak is the rare miss.
  */
 export function deriveVenueStatusChips(
   venue: Pick<
