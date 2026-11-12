@@ -7,11 +7,13 @@
 // artist's accent and snaps the glyph into the stub hole — so the button
 // visually *becomes* the stamp it will be in History.
 //
-// `past-yes` / `past-no` are read-only displays, not affordances: the
-// retroactive "I went, actually" toggle is out of scope for v1.
+// `past-yes` is a read-only fact; `past-no` is the "I went" pill, a live tap that
+// stamps the night (edit-concerts PR3). Taking a stamp back out goes through the
+// "Remove it from Concerts" line under the button, never the button itself.
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { VenueStamp } from '@/components/consumer/venue-stamp/VenueStamp';
 import { GOING_COPY } from './definitions/copy';
 import { stampAccentFor, stampGlyphFor } from './lib/stamp';
 
@@ -27,7 +29,13 @@ export type GoingButtonState =
 export type GoingButtonSize = 'sm' | 'md' | 'lg';
 
 type GoingButtonProps = {
-  show: { eventId: string; artist: string; date: string };
+  show: {
+    eventId: string;
+    artist: string;
+    date: string;
+    /** Draws the past states' stamp in the stub hole. */
+    venue?: { slug: string; name: string };
+  };
   state?: GoingButtonState;
   size?: GoingButtonSize;
   fullWidth?: boolean;
@@ -144,8 +152,9 @@ export const GoingButton = ({
 
   const isPast = state === 'past-yes' || state === 'past-no';
   const isOn = state === 'going' || state === 'past-yes';
-  const isDeclined = state === 'past-no';
-  const disabled = isPast || pending;
+  // A stamped night reads as a fact; the way back out is the "Remove it" line
+  // under the button. An unstamped past night is a live "I went" tap.
+  const disabled = state === 'past-yes' || pending;
 
   const [announcement, setAnnouncement] = useState('');
   const previousState = useRef(state);
@@ -246,19 +255,14 @@ export const GoingButton = ({
           ? `color-mix(in oklch, ${accent} 22%, var(--surface-1))`
           : 'var(--surface-1)',
     border: `1.5px solid ${isOn ? accent : 'var(--border-strong)'}`,
-    color:
-      state === 'past-yes'
-        ? 'var(--fg-on-accent)'
-        : isDeclined
-          ? 'var(--fg-subtle)'
-          : 'var(--fg)',
+    color: state === 'past-yes' ? 'var(--fg-on-accent)' : 'var(--fg)',
     fontFamily: 'var(--font-ui)',
     fontWeight: 700,
     fontSize: sizes.font,
     letterSpacing: '-0.01em',
     // `pending` blocks a second tap but is deliberately invisible: the caller
     // commits optimistically, so dimming here would undo the point of it.
-    opacity: isDeclined ? 0.7 : 1,
+    opacity: 1,
     boxShadow: isOn
       ? `0 8px 24px -10px color-mix(in oklch, ${accent} 70%, transparent)`
       : 'none',
@@ -274,16 +278,26 @@ export const GoingButton = ({
         type="button"
         className="going-cta"
         disabled={disabled}
-        // The past states are read-only displays, not toggles — announcing
-        // aria-pressed=false on `past-yes` would claim the user isn't going to a
-        // show they already attended.
-        aria-pressed={isPast ? undefined : state === 'going'}
+        // `past-yes` is a read-only fact, so it carries no pressed state. The
+        // unstamped pill is a toggle that reads as off (addendum 3, item 56).
+        aria-pressed={
+          state === 'past-yes'
+            ? undefined
+            : state === 'past-no'
+              ? false
+              : state === 'going'
+        }
         aria-label={
           state === 'going'
             ? GOING_COPY.button.ariaGoing
             : state === 'default'
               ? GOING_COPY.button.ariaNotGoing
-              : undefined
+              : state === 'past-no'
+                ? GOING_COPY.past.ariaWent(
+                    show.artist,
+                    formatWentDate(show.date),
+                  )
+                : undefined
         }
         onClick={() => {
           if (disabled) return;
@@ -321,7 +335,17 @@ export const GoingButton = ({
             }`,
           }}
         >
-          {isOn ? (
+          {isPast && show.venue ? (
+            // The venue's Passport stamp: solid once the night is stamped, the
+            // dashed ghost of it until then (event_unmarked_m, event_stamped_m).
+            <VenueStamp
+              venueSlug={show.venue.slug}
+              venueName={show.venue.name}
+              seed={show.artist}
+              variant={state === 'past-yes' ? 'solid' : 'dashed'}
+              size={sizes.hole}
+            />
+          ) : isOn ? (
             <svg
               width={sizes.hole}
               height={sizes.hole}
