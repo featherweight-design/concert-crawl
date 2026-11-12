@@ -54,7 +54,7 @@ import {
   type Tier,
 } from '@concert-crawl/types';
 import { followedArtistsCondition } from '../lib/artist-follows.js';
-import { markPublicRead } from '../lib/edge-cache.js';
+import { markPublicRead, markViewerScopedRead } from '../lib/edge-cache.js';
 import { resolveArtistSlugs } from '../lib/artist-slugs.js';
 import { getEventWatchers } from '../lib/event-watchers.js';
 import {
@@ -550,12 +550,7 @@ eventsRouter.get(
     // Anonymous: the same for everyone, so the edge may hold it. A signed-in
     // list can carry the followedArtists overlay and taste/following scopes, so
     // it stays out of any shared cache. Set after the reads, never on an error.
-    if (listAuth?.userId) {
-      ctx.header('Vary', 'Authorization', { append: true });
-      ctx.header('Cache-Control', 'private, no-store');
-    } else {
-      markPublicRead(ctx);
-    }
+    markViewerScopedRead(ctx, Boolean(listAuth?.userId));
     return ctx.json({
       success: true,
       data: { data: enrichedRows, total, limit, offset, followingApplied },
@@ -659,9 +654,7 @@ eventsRouter.get('/availability', async (ctx) => {
 function markViewerScoped(ctx: Context, isAuthed: boolean): void {
   // Appended, not set: CORS contributes its own Vary, and replacing the header
   // would drop that and make a shared cache key on the wrong axis.
-  ctx.header('Vary', 'Authorization', { append: true });
-  if (isAuthed) ctx.header('Cache-Control', 'private, no-store');
-  else markPublicRead(ctx);
+  markViewerScopedRead(ctx, isAuthed);
 }
 
 // GET /v1/events/:id — single event with venue and watching count
