@@ -402,6 +402,8 @@ export function EventDetailBanners({
           open={sawDifferentSheetOpen}
           onClose={() => setSawDifferentSheetOpen(false)}
           liveStatus={sawDifferentLiveStatus}
+          // A pending Tickets available already is that report.
+          isPending={activePendingReport !== null}
           eventDate={event.date}
           onSelect={handleSawDifferentSelect}
         />

@@ -314,22 +314,24 @@ export const PendingReportBanner = ({
                 {methodLabel !== null && (
                   <>
                     <span>·</span>
-                    {isSafeHttpUrl(evidenceUrl) ? (
-                      <a
-                        href={evidenceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: 'var(--signal)',
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                        }}
-                      >
-                        {methodLabel} · {copy.viewEvidenceLink}
-                      </a>
-                    ) : (
-                      <span>{methodLabel}</span>
-                    )}
+                    <span>{methodLabel}</span>
+                  </>
+                )}
+                {isSafeHttpUrl(evidenceUrl) && (
+                  <>
+                    <span>·</span>
+                    <a
+                      href={evidenceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'var(--signal)',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {copy.viewEvidenceLink}
+                    </a>
                   </>
                 )}
               </div>
