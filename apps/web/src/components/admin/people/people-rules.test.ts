@@ -147,7 +147,7 @@ describe('codeNameFor', () => {
 });
 
 describe('personHref', () => {
-  it('opens the existing person page', () => {
-    expect(personHref('user_2abc')).toBe('/admin/users/user_2abc');
+  it('opens the person page under People', () => {
+    expect(personHref('user_2abc')).toBe('/admin/people/user_2abc');
   });
 });

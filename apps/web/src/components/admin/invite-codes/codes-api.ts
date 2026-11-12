@@ -60,7 +60,19 @@ const isRedemption = (value: unknown): value is InviteCodeRedemption =>
   isText(value['redeemedAt']);
 
 /** A payload that isn't the route's documented shape. Never shown as text. */
-class ShapeError extends Error {}
+class ShapeError extends Error {
+  constructor(
+    message: string,
+    /** The HTTP status when the API refused, so a caller can tell a 403 or 404. */
+    public readonly status: number | null = null,
+  ) {
+    super(message);
+  }
+}
+
+/** The status a failed `call` was refused with, or null when there wasn't one. */
+export const refusedStatus = (err: unknown): number | null =>
+  err instanceof ShapeError ? err.status : null;
 
 /** A taken custom code: the 409 carries a free suggestion (`12/code-taken-d`). */
 export class CodeTakenError extends Error {
@@ -122,7 +134,7 @@ export const call = async (
     throw new CodeTakenError(body['code'], body['suggestion']);
   }
   if (!res.ok || !isRecord(body) || body['success'] !== true) {
-    throw new ShapeError(`status ${res.status}`);
+    throw new ShapeError(`status ${res.status}`, res.status);
   }
   return body['data'];
 };

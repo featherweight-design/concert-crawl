@@ -22,9 +22,9 @@ export const PAGE_SIZE = 100;
 export const CHIPS = ['everyone', 'beta', 'promoter', 'admin', 'test'] as const;
 export type Chip = (typeof CHIPS)[number];
 
-/** Where a person opens: the existing person page until 5a part C moves it. */
+/** Where a person opens: the person page under People. */
 export const personHref = (userId: string): string =>
-  `/admin/users/${encodeURIComponent(userId)}`;
+  `/admin/people/${encodeURIComponent(userId)}`;
 
 /** People who joined with a code (5b's "See all N"), by the code as written. */
 export const peopleWithCodeHref = (code: string): string =>
