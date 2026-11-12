@@ -24,7 +24,9 @@ import {
   StageBackdrop,
   STAGE_CARD_TILT,
   THEME_WASH,
+  stageRing,
 } from '../EventStage';
+import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
 afterEach(cleanup);
 
@@ -135,6 +137,17 @@ describe('<EventStage />', () => {
     renderStage({ leadGenre: null });
     expect(screen.getByTestId('stage-card').style.boxShadow).toContain(
       '2px var(--border-strong)',
+    );
+  });
+
+  it('drops the halo and the glow for an ungenred show, keeping the ring', () => {
+    renderStage({ leadGenre: null });
+    const shadow = screen.getByTestId('stage-card').style.boxShadow;
+    expect(shadow).toContain('2px var(--border-strong)');
+    expect(shadow).not.toContain('7px');
+    expect(shadow).not.toContain('70px');
+    expect(stageRing(NEUTRAL_GENRE_COLOR)).toBe(
+      `0 0 0 2px ${NEUTRAL_GENRE_COLOR}`,
     );
   });
 

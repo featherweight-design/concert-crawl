@@ -121,9 +121,17 @@ export const StageBackdrop = ({
 /**
  * The genre ring on a card, as drawn: a 2px ring in the genre's color, a 7px
  * translucent halo band around it (16%), and a wide soft shadow (40%).
+ *
+ * An ungenred show (the `NEUTRAL_GENRE_COLOR` fallback) keeps the 2px ring and
+ * drops the halo and the glow, the rule rows (`genreRing`) and `GenreDot`
+ * already follow (addendum-2 item 23: "a neutral ring and no glow"). No B+
+ * event board draws a neutral stage with a glow; the stage skeleton
+ * (addendum-2 `load-artist-m`) draws the neutral 2px ring alone.
  */
 export const stageRing = (ring: string): string =>
-  `0 0 0 2px ${ring}, 0 0 0 7px color-mix(in oklch, ${ring} 16%, transparent), 0 30px 70px color-mix(in oklch, ${ring} 40%, transparent)`;
+  ring === NEUTRAL_GENRE_COLOR
+    ? `0 0 0 2px ${ring}`
+    : `0 0 0 2px ${ring}, 0 0 0 7px color-mix(in oklch, ${ring} 16%, transparent), 0 30px 70px color-mix(in oklch, ${ring} 40%, transparent)`;
 
 export type StageShellProps = {
   backdrop: ReactNode;
