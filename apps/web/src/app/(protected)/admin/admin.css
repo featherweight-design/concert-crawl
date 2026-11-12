@@ -274,3 +274,10 @@
   outline: 2px solid var(--signal);
   outline-offset: -2px;
 }
+
+/* The shell's pre-mount rail: matches MOBILE_BREAKPOINT in shell/nav.ts. */
+@media (max-width: 720px) {
+  .admin-shell-rail-placeholder {
+    display: none;
+  }
+}

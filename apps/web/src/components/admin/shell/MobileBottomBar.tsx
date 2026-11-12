@@ -35,7 +35,10 @@ export const MobileBottomBar = ({
         left: 0,
         right: 0,
         bottom: 0,
-        height: TAB_BAR_HEIGHT,
+        // The home indicator in a standalone PWA sits below the labels.
+        height: `calc(${TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        boxSizing: 'border-box',
         display: 'flex',
         background: 'var(--bg-elevated)',
         borderTop: '1px solid var(--border)',

@@ -10,6 +10,7 @@ import {
   activeTabKey,
   badgeCountFor,
 } from './nav';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const ADMIN_APP_DIR = path.resolve(__dirname, '../../../app/(protected)/admin');
 
@@ -63,8 +64,14 @@ describe('admin NAV', () => {
 
   it('never says Tools', () => {
     const source = readFileSync(path.join(__dirname, 'nav.ts'), 'utf8');
-    expect(source).not.toMatch(/\bTools\b/);
-    expect(NAV.some((item) => /tools/i.test(item.label))).toBe(false);
+    expect(source).not.toMatch(/\btools\b/i);
+    // Every shell string, including More's details and the tab bar.
+    const shellCopy = JSON.stringify(
+      ADMIN_COPY.shell,
+      (_key, value: unknown) =>
+        typeof value === 'function' ? String(value) : value,
+    );
+    expect(shellCopy).not.toMatch(/\btools\b/i);
   });
 
   it('has the 4-tab bar', () => {
