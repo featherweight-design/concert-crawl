@@ -20,8 +20,8 @@ export const adminSettings = pgTable(
       precision: 8,
       scale: 2,
     }),
-    // When true, community prices wait for an admin instead of promoting on
-    // corroboration.
+    // The admin's "approve every price myself" choice. Stored here and read
+    // back by the settings API; the price hold that acts on it ships with 2a.
     approvePricesMyself: boolean('approve_prices_myself')
       .notNull()
       .default(false),
