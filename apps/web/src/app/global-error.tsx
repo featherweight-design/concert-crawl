@@ -5,6 +5,7 @@
 // or globals.css. It writes the stored theme's tokens itself (same keys as the
 // root layout's pre-paint script) and draws the StandaloneError page.
 import { StandaloneError } from '@/components/standalone-error/StandaloneError';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { THEMES } from '@/theme/themes';
 
 // `<` is escaped so no token value can ever close the script tag early.
@@ -33,13 +34,17 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // The app's own rule (every boundary retries through the hook, so the cached
+  // failed payload is refreshed too). The router context sits above this file.
+  const retry = useErrorBoundaryRetry(reset);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body style={{ margin: 0, background: 'var(--bg)' }}>
-        <StandaloneError errorId={error.digest} onRetry={reset} />
+        <StandaloneError errorId={error.digest} onRetry={retry} />
       </body>
     </html>
   );
