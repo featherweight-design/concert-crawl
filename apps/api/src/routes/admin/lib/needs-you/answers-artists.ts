@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { artistReports, artists, db } from '@concert-crawl/db';
 import type { NeedsYouItem } from '@concert-crawl/types';
 import { idSchema } from '../../../../lib/id-schema.js';
-import { applyArtistMatch } from '../artist-match-update.js';
+import { applyArtistMatch, matchStatusSchema } from '../artist-match-update.js';
 import { dismissArtistReports } from '../artist-report-dismiss.js';
 import {
   type AnswerResult,
@@ -18,6 +18,15 @@ import {
 
 const artistIdOf = (item: NeedsYouItem): string | null =>
   item.kind === 'artist' ? item.artistId : null;
+
+// The match status the admin was shown when they decided. The item carries it
+// (it is also part of the item's key), and every write sends it back so a row
+// that changed between the queue load and the click is refused with a 409
+// rather than overwritten.
+const shownStatusOf = (item: NeedsYouItem) =>
+  item.kind === 'artist'
+    ? matchStatusSchema.safeParse(item.matchStatus).data
+    : undefined;
 
 const matchFailure = (
   outcome: Awaited<ReturnType<typeof applyArtistMatch>>,
@@ -33,7 +42,11 @@ export const pickRightArtist = define({
     if (artistId === null) return fail(400, 'Not an artist item');
     const outcome = await applyArtistMatch(
       artistId,
-      { spotifyArtistId: params.spotifyArtistId, matchStatus: 'matched' },
+      {
+        spotifyArtistId: params.spotifyArtistId,
+        matchStatus: 'matched',
+        expectedStatus: shownStatusOf(item),
+      },
       actorId,
     );
     return (
@@ -55,7 +68,11 @@ export const noPhoto = define({
     if (artistId === null) return fail(400, 'Not an artist item');
     const outcome = await applyArtistMatch(
       artistId,
-      { spotifyArtistId: null, matchStatus: 'no_match' },
+      {
+        spotifyArtistId: null,
+        matchStatus: 'no_match',
+        expectedStatus: shownStatusOf(item),
+      },
       actorId,
     );
     return matchFailure(outcome) ?? { ok: true, params: {}, before: null };
@@ -150,6 +167,11 @@ export const keepThisMatch = define({
       .from(artists)
       .where(eq(artists.id, artistId));
     if (!artist) return fail(404, 'Artist not found');
+    // The row moved on since the queue showed it: neither confirming nor
+    // dismissing reports is the answer to the question that was asked.
+    if (artist.matchStatus !== shownStatusOf(item)) {
+      return fail(409, STATE_CHANGED);
+    }
 
     // An unconfirmed auto-match is confirmed; otherwise the answer says the
     // page is right as it is, which dismisses its open reports.
@@ -165,7 +187,11 @@ export const keepThisMatch = define({
         );
       const outcome = await applyArtistMatch(
         artistId,
-        { spotifyArtistId: artist.spotifyArtistId, confirmAutoMatch: true },
+        {
+          spotifyArtistId: artist.spotifyArtistId,
+          confirmAutoMatch: true,
+          expectedStatus: shownStatusOf(item),
+        },
         actorId,
       );
       if (!outcome.ok) return fail(outcome.status, outcome.error);

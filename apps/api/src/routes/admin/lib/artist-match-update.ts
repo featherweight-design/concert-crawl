@@ -26,9 +26,9 @@ export const artistMatchBodySchema = z
     // ruling made against a stale row (a decision can sit on screen for
     // minutes) is refused with a 409. When it is omitted, nothing pins the
     // status and that race stays open: the last write wins. So the race is
-    // closed only for callers that send it. The 4c admin page will; the Needs
-    // you handlers do not yet, as they would need the shown status carried on
-    // the item. It pins the status only, not the Spotify identity.
+    // closed only for callers that send it. The Needs you artist answers send
+    // the status their item showed; the 4c admin page will. It pins the status
+    // only, not the Spotify identity.
     expectedStatus: matchStatusSchema.optional(),
   })
   .strict();
