@@ -2,9 +2,28 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { Highlight, VenueDateLine } from './ResultParts';
+import { Highlight, RingArt, VenueDateLine, ringColorFor } from './ResultParts';
 
 afterEach(cleanup);
+
+describe('RingArt', () => {
+  const shadow = (genres: string[] | null): string => {
+    const { container } = render(
+      <RingArt name="Idles" ring={ringColorFor(genres)} />,
+    );
+    return (container.firstElementChild as HTMLElement).style.boxShadow;
+  };
+
+  it('draws a bare hairline, no glow, for an ungenred artist', () => {
+    const value = shadow(null);
+    expect(value).toContain('var(--border-strong)');
+    expect(value).not.toContain('color-mix');
+  });
+
+  it('keeps the glow on a genre ring', () => {
+    expect(shadow(['Rock'])).toContain('color-mix');
+  });
+});
 
 const lit = (text: string, query: string): string | null => {
   const { container } = render(<Highlight text={text} query={query} />);
