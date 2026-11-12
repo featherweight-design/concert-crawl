@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import {
+  auditLog,
   db,
   events,
   priceSubmissions,
@@ -17,6 +18,9 @@ import {
   fanoutPriceDrop,
   type PriceDrop,
 } from '../lib/price-drop.js';
+
+// audit_log.actor_id for a community price the confirmations promoted on their own.
+const PRICE_PROMOTION_ACTOR = 'system:prices';
 
 const confirmBodySchema = z.object({
   method: z.enum(['same-vendor', 'other-vendor', 'box-office']),
@@ -195,6 +199,24 @@ priceSubmissionConfirmsRouter.post(
             preEvent?.ticketPriceMin,
             submission.priceMin,
           );
+
+          // The promotion is the system's act, so it is audited as one. Only
+          // the confirm that crosses the threshold is the promotion: the
+          // count lands on confirmsRequired exactly once, and a later confirm
+          // on the already corroborated row lands above it.
+          if (updatedRow.corroborationCount === confirmsRequired) {
+            await tx.insert(auditLog).values({
+              actorId: PRICE_PROMOTION_ACTOR,
+              action: 'price.promoted',
+              targetId: submissionId,
+              metadata: {
+                eventId,
+                priceMin: submission.priceMin,
+                priceMax: submission.priceMax,
+                confirms: confirmsRequired,
+              },
+            });
+          }
         }
 
         return { updatedRow, drop };

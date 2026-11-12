@@ -24,6 +24,7 @@ import { checkEventCountDrop } from './lib/event-count-alert.js';
 import { checkEventCeiling } from './lib/event-ceiling-alert.js';
 import { checkUrlCoverage } from './lib/url-coverage-alert.js';
 import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js';
+import { recordSystemAction } from './lib/system-audit.js';
 import {
   fetchPage,
   fetchPageHttp,
@@ -1655,7 +1656,14 @@ export async function crawlVenue(
     // never fail the crawl (crawl resilience is existential) — log and continue.
     if (seenEventCoords.length > 0) {
       try {
-        await reconcileDriftDuplicates(venueId);
+        const { reconciledLosers } = await reconcileDriftDuplicates(venueId);
+        if (reconciledLosers > 0) {
+          await recordSystemAction({
+            action: 'event.drift_duplicates_merged',
+            targetId: venueId,
+            metadata: { venueName: venue.name, merged: reconciledLosers },
+          });
+        }
       } catch (err) {
         reportFailure({
           event: 'crawl.reconcile_drift_duplicates_failed',
@@ -1943,6 +1951,20 @@ export async function crawlVenue(
       // Auto-pause side-effects (crawl pause, email, "crawl paused" wording)
       // align on a single gate: non-block 3rd consecutive failure only.
       const shouldAutoPause = !isBlocked && newFailureCount === 3;
+
+      // What the system did on its own, for the admin's Done for you list.
+      // A block records on every 403/429; the pause only on the transition.
+      if (isBlocked || shouldAutoPause) {
+        await recordSystemAction({
+          action: isBlocked ? 'venue.crawl_blocked' : 'venue.crawl_auto_paused',
+          targetId: venueId,
+          metadata: {
+            venueName: venue.name,
+            crawlRunId: id,
+            consecutiveFailures: newFailureCount,
+          },
+        });
+      }
 
       if (newFailureCount >= 3) {
         const notificationBody = shouldAutoPause

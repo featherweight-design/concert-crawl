@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { and, eq, sql } from 'drizzle-orm';
 import type { Browser } from 'playwright';
-import { db, events, venues, crawlRunPages } from '@concert-crawl/db';
+import { db, events, venues, crawlRunPages, auditLog } from '@concert-crawl/db';
 import { crawlVenue } from './crawl.js';
 
 // Mock just the IO layer — fetcher, robots, LLM. Real Postgres handles the
@@ -58,7 +58,7 @@ const HTML_BASE_V2 = '<html><body><p>Event listing v2</p></body></html>';
 
 async function clearCrawlState(): Promise<void> {
   await db.execute(
-    sql`TRUNCATE events, venues, crawl_runs, notifications, cost_tracking RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE events, venues, crawl_runs, notifications, cost_tracking, audit_log RESTART IDENTITY CASCADE`,
   );
 }
 
@@ -1937,5 +1937,61 @@ describe('crawlVenue — run reasons and fetched pages (admin 1a)', () => {
     expect(pages.find((page) => page.url === venue.url)?.bytes).toBe(
       Buffer.byteLength(HTML_BASE),
     );
+
+describe('crawlVenue — system audit rows (admin 1b)', () => {
+  const systemRows = () =>
+    db.select().from(auditLog).where(eq(auditLog.actorId, 'system:crawler'));
+
+  async function seedWithFailures(consecutiveFailures: number) {
+    const [venue] = await db
+      .insert(venues)
+      .values({
+        name: `System Audit Venue ${crypto.randomUUID()}`,
+        slug: `system-audit-${crypto.randomUUID()}`,
+        websiteUrl: 'https://system-audit.example.com',
+        consecutiveFailures,
+        crawlMode: 'browser',
+      })
+      .returning();
+    if (!venue) throw new Error('venue insert returned no row');
+    return venue;
+  }
+
+  it('records venue.crawl_auto_paused on the third failure, once', async () => {
+    const venue = await seedWithFailures(2);
+    mockFetchPage.mockRejectedValueOnce(new Error('boom'));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    const rows = await systemRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      action: 'venue.crawl_auto_paused',
+      targetId: venue.id,
+    });
+    expect(rows[0]?.metadata).toMatchObject({
+      crawlRunId: run.id,
+      consecutiveFailures: 3,
+    });
+  });
+
+  it('writes nothing for the first or second failure', async () => {
+    const venue = await seedWithFailures(0);
+    mockFetchPage.mockRejectedValueOnce(new Error('boom'));
+
+    await crawlVenue(venue.id, mockBrowser);
+
+    expect(await systemRows()).toHaveLength(0);
+  });
+
+  it('records venue.crawl_blocked on a 403', async () => {
+    const venue = await seedWithFailures(0);
+    mockFetchPage.mockRejectedValueOnce(new CrawlFetchError(403, 'HTTP 403'));
+
+    await crawlVenue(venue.id, mockBrowser);
+
+    const rows = await systemRows();
+    expect(rows.map((row) => row.action)).toEqual(['venue.crawl_blocked']);
+    expect(rows[0]?.targetId).toBe(venue.id);
   });
 });
