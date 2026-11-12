@@ -367,6 +367,27 @@ export type PlatformProbeResult =
       error: string;
     };
 
+// Why an admin paused a venue's crawl. Mirrors PAUSE_REASONS in
+// apps/api/src/routes/admin/lib/venue-crawl-pause.ts.
+export type CrawlPauseReason =
+  'waiting_on_permission' | 'site_broken_or_moved' | 'other';
+
+// When a paused crawl resumes by itself: never (an admin resumes it), a whole
+// number of days from today (1 to 366), or on a Mountain Time calendar date.
+export type CrawlPauseResume =
+  | { mode: 'manual' }
+  | { mode: 'in_days'; days: number }
+  | { mode: 'on'; date: string };
+
+// Body of POST /v1/admin/venues/:id/crawl-pause (pauseBodySchema). `note` is
+// at most 500 characters and required when `reason` is 'other'; `resume`
+// defaults to manual.
+export interface CrawlPauseRequest {
+  reason: CrawlPauseReason;
+  note?: string;
+  resume?: CrawlPauseResume;
+}
+
 // Venue — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface Venue {
@@ -394,8 +415,7 @@ export interface Venue {
   // calendar date); null for a pause with no reason or no date, and for a
   // crawler auto-pause. The API always sends them; optional here only so
   // existing fixtures keep compiling.
-  crawlPauseReason?:
-    'waiting_on_permission' | 'site_broken_or_moved' | 'other' | null;
+  crawlPauseReason?: CrawlPauseReason | null;
   crawlPauseNote?: string | null;
   crawlResumeOn?: string | null;
   // Set when the venue's data was removed at its request; cleared on activation.

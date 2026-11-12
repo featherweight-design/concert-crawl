@@ -32,7 +32,10 @@ export const CrawlPauseControl = ({
       if (paused) {
         await resumeCrawling(venueId);
       } else {
-        await pauseCrawling(venueId, trimmedReason);
+        // The field is free text, which the API files as Other with the text
+        // as its note. Sending that shape directly keeps the body typed and
+        // means a typed "other" no longer arrives as Other with no note.
+        await pauseCrawling(venueId, { reason: 'other', note: trimmedReason });
         setReason('');
       }
       router.refresh();
