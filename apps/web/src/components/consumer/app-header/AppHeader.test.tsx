@@ -274,7 +274,9 @@ describe('AppHeader crews tab (#1226)', () => {
     ).toBeTruthy();
   });
 
-  it('draws the 640-1023 header as the boards do: 38px rounded search, 14px 600 tabs', () => {
+  // jsdom applies no media queries, so this pins the classes each board
+  // draws its values on: header-640 below 900, header-900 and header-1100 from 900.
+  it('draws the 640 header, switching to the 900 board at min-[900px]', () => {
     render(<AppHeader />);
     const search = screen.getByTestId('header-search-desktop');
     expect(search.className).toContain('h-[38px]');
@@ -282,11 +284,25 @@ describe('AppHeader crews tab (#1226)', () => {
     expect(search.className).toContain('rounded-[10px]');
     expect(search.className).toContain('lg:w-[280px]');
     const tab = screen.getByRole('link', { name: 'Venues' });
+    // 640 board: 14px 600 tabs, 10px sides; 900 board: 14px sides.
     expect(tab.className).toContain('text-[14px]');
     expect(tab.className).toContain('font-semibold');
-    expect(tab.className).toContain('md:px-[14px]');
-    expect(screen.getByTestId('header-desktop').className).toContain(
-      'md:gap-5',
-    );
+    expect(tab.className).toContain('px-[10px]');
+    expect(tab.className).toContain('min-[900px]:px-[14px]');
+    expect(tab.className).not.toContain('md:px-[14px]');
+    // 640 board: 2px tab gap, 12px header gap; 900 board: 6px and 20px.
+    const nav = tab.parentElement;
+    expect(nav?.className).toContain('gap-0.5');
+    expect(nav?.className).toContain('min-[900px]:gap-1.5');
+    const bar = screen.getByTestId('header-desktop').className;
+    expect(bar).toContain('gap-3');
+    expect(bar).toContain('min-[900px]:gap-5');
+    // The 1100 board draws the same 20px and 6px gaps: no lg override.
+    expect(bar).not.toContain('lg:gap-');
+    expect(nav?.className).not.toContain('lg:gap-');
+    // header-640 draws the bare mark; the frame arrives with the 900 board.
+    const mark = screen.getAllByTestId('header-mark-tile').at(-1);
+    expect(mark?.className).toContain('border-transparent');
+    expect(mark?.className).toContain('min-[900px]:border-border');
   });
 });
