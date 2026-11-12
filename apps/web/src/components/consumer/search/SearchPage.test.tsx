@@ -369,6 +369,58 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     },
   ];
 
+  it('draws Artists, Venues, then Artist pages', () => {
+    render(
+      <SearchResultsState
+        artistResults={[
+          {
+            name: 'Clipse & J.I.D',
+            nextDate: '2027-11-12',
+            venueShort: 'Red Rocks',
+          },
+        ]}
+        artistPageResults={ARTIST_PAGES}
+        venueResults={[
+          {
+            name: 'Cervantes',
+            slug: 'cervantes',
+            showCount: 18,
+            matchingEventId: 'ev-1',
+          },
+        ]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    const text = document.body.textContent ?? '';
+    const artists = text.indexOf('Artists · 1');
+    const venues = text.indexOf('Venues · 1');
+    const pages = text.indexOf('Artist pages · 1');
+    expect(artists).toBeGreaterThanOrEqual(0);
+    expect(artists).toBeLessThan(venues);
+    expect(venues).toBeLessThan(pages);
+  });
+
+  it('chips an artist page row with the artist genre, and none without one', () => {
+    const { rerender } = render(
+      <SearchResultsState
+        artistResults={[]}
+        artistPageResults={[{ ...ARTIST_PAGES[0]!, genre: 'hip-hop' }]}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    expect(screen.getAllByTestId('genre-chip')).toHaveLength(1);
+    rerender(
+      <SearchResultsState
+        artistResults={[]}
+        artistPageResults={[{ ...ARTIST_PAGES[0]!, genre: null }]}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    );
+    expect(screen.queryAllByTestId('genre-chip')).toHaveLength(0);
+  });
+
   it('renders the artist-pages section with its own header and count', () => {
     render(
       <SearchResultsState
@@ -464,7 +516,7 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     expect(screen.queryByText(/Artist pages/)).toBeNull();
   });
 
-  it('offsets the event-derived sections so keyboard indices stay unique', () => {
+  it('puts the artist pages after the event-derived sections so keyboard indices stay unique', () => {
     render(
       <SearchResultsState
         artistResults={[
@@ -480,10 +532,11 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
         onNavigateTo={mockNavigateTo}
       />,
     );
-    // Index 0 is the artist-page row; index 1 must be the event-derived row.
+    // B+ order: index 0 is the event-derived row, index 1 the artist-page row.
     const selected = document.querySelectorAll('[data-selected="true"]');
     expect(selected).toHaveLength(1);
-    expect(selected[0]?.textContent).toContain('Red Rocks');
+    expect(selected[0]?.textContent).toContain('Artist page');
+    expect(selected[0]?.textContent).not.toContain('Red Rocks');
   });
 });
 

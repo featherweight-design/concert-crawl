@@ -108,6 +108,19 @@ const UPCOMING_STATUSES = new Set(['upcoming', 'cancelled', 'postponed']);
 // repo's `id-length` rule bans as an object key.
 const artistSearchQuerySchema = z.string().trim().min(2).max(200);
 
+// The most common genre in a tally; the first one counted wins a tie.
+const topGenre = (tally: Map<string, number> | undefined): string | null => {
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [genre, count] of tally ?? []) {
+    if (count > bestCount) {
+      best = genre;
+      bestCount = count;
+    }
+  }
+  return best;
+};
+
 // GET /v1/search/artists?q= — artists with their own page, no auth required.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so a
 // signed-in caller gets `following` stamped on each row; anonymous requests
@@ -169,6 +182,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       canonicalSupporting: events.canonicalSupporting,
       date: events.date,
       status: events.status,
+      genre: events.genre,
       venueActive: venues.active,
       venueRemovedAt: venues.removedAt,
     })
@@ -191,6 +205,12 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   const today = todayInDenver();
   const hasVisibleEvent = new Set<string>();
   const upcomingCounts = new Map<string, number>();
+  // Genre tallies per artist, over every consumer-visible row that counts for
+  // the artist (past or upcoming), so an artist with nothing upcoming still
+  // gets the chip they are known for. The row shows the single most common
+  // primary genre; ties go to the one seen first, which is stable because the
+  // tally preserves insertion order.
+  const genreTallies = new Map<string, Map<string, number>>();
 
   for (const row of billRows) {
     const onBill = billedCanonicalNames(row);
@@ -225,8 +245,14 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       UPCOMING_STATUSES.has(row.status ?? '') &&
       row.date >= today &&
       row.venueActive;
+    const primaryGenre = row.genre?.[0];
     for (const canonical of onBill) {
       if (isPast || isUpcoming) hasVisibleEvent.add(canonical);
+      if ((isPast || isUpcoming) && primaryGenre) {
+        const tally = genreTallies.get(canonical) ?? new Map<string, number>();
+        tally.set(primaryGenre, (tally.get(primaryGenre) ?? 0) + 1);
+        genreTallies.set(canonical, tally);
+      }
       if (isUpcoming) {
         upcomingCounts.set(canonical, (upcomingCounts.get(canonical) ?? 0) + 1);
       }
@@ -267,6 +293,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       upcomingShowCount: upcomingCounts.get(row.canonicalName) ?? 0,
       nextShow: nextShows.get(row.canonicalName) ?? null,
       following: followed?.has(row.canonicalName) ?? false,
+      genre: topGenre(genreTallies.get(row.canonicalName)),
     }));
 
   return ctx.json({ success: true, data });

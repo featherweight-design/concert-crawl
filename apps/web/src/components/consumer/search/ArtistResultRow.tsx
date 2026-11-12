@@ -17,6 +17,7 @@ import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { AvatarSlot } from '@/components/consumer/image-slot';
+import { GenreChips } from '../GenreChips';
 import {
   Highlight,
   RESULT_ART_SIZE,
@@ -111,9 +112,11 @@ export const ArtistResultRow = ({
         }`
       : copy.artistPageNoUpcoming;
 
-  // An artist page carries no genre of its own, so its ring is the neutral
-  // one; the row still takes the B+ selected wash and edge.
-  const ring = ringColorFor(null);
+  // The artist's own genre (the search API derives it from their shows) rings
+  // the portrait and fills the chip; an artist with none keeps the neutral
+  // ring. Either way the row takes the B+ selected wash and edge.
+  const genres = artist.genre ? [artist.genre] : null;
+  const ring = ringColorFor(genres);
 
   return (
     <div
@@ -185,6 +188,7 @@ export const ArtistResultRow = ({
             {' · '}
             <span>{copy.artistPageRowTag}</span>
           </span>
+          <GenreChips genres={genres} maxChips={1} />
         </span>
       </button>
       <FollowButton

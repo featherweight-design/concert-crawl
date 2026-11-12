@@ -152,26 +152,23 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         }
         return;
       }
-      // #1115 PR-G — artist-page rows own indices 0..n-1, ahead of both
-      // event-derived sections; everything below indexes into the remainder.
-      if (rawIdx < artistPageResults.length) {
-        const artistPage = artistPageResults[rawIdx];
+      // B+ order: Artists and Venues (`venueFirst` swaps them), then the
+      // artist pages, which own the indices after both.
+      const firstCount = venueFirst
+        ? venueResults.length
+        : artistResults.length;
+      const eventCount = artistResults.length + venueResults.length;
+      if (rawIdx >= eventCount) {
+        const artistPage = artistPageResults[rawIdx - eventCount];
         if (artistPage) {
           navigateTo('artistPage', { slug: artistPage.slug });
           onClose();
         }
         return;
       }
-      const currentIdx = rawIdx - artistPageResults.length;
-      const firstCount = venueFirst
-        ? venueResults.length
-        : artistResults.length;
-      const pickVenue = venueFirst
-        ? currentIdx < firstCount
-        : currentIdx >= firstCount;
+      const pickVenue = venueFirst ? rawIdx < firstCount : rawIdx >= firstCount;
       if (pickVenue) {
-        const venue =
-          venueResults[venueFirst ? currentIdx : currentIdx - firstCount];
+        const venue = venueResults[venueFirst ? rawIdx : rawIdx - firstCount];
         if (venue) {
           navigateTo('venue', {
             slug: venue.slug,
@@ -180,8 +177,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           onClose();
         }
       } else {
-        const artist =
-          artistResults[venueFirst ? currentIdx - firstCount : currentIdx];
+        const artist = artistResults[venueFirst ? rawIdx - firstCount : rawIdx];
         if (artist) {
           navigateTo('artist', artist.name);
           onClose();

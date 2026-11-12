@@ -388,12 +388,12 @@ export function SearchResultsState({
   const explain = withExplainerRail && artistPageResults.length > 0;
   const showRail = explain && isDesktop;
 
-  // Artist pages always sit first and occupy keyboard indices 0..n-1, so the
-  // venue/artist bases below shift by that count. `venueFirst` still decides
-  // the order of the two event-derived sections beneath them.
-  const pageCount = artistPageResults.length;
-  const venueBaseIdx = pageCount + (venueFirst ? 0 : artistResults.length);
-  const artistBaseIdx = pageCount + (venueFirst ? venueResults.length : 0);
+  // B+ draws Artists, Venues, then Artist pages (`more-r3-palette_typed`).
+  // `venueFirst` swaps the first two; the artist pages always close the list
+  // and own the keyboard indices after both.
+  const venueBaseIdx = venueFirst ? 0 : artistResults.length;
+  const artistBaseIdx = venueFirst ? venueResults.length : 0;
+  const pageBaseIdx = artistResults.length + venueResults.length;
 
   const hoverProp = onHover ? { onHover } : {};
   const queryProp = query === undefined ? {} : { query };
@@ -406,14 +406,6 @@ export function SearchResultsState({
         padding: '0 8px 10px',
       }}
     >
-      <ArtistPageSection
-        artistPageResults={artistPageResults}
-        selectedIdx={selectedIdx}
-        baseIdx={0}
-        {...hoverProp}
-        {...queryProp}
-        onNavigateTo={(type, value) => onNavigateTo(type, value)}
-      />
       {venueFirst ? (
         <>
           <VenueSection
@@ -453,6 +445,14 @@ export function SearchResultsState({
           />
         </>
       )}
+      <ArtistPageSection
+        artistPageResults={artistPageResults}
+        selectedIdx={selectedIdx}
+        baseIdx={pageBaseIdx}
+        {...hoverProp}
+        {...queryProp}
+        onNavigateTo={(type, value) => onNavigateTo(type, value)}
+      />
       {explain && !isDesktop && <ExplainerFootnote />}
     </div>
   );
