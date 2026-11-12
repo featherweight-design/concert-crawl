@@ -32,6 +32,9 @@ export type ApplyArtistMatchResult =
       artist: typeof artists.$inferSelect;
       nextStatus: z.infer<typeof matchStatusSchema>;
       previousAutoMatchedAt: Date | null;
+      // True when "It's an artist" lifted the not-an-artist hide, so the audit
+      // records the visibility change as well as the match.
+      unhid: boolean;
     }
   | { ok: false; status: 400 | 404 | 409; error: string };
 
@@ -120,6 +123,8 @@ export const applyArtistMatch = async (
   // that changed what the page shows is a fix. "Looks right" on an
   // auto-match, or a save that repeats the current answer, says the page was
   // right all along, so it dismisses instead: no notification.
+  const unhide =
+    existing.matchStatus === 'not_an_artist' && nextStatus === 'unmatched';
   const changedThePage =
     body.confirmAutoMatch !== true &&
     (identityChanged ||
@@ -148,10 +153,20 @@ export const applyArtistMatch = async (
         // slot on the bill and its own page. Deriving the switch from the
         // verdict is one-directional on purpose: re-matching a row later does
         // not un-hide it, because unhiding is its own deliberate admin action.
-        ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
+        // The one exception is that action: "It's an artist" on the Not artists
+        // tab (admin redesign 4c) sends the row back to To check as
+        // `unmatched`, and undoes the hide the verdict set in the same write,
+        // so the row is never half-restored.
+        ...(nextStatus === 'not_an_artist'
+          ? { hidden: true }
+          : unhide
+            ? { hidden: false }
+            : {}),
       })
       // A confirm re-checks at the write, not just at the read above: the
-      // match job can repoint the row in between.
+      // match job can repoint the row in between. So does the un-hide: if
+      // another admin re-ruled the row meanwhile, its hide is no longer the
+      // verdict's to lift.
       .where(
         body.confirmAutoMatch === true
           ? and(
@@ -159,7 +174,9 @@ export const applyArtistMatch = async (
               isNotNull(artists.autoMatchedAt),
               eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
             )
-          : eq(artists.id, id),
+          : unhide
+            ? and(eq(artists.id, id), eq(artists.matchStatus, 'not_an_artist'))
+            : eq(artists.id, id),
       )
       .returning();
     if (row) {
@@ -179,7 +196,13 @@ export const applyArtistMatch = async (
           status: 409,
           error: 'The auto-match has changed since it was loaded',
         }
-      : { ok: false, status: 404, error: 'Artist not found' };
+      : unhide
+        ? {
+            ok: false,
+            status: 409,
+            error: 'The artist has changed since it was loaded',
+          }
+        : { ok: false, status: 404, error: 'Artist not found' };
   }
 
   return {
@@ -187,5 +210,6 @@ export const applyArtistMatch = async (
     artist: updated,
     nextStatus,
     previousAutoMatchedAt: existing.autoMatchedAt,
+    unhid: unhide,
   };
 };
