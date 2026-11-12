@@ -15,8 +15,8 @@ const webOrigin = (): string =>
   process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000';
 
 // The web app's user settings live under /me, driven by a ?section= query
-// param (see SettingsRouteDesktop NavSection: profile|appearance|
-// submissions|account|danger). There is no dedicated email-preferences route
+// param (the valid values are SettingsRouteDesktop's `NavSection`). There is
+// no dedicated email-preferences route
 // yet, so the notification links land on the settings home; see follow-up
 // issue for the missing unsubscribe UI.
 export const notificationsUrl = (): string => `${webOrigin()}/me`;
