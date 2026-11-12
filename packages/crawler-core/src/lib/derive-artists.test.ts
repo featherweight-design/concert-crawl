@@ -500,30 +500,67 @@ describe('a cover or tribute night', () => {
   const coverTitle =
     "Halloween Cover Show: The B52's + Wire + Misfits + The Monks + Beat Happening";
 
-  it('bills nobody, and says so, when the adjudicator rules the names are the covered artists', async () => {
-    const adjudicate = vi.fn(async () => ({
-      isConcert: true,
-      headliners: [],
-      supportingArtists: [],
-      coversOtherArtists: true,
-    }));
-    const result = await deriveArtists(
-      { ...base, title: coverTitle, observedPerformers: [coverTitle] },
-      adjudicate,
-    );
-    expect(result).toMatchObject({
-      headliners: [],
-      supportingArtists: [],
-      adjudicated: true,
-      coversOtherArtists: true,
-    });
+  it('bills nobody, stays a concert and never calls the adjudicator, whatever the extractor said', async () => {
+    for (const isConcert of [undefined, true, false]) {
+      const result = await deriveArtists(
+        {
+          ...base,
+          title: coverTitle,
+          observedPerformers: [coverTitle],
+          isConcert,
+        },
+        neverCalled,
+      );
+      expect(result).toMatchObject({
+        headliners: [],
+        supportingArtists: [],
+        isConcert: true,
+        coversOtherArtists: true,
+        adjudicated: false,
+      });
+    }
   });
 
-  it('does not fall back to the observed names for a cover night', async () => {
-    const title =
-      'Night 0 Tributes to Steely Dan, Grateful Dead & Tyler Childers';
+  it.each([
+    'HIDE DEPECHE MODE TRIBUTES!',
+    'Tributes to Oingo Boingo & DEVO!',
+    'Night 0 Tributes to Steely Dan, Grateful Dead & Tyler Childers',
+  ])('settles "%s" from the title: no bill, never hidden', async (title) => {
     const result = await deriveArtists(
-      { ...base, title, observedPerformers: ['Steely Dan & Grateful Dead'] },
+      {
+        ...base,
+        title,
+        observedPerformers: ['Steely Dan & Grateful Dead'],
+        observedSupportingArtists: [
+          'Psychedelic Furs Tribute',
+          'Tyler Childers',
+        ],
+        isConcert: false,
+      },
+      neverCalled,
+    );
+    expect(result.headliners).toEqual([]);
+    expect(result.supportingArtists).toEqual([]);
+    expect(result.isConcert).toBe(true);
+  });
+
+  it('does not ask the reuse gate for a verdict on a tribute title', () => {
+    expect(
+      wouldAdjudicate({
+        title: 'Tributes to The Cure',
+        observedPerformers: [],
+      }),
+    ).toBe(false);
+  });
+
+  it('keeps the performers a venue credits when a verdict calls a non-tribute title a cover night', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title:
+          "Michael Shannon & Jason Narducy and Friends play R.E.M.'s Document",
+        observedPerformers: ['Michael Shannon', 'Jason Narducy'],
+      },
       async () => ({
         isConcert: true,
         headliners: [],
@@ -531,8 +568,34 @@ describe('a cover or tribute night', () => {
         coversOtherArtists: true,
       }),
     );
-    expect(result.headliners).toEqual([]);
-    expect(result.coversOtherArtists).toBe(true);
+    expect(result.headliners).toEqual(['Michael Shannon', 'Jason Narducy']);
+    expect(result.coversOtherArtists).toBeUndefined();
+  });
+});
+
+describe('a joined name the venue lists as separate acts', () => {
+  const ask = (title: string, performers: string[], headliners: string[]) =>
+    deriveArtists(
+      { ...base, title, observedPerformers: performers },
+      async () => ({ isConcert: true, headliners, supportingArtists: [] }),
+    );
+
+  it('is split whatever the model decided', async () => {
+    const result = await ask(
+      'Nas & The Roots Night',
+      ['Nas', 'The Roots'],
+      ['Nas & The Roots'],
+    );
+    expect(result.headliners).toEqual(['Nas', 'The Roots']);
+  });
+
+  it('stays whole when the venue prints it as one entry', async () => {
+    const result = await ask(
+      'Haute & Freddy: Big Disgrace Tour',
+      ['Haute & Freddy'],
+      ['Haute & Freddy'],
+    );
+    expect(result.headliners).toEqual(['Haute & Freddy']);
   });
 });
 

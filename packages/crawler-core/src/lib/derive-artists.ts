@@ -117,6 +117,37 @@ export function tidyBill(
   return { headliners: cleanHeadliners, supportingArtists: cleanSupporting };
 }
 
+// A tribute or cover night is a real show whose billed names are the artists
+// being honored. The title says so in plain words, so this is decided here, the
+// same way on every crawl, and never left to a model that can answer
+// differently run to run (it hid "Tributes to ..." nights as "not a concert",
+// and kept the honored acts on their bills). Words, not name shapes (#1343).
+const TRIBUTE_TITLE = /\btributes?\b|\bcover (?:show|night)\b/i;
+
+// "A & B" is one act or two, and the model answers that differently run to run
+// ("Nas & The Roots" came back whole after coming back split). When the venue's
+// own performer field lists every member as its own entry, the venue has said
+// they are separate acts: the split is decided by that evidence, not the model.
+export function splitListedSeparately(
+  headliners: string[],
+  venuePerformers: readonly string[],
+): string[] {
+  const listed = new Set(venuePerformers.map((name) => nameKey(name)));
+  return headliners.flatMap((name) => {
+    const members = name.split(' & ').map((member) => member.trim());
+    if (members.length < 2 || members.some((member) => member === '')) {
+      return [name];
+    }
+    return members.every((member) => listed.has(nameKey(member)))
+      ? members
+      : [name];
+  });
+}
+
+export function isTributeTitle(title: string): boolean {
+  return TRIBUTE_TITLE.test(title);
+}
+
 // Words that mark a title as describing the EVENT rather than naming an act.
 // Deliberately conservative: a false positive costs one LLM call, but a false
 // negative leaves a title in the artists projection.
@@ -189,6 +220,8 @@ export function wouldAdjudicate(event: {
   observedPerformers?: string[];
   isConcert?: boolean;
 }): boolean {
+  // A tribute or cover night is settled by its title alone, no call needed.
+  if (isTributeTitle(event.title)) return false;
   if (event.isConcert === false) return false;
   const observed = (event.observedPerformers ?? []).filter(
     (name) => name.trim().length > 0,
@@ -251,6 +284,19 @@ export async function deriveArtists(
   // whatever bill is stored, exactly as an adjudicator outage would.
   adjudicate: Adjudicator | null,
 ): Promise<DerivedArtists> {
+  // Step -1 — a tribute or cover night: a concert, never hidden, nobody billed.
+  // Outranks an extractor's "not a concert" and any observed bill, which here
+  // are the honored acts. An empty bill (not NULL) is "nobody billed".
+  if (isTributeTitle(event.title)) {
+    return {
+      headliners: [],
+      supportingArtists: [],
+      isConcert: true,
+      coversOtherArtists: true,
+      adjudicated: false,
+    };
+  }
+
   // Step 0 — an extractor that already read the page and said "not a concert"
   // outranks every step below it. Re-adjudicating would spend a call to
   // second-guess a verdict made with more context than a title, and echoing
@@ -312,17 +358,23 @@ export async function deriveArtists(
       adjudicated: false,
     };
   }
+  // What the venue's own field said, so a name it reported cannot vanish from
+  // the verdict unseen. Not sent when it only echoes the title.
+  const venuePerformers = observed.filter(
+    (name) => name.trim().toLowerCase() !== event.title.trim().toLowerCase(),
+  );
   try {
     const verdict = await adjudicate({
       title: event.title,
       description: event.description,
-      // What the venue's own field said, so a name it reported cannot vanish
-      // from the verdict unseen. Not sent when it only echoes the title.
-      venuePerformers: observed.filter(
-        (name) =>
-          name.trim().toLowerCase() !== event.title.trim().toLowerCase(),
-      ),
+      venuePerformers,
     });
+    // A "cover" verdict on a title that does not say tribute or cover, while
+    // the venue itself printed performers ("X & Y play R.E.M.'s Document"):
+    // the printed performers are the bill, the covered work is not.
+    if (verdict.coversOtherArtists === true && venuePerformers.length > 0) {
+      return { ...observedBill(), isConcert: verdict.isConcert };
+    }
     // A cover or tribute night: the names in the listing are the artists being
     // honored, so nobody is billed. The observed bill (the same names) must not
     // stand in for it, and a caller that rewrites stored bills skips the row.
@@ -343,11 +395,15 @@ export async function deriveArtists(
     if (joined && verdict.isConcert && verdict.headliners.length === 0) {
       return observedBill();
     }
+    const headliners = splitListedSeparately(
+      verdict.headliners,
+      venuePerformers,
+    );
     return {
       ...tidyBill(
-        verdict.headliners,
+        headliners,
         mergeObservedSupporting(
-          verdict.headliners,
+          headliners,
           verdict.supportingArtists,
           nonEmpty(event.observedSupportingArtists),
         ),
