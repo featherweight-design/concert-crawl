@@ -109,7 +109,16 @@ const ChipCount = ({ value, on }: { value: number | null; on: boolean }) =>
   );
 
 /** The initial in a signal ring, as the code panel draws a joiner. */
-const Avatar = ({ handle, size }: { handle: string | null; size: number }) => (
+export const Avatar = ({
+  handle,
+  size,
+  initialSize,
+}: {
+  handle: string | null;
+  size: number;
+  /** The initial's size; the person page's 56px head draws it at 22. */
+  initialSize?: number;
+}) => (
   <span
     aria-hidden
     style={{
@@ -121,7 +130,7 @@ const Avatar = ({ handle, size }: { handle: string | null; size: number }) => (
       alignItems: 'center',
       justifyContent: 'center',
       fontWeight: 800,
-      fontSize: size > 32 ? 15 : 13,
+      fontSize: initialSize ?? (size > 32 ? 15 : 13),
       color: 'var(--signal)',
       background:
         'linear-gradient(135deg, color-mix(in srgb, var(--signal) 30%, transparent), color-mix(in srgb, var(--accent) 30%, transparent))',

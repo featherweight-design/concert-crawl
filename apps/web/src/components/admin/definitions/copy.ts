@@ -1772,77 +1772,6 @@ export const ADMIN_COPY = {
     itemLabel: 'submissions',
   },
 
-  users: {
-    page: {
-      title: 'Users',
-      subtitle: (total: number) => `${total} total · manage role assignments`,
-    },
-    columns: {
-      emailHandle: 'Email / Handle',
-      role: 'Role',
-      joined: 'Joined',
-      assignRole: 'Assign role',
-    },
-    roleSelect: {
-      ariaLabel: 'Assign role',
-      errorFallback: 'Failed to update role',
-    },
-    viewDetail: (label: string) => `View details for ${label}`,
-    summary: {
-      userSingular: 'user',
-      userPlural: 'users',
-    },
-    empty: 'No users found.',
-    pagination: (shown: number, total: number) =>
-      `Showing ${shown} of ${total}. Use the API limit/offset params for pagination.`,
-    detail: {
-      backButton: 'Back to users',
-      eyebrow: 'operations · users',
-      loadError: "Couldn't load this user. Refresh to try again.",
-      identity: {
-        noEmail: 'No email on file',
-        noHandle: 'no handle',
-        noRole: 'no role',
-        deletedNote: 'No Clerk account — showing retained activity only.',
-        joinedPrefix: 'Joined',
-        unknownJoined: 'Join date unknown',
-        idPrefix: 'ID',
-        themePrefix: 'Theme',
-        avatarPrefix: 'Avatar',
-      },
-      stats: {
-        feedback: 'Feedback',
-        watching: 'Events',
-        priceSubmissions: 'Price subs',
-        artistFollows: 'Artist follows',
-      },
-      feedback: {
-        title: 'Feedback history',
-        empty: 'No feedback submitted.',
-        columns: {
-          category: 'Category',
-          status: 'Status',
-          message: 'Message',
-          when: 'When',
-        },
-        viewIssue: 'Issue',
-      },
-      watching: {
-        title: 'Tracked events',
-        empty: 'No tracked events.',
-        unknownVenue: 'Unknown venue',
-        attending: 'attending',
-        columns: {
-          event: 'Event',
-          venue: 'Venue',
-          date: 'Date',
-          status: 'Status',
-          added: 'Added',
-        },
-      },
-    },
-  },
-
   settings: {
     page: {
       title: 'Settings',
@@ -2051,6 +1980,103 @@ export const ADMIN_COPY = {
       title: 'Nobody matches',
       body: 'Check the spelling of the handle, or clear the filters.',
       clear: 'Clear filters',
+    },
+  },
+  // 5a person page (`07/person`, `07/person-mobile`, addendum-3 `12/person-menu-d`).
+  personPage: {
+    back: 'People',
+    joined: (date: string, how: string | null) =>
+      how ? `Joined ${date} ${how}` : `Joined ${date}`,
+    // Undrawn past "with code": how someone else came in.
+    joinedAs: {
+      code: (code: string) => `with code ${code}`,
+      poster: (code: string) => `with poster ${code}`,
+      founder: 'as a founder',
+      test: 'as a test account',
+    },
+    active: (when: string) => `active ${when.toLowerCase()}`,
+    stats: {
+      watching: 'Watching',
+      concerts: 'Concerts',
+      submittedPrices: 'Submitted prices',
+      feedback: 'Feedback',
+    },
+    role: 'Role',
+    roleCaption: (role: string) =>
+      `${role}. Beta testers see what is on for Beta in Feature flags and wear the Beta badge. Promoter is kept for later. Making someone an admin asks first.`,
+    // Rule 10's line when the API refuses a role change (the self-demote 403).
+    roleRefused: 'You can’t take Admin away from yourself.',
+    roleFailed: 'The role didn’t change. Try again.',
+    makeAdmin: {
+      title: (name: string) => `Make ${name} an admin?`,
+      body: 'Admins see every page here, including people’s emails when they choose to show them, and can change venues, prices and flags. This is logged.',
+      confirm: 'Make admin',
+    },
+    // Undrawn: Admin to a lower role asks first with the same dialog (#25).
+    removeAdmin: {
+      title: (name: string, role: string) => `Make ${name} a ${role}?`,
+      body: 'They stop seeing every page here, including people’s emails, and can no longer change venues, prices and flags. This is logged.',
+      confirm: (role: string) => `Make ${role}`,
+    },
+    change: (from: string, to: string) => `${from} → ${to}`,
+    toast: {
+      title: (name: string, role: string) => `${name} is now ${role}`,
+      betaOff:
+        'Their Beta badge and Beta flags are off on their next page load.',
+      betaOn:
+        'Their Beta badge and Beta flags are on from their next page load.',
+      undo: 'Undo',
+    },
+    account: 'Account',
+    email: 'Email',
+    showEmail: 'Show email',
+    noEmail: 'No email on file',
+    emailShown: 'Shown to you · logged',
+    emailShownNote:
+      'Shown for this visit only, and written to the Activity log with your handle. Hidden again when you leave the page.',
+    emailFailed: 'The email didn’t load. Try again.',
+    signsInWith: 'Signs in with',
+    inviteCode: 'Invite code',
+    inviteCodeCount: (code: string, count: number) =>
+      `${code} · 1 of ${count} who joined with it`,
+    testAccount: 'Test account',
+    testAccountCaption:
+      'Left out of counts, Beta and Needs you. Any role can be one.',
+    testAccountFailed: 'The test account tag didn’t change. Try again.',
+    recentTitle: 'Recent',
+    recent: {
+      price: (range: string, artist: string, venue: string) =>
+        `Submitted ${range} for ${artist} at ${venue}`,
+      feedback: (message: string) => `Feedback: “${message}”`,
+      artist: {
+        different_artist: (subject: string) =>
+          `Reported the wrong artist on ${subject}`,
+        wrong_photo: (subject: string) =>
+          `Reported the wrong photo on ${subject}`,
+        not_an_artist: (subject: string) =>
+          `Reported ${subject} as not an artist`,
+      },
+      event: {
+        'sold-out': (subject: string) => `Reported ${subject} sold out`,
+        cancelled: (subject: string) => `Reported ${subject} cancelled`,
+        postponed: (subject: string) => `Reported ${subject} postponed`,
+        available: (subject: string) => `Reported ${subject} on sale again`,
+      },
+      other: (subject: string) => `Reported a problem with ${subject}`,
+    },
+    menu: {
+      label: (name: string) => `More for ${name}`,
+      signOut: 'Sign them out everywhere…',
+      signOutHint: 'For a lost phone. They can sign in again.',
+    },
+    signOut: {
+      title: (name: string) => `Sign ${name} out everywhere?`,
+      body: (name: string) =>
+        `${name} is signed out on every phone and computer within a minute. Nothing else changes: their Watching, Concerts and prices stay. They can sign in again right away.`,
+      confirm: 'Sign them out',
+      done: (name: string) => `Signed ${name} out everywhere`,
+      doneBody: 'They can sign in again.',
+      failed: 'They weren’t signed out. Try again.',
     },
   },
   codesPage: {

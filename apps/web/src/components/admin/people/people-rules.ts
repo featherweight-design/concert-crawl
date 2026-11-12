@@ -19,9 +19,9 @@ const TEST_SWEEP_PAGES = 10;
 export const CHIPS = ['everyone', 'beta', 'promoter', 'admin', 'test'] as const;
 export type Chip = (typeof CHIPS)[number];
 
-/** Where a person opens: the existing person page until 5a part C moves it. */
+/** Where a person opens: the person page under People. */
 export const personHref = (userId: string): string =>
-  `/admin/users/${encodeURIComponent(userId)}`;
+  `/admin/people/${encodeURIComponent(userId)}`;
 
 /**
  * Role chip tones, from `07/people`: Beta signal, Admin accent, Member

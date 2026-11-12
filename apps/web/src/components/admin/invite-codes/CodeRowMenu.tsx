@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   Ban,
   Copy,
+  LogOut,
   MoreHorizontal,
   Printer,
   RotateCcw,
@@ -24,6 +25,7 @@ export interface CodeMenuItem {
 }
 
 export const MENU_ICONS = {
+  signOut: LogOut,
   copy: Copy,
   poster: Printer,
   joined: Users,
@@ -39,9 +41,15 @@ export const MENU_ICONS = {
 export const CodeRowMenu = ({
   label,
   items,
+  width = 320,
+  triggerStyle,
 }: {
   label: string;
   items: readonly CodeMenuItem[];
+  /** The menu's width; the person menu (`12/person-menu-d`) is 300. */
+  width?: number;
+  /** The person page draws its ⋯ as a 36px outlined button. */
+  triggerStyle?: CSSProperties;
 }) => {
   // Where the menu opens, measured from the trigger. Fixed rather than
   // absolute, because the table scrolls inside its card and would clip it.
@@ -142,6 +150,7 @@ export const CodeRowMenu = ({
           borderRadius: 7,
           color: open ? 'var(--fg)' : 'var(--fg-muted)',
           display: 'inline-flex',
+          ...triggerStyle,
         }}
       >
         <MoreHorizontal size={16} />
@@ -178,7 +187,7 @@ export const CodeRowMenu = ({
             top: open.top,
             right: open.right,
             zIndex: 50,
-            width: 320,
+            width,
             padding: 6,
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-strong)',
