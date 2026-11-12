@@ -196,20 +196,31 @@ describe('PassportBooklet', () => {
     ).toHaveLength(1);
   });
 
-  // B+ rule 4: one stamp everywhere. Every night is the VenueStamp, and
-  // nothing anywhere in the stamp, svg included, is turned.
-  it('stamps every night with the venue stamp, never tilted', () => {
+  // Addendum 2 item 3 (Hugh, 2026-11-12): one round venue stamp everywhere,
+  // straight except inside the booklet, where each slot keeps its
+  // hand-stamped tilt (−8°, 6°, 4°, −5°, repeating). Only the slot turns;
+  // nothing inside the stamp is turned again.
+  it('stamps every night with the venue stamp at its slot tilt', () => {
     renderBooklet(3);
 
     const stamps = view('spread').querySelectorAll('[data-booklet-stamp]');
     expect(stamps).toHaveLength(3);
-    stamps.forEach((stamp) => {
+    const tilts = ['-8deg', '6deg', '4deg'];
+    stamps.forEach((stamp, index) => {
       expect(stamp.querySelector('[data-venue-stamp="solid"]')).not.toBeNull();
-      [stamp, ...Array.from(stamp.querySelectorAll('*'))].forEach((node) => {
+      expect(stamp.getAttribute('style') ?? '').toContain(
+        `rotate(${tilts[index]})`,
+      );
+      Array.from(stamp.querySelectorAll('*')).forEach((node) => {
         expect(node.getAttribute('transform') ?? '').not.toMatch(/rotate/);
         expect(node.getAttribute('style') ?? '').not.toMatch(/rotate/);
       });
     });
+    // The fourth slot, the NEXT ghost or an empty slot, keeps −5°.
+    const fourth = view('spread').querySelector(
+      '[data-booklet-next], [data-booklet-empty]',
+    );
+    expect(fourth?.getAttribute('style') ?? '').toContain('rotate(-5deg)');
   });
 });
 

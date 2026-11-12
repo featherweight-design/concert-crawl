@@ -6,6 +6,7 @@ import {
   BookletStamp,
   EmptySlot,
   NextSlot,
+  slotTilt,
 } from '@/components/consumer/passport/BookletStamp';
 import {
   PassportIdPage,
@@ -50,11 +51,16 @@ function StampPage({ page, size }: { page: BookletPage; size: number }) {
     >
       {page.slots.map((slot, index) => {
         const key = `${page.number}-${index}`;
+        const tilt = slotTilt(index);
         if (slot.kind === 'stamp')
-          return <BookletStamp key={key} show={slot.show} size={size} />;
+          return (
+            <BookletStamp key={key} show={slot.show} size={size} tilt={tilt} />
+          );
         if (slot.kind === 'next')
-          return <NextSlot key={key} show={slot.show} size={size} />;
-        return <EmptySlot key={key} size={size} />;
+          return (
+            <NextSlot key={key} show={slot.show} size={size} tilt={tilt} />
+          );
+        return <EmptySlot key={key} size={size} tilt={tilt} />;
       })}
       <span className={`absolute bottom-3 right-4 ${MONO_LABEL}`}>
         {COPY.pageLabel(page.number)}
