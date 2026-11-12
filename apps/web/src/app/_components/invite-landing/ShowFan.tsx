@@ -58,8 +58,10 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
         alt={show.artist}
         artist={show.artist}
         identityScale="tile"
-        fill
-        sizes="280px"
+        // Never `fill`: that switches EventImage to next/image, and
+        // next.config allows no remote hosts, so a venue image from any CDN
+        // (Ticketmaster's, for one) crashed the whole landing. The plain
+        // <img> branch is what every other surface uses.
         className="absolute inset-0 h-full w-full"
       />
       <div
