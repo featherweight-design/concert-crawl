@@ -203,12 +203,12 @@ describe('<EventStage /> title step-down (addendum 3 rule 2)', () => {
 
   it('holds 38 at 320 for a wrapping name (hero-320-wrap)', () => {
     renderStage({ name: 'Thievery Corporation' });
-    expect(head()).toContain('[--stage-head:clamp(38px,10vw,44px)]');
+    expect(head()).toContain('[--stage-head:clamp(38px,11.875vw,44px)]');
   });
 
   it('steps a long single word down to 30 (hero-320-long-word)', () => {
     renderStage({ name: 'Superorganism' });
-    expect(head()).toContain('[--stage-head:clamp(30px,10vw,44px)]');
+    expect(head()).toContain('[--stage-head:clamp(30px,9.375vw,44px)]');
     expect(head()).toContain('sm:[--stage-head:64px]');
   });
 });
