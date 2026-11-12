@@ -2,9 +2,12 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const revalidatePathMock = vi.fn();
+const revalidateTagMock = vi.fn();
 
 vi.mock('next/cache', () => ({
   revalidatePath: (path: string) => revalidatePathMock(path),
+  revalidateTag: (tag: string, profile: unknown) =>
+    revalidateTagMock(tag, profile),
 }));
 
 const SECRET = 'a'.repeat(64);
@@ -28,6 +31,7 @@ describe('POST /api/revalidate', () => {
   beforeEach(() => {
     vi.resetModules();
     revalidatePathMock.mockClear();
+    revalidateTagMock.mockClear();
     process.env['REVALIDATE_SECRET'] = SECRET;
   });
 
@@ -43,6 +47,38 @@ describe('POST /api/revalidate', () => {
 
     expect(response.status).toBe(204);
     expect(revalidatePathMock).toHaveBeenCalledWith('/');
+  });
+
+  it('expires the catalog tag so the next read refetches, and 204s', async () => {
+    const POST = await importRoute();
+    const response = await POST(
+      makeRequest({ tags: ['catalog'] }, { 'x-revalidate-token': SECRET }),
+    );
+    expect(response.status).toBe(204);
+    expect(revalidateTagMock).toHaveBeenCalledWith('catalog', { expire: 0 });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it('takes a path and the tag together, and ignores a tag outside the allowlist', async () => {
+    const POST = await importRoute();
+    const response = await POST(
+      makeRequest(
+        { path: '/', tags: ['catalog', 'anything-else'] },
+        { 'x-revalidate-token': SECRET },
+      ),
+    );
+    expect(response.status).toBe(204);
+    expect(revalidatePathMock).toHaveBeenCalledWith('/');
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a body naming only a tag outside the allowlist with 400', async () => {
+    const POST = await importRoute();
+    const response = await POST(
+      makeRequest({ tags: ['users'] }, { 'x-revalidate-token': SECRET }),
+    );
+    expect(response.status).toBe(400);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('returns 401 when no token is supplied', async () => {

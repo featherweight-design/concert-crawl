@@ -12,7 +12,8 @@ import type {
 } from '@concert-crawl/types';
 import { resolveGuideViewerMode } from '@concert-crawl/types';
 import { EventFirstTimerChip } from '@/components/consumer/venue-guide';
-import { publicApiClient, apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/api';
+import { publicCatalogGet } from '@/lib/catalog-cache';
 import { seedFollowedArtists } from '@/lib/following';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { isScaRegion } from '@/lib/sca-region';
@@ -79,7 +80,7 @@ async function fetchEvent(
         token,
       );
     }
-    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`);
+    return await publicCatalogGet<EventDetailResponse>(`/v1/events/${id}`);
   } catch (err) {
     console.error('[event detail] event fetch failed', { id, err });
     return null;
@@ -93,7 +94,7 @@ async function fetchEvent(
  * `isPublicOnceLaunched`), so an unfurl crawler lands here as readily as it
  * lands on the `/e/:id` mirror — and this is the page that should win, because
  * every internal link points at it and the mirror redirects a signed-in
- * visitor back to it. Fetched through `publicApiClient` with no token for the
+ * visitor back to it. Fetched through `publicCatalogGet` with no token for the
  * same reason: whoever is asking for the card has no cookies.
  */
 export const generateMetadata = async ({
@@ -134,7 +135,7 @@ async function fetchRelatedById(
           `/v1/events/${eventId}/related`,
           token,
         )
-      : await publicApiClient.get<EventsRelatedResponse>(
+      : await publicCatalogGet<EventsRelatedResponse>(
           `/v1/events/${eventId}/related`,
         );
     return result.data;

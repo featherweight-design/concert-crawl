@@ -109,6 +109,36 @@ async function request<T>(
   }
 }
 
+/**
+ * A read with NO identity: no `Authorization`, and no `x-service-key` either
+ * (the key vouches for this server, so an answer fetched with it could differ
+ * from an anonymous visitor's). The only way into the shared catalog cache
+ * (lib/catalog-cache.ts), which is why it lives beside `request()` and not
+ * behind an option on it: a flag could be passed true by mistake, a separate
+ * function cannot.
+ */
+export async function anonymousRequest<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const timer = startApiTimer('GET', path, false);
+  try {
+    return await readResponse<T>(
+      await fetch(`${API_URL}${path}`, {
+        ...options,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      }),
+      timer,
+    );
+  } finally {
+    timer.done();
+  }
+}
+
 async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
   timer.headers(res.status);
 

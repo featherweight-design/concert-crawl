@@ -10,7 +10,8 @@ import type {
   VenuePublic,
   WatchingShow,
 } from '@concert-crawl/types';
-import { publicApiClient, apiClient } from '@/lib/api';
+import { apiClient } from '@/lib/api';
+import { publicCatalogGet } from '@/lib/catalog-cache';
 import { isScaRegion } from '@/lib/sca-region';
 import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection';
 import { buildEventsApiParams } from '@/lib/events-api-params';
@@ -98,19 +99,16 @@ async function fetchEvents(
   const url = `/v1/events?${qs.toString()}`;
   return token
     ? apiClient.get<EventsListResponse>(url, token)
-    : publicApiClient.get<EventsListResponse>(url);
+    : publicCatalogGet<EventsListResponse>(url);
 }
 
-async function fetchVenues(token: string | null): Promise<VenuePublic[]> {
-  return token
-    ? apiClient.get<VenuePublic[]>('/v1/venues', token)
-    : publicApiClient.get<VenuePublic[]>('/v1/venues');
+async function fetchVenues(): Promise<VenuePublic[]> {
+  // The same for everyone, so a signed-in visitor reads the shared cache too.
+  return publicCatalogGet<VenuePublic[]>('/v1/venues');
 }
 
-async function fetchGenres(token: string | null): Promise<string[]> {
-  return token
-    ? apiClient.get<string[]>('/v1/events/genres', token)
-    : publicApiClient.get<string[]>('/v1/events/genres');
+async function fetchGenres(): Promise<string[]> {
+  return publicCatalogGet<string[]>('/v1/events/genres');
 }
 
 async function BrowsePageInner({ searchParams }: BrowsePageProps) {
@@ -296,8 +294,8 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     requestHeaders,
   ] = await Promise.all([
     eventsPromise,
-    fetchVenues(token),
-    fetchGenres(token).catch(() => []),
+    fetchVenues(),
+    fetchGenres().catch(() => []),
     watchedShowsPromise,
     tastePicksPromise,
     crewsPromise,

@@ -15,7 +15,7 @@ import type {
   RelatedEvent,
 } from '@concert-crawl/types';
 
-import { publicApiClient } from '@/lib/api';
+import { publicCatalogGet } from '@/lib/catalog-cache';
 import { isScaRegion } from '@/lib/sca-region';
 import { PublicEventDetail } from '@/components/consumer/event-detail';
 import {
@@ -48,7 +48,7 @@ const isUuid = (value: string): boolean => UUID_PATTERN.test(value);
 
 const fetchEvent = async (id: string): Promise<EventDetailResponse | null> => {
   try {
-    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`);
+    return await publicCatalogGet<EventDetailResponse>(`/v1/events/${id}`);
   } catch (err) {
     console.error('[public event] event fetch failed', { id, err });
     return null;
@@ -57,7 +57,7 @@ const fetchEvent = async (id: string): Promise<EventDetailResponse | null> => {
 
 const fetchRelated = async (id: string): Promise<RelatedEvent[]> => {
   try {
-    const result = await publicApiClient.get<EventsRelatedResponse>(
+    const result = await publicCatalogGet<EventsRelatedResponse>(
       `/v1/events/${id}/related`,
     );
     return result.data;

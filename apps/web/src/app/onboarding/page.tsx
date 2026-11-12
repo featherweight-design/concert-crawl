@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
-import { publicApiClient } from '@/lib/api';
+import { publicCatalogGet } from '@/lib/catalog-cache';
 import { isScaRegion } from '@/lib/sca-region';
 import {
   decodeIntent,
@@ -28,7 +28,7 @@ const firstValue = (raw: string | string[] | undefined): string | null => {
  */
 async function fetchGenreBuckets(): Promise<string[]> {
   try {
-    return await publicApiClient.get<string[]>('/v1/events/genres');
+    return await publicCatalogGet<string[]>('/v1/events/genres');
   } catch (err) {
     console.error('[onboarding] genre buckets load failed', err);
     return [];

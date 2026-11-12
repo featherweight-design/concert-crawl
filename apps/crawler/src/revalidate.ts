@@ -5,6 +5,8 @@ const logger = createLogger('crawler');
 // The landing page is the only ISR-cached surface today, and the only path the
 // web endpoint accepts. Keep the two in sync if that ever grows.
 const LANDING_PATH = '/';
+// The web's shared catalog cache (events, venues, genres) carries this tag.
+const CATALOG_TAG = 'catalog';
 
 const REQUEST_TIMEOUT_MS = 5000;
 
@@ -51,7 +53,7 @@ export async function requestLandingRevalidationSafely(
           'content-type': 'application/json',
           'x-revalidate-token': secret,
         },
-        body: JSON.stringify({ path: LANDING_PATH }),
+        body: JSON.stringify({ path: LANDING_PATH, tags: [CATALOG_TAG] }),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       },
     );
