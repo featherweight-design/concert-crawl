@@ -45,10 +45,22 @@ export const onRequestError: typeof Sentry.captureRequestError = async (
 // when Clerk is not in play), so any failure leaves both tags off and never
 // masks the error being reported. The key is server-only; with it unset there
 // is no hash.
-async function requestIdentityTags(): Promise<{
-  tier?: string;
-  userHash?: string | undefined;
-}> {
+type IdentityTags = { tier?: string; userHash?: string | undefined };
+
+// Capped so a slow Clerk call can never hold the error back: after the cap the
+// error goes out untagged.
+const IDENTITY_TIMEOUT_MS = 300;
+
+function requestIdentityTags(): Promise<IdentityTags> {
+  return Promise.race([
+    readIdentityTags(),
+    new Promise<IdentityTags>((resolve) =>
+      setTimeout(() => resolve({}), IDENTITY_TIMEOUT_MS),
+    ),
+  ]);
+}
+
+async function readIdentityTags(): Promise<IdentityTags> {
   try {
     const { auth } = await import('@clerk/nextjs/server');
     const { userId, sessionClaims } = await auth();

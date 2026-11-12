@@ -13,6 +13,7 @@ describe('SentryTierTag', () => {
 
   it('tags the plan from the session claim', () => {
     useAuth.mockReturnValue({
+      isLoaded: true,
       isSignedIn: true,
       sessionClaims: { metadata: { plan: 'supporter' } },
     });
@@ -21,12 +22,34 @@ describe('SentryTierTag', () => {
   });
 
   it('tags unknown for a visitor and for a claim without a plan', () => {
-    useAuth.mockReturnValue({ isSignedIn: false, sessionClaims: undefined });
+    useAuth.mockReturnValue({
+      isLoaded: true,
+      isSignedIn: false,
+      sessionClaims: undefined,
+    });
     render(<SentryTierTag />);
     expect(setTag).toHaveBeenLastCalledWith('tier', 'unknown');
 
-    useAuth.mockReturnValue({ isSignedIn: true, sessionClaims: {} });
+    useAuth.mockReturnValue({
+      isLoaded: true,
+      isSignedIn: true,
+      sessionClaims: {},
+    });
     render(<SentryTierTag />);
+    expect(setTag).toHaveBeenLastCalledWith('tier', 'unknown');
+  });
+
+  it('writes nothing before Clerk has loaded, and resets on unmount', () => {
+    useAuth.mockReturnValue({ isLoaded: false });
+    render(<SentryTierTag />).unmount();
+    expect(setTag).not.toHaveBeenCalled();
+
+    useAuth.mockReturnValue({
+      isLoaded: true,
+      isSignedIn: true,
+      sessionClaims: { metadata: { plan: 'supporter' } },
+    });
+    render(<SentryTierTag />).unmount();
     expect(setTag).toHaveBeenLastCalledWith('tier', 'unknown');
   });
 });
