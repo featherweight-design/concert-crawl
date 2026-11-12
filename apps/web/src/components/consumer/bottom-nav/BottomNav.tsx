@@ -206,6 +206,7 @@ export function BottomNav() {
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const wasSignedInRef = useRef(false);
   const {
     open: menuOpen,
     toggleFrom,
@@ -218,6 +219,7 @@ export function BottomNav() {
 
   useEffect(() => {
     if (!isSignedIn) {
+      wasSignedInRef.current = false;
       setAvatarHandle(null);
       setAvatarColor(null);
       setProfileLoaded(true);
@@ -227,14 +229,17 @@ export function BottomNav() {
     // The signed-out branch above marks the profile loaded. Clerk flipping to
     // signed in must reopen the loading state, or the slot paints its fallback
     // for the whole of the first fetch.
-    setProfileLoaded(false);
+    // Only on the signed-out to signed-in edge: a getToken or queryClient
+    // identity change while signed in must not drop a loaded disc back to the
+    // skeleton.
+    if (!wasSignedInRef.current) {
+      wasSignedInRef.current = true;
+      setProfileLoaded(false);
+    }
     void (async () => {
-      const token = await getToken();
-      if (!token || cancelled) {
-        if (!cancelled) setProfileLoaded(true);
-        return;
-      }
       try {
+        const token = await getToken();
+        if (!token || cancelled) return;
         // Shared with the other mount-time readers of /v1/users/me.
         const profile = await fetchMeShared(queryClient, userId, getToken);
         if (!cancelled) {

@@ -162,6 +162,18 @@ describe('BottomNav account avatar (Chrome B17)', () => {
     expect(trigger.getAttribute('aria-busy')).toBeNull();
     expect(trigger.getAttribute('data-avatar-state')).toBe('ready');
   });
+
+  it('draws no active outline on the trigger when /me is active', async () => {
+    signedIn();
+    pathname.current = '/me';
+    render(<BottomNav />);
+    const avatar = await screen.findByTestId('me-avatar');
+    expect(avatar.getAttribute('data-avatar-edge')).toBe('solid');
+    const trigger = screen.getByRole('button', { name: /account/i });
+    expect(trigger.style.outline).toBe('');
+    expect(trigger.className).not.toMatch(/outline|ring/);
+    expect(avatar.style.outline).toBe('');
+  });
 });
 
 describe('BottomNav crews slot (#1226)', () => {
