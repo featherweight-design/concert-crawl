@@ -15,10 +15,13 @@ vi.mock('@concert-crawl/db', () => ({
     }),
   },
   priceSubmissions: {
+    id: 'id',
     priceMin: 'price_min',
     priceMax: 'price_max',
     eventId: 'event_id',
     status: 'status',
+    tier: 'tier',
+    disputedSubmissionId: 'disputed_submission_id',
     createdAt: 'created_at',
   },
 }));
@@ -27,6 +30,15 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn(),
   desc: vi.fn(),
   eq: vi.fn(),
+  exists: vi.fn(),
+  or: vi.fn(),
+  sql: vi.fn(),
+}));
+
+// The open-check subquery aliases price_submissions; the alias only has to
+// expose the same column names to the mocked builders.
+vi.mock('drizzle-orm/pg-core', () => ({
+  alias: (table: unknown) => table,
 }));
 
 const { tier6Community } = await import('../tier6-community.js');

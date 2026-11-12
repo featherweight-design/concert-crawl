@@ -31,6 +31,7 @@ import {
   seedUserProfile,
   seedVenue,
 } from '../test/helpers/seed.js';
+import { allowSeveralPendingCountersPerPrice } from '../test/helpers/pending-counter-index.js';
 
 const app = createApp();
 
@@ -111,6 +112,8 @@ async function getDetail(eventId: string): Promise<DetailBody> {
 }
 
 describe('GET /v1/events/:id — a price under check with several updates', () => {
+  allowSeveralPendingCountersPerPrice();
+
   beforeEach(async () => {
     setAuth(null);
     await clearTables();
@@ -207,6 +210,8 @@ describe('GET /v1/events/:id — a price under check with several updates', () =
 });
 
 describe('the shared price rule while a check is open', () => {
+  allowSeveralPendingCountersPerPrice();
+
   beforeEach(async () => {
     setAuth(null);
     await clearTables();

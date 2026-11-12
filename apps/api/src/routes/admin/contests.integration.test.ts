@@ -41,6 +41,7 @@ import {
   seedUserRole,
   seedVenue,
 } from '../../test/helpers/seed.js';
+import { allowSeveralPendingCountersPerPrice } from '../../test/helpers/pending-counter-index.js';
 
 const app = createApp();
 
@@ -499,6 +500,8 @@ describe('GET /v1/admin/contests/prices', () => {
 // B+ B9: a price can hold several pending updates. The queue lists one row
 // per check, carrying the leading update; the detail lists them all.
 describe('admin contests with several pending updates on one price', () => {
+  allowSeveralPendingCountersPerPrice();
+
   beforeEach(async () => {
     clearAuth();
     await clearTables();
@@ -534,7 +537,10 @@ describe('admin contests with several pending updates on one price', () => {
       status: 'pending',
       disputedSubmissionId: parent.id,
       corroborationCount: 2,
-      createdAt: new Date('2027-01-02T00:00:00Z'),
+      // Filed earlier than `first` but inserted after it, so neither the
+      // heap order nor the detail's createdAt DESC read happens to put the
+      // leading update first; only the leading sort does.
+      createdAt: new Date('2026-12-31T00:00:00Z'),
     });
     return { parent, first, confirmed };
   };
@@ -1005,6 +1011,8 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
 });
 
 describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
+  allowSeveralPendingCountersPerPrice();
+
   beforeEach(async () => {
     clearAuth();
     await clearTables();
@@ -1558,15 +1566,17 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
 
   it('with equal confirmations the earliest-filed counter leads', async () => {
     setAdminAuth();
+    // seedContest's counter is inserted first; `earlier` is inserted after
+    // it but filed a minute before, so heap order can't pass this test.
     const { event, parent, counter } = await seedContest();
-    const later = await seedPriceSubmission(event.id, 'later-fan', {
+    const earlier = await seedPriceSubmission(event.id, 'earlier-fan', {
       tier: 'GA',
       vendor: 'AXS',
       sourceCategory: 'standard',
       priceMin: '70',
       status: 'pending',
       disputedSubmissionId: parent.id,
-      createdAt: new Date(counter.createdAt.getTime() + 60_000),
+      createdAt: new Date(counter.createdAt.getTime() - 60_000),
     });
 
     const res = await app.request(
@@ -1582,8 +1592,8 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
     );
 
     expect(res.status).toBe(200);
-    expect((await fetchSubmission(counter.id)).status).toBe('corroborated');
-    expect((await fetchSubmission(later.id)).status).toBe('archived');
+    expect((await fetchSubmission(earlier.id)).status).toBe('corroborated');
+    expect((await fetchSubmission(counter.id)).status).toBe('archived');
   });
 
   it('decides on the counter named by challengerId when given', async () => {

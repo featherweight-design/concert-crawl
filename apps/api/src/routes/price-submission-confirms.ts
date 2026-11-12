@@ -13,7 +13,10 @@ import {
 import { SP_POLICY } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 import { isImminentEvent } from '../lib/time.js';
-import { settleCheckOnCounterPromotion } from '../lib/price-check.js';
+import {
+  lockParent,
+  settleCheckOnCounterPromotion,
+} from '../lib/price-check.js';
 import {
   detectPriceDrop,
   fanoutPriceDrop,
@@ -131,9 +134,30 @@ priceSubmissionConfirmsRouter.post(
       | undefined;
     let pricedrop: PriceDrop | undefined;
     let alreadyConfirmed = false;
+    let notPending = false;
     let uniqueViolation = false;
     try {
       const txResult = await db.transaction(async (tx) => {
+        // Lock order (lib/price-check.ts rule 4): a counter's parent first,
+        // then the row itself, re-checked under the lock. The 'pending'
+        // check above ran outside the transaction; without this, a late
+        // confirm on an update that a resolve or a sibling's promotion had
+        // just archived promoted it straight back to 'corroborated'. Taking
+        // the parent first also serializes two sibling promotions instead
+        // of deadlocking them, and matches admin resolve/defer.
+        if (submission.disputedSubmissionId !== null) {
+          await lockParent(tx, submission.disputedSubmissionId);
+        }
+        const [locked] = await tx
+          .select({ status: priceSubmissions.status })
+          .from(priceSubmissions)
+          .where(eq(priceSubmissions.id, submissionId))
+          .for('update');
+        if (locked?.status !== 'pending') {
+          notPending = true;
+          return undefined;
+        }
+
         const [insertedConfirm] = await tx
           .insert(submissionConfirms)
           .values({ submissionId, userId, method })
@@ -164,7 +188,12 @@ priceSubmissionConfirmsRouter.post(
             END`,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, submissionId))
+          .where(
+            and(
+              eq(priceSubmissions.id, submissionId),
+              eq(priceSubmissions.status, 'pending'),
+            ),
+          )
           .returning({
             corroborationCount: priceSubmissions.corroborationCount,
             status: priceSubmissions.status,
@@ -188,8 +217,9 @@ priceSubmissionConfirmsRouter.post(
         let drop: PriceDrop | undefined;
         if (updatedRow?.status === 'corroborated') {
           // A pending update that reaches the threshold wins its price
-          // check: archive the parent and every other pending update on it.
-          // Submission rows only, so it stays ahead of the event lock below.
+          // check: archive the parent (already locked above) and every other
+          // pending update on it. Submission rows only, so it stays ahead of
+          // the event lock below.
           await settleCheckOnCounterPromotion(tx, submission);
 
           const [preEvent] = await tx
@@ -256,6 +286,13 @@ priceSubmissionConfirmsRouter.post(
       } else {
         throw error;
       }
+    }
+
+    if (notPending) {
+      return ctx.json(
+        { success: false, error: 'Submission is not pending' },
+        400,
+      );
     }
 
     if (alreadyConfirmed) {

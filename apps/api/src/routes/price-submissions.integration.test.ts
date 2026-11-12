@@ -26,6 +26,7 @@ import {
   seedPriceSubmission,
   seedUserProfile,
 } from '../test/helpers/seed.js';
+import { allowSeveralPendingCountersPerPrice } from '../test/helpers/pending-counter-index.js';
 
 const app = createApp();
 
@@ -501,7 +502,56 @@ describe('price submissions — anonymous access (#794)', () => {
 // `disputedSubmissionId` in the body). Must mirror the /v1/submissions/:id/dispute
 // route's contract: 1-pending-counter-per-parent invariant, parent-flip to
 // 'disputed' in the same transaction, and slot-identity inheritance from parent.
+// Between migrations 0099 and 0100 the database still has 0041's one-per-
+// parent index, and this code must run against it: a second fan's update is
+// refused with a clean 409, not a 500. Delete this suite in the 0100 PR.
+describe('counter path while 0041 still allows one update per price', () => {
+  beforeEach(async () => {
+    clearAuth();
+    await clearTables();
+  });
+
+  it("answers a second fan's update with a clean 409", async () => {
+    const venue = await seedVenue({ name: 'Old Index', slug: 'old-index-ps' });
+    const event = await seedEvent(venue.id, { date: '2027-07-01' });
+    const parent = await seedPriceSubmission(event.id, 'parent-old-idx', {
+      tier: 'GA',
+      vendor: 'AXS',
+      howFound: 'saw_listing',
+      sourceCategory: 'standard',
+      status: 'corroborated',
+    });
+    const fileCounter = (userId: string, priceMin: number) => {
+      setAuth(userId);
+      return app.request(`/v1/events/${event.id}/price-submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({
+          priceMin,
+          tier: 'GA',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          disputedSubmissionId: parent.id,
+        }),
+      });
+    };
+
+    expect((await fileCounter('old-idx-1', 50)).status).toBe(201);
+    const second = await fileCounter('old-idx-2', 60);
+    expect(second.status).toBe(409);
+    const body = (await second.json()) as { error: string; code: string };
+    expect(body.error).toMatch(/another update is already pending/i);
+    expect(body.code).toBe('price_check_update_pending');
+  });
+});
+
 describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
+  allowSeveralPendingCountersPerPrice();
+
   beforeEach(async () => {
     clearAuth();
     await clearTables();
@@ -626,6 +676,27 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
     const body = (await second.json()) as { success: boolean; error: string };
     expect(body.success).toBe(false);
     expect(body.error).toMatch(/already have an update pending/i);
+  });
+
+  it('refuses a counter on an archived (decided) price and leaves it archived', async () => {
+    const { parent, fileCounter } = await seedCounterParent('archived-ps');
+    await testDb
+      .update(priceSubmissions)
+      .set({ status: 'archived' })
+      .where(eq(priceSubmissions.id, parent.id));
+
+    const res = await fileCounter('chal-1-ps', 50);
+    expect(res.status).toBe(400);
+    const [reloaded] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id));
+    expect(reloaded?.status).toBe('archived');
+    const counters = await testDb
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.disputedSubmissionId, parent.id));
+    expect(counters).toHaveLength(0);
   });
 
   it('still refuses a counter on a disputed price with no open check (an admin denial)', async () => {

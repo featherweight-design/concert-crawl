@@ -481,9 +481,10 @@ export const PendingCardB = ({
           {view === 'other' && (
             <>
               {counterPointer != null ? (
-                // Schema enforces one pending counter per parent — surface a
-                // pointer to the existing counter instead of letting the user
-                // start a duplicate dispute form (would 409).
+                // Until migration 0100 lands the schema allows one pending
+                // counter per price, so point at the existing one rather than
+                // open a form that would 409. Several fans may each file one
+                // after 0100; B9b replaces this with "Submit an update".
                 <CounterPointerLink href={counterPointer.href} />
               ) : (
                 <button

@@ -15,11 +15,14 @@ import {
   getAuthOptional,
 } from '../middleware/auth.js';
 import { moderateNote } from '../lib/moderate-note.js';
-import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
+import { pendingCounterViolation } from '../lib/pg-errors.js';
 import { idSchema } from '../lib/id-schema.js';
 import {
+  OTHER_UPDATE_PENDING_ERROR,
   OWN_UPDATE_PENDING_ERROR,
-  hasPendingCounter,
+  UPDATE_PENDING_CODE,
+  fileCounterUnderLock,
+  takesUpdates,
 } from '../lib/price-check.js';
 
 const submissionBodySchema = z
@@ -367,7 +370,11 @@ priceSubmissionsRouter.post(
         .limit(1);
       if (ownCounter) {
         return ctx.json(
-          { success: false, error: OWN_UPDATE_PENDING_ERROR },
+          {
+            success: false,
+            error: OWN_UPDATE_PENDING_ERROR,
+            code: UPDATE_PENDING_CODE,
+          },
           409,
         );
       }
@@ -376,10 +383,7 @@ priceSubmissionsRouter.post(
       // a check another fan opened (the first counter flips it to 'disputed').
       // A 'disputed' row with no pending counter is an admin denial, not a
       // check, and takes none.
-      const underOpenCheck =
-        disputed.status === 'disputed' &&
-        (await hasPendingCounter(body.disputedSubmissionId));
-      if (disputed.status !== 'corroborated' && !underOpenCheck) {
+      if (!(await takesUpdates(disputed))) {
         return ctx.json(
           {
             success: false,
@@ -402,49 +406,65 @@ priceSubmissionsRouter.post(
       const parentId = body.disputedSubmissionId;
 
       try {
-        const created = await db.transaction(async (tx) => {
-          const [child] = await tx
-            .insert(priceSubmissions)
-            .values({
-              eventId,
-              userId,
-              priceMin: String(body.priceMin),
-              priceMax: body.priceMax != null ? String(body.priceMax) : null,
-              tier: inheritedTier,
-              vendor: inheritedVendor,
-              // howFound is NOT slot identity — it's how THIS submitter saw
-              // the price. Preserve submitter's value. (This intentionally
-              // differs from /v1/submissions/:id/dispute which inherits
-              // howFound from the parent; that small inconsistency is out
-              // of scope for this PR.)
-              howFound: body.howFound,
-              sourceCategory: inheritedSourceCategory,
-              corroborationCount: 1,
-              note: body.note ?? null,
-              disputedSubmissionId: parentId,
-              status: 'pending',
-            })
-            .returning();
+        // The parent is locked and re-checked inside the transaction
+        // (fileCounterUnderLock): the checks above only give a clean error
+        // early, and a resolve or auto-promotion can land in between.
+        const outcome = await db.transaction((tx) =>
+          fileCounterUnderLock(tx, parentId, async () => {
+            const [child] = await tx
+              .insert(priceSubmissions)
+              .values({
+                eventId,
+                userId,
+                priceMin: String(body.priceMin),
+                priceMax: body.priceMax != null ? String(body.priceMax) : null,
+                tier: inheritedTier,
+                vendor: inheritedVendor,
+                // howFound is NOT slot identity — it's how THIS submitter saw
+                // the price. Preserve submitter's value. (This intentionally
+                // differs from /v1/submissions/:id/dispute which inherits
+                // howFound from the parent; that small inconsistency is out
+                // of scope for this PR.)
+                howFound: body.howFound,
+                sourceCategory: inheritedSourceCategory,
+                corroborationCount: 1,
+                note: body.note ?? null,
+                disputedSubmissionId: parentId,
+                status: 'pending',
+              })
+              .returning();
+            if (!child) {
+              throw new Error('Counter insert returned no rows');
+            }
+            return child;
+          }),
+        );
 
-          if (!child) {
-            throw new Error('Counter insert returned no rows');
-          }
-
-          await tx
-            .update(priceSubmissions)
-            .set({ status: 'disputed', updatedAt: sql`now()` })
-            .where(eq(priceSubmissions.id, parentId));
-
-          return child;
-        });
-
-        return ctx.json({ success: true, data: created }, 201);
-      } catch (err) {
-        // Belt-and-braces: translate the DB unique_violation on the partial
-        // unique index into the same clean 409 the pre-insert SELECT returns.
-        if (isPendingCounterUniqueViolation(err)) {
+        if (outcome.kind === 'closed') {
           return ctx.json(
-            { success: false, error: OWN_UPDATE_PENDING_ERROR },
+            {
+              success: false,
+              error: 'Can only dispute a corroborated submission',
+            },
+            400,
+          );
+        }
+        return ctx.json({ success: true, data: outcome.row }, 201);
+      } catch (err) {
+        // Belt-and-braces: translate a unique_violation on a pending-counter
+        // index into a clean 409. 'any' is 0041's one-per-parent index,
+        // which refuses a second fan's update until migration 0100 drops it.
+        const violation = pendingCounterViolation(err);
+        if (violation !== null) {
+          return ctx.json(
+            {
+              success: false,
+              error:
+                violation === 'own'
+                  ? OWN_UPDATE_PENDING_ERROR
+                  : OTHER_UPDATE_PENDING_ERROR,
+              code: UPDATE_PENDING_CODE,
+            },
             409,
           );
         }

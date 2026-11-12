@@ -66,8 +66,9 @@ interface Recipient {
  *     is set (apps/api/src/routes/price-submissions.ts — the counter path
  *     bypasses the rate limiter, so the explicit guard is what blocks it).
  * We still dedupe defensively here for any future codepath that bypasses
- * those gates. The §4.6 partial unique index is a separate guarantee — it
- * prevents two pending counters against the same parent, not self-contest.
+ * those gates. The pending-counter unique indexes are a separate guarantee —
+ * one pending counter per fan per parent (0099; 0041's one per parent until
+ * 0100) — and say nothing about self-contest.
  * Skipped entirely when both ids are null.
  *
  * `notifications.metadata` is a `text` column (see packages/db schema), so

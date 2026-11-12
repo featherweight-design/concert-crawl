@@ -49,6 +49,12 @@ function appWithHandler() {
   app.get('/boom', () => {
     throw new Error('kaboom');
   });
+  // Drizzle wraps the postgres-js error; the SQLSTATE sits on `cause`.
+  app.get('/deadlock', () => {
+    throw new Error('Failed query', {
+      cause: Object.assign(new Error('deadlock detected'), { code: '40P01' }),
+    });
+  });
   app.get('/upstream-down', () => {
     throw new HTTPException(503, { message: 'Upstream unavailable' });
   });
@@ -176,6 +182,15 @@ describe('errorHandler', () => {
 
     expect(tags.has('userHash')).toBe(false);
     expect(captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers a deadlock as a retryable 409, not a reported 500', async () => {
+    const res = await appWithHandler().request('/deadlock');
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe('retryable_conflict');
+    expect(captureException).not.toHaveBeenCalled();
   });
 });
 

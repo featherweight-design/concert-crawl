@@ -22,6 +22,7 @@ import {
   seedPriceSubmission,
   seedVenue,
 } from '../../test/helpers/seed.js';
+import { allowSeveralPendingCountersPerPrice } from '../../test/helpers/pending-counter-index.js';
 
 const app = createApp();
 
@@ -422,5 +423,50 @@ describe('GET /v1/admin/review/counts', () => {
     clearAuth();
     const res = await app.request('/v1/admin/review/counts');
     expect(res.status).toBe(401);
+  });
+});
+
+// B+ B9: several fans can each have an update pending on one price, and the
+// queue lists one row per price, so the pill counts prices under check.
+describe('GET /v1/admin/review/counts — several updates on one price', () => {
+  allowSeveralPendingCountersPerPrice();
+
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  it('counts a price with two pending updates once', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      verified: true,
+    });
+    const parent = await seedPriceSubmission(event.id, 'user-parent', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '44',
+      status: 'disputed',
+    });
+    for (const update of [
+      { user: 'user-rae', priceMin: '52' },
+      { user: 'user-sam', priceMin: '60' },
+    ]) {
+      await seedPriceSubmission(event.id, update.user, {
+        tier: 'GA',
+        vendor: 'AXS',
+        sourceCategory: 'standard',
+        priceMin: update.priceMin,
+        status: 'pending',
+        disputedSubmissionId: parent.id,
+      });
+    }
+
+    const res = await app.request('/v1/admin/review/counts', {
+      headers: ADMIN_HEADERS,
+    });
+    const body = (await res.json()) as { data: { priceContests: number } };
+    expect(body.data.priceContests).toBe(1);
   });
 });

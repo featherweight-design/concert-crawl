@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { and, eq, getTableColumns, sql } from 'drizzle-orm';
+import { and, eq, getTableColumns, inArray, sql } from 'drizzle-orm';
 import {
   db,
   events,
@@ -18,11 +18,16 @@ import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 import {
   PG_UNIQUE_VIOLATION,
   describeDbError,
-  isPendingCounterUniqueViolation,
+  pendingCounterViolation,
 } from '../lib/pg-errors.js';
 import { idSchema } from '../lib/id-schema.js';
+import { apiLogger } from '../lib/logger.js';
 import {
+  OTHER_UPDATE_PENDING_ERROR,
   OWN_UPDATE_PENDING_ERROR,
+  UPDATE_PENDING_CODE,
+  fileCounterUnderLock,
+  lockParent,
   reopenPriceWhenCheckEmpty,
   settleCheckOnCounterPromotion,
 } from '../lib/price-check.js';
@@ -117,49 +122,94 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
     );
   }
 
-  const inserted = await db
-    .insert(submissionConfirms)
-    .values({ submissionId, userId })
-    .onConflictDoNothing()
-    .returning();
-
-  let newStatus = submission.status;
-  let newCount = submission.corroborationCount;
-
-  if (inserted.length > 0) {
-    const updated = await db.transaction(async (tx) => {
-      const [row] = await tx
-        .update(priceSubmissions)
-        .set({
-          corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
-          status: sql`CASE WHEN ${priceSubmissions.corroborationCount} + 1 >= ${SP_POLICY.confirmsRequired} THEN 'corroborated'::price_submission_status ELSE ${priceSubmissions.status} END`,
-          updatedAt: sql`now()`,
-        })
-        .where(eq(priceSubmissions.id, submissionId))
-        .returning({
-          corroborationCount: priceSubmissions.corroborationCount,
-          status: priceSubmissions.status,
-        });
-      // A pending update that reaches the threshold wins its price check:
-      // the parent and every other pending update are archived with it.
-      if (
-        row?.status === 'corroborated' &&
-        submission.status === 'pending' &&
-        submission.disputedSubmissionId !== null
-      ) {
-        await settleCheckOnCounterPromotion(tx, submission);
-      }
-      return row;
-    });
-    if (updated) {
-      newCount = updated.corroborationCount;
-      newStatus = updated.status;
+  // Only a pending or live price takes confirms. Anything else (an archived
+  // or superseded update, a price under check, a stale row) is refused:
+  // the threshold CASE below would otherwise promote it straight back to
+  // 'corroborated'. Lock order (lib/price-check.ts rule 4): the parent of a
+  // counter first, then the row itself, re-checked under that lock.
+  const CONFIRMABLE: ReadonlyArray<'pending' | 'corroborated'> = [
+    'pending',
+    'corroborated',
+  ];
+  const parentId = submission.disputedSubmissionId;
+  type ConfirmOutcome =
+    { kind: 'closed' } | { kind: 'done'; confirms: number; status: string };
+  const outcome = await db.transaction(async (tx): Promise<ConfirmOutcome> => {
+    if (parentId !== null) await lockParent(tx, parentId);
+    const [locked] = await tx
+      .select({
+        status: priceSubmissions.status,
+        corroborationCount: priceSubmissions.corroborationCount,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, submissionId))
+      .for('update');
+    if (!locked || !CONFIRMABLE.some((status) => status === locked.status)) {
+      return { kind: 'closed' };
     }
-  }
 
+    const inserted = await tx
+      .insert(submissionConfirms)
+      .values({ submissionId, userId })
+      .onConflictDoNothing()
+      .returning();
+    if (inserted.length === 0) {
+      return {
+        kind: 'done',
+        confirms: locked.corroborationCount,
+        status: locked.status,
+      };
+    }
+
+    const [row] = await tx
+      .update(priceSubmissions)
+      .set({
+        corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
+        status: sql`CASE WHEN ${priceSubmissions.corroborationCount} + 1 >= ${SP_POLICY.confirmsRequired} THEN 'corroborated'::price_submission_status ELSE ${priceSubmissions.status} END`,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(priceSubmissions.id, submissionId),
+          inArray(priceSubmissions.status, [...CONFIRMABLE]),
+        ),
+      )
+      .returning({
+        corroborationCount: priceSubmissions.corroborationCount,
+        status: priceSubmissions.status,
+      });
+    if (!row) {
+      // Unreachable under the row lock; throwing rolls the confirm back.
+      throw new Error('Confirmed row left its confirmable status');
+    }
+    // A pending update that reaches the threshold wins its price check:
+    // the parent and every other pending update are archived with it.
+    if (
+      row.status === 'corroborated' &&
+      locked.status === 'pending' &&
+      parentId !== null
+    ) {
+      await settleCheckOnCounterPromotion(tx, {
+        id: submissionId,
+        disputedSubmissionId: parentId,
+      });
+    }
+    return {
+      kind: 'done',
+      confirms: row.corroborationCount,
+      status: row.status,
+    };
+  });
+
+  if (outcome.kind === 'closed') {
+    return ctx.json(
+      { success: false, error: 'This price is no longer open to confirm.' },
+      409,
+    );
+  }
   return ctx.json({
     success: true,
-    data: { confirms: newCount, status: newStatus },
+    data: { confirms: outcome.confirms, status: outcome.status },
   });
 });
 
@@ -238,62 +288,85 @@ submissionsRouter.post(
       )
       .limit(1);
     if (ownCounter) {
-      return ctx.json({ success: false, error: OWN_UPDATE_PENDING_ERROR }, 409);
+      return ctx.json(
+        {
+          success: false,
+          error: OWN_UPDATE_PENDING_ERROR,
+          code: UPDATE_PENDING_CODE,
+        },
+        409,
+      );
     }
 
     const vendor = parent.vendor;
 
-    let disputeRow: typeof priceSubmissions.$inferSelect;
+    // Filed under the parent lock (fileCounterUnderLock): the parent must
+    // be live, or already under a check another fan opened. A pending,
+    // stale, archived or denied price takes no update; before this, filing
+    // one here and then withdrawing it reopened that price as 'corroborated'.
     try {
-      disputeRow = await db.transaction(async (tx) => {
-        const [created] = await tx
-          .insert(priceSubmissions)
-          .values({
-            eventId: parent.eventId,
-            userId,
-            priceMin: String(floor),
-            priceMax: ceiling != null ? String(ceiling) : null,
-            tier: parent.tier,
-            vendor,
-            howFound: parent.howFound,
-            // Dispute creates a new (tier, source_category) row. Inherit the
-            // parent's sourceCategory when present; otherwise derive from the
-            // new (vendor, parent.howFound) so the dispute lands with a non-
-            // null source_category (matches the partial unique index semantics).
-            sourceCategory:
-              parent.sourceCategory ??
-              deriveSourceCategory(vendor, parent.howFound),
-            disputedSubmissionId: submissionId,
-            status: 'pending',
-          })
-          .returning();
-
-        if (!created) {
-          throw new Error('Dispute insert returned no rows');
-        }
-
-        await tx
-          .update(priceSubmissions)
-          .set({ status: 'disputed', updatedAt: sql`now()` })
-          .where(eq(priceSubmissions.id, submissionId));
-
-        return created;
-      });
-    } catch (err) {
-      // Belt-and-braces: translate the DB unique_violation on the partial
-      // unique index into the same clean 409 the pre-insert SELECT returns.
-      // Drizzle wraps the underlying postgres-js error, so check both the
-      // outer error AND `err.cause` for SQLSTATE 23505 + the index name.
-      if (isPendingCounterUniqueViolation(err)) {
+      const outcome = await db.transaction((tx) =>
+        fileCounterUnderLock(tx, submissionId, async () => {
+          const [created] = await tx
+            .insert(priceSubmissions)
+            .values({
+              eventId: parent.eventId,
+              userId,
+              priceMin: String(floor),
+              priceMax: ceiling != null ? String(ceiling) : null,
+              tier: parent.tier,
+              vendor,
+              howFound: parent.howFound,
+              // Dispute creates a new (tier, source_category) row. Inherit
+              // the parent's sourceCategory when present; otherwise derive
+              // from the new (vendor, parent.howFound) so the dispute lands
+              // with a non-null source_category (matches the partial unique
+              // index semantics).
+              sourceCategory:
+                parent.sourceCategory ??
+                deriveSourceCategory(vendor, parent.howFound),
+              disputedSubmissionId: submissionId,
+              status: 'pending',
+            })
+            .returning();
+          if (!created) {
+            throw new Error('Dispute insert returned no rows');
+          }
+          return created;
+        }),
+      );
+      if (outcome.kind === 'closed') {
         return ctx.json(
-          { success: false, error: OWN_UPDATE_PENDING_ERROR },
+          {
+            success: false,
+            error: 'Can only dispute a corroborated submission',
+          },
+          400,
+        );
+      }
+      return ctx.json({ success: true, data: outcome.row }, 201);
+    } catch (err) {
+      // Belt-and-braces: translate a unique_violation on a pending-counter
+      // index into a clean 409. Drizzle wraps the postgres-js error, so the
+      // helper checks both the outer error AND `err.cause`. 'any' is 0041's
+      // one-per-parent index, which refuses a second fan's update until
+      // migration 0100 drops it.
+      const violation = pendingCounterViolation(err);
+      if (violation !== null) {
+        return ctx.json(
+          {
+            success: false,
+            error:
+              violation === 'own'
+                ? OWN_UPDATE_PENDING_ERROR
+                : OTHER_UPDATE_PENDING_ERROR,
+            code: UPDATE_PENDING_CODE,
+          },
           409,
         );
       }
       throw err;
     }
-
-    return ctx.json({ success: true, data: disputeRow }, 201);
   },
 );
 
@@ -414,21 +487,38 @@ submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
     return ctx.json({ success: false, error: 'Forbidden' }, 403);
   }
 
-  const parentId =
-    submission.status === 'pending' ? submission.disputedSubmissionId : null;
+  // Withdrawing an update. Lock order (lib/price-check.ts rule 4): the
+  // parent first, so filing a counter, another withdrawal and a resolve all
+  // serialize on it. Without that lock, two fans withdrawing the last two
+  // updates at once each saw the other's still pending, neither reopened the
+  // price, and it vanished (write skew); and a counter filed concurrently
+  // could be missed, reopening a price with an update pending.
+  const parentId = submission.disputedSubmissionId;
   await db.transaction(async (tx) => {
+    if (parentId !== null) await lockParent(tx, parentId);
+    const [locked] = await tx
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id))
+      .for('update');
     await tx.delete(priceSubmissions).where(eq(priceSubmissions.id, id));
     // Withdrawing the last pending update on a price closes its check, so the
-    // price goes back to live. Savepoint: if a box-office price was approved
-    // in the same slot meanwhile, the unique index refuses the reopen, and
-    // the withdrawal still goes through; the box-office price leads that slot.
-    if (parentId !== null) {
+    // price goes back to live. Only a still-pending update counts: deleting
+    // an archived one must not reopen anything. Savepoint: if a box-office
+    // price was approved in the same slot meanwhile, the unique index refuses
+    // the reopen, and the withdrawal still goes through; the box-office price
+    // leads that slot.
+    if (parentId !== null && locked?.status === 'pending') {
       try {
         await tx.transaction((savepoint) =>
           reopenPriceWhenCheckEmpty(savepoint, parentId),
         );
       } catch (err) {
         if (describeDbError(err).code !== PG_UNIQUE_VIOLATION) throw err;
+        apiLogger.warn(
+          { parentId, withdrawnId: id, db: describeDbError(err) },
+          'Price check closed by withdrawal; a live box-office price holds the slot, so the old price stays out',
+        );
       }
     }
   });

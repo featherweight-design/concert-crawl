@@ -16,7 +16,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { eq } from 'drizzle-orm';
-import { priceSubmissions } from '@concert-crawl/db';
+import { priceSubmissions, submissionConfirms } from '@concert-crawl/db';
 import { createApp } from '../app.js';
 import { testDb } from '../test/helpers/db.js';
 import {
@@ -26,6 +26,7 @@ import {
   seedPriceSubmission,
   seedSubmissionConfirm,
 } from '../test/helpers/seed.js';
+import { allowSeveralPendingCountersPerPrice } from '../test/helpers/pending-counter-index.js';
 
 const app = createApp();
 
@@ -177,6 +178,8 @@ describe('POST /v1/submissions/:id/confirm', () => {
 });
 
 describe('POST /v1/submissions/:id/dispute', () => {
+  allowSeveralPendingCountersPerPrice();
+
   let eventId: string;
   let submissionId: string;
 
@@ -186,9 +189,41 @@ describe('POST /v1/submissions/:id/dispute', () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id);
     eventId = event.id;
-    const submission = await seedPriceSubmission(eventId, 'user_owner');
+    // Only a live price takes an update (B+ B9a).
+    const submission = await seedPriceSubmission(eventId, 'user_owner', {
+      status: 'corroborated',
+    });
     submissionId = submission.id;
   });
+
+  it.each<'pending' | 'stale' | 'archived'>(['pending', 'stale', 'archived'])(
+    'refuses an update on a %s price, leaving it as it was',
+    async (status) => {
+      const target = await seedPriceSubmission(eventId, 'user_owner', {
+        status,
+      });
+      setAuth('user_disputer');
+      const res = await app.request(`/v1/submissions/${target.id}/dispute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({ floor: 50 }),
+      });
+      expect(res.status).toBe(400);
+      const [after] = await testDb
+        .select({ status: priceSubmissions.status })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.id, target.id));
+      expect(after?.status).toBe(status);
+      const counters = await testDb
+        .select({ id: priceSubmissions.id })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.disputedSubmissionId, target.id));
+      expect(counters).toHaveLength(0);
+    },
+  );
 
   it('returns 403 when disputing own submission', async () => {
     setAuth('user_owner');
@@ -523,6 +558,8 @@ describe('DELETE /v1/submissions/:id', () => {
 // narrow a price check; the parent must never be left 'disputed' with nothing
 // pending, which every price surface reads as an admin denial.
 describe('price check lifecycle on a price with several updates', () => {
+  allowSeveralPendingCountersPerPrice();
+
   let eventId: string;
 
   beforeEach(async () => {
@@ -586,6 +623,68 @@ describe('price check lifecycle on a price with several updates', () => {
     expect(res.status).toBe(204);
     expect(await statusOf(parent.id)).toBe('disputed');
     expect(await statusOf(counters[1]!.id)).toBe('pending');
+  });
+
+  it('refuses a confirm on an archived update and does not resurrect it', async () => {
+    const { counters } = await seedCheck(['user_rae']);
+    await testDb
+      .update(priceSubmissions)
+      .set({ status: 'archived' })
+      .where(eq(priceSubmissions.id, counters[0]!.id));
+
+    setAuth('user_confirmer');
+    const res = await app.request(
+      `/v1/submissions/${counters[0]!.id}/confirm`,
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer test-token' },
+      },
+    );
+    expect(res.status).toBe(409);
+    expect(await statusOf(counters[0]!.id)).toBe('archived');
+    const confirmRows = await testDb
+      .select({ id: submissionConfirms.id })
+      .from(submissionConfirms)
+      .where(eq(submissionConfirms.submissionId, counters[0]!.id));
+    expect(confirmRows).toHaveLength(0);
+  });
+
+  it('withdrawing the last update keeps the old price out when a box-office price took the slot', async () => {
+    // The parent is a box-office price under check. While the check was
+    // open a second box-office price was approved in the same slot, so the
+    // partial unique index refuses to reopen the parent; the withdrawal must
+    // still succeed.
+    const parent = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      sourceCategory: 'boxoffice',
+      priceMin: '44',
+      status: 'disputed',
+    });
+    const counter = await seedPriceSubmission(eventId, 'user_rae', {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      sourceCategory: 'boxoffice',
+      priceMin: '52',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+    await seedPriceSubmission(eventId, 'user_other', {
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      sourceCategory: 'boxoffice',
+      priceMin: '50',
+      status: 'corroborated',
+    });
+
+    setAuth('user_rae');
+    const res = await app.request(`/v1/submissions/${counter.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(204);
+    expect(await statusOf(counter.id)).toBeUndefined();
+    expect(await statusOf(parent.id)).toBe('disputed');
   });
 
   it('a counter promoted on confirms wins: parent and other updates are archived', async () => {
