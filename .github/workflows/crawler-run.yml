@@ -213,6 +213,7 @@ jobs:
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          GIT_SHA: ${{ steps.sha.outputs.sha }}
           MODE: ${{ inputs.mode }}
           DRAIN_MAX: ${{ inputs.drain_max }}
         run: |
@@ -249,6 +250,9 @@ jobs:
           put ADMIN_EMAIL "$ADMIN_EMAIL"
           put SENTRY_ENVIRONMENT "$SENTRY_ENVIRONMENT"
           put LOG_LEVEL "$LOG_LEVEL"
+          # The deployed commit, read by apps/crawler/src/instrument.ts as the
+          # Sentry release.
+          put GIT_SHA "$GIT_SHA"
           echo "env_file=$env_file" >> "$GITHUB_ENV"
 
       # --shm-size: Docker's 64 MB /dev/shm default crashes Chromium on heavy

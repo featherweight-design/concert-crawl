@@ -108,6 +108,29 @@ describe('reportFailure', () => {
     expect(options.extra).toEqual({ venueId: 'venue-123', attempt: 3 });
   });
 
+  it('forwards tags to Sentry as tags, not extra', () => {
+    reportFailure({
+      event: 'crawl.event_count_dropped',
+      severity: 'error',
+      tags: { dropSeverity: 'went_dark', venueId: 'venue-1' },
+      eventsFound: 0,
+    });
+
+    const [, options] = captureMessageSpy.mock.calls[0] ?? [];
+    expect(options.tags).toEqual({
+      dropSeverity: 'went_dark',
+      venueId: 'venue-1',
+    });
+    expect(options.extra).toEqual({ eventsFound: 0 });
+  });
+
+  it('sends no tags option when none are given', () => {
+    reportFailure({ event: 'crawl.x', severity: 'warn' });
+
+    const [, options] = captureMessageSpy.mock.calls[0] ?? [];
+    expect(options).not.toHaveProperty('tags');
+  });
+
   it("forwards severity 'warn' to Sentry as level 'warning' (Sentry's name for warn)", () => {
     reportFailure({
       event: 'email.misconfigured',

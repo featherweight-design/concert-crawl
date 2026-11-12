@@ -26,6 +26,18 @@ const logger = createLogger('crawler');
 // cron's behaviour: its 512Mi process was OOM-killed when one tick crawled
 // unboundedly many venues (#1352, #1353).
 const MAX_CONCURRENT = 1;
+
+// Searchable Sentry tags for a crawl failure. Ids are uuids, not personal
+// data; an id that is not known at the call site is left off.
+function crawlTags(
+  venueId: string | undefined,
+  crawlRunId?: string,
+): Record<string, string> {
+  return {
+    ...(venueId ? { venueId } : {}),
+    ...(crawlRunId ? { crawlRunId } : {}),
+  };
+}
 const DEFAULT_TRIGGER_DRAIN_MAX = 1;
 // The fallback when CRAWL_TRIGGER_BUDGET_MS is unset. The GitHub Actions jobs
 // always set it, sized to their own timeouts (crawler-run.yml). The budget
@@ -106,6 +118,7 @@ async function reapStaleProcessingTriggers(): Promise<void> {
       `Crawl trigger ${trigger.id} was stranded in 'processing' — the crawler process died mid-crawl (no crawl_runs row was written)`,
     );
     Sentry.captureException(err, {
+      tags: crawlTags(trigger.venueId),
       extra: { triggerId: trigger.id, venueId: trigger.venueId },
     });
     Sentry.logger.error('crawl.trigger_stranded', {
@@ -267,7 +280,10 @@ async function processTrigger(
       // Grouped by cause, not by this call site.
       Sentry.captureException(new Error(message), {
         fingerprint: grouping.fingerprint,
-        tags: { crawl_error_kind: grouping.errorKind },
+        tags: {
+          crawl_error_kind: grouping.errorKind,
+          ...crawlTags(trigger.venueId, crawlRun.id),
+        },
         extra: { venueId: trigger.venueId, triggerId: trigger.id },
       });
       Sentry.logger.warn('crawl.failed', {
@@ -319,6 +335,7 @@ async function processTrigger(
       .where(eq(crawlTriggers.id, trigger.id));
   } catch (err) {
     Sentry.captureException(err, {
+      tags: crawlTags(trigger.venueId),
       extra: { triggerId: trigger.id, venueId: trigger.venueId },
     });
     Sentry.logger.error('crawl.error', {
@@ -467,7 +484,10 @@ export async function runDailyCrawl(): Promise<{
             // Grouped by cause, not by this call site.
             Sentry.captureException(new Error(message), {
               fingerprint: grouping.fingerprint,
-              tags: { crawl_error_kind: grouping.errorKind },
+              tags: {
+                crawl_error_kind: grouping.errorKind,
+                ...crawlTags(venue?.id, result.value.id),
+              },
               extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
             });
             Sentry.logger.warn('crawl.failed', {
@@ -534,6 +554,7 @@ export async function runDailyCrawl(): Promise<{
             });
           }
           Sentry.captureException(result.reason, {
+            tags: crawlTags(venue?.id),
             extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
           });
           Sentry.logger.error('crawl.error', {

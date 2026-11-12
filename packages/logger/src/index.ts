@@ -70,6 +70,11 @@ export interface FailureReport {
    */
   fingerprint?: string[];
   /**
+   * Searchable Sentry tags (short string values: ids, enums). Sent to Sentry
+   * as tags and, like every other field, kept in the console JSON line.
+   */
+  tags?: Record<string, string>;
+  /**
    * Arbitrary structured context. Forwarded to Sentry `extra` verbatim.
    *
    * Avoid key names containing `token`, `password`, `secret`, `auth`, or
@@ -97,7 +102,7 @@ export function reportFailure(report: FailureReport): void {
   // circular references or BigInt values in `extra`, and the Sentry SDK
   // can in principle raise; both are wrapped so a logging failure cannot
   // mask the original error.
-  const { event, severity, fingerprint, ...extra } = report;
+  const { event, severity, fingerprint, tags, ...extra } = report;
   try {
     let json: string;
     try {
@@ -133,6 +138,7 @@ export function reportFailure(report: FailureReport): void {
     Sentry.captureMessage(event, {
       level: severity === 'error' ? 'error' : 'warning',
       extra,
+      ...(tags ? { tags } : {}),
       ...(fingerprint ? { fingerprint } : {}),
     });
   } catch {

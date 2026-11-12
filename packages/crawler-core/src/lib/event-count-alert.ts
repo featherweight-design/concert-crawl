@@ -241,6 +241,11 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     venueId: input.venueId,
     venueName: input.venueName,
     crawlRunId: input.crawlRunId,
+    tags: {
+      dropSeverity: severity,
+      venueId: input.venueId,
+      ...(input.crawlRunId ? { crawlRunId: input.crawlRunId } : {}),
+    },
     dropSeverity: severity,
     guardsAteEverything,
     eventsFound: input.eventsFound,
