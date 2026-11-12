@@ -18,6 +18,7 @@ import { artistsAdminRouter } from './artists.js';
 import { featureFlagsAdminRouter } from './feature-flags.js';
 import { settingsAdminRouter } from './settings.js';
 import { auditLogAdminRouter } from './audit-log.js';
+import { needsYouAdminRouter } from './needs-you.js';
 
 export type AdminVariables = {
   Variables: {
@@ -162,3 +163,4 @@ adminRouter.route('/artists', artistsAdminRouter);
 adminRouter.route('/feature-flags', featureFlagsAdminRouter);
 adminRouter.route('/settings', settingsAdminRouter);
 adminRouter.route('/audit-log', auditLogAdminRouter);
+adminRouter.route('/needs-you', needsYouAdminRouter);
