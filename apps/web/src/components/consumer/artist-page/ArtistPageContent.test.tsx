@@ -287,6 +287,120 @@ describe('ArtistPageContent', () => {
     expect(countFollows(block as HTMLElement, 'Neal Francis')).toBe(1);
   });
 
+  // Regression for Hugh's staging bug on main: scrolling past the hero hid the
+  // Follow block, the page got shorter, and at the bottom the shorter page
+  // pulled the scroll back above the threshold, so the sub-header toggled and
+  // the heading jittered. Addendum 2 item 27 removed the cause (Follow is not
+  // scroll-driven); this pins it. Every listener the page could use is driven:
+  // window scroll and any IntersectionObserver it registers.
+  it('scrolling past the hero never changes the in-flow layout', () => {
+    class FakeIntersectionObserver implements IntersectionObserver {
+      static instances: FakeIntersectionObserver[] = [];
+      readonly root = null;
+      readonly rootMargin = '0px';
+      readonly thresholds: readonly number[] = [0];
+      readonly targets: Element[] = [];
+      constructor(readonly callback: IntersectionObserverCallback) {
+        FakeIntersectionObserver.instances.push(this);
+      }
+      observe(target: Element) {
+        this.targets.push(target);
+      }
+      unobserve() {}
+      disconnect() {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+      /** Report every observed target as off screen, as past the hero. */
+      leave() {
+        const rect: DOMRectReadOnly = {
+          x: 0,
+          y: -600,
+          top: -600,
+          left: 0,
+          width: 320,
+          height: 440,
+          right: 320,
+          bottom: -160,
+          toJSON: () => ({}),
+        };
+        this.callback(
+          this.targets.map((target) => ({
+            target,
+            isIntersecting: false,
+            intersectionRatio: 0,
+            boundingClientRect: rect,
+            intersectionRect: rect,
+            rootBounds: null,
+            time: 0,
+          })),
+          this,
+        );
+      }
+    }
+    vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver);
+
+    try {
+      const { container } = render(<ArtistPageContent data={withShows} />);
+      const main = container.querySelector('main');
+      expect(main).not.toBeNull();
+
+      // Everything in flow: the page minus the fixed sub-header. Identical
+      // markup and styles means an identical document height.
+      const inFlow = () =>
+        Array.from(main?.children ?? [])
+          .filter((child) => !child.hasAttribute('data-sticky-bar'))
+          .map((child) => child.outerHTML)
+          .join('');
+      const before = inFlow();
+      const mainStyle = main?.getAttribute('style') ?? '';
+      const mainClass = main?.className;
+
+      const settle = (position: number) => {
+        scrollTo(position);
+        act(() => {
+          for (const observer of FakeIntersectionObserver.instances) {
+            observer.leave();
+          }
+        });
+      };
+
+      // Past the hero, then jitter around the threshold at the page bottom.
+      for (const position of [
+        AP_STICKY_AFTER + 10,
+        AP_STICKY_AFTER + 2000,
+        AP_STICKY_AFTER + 1999,
+        AP_STICKY_AFTER + 2000,
+      ]) {
+        settle(position);
+
+        // Follow is still rendered, once, in its block under the hero.
+        const block = container.querySelector<HTMLElement>(
+          '.ap-shell > .ap-block-follow',
+        );
+        if (!block) throw new Error('the Follow block left the page');
+        expect(countFollows(block, 'Neal Francis')).toBe(1);
+        expect(countFollows(container, 'Neal Francis')).toBe(1);
+
+        // The in-flow page is untouched, so its height cannot move.
+        expect(inFlow()).toBe(before);
+        expect(main?.getAttribute('style') ?? '').toBe(mainStyle);
+        expect(main?.className).toBe(mainClass);
+
+        // The sub-header is the only change, and it is out of flow.
+        const bar = container.querySelector<HTMLElement>('[data-sticky-bar]');
+        expect(bar).not.toBeNull();
+        expect(bar?.style.position).toBe('fixed');
+      }
+
+      // Nothing on the document itself toggles either.
+      expect(document.documentElement.getAttribute('style')).toBeNull();
+      expect(document.body.getAttribute('style')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   // B+ `09-artist` reads Upcoming first, then the player. Desktop lifts the
   // player into a side column with CSS only, so the tab order stays this one.
   it('walks back → follow → rows → skip player → iframe → report', () => {

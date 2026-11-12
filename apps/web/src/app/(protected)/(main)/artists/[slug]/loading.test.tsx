@@ -14,6 +14,7 @@ import {
 } from '@/components/consumer/artist-page/ArtistStage';
 import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
+import { MONTH_TILE_SIZE } from '@/components/consumer/events-list/DayTile';
 
 import ArtistLoading from './loading';
 
@@ -130,12 +131,33 @@ describe('artist route skeleton', () => {
     ).not.toBeNull();
   });
 
-  it('draws three carded rows with neutral edges', () => {
+  // Addendum 2 board `11-artist-skeleton/load-artist-m`.
+  it('draws two carded rows of three lines each, with neutral edges', () => {
     const { getAllByTestId } = render(<ArtistLoading />);
     const rows = getAllByTestId('artist-row-skeleton');
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(2);
     for (const row of rows) {
       expect(row.style.borderLeftColor).toBe('var(--border-strong)');
+    }
+    for (const lines of getAllByTestId('artist-row-skeleton-lines')) {
+      expect(lines.children).toHaveLength(3);
+    }
+    // The tile wears the loaded row's own size classes, so nothing shifts.
+    for (const tile of getAllByTestId('artist-row-skeleton-tile')) {
+      expect(tile.className).toContain(MONTH_TILE_SIZE);
+    }
+  });
+
+  it('draws two genre-chip pills under the name, not one bar', () => {
+    const { getByTestId } = render(<ArtistLoading />);
+    const pills = Array.from(
+      getByTestId('genre-chip-skeletons').children,
+    ).filter((node): node is HTMLElement => node instanceof HTMLElement);
+    expect(pills).toHaveLength(2);
+    expect(pills.map((pill) => pill.style.width)).toEqual(['92px', '76px']);
+    for (const pill of pills) {
+      expect(pill.style.height).toBe('24px');
+      expect(pill.style.borderRadius).toBe('999px');
     }
   });
 

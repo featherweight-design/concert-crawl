@@ -10,8 +10,10 @@
 // rule 9 exists to prevent. Addendum 3 settled it as the loaded card exactly
 // (200 × 250 at −2° on mobile, the same radius and outline, on desktop too),
 // so it reads the loaded card's own ratio and frame rather than its own
-// numbers. Everything else is the board's: the name and line bars, the follow
-// pill, the section label and three carded rows.
+// numbers. Everything else is addendum 2's board `11-artist-skeleton/
+// load-artist-m`: the eyebrow and name bars, two genre-chip pills, the follow
+// pill and its line, the history block, the section label and two carded rows
+// of three lines each.
 //
 // This stands in for the ARTIST PAYLOAD only. The Spotify embed has its own
 // loading clock: a third-party iframe must never hold the whole page grey.
@@ -28,6 +30,7 @@ import {
 import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
 import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
+import { MONTH_TILE_SIZE } from '@/components/consumer/events-list/DayTile';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
@@ -41,7 +44,13 @@ const FollowSkeleton = () => (
   </div>
 );
 
-/** A carded show row: the date tile, two lines, the price. Neutral edge. */
+/**
+ * A carded show row: the date tile, three lines (venue, time, and the short
+ * third bar the board draws), the price. Neutral edge. The line widths are the
+ * board's (`11-artist-skeleton/load-artist-m`: 137, 97 and 64px of a ~235px
+ * column at 390), as fractions so a 320 column scales them rather than
+ * overflowing. The tile stays the loaded row's tile so nothing shifts (rule 9).
+ */
 const RowSkeleton = () => (
   <div
     data-testid="artist-row-skeleton"
@@ -52,10 +61,19 @@ const RowSkeleton = () => (
       padding: '12px 12px 12px 14px',
     }}
   >
-    <SkeletonBlock width={56} height={62} radius={12} />
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <SkeletonBlock width="70%" height={14} />
-      <SkeletonBlock width="45%" height={10} />
+    <span
+      data-testid="artist-row-skeleton-tile"
+      className={`block shrink-0 ${MONTH_TILE_SIZE}`}
+    >
+      <SkeletonBlock height="100%" radius={12} />
+    </span>
+    <div
+      data-testid="artist-row-skeleton-lines"
+      className="flex min-w-0 flex-1 flex-col gap-2"
+    >
+      <SkeletonBlock width="58%" height={13} />
+      <SkeletonBlock width="41%" height={10} />
+      <SkeletonBlock width="27%" height={15} radius={6} />
     </div>
     <SkeletonBlock width={30} height={12} radius={999} />
   </div>
@@ -92,7 +110,11 @@ const ArtistLoading = () => (
         <span className="block w-[min(230px,70%)] md:w-full md:max-w-[420px]">
           <SkeletonBlock height={36} radius={10} />
         </span>
-        <SkeletonBlock width={130} height={20} radius={6} />
+        {/* Two genre-chip pills, as the board draws them (92 and 76 × 24). */}
+        <div data-testid="genre-chip-skeletons" className="flex gap-1.5">
+          <SkeletonBlock width={92} height={24} radius={999} />
+          <SkeletonBlock width={76} height={24} radius={999} />
+        </div>
       </div>
     </ArtistStageShell>
 
@@ -100,17 +122,17 @@ const ArtistLoading = () => (
       <div className="ap-block-follow md:hidden">
         <FollowSkeleton />
       </div>
-      <div className="ap-history-card md:hidden">
-        <SkeletonBlock width="85%" height={12} />
+      {/* The board draws the history card as one filled block, 40 tall. */}
+      <div className="mt-[18px] md:hidden">
+        <SkeletonBlock height={40} radius={14} />
       </div>
 
       <div className="ap-grid">
         <div className="ap-block-shows">
           <div className="mb-[14px]">
-            <SkeletonBlock width={140} height={16} />
+            <SkeletonBlock width={170} height={16} radius={8} />
           </div>
           <div className="flex flex-col gap-[10px]">
-            <RowSkeleton />
             <RowSkeleton />
             <RowSkeleton />
           </div>
