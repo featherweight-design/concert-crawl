@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/hono/node';
 import { SENTRY_PRIVACY_OPTIONS } from '@concert-crawl/types/sentry';
+import { SENTRY_INITIAL_SCOPE } from '@concert-crawl/types/sentry-tags';
 import { scrubEvent } from './lib/sentry-scrub.js';
 
 // `||` rather than `??`: a variable that exists but is blank must still read
@@ -9,6 +10,10 @@ const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local';
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment,
+  // Vercel sets the commit sha on its own builds; blank (CLI deploys, local)
+  // leaves the release unset rather than sending an empty string.
+  release: process.env['VERCEL_GIT_COMMIT_SHA'] || undefined,
+  initialScope: SENTRY_INITIAL_SCOPE,
   // Dev machines and agent worktrees produced 86 of 89 error events over a
   // two-week window — unrun migrations, port clashes, half-built packages —
   // none of which say anything about deployed health. Reporting them buries
