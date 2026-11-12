@@ -322,7 +322,14 @@ export async function fetchPageHttp(
     headers: { Accept: 'text/html,application/xhtml+xml' },
     crawlDelayMs,
   }).catch((err: unknown) => {
-    fetchLog?.record({ url, mode: 'http' });
+    // A redirect that robots.txt declined was never requested, so it is not a
+    // failed page.
+    if (
+      !(err instanceof CrawlSkipError) &&
+      !(err instanceof RobotsDisallowedError)
+    ) {
+      fetchLog?.record({ url, mode: 'http' });
+    }
     throw err;
   });
 

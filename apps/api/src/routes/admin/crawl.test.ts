@@ -469,7 +469,7 @@ describe('Admin crawl routes', () => {
       );
       expect(bad.status).toBe(400);
       const over = await createApp().request(
-        `/v1/admin/crawl/runs/${RUN_ID}/pages?limit=51`,
+        `/v1/admin/crawl/runs/${RUN_ID}/pages?limit=201`,
       );
       expect(over.status).toBe(400);
     });
