@@ -72,12 +72,6 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
         })}
       </div>
 
-      {months.length === 0 && (
-        <p className="text-[12.5px] text-fg-muted">
-          {SETTINGS_COPY.submissionsFilterEmpty}
-        </p>
-      )}
-
       {months.map((month) => (
         <section key={month.key} className="flex flex-col gap-2.5">
           <h2
