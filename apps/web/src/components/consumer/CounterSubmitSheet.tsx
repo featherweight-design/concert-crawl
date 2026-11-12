@@ -14,6 +14,11 @@ import {
   SheetRail,
   type SheetRailTone,
 } from '@/components/consumer/price-check/SheetRail';
+import {
+  PriceCheckCardView,
+  WithdrawFooter,
+} from '@/components/consumer/price-check/PriceCheckCardView';
+import { useWithdrawUpdate } from '@/components/consumer/price-check/use-withdraw-update';
 import { SP_POLICY } from '@concert-crawl/types';
 import type { Tier } from '@concert-crawl/types';
 
@@ -85,8 +90,46 @@ export interface CounterSubmitSheetProps {
    * the sheet names that slot instead of asking for one.
    */
   currentTier?: Tier | null;
+  /**
+   * The checked price's context for the success state's card preview
+   * (`more-st-counter_done_m`). Without it the success state has no card.
+   */
+  preview?: PriceCheckPreviewContext;
   onSuccess?: () => void;
 }
+
+export interface PriceCheckPreviewContext {
+  kind: 'community' | 'boxoffice';
+  submitter: { handle: string } | null;
+  confirmsCount: number;
+  lastAdminActionKind?: 'defer' | null;
+}
+
+// The update this sheet just filed, as the success preview draws it.
+interface FiledUpdate {
+  id: string | null;
+  createdAt: string;
+  floor: number;
+  ceiling?: number | undefined;
+}
+
+// The POST answers `{ success, data: <the new row> }`. Narrowed rather than
+// asserted: without an id the preview simply draws no Withdraw.
+const readFiledRow = (
+  payload: unknown,
+): { id: string | null; createdAt: string | null } => {
+  if (typeof payload !== 'object' || payload === null || !('data' in payload))
+    return { id: null, createdAt: null };
+  const { data } = payload;
+  if (typeof data !== 'object' || data === null)
+    return { id: null, createdAt: null };
+  const id = 'id' in data && typeof data.id === 'string' ? data.id : null;
+  const createdAt =
+    'createdAt' in data && typeof data.createdAt === 'string'
+      ? data.createdAt
+      : null;
+  return { id, createdAt };
+};
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 
@@ -139,6 +182,7 @@ export function CounterSubmitSheet({
   currentCeiling,
   currentVendor,
   currentTier = null,
+  preview,
   onSuccess,
 }: CounterSubmitSheetProps) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -154,6 +198,7 @@ export function CounterSubmitSheet({
   // is dismissed, not on arrival: a refresh flips the card's viewerAction,
   // and refreshing under an open sheet would swap the result for the card.
   const staleRef = useRef(false);
+  const [filed, setFiled] = useState<FiledUpdate | null>(null);
 
   const subtitle =
     currentCeiling != null
@@ -203,7 +248,14 @@ export function CounterSubmitSheet({
         }
         throw new Error(apiErrorMessage(payload) ?? 'Submission failed');
       }
+      const row = readFiledRow(await res.json().catch(() => null));
       staleRef.current = true;
+      setFiled({
+        id: row.id,
+        createdAt: row.createdAt ?? new Date().toISOString(),
+        floor: Number(floor),
+        ceiling: ceiling ? Number(ceiling) : undefined,
+      });
       setSheetState('success');
     } catch (err) {
       console.error('CounterSubmitSheet: price update failed', err);
@@ -223,6 +275,7 @@ export function CounterSubmitSheet({
     setCeiling('');
     setHowFound(null);
     setFieldErrors({});
+    setFiled(null);
     if (staleRef.current) {
       staleRef.current = false;
       router.refresh();
@@ -245,7 +298,13 @@ export function CounterSubmitSheet({
   const rail = RAIL[sheetState];
   const headerNode = (
     <>
-      <SheetRail label={rail.label} code={rail.code} tone={rail.tone} />
+      <SheetRail
+        label={rail.label}
+        code={rail.code}
+        tone={rail.tone}
+        onClose={handleClose}
+        closeLabel={copy.closeAriaLabel}
+      />
       {(sheetState === 'form' || sheetState === 'submitting') && (
         <>
           <p
@@ -317,7 +376,19 @@ export function CounterSubmitSheet({
           body={copy.successBody}
           primaryLabel={copy.successBackButton}
           onPrimary={handleClose}
-        />
+        >
+          {preview !== undefined && filed !== null && (
+            <FiledUpdatePreview
+              filed={filed}
+              context={preview}
+              currentFloor={currentFloor}
+              currentCeiling={currentCeiling}
+              currentTier={currentTier}
+              currentVendor={currentVendor}
+              onWithdrawn={handleClose}
+            />
+          )}
+        </ResultState>
       )}
 
       {sheetState === 'update_pending' && (
@@ -511,6 +582,8 @@ const secondaryButtonStyle: React.CSSProperties = {
 interface ResultStateProps {
   heading: string;
   body: string;
+  /** Drawn between the body and the buttons (the success card preview). */
+  children?: React.ReactNode;
   primaryLabel: string;
   onPrimary: () => void;
   secondaryLabel?: string;
@@ -527,6 +600,7 @@ function ResultState({
   onPrimary,
   secondaryLabel,
   onSecondary,
+  children,
 }: ResultStateProps) {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   useEffect(() => {
@@ -567,6 +641,7 @@ function ResultState({
       >
         {body}
       </p>
+      {children}
       <div
         style={{
           display: 'flex',
@@ -642,5 +717,59 @@ function LockedField({ label, value }: { label: string; value: string }) {
         </svg>
       </dd>
     </dl>
+  );
+}
+
+// The success preview (`more-st-counter_done_m`): the event page's price check
+// card, drawn with the update just filed as its pending price and the
+// viewer's own footer. The API does not return the filer's handle, so the
+// strip falls back to the card's anonymous label.
+function FiledUpdatePreview({
+  filed,
+  context,
+  currentFloor,
+  currentCeiling,
+  currentTier,
+  currentVendor,
+  onWithdrawn,
+}: {
+  filed: FiledUpdate;
+  context: PriceCheckPreviewContext;
+  currentFloor: number;
+  currentCeiling: number | undefined;
+  currentTier: Tier | null;
+  currentVendor: string;
+  onWithdrawn: () => void;
+}) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const withdraw = useWithdrawUpdate({
+    counterId: filed.id,
+    focusRef: cardRef,
+    onDone: onWithdrawn,
+  });
+  return (
+    <PriceCheckCardView
+      testId="counter-sheet-preview"
+      cardRef={cardRef}
+      floor={currentFloor}
+      ceiling={currentCeiling}
+      tier={currentTier}
+      vendor={currentVendor}
+      kind={context.kind}
+      submitter={context.submitter}
+      confirmsCount={context.confirmsCount}
+      disputer={null}
+      disputeFloor={filed.floor}
+      disputeCeiling={filed.ceiling}
+      disputedAt={filed.createdAt}
+      lastAdminActionKind={context.lastAdminActionKind ?? null}
+      footer={
+        <WithdrawFooter
+          state={withdraw.state}
+          canWithdraw={filed.id !== null}
+          onWithdraw={withdraw.withdraw}
+        />
+      }
+    />
   );
 }

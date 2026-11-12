@@ -1493,6 +1493,8 @@ export const CONSUMER_COPY = {
       errorCode: 'ERR',
     },
     heading: 'Update the price.',
+    // The rail's close button (not drawn as text; matches submitPrice's).
+    closeAriaLabel: 'Close',
     // The tier and vendor are drawn as locked fields below, so the line names
     // only the price and where it is listed.
     subtitleWithRange: (floor: number, ceiling: number, vendor: string) =>

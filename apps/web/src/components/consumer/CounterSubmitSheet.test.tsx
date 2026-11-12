@@ -325,3 +325,147 @@ describe('CounterSubmitSheet how you found out', () => {
     expect(footnote.style.textTransform).toBe('');
   });
 });
+
+// The rail as drawn on `more-st-counter_m`: brand tile left, close button
+// right. The close button dismisses exactly as Escape does.
+describe('CounterSubmitSheet rail', () => {
+  it('draws the tile and a labelled close button', () => {
+    renderSheet();
+    expect(screen.getByTestId('sheet-rail-tile')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+
+  it('closes on the close button the same way as on Escape', () => {
+    const viaButton = vi.fn();
+    const { unmount } = render(
+      <CounterSubmitSheet
+        open
+        onClose={viaButton}
+        eventId="evt-1"
+        disputedSubmissionId="sub-1"
+        currentFloor={40}
+        currentVendor="AXS"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    unmount();
+
+    const viaEscape = vi.fn();
+    render(
+      <CounterSubmitSheet
+        open
+        onClose={viaEscape}
+        eventId="evt-1"
+        disputedSubmissionId="sub-1"
+        currentFloor={40}
+        currentVendor="AXS"
+      />,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(viaButton).toHaveBeenCalledTimes(1);
+    expect(viaEscape).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the rail close button on the result states', async () => {
+    renderSheet();
+    fillRequiredFields();
+    submit();
+    await screen.findByRole('heading', { name: 'Update submitted.' });
+    expect(screen.getByTestId('sheet-rail')).toHaveTextContent('Sent');
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+  });
+});
+
+// `more-st-counter_done_m`: the success state draws the price check card with
+// the update just filed as its pending price and the viewer's own footer.
+describe('CounterSubmitSheet success preview', () => {
+  const renderWithPreview = (onClose = vi.fn()) =>
+    render(
+      <CounterSubmitSheet
+        open
+        onClose={onClose}
+        eventId="evt-1"
+        disputedSubmissionId="sub-1"
+        currentFloor={44}
+        currentVendor="Ticketmaster"
+        currentTier="GA"
+        preview={{
+          kind: 'community',
+          submitter: { handle: 'hugh' },
+          confirmsCount: 2,
+        }}
+      />,
+    );
+
+  const stubFiled = (data: Record<string, unknown> | null) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data }), {
+            status: 201,
+          }),
+      ),
+    );
+
+  it('draws the current price, then the update just filed', async () => {
+    stubFiled({ id: 'counter-new', createdAt: new Date().toISOString() });
+    renderWithPreview();
+    fireEvent.change(screen.getByLabelText(/floor/i), {
+      target: { value: '52' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /bought it myself/i }));
+    submit();
+
+    const preview = await screen.findByTestId('counter-sheet-preview');
+    expect(preview).toHaveTextContent('$44');
+    expect(preview).toHaveTextContent('$52?');
+    expect(preview).toHaveTextContent('GA');
+    expect(preview).toHaveTextContent('Ticketmaster');
+    expect(preview).toHaveTextContent('@hugh');
+    expect(preview).toHaveTextContent('2 fans confirmed');
+    expect(preview).toHaveTextContent('Your update');
+    expect(preview).toHaveTextContent('Waiting on review.');
+    expect(
+      screen.getByRole('button', { name: 'Withdraw' }),
+    ).toBeInTheDocument();
+  });
+
+  it('withdraws the update just filed, then closes', async () => {
+    stubFiled({ id: 'counter-new', createdAt: new Date().toISOString() });
+    const onClose = vi.fn();
+    renderWithPreview(onClose);
+    fillRequiredFields();
+    submit();
+    await screen.findByTestId('counter-sheet-preview');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    const calls = vi.mocked(global.fetch).mock.calls;
+    const [url, init] = calls[calls.length - 1] ?? [];
+    expect(String(url)).toMatch(/\/v1\/submissions\/counter-new$/);
+    expect(init).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('draws no Withdraw when the response carries no id', async () => {
+    stubFiled(null);
+    renderWithPreview();
+    fillRequiredFields();
+    submit();
+
+    expect(
+      await screen.findByTestId('counter-sheet-preview'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull();
+  });
+
+  it('draws no card without the preview context', async () => {
+    renderSheet();
+    fillRequiredFields();
+    submit();
+    await screen.findByRole('heading', { name: 'Update submitted.' });
+    expect(screen.queryByTestId('counter-sheet-preview')).toBeNull();
+  });
+});
