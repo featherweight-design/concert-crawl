@@ -183,18 +183,25 @@ export async function pauseCrawling(
   return { ok: true };
 }
 
-// Queues one venue's crawl now (POST /v1/admin/crawl/:id). False when the API
-// refuses it (409 paused, 400 hidden or unverified), so a bulk Re-crawl can
-// name the venues that didn't queue.
-export async function recrawlVenue(id: string): Promise<boolean> {
+// Queues one venue's crawl now (POST /v1/admin/crawl/:id). A failure carries
+// the API's status: 400 (hidden or unverified) and 409 (paused) are the API
+// refusing that venue; anything else is an error, logged as one. A failure
+// before any response (the network) still throws.
+export async function recrawlVenue(
+  id: string,
+): Promise<{ ok: true } | { ok: false; status: number }> {
   const token = await getToken();
   try {
     await apiClient.post(`/v1/admin/crawl/${id}`, token, {});
-    return true;
+    return { ok: true };
   } catch (err: unknown) {
     if (!(err instanceof ApiError)) throw err;
-    console.warn('recrawlVenue: refused', { id, status: err.status });
-    return false;
+    if (err.status === 400 || err.status === 409) {
+      console.warn('recrawlVenue: refused', { id, status: err.status });
+    } else {
+      console.error('recrawlVenue: failed', { id, status: err.status });
+    }
+    return { ok: false, status: err.status };
   }
 }
 

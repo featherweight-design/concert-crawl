@@ -10,22 +10,31 @@ const copy = ADMIN_COPY.states.saveFailed;
  * `07/save-failed`: says what didn't change and what is still saved, with
  * Try again. The control beside it has already snapped back (`useSnapBack`).
  */
+type SaveFailedToastProps = {
+  /** What is still saved, as a sentence, e.g. "Staging is still Beta." */
+  saved: string;
+  onRetry: () => void;
+  retrying?: boolean;
+} & (
+  | {
+      /** The thing that didn't change, e.g. "Crews". */
+      what: string;
+      title?: never;
+    }
+  | {
+      /** In place of "Couldn't change {what}", for an action that isn't a change. */
+      title: string;
+      what?: never;
+    }
+);
+
 export const SaveFailedToast = ({
   what,
   title,
   saved,
   onRetry,
   retrying = false,
-}: {
-  /** The thing that didn't change, e.g. "Crews". */
-  what: string;
-  /** In place of "Couldn't change {what}", for an action that isn't a change. */
-  title?: string;
-  /** What is still saved, as a sentence, e.g. "Staging is still Beta." */
-  saved: string;
-  onRetry: () => void;
-  retrying?: boolean;
-}) => (
+}: SaveFailedToastProps) => (
   <div
     role="alert"
     data-testid="save-failed"
@@ -50,7 +59,7 @@ export const SaveFailedToast = ({
           overflowWrap: 'anywhere',
         }}
       >
-        {title ?? copy.title(what)}
+        {title ?? copy.title(what ?? '')}
       </div>
       <div
         style={{

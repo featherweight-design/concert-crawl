@@ -176,7 +176,7 @@ const DesktopRow = ({
   select,
 }: {
   venue: VenueListRow;
-  select?: { on: boolean; onToggle: () => void };
+  select?: { on: boolean; disabled: boolean; onToggle: () => void };
 }) =>
   select ? (
     <label
@@ -186,7 +186,7 @@ const DesktopRow = ({
       style={{
         ...ROW,
         gridTemplateColumns: SELECT_COLUMNS,
-        cursor: 'pointer',
+        cursor: select.disabled ? 'default' : 'pointer',
         background: select.on
           ? 'color-mix(in srgb, var(--signal) 6%, transparent)'
           : undefined,
@@ -197,6 +197,7 @@ const DesktopRow = ({
           type="checkbox"
           className="sr-only"
           checked={select.on}
+          disabled={select.disabled}
           onChange={select.onToggle}
           aria-label={COPY.selectVenue(venue.name)}
         />
@@ -359,11 +360,13 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
   const { shown, folded } = folds
     ? foldOk(sorted)
     : { shown: sorted, folded: [] };
-  const bulk = useVenueBulk(listed);
-  // No phone board draws Select, so the phone has none.
+  // No phone board draws Select, so the phone has none; switching to it
+  // leaves Select (the hook resets).
+  const bulk = useVenueBulk({ listed, visible: shown, isPhone });
   const selecting = bulk.selecting && !isPhone;
-  const allShown =
-    shown.length > 0 && shown.every((venue) => bulk.selected.has(venue.id));
+  const pickedShown = bulk.picked.length;
+  const allShown = shown.length > 0 && pickedShown === shown.length;
+  const someShown = pickedShown > 0 && !allShown;
 
   if (venues === null) {
     return <CouldntLoad page={COPY.title} onRetry={() => router.refresh()} />;
@@ -489,7 +492,6 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
             {search}
             <button
               type="button"
-              aria-pressed={selecting}
               onClick={selecting ? bulk.stop : bulk.start}
               style={HEAD_BUTTON}
             >
@@ -576,7 +578,13 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
                 <input
                   type="checkbox"
                   className="sr-only"
+                  // Some picked, not all: the mixed state, set on the node
+                  // because React has no prop for it.
+                  ref={(node) => {
+                    if (node) node.indeterminate = someShown;
+                  }}
                   checked={allShown}
+                  disabled={bulk.busy}
                   onChange={() =>
                     bulk.setMany(
                       shown.map((venue) => venue.id),
@@ -585,7 +593,7 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
                   }
                   aria-label={COPY.selectAll}
                 />
-                <SelectBox on={allShown} />
+                <SelectBox on={allShown} mixed={someShown} />
               </label>
             ) : (
               <span />
@@ -617,6 +625,7 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
               {...(selecting && {
                 select: {
                   on: bulk.selected.has(venue.id),
+                  disabled: bulk.busy,
                   onToggle: () => bulk.toggle(venue.id),
                 },
               })}
