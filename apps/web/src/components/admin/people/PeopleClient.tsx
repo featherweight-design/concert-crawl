@@ -251,7 +251,10 @@ export function PeopleClient({ code }: { code: string | null }) {
     setChip(next);
     setPage(1);
   };
-  const clearCode = () => router.replace('/admin/people');
+  const clearCode = () => {
+    setPage(1);
+    router.replace('/admin/people');
+  };
   const clearFilters = () => {
     setTyped('');
     setSearch('');
