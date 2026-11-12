@@ -10,11 +10,17 @@ describe('splitVenueName', () => {
     expect(splitVenueName('The Church Nightclub')?.highlight).toBe('Church');
   });
 
-  it('takes the distinctive run before a generic noun', () => {
-    expect(splitVenueName('Red Rocks Amphitheatre')?.highlight).toBe(
-      'Red Rocks',
+  it('takes the last non-generic word only (addendum-3 B11)', () => {
+    expect(splitVenueName('Red Rocks Amphitheatre')?.highlight).toBe('Rocks');
+    expect(splitVenueName('Red Rocks Amphitheatre')?.before).toBe('Red ');
+    expect(splitVenueName("Cervantes' Masterpiece Ballroom")?.highlight).toBe(
+      'Masterpiece',
     );
     expect(splitVenueName('Mission Ballroom')?.highlight).toBe('Mission');
+  });
+
+  it('treats "box" as a distinctive word', () => {
+    expect(splitVenueName('The Black Box')?.highlight).toBe('Box');
   });
 
   it('takes a single distinctive word whole', () => {

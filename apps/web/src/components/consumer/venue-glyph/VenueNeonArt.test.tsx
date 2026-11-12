@@ -45,6 +45,43 @@ describe('VenueNeonArt', () => {
     expect(backdrop?.querySelector('mask')).toBeNull();
   });
 
+  it('the hero adds the desktop ridge and skyline in the board box; cards do not', () => {
+    const hero = render(
+      <VenueNeonArt glyphKey="redrocks" glyphSize={163} glyphSizeSm={245} />,
+    );
+    const ridge = hero.container.querySelector(
+      'svg[data-venue-backdrop-wide="outdoor"]',
+    );
+    expect(ridge?.getAttribute('viewBox')).toBe('0 0 1200 420');
+    expect(ridge?.getAttribute('class')).toContain('sm:block');
+    // The phone layer steps aside from sm.
+    expect(
+      hero.container
+        .querySelector('[data-venue-backdrop="outdoor"]')
+        ?.getAttribute('class'),
+    ).toContain('sm:hidden');
+    expect(ridge?.querySelectorAll('circle')).toHaveLength(100);
+    hero.unmount();
+
+    const arena = render(
+      <VenueNeonArt glyphKey="ballarena" glyphSize={163} glyphSizeSm={245} />,
+    );
+    const skyline = arena.container.querySelector(
+      'svg[data-venue-backdrop-wide="arena"]',
+    );
+    expect(skyline?.querySelectorAll('rect[stroke]')).toHaveLength(26);
+    // The moon stays.
+    expect(
+      arena.container.querySelector('svg[data-venue-moon]'),
+    ).not.toBeNull();
+    arena.unmount();
+
+    const card = render(<VenueNeonArt glyphKey="redrocks" glyphSize={150} />);
+    expect(
+      card.container.querySelector('[data-venue-backdrop-wide]'),
+    ).toBeNull();
+  });
+
   it('keeps the brick layer for a street venue', () => {
     const { container } = render(
       <VenueNeonArt glyphKey="ogden" glyphSize={196} />,

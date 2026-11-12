@@ -18,13 +18,15 @@ export function VenueHero({ slug, name }: VenueHeroProps) {
         // Measured from `10-venue-art/hero-m-redrocks.jpg`: on a 390 phone the
         // glyph's 24-unit grid is ~140pt wide inside a ~185pt halo, so the svg
         // (28 units across) is 163. The audit's 267/295 is the container, not
-        // the glyph, where the two disagree the specific hero board wins. No
-        // desktop hero board measures differently, so from sm the grid stays at
-        // the 168 it has always drawn (196 svg).
+        // the glyph, where the two disagree the specific hero board wins. From
+        // sm the desktop board (`bp-venue.jpg` / `hero-venue.jpg`) draws the
+        // sign about a quarter larger than the 168 grid it used to get, so the
+        // grid is 210 (245 svg) and the halo discs, which are in glyph units,
+        // grow with it.
         <VenueNeonArt
           glyphKey={glyphKey}
           glyphSize={163}
-          glyphSizeSm={196}
+          glyphSizeSm={245}
           align="endFromSm"
         />
       ) : (
