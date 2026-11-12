@@ -403,6 +403,32 @@ describe('GET /v1/admin/invite-codes/:id/redemptions', () => {
     expect(body.data[0]?.userId).toBe('fan-0');
   });
 
+  it('lists a used_by redeemer once when they also have a redemptions row', async () => {
+    setAuth('admin');
+    const code = await seedCode({
+      maxUses: 5,
+      useCount: 2,
+      usedBy: 'fan-0',
+      usedAt: new Date('2026-09-01T00:00:00Z'),
+    });
+    await testDb.insert(inviteCodeRedemptions).values([
+      {
+        codeId: code.id,
+        userId: 'fan-0',
+        redeemedAt: new Date('2026-09-01T00:00:00Z'),
+      },
+      {
+        codeId: code.id,
+        userId: 'fan-1',
+        redeemedAt: new Date('2026-09-02T00:00:00Z'),
+      },
+    ]);
+    const { json } = await call('GET', `/${code.id}/redemptions`);
+    const body = json.data as InviteCodeRedemptionsResponse;
+    expect(body.total).toBe(2);
+    expect(body.data.map((row) => row.userId)).toEqual(['fan-1', 'fan-0']);
+  });
+
   it('leaves roles null when Clerk fails', async () => {
     setAuth('admin');
     const code = await seedCode();
