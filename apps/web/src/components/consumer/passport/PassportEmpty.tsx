@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { PASSPORT_CTA_GLOW } from './definitions/styles';
 
 const COPY = CONSUMER_COPY.passport;
 
@@ -12,6 +13,7 @@ function FindAShow({ compact }: { compact: boolean }) {
       }`}
       style={{
         background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+        boxShadow: PASSPORT_CTA_GLOW,
       }}
     >
       {COPY.emptyCta}

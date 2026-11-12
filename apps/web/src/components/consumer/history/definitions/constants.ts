@@ -1,5 +1,7 @@
 // Non-copy data for the History surface (#70).
 
+import type { CSSProperties } from 'react';
+
 // The Passport keepsake surface (#85). Still typed nullable so the teaser keeps
 // its no-link branch: a build that ever takes the page away should degrade to a
 // plain stat strip rather than a dead href.
@@ -65,3 +67,20 @@ export const HISTORY_DENSITY_CONFIG: Record<
 // pill).
 export const MY_SHOWS_GRADIENT =
   'linear-gradient(90deg, var(--signal), var(--accent))';
+
+// The hairline under the Watching and Concerts headers (addendum-2
+// `03-stamps/concerts-round-stamps-m`, after "since September 2026";
+// `bp-m-watching_m`): `linear-gradient(90deg, rgba(122,230,255,.6),
+// rgba(255,123,212,.4) 40%, #1F2748 75%)`, 1px. Signal into accent, settling
+// into the border colour, so it reads as a rule and not a second tab.
+export const MY_SHOWS_HEADER_RULE =
+  'linear-gradient(90deg, color-mix(in oklch, var(--signal) 60%, transparent), color-mix(in oklch, var(--accent) 40%, transparent) 40%, var(--border) 75%)';
+
+// Painted as a 1px background along the header's bottom edge, where the plain
+// `border-b` used to sit, so the header's spacing is unchanged.
+export const MY_SHOWS_HEADER_RULE_STYLE: CSSProperties = {
+  backgroundImage: MY_SHOWS_HEADER_RULE,
+  backgroundSize: '100% 1px',
+  backgroundPosition: 'left bottom',
+  backgroundRepeat: 'no-repeat',
+};

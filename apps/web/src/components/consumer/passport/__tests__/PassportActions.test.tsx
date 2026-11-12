@@ -11,6 +11,7 @@ import {
 } from '@testing-library/react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { PassportActions } from '../PassportActions';
+import { PASSPORT_CTA_GLOW } from '../definitions/styles';
 
 const track = vi.hoisted(() => vi.fn());
 
@@ -233,5 +234,23 @@ describe('PassportActions', () => {
     expect(track).toHaveBeenCalledWith('passport_shared', {
       destination: 'save-image',
     });
+  });
+
+  // Addendum-2 `04-passport-order/passport-m|d`: Share… sits on
+  // `0 8px 24px rgba(122,230,255,0.22)`, the signal at 22%.
+  it('lifts Share… on the board glow', async () => {
+    expect(PASSPORT_CTA_GLOW).toBe(
+      '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+    );
+    render(
+      <PassportActions
+        imageUrl="/passport/square"
+        capabilities={{ share: () => Promise.resolve(), canShare: () => true }}
+      />,
+    );
+
+    const button = await readyShareButton();
+    expect(button.style.boxShadow).toContain('0 8px 24px');
+    expect(button.style.boxShadow).toContain('var(--signal) 22%');
   });
 });

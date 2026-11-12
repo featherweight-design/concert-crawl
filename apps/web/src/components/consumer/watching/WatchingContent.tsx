@@ -8,7 +8,10 @@ import { WatchingRow } from './WatchingRow';
 import { WatchingEmpty } from './WatchingEmpty';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
-import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
+import {
+  MY_SHOWS_GRADIENT,
+  MY_SHOWS_HEADER_RULE_STYLE,
+} from '@/components/consumer/history/definitions/constants';
 import { denverTodayUtcMs } from '@/lib/time';
 
 const COPY = CONSUMER_COPY.watching;
@@ -163,7 +166,11 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
       {/* Headline block. An empty list skips it: the empty card's own eyebrow
           and headline say it (B+ `bp-s-empty_watching_m`). */}
       {displayedShows.length > 0 && (
-        <div className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
+        <div
+          data-testid="watching-header"
+          className="mb-5 pb-4 sm:mb-6 sm:pb-5"
+          style={MY_SHOWS_HEADER_RULE_STYLE}
+        >
           <p
             style={{
               fontFamily: 'var(--font-mono)',

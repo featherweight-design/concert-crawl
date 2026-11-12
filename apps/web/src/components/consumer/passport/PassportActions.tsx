@@ -7,6 +7,7 @@ import {
   type ShareCapabilities,
 } from '@/lib/share/destinations';
 import { track } from '@/lib/analytics';
+import { PASSPORT_CTA_GLOW } from './definitions/styles';
 
 const COPY = CONSUMER_COPY.passport;
 
@@ -139,6 +140,7 @@ export const PassportActions = ({
             style={{
               background:
                 'linear-gradient(135deg, var(--signal), var(--accent))',
+              boxShadow: PASSPORT_CTA_GLOW,
             }}
           >
             <svg
