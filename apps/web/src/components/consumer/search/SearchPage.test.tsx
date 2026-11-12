@@ -339,10 +339,12 @@ describe('SearchEmptyState', () => {
     expect(screen.getByText(/Nothing under that name/)).toBeTruthy();
   });
 
-  it('renders browse CTA linking to /events', () => {
-    render(<SearchEmptyState query="thee oh sees" />);
-    const link = screen.getByRole('link', { name: /Browse all shows/i });
-    expect(link.getAttribute('href')).toBe('/events');
+  it('browse CTA runs the caller hook, then goes to /events', () => {
+    const onCtaClick = vi.fn();
+    render(<SearchEmptyState query="thee oh sees" onCtaClick={onCtaClick} />);
+    fireEvent.click(screen.getByRole('button', { name: /Browse all shows/i }));
+    expect(onCtaClick).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/events');
   });
 });
 
