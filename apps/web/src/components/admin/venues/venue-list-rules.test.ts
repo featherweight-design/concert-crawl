@@ -146,6 +146,24 @@ describe('venue list rules', () => {
         consecutiveFailures: 3,
       }),
     ).toBe('Failed: calendar block not found');
+    expect(
+      lineFor(run({ status: 'skipped', reason: 'crawl_paused' }), {
+        crawlPausedAt: '2026-10-28T18:00:00Z',
+        consecutiveFailures: 3,
+      }),
+    ).toBe('Paused · Oct 28');
+  });
+
+  it('reads a partial run as partial, whatever its reason', () => {
+    expect(
+      lineFor(
+        run({
+          status: 'partial',
+          reason: 'no_events_found',
+          eventsInserted: 1,
+        }),
+      ),
+    ).toBe('Partial · 3:04 AM · 1 new');
   });
 
   it('says No runs yet for a venue that never crawled', () => {

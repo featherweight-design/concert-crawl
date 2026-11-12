@@ -58,6 +58,10 @@ const runLine = (run: VenueLatestRun, now: Date): string => {
   const when = runWhen(run.at, now);
   const added =
     run.eventsInserted > 0 ? RUN.newShows(run.eventsInserted) : null;
+  // A run that read shows is its outcome, whatever reason rode along (a
+  // partial run can carry `no_events_found` for one of its pages).
+  if (run.status === 'success') return joined(RUN.success, when, added);
+  if (run.status === 'partial') return joined(RUN.partial, when, added);
   switch (run.reason) {
     case 'page_unchanged':
       return joined(RUN.unchanged, when);
@@ -79,34 +83,29 @@ const runLine = (run: VenueLatestRun, now: Date): string => {
     case null:
       break;
   }
-  switch (run.status) {
-    case 'success':
-      return joined(RUN.success, when, added);
-    case 'partial':
-      return joined(RUN.partial, when, added);
-    case 'failed':
-      return errorLine(run);
-    case 'skipped':
-      return joined(RUN.skipped, when);
-  }
+  return run.status === 'failed' ? errorLine(run) : joined(RUN.skipped, when);
 };
 
 /**
  * The latest-run cell (`04/venues-desktop`): "OK · 3:04 AM · 2 new",
  * "Failed: calendar block not found". A hand-paused venue reads its pause
- * instead, "Paused · Oct 28". HOLD: the board's "Paused by Hugh" needs a name,
- * and the API sends `crawlPausedBy` as a user id; "since Nov 10" on Unchanged
- * and "off-season until Apr 1" have no data yet.
+ * instead, "Paused · Oct 28", and so does an auto-paused one once its nightly
+ * runs are skips for the pause: the failure that paused it is no longer the
+ * latest run. HOLD: the board's "Paused by Hugh" needs a name, and the API
+ * sends `crawlPausedBy` as a user id; the auto-paused row's failure reason,
+ * "since Nov 10" on Unchanged and "off-season until Apr 1" have no data yet.
  */
 export const latestRunLine = (
   venue: VenueListRow,
   now: Date = new Date(),
 ): string => {
   const chips = deriveVenueStatusChips(venue);
+  const pauseSkip = venue.latestRun?.reason === 'crawl_paused';
   if (
     chips.onSite === 'live' &&
-    chips.crawling === 'paused' &&
-    venue.crawlPausedAt !== null
+    venue.crawlPausedAt !== null &&
+    (chips.crawling === 'paused' ||
+      (chips.crawling === 'auto_paused' && pauseSkip))
   ) {
     return RUN.pausedOn(
       formatISODate(venue.crawlPausedAt, DENVER_TIME_ZONE, {
