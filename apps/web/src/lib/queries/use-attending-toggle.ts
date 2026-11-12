@@ -10,13 +10,20 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import type {
   AttendingToggleResponse,
+  HistoryResponse,
   WatchingShow,
 } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
 import { watchingQueryKey } from './use-watching';
 import { historyQueryKey } from './use-history';
 
-export type AttendingToggleInput = { eventId: string; going: boolean };
+export type AttendingToggleInput = {
+  eventId: string;
+  going: boolean;
+  // Undo of a remove: the token DELETE returned, sent with the PUT that puts
+  // back exactly the attendance it removed.
+  restore?: { attendingAt: string; token: string };
+};
 
 export function useAttendingToggle() {
   const queryClient = useQueryClient();
@@ -27,6 +34,7 @@ export function useAttendingToggle() {
     mutationFn: async ({
       eventId,
       going,
+      restore,
     }: AttendingToggleInput): Promise<AttendingToggleResponse> => {
       const token = await getToken();
       if (!token) throw new Error('Not authenticated');
@@ -34,6 +42,7 @@ export function useAttendingToggle() {
         ? apiClient.put<AttendingToggleResponse>(
             `/v1/attending/${eventId}`,
             token,
+            restore ? { restore } : undefined,
           )
         : apiClient.delete<AttendingToggleResponse>(
             `/v1/attending/${eventId}`,
@@ -42,9 +51,26 @@ export function useAttendingToggle() {
     },
     onMutate: async ({ eventId, going }: AttendingToggleInput) => {
       await queryClient.cancelQueries({ queryKey: watchingQueryKey(userId) });
+      await queryClient.cancelQueries({ queryKey: historyQueryKey(userId) });
       const previous = queryClient.getQueryData<WatchingShow[]>(
         watchingQueryKey(userId),
       );
+      const previousHistory = queryClient.getQueryData<HistoryResponse>(
+        historyQueryKey(userId),
+      );
+
+      // Releasing a night takes its row off Concerts at once. Going (a restore
+      // included) is not patched in: the row needs the server's join, so the
+      // settle refetch brings it back in its month slot.
+      if (previousHistory && !going) {
+        queryClient.setQueryData<HistoryResponse>(historyQueryKey(userId), {
+          ...previousHistory,
+          past: previousHistory.past.filter((row) => row.eventId !== eventId),
+          upcoming: previousHistory.upcoming.filter(
+            (row) => row.eventId !== eventId,
+          ),
+        });
+      }
 
       if (previous) {
         queryClient.setQueryData(
@@ -60,9 +86,15 @@ export function useAttendingToggle() {
         );
       }
 
-      return { previous };
+      return { previous, previousHistory };
     },
     onError: (_err, _input, context) => {
+      if (context?.previousHistory !== undefined) {
+        queryClient.setQueryData(
+          historyQueryKey(userId),
+          context.previousHistory,
+        );
+      }
       // Only restore when there was a cache to restore. A cold cache means
       // onMutate wrote nothing, and writing `undefined` back would leave a
       // resolved query with no data for consumers expecting WatchingShow[].

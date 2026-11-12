@@ -47,6 +47,28 @@ export const GOING_COPY = {
     aria: "I'm going! Requires a paid plan.",
     line: 'Needs a paid plan.',
   },
+  // Taking a past night back out (edit-concerts handoff, COPY.md "Remove
+  // confirm"). The title is `button.pastNo` with a question mark.
+  remove: {
+    title: "Didn't make it?",
+    body: "Take it out of your Concerts. Its stamp comes off your Passport, your stats drop it, and your crews won't see you there.",
+    confirm: 'Remove from Concerts',
+    cancel: 'Cancel',
+    keep: 'Keep it',
+    // In flight and failed (addendum 3 boards remove-busy-m, remove-failed-m).
+    busy: 'Removing…',
+    retry: 'Try again',
+    failed: "Couldn't remove it. Check your connection and try again.",
+    footnoteConcerts: 'Changed your mind? Tap I went on the show page.',
+    footnoteShowPage: 'Changed your mind? Tap I went again.',
+  },
+  toast: {
+    removed: (artist: string) => `${artist} is out of your Concerts.`,
+    undo: 'Undo',
+    // New, not in COPY.md (plan D7). Goes through copy-review.
+    saveFailed: "Didn't save. Try again.",
+    undoFailed: "Couldn't undo that. Open the show to add it back.",
+  },
   error: {
     retry: "Didn't save. Tap to retry",
     // Names what survived, so a failed commit doesn't read as losing the watch.

@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { HistoryItem } from './HistoryItem';
 import { HISTORY_COPY } from './definitions/copy';
 import { genreColor } from '@/lib/genre-color';
+
+vi.mock('@/lib/hooks/useIsMobileViewport', () => ({
+  useIsMobileViewport: () => false,
+}));
 
 afterEach(cleanup);
 
@@ -165,6 +169,66 @@ describe('HistoryItem', () => {
 
     expect(screen.getByTestId('history-item').style.borderLeftColor).toBe(
       'var(--border-strong)',
+    );
+  });
+
+  it('fades an Undone row back in, and no other row', () => {
+    const { rerender } = render(<HistoryItem show={SHOW} density="cozy" />);
+    expect(screen.getByTestId('history-item').className).not.toContain(
+      'starting:opacity-0',
+    );
+
+    rerender(<HistoryItem show={SHOW} density="cozy" restored />);
+    expect(screen.getByTestId('history-item').className).toContain(
+      'starting:opacity-0',
+    );
+    expect(screen.getByTestId('history-item').className).toContain(
+      '--motion-base',
+    );
+  });
+
+  it('lets the title and the date wrap instead of truncating', () => {
+    const { container } = render(<HistoryItem show={SHOW} density="cozy" />);
+
+    expect(container.querySelector('.truncate')).toBeNull();
+  });
+
+  it('draws no menu button when the row has no actions', () => {
+    render(<HistoryItem show={SHOW} density="cozy" />);
+
+    expect(screen.queryByTestId('row-menu')).not.toBeInTheDocument();
+  });
+
+  it('puts the menu beside the link, never inside it', () => {
+    const { container } = render(
+      <HistoryItem
+        show={SHOW}
+        density="cozy"
+        menu={{ onRemove: vi.fn(), onShare: vi.fn() }}
+      />,
+    );
+
+    expect(screen.getByTestId('row-menu')).toBeInTheDocument();
+    expect(container.querySelector('a button')).toBeNull();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/events/evt-1');
+    expect(screen.getByTestId('history-item')).toContainElement(
+      screen.getByTestId('row-menu'),
+    );
+  });
+
+  it('gives a dashed-stamp row the upcoming menu', () => {
+    render(
+      <HistoryItem
+        show={SHOW}
+        density="cozy"
+        stamp="dashed"
+        menu={{ onRemove: vi.fn(), onShare: vi.fn() }}
+      />,
+    );
+
+    expect(screen.getByTestId('row-menu')).toHaveAttribute(
+      'data-tense',
+      'upcoming',
     );
   });
 });

@@ -1,0 +1,84 @@
+{
+  "feature": "Edit Concerts PR2 · Concerts row menu and remove",
+  "note": "Handoff design/design_handoff_edit_concerts/screens/ and addendum 3 04-edit-your-concerts: concerts = concerts_m, concerts_menu_d, one-stamp-m; past-menu = past-menu-m (phone sheet), concerts_menu_d (popover); upcoming-menu = upcoming-menu-m, upcoming-menu-d; past-remove = remove_sheet_m (phone), remove_dialog_d (sm, desktop). Hand-walked, not in the sheet: remove-busy-m, remove-failed-m and removed_m / removed-d / removed-no-undo-m (confirming mutates, so the kit never does it), keyboard menu nav, menu-flip-focus-d. Needs the audit user to have at least one past and one upcoming row.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "sm", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "past-menu-sheet",
+      "label": "Past ⋯ opens the phone sheet menu",
+      "widths": ["floor", "phone"],
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"history-rail\"]" },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"past\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        }
+      ]
+    },
+    {
+      "id": "past-remove-sheet",
+      "label": "Past ⋯ → Didn't make it? Remove → confirm sheet",
+      "widths": ["floor", "phone"],
+      "steps": [
+        {
+          "goto": "/history?cell=remove",
+          "wait": "[data-testid=\"history-rail\"]"
+        },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"past\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        },
+        { "clickRole": "menuitem", "name": "^Didn.t make it\\? Remove$" },
+        { "waitDialog": "^Didn.t make it\\?$" }
+      ]
+    },
+    {
+      "id": "past-menu",
+      "label": "Past ⋯ menu (popover)",
+      "widths": ["sm", "desktop"],
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"history-rail\"]" },
+        {
+          "hover": "[data-testid=\"history-item\"]:has([data-tense=\"past\"]) >> nth=0"
+        },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"past\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        }
+      ]
+    },
+    {
+      "id": "past-remove-dialog",
+      "label": "Menu → Didn't make it? Remove → dialog (480)",
+      "widths": ["sm", "desktop"],
+      "steps": [
+        {
+          "goto": "/history?cell=remove",
+          "wait": "[data-testid=\"history-rail\"]"
+        },
+        {
+          "hover": "[data-testid=\"history-item\"]:has([data-tense=\"past\"]) >> nth=0"
+        },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"past\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        },
+        { "clickRole": "menuitem", "name": "^Didn.t make it\\? Remove$" },
+        { "waitDialog": "^Didn.t make it\\?$" }
+      ]
+    },
+    {
+      "id": "concerts",
+      "label": "/history with a ⋯ on every row (last: a full-page cell leaves the next cell's menu out of reach)",
+      "fullPage": true,
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"history-rail\"]" }
+      ]
+    }
+  ]
+}

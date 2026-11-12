@@ -115,6 +115,43 @@ describe('BottomSheet', () => {
     );
   });
 
+  it('keeps the default modal width when no maxWidth is given', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('sm:max-w-md');
+    expect(dialog.className).not.toContain('--sheet-max');
+    expect(dialog.style.getPropertyValue('--sheet-max')).toBe('');
+  });
+
+  it('sets the modal width from maxWidth through a --sheet-max variable', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test" maxWidth={480}>
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('sm:max-w-[var(--sheet-max)]');
+    expect(dialog.className).not.toContain('sm:max-w-md');
+    expect(dialog.style.getPropertyValue('--sheet-max')).toBe('480px');
+  });
+
+  it('draws the close as text when closeText is given, with no X icon', () => {
+    const onClose = vi.fn();
+    render(
+      <BottomSheet open onClose={onClose} title="test" closeText="Cancel">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const close = screen.getByRole('button', { name: 'Cancel' });
+    expect(close.querySelector('svg')).toBeNull();
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('closes when the scrim is clicked', () => {
     const onClose = vi.fn();
     const { container } = render(

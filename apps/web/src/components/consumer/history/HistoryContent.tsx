@@ -18,8 +18,18 @@
 // ordered. The header, the export and the passport stay past-only: nights,
 // venues and spend are all past-tense claims.
 
+import { useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 import type { HistoryResponse, HistoryShow } from '@concert-crawl/types';
 import type { VenueStampVariant } from '@/components/consumer/venue-stamp';
+import { RemoveConfirm } from '@/components/consumer/going/RemoveConfirm';
+import {
+  showAttendanceError,
+  showRemovedToast,
+} from '@/components/consumer/going/lib/attendance-toasts';
+import { ShareSheet } from '@/components/consumer/share/ShareSheet';
+import { toPosterEvent } from '@/lib/share/poster-event';
+import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useHistory } from '@/lib/queries/use-history';
 import { MyShowsTabs } from './MyShowsTabs';
@@ -49,12 +59,19 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
   </main>
 );
 
+type RowActions = { onRemove: () => void; onShare: () => void };
+
 const MonthBuckets = ({
   shows,
   stamp,
+  restoredId,
+  actionsFor,
 }: {
   shows: HistoryShow[];
   stamp: VenueStampVariant;
+  restoredId: string | null;
+  /** The ⋯ for a row. Omitted for a half that has no row actions. */
+  actionsFor?: ((show: HistoryShow) => RowActions) | undefined;
 }) => (
   <>
     {groupHistoryByMonth(shows).map((bucket) => (
@@ -90,6 +107,8 @@ const MonthBuckets = ({
               show={show}
               density={HISTORY_DENSITY}
               stamp={stamp}
+              restored={show.eventId === restoredId}
+              menu={actionsFor?.(show)}
             />
           ))}
         </div>
@@ -106,12 +125,16 @@ const AttendanceSection = ({
   emptyLabel,
   shows,
   stamp,
+  restoredId,
+  actionsFor,
 }: {
   heading: string;
   emptyLabel: string;
   shows: HistoryShow[];
   /** Upcoming nights show the dashed stamp they will become (B+ rule 4). */
   stamp: VenueStampVariant;
+  restoredId: string | null;
+  actionsFor?: ((show: HistoryShow) => RowActions) | undefined;
 }) => (
   <section aria-label={heading} className="flex flex-col gap-2 sm:gap-3">
     <h2
@@ -136,7 +159,12 @@ const AttendanceSection = ({
         {emptyLabel}
       </p>
     ) : (
-      <MonthBuckets shows={shows} stamp={stamp} />
+      <MonthBuckets
+        shows={shows}
+        stamp={stamp}
+        restoredId={restoredId}
+        actionsFor={actionsFor}
+      />
     )}
   </section>
 );
@@ -155,6 +183,64 @@ export const HistoryContent = ({
     enabled: !locked && clientEntitled,
   });
   const history = data ?? initialData;
+
+  const { user } = useUser();
+  const toggle = useAttendingToggle();
+  // The past-night confirm. It stays open while the remove is in flight and
+  // shows the failure in place, and closes only once the server has said yes
+  // (addendum 3: remove-busy-m, remove-failed-m).
+  const [removing, setRemoving] = useState<{
+    show: HistoryShow;
+    status: 'idle' | 'pending' | 'failed';
+  } | null>(null);
+  const [sharing, setSharing] = useState<HistoryShow | null>(null);
+  // The night an Undo just put back, so its row fades in rather than popping.
+  const [restoredId, setRestoredId] = useState<string | null>(null);
+
+  // Takes the night out and raises the toast. Both halves end here, with and
+  // without a confirm: a past night asks first, an upcoming one does not.
+  const release = (show: HistoryShow, onDone: (ok: boolean) => void) => {
+    toggle.mutate(
+      { eventId: show.eventId, going: false },
+      {
+        onSuccess: (result) => {
+          const restore = result.restore ?? null;
+          showRemovedToast({
+            artist: show.artist,
+            onUndo: restore
+              ? () => {
+                  setRestoredId(show.eventId);
+                  toggle.mutate(
+                    { eventId: show.eventId, going: true, restore },
+                    { onError: () => showAttendanceError('undo') },
+                  );
+                }
+              : null,
+          });
+          onDone(true);
+        },
+        onError: () => onDone(false),
+      },
+    );
+  };
+
+  const confirmRemove = (show: HistoryShow) => {
+    setRemoving({ show, status: 'pending' });
+    release(show, (ok) => setRemoving(ok ? null : { show, status: 'failed' }));
+  };
+
+  const actionsFor =
+    (tense: 'past' | 'upcoming') =>
+    (show: HistoryShow): RowActions => ({
+      onRemove:
+        tense === 'past'
+          ? () => setRemoving({ show, status: 'idle' })
+          : () =>
+              release(show, (ok) => {
+                if (!ok) showAttendanceError('save');
+              }),
+      onShare: () => setSharing(show),
+    });
 
   // Server 403 wins outright; the client hook is what decides for a plan the
   // server hasn't rejected (e.g. a stale token that downgraded mid-session).
@@ -211,15 +297,49 @@ export const HistoryContent = ({
             emptyLabel={SECTION_COPY.upcomingEmpty}
             shows={history.upcoming}
             stamp="dashed"
+            restoredId={restoredId}
+            actionsFor={actionsFor('upcoming')}
           />
           <AttendanceSection
             heading={SECTION_COPY.past}
             emptyLabel={SECTION_COPY.pastEmpty}
             shows={history.past}
             stamp="solid"
+            restoredId={restoredId}
+            actionsFor={actionsFor('past')}
           />
         </div>
       </div>
+
+      {removing && (
+        <RemoveConfirm
+          open
+          onClose={() => setRemoving(null)}
+          show={removing.show}
+          footnote="concerts"
+          onConfirm={() => confirmRemove(removing.show)}
+          pending={removing.status === 'pending'}
+          failed={removing.status === 'failed'}
+        />
+      )}
+      {sharing && (
+        <ShareSheet
+          open
+          onClose={() => setSharing(null)}
+          event={toPosterEvent({
+            id: sharing.eventId,
+            artist: sharing.artist,
+            date: sharing.date,
+            showTime: sharing.rawShowTime,
+            venue: {
+              name: sharing.venueName,
+              city: sharing.venueCity,
+              timezone: sharing.venueTimezone,
+            },
+          })}
+          handle={user?.username ?? null}
+        />
+      )}
     </Shell>
   );
 };

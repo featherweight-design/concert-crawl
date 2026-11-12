@@ -1,0 +1,39 @@
+{
+  "feature": "Edit Concerts PR2 · upcoming row menu",
+  "note": "Its own inventory: the kit's cells after a cell that left a menu open could not find their own menu, so the upcoming menus are photographed on a run of their own. Boards: addendum 3 04-edit-your-concerts upcoming-menu-m (phone sheet, sublines) and upcoming-menu-d (popover). Needs the audit user to have at least one upcoming row. The rest of PR2 is edit-concerts-pr2.json.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "sm", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "upcoming-menu-sheet",
+      "label": "Upcoming ⋯ opens the phone sheet menu (sublines)",
+      "widths": ["floor", "phone"],
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"history-rail\"]" },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"upcoming\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        }
+      ]
+    },
+    {
+      "id": "upcoming-menu",
+      "label": "Upcoming ⋯ menu (popover)",
+      "widths": ["sm", "desktop"],
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"history-rail\"]" },
+        {
+          "hover": "[data-testid=\"history-item\"]:has([data-tense=\"upcoming\"]) >> nth=0"
+        },
+        {
+          "click": "[data-testid=\"row-menu\"][data-tense=\"upcoming\"] >> nth=0",
+          "wait": "[role=\"menu\"]"
+        }
+      ]
+    }
+  ]
+}

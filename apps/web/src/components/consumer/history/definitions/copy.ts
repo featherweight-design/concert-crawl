@@ -59,6 +59,22 @@ export const HISTORY_COPY = {
     paid: (amount: number) => `paid $${Math.round(amount)}`,
   },
 
+  // The ⋯ on a row (edit-concerts handoff COPY.md, addendum 3 boards
+  // past-menu-m, upcoming-menu-m, upcoming-menu-d). The sublines show on the
+  // phone sheet only.
+  menu: {
+    trigger: (artist: string) => `More options for ${artist}`,
+    open: 'Open the show page',
+    openSub: "Tickets, lineup and who's going.",
+    share: 'Share this night',
+    shareUpcoming: 'Share this show',
+    shareSub: 'The poster card, ready to send.',
+    remove: "Didn't make it? Remove",
+    removeUpcoming: 'Not going anymore',
+    removeUpcomingSub:
+      'It goes back to Watching. Your crews stop seeing you there.',
+  },
+
   empty: {
     // The B+ empty card's eyebrow (`bp-s-empty_concerts_m`). Uppercased by CSS.
     eyebrow: 'Concerts',

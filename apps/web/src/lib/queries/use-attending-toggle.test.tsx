@@ -12,7 +12,11 @@ import type { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { WatchingShow } from '@concert-crawl/types';
+import type {
+  HistoryResponse,
+  HistoryShow,
+  WatchingShow,
+} from '@concert-crawl/types';
 
 const TEST_USER_ID = 'user_1';
 
@@ -25,13 +29,17 @@ const deleteMock = vi.fn();
 
 vi.mock('@/lib/api', () => ({
   apiClient: {
-    put: (path: string, token: string) => putMock(path, token),
+    // The body only reaches the spy when there is one, so the plain-PUT
+    // assertions below stay on (path, token).
+    put: (path: string, token: string, data?: unknown) =>
+      data === undefined ? putMock(path, token) : putMock(path, token, data),
     delete: (path: string, token: string) => deleteMock(path, token),
   },
 }));
 
 const { useAttendingToggle } = await import('./use-attending-toggle');
 const { watchingQueryKey } = await import('./use-watching');
+const { historyQueryKey } = await import('./use-history');
 
 const show = (over: Partial<WatchingShow> = {}): WatchingShow => ({
   userEventId: 'ue1',
@@ -95,6 +103,65 @@ describe('useAttendingToggle', () => {
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true));
     expect(deleteMock).toHaveBeenCalledWith('/v1/attending/ev1', 'tok');
     expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the restore token as the PUT body for an Undo', async () => {
+    const restore = { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' };
+    const { hook } = setup();
+    hook.result.current.mutate({ eventId: 'ev1', going: true, restore });
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true));
+    expect(putMock).toHaveBeenCalledWith('/v1/attending/ev1', 'tok', {
+      restore,
+    });
+  });
+
+  describe('the Concerts list cache', () => {
+    const historyShow = (eventId: string) => ({ eventId }) as HistoryShow;
+    const seedHistory = (client: QueryClient) =>
+      client.setQueryData<HistoryResponse>(historyQueryKey(TEST_USER_ID), {
+        past: [historyShow('ev1'), historyShow('ev2')],
+        upcoming: [historyShow('ev3')],
+        stats: {} as HistoryResponse['stats'],
+      });
+    const ids = (client: QueryClient) => {
+      const data = client.getQueryData<HistoryResponse>(
+        historyQueryKey(TEST_USER_ID),
+      );
+      return [
+        ...(data?.past ?? []).map((row) => row.eventId),
+        ...(data?.upcoming ?? []).map((row) => row.eventId),
+      ];
+    };
+
+    it('takes a released night off the list at once', async () => {
+      const { client, hook } = setup();
+      seedHistory(client);
+
+      hook.result.current.mutate({ eventId: 'ev1', going: false });
+
+      await waitFor(() => expect(ids(client)).toEqual(['ev2', 'ev3']));
+    });
+
+    it('puts the list back when the release fails', async () => {
+      deleteMock.mockRejectedValue(new Error('nope'));
+      const { client, hook } = setup();
+      seedHistory(client);
+
+      hook.result.current.mutate({ eventId: 'ev1', going: false });
+      await waitFor(() => expect(hook.result.current.isError).toBe(true));
+
+      expect(ids(client)).toEqual(['ev1', 'ev2', 'ev3']);
+    });
+
+    it('does not patch the list when going; the refetch brings the row back', async () => {
+      const { client, hook } = setup();
+      seedHistory(client);
+
+      hook.result.current.mutate({ eventId: 'ev9', going: true });
+      await waitFor(() => expect(hook.result.current.isSuccess).toBe(true));
+
+      expect(ids(client)).toEqual(['ev1', 'ev2', 'ev3']);
+    });
   });
 
   it('optimistically stamps attendingAt without changing watch membership', async () => {

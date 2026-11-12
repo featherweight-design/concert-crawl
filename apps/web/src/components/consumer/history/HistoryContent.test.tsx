@@ -2,7 +2,13 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  act,
+} from '@testing-library/react';
 import type { HistoryResponse, HistoryShow } from '@concert-crawl/types';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
 
@@ -23,6 +29,32 @@ vi.mock('@/lib/queries/use-history', () => ({
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: () => Promise.resolve('tok') }),
+  useUser: () => ({ user: { username: 'huey' } }),
+}));
+
+// The mutation itself is exercised in use-attending-toggle.test.tsx; here the
+// list only has to call it with the right input and react to its callbacks.
+const toggle = vi.hoisted(() => ({
+  mutate: vi.fn(),
+}));
+vi.mock('@/lib/queries/use-attending-toggle', () => ({
+  useAttendingToggle: () => ({ mutate: toggle.mutate }),
+}));
+
+const toasts = vi.hoisted(() => ({
+  showRemovedToast: vi.fn(),
+  showAttendanceError: vi.fn(),
+}));
+vi.mock('@/components/consumer/going/lib/attendance-toasts', () => toasts);
+
+// Below sm the ⋯ goes straight to the confirm, which is what these tests drive.
+vi.mock('@/lib/hooks/useIsMobileViewport', () => ({
+  useIsMobileViewport: () => true,
+}));
+
+vi.mock('@/components/consumer/share/ShareSheet', () => ({
+  ShareSheet: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="share-sheet" /> : null,
 }));
 
 vi.mock('@/lib/history', () => ({
@@ -40,6 +72,7 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
 
 import { HistoryContent } from './HistoryContent';
 import { HISTORY_COPY } from './definitions/copy';
+import { GOING_COPY } from '@/components/consumer/going/definitions/copy';
 
 const show = (eventId: string, date: string): HistoryShow => ({
   eventId,
@@ -348,5 +381,211 @@ describe('HistoryContent', () => {
     const rail = screen.getByTestId('history-rail');
     expect(rail).toHaveTextContent(HISTORY_COPY.calendar.label);
     expect(rail).toHaveTextContent(HISTORY_COPY.passport.headline);
+  });
+});
+
+describe('HistoryContent: taking a night out', () => {
+  const renderWithUpcoming = () =>
+    render(
+      <HistoryContent
+        initialData={{ ...RESPONSE, upcoming: [show('up', `${year}-12-20`)] }}
+        locked={false}
+        scaRegion={false}
+      />,
+    );
+
+  const openMenuFor = (artist: string) => {
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: HISTORY_COPY.menu.trigger(artist),
+      }),
+    );
+  };
+
+  // ⋯, then Didn't make it? Remove, which opens the confirm.
+  const openConfirmFor = (artist: string) => {
+    openMenuFor(artist);
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: HISTORY_COPY.menu.remove }),
+    );
+  };
+
+  // ... and the confirm's own button.
+  const confirmRemoval = (artist: string) => {
+    openConfirmFor(artist);
+    fireEvent.click(
+      screen.getByRole('button', { name: GOING_COPY.remove.confirm }),
+    );
+  };
+
+  afterEach(() => {
+    toggle.mutate.mockReset();
+    toasts.showRemovedToast.mockReset();
+    toasts.showAttendanceError.mockReset();
+  });
+
+  it('gives a menu to past rows and to upcoming rows', () => {
+    renderWithUpcoming();
+
+    expect(screen.getAllByTestId('row-menu')).toHaveLength(3);
+    expect(
+      screen.getByRole('button', {
+        name: HISTORY_COPY.menu.trigger('Artist up'),
+      }),
+    ).toHaveAttribute('data-tense', 'upcoming');
+  });
+
+  it('asks before removing a past night, and Keep it removes nothing', () => {
+    renderWithUpcoming();
+    openConfirmFor('Artist a');
+
+    expect(
+      screen.getByRole('dialog', { name: GOING_COPY.remove.title }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: GOING_COPY.remove.keep }),
+    );
+
+    expect(toggle.mutate).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('releases the night on confirm and keeps the sheet open, reading Removing…, until the server answers', () => {
+    renderWithUpcoming();
+    confirmRemoval('Artist a');
+
+    expect(toggle.mutate).toHaveBeenCalledTimes(1);
+    expect(toggle.mutate.mock.calls[0]?.[0]).toEqual({
+      eventId: 'a',
+      going: false,
+    });
+    expect(
+      screen.getByRole('button', { name: GOING_COPY.remove.busy }),
+    ).toBeDisabled();
+  });
+
+  it('closes the sheet once the remove succeeds', () => {
+    renderWithUpcoming();
+    confirmRemoval('Artist a');
+
+    act(() => {
+      toggle.mutate.mock.calls[0]?.[1].onSuccess({
+        going: false,
+        restore: null,
+      });
+    });
+
+    expect(
+      screen.queryByRole('dialog', { name: GOING_COPY.remove.title }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the failure in the sheet, not a toast, and Try again sends it again', () => {
+    renderWithUpcoming();
+    confirmRemoval('Artist a');
+
+    act(() => {
+      toggle.mutate.mock.calls[0]?.[1].onError();
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      GOING_COPY.remove.failed,
+    );
+    expect(toasts.showAttendanceError).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: GOING_COPY.remove.retry }),
+    );
+    expect(toggle.mutate).toHaveBeenCalledTimes(2);
+  });
+
+  it('takes an upcoming night out with no confirm, and toasts with Undo', () => {
+    renderWithUpcoming();
+    openMenuFor('Artist up');
+    fireEvent.click(
+      screen.getByRole('menuitem', {
+        name: HISTORY_COPY.menu.removeUpcoming,
+      }),
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(toggle.mutate.mock.calls[0]?.[0]).toEqual({
+      eventId: 'up',
+      going: false,
+    });
+
+    const restore = { attendingAt: '2026-12-01T02:00:00.000Z', token: 't2' };
+    toggle.mutate.mock.calls[0]?.[1].onSuccess({ going: false, restore });
+    expect(toasts.showRemovedToast.mock.calls[0]?.[0].artist).toBe('Artist up');
+    expect(toasts.showRemovedToast.mock.calls[0]?.[0].onUndo).toBeTypeOf(
+      'function',
+    );
+  });
+
+  it('raises the save failure as a toast when an upcoming release fails', () => {
+    renderWithUpcoming();
+    openMenuFor('Artist up');
+    fireEvent.click(
+      screen.getByRole('menuitem', {
+        name: HISTORY_COPY.menu.removeUpcoming,
+      }),
+    );
+
+    toggle.mutate.mock.calls[0]?.[1].onError();
+
+    expect(toasts.showAttendanceError).toHaveBeenCalledWith('save');
+  });
+
+  it('opens Share this night from the menu', () => {
+    renderWithUpcoming();
+    openMenuFor('Artist a');
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: HISTORY_COPY.menu.share }),
+    );
+
+    expect(screen.getByTestId('share-sheet')).toBeInTheDocument();
+  });
+
+  it('toasts with Undo that sends the restore token back', () => {
+    renderWithUpcoming();
+    confirmRemoval('Artist a');
+
+    const restore = { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' };
+    toggle.mutate.mock.calls[0]?.[1].onSuccess({ going: false, restore });
+    const { artist, onUndo } = toasts.showRemovedToast.mock.calls[0]?.[0];
+    expect(artist).toBe('Artist a');
+
+    onUndo();
+    expect(toggle.mutate.mock.calls[1]?.[0]).toEqual({
+      eventId: 'a',
+      going: true,
+      restore,
+    });
+  });
+
+  it('toasts without Undo when the server returned no restore', () => {
+    renderWithUpcoming();
+    confirmRemoval('Artist a');
+
+    toggle.mutate.mock.calls[0]?.[1].onSuccess({
+      going: false,
+      restore: null,
+    });
+
+    expect(toasts.showRemovedToast.mock.calls[0]?.[0].onUndo).toBeNull();
+  });
+
+  it('raises the undo failure when the restore fails', () => {
+    renderWithUpcoming();
+    confirmRemoval('Artist a');
+    toggle.mutate.mock.calls[0]?.[1].onSuccess({
+      going: false,
+      restore: { attendingAt: '2026-05-14T02:00:00.000Z', token: 't1' },
+    });
+    toasts.showRemovedToast.mock.calls[0]?.[0].onUndo();
+
+    toggle.mutate.mock.calls[1]?.[1].onError();
+
+    expect(toasts.showAttendanceError).toHaveBeenCalledWith('undo');
   });
 });
