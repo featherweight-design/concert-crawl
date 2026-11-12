@@ -19,6 +19,8 @@ const MIN_ROOM_BELOW = 240;
 const MAX_ROOM_NEEDED = 520;
 /** The sticky desktop site header (`AppHeader`, `h-16`), which a scroll must not tuck the chip under. */
 const SITE_HEADER_HEIGHT = 64;
+/** How near the page must sit to opening's own scroll for it to count as that scroll. */
+const SCROLL_TOLERANCE = 1;
 
 export interface PopoverPlacement {
   top: number;
@@ -147,10 +149,16 @@ export function FilterPopover({
   // When the room below the chip is short, bring the bar up before the first
   // paint so the menu fits below it, rather than flipping above it. Runs
   // before the listener effect below, but the scroll event itself is
-  // dispatched later, so `scrolledToRef` is what keeps it from closing.
+  // dispatched later, so `scrolledToRef` is what keeps it from closing. A
+  // re-run (another chip opened in place) leaves a pending guard alone: the
+  // listener consumes it when its scroll event arrives.
   useLayoutEffect(() => {
-    scrolledToRef.current = null;
-    if (!open || !anchorRect) return;
+    // A reopen with the same rect must not reuse the last open's offset.
+    setShift(null);
+    if (!open || !anchorRect) {
+      scrolledToRef.current = null;
+      return;
+    }
     const popover = popoverRef.current;
     // Under `sm` the popover is `hidden` and the sheet opens instead.
     if (!popover || window.getComputedStyle(popover).display === 'none') {
@@ -216,12 +224,17 @@ export function FilterPopover({
         return;
       }
       // The page scroll opening made: the chip is where the menu placed it.
+      // Consumed on its first match, so a later scroll that happens to land
+      // on the same offset still closes. Within a pixel, for fractional
+      // scroll positions on zoomed or high-density screens.
       const pageScroll = target === document || target === window;
+      const scrolledTo = scrolledToRef.current;
       if (
         pageScroll &&
-        scrolledToRef.current !== null &&
-        window.scrollY === scrolledToRef.current
+        scrolledTo !== null &&
+        Math.abs(window.scrollY - scrolledTo) <= SCROLL_TOLERANCE
       ) {
+        scrolledToRef.current = null;
         return;
       }
       onClose();

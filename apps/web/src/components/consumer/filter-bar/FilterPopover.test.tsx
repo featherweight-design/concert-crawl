@@ -150,6 +150,85 @@ describe('FilterPopover opened low in the viewport', () => {
     expect(popover.style.top).toBe('750px');
     expect(popover.style.maxHeight).toBe('134px');
   });
+
+  const popoverAt = (anchorRect: DOMRect, onClose: () => void, open = true) => (
+    <FilterPopover
+      open={open}
+      title="Where"
+      options={[{ value: 'ogden', label: 'Ogden Theatre' }]}
+      value=""
+      anchorRect={anchorRect}
+      onSelect={vi.fn()}
+      onClose={onClose}
+    />
+  );
+
+  it('keeps the guard when it re-runs before its scroll event arrives', () => {
+    mockScroll(10_000);
+    const onClose = vi.fn();
+    const { rerender } = render(
+      popoverAt(new DOMRect(0, 760, 120, 34), onClose),
+    );
+    // Another chip opens in place, with room enough: no second scroll.
+    rerender(popoverAt(new DOMRect(0, 100, 120, 34), onClose));
+    fireEvent.scroll(window);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('does not reuse the last offset when reopened on the same rect', () => {
+    // The page can scroll 156 once, and no further.
+    mockScroll(156);
+    const onClose = vi.fn();
+    const rect = new DOMRect(0, 760, 120, 34);
+    const { rerender } = render(popoverAt(rect, onClose));
+    expect(screen.getByTestId('filter-popover').style.top).toBe('644px');
+
+    rerender(popoverAt(rect, onClose, false));
+    rerender(popoverAt(rect, onClose));
+    // The rect is the same object, but this open scrolled nothing.
+    expect(screen.getByTestId('filter-popover').style.top).toBe('800px');
+  });
+
+  it('counts its own scroll within a pixel of where it landed', () => {
+    vi.spyOn(window, 'scrollBy').mockImplementation(
+      (options?: ScrollToOptions | number) => {
+        const by = typeof options === 'number' ? options : (options?.top ?? 0);
+        window.scrollY += by + 0.4;
+      },
+    );
+    const onClose = renderLow();
+    // The browser reports the rounded position when the event arrives.
+    window.scrollY = 156;
+    fireEvent.scroll(window);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('consumes the guard, so a later scroll to the same offset closes', () => {
+    mockScroll(10_000);
+    const onClose = renderLow();
+    fireEvent.scroll(window);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.scroll(window);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not scroll when the popover is hidden below `sm`', () => {
+    const scrollBy = mockScroll(10_000);
+    const realGetComputedStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(
+      (element: Element, pseudo?: string | null) => {
+        const style = realGetComputedStyle(element, pseudo);
+        if (element.getAttribute('data-testid') !== 'filter-popover') {
+          return style;
+        }
+        return Object.create(style, { display: { value: 'none' } });
+      },
+    );
+    renderLow();
+    expect(scrollBy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('filter-popover').style.top).toBe('800px');
+  });
 });
 
 describe('getPopoverLeft', () => {
