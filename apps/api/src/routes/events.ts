@@ -43,6 +43,10 @@ import {
   RESALE_VENDOR_VALUES,
   bucketsPresentIn,
   expandBucket,
+  isEventsQueryKey,
+  parseListParam,
+  type EventsQueryKey,
+  type ParseListParamOptions,
   vendorTrustRank,
   type AvailabilityDay,
   type EventsAvailabilityResponse,
@@ -89,56 +93,51 @@ import { idSchema } from '../lib/id-schema.js';
 
 // Where and Vibe are multi-select (Design addendum 2, item 6): a show matches
 // if it is at ANY chosen venue and has ANY chosen vibe, and different filters
-// still AND together. The cap bounds the IN list and the ARRAY[] overlap a
-// hand-rolled query string could otherwise grow without limit.
-export const MAX_LIST_FILTER_VALUES = 25;
-
-// A list param arrives comma-separated (`venueSlug=a,b`), the format the
-// API's other list params already use (`genres` on /v1/artists/suggestions,
-// the admin events tags). A repeated key (`venueSlug=a&venueSlug=b`) reaches
-// the validator as an array and is accepted too, and a single value is the
-// legacy shape every bookmarked URL carries, so it must keep meaning exactly
-// what it did. Blank items are dropped and an empty list means no filter.
-// Items are not trimmed: an unknown vibe falls back to an exact-string genre
-// match, which must see the value as the URL carried it.
-const listParam = (item: z.ZodString) =>
+// still AND together.
+//
+// A list arrives as a repeated key (`venueSlug=a&venueSlug=b`), which Hono
+// hands the validator as an array, or as one value: the legacy shape every
+// bookmarked URL carries. `parseListParam` trims, drops blanks, dedupes and
+// truncates to MAX_LIST_PARAM_VALUES, the same rule the web mapper applies.
+// Venue slugs never contain a comma, so `venueSlug=a,b` is split too; a vibe
+// is never split, because an unknown vibe falls back to an exact raw-genre
+// match and a raw genre can contain a comma. Each item is then validated as
+// the single value always was. An empty list means no filter.
+const listParam = (item: z.ZodString, options: ParseListParamOptions = {}) =>
   z
     .union([z.string(), z.array(z.string())])
     .optional()
-    .transform((raw) =>
-      (raw === undefined ? [] : Array.isArray(raw) ? raw : [raw])
-        .flatMap((value) => value.split(','))
-        .filter((value) => value.trim() !== ''),
-    )
-    .pipe(z.array(item).max(MAX_LIST_FILTER_VALUES));
+    .transform((raw) => parseListParam(raw, options))
+    .pipe(z.array(item));
 
-// Strict on purpose (#1698): a non-strict object strips an unknown key, so a
-// caller that misnames a filter (`filterWhere` for `venueSlug`) gets a 200
-// with the filter silently dropped. Rejecting it makes the mismatch a 400.
-const listEventsSchema = z
-  .object({
-    from: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-    to: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-    venueSlug: listParam(z.string()),
-    search: z.string().max(200).optional(),
-    filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
-    filterVibe: listParam(z.string().max(100)),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
-    offset: z.coerce.number().int().min(0).default(0),
-    // Taste filter (#763 PR 7, §9.3) — presence flag; only '1' is valid so a
-    // tampered value fails validation instead of silently passing unfiltered.
-    taste: z.literal('1').optional(),
-    // "My artists" scope filter (native following, §7.1) — same presence-flag
-    // shape as `taste`, for the same reason.
-    following: z.literal('1').optional(),
-  })
-  .strict();
+// The schema's keys are pinned to EVENTS_QUERY_KEYS by `satisfies`, so a key
+// added on one side without the other fails to compile.
+//
+// Deliberately NOT strict: a 400 on an unknown key would break old PWA
+// bundles and cached URLs. Unknown keys are logged in the handler instead
+// (#1698), and a web test asserts the mapper only emits keys from the list.
+const listEventsSchema = z.object({
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  venueSlug: listParam(z.string(), { splitCommas: true }),
+  search: z.string().max(200).optional(),
+  filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
+  filterVibe: listParam(z.string().max(100)),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  // Taste filter (#763 PR 7, §9.3) — presence flag; only '1' is valid so a
+  // tampered value fails validation instead of silently passing unfiltered.
+  taste: z.literal('1').optional(),
+  // "My artists" scope filter (native following, §7.1) — same presence-flag
+  // shape as `taste`, for the same reason.
+  following: z.literal('1').optional(),
+} satisfies Record<EventsQueryKey, z.ZodType>);
 
 // Shape of the custom claims added by our Clerk JWT template — same contract
 // as middleware/entitlement.ts: only extract `metadata`, loadPlanState owns
@@ -195,6 +194,19 @@ eventsRouter.get(
       taste,
       following,
     } = ctx.req.valid('query');
+
+    // An unknown key is ignored, not rejected (a 400 would break old PWA
+    // bundles and cached URLs), but it is logged: an unknown key here is how
+    // #1698's misnamed filter would show up, silently widening the list.
+    const unknownKeys = Object.keys(ctx.req.queries()).filter(
+      (key) => !isEventsQueryKey(key),
+    );
+    if (unknownKeys.length > 0) {
+      apiLogger.warn(
+        { unknownKeys },
+        'GET /v1/events: unknown query keys ignored',
+      );
+    }
 
     // Resolved up front (getAuth is a local JWT read — no network/DB cost)
     // because the scope gates below need it before any query runs; the
@@ -300,23 +312,18 @@ eventsRouter.get(
     }
 
     if (venueSlug.length > 0) {
-      // OR within the filter: a show at any chosen venue matches. A slug that
-      // resolves to nothing narrows nothing; only when none resolve does the
-      // list short-circuit to empty, as a single unknown slug always did.
-      const matchedVenues = await db
-        .select({ id: venues.id })
-        .from(venues)
-        .where(inArray(venues.slug, venueSlug));
-      if (matchedVenues.length === 0) {
-        return ctx.json({
-          success: true,
-          data: { data: [], total: 0, limit, offset, followingApplied },
-        });
-      }
+      // OR within the filter: a show at any chosen venue matches. The slugs
+      // are already trimmed (parseListParam), so a slug is unknown only if no
+      // venue carries it once trimmed. An unknown slug is ignored while
+      // another slug in the list resolves; when none resolve, the subquery is
+      // empty and so is the list, as a single unknown slug always was.
       conditions.push(
         inArray(
           events.venueId,
-          matchedVenues.map((venue) => venue.id),
+          db
+            .select({ id: venues.id })
+            .from(venues)
+            .where(inArray(venues.slug, venueSlug)),
         ),
       );
     }
