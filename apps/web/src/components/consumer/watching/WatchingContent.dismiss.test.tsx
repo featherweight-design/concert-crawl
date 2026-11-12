@@ -328,14 +328,18 @@ describe('Watching: dismissing a No longer listed show', () => {
     expect(undoToastMock).not.toHaveBeenCalled();
   });
 
-  it('a 409 not_delisted puts the row back and says the show is listed again', async () => {
+  it('a 409 not_delisted never restores the stale row; the refetch brings the fresh one', async () => {
     const post = deferred();
     postMock.mockReturnValue(post.promise);
-    pinRefetch();
+    const refetch = deferred();
+    getMock.mockReturnValue(refetch.promise);
     const client = setup([live, delisted]);
 
-    fireEvent.click(dismissButton());
+    const button = dismissButton();
+    button.focus();
+    fireEvent.click(button);
     await waitFor(() => expect(cachedIds(client)).toEqual(['ev-live']));
+    getMock.mockClear();
 
     await act(async () =>
       post.reject(new ApiError(409, 'Show is still listed', 'not_delisted')),
@@ -346,9 +350,57 @@ describe('Watching: dismissing a No longer listed show', () => {
         id: 'watching-dismiss',
       }),
     );
-    expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll']);
-    expect(screen.getByText(delisted.artist)).toBeTruthy();
+    // The stale delisted row stays out, so its dismiss × never flashes back,
+    // and the list is refetched for the fresh one.
+    expect(cachedIds(client)).toEqual(['ev-live']);
+    expect(screen.queryByTestId('watching-dismiss')).toBeNull();
+    await waitFor(() => expect(getMock).toHaveBeenCalled());
     expect(undoToastMock).not.toHaveBeenCalled();
+
+    // The server's answer: the show is listed again, so a live row.
+    const relisted = makeShow({
+      ...delisted,
+      eventStatus: 'upcoming',
+      eventDelistedAt: null,
+    });
+    await act(async () => refetch.resolve([live, relisted]));
+
+    await waitFor(() =>
+      expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll']),
+    );
+    expect(screen.queryByTestId('watching-dismiss')).toBeNull();
+    // Focus goes back to the returned row's ×, now its remove ×.
+    const removeButton = screen.getByRole('button', {
+      name: COPY.watchingItem.removeAriaLabel(delisted.artist),
+    });
+    await waitFor(() => expect(document.activeElement).toBe(removeButton));
+  });
+
+  it('a failed POST returns focus to the restored row’s ×', async () => {
+    const post = deferred();
+    postMock.mockReturnValue(post.promise);
+    pinRefetch();
+    setup([live, delisted, later]);
+
+    const button = dismissButton();
+    button.focus();
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.queryByText(delisted.artist)).toBeNull());
+    // While the POST is out, focus sits on the next row.
+    expect(
+      document
+        .querySelector('[data-watching-event="ev-later"]')
+        ?.contains(document.activeElement),
+    ).toBe(true);
+
+    await act(async () => post.reject(new ApiError(500, 'boom')));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(COPY.dismiss.failed, {
+        id: 'watching-dismiss',
+      }),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(dismissButton()));
   });
 
   it('a failed Undo hides the row again and offers another go', async () => {

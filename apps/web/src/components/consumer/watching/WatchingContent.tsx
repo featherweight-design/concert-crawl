@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { WatchingShow } from '@concert-crawl/types';
 import { useWatching } from '@/lib/queries/use-watching';
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle';
@@ -14,18 +14,18 @@ import {
 } from '@/components/consumer/history/definitions/constants';
 import { denverTodayUtcMs } from '@/lib/time';
 import { toast } from 'sonner';
-import { ApiError } from '@/lib/api';
-import { useWatchingDismiss } from '@/lib/queries/use-watching-dismiss';
+import {
+  isStillListed,
+  useWatchingDismiss,
+} from '@/lib/queries/use-watching-dismiss';
 import { showUndoToast } from '@/components/consumer/going/lib/attendance-toasts';
+import { FOCUSABLE } from '@/lib/hooks/useFocusTrap';
 
 const COPY = CONSUMER_COPY.watching;
 
 // One dismiss toast at a time: a new one replaces the last rather than
 // stacking (addendum 3, ruling 7).
 const DISMISS_TOAST_ID = 'watching-dismiss';
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface WatchingContentProps {
   initialShows: WatchingShow[];
@@ -133,20 +133,50 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(
     new Set(),
   );
-  // Shows whose dismiss POST is in flight. They stay out of the list until it
-  // settles, so a refetch that lands mid-flight can't bring the row back, and
-  // the ref turns away a second tap before React has re-rendered.
-  const [pendingDismissIds, setPendingDismissIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const pendingDismissRef = useRef<Set<string>>(new Set());
+  // The No longer listed dismiss. The row leaves the list at once
+  // (useWatchingDismiss), the Undo toast waits for the server's yes, and any
+  // failure puts the row back. Each call is awaited on its own, so two quick
+  // dismisses each get their toast.
+  const { dismiss, isHiding } = useWatchingDismiss();
   const displayedShows = shows.filter(
-    (sv) =>
-      !pendingRemoveIds.has(sv.eventId) && !pendingDismissIds.has(sv.eventId),
+    (sv) => !pendingRemoveIds.has(sv.eventId) && !isHiding(sv.eventId),
   );
+  // The callbacks below read the list through this ref, so they stay stable
+  // across renders instead of rebuilding with every new array.
+  const displayedRef = useRef(displayedShows);
+  displayedRef.current = displayedShows;
 
   const mainRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  // A failed dismiss owes focus back to its row's ×, once that row is drawn
+  // again. `from` is where the dismiss sent focus: it is only taken back from
+  // there, never from somewhere the viewer has since moved it.
+  const focusBackRef = useRef<{
+    eventId: string;
+    from: Element | null;
+  } | null>(null);
+
+  const takeFocusBack = useCallback(() => {
+    const owed = focusBackRef.current;
+    if (!owed) return;
+    const active = document.activeElement;
+    if (active !== owed.from && active !== document.body && active !== null) {
+      focusBackRef.current = null;
+      return;
+    }
+    const control = mainRef.current
+      ?.querySelector(`[data-watching-event="${owed.eventId}"]`)
+      ?.querySelector<HTMLElement>('[data-row-action]');
+    if (!control) return;
+    focusBackRef.current = null;
+    control.focus();
+  }, []);
+
+  // The row comes back on a later render: a rollback, or the refetch after a
+  // 409. Every commit checks whether the owed focus can be paid now.
+  useEffect(() => {
+    takeFocusBack();
+  });
 
   const handleRemove = useCallback(
     (userEventId: string) => {
@@ -166,34 +196,27 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
     [shows, toggle, pendingRemoveIds],
   );
 
-  // The No longer listed dismiss. The row leaves the list at once
-  // (useWatchingDismiss), the Undo toast waits for the server's yes, and any
-  // failure puts the row back. Each call is awaited on its own, so two quick
-  // dismisses each get their toast.
-  const dismiss = useWatchingDismiss();
-
   // The tapped × is about to unmount with its row, so focus goes to the next
   // row's first control, or to the list heading when it was the last row, or
-  // to the page when the list is about to be empty.
-  const moveFocusFrom = useCallback(
-    (eventId: string) => {
-      const at = displayedShows.findIndex((sv) => sv.eventId === eventId);
-      const next = at >= 0 ? displayedShows[at + 1] : undefined;
-      const nextControl = next
-        ? mainRef.current
-            ?.querySelector(`[data-watching-event="${next.eventId}"]`)
-            ?.querySelector<HTMLElement>(FOCUSABLE)
-        : null;
-      if (nextControl) {
-        nextControl.focus();
-      } else if (displayedShows.length > 1 && headerRef.current) {
-        headerRef.current.focus();
-      } else {
-        mainRef.current?.focus();
-      }
-    },
-    [displayedShows],
-  );
+  // to the page when the list is about to be empty. Returns where it went.
+  const moveFocusFrom = useCallback((eventId: string): Element | null => {
+    const rows = displayedRef.current;
+    const at = rows.findIndex((sv) => sv.eventId === eventId);
+    const next = at >= 0 ? rows[at + 1] : undefined;
+    const nextControl = next
+      ? mainRef.current
+          ?.querySelector(`[data-watching-event="${next.eventId}"]`)
+          ?.querySelector<HTMLElement>(FOCUSABLE)
+      : null;
+    if (nextControl) {
+      nextControl.focus();
+    } else if (rows.length > 1 && headerRef.current) {
+      headerRef.current.focus();
+    } else {
+      mainRef.current?.focus();
+    }
+    return document.activeElement;
+  }, []);
 
   const restore = useCallback(
     async (show: WatchingShow) => {
@@ -215,38 +238,34 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
   );
 
   const handleDismiss = useCallback(
-    async (show: WatchingShow) => {
-      if (pendingDismissRef.current.has(show.eventId)) return;
-      pendingDismissRef.current.add(show.eventId);
-      moveFocusFrom(show.eventId);
-      setPendingDismissIds((prev) => new Set([...prev, show.eventId]));
-      try {
-        await dismiss({ show, dismissed: true });
-        showUndoToast({
-          id: DISMISS_TOAST_ID,
-          message: COPY.dismiss.hidden(show.artist),
-          undoLabel: COPY.dismiss.undo,
-          onUndo: () => void restore(show),
-        });
-      } catch (err) {
-        const stillListed =
-          err instanceof ApiError &&
-          err.status === 409 &&
-          err.code === 'not_delisted';
-        toast.error(
-          stillListed ? COPY.dismiss.stillListed : COPY.dismiss.failed,
-          { id: DISMISS_TOAST_ID },
-        );
-      } finally {
-        pendingDismissRef.current.delete(show.eventId);
-        setPendingDismissIds((prev) => {
-          const next = new Set(prev);
-          next.delete(show.eventId);
-          return next;
-        });
-      }
+    (show: WatchingShow) => {
+      // A second tap before React has re-rendered finds the POST already out.
+      if (isHiding(show.eventId)) return;
+      focusBackRef.current = null;
+      const request = dismiss({ show, dismissed: true });
+      const movedTo = moveFocusFrom(show.eventId);
+      request.then(
+        () =>
+          showUndoToast({
+            id: DISMISS_TOAST_ID,
+            message: COPY.dismiss.hidden(show.artist),
+            undoLabel: COPY.dismiss.undo,
+            onUndo: () => void restore(show),
+          }),
+        (err: unknown) => {
+          // The row is coming back: at once from the rollback, or with the
+          // refetch after a 409. Its × gets focus back when it lands, and the
+          // error toast (a live region) says why it is still there.
+          focusBackRef.current = { eventId: show.eventId, from: movedTo };
+          takeFocusBack();
+          toast.error(
+            isStillListed(err) ? COPY.dismiss.stillListed : COPY.dismiss.failed,
+            { id: DISMISS_TOAST_ID },
+          );
+        },
+      );
     },
-    [dismiss, restore, moveFocusFrom],
+    [dismiss, isHiding, restore, moveFocusFrom, takeFocusBack],
   );
 
   const { drops, spikes, soldOut } = countChanges(displayedShows);
@@ -279,7 +298,9 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
           ref={headerRef}
           tabIndex={-1}
           data-testid="watching-header"
-          className="mb-5 border-b border-transparent pb-4 outline-none sm:mb-6 sm:pb-5"
+          // Focus lands here when a dismissed row was the last one, so a
+          // keyboard user sees where it went.
+          className="mb-5 rounded-sm border-b border-transparent pb-4 outline-none focus-visible:ring-2 focus-visible:ring-signal sm:mb-6 sm:pb-5"
           style={MY_SHOWS_HEADER_RULE_STYLE}
         >
           <p
@@ -384,7 +405,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
                     <WatchingRow
                       show={show}
                       onRemove={handleRemove}
-                      onDismiss={(dismissed) => void handleDismiss(dismissed)}
+                      onDismiss={handleDismiss}
                     />
                   </div>
                 ))}

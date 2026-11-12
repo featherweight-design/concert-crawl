@@ -5,7 +5,8 @@ import { useEffect } from 'react';
 // Kept identical to BottomSheet's selector so the two traps can't drift.
 // :not(:disabled) excludes native controls that can't actually receive focus —
 // otherwise a disabled control at either end makes the trap refuse to wrap.
-const FOCUSABLE =
+// Exported as the one selector for "the next thing focus can land on".
+export const FOCUSABLE =
   'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 /**
