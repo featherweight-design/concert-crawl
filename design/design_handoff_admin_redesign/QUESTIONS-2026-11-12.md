@@ -147,7 +147,7 @@ Minor 21, e.g.: what "Weekly read" is; resolved_by, and "on the roadmap"; the re
 
 Minor 8, e.g.: how long the New pill stays; which tab holds the reply notice; the sender's name; what happens when a fan has turned email off; what the Phase 6 flag gates.
 
-**Other (no PR).** Minor 3: the Invite codes interim row (decision 14 keeps one; the note says it was removed); judgment calls in merged PRs; the #175 proposals (desktop feed fields; drop Save debug HTML: keep it until eng confirms).
+**Other (no PR).** Minor 2: judgment calls in merged PRs; the #175 proposals (desktop feed fields; drop Save debug HTML: keep it until eng confirms).
 
 ### Already answered (dropped)
 - Phone versions of desktop-only dialogs and panels (Crawl all, snooze, the 7 evidence panels, Add a show, Past shows, Matched and Not artists, Reject, Make admin, invite code panels, flag dialogs, feedback panels): plan decision 1. Phone run detail is the addendum's run-detail-sheet.
@@ -161,7 +161,9 @@ Minor 8, e.g.: how long the New pill stays; which tab holds the reply notice; th
 - Rows the audit already marked fine: 3b save failed, 5a loading, 5b loading and none, 5c named people, 5d empty day.
 - Copy for the lane's copy-review, not questions: the banned words Tools, history, Saved, submission and Following, and "Not 96"; card vs panel label mismatches (Re-crawl now, Move to, Use $45+, Approve 8); the two Paused chip texts; latest-line formats; subtitle mismatches; "like Levitt and Meow Wolf"; a design note shown as copy.
 
-**Totals: 399 items audited (382 board rows + 17 hand-written), 75 blockers, 265 minor, 59 dropped.**
+**Totals: 399 items audited (382 board rows + 17 hand-written), 75 blockers, 257 minor, 67 dropped.**
+
+Answered in #178: 8 rows removed (items 7, 8, 9, 10, 29), 5 trimmed to their open part. Still open on purpose: the #169 BottomSheet and sr-only / 720px rows (b1 plan rows 4, 9, 10) and the user-menu popover anchor, none of which #178 covers.
 
 ## Admin 1c Health (b1, boards 03/health-desktop, tiles-in-each-state)
 1. "The site" tile/panel: production smoke, staging e2e, Sentry errors (24h) have no API source; plan says "emails only, record the gap". Hide rows, build a source (adm2), or show "no data"? (data/backend call)
@@ -170,10 +172,8 @@ Minor 8, e.g.: how long the New pill stays; which tab holds the reply notice; th
 4. "Quiet on purpose": Fiddler's Green "Off-season until ..." needs 3c's crawl_paused_reason + date. Before 3c: omit that case or file under Paused? (sequencing call)
 5. Crawl tile "Didn't run" and "Running now ... about 20 min left": needs 1d batches API; estimate basis undrawn.
 6. "Done for you overnight": 4 phrasings drawn; system actions venue.crawl_blocked, event.auto_cancel.stale, artist.match.auto have no drawn line.
-7. Header "Open Needs you · 14": same count as the held badge sum (addendum 2).
 
 ## Other
-- Invite codes and Posters URL-only until 5b once #169 merges (undrawn interim row removed). Hugh: OK, or pull the People route forward?
 - Merged PRs with judgment calls (listed under "Merged admin PRs" below): fix back to board or confirm.
 
 ## From the #175 readiness audit (verdict Orange -> Yellow; all 4 phone gaps closed)
@@ -227,7 +227,7 @@ Field mapping fixes: calendar page is website_url, not url; Source save must kee
 | board | what it says | the question |
 |---|---|---|
 | needs-you-desktop, needs-you-mobile | Filters: All, Shows, Venues, Artists, Prices, Bugs (6 + 3 + 2 + 2 + 1 = 14) | There's no filter for EVENT (low-confidence) items, and 14 only adds up if EVENT counts under Shows. Is EVENT under Shows, and is Price check under Prices? 2a has 10 kinds but only 5 filters, and that mapping is drawn nowhere. |
-| needs-you-mobile vs README rule 8 vs COPY.md | Kind label `PRICE CHECK` on the card and the panel | README rule 8 lists the labels as VENUE, SHOW, ARTIST, BUG, FLAG. COPY.md lists SHOW, VENUE, ARTIST, EVENT, PRICES, BUG. The boards also draw PRICE CHECK and EVENT. Which set is canonical, and does FLAG still exist? |
+| needs-you-mobile vs README rule 8 vs COPY.md | Kind label `PRICE CHECK` on the card and the panel | README rule 8 lists the labels as VENUE, SHOW, ARTIST, BUG, FLAG. COPY.md lists SHOW, VENUE, ARTIST, EVENT, PRICES, BUG. The boards also draw PRICE CHECK and EVENT. Which set is canonical? (#178 item 29 keeps FLAG, in info tone.) |
 | needs-you-mobile | `PRICE CHECK · In 1 day` (Thu Nov 12) is drawn third, below `SHOW · In 3 days` (Sat Nov 14) | This breaks "soonest for fans first" (2a rank.ts). Is the board order wrong, or does Price check rank by something else? |
 | needs-you-mobile vs needs-you-desktop | Thu Nov 12 is `Tomorrow` on the show card and `In 1 day` on the Price check card | Which wording applies, and what are the `when.*` rules (Tomorrow / In N days / a date beyond some N)? |
 | needs-you-desktop | `Tomorrow` and `In 1 day` are pink; `In 3 days`, `In 4 days` and `In 11 days` are grey | What's the cut-off for the pink "urgent" when line? It isn't specified anywhere. |
@@ -246,7 +246,7 @@ Field mapping fixes: calendar page is website_url, not url; Source save must kee
 | snooze-menu | A desktop popover at 380 wide | The phone version (a sheet?) isn't drawn. |
 | all-clear | `Last night's crawl 20 of 21 OK`, `Next crawl Tonight, 3 AM`, `Snoozed 2 venues off-season`, `Open Health` | 2a doesn't supply this. Which API feeds it (1c Health)? Is "Snoozed" only off-season venues, or every snoozed item? What if snoozed items aren't off-season? |
 | all-clear | Mobile only | The desktop all-clear isn't drawn. Is a filter with no items (for example Bugs 0) the same state or a different one? |
-| couldnt-load | `The API didn't answer in time. Nothing you decided is lost.` with Try again and Open Health | Is that line used for every failure (500, 403, network) or only timeouts? The mobile couldn't-load isn't drawn. What does the badge show when the count call fails? (The board shows 14.) |
+| couldnt-load | Try again and Open Health (the line itself is settled by #178 item 10) | The mobile couldn't-load isn't drawn. What does the badge show when the count call fails? (The board shows 14.) |
 | 07/loading-needs-you | The skeleton is a table: one wide pill plus 4 pills, rows with an icon square, two lines and a chip | Rule 9 says "the page's final shape", but the real page is 6 filter pills and stacked cards (plus an evidence panel on desktop). Which shape should the skeleton follow? The mobile skeleton is only the generic `loading-any-list-on-mobile`. |
 | needs-you-desktop | The desktop open state has the evidence panel open with the Fiddler card selected | Is the desktop default with nothing selected (no `?item=`) blank, or does it open the first item? Not drawn. |
 | needs-you-desktop / mobile | Card answers: show-dropped is `Postponed`, `Cancelled`, `Still on` (none highlighted) | The panel draws `Still on` as the suggested primary, plus a fourth answer `Moved…`. Does the card show the suggestion and the order from the panel? Rule 1 says two or three answers, so is it right that the card drops Moved…? |
@@ -535,7 +535,7 @@ Read-only audit of the `07-people-flags-operations` boards and screens against t
 | people | Column JOINED: "Oct 2 · code REDROCKS", "Nov 3 · poster HIDIVE", "Apr 23 · founder", "Jun 1 · test" | "code" vs "poster" has no source, because a poster is not stored as a separate thing; a code is a code. And what are "founder" and "test" as join sources? (Is founder the founder window? Is test the Test account tag?) |
 | people | Column WATCHING per row, plus the filter counts Everyone 211 / Beta 38 / Promoter 0 / Admin 2 / Test accounts 3 | The list is paged straight from Clerk `getUserList`, which can't filter or count by `publicMetadata.role`, and has no Watching count or test flag. Is a full Clerk scan joined to the DB acceptable at this size, or do we need a mirrored role column? |
 | people | Tab "People 214", but chip "Everyone 211", and footer "7 of 214" | The counts disagree. If Everyone leaves out the 3 test accounts ("Left out of counts"), which number do the tab and the footer show? |
-| people | "Search by handle" | Clerk's `query` searches email and username, not `user_profiles.handle`. Should search run on our DB? Also, how does a person with no handle (`handle` is nullable) show in the list and in search? This is undrawn, and rule 7 forbids showing ids. |
+| people | "Search by handle" | Clerk's `query` searches email and username, not `user_profiles.handle`. Should search run on our DB? Also, how is a person with no handle (`handle` is nullable) found in search? (How they show in the list is #178 item 29: first name, else @handle, else the masked email.) |
 | people | "newest activity first" | Today's sort is `-created_at`. Sorting by activity needs the last-active source above. |
 | people-mobile | Chips Everyone / Beta / Admin / Test, with no Promoter; desktop says "Test accounts" | Is dropping Promoter on the phone intended? |
 | person | "Beta since Oct 2, set by @hugh" | Only derivable from `audit_log` `user.role.update`. What shows for someone whose role was set before the audit log existed, or by Clerk directly? Undrawn. |
@@ -661,15 +661,16 @@ From the design-review sections of the admin PRs (#169 shell, #170 primitives, #
 
 | PR | board | what was built | the question |
 | --- | --- | --- | --- |
-| #169 | 07/more-mobile | Health and Operations show plain grey counts, not the drawn yellow pills (README rule 1: one badge in admin) | [Design] Confirm plain counts, or redraw the More rows. |
 | #169 | 07/user-menu-mobile | `components/pwa/BottomSheet` (close X, no drag handle) until 0b's `AdminSheet` replaces it | [Design] Confirm the interim sheet. |
-| #169 | 07/more-mobile | The More-row detail lines (for example "Codes and who joined") were written by the lane; the board gives no data source | [Design] Confirm or replace each detail line. |
 | #169 | 01/desktop-sidebar, mobile-one-nav | sr-only labels added; the phone shell runs to 720px (plan decision 16) | [Design] Confirm. |
-| #169 | user menu | An admin with no first name shows the email prefix | [Design] What should a nameless admin show? |
 | #169 | 07/staging-admin-feature-flags, production-admin-feature-flags | Environment badge at topbar right; breadcrumbs use "/" as in 07/not-found; PRODUCTION checked by hand | [Design] Confirm badge placement and the "/" separator. |
-| #170 | 01/venues-list-status-columns | "robots.txt disallows" has no drawn chip, so it takes the danger tone of the other stopped states; Draft waits for 3c | [Design] Draw the robots.txt disallows chip, or confirm the danger tone. |
-| #170 | 01/venues-list-status-columns | Paused shows without a reason until 3c; a hand pause after a failure streak reads as auto-paused | [Design] Confirm both interim readings. |
-| #170 | 07/not-found | Generic admin not-found strings ("That page isn't here", Back to Health) written by the lane; page-specific wording comes with each page's `notFound()` | [Design] Confirm the generic fallback. |
-| #170 | primitives | FLAG tone, ConfirmDialog DOM order, and skeleton geometry were approximated | [Design] Confirm, or give exact values. |
+| #170 | primitives | ConfirmDialog DOM order was approximated (FLAG tone and skeleton heights: answered in #178 item 29) | [Design] Confirm, or give exact values. |
 | #171 | tokens | `--shadow-lg` mapped to `--shadow-strong` | [Design] Confirm the mapping. |
 | #152 | invite_poster admin-posters-mobile | 640px is drawn as the phone layout (the CSS breakpoint is 720px; the board has no tablet) | [Design] Confirm 640 uses the phone layout. |
+
+## Admin: open from #178 (b1)
+
+| board / PR | what it says | the question |
+| --- | --- | --- |
+| #178 item 29, FLAG kind label | "Info tone, like VENUE and SHOW." | [Design] VENUE is drawn in warning (#FFD27A) and SHOW in accent (#FF7BD4), so they differ. Which colour is FLAG? Built as `--signal` for now. Nothing renders a FLAG label until 2b, so it needs an answer before 2b. |
+| 07/user-menu-desktop (#169) | The popover is drawn without its anchor (the board crop shows only the menu). | [Design] Where does the desktop user menu open from? Built: above the sidebar's user card, 332px wide, as the board's width. |
