@@ -1493,6 +1493,11 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
   it('archives every other pending counter against the same parent in the same transaction', async () => {
     setAdminAuth();
     const { event, parent, counter } = await seedContest();
+    // Filed a minute after seedContest's counter. Both start with one
+    // confirmation, and the leading counter is then decided by filing time at
+    // MILLISECOND precision (filedAtMs, to match compareLeadingCounters), with
+    // the random id as the last tie-break. Two sequential inserts can share a
+    // millisecond, which made `counter` win only some of the time.
     const secondCounter = await seedPriceSubmission(event.id, 'second-fan', {
       tier: 'GA',
       vendor: 'AXS',
@@ -1500,6 +1505,7 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       priceMin: '60',
       status: 'pending',
       disputedSubmissionId: parent.id,
+      createdAt: new Date(counter.createdAt.getTime() + 60_000),
     });
 
     const res = await app.request(
