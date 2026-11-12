@@ -1520,7 +1520,6 @@ export function EventDetailPriceBlock({
             ? { handle: event.priceSubmitterHandle }
             : null
         }
-        liveSubmittedAt={event.priceObservedAt ?? new Date().toISOString()}
         confirmsCount={event.priceConfirmsCount ?? 0}
         disputer={counter.submitter}
         disputeFloor={counter.floor}
@@ -1529,6 +1528,9 @@ export function EventDetailPriceBlock({
           : {})}
         disputedAt={counter.submittedAt}
         counterSubmissionId={counter.id}
+        // B+ B9: the footer follows the server's call, never a client guess.
+        viewerAction={counter.viewerAction}
+        viewerCounterId={counter.viewerCounterId}
         lastAdminActionKind={counter.lastAdminActionKind ?? null}
         eventId={event.id}
         disputedSubmissionId={counter.parentSubmissionId}

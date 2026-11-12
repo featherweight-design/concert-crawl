@@ -1,18 +1,23 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { CounterSubmitSheet } from './CounterSubmitSheet';
 import {
   ArrowGlyph,
   Eyebrow,
   PendingTrustPill,
 } from '@/components/consumer/glyphs';
+import { RowMetaChip } from '@/components/consumer/event-row/RowMetaChip';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import type { Tier } from '@concert-crawl/types';
+import type { PriceCheckViewerAction, Tier } from '@concert-crawl/types';
 
 const copy = CONSUMER_COPY.disputedPriceCard;
 
-// ── Helper ────────────────────────────────────────────────────────
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
+
+// ── Helpers ───────────────────────────────────────────────────────
 
 const formatTimeAgo = (isoDate: string): string => {
   const diffMs = Date.now() - new Date(isoDate).getTime();
@@ -23,10 +28,15 @@ const formatTimeAgo = (isoDate: string): string => {
   return `${Math.floor(diffHours / 24)}d ago`;
 };
 
+const formatAmount = (floor: number, ceiling?: number): string =>
+  ceiling != null
+    ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
+    : `$${Math.round(floor)}`;
+
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface DisputedPriceCardProps {
-  // Live price (current corroborated price)
+  // The current price: it stays the price while the check is open.
   floor: number;
   ceiling?: number;
   /** The checked price's tier; its label is left out when unknown. */
@@ -34,23 +44,30 @@ export interface DisputedPriceCardProps {
   vendor: string;
   kind: 'community' | 'boxoffice';
   submitter: { handle: string } | null;
-  liveSubmittedAt: string;
   confirmsCount: number;
 
-  // The pending counter-submission
+  // The LEADING pending update (B9a): the amount drawn after the arrow.
   disputer: { handle: string } | null;
   disputeFloor: number;
   disputeCeiling?: number;
   disputedAt: string; // ISO date
 
-  // The counter-submission ID — used as the deep-link anchor target for the
-  // coral CounterPointerLink rendered inside PendingCardB.
+  // The leading counter's ID: the deep-link anchor the CounterPointerLink in
+  // PendingCardB points at.
   counterSubmissionId?: string | null;
 
-  // Engagement-signal pill. When 'defer', a quiet warning chip near the
-  // dashed update strip surfaces CONSUMER_COPY.priceRegion.adminDeferPillLabel
-  // ("Admin requested more info"). Sourced from
-  // EventDetailResponse.counterSubmission.lastAdminActionKind.
+  /**
+   * What this viewer can do, decided by the server so the card never guesses:
+   * 'submit_update' draws "Submit an update", 'none' (the checked price's
+   * submitter) draws no button, 'withdraw' draws "Withdraw" for
+   * `viewerCounterId`.
+   */
+  viewerAction: PriceCheckViewerAction;
+  viewerCounterId: string | null;
+
+  // Engagement-signal pill. When 'defer', a chip under the meta line surfaces
+  // CONSUMER_COPY.priceRegion.adminDeferPillLabel ("Admin requested more
+  // info"). Sourced from counterSubmission.lastAdminActionKind.
   lastAdminActionKind?: 'defer' | null;
 
   // For CounterSubmitSheet
@@ -67,6 +84,57 @@ export interface DisputedPriceCardProps {
   onUpdateSuccess?: () => void;
 }
 
+// ── Footer pieces ─────────────────────────────────────────────────
+
+const footerRowStyle: React.CSSProperties = {
+  padding: '11px 14px',
+  borderTop: '1px solid var(--border)',
+  display: 'flex',
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+};
+
+const footerBodyStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12.5,
+  color: 'var(--fg-muted)',
+  lineHeight: 1.4,
+  flex: 1,
+  minWidth: 0,
+};
+
+const textButtonStyle = (color: string): React.CSSProperties => ({
+  all: 'unset',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-ui)',
+  fontWeight: 800,
+  fontSize: 13,
+  color,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+  lineHeight: 1,
+  padding: '6px 0',
+});
+
+const FooterLabel = ({ children }: { children: React.ReactNode }) => (
+  <span
+    style={{
+      fontFamily: 'var(--font-mono)',
+      fontSize: 9,
+      fontWeight: 700,
+      color: 'var(--fg-subtle)',
+      letterSpacing: '0.14em',
+      textTransform: 'uppercase',
+      flexShrink: 0,
+      maxWidth: 64,
+      lineHeight: 1.4,
+    }}
+  >
+    {children}
+  </span>
+);
+
 // ── Component ─────────────────────────────────────────────────────
 
 export const DisputedPriceCard = ({
@@ -76,20 +144,26 @@ export const DisputedPriceCard = ({
   vendor,
   kind,
   submitter,
-  liveSubmittedAt,
   confirmsCount,
   disputer,
   disputeFloor,
   disputeCeiling,
   disputedAt,
   counterSubmissionId = null,
+  viewerAction,
+  viewerCounterId,
   lastAdminActionKind = null,
   eventId,
   disputedSubmissionId,
   signedOut = false,
   onUpdateSuccess,
 }: DisputedPriceCardProps) => {
+  const { getToken } = useAuth();
+  const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [withdrawState, setWithdrawState] = useState<
+    'idle' | 'withdrawing' | 'error'
+  >('idle');
 
   const handleOpenSheet = useCallback(() => {
     setIsSheetOpen(true);
@@ -104,310 +178,259 @@ export const DisputedPriceCard = ({
     onUpdateSuccess?.();
   }, [onUpdateSuccess]);
 
-  const timeAgo = formatTimeAgo(disputedAt);
+  const handleWithdraw = useCallback(async () => {
+    if (viewerCounterId === null) return;
+    setWithdrawState('withdrawing');
+    try {
+      const token = await getToken();
+      if (!token) {
+        setWithdrawState('error');
+        return;
+      }
+      const res = await fetch(`${API_URL}/v1/submissions/${viewerCounterId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        console.error('DisputedPriceCard: withdraw failed', res.status);
+        setWithdrawState('error');
+        return;
+      }
+      setWithdrawState('idle');
+      router.refresh();
+    } catch (err) {
+      console.error('DisputedPriceCard: withdraw failed', err);
+      setWithdrawState('error');
+    }
+  }, [viewerCounterId, getToken, router]);
 
-  // Build the attribution text
-  const attributionText = disputer
-    ? disputeCeiling != null
-      ? `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
-      : `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`
-    : disputeCeiling != null
-      ? `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
-      : `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`;
+  const pendingAmount = formatAmount(disputeFloor, disputeCeiling);
+  const attributionWho = disputer
+    ? `@${disputer.handle}`
+    : copy.strip.anonymousLabel;
 
-  // Build the live price headline
-  const headlineStr =
-    ceiling != null
-      ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
-      : `$${Math.round(floor)}`;
-
-  // Anchor target for the coral CounterPointerLink rendered inside
-  // PendingCardB. Falls back to the disputed parent ID if the counter ID
-  // wasn't passed — keeps the anchor non-broken for legacy callers.
+  // Anchor target for the CounterPointerLink rendered inside PendingCardB.
+  // Falls back to the checked price's ID if the counter ID wasn't passed.
   const anchorId = `counter-${counterSubmissionId ?? disputedSubmissionId}`;
 
   return (
     <>
-      {/* Card */}
       <div
         id={anchorId}
+        data-testid="price-check-card"
         style={{
-          borderRadius: 12,
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
+          borderRadius: 14,
+          // A live price keeps the blue-to-pink edge while it is checked.
+          border: '1px solid transparent',
+          background:
+            'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, color-mix(in oklab, var(--signal) 70%, transparent), color-mix(in oklab, var(--accent) 70%, transparent)) border-box',
           overflow: 'hidden',
         }}
       >
-        {/* Dashed update strip */}
+        {/* Update strip: pending, so its edge is dashed (rule 3) */}
         <div
           style={{
             padding: '9px 14px',
-            background: 'color-mix(in oklab, var(--fg-muted) 8%, transparent)',
-            borderBottom: '1px dashed var(--border-strong)',
+            background: 'var(--surface-2)',
+            borderBottom:
+              '1px dashed color-mix(in oklab, var(--warning) 55%, transparent)',
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
             gap: 10,
+            minWidth: 0,
           }}
         >
-          {/* Left side: badge + attribution */}
-          <div
+          <RowMetaChip label={copy.strip.badgeLabel} tone="warn" />
+          {/* Names the reader, so analytics skips it */}
+          <span
+            className="ph-no-capture"
             style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12.5,
+              color: 'var(--fg-muted)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               minWidth: 0,
             }}
           >
-            {/* "update pending" badge */}
-            <span
-              style={{
-                background:
-                  'color-mix(in oklab, var(--fg-muted) 14%, transparent)',
-                borderRadius: 4,
-                padding: '2px 6px',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                fontWeight: 700,
-                color: 'var(--fg)',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                lineHeight: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <svg
-                width="9"
-                height="9"
-                viewBox="0 0 10 10"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M1 7.5 C2.5 7.5 2.5 4 4 4 C5.5 4 5.5 6 7 6 L9 2.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M7 2.5 L9 2.5 L9 4.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              {copy.strip.badgeLabel}
-            </span>
-
-            {/* Attribution text: names the reader, so analytics skips it */}
-            <span
-              className="ph-no-capture"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9.5,
-                color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {attributionText}
-            </span>
-          </div>
-
-          {/* Admin-defer pill (LOCKED §9 — engagement signal) */}
-          {lastAdminActionKind === 'defer' && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 8px',
-                borderRadius: 999,
-                background:
-                  'color-mix(in oklab, var(--warning) 10%, transparent)',
-                color: 'var(--warning)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 9,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-                flexShrink: 0,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
-            </span>
-          )}
+            {attributionWho} {copy.strip.sawVerb}{' '}
+            <strong style={{ color: 'var(--fg)', fontWeight: 700 }}>
+              {pendingAmount}
+            </strong>{' '}
+            · {formatTimeAgo(disputedAt)}
+          </span>
         </div>
 
-        {/* Main price area */}
+        {/* Price area */}
         <div style={{ padding: '14px 14px 12px' }}>
-          {/* Eyebrow */}
           <Eyebrow>{copy.body.ticketsLabel}</Eyebrow>
 
-          {/* Headline row: price + tier + chip */}
           <div
             style={{
               marginTop: 6,
               display: 'flex',
-              alignItems: 'baseline',
+              alignItems: 'center',
               gap: 10,
               flexWrap: 'wrap',
             }}
           >
             <span
+              data-testid="price-check-current"
               style={{
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 800,
-                fontSize: 28,
+                fontSize: 30,
                 color: 'var(--fg)',
                 letterSpacing: '-0.025em',
                 lineHeight: 1.05,
               }}
             >
-              {headlineStr}
+              {formatAmount(floor, ceiling)}
             </span>
+            <span
+              aria-hidden
+              style={{ color: 'var(--fg-subtle)', display: 'inline-flex' }}
+            >
+              <ArrowGlyph size={16} />
+            </span>
+            <span
+              data-testid="price-check-pending"
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 800,
+                fontSize: 22,
+                color: 'var(--warning)',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.05,
+              }}
+            >
+              <span className="sr-only">{copy.body.pendingPriceSr} </span>
+              {pendingAmount}?
+            </span>
+            <span style={{ marginLeft: 'auto' }}>
+              <PendingTrustPill kind={kind} />
+            </span>
+          </div>
+
+          {/* Meta line: tier · vendor · submitter · confirms */}
+          <p
+            style={{
+              margin: '8px 0 0',
+              fontFamily: 'var(--font-ui)',
+              fontSize: 12.5,
+              color: 'var(--fg-muted)',
+              lineHeight: 1.45,
+            }}
+          >
             {tier !== null && (
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontWeight: 700,
-                  fontSize: 11,
-                  color: 'var(--fg-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                {tier}
-              </span>
+              <>
+                <span>{tier}</span> ·{' '}
+              </>
             )}
-            <PendingTrustPill kind={kind} />
-          </div>
-
-          {/* Vendor line */}
-          <div
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
-              marginTop: 6,
-            }}
-          >
-            {copy.body.seenOnPrefix} {vendor}
-          </div>
-
-          {/* Attribution line */}
-          <div
-            style={{
-              marginTop: 8,
-              fontFamily: 'Inter, system-ui',
-              fontSize: 12,
-              color: 'var(--fg-muted)',
-              letterSpacing: '-0.005em',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span>{copy.body.submittedByPrefix}</span>
+            {copy.body.seenOnPrefix} {vendor} · {copy.body.submittedByPrefix}{' '}
             {submitter !== null ? (
-              <span className="ph-no-capture" style={{ fontWeight: 700 }}>
-                @{submitter.handle}
-              </span>
+              <span className="ph-no-capture">@{submitter.handle}</span>
             ) : (
-              <span style={{ fontStyle: 'italic', opacity: 0.85 }}>
+              <span style={{ fontStyle: 'italic' }}>
                 {copy.strip.anonymousLabel}
               </span>
-            )}
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span>{formatTimeAgo(liveSubmittedAt)}</span>
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span>{copy.body.fansConfirmed(confirmsCount)}</span>
+            )}{' '}
+            · {copy.body.fansConfirmed(confirmsCount)}
+          </p>
+
+          {lastAdminActionKind === 'defer' && (
+            <div style={{ marginTop: 10 }}>
+              <RowMetaChip
+                label={CONSUMER_COPY.priceRegion.adminDeferPillLabel}
+                tone="accent"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Footer: driven purely by the server's viewerAction */}
+        {viewerAction === 'submit_update' && (
+          <div style={{ ...footerRowStyle, justifyContent: 'space-between' }}>
+            <span style={footerBodyStyle}>{copy.footer.preButtonCopy}</span>
+            <button
+              type="button"
+              onClick={handleOpenSheet}
+              {...(signedOut
+                ? { 'aria-label': copy.footer.ariaButtonLabelSignedOut }
+                : {})}
+              style={textButtonStyle('var(--signal)')}
+            >
+              {copy.footer.buttonLabel}
+            </button>
           </div>
-        </div>
+        )}
 
-        {/* Footer */}
-        <div
-          style={{
-            padding: '10px 14px',
-            borderTop: '1px solid var(--border)',
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-          }}
-        >
-          {/* Copy before button */}
-          <span
-            style={{
-              fontFamily: 'Inter, system-ui',
-              fontSize: '12px',
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
-              flexShrink: 1,
-              minWidth: 0,
-            }}
-          >
-            {copy.footer.preButtonCopy}
-          </span>
+        {viewerAction === 'none' && (
+          <div data-testid="price-check-your-price" style={footerRowStyle}>
+            <FooterLabel>{copy.footer.yourPriceLabel}</FooterLabel>
+            <span style={footerBodyStyle}>{copy.footer.yourPriceBody}</span>
+          </div>
+        )}
 
-          {/* Submit an update button */}
-          <button
-            type="button"
-            onClick={handleOpenSheet}
-            {...(signedOut
-              ? { 'aria-label': copy.footer.ariaButtonLabelSignedOut }
-              : {})}
-            style={{
-              all: 'unset',
-              cursor: 'pointer',
-              background: 'transparent',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 8,
-              padding: '7px 12px',
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 700,
-              fontSize: 12.5,
-              color: 'var(--fg)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              lineHeight: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            {copy.footer.buttonLabel}
-            <ArrowGlyph size={11} />
-          </button>
-        </div>
+        {viewerAction === 'withdraw' && (
+          <div style={{ borderTop: '1px solid var(--border)' }}>
+            <div style={{ ...footerRowStyle, borderTop: 'none' }}>
+              <FooterLabel>{copy.footer.yourUpdateLabel}</FooterLabel>
+              <span style={footerBodyStyle}>{copy.footer.yourUpdateBody}</span>
+              {viewerCounterId !== null && (
+                <button
+                  type="button"
+                  onClick={() => void handleWithdraw()}
+                  disabled={withdrawState === 'withdrawing'}
+                  style={{
+                    ...textButtonStyle('var(--warning)'),
+                    cursor:
+                      withdrawState === 'withdrawing'
+                        ? 'not-allowed'
+                        : 'pointer',
+                    opacity: withdrawState === 'withdrawing' ? 0.6 : 1,
+                  }}
+                >
+                  {withdrawState === 'withdrawing'
+                    ? copy.footer.withdrawingButton
+                    : copy.footer.withdrawButton}
+                </button>
+              )}
+            </div>
+            {withdrawState === 'error' && (
+              <p
+                role="alert"
+                style={{
+                  margin: 0,
+                  padding: '0 14px 11px',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 12,
+                  color: 'var(--warning)',
+                  lineHeight: 1.4,
+                }}
+              >
+                {copy.footer.withdrawError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* CounterSubmitSheet */}
-      <CounterSubmitSheet
-        open={isSheetOpen}
-        onClose={handleCloseSheet}
-        eventId={eventId}
-        disputedSubmissionId={disputedSubmissionId}
-        currentFloor={floor}
-        {...(ceiling != null ? { currentCeiling: ceiling } : {})}
-        currentVendor={vendor}
-        currentTier={tier}
-        onSuccess={handleSuccess}
-      />
+      {viewerAction === 'submit_update' && (
+        <CounterSubmitSheet
+          open={isSheetOpen}
+          onClose={handleCloseSheet}
+          eventId={eventId}
+          disputedSubmissionId={disputedSubmissionId}
+          currentFloor={floor}
+          {...(ceiling != null ? { currentCeiling: ceiling } : {})}
+          currentVendor={vendor}
+          currentTier={tier}
+          onSuccess={handleSuccess}
+        />
+      )}
     </>
   );
 };

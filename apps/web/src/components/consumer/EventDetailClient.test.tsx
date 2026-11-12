@@ -13,6 +13,7 @@ import {
 import type {
   EventDetailResponse,
   EventReport,
+  TierCounter,
   TierHeadline,
   TierPriceBlock,
   Tier,
@@ -1355,7 +1356,7 @@ describe('EventDetailPriceBlock price check', () => {
   // The flat fields carry no tier; the card used to print the vendor in the
   // tier slot and send nothing to lock the update to.
   it('labels the checked price with its tier, not its vendor', () => {
-    const counter = {
+    const counter: TierCounter = {
       id: 'counter-1',
       parentSubmissionId: 'parent-1',
       floor: 30,
@@ -1363,6 +1364,9 @@ describe('EventDetailPriceBlock price check', () => {
       submittedAt: '2026-11-01T12:00:00.000Z',
       lastAdminActionAt: null,
       lastAdminActionKind: null,
+      pendingCount: 1,
+      viewerAction: 'submit_update',
+      viewerCounterId: null,
     };
     const event = buildBaseEvent({
       ticketPriceMin: '40.00',

@@ -1443,7 +1443,9 @@ export const CONSUMER_COPY = {
   },
 
   // ── DisputedPriceCard ───────────────────────────────────────────
-  // Card showing a live price with a pending counter-submission against it
+  // A live price under an open price check: the current price, then the
+  // leading pending update ("$44 → $52?"). The footer follows the server's
+  // viewerAction (B+ B9).
   disputedPriceCard: {
     strip: {
       badgeLabel: 'update pending',
@@ -1455,47 +1457,72 @@ export const CONSUMER_COPY = {
       seenOnPrefix: 'seen on',
       submittedByPrefix: 'Submitted by',
       fansConfirmed: (count: number) => `${count} fans confirmed`,
+      // Read in place of the drawn arrow between the two prices.
+      pendingPriceSr: 'Pending update:',
     },
     footer: {
       preButtonCopy: 'Got a different number?',
       buttonLabel: 'Submit an update',
       // Same announced-not-drawn gate as the submit card (#1247).
       ariaButtonLabelSignedOut: 'Submit an update: sign up to submit a price',
+      // The checked price's own submitter: no button, an admin decides.
+      yourPriceLabel: 'Your price',
+      yourPriceBody: 'Someone saw a different number. An admin will pick one.',
+      // The viewer's own pending update on this price.
+      yourUpdateLabel: 'Your update',
+      yourUpdateBody: 'Waiting on review.',
+      withdrawButton: 'Withdraw',
+      withdrawingButton: 'Withdrawing…',
+      withdrawError:
+        'Something went wrong withdrawing your update. Try again or come back later.',
     },
   },
 
   // ── CounterSubmitSheet ──────────────────────────────────────────
-  // Bottom sheet for submitting a counter/update to an existing price submission
+  // Bottom sheet for submitting an update to a price (opens a price check)
   counterSubmitSheet: {
-    eyebrow: 'Price update',
+    // The sheet's top rail: a label, then a short status code on the right.
+    rail: {
+      open: 'Price update',
+      openCode: 'Open',
+      success: 'Got it · submitted',
+      successCode: 'Sent',
+      updatePending: 'Price update',
+      updatePendingCode: 'Waiting',
+      error: 'Hmm · stalled',
+      errorCode: 'ERR',
+    },
     heading: 'Update the price.',
-    // The tier names the slot the update lands in; it's left out when unknown.
-    subtitleWithRange: (
-      floor: number,
-      ceiling: number,
-      tier: string | null,
-      vendor: string,
-    ) =>
-      `Currently listed: $${floor}–$${ceiling} on ${vendor}${tier ? ` (${tier})` : ''}. Your update goes pending until another fan confirms.`,
-    subtitleFloorOnly: (floor: number, tier: string | null, vendor: string) =>
-      `Currently listed: $${floor} on ${vendor}${tier ? ` (${tier})` : ''}. Your update goes pending until another fan confirms.`,
-    floorLabel: 'Floor price',
+    // The tier and vendor are drawn as locked fields below, so the line names
+    // only the price and where it is listed.
+    subtitleWithRange: (floor: number, ceiling: number, vendor: string) =>
+      `Currently listed: $${floor}–$${ceiling} on ${vendor}. Your update goes pending until another fan confirms.`,
+    subtitleFloorOnly: (floor: number, vendor: string) =>
+      `Currently listed: $${floor} on ${vendor}. Your update goes pending until another fan confirms.`,
+    tierLabel: 'Tier',
+    vendorLabel: 'Where it’s listed',
+    lockedHint:
+      'Same tier and vendor as the listed price, so the two numbers compare.',
+    floorLabel: 'Floor',
     floorPlaceholder: '35',
-    ceilingLabel: 'Ceiling price (optional)',
-    ceilingPlaceholder: '75',
+    ceilingLabel: 'Ceiling',
+    ceilingPlaceholder: 'optional',
     howFoundLabel: 'How you found out *',
-    ceilingHint: 'Optional. Helps fans know the full price range.',
     honestyDisclaimer: 'By submitting, you confirm this is accurate.',
     // Fine print under the submit form's honesty disclaimer
     honestyFootnote:
       'By submitting you confirm this is accurate to the best of your knowledge. Intentionally false reports may result in account suspension.',
-    footerDisclaimer: 'Your update goes pending until another fan confirms.',
     submitButton: 'Submit update',
     submittingButton: 'Submitting…',
     cancelButton: 'Cancel',
     successHeading: 'Update submitted.',
     successBody: 'Your update is pending. Confirms move it forward.',
     successBackButton: 'Back to show',
+    // A 409 `price_check_update_pending`: another update already holds this
+    // price's check (until migration 0100 lets several fans file one each).
+    updatePendingHeading: 'Already waiting.',
+    updatePendingBody:
+      'An update is already waiting on this price. Check back once it’s reviewed.',
     errorHeading: "Didn't go through.",
     errorBody:
       "Couldn't reach the server. Your inputs are still here. Try again or come back later.",

@@ -122,7 +122,14 @@ describe('CounterSubmitSheet slot', () => {
         currentTier="VIP"
       />,
     );
-    expect(screen.getByText(/\$40 on AXS \(VIP\)/)).toBeInTheDocument();
+    // The line names the price and vendor; the tier and vendor are drawn as
+    // locked fields, so they are not asked for.
+    expect(
+      screen.getByText(/Currently listed: \$40 on AXS\./),
+    ).toBeInTheDocument();
+    expect(screen.getByText('VIP')).toBeInTheDocument();
+    expect(screen.getByText('AXS')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /tier/i })).toBeNull();
   });
 
   it('posts without a tier or vendor', async () => {
@@ -139,5 +146,60 @@ describe('CounterSubmitSheet slot', () => {
       howFound: 'bought_myself',
       disputedSubmissionId: 'sub-1',
     });
+  });
+});
+
+// B9a answers a second fan's update with a 409 `price_check_update_pending`
+// until migration 0100 lands: a status, never a raw server error.
+describe('CounterSubmitSheet update already pending (409)', () => {
+  it('shows the waiting state, not the error state', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: false,
+              error: 'Another update is already pending on this price.',
+              code: 'price_check_update_pending',
+            }),
+            { status: 409 },
+          ),
+      ),
+    );
+    renderSheet();
+    fillRequiredFields();
+    submit();
+
+    expect(await screen.findByText('Already waiting.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'An update is already waiting on this price. Check back once it’s reviewed.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('sheet-rail')).toHaveTextContent('Waiting');
+    expect(screen.queryByText("Didn't go through.")).toBeNull();
+    expect(
+      screen.queryByText('Another update is already pending on this price.'),
+    ).toBeNull();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('treats any other 409 as an error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: false, error: 'Conflict' }), {
+            status: 409,
+          }),
+      ),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderSheet();
+    fillRequiredFields();
+    submit();
+
+    expect(await screen.findByText("Didn't go through.")).toBeInTheDocument();
   });
 });

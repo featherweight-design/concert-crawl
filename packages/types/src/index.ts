@@ -761,7 +761,30 @@ export interface TierPending {
   isSubmitter: boolean;
 }
 
-export interface TierCounter {
+// What the viewer can do on a price under an open price check (B+ B9),
+// decided by the server so the UI never guesses:
+//   - 'none'          the viewer submitted the price being checked
+//   - 'withdraw'      the viewer has a pending update on it (viewerCounterId)
+//   - 'submit_update' anyone else, signed-out viewers included (the sheet
+//                     asks them to sign in)
+export type PriceCheckViewerAction = 'none' | 'withdraw' | 'submit_update';
+
+// Additive price-check fields on both counter shapes (B+ B9). Several fans can
+// each have an update pending on one price; the counter a shape describes is
+// the LEADING one (most confirmations, then earliest filed), so its
+// floor/ceiling is the pending amount the card shows after the current price
+// ("$44 → $52?").
+export interface PriceCheckFields {
+  // Pending updates open against the price, the leading one included. >= 1.
+  pendingCount: number;
+  viewerAction: PriceCheckViewerAction;
+  // The viewer's own pending update on this price, the id to withdraw
+  // (DELETE /v1/submissions/:id). Set exactly when viewerAction is
+  // 'withdraw'; it need not be the leading counter.
+  viewerCounterId: string | null;
+}
+
+export interface TierCounter extends PriceCheckFields {
   id: string;
   parentSubmissionId: string;
   floor: number;
@@ -856,21 +879,23 @@ export interface EventDetailResponse extends EventWithVenue {
   // Pending counter-submission against the primary live price (if any).
   // parentSubmissionId is the corroborated submission being disputed — it
   // must be the value passed as disputedSubmissionId when filing a new dispute.
-  counterSubmission?: {
-    id: string;
-    parentSubmissionId: string;
-    floor: number;
-    ceiling?: number;
-    submitter: { handle: string } | null;
-    submittedAt: string;
-    // Engagement-signal columns surfaced when an admin defers the contest.
-    // Mirrors TierCounter.lastAdminAction* above so the flat shape stays in
-    // lock-step with the per-tier shape during the PR 4 migration window
-    // (events.ts:666–675 writes both paths off the same counter row). Both
-    // stay null while the contest sits with no admin engagement.
-    lastAdminActionAt: string | null;
-    lastAdminActionKind: 'defer' | null;
-  } | null;
+  counterSubmission?:
+    | ({
+        id: string;
+        parentSubmissionId: string;
+        floor: number;
+        ceiling?: number;
+        submitter: { handle: string } | null;
+        submittedAt: string;
+        // Engagement-signal columns surfaced when an admin defers the contest.
+        // Mirrors TierCounter.lastAdminAction* above so the flat shape stays in
+        // lock-step with the per-tier shape during the PR 4 migration window
+        // (events.ts:666–675 writes both paths off the same counter row). Both
+        // stay null while the contest sits with no admin engagement.
+        lastAdminActionAt: string | null;
+        lastAdminActionKind: 'defer' | null;
+      } & PriceCheckFields)
+    | null;
   // Promoted sold-out report — present when a community sold-out report was confirmed
   soldOutReport?: {
     reporterHandle: string | null;
