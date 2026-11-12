@@ -80,6 +80,27 @@ describe('candidateCards', () => {
     ).toEqual(['c', 'a']);
   });
 
+  it('draws a current match the snapshot lacks, and selects it', () => {
+    const cards = candidateCards(
+      row({
+        spotifyArtistId: 'zz',
+        photoUrl: 'https://img/zz',
+        openReportCount: 1,
+      }),
+      'reported',
+    );
+    expect(cards[0]).toEqual({
+      type: 'artist',
+      candidate: {
+        id: 'zz',
+        name: 'Cashmere',
+        imageUrl: 'https://img/zz',
+        genres: null,
+      },
+    });
+    expect(defaultSelection(cards)).toBe('zz');
+  });
+
   it('fills an empty slot with the Search card', () => {
     const cards = candidateCards(
       row({ candidates: [candidate('a')] }),

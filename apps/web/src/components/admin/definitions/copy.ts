@@ -2512,7 +2512,11 @@ export const ADMIN_COPY = {
       title: 'No artist matches',
       body: 'Check the spelling, or clear the search.',
       clear: 'Clear search',
+      elsewhereTitle: 'Not in To check',
+      elsewhereBody: 'That name is in Matched or Not artists.',
     },
+    /** A row's buttons name the artist for screen readers. */
+    actionFor: (action: string, name: string) => `${action}: ${name}`,
     // Under "Couldn't change {name}", so the name isn't said twice.
     stillToCheck: "It's still in To check.",
     itemLabel: 'artists',

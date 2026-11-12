@@ -61,29 +61,37 @@ const KindLine = ({
   );
 };
 
-const Photo = ({ url }: { url: string | null }) =>
-  url ? (
-    // A Spotify CDN photo at 34px; next/image would proxy it for nothing.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt=""
-      width={34}
-      height={34}
-      style={{ flex: 'none', borderRadius: '50%', objectFit: 'cover' }}
-    />
-  ) : (
-    <span
-      aria-hidden
-      style={{
-        width: 34,
-        height: 34,
-        flex: 'none',
-        borderRadius: '50%',
-        background: PHOTO_PLACEHOLDER,
-      }}
-    />
-  );
+/** The plain tile sits behind the photo, so one that fails to load still
+ * draws the tile rather than a hole. */
+const Photo = ({ url }: { url: string | null }) => (
+  <span
+    aria-hidden
+    style={{
+      display: 'block',
+      width: 34,
+      height: 34,
+      flex: 'none',
+      borderRadius: '50%',
+      overflow: 'hidden',
+      background: PHOTO_PLACEHOLDER,
+    }}
+  >
+    {url && (
+      // A Spotify CDN photo at 34px; next/image would proxy it for nothing.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt=""
+        width={34}
+        height={34}
+        onError={(event) => {
+          event.currentTarget.style.display = 'none';
+        }}
+        style={{ display: 'block', objectFit: 'cover' }}
+      />
+    )}
+  </span>
+);
 
 const CARD = {
   display: 'flex',
@@ -195,6 +203,8 @@ export const ToCheckRow = ({
       .find((candidate) => candidate.id === selectedId) ?? null;
   const write = primaryWrite(row, selected);
   const keeps = write !== null && write.kind !== 'use';
+  const primaryLabel = keeps ? COPY.looksRight : COPY.useSelected;
+  const named = (action: string) => COPY.actionFor(action, row.name);
   const show = showLine(row);
 
   if (isPhone) {
@@ -222,6 +232,7 @@ export const ToCheckRow = ({
               type="button"
               disabled={busy}
               onClick={() => onWrite(write)}
+              aria-label={named(COPY.looksRight)}
               style={{ ...TINT_BUTTON, ...PHONE_BUTTON }}
             >
               {COPY.looksRight}
@@ -231,6 +242,7 @@ export const ToCheckRow = ({
             <AdminButton
               type="button"
               disabled
+              aria-label={named(COPY.pick)}
               style={{ ...TINT_BUTTON, ...PHONE_BUTTON, ...PENDING }}
             >
               {COPY.pick}
@@ -240,6 +252,7 @@ export const ToCheckRow = ({
             type="button"
             icon={Search}
             disabled
+            aria-label={named(COPY.searchButton)}
             style={{ ...SECONDARY_BUTTON, ...PHONE_BUTTON, ...PENDING }}
           >
             {COPY.searchButton}
@@ -309,19 +322,21 @@ export const ToCheckRow = ({
           type="button"
           disabled={busy || write === null}
           onClick={() => write && onWrite(write)}
+          aria-label={named(primaryLabel)}
           style={{
             ...TINT_BUTTON,
             ...ROW_BUTTON,
             ...(write === null ? PENDING : {}),
           }}
         >
-          {keeps ? COPY.looksRight : COPY.useSelected}
+          {primaryLabel}
         </AdminButton>
         <AdminButton
           type="button"
           variant="ghost"
           disabled={busy}
           onClick={onNotAnArtist}
+          aria-label={named(COPY.notAnArtist)}
           style={ROW_BUTTON}
         >
           {COPY.notAnArtist}

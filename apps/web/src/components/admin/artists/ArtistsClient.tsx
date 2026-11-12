@@ -219,6 +219,8 @@ const SearchBox = ({
     <Search size={14} aria-hidden style={{ flex: 'none' }} />
     <input
       type="search"
+      // The API caps a search at 200 characters.
+      maxLength={200}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={COPY.search}
@@ -261,6 +263,8 @@ export function ArtistsClient() {
   const [list, setList] = useState<{
     rows: AdminArtistRow[];
     total: number;
+    /** A search hit only rows that live in another tab. */
+    elsewhere?: boolean;
   } | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<ReadonlySet<string>>(() => new Set());
@@ -268,6 +272,10 @@ export function ArtistsClient() {
   const [confirming, setConfirming] = useState<AdminArtistRow | null>(null);
   // Bumped on every load, so a stale response never lands over a newer one.
   const generation = useRef(0);
+  // Rows saved out of To check, keyed to the load that was current then: a
+  // load started before the save may still list them, so it drops them.
+  const resolved = useRef(new Map<string, number>());
+  const listRef = useRef<HTMLUListElement>(null);
 
   // A keystroke per request would spend a query on every prefix of the name.
   useEffect(() => {
@@ -298,14 +306,20 @@ export function ArtistsClient() {
         offset: (page - 1) * PAGE_SIZE,
       });
       if (mine !== generation.current) return;
+      const fresh = next.rows.filter(
+        (row) => (resolved.current.get(row.id) ?? -1) < mine,
+      );
+      const dropped = next.rows.length - fresh.length;
       // A search lists every status; this tab keeps only its own rows.
+      const rows = search === '' ? fresh : fresh.filter(isToCheck);
       setList(
         search === ''
-          ? next
-          : (() => {
-              const rows = next.rows.filter(isToCheck);
-              return { rows, total: rows.length };
-            })(),
+          ? { rows, total: Math.max(0, next.total - dropped) }
+          : {
+              rows,
+              total: rows.length,
+              elsewhere: rows.length === 0 && fresh.length > 0,
+            },
       );
     } catch {
       if (mine === generation.current) setLoadFailed(true);
@@ -315,6 +329,13 @@ export function ArtistsClient() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Saving the last row of a later page leaves that page empty: step back.
+  useEffect(() => {
+    if (list && list.rows.length === 0 && page > 1 && search === '') {
+      setPage((prev) => Math.max(1, prev - 1));
+    }
+  }, [list, page, search]);
 
   useEffect(() => {
     loadCounts();
@@ -334,20 +355,26 @@ export function ArtistsClient() {
    * changed under the page: reload rather than retry a stale answer.
    */
   const runWrite = async (row: AdminArtistRow, write: ArtistWrite) => {
+    // A retry from the toast can run after the list moved on; it still saves.
     const index = list?.rows.findIndex((each) => each.id === row.id) ?? -1;
-    if (index < 0) return;
+    const mine = generation.current;
     setFailed(null);
     setRowBusy(row.id, true);
-    setList((prev) =>
-      prev
-        ? {
-            rows: prev.rows.filter((each) => each.id !== row.id),
-            total: Math.max(0, prev.total - 1),
-          }
-        : prev,
-    );
+    if (index >= 0) {
+      setList((prev) =>
+        prev
+          ? {
+              rows: prev.rows.filter((each) => each.id !== row.id),
+              total: Math.max(0, prev.total - 1),
+            }
+          : prev,
+      );
+      // The pressed button left with its row; keep focus in the list.
+      requestAnimationFrame(() => listRef.current?.focus());
+    }
     try {
       await api.write(row.id, write);
+      resolved.current.set(row.id, generation.current);
       loadCounts();
     } catch (err) {
       if (err instanceof StaleRowError) {
@@ -355,12 +382,16 @@ export function ArtistsClient() {
         loadCounts();
         return;
       }
-      setList((prev) => {
-        if (!prev || prev.rows.some((each) => each.id === row.id)) return prev;
-        const rows = [...prev.rows];
-        rows.splice(Math.min(index, rows.length), 0, row);
-        return { rows, total: prev.total + 1 };
-      });
+      // Snap back only into the list the row left; a newer list never had it.
+      if (index >= 0 && generation.current === mine) {
+        setList((prev) => {
+          if (!prev || prev.rows.some((each) => each.id === row.id))
+            return prev;
+          const rows = [...prev.rows];
+          rows.splice(Math.min(index, rows.length), 0, row);
+          return { ...prev, rows, total: prev.total + 1 };
+        });
+      }
       setFailed({ row, index, write });
     } finally {
       setRowBusy(row.id, false);
@@ -390,8 +421,14 @@ export function ArtistsClient() {
     body =
       search !== '' ? (
         <EmptyState
-          title={COPY.noResults.title}
-          body={COPY.noResults.body}
+          title={
+            list.elsewhere
+              ? COPY.noResults.elsewhereTitle
+              : COPY.noResults.title
+          }
+          body={
+            list.elsewhere ? COPY.noResults.elsewhereBody : COPY.noResults.body
+          }
           action={
             <AdminButton
               type="button"
@@ -412,9 +449,11 @@ export function ArtistsClient() {
   } else {
     body = (
       <ul
+        ref={listRef}
+        tabIndex={-1}
         data-testid="artists-list"
         aria-label={COPY.tabs.toCheck}
-        style={{ listStyle: 'none', margin: 0, padding: 0 }}
+        style={{ listStyle: 'none', margin: 0, padding: 0, outline: 'none' }}
       >
         {list.rows.map((row) => (
           <ToCheckRow
