@@ -1,12 +1,16 @@
 // The sweeping light band that marks a placeholder as loading rather than
-// broken, from design_handoff_discovery_loading (DL_MOTION owns the timing).
+// broken, from design_handoff_discovery_loading. The timing is the B+ motion
+// scale's, not the old DL_MOTION's.
 //
 // No hooks and no 'use client', so server route fallbacks can render it too.
 // The parent must be `position: relative` and clip its overflow.
 
 // Tied to --fg so it lightens on dark themes and darkens on Light, and leaves
 // --accent alone: a skeleton is never brand presence.
-const SWEEP_ANIMATION = 'dlSweep 1500ms cubic-bezier(0.4,0,0.2,1) infinite';
+// The sheen sweeps on the slow motion step and the shared ease (B+ rule 9),
+// so it keeps time with every other motion in the app.
+export const SWEEP_ANIMATION =
+  'dlSweep var(--motion-slow) var(--motion-ease) infinite';
 
 export const SweepOverlay = () => (
   <div

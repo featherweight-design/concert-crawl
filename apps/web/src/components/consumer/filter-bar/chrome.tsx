@@ -75,11 +75,39 @@ export const HEADING_EYEBROW_CLASS =
   'text-[10px] uppercase tracking-widest text-fg-muted';
 export const HEADING_EYEBROW_STYLE: CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  letterSpacing: '0.1em',
+  // `browse-active-320`, `shelf-see-all-m`: 10px at 0.14em.
+  letterSpacing: '0.14em',
 };
 export const HEADING_TITLE_CLASS =
   'truncate text-[28px] font-black leading-none tracking-tight text-fg';
 export const HEADING_TITLE_STYLE: CSSProperties = { letterSpacing: '-0.03em' };
+
+/** The gradient the title's last word takes: signal into accent. */
+export const HEADING_ACCENT_STYLE: CSSProperties = {
+  background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  color: 'transparent',
+};
+
+/**
+ * "What's on?" with "on?" in the signal-to-accent gradient, as every Browse
+ * board draws it (`browse-active-320`, `shelf-see-all-m`, `bp-browse`). The
+ * split is the copy's last word, so the string stays whole in the copy file
+ * and the heading still reads as one phrase.
+ */
+export const HeadingTitleText = ({ title }: { title: string }) => {
+  const cut = title.lastIndexOf(' ');
+  if (cut === -1) return <>{title}</>;
+  return (
+    <>
+      {title.slice(0, cut + 1)}
+      <span data-testid="heading-accent" style={HEADING_ACCENT_STYLE}>
+        {title.slice(cut + 1)}
+      </span>
+    </>
+  );
+};
 
 /** The List/Cal toggle's track (B+ `bp-browse`). */
 export const VIEW_TOGGLE_CLASS = 'inline-flex items-center';
@@ -115,17 +143,22 @@ export const CHIP_ROW_STYLE: CSSProperties = {
   maskImage: 'linear-gradient(to right, black 85%, transparent)',
 };
 
-/** A dimension chip (When, Where, Price, Vibe). */
+/**
+ * A dimension chip (When, Where, Price, Vibe). An active chip is neutral: the
+ * `s2` fill and a `border-strong` hairline (`browse-active-320`), never a
+ * solid colour, because a filled coloured chip means a status or a price
+ * (B+ rule 2).
+ */
 export const FILTER_CHIP_CLASS =
   'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3';
 export const filterChipStyle = (active: boolean): CSSProperties => ({
   fontFamily: 'Inter, system-ui',
-  fontWeight: 600,
+  fontWeight: active ? 700 : 600,
   fontSize: 12.5,
   letterSpacing: '-0.005em',
-  color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
-  borderColor: active ? 'var(--signal)' : 'var(--border)',
-  background: active ? 'var(--signal)' : 'var(--surface-1)',
+  color: 'var(--fg)',
+  borderColor: active ? 'var(--border-strong)' : 'var(--border)',
+  background: active ? 'var(--surface-2)' : 'var(--surface-1)',
 });
 
 /** The "My artists" scope chip, in its usable state. */
@@ -321,7 +354,7 @@ export const FilterBarPreview = ({
           {copy.locationLine}
         </span>
         <span className={HEADING_TITLE_CLASS} style={HEADING_TITLE_STYLE}>
-          {copy.headingTitle}
+          <HeadingTitleText title={copy.headingTitle} />
         </span>
       </div>
       <span className={VIEW_TOGGLE_CLASS} style={VIEW_TOGGLE_STYLE}>

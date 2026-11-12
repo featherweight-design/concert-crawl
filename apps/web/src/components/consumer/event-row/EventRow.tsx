@@ -25,6 +25,11 @@ import { orderGenres, vibeBucketMembers } from './lib/order-genres';
 import { cardedEdge } from './lib/carded-edge';
 import { genreRing } from './lib/genre-ring';
 import type { EventRowShow } from './lib/row-model';
+import {
+  REMOVED_CARD_STYLE,
+  REMOVED_SOURCE_LINE_STYLE,
+} from './lib/removed-row';
+import { formatDelistedDate } from '@/lib/delisted-date';
 
 const NARROW_AT = 360;
 
@@ -92,6 +97,7 @@ export const EventRow = ({
   // neutral edge so no colour on the row claims a state we do not know.
   const removed = status === 'removed';
   const chipUnderTitle = removed && narrow;
+  const removedSince = removed ? formatDelistedDate(show.delistedAt) : null;
   // B+ rule 2: the lead genre, the one that dots the genre chip, colors the
   // image ring and the card's left edge. Decoration only; the chip names it.
   const genre = removed
@@ -111,6 +117,8 @@ export const EventRow = ({
         config.carded && removed && 'border-dashed',
         className,
       )}
+      // No longer listed (`nll-row-browse-d`): the surface-1 fill stays, and
+      // the whole card takes a 1.5px dashed `border-strong` edge.
       style={{
         // The card's left inset is tighter at narrow so the art keeps its size
         // rather than the title column paying for the padding.
@@ -121,7 +129,7 @@ export const EventRow = ({
         ...(config.carded && !removed && cardedEdge(edge)),
         // The board draws the whole card dashed with no genre edge and no
         // wash: the row recedes rather than alarms.
-        ...(config.carded && removed && { background: 'transparent' }),
+        ...(config.carded && removed && REMOVED_CARD_STYLE),
       }}
     >
       <div
@@ -154,6 +162,9 @@ export const EventRow = ({
               // The ring dims with it, deliberately: it is decoration, and a
               // full-strength ring around dimmed art would outshine the show.
               opacity: isFaded(status) ? 0.55 : 1,
+              // No longer listed: the photo goes grey (addendum-3 README,
+              // "the photo is in grayscale"), so no colour claims a state.
+              filter: removed ? 'grayscale(1)' : undefined,
             }}
           >
             <EventImage
@@ -243,13 +254,26 @@ export const EventRow = ({
                   <PriceStack show={show} surface={surface} narrow={narrow} />
                 </div>
               )}
-              <p
-                data-testid="row-removed-line"
-                className="text-fg-muted"
-                style={{ fontSize: 12, lineHeight: 1.35, margin: '2px 0 0' }}
-              >
-                {copy.removedLine}
-              </p>
+              {/* The source line (`nll-row-browse-d`): mono 9px caps at
+                  fg-muted, the date the venue dropped it. Without a readable
+                  date the plain explanation stands in. */}
+              {removedSince !== null ? (
+                <p
+                  data-testid="row-removed-line"
+                  className="text-fg-muted"
+                  style={REMOVED_SOURCE_LINE_STYLE}
+                >
+                  {copy.removedSince(removedSince)}
+                </p>
+              ) : (
+                <p
+                  data-testid="row-removed-line"
+                  className="text-fg-muted"
+                  style={{ fontSize: 12, lineHeight: 1.35, margin: '2px 0 0' }}
+                >
+                  {copy.removedLine}
+                </p>
+              )}
             </>
           ) : (
             <MetaRow

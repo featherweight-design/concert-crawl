@@ -657,7 +657,7 @@ describe('EventRow — No longer listed (A5)', () => {
       genres: ['hip-hop'],
     });
 
-  it('draws a dashed edge, no strike, and the explanation line', () => {
+  it('draws a dashed edge, no strike, and the source line', () => {
     const { container } = render(
       <EventRow show={removedShow()} surface="browse" />,
     );
@@ -666,11 +666,64 @@ describe('EventRow — No longer listed (A5)', () => {
     );
     expect(row).not.toBeNull();
     expect(row?.className).toContain('border-dashed');
+    // `nll-row-browse-d`: the date the venue dropped it, in Mountain Time.
     expect(screen.getByTestId('row-removed-line').textContent).toBe(
-      EVENT_ROW_COPY.removedLine,
+      EVENT_ROW_COPY.removedSince('Nov 4'),
     );
     expect(container.querySelector('[style*="line-through"]')).toBeNull();
     expect(container.querySelector('.line-through')).toBeNull();
+  });
+
+  // Addendum-3 `02/nll-row-browse-d`: a surface-1 card with a 1.5px dashed
+  // border-strong edge, the photo in grayscale, and a mono 9px source line.
+  it('draws the board card: surface-1 fill, 1.5px border-strong edge', () => {
+    const { container } = render(
+      <EventRow show={removedShow()} surface="browse" />,
+    );
+    const row = container.querySelector<HTMLElement>(
+      '[data-row-status="removed"]',
+    );
+    expect(row?.className).toContain('bg-surface-1');
+    expect(row?.style.background).toBe('');
+    expect(row?.style.borderWidth).toBe('1.5px');
+    expect(row?.style.borderColor).toBe('var(--border-strong)');
+  });
+
+  it('greys the artwork', () => {
+    render(<EventRow show={removedShow()} surface="browse" />);
+    expect(screen.getByTestId('row-image-ring').style.filter).toBe(
+      'grayscale(1)',
+    );
+  });
+
+  it('sets the source line in mono 9px caps', () => {
+    render(<EventRow show={removedShow()} surface="browse" />);
+    const line = screen.getByTestId('row-removed-line');
+    expect(line.style.fontFamily).toBe('var(--font-mono)');
+    expect(line.style.fontSize).toBe('9px');
+    expect(line.style.letterSpacing).toBe('0.08em');
+    expect(line.style.textTransform).toBe('uppercase');
+    expect(line.className).toContain('text-fg-muted');
+  });
+
+  it('falls back to the explanation without a readable date', () => {
+    render(
+      <EventRow
+        show={makeShow({
+          lifecycle: 'cancelled',
+          delistedAt: 'not-a-date',
+        })}
+        surface="browse"
+      />,
+    );
+    expect(screen.getByTestId('row-removed-line').textContent).toBe(
+      EVENT_ROW_COPY.removedLine,
+    );
+  });
+
+  it('keeps colour on a listed row', () => {
+    render(<EventRow show={makeShow({ genres: ['folk'] })} surface="browse" />);
+    expect(screen.getByTestId('row-image-ring').style.filter).toBe('');
   });
 
   it('leaves a confirmed cancellation as a struck, non-removed row', () => {

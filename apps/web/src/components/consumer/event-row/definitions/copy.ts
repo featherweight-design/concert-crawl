@@ -39,6 +39,9 @@ export const EVENT_ROW_COPY = {
   },
   // Line 4 of a No longer listed row, in place of the chips.
   removedLine: CONSUMER_COPY.noLongerListedLine,
+  // The source line that replaces it when the sweep's date is known, the same
+  // words the event page's card prints (addendum-3 `nll-row-browse-d`).
+  removedSince: CONSUMER_COPY.noLongerListedSince,
   provenance: {
     boxoffice: 'Box office',
     standard: 'Community',

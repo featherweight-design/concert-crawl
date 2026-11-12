@@ -234,9 +234,9 @@ describe('HeroEventCard genre color', () => {
     expect(screen.getByTestId('hero-event-card').style.background).toContain(
       'var(--genre-rock)',
     );
-    // The fill washes the genre off the image side, as a carded row does.
-    expect(screen.getByTestId('hero-event-card').style.background).toContain(
-      'color-mix(in oklch, var(--genre-rock) 20%, var(--surface-1))',
+    // The genre wash lives over the blurred photo, not in the card fill.
+    expect(screen.getByTestId('hero-backdrop-wash').style.background).toContain(
+      'color-mix(in oklch, var(--genre-rock) 30%, transparent)',
     );
     // MetaRow mounts a measuring copy beside the rendered chip, so every
     // chip node appears twice; the dot still takes only the lead genre.
@@ -253,7 +253,7 @@ describe('HeroEventCard genre color', () => {
       />,
     );
     expect(screen.getByTestId('hero-event-card').style.boxShadow).toBe(
-      '0 0 28px color-mix(in oklch, var(--genre-rock) 22%, transparent)',
+      '0 0 40px color-mix(in oklch, var(--genre-rock) 18%, transparent)',
     );
   });
 
@@ -261,7 +261,47 @@ describe('HeroEventCard genre color', () => {
   it('drops the outer glow for an ungenred show', () => {
     render(<HeroEventCard event={{ ...baseEvent, genre: [] }} />);
     const shadow = screen.getByTestId('hero-event-card').style.boxShadow;
-    expect(shadow).not.toContain('28px');
+    expect(shadow === '' || shadow === 'none').toBe(true);
     expect(spotlightGlow(NEUTRAL_GENRE_COLOR)).toBe('none');
+  });
+});
+
+// Addendum-2 `shelf-see-all-m` hero block: the photo blurred behind the card
+// under a genre radial wash, inside a 16px card with a 135deg gradient edge.
+describe('HeroEventCard — spotlight backdrop (B+ fidelity)', () => {
+  const portrait = 'https://example.test/artist.jpg';
+
+  it('draws the photo blurred and saturated behind the card', () => {
+    render(
+      <HeroEventCard
+        event={{
+          ...baseEvent,
+          genre: ['alternative'],
+          artistPhotoUrl: portrait,
+        }}
+      />,
+    );
+    const backdrop = screen.getByTestId('hero-backdrop');
+    expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+    expect(backdrop.style.filter).toBe('blur(36px) saturate(1.5)');
+    expect(backdrop.style.opacity).toBe('0.45');
+    expect(backdrop.style.top).toBe('-40px');
+    expect(backdrop.style.left).toBe('-40px');
+    expect(backdrop.querySelector('img')?.getAttribute('src')).toBe(portrait);
+  });
+
+  it('frames the card at 16px with the genre-to-accent edge and a 40px glow', () => {
+    render(<HeroEventCard event={{ ...baseEvent, genre: ['alternative'] }} />);
+    const card = screen.getByTestId('hero-event-card');
+    expect(card.className).toContain('rounded-[16px]');
+    expect(card.style.background).toContain(
+      'linear-gradient(135deg, var(--genre-rock), var(--accent) 50%, var(--border))',
+    );
+    expect(card.style.boxShadow).toBe(
+      '0 0 40px color-mix(in oklch, var(--genre-rock) 18%, transparent)',
+    );
+    expect(screen.getByTestId('hero-image-ring').className).toContain(
+      'rounded-[12px]',
+    );
   });
 });
