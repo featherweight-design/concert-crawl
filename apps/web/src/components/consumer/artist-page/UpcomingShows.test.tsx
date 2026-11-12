@@ -232,6 +232,32 @@ describe('UpcomingShows', () => {
     expect(head?.firstElementChild?.querySelector('svg')).toBe(runTile);
   });
 
+  // At 320 a long venue name must ellipsise rather than push the icon or the
+  // run pill out of the header. jsdom has no layout, so pin the structure that
+  // guarantees it: a flex row whose name can shrink and whose icon and pill
+  // cannot.
+  it("lets a run header's venue name truncate, never the icon or pill", () => {
+    const { container } = render(
+      <UpcomingShows
+        photoUrl={null}
+        name="mike."
+        shows={[
+          show('2026-09-05', 'Red Rocks Amphitheatre'),
+          show('2026-09-06', 'Red Rocks Amphitheatre'),
+          show('2026-09-07', 'Red Rocks Amphitheatre'),
+        ]}
+      />,
+    );
+    const cls = (id: string) =>
+      container.querySelector(`[data-testid="${id}"]`)?.classList;
+    expect(cls('artist-run-head')?.contains('flex')).toBe(true);
+    expect(cls('artist-run-head')?.contains('min-w-0')).toBe(true);
+    expect(cls('artist-run-venue')?.contains('min-w-0')).toBe(true);
+    expect(cls('artist-run-venue')?.contains('truncate')).toBe(true);
+    expect(cls('artist-run-tile')?.contains('shrink-0')).toBe(true);
+    expect(cls('artist-run-pill')?.contains('shrink-0')).toBe(true);
+  });
+
   it('draws every item as a card, with no rules between them', () => {
     const { container } = render(
       <UpcomingShows
