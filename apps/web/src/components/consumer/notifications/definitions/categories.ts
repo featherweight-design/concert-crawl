@@ -23,9 +23,10 @@
 // "simplify" this, and do not re-assign one ink per category — eight
 // distinguishable inks do not exist.
 //
-// `contest.resolved` stays neutral per the Phase 8.5 lock (a price check is a
-// price update, not a callout). `contest.needs_info` diverges to --signal on
-// purpose: neutrality governs VERDICTS, and an outstanding task is not one.
+// `contest.resolved` and `contest.needs_info` both use the `tag` glyph in
+// --warning, per the B+ board `notif-prices-m.html`. This OVERRIDES the Phase
+// 8.5 neutral (resolved) / --signal (needs_info) split; see the B19a audit row
+// for the price check categories.
 //
 // The ink is used ONLY on non-text surfaces — the tile glyph, the 2px unread
 // rail, and the unread dot. Row text is never tinted (WCAG 1.4.3: these are

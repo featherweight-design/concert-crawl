@@ -510,12 +510,14 @@ describe('NotifItem', () => {
       />,
     );
     const row = screen.getByRole('button');
-    // jsdom drops a `border-left` shorthand carrying a var(), so assert on
-    // the serialised inline style rather than the computed one.
+    // jsdom drops declarations carrying var()/color-mix() from the computed
+    // style, so assert on the serialised inline style.
     expect(row.getAttribute('style')).toContain(
-      'border-left: 2px solid var(--success)',
+      'box-shadow: inset 2px 0 0 var(--success)',
     );
-    expect(row.getAttribute('style')).toContain('background: var(--surface-1)');
+    expect(row.getAttribute('style')).toContain(
+      'background: color-mix(in srgb, var(--success) 4%, transparent)',
+    );
     const title = within(row).getByText(/The price for Geese/);
     expect(title).toHaveStyle({ fontWeight: '700' });
     expect(row.getAttribute('aria-label')).toContain('. Unread');
@@ -530,10 +532,9 @@ describe('NotifItem', () => {
       />,
     );
     const row = screen.getByRole('button');
-    expect(row.getAttribute('style')).toContain(
-      'border-left: 2px solid transparent',
-    );
+    expect(row.getAttribute('style')).toContain('box-shadow: none');
     expect(row.getAttribute('style')).toContain('background: transparent');
+    expect(row.getAttribute('style')).not.toContain('color-mix');
     expect(within(row).getByText(/The price for Geese/)).toHaveStyle({
       fontWeight: '600',
     });

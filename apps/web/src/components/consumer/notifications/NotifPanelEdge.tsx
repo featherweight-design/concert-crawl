@@ -20,8 +20,10 @@ export const NotifPanelEdge = () => {
       preserveAspectRatio="none"
       style={{
         position: 'absolute',
-        left: 0,
-        top: 0,
+        // An absolute child anchors to the padding box, inside the panel's
+        // 1px border; -1 puts the stroke on the border box as drawn.
+        left: -1,
+        top: -1,
         pointerEvents: 'none',
         zIndex: 3,
       }}

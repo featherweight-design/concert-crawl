@@ -3,8 +3,8 @@
 //
 // All marks are 16-viewBox, fill="none", stroked in currentColor so the tile
 // supplies the category ink. No filled icons, no brand marks — newshow's glyph
-// is a signal arc, never the Spotify logo, and contest.resolved is a balance
-// scale rather than a ticket (two numbers were weighed, nobody won a prize).
+// is a signal arc, never the Spotify logo. Sold out and both price check
+// categories draw the plain `tag` (B19a boards).
 
 import type { JSX } from 'react';
 
@@ -12,10 +12,7 @@ export type GlyphName =
   | 'pricedrop'
   | 'cancelled'
   | 'postponed'
-  | 'soldout'
   | 'backonsale'
-  | 'resolved'
-  | 'needsinfo'
   | 'newshow'
   | 'userfixed'
   | 'crew'
@@ -64,25 +61,6 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       />
     </>
   ),
-  soldout: (
-    <>
-      <rect
-        x="2"
-        y="4.6"
-        width="12"
-        height="7.4"
-        rx="1.6"
-        stroke="currentColor"
-        strokeWidth="1.4"
-      />
-      <path
-        d="M2.6 13.4L13.4 3.2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </>
-  ),
   backonsale: (
     <>
       <path
@@ -98,36 +76,6 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </>
-  ),
-  resolved: (
-    <>
-      <path
-        d="M8 3.4v10.1M5.6 13.5h4.8M3 5.9h10"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M3 5.9L1.5 9.1a1.9 1.9 0 003 0L3 5.9zM13 5.9l-1.5 3.2a1.9 1.9 0 003 0L13 5.9z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-      <circle cx="8" cy="3.4" r="1.1" fill="currentColor" />
-    </>
-  ),
-  needsinfo: (
-    <>
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M6.4 6.3a1.7 1.7 0 113 1.1c-.6.5-.9.8-.9 1.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="8.4" cy="11.2" r="0.85" fill="currentColor" />
     </>
   ),
   newshow: (

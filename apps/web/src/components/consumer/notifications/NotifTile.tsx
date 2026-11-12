@@ -9,11 +9,9 @@ import { NotifGlyph } from './glyphs';
 
 export const NotifTile = ({
   category,
-  read = false,
   size = 28,
 }: {
   category: string;
-  read?: boolean | undefined;
   size?: number | undefined;
 }) => {
   const { ink, glyph } = categoryFor(category);
@@ -35,7 +33,6 @@ export const NotifTile = ({
         // glyph is the fastest scan cue in the list; read state is carried by
         // the row's title weight and the missing wash, not by the tile.
       }}
-      data-read={read ? 'true' : undefined}
     >
       <NotifGlyph name={glyph} size={size * 0.57} />
     </span>
