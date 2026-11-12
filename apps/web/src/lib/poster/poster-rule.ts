@@ -60,14 +60,18 @@ type StatusFields = Pick<
   'revokedAt' | 'expiresAt' | 'maxUses' | 'useCount' | 'usedBy' | 'usedAt'
 >;
 
-export type InviteStatus = 'active' | 'redeemed' | 'expired' | 'revoked';
+export type InviteStatus = 'active' | 'full' | 'expired' | 'revoked';
 
-/** One answer to "is this code live", for the admin list and the poster. */
+/**
+ * One answer to "is this code live", for the admin list and the poster.
+ * Revoked, then Expired, then Full (addendum 3, 5b row 5): an ended code
+ * reads as ended even when every seat is taken, so Reactivate is offered.
+ */
 export const inviteStatus = (code: StatusFields, now: Date): InviteStatus => {
   if (code.revokedAt != null) return 'revoked';
-  if (seatsTaken(code) >= code.maxUses) return 'redeemed';
   if (code.expiresAt != null && new Date(code.expiresAt) <= now)
     return 'expired';
+  if (seatsTaken(code) >= code.maxUses) return 'full';
   return 'active';
 };
 

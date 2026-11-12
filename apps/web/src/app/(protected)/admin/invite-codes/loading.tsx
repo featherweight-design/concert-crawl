@@ -1,65 +1,18 @@
+import { PageSkeleton } from '@/components/admin/primitives';
+import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+
+/**
+ * `07/loading-invite-codes`: only the shell's text shows; the title, the
+ * three tabs and the rows are placeholders in the loaded page's shape.
+ */
 export default function AdminInviteCodesLoading() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* SectionHead */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div className="admin-skeleton" style={{ width: 110, height: 22 }} />
-          <div className="admin-skeleton" style={{ width: 200, height: 13 }} />
-        </div>
-        <div
-          className="admin-skeleton"
-          style={{ width: 110, height: 34, borderRadius: 8 }}
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <SkeletonBlock width={200} height={28} radius={8} />
+        <SkeletonBlock width="min(380px, 100%)" height={12} radius={6} />
       </div>
-
-      {/* Invite codes list */}
-      <div
-        style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          borderRadius: 10,
-          overflow: 'hidden',
-        }}
-      >
-        {Array.from({ length: 6 }).map((_, idx) => (
-          <div
-            key={idx}
-            style={{
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
-            <div
-              className="admin-skeleton"
-              style={{ width: 140, height: 16, borderRadius: 4 }}
-            />
-            <div
-              className="admin-skeleton"
-              style={{
-                width: 60,
-                height: 22,
-                borderRadius: 10,
-                marginLeft: 'auto',
-              }}
-            />
-            <div className="admin-skeleton" style={{ width: 80, height: 11 }} />
-            <div
-              className="admin-skeleton"
-              style={{ width: 60, height: 28, borderRadius: 6 }}
-            />
-          </div>
-        ))}
-      </div>
+      <PageSkeleton tabs={3} columns={6} rows={7} rowHeight={57} />
     </div>
   );
 }

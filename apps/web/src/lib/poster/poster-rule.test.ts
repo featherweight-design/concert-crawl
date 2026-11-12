@@ -91,13 +91,22 @@ describe('seatsTaken', () => {
 });
 
 describe('inviteStatus', () => {
-  it('reads revoked before full, and full before expired', () => {
+  it('reads revoked, then expired, then full, then active', () => {
     expect(
-      inviteStatus({ ...open, revokedAt: '2026-11-01', useCount: 50 }, NOW),
+      inviteStatus(
+        {
+          ...open,
+          revokedAt: '2026-11-01',
+          useCount: 50,
+          expiresAt: '2026-01-01',
+        },
+        NOW,
+      ),
     ).toBe('revoked');
     expect(
       inviteStatus({ ...open, useCount: 50, expiresAt: '2026-01-01' }, NOW),
-    ).toBe('redeemed');
+    ).toBe('expired');
+    expect(inviteStatus({ ...open, useCount: 50 }, NOW)).toBe('full');
     expect(inviteStatus({ ...open, expiresAt: NOW.toISOString() }, NOW)).toBe(
       'expired',
     );
