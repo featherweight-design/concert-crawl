@@ -16,8 +16,9 @@ export const OfflinePill = () => {
       aria-live="polite"
       aria-label={OFFLINE_COPY.pillAria}
       // One line at any width. Below 360 it reads just "Offline" in the 320
-      // board's smaller pill (30px tall, 10px sides, 7px dot), so search keeps
-      // its spot. The aria-label above keeps the whole sentence.
+      // board's smaller pill (30px tall, 10px sides), so search keeps its
+      // spot. The dot is 7px at every width (offline-pill-320 draws 7px).
+      // The aria-label above keeps the whole sentence.
       className="inline-flex min-h-[36px] items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface-2 px-3 text-[12px] font-semibold text-fg-muted max-[360px]:min-h-[30px] max-[360px]:px-2.5"
     >
       <span

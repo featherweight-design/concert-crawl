@@ -2,11 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
-import {
-  CachedEmpty,
-  CachedShortcuts,
-  TRY_AGAIN_CLASS,
-} from '../CachedShortcuts';
+import { CachedEmpty, CachedShortcuts } from '../CachedShortcuts';
 import { NoSignalTile, NothingCachedTile } from '../OfflineGlyphs';
 import { OfflinePill } from '../OfflinePill';
 
@@ -36,22 +32,51 @@ describe('B22b cached show rows', () => {
     );
     const row = screen.getByTestId('cached-event-row');
     const style = row.getAttribute('style') ?? '';
-    expect(style).toContain('border-left: 2px solid var(--genre-');
+    expect(style).toContain('border-left: 2px solid var(--genre-folk)');
     expect(style).toContain('linear-gradient(90deg');
+    expect(style).toContain('var(--genre-folk) 10%');
     expect(style).toContain('45%');
     const ring = row.querySelector('span[style*="box-shadow"]');
     const ringStyle = ring?.getAttribute('style') ?? '';
-    expect(ringStyle).toContain('1.25px');
+    expect(ringStyle).toContain('1.25px var(--genre-folk)');
     expect(ringStyle).toContain('0 0 20px');
-    expect(ringStyle).toContain('40%');
+    expect(ringStyle).toContain('var(--genre-folk) 40%');
+  });
+
+  it('falls back to the neutral border-strong when the genre has no bucket', () => {
+    render(
+      <CachedShortcuts
+        events={[
+          {
+            id: 'evt-2',
+            title: 'Show',
+            date: '2026-08-14',
+            venue: { name: 'The Roxy', slug: 'the-roxy' },
+            genre: ['zzz-not-a-genre'],
+          },
+        ]}
+        venues={[]}
+      />,
+    );
+    const row = screen.getByTestId('cached-event-row');
+    const style = row.getAttribute('style') ?? '';
+    expect(style).toContain('border-left: 2px solid var(--border-strong)');
+    expect(style).toContain('var(--border-strong) 10%');
+    const ringStyle =
+      row.querySelector('span[style*="box-shadow"]')?.getAttribute('style') ??
+      '';
+    expect(ringStyle).toContain('1.25px var(--border-strong)');
+    expect(ringStyle).toContain('var(--border-strong) 40%');
   });
 });
 
 describe('B22b Try again button', () => {
   it('is a 14px rounded rectangle 41px tall, not a pill', () => {
-    expect(TRY_AGAIN_CLASS).toContain('rounded-[14px]');
-    expect(TRY_AGAIN_CLASS).toContain('h-[41px]');
-    expect(TRY_AGAIN_CLASS).not.toContain('rounded-full');
+    render(<CachedEmpty onRetry={() => {}} />);
+    const button = screen.getByRole('button');
+    expect(button.className).toContain('rounded-[14px]');
+    expect(button.className).toContain('h-[41px]');
+    expect(button.className).not.toContain('rounded-full');
   });
 
   it('keeps the home link a full pill', () => {
