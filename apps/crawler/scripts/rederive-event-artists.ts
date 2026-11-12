@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 import {
   adjudicateEventWithUsage,
   calculateCost,
+  makeJoinedEvidence,
   rederiveEventArtists,
 } from '@concert-crawl/crawler-core';
 
@@ -110,6 +111,10 @@ async function main(): Promise<void> {
     limit,
     onlyFlattenedBillings,
     hideNonConcerts,
+    // Our artists table and MusicBrainz (the bot user agent, one request a
+    // second) decide whether "A & B" is one act or two; what they cannot
+    // settle is left unwritten and listed below.
+    joinedEvidence: makeJoinedEvidence(),
     shouldStop: () => spentUsd >= maxCostUsd,
     // Every change, not a sample: the summary is the list an apply is judged by.
     sampleSize: Number.MAX_SAFE_INTEGER,
@@ -185,6 +190,19 @@ async function main(): Promise<void> {
             '',
           ]
         : []),
+      `### Unresolved joined names (${result.unresolvedJoined.length}), left unwritten`,
+      '',
+      "Neither our artists nor MusicBrainz could say whether these are one act or two. The event is not touched; the model's guess is shown for an admin to read, not applied.",
+      '',
+      '| Event | Joined name | Model guess |',
+      '|---|---|---|',
+      ...result.unresolvedJoined
+        .slice(0, SUMMARY_MAX_ROWS)
+        .map(
+          (item) =>
+            `| ${cell(item.title)} | ${cell(item.name)} | ${cell(names(item.guess))} |`,
+        ),
+      '',
     ];
     appendFileSync(summaryFile, `${lines.join('\n')}\n`);
   }

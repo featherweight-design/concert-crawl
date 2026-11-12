@@ -298,6 +298,43 @@ describe('rederive-event-artists integration', () => {
     expect(result.stopped).toBe(true);
   });
 
+  it('leaves an event with an unsettled joined name untouched and lists the name', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      title: 'Jade Cicada & Mickman',
+      artist: 'Jade Cicada & Mickman',
+      canonicalArtist: 'jade cicada',
+      canonicalTitle: 'jade cicada & mickman',
+      date: '2026-09-02',
+    });
+    const result = await rederiveEventArtists({
+      dryRun: false,
+      adjudicate: vi.fn(async () => ({
+        isConcert: true,
+        headliners: ['Jade Cicada', 'Mickman'],
+        supportingArtists: [],
+      })),
+      adjudicationIntervalMs: 0,
+      aiUseAllowed: async () => true,
+      joinedEvidence: {
+        whole: async () => false,
+        part: async () => false,
+      },
+    });
+    const after = await readEvent(event.id);
+    expect(after.canonicalHeadliners).toBeNull();
+    expect(result.updated).toBe(0);
+    expect(result.strategies['joined-unresolved']).toBe(1);
+    expect(result.unresolvedJoined).toEqual([
+      {
+        eventId: event.id,
+        title: 'Jade Cicada & Mickman',
+        name: 'Jade Cicada & Mickman',
+        guess: ['Jade Cicada', 'Mickman'],
+      },
+    ]);
+  });
+
   it('leaves a row the adjudicator rules not a concert exactly as it was unless hiding is asked for', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {

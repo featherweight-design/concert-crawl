@@ -44,6 +44,7 @@ import {
   wouldAdjudicate,
   type Adjudicator,
 } from './lib/derive-artists.js';
+import type { JoinedEvidence } from './lib/joined-names.js';
 import { isAiUseAllowed } from './lib/robots.js';
 import { endpointUrl as aegEndpointUrl } from './lib/fetchers/aeg.js';
 import { ENDPOINT as VENUEPILOT_ENDPOINT } from './lib/fetchers/venuepilot.js';
@@ -82,7 +83,12 @@ export type RederiveStrategy =
    * left exactly as it was: this pass repairs bills, and reclassifying a show
    * is the crawl's call on its first sight of a row, not a repair's.
    */
-  | 'non-concert-left';
+  | 'non-concert-left'
+  /**
+   * A joined name ("A & B") the evidence could not settle as one act or two.
+   * The row is left exactly as it was; the name is listed for an admin.
+   */
+  | 'joined-unresolved';
 
 export interface RederiveChange {
   eventId: string;
@@ -117,6 +123,16 @@ export interface RederiveEventArtistsResult {
   strategies: Record<RederiveStrategy, number>;
   /** Up to 25 changes, for eyeballing before an apply run. */
   sample: RederiveChange[];
+  /** Joined names left unwritten for lack of evidence, with the model's guess. */
+  unresolvedJoined: UnresolvedJoined[];
+}
+
+export interface UnresolvedJoined {
+  eventId: string;
+  title: string;
+  name: string;
+  /** What the adjudicator answered; evidence, not a decision. */
+  guess: string[];
 }
 
 export interface RederiveEventArtistsOptions {
@@ -132,6 +148,8 @@ export interface RederiveEventArtistsOptions {
    * can cost a call.
    */
   onlyFlattenedBillings?: boolean;
+  /** Evidence for joined names and presenters. Left out, the ladder is as it was. */
+  joinedEvidence?: JoinedEvidence;
   /**
    * Hide rows the ladder rules "not a concert", as the crawl's INSERT path
    * does. Off by default: a model answer that varies run to run must not hide a
@@ -238,8 +256,10 @@ export async function rederiveEventArtists(
     'provenance-unknown': 0,
     'tribute-or-cover': 0,
     'non-concert-left': 0,
+    'joined-unresolved': 0,
   };
   const sample: RederiveChange[] = [];
+  const unresolvedJoined: UnresolvedJoined[] = [];
   let scanned = 0;
   let derived = 0;
   let updated = 0;
@@ -344,7 +364,21 @@ export async function rederiveEventArtists(
       }
       if (willAdjudicate && intervalMs > 0) await sleep(intervalMs);
 
-      const result = await deriveArtists(input, options.adjudicate);
+      const result = await deriveArtists(
+        input,
+        options.adjudicate,
+        options.joinedEvidence,
+      );
+
+      // A joined name the evidence cannot settle: nothing is written for the
+      // event, and the name goes in the summary for an admin to rule on.
+      if (result.unresolvedJoined !== undefined) {
+        strategies['joined-unresolved'] += 1;
+        for (const item of result.unresolvedJoined) {
+          unresolvedJoined.push({ eventId: row.id, title: row.title, ...item });
+        }
+        continue;
+      }
 
       // NULL is the ladder reaching no verdict, which only an adjudicator
       // outage produces. Writing it would read as "nobody is billed" and erase
@@ -446,5 +480,14 @@ export async function rederiveEventArtists(
     if (stopped) break;
   }
 
-  return { scanned, derived, updated, hidden, stopped, strategies, sample };
+  return {
+    scanned,
+    derived,
+    updated,
+    hidden,
+    stopped,
+    strategies,
+    sample,
+    unresolvedJoined,
+  };
 }

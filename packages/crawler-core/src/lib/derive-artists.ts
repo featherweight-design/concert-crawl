@@ -1,5 +1,11 @@
 import { reportFailure } from '@concert-crawl/logger';
 import type { NormalizedEvent } from '../types.js';
+import {
+  joinsNames,
+  partsOf,
+  rulingOf,
+  type JoinedEvidence,
+} from './joined-names.js';
 
 export interface DerivedArtists {
   /**
@@ -19,6 +25,12 @@ export interface DerivedArtists {
    * leaves the row untouched rather than erase what is there.
    */
   coversOtherArtists?: boolean;
+  /**
+   * Joined names ("A & B") the evidence could not settle as one act or two. The
+   * bill is NULL then (nothing is written for the event) and `guess` is what the
+   * adjudicator answered, kept only so an admin can read it beside the name.
+   */
+  unresolvedJoined?: { name: string; guess: string[] }[];
 }
 
 export type Adjudicator = (input: {
@@ -153,6 +165,63 @@ export function splitListedSeparately(
       ? members
       : [name];
   });
+}
+
+/**
+ * Settles every joined headliner from evidence. `lone` is the lone flattened
+ * name the venue's field reported: whatever the model answered for it, the
+ * ruling is what stands (so a model that splits it one run and keeps it whole
+ * the next cannot move the answer). Names the evidence cannot settle come back
+ * in `unresolved`.
+ */
+async function applyJoinedRulings(
+  headliners: string[],
+  lone: string | undefined,
+  evidence: JoinedEvidence,
+): Promise<{ headliners: string[]; unresolved: string[] }> {
+  const unresolved: string[] = [];
+  let rest = headliners;
+  const out: string[] = [];
+  if (lone !== undefined && joinsNames(lone)) {
+    const ruling = await rulingOf(lone, evidence);
+    const parts = partsOf(lone);
+    const keys = new Set([lone, ...parts].map(nameKey));
+    rest = rest.filter((name) => !keys.has(nameKey(name)));
+    if (ruling === 'whole') out.push(lone);
+    else if (ruling === 'split') out.push(...parts);
+    else unresolved.push(lone);
+  }
+  for (const name of rest) {
+    if (!joinsNames(name)) {
+      out.push(name);
+      continue;
+    }
+    const ruling = await rulingOf(name, evidence);
+    if (ruling === 'split') out.push(...partsOf(name));
+    else if (ruling === 'whole') out.push(name);
+    else unresolved.push(name);
+  }
+  return { headliners: out, unresolved };
+}
+
+// "Tape B Presents: Hallow Rocks": a presenter is on the bill only when it is a
+// known artist (Tape B is; a radio station that presents the night is not).
+// The word is "presents", never the shape of the name.
+const PRESENTER = /^(.+?)\s+presents\b/i;
+
+async function withKnownPresenter(
+  title: string,
+  headliners: string[],
+  evidence: JoinedEvidence,
+): Promise<string[]> {
+  const presenter = PRESENTER.exec(title)?.[1]?.trim();
+  if (presenter === undefined || presenter === '' || joinsNames(presenter))
+    return headliners;
+  const key = nameKey(presenter);
+  if (headliners.some((name) => nameKey(name) === key)) return headliners;
+  return (await evidence.part(presenter))
+    ? [presenter, ...headliners]
+    : headliners;
 }
 
 // Only when the title AS A WHOLE is a tribute or cover night. The word inside
@@ -297,6 +366,9 @@ export async function deriveArtists(
   // description are its page text, so step 2 is skipped and the event keeps
   // whatever bill is stored, exactly as an adjudicator outage would.
   adjudicate: Adjudicator | null,
+  // Evidence for joined names and presenters. The artist repair passes it; the
+  // live crawl does not, and keeps the answer it always had.
+  evidence?: JoinedEvidence,
 ): Promise<DerivedArtists> {
   // Step -1 — a tribute or cover night: a concert, never hidden, nobody billed.
   // Outranks an extractor's "not a concert" and any observed bill, which here
@@ -409,10 +481,31 @@ export async function deriveArtists(
     if (joined && verdict.isConcert && verdict.headliners.length === 0) {
       return observedBill();
     }
-    const headliners = splitListedSeparately(
-      verdict.headliners,
-      venuePerformers,
-    );
+    let headliners = splitListedSeparately(verdict.headliners, venuePerformers);
+    if (evidence !== undefined) {
+      const ruled = await applyJoinedRulings(
+        headliners,
+        joined ? observed[0] : undefined,
+        evidence,
+      );
+      if (ruled.unresolved.length > 0) {
+        return {
+          headliners: null,
+          supportingArtists: null,
+          isConcert: verdict.isConcert,
+          adjudicated: true,
+          unresolvedJoined: ruled.unresolved.map((name) => ({
+            name,
+            guess: verdict.headliners,
+          })),
+        };
+      }
+      headliners = await withKnownPresenter(
+        event.title,
+        ruled.headliners,
+        evidence,
+      );
+    }
     return {
       ...tidyBill(
         headliners,

@@ -58,7 +58,9 @@ export {
 export { sweepExpiredPageBodies } from './lib/page-body-sweep.js';
 export type { PageBodySweepResult } from './lib/page-body-sweep.js';
 export { rederiveEventArtists } from './rederive-event-artists.js';
+export { makeJoinedEvidence } from './joined-name-evidence.js';
 export type {
+  UnresolvedJoined,
   RederiveChange,
   RederiveEventArtistsOptions,
   RederiveEventArtistsResult,
