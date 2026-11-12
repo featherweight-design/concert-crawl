@@ -125,7 +125,11 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
       show.savedPrice !== null
         ? { at: show.savedAt, price: Math.round(show.savedPrice) }
         : null,
-    genres: show.genres,
+    // The type says required, but the payload is not parsed on the client and
+    // an API older than this field (a deploy race, or a prod rollback of the
+    // API alone) sends none. A missing list would throw in the chip builder
+    // and take the whole Watching list down with it.
+    genres: show.genres ?? [],
     isFollowed: false,
     crewGoing: null,
     // Every row on this list is watched by definition, so the tick would be on

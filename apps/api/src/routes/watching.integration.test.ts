@@ -68,6 +68,10 @@ async function readProvenance(
 // Parsed rather than cast for the same reason as the schemas above: a cast
 // turns a 500 into an empty `data` and lets a "row is excluded" assertion pass
 // for the wrong reason.
+const genresResponse = z.object({
+  data: z.array(z.object({ genres: z.array(z.string()) })),
+});
+
 const artistListResponse = z.object({
   success: z.boolean(),
   data: z.array(z.object({ artist: z.string() })),
@@ -158,7 +162,8 @@ describe('GET /v1/watching', () => {
     await seedUserEvent('user_genres', bare.id, { status: 'watching' });
 
     const res = await app.request('/v1/watching');
-    const body = (await res.json()) as { data: { genres: string[] }[] };
+    // Parsed, not cast: a missing `genres` key fails here by name.
+    const body = genresResponse.parse(await res.json());
     expect(body.data.map((row) => row.genres)).toEqual([['jazz', 'soul'], []]);
   });
 
