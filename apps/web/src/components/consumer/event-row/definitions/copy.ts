@@ -87,10 +87,10 @@ export const EVENT_ROW_COPY = {
     droppedGenre: (genre: string) => ` and ${genre}`,
     priceProvenance: (label: string) => `Price source: ${label}`,
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
-    // Replaces the visible "pending" marker, so it has to say what pending
-    // means rather than repeat the word.
     // Replaces the sold-out price slot's placeholder dash.
     soldOutPrice: 'No price, sold out',
+    // Replaces the visible "pending" marker, so it has to say what pending
+    // means rather than repeat the word.
     pendingPrice: 'Submitted price, not confirmed yet',
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,
     savedDeltaUp: (amount: string) => `Up ${amount} since you started watching`,

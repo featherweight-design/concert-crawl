@@ -1,4 +1,4 @@
-import { RowMetaChip, type ChipTone } from './event-row/RowMetaChip';
+import { RowMetaChip, toneColor, type ChipTone } from './event-row/RowMetaChip';
 
 /** Every show status B+ draws a chip for (`04-genre-and-vibe/bp-chips-all`). */
 export type ShowStatusChip =
@@ -14,22 +14,14 @@ const STATUS_TONE: Record<ShowStatusChip, ChipTone> = {
   removed: 'neutral',
 };
 
-// The token behind each tone, for the places a status colors something other
-// than its chip (a carded row's left edge and wash). Read through
-// `statusColor` so the chip and the edge can never disagree.
-const TONE_TOKEN: Record<ChipTone, string> = {
-  neutral: 'var(--border-strong)',
-  strong: 'var(--border-strong)',
-  warn: 'var(--warning)',
-  signal: 'var(--signal)',
-  accent: 'var(--accent)',
-  danger: 'var(--danger)',
-  success: 'var(--success)',
-};
-
-/** The rule 3 color for a status, as a CSS value. */
+/**
+ * The rule 3 color for a status, as a CSS value, for the places a status
+ * colors something other than its chip (a carded row's left edge and wash).
+ * Read from the chip's own tone table, so the chip and the edge cannot
+ * disagree.
+ */
 export const statusColor = (status: ShowStatusChip): string =>
-  TONE_TOKEN[STATUS_TONE[status]];
+  toneColor(STATUS_TONE[status]);
 
 interface StatusChipProps {
   status: ShowStatusChip;

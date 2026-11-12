@@ -236,7 +236,9 @@ export const RowTitleLine = ({
       <div
         data-testid="row-title"
         data-struck={struck || undefined}
-        className={`min-w-0 truncate transition-colors group-hover/eventtitle:text-signal ${struck ? 'text-fg-muted' : 'text-fg'}`}
+        // A struck title stays muted on hover: brightening it to the signal
+        // color would make a cancelled show read as a live one.
+        className={`min-w-0 truncate transition-colors ${struck ? 'text-fg-muted' : 'text-fg group-hover/eventtitle:text-signal'}`}
         // The strike is a decoration on the title box only, so the measuring
         // copy below keeps the same advance widths and the fit never moves.
         style={{

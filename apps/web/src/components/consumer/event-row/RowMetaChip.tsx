@@ -46,6 +46,9 @@ const TONE: Record<
   success: tint('--success', 9),
 };
 
+/** A tone's text color, for the places a tone colors something besides the chip. */
+export const toneColor = (tone: ChipTone): string => TONE[tone].color;
+
 export interface RowMetaChipProps {
   label: string;
   tone?: ChipTone;

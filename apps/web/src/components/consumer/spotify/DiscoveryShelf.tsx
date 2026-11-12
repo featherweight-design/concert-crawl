@@ -400,8 +400,8 @@ export const DiscoveryShelf = ({
               `max-w-[100vw]` + `overflow-hidden` remain as belt-and-
               suspenders for any other stray overflow. */}
           <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
-            {/* Not capped at lg like "Your artists": the picks have no page
-                that lists the rest, so the rail keeps scrolling. */}
+            {/* Not capped: the picks have no page that lists the rest, so
+                the rail keeps scrolling at every width. */}
             <ul
               aria-label={COPY.listAria}
               className={`flex list-none overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0 ${SHELF_RAIL_GAP_CLASS}`}
