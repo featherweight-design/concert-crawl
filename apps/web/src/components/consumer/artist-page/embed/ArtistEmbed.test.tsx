@@ -35,7 +35,8 @@ describe('ArtistEmbed — the player', () => {
     expect(frame?.getAttribute('allow')).toBe('encrypted-media');
     expect(frame?.getAttribute('height')).toBe(String(EMBED_H.compact));
     expect(frame?.style.width).toBe('100%');
-    expect(frame?.style.borderRadius).toBe('8px');
+    // B+ `09-artist`: the iframe sits 12px-round inside the 16px framed mat.
+    expect(frame?.style.borderRadius).toBe('12px');
   });
 
   it('passes the resolved plate hex to the iframe, never a CSS variable', () => {

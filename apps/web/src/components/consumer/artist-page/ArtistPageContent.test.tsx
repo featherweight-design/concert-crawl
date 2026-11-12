@@ -11,7 +11,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as EntitlementsModule from '@concert-crawl/entitlements';
 
 import { ArtistPageContent } from './ArtistPageContent';
-import { AP_STICKY_AFTER, AP_STICKY_BAR_H } from './definitions/constants';
+import {
+  AP_STICKY_AFTER,
+  AP_STICKY_BAR_H,
+  CRAWL_SINCE,
+} from './definitions/constants';
 import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
 
 import { ARTIST_COPY } from './definitions/copy';
@@ -584,7 +588,7 @@ describe('ArtistPageContent', () => {
     });
 
     it('places the history line once: under the follow on mobile, in the stage on desktop', () => {
-      const line = ARTIST_COPY.historyNone('March 2026');
+      const line = ARTIST_COPY.historyNone(CRAWL_SINCE);
       const mobile = render(<ArtistPageContent data={base} />).container;
       expect(mobile.querySelectorAll('.ap-history')).toHaveLength(1);
       expect(mobile.querySelector('.ap-history-card')?.textContent).toBe(line);
