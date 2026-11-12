@@ -97,11 +97,12 @@ describe('EventTitleBlock', () => {
     ).toBeInTheDocument();
   });
 
-  // The strike came off every surface, event detail included: the status pill
-  // states the cancellation in words, and a line through a proper noun reads as
-  // a typo before it reads as a state.
-  it('does not strike through a cancelled headliner', () => {
-    render(
+  // B+ reverses the old no-strike rule on the event page: the board
+  // (`08-prices-and-status/more-st-ev_canc_m`) strikes a cancelled title and
+  // draws the status chip under it. Postponed is never struck, and the hero
+  // card keeps its words.
+  it('strikes a cancelled headliner on the detail surface only', () => {
+    const { rerender } = render(
       <EventTitleBlock
         headliner="Wednesday"
         supportingArtists={[]}
@@ -111,9 +112,68 @@ describe('EventTitleBlock', () => {
         surface="detail"
       />,
     );
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).not.toHaveStyle({ textDecoration: 'line-through' });
-    expect(heading.style.textDecoration).toBe('');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveStyle({
+      textDecoration: 'line-through',
+    });
+    rerender(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        status="cancelled"
+        headlinerAs="h1"
+        surface="hero"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1 }).style.textDecoration).toBe(
+      '',
+    );
+    rerender(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        status="postponed"
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1 }).style.textDecoration).toBe(
+      '',
+    );
+  });
+
+  it('draws the detail status chip after the title, the hero chip before it', () => {
+    const { rerender } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName="Tour"
+        status="cancelled"
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    );
+    let heading = screen.getByRole('heading', { level: 1 });
+    let chip = screen.getByText(/cancelled/i);
+    expect(
+      heading.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    rerender(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName="Tour"
+        status="cancelled"
+        headlinerAs="h1"
+        surface="hero"
+      />,
+    );
+    heading = screen.getByRole('heading', { level: 1 });
+    chip = screen.getByText(/cancelled/i);
+    expect(
+      heading.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
   });
 });
 

@@ -73,18 +73,23 @@ export const EventTitleBlock = ({
   // The pill itself decides whether to render; this only drives whether the
   // row that would contain it exists at all.
   const hasPill = status !== 'upcoming';
+  // B+ (`08-prices-and-status/more-st-ev_canc_m`): on the detail page the
+  // status chip sits under the title, not in the tour row above it.
+  const pillBelow = surface === 'detail';
   const Headliner = headlinerAs;
   const showLegacyFallback =
     isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner;
 
   return (
     <div className="flex min-w-0 flex-col" style={{ gap: ramp.gap }}>
-      {(hasPill || tourName) && (
+      {((hasPill && !pillBelow) || tourName) && (
         <div
           className="flex min-w-0 items-center gap-2"
           style={{ marginBottom: 1 }}
         >
-          <StatusPill status={status} fontSize={ramp.tour} />
+          {pillBelow ? null : (
+            <StatusPill status={status} fontSize={ramp.tour} />
+          )}
           {tourName && (
             <div
               aria-label={CONSUMER_COPY.eventTitle.tourAriaLabel(tourName)}
@@ -103,10 +108,14 @@ export const EventTitleBlock = ({
         // whitespace-nowrap). Applying `truncate` on `detail` too would clip a
         // multi-line title, so it is scoped to the hero only.
         className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
-        // A cancelled show is not struck through. The status pill above the
-        // title already says so in words, and a line through a proper noun is
-        // read as a typo before it is read as a state.
+        // B+ draws a cancelled show's title struck and dimmed
+        // (`more-st-ev_canc_m`, `more-st-rows_board`). Postponed is not struck.
+        // The strike is the detail page's only: the hero card keeps its words.
         style={{
+          textDecoration:
+            surface === 'detail' && status === 'cancelled'
+              ? 'line-through'
+              : undefined,
           fontSize: ramp.head,
           fontWeight: surface === 'detail' ? 900 : 800,
           letterSpacing: surface === 'detail' ? '-0.03em' : '-0.02em',
@@ -137,6 +146,12 @@ export const EventTitleBlock = ({
           slugs={supportingArtistSlugs}
           linkArtists={linkArtists}
         />
+      )}
+
+      {pillBelow && hasPill && (
+        <div className="flex" style={{ marginTop: 2 }}>
+          <StatusPill status={status} fontSize={ramp.tour} />
+        </div>
       )}
 
       {showLegacyFallback && (
