@@ -6,8 +6,12 @@ import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
 
 const MT = 'America/Denver';
 const HOUR_MS = 3_600_000;
-/** The daily crawl starts at 3 AM MT (crawl rules). */
-const CRAWL_HOUR_MT = 3;
+/**
+ * The daily crawl's cron fires at 09:07 UTC (`apps/api/vercel.json`): 3:07 AM
+ * MDT but 2:07 AM MST. Anchoring on a fixed MT hour would miss the first hour
+ * of every winter crawl, so the boundary is the cron's UTC hour.
+ */
+const CRAWL_HOUR_UTC = 9;
 
 /** One row of `GET /v1/admin/crawl/status`: a venue and its newest run. */
 export interface HealthStatusRow {
@@ -71,13 +75,20 @@ export interface Window {
 }
 
 /**
- * "Last night": the MT calendar day of the newest 3 AM crawl that has started.
- * Before 3 AM that is yesterday. A by-hand run later the same day falls inside
- * it too (gap G2).
+ * "Last night": the MT calendar day of the newest daily crawl that has
+ * started. Before the cron hour (2 AM MST, 3 AM MDT) that is yesterday. MT day
+ * D's 09:00Z always falls inside D (its midnight is 06:00Z or 07:00Z). A
+ * by-hand run later the same day falls inside it too (gap G2).
  */
 export const lastNightWindow = (now: Date): Window => {
   const parts = mtParts(now);
-  const day = parts.hour < CRAWL_HOUR_MT ? parts.day - 1 : parts.day;
+  const cronAt = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    CRAWL_HOUR_UTC,
+  );
+  const day = now.getTime() < cronAt ? parts.day - 1 : parts.day;
   return {
     start: mtMidnight(parts.year, parts.month, day),
     end: mtMidnight(parts.year, parts.month, day + 1),
@@ -236,8 +247,26 @@ export const groupVenues = (
     const venue = venuesById.get(row.id);
     if (!venue) continue;
     const { onSite, crawling } = deriveVenueStatusChips(venue);
+    const run = runLastNight(row, window);
+    const cell: GridCell = {
+      id: row.id,
+      name: row.name,
+      // A failed run last night is at least the 1st failure, whatever the
+      // counter says (a 403 blocks without waiting for three).
+      failures:
+        run?.status === 'failed'
+          ? Math.max(1, venue.consecutiveFailures)
+          : venue.consecutiveFailures,
+      autoPaused: crawling === 'auto_paused',
+    };
+    // Every failure the Crawl tile counts is listed, a blocked venue's
+    // included, so the tile's "N failed" and the Failed group agree.
+    if (run?.status === 'failed') {
+      groups.failed.push(cell);
+      continue;
+    }
     // GAP G6: hidden, blocked and robots.txt venues have no drawn group, so
-    // they stay off the grid until Design draws one.
+    // otherwise they stay off the grid until Design draws one.
     if (
       onSite === 'hidden' ||
       crawling === 'blocked' ||
@@ -245,15 +274,7 @@ export const groupVenues = (
     ) {
       continue;
     }
-    const run = runLastNight(row, window);
-    const cell: GridCell = {
-      id: row.id,
-      name: row.name,
-      failures: venue.consecutiveFailures,
-      autoPaused: crawling === 'auto_paused',
-    };
-    if (run?.status === 'failed') groups.failed.push(cell);
-    else if (crawling === 'paused' || crawling === 'auto_paused') {
+    if (crawling === 'paused' || crawling === 'auto_paused') {
       groups.paused.push(cell);
     } else if (!run) {
       // No run last night and not paused is "Didn't run", which waits on 1d.
