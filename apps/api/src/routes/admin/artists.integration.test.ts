@@ -144,9 +144,22 @@ describe('admin artists routes', () => {
     });
 
     it('matches a backslash literally', async () => {
-      await seedArtist({ canonicalName: 'a\\b', matchStatus: 'ambiguous' });
-      await seedArtist({ canonicalName: 'a_b', matchStatus: 'ambiguous' });
-      await seedArtist({ canonicalName: 'axb', matchStatus: 'ambiguous' });
+      // Explicit slugs: 'a\b' and 'a_b' both derive to 'a-b'.
+      await seedArtist({
+        canonicalName: 'a\\b',
+        slug: 'a-backslash-b',
+        matchStatus: 'ambiguous',
+      });
+      await seedArtist({
+        canonicalName: 'a_b',
+        slug: 'a-underscore-b',
+        matchStatus: 'ambiguous',
+      });
+      await seedArtist({
+        canonicalName: 'axb',
+        slug: 'axb',
+        matchStatus: 'ambiguous',
+      });
 
       const res = await app.request(
         '/v1/admin/artists?search=%5C&upcoming=false',
