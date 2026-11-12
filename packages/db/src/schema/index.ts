@@ -4,6 +4,7 @@ export * from './events.js';
 export * from './artist-reports.js';
 export * from './artists.js';
 export * from './crawl-runs.js';
+export * from './crawl-run-pages.js';
 export * from './crawl-triggers.js';
 export * from './users.js';
 export * from './social.js';

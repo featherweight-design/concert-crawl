@@ -24,6 +24,7 @@ import type { Venue } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import type { NormalizedEvent } from '../../types.js';
+import type { FetchLog } from '../fetch-log.js';
 import { extractJsonLd } from '../extractors/json-ld.js';
 import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
@@ -85,8 +86,9 @@ async function fetchText(
   url: string,
   crawlDelayMs: number,
   timeoutMs?: number,
+  fetchLog?: FetchLog,
 ): Promise<string> {
-  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs)).html;
+  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs, fetchLog)).html;
 }
 
 // Like fetchText, but also returns the URL the body actually came from after
@@ -98,6 +100,7 @@ async function fetchTextLanded(
   url: string,
   crawlDelayMs: number,
   timeoutMs?: number,
+  fetchLog?: FetchLog,
 ): Promise<{ html: string; landedUrl: string }> {
   const origin = new URL(url).origin;
   let fetched: RobotsFetchResult;
@@ -134,6 +137,12 @@ async function fetchTextLanded(
   }
   const { response, finalUrl } = fetched;
   if (!response.ok) {
+    fetchLog?.record({
+      url,
+      finalUrl,
+      httpStatus: response.status,
+      mode: 'http',
+    });
     throw new DetailPageFetchError(
       response.status,
       url,
@@ -143,7 +152,24 @@ async function fetchTextLanded(
       `Detail-page fetch failed: HTTP ${response.status} for ${url}`,
     );
   }
-  return { html: await response.text(), landedUrl: finalUrl };
+  const html = await response.text();
+  fetchLog?.record({
+    url,
+    finalUrl,
+    httpStatus: response.status,
+    mode: 'http',
+    body: html,
+  });
+  return { html, landedUrl: finalUrl };
+}
+
+// The listing page loaded but carries nothing to follow: the venue's calendar
+// block is gone or moved. Its own class so the run records `calendar_not_found`.
+export class CalendarNotFoundError extends DetailPageFetchError {
+  constructor(url: string, message: string) {
+    super(0, url, message);
+    this.name = 'CalendarNotFoundError';
+  }
 }
 
 /**
@@ -267,7 +293,7 @@ async function detailPageFetch(
     try {
       sitemapUrls = parseSitemapUrls(
         await deadline.run('sitemap', (timeoutMs) =>
-          fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs),
+          fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs, opts.fetchLog),
         ),
         listingUrl,
       );
@@ -294,12 +320,11 @@ async function detailPageFetch(
 
   await deadline.wait(jitter(opts.crawlDelayMs));
   const listingHtml = await deadline.run('listing', (timeoutMs) =>
-    fetchText(listingUrl, opts.crawlDelayMs, timeoutMs),
+    fetchText(listingUrl, opts.crawlDelayMs, timeoutMs, opts.fetchLog),
   );
   const candidates = extractCandidateUrls(listingHtml, listingUrl);
   if (candidates.length === 0) {
-    throw new DetailPageFetchError(
-      0,
+    throw new CalendarNotFoundError(
       listingUrl,
       `Detail-page listing ${listingUrl} contained no same-origin links to follow`,
     );
@@ -362,7 +387,13 @@ async function detailPageFetch(
     try {
       ({ html, landedUrl } = await deadline.run(
         `detail ${detailUrl}`,
-        (timeoutMs) => fetchTextLanded(detailUrl, opts.crawlDelayMs, timeoutMs),
+        (timeoutMs) =>
+          fetchTextLanded(
+            detailUrl,
+            opts.crawlDelayMs,
+            timeoutMs,
+            opts.fetchLog,
+          ),
       ));
     } catch (err) {
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {

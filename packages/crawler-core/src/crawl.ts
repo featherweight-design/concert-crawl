@@ -3,12 +3,12 @@ import { and, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import {
   db,
   venues,
-  events,
   crawlRuns,
+  events,
   notifications,
   costTracking,
 } from '@concert-crawl/db';
-import type { CrawlRun } from '@concert-crawl/db';
+import type { CrawlRun, CrawlRunReason } from '@concert-crawl/db';
 import { reportFailure } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import {
@@ -46,6 +46,9 @@ import {
 } from './lib/derive-artists.js';
 import { calculateCost } from './lib/cost.js';
 import { dispatch } from './lib/fetchers/index.js';
+import { CalendarNotFoundError } from './lib/fetchers/detail-page.js';
+import { FetchLog } from './lib/fetch-log.js';
+import { insertCrawlRun } from './lib/record-run.js';
 import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js';
 import {
   detectCrossVenuePresale,
@@ -381,6 +384,27 @@ const memoizeBrowser = (source: BrowserSource): (() => Promise<Browser>) => {
   };
 };
 
+// Why a crawl that threw is recorded as failed. Account-wide LLM refusals are
+// the account's, not the venue's; a 403 or 429 is a block; a timeout is a page
+// that never answered or never rendered the calendar.
+function failureReason(err: unknown, isAccountWide: boolean): CrawlRunReason {
+  if (isAccountWide) return 'llm_account';
+  if (
+    err instanceof CrawlFetchError &&
+    (err.httpStatus === 403 || err.httpStatus === 429)
+  ) {
+    return 'blocked_http';
+  }
+  if (err instanceof CalendarNotFoundError) return 'calendar_not_found';
+  if (
+    err instanceof CrawlSelectorTimeoutError ||
+    (err instanceof Error && err.name === 'TimeoutError')
+  ) {
+    return 'timeout';
+  }
+  return 'error';
+}
+
 export async function crawlVenue(
   venueId: string,
   browser: BrowserSource,
@@ -397,6 +421,8 @@ export async function crawlVenue(
   const getBrowser = memoizeBrowser(browser);
   const id = crawlRunId ?? crypto.randomUUID();
   const startedAt = Date.now();
+  // Every page this run fetches, flushed with its crawl_runs row.
+  const fetchLog = new FetchLog();
   // Date snapshot captured up-front so the stale-event detection update can
   // compare it against events.last_seen_at after the per-venue upsert pass
   // runs. Using a single value across both update statements guarantees the
@@ -424,20 +450,20 @@ export async function crawlVenue(
   // failure: no strike, no block, and the venue's shows stay published.
   if (venue.crawlPausedAt !== null) {
     console.log(JSON.stringify({ event: 'crawl.paused', venueId }));
-    const [crawlRun] = await db
-      .insert(crawlRuns)
-      .values({
+    const crawlRun = await insertCrawlRun(
+      {
         id,
         venueId,
         status: 'skipped',
+        reason: 'crawl_paused',
         robotsTxtBlocked: 'unchecked',
         eventsFound: 0,
         eventsInserted: 0,
         errorMessage: 'Crawling paused; not crawled',
         durationMs: Date.now() - startedAt,
-      })
-      .returning();
-    if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+      },
+      fetchLog,
+    );
     return { ...crawlRun, insertedEventIds: [] };
   }
 
@@ -458,20 +484,20 @@ export async function crawlVenue(
         reason: robots.reason,
       }),
     );
-    const [crawlRun] = await db
-      .insert(crawlRuns)
-      .values({
+    const crawlRun = await insertCrawlRun(
+      {
         id,
         venueId,
         status: 'skipped',
+        reason: 'robots_unreachable',
         robotsTxtBlocked: 'unchecked',
         eventsFound: 0,
         eventsInserted: 0,
         errorMessage: `robots.txt unreachable (${robots.reason}); not crawled`,
         durationMs: Date.now() - startedAt,
-      })
-      .returning();
-    if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+      },
+      fetchLog,
+    );
     return { ...crawlRun, insertedEventIds: [] };
   }
   if (robots.status === 'disallowed') {
@@ -482,19 +508,19 @@ export async function crawlVenue(
         url: venue.websiteUrl,
       }),
     );
-    const [crawlRun] = await db
-      .insert(crawlRuns)
-      .values({
+    const crawlRun = await insertCrawlRun(
+      {
         id,
         venueId,
         status: 'failed',
+        reason: 'robots_disallowed',
         robotsTxtBlocked: 'yes',
         eventsFound: 0,
         eventsInserted: 0,
         durationMs: Date.now() - startedAt,
-      })
-      .returning();
-    if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+      },
+      fetchLog,
+    );
     await db
       .update(venues)
       .set({
@@ -517,20 +543,20 @@ export async function crawlVenue(
     { venueId, url: venue.websiteUrl },
   );
   if (crawlDelayMs === null) {
-    const [crawlRun] = await db
-      .insert(crawlRuns)
-      .values({
+    const crawlRun = await insertCrawlRun(
+      {
         id,
         venueId,
         status: 'skipped',
+        reason: 'robots_crawl_delay',
         robotsTxtBlocked: 'no',
         eventsFound: 0,
         eventsInserted: 0,
         errorMessage: `robots.txt Crawl-delay exceeds ${CRAWL_DELAY_CAP_MS / 1000}s; not crawled`,
         durationMs: Date.now() - startedAt,
-      })
-      .returning();
-    if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+      },
+      fetchLog,
+    );
     return { ...crawlRun, insertedEventIds: [] };
   }
 
@@ -596,6 +622,7 @@ export async function crawlVenue(
           crawlDelayMs,
         }),
         budgetFollowsCrawlDelay: true,
+        fetchLog,
       });
       extraction = {
         normalizedEvents: platformResult.events,
@@ -643,13 +670,18 @@ export async function crawlVenue(
           crawlDelayMs,
           venue.crawlWaitUntil,
           venue.crawlWaitForSelector ?? undefined,
+          fetchLog,
         );
         resolvedMode = 'browser';
       } else {
         // crawlMode is 'http' or null (auto-detect: HTTP first)
         let httpResult: FetchResult | null = null;
         try {
-          httpResult = await fetchPageHttp(venue.websiteUrl, crawlDelayMs);
+          httpResult = await fetchPageHttp(
+            venue.websiteUrl,
+            crawlDelayMs,
+            fetchLog,
+          );
         } catch (httpErr) {
           // A robots.txt verdict on a redirect is not an HTTP-mode problem the
           // browser could solve: retrying would fetch what we just declined.
@@ -674,6 +706,7 @@ export async function crawlVenue(
             crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
+            fetchLog,
           );
           resolvedMode = 'browser';
         }
@@ -725,21 +758,21 @@ export async function crawlVenue(
             url: venue.websiteUrl,
           }),
         );
-        const [crawlRun] = await db
-          .insert(crawlRuns)
-          .values({
+        const crawlRun = await insertCrawlRun(
+          {
             id,
             venueId,
             status: 'skipped',
+            reason: 'page_unchanged',
             httpStatusCode: httpStatus,
             robotsTxtBlocked: 'no',
             pageHash,
             eventsFound: 0,
             eventsInserted: 0,
             durationMs: Date.now() - startedAt,
-          })
-          .returning();
-        if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+          },
+          fetchLog,
+        );
         await db
           .update(venues)
           .set({
@@ -789,6 +822,7 @@ export async function crawlVenue(
             crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
+            fetchLog,
           );
           if (venue.debugCaptureHtml) {
             logDebugHtmlCapture(browserResult.html, {
@@ -1674,12 +1708,13 @@ export async function crawlVenue(
       null,
     );
 
-    const [crawlRun] = await db
-      .insert(crawlRuns)
-      .values({
+    const crawlRun = await insertCrawlRun(
+      {
         id,
         venueId,
-        status: foundNothing ? 'partial' : 'success',
+        ...(foundNothing
+          ? { status: 'partial' as const, reason: 'no_events_found' as const }
+          : { status: 'success' as const }),
         httpStatusCode: httpStatus,
         robotsTxtBlocked: 'no',
         extractionStrategyUsed: strategy,
@@ -1691,9 +1726,9 @@ export async function crawlVenue(
         llmCostUsd,
         durationMs,
         furthestEventDate,
-      })
-      .returning();
-    if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+      },
+      fetchLog,
+    );
 
     if (tokenUsage && llmCostUsd !== null) {
       await db.insert(costTracking).values({
@@ -1798,20 +1833,20 @@ export async function crawlVenue(
     // run. That is our choice not to crawl, not a venue failure: record it as
     // skipped and leave the strike count alone, like the pre-fetch skips above.
     if (err instanceof CrawlSkipError) {
-      const [crawlRun] = await db
-        .insert(crawlRuns)
-        .values({
+      const crawlRun = await insertCrawlRun(
+        {
           id,
           venueId,
           status: 'skipped',
+          reason: err.reason,
           robotsTxtBlocked: 'unchecked',
           eventsFound: 0,
           eventsInserted: 0,
           errorMessage: err.message,
           durationMs: Date.now() - startedAt,
-        })
-        .returning();
-      if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+        },
+        fetchLog,
+      );
       return { ...crawlRun, insertedEventIds: [] };
     }
 
@@ -1953,20 +1988,20 @@ export async function crawlVenue(
 
     const durationMs = Date.now() - startedAt;
 
-    const [crawlRun] = await db
-      .insert(crawlRuns)
-      .values({
+    const crawlRun = await insertCrawlRun(
+      {
         id,
         venueId,
         status: 'failed',
+        reason: failureReason(err, isAccountWide),
         robotsTxtBlocked: 'no',
         eventsFound: 0,
         eventsInserted: 0,
         errorMessage: String(err),
         durationMs,
-      })
-      .returning();
-    if (!crawlRun) throw new Error('crawl_runs insert returned no row');
+      },
+      fetchLog,
+    );
 
     reportFailure({
       event: 'crawl.failed',

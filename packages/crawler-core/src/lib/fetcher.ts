@@ -1,3 +1,4 @@
+import type { FetchLog } from './fetch-log.js';
 import type { Browser } from 'playwright';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 
@@ -66,6 +67,7 @@ export async function fetchPage(
   crawlDelayMs = 3000,
   waitUntil: 'networkidle' | 'load' | 'domcontentloaded' = 'networkidle',
   waitForSelector?: string,
+  fetchLog?: FetchLog,
 ): Promise<FetchResult> {
   const delay = jitter(crawlDelayMs);
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
@@ -178,6 +180,7 @@ export async function fetchPage(
     }
 
     if (finalStatus === 403 || finalStatus === 429) {
+      fetchLog?.record({ url, httpStatus: finalStatus, mode: 'browser' });
       console.log(
         JSON.stringify({ event: 'fetch.blocked', url, status: finalStatus }),
       );
@@ -192,6 +195,7 @@ export async function fetchPage(
     await assertVisitsAllowed([...hops, response?.url() ?? page.url()]);
 
     if (finalStatus >= 400) {
+      fetchLog?.record({ url, httpStatus: finalStatus, mode: 'browser' });
       console.log(
         JSON.stringify({ event: 'fetch.error', url, status: finalStatus }),
       );
@@ -259,6 +263,13 @@ export async function fetchPage(
     await assertVisitsAllowed();
     const html = await page.content();
     const finalUrl = page.url();
+    fetchLog?.record({
+      url,
+      finalUrl,
+      httpStatus: finalStatus,
+      mode: 'browser',
+      body: html,
+    });
 
     console.log(
       JSON.stringify({
@@ -277,6 +288,7 @@ export async function fetchPage(
 export async function fetchPageHttp(
   url: string,
   crawlDelayMs = 3000,
+  fetchLog?: FetchLog,
 ): Promise<FetchResult> {
   const delay = jitter(crawlDelayMs);
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
@@ -291,6 +303,12 @@ export async function fetchPageHttp(
   });
 
   if (response.status === 403 || response.status === 429) {
+    fetchLog?.record({
+      url,
+      finalUrl,
+      httpStatus: response.status,
+      mode: 'http',
+    });
     console.log(
       JSON.stringify({ event: 'fetch.blocked', url, status: response.status }),
     );
@@ -301,6 +319,12 @@ export async function fetchPageHttp(
   }
 
   if (response.status >= 400) {
+    fetchLog?.record({
+      url,
+      finalUrl,
+      httpStatus: response.status,
+      mode: 'http',
+    });
     console.log(
       JSON.stringify({ event: 'fetch.error', url, status: response.status }),
     );
@@ -308,6 +332,13 @@ export async function fetchPageHttp(
   }
 
   const html = await response.text();
+  fetchLog?.record({
+    url,
+    finalUrl,
+    httpStatus: response.status,
+    mode: 'http',
+    body: html,
+  });
 
   console.log(
     JSON.stringify({

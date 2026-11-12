@@ -52,6 +52,7 @@ const makeRun = (over: Partial<CrawlRun>): CrawlRun => ({
   id: RUN_ID,
   venueId: VENUE_ID,
   status: 'success',
+  reason: null,
   httpStatusCode: 200,
   robotsTxtBlocked: null,
   extractionStrategyUsed: 'platform:venuepilot',

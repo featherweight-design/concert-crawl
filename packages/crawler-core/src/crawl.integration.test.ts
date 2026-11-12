@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { and, eq, sql } from 'drizzle-orm';
 import type { Browser } from 'playwright';
-import { db, events, venues } from '@concert-crawl/db';
+import { db, events, venues, crawlRunPages } from '@concert-crawl/db';
 import { crawlVenue } from './crawl.js';
 
 // Mock just the IO layer — fetcher, robots, LLM. Real Postgres handles the
@@ -44,7 +44,8 @@ vi.mock('./lib/email.js', () => ({
   sendEventCountDropEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { fetchPage, fetchPageHttp } from './lib/fetcher.js';
+import { fetchPage, fetchPageHttp, CrawlFetchError } from './lib/fetcher.js';
+import { checkRobots } from './lib/robots.js';
 import { extractWithLlm } from './lib/extractors/llm.js';
 
 const mockBrowser = {} as Browser;
@@ -1847,5 +1848,94 @@ describe('crawlVenue — force reprocess', () => {
       .from(events)
       .where(eq(events.venueId, venue.id));
     expect(afterForce?.supportingArtists).toEqual(['Opener One']);
+  });
+});
+
+describe('crawlVenue — run reasons and fetched pages (admin 1a)', () => {
+  it('writes robots_disallowed when robots.txt disallows the venue', async () => {
+    const venue = await seedTestVenue();
+    vi.mocked(checkRobots).mockResolvedValueOnce({ status: 'disallowed' });
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('failed');
+    expect(run.reason).toBe('robots_disallowed');
+  });
+
+  it('writes crawl_paused for a paused venue', async () => {
+    const venue = await seedTestVenue();
+    await db
+      .update(venues)
+      .set({ crawlPausedAt: new Date() })
+      .where(eq(venues.id, venue.id));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('crawl_paused');
+  });
+
+  it('writes blocked_http for a 403', async () => {
+    const venue = await seedTestVenue();
+    mockFetchPage.mockRejectedValueOnce(new CrawlFetchError(403, 'HTTP 403'));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.reason).toBe('blocked_http');
+  });
+
+  it('writes page_unchanged when the page hash matches the last success', async () => {
+    const venue = await seedTestVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValueOnce({
+      events: [makeEvent('Reason Band', futureDate(10), venue.url)],
+      usage: { inputTokens: 1, outputTokens: 1 },
+    });
+    await crawlVenue(venue.id, mockBrowser);
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('page_unchanged');
+  });
+
+  it('flushes the pages a run fetched beside its row', async () => {
+    const venue = await seedTestVenue();
+    mockFetchPage.mockImplementationOnce(
+      async (_url, _browser, _delay, _wait, _selector, fetchLog) => {
+        fetchLog?.record({
+          url: venue.url,
+          finalUrl: venue.url,
+          httpStatus: 200,
+          mode: 'browser',
+          body: HTML_BASE,
+        });
+        fetchLog?.record({
+          url: `${venue.url}/page-2`,
+          httpStatus: 200,
+          mode: 'browser',
+        });
+        return { html: HTML_BASE, httpStatus: 200, finalUrl: venue.url };
+      },
+    );
+    mockExtractWithLlm.mockResolvedValueOnce({
+      events: [makeEvent('Pages Band', futureDate(11), venue.url)],
+      usage: { inputTokens: 1, outputTokens: 1 },
+    });
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    const pages = await db
+      .select()
+      .from(crawlRunPages)
+      .where(eq(crawlRunPages.crawlRunId, run.id));
+    expect(pages).toHaveLength(2);
+    expect(pages.find((page) => page.url === venue.url)?.bytes).toBe(
+      Buffer.byteLength(HTML_BASE),
+    );
   });
 });

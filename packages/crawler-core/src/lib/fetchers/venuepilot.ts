@@ -16,6 +16,7 @@ import type { Venue } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import type { NormalizedEvent } from '../../types.js';
+import type { FetchLog } from '../fetch-log.js';
 import { stripDescriptionHtml } from '../strip-description-html.js';
 import { CrawlFetchError } from '../fetcher.js';
 import {
@@ -296,6 +297,7 @@ async function fetchPage(
   startDate: string,
   page: number,
   timeoutMs?: number,
+  fetchLog?: FetchLog,
 ): Promise<z.infer<typeof ResponseSchema>['data']['paginatedEvents']> {
   const response = await fetch(ENDPOINT, {
     method: 'POST',
@@ -316,13 +318,25 @@ async function fetchPage(
       : {}),
   });
   if (!response.ok) {
+    fetchLog?.record({
+      url: ENDPOINT,
+      httpStatus: response.status,
+      mode: 'api',
+    });
     throw new VenuePilotFetchError(
       response.status,
       ENDPOINT,
       `VenuePilot fetch failed: HTTP ${response.status}`,
     );
   }
-  const raw: unknown = await response.json();
+  const text = await response.text();
+  fetchLog?.record({
+    url: ENDPOINT,
+    httpStatus: response.status,
+    mode: 'api',
+    body: text,
+  });
+  const raw: unknown = JSON.parse(text);
 
   // GraphQL errors come back on HTTP 200 with a top-level `errors` array.
   const errorsResult = GraphQLErrorsSchema.safeParse(raw);
@@ -419,7 +433,7 @@ async function venuePilotFetch(
   for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
     await deadline.wait(jitter(crawlDelayMs));
     const paginated = await deadline.run(`page-${page}`, (timeoutMs) =>
-      fetchPage(accountId, startDate, page, timeoutMs),
+      fetchPage(accountId, startDate, page, timeoutMs, opts.fetchLog),
     );
     pagesFetched += 1;
     totalCount = paginated.metadata.totalCount;
