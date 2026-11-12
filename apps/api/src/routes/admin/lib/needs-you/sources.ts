@@ -2,6 +2,7 @@
 // surface it replaces and returns display-ready items; none of them mutates.
 // Ranking and snooze filtering happen in index.ts, not here.
 
+import { createHash } from 'node:crypto';
 import {
   and,
   asc,
@@ -534,7 +535,12 @@ const priceBatchItems: Adapter = async ({ now }) => {
 
   return [
     {
-      key: 'price-batch:all',
+      // The key names the exact set of submissions, so a snooze covers the
+      // batch the admin saw and a newly corroborated price is a new question.
+      key: `price-batch:${createHash('sha256')
+        .update(rows.map((row) => row.id).join(','))
+        .digest('hex')
+        .slice(0, 12)}`,
       kind: 'price-batch',
       title: `${rows.length} corroborated price submissions`,
       venueId: null,
