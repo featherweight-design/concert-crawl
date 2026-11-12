@@ -55,6 +55,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.60.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: "Offline looks like the app now: a quiet pill up top, the shows you've already looked at saved on your phone, and a note on My shows that your account needs a signal.",
+      },
+      {
+        kind: 'added',
+        text: 'Pull down on Browse to reload the shows.',
+      },
+    ],
+  },
+  {
     version: 'v0.59.0-beta',
     date: 'Nov 12, 2026',
     headline: null,

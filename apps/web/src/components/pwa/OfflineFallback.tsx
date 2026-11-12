@@ -8,9 +8,18 @@ import {
   type CachedEvent,
   type CachedVenue,
 } from '@/lib/pwa/cached-content';
-import { CachedShortcuts, CachedEmpty } from './CachedShortcuts';
+import {
+  CachedShortcuts,
+  CachedEmpty,
+  TRY_AGAIN_CLASS,
+  TRY_AGAIN_STYLE,
+} from './CachedShortcuts';
+import { NoSignalTile, NothingCachedTile } from './OfflineGlyphs';
 import { OFFLINE_COPY } from './definitions/copy';
 
+// The offline page (B+ `bp-s-offline_m`, `bp-s-offline_empty_m`). With saved
+// shows it leads with the sentence and lists them; with none it says so and
+// offers the retry and the home page.
 export const OfflineFallback = () => {
   const router = useRouter();
   const [events, setEvents] = useState<CachedEvent[]>([]);
@@ -39,34 +48,46 @@ export const OfflineFallback = () => {
   }, [router]);
 
   const hasContent = events.length > 0 || venues.length > 0;
+  const empty = loaded && !hasContent;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-5 py-10">
-      <div className="flex flex-col gap-3">
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-7 px-5 py-10">
+      <div className="flex flex-col items-center gap-3 text-center">
+        {empty ? <NothingCachedTile /> : <NoSignalTile />}
         <span
-          className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
+          className="mt-3 text-[12px] font-bold uppercase tracking-[0.2em] text-warning"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
           {OFFLINE_COPY.fallback.eyebrow}
         </span>
-        <h1 className="text-2xl font-extrabold text-fg">
-          {OFFLINE_COPY.fallback.title}
-        </h1>
-        <p className="text-sm text-fg-muted">{OFFLINE_COPY.fallback.sub}</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="inline-flex min-h-[44px] w-fit items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent"
-        >
-          {OFFLINE_COPY.fallback.retry}
-        </button>
+        {!empty && (
+          <>
+            <h1 className="text-[34px] font-black leading-[1.05] tracking-[-0.035em] text-fg">
+              {OFFLINE_COPY.fallback.title}
+            </h1>
+            <p className="max-w-[360px] text-[15px] leading-relaxed text-fg-muted">
+              {OFFLINE_COPY.fallback.sub}
+            </p>
+          </>
+        )}
       </div>
-      {loaded &&
-        (hasContent ? (
-          <CachedShortcuts events={events} venues={venues} />
-        ) : (
-          <CachedEmpty />
-        ))}
+      {empty ? (
+        <CachedEmpty onRetry={onRetry} />
+      ) : (
+        <>
+          {loaded && <CachedShortcuts events={events} venues={venues} />}
+          {/* Offered before the cache read resolves too: the retry must never
+              wait on it. */}
+          <button
+            type="button"
+            onClick={onRetry}
+            className={`${TRY_AGAIN_CLASS} mx-auto`}
+            style={TRY_AGAIN_STYLE}
+          >
+            {OFFLINE_COPY.fallback.retry}
+          </button>
+        </>
+      )}
     </main>
   );
 };

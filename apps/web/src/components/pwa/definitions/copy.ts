@@ -80,8 +80,16 @@ export const OFFLINE_COPY = {
     sub: "The shows you've already looked at are saved on your phone. Live prices and anything new will load when you're back.",
     retry: 'Try again',
     shortcutsLabel: 'Saved on your phone',
+    // The tile in the page's header (a struck-through signal). Decorative: the
+    // eyebrow and title carry the meaning.
+    cachedBadge: 'Offline · cached OK',
     authNote:
       "Your account stuff (watchlist, settings) needs a connection. It'll be back when you are.",
+    // Venues with no night attached have their own small heading, so the two
+    // lists don't read as one.
+    venuesLabel: 'Venues',
+    priceTba: 'tba',
+    free: 'Free',
     empty: {
       title: 'Nothing cached yet.',
       sub: "First visit, or a fresh phone? There's nothing saved to show offline yet. Hit retry once you've got signal and we'll start keeping the shows you browse.",
