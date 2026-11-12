@@ -342,6 +342,11 @@ export interface PatchRimMetrics {
  * `02/patch-rim-spec`). Exported so the maths is testable without a layout.
  */
 export function patchRimMetrics(size: number): PatchRimMetrics {
+  // A zero, negative or NaN size draws nothing, so it gets no rim, rather
+  // than a division by zero that would write Infinity into the SVG.
+  if (!(size > 0)) {
+    return { rimWidthPx: 0, rimWidthUnits: 0, radiusPx: 0, glowBlurPx: null };
+  }
   const rimWidthPx = Math.max(1, (size * 1.5) / KIT_SIZE);
   return {
     rimWidthPx: round3(rimWidthPx),
@@ -393,6 +398,7 @@ export function CrewPatch({
         overflow: 'visible',
         // The glow is the rim's secondary at 35%, from 56px up only. Under
         // that the patch sits in rows of chips, where a glow reads as selected.
+        // color-mix is unguarded app-wide; without it only the glow drops.
         filter:
           rim.glowBlurPx === null
             ? undefined
@@ -425,20 +431,22 @@ export function CrewPatch({
         )}
         {SIGIL_RENDERERS[identity.sigil]({ pri, sec })}
       </g>
-      <rect
-        x={rimInset}
-        y={rimInset}
-        width={VIEWBOX - rim.rimWidthUnits}
-        height={VIEWBOX - rim.rimWidthUnits}
-        rx={SQUIRCLE_RADIUS - rimInset}
-        ry={SQUIRCLE_RADIUS - rimInset}
-        fill="none"
-        // The rim is the crew's colour at every size (B+ addendum 4, item 2):
-        // the chord's secondary at 60%. A neutral rim made every crew alike.
-        stroke={sec}
-        strokeOpacity="0.6"
-        strokeWidth={rim.rimWidthUnits}
-      />
+      {rim.rimWidthUnits > 0 && (
+        <rect
+          x={rimInset}
+          y={rimInset}
+          width={VIEWBOX - rim.rimWidthUnits}
+          height={VIEWBOX - rim.rimWidthUnits}
+          rx={SQUIRCLE_RADIUS - rimInset}
+          ry={SQUIRCLE_RADIUS - rimInset}
+          fill="none"
+          // The rim is the crew's colour at every size (B+ addendum 4, item 2):
+          // the chord's secondary at 60%. A neutral rim made every crew alike.
+          stroke={sec}
+          strokeOpacity="0.6"
+          strokeWidth={rim.rimWidthUnits}
+        />
+      )}
     </svg>
   );
 }
