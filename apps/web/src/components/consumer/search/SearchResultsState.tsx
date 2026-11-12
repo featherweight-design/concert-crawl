@@ -24,6 +24,7 @@ import {
   RingArt,
   SectionLabel,
   formatDayLabel,
+  VenueDateLine,
   resultRowProps,
   resultRowStyle,
   useListboxRows,
@@ -282,9 +283,10 @@ function ArtistSection({
               <span style={RESULT_NAME_STYLE}>
                 <Highlight text={artist.name} {...(query ? { query } : {})} />
               </span>
-              <span style={RESULT_META_STYLE}>
-                {artist.venueShort} · {formatDayLabel(artist.nextDate)}
-              </span>
+              <VenueDateLine
+                venue={artist.venueShort}
+                date={formatDayLabel(artist.nextDate)}
+              />
               <GenreChips genres={artist.genres ?? null} maxChips={1} />
             </span>
             <ResultPrice value={artist.ticketPriceMin} />

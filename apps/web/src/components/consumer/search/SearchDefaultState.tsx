@@ -3,12 +3,12 @@ import type { PopularEvent } from '../../../lib/search/useSearch';
 import { GenreChips } from '../GenreChips';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
-  RESULT_META_STYLE,
   RESULT_NAME_STYLE,
   ResultPrice,
   RingArt,
   SectionLabel,
   formatDayLabel,
+  VenueDateLine,
   resultRowProps,
   resultRowStyle,
   useListboxRows,
@@ -215,9 +215,10 @@ export function SearchDefaultState({
                   }}
                 >
                   <span style={RESULT_NAME_STYLE}>{event.artist}</span>
-                  <span style={RESULT_META_STYLE}>
-                    {event.venue.name} · {formatDayLabel(event.date)}
-                  </span>
+                  <VenueDateLine
+                    venue={event.venue.name}
+                    date={formatDayLabel(event.date)}
+                  />
                   <GenreChips genres={event.genre ?? null} maxChips={1} />
                 </span>
                 <ResultPrice value={event.ticketPriceMin} />
