@@ -1,0 +1,57 @@
+{
+ "feature": "Surface 8 \u00b7 wrong-artist report, admin side (W4)",
+ "note": "Boards: design/design_handoff_wrong_artist_report/screens/admin_artists. Admin role.",
+ "widths": [
+  {
+   "label": "w320",
+   "width": 320,
+   "height": 568,
+   "touch": true
+  },
+  {
+   "label": "w390",
+   "width": 390,
+   "height": 844,
+   "touch": true
+  },
+  {
+   "label": "w640",
+   "width": 640,
+   "height": 900
+  },
+  {
+   "label": "w1300",
+   "width": 1300,
+   "height": 900
+  }
+ ],
+ "out": "/private/tmp/claude-501/-Users-huey-Projects-concert-crawl/45bcb9f6-4513-4bff-a96f-c53d3eb31b53/scratchpad/sheets/s8",
+ "rows": [
+  {
+   "id": "artists",
+   "label": "/admin/artists: queue chips, badge",
+   "steps": [
+    {
+     "goto": "/admin/artists",
+     "wait": "h1",
+     "settle": 2000
+    }
+   ]
+  },
+  {
+   "id": "reported",
+   "label": "/admin/artists: Reported queue",
+   "steps": [
+    {
+     "goto": "/admin/artists",
+     "wait": "h1"
+    },
+    {
+     "clickRole": "button",
+     "name": "^Reported",
+     "settle": 2000
+    }
+   ]
+  }
+ ]
+}
