@@ -116,6 +116,11 @@ export const VenueGrid = ({
               textDecoration: 'none',
             }}
           >
+            <ChevronRight
+              size={12}
+              aria-hidden="true"
+              style={{ verticalAlign: 'middle', marginRight: 6 }}
+            />
             {copy.crawlRuns}
           </Link>
         }

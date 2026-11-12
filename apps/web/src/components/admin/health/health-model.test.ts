@@ -20,17 +20,31 @@ const windowOf = (now: string) => {
 };
 
 describe('lastNightWindow', () => {
-  it('is today in MT once the 3 AM crawl has started', () => {
+  it('is today in MT once the daily crawl has started', () => {
     expect(windowOf('2026-11-12T17:00:00Z')).toEqual([
       '2026-11-12T07:00:00.000Z',
       '2026-11-13T07:00:00.000Z',
     ]);
   });
 
-  it('is yesterday before 3 AM MT', () => {
+  it('is yesterday before the crawl cron (1:30 AM MST)', () => {
     expect(windowOf('2026-11-12T08:30:00Z')).toEqual([
       '2026-11-11T07:00:00.000Z',
       '2026-11-12T07:00:00.000Z',
+    ]);
+  });
+
+  it('is today from 2 AM MST, when the 09:07Z cron fires in winter', () => {
+    expect(windowOf('2026-11-12T09:30:00Z')).toEqual([
+      '2026-11-12T07:00:00.000Z',
+      '2026-11-13T07:00:00.000Z',
+    ]);
+  });
+
+  it('is still yesterday at 2:30 AM MDT, before the cron fires in summer', () => {
+    expect(windowOf('2026-07-15T08:30:00Z')).toEqual([
+      '2026-07-14T06:00:00.000Z',
+      '2026-07-15T06:00:00.000Z',
     ]);
   });
 
@@ -196,8 +210,11 @@ describe('groupVenues', () => {
     );
     const names = (key: keyof typeof groups) =>
       groups[key].map((cell) => cell.name);
-    expect(names('failed')).toEqual(['Junkyard']);
-    expect(groups.failed[0]).toMatchObject({ failures: 3, autoPaused: true });
+    // Blocked has no group of its own, but its failed run still lists it, so
+    // the Failed group agrees with the Crawl tile's count.
+    expect(names('failed')).toEqual(['Blocked', 'Junkyard']);
+    expect(groups.failed[0]).toMatchObject({ failures: 1 });
+    expect(groups.failed[1]).toMatchObject({ failures: 3, autoPaused: true });
     expect(names('paused')).toEqual(['Levitt']);
     expect(names('quiet')).toEqual(['Ball Arena']);
     expect(names('ok')).toEqual(['Alpha', 'Zed']);
