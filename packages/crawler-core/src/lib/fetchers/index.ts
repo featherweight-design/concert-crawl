@@ -9,6 +9,7 @@
 // described. See aeg.ts for details.)
 
 import type { Venue } from '@concert-crawl/db';
+import type { FetchLog } from '../fetch-log.js';
 import type { NormalizedEvent } from '../../types.js';
 
 export type { VenuePlatform } from '@concert-crawl/types';
@@ -64,6 +65,8 @@ export interface PlatformFetchOptions {
    * stretching it. Either way the delay itself is never shortened.
    */
   budgetFollowsCrawlDelay?: boolean;
+  /** Collects a record of each page this fetch requests. */
+  fetchLog?: FetchLog;
 }
 
 export interface PlatformFetcher {
@@ -100,7 +103,7 @@ export interface PlatformFetcher {
 
 export { PlatformFetchDeadlineError, createDeadline } from './deadline.js';
 export { aegFetcher } from './aeg.js';
-export { detailPageFetcher } from './detail-page.js';
+export { detailPageFetcher, CalendarNotFoundError } from './detail-page.js';
 export { liveNationFetcher } from './livenation.js';
 export { venuePilotFetcher } from './venuepilot.js';
 export { dispatch } from './dispatch.js';

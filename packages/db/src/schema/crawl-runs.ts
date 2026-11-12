@@ -17,12 +17,32 @@ export const crawlStatusEnum = pgEnum('crawl_status', [
   'skipped',
 ]);
 
+// Why a run did not produce events (#adm-1a). NULL on a success row. Written
+// only through crawler-core's insertCrawlRun, which makes it required for any
+// non-success status. Old rows stay NULL: the admin reads "No reason recorded".
+export const crawlRunReasonEnum = pgEnum('crawl_run_reason', [
+  'page_unchanged',
+  'crawl_paused',
+  'robots_unreachable',
+  'robots_disallowed',
+  'robots_crawl_delay',
+  'timeout',
+  'blocked_http',
+  'no_events_found',
+  'calendar_not_found',
+  'llm_account',
+  'error',
+]);
+
+export type CrawlRunReason = (typeof crawlRunReasonEnum.enumValues)[number];
+
 export const crawlRuns = pgTable('crawl_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
   venueId: uuid('venue_id')
     .notNull()
     .references(() => venues.id, { onDelete: 'cascade' }),
   status: crawlStatusEnum('status').notNull(),
+  reason: crawlRunReasonEnum('reason'),
   httpStatusCode: integer('http_status_code'),
   robotsTxtBlocked: text('robots_txt_blocked'), // 'yes' | 'no' | 'unchecked'
   extractionStrategyUsed: text('extraction_strategy_used'),

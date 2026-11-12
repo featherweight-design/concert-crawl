@@ -38,6 +38,7 @@ import type { Venue } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import type { NormalizedEvent } from '../../types.js';
+import type { FetchLog } from '../fetch-log.js';
 import { isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
   fetchFollowingRobots,
@@ -117,6 +118,7 @@ async function fetchText(
   crawlDelayMs: number,
   timeoutMs?: number,
   landed?: string[],
+  fetchLog?: FetchLog,
 ): Promise<string> {
   let fetched: RobotsFetchResult;
   try {
@@ -143,6 +145,12 @@ async function fetchText(
   }
   const { response, finalUrl } = fetched;
   if (!response.ok) {
+    fetchLog?.record({
+      url,
+      finalUrl,
+      httpStatus: response.status,
+      mode: 'http',
+    });
     throw new LiveNationFetchError(
       response.status,
       url,
@@ -152,7 +160,15 @@ async function fetchText(
     );
   }
   landed?.push(finalUrl);
-  return response.text();
+  const body = await response.text();
+  fetchLog?.record({
+    url,
+    finalUrl,
+    httpStatus: response.status,
+    mode: 'http',
+    body,
+  });
+  return body;
 }
 
 /**
@@ -400,7 +416,13 @@ async function liveNationFetch(
 
   const allCalendarUrls = parseCalendarUrls(
     await deadline.run('sitemap', (timeoutMs) =>
-      fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs, readUrls),
+      fetchText(
+        sitemapUrl,
+        opts.crawlDelayMs,
+        timeoutMs,
+        readUrls,
+        opts.fetchLog,
+      ),
     ),
     origin,
   );
@@ -450,7 +472,13 @@ async function liveNationFetch(
     // venue's configured per-domain delay applies to each of them.
     await deadline.wait(jitter(opts.crawlDelayMs));
     const html = await deadline.run(`calendar ${calendarUrl}`, (timeoutMs) =>
-      fetchText(calendarUrl, opts.crawlDelayMs, timeoutMs, readUrls),
+      fetchText(
+        calendarUrl,
+        opts.crawlDelayMs,
+        timeoutMs,
+        readUrls,
+        opts.fetchLog,
+      ),
     );
     const records = extractEventRecords(reassembleFlightPayload(html));
     rawRecordCount += records.length;

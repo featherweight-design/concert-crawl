@@ -39,6 +39,7 @@ const stores = vi.hoisted(() => ({
   crawlRuns: [] as any[],
   notifications: [] as any[],
   costTracking: [] as any[],
+  crawlRunPages: [] as any[],
 }));
 
 // Mock the entire @concert-crawl/db module with an in-memory chainable builder.
@@ -50,6 +51,7 @@ vi.mock('@concert-crawl/db', () => {
   const crawlRuns = { _t: 'crawlRuns' };
   const notifications = { _t: 'notifications' };
   const costTracking = { _t: 'costTracking' };
+  const crawlRunPages = { _t: 'crawlRunPages' };
 
   function getStore(table: any): any[] {
     return stores[table._t as keyof typeof stores] ?? [];
@@ -146,7 +148,15 @@ vi.mock('@concert-crawl/db', () => {
     delete: (_table: any) => makeDeleteBuilder(),
   };
 
-  return { db, venues, events, crawlRuns, notifications, costTracking };
+  return {
+    db,
+    venues,
+    events,
+    crawlRuns,
+    crawlRunPages,
+    notifications,
+    costTracking,
+  };
 });
 
 vi.mock('./lib/fetcher.js', () => ({
@@ -200,6 +210,7 @@ vi.mock('./lib/extractors/llm.js', () => ({
 import {
   fetchPage,
   fetchPageHttp,
+  CrawlFetchError,
   CrawlSelectorTimeoutError,
 } from './lib/fetcher.js';
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
@@ -228,6 +239,7 @@ beforeEach(() => {
   stores.crawlRuns.length = 0;
   stores.notifications.length = 0;
   stores.costTracking.length = 0;
+  stores.crawlRunPages.length = 0;
   mockFetchPage.mockClear();
   mockFetchPageHttp.mockClear();
   mockExtractWithLlm.mockClear();
@@ -311,6 +323,7 @@ describe('crawlVenue — page-level skip', () => {
     expect(run.eventsFound).toBe(0);
     expect(run.eventsInserted).toBe(0);
     expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('page_unchanged');
 
     // The most-recent crawl run (slice(-1)) should carry the pageHash
     const [skippedRun] = await db
@@ -963,6 +976,7 @@ describe('crawlVenue — zero-event crawls (#1162)', () => {
     const run = await crawlVenue(venue.id, mockBrowser);
 
     expect(run.status).toBe('partial');
+    expect(run.reason).toBe('no_events_found');
     expect(run.eventsFound).toBe(0);
 
     // The old success path reset this to 0 every night, so a venue that
@@ -1508,6 +1522,7 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     const run = await crawlVenue(venue.id, mockBrowser);
 
     expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('crawl_paused');
     expect(run.errorMessage).toContain('paused');
     expect(checkRobots).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
@@ -1524,6 +1539,7 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     const run = await crawlVenue(venue.id, mockBrowser);
 
     expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('robots_unreachable');
     expect(run.robotsTxtBlocked).toBe('unchecked');
     expect(run.errorMessage).toContain('robots.txt unreachable');
     const stored = stores.venues.find((row) => row.id === venue.id);
@@ -1737,6 +1753,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPageHttp).not.toHaveBeenCalled();
     expect(mockFetchPage).not.toHaveBeenCalled();
     expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('robots_crawl_delay');
     expect(run.errorMessage).toContain('Crawl-delay');
   });
 
@@ -1777,6 +1794,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
     expect(mockFetchPageHttp).not.toHaveBeenCalled();
     expect(run.status).toBe('skipped');
+    expect(run.reason).toBe('robots_unreachable');
     expect(run.robotsTxtBlocked).toBe('unchecked');
     expect(run.errorMessage).toContain('robots.txt unreachable');
   });
@@ -2409,5 +2427,82 @@ describe('crawlVenue — account-wide LLM refusals', () => {
     expect(mockExtractWithLlm).toHaveBeenCalled();
     expect(run.status).toBe('failed');
     expect(storedVenue(venue.id)?.consecutiveFailures).not.toBe(2);
+  });
+});
+
+describe('crawlVenue — failure reasons', () => {
+  it('records robots_disallowed when robots.txt disallows the venue', async () => {
+    const venue = seedVenue({ crawlMode: 'http' });
+    vi.mocked(checkRobots).mockResolvedValueOnce({ status: 'disallowed' });
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('failed');
+    expect(run.reason).toBe('robots_disallowed');
+  });
+
+  it('records blocked_http for a 403', async () => {
+    const venue = seedVenue({ crawlMode: 'http' });
+    mockFetchPageHttp.mockRejectedValue(new CrawlFetchError(403, 'HTTP 403'));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('failed');
+    expect(run.reason).toBe('blocked_http');
+  });
+
+  it('records timeout for a TimeoutError', async () => {
+    const venue = seedVenue({ crawlMode: 'browser' });
+    const timeoutError = new Error('Timeout exceeded');
+    timeoutError.name = 'TimeoutError';
+    mockFetchPage.mockRejectedValue(timeoutError);
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.reason).toBe('timeout');
+  });
+
+  it('records llm_account for an account-wide LLM refusal', async () => {
+    const venue = seedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    mockExtractWithLlm.mockRejectedValue(
+      new Error('Your credit balance is too low to access the Anthropic API'),
+    );
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('failed');
+    expect(run.reason).toBe('llm_account');
+  });
+
+  it('records error for anything else', async () => {
+    const venue = seedVenue({ crawlMode: 'http' });
+    mockFetchPageHttp.mockRejectedValue(new Error('network error'));
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.reason).toBe('error');
+  });
+
+  it('records no reason on a success', async () => {
+    const venue = seedVenue();
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('success');
+    expect(run.reason ?? null).toBeNull();
   });
 });

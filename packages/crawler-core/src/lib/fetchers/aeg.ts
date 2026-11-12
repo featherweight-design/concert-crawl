@@ -25,6 +25,7 @@ import type { Venue } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import type { NormalizedEvent } from '../../types.js';
+import type { FetchLog } from '../fetch-log.js';
 import { stripDescriptionHtml } from '../strip-description-html.js';
 import {
   CrawlSkipError,
@@ -292,7 +293,11 @@ function normalize(
   };
 }
 
-async function fetchAegBlob(url: string, timeoutMs?: number): Promise<unknown> {
+async function fetchAegBlob(
+  url: string,
+  timeoutMs?: number,
+  fetchLog?: FetchLog,
+): Promise<unknown> {
   const response = await fetch(url, {
     headers: {
       // No Origin header. We used to send the venue's own origin, which made
@@ -313,13 +318,21 @@ async function fetchAegBlob(url: string, timeoutMs?: number): Promise<unknown> {
       : {}),
   });
   if (!response.ok) {
+    fetchLog?.record({ url, httpStatus: response.status, mode: 'api' });
     throw new AegFetchError(
       response.status,
       url,
       `AEG fetch failed: HTTP ${response.status}`,
     );
   }
-  return response.json();
+  const text = await response.text();
+  fetchLog?.record({
+    url,
+    httpStatus: response.status,
+    mode: 'api',
+    body: text,
+  });
+  return JSON.parse(text) as unknown;
 }
 
 async function aegFetch(
@@ -377,7 +390,7 @@ async function aegFetch(
   // don't land on a bot-like fixed interval.
   await deadline.wait(jitter(crawlDelayMs));
   const raw = await deadline.run('events-blob', (timeoutMs) =>
-    fetchAegBlob(url, timeoutMs),
+    fetchAegBlob(url, timeoutMs, opts.fetchLog),
   );
   const parseResult = AegResponseSchema.safeParse(raw);
   if (!parseResult.success) {

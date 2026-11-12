@@ -334,7 +334,12 @@ async function fetchRobotsTxt(
  * a skipped run instead of a failure that counts toward pausing the venue.
  */
 export class CrawlSkipError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    /** Which of the two skips this is, for the run's recorded reason. */
+    public readonly reason:
+      'robots_unreachable' | 'robots_crawl_delay' = 'robots_crawl_delay',
+  ) {
     super(message);
     this.name = 'CrawlSkipError';
   }
@@ -353,6 +358,7 @@ export async function isAllowedOrSkip(
   if (verdict.status === 'unreachable') {
     throw new CrawlSkipError(
       `robots.txt unreachable for ${url} (${verdict.reason}); not crawled`,
+      'robots_unreachable',
     );
   }
   return verdict.status === 'allowed';
