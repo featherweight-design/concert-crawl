@@ -37,7 +37,7 @@ export const DayTile = ({ date, today, month = false, tint }: DayTileProps) => {
         height: month ? 62 : 48,
         borderRadius: month ? 12 : 10,
         background: filled
-          ? `linear-gradient(${tint ? '160deg' : '135deg'}, ${tint ?? 'var(--signal)'}, var(--accent))`
+          ? `linear-gradient(${tint !== undefined ? '160deg' : '135deg'}, ${tint ?? 'var(--signal)'}, var(--accent))`
           : 'var(--fg-muted)',
         color: filled ? 'var(--fg-on-accent)' : 'var(--bg)',
         lineHeight: 1,
