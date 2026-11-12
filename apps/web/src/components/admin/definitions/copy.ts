@@ -2541,8 +2541,9 @@ export const ADMIN_COPY = {
     // Under "Couldn't change {name}", so the name isn't said twice.
     stillIn: (tab: string) => `It's still in ${tab}.`,
     subtitleShort: 'The photo and genre fans see on every show.',
-    matchedMeta: (upcoming: number, following: number) =>
-      `${upcoming} upcoming · ${following} following`,
+    // The board's "Watching" is shows-only vocabulary; fans follow artists.
+    matchedMeta: (upcoming: number, followers: number) =>
+      `${upcoming} upcoming · ${followers} ${followers === 1 ? 'follower' : 'followers'}`,
     itsAnArtist: 'It’s an artist',
     changeMatch: 'Change match',
     menu: {
@@ -2558,7 +2559,7 @@ export const ADMIN_COPY = {
     },
     emptyNotArtists: {
       title: 'Nothing marked',
-      body: 'Tours, promoters and series you mark land here.',
+      body: 'Mark a tour, promoter or series and it moves here.',
     },
     itemLabel: 'artists',
   },
