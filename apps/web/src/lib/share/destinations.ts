@@ -170,6 +170,32 @@ export const systemShare = async (
 };
 
 /**
+ * Hand a link, and nothing else, to the OS share sheet.
+ *
+ * For surfaces that share a URL with no card behind it (the app's own QR
+ * sheet). Unlike `systemShare` it never fetches or fakes an image: `url` is
+ * the payload and `text` is the line that travels with it. Reaches `share`
+ * before its first await, so it can be called straight from a click without
+ * spending the user's transient activation.
+ */
+export const shareLink = async (
+  caps: ShareCapabilities,
+  args: { title: string; text: string; url: string },
+): Promise<ShareOutcome> => {
+  const { share } = caps;
+  if (typeof share !== 'function') return 'unsupported';
+  try {
+    await share({ title: args.title, text: args.text, url: args.url });
+    return 'shared';
+  } catch (err) {
+    // A dismissed sheet is an AbortError rejection: a cancel, not a failure.
+    if (err instanceof Error && err.name === 'AbortError') return 'cancelled';
+    console.error('[share] link share failed', { err });
+    return 'failed';
+  }
+};
+
+/**
  * `navigator.clipboard` is undefined on insecure origins and older Safari, so
  * the guard is load-bearing rather than defensive.
  */

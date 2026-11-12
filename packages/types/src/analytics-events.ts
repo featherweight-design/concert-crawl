@@ -38,6 +38,13 @@ export type ShareSurface = 'event-detail';
 export type ShareDestination = 'system' | 'save-image' | 'copy-link';
 
 /**
+ * Where a share of the app itself (the QR sheet) went: the system sheet, a
+ * copied link, or the full-screen code. A sibling of `ShareDestination`, not a
+ * member of it: `fullscreen` shares nothing, it holds the code up to a friend.
+ */
+export type AppShareDestination = 'system' | 'copy-link' | 'fullscreen';
+
+/**
  * The poster shapes and themes a card can be drawn in.
  *
  * Mirrored rather than imported: the sources are `ShareRatio` in
@@ -95,6 +102,13 @@ export interface ShareEventMap {
   artist_shared: {
     artistSlug: string;
     destination: Extract<ShareDestination, 'system' | 'copy-link'>;
+  };
+  // Share Concert Crawl by QR: the account-menu sheet. A sibling event rather
+  // than `subject: 'app'` on `share_destination_selected`, whose `eventId` is
+  // required and means a show. No code, no URL and no user id: the code is a
+  // person's invite, and the emitter already identifies who pressed.
+  app_share_destination_selected: {
+    destination: AppShareDestination;
   };
 }
 
