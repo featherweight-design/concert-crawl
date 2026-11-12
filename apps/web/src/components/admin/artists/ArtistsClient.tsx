@@ -278,57 +278,86 @@ export function ArtistsClient() {
   const listRef = useRef<HTMLUListElement>(null);
 
   // A keystroke per request would spend a query on every prefix of the name.
+  // Only a changed search resets the page, so mounting never undoes paging.
   useEffect(() => {
+    const next = searchInput.trim();
+    if (next === search) return undefined;
     const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
+      setSearch(next);
       setPage(1);
     }, 250);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
+  // A late /counts response never lands over a newer one.
+  const countsGeneration = useRef(0);
   const loadCounts = useCallback(() => {
+    const mine = ++countsGeneration.current;
     api
       .counts()
-      .then(setCounts)
+      .then((next) => {
+        if (mine === countsGeneration.current) setCounts(next);
+      })
       // The counts are a nicety; the list still works without them.
-      .catch(() => undefined);
+      .catch((err: unknown) => {
+        console.error('[admin artists] counts failed', err);
+      });
   }, [api]);
+
+  /**
+   * Rows saved off a page, by filter and page. The server's later pages
+   * shift up by that many, so a page's offset subtracts the rows saved off
+   * the pages before it, and no row is skipped.
+   */
+  const removals = useRef<{ key: string; page: number }[]>([]);
+  const filterKey = `${showWindow}|${search}`;
 
   const load = useCallback(async () => {
     const mine = ++generation.current;
     setLoadFailed(false);
     setList(null);
+    const shift = removals.current.filter(
+      (each) => each.key === filterKey && each.page < page,
+    ).length;
     try {
       const next = await api.list({
         tab: 'to_check',
         window: showWindow,
         search,
-        offset: (page - 1) * PAGE_SIZE,
+        offset: Math.max(0, (page - 1) * PAGE_SIZE - shift),
       });
       if (mine !== generation.current) return;
       const fresh = next.rows.filter(
         (row) => (resolved.current.get(row.id) ?? -1) < mine,
       );
       const dropped = next.rows.length - fresh.length;
-      // A search lists every status; this tab keeps only its own rows.
+      // A search lists every status; this tab keeps only its own rows, and
+      // pages through the search's own total.
       const rows = search === '' ? fresh : fresh.filter(isToCheck);
-      setList(
-        search === ''
-          ? { rows, total: Math.max(0, next.total - dropped) }
-          : {
-              rows,
-              total: rows.length,
-              elsewhere: rows.length === 0 && fresh.length > 0,
-            },
-      );
-    } catch {
+      setList({
+        rows,
+        total: Math.max(0, next.total - dropped),
+        // Only when the API returned every hit: a capped page can hold this
+        // tab's matches further on.
+        elsewhere:
+          search !== '' &&
+          rows.length === 0 &&
+          fresh.length > 0 &&
+          next.total <= next.rows.length,
+      });
+    } catch (err) {
+      console.error('[admin artists] list failed', err);
       if (mine === generation.current) setLoadFailed(true);
     }
-  }, [api, showWindow, search, page]);
+  }, [api, showWindow, search, page, filterKey]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // A write's 409 reloads what is on screen now, not what it began on.
+  const loadRef = useRef(load);
+  loadRef.current = load;
 
   // Saving the last row of a later page leaves that page empty: step back.
   useEffect(() => {
@@ -358,8 +387,13 @@ export function ArtistsClient() {
     // A retry from the toast can run after the list moved on; it still saves.
     const index = list?.rows.findIndex((each) => each.id === row.id) ?? -1;
     const mine = generation.current;
+    const at = { key: filterKey, page };
+    const searched = search !== '';
     setFailed(null);
     setRowBusy(row.id, true);
+    // Resolved before the PATCH, so a load landing mid-write drops the row;
+    // a failed save clears it again.
+    resolved.current.set(row.id, Number.MAX_SAFE_INTEGER);
     if (index >= 0) {
       setList((prev) =>
         prev
@@ -374,14 +408,19 @@ export function ArtistsClient() {
     }
     try {
       await api.write(row.id, write);
+      // Loads from here on may list it again wherever it now belongs.
       resolved.current.set(row.id, generation.current);
+      // A search pages through every status, where a save moves nothing.
+      if (index >= 0 && !searched) removals.current.push(at);
       loadCounts();
     } catch (err) {
+      resolved.current.delete(row.id);
       if (err instanceof StaleRowError) {
-        void load();
+        void loadRef.current();
         loadCounts();
         return;
       }
+      console.error('[admin artists] save failed', row.id, err);
       // Snap back only into the list the row left; a newer list never had it.
       if (index >= 0 && generation.current === mine) {
         setList((prev) => {
@@ -459,6 +498,7 @@ export function ArtistsClient() {
           <ToCheckRow
             key={row.id}
             row={row}
+            api={api}
             isPhone={isPhone}
             busy={busy.has(row.id)}
             onWrite={(write) => void runWrite(row, write)}
@@ -480,7 +520,7 @@ export function ArtistsClient() {
     />
   );
 
-  const pager = list && search === '' && list.total > PAGE_SIZE && (
+  const pager = list && list.total > PAGE_SIZE && (
     <Pagination
       page={page}
       pageSize={PAGE_SIZE}

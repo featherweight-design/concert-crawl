@@ -29,27 +29,23 @@
   "rows": [
     {
       "id": "artists",
-      "label": "/admin/artists: queue chips, badge",
+      "label": "/admin/artists: To check tab, window chips (4c redesign)",
       "steps": [
         {
           "goto": "/admin/artists",
-          "wait": "table tbody tr",
+          "wait": "[data-testid=\"artists-list\"], [data-testid=\"empty-state\"]",
           "settle": 2000
         }
       ]
     },
     {
       "id": "reported",
-      "label": "/admin/artists: Reported queue",
+      "label": "/admin/artists: reported rows lead To check with their reports listed under the name (4c redesign; the Reported chip is gone)",
       "steps": [
         {
           "goto": "/admin/artists",
-          "wait": "button:has-text(\"Reported\")"
-        },
-        {
-          "clickRole": "button",
-          "name": "^Reported",
-          "settle": 2000
+          "wait": "[data-testid=\"artists-list\"], [data-testid=\"empty-state\"]",
+          "settle": 3000
         }
       ]
     }

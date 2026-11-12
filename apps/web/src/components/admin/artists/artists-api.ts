@@ -80,21 +80,74 @@ const isNextShow = (value: unknown): value is AdminArtistRow['nextShow'] =>
     isText(value['date']) &&
     isTextOrNull(value['venueName']));
 
-export const isAdminArtistRow = (value: unknown): value is AdminArtistRow =>
+const isCandidateList = (value: unknown): value is ArtistCandidate[] =>
+  Array.isArray(value) && value.every(isCandidate);
+
+/**
+ * One list row, checked on its own: a malformed row is dropped and a
+ * malformed candidate snapshot is blanked, so one bad row never fails the
+ * page.
+ */
+export const parseArtistRow = (value: unknown): AdminArtistRow | null => {
+  if (
+    !isRecord(value) ||
+    !isText(value['id']) ||
+    !isText(value['name']) ||
+    !isTextOrNull(value['spotifyArtistId']) ||
+    !isMatchStatus(value['matchStatus']) ||
+    !isTextOrNull(value['photoUrl']) ||
+    !isTextOrNull(value['autoMatchedAt']) ||
+    !isCount(value['openReportCount']) ||
+    !isCount(value['upcomingCount']) ||
+    !isCount(value['watchingCount']) ||
+    !isNextShow(value['nextShow'])
+  ) {
+    return null;
+  }
+  const candidates = value['candidates'];
+  return {
+    id: value['id'],
+    name: value['name'],
+    spotifyArtistId: value['spotifyArtistId'],
+    matchStatus: value['matchStatus'],
+    photoUrl: value['photoUrl'],
+    autoMatchedAt: value['autoMatchedAt'],
+    openReportCount: value['openReportCount'],
+    upcomingCount: value['upcomingCount'],
+    watchingCount: value['watchingCount'],
+    nextShow: value['nextShow'],
+    candidates: isCandidateList(candidates) ? candidates : null,
+  };
+};
+
+/** Why a fan reported the match (the report form's four answers). */
+export type ReportReason =
+  'different_artist' | 'wrong_photo' | 'not_an_artist' | 'other';
+
+const REPORT_REASONS: readonly string[] = [
+  'different_artist',
+  'wrong_photo',
+  'not_an_artist',
+  'other',
+];
+
+/** One open wrong-artist report: the evidence Looks right would dismiss. */
+export interface ArtistReport {
+  id: string;
+  reason: ReportReason;
+  note: string | null;
+  suggestedSpotifyArtistId: string | null;
+  createdAt: string;
+}
+
+const isReport = (value: unknown): value is ArtistReport =>
   isRecord(value) &&
   isText(value['id']) &&
-  isText(value['name']) &&
-  isTextOrNull(value['spotifyArtistId']) &&
-  isMatchStatus(value['matchStatus']) &&
-  isTextOrNull(value['photoUrl']) &&
-  isTextOrNull(value['autoMatchedAt']) &&
-  isCount(value['openReportCount']) &&
-  isCount(value['upcomingCount']) &&
-  isCount(value['watchingCount']) &&
-  isNextShow(value['nextShow']) &&
-  (value['candidates'] === null ||
-    (Array.isArray(value['candidates']) &&
-      value['candidates'].every(isCandidate)));
+  isText(value['reason']) &&
+  REPORT_REASONS.includes(value['reason']) &&
+  isTextOrNull(value['note']) &&
+  isTextOrNull(value['suggestedSpotifyArtistId']) &&
+  isText(value['createdAt']);
 
 const COUNT_KEYS: ReadonlyArray<keyof ArtistCounts> = [
   'to_check',
@@ -135,7 +188,10 @@ const request = async (
       : { headers: auth },
   );
   if (res.status === 409) throw new StaleRowError();
-  const body: unknown = await res.json().catch(() => null);
+  const body: unknown = await res.json().catch((err: unknown) => {
+    console.error('[admin artists] unreadable response', path, err);
+    return null;
+  });
   if (!res.ok || !isRecord(body) || body['success'] !== true) {
     throw new ShapeError(`status ${res.status}`);
   }
@@ -194,13 +250,39 @@ export const artistsApi = (getToken: GetToken) => ({
     const body = await request(getToken, `${BASE}?${query.toString()}`);
     const data = body['data'];
     const total = body['total'];
-    if (
-      !Array.isArray(data) ||
-      !data.every(isAdminArtistRow) ||
-      !isCount(total)
-    )
+    if (!Array.isArray(data) || !isCount(total))
       throw new ShapeError('artists');
-    return { rows: data, total };
+    const rows = data
+      .map(parseArtistRow)
+      .filter((row): row is AdminArtistRow => row !== null);
+    if (rows.length < data.length) {
+      console.error(
+        '[admin artists] dropped malformed rows',
+        data.length - rows.length,
+      );
+    }
+    return { rows, total };
+  },
+  /** The open reports on one artist, oldest first. */
+  reports: async (id: string): Promise<ArtistReport[]> => {
+    const body = await request(
+      getToken,
+      `${BASE}/${encodeURIComponent(id)}/reports`,
+    );
+    const data = body['data'];
+    const reports = isRecord(data) ? data['reports'] : null;
+    if (!Array.isArray(reports)) throw new ShapeError('reports');
+    return reports.filter(isReport);
+  },
+  /** The match job's saved candidates (cache-first on the server). */
+  candidates: async (id: string): Promise<ArtistCandidate[]> => {
+    const body = await request(
+      getToken,
+      `${BASE}/${encodeURIComponent(id)}/candidates`,
+    );
+    const data = body['data'];
+    if (!Array.isArray(data)) throw new ShapeError('candidates');
+    return data.filter(isCandidate);
   },
   counts: async (): Promise<ArtistCounts> => {
     const body = await request(getToken, `${BASE}/counts?upcoming=false`);

@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Search } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, StatusBadge } from '@/components/admin/primitives';
 import type {
   AdminArtistRow,
   ArtistCandidate,
+  ArtistsApi,
   ArtistWrite,
 } from './artists-api';
+import { ReportList } from './ReportList';
 import {
   KIND_TONE,
   candidateCards,
@@ -132,27 +134,50 @@ const CardText = ({ title, line }: { title: string; line: string | null }) => (
   </span>
 );
 
+/**
+ * The Search card's state. `pending`: it opens the artist search, which lands
+ * in 4c C. The rest are the load path for a searched row, which arrives
+ * without the match job's candidates.
+ */
+type SearchCardState = 'pending' | 'idle' | 'loading' | 'failed';
+
+const SEARCH_LINE: Record<SearchCardState, string> = {
+  pending: COPY.searchCard.line,
+  idle: COPY.searchCard.showCandidates,
+  loading: COPY.searchCard.loading,
+  failed: COPY.searchCard.failed,
+};
+
 const Card = ({
   card,
   selected,
   disabled,
   onSelect,
+  search,
+  onSearch,
 }: {
   card: CandidateCard;
   selected: boolean;
   disabled: boolean;
   onSelect: (candidate: ArtistCandidate) => void;
+  search: SearchCardState;
+  onSearch: () => void;
 }) => {
   if (card.type === 'search') {
-    // Opens the artist search, which lands in 4c C.
+    const live = search === 'idle' || search === 'failed';
     return (
       <button
         type="button"
-        disabled
-        style={{ ...CARD, ...PLAIN_CARD, ...PENDING }}
+        disabled={!live || disabled}
+        onClick={onSearch}
+        style={{
+          ...CARD,
+          ...PLAIN_CARD,
+          ...(live ? { cursor: 'pointer' } : PENDING),
+        }}
       >
         <Photo url={null} />
-        <CardText title={COPY.searchCard.title} line={COPY.searchCard.line} />
+        <CardText title={COPY.searchCard.title} line={SEARCH_LINE[search]} />
       </button>
     );
   }
@@ -178,25 +203,36 @@ const Card = ({
 
 /**
  * One To check row (`06/artists-to-check`, `06/artists-mobile`). Desktop draws
- * the candidates inline to pick from; the phone draws two buttons that open
- * the search full screen (4c C).
+ * the candidates inline to pick from. On the phone, Pick opens the same
+ * cards and buttons under the row until the full-screen search lands (4c C).
  */
 export const ToCheckRow = ({
   row,
+  api,
   isPhone,
   busy,
   onWrite,
   onNotAnArtist,
 }: {
   row: AdminArtistRow;
+  api: ArtistsApi;
   isPhone: boolean;
   busy: boolean;
   onWrite: (write: ArtistWrite) => void;
   onNotAnArtist: () => void;
 }) => {
   const kind = toCheckKind(row);
-  const cards = candidateCards(row, kind);
+  // A searched row comes without candidates; the Search card loads them.
+  const [loaded, setLoaded] = useState<ArtistCandidate[] | null>(null);
+  const [search, setSearch] = useState<SearchCardState>(
+    row.candidates === null ? 'idle' : 'pending',
+  );
+  const cards = candidateCards(
+    loaded ? { ...row, candidates: loaded } : row,
+    kind,
+  );
   const [selectedId, setSelectedId] = useState(() => defaultSelection(cards));
+  const [picking, setPicking] = useState(false);
   const selected =
     cards
       .flatMap((card) => (card.type === 'artist' ? [card.candidate] : []))
@@ -206,6 +242,81 @@ export const ToCheckRow = ({
   const primaryLabel = keeps ? COPY.looksRight : COPY.useSelected;
   const named = (action: string) => COPY.actionFor(action, row.name);
   const show = showLine(row);
+
+  const loadCandidates = () => {
+    setSearch('loading');
+    api
+      .candidates(row.id)
+      .then((next) => {
+        const withLoaded = candidateCards({ ...row, candidates: next }, kind);
+        setLoaded(next);
+        setSelectedId((prev) => prev ?? defaultSelection(withLoaded));
+        // The card goes on to mean "search someone else" (4c C).
+        setSearch('pending');
+      })
+      .catch((err: unknown) => {
+        console.error('[admin artists] candidates failed', row.id, err);
+        setSearch('failed');
+      });
+  };
+
+  const grid = (
+    <div
+      role="group"
+      aria-label={COPY.candidates(row.name)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 8,
+        minWidth: 0,
+      }}
+    >
+      {cards.map((card) => (
+        <Card
+          key={card.type === 'artist' ? card.candidate.id : 'search'}
+          card={card}
+          selected={card.type === 'artist' && card.candidate.id === selectedId}
+          disabled={busy}
+          onSelect={(candidate) => setSelectedId(candidate.id)}
+          search={search}
+          onSearch={loadCandidates}
+        />
+      ))}
+    </div>
+  );
+
+  const primary = (size: CSSProperties) => (
+    <AdminButton
+      type="button"
+      disabled={busy || write === null}
+      onClick={() => write && onWrite(write)}
+      aria-label={named(primaryLabel)}
+      style={{
+        ...TINT_BUTTON,
+        ...size,
+        ...(write === null ? PENDING : {}),
+      }}
+    >
+      {primaryLabel}
+    </AdminButton>
+  );
+
+  const notAnArtist = (size: CSSProperties) => (
+    <AdminButton
+      type="button"
+      variant="ghost"
+      disabled={busy}
+      onClick={onNotAnArtist}
+      aria-label={named(COPY.notAnArtist)}
+      style={size}
+    >
+      {COPY.notAnArtist}
+    </AdminButton>
+  );
+
+  const reports = kind === 'reported' && (
+    <ReportList api={api} artistId={row.id} name={row.name} />
+  );
 
   if (isPhone) {
     const isCheck = kind === 'check';
@@ -226,24 +337,19 @@ export const ToCheckRow = ({
             {show}
           </span>
         )}
+        {reports}
         <span style={{ display: 'flex', gap: 8 }}>
           {isCheck && write ? (
-            <AdminButton
-              type="button"
-              disabled={busy}
-              onClick={() => onWrite(write)}
-              aria-label={named(COPY.looksRight)}
-              style={{ ...TINT_BUTTON, ...PHONE_BUTTON }}
-            >
-              {COPY.looksRight}
-            </AdminButton>
+            primary(PHONE_BUTTON)
           ) : (
-            // Pick opens the artist search full screen (ruling 12, 4c C).
+            // Until the full-screen search (ruling 12, 4c C), Pick opens the
+            // desktop row's cards and buttons under the row.
             <AdminButton
               type="button"
-              disabled
+              aria-expanded={picking}
+              onClick={() => setPicking((prev) => !prev)}
               aria-label={named(COPY.pick)}
-              style={{ ...TINT_BUTTON, ...PHONE_BUTTON, ...PENDING }}
+              style={{ ...TINT_BUTTON, ...PHONE_BUTTON }}
             >
               {COPY.pick}
             </AdminButton>
@@ -258,6 +364,15 @@ export const ToCheckRow = ({
             {COPY.searchButton}
           </AdminButton>
         </span>
+        {picking && !isCheck && (
+          <>
+            {grid}
+            <span style={{ display: 'flex', gap: 8 }}>
+              {primary(PHONE_BUTTON)}
+              {notAnArtist(PHONE_BUTTON)}
+            </span>
+          </>
+        )}
       </li>
     );
   }
@@ -287,29 +402,9 @@ export const ToCheckRow = ({
             {show}
           </div>
         )}
+        {reports && <div style={{ marginTop: 6 }}>{reports}</div>}
       </div>
-      <div
-        role="group"
-        aria-label={COPY.candidates(row.name)}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 8,
-          minWidth: 0,
-        }}
-      >
-        {cards.map((card) => (
-          <Card
-            key={card.type === 'artist' ? card.candidate.id : 'search'}
-            card={card}
-            selected={
-              card.type === 'artist' && card.candidate.id === selectedId
-            }
-            disabled={busy}
-            onSelect={(candidate) => setSelectedId(candidate.id)}
-          />
-        ))}
-      </div>
+      {grid}
       <div
         style={{
           display: 'flex',
@@ -318,29 +413,8 @@ export const ToCheckRow = ({
           alignItems: 'flex-end',
         }}
       >
-        <AdminButton
-          type="button"
-          disabled={busy || write === null}
-          onClick={() => write && onWrite(write)}
-          aria-label={named(primaryLabel)}
-          style={{
-            ...TINT_BUTTON,
-            ...ROW_BUTTON,
-            ...(write === null ? PENDING : {}),
-          }}
-        >
-          {primaryLabel}
-        </AdminButton>
-        <AdminButton
-          type="button"
-          variant="ghost"
-          disabled={busy}
-          onClick={onNotAnArtist}
-          aria-label={named(COPY.notAnArtist)}
-          style={ROW_BUTTON}
-        >
-          {COPY.notAnArtist}
-        </AdminButton>
+        {primary(ROW_BUTTON)}
+        {notAnArtist(ROW_BUTTON)}
       </div>
     </li>
   );

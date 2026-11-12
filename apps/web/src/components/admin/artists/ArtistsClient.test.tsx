@@ -53,20 +53,38 @@ const json = (status: number, body: unknown) =>
 
 let patchStatus = 200;
 let listCalls = 0;
+/** Set to hold the PATCH open until the test releases it. */
+let patchGate: Promise<void> | null = null;
+/** What a list call answers, from its query. */
+let listFor: (query: URLSearchParams) => {
+  data: AdminArtistRow[];
+  total: number;
+} = () => ({ data: [row()], total: 1 });
 
 beforeEach(() => {
   patchStatus = 200;
   listCalls = 0;
+  patchGate = null;
+  listFor = () => ({ data: [row()], total: 1 });
   window.matchMedia = vi.fn().mockReturnValue({
     matches: false,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
   });
   vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal(
     'fetch',
     vi.fn(async (input: string, init?: RequestInit) => {
       const url = String(input);
       if (init?.method === 'PATCH') {
+        if (patchGate) await patchGate;
         return patchStatus === 200
           ? json(200, { success: true, data: {} })
           : json(patchStatus, { success: false, error: 'nope' });
@@ -74,10 +92,22 @@ beforeEach(() => {
       if (url.includes('/counts'))
         return json(200, { success: true, data: COUNTS });
       listCalls += 1;
-      return json(200, { success: true, data: [row()], total: 1 });
+      const { data, total } = listFor(new URL(url).searchParams);
+      return json(200, { success: true, data, total });
     }),
   );
 });
+
+/** Hold the next PATCH open; call the result to let it answer. */
+const holdPatch = () => {
+  let release = () => undefined as void;
+  patchGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return () => release();
+};
+
+const rowName = (name: string) => screen.queryByText(name, { selector: 'div' });
 
 afterEach(() => {
   cleanup();
@@ -128,5 +158,77 @@ describe('ArtistsClient', () => {
     expect(
       vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === 'PATCH'),
     ).toBe(false);
+  });
+
+  it('drops a row saved while a load lands', async () => {
+    const release = holdPatch();
+    render(<ArtistsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' }),
+    );
+    // A new load lists the row again while its PATCH is still out.
+    fireEvent.click(screen.getByRole('button', { name: /^Later/ }));
+    await waitFor(() => expect(listCalls).toBe(2));
+    await waitFor(() =>
+      expect(screen.queryByTestId('page-skeleton')).toBeNull(),
+    );
+    expect(rowName('Kyle Emerson')).toBeNull();
+    release();
+    await waitFor(() => expect(rowName('Kyle Emerson')).toBeNull());
+  });
+
+  it('never snaps a failed row back into a newer list', async () => {
+    patchStatus = 500;
+    const release = holdPatch();
+    render(<ArtistsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Later/ }));
+    await waitFor(() => expect(listCalls).toBe(2));
+    release();
+    expect(await screen.findByTestId('save-failed')).toBeTruthy();
+    expect(rowName('Kyle Emerson')).toBeNull();
+  });
+
+  it('keeps only To check hits on a search, and says when they live elsewhere', async () => {
+    listFor = (query) =>
+      query.has('search')
+        ? {
+            data: [row({ id: 'm1', name: 'Matched Act', autoMatchedAt: null })],
+            total: 1,
+          }
+        : { data: [row()], total: 1 };
+    render(<ArtistsClient />);
+    await screen.findByRole('button', { name: 'Looks right: Kyle Emerson' });
+    fireEvent.change(
+      screen.getByRole('searchbox', { name: 'Search artists' }),
+      {
+        target: { value: 'matched' },
+      },
+    );
+    expect(await screen.findByText('Not in To check')).toBeTruthy();
+    expect(rowName('Matched Act')).toBeNull();
+  });
+
+  it('steps back a page when a save empties a later one', async () => {
+    listFor = (query) =>
+      query.get('offset') === '0'
+        ? {
+            data: Array.from({ length: 100 }, (_, i) =>
+              row({ id: `r${i}`, name: `Artist ${i}` }),
+            ),
+            total: 101,
+          }
+        : { data: [row({ id: 'last', name: 'Last Act' })], total: 101 };
+    render(<ArtistsClient />);
+    await screen.findByRole('button', { name: 'Looks right: Artist 0' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Next page' })[0]!);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Looks right: Last Act' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Looks right: Artist 0' }),
+    ).toBeTruthy();
   });
 });
