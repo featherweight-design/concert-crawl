@@ -5,6 +5,7 @@
 // the records go, and a chevron. Styled like SaveCalendarRow.
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { recordsStartLabel } from '@concert-crawl/types';
 import { AddShowSheet } from './AddShowSheet';
 import { HISTORY_COPY } from './definitions/copy';
@@ -73,7 +74,15 @@ export const AddShowRow = () => {
           />
         </svg>
       </button>
-      <AddShowSheet open={open} onClose={() => setOpen(false)} />
+      {/* Portaled to the body: the rail is sticky from lg, which makes it its
+          own stacking context, and the page's rows would paint over a sheet
+          mounted inside it. `open` only turns true on a click, so `document`
+          exists by then. */}
+      {open &&
+        createPortal(
+          <AddShowSheet open onClose={() => setOpen(false)} />,
+          document.body,
+        )}
     </>
   );
 };

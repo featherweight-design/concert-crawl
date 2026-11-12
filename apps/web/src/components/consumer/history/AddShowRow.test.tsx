@@ -24,6 +24,16 @@ describe('AddShowRow', () => {
     );
   });
 
+  // The rail is sticky from lg, so it is its own stacking context: a sheet left
+  // inside it is painted under the page's rows.
+  it('mounts the sheet on the body, outside the rail', () => {
+    const { container } = render(<AddShowRow />);
+    fireEvent.click(screen.getByTestId('add-show-row'));
+    const sheet = screen.getByTestId('add-sheet');
+    expect(sheet.parentElement).toBe(document.body);
+    expect(container.contains(sheet)).toBe(false);
+  });
+
   it('opens the sheet on tap', () => {
     render(<AddShowRow />);
     expect(screen.queryByTestId('add-sheet')).toBeNull();
