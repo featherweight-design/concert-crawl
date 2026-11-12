@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { EVENT_ROW_COPY } from './definitions/copy';
 import { tourClauseFits } from './lib/tour-clause';
 
@@ -90,6 +96,17 @@ interface RowTitleLineProps {
  * observing the node the flag resizes is how a measure pass re-fires on its
  * own mutation and locks the main thread with no console error.
  */
+/**
+ * A title sharing its line with a status chip keeps at least 8ch of itself.
+ * The flex basis drives the wrap, so when 8ch plus the chip will not fit (a
+ * 320px row) the chip drops to its own line instead of eating the act down to
+ * "S…". Max-content keeps a short title from stretching away from its chip.
+ */
+const TITLE_BESIDE_CHIP: CSSProperties = {
+  flex: '1 1 8ch',
+  maxWidth: 'max-content',
+};
+
 export const RowTitleLine = ({
   headliner,
   tourName,
@@ -205,7 +222,7 @@ export const RowTitleLine = ({
     <div
       ref={boxRef}
       data-testid="row-title-line"
-      className="flex min-w-0 items-baseline"
+      className={`flex min-w-0 items-baseline ${trailing != null ? 'flex-wrap' : ''}`}
       style={{ position: 'relative', gap: GAP }}
     >
       {/* First in reading order, so the row still announces the act before the
@@ -222,7 +239,11 @@ export const RowTitleLine = ({
         className={`min-w-0 truncate transition-colors group-hover/eventtitle:text-signal ${struck ? 'text-fg-muted' : 'text-fg'}`}
         // The strike is a decoration on the title box only, so the measuring
         // copy below keeps the same advance widths and the fit never moves.
-        style={struck ? { ...titleStyle, ...STRIKE } : titleStyle}
+        style={{
+          ...titleStyle,
+          ...(struck ? STRIKE : {}),
+          ...(trailing != null ? TITLE_BESIDE_CHIP : {}),
+        }}
       >
         {title}
       </div>

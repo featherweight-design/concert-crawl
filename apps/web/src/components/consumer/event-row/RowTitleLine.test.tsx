@@ -204,4 +204,27 @@ describe('RowTitleLine', () => {
       parseFloat(screen.getByTestId('row-title').style.fontSize),
     );
   });
+
+  // A 320px row once squeezed "Steve Lacy" to "S…" beside SOLD OUT. The title
+  // keeps an 8ch basis and the line wraps, so the chip drops below instead.
+  it('lets a trailing chip wrap below rather than squeeze the title', () => {
+    render(
+      <RowTitleLine
+        headliner="Steve Lacy"
+        tourName={null}
+        showsTour={false}
+        trailing={<span>Sold out</span>}
+      />,
+    );
+    expect(screen.getByTestId('row-title-line')).toHaveClass('flex-wrap');
+    expect(screen.getByTestId('row-title')).toHaveStyle({
+      flex: '1 1 8ch',
+      maxWidth: 'max-content',
+    });
+  });
+
+  it('keeps a chipless title line unwrapped', () => {
+    render(<RowTitleLine headliner="Wednesday" tourName={null} showsTour />);
+    expect(screen.getByTestId('row-title-line')).not.toHaveClass('flex-wrap');
+  });
 });
