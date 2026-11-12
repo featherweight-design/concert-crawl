@@ -6,6 +6,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import type { HistoryStats } from '@concert-crawl/types';
 import { HistoryHeader, historyTilesFor } from './HistoryHeader';
 import { HISTORY_COPY } from './definitions/copy';
+import { MY_SHOWS_HEADER_RULE } from './definitions/constants';
 
 afterEach(cleanup);
 
@@ -144,5 +145,28 @@ describe('HistoryHeader gradient', () => {
         expect(figure.style.color).toBe('var(--fg)');
       }
     }
+  });
+});
+
+// Addendum-2 `03-stamps/concerts-round-stamps-m`: the rule under the stats is
+// a 1px gradient hairline, signal 60% into accent 40% at 40%, then the border
+// colour at 75%.
+describe('HistoryHeader rule', () => {
+  it('pins the board gradient', () => {
+    expect(MY_SHOWS_HEADER_RULE).toBe(
+      'linear-gradient(90deg, color-mix(in oklch, var(--signal) 60%, transparent), color-mix(in oklch, var(--accent) 40%, transparent) 40%, var(--border) 75%)',
+    );
+  });
+
+  it('draws the gradient hairline along the bottom, not the plain border', () => {
+    render(<HistoryHeader stats={STATS} />);
+    const header = screen.getByTestId('history-header');
+    expect(header.className).not.toContain('border-b');
+    expect(header.style.backgroundImage).toContain('var(--signal) 60%');
+    expect(header.style.backgroundImage).toContain('var(--accent) 40%');
+    expect(header.style.backgroundImage).toContain('var(--border) 75%');
+    expect(header.style.backgroundSize).toBe('100% 1px');
+    expect(header.style.backgroundPosition).toBe('left bottom');
+    expect(header.style.backgroundRepeat).toBe('no-repeat');
   });
 });

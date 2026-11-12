@@ -11,7 +11,10 @@
 
 import type { HistoryStats } from '@concert-crawl/types';
 import { HISTORY_COPY } from './definitions/copy';
-import { MY_SHOWS_GRADIENT } from './definitions/constants';
+import {
+  MY_SHOWS_GRADIENT,
+  MY_SHOWS_HEADER_RULE_STYLE,
+} from './definitions/constants';
 
 const COPY = HISTORY_COPY.header;
 
@@ -151,7 +154,11 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
   const since = sinceLabelFor(stats.first);
 
   return (
-    <header className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
+    <header
+      data-testid="history-header"
+      className="mb-5 pb-4 sm:mb-6 sm:pb-5"
+      style={MY_SHOWS_HEADER_RULE_STYLE}
+    >
       {/* The tier chip that used to sit opposite the eyebrow is gone — this
           page only renders for a plan that already unlocked it. */}
       <div className="mb-3">
