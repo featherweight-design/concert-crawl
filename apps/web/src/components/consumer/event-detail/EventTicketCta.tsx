@@ -41,9 +41,10 @@ const disabledStyle = {
   justifyContent: 'center',
   width: '100%',
   height: 48,
-  borderRadius: 10,
-  background: 'var(--surface-1)',
-  border: '1px solid var(--border)',
+  // Disabled is transparent with the strong stroke, radius 12 (event-cancelled-no-link-m).
+  borderRadius: 12,
+  background: 'transparent',
+  border: '1px solid var(--border-strong)',
   color: 'var(--fg-subtle)',
   fontFamily: 'var(--font-ui)',
   fontWeight: 700,
@@ -53,7 +54,7 @@ const disabledStyle = {
 
 // The two link CTAs (tickets, refund info) share one shape.
 const linkClass =
-  'flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px]';
+  'flex h-12 w-full items-center justify-center gap-1.5 rounded-xl';
 const linkStyle = {
   fontFamily: 'var(--font-ui)',
   fontWeight: 800,
@@ -158,7 +159,13 @@ export const EventTicketCta = ({
         target="_blank"
         rel="noopener noreferrer"
         className={`${linkClass} text-fg-on-accent`}
-        style={{ ...linkStyle, background: 'var(--accent)' }}
+        style={{
+          ...linkStyle,
+          background: 'var(--accent)',
+          // The Get Tickets glow, as drawn (event-nll-m, event-tickets-back-live-m).
+          boxShadow:
+            '0 0 30px color-mix(in oklab, var(--accent) 30%, transparent)',
+        }}
       >
         {hasDirectLink ? copy.getTickets : copy.visitVenueWebsite}
         <ExternalLinkIcon />
