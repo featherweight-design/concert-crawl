@@ -1,3 +1,16 @@
+# [1.339.0](https://github.com/featherweight-design/concert-crawl/compare/v1.338.0...v1.339.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** retire the promoted status report when an admin moves a show off it ([d9b5149](https://github.com/featherweight-design/concert-crawl/commit/d9b5149397cb4f0c27e27549aa53df5427fbc5ca))
+* **web:** let a max-length handle wrap inside the status card ([48c36e5](https://github.com/featherweight-design/concert-crawl/commit/48c36e5e66b0f3dcd5f9c1d33819a3bb1b52fb7e))
+
+
+### Features
+
+* **api:** say where a cancelled or postponed status came from ([789c218](https://github.com/featherweight-design/concert-crawl/commit/789c218e5d4621726778707cc415c3dac7707dd8))
+
 # [1.338.0](https://github.com/featherweight-design/concert-crawl/compare/v1.337.2...v1.338.0) (2026-11-12)
 
 
