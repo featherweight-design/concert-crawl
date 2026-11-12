@@ -109,6 +109,61 @@ describe('rederive-event-artists integration', () => {
     expect(result.strategies.observed).toBe(1);
   });
 
+  it('splits a billing a structured source flattened into one name (Clipse & J.I.D, Galdive & rum.gold)', async () => {
+    const venue = await seedVenue();
+    const clipse = await seedEvent(venue.id, {
+      title: 'Clipse & J.I.D with Samara Cyn',
+      artist: 'Clipse & J.I.D',
+      canonicalArtist: 'clipse',
+      canonicalTitle: 'clipse',
+      date: '2026-11-12',
+      canonicalHeadliners: ['clipse'],
+    });
+    const galdive = await seedEvent(venue.id, {
+      title: 'Galdive & rum.gold',
+      artist: 'Galdive & rum.gold',
+      canonicalArtist: 'galdive',
+      canonicalTitle: 'galdive',
+      date: '2027-02-12',
+      canonicalHeadliners: ['galdive'],
+    });
+    const adjudicate: Adjudicator = vi.fn(async ({ title }) =>
+      title.startsWith('Clipse')
+        ? {
+            isConcert: true,
+            headliners: ['Clipse', 'J.I.D'],
+            supportingArtists: ['Samara Cyn'],
+          }
+        : {
+            isConcert: true,
+            headliners: ['Galdive', 'rum.gold'],
+            supportingArtists: [],
+          },
+    );
+
+    const dry = await run(adjudicate, true);
+    expect(dry.updated).toBe(2);
+    expect((await readEvent(clipse.id)).headliners).not.toEqual([
+      'Clipse',
+      'J.I.D',
+    ]);
+
+    await run(adjudicate, false);
+
+    const clipseAfter = await readEvent(clipse.id);
+    expect(clipseAfter.headliners).toEqual(['Clipse', 'J.I.D']);
+    expect(clipseAfter.canonicalHeadliners).toEqual(['clipse', 'j.i.d']);
+    expect(clipseAfter.supportingArtists).toEqual(['Samara Cyn']);
+    // The dedup key and the display string are never rewritten.
+    expect(clipseAfter.canonicalArtist).toBe('clipse');
+    expect(clipseAfter.artist).toBe('Clipse & J.I.D');
+
+    const galdiveAfter = await readEvent(galdive.id);
+    expect(galdiveAfter.headliners).toEqual(['Galdive', 'rum.gold']);
+    expect(galdiveAfter.canonicalHeadliners).toEqual(['galdive', 'rum.gold']);
+    expect(galdiveAfter.canonicalArtist).toBe('galdive');
+  });
+
   it('hides an event whose artist echoes its title and the adjudicator rejects', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {

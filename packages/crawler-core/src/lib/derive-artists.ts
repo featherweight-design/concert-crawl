@@ -44,6 +44,19 @@ const EVENT_WORDS = [
   'market',
 ];
 
+// A single observed performer that joins names with one of these may be two
+// acts a structured source flattened into one string ("Clipse & J.I.D",
+// "Galdive & rum.gold": AEG's headlinersText, a JSON-LD performer, a Ticketure
+// act) or one act whose own name has the joiner ("Iron & Wine", "Earth, Wind &
+// Fire"). Neither a separator split nor a trusting pass-through gets both
+// right, so the adjudicator rules. Never added to `canonicalizeArtist`'s
+// SEPARATORS: that is a dedup key and must not move.
+const CO_BILLING_JOINERS = [' & ', ' + '] as const;
+
+export function joinsSeveralNames(observed: string): boolean {
+  return CO_BILLING_JOINERS.some((joiner) => observed.includes(joiner));
+}
+
 export function isSuspiciousObservation(
   observed: string,
   title: string,
@@ -78,7 +91,10 @@ export function wouldAdjudicate(event: {
     (name) => name.trim().length > 0,
   )[0];
   if (headliner === undefined) return true;
-  return isSuspiciousObservation(headliner, event.title);
+  return (
+    isSuspiciousObservation(headliner, event.title) ||
+    joinsSeveralNames(headliner)
+  );
 }
 
 /**
@@ -154,9 +170,27 @@ export async function deriveArtists(
   // This is the venue's own structured field; an LLM re-reading the page title
   // is strictly downstream of it, and re-deriving here would make each event's
   // artist nondeterministic across nightly crawls.
+  const observedBill: DerivedArtists | null =
+    headliner === undefined
+      ? null
+      : {
+          headliners: observed,
+          supportingArtists: nonEmpty(event.observedSupportingArtists),
+          isConcert: true,
+          adjudicated: false,
+        };
+  // A lone observed name that joins several is escalated (see
+  // CO_BILLING_JOINERS), but its observed bill stays the answer when no verdict
+  // can be had, exactly as it was before the escalation existed. A bill the
+  // extractor already split into several headliners is trusted as it is.
+  const joined =
+    headliner !== undefined &&
+    observed.length === 1 &&
+    joinsSeveralNames(headliner);
   if (
     headliner !== undefined &&
-    !isSuspiciousObservation(headliner, event.title)
+    !isSuspiciousObservation(headliner, event.title) &&
+    !joined
   ) {
     // The whole observed headline bill, not just its first element — a
     // co-headline set (#1203) is a real reading of the page and demoting its
@@ -171,6 +205,7 @@ export async function deriveArtists(
 
   // Step 2 — no signal, or the signal is the title wearing a performer's hat.
   if (adjudicate === null) {
+    if (joined && observedBill !== null) return observedBill;
     return {
       headliners: null,
       supportingArtists: null,
@@ -207,6 +242,7 @@ export async function deriveArtists(
       title: event.title,
       error: err instanceof Error ? err.message : String(err),
     });
+    if (joined && observedBill !== null) return observedBill;
     return {
       headliners: null,
       supportingArtists: null,

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { deriveArtists, isSuspiciousObservation } from './derive-artists.js';
+import {
+  deriveArtists,
+  isSuspiciousObservation,
+  joinsSeveralNames,
+  wouldAdjudicate,
+} from './derive-artists.js';
 
 const neverCalled = vi.fn(() => {
   throw new Error('adjudicator must not be called');
@@ -275,5 +280,117 @@ describe('isSuspiciousObservation', () => {
   ];
   it.each(clean)('does not flag %s', (observed, title) => {
     expect(isSuspiciousObservation(observed, title)).toBe(false);
+  });
+});
+
+// AEG's headlinersText, a JSON-LD performer and a Ticketure act arrive as ONE
+// string even when the venue billed two acts. The ladder used to trust it, and
+// the artist projection then keyed the show on the first name alone.
+describe('a lone observed name that joins several', () => {
+  const clipse = {
+    ...base,
+    title: 'Clipse & J.I.D with Samara Cyn',
+    observedPerformers: ['Clipse & J.I.D'],
+  };
+  const galdive = {
+    ...base,
+    title: 'Galdive & rum.gold',
+    observedPerformers: ['Galdive & rum.gold'],
+  };
+
+  it('is escalated, so Clipse & J.I.D bill as two headliners with Samara Cyn as an opener', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Clipse', 'J.I.D'],
+      supportingArtists: ['Samara Cyn'],
+    });
+
+    const result = await deriveArtists(clipse, adjudicate);
+
+    expect(adjudicate).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      headliners: ['Clipse', 'J.I.D'],
+      supportingArtists: ['Samara Cyn'],
+      isConcert: true,
+      adjudicated: true,
+    });
+  });
+
+  it('bills Galdive & rum.gold as two headliners', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Galdive', 'rum.gold'],
+      supportingArtists: [],
+    });
+
+    const result = await deriveArtists(galdive, adjudicate);
+
+    expect(result.headliners).toEqual(['Galdive', 'rum.gold']);
+  });
+
+  it('keeps one act whose own name has the joiner whole when the adjudicator says so', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Iron & Wine'],
+      supportingArtists: [],
+    });
+
+    const result = await deriveArtists(
+      { ...base, title: 'Iron & Wine', observedPerformers: ['Iron & Wine'] },
+      adjudicate,
+    );
+
+    expect(result.headliners).toEqual(['Iron & Wine']);
+  });
+
+  it('still takes the observed bill when AI use is not allowed', async () => {
+    const result = await deriveArtists(clipse, null);
+
+    expect(result).toEqual({
+      headliners: ['Clipse & J.I.D'],
+      supportingArtists: [],
+      isConcert: true,
+      adjudicated: false,
+    });
+  });
+
+  it('still takes the observed bill when the adjudicator fails', async () => {
+    const adjudicate = vi.fn().mockRejectedValue(new Error('overloaded'));
+
+    const result = await deriveArtists(clipse, adjudicate);
+
+    expect(result.headliners).toEqual(['Clipse & J.I.D']);
+    expect(result.adjudicated).toBe(false);
+  });
+
+  it('does not re-escalate a bill the extractor already split', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Desert Dwellers & Great Dane',
+        observedPerformers: ['Desert Dwellers', 'Great Dane'],
+      },
+      neverCalled,
+    );
+
+    expect(result.headliners).toEqual(['Desert Dwellers', 'Great Dane']);
+  });
+
+  it('is what the verdict-reuse gate asks about', () => {
+    expect(wouldAdjudicate(clipse)).toBe(true);
+    expect(wouldAdjudicate({ ...clipse, observedPerformers: ['Clipse'] })).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    ['Clipse & J.I.D', true],
+    ['Galdive & rum.gold', true],
+    ['for KING + COUNTRY', true],
+    ['Clipse', false],
+    ['blink-182', false],
+    ['Earth, Wind and Fire', false],
+  ])('joinsSeveralNames(%s) is %s', (observed, expected) => {
+    expect(joinsSeveralNames(observed)).toBe(expected);
   });
 });
