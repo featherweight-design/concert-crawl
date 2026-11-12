@@ -49,9 +49,12 @@ describe('ShowFan', () => {
     const { container } = render(
       <ShowFan shows={[show('a', null), show('b', null), show('c', null)]} />,
     );
+    // Select the cards by their tilt: the genre dots inside them carry their
+    // own box-shadow glow, so a bare box-shadow selector would catch those too.
     const shadows = [
-      ...container.querySelectorAll<HTMLElement>('[style*="box-shadow"]'),
+      ...container.querySelectorAll<HTMLElement>('[style*="rotate("]'),
     ].map((card) => card.style.boxShadow);
+    expect(shadows).toHaveLength(3);
     expect(shadows.filter((value) => value.includes('0 0 0 2px'))).toHaveLength(
       1,
     );

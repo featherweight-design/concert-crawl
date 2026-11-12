@@ -43,7 +43,8 @@ describe('B22b cached show rows', () => {
     expect(ringStyle).toContain('var(--genre-folk) 40%');
   });
 
-  it('falls back to the neutral border-strong when the genre has no bucket', () => {
+  // addendum-2 item 23: an ungenred show gets a neutral ring and no glow.
+  it('falls back to a neutral border-strong ring with no glow when the genre has no bucket', () => {
     render(
       <CachedShortcuts
         events={[
@@ -65,8 +66,10 @@ describe('B22b cached show rows', () => {
     const ringStyle =
       row.querySelector('span[style*="box-shadow"]')?.getAttribute('style') ??
       '';
-    expect(ringStyle).toContain('1.25px var(--border-strong)');
-    expect(ringStyle).toContain('var(--border-strong) 40%');
+    expect(ringStyle).toContain(
+      'box-shadow: 0 0 0 1.25px var(--border-strong);',
+    );
+    expect(ringStyle).not.toContain('0 0 20px');
   });
 });
 
