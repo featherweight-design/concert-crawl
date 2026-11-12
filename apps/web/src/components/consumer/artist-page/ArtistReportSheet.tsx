@@ -117,6 +117,7 @@ export const ArtistReportSheet = ({
       setNote('');
       if (opening.current === thisOpening) setOutcome('sent');
     } catch (err) {
+      console.warn('artist report not sent', err);
       if (err instanceof ApiError && err.status === 409) {
         // One open report per artist: this is Already reported, not a failure.
         onReported(conflictSummary(reason));
@@ -132,13 +133,9 @@ export const ArtistReportSheet = ({
         if (err.code === 'invalid_spotify_link')
           setLinkError(copy.sheet.linkError);
         else if (err.code === 'note_rejected') setNoteError(err.message);
-        else {
-          console.warn('artist report rejected', err);
-          setNoteError(copy.sheet.noteError);
-        }
+        else setNoteError(copy.sheet.noteError);
         setOutcome(null);
       } else if (opening.current === thisOpening) {
-        console.warn('artist report failed', err);
         setErrorKind(
           err instanceof SignedOutError ||
             (err instanceof ApiError && err.status === 401)
@@ -158,19 +155,24 @@ export const ArtistReportSheet = ({
   const withdraw = async () => {
     setWithdrawing(true);
     setWithdrawFailed(false);
+    // As in submit: a result that lands after the sheet closed must not close
+    // a later opening or show its failure there. The withdrawal itself still
+    // reaches the card through onWithdrawn.
+    const thisOpening = opening.current;
+    const current = () => opening.current === thisOpening;
     try {
       const token = await getToken();
-      if (token === null) throw new Error('Not signed in');
+      if (token === null) throw new SignedOutError();
       await withdrawArtistReport(slug, token);
       onWithdrawn();
-      close();
+      if (current()) close();
     } catch (err) {
+      console.warn('artist report withdraw failed', err);
       // Nothing open any more is the outcome the fan asked for.
       if (err instanceof ApiError && err.status === 404) {
         onWithdrawn();
-        close();
-      } else {
-        console.warn('artist report withdraw failed', err);
+        if (current()) close();
+      } else if (current()) {
         setWithdrawFailed(true);
       }
     } finally {
