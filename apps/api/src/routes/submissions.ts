@@ -21,6 +21,10 @@ import {
   pendingCounterViolation,
 } from '../lib/pg-errors.js';
 import { idSchema } from '../lib/id-schema.js';
+import {
+  confirmPromotionColumns,
+  readApprovePricesMyself,
+} from '../lib/price-hold.js';
 import { apiLogger } from '../lib/logger.js';
 import {
   OTHER_UPDATE_PENDING_ERROR,
@@ -161,11 +165,13 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
       };
     }
 
+    // An update on a price under check is never held (lib/price-hold.ts).
+    const hold = parentId === null && (await readApprovePricesMyself(tx));
     const [row] = await tx
       .update(priceSubmissions)
       .set({
         corroborationCount: sql`${priceSubmissions.corroborationCount} + 1`,
-        status: sql`CASE WHEN ${priceSubmissions.corroborationCount} + 1 >= ${SP_POLICY.confirmsRequired} THEN 'corroborated'::price_submission_status ELSE ${priceSubmissions.status} END`,
+        ...confirmPromotionColumns(hold, SP_POLICY.confirmsRequired),
         updatedAt: sql`now()`,
       })
       .where(
