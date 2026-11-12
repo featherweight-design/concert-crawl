@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   pgTable,
   text,
   timestamp,
@@ -14,6 +15,9 @@ import { venues } from './venues.js';
 //   - a snooze: `item_key` set, hidden until `until` passes;
 //   - "Not useful": `not_useful` true with a `kind` and `venue_id`, which hides
 //     that kind of item for that venue until it is cleared.
+// The CHECK below makes any other mix unrepresentable. An expired snooze row
+// keeps its `item_key`, so a writer snoozing the same item again must upsert
+// (ON CONFLICT (item_key)) rather than insert.
 export const adminQueueSnoozes = pgTable(
   'admin_queue_snoozes',
   {
@@ -39,6 +43,11 @@ export const adminQueueSnoozes = pgTable(
     uniqueIndex('admin_queue_snoozes_not_useful_idx')
       .on(table.kind, table.venueId)
       .where(sql`${table.notUseful}`),
+    check(
+      'admin_queue_snoozes_shape',
+      sql`(${table.notUseful} AND ${table.venueId} IS NOT NULL AND ${table.itemKey} IS NULL)
+        OR (NOT ${table.notUseful} AND ${table.itemKey} IS NOT NULL AND ${table.until} IS NOT NULL)`,
+    ),
   ],
 );
 

@@ -50,4 +50,15 @@ describe('addDays', () => {
     expect(addDays('2026-12-30', 3)).toBe('2027-01-02');
     expect(addDays('2026-11-12', 0)).toBe('2026-11-12');
   });
+
+  it.each(['garbage', '2026-1-2', '', '2026-11-12T00:00:00Z'])(
+    'refuses %j rather than guessing a date',
+    (bad) => {
+      expect(() => addDays(bad, 1)).toThrow(RangeError);
+    },
+  );
+
+  it('refuses a fractional day count', () => {
+    expect(() => addDays('2026-11-12', 1.5)).toThrow(RangeError);
+  });
 });

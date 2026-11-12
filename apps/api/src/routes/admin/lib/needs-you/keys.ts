@@ -41,9 +41,19 @@ export const denverDate = (now: Date): string =>
     day: '2-digit',
   }).format(now);
 
-/** `date` (YYYY-MM-DD) plus `days` calendar days, as YYYY-MM-DD. */
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * `date` (YYYY-MM-DD) plus `days` calendar days, as YYYY-MM-DD. Throws on a
+ * string that is not a calendar date rather than returning a plausible wrong
+ * one.
+ */
 export const addDays = (date: string, days: number): string => {
-  const [year, month, day] = date.split('-').map(Number);
-  const ms = Date.UTC(year ?? 1970, (month ?? 1) - 1, (day ?? 1) + days);
+  const match = ISO_DAY.exec(date);
+  if (!match || !Number.isInteger(days)) {
+    throw new RangeError(`addDays needs a YYYY-MM-DD date, got "${date}"`);
+  }
+  const [, year, month, day] = match.map(Number);
+  const ms = Date.UTC(year ?? 0, (month ?? 1) - 1, (day ?? 1) + days);
   return new Date(ms).toISOString().slice(0, 10);
 };

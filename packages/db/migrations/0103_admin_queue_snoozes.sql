@@ -11,7 +11,11 @@ CREATE TABLE IF NOT EXISTS "admin_queue_snoozes" (
   "not_useful" boolean DEFAULT false NOT NULL,
   "reason" text,
   "created_by" text NOT NULL,
-  "created_at" timestamp with time zone DEFAULT now() NOT NULL
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT "admin_queue_snoozes_shape" CHECK (
+    ("not_useful" AND "venue_id" IS NOT NULL AND "item_key" IS NULL)
+    OR (NOT "not_useful" AND "item_key" IS NOT NULL AND "until" IS NOT NULL)
+  )
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "admin_queue_snoozes_item_key_idx" ON "admin_queue_snoozes" ("item_key") WHERE "item_key" IS NOT NULL;
