@@ -1,3 +1,10 @@
+## [1.330.4](https://github.com/featherweight-design/concert-crawl/compare/v1.330.3...v1.330.4) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** venue token cleanups and dead SmallEventRow ([b0ff71f](https://github.com/featherweight-design/concert-crawl/commit/b0ff71f5832016abfa911a9a11b237432ad5ba96))
+
 ## [1.330.3](https://github.com/featherweight-design/concert-crawl/compare/v1.330.2...v1.330.3) (2026-11-12)
 
 
