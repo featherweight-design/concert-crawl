@@ -33,16 +33,18 @@ describe('OfflinePill', () => {
     expect(status.textContent).toMatch(/offline/i);
   });
 
-  it('reads just "Offline" below 360px and the full label from 360 up', () => {
+  // jsdom applies no media queries, so this pins the breakpoint classes that
+  // swap the labels: the full label hides below 360, the short one shows there.
+  it('swaps to the short label below 360px via its breakpoint classes', () => {
     setOnline(false);
     render(<OfflinePill />);
-    const status = screen.getByRole('status');
-    expect(status.className).toContain('whitespace-nowrap');
-    const full = screen.getByText(OFFLINE_COPY.pillLabel);
-    const short = screen.getByText(OFFLINE_COPY.pillLabelShort);
-    expect(full.className).toContain('max-[359px]:hidden');
-    expect(short.className).toContain('hidden');
-    expect(short.className).toContain('max-[359px]:inline');
+    expect(screen.getByRole('status').classList).toContain('whitespace-nowrap');
+    const full = screen.getByText(OFFLINE_COPY.pillLabel).classList;
+    const short = screen.getByText(OFFLINE_COPY.pillLabelShort).classList;
+    expect(full).toContain('max-[360px]:hidden');
+    expect(full).not.toContain('hidden');
+    expect(short).toContain('hidden');
+    expect(short).toContain('max-[360px]:inline');
   });
 
   it('switches to visible when the online event fires false', () => {
