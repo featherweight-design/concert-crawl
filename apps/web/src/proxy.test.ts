@@ -982,6 +982,7 @@ describe('proxy — the known-segment list tracks the filesystem', () => {
 
   const NON_ROUTE_ROOT_FILES = new Set([
     'error.tsx',
+    'global-error.tsx',
     'globals.css',
     'layout.tsx',
     'not-found.tsx',
