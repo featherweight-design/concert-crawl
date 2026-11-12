@@ -217,10 +217,11 @@ describe('RowTitleLine', () => {
       />,
     );
     expect(screen.getByTestId('row-title-line')).toHaveClass('flex-wrap');
-    expect(screen.getByTestId('row-title')).toHaveStyle({
-      flex: '1 1 8ch',
-      maxWidth: 'max-content',
-    });
+    // The inline style, not toHaveStyle: jsdom's computed style drops a `ch`
+    // flex basis and `max-content`, so a computed-style check can never pass.
+    const title = screen.getByTestId('row-title');
+    expect(title.style.flex).toBe('1 1 8ch');
+    expect(title.style.maxWidth).toBe('max-content');
   });
 
   it('keeps a chipless title line unwrapped', () => {
