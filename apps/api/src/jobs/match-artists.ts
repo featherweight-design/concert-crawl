@@ -113,6 +113,16 @@ export interface MatchArtistsSummary {
   autoMatched: number;
   noMatch: number;
   photosRefreshed: number;
+  /**
+   * Matched rows whose re-search did not resolve: the identity is kept and
+   * only the candidate snapshot moved.
+   */
+  refreshesKept: number;
+  /**
+   * Rows a human changed while Spotify was searching, so the job's write was
+   * refused by its `updatedAt` guard and the human's answer stands.
+   */
+  superseded: number;
   failures: number;
   abortedReason: 'rate_limit' | 'auth' | 'timeout' | null;
   spotifyCalls: number;
@@ -144,9 +154,20 @@ export const runMatchArtists = async (
     autoMatched: 0,
     noMatch: 0,
     photosRefreshed: 0,
+    refreshesKept: 0,
+    superseded: 0,
     failures: 0,
     abortedReason: null,
     spotifyCalls: 0,
+  };
+  // Every row considered lands in exactly one bucket, so `considered` is
+  // their sum. A refused guarded write is one of them, not a silent skip.
+  const supersede = (artistId: string): void => {
+    summary.superseded += 1;
+    apiLogger.debug(
+      { artistId },
+      'match-artists: a human change mid-search superseded the job',
+    );
   };
 
   const client =
@@ -249,8 +270,9 @@ export const runMatchArtists = async (
         // ambiguous by definition. When Spotify's top result is still the same
         // act, its photo is refreshed from it and the refresh clock advances;
         // otherwise only the snapshot moves, so a stale photo is never stamped
-        // fresh. Guarded on `updatedAt` so a human repoint mid-batch never
-        // receives the old pick's photo.
+        // fresh. Guarded on `updatedAt`, auto-matched or not, so a human
+        // change mid-refresh (a repoint, a demotion, a not-an-artist ruling)
+        // is never overwritten and never receives the old pick's photo.
         const repick =
           row.autoMatchedAt === null
             ? null
@@ -259,7 +281,7 @@ export const runMatchArtists = async (
           repick !== null &&
           'picked' in repick &&
           repick.picked.id === row.spotifyArtistId;
-        await db
+        const refreshed = await db
           .update(artists)
           .set({
             ...(samePick
@@ -270,11 +292,15 @@ export const runMatchArtists = async (
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
           })
-          .where(
-            row.autoMatchedAt === null
-              ? eq(artists.id, row.id)
-              : and(eq(artists.id, row.id), unchangedSince(row.updatedAt)),
-          );
+          .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
+          .returning({ id: artists.id });
+        if (refreshed.length === 0) {
+          supersede(row.id);
+        } else if (samePick) {
+          summary.photosRefreshed += 1;
+        } else {
+          summary.refreshesKept += 1;
+        }
         continue;
       }
 
@@ -302,7 +328,10 @@ export const runMatchArtists = async (
           // replaced by the job's.
           .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
           .returning({ id: artists.id });
-        if (written.length === 0) continue;
+        if (written.length === 0) {
+          supersede(row.id);
+          continue;
+        }
         if (isRefresh) {
           summary.photosRefreshed += 1;
         } else {
@@ -356,7 +385,11 @@ export const runMatchArtists = async (
             }
             return written.length;
           });
-          if (picked > 0) summary.autoMatched += 1;
+          if (picked > 0) {
+            summary.autoMatched += 1;
+          } else {
+            supersede(row.id);
+          }
           continue;
         }
       }
@@ -378,7 +411,10 @@ export const runMatchArtists = async (
         // stayed, leaving a hidden row back in the queue as if undecided.
         .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
         .returning({ id: artists.id });
-      if (written.length === 0) continue;
+      if (written.length === 0) {
+        supersede(row.id);
+        continue;
+      }
       if (result.status === 'ambiguous') {
         summary.ambiguous += 1;
       } else {

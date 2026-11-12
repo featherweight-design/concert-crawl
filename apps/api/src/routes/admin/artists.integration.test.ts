@@ -1412,6 +1412,46 @@ describe('admin artists routes', () => {
         expect((await readRow(id))?.matchStatus).toBe('matched');
       });
 
+      describe('a confirm refused mid-write names its cause', () => {
+        const seedAutoMatched = () =>
+          seedArtist({
+            canonicalName: 'bahamas',
+            matchStatus: 'matched',
+            spotifyArtistId: 'sp_a',
+            autoMatchedAt: new Date(),
+          });
+        const confirm = {
+          spotifyArtistId: 'sp_a',
+          confirmAutoMatch: true,
+          expectedStatus: 'matched',
+        };
+
+        it('the auto-match moved: the auto-match message', async () => {
+          const id = await seedAutoMatched();
+          const res = await patchWithChangeBeforeWrite(id, confirm, () =>
+            testDb
+              .update(artists)
+              .set({ spotifyArtistId: 'sp_b' })
+              .where(eq(artists.id, id)),
+          );
+          expect(res.status).toBe(409);
+          expect((await res.json()).error).toBe(
+            'The auto-match has changed since it was loaded',
+          );
+        });
+
+        it('only the status moved: the artist message', async () => {
+          const id = await seedAutoMatched();
+          const res = await patchWithChangeBeforeWrite(id, confirm, () =>
+            setStatus(id, 'ambiguous'),
+          );
+          expect(res.status).toBe(409);
+          expect((await res.json()).error).toBe(
+            'The artist has changed since it was loaded',
+          );
+        });
+      });
+
       it('404s rather than 409s when the row is deleted mid-write', async () => {
         const id = await seedArtist({
           canonicalName: 'nirvana',

@@ -21,10 +21,14 @@ export const artistMatchBodySchema = z
     // still the row's current, unconfirmed answer. A stale page must never
     // write an old guess over a newer match.
     confirmAutoMatch: z.literal(true).optional(),
-    // The status the page showed when the admin decided. A human decision can
-    // sit on screen for minutes; with this the write lands only if the row is
-    // still in that status, so a ruling made against a stale row is refused
-    // rather than applied over whatever is there now.
+    // Opt-in: the status the caller showed when the admin decided. When it is
+    // sent, the write lands only if the row is still in that status, and a
+    // ruling made against a stale row (a decision can sit on screen for
+    // minutes) is refused with a 409. When it is omitted, nothing pins the
+    // status and that race stays open: the last write wins. So the race is
+    // closed only for callers that send it. The 4c admin page will; the Needs
+    // you handlers do not yet, as they would need the shown status carried on
+    // the item. It pins the status only, not the Spotify identity.
     expectedStatus: matchStatusSchema.optional(),
   })
   .strict();
@@ -213,19 +217,27 @@ export const applyArtistMatch = async (
 
   if (!updated) {
     // No row matched: either it is gone, or a guard refused it. Read it again
-    // to tell the two apart.
+    // to tell the two apart, and to name the guard that refused it. Only the
+    // confirm guard's own condition earns the auto-match message; a confirm
+    // that also sent `expectedStatus` can be refused by that instead.
     const [current] = await db
-      .select({ id: artists.id })
+      .select({
+        autoMatchedAt: artists.autoMatchedAt,
+        spotifyArtistId: artists.spotifyArtistId,
+      })
       .from(artists)
       .where(eq(artists.id, id));
     if (!current) {
       return { ok: false, status: 404, error: 'Artist not found' };
     }
+    const autoMatchMoved =
+      body.confirmAutoMatch === true &&
+      (current.autoMatchedAt === null ||
+        current.spotifyArtistId !== body.spotifyArtistId);
     return {
       ok: false,
       status: 409,
-      error:
-        body.confirmAutoMatch === true ? AUTO_MATCH_CHANGED : ARTIST_CHANGED,
+      error: autoMatchMoved ? AUTO_MATCH_CHANGED : ARTIST_CHANGED,
     };
   }
 
