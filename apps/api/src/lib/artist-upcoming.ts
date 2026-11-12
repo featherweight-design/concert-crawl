@@ -71,6 +71,15 @@ export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
   >`(SELECT MIN(${events.date}) ${upcomingShowsFrom(withinDays)})`;
 
 /**
+ * The venue of the soonest show `nextShowDateExpr` dates, from the same
+ * fragment. Ties on the day break on show time, then id, as the fan lists do.
+ */
+export const nextShowVenueExpr = (): SQL<string | null> =>
+  sql<
+    string | null
+  >`(SELECT ${venues.name} ${upcomingShowsFrom(undefined)} ORDER BY ${events.date}, ${events.showTime} NULLS LAST, ${events.id} LIMIT 1)`;
+
+/**
  * How many shows `hasUpcomingShowExpr` would accept for this artist. Built
  * from the same fragment, so a row the filter lists never reads 0.
  */

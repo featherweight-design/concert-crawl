@@ -14,7 +14,6 @@ import {
   and,
   asc,
   eq,
-  ne,
   ilike,
   inArray,
   isNull,
@@ -45,6 +44,7 @@ import { closeOpenArtistReports } from '../../lib/artist-reports.js';
 import {
   hasUpcomingShowExpr,
   nextShowDateExpr,
+  nextShowVenueExpr,
   upcomingShowCountExpr,
 } from '../../lib/artist-upcoming.js';
 import {
@@ -116,10 +116,16 @@ const windowFilter = (window: z.infer<typeof windowSchema>): SQL =>
       ? sql`${hasUpcomingShowExpr()} and not ${hasUpcomingShowExpr(SOON_WINDOW_DAYS)}`
       : sql`not ${hasUpcomingShowExpr()}`;
 
-// Who is Watching the artist. Listening history is not a follow (the artist
-// page's own rule), so Spotify top-artist rows are left out.
-const watchingCountExpr = (): SQL<number> =>
-  sql<number>`(select count(*)::int from ${userArtistFollows} where ${userArtistFollows.canonicalName} = "artists"."canonical_name" and ${userArtistFollows.source} <> 'spotify_top')`;
+// How many fans are Watching the artist: the list's column and the detail
+// panel's count, so the two can't disagree. Listening history is not a follow
+// (the artist page's own rule), so Spotify top-artist rows are left out. A fan
+// can follow both by hand and through Spotify, so users are counted, not rows.
+const watchingCountExpr = (canonicalName: SQL | string): SQL<number> =>
+  sql<number>`(select count(distinct ${userArtistFollows.userId})::int from ${userArtistFollows} where ${userArtistFollows.canonicalName} = ${canonicalName} and ${userArtistFollows.source} <> 'spotify_top')`;
+
+// The outer row's canonical name, qualified for the same reason as
+// `outerArtistId`.
+const outerCanonicalName = (): SQL => sql.raw('"artists"."canonical_name"');
 
 // To check is ordered by what needs a decision most: reported rows, then
 // unsure, then no match or not yet checked, then the auto-matched rows that
@@ -154,7 +160,8 @@ const upcomingParamSchema = z
 const listQuerySchema = z.object({
   status: listFilterSchema.optional(),
   upcoming: upcomingParamSchema,
-  // When set, replaces `upcoming`: the window already says which shows count.
+  // To check's show-date chips. Applied on top of `upcoming`, as `/counts`
+  // counts them, so "No show" lists rows only with `upcoming=false`.
   window: windowSchema.optional(),
   // An empty `search=` is what a controlled input sends when the admin clears
   // it, and that means "no filter" — not a bad request.
@@ -222,11 +229,8 @@ artistsAdminRouter.get(
       ? ilike(artists.canonicalName, `%${search}%`)
       : and(
           status ? statusFilter(status) : undefined,
-          window
-            ? windowFilter(window)
-            : upcoming
-              ? hasUpcomingShowExpr()
-              : undefined,
+          upcoming ? hasUpcomingShowExpr() : undefined,
+          window ? windowFilter(window) : undefined,
         );
     const toCheck = !search && status === 'to_check';
 
@@ -252,8 +256,9 @@ artistsAdminRouter.get(
         isExhausted: isExhaustedBucketExpr(),
         openReportCount: sql<number>`(select count(*)::int from ${artistReports} where ${artistReports.artistId} = ${outerArtistId()} and ${artistReports.status} = 'open')`,
         upcomingCount: upcomingShowCountExpr(),
-        watchingCount: watchingCountExpr(),
+        watchingCount: watchingCountExpr(outerCanonicalName()),
         nextShowDate: nextShowDateExpr(),
+        nextShowVenue: nextShowVenueExpr(),
         // The To check row shows its candidates inline (redesign 4c), from
         // the snapshot the match job already took. Other tabs never render
         // them, so they skip the widest column on the row.
@@ -279,14 +284,6 @@ artistsAdminRouter.get(
       .limit(limit)
       .offset(offset);
 
-    // Venue for the next show. The date comes from the row (the same predicate
-    // as the filter); the venue needs the billing walk, done once per page.
-    const nextShows = await loadNextShowByCanonical(
-      rows
-        .filter((row) => row.nextShowDate !== null)
-        .map((row) => row.canonicalName),
-    );
-
     // The page needs to know whether a next page exists, and the filtered total
     // is the only thing that answers it — a full page of rows is equally
     // consistent with there being one more row or a thousand.
@@ -297,16 +294,13 @@ artistsAdminRouter.get(
 
     return ctx.json({
       success: true,
-      data: rows.map(({ nextShowDate, ...row }) => {
-        const show = nextShows.get(row.canonicalName);
-        return {
-          ...row,
-          nextShow:
-            nextShowDate === null
-              ? null
-              : { date: nextShowDate, venueName: show?.venue ?? null },
-        };
-      }),
+      data: rows.map(({ nextShowDate, nextShowVenue, ...row }) => ({
+        ...row,
+        nextShow:
+          nextShowDate === null
+            ? null
+            : { date: nextShowDate, venueName: nextShowVenue },
+      })),
       total: totalRow?.total ?? 0,
     });
   },
@@ -332,49 +326,47 @@ artistsAdminRouter.get(
     // carries bind parameters, and Postgres renders separate placeholders in the
     // select list and the GROUP BY, so it cannot see the two as the same
     // expression and rejects the query.
-    const rows = await db
-      .select({
-        matchStatus: artists.matchStatus,
-        total: sql<number>`count(*)::int`,
-        exhausted: sql<number>`count(*) filter (where ${isExhaustedBucketExpr()})::int`,
-        autoMatched: sql<number>`count(*) filter (where ${isAutoMatchedExpr()})::int`,
-      })
-      .from(artists)
-      .where(upcoming ? hasUpcomingShowExpr() : undefined)
-      .groupBy(artists.matchStatus);
-
-    // Reported is its own overlapping bucket (an artist is reported in any
-    // match state), so it is counted apart and subtracts from nothing.
-    const [reportedRow] = await db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(artists)
-      .where(and(openReportOn(), upcoming ? hasUpcomingShowExpr() : undefined));
-
-    // The To check tab and its show-date chips (redesign 4c). The tab count
-    // honours `upcoming` like every other chip. The three windows partition
-    // every To check row by its next show, so they ignore `upcoming`: "No show"
-    // only has rows when past-only artists are included.
+    const upcomingOnly = upcoming ? hasUpcomingShowExpr() : undefined;
     const soon = hasUpcomingShowExpr(SOON_WINDOW_DAYS);
     const anyShow = hasUpcomingShowExpr();
-    const [toCheckRow] = await db
-      .select({
-        total: upcoming
-          ? sql<number>`count(*) filter (where ${anyShow})::int`
-          : sql<number>`count(*)::int`,
-        soon: sql<number>`count(*) filter (where ${soon})::int`,
-        later: sql<number>`count(*) filter (where ${anyShow} and not ${soon})::int`,
-        none: sql<number>`count(*) filter (where not ${anyShow})::int`,
-      })
-      .from(artists)
-      .where(isToCheckExpr());
+    const [rows, [reportedRow], [toCheckRow]] = await Promise.all([
+      db
+        .select({
+          matchStatus: artists.matchStatus,
+          total: sql<number>`count(*)::int`,
+          exhausted: sql<number>`count(*) filter (where ${isExhaustedBucketExpr()})::int`,
+          autoMatched: sql<number>`count(*) filter (where ${isAutoMatchedExpr()})::int`,
+        })
+        .from(artists)
+        .where(upcomingOnly)
+        .groupBy(artists.matchStatus),
+      // Reported is its own overlapping bucket (an artist is reported in any
+      // match state), so it is counted apart and subtracts from nothing.
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(artists)
+        .where(and(openReportOn(), upcomingOnly)),
+      // The To check tab and its show-date chips (redesign 4c). All of them
+      // honour `upcoming`, as the list applies it under `window`, so the chips
+      // always add up to the tab: "No show" is 0 unless past-only artists are
+      // included.
+      db
+        .select({
+          total: sql<number>`count(*)::int`,
+          soon: sql<number>`count(*) filter (where ${soon})::int`,
+          later: sql<number>`count(*) filter (where ${anyShow} and not ${soon})::int`,
+          none: sql<number>`count(*) filter (where not ${anyShow})::int`,
+        })
+        .from(artists)
+        .where(and(isToCheckExpr(), upcomingOnly)),
+    ]);
 
+    // Flat numbers only: the page spreads this into a status-to-count map.
     const counts = {
       to_check: toCheckRow?.total ?? 0,
-      toCheckWindows: {
-        soon: toCheckRow?.soon ?? 0,
-        later: toCheckRow?.later ?? 0,
-        none: toCheckRow?.none ?? 0,
-      },
+      to_check_soon: toCheckRow?.soon ?? 0,
+      to_check_later: toCheckRow?.later ?? 0,
+      to_check_none: toCheckRow?.none ?? 0,
       reported: reportedRow?.total ?? 0,
       unmatched: 0,
       matched: 0,
@@ -735,16 +727,11 @@ artistsAdminRouter.get(
       )
       .orderBy(asc(artistReports.createdAt), asc(artistReports.id));
 
+    // The list's Watching count, so the row and the panel agree.
     const [followers] = await db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(userArtistFollows)
-      .where(
-        and(
-          eq(userArtistFollows.canonicalName, artist.canonicalName),
-          // Listening history is not a follow (the artist page's own rule).
-          ne(userArtistFollows.source, 'spotify_top'),
-        ),
-      );
+      .select({ total: watchingCountExpr(outerCanonicalName()) })
+      .from(artists)
+      .where(eq(artists.id, id));
     const nextShow =
       (await loadNextShowByCanonical([artist.canonicalName])).get(
         artist.canonicalName,
