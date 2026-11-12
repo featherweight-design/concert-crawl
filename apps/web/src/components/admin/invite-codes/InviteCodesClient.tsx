@@ -15,6 +15,7 @@ import {
 } from '@/components/admin/primitives';
 import {
   inviteStatus,
+  MAX_SEATS,
   seatsTaken,
   type InviteStatus,
 } from '@/lib/poster/poster-rule';
@@ -198,6 +199,8 @@ export function InviteCodesClient() {
       icon={Plus}
       fullWidth={isPhone}
       variant="gradient"
+      // New code lands with its panel in the forms PR.
+      disabled
       style={{
         height: isPhone ? 42 : 36,
         fontSize: isPhone ? 14 : 13,
@@ -218,9 +221,9 @@ export function InviteCodesClient() {
       <EmptyState
         icon={Ticket}
         title={COPY.empty.title}
-        body={COPY.empty.body}
+        body={COPY.empty.body(MAX_SEATS)}
         action={
-          <AdminButton type="button" icon={Plus} variant="gradient">
+          <AdminButton type="button" icon={Plus} variant="gradient" disabled>
             {COPY.newCode}
           </AdminButton>
         }
@@ -230,6 +233,7 @@ export function InviteCodesClient() {
     body = (
       <ul
         data-testid="invite-codes-list"
+        aria-label={COPY.tabs.codes}
         style={{ listStyle: 'none', margin: 0, padding: 0 }}
       >
         {rows.map(({ row, status }) => (
@@ -281,84 +285,93 @@ export function InviteCodesClient() {
           background: 'var(--bg-elevated)',
         }}
       >
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            tableLayout: 'fixed',
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={{ ...COLUMN_HEAD, paddingLeft: 18 }}>
-                {COPY.columns.code}
-              </th>
-              <th style={{ ...COLUMN_HEAD, width: 190 }}>
-                {COPY.columns.seats}
-              </th>
-              <th style={{ ...COLUMN_HEAD, width: 90 }}>
-                {COPY.columns.expires}
-              </th>
-              <th style={{ ...COLUMN_HEAD, width: 96 }}>
-                {COPY.columns.status}
-              </th>
-              <th style={{ ...COLUMN_HEAD, width: 90 }}>
-                {COPY.columns.madeBy}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ row, status }) => (
-              <tr key={row.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td
-                  style={{
-                    ...CELL,
-                    paddingLeft: 18,
-                    color: 'var(--fg)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div style={{ ...MONO, fontSize: 13 }}>{row.code}</div>
-                  {codeLabel(row) && (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: 'var(--fg-muted)',
-                        marginTop: 2,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {codeLabel(row)}
-                    </div>
-                  )}
-                </td>
-                <td style={CELL}>
-                  <SeatsBar
-                    used={seatsTaken(row)}
-                    max={row.maxUses}
-                    full={status === 'full'}
-                  />
-                </td>
-                <td style={CELL}>
-                  {row.expiresAt ? shortDate(row.expiresAt) : COPY.never}
-                </td>
-                <td style={CELL}>
-                  <StatusChip status={status} />
-                </td>
-                <td
-                  style={{
-                    ...CELL,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {makerName(row)}
-                </td>
+        {/* Between the phone breakpoint and ~960px the fixed columns
+            don't fit beside the sidebar, so the table scrolls in its card. */}
+        <div style={{ overflowX: 'auto' }}>
+          <table
+            aria-label={COPY.tabs.codes}
+            style={{
+              width: '100%',
+              minWidth: 680,
+              borderCollapse: 'collapse',
+              tableLayout: 'fixed',
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={{ ...COLUMN_HEAD, paddingLeft: 18 }}>
+                  {COPY.columns.code}
+                </th>
+                <th style={{ ...COLUMN_HEAD, width: 190 }}>
+                  {COPY.columns.seats}
+                </th>
+                <th style={{ ...COLUMN_HEAD, width: 90 }}>
+                  {COPY.columns.expires}
+                </th>
+                <th style={{ ...COLUMN_HEAD, width: 96 }}>
+                  {COPY.columns.status}
+                </th>
+                <th style={{ ...COLUMN_HEAD, width: 90 }}>
+                  {COPY.columns.madeBy}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map(({ row, status }) => (
+                <tr
+                  key={row.id}
+                  style={{ borderTop: '1px solid var(--border)' }}
+                >
+                  <td
+                    style={{
+                      ...CELL,
+                      paddingLeft: 18,
+                      color: 'var(--fg)',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div style={{ ...MONO, fontSize: 13 }}>{row.code}</div>
+                    {codeLabel(row) && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--fg-muted)',
+                          marginTop: 2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {codeLabel(row)}
+                      </div>
+                    )}
+                  </td>
+                  <td style={CELL}>
+                    <SeatsBar
+                      used={seatsTaken(row)}
+                      max={row.maxUses}
+                      full={status === 'full'}
+                    />
+                  </td>
+                  <td style={CELL}>
+                    {row.expiresAt ? shortDate(row.expiresAt) : COPY.never}
+                  </td>
+                  <td style={CELL}>
+                    <StatusChip status={status} />
+                  </td>
+                  <td
+                    style={{
+                      ...CELL,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {makerName(row)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div
           style={{
             padding: '12px 18px',

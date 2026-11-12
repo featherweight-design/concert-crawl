@@ -12,16 +12,18 @@ export const SeatsBar = ({
   full: boolean;
   width?: number;
 }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
     <div
       aria-hidden
       style={{
         width,
+        minWidth: 40,
         height: 6,
         borderRadius: 3,
         background: 'var(--border)',
         overflow: 'hidden',
-        flex: 'none',
+        // Shrinks before a 320px card overflows; drawn width otherwise.
+        flex: '0 1 auto',
       }}
     >
       <div
