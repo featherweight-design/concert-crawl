@@ -15,12 +15,11 @@ const webOrigin = (): string =>
   process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000';
 
 // The web app's user settings live under /me, driven by a ?section= query
-// param (see SettingsRouteDesktop NavSection: profile|plan|appearance|
+// param (see SettingsRouteDesktop NavSection: profile|appearance|
 // submissions|account|danger). There is no dedicated email-preferences route
 // yet, so the notification links land on the settings home; see follow-up
 // issue for the missing unsubscribe UI.
 export const notificationsUrl = (): string => `${webOrigin()}/me`;
-export const planUrl = (): string => `${webOrigin()}/me?section=plan`;
 export const appUrl = (): string => webOrigin();
 
 export const LEGAL_LINE = 'Concert Crawl · Denver, CO';
@@ -85,7 +84,6 @@ export const familyUnsubscribeLabel = (family: EmailFamily): string =>
 interface TextShellInput {
   body: string;
   family: EmailFamily;
-  showManage: boolean;
   unsubscribeUrl?: string;
   // The same note the HTML footerRow carries (often the reply-to-us line).
   // Plain-text readers dropped it until #1386.
@@ -95,12 +93,10 @@ interface TextShellInput {
 const TEXT_RULE = '----------------------------------------';
 
 // Plain-text footer mirrors the HTML EmFooter contract: per-family
-// unsubscribe first, all-settings second, manage-subscription only where a
-// payment relationship exists, then the legal line.
+// unsubscribe first, all-settings second, then the legal line.
 export const renderTextShell = ({
   body,
   family,
-  showManage,
   unsubscribeUrl,
   note,
 }: TextShellInput): string => {
@@ -111,7 +107,6 @@ export const renderTextShell = ({
     TEXT_RULE,
     `${familyUnsubscribeLabel(family)}:  ${unsubscribeUrl ?? notificationsUrl()}`,
     `All email settings:       ${notificationsUrl()}`,
-    ...(showManage ? [`Manage subscription:      ${planUrl()}`] : []),
     LEGAL_LINE,
   ];
   return lines.join('\n');

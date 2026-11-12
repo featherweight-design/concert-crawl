@@ -1,5 +1,4 @@
 export { TierPickerSheet } from './TierPickerSheet';
-export { TierPickerEntry } from './TierPickerEntry';
 export { TierBadge } from './TierBadge';
 export { GiftedThankYou } from './GiftedThankYou';
 export { FounderClaimTakeover } from './FounderClaimTakeover';
