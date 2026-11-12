@@ -164,6 +164,50 @@ describe('rederive-event-artists integration', () => {
     expect(galdiveAfter.canonicalArtist).toBe('galdive');
   });
 
+  it('reads only flattened billings when asked, and stops at once when told to', async () => {
+    const venue = await seedVenue();
+    await seedEvent(venue.id, {
+      title: 'Plain Band',
+      artist: 'Plain Band',
+      canonicalArtist: 'plain band',
+      canonicalTitle: 'plain band',
+      date: '2026-11-20',
+    });
+    for (const [index, name] of ['Aaa & Bbb', 'Ccc & Ddd'].entries()) {
+      await seedEvent(venue.id, {
+        title: name,
+        artist: name,
+        canonicalArtist: name.split(' & ')[0]!.toLowerCase(),
+        canonicalTitle: name.toLowerCase(),
+        date: `2026-12-0${index + 1}`,
+      });
+    }
+    let calls = 0;
+    const adjudicate: Adjudicator = vi.fn(async ({ title }) => {
+      calls += 1;
+      const [first, second] = title.split(' & ');
+      return {
+        isConcert: true,
+        headliners: [first!, second!],
+        supportingArtists: [],
+      };
+    });
+
+    const result = await rederiveEventArtists({
+      dryRun: true,
+      adjudicate,
+      adjudicationIntervalMs: 0,
+      aiUseAllowed: async () => true,
+      onlyFlattenedBillings: true,
+      shouldStop: () => calls >= 1,
+    });
+
+    // The plain row is never read; the second flattened row is never reached.
+    expect(result.scanned).toBe(1);
+    expect(calls).toBe(1);
+    expect(result.stopped).toBe(true);
+  });
+
   it('hides an event whose artist echoes its title and the adjudicator rejects', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {

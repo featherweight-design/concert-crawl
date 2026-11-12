@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { reportFailure } from '@concert-crawl/logger';
-import type { LLMResult } from '../../types.js';
+import type { LLMResult, TokenUsage } from '../../types.js';
 import { cleanHtml, resolveExtractedUrl } from './clean-html.js';
 import { salvageJsonArrayPrefix } from './salvage-json-array.js';
 import { normalizeSupportingArtists } from '../normalize-supporting-artists.js';
@@ -679,13 +679,16 @@ ${IS_CONCERT_RULES}`;
  * Single-listing entry point for `deriveArtists()`'s escalation step. Same
  * rules and same model as page extraction, one title in and one verdict out.
  */
-export const adjudicateEvent = async ({
+export const adjudicateEventWithUsage = async ({
   title,
   description,
 }: {
   title: string;
   description: string | undefined;
-}): Promise<z.infer<typeof AdjudicationSchema>> => {
+}): Promise<{
+  verdict: z.infer<typeof AdjudicationSchema>;
+  usage: TokenUsage;
+}> => {
   const client = new Anthropic();
 
   const response = await client.messages.create({
@@ -732,9 +735,24 @@ export const adjudicateEvent = async ({
   // A verdict naming a headliner while calling the listing a non-concert is
   // self-contradictory, and the caller writes both fields. Trust isConcert —
   // it is the question the whole ladder is gated on — and drop the names.
+  const usage: TokenUsage = {
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+  };
   if (!parsed.data.isConcert) {
-    return { isConcert: false, headliners: [], supportingArtists: [] };
+    return {
+      verdict: { isConcert: false, headliners: [], supportingArtists: [] },
+      usage,
+    };
   }
 
-  return parsed.data;
+  return { verdict: parsed.data, usage };
 };
+
+export const adjudicateEvent = async (input: {
+  title: string;
+  description: string | undefined;
+}): Promise<z.infer<typeof AdjudicationSchema>> =>
+  (await adjudicateEventWithUsage(input)).verdict;

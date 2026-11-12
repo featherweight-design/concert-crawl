@@ -5,6 +5,7 @@ export type { FetchResult } from './lib/fetcher.js';
 export { extractJsonLd } from './lib/extractors/json-ld.js';
 export {
   adjudicateEvent,
+  adjudicateEventWithUsage,
   extractWithLlm,
   IS_CONCERT_RULES,
 } from './lib/extractors/llm.js';
