@@ -13,6 +13,7 @@ import {
   NO_MATCH_RETRY_DAYS,
   PHOTO_REFETCH_DAYS,
   runMatchArtists,
+  type MatchArtistsSummary,
 } from './match-artists.js';
 import type { SpotifyAppClient } from '../lib/spotify-app-client.js';
 import { SpotifyRateLimitError, SpotifyTimeoutError } from '../lib/spotify.js';
@@ -38,6 +39,17 @@ const seedArtist = async (
   if (!row) throw new Error('seed failed');
   return row.id;
 };
+
+// Every row the job considers lands in exactly one of these.
+const bucketTotal = (summary: MatchArtistsSummary): number =>
+  summary.matched +
+  summary.ambiguous +
+  summary.autoMatched +
+  summary.noMatch +
+  summary.photosRefreshed +
+  summary.refreshesKept +
+  summary.superseded +
+  summary.failures;
 
 const readArtist = async (id: string) => {
   const [row] = await testDb.select().from(artists).where(eq(artists.id, id));
@@ -89,7 +101,7 @@ describe('runMatchArtists', () => {
   it('leaves a row alone when an admin answers it while Spotify searches', async () => {
     const id = await seedArtist({ name: 'Bahamas', canonicalName: 'bahamas' });
 
-    await runMatchArtists({
+    const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
         await testDb
@@ -118,6 +130,53 @@ describe('runMatchArtists', () => {
     const row = await readArtist(id);
     expect(row?.matchStatus).toBe('no_match');
     expect(row?.autoMatchedAt).toBeNull();
+    // The refused write is counted, not silently skipped.
+    expect(summary).toMatchObject({
+      considered: 1,
+      superseded: 1,
+      autoMatched: 0,
+    });
+    expect(bucketTotal(summary)).toBe(summary.considered);
+  });
+
+  it('never overwrites a human change made during a photo refresh', async () => {
+    // A confirmed match (not auto-matched) due a refresh, whose re-search
+    // stops resolving: the snapshot-only write path.
+    const id = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_khru',
+      photoUrl: 'https://i.scdn.co/image/expired',
+      photoFetchedAt: new Date(
+        NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
+      ),
+    });
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        // An admin demotes the row while Spotify searches.
+        await testDb
+          .update(artists)
+          .set({
+            matchStatus: 'no_match',
+            spotifyArtistId: null,
+            photoUrl: null,
+            photoFetchedAt: null,
+            spotifyCandidates: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(artists.id, id));
+        return [];
+      }),
+    });
+
+    const row = await readArtist(id);
+    expect(row?.matchStatus).toBe('no_match');
+    expect(row?.spotifyCandidates).toBeNull();
+    expect(row?.matchCheckedAt).not.toEqual(NOW);
+    expect(summary).toMatchObject({ considered: 1, superseded: 1 });
+    expect(bucketTotal(summary)).toBe(summary.considered);
   });
 
   it("refreshes an auto-matched row's photo from the same pick", async () => {
@@ -262,7 +321,8 @@ describe('runMatchArtists', () => {
       }),
     });
 
-    expect(summary).toMatchObject({ noMatch: 0, ambiguous: 0 });
+    expect(summary).toMatchObject({ noMatch: 0, ambiguous: 0, superseded: 1 });
+    expect(bucketTotal(summary)).toBe(summary.considered);
     const row = await readArtist(id);
     expect(row?.matchStatus).toBe('not_an_artist');
     expect(row?.hidden).toBe(true);
@@ -296,7 +356,8 @@ describe('runMatchArtists', () => {
       }),
     });
 
-    expect(summary).toMatchObject({ matched: 0 });
+    expect(summary).toMatchObject({ matched: 0, superseded: 1 });
+    expect(bucketTotal(summary)).toBe(summary.considered);
     const row = await readArtist(id);
     expect(row?.matchStatus).toBe('not_an_artist');
     expect(row?.spotifyArtistId).toBeNull();

@@ -732,6 +732,9 @@ artistsAdminRouter.get(
         photoUrl: artists.photoUrl,
         spotifyArtistId: artists.spotifyArtistId,
         spotifyCandidates: artists.spotifyCandidates,
+        // The list's Watching count, the same expression on the same row, so
+        // the list and the panel agree.
+        followerCount: watchingCountExpr(outerCanonicalName()),
       })
       .from(artists)
       .where(eq(artists.id, id));
@@ -739,7 +742,7 @@ artistsAdminRouter.get(
       return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const reports = await db
+    const reportsQuery = db
       .select({
         id: artistReports.id,
         reason: artistReports.reason,
@@ -755,14 +758,6 @@ artistsAdminRouter.get(
       )
       .orderBy(asc(artistReports.createdAt), asc(artistReports.id));
 
-    // The list's Watching count, the same expression so the row and the panel
-    // agree, bound to this name rather than correlated to an artists row, so
-    // it needs no second artists query. The FROM only gives the scalar a row
-    // to ride on; with no follows at all there is no row, and that reads 0.
-    const [followers] = await db
-      .select({ total: watchingCountExpr(artist.canonicalName) })
-      .from(userArtistFollows)
-      .limit(1);
     // Next show: the list computes it in SQL (`nextShowDateExpr` and
     // `nextShowVenueExpr`), this panel through `loadNextShowByCanonical`. Kept
     // apart on purpose: this response's `nextShow` is the loader's
@@ -770,10 +765,11 @@ artistsAdminRouter.get(
     // SQL fragments cannot produce, and the response shape must not change.
     // Both apply the same consumer predicate and the same date, show time, id
     // order, so they pick the same show.
-    const nextShow =
-      (await loadNextShowByCanonical([artist.canonicalName])).get(
-        artist.canonicalName,
-      ) ?? null;
+    const [reports, nextShows] = await Promise.all([
+      reportsQuery,
+      loadNextShowByCanonical([artist.canonicalName]),
+    ]);
+    const nextShow = nextShows.get(artist.canonicalName) ?? null;
 
     const matchedGenres =
       artist.spotifyCandidates?.find(
@@ -789,7 +785,7 @@ artistsAdminRouter.get(
           spotifyArtistId: artist.spotifyArtistId,
           genres: matchedGenres,
           nextShow,
-          followerCount: followers?.total ?? 0,
+          followerCount: artist.followerCount,
         },
         reports: reports.map((report) => ({
           ...report,
