@@ -5,7 +5,7 @@
 // committed to would erase the night from your Concert History (#70).
 
 import { and, eq } from 'drizzle-orm';
-import { db, userEvents } from '@concert-crawl/db';
+import { db, userEventDismissals, userEvents } from '@concert-crawl/db';
 
 export interface ReleaseWatchResult {
   /** True when the whole row was removed; false when only Watching was cleared. */
@@ -29,6 +29,18 @@ export const releaseWatch = async (
     .limit(1);
 
   if (!existing) return { deleted: false };
+
+  // A hidden No longer listed show belongs to the Watching it qualified: stop
+  // watching and it is forgotten, so watching the same show again later does
+  // not come back already hidden with no way to undo it.
+  await db
+    .delete(userEventDismissals)
+    .where(
+      and(
+        eq(userEventDismissals.userId, userId),
+        eq(userEventDismissals.eventId, eventId),
+      ),
+    );
 
   if (existing.attendingAt === null) {
     await db.delete(userEvents).where(eq(userEvents.id, existing.id));

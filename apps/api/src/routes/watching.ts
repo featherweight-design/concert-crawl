@@ -156,7 +156,8 @@ watchingRouter.get('/', async (ctx) => {
     attendingAt: row.attendingAt?.toISOString() ?? null,
   }));
 
-  // Per person (the dismissal filter above), so it is never cached across people.
+  // Per person (the dismissal filter above): no shared cache may hold it.
+  ctx.header('Cache-Control', 'private, no-store');
   return ctx.json({ success: true, data });
 });
 
@@ -173,23 +174,36 @@ watchingRouter.post('/:eventId/dismiss', async (ctx) => {
   }
   const eventId = parsed.data;
 
-  const [row] = await db
-    .select({ delistedAt: events.delistedAt })
-    .from(userEvents)
-    .innerJoin(events, eq(userEvents.eventId, events.id))
-    .where(
-      and(
-        eq(userEvents.userId, authInfo.userId),
-        eq(userEvents.eventId, eventId),
-        eq(userEvents.status, 'watching'),
-      ),
-    )
-    .limit(1);
-  // Not on my list, or not a show I watch: the same answer either way.
-  if (!row) {
+  // One transaction under a lock on my watch row, so an Unwatch (which takes the
+  // same row) cannot slip between the check and the write.
+  const userId = authInfo.userId;
+  const outcome = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ delistedAt: events.delistedAt })
+      .from(userEvents)
+      .innerJoin(events, eq(userEvents.eventId, events.id))
+      .where(
+        and(
+          eq(userEvents.userId, userId),
+          eq(userEvents.eventId, eventId),
+          eq(userEvents.status, 'watching'),
+        ),
+      )
+      .limit(1)
+      .for('update', { of: userEvents });
+    // Not on my list, or not a show I watch: the same answer either way.
+    if (!row) return 'not_found' as const;
+    if (row.delistedAt === null) return 'not_delisted' as const;
+    await tx
+      .insert(userEventDismissals)
+      .values({ userId, eventId })
+      .onConflictDoNothing();
+    return 'dismissed' as const;
+  });
+  if (outcome === 'not_found') {
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
-  if (row.delistedAt === null) {
+  if (outcome === 'not_delisted') {
     return ctx.json(
       {
         success: false,
@@ -199,11 +213,6 @@ watchingRouter.post('/:eventId/dismiss', async (ctx) => {
       409,
     );
   }
-
-  await db
-    .insert(userEventDismissals)
-    .values({ userId: authInfo.userId, eventId })
-    .onConflictDoNothing();
   return ctx.json({ success: true, data: { dismissed: true } });
 });
 
