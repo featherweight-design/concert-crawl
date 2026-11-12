@@ -344,6 +344,37 @@ describe('CalendarView B+ states', () => {
     expect(cue.parentElement).toBe(screen.getByTestId('cal-month-row'));
     expect(month.parentElement).toBe(cue.parentElement);
   });
+
+  it('lets the cue wrap under the month at 320 without overflowing', () => {
+    setup();
+    const row = screen.getByTestId('cal-month-row');
+    // flex-wrap: the cue drops under the month only when the row is full.
+    // min-w-0: the month block may shrink, so the chevrons never get pushed off.
+    for (const cls of ['flex', 'flex-wrap', 'min-w-0']) {
+      expect(row.classList.contains(cls)).toBe(true);
+    }
+    // The chevron group never shrinks, so it holds its 30px boxes at 320.
+    const next = screen.getByRole('link', { name: 'Next week' });
+    expect(next.parentElement?.classList.contains('shrink-0')).toBe(true);
+  });
+
+  it('draws the chevrons at 30px with a 44px hit area', () => {
+    setup();
+    const next = screen.getByRole('link', { name: 'Next week' });
+    expect(next.style.width).toBe('30px');
+    expect(next.style.height).toBe('30px');
+    expect(next.classList.contains('cjp-wk-chev')).toBe(true);
+    // jsdom computes no pseudo-elements, so read the injected rule: a 7px
+    // outset on each side of a 30px box is a 44px target, out of flow.
+    const styles = document.getElementById('cjp-header-styles')?.textContent;
+    expect(styles).toContain(
+      ".cjp-wk-chev::before{content:'';position:absolute;inset:-7px}",
+    );
+    expect(styles).toContain('.cjp-wk-chev{position:relative}');
+    // Scoped to the week chevrons: the jump picker's own `.cjp-chev`
+    // buttons must not grow a halo.
+    expect(styles).not.toContain('.cjp-chev::before');
+  });
 });
 
 describe('CalendarView URL handling', () => {

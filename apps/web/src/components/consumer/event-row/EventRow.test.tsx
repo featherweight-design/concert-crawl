@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
@@ -63,6 +65,39 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     ...partial,
   };
 }
+
+describe('EventRow — focus and hover on the row link', () => {
+  // jsdom loads no stylesheet, so the ring is asserted in two halves: the row
+  // link carries the hook, and globals.css draws the app's ring from it.
+  const css = readFileSync(
+    resolve(__dirname, '../../../app/globals.css'),
+    'utf8',
+  ).replace(/\s+/g, ' ');
+
+  it('rings a keyboard-focused row with the app focus style', () => {
+    render(<EventRow show={makeShow()} surface="browse" />);
+    const link = screen.getByRole('link', { name: /Test Artist/ });
+    expect(link.className).toContain('event-row-stretch');
+    expect(css).toContain(
+      '.event-row-stretch:focus-visible::after { outline: 2px solid var(--focus); outline-offset: 2px;',
+    );
+  });
+
+  it.each(['browse', 'venue', 'watching'] as const)(
+    'gives a carded %s row no title hover tint',
+    (surface) => {
+      render(<EventRow show={makeShow()} surface={surface} />);
+      expect(screen.getByTestId('row-title').className).not.toContain('signal');
+    },
+  );
+
+  it('keeps the hover tint on an uncarded row', () => {
+    render(<EventRow show={makeShow()} surface="related" />);
+    expect(screen.getByTestId('row-title').className).toContain(
+      'group-hover/eventtitle:text-signal',
+    );
+  });
+});
 
 describe('EventRow — Rule 1, context subtraction', () => {
   it('drops the date on Browse, which states it in the group header', () => {

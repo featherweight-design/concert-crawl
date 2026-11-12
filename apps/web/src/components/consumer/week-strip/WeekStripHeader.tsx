@@ -20,12 +20,25 @@ interface WeekStripHeaderProps {
 }
 
 const STYLE_ID = 'cjp-header-styles';
+
+/** The chevrons' drawn size (the boards) and their hit area (44px minimum). */
+export const CHEV_SIZE = 30;
+export const CHEV_HIT = 44;
+const CHEV_HIT_OUTSET = (CHEV_HIT - CHEV_SIZE) / 2;
 const STYLE_CONTENT = [
   '.cjp-cue{transition:opacity var(--motion-fast) var(--motion-ease)}',
   '.cjp-cue:hover{opacity:.8}',
   '.cjp-chev{transition:background var(--motion-fast) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease)}',
   '.cjp-chev:hover:not(:disabled):not([aria-disabled="true"]){background:var(--overlay-hover)}',
   '.cjp-chev:disabled{opacity:.32;cursor:default}',
+  // Drawn at the boards' 30px, hit at 44px: an out-of-flow ::before reaches
+  // 7px past every edge, so the target grows without moving the layout. The
+  // two chevrons sit 6px apart, so their halos overlap by 8px in the gap; the
+  // later one paints on top and takes that strip (1px of the earlier box).
+  // Its own class: the jump picker's buttons share `.cjp-chev` and must not
+  // grow halos inside the sheet.
+  `.cjp-wk-chev{position:relative}`,
+  `.cjp-wk-chev::before{content:'';position:absolute;inset:-${CHEV_HIT_OUTSET}px}`,
   // Click-catcher: invisible on desktop (popover model), a blurred scrim on
   // mobile (sheet model). Closing the picker by clicking it is a specified
   // close path. On the phone it sits over the bottom nav (z-40), as the sheet
@@ -50,8 +63,8 @@ const ensureStyles = (): void => {
 
 // The boards' week chevrons: 30px squares, 9px corners, 6px apart.
 const chevStyle: CSSProperties = {
-  width: 30,
-  height: 30,
+  width: CHEV_SIZE,
+  height: CHEV_SIZE,
   borderRadius: 9,
   border: '1px solid var(--border-strong)',
   boxSizing: 'border-box',
@@ -206,7 +219,7 @@ export const WeekStripHeader = ({
               href={prevWeekHref}
               scroll={false}
               aria-label={CONSUMER_COPY.jumpPickerPrevWeek}
-              className="cjp-chev"
+              className="cjp-chev cjp-wk-chev"
               style={chevStyle}
             >
               <ChevronGlyph dir="left" />
@@ -224,7 +237,7 @@ export const WeekStripHeader = ({
             href={nextWeekHref}
             scroll={false}
             aria-label={CONSUMER_COPY.jumpPickerNextWeek}
-            className="cjp-chev"
+            className="cjp-chev cjp-wk-chev"
             style={chevStyle}
           >
             <ChevronGlyph dir="right" />

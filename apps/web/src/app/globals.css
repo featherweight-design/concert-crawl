@@ -739,6 +739,18 @@
   z-index: 1;
 }
 
+/* Keyboard focus rings the whole row, not the title's own box: the row is the
+   target, and carded rows have no hover tint left to signal it. The app's
+   standard ring (2px --focus, 2px offset), drawn on the stretched overlay. */
+.event-row-stretch:focus-visible {
+  outline: none;
+}
+.event-row-stretch:focus-visible::after {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
 /* Everything genuinely interactive sits above the stretched anchor, which
    otherwise swallows the venue link and the action gutter's button. */
 .event-row a:not(.event-row-stretch),
