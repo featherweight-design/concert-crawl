@@ -28,9 +28,10 @@ describe('buildEventsApiParams', () => {
       offset: '20',
       limit: '20',
     });
-    // The chip's own name must not ride along: `listEventsSchema` is not
-    // strict, so an untranslated key is dropped server-side and the filter
-    // silently stops applying.
+    // The chip's own name must not ride along: `listEventsSchema` is strict,
+    // so an untranslated key now fails the whole request with a 400 (before
+    // it was strict, the key was dropped and the filter silently stopped
+    // applying).
     expect(qs.has('filterWhere')).toBe(false);
   });
 
@@ -93,24 +94,83 @@ describe('buildEventsApiParams', () => {
     expect(qs.get('to')).toBe('2026-07-02');
   });
 
-  it('reads only the first value of a repeated key, whichever shape it arrives in', () => {
+  it('forwards every value of a repeated Where or Vibe key, whichever shape it arrives in', () => {
     // Next hands the server component an array; the client holds a
     // URLSearchParams. Disagreeing here reopens the page-1/page-2 scope
     // mismatch from the other side.
     const fromArray = buildEventsApiParams(
-      { filterVibe: ['indie', 'punk'] },
+      {
+        filterWhere: ['ogden-theatre', 'bluebird'],
+        filterVibe: ['indie', 'punk'],
+      },
       { limit: 20 },
     );
     const fromSearch = buildEventsApiParams(
       new URLSearchParams([
+        ['filterWhere', 'ogden-theatre'],
+        ['filterWhere', 'bluebird'],
         ['filterVibe', 'indie'],
         ['filterVibe', 'punk'],
       ]),
       { limit: 20 },
     );
 
-    expect(fromArray.get('filterVibe')).toBe('indie');
-    expect(fromSearch.get('filterVibe')).toBe('indie');
+    for (const qs of [fromArray, fromSearch]) {
+      // One comma-separated param, the API's list format.
+      expect(qs.getAll('venueSlug')).toEqual(['ogden-theatre,bluebird']);
+      expect(qs.getAll('filterVibe')).toEqual(['indie,punk']);
+      expect(qs.has('filterWhere')).toBe(false);
+    }
+  });
+
+  it('reads a comma list in the page URL the same as repeated keys', () => {
+    const qs = buildEventsApiParams(
+      new URLSearchParams({
+        filterWhere: 'ogden-theatre,bluebird',
+        filterVibe: 'indie,punk',
+      }),
+      { limit: 20 },
+    );
+
+    expect(qs.get('venueSlug')).toBe('ogden-theatre,bluebird');
+    expect(qs.get('filterVibe')).toBe('indie,punk');
+  });
+
+  it('drops blank and repeated values from a list', () => {
+    const qs = buildEventsApiParams(
+      new URLSearchParams([
+        ['filterWhere', 'bluebird'],
+        ['filterWhere', ''],
+        ['filterWhere', 'bluebird,'],
+        ['filterVibe', ''],
+      ]),
+      { limit: 20 },
+    );
+
+    expect(qs.get('venueSlug')).toBe('bluebird');
+    expect(qs.has('filterVibe')).toBe(false);
+  });
+
+  it('sends a legacy single-value URL exactly as it always did', () => {
+    // A bookmarked `?filterWhere=red-rocks&filterVibe=dubstep` from before
+    // multi-select must produce the same request, byte for byte.
+    const qs = buildEventsApiParams(
+      new URLSearchParams({ filterWhere: 'red-rocks', filterVibe: 'dubstep' }),
+      { limit: 20 },
+    );
+
+    expect(qs.toString()).toBe(
+      'venueSlug=red-rocks&filterVibe=dubstep&limit=20',
+    );
+  });
+
+  it('falls back to every venueSlug value when no filterWhere is set', () => {
+    const qs = buildEventsApiParams(
+      { venueSlug: ['ogden-theatre', 'bluebird'] },
+      { limit: 20 },
+    );
+
+    expect(qs.get('venueSlug')).toBe('ogden-theatre,bluebird');
   });
 
   it('emits the scope flags only when the caller says the viewer holds them', () => {

@@ -62,6 +62,23 @@ interface BrowsePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+// The calendar's week-nav links carry every filter the viewer chose, minus the
+// list offset and the selected day. A repeated key (multi-select Where and
+// Vibe) keeps all its values; copying only string values would drop a
+// multi-value filter on the first week step.
+function weekNavParams(
+  params: Record<string, string | string[] | undefined>,
+): URLSearchParams {
+  const navParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key === 'offset' || key === 'selectedDate') continue;
+    if (typeof value === 'string') navParams.set(key, value);
+    else if (Array.isArray(value))
+      for (const entry of value) navParams.append(key, entry);
+  }
+  return navParams;
+}
+
 async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
   token: string | null,
@@ -444,16 +461,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const calPrevWeekHref: string | null =
     weekOffset > 0
       ? (() => {
-          const prevParams = new URLSearchParams();
-          for (const [key, value] of Object.entries(params)) {
-            if (
-              typeof value === 'string' &&
-              key !== 'offset' &&
-              key !== 'selectedDate'
-            ) {
-              prevParams.set(key, value);
-            }
-          }
+          const prevParams = weekNavParams(params);
           prevParams.set('view', 'cal');
           const prevOffset = weekOffset - 1;
           if (prevOffset > 0) {
@@ -466,16 +474,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       : null;
 
   const calNextWeekHref = (() => {
-    const nextParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) {
-      if (
-        typeof value === 'string' &&
-        key !== 'offset' &&
-        key !== 'selectedDate'
-      ) {
-        nextParams.set(key, value);
-      }
-    }
+    const nextParams = weekNavParams(params);
     nextParams.set('view', 'cal');
     nextParams.set('weekOffset', String(weekOffset + 1));
     return `/events?${nextParams.toString()}`;
@@ -636,9 +635,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             event={heroEvent}
             isWatching={watchedIds.has(heroEvent.id)}
             filterVibe={
+              // The first value, as the list rows read it via
+              // `searchParams.get`, while the UI is still single-select.
               typeof params['filterVibe'] === 'string'
                 ? params['filterVibe']
-                : undefined
+                : Array.isArray(params['filterVibe'])
+                  ? params['filterVibe'][0]
+                  : undefined
             }
           />
         </div>

@@ -108,7 +108,7 @@ export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped';
 // Vibe filter bucket taxonomy. Lives here rather than in apps/api because the
 // row's genre pair needs bucket membership client-side to decide which of two
 // genres leads under an active filter — the web app only ever holds the bare
-// filterVibe string from the URL.
+// filterVibe strings from the URL.
 export * from './genre-buckets.js';
 
 // Event status
@@ -969,11 +969,14 @@ export interface EventDetailResponse extends EventWithVenue {
   priceByTier?: TierPriceBlock[] | null;
 }
 
-// Public events list query params
+// Public events list query params. Where and Vibe are multi-select: a show
+// matches any listed venue and any listed vibe, and the filters AND together.
+// On the wire each list is one comma-separated param (`venueSlug=a,b`).
 export interface EventsListParams {
   from?: string;
   to?: string;
-  venueSlug?: string;
+  venueSlug?: string[];
+  filterVibe?: string[];
   search?: string;
   limit?: number;
   offset?: number;

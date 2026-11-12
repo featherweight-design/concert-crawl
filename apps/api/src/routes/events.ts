@@ -86,28 +86,58 @@ import { parseGenreRows } from '../lib/parse-genre-rows.js';
 import { releaseWatch } from '../lib/user-events.js';
 import { idSchema } from '../lib/id-schema.js';
 
-const listEventsSchema = z.object({
-  from: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  to: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  venueSlug: z.string().optional(),
-  search: z.string().max(200).optional(),
-  filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
-  filterVibe: z.string().max(100).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-  // Taste filter (#763 PR 7, §9.3) — presence flag; only '1' is valid so a
-  // tampered value fails validation instead of silently passing unfiltered.
-  taste: z.literal('1').optional(),
-  // "My artists" scope filter (native following, §7.1) — same presence-flag
-  // shape as `taste`, for the same reason.
-  following: z.literal('1').optional(),
-});
+// Where and Vibe are multi-select (Design addendum 2, item 6): a show matches
+// if it is at ANY chosen venue and has ANY chosen vibe, and different filters
+// still AND together. The cap bounds the IN list and the ARRAY[] overlap a
+// hand-rolled query string could otherwise grow without limit.
+export const MAX_LIST_FILTER_VALUES = 25;
+
+// A list param arrives comma-separated (`venueSlug=a,b`), the format the
+// API's other list params already use (`genres` on /v1/artists/suggestions,
+// the admin events tags). A repeated key (`venueSlug=a&venueSlug=b`) reaches
+// the validator as an array and is accepted too, and a single value is the
+// legacy shape every bookmarked URL carries, so it must keep meaning exactly
+// what it did. Blank items are dropped and an empty list means no filter.
+// Items are not trimmed: an unknown vibe falls back to an exact-string genre
+// match, which must see the value as the URL carried it.
+const listParam = (item: z.ZodString) =>
+  z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((raw) =>
+      (raw === undefined ? [] : Array.isArray(raw) ? raw : [raw])
+        .flatMap((value) => value.split(','))
+        .filter((value) => value.trim() !== ''),
+    )
+    .pipe(z.array(item).max(MAX_LIST_FILTER_VALUES));
+
+// Strict on purpose (#1698): a non-strict object strips an unknown key, so a
+// caller that misnames a filter (`filterWhere` for `venueSlug`) gets a 200
+// with the filter silently dropped. Rejecting it makes the mismatch a 400.
+const listEventsSchema = z
+  .object({
+    from: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    to: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    venueSlug: listParam(z.string()),
+    search: z.string().max(200).optional(),
+    filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
+    filterVibe: listParam(z.string().max(100)),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    offset: z.coerce.number().int().min(0).default(0),
+    // Taste filter (#763 PR 7, §9.3) — presence flag; only '1' is valid so a
+    // tampered value fails validation instead of silently passing unfiltered.
+    taste: z.literal('1').optional(),
+    // "My artists" scope filter (native following, §7.1) — same presence-flag
+    // shape as `taste`, for the same reason.
+    following: z.literal('1').optional(),
+  })
+  .strict();
 
 // Shape of the custom claims added by our Clerk JWT template — same contract
 // as middleware/entitlement.ts: only extract `metadata`, loadPlanState owns
@@ -268,19 +298,26 @@ eventsRouter.get(
       conditions.push(lte(events.date, to));
     }
 
-    if (venueSlug) {
-      const [venue] = await db
+    if (venueSlug.length > 0) {
+      // OR within the filter: a show at any chosen venue matches. A slug that
+      // resolves to nothing narrows nothing; only when none resolve does the
+      // list short-circuit to empty, as a single unknown slug always did.
+      const matchedVenues = await db
         .select({ id: venues.id })
         .from(venues)
-        .where(eq(venues.slug, venueSlug))
-        .limit(1);
-      if (!venue) {
+        .where(inArray(venues.slug, venueSlug));
+      if (matchedVenues.length === 0) {
         return ctx.json({
           success: true,
           data: { data: [], total: 0, limit, offset, followingApplied },
         });
       }
-      conditions.push(eq(events.venueId, venue.id));
+      conditions.push(
+        inArray(
+          events.venueId,
+          matchedVenues.map((venue) => venue.id),
+        ),
+      );
     }
 
     if (search) {
@@ -315,13 +352,17 @@ eventsRouter.get(
 
     if (priceCondition) conditions.push(priceCondition);
 
-    if (filterVibe) {
+    if (filterVibe.length > 0) {
       // Bucket taxonomy (#1101): a filterVibe value like 'electronic' expands
       // to every sub-genre in the bucket so picking one label surfaces the
       // whole family (house / dubstep / bass / ...). Unknown values fall
       // through as a single-element array so bookmarked ?filterVibe=dubstep
-      // URLs from before this shipped still match exactly.
-      const genreValues = expandBucket(filterVibe);
+      // URLs from before this shipped still match exactly. Several vibes are
+      // OR'd: their expansions are unioned into one overlap, so a show in any
+      // chosen bucket matches.
+      const genreValues = [
+        ...new Set(filterVibe.flatMap((vibe) => expandBucket(vibe))),
+      ];
       const genrePlaceholders = sql.join(
         genreValues.map((genre) => sql`${genre}`),
         sql`, `,
