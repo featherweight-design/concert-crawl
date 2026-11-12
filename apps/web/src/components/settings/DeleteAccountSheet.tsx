@@ -51,7 +51,9 @@ export function DeleteAccountSheet({
   useModalDialog(dialogRef, open, onClose, !loading);
 
   // Drag-down dismiss on the phone sheet (the shared hook is a no-op from sm
-  // up). Like Escape, it does nothing while the request is in flight.
+  // up). Like Escape, it will not dismiss while the request is in flight (the
+  // sheet follows the finger, then snaps back). The scrim and "Keep account"
+  // still close mid-request, as they did before.
   const drag = useSheetDrag(() => {
     if (!loading) onClose();
   }, open);
@@ -227,7 +229,8 @@ export function DeleteAccountSheet({
         }}
         onTransitionEnd={drag.onSheetTransitionEnd}
       >
-        {/* Drag handle: the grab zone with the heading below it. The padding
+        {/* Drag handle: the only grab zone, because this sheet scrolls and a
+            touch-action off on the heading would block panning it. The padding
             and the matching negative margin widen the target to 28px without
             moving anything. */}
         <div {...drag.zoneProps} className="-my-3 py-3">
@@ -235,10 +238,9 @@ export function DeleteAccountSheet({
         </div>
 
         <h2
-          {...drag.zoneProps}
           id="delete-sheet-title"
           className="text-fg"
-          style={{ ...drag.zoneProps.style, fontSize: 20, fontWeight: 900 }}
+          style={{ fontSize: 20, fontWeight: 900 }}
         >
           {DANGER_COPY.confirmHeading}
         </h2>

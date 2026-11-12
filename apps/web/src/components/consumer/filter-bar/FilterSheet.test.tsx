@@ -154,7 +154,7 @@ describe('FilterSheet on a phone', () => {
 describe('FilterSheet kept mounted but hidden at desktop width', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('does not trap Tab, close on Escape or take focus', () => {
+  it('does not close on Escape or take focus', () => {
     stubPhone(false);
     const { onClose } = renderBesideCards({});
     const dialog = screen.getByRole('dialog', { name: 'Capacity filter' });
