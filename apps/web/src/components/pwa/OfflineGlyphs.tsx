@@ -20,13 +20,29 @@ export const NoSignalTile = () => (
   <span aria-hidden="true" style={TILE_STYLE}>
     <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
       <path
-        d="M6 17c9-8 23-8 32 0M12 24c6-5 14-5 20 0"
+        d="M6 15c9-8 23-8 32 0"
         stroke="currentColor"
         strokeWidth="2.6"
         strokeLinecap="round"
-        opacity="0.7"
+        opacity="0.35"
+        data-testid="signal-arc-outer"
       />
-      <circle cx="22" cy="31" r="3" fill="currentColor" />
+      <path
+        d="M12 21.5c6-5 14-5 20 0"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        opacity="0.65"
+        data-testid="signal-arc-middle"
+      />
+      <path
+        d="M17.5 27c3-2.5 6-2.5 9 0"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        data-testid="signal-arc-inner"
+      />
+      <circle cx="22" cy="33" r="2.6" fill="currentColor" />
       <path
         d="M8 7l28 30"
         stroke="var(--danger)"
@@ -37,17 +53,37 @@ export const NoSignalTile = () => (
   </span>
 );
 
-/** A tile with a lone dot: nothing saved yet. */
+/**
+ * A tile with a lone dot: nothing saved yet. Same build as the error mark's
+ * dark core (halo, solid ring, dark core), drawn in the tile's own 84px space
+ * so it sits upper right of the centre.
+ */
 export const NothingCachedTile = () => (
   <span aria-hidden="true" style={TILE_STYLE}>
-    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+    <svg width="84" height="84" viewBox="0 0 84 84" fill="none">
       <circle
-        cx="27"
-        cy="15"
-        r="7"
-        fill="color-mix(in oklch, var(--warning) 45%, transparent)"
+        data-testid="core-halo"
+        cx="56"
+        cy="27.5"
+        r="11.5"
+        fill="var(--warning)"
+        opacity="0.22"
       />
-      <circle cx="27" cy="15" r="3.4" fill="var(--bg)" />
+      <circle
+        data-testid="core-ring"
+        cx="56"
+        cy="27.5"
+        r="6.9"
+        fill="var(--warning)"
+        opacity="0.42"
+      />
+      <circle
+        data-testid="core-dot"
+        cx="56"
+        cy="27.5"
+        r="4"
+        fill="var(--border)"
+      />
     </svg>
   </span>
 );

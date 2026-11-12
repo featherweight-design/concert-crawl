@@ -22,7 +22,12 @@ export const OfflinePill = () => {
     >
       <span
         aria-hidden="true"
-        className="h-2 w-2 shrink-0 rounded-full bg-warning max-[360px]:h-[7px] max-[360px]:w-[7px]"
+        data-testid="offline-pill-dot"
+        className="h-[7px] w-[7px] shrink-0 rounded-full bg-warning"
+        style={{
+          boxShadow:
+            '0 0 6px color-mix(in oklch, var(--warning) 60%, transparent)',
+        }}
       />
       <span className="max-[360px]:hidden">{OFFLINE_COPY.pillLabel}</span>
       <span className="hidden max-[360px]:inline">
