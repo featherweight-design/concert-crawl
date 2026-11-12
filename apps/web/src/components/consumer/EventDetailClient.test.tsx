@@ -1335,6 +1335,17 @@ describe('EventDetailBanners pending report', () => {
     expect(screen.getByText('Withdraw')).toBeTruthy();
     expect(screen.queryByText('Add evidence')).toBeNull();
   });
+
+  it('drops a pending postponement on a show that is already cancelled', () => {
+    render(
+      <EventDetailBanners
+        event={{ ...buildBaseEvent(), status: 'cancelled' }}
+        reports={[buildReport({ status: 'postponed' })]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.queryByText('1 of 2')).toBeNull();
+  });
 });
 
 describe('EventDetailPriceBlock pending sold-out report', () => {

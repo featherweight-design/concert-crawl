@@ -207,16 +207,50 @@ export default async function EventDetailPage({
     safeEventUrl ??
     (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null);
 
-  // A cancelled show leads with its status card, straight under the hero, and
-  // drops what only a live show needs: the watch strip ("Watch to track the
-  // price") and the price card. The board for it draws neither.
-  const cancelled = event.status === 'cancelled';
+  // A cancelled or postponed show leads with its status card, straight under
+  // the hero, and drops what only a live show needs: the commit block (Going,
+  // and the watch strip with "Watch to track the price") and the price card.
+  // Their boards (more-st-ev_canc, more-st-ev_post) draw neither: the card,
+  // then one CTA (refund info, or Watching for the new date).
+  const leadsWithStatus =
+    event.status === 'cancelled' || event.status === 'postponed';
   const statusBanners = (
     <EventDetailBanners
       event={event}
       reports={reports}
       currentUserId={userId ?? null}
     />
+  );
+
+  // The one CTA. A status-led page puts it right under the status card.
+  const primaryCta = (
+    <>
+      {/* Primary CTA — always renders on all events. Postponed swaps it for
+        the Watch toggle (no date to buy for yet); cancelled relabels the
+        ticket link as refund info, since the vendor handles refunds.
+        Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
+        (eventUrl deep-links the venue's specific event page when there's
+        no direct ticket link, #1152). Fallback → venue website. No URL →
+        disabled "No tickets available". */}
+      <div className="mt-5">
+        {event.status === 'postponed' ? (
+          <WatchShowButton
+            eventId={event.id}
+            initialWatching={event.isWatching}
+            artist={event.artist}
+            variant="cta"
+          />
+        ) : (
+          <EventTicketCta
+            status={event.status}
+            ticketHref={safeTicketUrl}
+            soldOut={event.priceStatus === 'soldout'}
+            href={ctaHref}
+            hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
+          />
+        )}
+      </div>
+    </>
   );
 
   return (
@@ -260,9 +294,10 @@ export default async function EventDetailPage({
               handoff's CommitBlockV2: the commitment and the watch strip are
               two halves of the same decision, so they share a border rather
               than reading as two unrelated blocks. */}
-          {cancelled && statusBanners}
+          {leadsWithStatus && statusBanners}
+          {leadsWithStatus && primaryCta}
 
-          {!cancelled && (
+          {!leadsWithStatus && (
             <div className="mt-3">
               <EventDetailCtaBlock event={event} scaRegion={scaRegion}>
                 {/* Crew presence rides with Going, not with the eye: they are
@@ -339,12 +374,12 @@ export default async function EventDetailPage({
           </div>
 
           {/* Phase 8.5 — live/pending report banners render below the info block */}
-          {!cancelled && statusBanners}
+          {!leadsWithStatus && statusBanners}
 
           {/* Phase 8.5 — price slot. Renders the appropriate card based on event
               and community report state. Falls back to the standard PriceDisplay
               when no Phase 8.5 override applies. */}
-          {!cancelled && (
+          {!leadsWithStatus && (
             <div className="mt-4">
               <EventDetailPriceBlock
                 event={event}
@@ -354,31 +389,7 @@ export default async function EventDetailPage({
             </div>
           )}
 
-          {/* Primary CTA — always renders on all events. Postponed swaps it for
-              the Watch toggle (no date to buy for yet); cancelled relabels the
-              ticket link as refund info, since the vendor handles refunds.
-              Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
-              (eventUrl deep-links the venue's specific event page when there's
-              no direct ticket link, #1152). Fallback → venue website. No URL →
-              disabled "No tickets available". */}
-          <div className="mt-5">
-            {event.status === 'postponed' ? (
-              <WatchShowButton
-                eventId={event.id}
-                initialWatching={event.isWatching}
-                artist={event.artist}
-                variant="cta"
-              />
-            ) : (
-              <EventTicketCta
-                status={event.status}
-                ticketHref={safeTicketUrl}
-                soldOut={event.priceStatus === 'soldout'}
-                href={ctaHref}
-                hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
-              />
-            )}
-          </div>
+          {!leadsWithStatus && primaryCta}
 
           {/* About — after CTA, per design */}
           {event.description && (

@@ -178,13 +178,18 @@ export function EventDetailBanners({
           ? 'sold-out'
           : null;
 
-  // Show pending banner only when the event is NOT already in the promoted state
+  // Show pending banner only when the event is NOT already in the promoted
+  // state. A cancelled show takes no pending report at all: a postponement
+  // claim on a show that's off is moot, and the page leads with the
+  // cancelled card, so it would sit straight under it.
   const activePendingReport: EventReport | null =
-    pendingCancelledReport !== null && event.status !== 'cancelled'
-      ? pendingCancelledReport
-      : pendingPostponedReport !== null && event.status !== 'postponed'
-        ? pendingPostponedReport
-        : null;
+    event.status === 'cancelled'
+      ? null
+      : pendingCancelledReport !== null
+        ? pendingCancelledReport
+        : pendingPostponedReport !== null && event.status !== 'postponed'
+          ? pendingPostponedReport
+          : null;
 
   const handleWithdrawReport = useCallback(
     (reportId: string) => {

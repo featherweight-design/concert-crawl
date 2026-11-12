@@ -19,6 +19,19 @@ describe('LiveReportBanner', () => {
     expect(screen.queryByText(/confirms/)).toBeNull();
   });
 
+  it('keeps the confirms on a sold-out report that carries a count', () => {
+    render(
+      <LiveReportBanner
+        status="sold-out"
+        promotedAt={twoHoursAgo()}
+        confirmCount={2}
+        reporter={null}
+      />,
+    );
+
+    expect(screen.getByText(/2 confirms/)).toBeTruthy();
+  });
+
   it('credits the reporter and the confirms on a reported change', () => {
     render(
       <LiveReportBanner
