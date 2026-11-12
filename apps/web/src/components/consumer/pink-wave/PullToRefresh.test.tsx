@@ -25,6 +25,30 @@ const touch = (type: string, clientY: number) => {
 };
 
 describe('PullToRefresh', () => {
+  it('draws the wave at rest until the pull passes 74px, and snaps back on --motion-fast', () => {
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + 60 * 2);
+    });
+    expect(
+      document
+        .querySelector('[data-pink-wave]')
+        ?.getAttribute('data-pink-wave'),
+    ).toBe('still');
+    act(() => {
+      touch('touchend', 0);
+    });
+    const zone = screen.getByRole('status', { name: 'Loading shows' });
+    expect(zone.style.transition).toContain('var(--motion-fast)');
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
   it('takes no space until a pull begins', () => {
     const client = new QueryClient();
     const { container } = render(
@@ -48,6 +72,11 @@ describe('PullToRefresh', () => {
       touch('touchmove', 260);
     });
     expect(screen.getByRole('status', { name: 'Loading shows' })).toBeTruthy();
+    expect(
+      document
+        .querySelector('[data-pink-wave]')
+        ?.getAttribute('data-pink-wave'),
+    ).toBe('running');
     await act(async () => {
       touch('touchend', 0);
     });

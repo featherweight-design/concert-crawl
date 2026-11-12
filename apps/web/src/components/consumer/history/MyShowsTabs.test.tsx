@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { act, render, screen, cleanup } from '@testing-library/react';
 import { MyShowsTabs } from './MyShowsTabs';
 import { HISTORY_COPY } from './definitions/copy';
 
@@ -24,6 +24,15 @@ describe('MyShowsTabs', () => {
     expect(
       screen.getByRole('link', { name: new RegExp(COPY.artists) }),
     ).toHaveAttribute('href', '/following');
+  });
+
+  it('adds no offline note of its own: the header pill is the only offline signal', () => {
+    render(<MyShowsTabs active="watching" />);
+    act(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('marks Watching as the current page when active', () => {

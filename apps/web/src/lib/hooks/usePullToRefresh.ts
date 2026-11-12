@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /** The indicator height, after resistance, at which a release commits. */
-export const PULL_READY_PX = 60;
+export const PULL_READY_PX = 74;
 /** The indicator never opens wider than this, however far the finger goes. */
 export const PULL_MAX_PX = 120;
 const RESISTANCE = 0.5;

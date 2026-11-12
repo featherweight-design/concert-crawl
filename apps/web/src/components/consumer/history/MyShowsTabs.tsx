@@ -16,7 +16,6 @@
 // associate and no in-place switching.
 
 import Link from 'next/link';
-import { MyShowsOfflineNote } from '@/components/pwa/MyShowsOfflineNote';
 import { HISTORY_COPY } from './definitions/copy';
 
 const COPY = HISTORY_COPY.tabs;
@@ -44,60 +43,57 @@ interface MyShowsTabsProps {
 }
 
 export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
-  <>
-    <nav
-      aria-label={COPY.ariaLabel}
-      className="mb-4 flex gap-1 rounded-[10px] border border-border bg-surface-1 p-[3px] sm:mb-6 sm:gap-2 sm:border-transparent sm:bg-transparent sm:p-0"
-    >
-      {TABS.map((tab) => {
-        const current = tab.key === active;
-        const count =
-          tab.key === 'artists' &&
-          current &&
-          artistCount !== undefined &&
-          artistCount > 0
-            ? artistCount
-            : null;
-        return (
-          <Link
-            key={tab.key}
-            href={tab.href}
-            aria-current={current ? 'page' : undefined}
-            aria-label={
-              count === null ? undefined : COPY.tabCountAria(tab.label, count)
-            }
-            className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-md px-3.5 sm:flex-none sm:justify-start sm:gap-2 sm:rounded-[9px] sm:px-4"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: 12.5,
-              fontWeight: current ? 700 : 500,
-              letterSpacing: '-0.005em',
-              textDecoration: 'none',
-              color: current ? 'var(--fg)' : 'var(--fg-muted)',
-              background: current ? 'var(--surface-3)' : 'transparent',
-              border: `1px solid ${current ? 'var(--border-strong)' : 'transparent'}`,
-            }}
-          >
-            {/* No tier chip: a subscriber shouldn't be sold the plan they're on,
+  <nav
+    aria-label={COPY.ariaLabel}
+    className="mb-4 flex gap-1 rounded-[10px] border border-border bg-surface-1 p-[3px] sm:mb-6 sm:gap-2 sm:border-transparent sm:bg-transparent sm:p-0"
+  >
+    {TABS.map((tab) => {
+      const current = tab.key === active;
+      const count =
+        tab.key === 'artists' &&
+        current &&
+        artistCount !== undefined &&
+        artistCount > 0
+          ? artistCount
+          : null;
+      return (
+        <Link
+          key={tab.key}
+          href={tab.href}
+          aria-current={current ? 'page' : undefined}
+          aria-label={
+            count === null ? undefined : COPY.tabCountAria(tab.label, count)
+          }
+          className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-md px-3.5 sm:flex-none sm:justify-start sm:gap-2 sm:rounded-[9px] sm:px-4"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12.5,
+            fontWeight: current ? 700 : 500,
+            letterSpacing: '-0.005em',
+            textDecoration: 'none',
+            color: current ? 'var(--fg)' : 'var(--fg-muted)',
+            background: current ? 'var(--surface-3)' : 'transparent',
+            border: `1px solid ${current ? 'var(--border-strong)' : 'transparent'}`,
+          }}
+        >
+          {/* No tier chip: a subscriber shouldn't be sold the plan they're on,
               and HistoryLocked is where an unentitled user meets the price. */}
-            <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
-            {count !== null && (
-              <span
-                aria-hidden
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: 'var(--fg-subtle)',
-                }}
-              >
-                {count}
-              </span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
-    <MyShowsOfflineNote />
-  </>
+          <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
+          {count !== null && (
+            <span
+              aria-hidden
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 700,
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              {count}
+            </span>
+          )}
+        </Link>
+      );
+    })}
+  </nav>
 );

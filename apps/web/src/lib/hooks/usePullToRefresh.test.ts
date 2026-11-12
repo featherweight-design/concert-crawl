@@ -27,6 +27,22 @@ describe('pullDistance', () => {
 });
 
 describe('usePullToRefresh', () => {
+  it('opens a 74px zone: ready at 74, still pulling just short of it', () => {
+    expect(PULL_READY_PX).toBe(74);
+    const { result } = renderHook(() =>
+      usePullToRefresh(vi.fn().mockResolvedValue(undefined)),
+    );
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + 73 * 2);
+    });
+    expect(result.current.state).toBe('pulling');
+    act(() => {
+      touch('touchmove', 100 + 74 * 2);
+    });
+    expect(result.current.state).toBe('ready');
+  });
+
   it('commits a refresh when released past the ready height, and settles after', async () => {
     const onRefresh = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() => usePullToRefresh(onRefresh));
