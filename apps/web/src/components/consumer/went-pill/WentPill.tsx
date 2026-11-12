@@ -16,7 +16,9 @@ import {
   showStampedToast,
 } from '@/components/consumer/going/lib/attendance-toasts';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
+import { pillInkFor } from '@/components/consumer/going/lib/pill-ink';
 import { stampColorsFor } from '@/lib/passport/stamp';
+import { useThemeName } from '@/theme';
 
 interface WentPillProps {
   eventId: string;
@@ -32,8 +34,6 @@ interface WentPillProps {
    * Add sheet, where the reader stays put).
    */
   afterStamp?: 'passport' | 'undo';
-  /** Fires once a stamp or an un-stamp has settled on the server. */
-  onChanged?: () => void;
 }
 
 const PILL_HEIGHT = 44;
@@ -47,7 +47,6 @@ export const WentPill = ({
   dateLabel,
   attending,
   afterStamp = 'passport',
-  onChanged,
 }: WentPillProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -59,12 +58,14 @@ export const WentPill = ({
   // The pill is filled in its VENUE's colour, as the stamp beside it is inked
   // (artist_past_m: orange for Red Rocks), so two venues are two colours.
   const accent = stampColorsFor(venueSlug).ring;
+  // The label ink is picked by contrast, as the going stub's is: white on a
+  // pale venue colour fails AA on Light.
+  const ink = pillInkFor(accent, useThemeName());
 
   const unstamp = async () => {
     setWent(false);
     try {
       const result = await toggle.mutateAsync({ eventId, going: false });
-      onChanged?.();
       const restore = result.restore ?? null;
       showRemovedToast({
         artist,
@@ -83,7 +84,6 @@ export const WentPill = ({
     setWent(true);
     try {
       await toggle.mutateAsync({ eventId, going: true, restore });
-      onChanged?.();
     } catch {
       setWent(false);
       showAttendanceError('undo');
@@ -94,7 +94,6 @@ export const WentPill = ({
     setWent(true);
     try {
       await toggle.mutateAsync({ eventId, going: true });
-      onChanged?.();
       showStampedToast({
         artist,
         ...(afterStamp === 'undo'
@@ -109,7 +108,9 @@ export const WentPill = ({
 
   const onTap = () => {
     if (attending === null) {
-      router.push(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`);
+      // Back to where they were, query string and all.
+      const here = `${pathname}${window.location.search}`;
+      router.push(`/sign-in?redirect_url=${encodeURIComponent(here)}`);
       return;
     }
     void (went ? unstamp() : stamp());
@@ -122,15 +123,15 @@ export const WentPill = ({
       onClick={onTap}
       disabled={toggle.isPending}
       aria-pressed={went}
-      aria-label={
-        went ? undefined : GOING_COPY.past.ariaWent(artist, dateLabel)
-      }
+      // One name for both states, so `aria-pressed` alone carries "on" and the
+      // announcement is not doubled by a changing label.
+      aria-label={GOING_COPY.past.ariaWent(artist, dateLabel)}
       className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border-[1.5px] px-4 text-[15px] font-bold disabled:cursor-default"
       style={{
         minHeight: PILL_HEIGHT,
         background: went ? accent : 'transparent',
         borderColor: went ? accent : 'var(--border-strong)',
-        color: went ? 'var(--fg-on-accent)' : 'var(--fg)',
+        color: went ? ink.text : 'var(--fg)',
         fontFamily: 'var(--font-ui)',
         letterSpacing: '-0.01em',
       }}

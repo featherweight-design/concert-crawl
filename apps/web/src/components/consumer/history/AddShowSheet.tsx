@@ -5,9 +5,7 @@
 // stamp the ones you were at. One component for both widths, since BottomSheet
 // is already a tall sheet below `sm` and a centred dialog from it.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@clerk/nextjs';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PastShowRow, PastShowsScope } from '@concert-crawl/types';
 import { recordsStartLabel, recordsStartShort } from '@concert-crawl/types';
 import { BottomSheet } from '@/components/pwa/BottomSheet';
@@ -15,7 +13,6 @@ import { Panel } from '@/components/consumer/image-slot';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { WentPill } from '@/components/consumer/went-pill/WentPill';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
-import { historyQueryKey } from '@/lib/queries/use-history';
 import { usePastShows } from '@/lib/queries/use-past-shows';
 import { HISTORY_COPY } from './definitions/copy';
 import { groupHistoryByMonth } from './lib/buckets';
@@ -81,13 +78,7 @@ const CalendarIcon = () => (
   </svg>
 );
 
-const ShowRow = ({
-  row,
-  onChanged,
-}: {
-  row: PastShowRow;
-  onChanged: () => void;
-}) => (
+const ShowRow = ({ row }: { row: PastShowRow }) => (
   <li
     data-testid="add-show-item"
     className="flex items-center gap-3 border-b border-[var(--border)] py-3 last:border-b-0"
@@ -120,7 +111,6 @@ const ShowRow = ({
       dateLabel={`${row.dateLabel}, ${row.date.slice(0, 4)}`}
       attending={row.attendingAt !== null}
       afterStamp="undo"
-      onChanged={onChanged}
     />
   </li>
 );
@@ -150,15 +140,18 @@ interface AddShowSheetProps {
 }
 
 export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
-  const queryClient = useQueryClient();
-  const { userId } = useAuth();
   const { active: followsActive } = useEntitlement('following');
   const [text, setText] = useState('');
   const [term, setTerm] = useState('');
   const [scope, setScope] = useState<PastShowsScope>('all');
-  // A tap on a pill changes Concerts underneath the sheet; it is refreshed once,
-  // when the sheet closes, rather than reshuffling the page behind it.
-  const changed = useRef(false);
+  // BottomSheet's focus effect depends on `onClose`, so a new function on every
+  // keystroke would pull focus out of the search box. Hand it one that never
+  // changes and read the caller's latest from a ref.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+  const close = useCallback(() => onCloseRef.current(), []);
 
   useEffect(() => {
     const timer = window.setTimeout(
@@ -177,6 +170,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
     data,
     isPending,
     isError,
+    isFetchNextPageError,
     refetch,
     fetchNextPage,
     hasNextPage,
@@ -197,25 +191,31 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
   const sentinel = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
     const node = sentinel.current;
-    if (!node || !hasNextPage || isFetchingNextPage) return;
+    // A failed page waits for its Try again rather than re-arming the sentinel
+    // into a request loop against a failing API.
+    if (!node || !hasNextPage || isFetchingNextPage || isFetchNextPageError) {
+      return;
+    }
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) void fetchNextPage();
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
-
-  const close = () => {
-    if (changed.current) {
-      changed.current = false;
-      void queryClient.invalidateQueries({ queryKey: historyQueryKey(userId) });
-    }
-    onClose();
-  };
+  }, [
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage,
+    rows.length,
+  ]);
 
   const searching = term !== '';
+  // "That's every {artist} show" is only true of an unscoped search that came
+  // back as one artist; a venue name or a scope can return one act too.
   const singleArtist =
-    rows.length > 0 && rows.every((row) => row.artist === rows[0]?.artist);
+    effectiveScope === 'all' &&
+    rows.length > 0 &&
+    rows.every((row) => row.artist === rows[0]?.artist);
   const scopes: Array<{ value: PastShowsScope; label: string }> = [
     { value: 'all', label: COPY.scopeAll },
     { value: 'venues', label: COPY.scopeVenues },
@@ -284,8 +284,10 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
           )}
         </label>
 
+        {/* A button group with `aria-pressed`: radio semantics would promise
+            arrow-key movement these chips do not have. */}
         <div
-          role="radiogroup"
+          role="group"
           aria-label={COPY.scopeAria}
           className="flex flex-wrap gap-2"
         >
@@ -295,8 +297,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
               <button
                 key={item.value}
                 type="button"
-                role="radio"
-                aria-checked={on}
+                aria-pressed={on}
                 onClick={() => setScope(item.value)}
                 className="min-h-11 cursor-pointer rounded-full border px-4 text-[15px] font-bold"
                 style={{
@@ -348,7 +349,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
 
         {isPending ? (
           <SkeletonRows count={SKELETON_ROWS} />
-        ) : isError ? (
+        ) : isError && rows.length === 0 ? (
           <div
             role="alert"
             className="flex flex-col items-start gap-2 py-3 text-[15px]"
@@ -398,13 +399,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
                 </h3>
                 <ul className="m-0 list-none p-0">
                   {bucket.shows.map((row) => (
-                    <ShowRow
-                      key={row.eventId}
-                      row={row}
-                      onChanged={() => {
-                        changed.current = true;
-                      }}
-                    />
+                    <ShowRow key={row.eventId} row={row} />
                   ))}
                 </ul>
               </section>
@@ -416,6 +411,29 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             ) : null}
             {isFetchingNextPage && (
               <SkeletonRows count={PAGING_SKELETON_ROWS} />
+            )}
+            {/* A failed next page keeps the rows already loaded and offers its
+                own retry, rather than replacing the list. */}
+            {isFetchNextPageError && (
+              <div
+                role="alert"
+                className="flex flex-col items-start gap-2 py-3 text-[15px]"
+                style={{ color: 'var(--fg-muted)' }}
+              >
+                <span>{COPY.loadFailed}</span>
+                <button
+                  type="button"
+                  onClick={() => void fetchNextPage()}
+                  className="min-h-11 cursor-pointer rounded-full border px-4 font-bold"
+                  style={{
+                    borderColor: 'var(--border-strong)',
+                    background: 'transparent',
+                    color: 'var(--fg)',
+                  }}
+                >
+                  {COPY.retry}
+                </button>
+              </div>
             )}
             {!hasNextPage && (
               <div
