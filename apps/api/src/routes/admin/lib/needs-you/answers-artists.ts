@@ -19,14 +19,17 @@ import {
 const artistIdOf = (item: NeedsYouItem): string | null =>
   item.kind === 'artist' ? item.artistId : null;
 
-// The match status the admin was shown when they decided. The item carries it
-// (it is also part of the item's key), and every write sends it back so a row
-// that changed between the queue load and the click is refused with a 409
-// rather than overwritten.
-const shownStatusOf = (item: NeedsYouItem) =>
-  item.kind === 'artist'
-    ? matchStatusSchema.safeParse(item.matchStatus).data
-    : undefined;
+// The match status the item showed. The long gap (a decision sitting on screen)
+// is closed by the item key, which embeds the status: the route finds the item
+// by exact key, so a click on a row that has since changed is a 404 there. The
+// route reloads the item, so this status is the one just read, and sending it
+// as `expectedStatus` closes the remaining gap, between that reload and the
+// write (a 409 instead of an overwrite). A status outside the enum is a bug:
+// it fails loudly rather than switching the guard off.
+const shownStatusOf = (item: NeedsYouItem) => {
+  if (item.kind !== 'artist') return undefined;
+  return matchStatusSchema.parse(item.matchStatus);
+};
 
 const matchFailure = (
   outcome: Awaited<ReturnType<typeof applyArtistMatch>>,
