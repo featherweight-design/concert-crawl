@@ -60,8 +60,22 @@ export const ArtistReportSentStub = ({
           fontSize: 9,
           fontWeight: 700,
           color: AMBER.color,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
         }}
       >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: AMBER.color,
+            boxShadow: `0 0 0 3px ${AMBER.bgStrong}`,
+            flexShrink: 0,
+          }}
+        />
         {copy.sent.stubStatus}
       </span>
     </div>

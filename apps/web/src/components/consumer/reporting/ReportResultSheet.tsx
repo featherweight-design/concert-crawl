@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 
+import { CCMark } from '@/components/brand/cc-mark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 
 import { REPORT_TOKENS } from './reportTokens';
@@ -63,6 +64,7 @@ export const ReportResultSheet = ({
             marginBottom: 14,
           }}
         >
+          <CCMark size={22} />
           <span
             aria-hidden="true"
             style={{
