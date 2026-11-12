@@ -739,7 +739,15 @@ export const CONSUMER_COPY = {
       followOn: 'On',
       followedCount: (count: number) => `${count} followed`,
       clearAria: (label: string) => `Clear ${label}`,
+      // Where and Vibe are multi-select (addendum 2, item 6): the segment
+      // names the first pick and counts the rest, "Bluebird +1".
+      moreCount: (label: string, more: number) => `${label} +${more}`,
     },
+
+    // The phone chip once Where or Vibe holds more than one value.
+    venueCount: (count: number) =>
+      `${count} ${count === 1 ? 'venue' : 'venues'}`,
+    vibeCount: (count: number) => `${count} ${count === 1 ? 'vibe' : 'vibes'}`,
 
     // The count line under the desktop bar
     showCount: (count: number) => `${count} ${count === 1 ? 'show' : 'shows'}`,

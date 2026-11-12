@@ -301,7 +301,7 @@ describe('FilterBar desktop segmented bar', () => {
     );
   });
 
-  it('Where searches venues by name and applies a pick', () => {
+  it('Where searches venues by name and toggles a pick without closing', () => {
     renderBar();
     fireEvent.click(screen.getByTestId('venue-chip'));
     const dialog = screen.getByRole('dialog', { name: /filter$/ });
@@ -316,8 +316,9 @@ describe('FilterBar desktop segmented bar', () => {
     expect(within(dialog).queryByText('Bluebird Theater')).toBeNull();
 
     fireEvent.click(within(dialog).getByText('Ogden Theatre'));
-    expect(lastQuery().get('filterWhere')).toBe('ogden-theatre');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(lastQuery().getAll('filterWhere')).toEqual(['ogden-theatre']);
+    // Multi-select: the popover stays open for the next pick.
+    expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
   });
 
   it('Where says so when no venue matches', () => {
@@ -451,5 +452,266 @@ describe('FilterBar desktop segmented bar', () => {
     expect(document.activeElement).toBe(
       screen.getByTestId('filter-segment-who'),
     );
+  });
+});
+
+// Where and Vibe are multi-select (Design addendum 2, item 6; boards
+// `bp-f-filt_active_d`, `bp-f-filt_where_d`, `filt_m_active`).
+describe('FilterBar multi-select Where and Vibe', () => {
+  const openWhere = () => {
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    return screen.getByRole('dialog', { name: /filter$/ });
+  };
+
+  it('Where rows are checkboxes, checked from every repeated key', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    const dialog = openWhere();
+    const boxes = within(dialog).getAllByRole('checkbox');
+    expect(boxes).toHaveLength(VENUES.length);
+    const checked = boxes
+      .filter((box) => box.getAttribute('aria-checked') === 'true')
+      .map((box) => box.textContent);
+    expect(checked).toHaveLength(2);
+    expect(checked.some((text) => text?.includes('Bluebird Theater'))).toBe(
+      true,
+    );
+    expect(checked.some((text) => text?.includes('Ogden Theatre'))).toBe(true);
+    expect(
+      within(dialog)
+        .getByRole('checkbox', { name: /Globe Hall/ })
+        .getAttribute('aria-checked'),
+    ).toBe('false');
+    // The earlier single-select pass's pressed-button rows are gone.
+    expect(within(dialog).queryByRole('button', { pressed: true })).toBeNull();
+  });
+
+  it('a second pick adds a repeated key and keeps the other params', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterPrice=under-25&view=list&offset=40',
+    );
+    renderBar();
+    const dialog = openWhere();
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', { name: /Ogden Theatre/ }),
+    );
+    const query = lastQuery();
+    expect(query.getAll('filterWhere')).toEqual([
+      'bluebird-theater',
+      'ogden-theatre',
+    ]);
+    expect(query.get('filterPrice')).toBe('under-25');
+    expect(query.get('view')).toBe('list');
+    // A filter change starts the list over.
+    expect(query.get('offset')).toBeNull();
+    expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
+  });
+
+  it('picking a checked venue toggles it off', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    const dialog = openWhere();
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', { name: /Bluebird Theater/ }),
+    );
+    expect(lastQuery().getAll('filterWhere')).toEqual(['ogden-theatre']);
+  });
+
+  it('toggling the last venue off removes the key', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=ogden-theatre&filterVibe=indie',
+    );
+    renderBar();
+    const dialog = openWhere();
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', { name: /Ogden Theatre/ }),
+    );
+    const query = lastQuery();
+    expect(query.has('filterWhere')).toBe(false);
+    expect(query.getAll('filterVibe')).toEqual(['indie']);
+  });
+
+  it('Vibe rows are checkboxes that add and remove repeated keys', () => {
+    searchParams.current = new URLSearchParams('filterVibe=electronic');
+    renderBar();
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    const dialog = screen.getByRole('dialog', { name: /filter$/ });
+    const indie = within(dialog).getByRole('checkbox', { name: 'Indie' });
+    const electronic = within(dialog).getByRole('checkbox', {
+      name: 'Electronic',
+    });
+    expect(electronic.getAttribute('aria-checked')).toBe('true');
+    expect(indie.getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(indie);
+    expect(lastQuery().getAll('filterVibe')).toEqual(['electronic', 'indie']);
+    expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
+
+    fireEvent.click(electronic);
+    expect(lastQuery().has('filterVibe')).toBe(false);
+  });
+
+  it('the Where segment reads "Bluebird +1" over two stacked tiles', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    const where = screen.getByTestId('venue-chip');
+    expect(where.textContent).toContain('Bluebird +1');
+    const stack = within(where).getByTestId('segment-venue-stack');
+    expect(stack.children).toHaveLength(2);
+  });
+
+  it('the Vibe segment reads "Electronic +1" over two stacked dots', () => {
+    searchParams.current = new URLSearchParams(
+      'filterVibe=electronic&filterVibe=indie',
+    );
+    renderBar();
+    const vibe = screen.getByTestId('filter-segment-vibe');
+    expect(vibe.textContent).toContain('Electronic +1');
+    const stack = within(vibe).getByTestId('segment-vibe-stack');
+    expect(within(stack).getAllByTestId('genre-dot')).toHaveLength(2);
+  });
+
+  it('a single pick still reads as the short name', () => {
+    searchParams.current = new URLSearchParams('filterWhere=bluebird-theater');
+    renderBar();
+    const where = screen.getByTestId('venue-chip');
+    expect(where.textContent).toContain('Bluebird');
+    expect(where.textContent).not.toContain('+');
+  });
+
+  it('the phone chips read "2 venues" and "2 vibes"', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre&filterVibe=electronic&filterVibe=indie',
+    );
+    renderBar();
+    const bar = screen.getByTestId('filter-segment-bar');
+    const phoneChipText = screen
+      .getAllByRole('button')
+      .filter(
+        (button) =>
+          button.getAttribute('aria-haspopup') === 'dialog' &&
+          !bar.contains(button),
+      )
+      .map((button) => button.textContent ?? '');
+    expect(
+      phoneChipText.some((text) => text.includes(copy.venueCount(2))),
+    ).toBe(true);
+    expect(phoneChipText.some((text) => text.includes(copy.vibeCount(2)))).toBe(
+      true,
+    );
+    expect(copy.venueCount(2)).toBe('2 venues');
+    expect(copy.vibeCount(2)).toBe('2 vibes');
+  });
+
+  it("a segment's ✕ clears every value in its dimension", () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre&filterVibe=indie&filterVibe=electronic',
+    );
+    renderBar();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: copy.segment.clearAria(copy.whereLabel),
+      }),
+    );
+    const query = lastQuery();
+    expect(query.has('filterWhere')).toBe(false);
+    expect(query.getAll('filterVibe')).toEqual(['indie', 'electronic']);
+  });
+
+  it('Clear all removes both lists and keeps the scopes', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=bluebird-theater&filterWhere=ogden-theatre&filterVibe=indie&filterVibe=electronic&filterFollowing=1',
+    );
+    renderBar({ showCount: 4 });
+    expect(screen.getByTestId('filter-count-line').textContent).toBe(
+      copy.showCountMatch(4),
+    );
+    fireEvent.click(screen.getByRole('button', { name: copy.clearAll }));
+    const query = lastQuery();
+    expect(query.has('filterWhere')).toBe(false);
+    expect(query.has('filterVibe')).toBe(false);
+    expect(query.get('filterFollowing')).toBe('1');
+  });
+
+  it('round-trips the URL: what it writes reads back as the same picks', () => {
+    renderBar();
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Ogden Theatre/ }));
+    const written = lastQuery();
+    expect(written.toString()).toBe('filterWhere=ogden-theatre');
+
+    cleanup();
+    searchParams.current = written;
+    renderBar();
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Bluebird Theater/ }));
+    const second = lastQuery();
+    expect(second.toString()).toBe(
+      'filterWhere=ogden-theatre&filterWhere=bluebird-theater',
+    );
+
+    cleanup();
+    searchParams.current = second;
+    renderBar();
+    expect(screen.getByTestId('venue-chip').textContent).toContain('Ogden +1');
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    expect(
+      screen
+        .getAllByRole('checkbox')
+        .filter((box) => box.getAttribute('aria-checked') === 'true'),
+    ).toHaveLength(2);
+  });
+
+  it('reads a legacy single value and drops blanks and duplicates', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=ogden-theatre&filterWhere=&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    expect(screen.getByTestId('venue-chip').textContent).toContain('Ogden');
+    expect(screen.getByTestId('venue-chip').textContent).not.toContain('+');
+  });
+});
+
+describe('FilterBar phone sheet, multi-select', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  it('the Where sheet toggles checkboxes and stays open', () => {
+    searchParams.current = new URLSearchParams('filterWhere=bluebird-theater');
+    renderBar();
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    const sheet = screen.getByRole('dialog', { name: /filter$/ });
+    expect(
+      within(sheet)
+        .getByRole('checkbox', { name: 'Bluebird Theater' })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
+    fireEvent.click(
+      within(sheet).getByRole('checkbox', { name: 'Ogden Theatre' }),
+    );
+    expect(lastQuery().getAll('filterWhere')).toEqual([
+      'bluebird-theater',
+      'ogden-theatre',
+    ]);
+    expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
   });
 });

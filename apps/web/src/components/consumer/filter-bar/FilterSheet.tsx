@@ -6,6 +6,7 @@ import { useModalDialog } from '@/lib/hooks/useModalDialog';
 import { useOnPhone, useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import type { FilterOption } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CheckboxMark } from './CheckboxMark';
 
 const copy = CONSUMER_COPY.filterBar;
 
@@ -16,6 +17,15 @@ interface FilterSheetProps {
   options: FilterOption[];
   value: string;
   alwaysOn?: boolean;
+  /**
+   * Multi-select (Where and Vibe, addendum 2 item 6). Each option row becomes
+   * a checkbox that toggles its value and leaves the sheet open; the
+   * placeholder row still clears the dimension and closes. The B+ phone sheet
+   * that replaces this one is B6b.
+   */
+  multi?:
+    | { selected: readonly string[]; onToggle: (value: string) => void }
+    | undefined;
   onSelect: (nextValue: string) => void;
   onClose: () => void;
 }
@@ -27,6 +37,7 @@ export function FilterSheet({
   options,
   value,
   alwaysOn = false,
+  multi,
   onSelect,
   onClose,
 }: FilterSheetProps) {
@@ -103,24 +114,34 @@ export function FilterSheet({
           {!alwaysOn && (
             <OptionButton
               label={placeholder}
-              active={!value}
+              active={multi ? multi.selected.length === 0 : !value}
               onClick={() => {
                 onSelect('');
                 onClose();
               }}
             />
           )}
-          {options.map((option) => (
-            <OptionButton
-              key={option.value}
-              label={option.label}
-              active={value === option.value}
-              onClick={() => {
-                onSelect(option.value);
-                onClose();
-              }}
-            />
-          ))}
+          {options.map((option) =>
+            multi ? (
+              <OptionButton
+                key={option.value}
+                label={option.label}
+                active={multi.selected.includes(option.value)}
+                checkbox
+                onClick={() => multi.onToggle(option.value)}
+              />
+            ) : (
+              <OptionButton
+                key={option.value}
+                label={option.label}
+                active={value === option.value}
+                onClick={() => {
+                  onSelect(option.value);
+                  onClose();
+                }}
+              />
+            ),
+          )}
         </div>
       </section>
     </div>,
@@ -131,13 +152,22 @@ export function FilterSheet({
 interface OptionButtonProps {
   label: string;
   active: boolean;
+  /** A multi-select row: checkbox semantics and the drawn checkbox. */
+  checkbox?: boolean;
   onClick: () => void;
 }
 
-function OptionButton({ label, active, onClick }: OptionButtonProps) {
+function OptionButton({
+  label,
+  active,
+  checkbox = false,
+  onClick,
+}: OptionButtonProps) {
   return (
     <button
       type="button"
+      role={checkbox ? 'checkbox' : undefined}
+      aria-checked={checkbox ? active : undefined}
       onClick={onClick}
       className="flex w-full items-center justify-between text-left"
       style={{
@@ -149,7 +179,9 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
       }}
     >
       <span>{label}</span>
-      {active ? (
+      {checkbox ? (
+        <CheckboxMark checked={active} />
+      ) : active ? (
         <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
             d="M2 6.5l2.5 2.5L10 3.5"
