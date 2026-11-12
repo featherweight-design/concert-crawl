@@ -1,85 +1,120 @@
-// Route-level skeleton for the artist page (#1115, PR-E).
+// The artist page while it loads (B+ B10, board `06-states/bp-s-load_artist_m`).
+// The stage keeps its real geometry, its back control and a quiet wash, so the
+// page holds its shape when the data lands (README rule 9); only the data is a
+// skeleton. Every block carries the one shared sweep, which holds still under
+// reduced motion.
 //
-// This stands in for the ARTIST PAYLOAD only. The Spotify embed (PR-F) has its
-// own loading clock on purpose — a third-party iframe must never be able to
-// hold the whole page grey.
+// One deliberate departure from the board: it draws a round portrait, which
+// predates the tilted card the artist boards settled on. The skeleton draws
+// the card, because a circle that turns into a 4:5 card is the layout shift
+// rule 9 exists to prevent. Everything else is the board's: the name and line
+// bars, the follow pill, the section label and three carded rows.
+//
+// This stands in for the ARTIST PAYLOAD only. The Spotify embed has its own
+// loading clock: a third-party iframe must never hold the whole page grey.
 import React from 'react';
 
+import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import {
-  CrumbSkeleton,
-  FollowSkeleton,
-  HeroSkeleton,
-  ShowsSkeleton,
-  TextSkeleton,
-} from '@/components/consumer/artist-page/skeletons/Skeletons';
-import { AP_RAIL_W } from '@/components/consumer/artist-page/definitions/constants';
+  ARTIST_CARD_RADIUS,
+  ARTIST_CARD_TILT,
+  ArtistBackdrop,
+  ArtistStageShell,
+} from '@/components/consumer/artist-page/ArtistStage';
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
+import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
+import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
+import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+
+const FOLLOW = NF_FOLLOW_SIZES.primary;
+
+/** The follow pill and the one line under it, at the real control's height. */
+const FollowSkeleton = () => (
+  <div className="flex flex-col items-center gap-2">
+    <SkeletonBlock height={FOLLOW.height} radius={FOLLOW.radius} />
+    <SkeletonBlock width="70%" height={11} />
+  </div>
+);
+
+/** A carded show row: the date tile, two lines, the price. Neutral edge. */
+const RowSkeleton = () => (
+  <div
+    data-testid="artist-row-skeleton"
+    className="flex items-center border border-border bg-surface-1"
+    style={{
+      ...cardedEdge(NEUTRAL_GENRE_COLOR),
+      gap: 12,
+      padding: '12px 12px 12px 14px',
+    }}
+  >
+    <SkeletonBlock width={56} height={62} radius={12} />
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <SkeletonBlock width="70%" height={14} />
+      <SkeletonBlock width="45%" height={10} />
+    </div>
+    <SkeletonBlock width={30} height={12} radius={999} />
+  </div>
+);
 
 const ArtistLoading = () => (
-  <main className="ap-page">
-    {/* Mobile: the band. Geometry is copied from `HeroBand` deliberately — a
-        skeleton that is not the same height as the thing it stands in for is
-        the layout-shift lie this file exists to avoid. */}
-    <div
-      aria-hidden="true"
-      className="ap-band-skeleton border-b border-border px-4 pb-[18px] pt-4 md:hidden"
+  <main className="ap-page" data-testid="artist-skeleton" aria-busy="true">
+    <span role="status" className="sr-only">
+      {ARTIST_COPY.loadingArtist}
+    </span>
+    <ArtistStageShell
+      backdrop={<ArtistBackdrop />}
+      back={<BackChip inline fallbackHref="/events" />}
+      aside={<FollowSkeleton />}
+      card={
+        <div
+          data-testid="stage-card-skeleton"
+          style={{
+            transform: `rotate(${ARTIST_CARD_TILT}deg)`,
+            borderRadius: ARTIST_CARD_RADIUS,
+            boxShadow: '0 0 0 1px var(--border-strong)',
+            aspectRatio: '4 / 5',
+            overflow: 'hidden',
+          }}
+        >
+          <SkeletonBlock height="100%" radius={ARTIST_CARD_RADIUS} />
+        </div>
+      }
     >
-      <div className="mb-3 h-11 w-11" />
-      <div className="flex items-start gap-3.5">
-        <div className="w-32 shrink-0">
-          <HeroSkeleton height={128} />
-        </div>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <TextSkeleton width="82%" height={23} />
-          <TextSkeleton width="94%" height={11} marginTop={14} />
-          <TextSkeleton width="64%" height={11} marginTop={8} />
-        </div>
+      {/* Eyebrow, name, chips. Mobile centres them under the card; the
+          column's own alignment does the rest. */}
+      <div className="flex w-full flex-col items-center gap-3 md:items-start">
+        <SkeletonBlock width={60} height={11} />
+        <span className="block w-[min(230px,70%)] md:w-full md:max-w-[420px]">
+          <SkeletonBlock height={36} radius={10} />
+        </span>
+        <SkeletonBlock width={130} height={20} radius={6} />
       </div>
-    </div>
+    </ArtistStageShell>
 
     <div className="ap-shell">
-      {/* Desktop crumb — mirrors ArtistPageContent's own `hidden md:block`
-          wrapper. Omitting it dropped the entire grid 38px when content
-          landed (name top 98 → 136). Design table §12 requires it here. */}
-      <div className="hidden md:block">
-        <CrumbSkeleton />
+      <div className="ap-block-follow md:hidden">
+        <FollowSkeleton />
       </div>
+      <div className="ap-history-card md:hidden">
+        <SkeletonBlock width="85%" height={12} />
+      </div>
+
       <div className="ap-grid">
-        <div className="ap-rail hidden md:block">
-          <div style={{ borderRadius: 12, overflow: 'hidden' }}>
-            <HeroSkeleton height={AP_RAIL_W} />
+        <div className="ap-block-shows">
+          <div className="mb-[14px]">
+            <SkeletonBlock width={140} height={16} />
           </div>
-          {/* Design table §12: on DESKTOP the Follow slot belongs in the rail,
-              in the same marginTop:16 box the real control occupies. */}
-          <div style={{ marginTop: 16 }}>
-            <FollowSkeleton />
+          <div className="flex flex-col gap-[10px]">
+            <RowSkeleton />
+            <RowSkeleton />
+            <RowSkeleton />
           </div>
         </div>
-
-        <div style={{ minWidth: 0 }}>
-          {/* Name and history line, desktop only — on mobile the band above
-              carries both, the same split the loaded page makes. */}
-          <div className="hidden md:block">
-            <TextSkeleton width="60%" height={40} />
-            <TextSkeleton width="92%" height={12} marginTop={18} />
-            <TextSkeleton width="58%" height={12} marginTop={8} />
-          </div>
-
-          {/* Mobile only — the desktop slot is in the rail above. The loaded
-              page puts the mobile control here too, so the two agree. This
-              skeleton always reserves it: the empty state renders a Follow at
-              this viewport as well, so the box is occupied either way. */}
-          <div className="ap-block-follow md:hidden">
-            <FollowSkeleton />
-          </div>
-
-          <div className="mt-[30px] md:mt-[34px]">
-            <div className="md:hidden">
-              <ShowsSkeleton rows={3} />
-            </div>
-            <div className="hidden md:block">
-              <ShowsSkeleton rows={4} />
-            </div>
-          </div>
+        {/* The framed player card. Desktop only: on mobile it sits below the
+            fold, and the board stops at the rows. */}
+        <div className="ap-block-player hidden md:block">
+          <SkeletonBlock height={176} radius={16} />
         </div>
       </div>
     </div>

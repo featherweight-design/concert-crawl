@@ -76,13 +76,17 @@ export const ArtistEmbed = ({
         note={ARTIST_COPY.playerRailThirdParty}
       />
       <EmbedSkipLink targetId={skipTo} />
+      {/* B+ `09-artist`: the framed side card. A gradient hairline in the
+          theme's pair, drawn as a border-box background so the frame follows
+          the radius; the mat inside still reserves the iframe's exact height. */}
       <div
         data-embed-mat=""
         style={{
-          padding: 8,
-          borderRadius: 12,
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border)',
+          padding: 6,
+          borderRadius: 16,
+          border: '1.5px solid transparent',
+          background:
+            'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, color-mix(in oklch, var(--signal) 70%, transparent), color-mix(in oklch, var(--accent) 70%, transparent)) border-box',
         }}
       >
         <iframe
@@ -97,7 +101,7 @@ export const ArtistEmbed = ({
           style={{
             width: '100%',
             border: 0,
-            borderRadius: 8,
+            borderRadius: 12,
             display: 'block',
             background: plate,
           }}

@@ -9,14 +9,8 @@
 // Artist names, venue names, dates and counts are DATA — they never live here.
 
 export const ARTIST_COPY = {
-  // Chrome
-  // DELTA vs the handoff: `backLabel` ("Back") is not duplicated here. The
-  // back chip is shared with event detail and venue profile, so its accessible
-  // name lives once in BACK_CHIP_COPY.label.
-  crumbRoot: 'Browse',
-  // The breadcrumb <nav> landmark needs a description of the landmark, not the
-  // text of its first link — a screen reader announces "<label> navigation".
-  crumbAria: 'Breadcrumb',
+  // The stage's eyebrow over the name (B+ `09-artist`). Uppercased in CSS.
+  eyebrow: 'Artist',
 
   // Follow — ONE affordance, one mental model.
   // A show is WATCHED; an artist is FOLLOWED. These are separate concepts and
@@ -72,15 +66,19 @@ export const ARTIST_COPY = {
     `Concert Crawl started crawling in ${since}. Shows before that aren't tracked.`,
 
   // Player / embed (rendered by PR-F; the strings land here with the rest).
-  playerRail: 'Player · Spotify',
-  playerRailThirdParty: 'third party',
+  // B+ `09-artist`: the rail reads LISTEN on the left and names whose preview
+  // it is on the right, so the third-party disclosure survives the restyle.
+  playerRail: 'Listen',
+  playerRailThirdParty: 'Spotify preview',
   playerShelfTitle: 'Have a listen',
   playerPreviewNote:
     "30-second previews. Full tracks if you're signed into Spotify.",
   // DELTA vs the handoff: `playerLoading` is dropped. Gate 1 finding 4 dropped
   // the EmbedLoading clock — the Spotify iframe paints its own skeleton, so
   // ours would stack a second one on top of it, and no PR builds the state.
-  playerSkip: 'Skip player, go to shows',
+  // The player sits after the shows now, so the skip goes past it to the rest
+  // of the page rather than up to the shows.
+  playerSkip: 'Skip player',
   playerTitle: (name: string) => `Spotify player for ${name}`,
   playerNoneRail: 'No player',
   playerNone: "We don't have them on Spotify.",
@@ -93,7 +91,7 @@ export const ARTIST_COPY = {
   playerAria: (name: string) => `Player for ${name}`,
 
   // Upcoming shows
-  upcomingTitle: 'Upcoming',
+  upcomingTitle: 'Upcoming in Denver',
   showCount: (count: number) => `${count} show${count === 1 ? '' : 's'}`,
   residencyRun: (count: number) => `${count}-night run`,
   // Same unit as the section-head count: shows, never groups.
@@ -102,6 +100,14 @@ export const ARTIST_COPY = {
   // The one-off rows on this page are EventRows now, and they state an absent
   // price as `tba`. The run card sits beside them, so it says the same thing.
   priceUnknown: 'tba',
+
+  // The dashed note under the upcoming rows (B+ `09-artist`). It reuses the
+  // promise the following tab already makes ("We'll tell you the day any of
+  // them book another Denver date."), so it claims nothing new. Signed out and
+  // locked read the not-following line: neither can be following.
+  upcomingNote: 'Follow to hear the day they book another Denver date.',
+  upcomingNoteFollowing:
+    "We'll tell you the day they book another Denver date.",
 
   // Empty upcoming — first-class, the conversion moment (rendered by PR-F).
   emptyTitle: 'Nothing on the calendar.',

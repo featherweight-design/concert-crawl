@@ -100,6 +100,7 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
 | `CC_POSTPONED_EVENT_ID`, `CC_SOLD_OUT_EVENT_ID` | A4, A3                                          |
 | `CC_REMOVED_EVENT_ID`                           | A5: a show the stale sweep removed              |
 | `CC_ARTIST_SLUG`                                | B10: an artist with upcoming shows              |
+| `CC_ARTIST_SLUG_NO_SHOWS`                       | B10: an artist with no upcoming shows           |
 | `CC_CREW_ID`                                    | B14: a crew the audit user is in                |
 | `CC_CREW_INVITE_TOKEN`                          | B14: a live invite token for that crew          |
 
@@ -121,6 +122,7 @@ Neon `scratch-contact-sheet` branch). Pick each in the app as the audit user and
   (the admin review queue, `/admin/review`, lists the disputed ones).
 - `CC_REMOVED_EVENT_ID`: a show on the audit user's Watching list that the stale sweep marked no longer listed.
 - `CC_ARTIST_SLUG`: open an artist from an event page, copy the slug from `/artists/<slug>`.
+- `CC_ARTIST_SLUG_NO_SHOWS`: open an artist from a past show's event page whose page reads Nothing on the calendar.
 - `CC_CREW_ID`: open Crews as the audit user (start one by hand if there is none), copy the id from `/crews/<id>`.
 - `CC_CREW_INVITE_TOKEN`: on that crew, open the invite sheet and copy the token from its `/crew/join/<token>` link.
 

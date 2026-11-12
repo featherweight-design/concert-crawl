@@ -24,16 +24,19 @@ export const FollowBlock = (props: FollowBlockProps) => {
 
   return (
     <div>
-      <FollowButton {...props} size="primary" tone="loud" full />
+      <FollowButton {...props} size="primary" tone="hero" full />
       <p
         data-follow-pitch=""
         style={{
           margin: '8px 0 0',
           fontFamily: 'Inter, system-ui, sans-serif',
-          fontSize: 11.5,
+          fontSize: 12.5,
+          // B+ `09-artist`: the pitch centres under the button, in the hero on
+          // desktop and under the stage on mobile.
+          textAlign: 'center',
           lineHeight: 1.45,
           fontWeight: 500,
-          color: 'var(--fg-subtle)',
+          color: 'var(--fg-muted)',
           textWrap: 'pretty',
         }}
       >

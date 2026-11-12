@@ -200,43 +200,46 @@ describe('ArtistPageContent', () => {
       expect(follow).not.toBeNull();
     });
 
-    it('(b) mobile, no shows — the empty block owns it', () => {
+    it('(b) mobile, no shows — the block under the stage owns it', () => {
       const { container } = render(<ArtistPageContent data={base} />);
       expect(countFollows(container, 'Neal Francis')).toBe(1);
+      const block = container.querySelector('.ap-block-follow');
+      expect(countFollows(block as HTMLElement, 'Neal Francis')).toBe(1);
+      // The empty block is copy only now: the follow already sits above it.
       const empty = container.querySelector('[data-empty-upcoming]');
-      expect(countFollows(empty as HTMLElement, 'Neal Francis')).toBe(1);
+      expect(countFollows(empty as HTMLElement, 'Neal Francis')).toBe(0);
 
-      // The bar may arrive, but it must not grow a second follow.
       scrollTo(AP_STICKY_AFTER + 10);
       expect(countFollows(container, 'Neal Francis')).toBe(1);
     });
 
-    it('(c) desktop, has shows — the sticky rail owns it, no sub-header', () => {
+    it('(c) desktop, has shows — the stage owns it, no sub-header', () => {
       setViewport(true);
       const { container } = render(<ArtistPageContent data={withShows} />);
       expect(countFollows(container, 'Neal Francis')).toBe(1);
-      const rail = container.querySelector('.ap-rail');
-      expect(countFollows(rail as HTMLElement, 'Neal Francis')).toBe(1);
+      const stage = container.querySelector('[data-testid="hero-band"]');
+      expect(countFollows(stage as HTMLElement, 'Neal Francis')).toBe(1);
 
       scrollTo(AP_STICKY_AFTER + 400);
       expect(container.querySelector('[data-sticky-bar]')).toBeNull();
       expect(countFollows(container, 'Neal Francis')).toBe(1);
     });
 
-    it('(d) desktop, no shows — the empty block stays copy only', () => {
+    it('(d) desktop, no shows — the stage owns it and the empty block stays copy only', () => {
       setViewport(true);
       const { container } = render(<ArtistPageContent data={base} />);
       expect(countFollows(container, 'Neal Francis')).toBe(1);
+      const stage = container.querySelector('[data-testid="hero-band"]');
+      expect(countFollows(stage as HTMLElement, 'Neal Francis')).toBe(1);
       const empty = container.querySelector('[data-empty-upcoming]');
       expect(countFollows(empty as HTMLElement, 'Neal Francis')).toBe(0);
     });
   });
 
-  // `HeroBand` steps its panel to 208 and grows its padding at `sm` (640) while
-  // this page keeps its mobile layout until `md` (768). Between those widths a
-  // fixed 218px assumption brought the bar up over a band still on screen.
+  // The stage's height follows the card and the name's wrap, so a fixed
+  // assumption brings the bar up over a stage still on screen.
   it('times the sticky bar off the measured band, not a fixed height', () => {
-    const TALL = 322;
+    const TALL = 620;
     const observers: (() => void)[] = [];
     vi.stubGlobal(
       'ResizeObserver',
@@ -267,7 +270,7 @@ describe('ArtistPageContent', () => {
     vi.unstubAllGlobals();
   });
 
-  it('gives the sticky bar its follow flag from the page, not from itself', () => {
+  it('hands the sticky bar the follow whether or not there are shows', () => {
     const { container, rerender } = render(
       <ArtistPageContent data={withShows} />,
     );
@@ -276,15 +279,20 @@ describe('ArtistPageContent', () => {
       container.querySelector('[data-sticky-bar] button[aria-label]'),
     ).not.toBeNull();
 
+    // No empty-block follow any more, so the bar is its only home past the
+    // stage on mobile.
     rerender(<ArtistPageContent data={base} />);
     const bar = container.querySelector('[data-sticky-bar]');
     expect(bar).not.toBeNull();
-    expect(countFollows(bar as HTMLElement, 'Neal Francis')).toBe(0);
+    expect(countFollows(bar as HTMLElement, 'Neal Francis')).toBe(1);
   });
 
-  it('walks back → follow → skip player → iframe → rows → show all', () => {
+  // B+ `09-artist` reads Upcoming first, then the player. Desktop lifts the
+  // player into a side column with CSS only, so the tab order stays this one.
+  it('walks back → follow → rows → skip player → iframe → report', () => {
     const data: ArtistDetailResponse = {
       ...withShows,
+      following: false,
       artist: { ...base.artist, spotifyArtistId: '3TVXtAsR1Inumwj472S9r4' },
     };
     const { container } = render(<ArtistPageContent data={data} />);
@@ -305,14 +313,68 @@ describe('ArtistPageContent', () => {
         ),
       ) ?? null,
     );
+    const firstRow = indexOf(container.querySelector('a[href^="/events/"]'));
     const skip = indexOf(container.querySelector('a.ap-skip'));
     const iframe = indexOf(container.querySelector('iframe'));
-    const firstRow = indexOf(container.querySelector('a[href^="/events/"]'));
+    const report = indexOf(
+      container.querySelector('[data-testid="artist-report-card"]'),
+    );
 
     expect(back).toBeLessThan(follow);
-    expect(follow).toBeLessThan(skip);
+    expect(follow).toBeLessThan(firstRow);
+    expect(firstRow).toBeLessThan(skip);
     expect(skip).toBeLessThan(iframe);
-    expect(iframe).toBeLessThan(firstRow);
+    expect(iframe).toBeLessThan(report);
+    // The skip lands past the player, on the report card's block.
+    expect(container.querySelector('a.ap-skip')?.getAttribute('href')).toBe(
+      '#artist-report',
+    );
+  });
+
+  it('skips the player to Previously when there are past shows', () => {
+    const data: ArtistDetailResponse = {
+      ...withShows,
+      past: withPast.past,
+      history: withPast.history,
+      artist: { ...base.artist, spotifyArtistId: '3TVXtAsR1Inumwj472S9r4' },
+    };
+    const { container } = render(<ArtistPageContent data={data} />);
+    expect(container.querySelector('a.ap-skip')?.getAttribute('href')).toBe(
+      '#previously',
+    );
+    expect(container.querySelector('#previously')).not.toBeNull();
+  });
+
+  describe('the upcoming note', () => {
+    it('invites a follow when the viewer does not follow', () => {
+      const { container } = render(
+        <ArtistPageContent data={{ ...withShows, following: false }} />,
+      );
+      expect(container.querySelector('[data-upcoming-note]')?.textContent).toBe(
+        ARTIST_COPY.upcomingNote,
+      );
+    });
+
+    it('confirms the promise once they do', () => {
+      const { container } = render(
+        <ArtistPageContent data={{ ...withShows, following: true }} />,
+      );
+      expect(container.querySelector('[data-upcoming-note]')?.textContent).toBe(
+        ARTIST_COPY.upcomingNoteFollowing,
+      );
+    });
+
+    it('invites a signed-out visitor, who cannot be following', () => {
+      const { container } = render(<ArtistPageContent data={withShows} />);
+      expect(container.querySelector('[data-upcoming-note]')?.textContent).toBe(
+        ARTIST_COPY.upcomingNote,
+      );
+    });
+
+    it('is not drawn with no shows: the empty block already says it', () => {
+      const { container } = render(<ArtistPageContent data={base} />);
+      expect(container.querySelector('[data-upcoming-note]')).toBeNull();
+    });
   });
 
   // The gate is asked once, here, and passed down — six surfaces each asking
@@ -385,18 +447,21 @@ describe('ArtistPageContent', () => {
     expect(container.textContent).toContain(ARTIST_COPY.playerNone);
   });
 
-  // #1525 — the hero is a band now, not a full-bleed plate.
-  describe('the imagery band', () => {
+  // B+ `09-artist`: one stage on both viewports.
+  describe('the stage', () => {
     const photo = 'https://i.example.com/neal.jpg';
     const withPhoto: ArtistDetailResponse = {
       ...base,
       artist: { ...base.artist, photoUrl: photo },
     };
+    const card = (container: HTMLElement) =>
+      container.querySelector<HTMLElement>('[data-testid="stage-card"]');
 
     it('names the headliner exactly once across the whole page', () => {
       const { container } = render(<ArtistPageContent data={withShows} />);
       expect(container.querySelectorAll('h1')).toHaveLength(1);
       expect(container.querySelector('h1')?.textContent).toBe('Neal Francis');
+      expect(container.textContent).toContain(ARTIST_COPY.eyebrow);
 
       cleanup();
       setViewport(true);
@@ -404,49 +469,101 @@ describe('ArtistPageContent', () => {
       expect(desktop.querySelectorAll('h1')).toHaveLength(1);
     });
 
+    it('places the history line once: under the follow on mobile, in the stage on desktop', () => {
+      const line = ARTIST_COPY.historyNone('March 2026');
+      const mobile = render(<ArtistPageContent data={base} />).container;
+      expect(mobile.querySelectorAll('.ap-history')).toHaveLength(1);
+      expect(mobile.querySelector('.ap-history-card')?.textContent).toBe(line);
+
+      cleanup();
+      setViewport(true);
+      const desktop = render(<ArtistPageContent data={base} />).container;
+      expect(desktop.querySelectorAll('.ap-history')).toHaveLength(1);
+      expect(
+        desktop.querySelector('[data-testid="hero-band"] .ap-history')
+          ?.textContent,
+      ).toBe(line);
+    });
+
+    it('rings the card in the lead genre and chips the genres under the name', () => {
+      const data: ArtistDetailResponse = {
+        ...base,
+        shows: [
+          {
+            ...show('2026-11-10', 'Marquis Theater'),
+            genres: ['electronic', 'hip-hop'],
+          },
+        ],
+      };
+      const { container } = render(<ArtistPageContent data={data} />);
+      expect(card(container)?.style.boxShadow).toContain('var(--genre-');
+      const chips = container.querySelectorAll(
+        '[data-testid="hero-band"] [data-testid="genre-chip"]',
+      );
+      expect(Array.from(chips).map((chip) => chip.textContent)).toEqual([
+        'electronic',
+        'hip-hop',
+      ]);
+      expect(card(container)?.style.boxShadow).toContain(
+        'var(--genre-electronic)',
+      );
+    });
+
+    it('draws the neutral ring and no chips for an artist with no shows', () => {
+      const { container } = render(<ArtistPageContent data={base} />);
+      expect(card(container)?.style.boxShadow).toContain(
+        'var(--border-strong)',
+      );
+      expect(container.querySelector('[data-testid="genre-chip"]')).toBeNull();
+    });
+
     it('falls to generated art when the portrait URL has expired', () => {
       // A signed press URL can die between the server render and the browser's
       // request, so the fallback is a render-time gate, not a fetch-time one.
       const { container } = render(<ArtistPageContent data={withPhoto} />);
-      const band = container.querySelector('[data-testid="hero-band"]');
-      const slot = band?.querySelector<HTMLElement>('.w-32 > *');
-      const image = band?.querySelector('img');
+      const image = card(container)?.querySelector('img');
       if (!(image instanceof HTMLImageElement)) throw new Error('no portrait');
 
-      const before = slot?.getAttribute('style');
+      const before = card(container)?.firstElementChild?.getAttribute('style');
       act(() => {
         fireEvent.error(image);
       });
 
-      expect(band?.querySelector('img')).toBeNull();
-      expect(band?.querySelector('svg')).not.toBeNull();
+      expect(card(container)?.querySelector('img')).toBeNull();
+      expect(card(container)?.querySelector('svg')).not.toBeNull();
       // The box is unchanged, so the fallback costs no layout shift.
-      expect(
-        band?.querySelector<HTMLElement>('.w-32 > *')?.getAttribute('style'),
-      ).toBe(before);
+      expect(card(container)?.firstElementChild?.getAttribute('style')).toBe(
+        before,
+      );
     });
 
     it('draws generated art rather than borrowing a show poster', () => {
       // §2.3: an artist surface resolves portrait → generated and never event
-      // artwork. `SlotSource` makes the wrong call a compile error; this is its
-      // runtime witness, on a page whose shows do have their own imagery.
-      const { container } = render(<ArtistPageContent data={withShows} />);
-      const band = container.querySelector('[data-testid="hero-band"]');
-
-      expect(band?.querySelector('img')).toBeNull();
-      expect(band?.querySelector('svg')).not.toBeNull();
+      // artwork, on a page whose shows do have their own imagery.
+      const { container } = render(
+        <ArtistPageContent
+          data={{
+            ...withShows,
+            shows: withShows.shows.map((item) => ({
+              ...item,
+              imageUrl: 'https://i.example.com/poster.jpg',
+            })),
+          }}
+        />,
+      );
+      expect(card(container)?.querySelector('img')).toBeNull();
+      expect(card(container)?.querySelector('svg')).not.toBeNull();
     });
 
-    it('keeps the desktop rail sticky and hands it the band panel', () => {
+    it('draws the starburst on desktop only, in CSS', () => {
       setViewport(true);
       const { container } = render(<ArtistPageContent data={withPhoto} />);
-
-      const rail = container.querySelector('.ap-rail');
-      expect(rail).not.toBeNull();
-      expect(rail?.querySelector('img')?.getAttribute('src')).toBe(photo);
-      // `.ap-rail` carries `position: sticky` in globals.css; the band must not
-      // render alongside it or the page would show two portraits.
-      expect(container.querySelector('[data-testid="hero-band"]')).toBeNull();
+      const burst = container.querySelector<HTMLElement>(
+        '[data-testid="stage-starburst"]',
+      );
+      expect(burst?.className).toContain('hidden');
+      expect(burst?.className).toContain('md:block');
+      expect(burst?.style.opacity).toBe('0.08');
     });
   });
 
@@ -480,12 +597,9 @@ describe('ArtistPageContent', () => {
       const { container } = render(<ArtistPageContent data={signedIn} />);
 
       expect(cards(container)).toHaveLength(1);
-      const column = container.querySelector('.ap-grid > div:last-child');
-      expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
-      // And not in the rail.
-      expect(
-        container.querySelector('.ap-rail')?.textContent ?? '',
-      ).not.toContain(copy.card.title);
+      const last = container.querySelector('.ap-grid > div:last-child');
+      expect(last?.className).toContain('ap-block-report');
+      expect(last?.textContent).toContain(copy.card.title);
     });
 
     it('ends the page on mobile with no shows too, after the player', () => {
@@ -493,19 +607,19 @@ describe('ArtistPageContent', () => {
         <ArtistPageContent data={{ ...base, following: false }} />,
       );
 
-      const column = container.querySelector('.ap-grid > div:last-child');
-      expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
+      const last = container.querySelector('.ap-grid > div:last-child');
+      expect(last?.textContent).toContain(copy.card.title);
     });
 
-    it('ends the main column on desktop too, not the rail', () => {
+    it('ends the main column on desktop too, never the player column', () => {
       setViewport(true);
       const { container } = render(<ArtistPageContent data={signedIn} />);
 
       expect(cards(container)).toHaveLength(1);
-      const column = container.querySelector('.ap-grid > div:last-child');
-      expect(column?.lastElementChild?.textContent).toContain(copy.card.title);
+      const last = container.querySelector('.ap-grid > div:last-child');
+      expect(last?.className).toContain('ap-block-report');
       expect(
-        container.querySelector('.ap-rail')?.textContent ?? '',
+        container.querySelector('.ap-block-player')?.textContent ?? '',
       ).not.toContain(copy.card.title);
     });
 

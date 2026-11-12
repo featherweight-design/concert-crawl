@@ -37,6 +37,8 @@ const followCopy = () => [
   ARTIST_COPY.followSignedOutPitch,
   ARTIST_COPY.emptyBody,
   ARTIST_COPY.emptyBodyFollowing,
+  ARTIST_COPY.upcomingNote,
+  ARTIST_COPY.upcomingNoteFollowing,
   ARTIST_COPY.followAria('Nightjar Choir'),
   ARTIST_COPY.followingAria('Nightjar Choir'),
   ARTIST_COPY.followSignedOutAria('Nightjar Choir'),
@@ -118,5 +120,15 @@ describe('ARTIST_COPY', () => {
       'Wax Harbour',
     );
     expect(ARTIST_COPY.followSignedOutAria('Wax Harbour')).toMatch(/sign in/i);
+  });
+
+  it('keeps the upcoming note to artists and Denver dates', () => {
+    for (const line of [
+      ARTIST_COPY.upcomingNote,
+      ARTIST_COPY.upcomingNoteFollowing,
+    ]) {
+      expect(line).toMatch(/Denver date/);
+      expect(line).not.toContain('\u2014');
+    }
   });
 });

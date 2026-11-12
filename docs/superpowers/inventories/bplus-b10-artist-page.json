@@ -1,10 +1,28 @@
 {
-  "feature": "B10 · Artist page and its skeleton",
-  "note": "Plan row B10 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): artist = 09-artist/artist-m-noburst-puma, 09-artist/artist-burst-puma, 09-artist/artist-light; artist-full = 09-artist/artist-m-noburst-toki, 09-artist/artist-burst-toki. Walk by hand (state a sheet cannot set up): skeleton (06-states/bp-s-load_artist_m): throttle and navigate.",
+  "feature": "B10 · Artist page: stage with tilted card and genre ring, Follow in the hero, Upcoming in Denver rows, framed Spotify card, skeleton",
+  "note": "Plan row B10 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): artist and artist-full = 09-artist/artist-m-noburst-puma and 09-artist/artist-m-noburst-toki at phone (no starburst), 09-artist/artist-burst-puma and 09-artist/artist-burst-toki at desktop (starburst at 8%), 09-artist/artist-light under the light theme. The burst and no-burst variants are the same route at the two widths, so they are not separate rows; following versus not following is the audit user's own state on the artist, so set it by hand before the run. artist-empty has no board: it is the copy-only empty Upcoming block under the same stage. artist-report = the W3 wrong-artist report card at the column foot. Walk by hand (state a sheet cannot set up): skeleton (06-states/bp-s-load_artist_m): throttle and navigate from an event page. CC_ARTIST_SLUG is an artist with upcoming shows; CC_ARTIST_SLUG_NO_SHOWS is one with none (open one from a past show's event page, or search for an artist whose page says Nothing on the calendar).",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    },
+    {
+      "label": "light",
+      "dataTheme": "light",
+      "storage": {
+        "cc-theme": "light"
+      },
+      "colorScheme": "light"
+    }
+  ],
   "rows": [
     {
       "id": "artist",
-      "label": "/artists/[slug]: first screen",
+      "label": "/artists/[slug]: first screen, with upcoming shows",
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG}",
@@ -14,22 +32,36 @@
     },
     {
       "id": "artist-full",
-      "label": "/artists/[slug]: whole page",
+      "label": "/artists/[slug]: whole page, with upcoming shows",
       "fullPage": true,
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG}",
-          "wait": "[data-testid=\"hero-band\"]"
+          "wait": "[data-testid=\"artist-show-row\"]"
+        }
+      ]
+    },
+    {
+      "id": "artist-empty",
+      "label": "/artists/[slug]: whole page, no upcoming shows",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/artists/${CC_ARTIST_SLUG_NO_SHOWS}",
+          "wait": "[data-empty-upcoming]"
         }
       ]
     },
     {
       "id": "artist-report",
-      "label": "/artists/[slug]: wrong-artist report sheet",
+      "label": "/artists/[slug]: wrong-artist report card and sheet",
       "steps": [
         {
           "goto": "/artists/${CC_ARTIST_SLUG}",
           "wait": "[data-testid=\"hero-band\"]"
+        },
+        {
+          "scrollTo": "[data-testid=\"artist-report-card\"]"
         },
         {
           "click": "[data-testid=\"artist-report-card\"]"

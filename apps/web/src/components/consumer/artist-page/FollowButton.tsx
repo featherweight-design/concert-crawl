@@ -35,9 +35,11 @@ export interface FollowButtonProps {
    * Visual weight. `quiet` is an outline; `loud` is the filled `--signal`
    * pill, and there is at most ONE of those per screen (R3 rule 1). Quiet is
    * the default precisely so a new call site cannot add a second one by
-   * omission.
+   * omission. `hero` is the artist page's own loud skin (B+ `09-artist`):
+   * the theme's gradient while you can follow, an outlined state once you do.
+   * It is still the one filled control on its screen.
    */
-  tone?: 'quiet' | 'loud';
+  tone?: 'quiet' | 'loud' | 'hero';
   /** Stretch to the container's width. Independent of `size`. */
   full?: boolean;
   /**
@@ -136,7 +138,7 @@ export const FollowButton = ({
   // `badge` has no label to drop, so it is square by definition.
   const square = iconOnly || size === 'badge';
 
-  const loud = tone === 'loud';
+  const loud = tone === 'loud' || tone === 'hero';
 
   // Locked keeps `--fg`, not the muted colour the prototype drew: at quiet
   // weight the only thing left separating "you can do this" from "you cannot
@@ -148,26 +150,41 @@ export const FollowButton = ({
         color: 'var(--fg)',
         border: '1px solid var(--border-strong)',
       }
-    : loud
-      ? {
-          background: active
-            ? 'color-mix(in oklab, var(--signal) 14%, transparent)'
-            : 'var(--signal)',
-          color: active ? 'var(--signal)' : 'var(--fg-on-accent)',
-          // `all: unset` wipes the border, and the Following skin's background
-          // is a 14% mix — without this the control has no edge at all in that
-          // state. `box-sizing: border-box` below keeps the heights exact.
-          border: '1px solid var(--signal)',
-        }
-      : {
-          background: 'transparent',
-          // Following stays `--signal`-tinted at either weight: it is a state,
-          // and losing the colour loses the read (R3 rule 3).
-          color: active ? 'var(--signal)' : 'var(--fg)',
-          border: active
-            ? '1px solid color-mix(in oklab, var(--signal) 55%, transparent)'
-            : '1px solid var(--border-strong)',
-        };
+    : tone === 'hero'
+      ? active
+        ? {
+            background:
+              'color-mix(in oklab, var(--signal) 10%, var(--surface-1))',
+            color: 'var(--signal)',
+            border: '1.5px solid var(--signal)',
+          }
+        : {
+            background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+            color: 'var(--fg-on-accent)',
+            border: '1px solid transparent',
+            boxShadow:
+              '0 8px 28px -10px color-mix(in oklab, var(--accent) 60%, transparent)',
+          }
+      : loud
+        ? {
+            background: active
+              ? 'color-mix(in oklab, var(--signal) 14%, transparent)'
+              : 'var(--signal)',
+            color: active ? 'var(--signal)' : 'var(--fg-on-accent)',
+            // `all: unset` wipes the border, and the Following skin's background
+            // is a 14% mix — without this the control has no edge at all in that
+            // state. `box-sizing: border-box` below keeps the heights exact.
+            border: '1px solid var(--signal)',
+          }
+        : {
+            background: 'transparent',
+            // Following stays `--signal`-tinted at either weight: it is a state,
+            // and losing the colour loses the read (R3 rule 3).
+            color: active ? 'var(--signal)' : 'var(--fg)',
+            border: active
+              ? '1px solid color-mix(in oklab, var(--signal) 55%, transparent)'
+              : '1px solid var(--border-strong)',
+          };
 
   const style: React.CSSProperties = {
     all: 'unset',
