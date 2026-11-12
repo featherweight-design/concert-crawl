@@ -412,7 +412,6 @@ describe('crawlVenue — canonical_supporting writes (#763)', () => {
     expect(insertedEvent?.supportingArtists).toEqual([
       'MIKE',
       'Niontay & Friends',
-      'MIKE',
     ]);
     expect(insertedEvent?.canonicalSupporting).toEqual(['mike', 'niontay']);
   });
