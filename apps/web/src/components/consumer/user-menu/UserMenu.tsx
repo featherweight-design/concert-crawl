@@ -17,7 +17,9 @@ import { ThemeSwatch } from '@/theme/ThemeSwatch';
 import { THEMES, THEME_META, THEME_NAMES } from '@/theme/themes';
 import { MiniMark } from '@/theme/MiniMark';
 import { useTheme } from '@/theme';
-import { fetchMe, patchMe } from '@/lib/users';
+import { patchMe } from '@/lib/users';
+import { fetchMeShared } from '@/lib/queries/use-me';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ThemeName } from '@/theme/themes';
 import type { AvatarColor } from '@concert-crawl/types';
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
@@ -128,6 +130,7 @@ export function AccountMenuProvider({
 }) {
   const { getToken, sessionClaims, isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+  const queryClient = useQueryClient();
   const { signOut } = useClerk();
   const router = useRouter();
   const pathname = usePathname();
@@ -287,7 +290,8 @@ export function AccountMenuProvider({
         return;
       }
       try {
-        const profile = await fetchMe(token);
+        // Shared with the other mount-time readers of /v1/users/me.
+        const profile = await fetchMeShared(queryClient, userId, getToken);
         if (!cancelled) {
           setAvatarHandle(profile.handle);
           setAvatarColor(profile.avatarColor);
@@ -308,7 +312,7 @@ export function AccountMenuProvider({
     return () => {
       cancelled = true;
     };
-  }, [getToken, isLoaded, userId]);
+  }, [getToken, isLoaded, userId, queryClient]);
 
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>

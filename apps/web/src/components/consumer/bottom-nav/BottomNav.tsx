@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { fetchMe } from '@/lib/users';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchMeShared } from '@/lib/queries/use-me';
 import { isTabActive } from '@/lib/nav-tab-active';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import type { AvatarColor } from '@concert-crawl/types';
@@ -191,7 +192,8 @@ function PersonIcon() {
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken, isSignedIn, userId } = useAuth();
+  const queryClient = useQueryClient();
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -220,7 +222,8 @@ export function BottomNav() {
         return;
       }
       try {
-        const profile = await fetchMe(token);
+        // Shared with the other mount-time readers of /v1/users/me.
+        const profile = await fetchMeShared(queryClient, userId, getToken);
         if (!cancelled) {
           setAvatarHandle(profile.handle);
           setAvatarColor(profile.avatarColor);
@@ -234,7 +237,7 @@ export function BottomNav() {
     return () => {
       cancelled = true;
     };
-  }, [getToken, isSignedIn]);
+  }, [getToken, isSignedIn, userId, queryClient]);
 
   const isMeActive = pathname.startsWith('/me');
   // Signed-in only, and guarded here rather than trusting the provider alone —
