@@ -15,6 +15,28 @@ describe('FollowShelfSkeleton', () => {
     ).toBe('true');
   });
 
+  it("matches ShelfHead's line boxes: 10px eyebrow, 5px gap, 15.5px title", () => {
+    render(<FollowShelfSkeleton />);
+    const lines = screen.getAllByTestId('follow-shelf-skeleton-line');
+    expect(lines).toHaveLength(2);
+    // 10 × 1.5 and 15.5 × 1.5: the inherited base line height.
+    expect(lines.map((line) => line.style.height)).toEqual(['15px', '23.25px']);
+    expect(lines[0]?.parentElement?.className).toContain('gap-[5px]');
+    expect(screen.queryByTestId('follow-shelf-skeleton-body')).toBeNull();
+  });
+
+  it('adds the zero head body line at 12.5px / 1.45', () => {
+    render(<FollowShelfSkeleton withBody />);
+    const body = screen.getByTestId('follow-shelf-skeleton-body');
+    const bodyLines = Array.from(body.children);
+    expect(bodyLines.length).toBeGreaterThan(0);
+    for (const line of bodyLines) {
+      if (!(line instanceof HTMLElement)) throw new Error('not an element');
+      // 12.5 × 1.45
+      expect(line.style.height).toBe('18.125px');
+    }
+  });
+
   it('draws three cards at phone width and five from sm, in the live box', () => {
     render(<FollowShelfSkeleton />);
     const cards = screen.getAllByTestId('follow-shelf-skeleton-card');

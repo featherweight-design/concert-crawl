@@ -23,6 +23,12 @@ vi.mock('@clerk/nextjs/server', () => ({
   auth: () => Promise.resolve({ userId: authUserId }),
 }));
 
+let urlSearch = '';
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(urlSearch),
+}));
+
 import EventsLoading from './loading';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 
@@ -34,6 +40,65 @@ const shelfTitle = SPOTIFY_COPY.discovery.title;
 // jsdom doesn't ship.
 beforeEach(() => {
   stubMatchMedia(false);
+  urlSearch = '';
+});
+
+// The page draws a shelf only in the list view with no crew lens
+// (isShelfSlotOpen); the fallback must not ghost one anywhere else.
+describe('EventsLoading follow shelf slot', () => {
+  it('draws the follow shelf skeleton in the plain list view', async () => {
+    cookieValue = undefined;
+    authUserId = 'user_entitled';
+    const { queryByTestId } = await renderLoading();
+    expect(queryByTestId('follow-shelf-skeleton')).not.toBeNull();
+  });
+
+  it('draws it for an explicit list view with other filters', async () => {
+    cookieValue = undefined;
+    authUserId = 'user_entitled';
+    urlSearch = 'view=list&genre=rock';
+    const { queryByTestId } = await renderLoading();
+    expect(queryByTestId('follow-shelf-skeleton')).not.toBeNull();
+  });
+
+  it('draws no shelf skeleton in the calendar view', async () => {
+    cookieValue = undefined;
+    authUserId = 'user_entitled';
+    urlSearch = 'view=cal';
+    const { queryByTestId } = await renderLoading();
+    expect(queryByTestId('follow-shelf-skeleton')).toBeNull();
+  });
+
+  it('draws no shelf skeleton under a crew lens', async () => {
+    cookieValue = undefined;
+    authUserId = 'user_entitled';
+    urlSearch = 'crew=crew_1';
+    const { queryByTestId } = await renderLoading();
+    expect(queryByTestId('follow-shelf-skeleton')).toBeNull();
+  });
+
+  it('draws no taste shelf skeleton under a lens either', async () => {
+    cookieValue = 'user_entitled:1';
+    authUserId = 'user_entitled';
+    urlSearch = 'crew=crew_1';
+    const { queryByText, queryByTestId } = await renderLoading();
+    expect(queryByText(shelfTitle)).toBeNull();
+    expect(queryByTestId('follow-shelf-skeleton')).toBeNull();
+  });
+
+  it('gives a signed-out visitor the starter head with its body line', async () => {
+    cookieValue = undefined;
+    authUserId = null;
+    const { queryByTestId } = await renderLoading();
+    expect(queryByTestId('follow-shelf-skeleton-body')).not.toBeNull();
+  });
+
+  it('draws no body line for a signed-in viewer', async () => {
+    cookieValue = undefined;
+    authUserId = 'user_entitled';
+    const { queryByTestId } = await renderLoading();
+    expect(queryByTestId('follow-shelf-skeleton-body')).toBeNull();
+  });
 });
 
 describe('EventsLoading B+ first load', () => {
