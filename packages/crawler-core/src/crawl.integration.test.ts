@@ -1937,6 +1937,8 @@ describe('crawlVenue — run reasons and fetched pages (admin 1a)', () => {
     expect(pages.find((page) => page.url === venue.url)?.bytes).toBe(
       Buffer.byteLength(HTML_BASE),
     );
+  });
+});
 
 describe('crawlVenue — system audit rows (admin 1b)', () => {
   const systemRows = () =>
