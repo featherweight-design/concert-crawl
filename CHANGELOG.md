@@ -1,3 +1,19 @@
+# [1.375.0](https://github.com/featherweight-design/concert-crawl/compare/v1.374.0...v1.375.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** harden the Watching dismiss: per-event scope, per-row rollback, focus, Zod ([fea42ce](https://github.com/featherweight-design/concert-crawl/commit/fea42cea44447684926ee585892b3e898b1745a5))
+* **web:** no glow on the ungenred artist card or spotlight ([9938f0f](https://github.com/featherweight-design/concert-crawl/commit/9938f0f76c1273c567dcc0528c1e685e7fc50e28))
+* **web:** re-render on every dismiss settle and log dismiss failures ([fbb7863](https://github.com/featherweight-design/concert-crawl/commit/fbb78634513d9218202136059ab1bfc11ee6f1ba))
+* **web:** settle the Watching dismiss review findings ([7949953](https://github.com/featherweight-design/concert-crawl/commit/79499532844363fe3374b7046bb785685f5b1257))
+* **web:** the event stage drops its glow when the show has no genre ([4d4bc6a](https://github.com/featherweight-design/concert-crawl/commit/4d4bc6a66856ca4a8393dfd4e3b239efd0fdd0ec))
+
+
+### Features
+
+* **web:** dismiss a no-longer-listed show from Watching, with Undo ([1d7d591](https://github.com/featherweight-design/concert-crawl/commit/1d7d59199c59c837c97c67a4d4a6c947939edf89))
+
 # [1.374.0](https://github.com/featherweight-design/concert-crawl/compare/v1.373.0...v1.374.0) (2026-11-12)
 
 
