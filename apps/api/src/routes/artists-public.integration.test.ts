@@ -572,4 +572,53 @@ describe('GET /v1/artists/:slug — integration', () => {
       expect(map.get(second.id)).toBe(false);
     });
   });
+
+  // The crawler can keep several rows for one night (a venue page and a
+  // ticketing page); the page lists the night once, and the history line's
+  // count agrees with the list.
+  describe('one row per night in past[]', () => {
+    const seedDuplicateNight = async () => {
+      await seedArtist({ name: 'Beck', canonicalName: 'beck' });
+      const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' });
+      const timed = await seedEvent(venue.id, {
+        artist: 'Beck',
+        date: '2026-10-01',
+        showTime: '19:00:00',
+        title: 'Beck at Red Rocks',
+      });
+      const untimed = await seedEvent(venue.id, {
+        artist: 'Beck',
+        date: '2026-10-01',
+        showTime: null,
+        title: 'Beck (ticketing listing)',
+      });
+      return { timed, untimed };
+    };
+
+    const getPast = async (): Promise<SuccessBody['data']> => {
+      const res = await getArtist('beck');
+      return ((await res.json()) as SuccessBody).data;
+    };
+
+    it('lists the night once and counts it once', async () => {
+      await seedDuplicateNight();
+      const data = await getPast();
+      expect(data.past).toHaveLength(1);
+      expect(data.history.count).toBe(1);
+    });
+
+    it('keeps the duplicate the caller stamped, so the pill reads on', async () => {
+      const { timed, untimed } = await seedDuplicateNight();
+      const stamped = [timed.id, untimed.id].sort()[1] ?? timed.id;
+      await seedUserEvent('user_beck', stamped, {
+        status: null,
+        attendingAt: new Date('2026-10-02T00:00:00Z'),
+      });
+      authState.current = { userId: 'user_beck' };
+      const data = await getPast();
+      expect(data.past).toHaveLength(1);
+      expect(data.past[0]?.eventId).toBe(stamped);
+      expect(data.past[0]?.attending).toBe(true);
+    });
+  });
 });
