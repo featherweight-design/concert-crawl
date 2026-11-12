@@ -55,10 +55,10 @@ describe('CrawlPauseControl', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.pauseButton }));
 
     await waitFor(() =>
-      expect(mockPauseCrawling).toHaveBeenCalledWith(
-        'venue-1',
-        'venue asked us to stop',
-      ),
+      expect(mockPauseCrawling).toHaveBeenCalledWith('venue-1', {
+        reason: 'other',
+        note: 'venue asked us to stop',
+      }),
     );
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });

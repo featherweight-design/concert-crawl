@@ -4,6 +4,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { apiClient, ApiError } from '@/lib/api';
 import type {
+  CrawlPauseRequest,
   PlatformProbeResult,
   Venue,
   VenueGuide,
@@ -155,11 +156,19 @@ export async function pauseVenue(id: string): Promise<void> {
   revalidatePath(`/admin/venues/${id}`);
 }
 
-export async function pauseCrawling(id: string, reason: string): Promise<void> {
+// Sends the whole pause body (reason, note, resume) to the API. Optional
+// fields left undefined are dropped by JSON serialisation, so a reason-only
+// pause stays a valid body and the API defaults resume to manual.
+export async function pauseCrawling(
+  id: string,
+  body: CrawlPauseRequest,
+): Promise<void> {
   const token = await getToken();
-  await apiClient.post<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token, {
-    reason,
-  });
+  await apiClient.post<Venue>(
+    `/v1/admin/venues/${id}/crawl-pause`,
+    token,
+    body,
+  );
   revalidatePath('/admin/venues');
   revalidatePath(`/admin/venues/${id}`);
 }
