@@ -27,6 +27,11 @@ const CRAWLING: Record<VenueCrawling, { tone: string; label: string }> = {
   },
 };
 
+const NOT_CRAWLED = {
+  tone: 'var(--fg-subtle)',
+  label: copy.crawling.notCrawled,
+};
+
 /** Grey states read in the muted ink, as drawn, so the word stays legible. */
 const textTone = (tone: string): string =>
   tone === 'var(--fg-subtle)' ? 'var(--fg-muted)' : tone;
@@ -53,6 +58,9 @@ const Chip = ({
       fontWeight: 600,
       lineHeight: 1,
       whiteSpace: 'nowrap',
+      // An Other pause shows its note, which can outrun the cell.
+      maxWidth: '100%',
+      minWidth: 0,
       color: textTone(tone),
       background: `color-mix(in srgb, ${tone} 14%, transparent)`,
       border: `1px solid color-mix(in srgb, ${tone} 32%, transparent)`,
@@ -68,7 +76,9 @@ const Chip = ({
         background: tone,
       }}
     />
-    {label}
+    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      {label}
+    </span>
   </span>
 );
 
@@ -91,22 +101,28 @@ export const VenueStatus = ({
   venue,
   crawlingLabel,
   inList = false,
+  only,
 }: {
   venue: VenueStatusVenue;
-  crawlingLabel?: string;
+  crawlingLabel?: string | undefined;
   /**
    * List cells say "Auto-paused" and put the failure count in the latest-run
    * line; detail views and Needs you say "Auto-paused: 3 failures" (#178
    * item 29).
    */
   inList?: boolean;
+  /** One chip, for a table that gives each axis its own column (`04/venues-desktop`). */
+  only?: 'onSite' | 'crawling';
 }) => {
   const chips = deriveVenueStatusChips(venue);
   const onSite = ON_SITE[chips.onSite];
+  // A hidden venue isn't crawled, whatever else is set (ruling 13).
   const crawling =
-    inList && chips.crawling === 'auto_paused'
-      ? { ...CRAWLING.auto_paused, label: copy.crawling.autoPausedShort }
-      : CRAWLING[chips.crawling];
+    chips.onSite === 'hidden'
+      ? NOT_CRAWLED
+      : inList && chips.crawling === 'auto_paused'
+        ? { ...CRAWLING.auto_paused, label: copy.crawling.autoPausedShort }
+        : CRAWLING[chips.crawling];
   return (
     <span
       data-testid="venue-status"
@@ -115,18 +131,23 @@ export const VenueStatus = ({
         alignItems: 'center',
         gap: 6,
         flexWrap: 'wrap',
+        maxWidth: '100%',
       }}
     >
-      <Chip
-        tone={onSite.tone}
-        label={onSite.label}
-        testId="venue-status-on-site"
-      />
-      <Chip
-        tone={crawling.tone}
-        label={crawlingLabel ?? crawling.label}
-        testId="venue-status-crawling"
-      />
+      {only !== 'crawling' && (
+        <Chip
+          tone={onSite.tone}
+          label={onSite.label}
+          testId="venue-status-on-site"
+        />
+      )}
+      {only !== 'onSite' && (
+        <Chip
+          tone={crawling.tone}
+          label={crawlingLabel ?? crawling.label}
+          testId="venue-status-crawling"
+        />
+      )}
     </span>
   );
 };

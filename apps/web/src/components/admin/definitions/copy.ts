@@ -18,6 +18,9 @@ const TRIAGE_ERROR_CLASS_LABELS: Record<string, string> = {
   unknown: 'Unclassified error',
 };
 
+const venueCount = (count: number): string =>
+  `${count.toLocaleString('en-US')} ${count === 1 ? 'venue' : 'venues'}`;
+
 export const ADMIN_COPY = {
   dashboard: {
     statCards: {
@@ -391,28 +394,50 @@ export const ADMIN_COPY = {
     },
   },
 
-  venuesPage: {
-    page: {
-      title: 'Venues',
-      subtitle: (total: number, blocked: number) =>
-        `${total} configured · ${blocked} blocked.`,
-      robotsAuditButton: 'robots.txt audit',
-    },
-    stats: {
-      totalVenues: 'Total venues',
-      active: 'Active',
-      pausedBlocked: 'Paused / Blocked',
-      avgHealth: 'Avg health · 7d',
-      avgHealthHint: 'average run success rate',
-    },
-    options: {
-      all: 'All statuses',
-      active: 'Active',
+  // `04/venues-desktop`, `04/venues-mobile`, `A3/03/venues-select-d`.
+  venuesList: {
+    title: 'Venues',
+    subtitle: (venues: number, shows: number) =>
+      `${venueCount(venues)} · ${shows.toLocaleString('en-US')} upcoming ${shows === 1 ? 'show' : 'shows'} · worst first`,
+    subtitlePhone: (venues: number) => `${venueCount(venues)} · worst first`,
+    shows: (count: number) =>
+      `${count.toLocaleString('en-US')} ${count === 1 ? 'show' : 'shows'}`,
+    search: 'Search venues',
+    filtersLabel: 'Filter venues',
+    filters: {
+      all: 'All',
       paused: 'Paused',
-      blocked: 'Blocked',
+      hidden: 'Hidden',
+      disallowed: 'Disallowed',
     },
-    statusFallback: 'Status',
-    ariaLabel: 'Filter by status',
+    columns: {
+      venue: 'Venue',
+      onSite: 'On the site',
+      crawling: 'Crawling',
+      upcoming: 'Upcoming',
+      latestRun: 'Latest run',
+      robots: 'robots.txt',
+    },
+    latestRun: {
+      success: 'OK',
+      failed: 'Failed',
+      partial: 'Partial',
+      skipped: 'Skipped',
+      // Not "Not crawled yet": a hidden venue's chip already says "Not crawled".
+      never: 'No runs yet',
+    },
+    robots: {
+      allowed: 'Allowed',
+      disallowed: 'Disallowed',
+      notChecked: 'Not checked',
+    },
+    pausedWith: (reason: string) => `Paused: ${reason}`,
+    pauseReason: {
+      waiting_on_permission: 'waiting on permission',
+      site_broken_or_moved: 'site is broken or moved',
+    },
+    moreOk: (count: number) => `${count} more, all OK`,
+    noMatch: 'No venues match the current filter.',
   },
 
   robotsAudit: {
@@ -886,72 +911,13 @@ export const ADMIN_COPY = {
     },
   },
 
-  venueQuickView: {
-    sections: {
-      ticketVendor: 'Ticket vendor',
-      crawlSchedule: 'Crawl schedule',
-      extractionStrategy: 'Extraction strategy',
-      consecutiveFailures: 'Consecutive failures',
-      robotsTxt: 'robots.txt',
-    },
-    crawlSchedule: {
-      label: 'daily · 3 AM MT',
-      cron: '0 0 3 * * *',
-    },
-    consecutiveFailures: {
-      outOf: 'of 4',
-    },
-    robots: {
-      unchecked: 'unchecked',
-      allowed: 'allowed',
-      disallowed: 'disallowed',
-    },
-    actions: {
-      runCrawl: 'Run crawl now',
-      triggering: 'Triggering…',
-      queued: 'Queued ✓',
-      error: 'Error — retry?',
-      editVenue: 'Edit venue',
-      crawlHistory: 'Crawl history',
-    },
-  },
-
   crawlPausedBadge: {
     // Never plain "Paused": the venue status already says "Paused" for a
     // venue taken off the site. A crawl pause keeps its shows published.
     label: 'Crawl paused',
   },
-  venueTableClient: {
-    empty: 'No venues match the current filter.',
-    bulkActions: {
-      selected: 'selected',
-      verify: 'Verify',
-      unverify: 'Unverify',
-      activate: 'Activate',
-      deactivate: 'Deactivate',
-    },
-    configuredVenues: 'Configured venues',
-    columns: {
-      venue: 'Venue',
-      sourceUrl: 'Source URL',
-      strategy: 'Strategy',
-      schedule: 'Schedule',
-      status: 'Status',
-      health: 'Health',
-      lastCrawl: 'Last crawl',
-      events: 'Events',
-    },
-    schedule: 'daily · 3 AM MT',
-    expand: {
-      expandAriaLabel: 'Expand venue',
-      collapseAriaLabel: 'Collapse venue',
-    },
-    selectAll: 'Select all venues',
-    selectVenue: 'Select',
-  },
-
   addVenueModal: {
-    trigger: 'Add venue',
+    trigger: 'Add a venue',
     header: {
       eyebrow: 'new venue',
       title: 'Add a crawl target',
@@ -2836,6 +2802,7 @@ export const ADMIN_COPY = {
       autoPausedShort: 'Auto-paused',
       blocked: 'Blocked',
       robotsDisallowed: 'Paused: robots.txt',
+      notCrawled: 'Not crawled',
     },
   },
   kind: {
