@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { holdFollowNudgeOpen, whenFollowNudgeClosed } from './nudge-presence';
 
 describe('nudge presence', () => {
-  it('runs at once when no nudge is open', () => {
+  it('runs at once when no nudge is open, and hands back no cancel', () => {
     const run = vi.fn();
-    whenFollowNudgeClosed(run);
+    expect(whenFollowNudgeClosed(run)).toBeNull();
     expect(run).toHaveBeenCalledTimes(1);
   });
 
@@ -25,7 +25,7 @@ describe('nudge presence', () => {
     const release = holdFollowNudgeOpen();
     const run = vi.fn();
     const cancel = whenFollowNudgeClosed(run);
-    cancel();
+    cancel?.();
     release();
     release();
     expect(run).not.toHaveBeenCalled();

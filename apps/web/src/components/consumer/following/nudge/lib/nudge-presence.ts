@@ -29,15 +29,19 @@ export const holdFollowNudgeOpen = (): (() => void) => {
 
 /**
  * Runs `run` now when no nudge is open, otherwise as soon as the last one
- * closes. Returns a cancel for a caller that unmounts or changes its mind.
+ * closes. Returns a cancel while the run is still waiting, or null when it
+ * already ran, so a caller never keeps a cancel for a wait that is over.
  */
-export const whenFollowNudgeClosed = (run: () => void): (() => void) => {
+export const whenFollowNudgeClosed = (run: () => void): (() => void) | null => {
   if (openCount === 0) {
     run();
-    return () => {};
+    return null;
   }
   waiters.add(run);
   return () => {
     waiters.delete(run);
   };
 };
+
+/** Test seam: how many runs are still waiting. */
+export const pendingFollowNudgeWaits = (): number => waiters.size;

@@ -135,6 +135,12 @@ export function WatchShowButton({
   // user's shows still marked Watching — per-user state surviving sign-out.
   // Signed out the eye is always at-rest; the gate is announced, not drawn.
   const renderedWatching = !!isSignedIn && isWatching;
+  // Read by the post-watch sheet when it finally opens, which can be well
+  // after the click if it waited for the follow nudge.
+  const watchingRef = useRef(isWatching);
+  useEffect(() => {
+    watchingRef.current = isWatching;
+  }, [isWatching]);
 
   // Decide whether the post-watch permission ask should surface after a
   // successful commit. Gates (all must hold):
@@ -218,11 +224,16 @@ export function WatchShowButton({
           if (masterEnabledRef.current === true) return;
           // The same watch may have raised the follow nudge. Never open on
           // top of it: wait for it to close, then ask.
+          let waited = false;
           cancelNudgeWaitRef.current = whenFollowNudgeClosed(() => {
             cancelNudgeWaitRef.current = null;
             if (masterEnabledRef.current === true) return;
+            // A wait can outlast the watch: unwatched from another control or
+            // tab while the nudge was up means there is nothing to ask for.
+            if (waited && !watchingRef.current) return;
             setPromptVariant(variant);
           });
+          waited = cancelNudgeWaitRef.current !== null;
         }, 500);
       },
     });

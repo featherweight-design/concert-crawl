@@ -54,6 +54,29 @@ const watchedShow = (eventId: string): WatchingShow => ({
 });
 
 const watchingData = vi.fn<() => WatchingShow[]>(() => []);
+// evt_1 as the Watching cache holds it once a watch has landed.
+const watchedRow: WatchingShow = {
+  userEventId: 'ue_1',
+  eventId: 'evt_1',
+  artist: 'A',
+  venueName: 'V',
+  venueSlug: 'v',
+  date: '2026-08-14',
+  showTime: null,
+  ticketUrl: null,
+  ticketLinks: null,
+  savedAt: '2026-07-19T00:00:00Z',
+  savedPrice: null,
+  currentPrice: null,
+  priceSourceCategory: null,
+  eventStatus: 'upcoming',
+  watchStatus: 'live',
+  updatedAt: '2026-07-19T00:00:00Z',
+  priceObservedAt: null,
+  imageUrl: null,
+  artistPhotoUrl: null,
+  attendingAt: null,
+};
 vi.mock('@/lib/queries/use-watching', () => ({
   useWatching: () => ({ data: watchingData() }),
 }));
@@ -123,17 +146,24 @@ import {
   markPostWatchAskDismissed,
 } from '@/lib/pwa/post-watch-dismissal';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { holdFollowNudgeOpen } from '@/components/consumer/following/nudge/lib/nudge-presence';
+import {
+  holdFollowNudgeOpen,
+  pendingFollowNudgeWaits,
+} from '@/components/consumer/following/nudge/lib/nudge-presence';
 
-const renderButton = () => {
-  const client = new QueryClient({
+const testClient = () =>
+  new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={client}>
-      <WatchShowButton eventId="evt_1" initialWatching={false} />
-    </QueryClientProvider>,
-  );
+let currentClient = testClient();
+const buttonTree = () => (
+  <QueryClientProvider client={currentClient}>
+    <WatchShowButton eventId="evt_1" initialWatching={false} />
+  </QueryClientProvider>
+);
+const renderButton = () => {
+  currentClient = testClient();
+  return render(buttonTree());
 };
 
 beforeEach(() => {
@@ -199,33 +229,64 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
 
   it('waits for an open follow nudge to close, so two sheets never stack', async () => {
     const releaseNudge = holdFollowNudgeOpen();
-    renderButton();
-    fireEvent.click(screen.getByRole('button', { name: /watch/i }));
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-    expect(
-      screen.queryByRole('button', { name: /turn on notifications/i }),
-    ).toBeNull();
+    try {
+      const view = renderButton();
+      fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(
+        screen.queryByRole('button', { name: /turn on notifications/i }),
+      ).toBeNull();
 
-    await act(async () => {
+      // The watch has landed in the cache by the time the nudge is answered.
+      watchingData.mockReturnValue([watchedRow]);
+      view.rerender(buttonTree());
+      await act(async () => {
+        releaseNudge();
+      });
+      expect(
+        screen.getByRole('button', { name: /turn on notifications/i }),
+      ).not.toBeNull();
+    } finally {
       releaseNudge();
-    });
-    expect(
-      screen.getByRole('button', { name: /turn on notifications/i }),
-    ).not.toBeNull();
+    }
+  });
+
+  it('skips the ask if the show was unwatched elsewhere while it waited', async () => {
+    const releaseNudge = holdFollowNudgeOpen();
+    try {
+      renderButton();
+      fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      // The cache still has no watch for this show when the nudge closes.
+      await act(async () => {
+        releaseNudge();
+      });
+      expect(
+        screen.queryByRole('button', { name: /turn on notifications/i }),
+      ).toBeNull();
+    } finally {
+      releaseNudge();
+    }
   });
 
   it('drops a sheet still waiting on the nudge when the button unmounts', async () => {
     const releaseNudge = holdFollowNudgeOpen();
-    const { unmount } = renderButton();
-    fireEvent.click(screen.getByRole('button', { name: /watch/i }));
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-    unmount();
-    // Releasing after unmount must not set state on the unmounted button.
-    expect(() => releaseNudge()).not.toThrow();
+    try {
+      const { unmount } = renderButton();
+      fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(pendingFollowNudgeWaits()).toBe(1);
+      unmount();
+      expect(pendingFollowNudgeWaits()).toBe(0);
+    } finally {
+      releaseNudge();
+    }
   });
 
   it('does not fire the sheet when un-watching an already-watching show', async () => {
