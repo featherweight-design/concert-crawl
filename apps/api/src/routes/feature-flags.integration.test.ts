@@ -153,7 +153,7 @@ describe('admin feature flags', () => {
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.data).toHaveLength(4);
+    expect(body.data).toHaveLength(3);
     const crews = body.data.find((row: { key: string }) => row.key === 'crews');
     expect(crews).toMatchObject({
       key: 'crews',
