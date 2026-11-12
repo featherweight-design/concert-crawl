@@ -28,7 +28,9 @@ describe('artistGenres', () => {
 
   it('ranks by how many shows carry the bucket', () => {
     expect(
-      artistGenres([show(['soul']), show(['r&b', 'blues']), show(['r&b'])]),
+      // Blues is a jazz sub-genre, so it would tie the two; rap keeps the
+      // second show hip-hop only (once, though it carries two hip-hop genres).
+      artistGenres([show(['soul']), show(['r&b', 'rap']), show(['r&b'])]),
     ).toEqual(['hip-hop', 'jazz']);
     expect(
       artistGenres([show(['indie']), show(['rap']), show(['r&b'])]),
