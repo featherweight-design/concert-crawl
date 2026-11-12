@@ -17,7 +17,7 @@ import {
   portraitCanonicalName,
 } from '../lib/event-billing.js';
 import { todayInDenver } from '../lib/time.js';
-import { escapeLikePattern } from '../lib/escape-like.js';
+import { containsPattern, escapeLikePattern } from '../lib/escape-like.js';
 
 export const searchRouter = new Hono();
 
@@ -133,7 +133,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   }
   const query = parsed.data;
   const canonicalQuery = canonicalizeArtist(query);
-  const pattern = `%${escapeLikePattern(query)}%`;
+  const pattern = containsPattern(query);
 
   // Ranking: an exact canonical hit ("Wolf") beats a prefix hit ("Wolf Alice")
   // beats an anywhere-substring hit ("She Wolf"). Name breaks ties so the order

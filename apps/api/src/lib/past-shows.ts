@@ -29,7 +29,7 @@ import {
 } from '@concert-crawl/types';
 import { followedArtistsCondition } from './artist-follows.js';
 import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
-import { escapeLikePattern } from './escape-like.js';
+import { containsPattern } from './escape-like.js';
 import { MT_TIME_ZONE, todayInDenver } from './time.js';
 
 export const PAST_SHOWS_PAGE = 30;
@@ -68,7 +68,7 @@ export const loadPastShows = async ({
   ];
 
   if (search) {
-    const pattern = `%${escapeLikePattern(search)}%`;
+    const pattern = containsPattern(search);
     conditions.push(
       or(
         ilike(events.artist, pattern),

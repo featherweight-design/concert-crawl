@@ -43,7 +43,7 @@ import {
 import { idSchema } from '../../lib/id-schema.js';
 import { eventPatchSchema, updateEvent } from './lib/event-update.js';
 import { mergeEvents } from './lib/event-merge.js';
-import { escapeLikePattern } from '../../lib/escape-like.js';
+import { containsPattern } from '../../lib/escape-like.js';
 import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
 
 const eventIdSchema = z.object({ id: idSchema });
@@ -404,7 +404,7 @@ eventsAdminRouter.get(
 
     // PR 5 filter clauses. Each is undefined when its param is omitted, which
     // drizzle's `and()` treats as a no-op — so callers compose freely.
-    const queryLike = query ? `%${escapeLikePattern(query)}%` : null;
+    const queryLike = query ? containsPattern(query) : null;
     const searchClause = queryLike
       ? or(
           ilike(events.title, queryLike),

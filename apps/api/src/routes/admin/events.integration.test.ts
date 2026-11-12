@@ -3346,3 +3346,34 @@ describe('GET /v1/admin/events?count=true', () => {
     expect(body.data.total).toBe(1);
   });
 });
+
+describe('GET /v1/admin/events?query= — LIKE metacharacters', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const titlesFor = async (query: string): Promise<string[]> => {
+    const res = await app.request(
+      `/v1/admin/events?query=${encodeURIComponent(query)}&count=true&limit=50&offset=0`,
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(200);
+    const body: { data: { rows: { title: string }[] } } = await res.json();
+    return body.data.rows.map((row) => row.title);
+  };
+
+  it('matches % and _ literally', async () => {
+    const venue = await seedVenue({ name: 'Plain Hall', slug: 'plain-hall' });
+    for (const name of ['a_b', 'axb', 'a%c']) {
+      await seedEvent(venue.id, {
+        title: name,
+        artist: name,
+        date: '2027-06-01',
+      });
+    }
+
+    expect(await titlesFor('_')).toEqual(['a_b']);
+    expect(await titlesFor('%')).toEqual(['a%c']);
+  });
+});
