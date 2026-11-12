@@ -7,7 +7,7 @@ How to read this:
 - Every board is made from the approved B+ and admin kits. Nothing here adds a color, a token, a component style or an icon.
 - Where the question gives us a conflict, the **README rules win over a board**, and **live copy wins over a board's wording** unless a board was drawn to change it.
 - New strings are marked **(new copy)**. They need the `copy-review` pass like any other copy.
-- Questions that need Hugh or design are collected at the end under **Open questions for design**. Engineering should build the ruling given here in the meantime, because each one is the safest reading.
+- The questions this raised for Hugh were settled on 2026-11-12 and are listed at the end under **Decided with Hugh**.
 - Several questions in the brief were cut off mid-sentence (17, 18, 24 to 29). For those, the section starts with how we read the question.
 
 Live canvas: https://claude.ai/artifact/DjFFjh1j5Nt9G9hJ7CWCm2. The phone addendum for admin gaps 1 to 4 is separate (PR #175).
@@ -28,6 +28,7 @@ Live canvas: https://claude.ai/artifact/DjFFjh1j5Nt9G9hJ7CWCm2. The phone addend
 - An unknown category (the `CATEGORY_FALLBACK` path) goes under **Alerts**.
 - The tab opens on **Shows**. The header count ("4 NEW") is the total across all three tabs, as live.
 - Each row keeps its small category label (SHOWS, ARTISTS, CREWS, PRICES).
+- **Unread dots (decided):** any tab other than the open one shows a 6px accent dot when it has an unread item. The open tab doesn't need one, because its rows show their own. The dot has no number.
 
 ### 2. "No longer listed": is there a notification?
 
@@ -261,17 +262,19 @@ The artist is never assigned a fallback genre color.
   - "Last run today, 3:00 AM" is the start time of the latest daily crawl, in Mountain Time.
   - See item 7 for the rest.
 
-## Open questions for design
+## Decided with Hugh (2026-11-12)
 
-Engineering should build the ruling above until these are answered.
+These were open questions. Hugh approved each recommendation.
 
-1. **Tickets available, confirmed (14):** should the price card carry a short "Tickets back" line for a day, or is back to normal enough? We drew back to normal.
-2. **Notification tabs (1):** should each tab show its own unread dot? None is drawn, and the header total is the only count.
-3. **No longer listed (2, 12):** the No longer listed plan asked whether a quiet, non-alert notice should exist. We ruled no notification, following Hugh's earlier decision.
-4. **See all on the shelf (20):** it turns on My artists in Browse. The alternative is the Artists tab in My shows.
-5. **Founder eyebrow (25):** dropped for lack of data. Should early members get a mark later?
-6. **Refused report (18):** one state covers both a rate limit and a rejection. Do they need different words?
-7. **The truncated items (17, 18, 24 to 29):** please check that our reading of each question matches what was asked.
+1. **Tickets available, confirmed (14):** the page goes back to normal, with no "Tickets back" line. Watchers already get `watch.backonsale`.
+2. **Notification tabs (1):** any tab other than the open one gets an unread dot (drawn in `01-notification-tabs`).
+3. **No longer listed (2, 12):** there is no notification of any kind, not even a quiet notice.
+4. **See all on the shelf (20):** it turns on My artists in Browse.
+5. **Account menu eyebrow (25):** the "BETA · FOUNDER" eyebrow is dropped, beta tag included. The panel shows the handle only.
+6. **Refused report (18):** one message covers both a rate limit and a rejection.
+7. **Filters (6):** they stay multi-select. **Stamps (3):** they are tilted inside the Passport booklet only.
+
+Still open: whoever wrote the brief should check our reading of the truncated items (17, 18 and 24 to 29) against the original questions.
 
 ## Files
 
