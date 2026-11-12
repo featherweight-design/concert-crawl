@@ -209,8 +209,38 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
-  it('shows no tabs without a list', () => {
-    render(<NotifBody state="ready" items={[]} now={NOW} />);
+  it('draws the tab row, "0 new" and Mark all read on the empty state, as the board does', () => {
+    render(
+      <NotifBody state="ready" items={[]} onMarkAll={vi.fn()} now={NOW} />,
+    );
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(
+      screen.getByText(NOTIFICATIONS_COPY.panelSub(0)),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel', { name: 'Shows' })).toBeInTheDocument();
+  });
+
+  it('draws the tab row and Mark all read on the error state, with the count held as an ellipsis', () => {
+    render(
+      <NotifBody
+        state="error"
+        onRetry={vi.fn()}
+        onMarkAll={vi.fn()}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull();
+  });
+
+  it('draws no tabs while loading', () => {
+    render(<NotifBody state="loading" now={NOW} />);
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 });

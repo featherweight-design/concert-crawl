@@ -72,7 +72,10 @@ export const NotifBody = ({
 }) => {
   // Opens on Shows. The header count stays the total across all three tabs.
   const [tab, setTab] = useState<NotificationTab>(DEFAULT_NOTIFICATION_TAB);
-  const hasList = state === 'ready' && items.length > 0;
+  const isEmpty = state === 'ready' && items.length === 0;
+  // The boards draw the tab row on the empty and error states too; only the
+  // loading state, where nothing has landed yet, has none.
+  const showTabs = state !== 'loading';
   const visible = items.filter((item) => tabFor(item.category) === tab);
   const derived = unreadCount ?? countUnread(items);
   // Loading and error headers read zero: there is nothing on screen to mark.
@@ -89,8 +92,10 @@ export const NotifBody = ({
         onMarkAll={onMarkAll}
         onClose={onClose}
         showClose={showClose}
-        tab={hasList ? tab : undefined}
-        onTab={hasList ? setTab : undefined}
+        empty={isEmpty}
+        showMarkAll={isEmpty || state === 'error'}
+        tab={showTabs ? tab : undefined}
+        onTab={showTabs ? setTab : undefined}
       />
       {notice !== undefined && (
         <div
@@ -119,9 +124,23 @@ export const NotifBody = ({
         }}
       >
         {state === 'loading' && <NotifLoading />}
-        {state === 'error' && <NotifError onRetry={onRetry} />}
-        {state === 'ready' && items.length === 0 && (
-          <NotifEmpty onAction={onAction} />
+        {state === 'error' && (
+          <div
+            role="tabpanel"
+            id={NOTIF_TABPANEL_ID}
+            aria-labelledby={notifTabId(tab)}
+          >
+            <NotifError onRetry={onRetry} />
+          </div>
+        )}
+        {isEmpty && (
+          <div
+            role="tabpanel"
+            id={NOTIF_TABPANEL_ID}
+            aria-labelledby={notifTabId(tab)}
+          >
+            <NotifEmpty onAction={onAction} />
+          </div>
         )}
         {state === 'ready' && items.length > 0 && (
           <div
