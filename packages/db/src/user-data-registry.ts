@@ -399,12 +399,13 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     tableName: 'venues',
     disposition: 'none',
     userIdColumn: null,
-    otherUserIdColumns: ['verified_by'],
+    otherUserIdColumns: ['verified_by', 'crawl_paused_by', 'hidden_by'],
     exportKey: null,
     exportColumns: null,
     reason:
-      'Public venue catalogue. `verified_by` is the admin who signed off on the ' +
-      'listing, not a customer, and stays as the record of who acted.',
+      'Public venue catalogue. `verified_by`, `crawl_paused_by` and `hidden_by` ' +
+      'are the admin who signed off on, paused or hid the listing, not a ' +
+      'customer, and stay as the record of who acted.',
   },
   {
     tableName: 'events',
