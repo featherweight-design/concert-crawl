@@ -7,18 +7,7 @@
 
 import type { ReactNode, Ref } from 'react';
 import { cn } from '@/lib/utils';
-
-const Chevron = () => (
-  <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path
-      d="M4 6l4 4 4-4"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+import { IconChevDown, segmentEyebrowStyle, segmentValueStyle } from './chrome';
 
 const ClearGlyph = () => (
   <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden>
@@ -86,18 +75,7 @@ export function FilterSegment({
         )}
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: active ? 'var(--signal)' : 'var(--fg-subtle)',
-            }}
-          >
-            {eyebrow}
-          </span>
+          <span style={segmentEyebrowStyle(active)}>{eyebrow}</span>
           <span className="flex min-w-0 items-center gap-1.5">
             {leading}
             {/* The name and its "+1" are one run of text with no flex gap
@@ -106,13 +84,7 @@ export function FilterSegment({
             <span
               data-testid="segment-value"
               className="flex min-w-0"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: 15,
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-                color: 'var(--fg)',
-              }}
+              style={segmentValueStyle(false)}
             >
               <span className="truncate">{value}</span>
               {suffix !== undefined && (
@@ -128,7 +100,7 @@ export function FilterSegment({
         </span>
         {!active && (
           <span className="shrink-0 text-fg-subtle">
-            <Chevron />
+            <IconChevDown size={11} />
           </span>
         )}
       </button>

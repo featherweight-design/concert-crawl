@@ -2,7 +2,9 @@
 
 // The desktop segmented filter bar (B+ B6a): from 640px up the chip row gives
 // way to one bar of segments, a count line under it, and restyled popovers.
-// jsdom has no layout, so `isDesktop` is driven by mocking matchMedia.
+// jsdom has no layout or CSS, so the chip row and the bar both render here
+// (the page shows one per width). Which overlay a tap opens is driven by
+// mocking matchMedia.
 
 import {
   render,
@@ -47,6 +49,7 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
 }));
 
 import { FilterBar } from './FilterBar';
+import { VIBE_ORDER, getFilterOptions } from './filter-defs';
 import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
@@ -194,8 +197,12 @@ describe('FilterBar desktop segmented bar', () => {
       surface: 'paywall-on-tap',
     };
     renderBar();
+    // The phone chip renders too (CSS hides it from sm up), so reach the
+    // segment through the bar.
     fireEvent.click(
-      screen.getByRole('button', { name: FOLLOWING_COPY.chipAria }),
+      within(screen.getByTestId('filter-segment-bar')).getByRole('button', {
+        name: FOLLOWING_COPY.chipAria,
+      }),
     );
     expect(screen.getByTestId('tier-picker')).toBeTruthy();
     expect(replace).not.toHaveBeenCalled();
@@ -245,6 +252,22 @@ describe('FilterBar desktop segmented bar', () => {
     // Clear all keeps its old reach: scopes are modes, not dimensions.
     expect(query.get('filterFollowing')).toBe('1');
   });
+
+  it.each(['filterFollowing=1', 'filterTaste=1'])(
+    'says "match" and lights the bar when only a scope narrows (%s)',
+    (scope) => {
+      searchParams.current = new URLSearchParams(scope);
+      renderBar({ showCount: 9 });
+      expect(screen.getByTestId('filter-count-line').textContent).toBe(
+        copy.showCountMatch(9),
+      );
+      expect(
+        screen.getByTestId('filter-segment-bar').getAttribute('data-active'),
+      ).toBe('true');
+      // Scopes are modes, not dimensions: still no Clear all.
+      expect(screen.queryByRole('button', { name: copy.clearAll })).toBeNull();
+    },
+  );
 
   it('offers no clear control beyond Clear all, the mobile ✕ and the segment ✕', () => {
     searchParams.current = new URLSearchParams('filterVibe=indie');
@@ -744,8 +767,98 @@ describe('FilterBar multi-select Where and Vibe', () => {
     expect(lastQuery().getAll('filterVibe')).toEqual(['electronic', 'indie']);
     expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
 
+    // The second tick builds on the first, not on the URL it hasn't reached.
     fireEvent.click(electronic);
+    expect(lastQuery().getAll('filterVibe')).toEqual(['indie']);
+    fireEvent.click(indie);
     expect(lastQuery().has('filterVibe')).toBe(false);
+  });
+
+  it('two quick Where ticks both survive before the URL catches up', () => {
+    // The mocked router never moves `useSearchParams()`, exactly the window a
+    // real round trip leaves open between two quick ticks.
+    searchParams.current = new URLSearchParams('filterPrice=under-25');
+    renderBar();
+    const dialog = openWhere();
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', { name: /Ogden Theatre/ }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', { name: /Globe Hall/ }),
+    );
+    const query = lastQuery();
+    expect(query.getAll('filterWhere')).toEqual([
+      'ogden-theatre',
+      'globe-hall',
+    ]);
+    expect(query.get('filterPrice')).toBe('under-25');
+    // The ticks show at once, before the server answers.
+    expect(
+      within(dialog)
+        .getAllByRole('checkbox')
+        .filter((box) => box.getAttribute('aria-checked') === 'true'),
+    ).toHaveLength(2);
+  });
+
+  it('a quick Vibe tick keeps a Where tick still in flight', () => {
+    renderBar();
+    const dialog = openWhere();
+    fireEvent.click(
+      within(dialog).getByRole('checkbox', { name: /Ogden Theatre/ }),
+    );
+    fireEvent.click(screen.getByTestId('filter-segment-vibe'));
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: /filter$/ })).getByRole(
+        'checkbox',
+        { name: 'Indie' },
+      ),
+    );
+    const query = lastQuery();
+    expect(query.getAll('filterWhere')).toEqual(['ogden-theatre']);
+    expect(query.getAll('filterVibe')).toEqual(['indie']);
+  });
+
+  it('at 25 venues the unticked Where rows are disabled', () => {
+    const many = Array.from({ length: 26 }, (_, index) =>
+      venue(`venue-${index}`, `Venue ${String(index).padStart(2, '0')}`, ''),
+    );
+    searchParams.current = new URLSearchParams(
+      many
+        .slice(0, 25)
+        .map((item) => `filterWhere=${item.slug}`)
+        .join('&'),
+    );
+    renderBar({ venues: many });
+    const dialog = openWhere();
+    const last = within(dialog).getByRole('checkbox', { name: /Venue 25/ });
+    expect(last.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(last);
+    expect(replace).not.toHaveBeenCalled();
+    // A ticked row stays live, so a pick can still be taken back.
+    const first = within(dialog).getByRole('checkbox', { name: /Venue 00/ });
+    expect(first.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('under 25 venues no Where row is disabled', () => {
+    searchParams.current = new URLSearchParams('filterWhere=ogden-theatre');
+    renderBar();
+    const dialog = openWhere();
+    expect(
+      within(dialog)
+        .getAllByRole('checkbox')
+        .some((box) => box.hasAttribute('disabled')),
+    ).toBe(false);
+  });
+
+  it('labels from the first venue that resolves when the first is stale', () => {
+    searchParams.current = new URLSearchParams(
+      'filterWhere=gone-venue&filterWhere=ogden-theatre',
+    );
+    renderBar();
+    const where = screen.getByTestId('venue-chip');
+    expect(within(where).getByTestId('segment-value').textContent).toBe(
+      'Ogden +1',
+    );
   });
 
   it('the Where segment reads "Bluebird +1" over two stacked tiles', () => {
@@ -943,5 +1056,46 @@ describe('FilterBar phone sheet, multi-select', () => {
       'ogden-theatre',
     ]);
     expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
+  });
+
+  it('the Vibe sheet lists all 16 buckets in the board order, shows or not', () => {
+    // The page only has shows in two genres; the sheet still lists every
+    // bucket, as `bp-vibe-vibe_sheet_m` and the desktop popover do.
+    renderBar({ genres: ['indie', 'electronic'] });
+    const vibeChip = screen
+      .getAllByRole('button', { expanded: false })
+      .find(
+        (button) =>
+          button.getAttribute('aria-haspopup') === 'dialog' &&
+          button.textContent?.startsWith(`${copy.vibeLabel} `),
+      );
+    if (!vibeChip) throw new Error('no phone Vibe chip');
+    fireEvent.click(vibeChip);
+    const sheet = screen.getByRole('dialog', { name: /filter$/ });
+    const rows = within(sheet)
+      .getAllByRole('checkbox')
+      .map((box) => box.textContent);
+    expect(rows).toEqual(
+      getFilterOptions('vibe', [], [...VIBE_ORDER]).map(
+        (option) => option.label,
+      ),
+    );
+    expect(rows).toHaveLength(16);
+  });
+
+  it('two quick sheet ticks both survive', () => {
+    renderBar();
+    fireEvent.click(screen.getByTestId('venue-chip'));
+    const sheet = screen.getByRole('dialog', { name: /filter$/ });
+    fireEvent.click(
+      within(sheet).getByRole('checkbox', { name: 'Ogden Theatre' }),
+    );
+    fireEvent.click(
+      within(sheet).getByRole('checkbox', { name: 'Globe Hall' }),
+    );
+    expect(lastQuery().getAll('filterWhere')).toEqual([
+      'ogden-theatre',
+      'globe-hall',
+    ]);
   });
 });

@@ -18,7 +18,7 @@
 // filtering (#794's identical-pixels rule means the gate is told in the
 // aria-describedby sentence, not in the visible label).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { PickerEntry } from '@concert-crawl/types';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
@@ -37,8 +37,6 @@ import {
 } from './chrome';
 
 const SEGMENT_COPY = CONSUMER_COPY.filterBar.segment;
-
-const GATE_DESCRIPTION_ID = 'follow-scope-chip-gate';
 
 interface FollowFilterChipProps {
   active: boolean;
@@ -72,6 +70,9 @@ export const FollowFilterChip = ({
   variant = 'chip',
 }: FollowFilterChipProps) => {
   const isSegment = variant === 'segment';
+  // The bar renders both variants (CSS shows one per width), so the gate
+  // sentence each points at needs its own id.
+  const gateId = useId();
   const { isLoading, surface } = useEntitlement('following');
   const { data: planState } = usePlanState();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -182,7 +183,7 @@ export const FollowFilterChip = ({
     />
   );
   const gate = (
-    <span id={GATE_DESCRIPTION_ID} className="sr-only">
+    <span id={gateId} className="sr-only">
       {FOLLOWING_COPY.chipGate}
     </span>
   );
@@ -194,7 +195,7 @@ export const FollowFilterChip = ({
           type="button"
           onClick={onLockedTap}
           aria-label={FOLLOWING_COPY.chipAria}
-          aria-describedby={GATE_DESCRIPTION_ID}
+          aria-describedby={gateId}
           data-testid="follow-scope-chip"
           className="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-3.5 transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
         >
@@ -219,7 +220,7 @@ export const FollowFilterChip = ({
         type="button"
         onClick={onLockedTap}
         aria-label={FOLLOWING_COPY.chipAria}
-        aria-describedby={GATE_DESCRIPTION_ID}
+        aria-describedby={gateId}
         data-testid="follow-scope-chip"
         className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         style={{

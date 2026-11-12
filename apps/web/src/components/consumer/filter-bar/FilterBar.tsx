@@ -26,17 +26,20 @@ import { GenreDot } from '@/components/consumer/GenreDot';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { FilterPopover } from './FilterPopover';
 import { FilterSheet } from './FilterSheet';
 import {
   FILTER_DEFS,
   FILTER_ORDER,
+  MULTI_FILTER_KEYS,
+  VIBE_ORDER,
   type FilterKey,
   type FilterValues,
   getActiveFilterCount,
   getChipLabel,
   getFilterOptions,
-  getSegmentLabel,
+  getFirstResolvedLabel,
   isMultiFilter,
   toggleValue,
 } from './filter-defs';
@@ -97,6 +100,16 @@ const SEGMENT_LABEL: Record<FilterKey, string> = {
 
 /** A venue tile in the Where segment (`bp-f-filt_active_d`). */
 const SEGMENT_TILE_SIZE = 18;
+
+/** Tailwind's `sm`: from here up the segmented bar replaces the chip row. */
+const DESKTOP_QUERY = '(min-width: 640px)';
+
+/** Where and Vibe lists written but not yet back from the server. */
+type PendingLists = Partial<Record<FilterKey, readonly string[]>>;
+
+const sameList = (left: readonly string[], right: readonly string[]) =>
+  left.length === right.length &&
+  left.every((value, index) => value === right[index]);
 
 interface BarSegment {
   key: SegmentKey;
@@ -196,12 +209,62 @@ export function FilterBar({
   const { enabled: crewsEnabled } = useFeatureFlag('crews');
   const crews = crewsEnabled ? crewsProp : [];
 
+  // `useSearchParams()` only moves once the server answers, so a second quick
+  // tick built on it would drop the first. Each Where/Vibe list written is
+  // held here until the URL catches up to it, and every write and the ticks
+  // shown build on it. The ref is what writes read; the state re-renders.
+  const pendingRef = useRef<PendingLists>({});
+  const [pending, setPending] = useState<PendingLists>({});
+
+  // Read by the effect below without re-running it on every flip.
+  const isPendingRef = useRef(isPending);
+  isPendingRef.current = isPending;
+
+  // When the URL moves, a held list is let go once the URL reads it back, and
+  // every one is let go once no write is in flight (the URL is then final,
+  // including after Back).
+  useEffect(() => {
+    const held = pendingRef.current;
+    const settled = !isPendingRef.current;
+    const next: PendingLists = { ...held };
+    let changed = false;
+    for (const key of MULTI_FILTER_KEYS) {
+      const list = held[key];
+      if (list === undefined) continue;
+      const fromUrl = parseListParam(
+        searchParams.getAll(FILTER_DEFS[key].queryKey),
+      );
+      if (settled || sameList(fromUrl, list)) {
+        delete next[key];
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    pendingRef.current = next;
+    setPending(next);
+  }, [searchParams]);
+
   // A list writes one repeated key per value (`filterWhere=a&filterWhere=b`),
   // the shape `buildEventsApiParams` reads; an empty list or string removes
-  // the key. Every other param is kept as it was.
+  // the key. Every other param is kept as it was, a held list included.
   const updateParams = useCallback(
     (updates: Record<string, string | readonly string[]>) => {
       const params = new URLSearchParams(searchParams.toString());
+      const nextPending: PendingLists = { ...pendingRef.current };
+      for (const key of MULTI_FILTER_KEYS) {
+        const queryKey = FILTER_DEFS[key].queryKey;
+        const update = updates[queryKey];
+        if (update !== undefined) {
+          nextPending[key] =
+            typeof update === 'string' ? (update ? [update] : []) : update;
+        }
+        const list = nextPending[key];
+        if (list === undefined) continue;
+        params.delete(queryKey);
+        for (const item of list) params.append(queryKey, item);
+      }
+      pendingRef.current = nextPending;
+      setPending(nextPending);
       for (const [key, value] of Object.entries(updates)) {
         params.delete(key);
         if (typeof value === 'string') {
@@ -223,7 +286,11 @@ export function FilterBar({
 
   const [openFilterKey, setOpenFilterKey] = useState<SegmentKey | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const [isDesktop, setIsDesktop] = useState(false);
+  // Never decides what the first paint draws: the chip row and the segmented
+  // bar both render and CSS (`sm:`) shows one. It picks only what a tap opens
+  // (the phone sheet or the desktop popover), which `venue-chip` is live for
+  // e2e, and the taste chip's one home. The server guesses the phone.
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   // Desktop segments anchor their popovers on the whole segment, ✕ included.
   const segmentRefs = useRef<
     Partial<Record<SegmentKey, HTMLDivElement | null>>
@@ -248,11 +315,12 @@ export function FilterBar({
     const value = searchParams.get(key);
     return value ? [value] : [];
   };
+  // A held list (written, not yet back) wins over the URL.
   const filterValues: FilterValues = {
     when: readSingle('filterWhen'),
-    where: parseListParam(searchParams.getAll('filterWhere')),
+    where: pending.where ?? parseListParam(searchParams.getAll('filterWhere')),
     price: readSingle('filterPrice'),
-    vibe: parseListParam(searchParams.getAll('filterVibe')),
+    vibe: pending.vibe ?? parseListParam(searchParams.getAll('filterVibe')),
   };
 
   const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal';
@@ -262,21 +330,6 @@ export function FilterBar({
   const tasteActive = searchParams.get('filterTaste') === '1';
   // Same treatment for the follow scope: a mode, not a dimension.
   const followActive = searchParams.get('filterFollowing') === '1';
-
-  useEffect(() => {
-    const media = window.matchMedia('(min-width: 640px)');
-    const apply = () => setIsDesktop(media.matches);
-    apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
-  }, []);
-
-  useEffect(() => {
-    if (!openFilterKey || !isDesktop) return;
-    const nextAnchor = segmentRefs.current[openFilterKey];
-    setAnchorRect(nextAnchor?.getBoundingClientRect() ?? null);
-    setBarRight(barRef.current?.getBoundingClientRect().right);
-  }, [openFilterKey, isDesktop]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -291,9 +344,14 @@ export function FilterBar({
   const openDimension: FilterKey | null =
     openFilterKey === 'who' ? null : openFilterKey;
   const activeDef = openDimension ? FILTER_DEFS[openDimension] : null;
-  const activeOptions = openDimension
-    ? getFilterOptions(openDimension, venues, genres)
-    : [];
+  // The phone Vibe sheet lists all 16 buckets in the board's order, as the
+  // desktop popover does (`bp-vibe-vibe_sheet_m`), shows or not.
+  const activeOptions =
+    openDimension === 'vibe'
+      ? getFilterOptions('vibe', venues, [...VIBE_ORDER])
+      : openDimension
+        ? getFilterOptions(openDimension, venues, genres)
+        : [];
   const activeValue = openDimension
     ? (filterValues[openDimension][0] ?? '')
     : '';
@@ -306,9 +364,11 @@ export function FilterBar({
   );
 
   // A multi-select pick adds the value, or removes it if it was already set.
+  // It builds on the last list written, not the URL, so quick ticks add up.
   const toggleFilterValue = (key: FilterKey, value: string) => {
+    const base = pendingRef.current[key] ?? filterValues[key];
     updateParams({
-      [FILTER_DEFS[key].queryKey]: toggleValue(filterValues[key], value),
+      [FILTER_DEFS[key].queryKey]: toggleValue(base, value),
     });
   };
 
@@ -326,9 +386,13 @@ export function FilterBar({
   const lensCrewId = searchParams.get('crew');
   const lensCrew = crews.find((crew) => crew.id === lensCrewId) ?? null;
 
+  // Narrowed by a dimension or a scope: My artists and taste cut the list as
+  // surely as a venue does, so the count line says "match" for them too.
+  const listFiltered = activeFilterCount > 0 || followActive || tasteActive;
+
   // Any filter or scope on draws the whole bar's edge in the signal
   // (`bp-f-filt_active_d`).
-  const barActive = activeFilterCount > 0 || followActive || lensCrew !== null;
+  const barActive = listFiltered || lensCrew !== null;
 
   const setLensCrew = useCallback(
     (crewId: string | null) => {
@@ -356,8 +420,10 @@ export function FilterBar({
     [updateParams],
   );
 
-  // Rendered in exactly one place at a time (the mobile chip row, or the
-  // desktop count line), so its entitlement effects never run twice.
+  // Rendered in exactly one place (the phone chip row, or the desktop count
+  // line), so its entitlement effects never run twice. It draws nothing until
+  // its entitlement resolves on the client, so choosing its home after
+  // hydration moves nothing the first paint drew.
   const tasteChip = (
     <TasteFilterChip
       active={tasteActive}
@@ -368,17 +434,14 @@ export function FilterBar({
 
   const dimensionSegment = (key: FilterKey): BarSegment => {
     const values = filterValues[key];
-    // The first pick's name and the "+N" count render apart, so a narrow
-    // segment ellipsises the name and never the count ("Red Ro… +1").
-    const activeLabel = getSegmentLabel(
-      key,
-      values.slice(0, 1),
-      venues,
-      genres,
-    );
+    // The first resolving pick's name and the "+N" count render apart, so a
+    // narrow segment ellipsises the name and never the count ("Red Ro… +1").
+    // A stale first slug is skipped for the name, never left blank.
+    const resolved = getFirstResolvedLabel(key, values, venues, genres);
+    const activeLabel = resolved?.label ?? null;
     const suffix =
-      activeLabel !== null && values.length > 1
-        ? copy.segment.moreSuffix(values.length - 1)
+      resolved !== null && resolved.rest > 0
+        ? copy.segment.moreSuffix(resolved.rest)
         : undefined;
     // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
     // the genre dots for Vibe. It draws two; the stack shows the first two.
@@ -487,7 +550,8 @@ export function FilterBar({
               crews={crews}
               activeCrew={lensCrew}
               onSelect={setLensCrew}
-              wide={isDesktop}
+              // Only ever shown under sm, so always the phone width.
+              wide={false}
             />
           </div>
         )}
@@ -571,18 +635,16 @@ export function FilterBar({
             divider). "My artists" comes first: it scopes to a list the viewer
             built by hand, where the taste chip scopes to one Spotify inferred.
             Either chip can render nothing, and because each owns the divider
-            that FOLLOWS it, no combination can strand a leading rule. */}
-        {!isDesktop && (
-          <>
-            <FollowFilterChip
-              active={followActive}
-              onToggle={toggleFollow}
-              followCount={followCount}
-              scaRegion={scaRegion}
-            />
-            {tasteChip}
-          </>
-        )}
+            that FOLLOWS it, no combination can strand a leading rule. The
+            row is `sm:hidden`, so this chip and the bar's switch below both
+            render and CSS shows one per width. */}
+        <FollowFilterChip
+          active={followActive}
+          onToggle={toggleFollow}
+          followCount={followCount}
+          scaRegion={scaRegion}
+        />
+        {!isDesktop && tasteChip}
 
         {FILTER_ORDER.map((key) => {
           if (key === 'when' && isCalendarView) return null;
@@ -638,15 +700,13 @@ export function FilterBar({
           className={SEGMENT_BAR_CLASS}
           style={segmentBarStyle(barActive)}
         >
-          {isDesktop && (
-            <FollowFilterChip
-              variant="segment"
-              active={followActive}
-              onToggle={toggleFollow}
-              followCount={followCount}
-              scaRegion={scaRegion}
-            />
-          )}
+          <FollowFilterChip
+            variant="segment"
+            active={followActive}
+            onToggle={toggleFollow}
+            followCount={followCount}
+            scaRegion={scaRegion}
+          />
           {segments.map((segment, index) => (
             <Fragment key={segment.key}>
               {index > 0 && <SegmentDivider />}
@@ -699,7 +759,7 @@ export function FilterBar({
         <div className={COUNT_ROW_CLASS}>
           {showCount !== null && (
             <span data-testid="filter-count-line" style={COUNT_LINE_STYLE}>
-              {activeFilterCount > 0
+              {listFiltered
                 ? copy.showCountMatch(showCount)
                 : copy.showCount(showCount)}
             </span>
@@ -761,7 +821,6 @@ export function FilterBar({
           value={activeValue}
           anchorRect={anchorRect}
           opener={opener}
-          multi={multiFor(openDimension)}
           onClose={closePopover}
           onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
           // "Show N shows" reads the events response's total, the same count

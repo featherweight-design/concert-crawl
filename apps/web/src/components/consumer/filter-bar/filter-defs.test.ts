@@ -5,11 +5,11 @@ import { vibeKind } from './VibeOptionGrid';
 import {
   VIBE_ORDER,
   compareVenueNames,
-  orderVibes,
   getActiveFilterCount,
   getActiveFilterLabel,
   getChipLabel,
   getFilterOptions,
+  getFirstResolvedLabel,
   getSegmentLabel,
   toggleValue,
 } from './filter-defs';
@@ -65,6 +65,21 @@ describe('multi-select labels (addendum 2, item 6)', () => {
     expect(getChipLabel('vibe', ['electronic'], venues)).toBe('Electronic');
   });
 
+  it('labels from the first pick that resolves when the first is stale', () => {
+    // A venue since removed leaves its slug in a shared URL. The label skips
+    // it rather than going blank, and the count still covers every pick.
+    expect(getSegmentLabel('where', ['gone-venue', 'bluebird'], venues)).toBe(
+      copy.segment.moreCount('Bluebird', 1),
+    );
+    expect(
+      getFirstResolvedLabel('where', ['gone-venue', 'red-rocks'], venues),
+    ).toEqual({ label: 'Red Rocks', rest: 1 });
+    expect(getSegmentLabel('where', ['gone-venue'], venues)).toBeNull();
+    expect(getChipLabel('where', ['gone-venue', 'bluebird'], venues)).toBe(
+      '2 venues',
+    );
+  });
+
   it('toggles a value on and off', () => {
     expect(toggleValue([], 'indie')).toEqual(['indie']);
     expect(toggleValue(['indie'], 'punk')).toEqual(['indie', 'punk']);
@@ -110,23 +125,13 @@ describe('compareVenueNames', () => {
   });
 });
 
-describe('orderVibes', () => {
+describe('VIBE_ORDER', () => {
   it('follows the vibe_pop_d order, row by row', () => {
-    expect(orderVibes([...VIBE_ORDER].reverse())).toEqual([...VIBE_ORDER]);
     expect(VIBE_ORDER.slice(0, 4)).toEqual([
       'electronic',
       'hip-hop',
       'pop',
       'indie',
-    ]);
-  });
-
-  it('puts a bucket the board does not name last, alphabetically', () => {
-    expect(orderVibes(['zydeco', 'indie', 'blues', 'electronic'])).toEqual([
-      'electronic',
-      'indie',
-      'blues',
-      'zydeco',
     ]);
   });
 
