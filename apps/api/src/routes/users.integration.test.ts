@@ -153,10 +153,8 @@ const planStateBodySchema = z.object({
   }),
 });
 
-async function fetchMe(
-  query = '',
-): Promise<z.infer<typeof planStateBodySchema>> {
-  const res = await app.request(`/v1/users/me${query}`, {
+async function fetchMe(): Promise<z.infer<typeof planStateBodySchema>> {
+  const res = await app.request('/v1/users/me', {
     headers: { Authorization: 'Bearer test' },
   });
   expect(res.status).toBe(200);
@@ -425,7 +423,6 @@ describe('GET /v1/users/me — no card-less trial', () => {
 
 describe('GET /v1/users/me — founder window', () => {
   const DAY_MS = 86400000;
-  const HOUR_MS = 3600000;
 
   beforeEach(async () => {
     clearAuth();

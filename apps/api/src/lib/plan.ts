@@ -7,8 +7,7 @@ import { apiLogger } from './logger.js';
 
 // Pure derivation moved to @concert-crawl/entitlements (#763 PR 10) so the
 // crawler's Spotify fan-out can gate on plan without importing API code.
-// Re-exported here so existing consumers (plan.test.ts) are
-// unchanged.
+// Re-exported here so existing consumers (plan.test.ts) are unchanged.
 export {
   derivePlanState,
   LIVE_STATUSES,
@@ -57,9 +56,6 @@ export async function loadPlanContext(
     db
       .select({
         trialEndsAt: userBilling.trialEndsAt,
-        lastTrialEndedShownAt: userBilling.lastTrialEndedShownAt,
-        dayThirteenBannerDismissedAt: userBilling.dayThirteenBannerDismissedAt,
-        pastDueBannerDismissedAt: userBilling.pastDueBannerDismissedAt,
       })
       .from(userBilling)
       .where(eq(userBilling.userId, userId))
