@@ -11,13 +11,22 @@ export const PUBLIC_EDGE_CACHE =
 /**
  * Let a shared cache hold this response. Call it only on a 2xx answer that is
  * the same for every visitor: never when a token changed the body (an overlay
- * such as `isWatching`), and never on an error. `Vary: Authorization` keeps a
- * signed-in caller's request from being answered with an anonymous entry, and
- * is appended so CORS's own `Vary` survives.
+ * such as `isWatching`), and never on an error.
+ *
+ * Only a request that carries NO `Authorization` header at all is cacheable. A
+ * bad or expired token resolves to "anonymous" here, but `Vary: Authorization`
+ * alone would still let a CDN keep one entry per token value, so any request
+ * that sent the header gets `private, no-store`. `Vary` stays on every answer
+ * (appended, so CORS's own `Vary` survives) so the two never share an entry.
  */
 export const markPublicRead = (ctx: Context): void => {
-  ctx.header('Cache-Control', PUBLIC_EDGE_CACHE);
   ctx.header('Vary', 'Authorization', { append: true });
+  ctx.header(
+    'Cache-Control',
+    ctx.req.header('Authorization') === undefined
+      ? PUBLIC_EDGE_CACHE
+      : 'private, no-store',
+  );
 };
 
 /**

@@ -82,6 +82,24 @@ describe('edge cache headers on public reads', () => {
     }
   });
 
+  it('caches nothing when the request carries an Authorization header, even one that resolves to anonymous', async () => {
+    // getAuth() is null here (a bad or expired token), yet the header was sent.
+    for (const path of [
+      '/v1/events/genres',
+      '/v1/venues',
+      '/v1/events?limit=5',
+      `/v1/events/${eventId}`,
+      `/v1/venues/${slug}`,
+    ]) {
+      const res = await app.request(path, {
+        headers: { Authorization: 'Bearer expired' },
+      });
+      expect(res.status, path).toBe(200);
+      expect(cacheOf(res), path).toBe('private, no-store');
+      expect(varies(res), path).toBe(true);
+    }
+  });
+
   it('never marks an error cacheable', async () => {
     for (const path of [
       '/v1/events/00000000-0000-4000-8000-000000000000',
