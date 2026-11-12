@@ -12,16 +12,100 @@ export interface DerivedArtists {
   isConcert: boolean;
   /** True when an LLM call was made — the caller records cost against this. */
   adjudicated: boolean;
+  /**
+   * True when the adjudicator ruled that the names in the listing are the
+   * artists being covered or honored (a cover show, a tribute night), not
+   * performers. The bill is empty then, and a caller that rewrites stored bills
+   * leaves the row untouched rather than erase what is there.
+   */
+  coversOtherArtists?: boolean;
 }
 
 export type Adjudicator = (input: {
   title: string;
   description: string | undefined;
+  /** The performer field the venue's own listing reported, when it named one. */
+  venuePerformers?: readonly string[] | undefined;
 }) => Promise<{
   isConcert: boolean;
   headliners: string[];
   supportingArtists: string[];
+  coversOtherArtists?: boolean;
 }>;
+
+// Words that are never an act, on a bill or off it. Compared case-insensitively
+// against a whole name, so "Friends" goes and "Friends of Mine" stays.
+const GENERIC_TOKENS = new Set([
+  'friends',
+  '& friends',
+  'and friends',
+  'friend',
+  'special guest',
+  'special guests',
+  'guest',
+  'guests',
+  'more',
+  'and more',
+  '& more',
+  'tba',
+  'tbd',
+  'tbc',
+  'surprise set',
+  'surprise guest',
+  'surprise guests',
+  'dj',
+  'djs',
+  'support',
+  'openers',
+  'live band',
+]);
+
+const nameKey = (name: string): string =>
+  name
+    .trim()
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim()
+    .toLowerCase();
+
+// The acts a combined headliner is made of: "Brothers of Brass & Hot Like Mars"
+// and "A / B" both stand for several acts, and an act listed under them is the
+// same act listed twice. The whole combined name counts as a member too.
+const COMBINED_JOINERS = / & | \+ | \/ |, | and | x /i;
+const memberKeys = (name: string): string[] => {
+  const whole = nameKey(name);
+  return [whole, ...name.split(COMBINED_JOINERS).map(nameKey)].filter(
+    (key) => key !== '',
+  );
+};
+
+/**
+ * The deterministic clean-up every bill passes through before it is stored:
+ * generic words ("Friends", "Special Guests", "TBA") are never acts, and an act
+ * is never listed twice under two roles. Supporting is checked against the
+ * headliners AND the members of a combined headliner, ignoring a trailing
+ * parenthetical ("LivSings (Beyonce Tribute)" is "LivSings").
+ */
+export function tidyBill(
+  headliners: string[],
+  supportingArtists: string[],
+): { headliners: string[]; supportingArtists: string[] } {
+  const keepName = (name: string): boolean => {
+    const key = name.trim().toLowerCase();
+    return key !== '' && !GENERIC_TOKENS.has(key);
+  };
+  const cleanHeadliners = headliners.filter(keepName);
+  const headlinerMembers = new Set(cleanHeadliners.flatMap(memberKeys));
+  const seen = new Set<string>();
+  const cleanSupporting: string[] = [];
+  for (const name of supportingArtists) {
+    if (!keepName(name)) continue;
+    const key = nameKey(name);
+    if (headlinerMembers.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    cleanSupporting.push(name.trim());
+  }
+  return { headliners: cleanHeadliners, supportingArtists: cleanSupporting };
+}
 
 // Words that mark a title as describing the EVENT rather than naming an act.
 // Deliberately conservative: a false positive costs one LLM call, but a false
@@ -181,8 +265,7 @@ export async function deriveArtists(
   // is strictly downstream of it, and re-deriving here would make each event's
   // artist nondeterministic across nightly crawls.
   const observedBill = (): DerivedArtists => ({
-    headliners: observed,
-    supportingArtists: nonEmpty(event.observedSupportingArtists),
+    ...tidyBill(observed, nonEmpty(event.observedSupportingArtists)),
     isConcert: true,
     adjudicated: false,
   });
@@ -216,7 +299,25 @@ export async function deriveArtists(
     const verdict = await adjudicate({
       title: event.title,
       description: event.description,
+      // What the venue's own field said, so a name it reported cannot vanish
+      // from the verdict unseen. Not sent when it only echoes the title.
+      venuePerformers: observed.filter(
+        (name) =>
+          name.trim().toLowerCase() !== event.title.trim().toLowerCase(),
+      ),
     });
+    // A cover or tribute night: the names in the listing are the artists being
+    // honored, so nobody is billed. The observed bill (the same names) must not
+    // stand in for it, and a caller that rewrites stored bills skips the row.
+    if (verdict.coversOtherArtists === true) {
+      return {
+        headliners: [],
+        supportingArtists: [],
+        isConcert: verdict.isConcert,
+        adjudicated: true,
+        coversOtherArtists: true,
+      };
+    }
     // The venue named somebody, and the adjudicator reads only the title and
     // description. A verdict that bills nobody for a concert has not told us
     // who the venue's own performer field should have been, so the observed
@@ -226,11 +327,13 @@ export async function deriveArtists(
       return observedBill();
     }
     return {
-      headliners: verdict.headliners,
-      supportingArtists: mergeObservedSupporting(
+      ...tidyBill(
         verdict.headliners,
-        verdict.supportingArtists,
-        nonEmpty(event.observedSupportingArtists),
+        mergeObservedSupporting(
+          verdict.headliners,
+          verdict.supportingArtists,
+          nonEmpty(event.observedSupportingArtists),
+        ),
       ),
       isConcert: verdict.isConcert,
       adjudicated: true,
