@@ -31,8 +31,14 @@ export {
   CATEGORY_FALLBACK,
   CATEGORY_KEYS,
   categoryFor,
+  tabFor,
+  NOTIFICATION_TABS,
+  DEFAULT_NOTIFICATION_TAB,
 } from './definitions/categories';
-export type { CategoryPresentation } from './definitions/categories';
+export type {
+  CategoryPresentation,
+  NotificationTab,
+} from './definitions/categories';
 export {
   relTime,
   relTimeLong,

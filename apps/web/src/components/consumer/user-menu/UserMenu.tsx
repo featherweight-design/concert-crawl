@@ -106,14 +106,13 @@ const AccountMenuBodyContext = createContext<MenuBodyProps | null>(null);
 export type AccountMenuMode = 'menu' | 'notifications';
 
 /**
- * The desktop popover's panel height (the mobile sheet grows to its content).
- *
- * 340, not the 520 that `NotifDropdown` defaults to: 520 is the STANDALONE
- * dropdown's budget, and this panel is nested inside a 360px-wide account menu
- * that carries the identity card above it. The handoff's nested-menu component
- * takes `panelMaxHeight = 340` for exactly that reason.
+ * The desktop popover in notifications mode (addendum 2, item 16): the account
+ * panel swaps to What you missed, 390 wide under the avatar, and the whole
+ * panel (back row, header, tabs, list) is bounded at 700 tall with the list
+ * scrolling inside it. The mobile sheet grows to its content instead.
  */
-const PANEL_MAX_HEIGHT = 340;
+const PANEL_MAX_HEIGHT = 700;
+const PANEL_WIDTH = 390;
 
 /**
  * Owns the account menu's open state for every trigger in the app — the
@@ -895,7 +894,7 @@ function UserMenuPopover(props: MenuBodyProps) {
         right: 0,
         top: 'calc(100% + 8px)',
         zIndex: 100,
-        width: 360,
+        width: isNotifMode(props) ? PANEL_WIDTH : 360,
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-strong)',
         borderRadius: 14,

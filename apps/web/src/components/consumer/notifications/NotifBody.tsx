@@ -12,10 +12,16 @@
 // The prop wins when supplied (chrome passes API truth); the derived count is
 // the fallback, matching the mock.
 
+import { useState } from 'react';
 import type { ConsumerNotification } from '@/lib/notifications';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
 import { NMono } from './NMono';
-import { NotifHeader } from './NotifHeader';
+import {
+  DEFAULT_NOTIFICATION_TAB,
+  tabFor,
+  type NotificationTab,
+} from './definitions/categories';
+import { NotifHeader, NOTIF_TABPANEL_ID, notifTabId } from './NotifHeader';
 import { NotifItem } from './NotifItem';
 import { NotifDayDivider } from './NotifDayDivider';
 import { NotifLoading, NotifEmpty, NotifError } from './NotifStates';
@@ -64,12 +70,16 @@ export const NotifBody = ({
    */
   notice?: string;
 }) => {
+  // Opens on Shows. The header count stays the total across all three tabs.
+  const [tab, setTab] = useState<NotificationTab>(DEFAULT_NOTIFICATION_TAB);
+  const hasList = state === 'ready' && items.length > 0;
+  const visible = items.filter((item) => tabFor(item.category) === tab);
   const derived = unreadCount ?? countUnread(items);
   // Loading and error headers read zero: there is nothing on screen to mark.
   const headerCount = state === 'ready' ? derived : 0;
   const groups = grouped
-    ? groupByDay(items, now)
-    : [{ key: '', items }].filter((group) => group.items.length > 0);
+    ? groupByDay(visible, now)
+    : [{ key: '', items: visible }].filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -79,6 +89,8 @@ export const NotifBody = ({
         onMarkAll={onMarkAll}
         onClose={onClose}
         showClose={showClose}
+        tab={hasList ? tab : undefined}
+        onTab={hasList ? setTab : undefined}
       />
       {notice !== undefined && (
         <div
@@ -112,17 +124,23 @@ export const NotifBody = ({
           <NotifEmpty onAction={onAction} />
         )}
         {state === 'ready' && items.length > 0 && (
-          <div role="list" aria-label={NOTIFICATIONS_COPY.panelTitle}>
-            {groups.map((group, index) => (
-              <div key={`${group.key}-${index}`} role="presentation">
-                {group.key !== '' && <NotifDayDivider label={group.key} />}
-                {group.items.map((item) => (
-                  <div role="listitem" key={item.id}>
-                    <NotifItem item={item} onOpen={onOpen} now={now} />
-                  </div>
-                ))}
-              </div>
-            ))}
+          <div
+            role="tabpanel"
+            id={NOTIF_TABPANEL_ID}
+            aria-labelledby={notifTabId(tab)}
+          >
+            <div role="list" aria-label={NOTIFICATIONS_COPY.segments[tab]}>
+              {groups.map((group, index) => (
+                <div key={`${group.key}-${index}`} role="presentation">
+                  {group.key !== '' && <NotifDayDivider label={group.key} />}
+                  {group.items.map((item) => (
+                    <div role="listitem" key={item.id}>
+                      <NotifItem item={item} onOpen={onOpen} now={now} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
             <div
               style={{
                 padding: '8px 16px 16px',
