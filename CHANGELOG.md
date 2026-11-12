@@ -1,3 +1,22 @@
+# [1.374.0](https://github.com/featherweight-design/concert-crawl/compare/v1.373.0...v1.374.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** explicit cache headers on reports, skip handle lookups for anonymous callers ([f5cd518](https://github.com/featherweight-design/concert-crawl/commit/f5cd51836295d58b87f8df99c2b0aaca4a7653e4))
+* **api:** hide fan handles and ids from anonymous event callers, add statusSource ([7e40895](https://github.com/featherweight-design/concert-crawl/commit/7e40895942d8b31266c9b292f13a7a60123f89c3))
+* **web:** address the review on the artist expected status follow-up (4c) ([58ef311](https://github.com/featherweight-design/concert-crawl/commit/58ef311b7fac92b3dd3b91d62a03c53410da3e09))
+* **web:** close the pause panel review findings ([5d95ae4](https://github.com/featherweight-design/concert-crawl/commit/5d95ae427a6fe413c81ed8babb00c8c22dde85f4))
+* **web:** keep the phone sheet's pause button at its drawn height ([be10367](https://github.com/featherweight-design/concert-crawl/commit/be10367ccce7589fb94bbd85fed4875059e54e0d))
+* **web:** keep unknown code kinds read-only, format joined counts, correct the reactivate note ([18441b6](https://github.com/featherweight-design/concert-crawl/commit/18441b6e7b103647090e18e20b572c9c4077e9f2))
+* **web:** member share codes on admin invite codes: Personal label, N joined, Revoke only ([ba3651d](https://github.com/featherweight-design/concert-crawl/commit/ba3651d64b2f941e27467660dd691c2238d33490)), closes [#254](https://github.com/featherweight-design/concert-crawl/issues/254)
+
+
+### Features
+
+* **web:** pin artist writes to the loaded status and say followers on Matched (4c) ([c7f36e3](https://github.com/featherweight-design/concert-crawl/commit/c7f36e30fcd5fe05046ed00a908d7473d6a8f279))
+* **web:** the shared Pause panel, with the full pause body ([067ba39](https://github.com/featherweight-design/concert-crawl/commit/067ba39b2c29cdc5658fafbc5c540d8751f47727))
+
 # [1.373.0](https://github.com/featherweight-design/concert-crawl/compare/v1.372.0...v1.373.0) (2026-11-12)
 
 
