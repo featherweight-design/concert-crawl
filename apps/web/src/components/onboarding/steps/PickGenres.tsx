@@ -9,6 +9,7 @@
 // (Gate 1 decision D3: artists carry no genre of their own either, so the
 // filter runs against the genres of the events they are billed on.)
 
+import { genreLabel } from '@/components/consumer/filter-bar/filter-defs';
 import { Eyebrow, StepHeading, Lede } from './_primitives';
 import { ONBOARDING_COPY } from '../definitions/copy';
 
@@ -58,10 +59,9 @@ export function PickGenres({ genres, selected, onToggle }: PickGenresProps) {
                   fontSize: 13.5,
                   fontWeight: 700,
                   letterSpacing: '-0.01em',
-                  textTransform: 'capitalize',
                 }}
               >
-                {genre}
+                {genreLabel(genre)}
               </button>
             );
           })}

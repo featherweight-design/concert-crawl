@@ -22,7 +22,7 @@ export const THEME_META: Record<ThemeName, ThemeMeta> = {
   pulse: { label: 'Pulse', mode: 'dark', role: 'EDM' },
   forge: { label: 'Forge', mode: 'dark', role: 'Metal' },
   bluenote: { label: 'Blue Note', mode: 'dark', role: 'Jazz' },
-  drip: { label: 'Drip', mode: 'dark', role: 'Hip-Hop' },
+  drip: { label: 'Drip', mode: 'dark', role: 'Hip-hop' },
   cedar: { label: 'Cedar', mode: 'dark', role: 'Indie / Folk' },
   gloss: { label: 'Gloss', mode: 'dark', role: 'Pop' },
 };

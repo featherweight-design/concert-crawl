@@ -91,9 +91,15 @@ export const VIBE_ORDER: readonly string[] = [
   'comedy',
 ];
 
-function genreLabel(genre: string): string {
+/**
+ * A genre bucket's display name, in sentence case like every other label:
+ * `hip-hop` reads "Hip-hop", never "Hip-Hop". The letter after `&` is
+ * capitalised too, since R&B is an initialism. The Vibe filter and the
+ * onboarding genre chips both draw it, so the two never disagree.
+ */
+export function genreLabel(genre: string): string {
   return genre.replace(
-    /(^|[-&])([a-z])/g,
+    /(^|&)([a-z])/g,
     (_, sep, char) => sep + char.toUpperCase(),
   );
 }

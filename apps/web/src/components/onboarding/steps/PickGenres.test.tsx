@@ -24,6 +24,20 @@ describe('PickGenres', () => {
     expect(screen.getAllByRole('checkbox')).toHaveLength(2);
   });
 
+  it('names each bucket as the Vibe filter does, in sentence case', () => {
+    render(
+      <PickGenres
+        genres={['hip-hop', 'jazz']}
+        selected={new Set()}
+        onToggle={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('checkbox', { name: 'Hip-hop' })).toHaveTextContent(
+      'Hip-hop',
+    );
+    expect(screen.getByRole('checkbox', { name: 'Jazz' })).toBeInTheDocument();
+  });
+
   it('reports selection through aria-checked, not colour alone', () => {
     render(
       <PickGenres
@@ -32,11 +46,11 @@ describe('PickGenres', () => {
         onToggle={vi.fn()}
       />,
     );
-    expect(screen.getByRole('checkbox', { name: 'punk' })).toHaveAttribute(
+    expect(screen.getByRole('checkbox', { name: 'Punk' })).toHaveAttribute(
       'aria-checked',
       'true',
     );
-    expect(screen.getByRole('checkbox', { name: 'jazz' })).toHaveAttribute(
+    expect(screen.getByRole('checkbox', { name: 'Jazz' })).toHaveAttribute(
       'aria-checked',
       'false',
     );
@@ -46,7 +60,7 @@ describe('PickGenres', () => {
     render(
       <PickGenres genres={['punk']} selected={new Set()} onToggle={vi.fn()} />,
     );
-    expect(screen.getByRole('checkbox', { name: 'punk' })).toHaveStyle({
+    expect(screen.getByRole('checkbox', { name: 'Punk' })).toHaveStyle({
       minHeight: '44px',
     });
   });
@@ -60,7 +74,7 @@ describe('PickGenres', () => {
         onToggle={onToggle}
       />,
     );
-    fireEvent.click(screen.getByRole('checkbox', { name: 'jazz' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Jazz' }));
     expect(onToggle).toHaveBeenCalledWith('jazz');
   });
 
