@@ -563,7 +563,11 @@ describe('what the adjudicator is given', () => {
       supportingArtists: [],
     }));
     await deriveArtists(
-      { ...base, title: 'Open House', observedPerformers: ['Open House'] },
+      {
+        ...base,
+        title: 'Open Mic Night',
+        observedPerformers: ['Open Mic Night'],
+      },
       adjudicate,
     );
     expect(adjudicate).toHaveBeenCalledWith(
