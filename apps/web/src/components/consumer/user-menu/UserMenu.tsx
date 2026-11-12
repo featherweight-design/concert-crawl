@@ -171,7 +171,7 @@ export function AccountMenuProvider({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AccountMenuMode>('menu');
   const [isMobile, setIsMobile] = useState(false);
-  const [submissionCount, setSubmissionCount] = useState(0);
+  const [liveSubmissionCount, setLiveSubmissionCount] = useState(0);
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
   const [avatarSecondColor, setAvatarSecondColor] =
@@ -192,7 +192,7 @@ export function AccountMenuProvider({
     // Reset per-user state whenever the signed-in user changes (or signs out),
     // so a previous account's cached handle/color or submission count can't
     // linger on a shared device until fetchMe resolves.
-    setSubmissionCount(0);
+    setLiveSubmissionCount(0);
     setAvatarSecondColor(null);
     if (!userId) {
       // Signed-out: there's nothing to fetch, so resolve the loading state
@@ -312,7 +312,7 @@ export function AccountMenuProvider({
   useEffect(() => {
     // Wait for Clerk before treating a null token as "nothing to fetch" —
     // otherwise a transient pre-hydration null would strand the effect for the
-    // rest of the session, leaving submissionCount at 0 and the avatar cache
+    // rest of the session, leaving liveSubmissionCount at 0 and the avatar cache
     // unrefreshed. The effect re-runs once isLoaded flips true.
     if (!isLoaded) return;
     if (!userId) return;
@@ -335,7 +335,9 @@ export function AccountMenuProvider({
           setAvatarSecondColor(profile.avatarSecondColor);
           // The menu's meta reads "N live", so it takes the live count, not the
           // total the delete sheet needs.
-          setSubmissionCount(profile.submissionCounts.live);
+          // Optional chaining: web and API deploy separately, and a cached
+          // /me from before the API shipped the breakdown has no such field.
+          setLiveSubmissionCount(profile.submissionCounts?.live ?? 0);
           writeAvatarCache(userId, {
             handle: profile.handle,
             avatarColor: profile.avatarColor,
@@ -382,7 +384,7 @@ export function AccountMenuProvider({
     identityLabel,
     isAdmin,
     buildLabel,
-    submissionCount,
+    liveSubmissionCount,
     avatarHandle,
     avatarColor,
     avatarSecondColor,
@@ -557,7 +559,7 @@ interface MenuBodyProps {
   onSettings: () => void;
   onSignOut: () => void;
   onDismiss: () => void;
-  submissionCount: number;
+  liveSubmissionCount: number;
   avatarHandle: string | null;
   avatarColor: AvatarColor | null;
   /** The second colour of the user's pair; drawn by the identity card only. */
@@ -753,7 +755,7 @@ function MenuBody({
   onSettings,
   onSignOut,
   onDismiss,
-  submissionCount,
+  liveSubmissionCount,
   avatarHandle,
   avatarColor,
   avatarSecondColor,
@@ -871,10 +873,10 @@ function MenuBody({
       <MenuRow
         label={CONSUMER_COPY.userMenu.rows.submittedPrices}
         href="/me?section=submissions"
-        {...(submissionCount > 0
+        {...(liveSubmissionCount > 0
           ? {
               meta: CONSUMER_COPY.userMenu.rows.submittedPricesMeta(
-                submissionCount,
+                liveSubmissionCount,
               ),
             }
           : {})}

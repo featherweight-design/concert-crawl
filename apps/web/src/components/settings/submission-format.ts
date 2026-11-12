@@ -1,4 +1,7 @@
-import type { UserSubmissionItem } from '@concert-crawl/types';
+import {
+  tallySubmissionCounts,
+  type UserSubmissionItem,
+} from '@concert-crawl/types';
 
 export const formatPrice = (cents: number): string =>
   `$${Math.round(cents / 100)}`;
@@ -71,13 +74,18 @@ export const matchesFilter = (
 
 export const countsByFilter = (
   submissions: Pick<UserSubmissionItem, 'status'>[],
-): Record<SubmissionFilter, number> => ({
-  all: submissions.length,
-  live: submissions.filter((sub) => matchesFilter(sub, 'live')).length,
-  pending: submissions.filter((sub) => matchesFilter(sub, 'pending')).length,
-  priceChecks: submissions.filter((sub) => matchesFilter(sub, 'priceChecks'))
-    .length,
-});
+): Record<SubmissionFilter, number> => {
+  // The shared tally (the same one /v1/users/me uses), so the page's chips and
+  // every other surface count by one definition. Closed rows (stale, archived)
+  // are in `all` and in no filter, so the filters need not sum to All.
+  const counts = tallySubmissionCounts(submissions);
+  return {
+    all: counts.total,
+    live: counts.live,
+    pending: counts.pending,
+    priceChecks: counts.priceChecks,
+  };
+};
 
 export interface SubmissionMonth {
   /** `YYYY-MM` in Mountain Time, the month the price was submitted. */
