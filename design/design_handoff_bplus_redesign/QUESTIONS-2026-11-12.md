@@ -291,3 +291,12 @@ Fully drawn (PR2 can be built to this): concerts_m, concerts_menu_d (open past-r
 | board / PR | what it says | the question |
 | --- | --- | --- |
 | more-s-d_profile and its five sibling Settings panels (B18a, #154) | The profile card is drawn only for an account with a handle. | [Design] What does the profile card look like with no handle, when there's no initial to fill the ring? Built as today: the plain dashed placeholder avatar, no gradient ring, and no cutout gap over the banner. Draw the ring, the banner overlap and the placeholder, or confirm. |
+
+## Late: from lanes a6 (bp2) and 9d (2026-11-12)
+
+| board / PR | what it says | the question |
+| --- | --- | --- |
+| B12/B13 stamp boards (a6) | Every stamp board is dark-themed, with the venue's VENUE_GLYPHS `to` colour (ring and text) and `from` colour (glyph) as pure hex. | [Design] Nothing is drawn for Light, where pale venue colours (yellows, limes) may fall below contrast on the light surface. The fix PR builds the board hex unchanged on Light and records the measured contrast. Should Light use a darker ink? |
+| Theme screenshots, page glow (a6) | A tinted page glow shows on all 8 other themes, Light included (pink on Light, purple on Pulse, blue on Jade). | [Design] No values are given, and Electric's #BC77F2 tint is neither a theme token nor a mix of two. The glows PR ships it on Electric only. What is each theme's glow? |
+| Browse filter bar at 640 (a6) | No board covers 640. The desktop segmented bar's values shrink to stubs there. | [Design] What layout goes between the phone chip row and the desktop bar? |
+| screens/02-mobile/bp-m-account_m.jpg, #213 drag-down dismiss (9d, from ec1) | The account sheet draws no grabber, only the gradient top edge and the identity card. Main already has a 36x4 handle strip above the identity card (it predates #213). #213 makes the sheet draggable, with the card and strip as the pull zone. | [Design] Keep the strip now that the sheet drags, drop it to match the board, or draw a different affordance? No board draws the drag gesture for any sheet: BottomSheet has no handle, ModalShell has a 36x4 strip, and bp-s-cal_jump_m has a centred grabber. Draw one drag affordance for sheets? |
