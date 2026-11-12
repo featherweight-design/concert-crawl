@@ -22,7 +22,7 @@ const notification = (
   over: Partial<ConsumerNotification> = {},
 ): ConsumerNotification => ({
   id: 'n1',
-  category: 'watch.pricedrop',
+  category: 'watch.cancelled',
   title: 'The price for Geese at Bluebird Theater dropped from $41 to $28.',
   body: "Cheapest it's been since the on-sale.",
   actionUrl: '/events/e1',
@@ -110,6 +110,53 @@ describe('NotifBody — panel states', () => {
     expect(
       screen.queryByText(NOTIFICATIONS_COPY.emptyTitle),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('NotifBody — tabs (addendum 2, item 1)', () => {
+  const mixed = [
+    notification({ id: 'show', category: 'watch.soldout', title: 'S' }),
+    notification({ id: 'alert', category: 'artist.new_show', title: 'A' }),
+    notification({ id: 'crew', category: 'crew.joined', title: 'C' }),
+    notification({ id: 'price', category: 'watch.pricedrop', title: 'P' }),
+    notification({ id: 'check', category: 'contest.resolved', title: 'R' }),
+    notification({ id: 'odd', category: 'venue.gone', title: 'U' }),
+  ];
+  const titles = (): string[] =>
+    screen
+      .getAllByRole('listitem')
+      .map((row) => row.textContent ?? '')
+      .map((text) => text.charAt(0));
+
+  it('opens on Shows with all three tabs and the total count', () => {
+    render(<NotifBody state="ready" items={mixed} unreadCount={6} now={NOW} />);
+    expect(screen.getByRole('tab', { name: 'Shows' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'Alerts' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Prices' })).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(
+      screen.getByText(NOTIFICATIONS_COPY.panelSub(6)),
+    ).toBeInTheDocument();
+  });
+
+  it('puts artist.*, crew.* and unknown categories under Alerts', () => {
+    render(<NotifBody state="ready" items={mixed} now={NOW} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Alerts' }));
+    expect(titles().sort()).toEqual(['A', 'C', 'U']);
+  });
+
+  it('puts pricedrop and contest.* under Prices, not Shows', () => {
+    render(<NotifBody state="ready" items={mixed} now={NOW} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Prices' }));
+    expect(titles().sort()).toEqual(['P', 'R']);
+  });
+
+  it('shows no tabs without a list', () => {
+    render(<NotifBody state="ready" items={[]} now={NOW} />);
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   });
 });
 
@@ -361,8 +408,13 @@ describe('NotifItem', () => {
   });
 
   it('spells the category out, so colour is never the only signal', () => {
-    render(<NotifItem item={notification()} now={NOW} />);
-    expect(screen.getByText('Price drop')).toBeInTheDocument();
+    render(
+      <NotifItem
+        item={notification({ category: 'watch.pricedrop' })}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByText('Prices')).toBeInTheDocument();
     expect(screen.getByText('2h')).toBeInTheDocument();
   });
 

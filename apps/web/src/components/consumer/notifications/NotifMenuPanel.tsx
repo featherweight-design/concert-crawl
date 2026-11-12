@@ -105,6 +105,9 @@ export const NotifMenuPanel = ({
         flexDirection: 'column',
         flex: 1,
         minHeight: 0,
+        // Bounds the WHOLE panel (back row, header, tabs, list) so the list
+        // scrolls inside it rather than the panel growing past the viewport.
+        ...(maxHeight === undefined ? {} : { maxHeight }),
       }}
     >
       {/* A real `<button>`: nothing interactive is nested inside it, so the
@@ -175,7 +178,6 @@ export const NotifMenuPanel = ({
           onNavigate();
           router.push(NOTIFICATIONS_EMPTY_ACTION_HREF);
         }}
-        {...(maxHeight === undefined ? {} : { maxHeight })}
       />
     </div>
   );

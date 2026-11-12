@@ -93,7 +93,7 @@ const notification = (
   over: Partial<ConsumerNotification> = {},
 ): ConsumerNotification => ({
   id: 'n1',
-  category: 'watch.pricedrop',
+  category: 'watch.cancelled',
   title: 'The price for Geese at Bluebird Theater dropped from $41 to $28.',
   body: "Cheapest it's been since the on-sale.",
   actionUrl: '/events/e1',

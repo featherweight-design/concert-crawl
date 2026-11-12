@@ -17,6 +17,14 @@
 
 import { NOTIFICATIONS_COPY } from './definitions/copy';
 import { NMono } from './NMono';
+import {
+  NOTIFICATION_TABS,
+  type NotificationTab,
+} from './definitions/categories';
+
+/** DOM id of a tab's button; the list region points back at it. */
+export const notifTabId = (tab: NotificationTab): string => `notif-tab-${tab}`;
+export const NOTIF_TABPANEL_ID = 'notif-tabpanel';
 
 export const NotifHeader = ({
   count,
@@ -24,8 +32,16 @@ export const NotifHeader = ({
   onMarkAll,
   onClose,
   showClose = false,
+  tab,
+  onTab,
 }: {
   count: number;
+  /**
+   * The active tab. Supplied only when there is a list to filter (addendum 2,
+   * item 1); with no list there is nothing to switch between, so no tabs.
+   */
+  tab?: NotificationTab | undefined;
+  onTab?: ((next: NotificationTab) => void) | undefined;
   /**
    * Whether the first page has actually landed. "All caught up." while the
    * query is still in flight — or has failed outright — is a guess presented
@@ -164,5 +180,53 @@ export const NotifHeader = ({
         </button>
       )}
     </div>
+    {tab !== undefined && onTab !== undefined && (
+      <div
+        role="tablist"
+        aria-label={NOTIFICATIONS_COPY.panelTitle}
+        style={{ display: 'flex', gap: 4, marginTop: 6 }}
+      >
+        {NOTIFICATION_TABS.map((key) => {
+          const selected = key === tab;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              id={notifTabId(key)}
+              aria-selected={selected}
+              aria-controls={NOTIF_TABPANEL_ID}
+              onClick={() => onTab(key)}
+              style={{
+                all: 'unset',
+                outline: 'revert',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+                minHeight: 32,
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '6px 12px',
+                borderRadius: 8,
+                fontFamily: 'Inter, system-ui',
+                fontSize: 13,
+                fontWeight: selected ? 700 : 600,
+                color: selected ? 'var(--fg)' : 'var(--fg-muted)',
+                border: '1px solid transparent',
+                // B+ (addendum 2, `notif-*-m`): the selected tab is a pill
+                // with a signal-to-accent hairline, the rest are bare text.
+                ...(selected
+                  ? {
+                      background:
+                        'linear-gradient(var(--border), var(--border)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+                    }
+                  : {}),
+              }}
+            >
+              {NOTIFICATIONS_COPY.segments[key]}
+            </button>
+          );
+        })}
+      </div>
+    )}
   </div>
 );

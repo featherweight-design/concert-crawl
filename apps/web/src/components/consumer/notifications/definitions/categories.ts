@@ -53,43 +53,43 @@ export interface CategoryPresentation {
 export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
   {
     'watch.cancelled': {
-      label: 'Cancelled',
+      label: 'Shows',
       ink: 'var(--danger)',
       glyph: 'cancelled',
       verb: 'Show cancelled',
     },
     'watch.postponed': {
-      label: 'Moved',
+      label: 'Shows',
       ink: 'var(--warning)',
       glyph: 'postponed',
       verb: 'Show moved',
     },
     'watch.soldout': {
-      label: 'Sold out',
+      label: 'Shows',
       ink: 'var(--warning)',
       glyph: 'soldout',
       verb: 'Show sold out',
     },
     'watch.backonsale': {
-      label: 'Back on',
+      label: 'Shows',
       ink: 'var(--success)',
       glyph: 'backonsale',
       verb: 'Tickets back on sale',
     },
     'watch.pricedrop': {
-      label: 'Price drop',
+      label: 'Prices',
       ink: 'var(--success)',
       glyph: 'pricedrop',
       verb: 'Price drop',
     },
     'contest.resolved': {
-      label: 'Price check',
+      label: 'Prices',
       ink: 'var(--fg-muted)',
       glyph: 'resolved',
       verb: 'Price check result',
     },
     'contest.needs_info': {
-      label: 'Needs you',
+      label: 'Prices',
       ink: 'var(--signal)',
       glyph: 'needsinfo',
       verb: 'Price check needs you',
@@ -109,19 +109,19 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
       verb: 'Artist page fixed',
     },
     'crew.going': {
-      label: 'Crew',
+      label: 'Crews',
       ink: 'var(--accent)',
       glyph: 'crew',
       verb: 'Crew plans',
     },
     'crew.joined': {
-      label: 'Crew',
+      label: 'Crews',
       ink: 'var(--accent)',
       glyph: 'crew',
       verb: 'New crew member',
     },
     'crew.left': {
-      label: 'Crew',
+      label: 'Crews',
       ink: 'var(--accent)',
       glyph: 'crew',
       verb: 'Crew member left',
@@ -143,3 +143,37 @@ export const CATEGORY_KEYS: NotificationCategory[] = Object.keys(
 
 export const categoryFor = (raw: string): CategoryPresentation =>
   isNotificationCategory(raw) ? CATEGORY_MAP[raw] : CATEGORY_FALLBACK;
+
+/**
+ * The three tabs of the panel (addendum 2, item 1). Each category belongs to
+ * exactly one. A price drop is a Prices item, not a Shows one.
+ */
+export type NotificationTab = 'shows' | 'alerts' | 'prices';
+
+export const NOTIFICATION_TABS: readonly NotificationTab[] = [
+  'shows',
+  'alerts',
+  'prices',
+];
+
+/** The tab the panel opens on. */
+export const DEFAULT_NOTIFICATION_TAB: NotificationTab = 'shows';
+
+const TAB_BY_CATEGORY: Record<NotificationCategory, NotificationTab> = {
+  'watch.cancelled': 'shows',
+  'watch.postponed': 'shows',
+  'watch.soldout': 'shows',
+  'watch.backonsale': 'shows',
+  'watch.pricedrop': 'prices',
+  'contest.resolved': 'prices',
+  'contest.needs_info': 'prices',
+  'artist.new_show': 'alerts',
+  'artist.report_fixed': 'alerts',
+  'crew.going': 'alerts',
+  'crew.joined': 'alerts',
+  'crew.left': 'alerts',
+};
+
+/** An unknown category (the CATEGORY_FALLBACK path) lands under Alerts. */
+export const tabFor = (raw: string): NotificationTab =>
+  isNotificationCategory(raw) ? TAB_BY_CATEGORY[raw] : 'alerts';
