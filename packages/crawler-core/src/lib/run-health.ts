@@ -92,7 +92,9 @@ export function describeDegradation(degradation: RunDegradation): string {
   const names = degradation.venueNames.join(', ');
   const count = degradation.venueNames.length;
   if (degradation.errorKind === 'llm_quota') {
-    return `${count} venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: ${names}.`;
+    // llm_quota also covers our own monthly LLM budget with "If it runs out"
+    // on (LlmBudgetSpentError), so the line names both places to look.
+    return `${count} venues failed on the LLM account's usage limit or the monthly LLM budget in admin settings. This is account-wide, not a venue problem: ${names}.`;
   }
   if (degradation.errorKind === 'llm_rate_limit') {
     return `${count} venues failed on the LLM's rate limit or capacity after retries. This is account-wide, not a venue problem: ${names}.`;

@@ -450,6 +450,9 @@ export async function crawlVenue(
   llmBudget: LlmBudgetStatus | null = null,
 ): Promise<CrawlVenueResult> {
   const getBrowser = memoizeBrowser(browser);
+  // Budget spent with "If it runs out" on: no Haiku call in this crawl at all,
+  // so artist adjudication falls back to its no-adjudicator path too.
+  const llmStopped = llmBudgetVerdict(llmBudget) === 'over_stop';
   const id = crawlRunId ?? crypto.randomUUID();
   const startedAt = Date.now();
   // Every page this run fetches, flushed with its crawl_runs row.
@@ -1080,7 +1083,9 @@ export async function crawlVenue(
       }
       const derived = await deriveArtists(
         evt,
-        (await aiUseAllowedFor(evt.sourceUrl)) && (await payloadAiUseAllowed())
+        !llmStopped &&
+          (await aiUseAllowedFor(evt.sourceUrl)) &&
+          (await payloadAiUseAllowed())
           ? adjudicateEvent
           : null,
       );
@@ -1925,9 +1930,12 @@ export async function crawlVenue(
     // the Sentry event only.
     // A venue's own fetch error is never the LLM account's, whatever its text:
     // its 429 is a block and must reach the block branch below.
+    // Our own spent budget is matched by type first, so rewording its message
+    // can never turn a skip into a venue strike.
     const isAccountWide =
-      !(err instanceof CrawlFetchError) &&
-      isAccountWideKind(classifyCrawlError(String(err)).kind);
+      err instanceof LlmBudgetSpentError ||
+      (!(err instanceof CrawlFetchError) &&
+        isAccountWideKind(classifyCrawlError(String(err)).kind));
 
     // Set below when this failure paused or blocked the venue, and written once
     // the failed run row is safely recorded.
