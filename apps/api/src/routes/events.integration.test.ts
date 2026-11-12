@@ -247,6 +247,42 @@ describe('GET /v1/events — integration', () => {
     expect(body.data.data).toHaveLength(1);
     expect(body.data.data[0]?.title).toBe('Active Show');
   });
+
+  describe('search', () => {
+    const titlesFor = async (search: string): Promise<string[]> => {
+      const res = await app.request(
+        `/v1/events?search=${encodeURIComponent(search)}`,
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: { data: { title: string }[] };
+      };
+      return body.data.data.map((row) => row.title).sort();
+    };
+
+    const seedRows = async (): Promise<void> => {
+      const venue = await seedVenue({ name: 'Plain Hall', slug: 'plain-hall' });
+      for (const name of ['a_b', 'axb', 'a%c']) {
+        await seedEvent(venue.id, {
+          title: name,
+          artist: name,
+          date: '2027-06-01',
+        });
+      }
+    };
+
+    // `%` and `_` are LIKE wildcards; a search must match them literally.
+    it('matches LIKE metacharacters literally', async () => {
+      await seedRows();
+      expect(await titlesFor('_')).toEqual(['a_b']);
+      expect(await titlesFor('%')).toEqual(['a%c']);
+    });
+
+    it('treats a whitespace-only search as no filter', async () => {
+      await seedRows();
+      expect(await titlesFor('   ')).toEqual(['a%c', 'a_b', 'axb']);
+    });
+  });
 });
 
 describe('GET /v1/events/:id — integration', () => {

@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../lib/validator.js';
+import { containsPattern } from '../lib/escape-like.js';
 import { z } from 'zod';
 import {
   db,
@@ -126,7 +127,13 @@ const listEventsSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
   venueSlug: listParam(z.string(), { splitCommas: true }),
-  search: z.string().max(200).optional(),
+  // Trimmed, and blank becomes undefined, so whitespace-only means no filter.
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((val) => (val === '' ? undefined : val)),
   filterPrice: z.enum(['under-25', '25-50', '50-plus', 'tbd']).optional(),
   filterVibe: listParam(z.string().max(100)),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -330,9 +337,9 @@ eventsRouter.get(
 
     if (search) {
       const searchCondition = or(
-        ilike(events.title, `%${search}%`),
-        ilike(events.artist, `%${search}%`),
-        ilike(venues.name, `%${search}%`),
+        ilike(events.title, containsPattern(search)),
+        ilike(events.artist, containsPattern(search)),
+        ilike(venues.name, containsPattern(search)),
       );
       if (searchCondition) conditions.push(searchCondition);
     }

@@ -143,6 +143,22 @@ describe('admin artists routes', () => {
       ).toEqual(['a%c']);
     });
 
+    it('matches a backslash literally', async () => {
+      await seedArtist({ canonicalName: 'a\\b', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'a_b', matchStatus: 'ambiguous' });
+      await seedArtist({ canonicalName: 'axb', matchStatus: 'ambiguous' });
+
+      const res = await app.request(
+        '/v1/admin/artists?search=%5C&upcoming=false',
+        { headers: ADMIN_HEADERS },
+      );
+      const body = await res.json();
+      expect(res.status).toBe(200);
+      expect(
+        body.data.map((row: { canonicalName: string }) => row.canonicalName),
+      ).toEqual(['a\\b']);
+    });
+
     it('filters to the not_an_artist tombstones', async () => {
       await seedArtist({
         canonicalName: 'bass bingo night',

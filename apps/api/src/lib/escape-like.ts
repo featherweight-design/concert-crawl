@@ -3,3 +3,7 @@
 // backslash as the default escape character.
 export const escapeLikePattern = (raw: string): string =>
   raw.replace(/[\\%_]/g, (char) => `\\${char}`);
+
+// The safe "contains" pattern for user input: escaped, then wrapped in `%`.
+export const containsPattern = (raw: string): string =>
+  `%${escapeLikePattern(raw)}%`;
