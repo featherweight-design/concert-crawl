@@ -1,3 +1,21 @@
+# [1.348.0](https://github.com/featherweight-design/concert-crawl/compare/v1.347.0...v1.348.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address launch-animation review (startup stills public, easing, StrictMode, flag cache) ([e92e148](https://github.com/featherweight-design/concert-crawl/commit/e92e14889cc8c5609c5204432b3f1b2e465143c0))
+* **web:** launch mark starts at 128/96 and is centred, per addendum 2 item 22 ([685e43b](https://github.com/featherweight-design/concert-crawl/commit/685e43b1d3882db527c683fea448448cb12338db))
+* **web:** launch review fixes: iPhone 16 stills, tighter startup matcher, dismiss with no animation ([fdfed7f](https://github.com/featherweight-design/concert-crawl/commit/fdfed7f88ee2d05187b8f58d5e496804917fdb82))
+* **web:** launch-animation flag in flag-map tests; decide cold start before caching the flag ([7514062](https://github.com/featherweight-design/concert-crawl/commit/7514062fe5275f5503b951728101d743418a1494))
+* **web:** pull to refresh edge cases, offline list and release note follow the build ([2eeda50](https://github.com/featherweight-design/concert-crawl/commit/2eeda507b956a427e1dafaa243d0075070f02a3c))
+* **web:** pull to refresh follows addendum 2 item 21, drop the My shows offline note ([bfe5624](https://github.com/featherweight-design/concert-crawl/commit/bfe56241417b0610b86764081d99159c559a9747))
+
+
+### Features
+
+* **web:** offline pill, saved-shows page, My shows offline note and pull to refresh (B+ B22b) ([eeb21f9](https://github.com/featherweight-design/concert-crawl/commit/eeb21f990bc0ffbaaa3693631ab25b2a6e8764b7))
+* **web:** the launch animation and iPhone startup images, behind switches (B+ B23) ([85a840e](https://github.com/featherweight-design/concert-crawl/commit/85a840ee58b7492e4be85273afe53c8de8ae14f6))
+
 # [1.347.0](https://github.com/featherweight-design/concert-crawl/compare/v1.346.0...v1.347.0) (2026-11-12)
 
 
