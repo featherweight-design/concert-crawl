@@ -308,10 +308,15 @@ describe('proxy — auth gate (#841)', () => {
   it('keeps other /api/pwa paths gated for an unauthenticated caller', async () => {
     const { middlewareHandler } = await import('./proxy');
 
-    const req = new NextRequest('http://localhost/api/pwa/other');
-    const result = await middlewareHandler(makeAuth(null), req);
-
-    expect(result).not.toBeUndefined();
+    // `/api/pwa/startupfoo` is the near miss the `startup/` matcher exists to
+    // keep gated.
+    for (const path of ['/api/pwa/other', '/api/pwa/startupfoo']) {
+      const auth = makeAuth(null);
+      await expect(
+        middlewareHandler(auth, new NextRequest(`http://localhost${path}`)),
+      ).rejects.toThrow('Unauthorized');
+      expect(auth.protect).toHaveBeenCalled();
+    }
   });
 
   it('lets the unauthenticated site social card through without protect', async () => {
