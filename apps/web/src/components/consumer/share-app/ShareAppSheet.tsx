@@ -191,6 +191,7 @@ export const ShareAppSheet = ({
       onClose={onClose}
       title={titleText}
       maxWidth={DIALOG_WIDTH}
+      edgeFromSm
     >
       {/* Grabber: decorative, phone only. The sheet closes by its X, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}

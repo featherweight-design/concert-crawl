@@ -139,6 +139,29 @@ describe('BottomSheet', () => {
     expect(dialog.style.getPropertyValue('--sheet-max')).toBe('480px');
   });
 
+  it('keeps the plain bordered dialog from sm up unless edgeFromSm is set', () => {
+    const { rerender } = render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const plain = screen.getByRole('dialog').className;
+    expect(plain).toContain('max-sm:sheet-edge');
+    expect(plain).toContain('sm:border-border');
+
+    rerender(
+      <BottomSheet open onClose={() => {}} title="test" edgeFromSm>
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const edged = screen.getByRole('dialog').className;
+    // The gradient edge now draws at every width, with no flat border to
+    // cover it from sm up.
+    expect(edged).toContain('sheet-edge');
+    expect(edged).not.toContain('max-sm:sheet-edge');
+    expect(edged).not.toContain('sm:border-border');
+  });
+
   it('draws the close as text when closeText is given, with no X icon', () => {
     const onClose = vi.fn();
     render(
