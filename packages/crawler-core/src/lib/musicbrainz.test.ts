@@ -57,16 +57,18 @@ describe('makeMusicBrainzLookup', () => {
     expect(sleeps[0]).toBeGreaterThanOrEqual(1000);
   });
 
-  it('reads a failed call as not known, and asks again next time', async () => {
+  it('reads a failed call as UNKNOWN (null, never false), and asks again next time', async () => {
     const fetchImpl = vi
       .fn()
       .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce(new Response('busy', { status: 503 }))
       .mockResolvedValueOnce(Response.json({ artists: [{ name: 'Nas' }] }));
     const lookup = makeMusicBrainzLookup({
       fetchImpl,
       sleepImpl: async () => {},
     });
-    expect(await lookup('Nas')).toBe(false);
+    expect(await lookup('Nas')).toBeNull();
+    expect(await lookup('Nas')).toBeNull();
     expect(await lookup('Nas')).toBe(true);
   });
 });

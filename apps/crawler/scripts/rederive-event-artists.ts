@@ -147,6 +147,11 @@ async function main(): Promise<void> {
         .map(([name, count]) => `${name}=${count}`)
         .join(' '),
   );
+  for (const item of result.unresolvedJoined) {
+    console.warn(
+      `[rederive-event-artists] unresolved joined name "${item.name}" in "${item.title}" (model guess: ${names(item.guess)})`,
+    );
+  }
   if (dryRun) {
     console.warn(
       '[rederive-event-artists] dry run — nothing written. Re-run with --apply.',
@@ -202,6 +207,12 @@ async function main(): Promise<void> {
           (item) =>
             `| ${cell(item.title)} | ${cell(item.name)} | ${cell(names(item.guess))} |`,
         ),
+      ...(result.unresolvedJoined.length > SUMMARY_MAX_ROWS
+        ? [
+            '',
+            `…and ${result.unresolvedJoined.length - SUMMARY_MAX_ROWS} more unresolved names; the step log lists every one.`,
+          ]
+        : []),
       '',
     ];
     appendFileSync(summaryFile, `${lines.join('\n')}\n`);
