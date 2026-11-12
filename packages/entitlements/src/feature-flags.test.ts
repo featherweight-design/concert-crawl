@@ -38,10 +38,11 @@ describe('feature flag registry', () => {
     }
   });
 
-  it('defaults spotify-sync and crews off, release-notes on', () => {
+  it('defaults spotify-sync, crews and launch-animation off, release-notes on', () => {
     expect(featureFlagDefaults()).toEqual({
       'spotify-sync': false,
       crews: false,
+      'launch-animation': false,
       'release-notes': true,
     });
   });
