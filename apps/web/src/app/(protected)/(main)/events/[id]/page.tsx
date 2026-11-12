@@ -291,6 +291,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           event.status,
         )}
         status={event.status}
+        delistedAt={event.delistedAt}
         {...(event.status === 'upcoming' &&
         event.date < localDateString(event.venue.timezone)
           ? { pastVenueSlug: event.venue.slug }

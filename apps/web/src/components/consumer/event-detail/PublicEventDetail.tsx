@@ -130,6 +130,7 @@ export const PublicEventDetail = ({
           event.status,
         )}
         status={event.status}
+        delistedAt={event.delistedAt}
         surface="event"
         artworkUrl={event.imageUrl}
         photoUrl={event.artistPhotoUrl ?? null}

@@ -95,7 +95,14 @@ export const SupportingLine = ({
     <div
       role="group"
       aria-label={supportingA11yLabel(lead, artists)}
-      className={`flex min-w-0 items-baseline ${isRow ? 'font-mono' : ''}`}
+      // `detail` flows as one inline run, so a wrapped bill reads as a single
+      // centred block with "with" glued to the first name; as two flex items,
+      // "with" was stranded at the left edge while the names centred.
+      className={
+        overArt
+          ? 'min-w-0 text-balance'
+          : `flex min-w-0 items-baseline ${isRow ? 'font-mono' : ''}`
+      }
       style={{ lineHeight: 1.35 }}
     >
       <span
