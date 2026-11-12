@@ -7,7 +7,6 @@ Every string on the boards. **DRAFT** strings are Design’s wording and go thro
 | Key | Text | Status |
 |---|---|---|
 | `menu.row` | Share Concert Crawl | DRAFT |
-| `menu.metaInvite` | Your invite | DRAFT |
 
 ## Share sheet
 
@@ -21,7 +20,6 @@ Every string on the boards. **DRAFT** strings are Design’s wording and go thro
 | `sh.bodyOpen` | Every Denver show in one calendar. Send it to someone you’d go with. | DRAFT |
 | `sh.qrAria` | QR code for your invite link | DRAFT |
 | `sh.qrAriaOpen` | QR code for concertcrawl.app | DRAFT |
-| `sh.enlargeHint` | Tap the code to make it bigger | DRAFT |
 | `sh.joinedLabel` | Joined with your code | DRAFT |
 | `sh.joinedNone` | No one yet | DRAFT |
 | `sh.joinedNoneSub` | Your code doesn’t run out. | DRAFT |
@@ -46,7 +44,7 @@ Every string on the boards. **DRAFT** strings are Design’s wording and go thro
 | `fs.title` | Scan to get in | DRAFT |
 | `fs.titleOpen` | Scan to open Concert Crawl | DRAFT |
 | `fs.done` | Done | DRAFT |
-| `fs.note` | Screen stays on while this is open. | DRAFT |
+| `fs.note` | Dim room? Turn your brightness up. | DRAFT |
 
 ## Link preview (OG image)
 

@@ -13,7 +13,7 @@ Canvas: see the PR description. Boards: `screens/` (2x JPG) and `boards/` (stand
 
 | Section | What it shows |
 |---|---|
-| 01 Where it lives | One new row in the account menu, last in **You** (after Submitted prices): QR tile in accent, `YOUR INVITE` meta before launch. Phone sheet and desktop popover. |
+| 01 Where it lives | One new row in the account menu, last in **You** (after Submitted prices): QR tile in accent, no meta text. Phone sheet and desktop popover. |
 | 02 The share sheet | The QR drawn as a ticket: the code above a perforation, **Joined with your code** below it (count and faces). Share… (system sheet), Copy link, Full screen. At 320, desktop dialog, Light. Full screen is always white so it scans in a dark venue. |
 | 03 States | Making your invite (first open), Link copied, Share failed, Couldn't make the code, Code turned off. |
 | 04 After launch | Plain link, no stub, the title changes. The signed-out menu gains the row too (first in App); before launch it is absent signed out. |
@@ -25,11 +25,12 @@ Canvas: see the PR description. Boards: `screens/` (2x JPG) and `boards/` (stand
 1. **One personal code per account, unlimited.** Made on first open of the sheet, then reused for good. A plain `BETA-XXXX-XXXX` code from the existing generator, so it works with today's `/auth/code` checks and the sign-up handoff's prefilled board. It never names the person.
 2. **The short `/i/` link the poster already uses.** The QR encodes `HTTPS://CONCERTCRAWL.APP/I/<CODE>` in capitals: QR alphanumeric mode, version 3 at error correction Q, quiet zone 4. `inviteShortLinkRedirect` in `apps/web/src/proxy.ts` already sends it to `/auth/code?code=`. The copied and shared link is lowercase except the code.
 3. **Built on the live share pieces.** The sheet is `components/pwa/BottomSheet` (mobile sheet, centered dialog on desktop), like `consumer/share/ShareSheet.tsx`, and uses its helpers in `lib/share/destinations` (`canSystemShare`, `systemShare`, `copyLink`). `Share…`, `Copy link` and `Link copied` are live strings reused word for word.
-4. **Share… only where the browser has it.** Phone: Share… leads, Copy link and Full screen sit under it. Desktop: Copy link leads; Share… shows only when `navigator.share` exists; no Full screen and no enlarge chip.
-5. **Full screen** is a white page whatever the theme, with the QR at the screen width minus 56px, the link and the joined line. It holds a Wake Lock while open (where supported) and gives it back on Done. Tapping the QR in the sheet opens it too.
-6. **Joined with your code** counts redemptions of this person's code (`invite_code_redemptions`) and shows up to four faces with the live "mix two" avatars, then +N. No one yet shows three dashed seats and "Your code doesn't run out."
-7. **Code turned off.** An unlimited code could end up somewhere public. An admin revokes it with the existing `revoked_at`, and the sheet falls back to the plain site link (the waitlist before launch) with a one-line note. The person is not told why, and nothing new is made for them automatically.
-8. **One glow per screen.** The ticket is this feature's own motif (perforation and notches), echoing the poster's tear-off tabs. The sheet's blue-to-pink edge follows the corners.
+4. **Share… only where the browser has it.** Phone: Share… leads, Copy link and Full screen sit under it. Desktop: Copy link leads; Share… shows only when `navigator.share` exists; no Full screen.
+5. **Full screen** is a white page whatever the theme, with the QR at the screen width minus 56px, the link and the joined line. The Full screen press is the only visible way in; tapping the QR is a shortcut with no icon of its own (Hugh found the two redundant, 2026-11-12). It holds a Wake Lock while open (where supported) and gives it back on Done.
+6. **Brightness.** Hugh asked for brightness up on open and back down on Done. No browser lets a web page or PWA set screen brightness (iOS and Android keep it to native apps), so the page does the most it can: pure white at full contrast, the screen kept awake, and a foot line asking for brightness. If Concert Crawl ever ships in a native shell, raise brightness there on open and restore the previous level on Done, on leaving the page and when the app goes to the background.
+7. **Joined with your code** counts redemptions of this person's code (`invite_code_redemptions`) and shows up to four faces with the live "mix two" avatars, then +N. No one yet shows three dashed seats and "Your code doesn't run out."
+8. **Code turned off.** An unlimited code could end up somewhere public. An admin revokes it with the existing `revoked_at`, and the sheet falls back to the plain site link (the waitlist before launch) with a one-line note. The person is not told why, and nothing new is made for them automatically.
+9. **One glow per screen.** The ticket is this feature's own motif (perforation and notches), echoing the poster's tear-off tabs. The sheet's blue-to-pink edge follows the corners.
 
 ## What the build needs (for the CLI plan)
 
