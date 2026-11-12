@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   buildPauseBody,
+  canPause,
   canRecrawl,
   fanOut,
+  recrawlExclusion,
   formFromBody,
   isPickable,
   monthGrid,
@@ -153,16 +155,17 @@ describe('pause rules', () => {
 });
 
 describe('bulk rules', () => {
+  const row = (over: Partial<RecrawlFacts>): RecrawlFacts => ({
+    active: true,
+    verified: true,
+    crawlPausedAt: null,
+    blockedAt: null,
+    consecutiveFailures: 0,
+    robotsTxtAllowed: true,
+    ...over,
+  });
+
   it('re-crawls only a live, verified venue that is crawling', () => {
-    const row = (over: Partial<RecrawlFacts>): RecrawlFacts => ({
-      active: true,
-      verified: true,
-      crawlPausedAt: null,
-      blockedAt: null,
-      consecutiveFailures: 0,
-      robotsTxtAllowed: true,
-      ...over,
-    });
     expect(canRecrawl(row({}))).toBe(true);
     expect(canRecrawl(row({ crawlPausedAt: TODAY }))).toBe(false);
     expect(
@@ -186,7 +189,36 @@ describe('bulk rules', () => {
     expect(result).toEqual({
       failed: ['b', 'c', 'd'],
       inlineError: 'Pick a date after today',
+      inlineFailed: ['c'],
     });
+  });
+
+  it('pauses only venues being crawled', () => {
+    expect(canPause(row({}))).toBe(true);
+    expect(canPause(row({ crawlPausedAt: TODAY }))).toBe(false);
+    expect(
+      canPause(row({ crawlPausedAt: TODAY, consecutiveFailures: 3 })),
+    ).toBe(false);
+    expect(canPause(row({ blockedAt: TODAY }))).toBe(false);
+    expect(canPause(row({ robotsTxtAllowed: false }))).toBe(false);
+  });
+
+  it('names the Re-crawl exclusion: paused only when every one left out is', () => {
+    expect(recrawlExclusion([row({})])).toBeNull();
+    expect(
+      recrawlExclusion([
+        row({}),
+        row({ crawlPausedAt: TODAY }),
+        row({ crawlPausedAt: TODAY, consecutiveFailures: 3 }),
+      ]),
+    ).toBe('paused');
+    expect(
+      recrawlExclusion([
+        row({ crawlPausedAt: TODAY }),
+        row({ blockedAt: TODAY }),
+      ]),
+    ).toBe('other');
+    expect(recrawlExclusion([row({ verified: false })])).toBe('other');
   });
 
   it('keeps at most three calls out at once, and every id still goes', async () => {

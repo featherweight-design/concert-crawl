@@ -26,11 +26,13 @@ import {
 } from './venue-list-rules';
 import { PausePanel } from './PausePanel';
 import {
+  BULK_BUTTON,
   SELECT_BAR_HEIGHT,
   SelectBar,
   SelectBox,
   useVenueBulk,
 } from './VenueBulk';
+import { canPause } from './pause-rules';
 
 const COPY = ADMIN_COPY.venuesList;
 
@@ -41,22 +43,7 @@ const SELECT_COLUMNS =
   '18px minmax(0, 1.6fr) 96px 196px 84px minmax(0, 1.4fr) 92px';
 
 /** The head's Select / Done button (`A3/03/venues-select-d`). */
-const HEAD_BUTTON: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: 36,
-  padding: '0 12px',
-  borderRadius: 9,
-  fontSize: 13,
-  fontWeight: 600,
-  whiteSpace: 'nowrap',
-  fontFamily: 'inherit',
-  cursor: 'pointer',
-  background: 'var(--surface-2)',
-  color: 'var(--fg)',
-  border: '1px solid var(--border-strong)',
-};
+const HEAD_BUTTON: CSSProperties = { ...BULK_BUTTON, height: 36, fontSize: 13 };
 
 const HEAD_CELL: CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -365,6 +352,8 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
   const bulk = useVenueBulk({ listed, visible: shown, isPhone });
   const selecting = bulk.selecting && !isPhone;
   const pickedShown = bulk.picked.length;
+  // Bulk Pause sends only venues being crawled (see `canPause`).
+  const pausable = bulk.picked.filter(canPause);
   const allShown = shown.length > 0 && pickedShown === shown.length;
   const someShown = pickedShown > 0 && !allShown;
 
@@ -493,7 +482,12 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
             <button
               type="button"
               onClick={selecting ? bulk.stop : bulk.start}
-              style={HEAD_BUTTON}
+              // Done waits for a request out: it settles into Select's state.
+              disabled={selecting && bulk.busy}
+              style={{
+                ...HEAD_BUTTON,
+                opacity: selecting && bulk.busy ? 0.45 : 1,
+              }}
             >
               {selecting ? COPY.done : COPY.select}
             </button>
@@ -541,7 +535,8 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
         })}
       </div>
 
-      {!isPhone && bulk.toast}
+      {/* On the phone too: a failure from before a switch stays said. */}
+      {bulk.toast}
 
       {sorted.length === 0 ? (
         <EmptyState title={COPY.noMatch} />
@@ -641,13 +636,13 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
           <SelectBar bulk={bulk} />
         </>
       )}
-      {bulk.pausing && bulk.picked.length > 0 && (
+      {bulk.pausing && pausable.length > 0 && (
         <PausePanel
-          venues={bulk.picked}
+          venues={pausable}
           onClose={bulk.closePause}
           onSubmit={(body) =>
             bulk.pause(
-              bulk.picked.map((venue) => venue.id),
+              pausable.map((venue) => venue.id),
               body,
             )
           }

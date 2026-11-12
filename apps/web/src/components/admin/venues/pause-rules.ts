@@ -177,10 +177,11 @@ export type PauseOutcome = { ok: true } | { ok: false; error: string | null };
 
 /**
  * Re-crawl is for a live venue we're crawling. Paused and auto-paused venues
- * wait on Resume (orchestrator ruling, bulk too), and the API refuses hidden
- * and unverified ones. Blocked and robots-disallowed venues the API would
- * take, but we leave them out on purpose: a blocked site's 403 or 429 would
- * come straight back, and a disallow is never overridden (crawl rules).
+ * wait on Resume (orchestrator ruling, bulk too). The API refuses hidden and
+ * unverified venues (400), paused ones (409) and robots-disallowed ones (409
+ * `robots_disallowed`), so those would only come back as failures. Blocked
+ * venues the API would take, but we leave them out on purpose: a blocked
+ * site's 403 or 429 would come straight back (crawl rules).
  */
 export type RecrawlFacts = Pick<
   VenueWithEventCount,
@@ -197,11 +198,43 @@ export const canRecrawl = (venue: RecrawlFacts): boolean => {
   return onSite === 'live' && crawling === 'crawling' && venue.verified;
 };
 
+/**
+ * Bulk Pause is for venues we're crawling. Pausing one already paused keeps
+ * its timestamp but overwrites its reason, note and resume date, which would
+ * relabel an auto-pause and could schedule a resume nobody reviewed; blocked
+ * and robots-disallowed venues aren't crawled either.
+ */
+export const canPause = (venue: RecrawlFacts): boolean =>
+  deriveVenueStatusChips(venue).crawling === 'crawling';
+
+/**
+ * Why some picked venues are left out of Re-crawl: `paused` when every one of
+ * them is paused or auto-paused (the drawn "Resume crawling to re-crawl"),
+ * `other` for any other mix, null when none are.
+ */
+export const recrawlExclusion = (
+  picked: readonly RecrawlFacts[],
+): 'paused' | 'other' | null => {
+  const left = picked.filter((venue) => !canRecrawl(venue));
+  if (left.length === 0) return null;
+  const allPaused = left.every((venue) => {
+    const { onSite, crawling } = deriveVenueStatusChips(venue);
+    return (
+      onSite === 'live' &&
+      venue.verified &&
+      (crawling === 'paused' || crawling === 'auto_paused')
+    );
+  });
+  return allPaused ? 'paused' : 'other';
+};
+
 export interface FanOutResult {
   /** Ids whose action did not land, in the order they were sent. */
   failed: string[];
-  /** A refusal of the body itself (a 422 date error), shown in the panel. */
+  /** The first refusal of the body itself (a 422 date error). */
   inlineError: string | null;
+  /** Ids that failed with such a refusal, a subset of `failed`. */
+  inlineFailed: string[];
 }
 
 /** At most this many bulk calls are out at once. */
@@ -234,10 +267,10 @@ export const fanOut = async (
             status: 'fulfilled',
             value,
           }),
-          (reason: unknown): PromiseRejectedResult => ({
-            status: 'rejected',
-            reason,
-          }),
+          (reason: unknown): PromiseRejectedResult => {
+            console.error('bulk venue action: call failed', { id, reason });
+            return { status: 'rejected', reason };
+          },
         );
     }
   };
@@ -245,6 +278,7 @@ export const fanOut = async (
     Array.from({ length: Math.min(limit, ids.length) }, () => worker()),
   );
   const failed: string[] = [];
+  const inlineFailed: string[] = [];
   let inlineError: string | null = null;
   settled.forEach((result, index) => {
     const id = ids[index];
@@ -253,8 +287,11 @@ export const fanOut = async (
       failed.push(id);
     } else if (!result.value.ok) {
       failed.push(id);
-      inlineError ??= result.value.error;
+      if (result.value.error !== null) {
+        inlineFailed.push(id);
+        inlineError ??= result.value.error;
+      }
     }
   });
-  return { failed, inlineError };
+  return { failed, inlineError, inlineFailed };
 };

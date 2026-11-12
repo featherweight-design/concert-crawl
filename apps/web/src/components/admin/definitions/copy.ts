@@ -585,8 +585,17 @@ export const ADMIN_COPY = {
       // MST in winter and 03:07 MDT in summer.
       recrawlNoneDone: 'The nightly crawl still runs.',
       // A re-crawl that failed for a reason other than the API refusing it
-      // (a 5xx, the network): the request itself didn't land.
-      recrawlErrored: 'The request didn’t go through.',
+      // (a 5xx, the network): the request itself didn't land. No full stop:
+      // `withCause` adds it.
+      recrawlErrored: 'The request didn’t go through',
+      // Beside Re-crawl when the venues left out aren't all paused (blocked,
+      // robots-disallowed, hidden or unverified ones among them).
+      recrawlSkipped: (count: number) => `${count} can’t be re-crawled`,
+      // Beside Pause: venues already paused, blocked or disallowed are left
+      // out, so an auto-pause keeps its own label.
+      pauseSkipped: (count: number) => `${count} not crawling`,
+      // A Try again leaves out failed venues no longer on screen.
+      notRetried: (names: string) => `Not tried again, out of view: ${names}.`,
       // The cause first, then what is still true: "Pick a date after today.
       // The other one is paused."
       withCause: (cause: string, rest: string) => `${cause}. ${rest}`,
