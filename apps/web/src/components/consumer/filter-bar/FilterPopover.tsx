@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import type { FilterOption } from './filter-defs';
+import { CheckboxMark } from './CheckboxMark';
 
 const copy = CONSUMER_COPY.filterBar.popover;
 
@@ -65,6 +66,14 @@ interface FilterPopoverProps {
   renderLeading?: ((option: FilterOption) => ReactNode) | undefined;
   /** Replaces the option list, for a body that is not a plain list. */
   children?: ReactNode | undefined;
+  /**
+   * Multi-select (Where and Vibe, addendum 2 item 6). When given, each row is
+   * a checkbox that toggles its value through `onToggle` and leaves the
+   * popover open; `value` is ignored.
+   */
+  multi?:
+    | { selected: readonly string[]; onToggle: (value: string) => void }
+    | undefined;
   onSelect: (nextValue: string) => void;
   onClose: () => void;
   /**
@@ -86,6 +95,7 @@ export function FilterPopover({
   width,
   renderLeading,
   children,
+  multi,
   onSelect,
   onClose,
   opener = null,
@@ -175,7 +185,8 @@ export function FilterPopover({
       : getPopoverLeft(anchorRect.left, fittedWidth, window.innerWidth);
 
   // The single-select rows apply and close at once, as the sheet does; the
-  // header's Clear is the way back to the resting value.
+  // header's Clear is the way back to the resting value. Multi-select rows
+  // toggle and stay open (below).
   const pick = (nextValue: string) => {
     onSelect(nextValue);
     onClose();
@@ -233,17 +244,60 @@ export function FilterPopover({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
         {children ??
-          options.map((option) => (
-            <OptionButton
-              key={option.value}
-              label={option.label}
-              leading={renderLeading?.(option)}
-              active={value === option.value}
-              onClick={() => pick(option.value)}
-            />
-          ))}
+          options.map((option) =>
+            multi ? (
+              <CheckOption
+                key={option.value}
+                label={option.label}
+                leading={renderLeading?.(option)}
+                checked={multi.selected.includes(option.value)}
+                onClick={() => multi.onToggle(option.value)}
+              />
+            ) : (
+              <OptionButton
+                key={option.value}
+                label={option.label}
+                leading={renderLeading?.(option)}
+                active={value === option.value}
+                onClick={() => pick(option.value)}
+              />
+            ),
+          )}
       </div>
     </div>
+  );
+}
+
+interface CheckOptionProps {
+  label: string;
+  checked: boolean;
+  leading?: ReactNode;
+  onClick: () => void;
+}
+
+/**
+ * A multi-select row: a real checkbox, with the same checked treatment the
+ * Where list draws (`bp-f-filt_where_d`): the raised surface, a bolder label
+ * and a filled box at the end.
+ */
+function CheckOption({ label, checked, leading, onClick }: CheckOptionProps) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={onClick}
+      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] text-left text-[13.5px] transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2 ${checked ? 'bg-surface-2' : ''}`}
+      style={{
+        padding: '9px 10px',
+        color: checked ? 'var(--fg)' : 'var(--fg-muted)',
+        fontWeight: checked ? 700 : 500,
+      }}
+    >
+      {leading}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <CheckboxMark checked={checked} />
+    </button>
   );
 }
 

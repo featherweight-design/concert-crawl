@@ -1,6 +1,6 @@
 # B+ B6: Browse filters (phase plan)
 
-Part of the [B+ umbrella plan](2026-11-11-bplus-redesign.md). **Boards:** `05-filters/bp-f-filt_d`, `_active_d`, `_where_d`, `_who_d` (desktop); `_m_rest`, `_m_active`, `_sheet_m`, `_venues_m` (390). **Ruling (Hugh, 2026-11-11):** single-select chips, as drawn. Multi-select is B25, behind a flag.
+Part of the [B+ umbrella plan](2026-11-11-bplus-redesign.md). **Boards:** `05-filters/bp-f-filt_d`, `_active_d`, `_where_d`, `_who_d` (desktop); `_m_rest`, `_m_active`, `_sheet_m`, `_venues_m` (390). **Ruling (Hugh, 2026-11-12, design addendum 2 item 6):** Where and Vibe are multi-select, as the boards draw them ("Bluebird +1", "2 venues", venue checkboxes). This supersedes the 2026-11-11 single-select ruling. The API side shipped in #189 (repeated `filterWhere` and `filterVibe` keys); When and Price stay single-select.
 
 ## Split
 
@@ -11,7 +11,7 @@ B6 crosses the ~800-line boundary, so it ships as two PRs on one shared filter m
 
 ## What doesn't change
 
-- URL params (`filterWhen`, `filterWhere`, `filterPrice`, `filterVibe`, `crew`, the follow scope), offset reset, clearing `filterWhen` in Cal view, the follow chip's entitlement and lapse handling, and the `crews` flag gate.
+- URL param names (`filterWhen`, `filterWhere`, `filterPrice`, `filterVibe`, `crew`, the follow scope; Where and Vibe repeat their key per value), offset reset, clearing `filterWhen` in Cal view, the follow chip's entitlement and lapse handling, and the `crews` flag gate.
 - The taste chip (Spotify sync is retired) renders wherever it does today.
 
 ## Route inventory

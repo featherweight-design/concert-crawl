@@ -81,10 +81,68 @@ export function getFilterOptions(
   return genres.map((genre) => ({ value: genre, label: genreLabel(genre) }));
 }
 
-export function getActiveFilterCount(
-  values: Partial<Record<FilterKey, string>>,
-) {
-  return Object.values(values).filter(Boolean).length;
+/**
+ * Where and Vibe take several values (Design addendum 2, item 6): the page URL
+ * repeats the key, and a show matches any chosen venue and any chosen vibe.
+ * When and Price stay single-valued.
+ */
+export const MULTI_FILTER_KEYS: readonly FilterKey[] = ['where', 'vibe'];
+
+export const isMultiFilter = (key: FilterKey): boolean =>
+  MULTI_FILTER_KEYS.includes(key);
+
+/** Every dimension's values, a single-valued one as a list of at most one. */
+export type FilterValues = Record<FilterKey, readonly string[]>;
+
+/** The dimensions holding at least one value, for "N shows match" and Clear all. */
+export function getActiveFilterCount(values: Partial<FilterValues>) {
+  return Object.values(values).filter((list) => list.length > 0).length;
+}
+
+/** `values` with `value` added, or removed if it was already there. */
+export const toggleValue = (
+  values: readonly string[],
+  value: string,
+): string[] =>
+  values.includes(value)
+    ? values.filter((candidate) => candidate !== value)
+    : [...values, value];
+
+/**
+ * The desktop segment's value: the first pick's label, then "+N" for the rest
+ * ("Bluebird +1"). Null when nothing set resolves to a label, so the segment
+ * falls back to its placeholder.
+ */
+export function getSegmentLabel(
+  key: FilterKey,
+  values: readonly string[],
+  venues: VenuePublic[],
+  genres: string[] = [],
+): string | null {
+  const first = values[0];
+  if (first === undefined) return null;
+  const label = getActiveFilterLabel(key, first, venues, genres);
+  if (label === null) return null;
+  return values.length > 1
+    ? copy.segment.moreCount(label, values.length - 1)
+    : label;
+}
+
+/**
+ * The phone chip's value: one pick reads as its name, several as a count
+ * ("2 venues", "2 vibes").
+ */
+export function getChipLabel(
+  key: FilterKey,
+  values: readonly string[],
+  venues: VenuePublic[],
+  genres: string[] = [],
+): string | null {
+  if (values.length > 1) {
+    if (key === 'where') return copy.venueCount(values.length);
+    if (key === 'vibe') return copy.vibeCount(values.length);
+  }
+  return getSegmentLabel(key, values, venues, genres);
 }
 
 export function getActiveFilterLabel(

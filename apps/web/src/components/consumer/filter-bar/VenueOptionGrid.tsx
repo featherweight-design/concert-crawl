@@ -2,12 +2,15 @@
 
 // The Where popover's body on desktop (B+ B6a): a search field over a
 // two-column list of every venue, each with its icon tile and neighborhood.
-// Single-select, like every other filter: picking a venue applies and closes.
+// Multi-select (Design addendum 2, item 6): each row is a checkbox, as the
+// `bp-f-filt_where_d` board draws it, and a pick toggles that venue without
+// closing the popover.
 
 import { useEffect, useRef, useState } from 'react';
 import type { VenuePublic } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueTile } from '@/components/consumer/venue-glyph';
+import { CheckboxMark } from './CheckboxMark';
 
 const copy = CONSUMER_COPY.filterBar.popover;
 
@@ -23,28 +26,16 @@ const SearchGlyph = () => (
   </svg>
 );
 
-const CheckGlyph = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-    <path
-      d="M2 6.5l2.5 2.5L10 3.5"
-      stroke="var(--signal)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 interface VenueOptionGridProps {
   venues: VenuePublic[];
-  value: string;
-  onPick: (slug: string) => void;
+  selected: readonly string[];
+  onToggle: (slug: string) => void;
 }
 
 export function VenueOptionGrid({
   venues,
-  value,
-  onPick,
+  selected,
+  onToggle,
 }: VenueOptionGridProps) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,23 +82,17 @@ export function VenueOptionGrid({
       ) : (
         <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
           {shown.map((venue) => {
-            const active = venue.slug === value;
+            const active = selected.includes(venue.slug);
             return (
               <button
                 key={venue.slug}
                 type="button"
+                role="checkbox"
+                aria-checked={active}
                 data-testid="venue-option"
-                onClick={() => onPick(venue.slug)}
-                aria-pressed={active}
-                className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2"
-                style={
-                  active
-                    ? {
-                        background:
-                          'color-mix(in oklab, var(--signal) 8%, transparent)',
-                      }
-                    : undefined
-                }
+                onClick={() => onToggle(venue.slug)}
+                // The board lifts a checked row onto the raised surface.
+                className={`flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2 ${active ? 'bg-surface-2' : ''}`}
               >
                 <VenueTile slug={venue.slug} name={venue.name} size={28} />
                 <span className="flex min-w-0 flex-1 flex-col">
@@ -127,7 +112,7 @@ export function VenueOptionGrid({
                     </span>
                   )}
                 </span>
-                {active && <CheckGlyph />}
+                <CheckboxMark checked={active} />
               </button>
             );
           })}

@@ -10,7 +10,11 @@ import {
   useTransition,
   type ReactNode,
 } from 'react';
-import type { CrewSummary, VenuePublic } from '@concert-crawl/types';
+import {
+  parseListParam,
+  type CrewSummary,
+  type VenuePublic,
+} from '@concert-crawl/types';
 import {
   CREWS_COPY,
   CrewLensPill,
@@ -28,9 +32,13 @@ import {
   FILTER_DEFS,
   FILTER_ORDER,
   type FilterKey,
+  type FilterValues,
   getActiveFilterCount,
-  getActiveFilterLabel,
+  getChipLabel,
   getFilterOptions,
+  getSegmentLabel,
+  isMultiFilter,
+  toggleValue,
 } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { TasteFilterChip } from './TasteFilterChip';
@@ -123,6 +131,35 @@ interface FilterBarProps {
   showCount?: number | null;
 }
 
+/**
+ * Marks drawn overlapping, each later one tucked under the edge of the one
+ * before (`bp-f-filt_active_d`: "Bluebird +1" over two venue tiles,
+ * "Electronic +1" over two genre dots). A single mark renders as it is.
+ */
+function StackedMarks({
+  children,
+  testId,
+  tight = false,
+}: {
+  children: ReactNode[];
+  testId: string;
+  /** The 7px dots overlap by a sliver; the 20px tiles by a third. */
+  tight?: boolean;
+}) {
+  return (
+    <span
+      aria-hidden
+      data-testid={testId}
+      className={cn(
+        'inline-flex shrink-0 items-center',
+        tight ? '[&>*+*]:-ml-0.5' : '[&>*+*]:-ml-1.5',
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function FilterBar({
   venues,
   genres = [],
@@ -144,14 +181,18 @@ export function FilterBar({
   const { enabled: crewsEnabled } = useFeatureFlag('crews');
   const crews = crewsEnabled ? crewsProp : [];
 
+  // A list writes one repeated key per value (`filterWhere=a&filterWhere=b`),
+  // the shape `buildEventsApiParams` reads; an empty list or string removes
+  // the key. Every other param is kept as it was.
   const updateParams = useCallback(
-    (updates: Record<string, string>) => {
+    (updates: Record<string, string | readonly string[]>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(updates)) {
-        if (value) {
-          params.set(key, value);
+        params.delete(key);
+        if (typeof value === 'string') {
+          if (value) params.set(key, value);
         } else {
-          params.delete(key);
+          for (const item of value) params.append(key, item);
         }
       }
       params.delete('offset');
@@ -179,11 +220,18 @@ export function FilterBar({
   >({});
   const [opener, setOpener] = useState<HTMLElement | null>(null);
 
-  const filterValues: Partial<Record<FilterKey, string>> = {
-    when: searchParams.get('filterWhen') ?? '',
-    where: searchParams.get('filterWhere') ?? '',
-    price: searchParams.get('filterPrice') ?? '',
-    vibe: searchParams.get('filterVibe') ?? '',
+  // Where and Vibe read every value of their repeated key through the API's
+  // own list rule (trim, drop blanks, dedupe, cap), so the bar shows exactly
+  // the list `buildEventsApiParams` sends. When and Price stay single-valued.
+  const readSingle = (key: string): string[] => {
+    const value = searchParams.get(key);
+    return value ? [value] : [];
+  };
+  const filterValues: FilterValues = {
+    when: readSingle('filterWhen'),
+    where: parseListParam(searchParams.getAll('filterWhere')),
+    price: readSingle('filterPrice'),
+    vibe: parseListParam(searchParams.getAll('filterVibe')),
   };
 
   const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal';
@@ -224,7 +272,9 @@ export function FilterBar({
   const activeOptions = openDimension
     ? getFilterOptions(openDimension, venues, genres)
     : [];
-  const activeValue = openDimension ? (filterValues[openDimension] ?? '') : '';
+  const activeValue = openDimension
+    ? (filterValues[openDimension][0] ?? '')
+    : '';
 
   const setFilterValue = useCallback(
     (key: FilterKey, value: string) => {
@@ -232,6 +282,21 @@ export function FilterBar({
     },
     [updateParams],
   );
+
+  // A multi-select pick adds the value, or removes it if it was already set.
+  const toggleFilterValue = (key: FilterKey, value: string) => {
+    updateParams({
+      [FILTER_DEFS[key].queryKey]: toggleValue(filterValues[key], value),
+    });
+  };
+
+  const multiFor = (key: FilterKey) =>
+    isMultiFilter(key)
+      ? {
+          selected: filterValues[key],
+          onToggle: (value: string) => toggleFilterValue(key, value),
+        }
+      : undefined;
 
   // The lens rides a search param like every other Browse state, so it
   // survives a refresh and a shared URL. An id with no matching crew (a stale
@@ -276,26 +341,46 @@ export function FilterBar({
   );
 
   const dimensionSegment = (key: FilterKey): BarSegment => {
-    const value = filterValues[key] ?? '';
-    const activeLabel = value
-      ? getActiveFilterLabel(key, value, venues, genres)
-      : null;
-    const venue =
-      key === 'where' && value
-        ? venues.find((candidate) => candidate.slug === value)
-        : undefined;
+    const values = filterValues[key];
+    const activeLabel = getSegmentLabel(key, values, venues, genres);
+    // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
+    // the genre dots for Vibe. It draws two; the stack shows the first two.
     let leading: ReactNode = null;
-    if (venue) {
-      leading = <VenueTile slug={venue.slug} name={venue.name} size={20} />;
-    } else if (key === 'vibe' && value) {
-      leading = <GenreDot genre={value} />;
+    if (key === 'where') {
+      const picked = values
+        .map((slug) => venues.find((candidate) => candidate.slug === slug))
+        .filter((venue): venue is VenuePublic => venue !== undefined)
+        .slice(0, 2);
+      if (picked.length > 0) {
+        leading = (
+          <StackedMarks testId="segment-venue-stack">
+            {picked.map((venue) => (
+              <VenueTile
+                key={venue.slug}
+                slug={venue.slug}
+                name={venue.name}
+                size={20}
+              />
+            ))}
+          </StackedMarks>
+        );
+      }
+    } else if (key === 'vibe' && values.length > 0) {
+      leading = (
+        <StackedMarks testId="segment-vibe-stack" tight>
+          {values.slice(0, 2).map((genre) => (
+            <GenreDot key={genre} genre={genre} />
+          ))}
+        </StackedMarks>
+      );
     }
     return {
       key,
       eyebrow: SEGMENT_LABEL[key],
       value: activeLabel ?? SEGMENT_PLACEHOLDER[key],
       leading,
-      active: Boolean(value),
+      active: values.length > 0,
+      // The ✕ clears the whole dimension, every venue or vibe in it.
       clear: () => setFilterValue(key, ''),
     };
   };
@@ -463,12 +548,12 @@ export function FilterBar({
         {FILTER_ORDER.map((key) => {
           if (key === 'when' && isCalendarView) return null;
 
-          const value = filterValues[key] ?? '';
-          const activeLabel = value
-            ? getActiveFilterLabel(key, value, venues, genres)
-            : null;
+          const values = filterValues[key];
+          // One pick reads as its name, several as "2 venues" or "2 vibes"
+          // (`filt_m_active`). The B+ chip restyle itself is B6b.
+          const activeLabel = getChipLabel(key, values, venues, genres);
           const displayLabel = activeLabel ?? FILTER_DEFS[key].placeholder;
-          const isActive = Boolean(value);
+          const isActive = values.length > 0;
           const isOpen = openFilterKey === key;
 
           return (
@@ -613,6 +698,7 @@ export function FilterBar({
           placeholder={activeDef.placeholder}
           options={activeOptions}
           value={activeValue}
+          multi={multiFor(openDimension)}
           onClose={closePopover}
           onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
         />
@@ -639,17 +725,15 @@ export function FilterBar({
               ? (option) => <GenreDot genre={option.value} />
               : undefined
           }
+          multi={multiFor(openDimension)}
           onClose={closePopover}
           onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
         >
           {openDimension === 'where' ? (
             <VenueOptionGrid
               venues={venues}
-              value={activeValue}
-              onPick={(slug) => {
-                setFilterValue('where', slug);
-                closePopover();
-              }}
+              selected={filterValues.where}
+              onToggle={(slug) => toggleFilterValue('where', slug)}
             />
           ) : undefined}
         </FilterPopover>
