@@ -4,6 +4,7 @@ import {
   FEATURE_FLAG_KEYS,
   featureFlagDefaults,
   flagForEntitlement,
+  isFeatureFlagKey,
 } from './feature-flags.js';
 
 describe('feature flag registry', () => {
@@ -38,11 +39,10 @@ describe('feature flag registry', () => {
     }
   });
 
-  it('defaults spotify-sync, crews and launch-animation off, release-notes on', () => {
+  it('defaults spotify-sync and crews off, release-notes on', () => {
     expect(featureFlagDefaults()).toEqual({
       'spotify-sync': false,
       crews: false,
-      'launch-animation': false,
       'release-notes': true,
     });
   });
@@ -53,6 +53,13 @@ describe('feature flag registry', () => {
     expect(Object.keys(featureFlagDefaults()).sort()).toEqual(
       [...FEATURE_FLAG_KEYS].sort(),
     );
+  });
+
+  // The launch animation had a flag until 2026-11-12; a leftover DB row with
+  // that key must read as "not a flag", not as one.
+  it('does not recognise the retired launch-animation key', () => {
+    expect(isFeatureFlagKey('launch-animation')).toBe(false);
+    expect(FEATURE_FLAG_KEYS).not.toContain('launch-animation');
   });
 
   it('reverse-looks-up a flag by the entitlement it restricts', () => {

@@ -12,7 +12,6 @@ import {
 const base = {
   standalone: true,
   alreadyPlayed: false,
-  flagCached: true,
   reducedMotion: false,
 };
 
@@ -23,14 +22,13 @@ afterEach(() => {
 });
 
 describe('shouldPlayLaunch', () => {
-  it('plays on a cold standalone start with the flag on', () => {
+  it('plays on a cold standalone start, with no switch to consult', () => {
     expect(shouldPlayLaunch(base)).toBe(true);
   });
 
   it.each([
     ['a browser tab', { standalone: false }],
     ['a later open in the same session', { alreadyPlayed: true }],
-    ['the flag off', { flagCached: false }],
     ['reduced motion', { reducedMotion: true }],
   ])('does not play in %s', (_label, override) => {
     expect(shouldPlayLaunch({ ...base, ...override })).toBe(false);

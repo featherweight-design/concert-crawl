@@ -66,31 +66,12 @@ describe('root metadata.icons', () => {
 });
 
 describe('root metadata.appleWebApp.startupImage', () => {
-  // The metadata is a module-level constant, so each case re-imports it under
-  // its own env.
-  const startupImageUnder = async (value: string | undefined) => {
-    vi.resetModules();
-    if (value === undefined) vi.unstubAllEnvs();
-    else vi.stubEnv('NEXT_PUBLIC_LAUNCH_STARTUP_IMAGES', value);
-    const { metadata: fresh } = await import('./layout');
-    vi.unstubAllEnvs();
-    return fresh.appleWebApp;
-  };
-
-  it('is absent unless the switch is "1", so iOS keeps its own splash', async () => {
-    const unset = await startupImageUnder(undefined);
-    expect(unset && typeof unset === 'object' && 'startupImage' in unset).toBe(
-      false,
-    );
-    const off = await startupImageUnder('0');
-    expect(off && typeof off === 'object' && 'startupImage' in off).toBe(false);
-  });
-
-  it('lists the launch stills when the switch is "1"', async () => {
-    const on = await startupImageUnder('1');
+  // No env var or flag gates the stills: they are always listed.
+  it('always lists the launch stills', () => {
+    const web = metadata.appleWebApp;
     const list =
-      on && typeof on === 'object' && 'startupImage' in on
-        ? on.startupImage
+      web && typeof web === 'object' && 'startupImage' in web
+        ? web.startupImage
         : null;
     expect(Array.isArray(list)).toBe(true);
     expect(list).toContainEqual(

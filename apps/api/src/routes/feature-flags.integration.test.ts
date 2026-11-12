@@ -115,7 +115,6 @@ describe('GET /v1/flags', () => {
     expect(body.data).toEqual({
       'spotify-sync': false,
       crews: false,
-      'launch-animation': false,
       'release-notes': true,
     });
   });
