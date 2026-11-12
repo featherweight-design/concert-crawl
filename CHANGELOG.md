@@ -1,3 +1,19 @@
+# [1.368.0](https://github.com/featherweight-design/concert-crawl/compare/v1.367.0...v1.368.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address the code review on the artists to check tab (4c A) ([4d3e3b5](https://github.com/featherweight-design/concert-crawl/commit/4d3e3b5c00424b1fef114628be8e4c20a526fe34))
+* **web:** address the review on the artists to check tab (4c A) ([1acc01a](https://github.com/featherweight-design/concert-crawl/commit/1acc01ae33ab2c5eeed095f6a3db934586ba48e0))
+* **web:** address the review on the glow PR ([ef6c00a](https://github.com/featherweight-design/concert-crawl/commit/ef6c00a103ef0ee6827a410487a18724ec4c8f17))
+* **web:** copy-review the artists to check strings (4c A) ([4a43972](https://github.com/featherweight-design/concert-crawl/commit/4a43972d1822254b38afd9bc7038e42a0cb42039))
+* **web:** page, image-ring and genre-dot glows to the B+ boards ([aa40a56](https://github.com/featherweight-design/concert-crawl/commit/aa40a561da2c5c58e758fd9243b93dcf556b7b03))
+
+
+### Features
+
+* **web:** rebuild the artists to check tab on the redesign (4c A) ([6706560](https://github.com/featherweight-design/concert-crawl/commit/6706560d86c0f66ed1ef407eda2a7e5d2c4b35b2))
+
 # [1.367.0](https://github.com/featherweight-design/concert-crawl/compare/v1.366.0...v1.367.0) (2026-11-12)
 
 
