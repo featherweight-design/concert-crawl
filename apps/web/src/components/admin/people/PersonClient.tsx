@@ -419,7 +419,9 @@ export function PersonClient({ userId }: { userId: string }) {
                 }}
               >
                 <Avatar handle={person.handle} size={32} />
-                <span style={{ flex: 1, minWidth: 0 }}>
+                <span
+                  style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}
+                >
                   <b>{name}</b>
                   <span
                     style={{
