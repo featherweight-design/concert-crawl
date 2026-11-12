@@ -133,6 +133,25 @@ The scratch data has **0 reported rows**, so the Reported queue, the expanded ro
 
 None. Every ambiguity above resolved from a drawn pattern. au2's Mission Ballroom glyph question is settled: Hugh accepted the glyph as drawn on 2026-11-11.
 
+## Re-run on the scratch fixtures (2026-11-12)
+
+9d seeded the fixtures on the scratch branch only: watched cancelled, postponed, sold-out and removed shows, a promoted sold-out report on a first-page show, poster code `BETA-AUDT-0001` (25 seats), and an open wrong-artist report on `/artists/youth-fountain`. Every previously unchecked cell was re-run on the local stack.
+
+**Themes.** No per-pass DB write was needed. The kit fails any cell whose page doesn't draw the asked-for theme, and every signed-in Light and Pulse cell passed and drew its theme. The signed-in theme cells are checked.
+
+| Surface | Cells | Result | Finding | Severity | Fix | Owner |
+|---|---|---|---|---|---|---|
+| 2 `/events/[id]` postponed | a4 `postponed-cta`, 9 | checked | Same shape as cancelled: the Your move block and watch strip came first, and the status card sat below the info rows. The board (`more-st-ev_post_m`) puts the card under the hero, then Watching for the new date. | major | Fixed in #157 alongside the cancelled fix | 11 |
+| 1 `/events` sold-out row | a4 `sold-out-chip`, 9 | checked | SOLD OUT sits in the price slot at the row's right. The board (`more-st-rows_board`) puts it inline after the name, with `—` in the price slot. | minor | Chip inline after the headliner; price slot shows `—` | a6 |
+| 1, 3 row edge | b5, f3 `watching` | checked | The left edge takes the genre colour on a sold-out row. On the board, status wins: pink for sold out, red for cancelled, amber for postponed. | minor | Status tone overrides the genre edge on status rows | a6 |
+| 3 `/watching` | f3 `watching`, 12 | checked | Watching rows have no left edge and no genre chip. The board's rows (shared by browse, watching, artist and crew) have both. | minor | Use the browse row's edge and chip on Watching | a6 |
+| 3 `/watching` removed | f3 `watching` | checked | The watched removed show (fixture 71c2d6c5) isn't listed at all. The board draws a dashed "NO LONGER LISTED" row with "The venue took this show down. It may be off." | major | Render the removed watch as the No longer listed row (A5 shipped the state in the API) | a6 |
+| 3 `/watching` cancelled, postponed | f3 `watching` | checked | Confirms the rows major above: the date is struck and the title isn't, and postponed is struck too. | (above) | (above) | a6 |
+| 7 Posters | s7, 12 | checked | Confirms au2's blocker: the Night/Paper picker overlaps its own sub-lines at 390, 640 and 1300. The code card, seats line and preview all render. | (blocker above) | (above) | au2 |
+| 8 Reported queue | s8, 24 | checked | Renders: Reported (1), a row with a `1 REPORT` badge and a Reports action, and an Artists nav badge of 1. The sheet's `reported` cells still showed Ambiguous selected because the click landed before hydration (a probe that waits passes). The inventory now waits for the table before clicking. | none | — | — |
+
+**Still unchecked:** the bell's wrong-artist category (s8) needs a notification row, and `/I/<code>` for the poster code wasn't sheeted (no inventory row).
+
 ## Needed before the unchecked cells can run (DB writes, orchestrator to route)
 
 1. Set the audit user's saved theme per pass (Electric, then a genre theme) for the signed-in theme passes of surfaces 1–4.
