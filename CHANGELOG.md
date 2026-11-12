@@ -1,3 +1,16 @@
+# [1.338.0](https://github.com/featherweight-design/concert-crawl/compare/v1.337.2...v1.338.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** declare the open-counter alias in its subquery and harden mocks ([7251520](https://github.com/featherweight-design/concert-crawl/commit/72515201214f55b4b1d39de930acd5b1546405f1))
+* **api:** lock the parent on every price check write and split 0099 ([48ec8b5](https://github.com/featherweight-design/concert-crawl/commit/48ec8b5649b069938728dcac2aebe3d7d4daa21b))
+
+
+### Features
+
+* **api:** let several fans file an update on a price under check ([49cc6f1](https://github.com/featherweight-design/concert-crawl/commit/49cc6f18ae44f583e8a348fb37726bcb929abff0))
+
 ## [1.337.2](https://github.com/featherweight-design/concert-crawl/compare/v1.337.1...v1.337.2) (2026-11-12)
 
 
