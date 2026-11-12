@@ -33,16 +33,13 @@ export function InviteCodeField() {
   return (
     <form
       onSubmit={submit}
+      // Below 360 the padding tightens so Redeem keeps its width beside the
+      // field (addendum 2, 15-320px/invite-320).
+      className="p-1.5 pl-4 max-[359px]:pl-[14px]"
       style={{
         display: 'flex',
-        // Lets Redeem take its own row below 390: its `w-full` there forces
-        // the wrap, so the 14-character code keeps the whole first row.
-        // Without flexWrap the full-width button would crush the input.
-        flexWrap: 'wrap',
         alignItems: 'center',
         gap: 8,
-        padding: 6,
-        paddingLeft: 16,
         borderRadius: 12,
         border: '1.5px solid transparent',
         background: `linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, ${INVITE_GRADIENT} border-box`,
@@ -61,7 +58,9 @@ export function InviteCodeField() {
         autoComplete="off"
         autoCapitalize="characters"
         spellCheck={false}
-        className="focus-visible:outline-none"
+        // The placeholder stays on one line below 360 at 12px and 0.04em, as
+        // the 320 board draws it. Typed text keeps 16px (no iOS zoom).
+        className="focus-visible:outline-none max-[359px]:placeholder:text-[12px] max-[359px]:placeholder:tracking-[0.04em]"
         style={{
           flex: 1,
           minWidth: 0,
@@ -77,14 +76,12 @@ export function InviteCodeField() {
       />
       <button
         type="submit"
-        className={`${FOCUS_RING} max-[389px]:w-full`}
+        className={`${FOCUS_RING} px-[18px] max-[359px]:px-4`}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          justifyContent: 'center',
           gap: 6,
           minHeight: 44,
-          padding: '0 18px',
           border: 'none',
           borderRadius: 9,
           background: INVITE_GRADIENT,

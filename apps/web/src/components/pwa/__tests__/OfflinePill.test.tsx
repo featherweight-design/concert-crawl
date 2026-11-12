@@ -4,6 +4,7 @@ import React from 'react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup, act } from '@testing-library/react';
 import { OfflinePill } from '../OfflinePill';
+import { OFFLINE_COPY } from '../definitions/copy';
 
 const setOnline = (value: boolean) => {
   Object.defineProperty(navigator, 'onLine', {
@@ -32,13 +33,16 @@ describe('OfflinePill', () => {
     expect(status.textContent).toMatch(/offline/i);
   });
 
-  it('stays on one line and ellipsises its label rather than wrapping (320px)', () => {
+  it('reads just "Offline" below 360px and the full label from 360 up', () => {
     setOnline(false);
     render(<OfflinePill />);
     const status = screen.getByRole('status');
     expect(status.className).toContain('whitespace-nowrap');
-    expect(status.className).toContain('min-w-0');
-    expect(status.querySelector('.truncate')?.textContent).toMatch(/offline/i);
+    const full = screen.getByText(OFFLINE_COPY.pillLabel);
+    const short = screen.getByText(OFFLINE_COPY.pillLabelShort);
+    expect(full.className).toContain('max-[359px]:hidden');
+    expect(short.className).toContain('hidden');
+    expect(short.className).toContain('max-[359px]:inline');
   });
 
   it('switches to visible when the online event fires false', () => {

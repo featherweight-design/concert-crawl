@@ -88,21 +88,21 @@ export function InviteLanding({
       />
 
       <header
-        className="px-[22px] pt-5 md:px-12 md:pt-7"
+        // Below 360 the lockup and the beta pill share one row, as the 320
+        // board draws it (addendum 2, 15-320px/invite-320): 16px sides and a
+        // 16px wordmark.
+        className="px-[22px] pt-5 max-[359px]:px-4 md:px-12 md:pt-7"
         style={{
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          // At 320 the lockup and the beta pill don't fit on one line; the
-          // pill drops under the lockup rather than running off the edge.
-          flexWrap: 'wrap',
           gap: 8,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CCMark size={26} />
-          <CCWordmark size={20} />
+          <CCWordmark size={20} className="max-[359px]:!text-[16px]" />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <BetaPill />

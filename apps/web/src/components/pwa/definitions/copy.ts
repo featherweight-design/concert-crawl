@@ -71,6 +71,8 @@ export const POST_WATCH_COPY = {
 
 export const OFFLINE_COPY = {
   pillLabel: 'Offline · cached OK',
+  // Below 360px the pill drops the suffix (addendum 2, 15-320px/offline-pill-320).
+  pillLabelShort: 'Offline',
   pillAria: "You're offline. Cached shows are still available.",
   fallback: {
     eyebrow: 'No signal',
