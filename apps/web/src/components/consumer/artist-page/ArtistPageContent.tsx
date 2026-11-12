@@ -70,7 +70,9 @@ export const ArtistPageContent = ({
   const { artist, shows, past, history } = data;
   const hasShows = shows.length > 0;
   const genres = artistGenres(shows);
-  const ring = genreColor(genres[0]) ?? NEUTRAL_GENRE_COLOR;
+  // The first genre that has a color, so an unbucketed lead genre never
+  // neutralises the ring while a bucketed one sits behind it.
+  const ring = genres.map(genreColor).find(Boolean) ?? NEUTRAL_GENRE_COLOR;
 
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,
   // which is a real signed-in user who does not follow this artist.

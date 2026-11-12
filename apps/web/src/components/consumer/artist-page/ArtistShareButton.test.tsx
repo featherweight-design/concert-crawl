@@ -38,7 +38,7 @@ describe('ArtistShareButton', () => {
     ).toBeTruthy();
   });
 
-  it('hands the artist page link to the OS sheet, inside the click', () => {
+  it('hands the artist page link to the OS sheet, inside the click', async () => {
     const share = vi.fn(() => Promise.resolve());
     render(
       <ArtistShareButton
@@ -55,6 +55,9 @@ describe('ArtistShareButton', () => {
       title: 'Puma Blue',
       url: URL_FOR('puma-blue'),
     });
+    // Tracked only once the share resolves.
+    expect(track).not.toHaveBeenCalled();
+    await act(async () => {});
     expect(track).toHaveBeenCalledWith('artist_shared', {
       artistSlug: 'puma-blue',
       destination: 'system',
@@ -75,6 +78,7 @@ describe('ArtistShareButton', () => {
       tap();
     });
     expect(screen.getByTestId('artist-share-status').textContent).toBe('');
+    expect(track).not.toHaveBeenCalled();
   });
 
   it('says so when the OS share fails', async () => {
@@ -93,6 +97,7 @@ describe('ArtistShareButton', () => {
     expect(screen.getByTestId('artist-share-status').textContent).toBe(
       ARTIST_COPY.shareFailed,
     );
+    expect(track).not.toHaveBeenCalled();
     error.mockRestore();
   });
 
@@ -143,7 +148,7 @@ describe('ArtistShareButton', () => {
     expect(screen.getByTestId('artist-share-status').textContent).toBe('');
   });
 
-  it('says it failed when there is neither a sheet nor a clipboard', async () => {
+  it('says it failed, untracked, when there is neither a sheet nor a clipboard', async () => {
     render(
       <ArtistShareButton slug="puma-blue" name="Puma Blue" capabilities={{}} />,
     );
@@ -153,6 +158,27 @@ describe('ArtistShareButton', () => {
     expect(screen.getByTestId('artist-share-status').textContent).toBe(
       ARTIST_COPY.shareFailed,
     );
+    expect(track).not.toHaveBeenCalled();
+  });
+
+  it('does not track a clipboard write that fails', async () => {
+    const writeText = vi.fn(() => Promise.reject(new Error('denied')));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <ArtistShareButton
+        slug="puma-blue"
+        name="Puma Blue"
+        capabilities={{ clipboard: { writeText } }}
+      />,
+    );
+    await act(async () => {
+      tap();
+    });
+    expect(screen.getByTestId('artist-share-status').textContent).toBe(
+      ARTIST_COPY.shareFailed,
+    );
+    expect(track).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 
   it('encodes the slug into the path', () => {
