@@ -84,6 +84,7 @@ vi.mock('@concert-crawl/db', () => ({
   },
   auditLog: {},
   inviteCodes: {},
+  userProfiles: { userId: 'user_id', handle: 'handle' },
 }));
 
 // Spread the real module so a new drizzle-orm import elsewhere in the app
