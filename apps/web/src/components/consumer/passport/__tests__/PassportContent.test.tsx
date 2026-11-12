@@ -137,6 +137,50 @@ describe('PassportContent', () => {
     expect(book.parentElement).toHaveClass('grid-cols-[minmax(0,1fr)]');
   });
 
+  // Addendum 2 item 3 (Hugh, 2026-11-12), on the page the route renders: the
+  // booklet's slots keep their tilt (−8°, 6°, 4°, −5°, repeating), and every
+  // stamp outside the booklet (Up next, Venues collected) stays straight.
+  it('tilts the booklet slots on the page and nothing outside the booklet', () => {
+    const past = ['a', 'b', 'c', 'd', 'e'].map((id, index) =>
+      row(id, `2026-05-${String(10 + index).padStart(2, '0')}`),
+    );
+    const { container } = renderContent({
+      past,
+      upcoming: [row('u', '2026-11-20')],
+    });
+
+    const booklet = screen.getByTestId('passport-booklet');
+    const stack = booklet.querySelector('[data-booklet-layout="stack"]');
+    const page1 = stack?.querySelector('[data-booklet-leaf="page-1"]');
+    expect(page1).not.toBeNull();
+    const slots = Array.from(
+      page1?.querySelectorAll(
+        '[data-booklet-stamp], [data-booklet-next], [data-booklet-empty]',
+      ) ?? [],
+    );
+    expect(slots).toHaveLength(4);
+    expect(
+      slots.map((slot) =>
+        slot instanceof HTMLElement ? slot.style.transform : null,
+      ),
+    ).toEqual([
+      'rotate(-8deg)',
+      'rotate(6deg)',
+      'rotate(4deg)',
+      'rotate(-5deg)',
+    ]);
+
+    const outside = Array.from(container.querySelectorAll('*')).filter(
+      (node) => !booklet.contains(node),
+    );
+    expect(outside.length).toBeGreaterThan(0);
+    outside.forEach((node) => {
+      expect(node.getAttribute('style') ?? '').not.toMatch(/rotate/);
+      expect(node.getAttribute('transform') ?? '').not.toMatch(/rotate/);
+      expect(node.getAttribute('class') ?? '').not.toMatch(/rotate-/);
+    });
+  });
+
   it('counts Venues collected against the active venues', () => {
     renderContent({});
 
