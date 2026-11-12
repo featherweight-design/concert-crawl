@@ -103,7 +103,9 @@ export const CostByDay = ({
                 fill="var(--signal)"
                 opacity={0.85}
               >
-                <title>{copy.day(day.date, formatUsd(day.costUsd))}</title>
+                <title>
+                  {copy.day(`${name} ${i + 1}`, formatUsd(day.costUsd))}
+                </title>
               </rect>
             );
           })}
@@ -125,7 +127,8 @@ export const CostByDay = ({
             style={{
               position: 'absolute',
               right: 0,
-              top: Math.max(budgetY - 18, 0),
+              // Above the line as drawn; below it when the line is at the top.
+              top: budgetY >= 18 ? budgetY - 18 : budgetY + 4,
               fontSize: 11,
               color: 'var(--fg-muted)',
             }}
