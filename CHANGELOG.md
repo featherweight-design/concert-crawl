@@ -1,3 +1,10 @@
+## [1.330.3](https://github.com/featherweight-design/concert-crawl/compare/v1.330.2...v1.330.3) (2026-11-12)
+
+
+### Bug Fixes
+
+* **admin:** posters Look picker as a toggle on phones, board print row, crumb and back link ([e5ed0c0](https://github.com/featherweight-design/concert-crawl/commit/e5ed0c09982340a9b64695939bc0af7c4ce19fff))
+
 ## [1.330.2](https://github.com/featherweight-design/concert-crawl/compare/v1.330.1...v1.330.2) (2026-11-12)
 
 
