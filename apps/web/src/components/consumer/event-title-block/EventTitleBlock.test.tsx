@@ -175,6 +175,26 @@ describe('EventTitleBlock', () => {
       heading.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
   });
+
+  it('keeps the detail status chip as the last line of the block, after the openers', () => {
+    const { container } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={['Hotline TNT']}
+        tourName={null}
+        status="cancelled"
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    );
+    const block = container.firstElementChild as HTMLElement;
+    const chip = screen.getByText(/cancelled/i);
+    expect(block.lastElementChild).toContainElement(chip);
+    expect(block.lastElementChild).not.toContainElement(
+      screen.getByRole('heading', { level: 1 }),
+    );
+    expect(screen.getByText('Hotline TNT')).toBeInTheDocument();
+  });
 });
 
 // #1115 PR-G — the block can link the whole bill to artist pages, opt-in.
