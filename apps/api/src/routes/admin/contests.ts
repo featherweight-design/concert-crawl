@@ -33,6 +33,7 @@ import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
 import {
   compareLeadingCounters,
+  filedAtMs,
   leadingCounterOrderBy,
 } from '../../lib/price-check.js';
 
@@ -62,8 +63,9 @@ const listQuerySchema = z.object({
 //
 // The query pivots around the COUNTER row (priceSubmissions where
 // status='pending' AND disputedSubmissionId IS NOT NULL), not the parent's
-// status. Spec §6.1 + §4.6: the §4.6 partial unique index guarantees at most
-// one pending counter per parent, so one counter row = one contest. Anchoring
+// status. A price can hold several pending counters, one per fan (B+ B9,
+// migration 0099; 0041's one-per-parent index goes in 0100), so open mode
+// lists the LEADING counter per parent: one row = one contest. Anchoring
 // on the counter lets us ORDER BY counter.createdAt (the "filedAt" per spec)
 // and survives the two creation paths historically leaving the parent in
 // slightly different states (see plan Task 5 + 5b).
@@ -99,8 +101,9 @@ contestsAdminRouter.get(
           ),
           eq(sibling.status, 'pending'),
           ne(sibling.id, priceSubmissions.id),
-          sql`(${sibling.corroborationCount}, ${priceSubmissions.createdAt}, ${priceSubmissions.id})
-            > (${priceSubmissions.corroborationCount}, ${sibling.createdAt}, ${sibling.id})`,
+          // Same rank as compareLeadingCounters, at its ms precision.
+          sql`(${sibling.corroborationCount}, ${filedAtMs(priceSubmissions.createdAt)}, ${priceSubmissions.id})
+            > (${priceSubmissions.corroborationCount}, ${filedAtMs(sibling.createdAt)}, ${sibling.id})`,
         ),
       );
     const listWhere = includeArchived
@@ -264,10 +267,10 @@ contestsAdminRouter.get(
       openCounterCount: row.openCounterCount,
     }));
 
-    // `total` counts contests by their pending counter (matching the items
-    // shape), not by parents with status='disputed' — those numbers can
-    // differ if a parent was flagged disputed but the counter has since been
-    // withdrawn or archived (spec §4.6).
+    // `total` counts contests by their leading pending counter (matching the
+    // items shape, one per parent), not by parents with status='disputed' —
+    // those numbers can differ if a parent was flagged disputed but its
+    // counters have since been withdrawn or archived.
     const [totalRow] = await db
       .select({ value: sql<number>`count(*)::int` })
       .from(priceSubmissions)
@@ -294,11 +297,11 @@ const detailParamsSchema = z.object({
 // Unlike the list endpoint, this handler does NOT filter the counter by
 // status='pending'. The AdminDisputePanel renders read-only banners off the
 // actual parent/counter statuses for already-resolved or deferred contests, so
-// the detail endpoint must surface them as-is. The counter is fetched by
-// ORDER BY createdAt DESC LIMIT 1 — the §4.6 partial unique index guarantees
-// at most one pending counter per parent, but historical resolved counters can
-// stack up after multiple contests on the same parent. Most-recent-counter is
-// the right surface for the panel.
+// the detail endpoint must surface them as-is. The counter is the leading
+// pending one when the check is open (a price can hold several, one per fan),
+// else the most recent: historical resolved counters stack up after multiple
+// contests on the same parent, and the latest is the right surface for the
+// panel. `pendingCounters` lists every open one.
 contestsAdminRouter.get(
   '/prices/:contestId',
   zValidator('param', detailParamsSchema, (result, ctx) => {
@@ -984,7 +987,8 @@ const deferBodySchema = z.object({
 // archived.
 //
 // Same-slot assertions (event_id / tier / source_category) are kept for
-// defense-in-depth — by §4.6 + Task 5b they should never fire, but the cost
+// defense-in-depth — counters inherit the parent's slot (Task 5b), so they
+// should never fire, but the cost
 // is one comparison per request and the failure mode (defer signals on a
 // mismatched slot) would be invisible to consumers.
 //

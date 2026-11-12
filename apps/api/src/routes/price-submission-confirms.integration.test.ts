@@ -33,6 +33,7 @@ import {
   seedPriceSubmission,
   seedUserEvent,
 } from '../test/helpers/seed.js';
+import { allowSeveralPendingCountersPerPrice } from '../test/helpers/pending-counter-index.js';
 
 const app = createApp();
 
@@ -645,5 +646,124 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
       .limit(1);
     expect(unchanged?.ticketPriceMin).toBe('48.00');
     expect(await pricedropRows()).toHaveLength(0);
+  });
+});
+
+// B+ B9a: confirming an update on a price under check. An update that
+// reaches the threshold wins the check; a late confirm on an update the
+// check already decided must not bring it back.
+describe('confirming an update on a price under check', () => {
+  allowSeveralPendingCountersPerPrice();
+
+  let eventId: string;
+
+  beforeEach(async () => {
+    clearAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2027-08-01' });
+    eventId = event.id;
+  });
+
+  async function seedCheck() {
+    const parent = await seedPriceSubmission(eventId, 'user_owner', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '44',
+      status: 'disputed',
+    });
+    const rae = await seedPriceSubmission(eventId, 'user_rae', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '52',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+    const sam = await seedPriceSubmission(eventId, 'user_sam', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '60',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+    return { parent, rae, sam };
+  }
+
+  const confirm = (submissionId: string) =>
+    app.request(
+      `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({ method: 'same-vendor' }),
+      },
+    );
+
+  async function statusOf(id: string): Promise<string | undefined> {
+    const [row] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id));
+    return row?.status;
+  }
+
+  it('a promoted update wins: the parent and the other update are archived', async () => {
+    const { parent, rae, sam } = await seedCheck();
+    setAuth('user_confirmer');
+    const res = await confirm(sam.id);
+    expect(res.status).toBe(200);
+    expect(await statusOf(sam.id)).toBe('corroborated');
+    expect(await statusOf(parent.id)).toBe('archived');
+    expect(await statusOf(rae.id)).toBe('archived');
+    const [eventRow] = await testDb
+      .select({ ticketPriceMin: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, eventId));
+    expect(eventRow?.ticketPriceMin).toBe('60.00');
+  });
+
+  it('a late confirm on a superseded update is refused and does not resurrect it', async () => {
+    const { rae, sam } = await seedCheck();
+    setAuth('user_confirmer');
+    expect((await confirm(sam.id)).status).toBe(200);
+
+    setAuth('user_late');
+    const late = await confirm(rae.id);
+    expect(late.status).toBe(400);
+    expect(await statusOf(rae.id)).toBe('archived');
+  });
+
+  // Lock order (lib/price-check.ts rule 4): a confirm on an update takes the
+  // parent's row lock first, like admin resolve/defer and filing, so the two
+  // serialize instead of deadlocking. Imminent show: three observations are
+  // needed, so this confirm doesn't promote and the old code never touched
+  // the parent at all.
+  it('waits on the parent row lock before touching the update', async () => {
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    await testDb
+      .update(events)
+      .set({ date: tomorrow })
+      .where(eq(events.id, eventId));
+    const { parent, rae } = await seedCheck();
+
+    setAuth('user_confirmer');
+    const { blocked, result } = await withLockHolder(
+      [
+        sql`SELECT id FROM price_submissions WHERE id = ${parent.id} FOR UPDATE`,
+      ],
+      () => observeBlocking(() => confirm(rae.id)),
+    );
+    const res = await result;
+    expect(blocked).toBe(true);
+    expect(res.status).toBe(200);
+    expect(await statusOf(rae.id)).toBe('pending');
   });
 });

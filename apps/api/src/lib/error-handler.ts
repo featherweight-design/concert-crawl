@@ -5,6 +5,7 @@ import { getAuth } from '@hono/clerk-auth';
 import * as Sentry from '@sentry/hono/node';
 import { sentryTier, sentryUserHash } from '@concert-crawl/types/sentry-tags';
 import { apiLogger } from './logger.js';
+import { describeDbError, isRetryableTxError } from './pg-errors.js';
 
 // Hono raises HTTPException for failures the caller caused — most commonly a
 // 400 from zValidator when the request body isn't parseable JSON. Treating
@@ -23,6 +24,24 @@ export const errorHandler: ErrorHandler = async (err, ctx) => {
   if (err instanceof HTTPException && err.status < 500) {
     apiLogger.warn({ err, requestId, status: err.status }, 'Client error');
     return ctx.json({ success: false, error: err.message }, err.status);
+  }
+
+  // A deadlock or serialization failure is transient: the transaction rolled
+  // back whole, so the client can retry. Logged, not sent to Sentry as a
+  // fault, but a rising rate is worth a look (lock order, lib/price-check.ts).
+  if (isRetryableTxError(err)) {
+    apiLogger.warn(
+      { requestId, db: describeDbError(err) },
+      'Retryable transaction conflict',
+    );
+    return ctx.json(
+      {
+        success: false,
+        error: 'Something else changed this at the same time. Try again.',
+        code: 'retryable_conflict',
+      },
+      409,
+    );
   }
 
   const tags = await requestTags(ctx);

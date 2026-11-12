@@ -9,17 +9,39 @@ import { z } from 'zod';
  */
 export const PG_UNIQUE_VIOLATION = '23505' as const;
 
-// One pending counter per (parent, submitter), migration 0099. The 0041
-// one-per-parent index it replaced is still recognised for a database that
-// has not run 0099 yet.
-const PENDING_COUNTER_UNIQUE_INDEXES: readonly string[] = [
-  'price_submissions_pending_counter_user_unique_idx',
-  'price_submissions_pending_counter_unique_idx',
-];
+const causeSchema = z.object({ cause: z.unknown() });
+
+// The two pending-counter partial unique indexes. 0099 added one pending
+// counter per (parent, submitter); 0041's one per parent stays until the 0100
+// contract migration drops it, and while it exists it is what refuses a
+// SECOND fan's update, so the two need different messages.
+const OWN_PENDING_COUNTER_INDEX =
+  'price_submissions_pending_counter_user_unique_idx';
+const ANY_PENDING_COUNTER_INDEX =
+  'price_submissions_pending_counter_unique_idx';
+
+const constraintRecordSchema = z.object({
+  code: z.literal(PG_UNIQUE_VIOLATION),
+  constraint_name: z.string().optional(),
+  constraint: z.string().optional(),
+  message: z.string().optional(),
+});
+
+function violatesIndex(candidate: unknown, indexName: string): boolean {
+  const parsed = constraintRecordSchema.safeParse(candidate);
+  if (!parsed.success) return false;
+  const record = parsed.data;
+  return (
+    record.constraint_name === indexName ||
+    record.constraint === indexName ||
+    (record.message?.includes(indexName) ?? false)
+  );
+}
 
 /**
- * Detect a Postgres unique_violation (SQLSTATE 23505) against a pending-counter
- * partial unique index (see PENDING_COUNTER_UNIQUE_INDEXES).
+ * Which pending-counter unique index a Postgres unique_violation (SQLSTATE
+ * 23505) tripped: 'own' for the per-submitter index (0099), 'any' for 0041's
+ * per-parent index, null for anything else.
  *
  * Drizzle wraps the underlying postgres-js error in a DrizzleQueryError, so
  * the original `code` lives on `err.cause`. We check both so the translation
@@ -27,26 +49,35 @@ const PENDING_COUNTER_UNIQUE_INDEXES: readonly string[] = [
  * surface as `constraint_name`, `constraint`, or embedded in the message —
  * we sniff all three.
  */
-export function isPendingCounterUniqueViolation(err: unknown): boolean {
-  const matches = (candidate: unknown): boolean => {
-    if (typeof candidate !== 'object' || candidate === null) return false;
-    const record = candidate as Record<string, unknown>;
-    if (record['code'] !== PG_UNIQUE_VIOLATION) return false;
-    const constraintName = record['constraint_name'];
-    const constraint = record['constraint'];
-    const message = record['message'];
-    return PENDING_COUNTER_UNIQUE_INDEXES.some(
-      (indexName) =>
-        constraintName === indexName ||
-        constraint === indexName ||
-        (typeof message === 'string' && message.includes(indexName)),
-    );
-  };
-  if (matches(err)) return true;
-  if (err instanceof Error && 'cause' in err) {
-    return matches((err as Error & { cause?: unknown }).cause);
-  }
-  return false;
+export function pendingCounterViolation(err: unknown): 'own' | 'any' | null {
+  const candidates = [err, causeOf(err)];
+  if (candidates.some((cand) => violatesIndex(cand, OWN_PENDING_COUNTER_INDEX)))
+    return 'own';
+  if (candidates.some((cand) => violatesIndex(cand, ANY_PENDING_COUNTER_INDEX)))
+    return 'any';
+  return null;
+}
+
+function causeOf(err: unknown): unknown {
+  const withCause = causeSchema.safeParse(err);
+  return withCause.success ? withCause.data.cause : undefined;
+}
+
+/** SQLSTATEs a client can simply retry: deadlock and serialization failure. */
+export const PG_RETRYABLE_CODES: ReadonlySet<string> = new Set([
+  '40P01',
+  '40001',
+]);
+
+/**
+ * Whether a DB error is a deadlock or serialization failure. Defence in
+ * depth: the price-check paths share one lock order (lib/price-check.ts) so
+ * they should never deadlock, but if one does the caller gets a retryable
+ * 409 instead of a 500.
+ */
+export function isRetryableTxError(err: unknown): boolean {
+  const { code } = describeDbError(err);
+  return code !== null && PG_RETRYABLE_CODES.has(code);
 }
 
 const errorCodeSchema = z.object({
@@ -54,8 +85,6 @@ const errorCodeSchema = z.object({
   // anything else, such as a driver that put free text in `code`, out.
   code: z.string().regex(/^[A-Z0-9_]{1,32}$/),
 });
-
-const causeSchema = z.object({ cause: z.unknown() });
 
 export interface SafeDbErrorDescription {
   errorClass: string;

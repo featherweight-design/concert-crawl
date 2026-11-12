@@ -77,14 +77,16 @@ adminRouter.use('*', async (ctx, next) => {
 //   eventFlags    → /v1/admin/events?verified=false   (defaults to date >= today)
 //   prices        → /v1/admin/prices/submissions      (defaults to status=pending)
 //   missing       → /v1/admin/events?missing=true     (excludes hidden_from_consumer)
-//   priceContests → /v1/admin/contests/prices         (pending counter rows;
-//                   §4.6 partial unique index guarantees one per parent)
+//   priceContests → /v1/admin/contests/prices         (prices under check:
+//                   one per parent with a pending counter)
 //
-// priceContests' WHERE clause (status='pending' AND disputed_submission_id IS
-// NOT NULL) mirrors the list endpoint in apps/api/src/routes/admin/contests.ts
-// exactly. Deferred counters (lastAdminActionKind='defer') are still pending —
-// defer is an engagement signal, not a state flip — so they correctly stay in
-// the count.
+// priceContests counts DISTINCT parents with a pending counter
+// (status='pending' AND disputed_submission_id IS NOT NULL). Several fans can
+// each have an update pending on one price (B+ B9), and the list endpoint in
+// apps/api/src/routes/admin/contests.ts shows one row per price, so counting
+// counter rows would overstate the queue. Deferred counters
+// (lastAdminActionKind='defer') are still pending — defer is an engagement
+// signal, not a state flip — so they correctly stay in the count.
 adminRouter.get('/review/counts', async (ctx) => {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/Denver',
@@ -123,7 +125,9 @@ adminRouter.get('/review/counts', async (ctx) => {
           ),
         ),
       db
-        .select({ total: sql<number>`count(*)::int` })
+        .select({
+          total: sql<number>`count(DISTINCT ${priceSubmissions.disputedSubmissionId})::int`,
+        })
         .from(priceSubmissions)
         .where(
           and(
