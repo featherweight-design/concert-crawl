@@ -33,7 +33,11 @@ describe('useFeatureFlags', () => {
   it('serves the registry default while the fetch is in flight', async () => {
     get.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useFeatureFlag('crews'), { wrapper });
-    expect(result.current).toEqual({ isLoading: true, enabled: false });
+    expect(result.current).toEqual({
+      isLoading: true,
+      enabled: false,
+      loaded: false,
+    });
   });
 
   // Same in-flight state, opposite default: a released feature must not blink
@@ -43,7 +47,11 @@ describe('useFeatureFlags', () => {
     const { result } = renderHook(() => useFeatureFlag('release-notes'), {
       wrapper,
     });
-    expect(result.current).toEqual({ isLoading: true, enabled: true });
+    expect(result.current).toEqual({
+      isLoading: true,
+      enabled: true,
+      loaded: false,
+    });
   });
 
   it('falls back to registry defaults when the fetch fails', async () => {
