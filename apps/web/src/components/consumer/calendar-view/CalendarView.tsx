@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type {
-  EventsAvailabilityResponse,
-  EventWithVenue,
+import {
+  parseListParam,
+  type EventsAvailabilityResponse,
+  type EventWithVenue,
 } from '@concert-crawl/types';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { EmptyState } from '@/components/consumer/empty-state';
@@ -51,7 +52,7 @@ export function CalendarView({
 }: CalendarViewProps) {
   // The calendar is Browse's other rendering, on the same route and the same
   // filter, so the genre reorder has to reach it too or switching views loses it.
-  const filterVibe = useSearchParams().get('filterVibe') ?? undefined;
+  const filterVibes = parseListParam(useSearchParams().getAll('filterVibe'));
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   // A cross-week jump soft-navigates via router.push, so Next.js re-renders this
   // component with a fresh initialSelectedDate but React keeps the old useState
@@ -177,7 +178,7 @@ export function CalendarView({
                         isWatching: watchedSet.has(event.id),
                       })}
                       surface="browse"
-                      filterVibe={filterVibe}
+                      filterVibes={filterVibes}
                     />
                   ))}
                 </div>

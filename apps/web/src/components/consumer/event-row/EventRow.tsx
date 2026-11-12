@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { bucketMembersFor } from '@concert-crawl/types';
 import { cn } from '@/lib/utils';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { EventImage } from '../event-image';
@@ -22,7 +21,7 @@ import {
   rowEdgeStatus,
 } from './lib/row-status';
 import { StatusChip, statusColor } from '@/components/consumer/StatusChip';
-import { orderGenres } from './lib/order-genres';
+import { orderGenres, vibeBucketMembers } from './lib/order-genres';
 import { cardedEdge } from './lib/carded-edge';
 import { genreRing } from './lib/genre-ring';
 import type { EventRowShow } from './lib/row-model';
@@ -37,11 +36,12 @@ interface EventRowProps {
   /** The surface's own row action, rendered in the gutter. */
   action?: ReactNode;
   /**
-   * The active Vibe filter, so the genre the reader filtered on leads its chip.
-   * Only Browse has one; every other surface passes nothing and gets no
-   * reorder, which is the safe answer rather than a guessed one.
+   * The active Vibe filter, every chosen vibe in URL order, so the genres the
+   * reader filtered on lead its chip. Only Browse has one; every other surface
+   * passes nothing and gets no reorder, which is the safe answer rather than a
+   * guessed one.
    */
-  filterVibe?: string | undefined;
+  filterVibes?: readonly string[] | undefined;
   className?: string;
 }
 
@@ -50,7 +50,7 @@ export const EventRow = ({
   surface,
   footer,
   action,
-  filterVibe,
+  filterVibes = [],
   className,
 }: EventRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -83,7 +83,7 @@ export const EventRow = ({
   const hasSupportLine = config.showsSupports && show.supports.length > 0;
   // Resolved once here rather than inside the chip builder, so the taxonomy
   // stays out of a module whose whole job is turning a show into chip data.
-  const bucketMembers = bucketMembersFor(filterVibe);
+  const bucketMembers = vibeBucketMembers(filterVibes);
   const chips = rowChips(show, surface, bucketMembers);
   const status = resolveRowStatus(show.lifecycle, show.status, show.delistedAt);
   const struck = isStruck(status);
