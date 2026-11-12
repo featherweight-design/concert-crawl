@@ -62,6 +62,7 @@ interface Redemption {
   code: string;
   label: string | null;
   maxUses: number;
+  kind: string;
 }
 
 const redemptionsOf = async (userIds: string[]): Promise<Redemption[]> => {
@@ -73,6 +74,7 @@ const redemptionsOf = async (userIds: string[]): Promise<Redemption[]> => {
       code: inviteCodes.code,
       label: inviteCodes.label,
       maxUses: inviteCodes.maxUses,
+      kind: inviteCodes.kind,
     })
     .from(inviteCodeRedemptions)
     .innerJoin(inviteCodes, eq(inviteCodeRedemptions.codeId, inviteCodes.id))
@@ -101,11 +103,15 @@ const sourceFrom = (
 ): PersonJoinSource | null => {
   if (isTest) return { kind: 'test', code: null, label: null };
   if (redemption !== undefined) {
-    return {
-      kind: redemption.maxUses > 1 ? 'poster' : 'code',
-      code: redemption.code,
-      label: redemption.label,
-    };
+    // A member's own share code has a high seat cap but is not a poster:
+    // `kind`, never `max_uses`, says which.
+    const kind: PersonJoinSource['kind'] =
+      redemption.kind === 'member'
+        ? 'member'
+        : redemption.maxUses > 1
+          ? 'poster'
+          : 'code';
+    return { kind, code: redemption.code, label: redemption.label };
   }
   return isFounder ? { kind: 'founder', code: null, label: null } : null;
 };

@@ -31,6 +31,7 @@ const code = (over: Partial<AdminInviteCode> = {}): AdminInviteCode => ({
   label: 'Red Rocks lot, Oct',
   createdByHandle: 'jules',
   lastUsedAt: '2026-11-09T18:00:00Z',
+  kind: 'admin',
   ...over,
 });
 

@@ -46,6 +46,7 @@ const code = (overrides: Partial<InviteCode> = {}): InviteCode => ({
   maxUses: 50,
   useCount: 3,
   label: 'Hi-Dive bathroom',
+  kind: 'admin',
   ...overrides,
 });
 

@@ -771,6 +771,13 @@
       "when": 1795000000000,
       "tag": "0110_user_event_dismissals",
       "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1795100000000,
+      "tag": "0111_invite_codes_kind",
+      "breakpoints": true
     }
   ]
 }

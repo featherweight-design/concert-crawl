@@ -42,7 +42,8 @@ export default async function InviteCodePostersPage({
   const now = new Date();
   const origin = siteOrigin();
   const cards: PosterCodeCard[] = codes
-    .filter((code) => code.maxUses > 1)
+    // A member's own share code has a high cap too, but it is never a poster.
+    .filter((code) => code.kind !== 'member' && code.maxUses > 1)
     .map((code) => ({ code, status: inviteStatus(code, now) }))
     .filter(({ status }) => status === 'active' || status === 'full')
     .sort((left, right) =>
