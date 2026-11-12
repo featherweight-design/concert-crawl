@@ -1258,6 +1258,9 @@ export const CONSUMER_COPY = {
     pending: 'Pending',
     of: 'of',
     confirmed: 'confirmed',
+    // Joins the strip's "Pending · 1 of 2 confirmed" and the qualifier's
+    // "GA · seen on AXS" (more-p-price_states).
+    separator: ' · ',
     // Strip right side: "{N} to go"
     toGo: 'to go',
     // Imminent-show tag + tooltip. Shown when the show is within the imminent

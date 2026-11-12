@@ -22,9 +22,26 @@ const vendorDisplayName = (vendor: string): string =>
 const COMMUNITY_SIGNAL = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
 const GOLD = 'oklch(0.66 0.14 78)'; // box-office tier
 
+// ── AA text colours (WCAG 1.4.3, 4.5:1 for text under 18.66px bold) ──
+// Each one nudges its token toward --fg, which raises contrast on every theme
+// (dark text darkens on a light ground, light text lightens on a dark one).
+// Ratios computed on --surface-1, Light / Electric:
+// - --fg-subtle alone is 2.79 / 3.17; at 75% it is 4.71 / 5.02.
+const SUBTLE_TEXT = 'color-mix(in oklab, var(--fg-subtle) 75%, var(--fg))';
+// - --warning alone is 3.65 on Light (Withdraw, 13.5px bold); at 85%, 4.82.
+const WARNING_TEXT = 'color-mix(in oklab, var(--warning) 85%, var(--fg))';
+// - --signal on the 7% strip is 3.83 on Light; at 85%, 4.98 (Electric 11.1).
+const SIGNAL_TEXT = `color-mix(in oklab, ${COMMUNITY_SIGNAL} 85%, var(--fg))`;
+// - White --fg-on-accent on the Confirm gradient bottoms out at 4.45 on Light;
+//   both stops at 95% toward --fg lift the worst point to 4.86 (Electric 10.2).
+const CONFIRM_GRADIENT =
+  'linear-gradient(135deg, color-mix(in oklab, var(--signal) 95%, var(--fg)), color-mix(in oklab, var(--cta-end) 95%, var(--fg)))';
+
 // ── Token shape ──────────────────────────────────────────────────
 interface PendingTokens {
   color: string;
+  /** Strip text colour, AA on the strip fill. */
+  text: string;
   bg: string;
   border: string;
   strip: string;
@@ -36,6 +53,7 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
   if (kind === 'community') {
     return {
       color: COMMUNITY_SIGNAL,
+      text: SIGNAL_TEXT,
       bg: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 6%, var(--surface-1))`,
       border: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 32%, var(--border))`,
       // more-p-price_states samples the strip at #18243C: signal at ~7%.
@@ -47,6 +65,8 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
 
   return {
     color: GOLD,
+    // Box office pending is not on the board; its strip keeps the gold.
+    text: GOLD,
     bg: `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`,
     border: `color-mix(in oklab, ${GOLD} 38%, var(--border))`,
     strip: `color-mix(in oklab, ${GOLD} 14%, transparent)`,
@@ -230,7 +250,7 @@ export const PendingCardB = ({
             gap: '10px',
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: '9.5px',
-            color: tok.color,
+            color: tok.text,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
             fontWeight: 700,
@@ -250,7 +270,9 @@ export const PendingCardB = ({
             ))}
           </span>
           <span>
-            {copy.pending} · {confirms} {copy.of} {needed} {copy.confirmed}
+            {copy.pending}
+            {copy.separator}
+            {confirms} {copy.of} {needed} {copy.confirmed}
           </span>
           {isImminent && (
             <CCTip
@@ -341,7 +363,7 @@ export const PendingCardB = ({
           }}
         >
           <Eyebrow
-            color={isBox ? tok.color : 'var(--fg-subtle)'}
+            color={isBox ? tok.color : SUBTLE_TEXT}
             size={PRICE_EYEBROW.size}
             tracking={PRICE_EYEBROW.tracking}
           >
@@ -388,7 +410,9 @@ export const PendingCardB = ({
               fontWeight: 500,
             }}
           >
-            {tier} · {copy.seenOnPrefix} {vendorDisplayName(vendor)}
+            {tier}
+            {copy.separator}
+            {copy.seenOnPrefix} {vendorDisplayName(vendor)}
           </span>
           {isBox && (
             <span
@@ -501,6 +525,8 @@ export const PendingCardB = ({
                 {...(signedOut
                   ? { 'aria-label': copy.ariaConfirmPriceSignedOut }
                   : {})}
+                // all:unset drops the focus ring; the class restores it.
+                className="pending-card-action"
                 style={{
                   all: 'unset',
                   boxSizing: 'border-box',
@@ -515,9 +541,8 @@ export const PendingCardB = ({
                   padding: '0 16px',
                   borderRadius: '10px',
                   // Sampled left to right: signal into accent at about 65%,
-                  // with a signal glow under the pill.
-                  background:
-                    'linear-gradient(135deg, var(--signal), var(--cta-end))',
+                  // with a signal glow under the pill; stops nudged for AA.
+                  background: CONFIRM_GRADIENT,
                   boxShadow:
                     '0 6px 18px color-mix(in oklab, var(--signal) 22%, transparent)',
                   color: 'var(--fg-on-accent)',
@@ -545,11 +570,15 @@ export const PendingCardB = ({
                   {...(signedOut
                     ? { 'aria-label': copy.ariaSawDifferentNumberSignedOut }
                     : {})}
+                  className="pending-card-action"
                   style={{
                     all: 'unset',
                     boxSizing: 'border-box',
                     cursor: 'pointer',
-                    // Grows only once it wraps onto a row of its own.
+                    // Grow weight 1 against Confirm's 100: on a shared row it
+                    // takes 1/101 of the spare width (under 1px at the board's
+                    // 342px row), and once wrapped onto its own row it is the
+                    // only item there, so it fills it.
                     flex: '1 0 auto',
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -581,7 +610,7 @@ export const PendingCardB = ({
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: '9.5px',
                   lineHeight: '12px',
-                  color: 'var(--fg-subtle)',
+                  color: SUBTLE_TEXT,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}
@@ -620,7 +649,7 @@ export const PendingCardB = ({
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: '9.5px',
                   lineHeight: '12px',
-                  color: 'var(--fg-subtle)',
+                  color: SUBTLE_TEXT,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}
@@ -647,6 +676,7 @@ export const PendingCardB = ({
                 <button
                   type="button"
                   onClick={onEdit}
+                  className="pending-card-action"
                   style={{
                     all: 'unset',
                     cursor: 'pointer',
@@ -661,13 +691,14 @@ export const PendingCardB = ({
                 <button
                   type="button"
                   onClick={onWithdraw}
+                  className="pending-card-action"
                   style={{
                     all: 'unset',
                     cursor: 'pointer',
                     fontFamily: 'Inter, system-ui',
                     fontWeight: 700,
                     fontSize: '13.5px',
-                    color: 'var(--warning)',
+                    color: WARNING_TEXT,
                   }}
                 >
                   {copy.withdrawButton}

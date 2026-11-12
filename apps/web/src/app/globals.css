@@ -470,6 +470,14 @@
   outline-offset: 2px;
 }
 
+/* Pending price card actions (Confirm price, Saw a different number?, Edit,
+   Withdraw) — all:unset restoration. An outline, because Confirm already uses
+   box-shadow for its glow. */
+.pending-card-action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* Concert History (#70) — every interactive element on the surface sets its own
    inline background/border, so the ring is an outline for the same reason the
    "I'm going!" CTA uses one. */
