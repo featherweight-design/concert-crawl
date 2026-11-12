@@ -1,3 +1,26 @@
+# [1.367.0](https://github.com/featherweight-design/concert-crawl/compare/v1.366.0...v1.367.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** escape and trim public events search, add containsPattern helper ([e2e7d0f](https://github.com/featherweight-design/concert-crawl/commit/e2e7d0fb342fa57f98b266320f80414f367a69fb))
+* **api:** escape like metacharacters in admin artist and event search ([3c352bd](https://github.com/featherweight-design/concert-crawl/commit/3c352bd4f09aa7d3ac2e41d64030e98d20207c7c))
+* **crawler:** clear the bill of a cover night, listed in the dry run; review fixes ([8917549](https://github.com/featherweight-design/concert-crawl/commit/8917549a30e232fd87024f941c439c2f0b54bbd3))
+* **crawler:** keep covers and tribute nights off real artists, clean bills, repair workflow ([35a9dd2](https://github.com/featherweight-design/concert-crawl/commit/35a9dd2ddd90f3fe8ee1efc8ec034d77d0674e1d))
+* **web:** address the B10 artist page review ([0249362](https://github.com/featherweight-design/concert-crawl/commit/02493623c7d41c868b39d45e4e8c7e871bddd4d8))
+* **web:** artist page Follow is not sticky; skeleton card 190 × 230 at −2.5° (addendum 2) ([efd22d4](https://github.com/featherweight-design/concert-crawl/commit/efd22d4b5fb78814717cf39f34dd09a6ff6408a7))
+* **web:** artist show row keeps the whole venue name at 320 ([56610a6](https://github.com/featherweight-design/concert-crawl/commit/56610a63191a5b44e7bd234d92600fc23ccba835))
+* **web:** artist skeleton matches the loaded card at 200 × 250, −2° (addendum 3) ([80615c6](https://github.com/featherweight-design/concert-crawl/commit/80615c65111a361e5d6538098e995388f999920d))
+* **web:** artist skeleton pills, narrow rows and a Follow scroll regression test (B10) ([14cfed1](https://github.com/featherweight-design/concert-crawl/commit/14cfed121325f14bc509dd7c5f47e3c9b87c6e27))
+* **web:** run line reads partial and success by status, auto-paused skips as the pause ([a94f768](https://github.com/featherweight-design/concert-crawl/commit/a94f768aa65907e451ba0aea88b217a64aef56dc))
+
+
+### Features
+
+* **web:** artist page stage, Follow in the hero and Upcoming in Denver rows (B+ B10) ([0a2d2bb](https://github.com/featherweight-design/concert-crawl/commit/0a2d2bb3a0d30318176765285e49c702d250f567))
+* **web:** share an artist page from the stage (B+ B10) ([0f7df90](https://github.com/featherweight-design/concert-crawl/commit/0f7df907732e0d8c6d0684d469e13a21253053c6))
+* **web:** venues latest-run line from latestRun, robots audit in more, drop dead bulk actions ([1e4d3cc](https://github.com/featherweight-design/concert-crawl/commit/1e4d3cc7bc77591aa8392a87e62923823900566a))
+
 # [1.366.0](https://github.com/featherweight-design/concert-crawl/compare/v1.365.0...v1.366.0) (2026-11-12)
 
 
