@@ -1,3 +1,10 @@
+## [1.377.1](https://github.com/featherweight-design/concert-crawl/compare/v1.377.0...v1.377.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** let a long handle wrap in the delete-account sheet ([f872a7c](https://github.com/featherweight-design/concert-crawl/commit/f872a7cb41244f0a8bb61f1aad8f2c8aa7b85c70))
+
 # [1.377.0](https://github.com/featherweight-design/concert-crawl/compare/v1.376.0...v1.377.0) (2026-11-12)
 
 
