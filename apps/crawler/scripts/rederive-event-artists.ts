@@ -39,6 +39,8 @@ const parseLimit = (): number | undefined => {
 // rule can change, so every row read is a row that can cost a call.
 // The spend ceiling is built in: with no flag the pass stops at $6, and a flag
 // can only lower it. A run that could spend more than $6 cannot be asked for.
+// It is checked before each row, so a pass can end at most one adjudication
+// (a fraction of a cent) over it.
 const HARD_MAX_COST_USD = 6;
 
 const parseMaxCost = (): number => {
@@ -64,6 +66,9 @@ const parseSummaryFile = (): string | undefined => {
   const flag = process.argv.find((arg) => arg.startsWith('--summary-file='));
   return flag === undefined ? undefined : flag.slice('--summary-file='.length);
 };
+
+// A step summary over 1 MiB fails the step; a row is a few hundred bytes.
+const SUMMARY_MAX_ROWS = 1500;
 
 const cell = (text: string): string => text.replace(/\|/g, '\\|');
 const names = (list: readonly string[]): string =>
@@ -157,13 +162,25 @@ async function main(): Promise<void> {
       '',
       '| Title | Strategy | Before: headliners / supporting | After: headliners / supporting |',
       '|---|---|---|---|',
-      ...result.sample.map(
-        (change) =>
-          `| ${cell(change.title)}${change.hides ? ' **HIDE**' : ''} | ${change.strategy} | ` +
-          `${cell(names(change.before.headliners))} / ${cell(names(change.before.supportingArtists))} | ` +
-          `${cell(names(change.headliners))} / ${cell(names(change.supportingArtists))} |`,
-      ),
+      ...result.sample
+        .slice(0, SUMMARY_MAX_ROWS)
+        .map(
+          (change) =>
+            `| ${cell(change.title)}${change.hides ? ' **HIDE**' : ''} | ${
+              change.strategy === 'tribute-or-cover'
+                ? 'tribute/cover → bill cleared'
+                : change.strategy
+            } | ` +
+            `${cell(names(change.before.headliners))} / ${cell(names(change.before.supportingArtists))} | ` +
+            `${cell(names(change.headliners))} / ${cell(names(change.supportingArtists))} |`,
+        ),
       '',
+      ...(result.sample.length > SUMMARY_MAX_ROWS
+        ? [
+            `…and ${result.sample.length - SUMMARY_MAX_ROWS} more changes; the step log lists every row (GitHub caps a step summary at 1 MiB).`,
+            '',
+          ]
+        : []),
     ];
     appendFileSync(summaryFile, `${lines.join('\n')}\n`);
   }

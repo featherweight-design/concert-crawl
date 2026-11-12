@@ -72,8 +72,9 @@ export type RederiveStrategy =
   | 'provenance-unknown'
   /**
    * The adjudicator ruled the listing a cover or tribute night whose names are
-   * the artists being covered. A real artist must never be attached to it, and
-   * the stored bill is not erased either: the row is left exactly as it was.
+   * the artists being covered. A real artist must never be attached to it, so
+   * the bill is written empty ("tribute/cover → bill cleared"); the title stays
+   * and the row stays visible.
    */
   | 'tribute-or-cover';
 
@@ -340,25 +341,29 @@ export async function rederiveEventArtists(
         continue;
       }
 
-      // A cover or tribute night is left exactly as it is: the real artists in
-      // its title are the ones being honored, and an empty bill would erase
-      // whatever is stored.
-      if (result.coversOtherArtists === true) {
-        strategies['tribute-or-cover'] += 1;
-        continue;
-      }
-
+      // A cover or tribute night: the names in its title are the artists being
+      // honored, so the bill is written EMPTY (never NULL: an empty array is the
+      // ladder reporting "nobody billed", which every artist page, follow match
+      // and search predicate reads as no act, where NULL falls back to the
+      // title). The title stays and the row stays visible; a real artist
+      // attached by an earlier live extraction is cleared.
       derived += 1;
-      const strategy: RederiveStrategy = result.adjudicated
-        ? 'adjudicated'
-        : 'observed';
+      const strategy: RederiveStrategy =
+        result.coversOtherArtists === true
+          ? 'tribute-or-cover'
+          : result.adjudicated
+            ? 'adjudicated'
+            : 'observed';
       strategies[strategy] += 1;
 
       // A verdict of "not a concert" hides the row, matching what the crawler's
       // INSERT path does with the same signal. Only ever set to `true`: an
       // admin's manual hide is never cleared, and neither is a hide this pass
-      // made on a previous run.
-      const hides = result.isConcert === false && !row.hiddenFromConsumer;
+      // made on a previous run. A cover night is a concert and is never hidden.
+      const hides =
+        result.coversOtherArtists !== true &&
+        result.isConcert === false &&
+        !row.hiddenFromConsumer;
       if (hides) hidden += 1;
 
       const canonicalHeadliners = canonicalizeSupporting(result.headliners);

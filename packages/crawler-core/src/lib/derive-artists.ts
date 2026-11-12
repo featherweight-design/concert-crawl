@@ -70,7 +70,9 @@ const nameKey = (name: string): string =>
 // The acts a combined headliner is made of: "Brothers of Brass & Hot Like Mars"
 // and "A / B" both stand for several acts, and an act listed under them is the
 // same act listed twice. The whole combined name counts as a member too.
-const COMBINED_JOINERS = / & | \+ | \/ |, | and | x /i;
+// Only the co-billing joiners the ladder already knows (" & ", " + ") and " / ":
+// a comma, "and" or "x" sit inside too many real names to split on.
+const COMBINED_JOINERS = / & | \+ | \/ /;
 const memberKeys = (name: string): string[] => {
   const whole = nameKey(name);
   return [whole, ...name.split(COMBINED_JOINERS).map(nameKey)].filter(
@@ -93,7 +95,15 @@ export function tidyBill(
     const key = name.trim().toLowerCase();
     return key !== '' && !GENERIC_TOKENS.has(key);
   };
-  const cleanHeadliners = headliners.filter(keepName);
+  const seenHeadliners = new Set<string>();
+  const cleanHeadliners: string[] = [];
+  for (const name of headliners) {
+    if (!keepName(name)) continue;
+    const key = nameKey(name);
+    if (seenHeadliners.has(key)) continue;
+    seenHeadliners.add(key);
+    cleanHeadliners.push(name.trim());
+  }
   const headlinerMembers = new Set(cleanHeadliners.flatMap(memberKeys));
   const seen = new Set<string>();
   const cleanSupporting: string[] = [];
@@ -264,11 +274,18 @@ export async function deriveArtists(
   // This is the venue's own structured field; an LLM re-reading the page title
   // is strictly downstream of it, and re-deriving here would make each event's
   // artist nondeterministic across nightly crawls.
-  const observedBill = (): DerivedArtists => ({
-    ...tidyBill(observed, nonEmpty(event.observedSupportingArtists)),
-    isConcert: true,
-    adjudicated: false,
-  });
+  const observedBill = (): DerivedArtists => {
+    const tidy = tidyBill(observed, nonEmpty(event.observedSupportingArtists));
+    return {
+      // A source that named only generic words ("Friends", "TBA") has still
+      // named somebody; emptying a concert's bill here would store nobody, so the
+      // observed headliners stand as they always did.
+      headliners: tidy.headliners.length > 0 ? tidy.headliners : observed,
+      supportingArtists: tidy.supportingArtists,
+      isConcert: true,
+      adjudicated: false,
+    };
+  };
   // A lone observed name that joins several is escalated (see
   // CO_BILLING_JOINERS), but its observed bill stays the answer when no verdict
   // can be had, exactly as it was before the escalation existed. A bill the
