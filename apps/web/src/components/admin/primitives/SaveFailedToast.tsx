@@ -38,10 +38,25 @@ export const SaveFailedToast = ({
   >
     <X size={16} color="var(--danger)" aria-hidden style={{ flex: 'none' }} />
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--fg)' }}>
+      {/* Long unbroken text wraps instead of overflowing a phone (as #260). */}
+      <div
+        style={{
+          fontSize: 13.5,
+          fontWeight: 700,
+          color: 'var(--fg)',
+          overflowWrap: 'anywhere',
+        }}
+      >
         {copy.title(what)}
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--fg-muted)', marginTop: 2 }}>
+      <div
+        style={{
+          fontSize: 12.5,
+          color: 'var(--fg-muted)',
+          marginTop: 2,
+          overflowWrap: 'anywhere',
+        }}
+      >
         {copy.body(saved)}
       </div>
     </div>

@@ -393,9 +393,28 @@ export const Toast = ({
           style={{ flex: 'none' }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{title}</div>
+          {/* A long unbroken handle ("@<50 chars> is now Beta") wraps inside
+              the toast instead of running off a phone's edge (as #260). */}
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 700,
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {title}
+          </div>
           {body && (
-            <div style={{ fontSize: 12.5, ...MUTED, marginTop: 2 }}>{body}</div>
+            <div
+              style={{
+                fontSize: 12.5,
+                ...MUTED,
+                marginTop: 2,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {body}
+            </div>
           )}
         </div>
         {action}
