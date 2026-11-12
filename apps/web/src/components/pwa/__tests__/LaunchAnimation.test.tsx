@@ -46,6 +46,19 @@ describe('LaunchAnimation', () => {
     expect(screen.queryByTestId('launch-animation')).toBeNull();
   });
 
+  it('starts the mark at 128/96 (1.333x), centred on the viewport', () => {
+    stubDisplay(true);
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    render(<LaunchAnimation />);
+    const mark = screen
+      .getByTestId('launch-animation')
+      .querySelector<HTMLElement>('div:nth-of-type(2)');
+    expect(mark?.style.width).toBe('96px');
+    expect(mark?.style.left).toBe('calc(50% - 48px)');
+    expect(mark?.style.top).toBe('calc(50% - 48px)');
+    expect(mark?.style.transform).toBe(`scale(${128 / 96})`);
+  });
+
   it('marks the session so a later mount is not a cold start', () => {
     stubDisplay(true);
     window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
