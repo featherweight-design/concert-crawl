@@ -20,6 +20,9 @@ const COPY = HISTORY_COPY.passport;
 // what it has rather than inventing venues it never went to.
 const TEASER_STAMPS = 4;
 
+/** The board's teaser stamp (`addendum-2/03/concerts-round-stamps-{d,m}`), in px. */
+export const TEASER_STAMP_SIZE = 50;
+
 export const teaserStampsFor = (
   shows: readonly HistoryShow[],
 ): HistoryShow[] => {
@@ -44,7 +47,11 @@ const TeaserBody = ({
   const stamps = teaserStampsFor(shows);
   return (
     <>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
+      <span
+        data-testid="passport-teaser-body"
+        className="flex min-w-0 flex-1 flex-col justify-center gap-1"
+        style={{ padding: '16px 16px 14px 18px', background: BODY_GROUND }}
+      >
         <span
           style={{
             fontFamily: 'var(--font-ui)',
@@ -74,7 +81,7 @@ const TeaserBody = ({
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '-0.005em',
-              color: 'var(--accent)',
+              color: 'var(--signal)',
             }}
           >
             {COPY.link}
@@ -87,16 +94,15 @@ const TeaserBody = ({
         <span
           aria-hidden
           data-testid="passport-teaser-stamps"
-          className="grid shrink-0 grid-cols-2 gap-1.5 self-stretch border-l border-dashed border-border-strong pl-3.5"
-          style={{ alignContent: 'center' }}
+          className="grid shrink-0 grid-cols-2 gap-1.5 self-stretch border-l border-dashed border-border-strong p-3"
+          style={{ alignContent: 'center', background: TEASER_STAMP_GROUND }}
         >
           {stamps.map((show) => (
             <VenueStamp
               key={show.venueSlug}
               venueSlug={show.venueSlug}
               venueName={show.venueName}
-              seed={show.artist}
-              size={40}
+              size={TEASER_STAMP_SIZE}
             />
           ))}
         </span>
@@ -105,15 +111,23 @@ const TeaserBody = ({
   );
 };
 
-const SHELL =
-  'flex items-center gap-3.5 overflow-hidden rounded-[14px] px-[18px] py-4 no-underline';
+// The board's teaser card (`addendum-2/03/concerts-round-stamps-{d,m}`): a
+// gradient hairline fading to the border, radius 18, no wash. The text panel
+// sits on a surface-2 to surface-1 sweep and the stamps on the booklet's dot
+// grid.
+const SHELL = 'flex items-stretch overflow-hidden rounded-[18px] no-underline';
 
-const SHELL_STYLE = {
-  border: '1px solid color-mix(in oklch, var(--accent) 35%, var(--border))',
+export const TEASER_SHELL_STYLE = {
+  border: '1px solid transparent',
   background:
-    'linear-gradient(135deg, color-mix(in oklch, var(--accent) 14%, var(--surface-1)) 0%, var(--surface-1) 70%)',
+    'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
 } as const;
 
+const BODY_GROUND =
+  'linear-gradient(135deg, var(--surface-2), var(--surface-1))';
+
+export const TEASER_STAMP_GROUND =
+  'radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--fg) 6%, transparent) 1px, transparent 1.5px) 0 0 / 12px 12px, var(--surface-1)';
 export const PassportTeaser = ({
   stats,
   shows,
@@ -123,7 +137,7 @@ export const PassportTeaser = ({
 }) => {
   if (PASSPORT_ROUTE === null) {
     return (
-      <div className={SHELL} style={SHELL_STYLE}>
+      <div className={SHELL} style={TEASER_SHELL_STYLE}>
         <TeaserBody stats={stats} shows={shows} />
       </div>
     );
@@ -133,7 +147,7 @@ export const PassportTeaser = ({
     <Link
       href={PASSPORT_ROUTE}
       className={`history-passport-teaser min-h-[44px] ${SHELL}`}
-      style={SHELL_STYLE}
+      style={TEASER_SHELL_STYLE}
     >
       <TeaserBody stats={stats} shows={shows} />
     </Link>

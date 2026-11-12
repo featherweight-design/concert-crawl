@@ -34,7 +34,6 @@ const Badge = () => (
         <VenueStamp
           venueSlug={venue.slug}
           venueName={venue.name}
-          seed={venue.slug}
           variant="dashed"
           size={STAMP_SIZE}
         />

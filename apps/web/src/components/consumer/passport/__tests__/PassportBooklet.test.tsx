@@ -11,8 +11,16 @@ import {
 } from '@testing-library/react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { PassportBooklet } from '../PassportBooklet';
-import { UpNextStubs } from '../UpNextStubs';
+import { BOOKLET_INNER_DASH, BookletStamp, slotTilt } from '../BookletStamp';
+import {
+  BOOKLET_FRAME,
+  BOOKLET_SHADOW,
+  BOOKLET_SPLIT_DASH,
+  PassportBooklet,
+  STAMP_SIZE,
+} from '../PassportBooklet';
+import { GHOST_SIZE, UpNextStubs } from '../UpNextStubs';
+import { genreColor } from '@/lib/genre-color';
 import { VenuesCollected } from '../VenuesCollected';
 import { bookletPages, collectedVenues } from '@/lib/passport/booklet';
 import { passportStats } from '@/lib/passport/stats';
@@ -210,7 +218,7 @@ describe('PassportBooklet', () => {
     expect(stamps).toHaveLength(3);
     const tilts = ['-8deg', '6deg', '4deg'];
     stamps.forEach((stamp, index) => {
-      expect(stamp.querySelector('[data-venue-stamp="solid"]')).not.toBeNull();
+      expect(stamp.querySelector('[data-venue-glyph="globe"]')).not.toBeNull();
       expect(stamp.getAttribute('style') ?? '').toContain(
         `rotate(${tilts[index]})`,
       );
@@ -224,6 +232,77 @@ describe('PassportBooklet', () => {
       '[data-booklet-next], [data-booklet-empty]',
     );
     expect(fourth?.getAttribute('style') ?? '').toContain('rotate(-5deg)');
+  });
+});
+
+// The booklet stamp as `addendum-2/04/passport-{m,d}` draw it.
+describe('BookletStamp face', () => {
+  const stampOf = (show: HistoryShow, size = STAMP_SIZE) => {
+    const { container } = render(<BookletStamp show={show} size={size} />);
+    const stamp = container.querySelector<HTMLElement>('[data-booklet-stamp]');
+    if (!stamp) throw new Error('no booklet stamp');
+    return stamp;
+  };
+
+  it("is the board's 124px stamp", () => {
+    expect(STAMP_SIZE).toBe(124);
+    const stamp = stampOf(row(0));
+    expect(stamp.style.width).toBe('124px');
+    expect(stamp.querySelector('svg')?.getAttribute('viewBox')).toBe(
+      '0 0 124 124',
+    );
+  });
+
+  it('draws a solid outer ring and a dashed inner ring, and no nested venue stamp', () => {
+    const stamp = stampOf(row(0));
+    const outer = stamp.querySelector('[data-booklet-ring]');
+    const inner = stamp.querySelector('[data-booklet-inner-ring]');
+    expect(outer?.getAttribute('r')).toBe('59');
+    expect(outer?.getAttribute('stroke-width')).toBe('2.4');
+    expect(outer?.getAttribute('stroke-dasharray')).toBeNull();
+    expect(inner?.getAttribute('r')).toBe('52');
+    expect(inner?.getAttribute('stroke-dasharray')).toBe(BOOKLET_INNER_DASH);
+    expect(stamp.querySelector('[data-venue-stamp]')).toBeNull();
+  });
+
+  it('sets the date straight and only the artist on the arc', () => {
+    const stamp = stampOf(row(0));
+    const date = stamp.querySelector('[data-booklet-date]');
+    expect(date?.textContent).toBe('MAR 01');
+    expect(date?.querySelector('textPath')).toBeNull();
+    expect(date?.getAttribute('y')).toBe('104.16');
+    expect(date?.getAttribute('text-anchor')).toBe('middle');
+    const paths = stamp.querySelectorAll('textPath');
+    expect(paths).toHaveLength(1);
+    expect(paths[0]?.textContent).toBe('ARTIST 0');
+  });
+
+  it("inks the stamp in its venue's colours, the same for any artist there", () => {
+    // Bluebird on the board: ring and text #4DA3FF, glyph #7AE6FF.
+    const bluebird = { venueSlug: 'bluebird-theater', venueName: 'Bluebird' };
+    const first = stampOf(row(0, { ...bluebird, artist: 'Khruangbin' }));
+    const second = stampOf(row(1, { ...bluebird, artist: 'Wednesday' }));
+    for (const stamp of [first, second]) {
+      expect(
+        stamp.querySelector('[data-booklet-ring]')?.getAttribute('stroke'),
+      ).toBe('#4DA3FF');
+      expect(
+        stamp.querySelector('[data-booklet-date]')?.getAttribute('fill'),
+      ).toBe('#4DA3FF');
+      expect(
+        stamp
+          .querySelector('[data-venue-glyph="bluebird"] > g')
+          ?.getAttribute('stroke'),
+      ).toBe('#7AE6FF');
+      expect(stamp.style.filter).toContain('#4DA3FF4D');
+      expect(stamp.style.opacity).toBe('0.95');
+    }
+  });
+
+  it('keeps the slot tilts −8°, 6°, 4°, −5°, repeating every four', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(slotTilt)).toEqual([
+      -8, 6, 4, -5, -8, 6, 4, -5,
+    ]);
   });
 });
 
@@ -254,6 +333,60 @@ describe('UpNextStubs', () => {
   it('draws nothing with nothing ahead', () => {
     const { container } = render(<UpNextStubs queue={[]} today="2026-03-01" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  // Audit row (`passport-m` UP NEXT): a 56px grey dashed ring holding the
+  // greyed venue tile, with the date inside the ring.
+  it('tears off a grey ghost of the stamp with the date inside its ring', () => {
+    render(<UpNextStubs queue={[row(10)]} today="2026-03-01" />);
+    const ghost = document.querySelector<HTMLElement>('[data-up-next-ghost]');
+    if (!ghost) throw new Error('no ghost stamp');
+    expect(ghost.style.width).toBe(`${GHOST_SIZE}px`);
+    expect(GHOST_SIZE).toBe(56);
+    expect(ghost.className).toContain('border-dashed');
+    expect(ghost.className).toContain('border-border-strong');
+    expect(ghost.style.borderWidth).toBe('1.5px');
+    expect(ghost.querySelector('[data-up-next-ghost-date]')?.textContent).toBe(
+      'MAR 11',
+    );
+    const tile = ghost.querySelector<HTMLElement>('[data-up-next-ghost-tile]');
+    expect(tile?.style.filter).toBe('grayscale(1)');
+    expect(tile?.style.opacity).toBe('0.45');
+    expect(tile?.querySelector('[data-venue-tile="globe"]')).not.toBeNull();
+    expect(ghost.querySelector('[data-venue-stamp]')).toBeNull();
+  });
+
+  it('rings the stub artwork in its genre colour', () => {
+    render(
+      <UpNextStubs queue={[row(10, { genre: 'indie' })]} today="2026-03-01" />,
+    );
+    const indie = genreColor('indie');
+    if (indie === null) throw new Error('indie has no genre colour');
+    expect(screen.getByTestId('up-next-art').style.boxShadow).toContain(indie);
+  });
+});
+
+// Audit row (`passport-{m,d}`): the booklet frame and its page split.
+describe('PassportBooklet frame', () => {
+  it('draws the gradient hairline fading to the border, with the deep shadow', () => {
+    renderBooklet(4);
+    const frame = view('spread').firstElementChild;
+    if (!(frame instanceof HTMLElement)) throw new Error('no frame');
+    expect(frame.style.borderWidth).toBe('1px');
+    expect(BOOKLET_FRAME).toContain(
+      'linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+    );
+    expect(BOOKLET_SHADOW).toBe('0 40px 100px rgba(0, 0, 0, 0.5)');
+  });
+
+  it('splits the pages with a 5-on 5-off dashed hairline in border-strong', () => {
+    renderBooklet(4);
+    expect(
+      view('spread').querySelectorAll('[data-booklet-split]'),
+    ).toHaveLength(1);
+    expect(BOOKLET_SPLIT_DASH).toBe(
+      'var(--border-strong) 0 5px, transparent 5px 10px',
+    );
   });
 });
 

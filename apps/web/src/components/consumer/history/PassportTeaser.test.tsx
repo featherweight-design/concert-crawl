@@ -4,7 +4,13 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
-import { PassportTeaser, teaserStampsFor } from './PassportTeaser';
+import {
+  PassportTeaser,
+  TEASER_SHELL_STYLE,
+  TEASER_STAMP_GROUND,
+  TEASER_STAMP_SIZE,
+  teaserStampsFor,
+} from './PassportTeaser';
 import { PASSPORT_ROUTE } from './definitions/constants';
 import { HISTORY_COPY } from './definitions/copy';
 
@@ -105,7 +111,35 @@ describe('PassportTeaser stamps', () => {
     expect(stamps).toHaveLength(2);
     for (const stamp of stamps) {
       expect(stamp).toHaveAttribute('data-venue-stamp', 'solid');
+      // The board's teaser stamp is 50px.
+      expect(stamp).toHaveStyle({ width: `${TEASER_STAMP_SIZE}px` });
     }
+    expect(TEASER_STAMP_SIZE).toBe(50);
+  });
+
+  // Audit rows (`concerts-round-stamps-m`, "Your Passport" card).
+  it('draws the board shell: gradient hairline, radius 18, no pink wash', () => {
+    render(<PassportTeaser stats={STATS} shows={[show('a', 'Wednesday')]} />);
+    const card = screen.getByRole('link');
+    expect(card.className).toContain('rounded-[18px]');
+    expect(TEASER_SHELL_STYLE.background).toContain(
+      'linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+    );
+    expect(card.getAttribute('style')).not.toContain('var(--accent) 14%');
+    expect(screen.getByTestId('passport-teaser-body').style.background).toBe(
+      'linear-gradient(135deg, var(--surface-2), var(--surface-1))',
+    );
+  });
+
+  it('sets the stamps on the dot grid', () => {
+    expect(TEASER_STAMP_GROUND).toContain(
+      'radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--fg) 6%, transparent) 1px, transparent 1.5px) 0 0 / 12px 12px',
+    );
+  });
+
+  it('colours "Open it" in signal, not accent', () => {
+    render(<PassportTeaser stats={STATS} shows={[]} />);
+    expect(screen.getByText(COPY.link).style.color).toBe('var(--signal)');
   });
 
   // Without a stamp the column is only its dashed left rule.
