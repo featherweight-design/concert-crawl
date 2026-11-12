@@ -206,7 +206,9 @@ export const PendingCardB = ({
       {/* ── Pending strip ── */}
       <div
         style={{
-          // more-p-price_states: a 33px strip, 16px gutters, 13px line.
+          // more-p-price_states: a 33px strip, 16px gutters, 13px line. The
+          // imminent "Days away" pill (undrawn) is about 17px tall, so with
+          // it the strip grows to about 37px.
           padding: '10px 16px',
           lineHeight: '13px',
           background: tok.strip,
@@ -471,7 +473,9 @@ export const PendingCardB = ({
                   alignItems: 'stretch',
                   gap: '8px',
                   // At 320 the pair (about 309px) outgrows the 250px row, so
-                  // the second button wraps under Confirm and fills the row.
+                  // the second item wraps under Confirm. "Saw a different
+                  // number?" then fills the row; the counter pointer link
+                  // stays content-wide.
                   flexWrap: 'wrap',
                 }
               : {
@@ -480,7 +484,11 @@ export const PendingCardB = ({
                   borderTop: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
+                  // 16px between items; at 320 the actions wrap to their own
+                  // row rather than crush the wait line.
+                  columnGap: '16px',
+                  rowGap: '10px',
+                  flexWrap: 'wrap',
                 }
           }
         >
@@ -566,12 +574,15 @@ export const PendingCardB = ({
 
           {view === 'self-locked' && (
             <>
+              {/* Undrawn view: its label follows the drawn submitter one */}
               <span
                 style={{
+                  flex: '0 0 80px',
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '10px',
+                  fontSize: '9.5px',
+                  lineHeight: '12px',
                   color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
+                  letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}
               >
@@ -619,8 +630,11 @@ export const PendingCardB = ({
               <span
                 data-testid="pending-waiting"
                 style={{
-                  flex: '1 1 auto',
-                  minWidth: 0,
+                  // At least 120px: at the board's 342px row the label, the
+                  // wait line and the actions share one line (330px); below
+                  // that the actions wrap.
+                  flex: '1 1 120px',
+                  minWidth: '120px',
                   fontFamily: 'Inter, system-ui',
                   fontSize: '13.5px',
                   lineHeight: 1.2,

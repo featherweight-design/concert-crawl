@@ -215,13 +215,24 @@ describe('PendingCardB', () => {
       expect(screen.queryByRole('link', { name: '@friend' })).toBeNull();
     });
 
-    it('sets the line in sans 12.5px, upright, with no age (more-p-price_states)', () => {
+    it('sets the line in sans 12.5px with no age (more-p-price_states)', () => {
       render(<PendingCardB {...buildProps({ submittedAt: minutesAgo(12) })} />);
       const line = screen.getByTestId('pending-attribution');
       expect(line.style.fontSize).toBe('12.5px');
-      expect(line.style.fontStyle).toBe('');
       expect(line.textContent).not.toMatch(/ago/);
       expect(screen.queryByText('12m ago')).toBeNull();
+    });
+
+    it('keeps an anonymous submitter upright: nothing in the line is italic', () => {
+      render(
+        <PendingCardB {...buildProps({ view: 'other', submitter: null })} />,
+      );
+      const line = screen.getByTestId('pending-attribution');
+      expect(line.textContent).toBe('Submitted by an anonymous fan');
+      // Covers the line and every descendant, so a restored italic span fails.
+      expect(line.getAttribute('style') ?? '').not.toMatch(/italic/);
+      expect(line.querySelector('[style*="italic"]')).toBeNull();
+      expect(line.querySelector('em, i')).toBeNull();
     });
 
     it('view "submitter" renders "you" regardless of submitter prop', () => {
