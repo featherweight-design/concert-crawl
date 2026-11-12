@@ -210,6 +210,34 @@ describe('admin venues API, redesign 3a', () => {
     });
   });
 
+  describe('hide, edge cases', () => {
+    it('does not ask for a note when nothing is being hidden', async () => {
+      const venue = await seedVenue({ name: 'Plain', slug: 'plain' });
+      const res = await json('PATCH', `venues/${venue.id}`, {
+        hideReason: 'other',
+        name: 'Plain Renamed',
+      });
+      expect(res.status).toBe(200);
+      expect((await venueRow(venue.id))?.hiddenReason).toBeNull();
+    });
+
+    it('gives a venue hidden before reasons existed its reason when hidden again', async () => {
+      const venue = await seedVenue({
+        name: 'Old Hidden',
+        slug: 'old-hidden',
+        active: false,
+      });
+      await json('PATCH', `venues/${venue.id}`, {
+        active: false,
+        hideReason: 'venue_closed',
+      });
+      expect(await venueRow(venue.id)).toMatchObject({
+        hiddenReason: 'venue_closed',
+        hiddenBy: 'admin_1',
+      });
+    });
+  });
+
   describe('delete', () => {
     it('exposes what a delete would destroy on the detail, for the menu', async () => {
       const venue = await seedVenue({ name: 'Busy', slug: 'busy' });

@@ -13,9 +13,15 @@ export const HIDE_REASONS = [
 ] as const;
 export type HideReason = (typeof HIDE_REASONS)[number];
 
+/** The database or a transaction on it, so a count can join a delete's lock. */
+type Reader = Pick<typeof db, 'select'>;
+
 /** A venue's shows on or after today, Mountain Time. */
-export const upcomingShowCount = async (venueId: string): Promise<number> => {
-  const [row] = await db
+export const upcomingShowCount = async (
+  venueId: string,
+  reader: Reader = db,
+): Promise<number> => {
+  const [row] = await reader
     .select({ total: count(events.id) })
     .from(events)
     .where(and(eq(events.venueId, venueId), gte(events.date, todayInDenver())));
@@ -37,20 +43,21 @@ export interface DeleteBlockers {
  */
 export const deleteBlockers = async (
   venueId: string,
+  reader: Reader = db,
 ): Promise<DeleteBlockers> => {
   const today = todayInDenver();
-  const [past] = await db
+  const [past] = await reader
     .select({ total: count(events.id) })
     .from(events)
     .where(and(eq(events.venueId, venueId), lt(events.date, today)));
-  const [watchers] = await db
+  const [watchers] = await reader
     .select({ total: countDistinct(userEvents.userId) })
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
     .where(and(eq(events.venueId, venueId), eq(userEvents.status, 'watching')));
   return {
     pastShows: past?.total ?? 0,
-    upcomingShows: await upcomingShowCount(venueId),
+    upcomingShows: await upcomingShowCount(venueId, reader),
     watchers: watchers?.total ?? 0,
   };
 };
