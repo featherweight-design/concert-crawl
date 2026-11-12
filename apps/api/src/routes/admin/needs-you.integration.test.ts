@@ -244,10 +244,17 @@ describe('admin needs-you routes', () => {
         .status,
     ).toBe(400);
     expect((await unsnooze('nonsense:123')).status).toBe(400);
-    // Not useful needs a current item to take the venue from.
+    // Both shapes need a key that names a current item.
     expect(
       (await snooze('event-low-confidence:not-here', { notUseful: true }))
         .status,
+    ).toBe(404);
+    expect(
+      (
+        await snooze('event-low-confidence:not-here', {
+          until: inHours(1).toISOString(),
+        })
+      ).status,
     ).toBe(404);
     expect(await testDb.select().from(adminQueueSnoozes)).toEqual([]);
   });
