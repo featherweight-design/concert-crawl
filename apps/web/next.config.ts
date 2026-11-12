@@ -3,11 +3,16 @@ import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import withSerwistInit from '@serwist/next';
 import rootPkg from '../../package.json';
+import { CLERK_JS_VERSION, CLERK_UI_VERSION } from './src/lib/clerk-scripts';
 
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@concert-crawl/types'],
   env: {
+    // Exact Clerk script versions, so the browser skips two uncacheable
+    // redirects per page load. See src/lib/clerk-scripts.ts.
+    NEXT_PUBLIC_CLERK_JS_VERSION: CLERK_JS_VERSION,
+    NEXT_PUBLIC_CLERK_UI_VERSION: CLERK_UI_VERSION,
     NEXT_PUBLIC_APP_VERSION: `v${rootPkg.version} · ${process.env['VERCEL_GIT_COMMIT_SHA']?.slice(0, 7) ?? 'dev'}`,
     // Analytics `release` and `app_version` super-properties
     // (src/lib/analytics/client.ts). Vercel only exposes the NEXT_PUBLIC_ twin
