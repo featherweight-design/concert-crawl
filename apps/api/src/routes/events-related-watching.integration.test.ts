@@ -112,9 +112,11 @@ describe('GET /v1/events/:id/related — watch state', () => {
     });
 
     const res = await app.request(`/v1/events/${source.id}/related`);
-    // Anonymous stays cacheable — Vary alone keeps a shared cache from serving
-    // this body back to a signed-in caller.
-    expect(res.headers.get('Cache-Control')).toBeNull();
+    // Anonymous is cacheable at the edge; Vary alone keeps a shared cache from
+    // serving this body back to a signed-in caller.
+    expect(res.headers.get('Cache-Control')).toBe(
+      'public, s-maxage=120, stale-while-revalidate=600',
+    );
     expect(res.headers.get('Vary')).toContain('Authorization');
     const body = await readRelated(res);
     expect(body.data.data).toHaveLength(1);
