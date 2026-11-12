@@ -1,3 +1,17 @@
+# [1.334.0](https://github.com/featherweight-design/concert-crawl/compare/v1.333.0...v1.334.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** address the 1b code review ([dfd5645](https://github.com/featherweight-design/concert-crawl/commit/dfd564579e4ff7cabacdfb07cee1e9c2b2891448))
+* **api:** classify admin_settings for account deletion; build audit-log SQL per call ([43a386e](https://github.com/featherweight-design/concert-crawl/commit/43a386e98a9f167c6925090558982abffe6bbe2f))
+* **api:** lock row one on the first save and read audit times as epoch ms ([fc7a3a2](https://github.com/featherweight-design/concert-crawl/commit/fc7a3a297ad92f97a6f28fce781b6518fd0d09b9))
+
+
+### Features
+
+* **api:** admin settings, audit-log read and system audit writes ([647ee5e](https://github.com/featherweight-design/concert-crawl/commit/647ee5e2e832ceb49468261aa12570723e034fbb))
+
 # [1.333.0](https://github.com/featherweight-design/concert-crawl/compare/v1.332.0...v1.333.0) (2026-11-12)
 
 
