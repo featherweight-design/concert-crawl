@@ -1,3 +1,32 @@
+# [1.352.0](https://github.com/featherweight-design/concert-crawl/compare/v1.351.0...v1.352.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** audit the un-hide and re-check not-an-artist at the write ([8c3c9bc](https://github.com/featherweight-design/concert-crawl/commit/8c3c9bca7c59d046ef96f1abd468e4cfae8037d6))
+* **api:** harden the people list: whole-address email search, shared scan, paged sign-out ([397dbf7](https://github.com/featherweight-design/concert-crawl/commit/397dbf74b6cec34058929e22fe04a6758984d4df))
+* **api:** never auto-resume a removed venue ([1ec38a4](https://github.com/featherweight-design/concert-crawl/commit/1ec38a463a1bab07c1b3212aaf93df3a238f9a0d))
+* **api:** qualify the next-show venue order columns ([289d4ac](https://github.com/featherweight-design/concert-crawl/commit/289d4ac20de990917a51669b4ddfe833716ff88b))
+* **api:** refuse an impossible resume date, keep removed venues dateless, type the new venue fields ([bf8e702](https://github.com/featherweight-design/concert-crawl/commit/bf8e70290e2873e161d1c22a30eda8cbd9e3dd49))
+* **api:** watching counts users, windows honour upcoming, flat counts, venue from the same predicate ([9cff60f](https://github.com/featherweight-design/concert-crawl/commit/9cff60f3870a7e5d01d1cb8af7b02c8ebb95f0b3))
+* **web:** address the /code-review on my shows (B12) ([d32499d](https://github.com/featherweight-design/concert-crawl/commit/d32499df5907c9d4f8fbbf4d562ecdf4cd04afbf))
+* **web:** address the risk checklist on my shows (B12) ([576d186](https://github.com/featherweight-design/concert-crawl/commit/576d186506d10c6b4bd624d4974d00db7adbb112))
+* **web:** restore "Going to this show?" on the going nudge ([dac03bf](https://github.com/featherweight-design/concert-crawl/commit/dac03bf19affc1a4365f249e479663f70364cd25)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **web:** review fixes for my shows skeleton, going ink and test coverage (B12) ([0503d5c](https://github.com/featherweight-design/concert-crawl/commit/0503d5c055474c755d68c093063a0ba38d7661b6))
+* **web:** the profile avatar paints over the banner, not behind it ([f04afb4](https://github.com/featherweight-design/concert-crawl/commit/f04afb40d1890dac36098df67dfc91f687214ecf))
+
+
+### Features
+
+* **api:** add the admin people list with masked email, show email and sign-out ([42a166f](https://github.com/featherweight-design/concert-crawl/commit/42a166f18119f03647fd25cab56d0f07fc5f6b83))
+* **api:** admin artists to-check tab, show windows, next show and watching counts ([e1fd0f9](https://github.com/featherweight-design/concert-crawl/commit/e1fd0f955a7b0df266b5a83426acab5aca754abb))
+* **api:** it's-an-artist un-hides a not-an-artist row in the same write ([951246e](https://github.com/featherweight-design/concert-crawl/commit/951246e204802a4e9059558883f86382e2f9be10))
+* **api:** record why a venue is paused and resume it on a date ([3646c56](https://github.com/featherweight-design/concert-crawl/commit/3646c56b74db2fd822ee6b47319d4061519e82d0))
+* **web:** genre edge and genre chip on watching rows ([44dbe75](https://github.com/featherweight-design/concert-crawl/commit/44dbe756c6a7b63260cd292a83298d49baf40c0d))
+* **web:** match the my shows boards for loading, empty and the artists heading (B12) ([5ee33b6](https://github.com/featherweight-design/concert-crawl/commit/5ee33b6743e40fd730b4b16e61de9544308898d9))
+* **web:** my shows takes the venue stamp, drops the stale price chip (B12) ([b54dd8a](https://github.com/featherweight-design/concert-crawl/commit/b54dd8acb66f84c5748cbe6ffaef26ad27e50084))
+* **web:** restyle the Settings desktop shell and Profile panel ([2ac4239](https://github.com/featherweight-design/concert-crawl/commit/2ac42397ce165ad855d62aab59018866956ea91f))
+
 # [1.351.0](https://github.com/featherweight-design/concert-crawl/compare/v1.350.0...v1.351.0) (2026-11-12)
 
 
