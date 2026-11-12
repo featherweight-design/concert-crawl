@@ -165,6 +165,47 @@ describe('CrewPatch rendering', () => {
     expect(at96.filter).toContain(`${secondary} 35%`);
   });
 
+  it('draws no rim and no glow for a size of zero or less', () => {
+    for (const size of [0, -4, Number.NaN]) {
+      expect(patchRimMetrics(size)).toEqual({
+        rimWidthPx: 0,
+        rimWidthUnits: 0,
+        radiusPx: 0,
+        glowBlurPx: null,
+      });
+    }
+    const { container } = render(<CrewPatch crewId="crew-alpha" size={0} />);
+    const svg = container.querySelector('svg') as SVGElement;
+    expect(svg.innerHTML).not.toContain('Infinity');
+    expect(svg.innerHTML).not.toContain('NaN');
+    expect(container.querySelector('svg > rect')).toBeNull();
+    expect(svg.style.filter).toBe('');
+  });
+
+  it('fills the viewBox and insets the rim by half its stroke, as the board draws it', () => {
+    const { container } = render(
+      <CrewPatch crewId="crew-alpha" size={56} scale="hero" />,
+    );
+    const clip = container.querySelector('clipPath rect') as SVGRectElement;
+    // Full bleed: no offset, the whole 0-100 box, radius 25 (14/56).
+    expect(clip.getAttribute('x')).toBeNull();
+    expect(clip.getAttribute('y')).toBeNull();
+    expect(clip.getAttribute('width')).toBe('100');
+    expect(clip.getAttribute('height')).toBe('100');
+    expect(clip.getAttribute('rx')).toBe('25');
+
+    const rects = Array.from(container.querySelectorAll('svg > rect'));
+    const edge = rects[rects.length - 1] as SVGRectElement;
+    const half = 2.679 / 2;
+    expect(Number(edge.getAttribute('x'))).toBeCloseTo(half, 6);
+    expect(Number(edge.getAttribute('y'))).toBeCloseTo(half, 6);
+    expect(Number(edge.getAttribute('width'))).toBeCloseTo(100 - 2.679, 6);
+    expect(Number(edge.getAttribute('height'))).toBeCloseTo(100 - 2.679, 6);
+    expect(Number(edge.getAttribute('rx'))).toBeCloseTo(25 - half, 6);
+    // The stroke's outer edge lands exactly on the silhouette.
+    expect(Number(edge.getAttribute('x')) - half).toBeCloseTo(0, 6);
+  });
+
   it('keys the glow on size, not scale', () => {
     const filterOf = (size: number, scale: 'hero' | 'tile' | 'micro') => {
       const { container, unmount } = render(
