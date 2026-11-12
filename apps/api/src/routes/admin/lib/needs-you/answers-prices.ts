@@ -108,5 +108,3 @@ export const resolveOnly = define({
   schema: noParams,
   run: (item) => resolveBug(item),
 });
-
-// ---------------------------------------------------------------------------

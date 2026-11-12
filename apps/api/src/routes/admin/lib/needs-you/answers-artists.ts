@@ -76,7 +76,7 @@ const keepSnapshot = z.discriminatedUnion('path', [
     ]),
     matchAttempts: z.number().int(),
     matchConfidence: z.string().nullable(),
-    autoMatchedAt: isoOrNull,
+    autoMatchedAt: z.string().datetime({ offset: true }),
     matchCheckedAt: isoOrNull,
     closedReportIds: z.array(idSchema),
     // What the answer itself wrote, so an undo can tell a later change apart.
@@ -238,7 +238,7 @@ export const keepThisMatch = define({
           matchStatus: before.matchStatus,
           matchAttempts: before.matchAttempts,
           matchConfidence: before.matchConfidence,
-          autoMatchedAt: new Date(before.autoMatchedAt ?? Date.now()),
+          autoMatchedAt: new Date(before.autoMatchedAt),
           matchCheckedAt:
             before.matchCheckedAt === null
               ? null
@@ -275,5 +275,3 @@ function artistAnsweredAt(matchCheckedAt: string | null) {
         isNull(artists.autoMatchedAt),
       );
 }
-
-// ---------------------------------------------------------------------------
