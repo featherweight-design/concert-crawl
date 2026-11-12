@@ -100,7 +100,8 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     // The iPhone launch stills (B+ B23): the plain icon on #070A1A, so the
     // system splash matches the launch animation's first frame. Behind a
-    // build-time switch because they replace iOS's own splash for everyone;
+    // deploy-time switch (read by the server layout, so a web redeploy applies
+    // it) because they replace iOS's own splash for everyone;
     // the animation itself is behind the `launch-animation` flag.
     ...(process.env['NEXT_PUBLIC_LAUNCH_STARTUP_IMAGES'] === '1'
       ? { startupImage: startupImageLinks() }

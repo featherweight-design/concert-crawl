@@ -235,7 +235,10 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
       { duration: total, easing: 'linear', fill: 'forwards' },
     );
     animations.push(backdrop);
-    if (backdrop !== null) {
+    // No Web Animations support (or reduced motion racing the effect): there is
+    // nothing to wait for, so the opaque overlay must not sit over the app.
+    if (backdrop === null) doneRef.current();
+    else {
       // Only a real finish ends it: a cancel (effect cleanup, StrictMode's
       // dev remount) rejects `finished` and must not dismiss the overlay.
       void backdrop.finished.then(

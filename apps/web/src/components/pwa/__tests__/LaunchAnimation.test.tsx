@@ -32,16 +32,37 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// An animation that never reports finished, so only the failsafe can end it.
+const stubStuckAnimate = () => {
+  Element.prototype.animate = vi.fn(
+    () =>
+      ({
+        finished: new Promise<Animation>(() => undefined),
+        cancel: () => undefined,
+      }) as unknown as Animation,
+  );
+};
+
 describe('LaunchAnimation', () => {
+  it('goes at once when there is no Web Animations API to wait on', () => {
+    stubDisplay(true);
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    render(<LaunchAnimation />);
+    // jsdom has none: an opaque overlay with nothing to end it must not mount
+    // over a usable app.
+    expect(screen.queryByTestId('launch-animation')).toBeNull();
+  });
+
   it('draws over a cold standalone start when the cached flag is on, then goes', () => {
     vi.useFakeTimers();
     stubDisplay(true);
+    stubStuckAnimate();
     window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const overlay = screen.getByTestId('launch-animation');
     expect(overlay.getAttribute('aria-hidden')).toBe('true');
     expect(overlay.style.pointerEvents).toBe('none');
-    // jsdom has no Web Animations API, so only the failsafe can end it.
+    // The animation never finishes, so only the failsafe can end it.
     act(() => {
       vi.advanceTimersByTime(3000);
     });
@@ -50,6 +71,7 @@ describe('LaunchAnimation', () => {
 
   it('starts the mark at 128/96 (1.333x), centred on the viewport', () => {
     stubDisplay(true);
+    stubStuckAnimate();
     window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
     const mark = screen.getByTestId('launch-mark');
