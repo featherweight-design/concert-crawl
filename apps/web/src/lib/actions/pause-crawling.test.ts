@@ -11,7 +11,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
-const apiPost = vi.fn();
+const { apiPost } = vi.hoisted(() => ({ apiPost: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
   apiClient: { get: vi.fn(), put: vi.fn(), post: apiPost, delete: vi.fn() },
@@ -58,8 +58,7 @@ describe('pauseCrawling — request body', () => {
   it('sends a reason-only pause as just the reason', async () => {
     await pauseCrawling('venue-1', { reason: 'waiting_on_permission' });
 
-    const body: unknown = apiPost.mock.calls[0]?.[2];
-    expect(JSON.parse(JSON.stringify(body))).toEqual({
+    expect(apiPost.mock.calls[0]?.[2]).toStrictEqual({
       reason: 'waiting_on_permission',
     });
   });
