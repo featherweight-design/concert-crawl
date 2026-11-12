@@ -173,3 +173,4 @@ None of these was decided by the lane. Rows 2, 5 and 6 BLOCK; the rest are minor
 | 24 | #123 | Up next on an empty desktop book isn't drawn. | Between the empty block and Venues collected |
 | 25 | #123 | The PNG share card still draws tilted square stamps. Does "everywhere" include it? | Unchanged |
 | 26 | #123 | The empty phone board says "Passport"; the build shows "Your Passport". | Unchanged |
+| 28 | #116 (#178 item 17) | Venue page stats wrap to 2 lines and never shrink, but a single long word wider than its column can't wrap at a word boundary, so at 390 "Amphitheater" breaks mid-word as "Amphithe / ater" (Red Rocks). Is a mid-word break OK, should it hyphenate ("Amphithe-ater"), or may the word shrink? | Mid-word break (as built) |
