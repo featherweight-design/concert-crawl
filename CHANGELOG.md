@@ -1,3 +1,23 @@
+# [1.343.0](https://github.com/featherweight-design/concert-crawl/compare/v1.342.3...v1.343.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **admin:** apply addendum 2 to the primitives ([543e307](https://github.com/featherweight-design/concert-crawl/commit/543e307caf3509210935644ccee4dccd01f09d28)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **admin:** phone confirm opens on Cancel, sheets clear the home indicator ([568abd6](https://github.com/featherweight-design/concert-crawl/commit/568abd6deb3bbbcfb0b05e097668add7791ebff3))
+* **admin:** scrim covers the content area, FLAG and Couldn't load per the boards ([f1cadd9](https://github.com/featherweight-design/concert-crawl/commit/f1cadd9a516c8b1ca4e2a174295f2e72508d9de9))
+* **api:** report the venue mute apart on unsnooze and cap a snooze at a year ([9cd4157](https://github.com/featherweight-design/concert-crawl/commit/9cd4157fd15c4c04b93c1c003bc2dbefcb7e28c8))
+* **api:** snooze checks the key names a current item and takes the actor strictly ([453c8f5](https://github.com/featherweight-design/concert-crawl/commit/453c8f52477a629c1539aa82e632b55e402b4f49))
+* **web:** cap the identity lookup, reset the tier tag on unmount ([ae8bad1](https://github.com/featherweight-design/concert-crawl/commit/ae8bad164e5763921801fbb57810c39e206d4d8b))
+* **web:** clear the identity timer, key the tier tag on the plan, document the web hash key ([094d254](https://github.com/featherweight-design/concert-crawl/commit/094d254e0c5399264e94fc896ee60bb63ac3b5e5))
+
+
+### Features
+
+* **admin:** shared primitives for the redesign ([34af639](https://github.com/featherweight-design/concert-crawl/commit/34af6398cdfde5e9ae5222a345325c0d9de2894b))
+* **api:** admin Needs you routes (list, count, snooze) ([5213d47](https://github.com/featherweight-design/concert-crawl/commit/5213d47b67bfd62bb1004ecf30d29f57687b6a18))
+* **web:** tag Sentry events with app, release, route, tier and keyed user hash ([8d12bef](https://github.com/featherweight-design/concert-crawl/commit/8d12bef6e7c288fce034977018b3351fd022f38b))
+
 ## [1.342.3](https://github.com/featherweight-design/concert-crawl/compare/v1.342.2...v1.342.3) (2026-11-12)
 
 
