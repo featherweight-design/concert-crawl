@@ -22,27 +22,21 @@ import {
 import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
 import { ToggleSwitch } from '../connections/ToggleSwitch';
 import { CrewActivityBlock } from './CrewActivityBlock';
+import { Bell } from 'lucide-react';
 import { PanelHeading } from '../PanelHeading';
+import {
+  CTA_CLASS,
+  CTA_STYLE,
+  GroupHeading,
+  IconTile,
+  ROW_CARD,
+  ROW_DETAIL,
+  ROW_LABEL,
+} from './NotificationRow';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
 
 const ARTISTS_COPY = NOTIFICATIONS_COPY.artists;
 const PRODUCT_EMAIL_COPY = NOTIFICATIONS_COPY.productEmail;
-
-/**
- * A sub-group label inside the section. `h3`, not `h2`: "Notifications" is the
- * section's own `h2` and labels it via `aria-labelledby`, so a sibling `h2`
- * here would flatten the outline and claim these rows sit beside the section
- * rather than inside it. CrewActivityBlock, the shipped sub-group in this same
- * section, is an `h3` for the same reason.
- */
-const GroupHeading = ({ text }: { text: string }) => (
-  <h3
-    className="pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
-    style={{ fontFamily: 'var(--font-mono)' }}
-  >
-    {text}
-  </h3>
-);
 
 // Detail line under the master switch: shows "On" only when BOTH the server
 // preference has push enabled AND this device holds a live subscription. The
@@ -289,7 +283,7 @@ export const NotificationsSection = ({
     ) : (
       <h2
         id={headingId}
-        className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
+        className="-mb-4 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
         style={{ fontFamily: 'var(--font-mono)' }}
       >
         {NOTIFICATIONS_COPY.heading}
@@ -298,7 +292,7 @@ export const NotificationsSection = ({
 
   if (isError) {
     return (
-      <section aria-labelledby={headingId} className="flex flex-col gap-4">
+      <section aria-labelledby={headingId} className="flex flex-col gap-7">
         {heading}
         <p role="alert" className="text-xs text-fg-muted">
           {NOTIFICATIONS_COPY.loadError}
@@ -316,11 +310,11 @@ export const NotificationsSection = ({
   // devices.
   if (isLoading || deviceState === null) {
     return (
-      <section aria-labelledby={headingId} className="flex flex-col gap-4">
+      <section aria-labelledby={headingId} className="flex flex-col gap-7">
         {heading}
         <div aria-busy="true" className="flex flex-col gap-2">
           <div className="h-4 w-32 rounded bg-surface-2" />
-          <div className="h-10 rounded-lg bg-surface-1" />
+          <div className="h-10 rounded-2xl bg-surface-1" />
         </div>
         <CrewActivityBlock />
       </section>
@@ -340,7 +334,7 @@ export const NotificationsSection = ({
   const isIosInstalled = isIosSafari() && isStandalone();
 
   return (
-    <section className="flex flex-col gap-4" aria-labelledby={headingId}>
+    <section className="flex flex-col gap-7" aria-labelledby={headingId}>
       {heading}
 
       {isIosNeedsInstall && (
@@ -363,14 +357,12 @@ export const NotificationsSection = ({
       )}
 
       {isDenied ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-1 p-4">
+        <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface-1 p-4">
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
               {NOTIFICATIONS_COPY.denied.badge}
             </span>
-            <span className="text-sm font-semibold text-fg">
-              {NOTIFICATIONS_COPY.denied.title}
-            </span>
+            <span className={ROW_LABEL}>{NOTIFICATIONS_COPY.denied.title}</span>
           </div>
           <p className="text-xs text-fg-muted">
             {NOTIFICATIONS_COPY.denied.sub}
@@ -385,34 +377,34 @@ export const NotificationsSection = ({
           </a>
         </div>
       ) : isEmpty ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-1 p-4">
-          <p className="text-sm font-semibold text-fg">
-            {NOTIFICATIONS_COPY.empty.title}
-          </p>
-          <p className="text-xs text-fg-muted">
-            {NOTIFICATIONS_COPY.empty.sub}
-          </p>
-          <button
-            type="button"
-            onClick={() => void onToggleMaster(true)}
-            // Disable whenever push isn't in the actionable-supported state.
-            // `ios-needs-install` and `unsupported` both cause subscribeToPush
-            // to return {status:'unsupported'}, so a live button here would
-            // be a dead tap on iOS Safari outside standalone mode.
-            disabled={support !== 'supported'}
-            className="inline-flex min-h-[44px] w-fit items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent disabled:opacity-60"
-          >
-            {NOTIFICATIONS_COPY.empty.cta}
-          </button>
+        <div className="flex items-start gap-3.5 rounded-2xl border border-dashed border-border-strong bg-surface-1 p-4">
+          <IconTile>
+            <Bell size={17} />
+          </IconTile>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <p className={ROW_LABEL}>{NOTIFICATIONS_COPY.empty.title}</p>
+            <p className={ROW_DETAIL}>{NOTIFICATIONS_COPY.empty.sub}</p>
+            <button
+              type="button"
+              onClick={() => void onToggleMaster(true)}
+              // Disable whenever push isn't in the actionable-supported state.
+              // `ios-needs-install` and `unsupported` both cause subscribeToPush
+              // to return {status:'unsupported'}, so a live button here would
+              // be a dead tap on iOS Safari outside standalone mode.
+              disabled={support !== 'supported'}
+              className={`${CTA_CLASS} mt-2.5`}
+              style={CTA_STYLE}
+            >
+              {NOTIFICATIONS_COPY.empty.cta}
+            </button>
+          </div>
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between rounded-lg border border-border bg-surface-1 px-4 py-3">
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-fg">
-                {NOTIFICATIONS_COPY.master}
-              </span>
-              <span className="text-xs text-fg-muted">
+          <div className={ROW_CARD}>
+            <div className="flex flex-col gap-1">
+              <span className={ROW_LABEL}>{NOTIFICATIONS_COPY.master}</span>
+              <span className={ROW_DETAIL}>
                 {detailForMaster(masterOn, deviceState)}
               </span>
             </div>
@@ -433,15 +425,16 @@ export const NotificationsSection = ({
               "Enable on this device" affordance so the user can subscribe
               without toggling master off/on globally. */}
           {masterOn && !deviceState.subscribed && support === 'supported' && (
-            <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface-1 p-4">
-              <p className="text-xs text-fg-muted">
+            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-1 p-4">
+              <p className={ROW_DETAIL}>
                 {NOTIFICATIONS_COPY.enableOnDevice.sub}
               </p>
               <button
                 type="button"
                 onClick={() => void subscribeThisDevice()}
                 disabled={patch.isPending}
-                className="inline-flex min-h-[44px] w-fit items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent disabled:opacity-60"
+                className={CTA_CLASS}
+                style={CTA_STYLE}
               >
                 {NOTIFICATIONS_COPY.enableOnDevice.cta}
               </button>
@@ -459,15 +452,13 @@ export const NotificationsSection = ({
           so this row is the in-app view of that same state. */}
       <div className="flex flex-col gap-2">
         <GroupHeading text={PRODUCT_EMAIL_COPY.heading} />
-        <div className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
-          <div className="flex min-w-0 flex-col">
-            <span className="text-sm font-semibold text-fg">
-              {PRODUCT_EMAIL_COPY.label}
-            </span>
+        <div className={ROW_CARD}>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className={ROW_LABEL}>{PRODUCT_EMAIL_COPY.label}</span>
             {/* B+ `more-s-d_notifications` draws the off state with its
                 promise. On, there is nothing to promise, so no line. */}
             {!productEmailsOn && (
-              <span id={rowIds.productEmail} className="text-xs text-fg-muted">
+              <span id={rowIds.productEmail} className={ROW_DETAIL}>
                 {PRODUCT_EMAIL_COPY.offDetail}
               </span>
             )}
@@ -497,16 +488,14 @@ export const NotificationsSection = ({
       <div className="flex flex-col gap-2">
         <GroupHeading text={ARTISTS_COPY.heading} />
         {masterOn && (
-          <div className="overflow-hidden rounded-lg border border-border bg-surface-1">
-            <div className="flex min-h-[44px] items-center justify-between gap-3 px-4 py-3">
-              <div className="flex min-w-0 flex-col">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface-1">
+            <div className="flex min-h-[44px] items-center justify-between gap-3 px-4 py-3.5">
+              <div className="flex min-w-0 flex-col gap-1">
                 {/* No New badge here, unlike the digest row below: the
                           label already opens with the word "New", and the two
                           together read as one confused phrase. */}
-                <span className="text-sm font-semibold text-fg">
-                  {ARTISTS_COPY.alerts.label}
-                </span>
-                <span id={rowIds.alerts} className="text-xs text-fg-muted">
+                <span className={ROW_LABEL}>{ARTISTS_COPY.alerts.label}</span>
+                <span id={rowIds.alerts} className={ROW_DETAIL}>
                   {ARTISTS_COPY.alerts.detail}
                 </span>
               </div>
@@ -520,12 +509,12 @@ export const NotificationsSection = ({
             </div>
             {/* Indented sub-row of the above, not a sibling: it only
                       means anything while the alert it modifies is on. */}
-            <div className="flex min-h-[44px] items-center justify-between gap-3 border-t border-border py-3 pl-[34px] pr-4">
-              <div className="flex min-w-0 flex-col">
-                <span className="text-sm font-semibold text-fg">
+            <div className="flex min-h-[44px] items-center justify-between gap-3 border-t border-border py-3.5 pl-[34px] pr-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className={ROW_LABEL}>
                   {ARTISTS_COPY.autoWatch.label}
                 </span>
-                <span id={rowIds.autoWatch} className="text-xs text-fg-muted">
+                <span id={rowIds.autoWatch} className={ROW_DETAIL}>
                   {ARTISTS_COPY.autoWatch.detail}
                 </span>
               </div>
@@ -540,15 +529,15 @@ export const NotificationsSection = ({
           </div>
         )}
 
-        <div className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
-          <div className="flex min-w-0 flex-col">
-            <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-fg">
+        <div className={ROW_CARD}>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className={`${ROW_LABEL} flex flex-wrap items-center gap-2`}>
               {ARTISTS_COPY.digest.label}
               <span className="rounded border border-signal px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.12em] text-signal">
                 {ARTISTS_COPY.newBadge}
               </span>
             </span>
-            <span id={rowIds.digest} className="text-xs text-fg-muted">
+            <span id={rowIds.digest} className={ROW_DETAIL}>
               {ARTISTS_COPY.digest.detail}
             </span>
           </div>
@@ -576,15 +565,10 @@ export const NotificationsSection = ({
             const checked = sub.key === 'watch' ? watchUpdatesOn : priceDropsOn;
             const detailId = `${idPrefix}-sub-${sub.key}-detail`;
             return (
-              <div
-                key={sub.key}
-                className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3"
-              >
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-sm font-semibold text-fg">
-                    {sub.label}
-                  </span>
-                  <span id={detailId} className="text-xs text-fg-muted">
+              <div key={sub.key} className={ROW_CARD}>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className={ROW_LABEL}>{sub.label}</span>
+                  <span id={detailId} className={ROW_DETAIL}>
                     {sub.detail}
                   </span>
                 </div>
