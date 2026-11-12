@@ -195,6 +195,12 @@ export const REPORTING_COPY = {
       vendor: "The show's off. Contact your ticket vendor for refund details.",
       venue: "The show's off. Check with the venue about refunds.",
     },
+    // The other two cards' second sentences, as their boards draw them
+    // (08-prices-and-status/more-st-ev_post_m, more-st-ev_sold_m).
+    postponedBody:
+      "New date not announced yet. Keep it in Watching and we'll tell you when it lands.",
+    soldOutBody:
+      "Official waitlist may open closer to the date. We'll watch it.",
   },
 
   // ── PendingSoldOutCard ───────────────────────────────────────────
