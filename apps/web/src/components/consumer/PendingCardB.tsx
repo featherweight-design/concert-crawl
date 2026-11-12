@@ -4,7 +4,6 @@ import { SP_POLICY } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { CCTip, type TipContent } from '@/components/ui/cc-tip';
 import {
-  CheckGlyph,
   Eyebrow,
   LockGlyph,
   PendingDot,
@@ -18,15 +17,6 @@ const copy = CONSUMER_COPY.pendingCardB;
 // ── Helpers ──────────────────────────────────────────────────────
 const vendorDisplayName = (vendor: string): string =>
   vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor;
-
-const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${Math.floor(diffHours / 24)}d ago`;
-};
 
 // ── Color constants ──────────────────────────────────────────────
 const COMMUNITY_SIGNAL = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
@@ -48,7 +38,8 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
       color: COMMUNITY_SIGNAL,
       bg: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 6%, var(--surface-1))`,
       border: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 32%, var(--border))`,
-      strip: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 12%, transparent)`,
+      // more-p-price_states samples the strip at #18243C: signal at ~7%.
+      strip: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 7%, transparent)`,
       stripBorder: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 26%, var(--border))`,
       pill: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 16%, transparent)`,
     };
@@ -128,6 +119,10 @@ export interface PendingCardBProps {
   vendor: string;
   kind: 'community' | 'boxoffice';
   submitter: { handle: string; url: string } | null;
+  /**
+   * Kept on the contract for callers. The card no longer prints the age:
+   * more-p-price_states draws "Submitted by @hugh" with no time.
+   */
   submittedAt: string;
   confirms: number;
   needed: number;
@@ -165,7 +160,6 @@ export const PendingCardB = ({
   vendor,
   kind,
   submitter,
-  submittedAt,
   view,
   note,
   confirms,
@@ -212,7 +206,9 @@ export const PendingCardB = ({
       {/* ── Pending strip ── */}
       <div
         style={{
-          padding: '8px 14px',
+          // more-p-price_states: a 33px strip, 16px gutters, 13px line.
+          padding: '10px 16px',
+          lineHeight: '13px',
           background: tok.strip,
           borderBottom: `1px dashed ${tok.stripBorder}`,
           display: 'flex',
@@ -222,34 +218,37 @@ export const PendingCardB = ({
           flexWrap: 'wrap',
         }}
       >
-        {/* Strip left group */}
+        {/* Strip left group: the dots lead, then one mono line
+            "PENDING · 1 OF 2 CONFIRMED" (9.5px, 0.14em), as drawn */}
         <div
+          data-testid="pending-strip-left"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: '9.5px',
             color: tok.color,
-            letterSpacing: '0.08em',
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
             fontWeight: 700,
           }}
         >
-          <span>{copy.pending}</span>
-          <span style={{ opacity: 0.4 }}>·</span>
-          <span style={{ display: 'inline-flex', gap: '3px' }}>
+          <span
+            data-testid="pending-strip-dots"
+            style={{ display: 'inline-flex', gap: '10px' }}
+          >
             {Array.from({ length: needed }).map((_, idx) => (
               <PendingDot
                 key={idx}
-                size={7}
+                size={9}
                 filled={idx < confirms}
                 color={tok.color}
               />
             ))}
           </span>
           <span>
-            {confirms} {copy.of} {needed} {copy.confirmed}
+            {copy.pending} · {confirms} {copy.of} {needed} {copy.confirmed}
           </span>
           {isImminent && (
             <CCTip
@@ -313,11 +312,12 @@ export const PendingCardB = ({
           </span>
         ) : (
           <span
+            data-testid="pending-strip-to-go"
             style={{
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '9px',
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
+              fontSize: '9.5px',
+              color: 'var(--fg-muted)',
+              letterSpacing: '0.14em',
               textTransform: 'uppercase',
             }}
           >
@@ -328,12 +328,14 @@ export const PendingCardB = ({
 
       {/* ── Body ── */}
       <div style={{ padding: '16px 16px 14px' }}>
-        {/* Top row (eyebrow row) */}
+        {/* Top row (eyebrow row). The board holds it at the live card's
+            19px badge-row height, so TICKETS sits 24px under the strip. */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            minHeight: '19px',
           }}
         >
           <Eyebrow
@@ -371,17 +373,20 @@ export const PendingCardB = ({
               ? `$${floor}–$${ceiling}`
               : `$${floor}`}
           </span>
+          {/* One mono-caps qualifier, "GA · SEEN ON TICKETMASTER", inline
+              after the price (more-p-price_states: 9.5px, 0.14em, muted). */}
           <span
+            data-testid="pending-qualifier"
             style={{
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '11px',
+              fontSize: '9.5px',
               color: 'var(--fg-muted)',
-              letterSpacing: '0.06em',
+              letterSpacing: '0.14em',
               textTransform: 'uppercase',
-              fontWeight: 700,
+              fontWeight: 500,
             }}
           >
-            {tier}
+            {tier} · {copy.seenOnPrefix} {vendorDisplayName(vendor)}
           </span>
           {isBox && (
             <span
@@ -399,58 +404,37 @@ export const PendingCardB = ({
           <PendingTrustPill kind={kind} />
         </div>
 
-        {/* Vendor line */}
+        {/* Attribution line: "Submitted by @hugh" / "Submitted by you", sans
+            12.5px, muted, no time (more-p-price_states). Price baseline to
+            its caps is 17px, as on the live card. */}
         <div
+          data-testid="pending-attribution"
           style={{
-            marginTop: '6px',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '10px',
+            marginTop: '9px',
+            fontFamily: 'Inter, system-ui',
+            fontSize: '12.5px',
+            lineHeight: 1.25,
             color: 'var(--fg-muted)',
-            letterSpacing: '0.04em',
           }}
         >
-          {copy.seenOnPrefix} {vendorDisplayName(vendor)}
-        </div>
-
-        {/* Attribution line */}
-        <div
-          style={{
-            marginTop: '8px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            flexWrap: 'wrap',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '9px',
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.04em',
-          }}
-        >
-          <span>{copy.submittedByPrefix}</span>
+          {copy.submittedByPrefix}{' '}
           {isSubmitter ? (
-            <span style={{ color: tok.color, fontWeight: 700 }}>
-              {copy.you}
-            </span>
+            copy.you
           ) : submitter !== null ? (
-            <a
-              href={submitter.url}
-              className="ph-no-capture"
-              style={{
-                color: 'var(--fg-muted)',
-                textDecoration: 'underline',
-                textDecorationColor: 'var(--border-strong)',
-                textUnderlineOffset: '2px',
-              }}
-            >
-              {submitter.handle}
-            </a>
+            submitter.url ? (
+              <a
+                href={submitter.url}
+                className="ph-no-capture"
+                style={{ color: 'inherit', textDecoration: 'none' }}
+              >
+                {submitter.handle}
+              </a>
+            ) : (
+              <span className="ph-no-capture">{submitter.handle}</span>
+            )
           ) : (
-            <span style={{ fontStyle: 'italic', opacity: 0.85 }}>
-              {copy.anonymousFan}
-            </span>
+            copy.anonymousFan
           )}
-          <span style={{ opacity: 0.5 }}>·</span>
-          <span>{formatTimeAgo(submittedAt)}</span>
         </div>
 
         {/* Optional note */}
@@ -474,77 +458,109 @@ export const PendingCardB = ({
           </div>
         )}
 
-        {/* Footer */}
+        {/* Footer. Someone else's price: two 40px buttons, no rule, 15px
+            under the attribution. Your own: a solid rule, then the label,
+            the wait line and Edit / Withdraw (more-p-price_states). */}
         <div
-          style={{
-            marginTop: '12px',
-            paddingTop: '10px',
-            borderTop: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '10px',
-            flexWrap: 'wrap',
-          }}
+          data-testid="pending-footer"
+          style={
+            view === 'other'
+              ? {
+                  marginTop: '15px',
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  gap: '8px',
+                  // At 320 the pair (about 309px) outgrows the 250px row, so
+                  // the second button wraps under Confirm and fills the row.
+                  flexWrap: 'wrap',
+                }
+              : {
+                  marginTop: '15px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                }
+          }
         >
           {view === 'other' && (
             <>
-              {counterPointer != null ? (
-                // Until migration 0100 lands the schema allows one pending
-                // counter per price, so point at the existing one rather than
-                // open a form that would 409. Several fans may each file one
-                // after 0100; B9b replaces this with "Submit an update".
-                <CounterPointerLink href={counterPointer.href} />
-              ) : (
-                <button
-                  type="button"
-                  onClick={onEdit}
-                  {...(signedOut
-                    ? { 'aria-label': copy.ariaSawDifferentNumberSignedOut }
-                    : {})}
-                  style={{
-                    all: 'unset',
-                    cursor: 'pointer',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '10px',
-                    color: 'var(--fg-subtle)',
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {copy.sawDifferentNumber}
-                </button>
-              )}
               <button
                 type="button"
                 onClick={onConfirm}
+                data-testid="pending-confirm"
                 {...(signedOut
                   ? { 'aria-label': copy.ariaConfirmPriceSignedOut }
                   : {})}
                 style={{
                   all: 'unset',
+                  boxSizing: 'border-box',
                   cursor: 'pointer',
+                  // Takes the row's spare width (the board's Confirm is 33px
+                  // wider than its label; the second button is content-wide).
+                  flex: '100 1 auto',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  borderRadius: '8px',
-                  // The Confirm price pill is the signal-to-accent gradient
-                  // with a soft glow, as drawn (more-p-price_states).
+                  justifyContent: 'center',
+                  height: '40px',
+                  padding: '0 16px',
+                  borderRadius: '10px',
+                  // Sampled left to right: signal into accent at about 65%,
+                  // with a signal glow under the pill.
                   background:
                     'linear-gradient(135deg, var(--signal), var(--cta-end))',
                   boxShadow:
-                    '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
+                    '0 6px 18px color-mix(in oklab, var(--signal) 22%, transparent)',
                   color: 'var(--fg-on-accent)',
                   fontFamily: 'Inter, system-ui',
                   fontWeight: 700,
-                  fontSize: '12.5px',
-                  letterSpacing: '-0.005em',
+                  fontSize: '14px',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <CheckGlyph size={11} color="var(--fg-on-accent)" />
                 {copy.confirmPrice}
               </button>
+              {counterPointer != null ? (
+                // Until migration 0100 lands the schema allows one pending
+                // counter per price, so point at the existing one rather than
+                // open a form that would 409. Several fans may each file one
+                // after 0100; B9b replaces this with "Submit an update".
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <CounterPointerLink href={counterPointer.href} />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  data-testid="pending-saw-different"
+                  {...(signedOut
+                    ? { 'aria-label': copy.ariaSawDifferentNumberSignedOut }
+                    : {})}
+                  style={{
+                    all: 'unset',
+                    boxSizing: 'border-box',
+                    cursor: 'pointer',
+                    // Grows only once it wraps onto a row of its own.
+                    flex: '1 0 auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '40px',
+                    padding: '0 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-strong)',
+                    background: 'var(--surface-1)',
+                    color: 'var(--fg)',
+                    fontFamily: 'Inter, system-ui',
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {copy.sawDifferentNumber}
+                </button>
+              )}
             </>
           )}
 
@@ -585,18 +601,35 @@ export const PendingCardB = ({
 
           {view === 'submitter' && (
             <>
+              {/* 80px label column that wraps to two mono lines, as drawn */}
               <span
+                data-testid="pending-your-submission"
                 style={{
+                  flex: '0 0 80px',
                   fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '10px',
+                  fontSize: '9.5px',
+                  lineHeight: '12px',
                   color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
+                  letterSpacing: '0.08em',
                   textTransform: 'uppercase',
                 }}
               >
                 {copy.yourSubmissionLabel}
               </span>
-              <div style={{ display: 'flex', gap: '14px' }}>
+              <span
+                data-testid="pending-waiting"
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: 0,
+                  fontFamily: 'Inter, system-ui',
+                  fontSize: '13.5px',
+                  lineHeight: 1.2,
+                  color: 'var(--fg-muted)',
+                }}
+              >
+                {copy.waitingOnFans(remaining)}
+              </span>
+              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={onEdit}
@@ -604,10 +637,9 @@ export const PendingCardB = ({
                     all: 'unset',
                     cursor: 'pointer',
                     fontFamily: 'Inter, system-ui',
-                    fontWeight: 600,
-                    fontSize: '12px',
-                    color: 'var(--signal)',
-                    letterSpacing: '-0.005em',
+                    fontWeight: 700,
+                    fontSize: '13.5px',
+                    color: 'var(--fg)',
                   }}
                 >
                   {copy.editButton}
@@ -619,10 +651,9 @@ export const PendingCardB = ({
                     all: 'unset',
                     cursor: 'pointer',
                     fontFamily: 'Inter, system-ui',
-                    fontWeight: 600,
-                    fontSize: '12px',
+                    fontWeight: 700,
+                    fontSize: '13.5px',
                     color: 'var(--warning)',
-                    letterSpacing: '-0.005em',
                   }}
                 >
                   {copy.withdrawButton}
