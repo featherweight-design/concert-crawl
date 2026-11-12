@@ -9,6 +9,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { MY_SHOWS_GRADIENT } from './definitions/constants';
+import { PASSPORT_CTA_GLOW } from '@/components/consumer/passport/definitions/styles';
 
 interface MyShowsEmptyCardBaseProps {
   /** Decorative art above the eyebrow. */
@@ -107,8 +108,7 @@ export const MyShowsEmptyCard = ({
           fontSize: 15,
           fontWeight: 800,
           letterSpacing: '-0.01em',
-          boxShadow:
-            '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+          boxShadow: PASSPORT_CTA_GLOW,
         }}
       >
         {cta.label}

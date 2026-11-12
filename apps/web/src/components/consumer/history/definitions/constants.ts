@@ -76,11 +76,15 @@ export const MY_SHOWS_GRADIENT =
 export const MY_SHOWS_HEADER_RULE =
   'linear-gradient(90deg, color-mix(in oklch, var(--signal) 60%, transparent), color-mix(in oklch, var(--accent) 40%, transparent) 40%, var(--border) 75%)';
 
-// Painted as a 1px background along the header's bottom edge, where the plain
-// `border-b` used to sit, so the header's spacing is unchanged.
+// Pair with `border-b border-transparent`. The 1px transparent border keeps
+// the header's height where the old plain `border-b` had it, and the
+// border-box origin and clip paint the gradient into that border row rather
+// than inside the padding, so nothing below shifts.
 export const MY_SHOWS_HEADER_RULE_STYLE: CSSProperties = {
   backgroundImage: MY_SHOWS_HEADER_RULE,
   backgroundSize: '100% 1px',
   backgroundPosition: 'left bottom',
   backgroundRepeat: 'no-repeat',
+  backgroundOrigin: 'border-box',
+  backgroundClip: 'border-box',
 };
