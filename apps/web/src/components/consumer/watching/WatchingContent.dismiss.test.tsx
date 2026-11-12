@@ -500,6 +500,41 @@ describe('Watching: dismissing a No longer listed show', () => {
     expect(screen.queryByText(delisted.artist)).toBeNull();
   });
 
+  it('a refetch mid-POST then a failed POST shows the row again and returns focus', async () => {
+    const post = deferred();
+    postMock.mockReturnValue(post.promise);
+    const client = setup([live, delisted, later]);
+
+    const button = dismissButton();
+    button.focus();
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.queryByText(delisted.artist)).toBeNull());
+
+    // The refetch puts the row back in the cache; only the hiding set keeps
+    // it out of the list.
+    getMock.mockResolvedValue([live, delisted, later]);
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: watchingQueryKey(TEST_USER_ID),
+      });
+    });
+    expect(cachedIds(client)).toEqual(['ev-live', 'ev-nll', 'ev-later']);
+    expect(screen.queryByText(delisted.artist)).toBeNull();
+
+    // The rollback finds the row already cached and writes nothing new, so
+    // clearing the hiding set has to re-render on its own.
+    pinRefetch();
+    await act(async () => post.reject(new ApiError(500, 'boom')));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(COPY.dismiss.failed, {
+        id: 'watching-dismiss',
+      }),
+    );
+    await waitFor(() => expect(screen.getByText(delisted.artist)).toBeTruthy());
+    await waitFor(() => expect(document.activeElement).toBe(dismissButton()));
+  });
+
   it('a failed POST puts back only its own row, at its old place', async () => {
     const post = deferred();
     postMock.mockReturnValue(post.promise);
