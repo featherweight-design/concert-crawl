@@ -1,3 +1,27 @@
+# [1.360.0](https://github.com/featherweight-design/concert-crawl/compare/v1.359.0...v1.360.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** catalog cache skips unreadable stamps and searches, events live five minutes ([cee388b](https://github.com/featherweight-design/concert-crawl/commit/cee388b513afe6178a7cc245851157e2b5ca0ebc))
+* **web:** flagship card meta line, mobile chip and page title as the boards draw them ([d683f63](https://github.com/featherweight-design/concert-crawl/commit/d683f6315eb4d6d25efbf88150246e238b386b23))
+* **web:** flagship Directions link keeps its case as the board draws it ([2b86704](https://github.com/featherweight-design/concert-crawl/commit/2b86704fd3eba8133b710cc86658e5120391c2bb))
+* **web:** keep every remove's toast and restore token, and tidy the row menu's focus ([12cfb2c](https://github.com/featherweight-design/concert-crawl/commit/12cfb2cdd3f59d2b59462abdaafeb69548581832))
+* **web:** merge BottomSheet maxWidth style with the drag style ([4f3b65c](https://github.com/featherweight-design/concert-crawl/commit/4f3b65c68b7412567c1614bbb90994e38901e973))
+* **web:** phone flagship glyph sits right as the board draws it ([8ed7432](https://github.com/featherweight-design/concert-crawl/commit/8ed7432cdeb3680a3c4a3cffc94084d113b5df9f))
+* **web:** venue fidelity review fixes, hover, forced colours, stat floor ([0b193af](https://github.com/featherweight-design/concert-crawl/commit/0b193afba439b2f32f37175002973a11089d88e5))
+
+
+### Features
+
+* **web:** edit your Concerts list: row menu, remove confirm, Undo and share ([4e3273a](https://github.com/featherweight-design/concert-crawl/commit/4e3273a521123c00f3e9a2a4619f154f8d84919a))
+* **web:** venue page fidelity, name gradient, flagship edge, fallback tile, hero layout ([c8f13cf](https://github.com/featherweight-design/concert-crawl/commit/c8f13cfd173ceb544a71fddc6207b7aa996c338b))
+
+
+### Performance Improvements
+
+* **web:** cache public catalog reads server-side under a versioned key ([dbd0d48](https://github.com/featherweight-design/concert-crawl/commit/dbd0d48e29c8ba787ddfd79bbb3f50ba0e8fffdc))
+
 # [1.359.0](https://github.com/featherweight-design/concert-crawl/compare/v1.358.0...v1.359.0) (2026-11-12)
 
 
