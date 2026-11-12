@@ -64,13 +64,22 @@ const MIN_TAP_TARGET = 44;
 // A plain YYYY-MM-DD is anchored at noon UTC before formatting — midnight would
 // slip to the previous day in any negative-offset zone and label the night the
 // user attended one day early.
-const formatWentDate = (date: string): string =>
+const formatDate = (
+  date: string,
+  options: Intl.DateTimeFormatOptions,
+): string =>
   new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    ...options,
     timeZone: 'America/Denver',
   }).format(new Date(`${date}T12:00:00Z`));
+
+/** The button's label date, as drawn: "Sat, Nov 7" (event_stamped_m). */
+const formatWentDate = (date: string): string =>
+  formatDate(date, { weekday: 'short', month: 'short', day: 'numeric' });
+
+/** The pill's accessible name keeps the year, which the drawn label drops. */
+const formatWentDateFull = (date: string): string =>
+  formatDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
 
 const LockIcon = ({ size }: { size: number }) => (
   <svg
@@ -295,7 +304,7 @@ export const GoingButton = ({
               : state === 'past-no'
                 ? GOING_COPY.past.ariaWent(
                     show.artist,
-                    formatWentDate(show.date),
+                    formatWentDateFull(show.date),
                   )
                 : undefined
         }

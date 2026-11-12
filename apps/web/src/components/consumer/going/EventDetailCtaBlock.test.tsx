@@ -126,8 +126,10 @@ describe('EventDetailCtaBlock', () => {
     expect(
       screen.getByText(GOING_COPY.past.hint('Gothic Theatre')),
     ).toBeInTheDocument();
-    // Nothing to weigh between going and watching on a night that is over.
-    expect(screen.queryByRole('button', { name: EXPLAINER_LABEL })).toBeNull();
+    // The boards draw the ⓘ on a past night too.
+    expect(
+      screen.getByRole('button', { name: EXPLAINER_LABEL }),
+    ).toBeInTheDocument();
   });
 
   it('stamps the night on an "I went" tap and offers the Passport', async () => {
