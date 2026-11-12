@@ -5,6 +5,7 @@ import { vibeKind } from './VibeOptionGrid';
 import {
   VIBE_ORDER,
   compareVenueNames,
+  genreLabel,
   getActiveFilterCount,
   getActiveFilterLabel,
   getChipLabel,
@@ -63,6 +64,12 @@ describe('multi-select labels (addendum 2, item 6)', () => {
     );
     expect(getChipLabel('where', ['red-rocks'], venues)).toBe('Red Rocks');
     expect(getChipLabel('vibe', ['electronic'], venues)).toBe('Electronic');
+  });
+
+  it('names a genre bucket in sentence case, keeping R&B an initialism', () => {
+    expect(genreLabel('hip-hop')).toBe('Hip-hop');
+    expect(genreLabel('r&b')).toBe('R&B');
+    expect(getChipLabel('vibe', ['hip-hop'], venues)).toBe('Hip-hop');
   });
 
   it('labels from the first pick that resolves when the first is stale', () => {

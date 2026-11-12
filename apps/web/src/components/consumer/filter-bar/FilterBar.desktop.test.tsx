@@ -388,7 +388,7 @@ describe('FilterBar desktop segmented bar', () => {
     const rows = within(dialog).getAllByTestId('vibe-option');
     expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual([
       'Electronic',
-      'Hip-Hop',
+      'Hip-hop',
       'Pop',
       'Indie',
       'Rock',
@@ -448,7 +448,7 @@ describe('FilterBar desktop segmented bar', () => {
     const dialog = screen.getByRole('dialog', { name: /filter$/ });
     for (const [name, token] of [
       ['Electronic', 'var(--genre-electronic)'],
-      ['Hip-Hop', 'var(--genre-hip-hop)'],
+      ['Hip-hop', 'var(--genre-hip-hop)'],
     ] as const) {
       const row = within(dialog).getByRole('checkbox', { name });
       expect(row.style.borderWidth).toBe('1px');
