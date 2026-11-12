@@ -268,6 +268,17 @@ describe('FollowShelf', () => {
     });
   });
 
+  it('offers no See all to a viewer the follow filter would refuse', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    };
+    renderShelf({ mode: 'some', followCount: 4, artists: [artist()] });
+    expect(screen.getByText(FOLLOWING_COPY.yoursTitle)).toBeTruthy();
+    expect(screen.queryByTestId('shelf-see-all')).toBeNull();
+  });
+
   it('locked viewers get a gated badge that opens the picker', () => {
     entitlementState.current = {
       isLoading: false,
