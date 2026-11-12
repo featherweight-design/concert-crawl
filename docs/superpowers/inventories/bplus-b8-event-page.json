@@ -8,7 +8,13 @@
       "steps": [
         {
           "goto": "/events/${CC_EVENT_ID}",
-          "wait": "[data-testid=\"hero-band\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"stage-meta\"]"
         }
       ]
     },
@@ -18,7 +24,13 @@
       "steps": [
         {
           "goto": "/events/${CC_EVENT_ID}",
-          "wait": "[data-testid=\"hero-band\"]"
+          "settle": 1000
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"stage-meta\"]"
         },
         {
           "scroll": "bottom"

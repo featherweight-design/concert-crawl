@@ -10,6 +10,9 @@
         {
           "goto": "/e/${CC_EVENT_ID}",
           "expectRedirect": "/sign-in",
+          "settle": 1000
+        },
+        {
           "wait": "input[name=\"identifier\"]"
         }
       ]
