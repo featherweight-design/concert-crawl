@@ -5,7 +5,7 @@
 // use-watch-toggle.ts, but it never touches the watch itself: the row leaves
 // the cache, the watch stays, and nobody else's list changes.
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { z } from 'zod';
@@ -13,7 +13,7 @@ import type {
   WatchingDismissResponse,
   WatchingShow,
 } from '@concert-crawl/types';
-import { apiClient } from '@/lib/api';
+import { ApiError, apiClient } from '@/lib/api';
 import { watchingQueryKey } from './use-watching';
 
 export type WatchingDismissInput = {
@@ -53,20 +53,39 @@ const reinsert = (
 const without = (current: WatchingShow[], eventId: string): WatchingShow[] =>
   current.filter((row) => row.eventId !== eventId);
 
+/** A 409 `not_delisted`: the venue listed the show again before the POST. */
+export const isStillListed = (err: unknown): boolean =>
+  err instanceof ApiError && err.status === 409 && err.code === 'not_delisted';
+
 /**
  * Returns `dismiss(input)`, which resolves with the server's answer or rejects
- * after rolling this one row back. Each call is its own mutation in the shared
+ * after rolling this one row back, and `isHiding(eventId)`, true while that
+ * show's dismiss POST is out. Each call is its own mutation in the shared
  * cache, scoped by event: a POST and the Undo DELETE for one show always reach
  * the server in that order, while different shows don't wait on each other.
  * `useMutation` can't do that, since its scope is fixed per hook, not per call.
+ *
+ * Hiding is two things only: the cache, and the `hiding` set. The cache drops
+ * the row at once. The set keeps it out of the list while the POST is out,
+ * whatever a mid-flight refetch writes, and turns away a second tap before
+ * React has re-rendered. The set is always cleared before the settle's cache
+ * write, so the render that write triggers already sees the final answer.
  */
 export function useWatchingDismiss() {
   const queryClient = useQueryClient();
   const { getToken, userId } = useAuth();
+  const hidingRef = useRef<Set<string>>(new Set());
 
-  return useCallback(
+  const isHiding = useCallback(
+    (eventId: string) => hidingRef.current.has(eventId),
+    [],
+  );
+
+  const dismiss = useCallback(
     (input: WatchingDismissInput): Promise<WatchingDismissResponse> => {
       const key = watchingQueryKey(userId);
+      const { eventId } = input.show;
+      if (input.dismissed) hidingRef.current.add(eventId);
       const mutation = queryClient
         .getMutationCache()
         .build<
@@ -114,6 +133,7 @@ export function useWatchingDismiss() {
           onSuccess: (_data, { show, dismissed }) => {
             // The server has said yes. A refetch that landed mid-flight may
             // have carried the old answer back in, so apply it again.
+            if (dismissed) hidingRef.current.delete(show.eventId);
             queryClient.setQueryData<WatchingShow[]>(key, (current) => {
               if (!current) return current;
               return dismissed
@@ -121,10 +141,19 @@ export function useWatchingDismiss() {
                 : reinsert(current, show);
             });
           },
-          onError: (_err, { show, dismissed }, context) => {
-            // Every failure rolls back, a 409 (the show is listed again)
-            // included. Only this row moves: anything else that changed the
-            // list meanwhile stays changed.
+          onError: (err, { show, dismissed }, context) => {
+            if (dismissed) hidingRef.current.delete(show.eventId);
+            // A 409 means the show is listed again, so the row we hold is
+            // stale: it would bring back a dismiss × the show no longer has.
+            // Leave it out and let the settle refetch bring the fresh row.
+            if (dismissed && isStillListed(err)) {
+              queryClient.setQueryData<WatchingShow[]>(key, (current) =>
+                current ? without(current, show.eventId) : current,
+              );
+              return;
+            }
+            // Any other failure rolls back. Only this row moves: anything else
+            // that changed the list meanwhile stays changed.
             queryClient.setQueryData<WatchingShow[]>(key, (current) => {
               if (!current) return current;
               return dismissed
@@ -140,4 +169,6 @@ export function useWatchingDismiss() {
     },
     [queryClient, getToken, userId],
   );
+
+  return { dismiss, isHiding };
 }

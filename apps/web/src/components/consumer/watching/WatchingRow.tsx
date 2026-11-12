@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { WatchingShow } from '@concert-crawl/types';
 import { EventRow, fromWatchingShow } from '@/components/consumer/event-row';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -23,6 +24,58 @@ interface WatchingRowProps {
    */
   onDismiss?: (show: WatchingShow) => void;
 }
+
+// The live row's remove ×: a 12px glyph.
+const REMOVE_GLYPH = (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+    <path
+      d="M1 1l10 10M11 1L1 11"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// The No longer listed row's dismiss ×: the board's glyph (14px box, 16-unit
+// view, 1.6 stroke). It is smaller than the remove × on purpose: measured on
+// the board it draws about 8.4px of ink at a 1.4px stroke, against the remove
+// ×'s 11.5px at 1.5px. Same colour, no opacity: it is never dimmed.
+const DISMISS_GLYPH = (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <path
+      d="M4 4l8 8M12 4l-8 8"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+interface RowActionProps {
+  label: string;
+  onClick: () => void;
+  glyph: ReactNode;
+  testId?: string;
+}
+
+// The row's one action control. `data-row-action` lets the list hand focus
+// back to it after a failed dismiss.
+const RowAction = ({ label, onClick, glyph, testId }: RowActionProps) => (
+  <button
+    type="button"
+    data-testid={testId}
+    data-row-action=""
+    aria-label={label}
+    onClick={onClick}
+    // A small paint box padded out to the 44px minimum target: the visible
+    // control stays quiet without shrinking what a thumb has to hit.
+    className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
+  >
+    {glyph}
+  </button>
+);
 
 /**
  * Watching's row is `EventRow` plus the two things only this list has: the
@@ -74,58 +127,18 @@ export const WatchingRow = ({
       surface="watching"
       action={
         dismiss ? (
-          <button
-            type="button"
-            data-testid="watching-dismiss"
-            aria-label={COPY.watchingItem.dismissAriaLabel(show.artist)}
+          <RowAction
+            label={COPY.watchingItem.dismissAriaLabel(show.artist)}
             onClick={() => dismiss(show)}
-            // The board's glyph (14px box, 16-unit view, 1.6 stroke, --fg-subtle)
-            // padded out to the 44px minimum target, as the remove × is. It is
-            // smaller than the remove × on purpose: measured on the board it
-            // draws about 8.4px of ink at a 1.4px stroke, against the remove ×'s
-            // 11.5px at 1.5px. Same colour, no opacity: it is never dimmed.
-            className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M4 4l8 8M12 4l-8 8"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+            glyph={DISMISS_GLYPH}
+            testId="watching-dismiss"
+          />
         ) : (
-          <button
-            type="button"
-            aria-label={COPY.watchingItem.removeAriaLabel(show.artist)}
+          <RowAction
+            label={COPY.watchingItem.removeAriaLabel(show.artist)}
             onClick={() => onRemove(show.userEventId)}
-            // A 28px paint box padded out to the 44px minimum target: the visible
-            // control stays quiet without shrinking what a thumb has to hit.
-            className="-m-2 flex h-11 w-11 items-center justify-center text-fg-subtle transition-colors hover:text-fg"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M1 1l10 10M11 1L1 11"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+            glyph={REMOVE_GLYPH}
+          />
         )
       }
       footer={
