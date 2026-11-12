@@ -674,3 +674,4 @@ From the design-review sections of the admin PRs (#169 shell, #170 primitives, #
 | --- | --- | --- |
 | #178 item 29, FLAG kind label | "Info tone, like VENUE and SHOW." | [Design] VENUE is drawn in warning (#FFD27A) and SHOW in accent (#FF7BD4), so they differ. Which colour is FLAG? Built as `--signal` for now. Nothing renders a FLAG label until 2b, so it needs an answer before 2b. |
 | 07/user-menu-desktop (#169) | The popover is drawn without its anchor (the board crop shows only the menu). | [Design] Where does the desktop user menu open from? Built: above the sidebar's user card, 332px wide, as the board's width. |
+| 07-admin-more-no-pills (#169) | More lists Manage and System without an Invite codes row; #178 item 8 draws the interim row in the sidebar only. | [Design] Phones have no route to Invite codes until 5b (it's hidden from More as drawn, so it's reachable by URL). Add the interim row to More, or leave it URL-only on phones until 5b? |
