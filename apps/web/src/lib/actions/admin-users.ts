@@ -19,7 +19,9 @@ export async function updateUserRole(
   const token = await getToken();
   try {
     await apiClient.patch(`/v1/admin/users/${userId}/role`, token, { role });
-    revalidatePath('/admin/users');
+    // The list moved to /admin/people, which loads in the browser; the person
+    // page is the server-rendered view to refresh.
+    revalidatePath(`/admin/users/${userId}`);
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

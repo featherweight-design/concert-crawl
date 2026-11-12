@@ -211,6 +211,7 @@ export function PeopleClient({ code }: { code: string | null }) {
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<PeoplePage | null>(null);
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [allCodes, setAllCodes] = useState<AdminInviteCode[] | null>(null);
   // Only the newest request may draw; a slow older one is dropped.
   const latest = useRef(0);
@@ -227,11 +228,14 @@ export function PeopleClient({ code }: { code: string | null }) {
     latest.current += 1;
     const ticket = latest.current;
     setFailed(false);
+    setLoading(true);
     try {
       const next = await fetchPeople(api, { search, chip, code }, page);
       if (ticket === latest.current) setResult(next);
     } catch {
       if (ticket === latest.current) setFailed(true);
+    } finally {
+      if (ticket === latest.current) setLoading(false);
     }
   }, [api, search, chip, code, page]);
 
@@ -290,6 +294,8 @@ export function PeopleClient({ code }: { code: string | null }) {
         onChange={(evt) => setTyped(evt.target.value)}
         placeholder={COPY.search}
         aria-label={COPY.search}
+        // The API takes up to 100 characters.
+        maxLength={100}
         style={{
           flex: 1,
           minWidth: 0,
@@ -552,13 +558,23 @@ export function PeopleClient({ code }: { code: string | null }) {
           {chips}
         </div>
       )}
-      {body}
-      {result && chip !== 'test' && result.total > PAGE_SIZE && (
+      {/* The old rows stay while new ones load, dimmed and marked busy. */}
+      <div
+        aria-busy={loading}
+        style={{
+          opacity: loading && result ? 0.6 : 1,
+          transition: 'opacity var(--motion-fast) var(--motion-ease)',
+        }}
+      >
+        {body}
+      </div>
+      {result && result.total > PAGE_SIZE && (
         <Pagination
           page={page}
           pageSize={PAGE_SIZE}
           total={result.total}
           onPageChange={setPage}
+          loading={loading}
           itemLabel={COPY.itemLabel}
         />
       )}
