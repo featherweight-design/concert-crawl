@@ -7,7 +7,6 @@ import {
   db,
   venues,
   crawlRuns,
-  crawlRunPages,
   crawlTriggers,
   notifications,
 } from '@concert-crawl/db';
@@ -269,41 +268,6 @@ crawlAdminRouter.get(
   },
 );
 
-// GET /v1/admin/crawl/runs/:id/pages — the pages a run fetched, oldest first.
-// Metadata only (URL, status, mode, size, content hash); never a body.
-const pagesQuerySchema = z.object({
-  // A run stores up to 50 pages plus every failed request, so the default
-  // reads them all.
-  limit: z.coerce.number().int().min(1).max(200).default(200),
-});
-
-crawlAdminRouter.get(
-  '/runs/:id/pages',
-  zValidator('param', crawlRunIdSchema, validationHook),
-  zValidator('query', pagesQuerySchema, validationHook),
-  async (ctx) => {
-    const { id } = ctx.req.valid('param');
-    const { limit } = ctx.req.valid('query');
-
-    const [crawlRun] = await db
-      .select({ id: crawlRuns.id })
-      .from(crawlRuns)
-      .where(eq(crawlRuns.id, id));
-    if (!crawlRun) {
-      return ctx.json({ success: false, error: 'Crawl run not found' }, 404);
-    }
-
-    const pages = await db
-      .select()
-      .from(crawlRunPages)
-      .where(eq(crawlRunPages.crawlRunId, id))
-      .orderBy(asc(crawlRunPages.fetchedAt))
-      .limit(limit);
-
-    return ctx.json({ success: true, data: pages });
-  },
-);
-
 // GET /v1/admin/crawl/runs?venueId=:id&limit=10&hasAlert=true — list crawl
 // runs (optionally filtered by venue and/or to only those with an active
 // admin_alert pointing at them). hasAlert is the surface that satisfies
@@ -427,7 +391,6 @@ crawlAdminRouter.get(
         venueId: crawlRuns.venueId,
         venueName: venues.name,
         status: crawlRuns.status,
-        reason: crawlRuns.reason,
         httpStatusCode: crawlRuns.httpStatusCode,
         robotsTxtBlocked: crawlRuns.robotsTxtBlocked,
         extractionStrategyUsed: crawlRuns.extractionStrategyUsed,
@@ -483,7 +446,6 @@ crawlAdminRouter.get('/status', async (ctx) => {
             id: crawlRuns.id,
             venueId: crawlRuns.venueId,
             status: crawlRuns.status,
-            reason: crawlRuns.reason,
             httpStatusCode: crawlRuns.httpStatusCode,
             createdAt: crawlRuns.createdAt,
             eventsFound: crawlRuns.eventsFound,
