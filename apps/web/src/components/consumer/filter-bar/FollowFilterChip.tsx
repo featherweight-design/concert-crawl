@@ -60,6 +60,13 @@ interface FollowFilterChipProps {
    * read the same entitlement and drive the same param.
    */
   variant?: 'chip' | 'segment';
+  /**
+   * Whether this instance runs the lapsed-entitlement release below. The bar
+   * mounts two instances at once (the phone chip and the desktop segment, CSS
+   * showing one per width), so exactly one of them owns it; two owners would
+   * release the same stale param twice.
+   */
+  ownsEffects?: boolean;
 }
 
 export const FollowFilterChip = ({
@@ -68,6 +75,7 @@ export const FollowFilterChip = ({
   followCount,
   scaRegion,
   variant = 'chip',
+  ownsEffects = true,
 }: FollowFilterChipProps) => {
   const isSegment = variant === 'segment';
   // The bar renders both variants (CSS shows one per width), so the gate
@@ -84,10 +92,10 @@ export const FollowFilterChip = ({
   // Entitlement lapsed (downgrade, session change) with filterFollowing=1 still
   // in the URL: the locked chip can't toggle it off and Clear all excludes
   // scopes, so release the param rather than strand the user on a list the API
-  // will answer with a 403.
+  // will answer with a 403. Only the owning instance releases it.
   useEffect(() => {
-    if (resolved && !usable && active) onToggle(false);
-  }, [resolved, usable, active, onToggle]);
+    if (ownsEffects && resolved && !usable && active) onToggle(false);
+  }, [ownsEffects, resolved, usable, active, onToggle]);
 
   // Hold rendering while the plan resolves — no locked flash.
   if (!resolved) return null;

@@ -10,11 +10,11 @@ interface CheckboxMarkProps {
   color?: string;
 }
 
-export function CheckboxMark({
+export const CheckboxMark = ({
   checked,
   size = 18,
   color = 'var(--signal)',
-}: CheckboxMarkProps) {
+}: CheckboxMarkProps) => {
   return (
     <span
       aria-hidden
@@ -43,4 +43,4 @@ export function CheckboxMark({
       )}
     </span>
   );
-}
+};

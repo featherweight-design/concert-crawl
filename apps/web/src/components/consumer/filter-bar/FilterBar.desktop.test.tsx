@@ -190,6 +190,20 @@ describe('FilterBar desktop segmented bar', () => {
     expect(lastQuery().get('filterFollowing')).toBeNull();
   });
 
+  it('one lapsed entitlement releases filterFollowing with one update', () => {
+    // Both My artists instances are mounted (phone chip and desktop segment);
+    // only one of them may run the release, or the bar writes the URL twice.
+    searchParams.current = new URLSearchParams('filterFollowing=1');
+    entitlement.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    };
+    renderBar();
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(lastQuery().get('filterFollowing')).toBeNull();
+  });
+
   it('a locked My artists segment opens the plans picker', () => {
     entitlement.current = {
       isLoading: false,

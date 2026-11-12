@@ -10,12 +10,14 @@ import { CalendarView } from './CalendarView';
 // Repo convention (memory:feedback_no_type_casting): no @testing-library/jest-dom
 // matchers, no user-event. Drive with fireEvent + raw DOM reads.
 const push = vi.fn();
+const searchString = { current: '' };
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
   // Both read by the nested WatchShowButton to build its signed-out sign-up
   // link, which carries the current view — query included — through auth.
+  // The calendar also reads the Vibe filter from it to order row genres.
   usePathname: () => '/events',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(searchString.current),
 }));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => null }),
@@ -257,6 +259,44 @@ describe('CalendarView B+ states', () => {
     // alphabetical: country before jazz.
     expect(dots[0]?.getAttribute('style')).toContain('var(--genre-country)');
     expect(dots[1]?.getAttribute('style')).toContain('var(--genre-jazz)');
+  });
+
+  // Addendum 3, lane a6 row 41: every chosen vibe is highlighted. The key
+  // repeats, so reading it with `.get()` would keep only jazz, and the row
+  // would pair jazz with its unmatched country instead of garage rock.
+  it('leads a row with the genres every chosen vibe matched', () => {
+    searchString.current = 'filterVibe=jazz&filterVibe=rock';
+    try {
+      render(
+        <CalendarView
+          days={days}
+          events={[
+            makeEvent({
+              id: 'a',
+              date: '2026-04-28',
+              genre: ['country', 'jazz', 'garage rock'],
+            }),
+          ]}
+          initialSelectedDate="2026-04-28"
+          today="2026-04-28"
+          watchedIds={[]}
+          prevWeekHref={null}
+          nextWeekHref="/events?view=cal&weekOffset=1"
+          initialAvailability={{
+            data: [{ date: '2026-04-28', count: 1 }],
+            from: '2026-04-01',
+            to: '2027-04-30',
+          }}
+        />,
+        { wrapper },
+      );
+      const meta = screen.getByTestId('row-meta').textContent ?? '';
+      expect(meta).toContain('jazz');
+      expect(meta).toContain('garage rock');
+      expect(meta).not.toContain('country');
+    } finally {
+      searchString.current = '';
+    }
   });
 });
 
