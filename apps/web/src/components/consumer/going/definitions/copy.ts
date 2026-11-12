@@ -28,6 +28,9 @@ export const GOING_COPY = {
   past: {
     hint: (venue: string) =>
       `Were you there? Tap it and the night lands in your Concerts with its ${venue} stamp.`,
+    // The artist page's stamped pill (artist_past_m); the unstamped one reads
+    // `button.pastNo`.
+    wentPill: 'Went',
     removeLead: "Didn't make it?",
     removeLink: 'Remove it from Concerts',
     // The pill's name for assistive tech (addendum 3, item 33).
