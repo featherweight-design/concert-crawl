@@ -7,15 +7,18 @@
 import { StandaloneError } from '@/components/standalone-error/StandaloneError';
 import { THEMES } from '@/theme/themes';
 
+// `<` is escaped so no token value can ever close the script tag early.
+const themesJson = JSON.stringify(THEMES).replace(/</g, '\\u003c');
+
 const themeScript = `
   (function() {
-    var themes = ${JSON.stringify(THEMES)};
+    var themes = ${themesJson};
     var root = document.documentElement;
     var theme = 'light';
     try {
       var stored = localStorage.getItem('cc-theme');
       var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'electric' : 'light';
-      theme = (stored && stored in themes) ? stored : system;
+      theme = (stored && Object.prototype.hasOwnProperty.call(themes, stored)) ? stored : system;
     } catch (e) {}
     var tokens = themes[theme];
     Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
