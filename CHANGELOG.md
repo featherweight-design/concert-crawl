@@ -1,3 +1,22 @@
+# [1.371.0](https://github.com/featherweight-design/concert-crawl/compare/v1.370.0...v1.371.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** fail loudly on an unknown shown status and test the stale key at the route ([0dc737d](https://github.com/featherweight-design/concert-crawl/commit/0dc737d1e644295557b5f6f78c96504452889c0b))
+* **api:** needs-you artist answers send the status the item showed ([ff34370](https://github.com/featherweight-design/concert-crawl/commit/ff343700431cd71ea5a7899e2d3c8cda8ac33ecd))
+* **crawler:** tribute and cover nights are never hidden, joined acts split by the venue's own list ([0cad09b](https://github.com/featherweight-design/concert-crawl/commit/0cad09bf995ac871ad19c3b83ea1ed98bf987e12))
+* **web:** address the code review on the artists matched and not artists tabs (4c B) ([0b54f19](https://github.com/featherweight-design/concert-crawl/commit/0b54f1938cdada139dad419d7939ef33ca2db237))
+* **web:** address the review on the artists matched and not artists tabs (4c B) ([0f0d0d2](https://github.com/featherweight-design/concert-crawl/commit/0f0d0d238b8b742855318650beb0779ba2964fb4))
+* **web:** address the second review on the artists matched and not artists tabs (4c B) ([b3ad0f7](https://github.com/featherweight-design/concert-crawl/commit/b3ad0f7bce00f8739368eaed96d89f74294f2d82))
+* **web:** copy-review the artists matched and not artists strings (4c B) ([dd96e59](https://github.com/featherweight-design/concert-crawl/commit/dd96e597e1e38e9125fe6f085381efdcebb950e1))
+* **web:** solid profile banner for a single avatar colour ([f57fbe4](https://github.com/featherweight-design/concert-crawl/commit/f57fbe47dcb1e240eb8bbffdd76360ec13819210))
+
+
+### Features
+
+* **web:** add the artists matched and not artists tabs (4c B) ([2c4e644](https://github.com/featherweight-design/concert-crawl/commit/2c4e644a1106e7db5241606d60a29807b753c2bf))
+
 # [1.370.0](https://github.com/featherweight-design/concert-crawl/compare/v1.369.0...v1.370.0) (2026-11-12)
 
 
