@@ -7,6 +7,7 @@ import {
   formatDollars,
   formatShowTime,
 } from '@/components/consumer/definitions/lib';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import type { CachedEvent, CachedVenue } from '@/lib/pwa/cached-content';
 import { OFFLINE_COPY } from './definitions/copy';
@@ -76,9 +77,7 @@ const CachedEventRow = ({ event }: { event: CachedEvent }) => {
       >
         <span
           className="inline-flex shrink-0 rounded-xl"
-          style={{
-            boxShadow: `0 0 0 1.25px ${ring}, 0 0 20px color-mix(in oklch, ${ring} 40%, transparent)`,
-          }}
+          style={{ boxShadow: genreRing(ring) }}
         >
           <Panel
             surface="event"
