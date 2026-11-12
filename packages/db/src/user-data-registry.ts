@@ -434,6 +434,16 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     reason: 'Crawler telemetry.',
   },
   {
+    tableName: 'crawl_run_pages',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: [],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Crawler telemetry: the pages one crawl run fetched. Cascades with its run.',
+  },
+  {
     tableName: 'crawl_triggers',
     disposition: 'none',
     userIdColumn: null,
