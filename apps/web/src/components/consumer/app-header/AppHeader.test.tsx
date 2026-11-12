@@ -262,16 +262,31 @@ describe('AppHeader crews tab (#1226)', () => {
     ).toBeNull();
   });
 
-  // B+ `bp-account`: on desktop the Install pill sits left of search.
-  it('renders the PWA slots before the search button in the desktop bar', () => {
+  // Addendum-3 header-640/900/1100: search, then the Offline pill, then avatar.
+  it('renders the PWA slots after the search button in the desktop bar', () => {
     render(<AppHeader rightSlots={<span data-testid="pwa-slot" />} />);
     const slot = screen.getAllByTestId('pwa-slot').at(-1);
-    const search = screen.getAllByRole('button', { name: /search/i }).at(-1);
+    const search = screen.getByTestId('header-search-desktop');
     expect(slot).toBeDefined();
-    expect(search).toBeDefined();
-    if (slot === undefined || search === undefined) return;
+    if (slot === undefined) return;
     expect(
-      slot.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+      search.compareDocumentPosition(slot) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('draws the 640-1023 header as the boards do: 38px rounded search, 14px 600 tabs', () => {
+    render(<AppHeader />);
+    const search = screen.getByTestId('header-search-desktop');
+    expect(search.className).toContain('h-[38px]');
+    expect(search.className).toContain('w-[38px]');
+    expect(search.className).toContain('rounded-[10px]');
+    expect(search.className).toContain('lg:w-[280px]');
+    const tab = screen.getByRole('link', { name: 'Venues' });
+    expect(tab.className).toContain('text-[14px]');
+    expect(tab.className).toContain('font-semibold');
+    expect(tab.className).toContain('md:px-[14px]');
+    expect(screen.getByTestId('header-desktop').className).toContain(
+      'md:gap-5',
+    );
   });
 });

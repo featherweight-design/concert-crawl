@@ -90,15 +90,16 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
       {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
       <div
         data-testid="header-desktop"
-        className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between gap-3 border-b border-border px-4 sm:flex md:px-6 lg:px-8"
+        className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between gap-3 border-b border-border px-4 sm:flex md:gap-5 md:px-6 lg:px-8"
         style={DESKTOP_BAR_STYLE}
       >
         {/* Left: logo + nav tabs */}
-        <div className="flex min-w-0 items-center gap-3 lg:gap-8">
+        <div className="flex min-w-0 items-center gap-3 md:gap-5 lg:gap-8">
           <Link href="/events" className="flex shrink-0 items-center gap-2.5">
             <div
               data-testid="header-mark-tile"
-              className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px] border border-border-strong"
+              // header-640 draws the bare mark; 900 and up add the 1px frame.
+              className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px] border border-transparent md:border-border"
             >
               <CCMark size={30} />
             </div>
@@ -113,7 +114,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             </span>
           </Link>
 
-          <nav className="flex min-w-0 gap-0.5 overflow-x-auto lg:gap-1">
+          <nav className="flex min-w-0 gap-0.5 overflow-x-auto md:gap-1.5">
             {tabs.map((tab) => {
               const isActive = isTabActive(tab, pathname);
               return (
@@ -122,10 +123,11 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                   href={tab.href}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'shrink-0 whitespace-nowrap rounded-[10px] border border-transparent px-[10px] py-[8px] text-[13px] lg:px-[14px] tracking-[-0.01em]',
+                    'shrink-0 whitespace-nowrap rounded-[10px] border border-transparent px-[10px] py-[8px] text-[14px] md:px-[14px] tracking-[-0.01em]',
+                    // The boards draw every tab at 14px, weight 600.
                     isActive
-                      ? 'font-bold text-fg'
-                      : 'bg-transparent font-medium text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg',
+                      ? 'font-semibold text-fg'
+                      : 'bg-transparent font-semibold text-fg-muted transition-colors hover:bg-surface-1 hover:text-fg',
                   )}
                   // B+ draws the active tab as a bordered pill whose edge runs
                   // from the signal to the accent. Every tab carries the same
@@ -142,14 +144,14 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
 
         {/* Right: search bar + user avatar */}
         <div className="flex shrink-0 items-center gap-3">
-          {/* The PWA slots (Install, Offline) sit LEFT of search on desktop,
-              as B+ `bp-account` draws them. On the phone bar they stay to the
-              left of the search circle too. */}
-          {rightSlots}
+          {/* Addendum-3 header-640/900/1100 draw search first, then the
+              Offline pill, then the avatar. On the phone bar the slots stay
+              left of the search circle. */}
           <button
             onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
+            data-testid="header-search-desktop"
+            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center gap-2.5 rounded-[10px] border border-border bg-[color-mix(in_oklch,var(--bg-elevated)_70%,transparent)] px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
           >
             <Search size={14} strokeWidth={1.5} className="shrink-0" />
             <span className="hidden flex-1 text-[13px] lg:block">
@@ -162,6 +164,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
               {copy.search.keyboardShortcut}
             </span>
           </button>
+          {rightSlots}
 
           {/* Not passed through rightSlots — that prop is the PWA slot host and
               the auth pair's position in the bar is fixed, not caller-chosen. */}
