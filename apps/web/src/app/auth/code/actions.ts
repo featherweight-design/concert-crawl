@@ -9,6 +9,7 @@ import {
   RETURN_PATH_COOKIE_NAME,
 } from '@/lib/invite-cookie';
 import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent';
+import { isInviteCodeShape, normalizeInviteCode } from '@concert-crawl/types';
 
 type ValidationResult =
   | { ok: true }
@@ -30,12 +31,12 @@ export async function validateAndSetInviteCode(
   // and is sanitised before it is written anywhere.
   returnPath?: string | null,
 ): Promise<ValidationResult> {
-  const codePattern = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-  if (!codePattern.test(code.toUpperCase())) {
+  // Generated (BETA-XXXX-XXXX) or custom (4 to 20 letters and numbers); the
+  // API checks the same shapes. Codes are not case-sensitive.
+  const normalizedCode = normalizeInviteCode(code);
+  if (!isInviteCodeShape(normalizedCode)) {
     return { ok: false, error: 'invalid_format' };
   }
-
-  const normalizedCode = code.toUpperCase();
 
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';

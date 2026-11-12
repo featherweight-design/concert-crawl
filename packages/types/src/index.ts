@@ -44,6 +44,10 @@ export * from './crew.js';
 // API handler and the web route shell.
 export * from './artist.js';
 
+// Invite code shapes (generated BETA- and custom), shared by the API and the
+// web code-entry page.
+export * from './invite-code.js';
+
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.

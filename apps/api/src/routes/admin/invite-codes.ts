@@ -22,7 +22,12 @@ import {
 import { zValidator } from '@hono/zod-validator';
 import { createClerkClient } from '@clerk/backend';
 import {
+  CUSTOM_INVITE_CODE_MAX_LENGTH,
+  CUSTOM_INVITE_CODE_MIN_LENGTH,
+  RESERVED_INVITE_CODE_PREFIX,
+  isCustomInviteCode,
   isRole,
+  normalizeInviteCode,
   type InviteCodeRedemption,
   type InviteCodeRedemptionsResponse,
   type Role,
@@ -35,6 +40,7 @@ import type { AdminVariables } from './index.js';
 import { sendInviteCodeEmail } from '../../lib/email.js';
 import { apiLogger } from '../../lib/logger.js';
 import { runBackgroundTask } from '../../lib/background-tasks.js';
+import { isUniqueViolationOn } from '../../lib/pg-errors.js';
 
 const clerkClient = createClerkClient({
   secretKey: process.env['CLERK_SECRET_KEY'] ?? '',
@@ -53,8 +59,47 @@ function generateCode(): string {
   return `BETA-${part()}-${part()}`;
 }
 
+// The unique constraint on `invite_codes.code` (drizzle's default name for
+// `.unique()`), which a custom code can race into after the pre-check.
+const INVITE_CODE_UNIQUE = 'invite_codes_code_unique';
+
+/**
+ * A free code to offer when `code` is taken: the code with the lowest free
+ * number on the end ("REDROCKS2"), trimmed to fit the 20-character limit.
+ * Null when every candidate checked is taken too.
+ */
+const suggestFreeCode = async (code: string): Promise<string | null> => {
+  const candidates = Array.from({ length: 8 }, (_, idx) => {
+    const suffix = String(idx + 2);
+    return `${code.slice(0, CUSTOM_INVITE_CODE_MAX_LENGTH - suffix.length)}${suffix}`;
+  });
+  const taken = await db
+    .select({ code: inviteCodes.code })
+    .from(inviteCodes)
+    .where(inArray(inviteCodes.code, candidates));
+  const takenSet = new Set(taken.map((row) => row.code));
+  return candidates.find((candidate) => !takenSet.has(candidate)) ?? null;
+};
+
+const codeTakenResponse = async (code: string) => ({
+  success: false as const,
+  error: 'code_taken' as const,
+  code,
+  suggestion: await suggestFreeCode(code),
+});
+
 const generateCodeSchema = z
   .object({
+    // A custom code (admin redesign 5b): 4 to 20 letters and numbers, not
+    // case-sensitive, so it is stored uppercase. Left out, a BETA- code is
+    // generated as before.
+    code: z
+      .string()
+      .transform(normalizeInviteCode)
+      .refine(isCustomInviteCode, {
+        message: `Use ${CUSTOM_INVITE_CODE_MIN_LENGTH} to ${CUSTOM_INVITE_CODE_MAX_LENGTH} letters and numbers, not starting with ${RESERVED_INVITE_CODE_PREFIX}`,
+      })
+      .optional(),
     expiresAt: z.string().datetime({ offset: true }).optional(),
     recipientEmail: z.string().email().optional(),
     // A poster code admits many people; a personal code (the default) admits one.
@@ -420,18 +465,45 @@ inviteCodesAdminRouter.post(
   zValidator('json', generateCodeSchema, validationHook),
   async (ctx) => {
     const { userId } = getAuthUser(ctx);
-    const { expiresAt, recipientEmail, label, maxUses } = ctx.req.valid('json');
+    const {
+      code: customCode,
+      expiresAt,
+      recipientEmail,
+      label,
+      maxUses,
+    } = ctx.req.valid('json');
 
-    const [code] = await db
-      .insert(inviteCodes)
-      .values({
-        code: generateCode(),
-        createdBy: userId,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        label: label ?? null,
-        maxUses: maxUses ?? 1,
-      })
-      .returning();
+    // The insert is the real check: the unique constraint refuses a code that
+    // was taken between this pre-check and the write. The pre-check only lets
+    // the common case answer without relying on an error.
+    if (customCode) {
+      const [existing] = await db
+        .select({ id: inviteCodes.id })
+        .from(inviteCodes)
+        .where(eq(inviteCodes.code, customCode));
+      if (existing) {
+        return ctx.json(await codeTakenResponse(customCode), 409);
+      }
+    }
+
+    let code: typeof inviteCodes.$inferSelect | undefined;
+    try {
+      [code] = await db
+        .insert(inviteCodes)
+        .values({
+          code: customCode ?? generateCode(),
+          createdBy: userId,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          label: label ?? null,
+          maxUses: maxUses ?? 1,
+        })
+        .returning();
+    } catch (err) {
+      if (customCode && isUniqueViolationOn(err, INVITE_CODE_UNIQUE)) {
+        return ctx.json(await codeTakenResponse(customCode), 409);
+      }
+      throw err;
+    }
 
     if (!code) {
       return ctx.json(
@@ -447,7 +519,11 @@ inviteCodesAdminRouter.post(
     ctx.set('auditAction', 'invite_code.create');
     ctx.set('auditTargetId', code.id);
     ctx.set('auditActorId', userId);
-    ctx.set('auditMeta', { label: code.label, maxUses: code.maxUses });
+    ctx.set('auditMeta', {
+      label: code.label,
+      maxUses: code.maxUses,
+      custom: customCode !== undefined,
+    });
 
     if (recipientEmail) {
       runBackgroundTask(async () => {

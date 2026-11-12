@@ -11,12 +11,14 @@ import {
   seatsTaken,
 } from '@concert-crawl/db';
 import { isGiftLive } from '@concert-crawl/entitlements';
+import { isInviteCodeShape, normalizeInviteCode } from '@concert-crawl/types';
 import { and, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { apiLogger } from '../../lib/logger.js';
 import { clerkAuth, requireAuth, getAuthUser } from '../../middleware/auth.js';
 
 const redeemSchema = z.object({
-  code: z.string().regex(/^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/),
+  // Either shape, uppercased first (see validate-code.ts).
+  code: z.string().transform(normalizeInviteCode).refine(isInviteCodeShape),
 });
 
 // `gifted_comps.grantedBy` is an admin Clerk ID everywhere else — an audit

@@ -4,6 +4,7 @@ import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { db, inviteCodes, seatsTaken } from '@concert-crawl/db';
 import { eq } from 'drizzle-orm';
+import { isInviteCodeShape, normalizeInviteCode } from '@concert-crawl/types';
 import { checkRateLimit, refundRateLimit } from '../../lib/rate-limit.js';
 
 /** Wrong codes one IP may try per hour. Valid codes never count. */
@@ -11,9 +12,12 @@ const MAX_MISSES = 10;
 const WINDOW_MS = 60 * 60 * 1000;
 
 const codeSchema = z.object({
+  // Either shape, generated or custom. Uppercased first, because codes are
+  // stored uppercase and are not case-sensitive.
   code: z
     .string()
-    .regex(/^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/, 'Invalid code format'),
+    .transform(normalizeInviteCode)
+    .refine(isInviteCodeShape, 'Invalid code format'),
 });
 
 export const validateCodeRouter = new Hono();

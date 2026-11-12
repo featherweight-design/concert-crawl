@@ -1,20 +1,26 @@
-/**
- * The beta invite code: `BETA-XXXX-XXXX`, uppercase letters and digits. The
- * server action and the API check the same shape; this is the client's copy.
- */
-export const INVITE_CODE_PATTERN = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+import {
+  CUSTOM_INVITE_CODE_MAX_LENGTH,
+  isInviteCodeShape,
+} from '@concert-crawl/types';
 
-/** `BETA-XXXX-XXXX`, dashes included. */
-export const INVITE_CODE_LENGTH = 14;
+/**
+ * An invite code is either generated, `BETA-XXXX-XXXX`, or custom: 4 to 20
+ * letters and numbers, like `REDROCKS`. The shapes live in
+ * `@concert-crawl/types`, so this client, the server action and the API all
+ * check the same thing.
+ */
 
 /** Whether a field value is a whole code, ready to redeem. */
 export const isCompleteInviteCode = (value: string): boolean =>
-  INVITE_CODE_PATTERN.test(value);
+  isInviteCodeShape(value);
 
 /**
- * Formats what a visitor types (or a poster QR pre-fills) toward the code
- * shape: uppercased, stripped to letters, digits and dashes, with `BETA-` and
- * the middle dash put in for them.
+ * Formats what a visitor types (or a poster QR pre-fills) toward a code shape:
+ * uppercased and stripped to letters, digits and dashes. Anything that starts
+ * like a generated code gets `BETA-` and the middle dash put in for it, as
+ * before. Anything else is a custom code: letters and numbers only, never
+ * longer than the longest one. Custom codes can't start with `BETA`, so the
+ * two never collide.
  */
 export function formatInviteCodeInput(raw: string): string {
   const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '');
@@ -24,8 +30,7 @@ export function formatInviteCodeInput(raw: string): string {
     // the middle one by the branch below.
     if (clean.startsWith('BETA'))
       return formatInviteCodeInput(`BETA-${clean.slice(4)}`);
-    // Never longer than a whole code, whatever is pasted or linked.
-    return clean.slice(0, INVITE_CODE_LENGTH);
+    return clean.replace(/-/g, '').slice(0, CUSTOM_INVITE_CODE_MAX_LENGTH);
   }
   const rest = clean.slice(5).replace(/-/g, '');
   if (rest.length <= 4) return `BETA-${rest}`;
