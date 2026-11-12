@@ -21,7 +21,7 @@ describe('StatPill', () => {
       expect(value.style.textOverflow).toBe('');
       expect(value.style.overflowWrap).toBe('normal');
       expect(value.dataset.longWord).toBe('true');
-      expect(value.style.fontSize).toContain('cqw');
+      expect(value.style.fontSize).toBe('clamp(13px, 12.5cqw, 22px)');
     },
   );
 

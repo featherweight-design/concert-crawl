@@ -48,9 +48,22 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
       {/* Desktop — horizontal card */}
       <div
         data-testid="venue-feature-card-desktop"
-        className="hidden lg:grid rounded-[14px] overflow-hidden transition-all"
+        className="relative hidden lg:grid rounded-[14px] overflow-hidden"
         style={{ ...FLAGSHIP_EDGE, gridTemplateColumns: '360px 1fr' }}
       >
+        {/* Hover layer: sits over the card, never touches the padding-box
+            gradient layers, so the border keeps its gradient. A tint plus an
+            inset signal ring and a stronger glow fade in on group-hover. */}
+        <div
+          data-testid="venue-feature-card-hover"
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-10 rounded-[14px] opacity-0 transition-opacity duration-[var(--motion-base)] ease-[var(--motion-ease)] group-hover:opacity-100 group-focus-visible:opacity-100"
+          style={{
+            background: 'color-mix(in oklab, var(--signal) 6%, transparent)',
+            boxShadow:
+              'inset 0 0 0 1px color-mix(in oklab, var(--signal) 55%, transparent), inset 0 0 32px -8px color-mix(in oklab, var(--accent) 35%, transparent)',
+          }}
+        />
         {/* Left — identity art panel */}
         <div
           className="relative"

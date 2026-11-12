@@ -124,9 +124,16 @@ describe('VenueFeatureCard', () => {
     ['venue-feature-card-desktop', 'venue-feature-card-mobile'].forEach(
       (id) => {
         const card = getByTestId(id);
-        expect(card.style.border).toContain('transparent');
-        expect(card.style.background).toContain('border-box');
-        expect(card.style.boxShadow).not.toBe('');
+        expect(card.style.border).toBe('1px solid transparent');
+        expect(card.style.background).toContain(
+          'linear-gradient(var(--surface-1), var(--surface-1)) padding-box',
+        );
+        expect(card.style.background).toContain(
+          'linear-gradient(135deg, var(--signal), var(--genre-metal) 50%, var(--accent)) border-box',
+        );
+        expect(card.style.boxShadow).toBe(
+          '0 10px 40px -10px color-mix(in oklab, var(--accent) 35%, transparent), 0 0 24px -6px color-mix(in oklab, var(--warning) 25%, transparent)',
+        );
       },
     );
   });
