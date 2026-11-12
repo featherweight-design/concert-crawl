@@ -153,3 +153,90 @@ The IA, the system rules (two-chip venue status, in-flow panels, skeletons, snap
 | 5c | Flags: schema, stage ladder, named people, verify | `/admin/feature-flags` |
 | 5d | Operations: Feedback (reply API), Emails, Activity log | `/admin/operations/**` |
 | 6 | Fan side, behind a flag | account menu, feedback modal |
+
+## Addendum audit (PR #175)
+
+**Verdict:** 🟡 **Yellow.** All four phone gaps are closed and nothing in them needs Design again. A few eng-side clarifications remain, plus one Hugh scope call on the ticketing-feed seller list (Item A5), which holds back only the Ticketing feed part of 3b's Source tab.
+**Audited:** 2026-11-12
+**Addendum:** `design/design_handoff_admin_redesign/phone-addendum/` (PR #175, merged): 38 boards, `README.md`, `manifest.json`.
+**Read against:** this READINESS, `docs/superpowers/plans/2026-11-11-admin-redesign.md` (Status gates, Migrations ledger, Decisions), `packages/db/src/schema/venues.ts` on `main`, and the desktop boards `04/venue-source`, `04/inspect-a-fetched-page`, `05/add-a-venue-start`, `05/gone-live` and `06/merge-duplicates`.
+
+### Decisions resolved 2026-11-12 (Hugh)
+
+1. **Fetched HTML is kept 14 days.** That matches the plan's default for 1e (gzipped in Postgres, daily sweep). It unblocks 1e. The addendum already draws to it: `inspect-pages-gone` and the Save debug HTML hint.
+2. **The Test account tag is stored in our DB** as `user_profiles.is_test_account boolean NOT NULL DEFAULT false`, the plan default. It unblocks 5a, and the count exclusions in 1c and 2a read it once 5a lands.
+3. **"Verified on staging" is a mark set by hand in production.** There is no cross-environment call: drop the `/v1/internal/flags/verified` server-to-server read and its shared secret. 5c stores `verified_at`, `verified_by` and `verified_note` in each environment and sets them by hand in prod. It unblocks 5c.
+4. **Block is dropped.** PR 5e is removed, and the Person ⋯ menu ships without Block in 5a.
+5. **Send feedback moves to the account menu, and the edge tab (`FeedbackEdgeTabGate`) is removed at launch.** This is the proposal as drawn, and it unblocks 6.
+6. **The Arena accent is the crescent, as drawn.** It unblocks the hero picker in 3e (`05/all-six-settings`) once B+ B11 lands.
+
+### Per-gap verdicts
+
+| Gap | Verdict | What the addendum settles |
+| --- | --- | --- |
+| 1 Merge duplicates at 320px | ✅ **Closed** | A full screen opens from the event ⋯ menu. A pick step (likely duplicate first, then search) leads to a **stacked** compare: the same rows in the same order per listing. The pinned button names the choice. Drawn: pick, pick loading, nothing found, compare (390 and 320), keep the second (320), compare loading, merging, couldn't merge. |
+| 2 Inspect a fetched page on phone | ✅ **Closed** | **Phone-reachable by intent.** Runs tab, then the run detail sheet, then Inspect page. A segmented control has What we read (opens first) and What we fetched (Page, Text, HTML). The HTML wraps and opens at the stop highlight. The header buttons move to ⋯. Drawn: sheet, both views at 390 and 320, ⋯ menu, loading, pages gone (14-day empty), couldn't load. |
+| 3 Add a venue start, Nobody asked yet, Gone live on phone | ✅ **Closed** | **+** on Venues opens Start. Start from scratch sits on top, then one card per asked-for venue (Set it up, or Ask the venue… when robots.txt disallows, plus Not for us with Undo). The two explainer cards become a footnote. Gone live keeps the desktop words, with stacked buttons and a short waiting list. Drawn: start (390 and 320), empty, loading, couldn't load, not for us (and its failure), going live, go-live failed, Gone live (390 and 320). |
+| 4 Venue Source tab on phone | ✅ **Closed** | The desktop columns stack in reading order: How we read it, robots.txt, Fixed by the crawl rules. Advanced stays collapsed, the tabs scroll sideways, and the Save bar pins only after a change and names it. Drawn: default (390 and 320), feed picked with a passed test, test running, Advanced open, robots.txt disallows, Don't crawl, loading, save failed. |
+
+Every board keeps the system rules: two-chip venue status, a spinner only inside a saving button, snap-back with a toast, skeletons in the final shape, no ids, one glow per screen. The boards use the handoff's palette and add no new colors.
+
+### 320px coverage
+
+- ✅ The default board of every gap surface is drawn at 320: merge compare and keep-the-second, Inspect read and fetched, Add a venue start, Gone live, and Source. Titles, lineups and row values wrap. The only thing that clips is the venue tab strip ("Gu…" at 320), which scrolls sideways by design as on every venue tab.
+- 🟡 These are drawn only at 390, so the BUILD-CHECK 320 pass has to cover them:
+  - The merge pick step and the run detail sheet.
+  - **Advanced open:** the three-way Wait until control (Network quiet / Loaded / HTML ready) is the tightest fit at 320, at about 85px per segment. If it doesn't fit on one line, follow the stacked-option pattern of How we read it.
+  - **Feed picked:** the five Seller chips and the pinned "Unsaved: …" Save bar.
+  - **robots.txt disallows:** the two status chips side by side in the header.
+- Plan decision 5 ("no board exists at that width") is now out of date for these surfaces. Each 3b, 3e and 4b inventory compares its 320 shots with the `*-320` boards, and falls back to the 390 boards everywhere else.
+
+### New gaps or contradictions the addendum introduces
+
+None needs a Design round. Each item below is settled from a drawn pattern or by an engineering or Hugh decision, and is recorded in the named phase plan.
+
+#### Eng-side clarifications (Yellow)
+
+- **A1 (4a, 4b): merging into a hand-added listing vs "the crawler skips manual rows".** `merge-keep-second-320` promises that "the next crawl updates this one instead of adding it again", but the plan's 4a says the crawler's upsert skips manual rows. **Decision for the 4a phase plan:** the crawl resolves its match key through `merged_into_id`. When the target is a `manual` row, the crawl updates crawl-owned fields (price, ticket link, status) and never overwrites hand-entered lineup or title. The stale sweep still never removes manual rows. This keeps need 23's "never removes" and makes the board's promise true. crawler-core integration tests cover it.
+- **A2 (4a): "added by @dlo" needs an author.** The From row (and the desktop merge panel) names who added a show by hand. The ledger gives 4a only `events.manual boolean`. **Decision:** add `events.created_by text NULL` (expand-only), filled in by Add a show by hand and rendered as the handle (rule 7). Older manual rows read "added by hand".
+- **A3 (4b): merging across venue or day.** Search lets you pick a listing on another date or at another venue, but the compare's shared header says "Same venue and day on both". **Decision:** when the two listings differ, drop the shared header and add Venue and Day as the first rows of each card. That follows the compare's own stacked-row pattern and the desktop panel, which shows venue and day per listing. Search results and no results in the pick step follow `06/artist-search-mobile` and `06/events-no-results`.
+- **A4 (1e, 3b): "What we read" needs per-run extracted items, not just the HTML.** The default Inspect view lists every item read, with Concert / Not a concert, the method ("via Haiku") and a stop marker ("Stopped here: page 2 never loaded"). The ledger has `crawl_run_pages` metadata (1a) and bodies (1e), but no item-level record and no stop marker. This was latent in the desktop board and the original audit missed it; the addendum makes it the screen you land on. **Decision for the 3b phase plan:** add a `crawl_run_items` table (`crawl_run_id`, `crawl_run_page_id`, `title`, `is_concert`, `method`, `position`) with the same 14-day sweep as the bodies, plus the reason and stopping-page fields on `crawl_runs` that 1a's `reason` enum already implies. Never recompute it by re-running Haiku on stored HTML (that has an LLM cost). Another open point: the run sheet lists several pages but Inspect shows one. **Decision:** tapping a PAGES row in the sheet opens Inspect on that page, and Inspect page opens the page where the run stopped (or the first page).
+- **A6 (3b): the Source field mapping has two errors.**
+  - "Calendar page → `url`": `venues` has no `url` column. The calendar page is `website_url`.
+  - `platform = 'detail-page'` is a crawl mode, not a seller, and no Source control shows it. **Decision:** saving Source preserves `platform` and `platform_venue_id` when the admin doesn't change How we read it, and Advanced shows a read-only line when a venue uses detail-page. Nothing is silently cleared.
+- **A7 (3c, 3e): Not for us needs a record.** Dismissing a SUGGESTED or IN FEEDBACK venue ("It won't show here again") needs a key that survives repeat asks. **Decision:** add a `venue_suggestion_dismissals` table (normalized venue name, `dismissed_by`, `dismissed_at`, `cleared_at` for Undo) in 3c. The Start list's query excludes active dismissals. Undo clears the row and is audited.
+- **A8 (2b): a new path from Needs you to Inspect.** The `run-detail-sheet` note says Needs you items for a failing or quiet venue link to the run detail. 2b is already running, so the link is added in 3b, where the destination exists. It needs no 2b change before then.
+- **A9 (copy):** the README's "New strings for copy review" list goes through `copy-review` with the rest of `COPY.md`. The faint caption under the HTML view ("Lines wrap; nothing scrolls sideways… Saved for 14 days.") is a board annotation, not UI copy.
+
+#### Open: Hugh calls (not Design)
+
+- **A5 (3b, a scope call): the drawn sellers have no fetchers.** Ticketing feed names AXS, Ticketmaster, Etix, DICE and Eventbrite, and the phone board draws them as Seller chips with a venue-ID field. The addendum says the fields map to existing columns. The columns exist, but their values don't fit:
+  - `api_provider` is an enum with only `venuepilot`.
+  - `platform` is `aeg | livenation | detail-page`.
+  - None of the five drawn sellers has a fetcher, and the three real feeds (VenuePilot, AEG, Live Nation) aren't on the list.
+  - `ticket_vendor` (axs, ticketmaster, dice…) is the price-vendor column, not a feed. Don't conflate the two.
+
+  This flaw is in the desktop board too; the original audit didn't catch it.
+
+  **Default if Hugh has no preference:** the chips come from the fetchers that exist (VenuePilot, AEG, Live Nation), and the option's description goes through `copy-review` to match. Building the five drawn sellers is new fetcher work and its own plan, never part of 3b. Until Hugh rules, 3b builds the rest of Source and leaves Ticketing feed off.
+- **The addendum's three proposals:**
+  - Undo on desktop's Not for us. Until Hugh says yes, 3e builds Undo on phone only, as drawn.
+  - The two feed fields on desktop Source. They follow A5.
+  - Dropping Save debug HTML. Keep the toggle as drawn until engineering confirms nothing else reads `debug_capture_html`.
+
+### Updated overall verdict and plan gates
+
+**Overall: 🟠 Orange → 🟡 Yellow.** No Design round-trip is outstanding. The Status gates table's "Wait for the Design phone addendum" rows are cleared now that #175 has merged:
+
+| PR | Was blocked on | Now |
+| --- | --- | --- |
+| **3b** Source, Details, Guide, Inspect | Gaps 2 and 4; 1e; retention | **Unblocked** after 3a and 1e. Retention is ruled (14 days), so 1e can start. Its phase plan records A4 and A6. Ticketing feed waits on A5. |
+| **3e** Add a venue flow | Gap 3; Arena | **Unblocked by design.** It still follows 3c (with A7), 3d and B+ B11. Arena is ruled (crescent). |
+| **4b** Events (merge on phone) | Gap 1 | **Unblocked.** Merge ships on phone and desktop together, after 4a (with A1 and A2). A3 is recorded in 4b. |
+| **1e** fetched HTML bodies | Hugh: retention | **Unblocked** (14 days). |
+| **5a** People | Hugh: Test account tag | **Unblocked** (DB column). Ships without Block. |
+| **5c** Flags | Hugh: verified transport | **Unblocked**, simpler: the verified mark is set by hand in prod, with no internal endpoint or secret. |
+| **5e** Block | Hugh | **Removed.** |
+| **6** Fan side | Hugh: Send feedback | **Unblocked** (account menu; edge tab removed at launch). |
+
+Still open: A5 (the seller list, Hugh) and the three addendum proposals (Hugh). None of them blocks a whole PR.
