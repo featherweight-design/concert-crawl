@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { ProfileHero } from './ProfileHero';
 import { AccountManagementRow } from './AccountManagementRow';
 import { DataExportRow } from './DataExportRow';
-import { PlanPanel } from './plan';
 import { ThemePickerInline } from './ThemePickerInline';
 import { NotificationsSection } from './notifications/NotificationsSection';
 import { MySubmissionsList } from './MySubmissionsList';
@@ -22,7 +21,6 @@ const SETTINGS_COPY = CONSUMER_COPY.settings;
 interface SettingsRouteProps {
   profile: UserProfileResponse;
   submissions: UserSubmissionItem[];
-  scaRegion: boolean;
   isAdmin?: boolean;
   /**
    * The `spotify-sync` release flag, resolved server-side on `/me` and passed
@@ -46,7 +44,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export function SettingsRoute({
   profile,
   submissions,
-  scaRegion,
   isAdmin = false,
   spotifyEnabled,
 }: SettingsRouteProps) {
@@ -87,16 +84,6 @@ export function SettingsRoute({
 
         <div className="mx-4 h-px bg-border" />
 
-        {/* Plan */}
-        <div className="px-4">
-          <SectionLabel>{SETTINGS_COPY.planSection}</SectionLabel>
-          <PlanPanel
-            planState={profile.planState}
-            scaRegion={scaRegion}
-            variant="mobile"
-          />
-        </div>
-
         {/* Appearance */}
         <div className="flex flex-col gap-2 px-4">
           <div className="flex items-center justify-between">
@@ -117,7 +104,7 @@ export function SettingsRoute({
             alerts row on My shows ▸ Artists — there is one settings route, so
             an anchor is the only way to land a link on this section. */}
         <div id="notifications" className="flex flex-col gap-2 px-4">
-          <NotificationsSection scaRegion={scaRegion} />
+          <NotificationsSection />
         </div>
 
         <div className="mx-4 h-px bg-border" />

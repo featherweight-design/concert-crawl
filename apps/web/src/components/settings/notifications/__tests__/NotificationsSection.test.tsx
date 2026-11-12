@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import type * as EntitlementsModule from '@concert-crawl/entitlements';
 import {
   render,
   screen,
@@ -11,7 +10,6 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { PlanState } from '@concert-crawl/types';
 
 // Auth mock — never resolves undefined so getToken calls proceed.
 vi.mock('@clerk/nextjs', () => ({
@@ -56,33 +54,6 @@ vi.mock('@/lib/push/client', () => ({
     unsubscribeFromPushMock(token, knownId),
 }));
 
-// The tier picker reaches for the app router, which jsdom has no provider for.
-// Every sibling suite that renders a locked surface stubs it the same way.
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
-    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
-}));
-
-// Plan state drives the artist-group lock. The default is a Premium member so
-// the pre-existing push assertions see live switches; locked tests override it.
-const usePlanStateMock = vi.fn();
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => usePlanStateMock(),
-}));
-
-// Going free (2026-10-29) left no signed-in plan the matrix denies following,
-// so the locked card is driven by re-gating chosen tiers in nfLocked. It is
-// kept for a future re-gate; roleComped still wins, as it does in the matrix.
-const regate = vi.hoisted(() => ({ plans: new Set<string>() }));
-vi.mock('@concert-crawl/entitlements', async (importOriginal) => {
-  const actual = await importOriginal<typeof EntitlementsModule>();
-  return {
-    ...actual,
-    nfLocked: (state: Parameters<typeof actual.nfLocked>[0]) =>
-      regate.plans.has(state.plan) ? !state.roleComped : actual.nfLocked(state),
-  };
-});
-
 const useSpotifyConnectionMock = vi.fn();
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
   useSpotifyConnection: () => useSpotifyConnectionMock(),
@@ -98,16 +69,6 @@ const withClient = (children: React.ReactNode) => {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 };
 
-const planOn = (plan: PlanState['plan']): PlanState => ({
-  plan,
-  onTrial: false,
-  trialEndsAt: null,
-  status: 'active',
-  cancelAtPeriodEnd: false,
-  currentPeriodEnd: null,
-  roleComped: false,
-});
-
 afterEach(() => {
   cleanup();
 });
@@ -119,9 +80,7 @@ beforeEach(() => {
   getPushDeviceStateMock.mockReset();
   subscribeToPushMock.mockReset();
   unsubscribeFromPushMock.mockReset();
-  usePlanStateMock.mockReset();
   useSpotifyConnectionMock.mockReset();
-  regate.plans.clear();
   // Default: loaded, master off, sub-toggles default true, supported.
   useNotificationPreferencesMock.mockReturnValue({
     data: {
@@ -134,12 +93,6 @@ beforeEach(() => {
       productEmailsEnabled: true,
     },
     isLoading: false,
-  });
-  // Premium by default so the artist group renders unlocked; the locked tests
-  // drop the plan back to free or supporter themselves.
-  usePlanStateMock.mockReturnValue({
-    data: planOn('premium'),
-    isPending: false,
   });
   useSpotifyConnectionMock.mockReturnValue({ data: undefined });
   getPushDeviceStateMock.mockResolvedValue({
@@ -538,77 +491,25 @@ describe('NotificationsSection — Artists you follow', () => {
     ).toBeNull();
   });
 
-  it.each(['free', 'supporter'] as const)(
-    'shows the artist switches and no locked card on %s (going free, 2026-10-29)',
-    async (plan) => {
-      masterOn();
-      usePlanStateMock.mockReturnValue({
-        data: planOn(plan),
-        isPending: false,
-      });
-      render(withClient(<NotificationsSection />));
-      await waitFor(() => {
-        expect(
-          screen.getByRole('switch', { name: ARTISTS.alerts.label }),
-        ).not.toBeNull();
-      });
-      expect(
-        screen.getByRole('switch', { name: ARTISTS.autoWatch.label }),
-      ).not.toBeNull();
-      expect(
-        screen.getByRole('switch', { name: ARTISTS.digest.label }),
-      ).not.toBeNull();
-      expect(screen.queryByText(ARTISTS.locked.detail)).toBeNull();
-    },
-  );
-
-  it.each(['free', 'supporter'] as const)(
-    'shows one locked card and zero artist switches on a re-gated %s',
-    async (plan) => {
-      regate.plans.add(plan);
-      masterOn();
-      usePlanStateMock.mockReturnValue({
-        data: planOn(plan),
-        isPending: false,
-      });
-      render(withClient(<NotificationsSection />));
-      await waitFor(() => {
-        expect(screen.getByText(ARTISTS.locked.detail)).not.toBeNull();
-      });
-      for (const label of [
-        ARTISTS.alerts.label,
-        ARTISTS.autoWatch.label,
-        ARTISTS.digest.label,
-      ]) {
-        expect(screen.queryByRole('switch', { name: label })).toBeNull();
-      }
-    },
-  );
-
-  it('opens the tier picker from the locked card CTA', async () => {
-    regate.plans.add('free');
-    usePlanStateMock.mockReturnValue({
-      data: planOn('free'),
-      isPending: false,
-    });
-    render(withClient(<NotificationsSection />));
-    await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: ARTISTS.locked.cta }),
-      ).not.toBeNull();
-    });
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: ARTISTS.locked.cta }));
-    expect(screen.getByTestId('tier-picker')).not.toBeNull();
-  });
-
-  it('stays locked while the plan is still unknown, so no switch flashes', async () => {
+  // Going free (2026-10-29): everyone signed in can follow, so the group is
+  // always live switches. There is no locked card and no upgrade route here.
+  it('shows the artist switches with no locked card', async () => {
     masterOn();
-    usePlanStateMock.mockReturnValue({ data: undefined, isPending: false });
     render(withClient(<NotificationsSection />));
     await waitFor(() => {
-      expect(screen.getByText(ARTISTS.locked.detail)).not.toBeNull();
+      expect(
+        screen.getByRole('switch', { name: ARTISTS.alerts.label }),
+      ).not.toBeNull();
     });
+    expect(
+      screen.getByRole('switch', { name: ARTISTS.autoWatch.label }),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole('switch', { name: ARTISTS.digest.label }),
+    ).not.toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /premium|upgrade/i }),
+    ).toBeNull();
   });
 
   it('shows the Spotify note only once a connection exists', async () => {
@@ -660,15 +561,11 @@ describe('NotificationsSection — Artists you follow', () => {
 //
 // The guarantees with teeth: the switch is reachable with push fully off AND
 // on a free plan, because it governs an email family and it is an opt-out we
-// are obliged to offer. Nothing about billing mail gets a switch.
+// are obliged to offer.
 describe('NotificationsSection — Email from us', () => {
   const PRODUCT = NOTIFICATIONS_COPY.productEmail;
 
   it('renders the switch with push off and on a free plan', async () => {
-    usePlanStateMock.mockReturnValue({
-      data: planOn('free'),
-      isPending: false,
-    });
     render(withClient(<NotificationsSection />));
     await waitFor(() => {
       expect(
@@ -688,7 +585,8 @@ describe('NotificationsSection — Email from us', () => {
         screen.getByRole('switch', { name: PRODUCT.label }),
       ).not.toBeNull();
     });
-    expect(screen.getByText(PRODUCT.onDetail)).not.toBeNull();
+    // On, there is no promise line; it appears when the switch is off.
+    expect(screen.queryByText(PRODUCT.offDetail)).toBeNull();
 
     fireEvent.click(screen.getByRole('switch', { name: PRODUCT.label }));
     expect(patchMutateMock).toHaveBeenCalledWith(

@@ -8,13 +8,9 @@ import { describe, expect, it } from 'vitest';
 // in silently, since both paths type-check and render, so this scans for one.
 const SRC = fileURLToPath(new URL('../../../', import.meta.url));
 
-// lazy.ts is the one module that imports the sheet by design, and the plan
-// page loads it eagerly through the barrel because checkout is what that page
-// is for. Every other file must take `tier-picker/lazy`.
-const ALLOWED = new Set([
-  'components/consumer/tier-picker/lazy.ts',
-  'components/settings/plan/PlanPanel.tsx',
-]);
+// lazy.ts is the one module that imports the sheet by design. Every other
+// file must take `tier-picker/lazy`.
+const ALLOWED = new Set(['components/consumer/tier-picker/lazy.ts']);
 
 // A value import (not `import type`) naming TierPickerSheet from the sheet
 // module or the barrel, by alias or by any relative path.
