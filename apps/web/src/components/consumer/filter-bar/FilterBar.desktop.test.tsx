@@ -6,6 +6,7 @@
 // (the page shows one per width). Which overlay a tap opens is driven by
 // mocking matchMedia.
 
+import '@testing-library/jest-dom';
 import {
   render,
   screen,
@@ -23,8 +24,11 @@ vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }));
 const searchParams = { current: new URLSearchParams() };
 const replace = vi.fn();
 
+// Next's router is one stable object across renders; a fresh one per render
+// would re-create every callback built on it.
+const router = { push: vi.fn(), replace };
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace }),
+  useRouter: () => router,
   usePathname: () => '/events',
   useSearchParams: () => searchParams.current,
 }));
