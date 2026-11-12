@@ -372,7 +372,7 @@ export function ArtistsClient() {
     void load();
   }, [load]);
 
-  // A write's 409 reloads what is on screen now, not what it began on.
+  // A write's 409 reloads what is on screen now, not the tab it began on.
   const loadRef = useRef(load);
   loadRef.current = load;
 

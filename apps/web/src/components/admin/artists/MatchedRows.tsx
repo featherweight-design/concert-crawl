@@ -114,20 +114,33 @@ const MenuItem = ({
  */
 const ArtistRowMenu = ({
   row,
+  busy,
   onNotAnArtist,
 }: {
   row: AdminArtistRow;
+  busy: boolean;
   onNotAnArtist: () => void;
 }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  /** Close and hand focus back to ⋯, so it never drops to the page. */
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
 
   useEffect(() => {
     if (!open) return undefined;
-    menuRef.current
-      ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not([disabled])')
-      ?.focus();
+    const items = () =>
+      Array.from(
+        menuRef.current?.querySelectorAll<HTMLButtonElement>(
+          '[role="menuitem"]:not([disabled])',
+        ) ?? [],
+      );
+    items()[0]?.focus();
     const handleClick = (evt: MouseEvent) => {
       if (
         evt.target instanceof Node &&
@@ -136,14 +149,37 @@ const ArtistRowMenu = ({
         setOpen(false);
       }
     };
-    const handleEscape = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') setOpen(false);
+    const handleKey = (evt: KeyboardEvent) => {
+      if (evt.key === 'Escape') {
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (evt.key !== 'ArrowDown' && evt.key !== 'ArrowUp') return;
+      const list = items();
+      if (list.length === 0) return;
+      evt.preventDefault();
+      const at = list.findIndex((item) => item === document.activeElement);
+      const step = evt.key === 'ArrowDown' ? 1 : -1;
+      list[(at + step + list.length) % list.length]?.focus();
     };
+    // Tabbing out of the menu closes it.
+    const handleFocusOut = (evt: FocusEvent) => {
+      if (
+        !(evt.relatedTarget instanceof Node) ||
+        !containerRef.current?.contains(evt.relatedTarget)
+      ) {
+        setOpen(false);
+      }
+    };
+    const container = containerRef.current;
     window.addEventListener('mousedown', handleClick);
-    window.addEventListener('keydown', handleEscape);
+    window.addEventListener('keydown', handleKey);
+    container?.addEventListener('focusout', handleFocusOut);
     return () => {
       window.removeEventListener('mousedown', handleClick);
-      window.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('keydown', handleKey);
+      container?.removeEventListener('focusout', handleFocusOut);
     };
   }, [open]);
 
@@ -153,6 +189,7 @@ const ArtistRowMenu = ({
       style={{ position: 'relative', display: 'inline-block' }}
     >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={COPY.menu.label(row.name)}
         aria-haspopup="menu"
@@ -209,8 +246,10 @@ const ArtistRowMenu = ({
             title={COPY.menu.notAnArtist}
             line={COPY.menu.notAnArtistLine}
             muted
+            disabled={busy}
             onClick={() => {
-              setOpen(false);
+              // Focus goes to ⋯ first, so the dialog restores it there.
+              close();
               onNotAnArtist();
             }}
           />
@@ -279,7 +318,7 @@ export const MatchedRow = ({
       <span style={{ fontSize: 12.5, color: 'var(--fg-muted)', width: 170 }}>
         {meta}
       </span>
-      <ArtistRowMenu row={row} onNotAnArtist={onNotAnArtist} />
+      <ArtistRowMenu row={row} busy={busy} onNotAnArtist={onNotAnArtist} />
     </li>
   );
 };
