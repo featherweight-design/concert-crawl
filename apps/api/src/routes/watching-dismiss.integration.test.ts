@@ -125,6 +125,24 @@ describe('dismissing a No longer listed show', () => {
     expect(await listed()).toEqual([liveId]);
   });
 
+  it('forgets the dismissal when I stop watching, so watching it again shows it', async () => {
+    as('user_a');
+    await send('POST', `/${delistedId}/dismiss`);
+    expect(await listed()).toEqual([liveId]);
+    // PUT toggles: the second one un-watches the show I am watching.
+    expect((await send('PUT', `/${delistedId}`)).status).toBe(200);
+    expect(await testDb.select().from(userEventDismissals)).toHaveLength(0);
+    // Watching it again while it is still delisted: not hidden.
+    expect((await send('PUT', `/${delistedId}`)).status).toBe(200);
+    expect(await listed()).toEqual(expect.arrayContaining([delistedId]));
+  });
+
+  it('is a personal read that no shared cache may hold', async () => {
+    as('user_a');
+    const res = await send('GET', '');
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
   it('needs a signed-in caller and a real id', async () => {
     as(null);
     expect((await send('POST', `/${delistedId}/dismiss`)).status).toBe(401);
