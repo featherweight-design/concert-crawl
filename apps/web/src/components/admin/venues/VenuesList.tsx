@@ -113,6 +113,19 @@ const Robots = ({ allowed }: { allowed: boolean | null }) => {
   );
 };
 
+/** The venue's glyph tile at a fixed size; a long name never squeezes it. */
+const Tile = ({
+  venue,
+  size,
+}: {
+  venue: VenueWithEventCount;
+  size: number;
+}) => (
+  <span style={{ display: 'flex', flex: 'none' }}>
+    <VenueTile slug={venue.slug} name={venue.name} size={size} />
+  </span>
+);
+
 const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
   <Link
     href={`/admin/venues/${venue.id}`}
@@ -127,6 +140,8 @@ const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
       borderTop: '1px solid var(--border)',
       color: 'var(--fg)',
       textDecoration: 'none',
+      // The boards set type at the browser's normal leading, not the body's.
+      lineHeight: 1.25,
     }}
   >
     {/* HOLD: the Needs you dot waits on 2a (ruling 18). */}
@@ -134,7 +149,7 @@ const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
     <span
       style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}
     >
-      <VenueTile slug={venue.slug} name={venue.name} size={34} />
+      <Tile venue={venue} size={34} />
       <span style={{ minWidth: 0 }}>
         <span
           style={{
@@ -196,9 +211,10 @@ const PhoneCard = ({ venue }: { venue: VenueWithEventCount }) => (
       borderBottom: '1px solid var(--border)',
       color: 'var(--fg)',
       textDecoration: 'none',
+      lineHeight: 1.25,
     }}
   >
-    <VenueTile slug={venue.slug} name={venue.name} size={40} />
+    <Tile venue={venue} size={40} />
     <span
       style={{
         flex: 1,
@@ -323,31 +339,39 @@ export const VenuesList = ({
   return (
     <div
       data-testid="venues-list"
-      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: isPhone ? 10 : 16,
+      }}
     >
       <div
         style={{
           display: 'flex',
           alignItems: 'flex-end',
-          gap: 12,
+          gap: isPhone ? 10 : 12,
           flexWrap: 'wrap',
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: isPhone ? 24 : 28,
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              color: 'var(--fg)',
-            }}
-          >
-            {COPY.title}
-          </h1>
+          {/* On the phone the shell's top bar carries the title, as
+              `04/venues-mobile` draws it, so the page doesn't repeat it. */}
+          {!isPhone && (
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                color: 'var(--fg)',
+              }}
+            >
+              {COPY.title}
+            </h1>
+          )}
           <p
             style={{
-              margin: `${isPhone ? 2 : 4}px 0 0`,
+              margin: isPhone ? 0 : '4px 0 0',
               fontSize: isPhone ? 12.5 : 13.5,
               color: 'var(--fg-muted)',
             }}
