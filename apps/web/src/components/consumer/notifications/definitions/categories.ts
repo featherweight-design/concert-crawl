@@ -5,12 +5,12 @@
 // THE SYSTEM: ink encodes VALENCE, glyph encodes EVENT.
 //
 //   --danger    bad news you can't act on      watch.cancelled
-//   --warning   changed on you / closing       watch.postponed · watch.soldout
+//   --warning   changed on you / closing       watch.postponed · contest.resolved
+//                                              contest.needs_info (B19a boards)
 //   --success   good news                      watch.backonsale · watch.pricedrop
 //                                              artist.report_fixed
-//   --fg-muted  a neutral verdict              contest.resolved
-//   --signal    a task — you owe a reply       contest.needs_info
-//   --accent    discovery, not your shows      artist.new_show · crew.*
+//   --accent    discovery, sold out            artist.new_show · crew.* ·
+//                                              watch.soldout (B19a boards)
 //
 // The three `crew.*` categories share one ink and one glyph on purpose: they
 // are not three kinds of news, they are one social channel, and a crew row
@@ -66,8 +66,9 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
     },
     'watch.soldout': {
       label: 'Shows',
-      ink: 'var(--warning)',
-      glyph: 'soldout',
+      // B19a (`notif-shows-m`): sold out is the accent tag, not a warning.
+      ink: 'var(--accent)',
+      glyph: 'tag',
       verb: 'Show sold out',
     },
     'watch.backonsale': {
@@ -84,14 +85,15 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
     },
     'contest.resolved': {
       label: 'Prices',
-      ink: 'var(--fg-muted)',
-      glyph: 'resolved',
+      // B19a (`notif-prices-m`): both price check rows wear the warning tag.
+      ink: 'var(--warning)',
+      glyph: 'tag',
       verb: 'Price check result',
     },
     'contest.needs_info': {
       label: 'Prices',
-      ink: 'var(--signal)',
-      glyph: 'needsinfo',
+      ink: 'var(--warning)',
+      glyph: 'tag',
       verb: 'Price check needs you',
     },
     'artist.new_show': {

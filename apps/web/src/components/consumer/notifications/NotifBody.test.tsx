@@ -13,6 +13,7 @@ import type { ConsumerNotification } from '@/lib/notifications';
 import { NotifBody } from './NotifBody';
 import { NotifItem } from './NotifItem';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
+import { categoryFor } from './definitions/categories';
 
 afterEach(cleanup);
 
@@ -271,9 +272,39 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
     expect(screen.queryByTestId('notif-tab-dot-prices')).toBeNull();
   });
 
-  it('draws no tabs while loading', () => {
+  it('keeps the tab row above the skeleton while loading (B19a)', () => {
     render(<NotifBody state="loading" now={NOW} />);
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
+    expect(screen.getByRole('tabpanel', { name: 'Shows' })).toBeInTheDocument();
+  });
+
+  it('draws the single-tab empty card with the tab name and its line (B19a)', () => {
+    render(
+      <NotifBody
+        state="ready"
+        items={[notification({ category: 'watch.pricedrop' })]}
+        now={NOW}
+      />,
+    );
+    const card = screen.getByTestId('state-card');
+    expect(card).toHaveTextContent(NOTIFICATIONS_COPY.segments.shows);
+    expect(card).toHaveTextContent(NOTIFICATIONS_COPY.tabEmpty.shows);
+  });
+
+  it('gives sold out the accent tag and price checks the warning tag (B19a)', () => {
+    expect(categoryFor('watch.soldout')).toMatchObject({
+      ink: 'var(--accent)',
+      glyph: 'tag',
+    });
+    expect(categoryFor('contest.resolved')).toMatchObject({
+      ink: 'var(--warning)',
+      glyph: 'tag',
+    });
+    expect(categoryFor('contest.needs_info')).toMatchObject({
+      ink: 'var(--warning)',
+      glyph: 'tag',
+    });
   });
 });
 

@@ -61,6 +61,15 @@ export const NOTIFICATIONS_COPY = {
   today: 'Today',
   yesterday: 'Yesterday',
   segments: { shows: 'Shows', alerts: 'Alerts', prices: 'Prices' },
+  /**
+   * One tab with nothing in it while the others have rows (B19a
+   * `notif-tab-empty-m`; the board draws the Prices tab only).
+   */
+  tabEmpty: {
+    shows: 'No show news.',
+    alerts: 'No alerts.',
+    prices: 'No price news.',
+  },
 } as const;
 
 /** Where the empty-state CTA sends someone with nothing to catch up on. */

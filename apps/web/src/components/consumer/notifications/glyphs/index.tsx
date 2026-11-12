@@ -19,6 +19,7 @@ export type GlyphName =
   | 'newshow'
   | 'userfixed'
   | 'crew'
+  | 'tag'
   | 'bell';
 
 export const GLYPH: Record<GlyphName, JSX.Element> = {
@@ -182,6 +183,19 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
         strokeWidth="1.4"
         strokeLinecap="round"
       />
+    </>
+  ),
+  // The plain price tag the B19a boards draw for sold out and both price check
+  // rows (`notif-shows-m`, `notif-prices-m`).
+  tag: (
+    <>
+      <path
+        d="M2 2h5.2L14 8.8 8.8 14 2 7.2V2Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="5" cy="5" r="1.1" fill="currentColor" />
     </>
   ),
   bell: (

@@ -19,7 +19,8 @@ interface StateCardProps {
   icon: ReactNode;
   eyebrow: string;
   title: string;
-  body: string;
+  /** Omitted by a card that is only an eyebrow and a title. */
+  body?: string | undefined;
   action?: StateCardAction | undefined;
   /**
    * Empty states sit in a dashed card (README "one pattern everywhere"); the
@@ -104,15 +105,19 @@ export function StateCard({
           color: ink,
           ...(tone === 'danger'
             ? {
-                borderRadius: 22,
+                // B19a (`notif-tab-failed-m`): 84px r24 tile, 10% fill, 45%
+                // border and a soft 20% glow.
+                borderRadius: 24,
                 border: `1px solid color-mix(in oklch, ${ink} 45%, transparent)`,
-                background: `color-mix(in oklch, ${ink} 12%, var(--surface-1))`,
+                background: `color-mix(in oklch, ${ink} 10%, transparent)`,
+                boxShadow: `0 0 40px color-mix(in oklch, ${ink} 20%, transparent)`,
               }
             : {
+                // B19a (`notif-tab-empty-m`): a 1.5px signal-tinted dashed
+                // ring over a faint signal radial.
                 borderRadius: '50%',
-                border: `1px dashed color-mix(in oklch, ${ink} 45%, transparent)`,
-                background:
-                  'radial-gradient(circle, var(--surface-2), var(--surface-1) 70%)',
+                border: `1.5px dashed color-mix(in oklch, ${ink} 55%, transparent)`,
+                background: `radial-gradient(circle, color-mix(in oklch, ${ink} 10%, transparent), transparent 70%)`,
               }),
         }}
       >
@@ -143,17 +148,19 @@ export function StateCard({
       >
         {title}
       </h2>
-      <span
-        style={{
-          fontSize: 14,
-          lineHeight: 1.5,
-          color: 'var(--fg-muted)',
-          maxWidth: 300,
-          textWrap: 'pretty',
-        }}
-      >
-        {body}
-      </span>
+      {body !== undefined && (
+        <span
+          style={{
+            fontSize: 14,
+            lineHeight: 1.5,
+            color: 'var(--fg-muted)',
+            maxWidth: 300,
+            textWrap: 'pretty',
+          }}
+        >
+          {body}
+        </span>
+      )}
       {action !== undefined && (
         <button type="button" onClick={action.onClick} style={ACTION_STYLE}>
           {action.label}

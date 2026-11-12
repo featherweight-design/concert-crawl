@@ -24,7 +24,12 @@ import {
 import { NotifHeader, NOTIF_TABPANEL_ID, notifTabId } from './NotifHeader';
 import { NotifItem } from './NotifItem';
 import { NotifDayDivider } from './NotifDayDivider';
-import { NotifLoading, NotifEmpty, NotifError } from './NotifStates';
+import {
+  NotifLoading,
+  NotifEmpty,
+  NotifError,
+  NotifTabEmpty,
+} from './NotifStates';
 import { groupByDay, unreadCount as countUnread } from './lib/format-time';
 
 export type NotifPanelState = 'loading' | 'ready' | 'error';
@@ -73,9 +78,6 @@ export const NotifBody = ({
   // Opens on Shows. The header count stays the total across all three tabs.
   const [tab, setTab] = useState<NotificationTab>(DEFAULT_NOTIFICATION_TAB);
   const isEmpty = state === 'ready' && items.length === 0;
-  // The boards draw the tab row on the empty and error states too; only the
-  // loading state, where nothing has landed yet, has none.
-  const showTabs = state !== 'loading';
   const unreadTabs = new Set<NotificationTab>(
     items
       .filter((item) => item.readAt === null)
@@ -100,8 +102,8 @@ export const NotifBody = ({
         unreadTabs={unreadTabs}
         empty={isEmpty}
         showMarkAll={isEmpty || state === 'error'}
-        tab={showTabs ? tab : undefined}
-        onTab={showTabs ? setTab : undefined}
+        tab={tab}
+        onTab={setTab}
       />
       {notice !== undefined && (
         <div
@@ -129,7 +131,17 @@ export const NotifBody = ({
           background: 'var(--bg-elevated)',
         }}
       >
-        {state === 'loading' && <NotifLoading />}
+        {/* B19a (`notif-tab-loading-m`): the tab row stays above the
+            skeleton, so the tabpanel exists for it to control. */}
+        {state === 'loading' && (
+          <div
+            role="tabpanel"
+            id={NOTIF_TABPANEL_ID}
+            aria-labelledby={notifTabId(tab)}
+          >
+            <NotifLoading />
+          </div>
+        )}
         {state === 'error' && (
           <div
             role="tabpanel"
@@ -154,9 +166,9 @@ export const NotifBody = ({
             id={NOTIF_TABPANEL_ID}
             aria-labelledby={notifTabId(tab)}
           >
-            {/* A tab with nothing in it draws no list: Design drew no empty
-                state for a single tab, so the panel stays silent (the tab
-                still names itself through aria-labelledby). */}
+            {/* A tab with nothing in it draws the single-tab empty card
+                (B19a `notif-tab-empty-m`) instead of a list. */}
+            {groups.length === 0 && <NotifTabEmpty tab={tab} />}
             {groups.length > 0 && (
               <div role="list" aria-label={NOTIFICATIONS_COPY.segments[tab]}>
                 {groups.map((group, index) => (
