@@ -10,6 +10,9 @@ const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local';
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment,
+  // The deployed commit, written to the run's env file by crawler-run.yml.
+  // Unset locally and on a manual run without it.
+  release: process.env['GIT_SHA'] || undefined,
   // See apps/api/src/instrument.ts — local runs never send, so dev noise
   // cannot bury real production errors.
   enabled: environment !== 'local',
