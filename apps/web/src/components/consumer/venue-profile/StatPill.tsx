@@ -40,7 +40,7 @@ export function StatPill({ label, value, signal = false }: StatPillProps) {
         className="font-bold"
         style={{
           overflowWrap: 'normal',
-          fontSize: longWord ? 'min(22px, 12.5cqw)' : '22px',
+          fontSize: longWord ? 'clamp(13px, 12.5cqw, 22px)' : '22px',
           lineHeight: 1.05,
           color: signal ? 'var(--signal)' : 'var(--fg)',
           letterSpacing: '-0.02em',
