@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import type { FilterOption } from './filter-defs';
 
@@ -9,15 +15,21 @@ const copy = CONSUMER_COPY.filterBar.popover;
 const ANCHOR_GAP = 6;
 const VIEWPORT_MARGIN = 16;
 const MIN_ROOM_BELOW = 240;
+/** The most room below the chip that opening will scroll the page to make. */
+const MAX_ROOM_NEEDED = 520;
+/** The sticky desktop site header (`AppHeader`, `h-16`), which a scroll must not tuck the chip under. */
+const SITE_HEADER_HEIGHT = 64;
 
-export type PopoverPlacement =
-  { top: number; maxHeight: number } | { bottom: number; maxHeight: number };
+export interface PopoverPlacement {
+  top: number;
+  maxHeight: number;
+}
 
 /**
  * Opens the menu below its chip, its height capped to the room between the
- * chip and the viewport's bottom margin. It flips above the chip, capped to
- * the room above, only when the room below is under MIN_ROOM_BELOW and the
- * room above is larger.
+ * chip and the viewport's bottom margin. It never opens above the chip, as
+ * `bp-f-filt_where_d` and `vibe_pop_d` draw it: when the room below is short,
+ * opening scrolls the page first (`getScrollIntoRoom`).
  */
 export const getPopoverPlacement = (
   anchorRect: Pick<DOMRect, 'top' | 'bottom'>,
@@ -27,14 +39,29 @@ export const getPopoverPlacement = (
     0,
     viewportHeight - anchorRect.bottom - ANCHOR_GAP - VIEWPORT_MARGIN,
   );
-  const roomAbove = Math.max(0, anchorRect.top - ANCHOR_GAP - VIEWPORT_MARGIN);
-  if (roomBelow < MIN_ROOM_BELOW && roomAbove > roomBelow) {
-    return {
-      bottom: viewportHeight - anchorRect.top + ANCHOR_GAP,
-      maxHeight: roomAbove,
-    };
-  }
   return { top: anchorRect.bottom + ANCHOR_GAP, maxHeight: roomBelow };
+};
+
+/**
+ * How far to scroll the page down so the menu fits below its chip: its
+ * natural height, at least MIN_ROOM_BELOW and at most MAX_ROOM_NEEDED, less
+ * the room there already is. Never so far that the chip slides under the
+ * sticky site header. Zero when the room below is enough.
+ */
+export const getScrollIntoRoom = (
+  anchorRect: Pick<DOMRect, 'top' | 'bottom'>,
+  viewportHeight: number,
+  contentHeight: number,
+): number => {
+  const needed = Math.min(
+    Math.max(contentHeight, MIN_ROOM_BELOW),
+    MAX_ROOM_NEEDED,
+  );
+  const roomBelow =
+    viewportHeight - anchorRect.bottom - ANCHOR_GAP - VIEWPORT_MARGIN;
+  if (roomBelow >= needed) return 0;
+  const headroom = anchorRect.top - SITE_HEADER_HEIGHT - VIEWPORT_MARGIN;
+  return Math.max(0, Math.min(needed - roomBelow, headroom));
 };
 
 /**
@@ -105,10 +132,46 @@ export function FilterPopover({
 }: FilterPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(opener);
+  // Where opening scrolled the page to, so the close-on-scroll listener can
+  // tell that scroll (which arrives a frame later) from the user's own.
+  const scrolledToRef = useRef<number | null>(null);
+  // How far opening scrolled the page, for the anchor rect it was opened with.
+  const [shift, setShift] = useState<{ rect: DOMRect; by: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     openerRef.current = opener;
   }, [opener]);
+
+  // When the room below the chip is short, bring the bar up before the first
+  // paint so the menu fits below it, rather than flipping above it. Runs
+  // before the listener effect below, but the scroll event itself is
+  // dispatched later, so `scrolledToRef` is what keeps it from closing.
+  useLayoutEffect(() => {
+    scrolledToRef.current = null;
+    if (!open || !anchorRect) return;
+    const popover = popoverRef.current;
+    // Under `sm` the popover is `hidden` and the sheet opens instead.
+    if (!popover || window.getComputedStyle(popover).display === 'none') {
+      return;
+    }
+    const cappedHeight = popover.style.maxHeight;
+    popover.style.maxHeight = 'none';
+    const contentHeight = popover.offsetHeight;
+    popover.style.maxHeight = cappedHeight;
+
+    const by = getScrollIntoRoom(anchorRect, window.innerHeight, contentHeight);
+    if (by <= 0) return;
+    const before = window.scrollY;
+    window.scrollBy({ top: by, behavior: 'instant' });
+    // A short page may not scroll the whole way; the menu then caps its
+    // height to whatever room below there is.
+    const moved = window.scrollY - before;
+    if (moved <= 0) return;
+    scrolledToRef.current = window.scrollY;
+    setShift({ rect: anchorRect, by: moved });
+  }, [open, anchorRect]);
 
   // Closing (a pick, Clear, Escape, an outside press) or unmounting hands
   // focus back to the opener, unless the press already put it somewhere else.
@@ -152,6 +215,15 @@ export function FilterPopover({
       if (target instanceof Node && popoverRef.current?.contains(target)) {
         return;
       }
+      // The page scroll opening made: the chip is where the menu placed it.
+      const pageScroll = target === document || target === window;
+      if (
+        pageScroll &&
+        scrolledToRef.current !== null &&
+        window.scrollY === scrolledToRef.current
+      ) {
+        return;
+      }
       onClose();
     };
     const openWidth = window.innerWidth;
@@ -177,7 +249,14 @@ export function FilterPopover({
 
   if (!open || !anchorRect) return null;
 
-  const placement = getPopoverPlacement(anchorRect, window.innerHeight);
+  const scrolledBy = shift?.rect === anchorRect ? shift.by : 0;
+  const placement = getPopoverPlacement(
+    {
+      top: anchorRect.top - scrolledBy,
+      bottom: anchorRect.bottom - scrolledBy,
+    },
+    window.innerHeight,
+  );
   const fittedWidth =
     width === undefined
       ? undefined
