@@ -22,6 +22,7 @@ function makeVenue(overrides: Partial<VenueWithDistance>): VenueWithDistance {
   return {
     id: 'v-1',
     name: 'Mission Ballroom',
+    shortName: null,
     slug: 'mission-ballroom',
     city: 'Denver',
     timezone: 'America/Denver',

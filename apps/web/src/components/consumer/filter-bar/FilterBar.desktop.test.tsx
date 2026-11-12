@@ -63,6 +63,7 @@ const venue = (slug: string, name: string, neighborhood: string) =>
   ({
     id: slug,
     name,
+    shortName: null,
     slug,
     city: 'Denver',
     timezone: 'America/Denver',
