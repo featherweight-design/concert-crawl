@@ -3,6 +3,7 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from './EventTitleBlock';
 
 describe('EventTitleBlock', () => {
@@ -267,5 +268,34 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Unprojected Act',
     );
+  });
+
+  describe('status: cancelled', () => {
+    const renderCancelled = (delistedAt: string | null) =>
+      render(
+        <EventTitleBlock
+          headliner="Wednesday"
+          supportingArtists={[]}
+          tourName={null}
+          surface="detail"
+          status="cancelled"
+          delistedAt={delistedAt}
+        />,
+      );
+
+    it('strikes the title of a confirmed cancellation', () => {
+      renderCancelled(null);
+      expect(screen.getByText('Wednesday').style.textDecoration).toBe(
+        'line-through',
+      );
+    });
+
+    it('does not strike a No longer listed title, and the pill says so', () => {
+      renderCancelled('2026-11-04T10:00:00.000Z');
+      expect(screen.getByText('Wednesday').style.textDecoration).toBe('');
+      expect(screen.getByTestId('status-pill-removed').textContent).toBe(
+        CONSUMER_COPY.noLongerListedLabel,
+      );
+    });
   });
 });
