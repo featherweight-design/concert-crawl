@@ -12,7 +12,7 @@ import { getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { createClerkClient } from '@clerk/backend';
-import { inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, userEvents, userProfiles } from '@concert-crawl/db';
 import type { Role } from '@concert-crawl/types';
 import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types';
@@ -28,6 +28,8 @@ const SCAN_PAGE = 100;
 // says so (`truncated`) instead of silently missing people.
 const SCAN_CAP = 5000;
 const SCAN_TTL_MS = 30_000;
+const SESSION_PAGE = 100;
+const MAX_REVOKE_ROUNDS = 10;
 
 interface ScannedUser {
   id: string;
@@ -45,19 +47,21 @@ interface Scan {
 }
 
 let cachedScan: Scan | null = null;
+let scanInFlight: Promise<Scan> | null = null;
+// Bumped by forgetPeopleScan, so a scan that started before a change never
+// writes its stale result into the cache.
+let scanGeneration = 0;
 
-const scanClerkUsers = async (now: number): Promise<Scan> => {
-  if (cachedScan !== null && now - cachedScan.at < SCAN_TTL_MS) {
-    return cachedScan;
-  }
+const fetchScan = async (): Promise<Scan> => {
   const users: ScannedUser[] = [];
-  let truncated = false;
-  for (let offset = 0; ; offset += SCAN_PAGE) {
+  let totalCount = 0;
+  for (let offset = 0; users.length < SCAN_CAP; offset += SCAN_PAGE) {
     const page = await clerkClient.users.getUserList({
       limit: SCAN_PAGE,
       offset,
       orderBy: '-created_at',
     });
+    totalCount = page.totalCount;
     for (const user of page.data) {
       const rawRole = (user.publicMetadata as { role?: unknown }).role;
       users.push({
@@ -69,19 +73,37 @@ const scanClerkUsers = async (now: number): Promise<Scan> => {
         lastActiveAt: user.lastActiveAt ?? null,
       });
     }
-    if (users.length >= SCAN_CAP) {
-      truncated = users.length < page.totalCount;
-      break;
-    }
-    if (page.data.length < SCAN_PAGE || users.length >= page.totalCount) break;
+    if (page.data.length < SCAN_PAGE || users.length >= totalCount) break;
   }
-  cachedScan = { users, truncated, at: now };
-  return cachedScan;
+  const truncated = users.length > SCAN_CAP || users.length < totalCount;
+  return { users: users.slice(0, SCAN_CAP), truncated, at: Date.now() };
+};
+
+const scanClerkUsers = async (now: number): Promise<Scan> => {
+  if (cachedScan !== null && now - cachedScan.at < SCAN_TTL_MS) {
+    return cachedScan;
+  }
+  // Concurrent requests after the TTL share one scan instead of each paging
+  // through all of Clerk.
+  if (scanInFlight !== null) return scanInFlight;
+  const generation = scanGeneration;
+  const running = fetchScan()
+    .then((scan) => {
+      if (generation === scanGeneration) cachedScan = scan;
+      return scan;
+    })
+    .finally(() => {
+      scanInFlight = null;
+    });
+  scanInFlight = running;
+  return running;
 };
 
 /** Drops the cached scan, so the next list sees a change made just now. */
 export const forgetPeopleScan = (): void => {
   cachedScan = null;
+  scanInFlight = null;
+  scanGeneration += 1;
 };
 
 /** `h***@example.com`: enough to tell people apart, not to contact them. */
@@ -129,12 +151,13 @@ peopleAdminRouter.get(
     const matches = (user: ScannedUser): boolean => {
       if (role !== undefined && user.role !== role) return false;
       if (needle === '') return true;
-      return [
-        handleOf.get(user.id) ?? '',
-        user.username ?? '',
-        user.email,
-        user.id,
-      ].some((field) => field.toLowerCase().includes(needle));
+      // An email matches only as the whole address, so search cannot be used
+      // to read a masked email out piece by piece without the audited Show
+      // email action.
+      if (user.email !== '' && user.email.toLowerCase() === needle) return true;
+      return [handleOf.get(user.id) ?? '', user.username ?? '', user.id].some(
+        (field) => field.toLowerCase().includes(needle),
+      );
     };
     const filtered = scan.users.filter(matches);
 
@@ -157,10 +180,13 @@ peopleAdminRouter.get(
         })
         .from(userEvents)
         .where(
-          sql`${userEvents.status} = 'watching' AND ${inArray(
-            userEvents.userId,
-            page.map((user) => user.id),
-          )}`,
+          and(
+            eq(userEvents.status, 'watching'),
+            inArray(
+              userEvents.userId,
+              page.map((user) => user.id),
+            ),
+          ),
         )
         .groupBy(userEvents.userId);
       for (const row of rows) watching.set(row.userId, row.value);
@@ -234,15 +260,26 @@ peopleAdminRouter.post(
       );
     }
 
+    // Clerk lists a page of sessions at a time, and a revoked session drops
+    // out of the active list, so go on until none are left (bounded).
     let revoked = 0;
     try {
-      const sessions = await clerkClient.sessions.getSessionList({
-        userId,
-        status: 'active',
-      });
-      for (const session of sessions.data) {
-        await clerkClient.sessions.revokeSession(session.id);
-        revoked += 1;
+      for (let round = 0; round < MAX_REVOKE_ROUNDS; round += 1) {
+        const sessions = await clerkClient.sessions.getSessionList({
+          userId,
+          status: 'active',
+          limit: SESSION_PAGE,
+        });
+        if (sessions.data.length === 0) break;
+        for (const session of sessions.data) {
+          try {
+            await clerkClient.sessions.revokeSession(session.id);
+            revoked += 1;
+          } catch (err: unknown) {
+            // Expired or revoked since the list: already signed out.
+            if (!isClerkNotFound(err)) throw err;
+          }
+        }
       }
     } catch (err: unknown) {
       if (isClerkNotFound(err)) {
@@ -280,6 +317,15 @@ peopleAdminRouter.patch(
         return ctx.json({ success: false, error: 'Person not found' }, 404);
       }
       throw err;
+    }
+
+    // sub_admin is not assignable here (as in the old users route), so a
+    // change away from it could never be undone; leave those accounts alone.
+    if (previousRole === 'sub_admin') {
+      return ctx.json(
+        { success: false, error: 'A sub_admin role is not changed here' },
+        403,
+      );
     }
 
     // Never demote your own admin account: it could leave nobody able to undo.

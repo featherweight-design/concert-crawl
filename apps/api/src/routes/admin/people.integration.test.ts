@@ -55,11 +55,17 @@ vi.mock('@clerk/backend', () => ({
       ),
     },
     sessions: {
-      getSessionList: vi.fn(async (params: { userId: string }) => ({
-        data: clerk.sessions.filter(
-          (session) => session.userId === params.userId,
-        ),
-      })),
+      getSessionList: vi.fn(
+        async (params: { userId: string; limit?: number }) => ({
+          data: clerk.sessions
+            .filter(
+              (session) =>
+                session.userId === params.userId &&
+                !clerk.revoked.includes(session.id),
+            )
+            .slice(0, params.limit ?? 10),
+        }),
+      ),
       revokeSession: vi.fn(async (id: string) => {
         clerk.revoked.push(id);
       }),
@@ -78,7 +84,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
-import { forgetPeopleScan } from './people.js';
+import { forgetPeopleScan, maskEmail } from './people.js';
 
 const app = createApp();
 
@@ -213,6 +219,28 @@ describe('admin people', () => {
     expect(byRole.data.total).toBe(1);
   });
 
+  it('matches an email only as the whole address, never a fragment', async () => {
+    setAuth('admin');
+    clerk.users = [person('user_a'), person('user_b')];
+    const fragment: ListBody = await (await get('?search=user_a%40')).json();
+    expect(fragment.data.people).toEqual([]);
+    const whole: ListBody = await (
+      await get('?search=USER_A%40example.com')
+    ).json();
+    expect(whole.data.people.map((row) => row.id)).toEqual(['user_a']);
+  });
+
+  it('signs out a person with more sessions than one Clerk page', async () => {
+    setAuth('admin');
+    clerk.users = [person('user_a')];
+    clerk.sessions = Array.from({ length: 25 }, (_, index) => ({
+      id: `sess_${index}`,
+      userId: 'user_a',
+    }));
+    const res = await post('/user_a/sign-out-everywhere');
+    expect(await res.json()).toEqual({ success: true, data: { revoked: 25 } });
+  });
+
   it('pages through the scan', async () => {
     setAuth('admin');
     clerk.users = Array.from({ length: 5 }, (_, index) =>
@@ -306,6 +334,15 @@ describe('admin people', () => {
     );
   });
 
+  it('leaves a sub_admin alone, since that role could not be restored by Undo', async () => {
+    setAuth('admin');
+    clerk.users = [
+      person('user_sub', { publicMetadata: { role: 'sub_admin' } }),
+    ];
+    expect((await patch('/user_sub/role', { role: 'user' })).status).toBe(403);
+    expect(clerk.updates).toEqual([]);
+  });
+
   it('refuses to demote your own admin account, and 404s an unknown person', async () => {
     setAuth('admin', 'user_admin');
     clerk.users = [person('user_admin', { publicMetadata: { role: 'admin' } })];
@@ -316,5 +353,16 @@ describe('admin people', () => {
     expect((await patch('/user_missing/role', { role: 'user' })).status).toBe(
       404,
     );
+  });
+});
+
+describe('maskEmail', () => {
+  it('keeps the first letter and the domain', () => {
+    expect(maskEmail('hugh@example.com')).toBe('h***@example.com');
+  });
+  it('hides an address with no usable local part', () => {
+    expect(maskEmail('@example.com')).toBe('***');
+    expect(maskEmail('nonsense')).toBe('***');
+    expect(maskEmail('')).toBe('');
   });
 });
