@@ -36,8 +36,11 @@ export const NotifHeader = ({
   onTab,
   empty = false,
   showMarkAll = false,
+  markAllDisabled = false,
   unreadTabs,
 }: {
+  /** Loading draws Mark all read inert (`notif-tab-loading-m`). */
+  markAllDisabled?: boolean | undefined;
   count: number;
   /** Tabs holding an unread item; the open tab never draws its dot. */
   unreadTabs?: ReadonlySet<NotificationTab> | undefined;
@@ -166,6 +169,7 @@ export const NotifHeader = ({
           type="button"
           className="notif-hit44"
           onClick={onMarkAll}
+          disabled={markAllDisabled}
           style={{
             all: 'unset',
             // all:unset writes `outline` as an INLINE declaration, which beats
@@ -180,7 +184,7 @@ export const NotifHeader = ({
             display: 'inline-flex',
             alignItems: 'center',
             position: 'relative',
-            cursor: 'pointer',
+            cursor: markAllDisabled ? 'default' : 'pointer',
             padding: '6px 2px',
             borderRadius: 7,
             fontFamily: 'Inter, system-ui',

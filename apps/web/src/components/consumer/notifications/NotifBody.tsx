@@ -101,7 +101,8 @@ export const NotifBody = ({
         showClose={showClose}
         unreadTabs={unreadTabs}
         empty={isEmpty}
-        showMarkAll={isEmpty || state === 'error'}
+        showMarkAll={isEmpty || state !== 'ready'}
+        markAllDisabled={state === 'loading'}
         tab={tab}
         onTab={setTab}
       />
@@ -231,7 +232,7 @@ export const NotifBody = ({
                     ? NOTIFICATIONS_COPY.loadingVisible
                     : NOTIFICATIONS_COPY.loadMore}
                 </button>
-              ) : (
+              ) : groups.length === 0 ? null : (
                 <NMono ls="0.1em">{NOTIFICATIONS_COPY.endOfList}</NMono>
               )}
             </div>
