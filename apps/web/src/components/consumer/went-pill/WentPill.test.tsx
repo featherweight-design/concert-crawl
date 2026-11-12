@@ -74,17 +74,22 @@ describe('WentPill', () => {
   // artist_past_m: the pill takes its venue's colour, so two venues on one
   // page are two colours (not the artist's hash).
   it('fills "Went" in its venue colour', () => {
-    // `toHaveStyle` compares computed colours, so jsdom's hex-to-rgb
-    // normalisation does not matter.
+    // jsdom stores a hex colour as `rgb()`, so the expected hex is run through
+    // the same normalisation by a probe element.
+    const asStored = (hex: string): string => {
+      const probe = document.createElement('div');
+      probe.style.background = hex;
+      return probe.style.background;
+    };
     pill(true);
-    expect(screen.getByRole('button')).toHaveStyle({
-      background: stampColorsFor('larimer-lounge').ring,
-    });
+    expect(screen.getByRole('button').style.background).toBe(
+      asStored(stampColorsFor('larimer-lounge').ring),
+    );
     cleanup();
     pill(true, { venueSlug: 'red-rocks-amphitheatre' });
-    expect(screen.getByRole('button')).toHaveStyle({
-      background: stampColorsFor('red-rocks-amphitheatre').ring,
-    });
+    expect(screen.getByRole('button').style.background).toBe(
+      asStored(stampColorsFor('red-rocks-amphitheatre').ring),
+    );
   });
 
   it('reads "Went" for a stamped night', () => {
