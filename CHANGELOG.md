@@ -1,3 +1,11 @@
+## [1.331.2](https://github.com/featherweight-design/concert-crawl/compare/v1.331.1...v1.331.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** a past day no longer sits above Tonight on Browse ([fee93a3](https://github.com/featherweight-design/concert-crawl/commit/fee93a30d773e17d4227457740ab9e4001936cab))
+* **web:** keep the offline fallback, floor Browse at render only ([da6020c](https://github.com/featherweight-design/concert-crawl/commit/da6020c81d430bf156abc785dd62bbde7daaafcc))
+
 ## [1.331.1](https://github.com/featherweight-design/concert-crawl/compare/v1.331.0...v1.331.1) (2026-11-12)
 
 
