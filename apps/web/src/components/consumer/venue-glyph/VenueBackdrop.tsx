@@ -78,6 +78,7 @@ const ARENA_STARS = [
  */
 export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
   if (setting === 'outdoor') {
+    const horizonId = `vn${uid}h`;
     return (
       <svg
         viewBox="0 0 380 200"
@@ -87,6 +88,15 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
         data-venue-backdrop="outdoor"
         style={SVG_STYLE}
       >
+        <defs>
+          {/* The sky warms toward the horizon (the board's `hs12`), so the
+              ridge reads as a solid dark silhouette against it. */}
+          <linearGradient id={horizonId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0.25" stopColor={to} stopOpacity={0} />
+            <stop offset="0.62" stopColor={to} stopOpacity={0.34} />
+          </linearGradient>
+        </defs>
+        <rect width="380" height="200" fill={`url(#${horizonId})`} />
         {OUTDOOR_STARS.map((star, i) => (
           <circle
             key={i}
