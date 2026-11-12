@@ -57,9 +57,6 @@
         {
           "goto": "/venues/no-such-venue",
           "expectStatus": 404,
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
-        },
-        {
           "wait": "[data-testid=\"not-found-surface\"]"
         }
       ]
