@@ -1,3 +1,17 @@
+# [1.373.0](https://github.com/featherweight-design/concert-crawl/compare/v1.372.0...v1.373.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** refuse to reactivate a member share code ([24e7e69](https://github.com/featherweight-design/concert-crawl/commit/24e7e69eb2b26d54609af075f0500fe2898a8079))
+* **crawler:** ignore parenthetical text when deciding a title is a tribute night ([58bae07](https://github.com/featherweight-design/concert-crawl/commit/58bae0775870063db97f3b39b9c0115ec003c5aa))
+* **crawler:** repair pass never hides, tribute note in parentheses keeps the bill, X & Friends is X ([1b00159](https://github.com/featherweight-design/concert-crawl/commit/1b0015968a427ea747924e5c9d711d0cbc5af977))
+
+
+### Features
+
+* **web:** stamp and unstamp a past night from the event page ([4f657cf](https://github.com/featherweight-design/concert-crawl/commit/4f657cf21cfb082a32491dd2cbfd505f2db78eb2))
+
 # [1.372.0](https://github.com/featherweight-design/concert-crawl/compare/v1.371.0...v1.372.0) (2026-11-12)
 
 
