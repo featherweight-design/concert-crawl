@@ -48,6 +48,7 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
 import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight';
+import { localDateString } from '@/lib/time';
 import {
   BillFollowBlock,
   billArtists,
@@ -285,6 +286,10 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           event.status,
         )}
         status={event.status}
+        {...(event.status === 'upcoming' &&
+        event.date < localDateString(event.venue.timezone)
+          ? { pastVenueSlug: event.venue.slug }
+          : {})}
         surface="event"
         artworkUrl={event.imageUrl}
         photoUrl={event.artistPhotoUrl ?? null}
