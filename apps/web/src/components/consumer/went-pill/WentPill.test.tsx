@@ -31,6 +31,7 @@ vi.mock('@/components/consumer/going/lib/attendance-toasts', () => ({
 }));
 
 import { GOING_COPY } from '@/components/consumer/going/definitions/copy';
+import { stampColorsFor } from '@/lib/passport/stamp';
 import { WentPill } from './WentPill';
 
 const pill = (
@@ -68,6 +69,20 @@ describe('WentPill', () => {
       GOING_COPY.past.ariaWent('Nightjar Choir', 'Jun 21, 2026'),
     );
     expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  // artist_past_m: the pill takes its venue's colour, so two venues on one
+  // page are two colours (not the artist's hash).
+  it('fills "Went" in its venue colour', () => {
+    pill(true);
+    expect(screen.getByRole('button').style.background).toBe(
+      stampColorsFor('larimer-lounge').ring,
+    );
+    cleanup();
+    pill(true, { venueSlug: 'red-rocks-amphitheatre' });
+    expect(screen.getByRole('button').style.background).toBe(
+      stampColorsFor('red-rocks-amphitheatre').ring,
+    );
   });
 
   it('reads "Went" for a stamped night', () => {

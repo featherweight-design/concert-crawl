@@ -16,7 +16,7 @@ import {
   showStampedToast,
 } from '@/components/consumer/going/lib/attendance-toasts';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
-import { stampAccentFor } from '@/lib/passport/stamp';
+import { stampColorsFor } from '@/lib/passport/stamp';
 
 interface WentPillProps {
   eventId: string;
@@ -56,7 +56,9 @@ export const WentPill = ({
   const [went, setWent] = useState(attending === true);
   useEffect(() => setWent(attending === true), [attending]);
 
-  const accent = stampAccentFor(artist);
+  // The pill is filled in its VENUE's colour, as the stamp beside it is inked
+  // (artist_past_m: orange for Red Rocks), so two venues are two colours.
+  const accent = stampColorsFor(venueSlug).ring;
 
   const unstamp = async () => {
     setWent(false);
@@ -154,7 +156,6 @@ export const WentPill = ({
         <VenueStamp
           venueSlug={venueSlug}
           venueName={venueName}
-          seed={artist}
           variant="dashed"
           size={STAMP_SIZE}
         />
