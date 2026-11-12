@@ -1,3 +1,33 @@
+# [1.359.0](https://github.com/featherweight-design/concert-crawl/compare/v1.358.0...v1.359.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** catalog generation is no-store so cache windows do not stack ([bac7fe1](https://github.com/featherweight-design/concert-crawl/commit/bac7fe14bfaa56865e9d0e5fb95e7b8836eba5c7))
+* **web:** address the review on the edit and new code panels (5b C) ([964fead](https://github.com/featherweight-design/concert-crawl/commit/964fead888c1d33ef673125640f40c6e05ff37c4))
+* **web:** check custom codes against the API's rule before sending (5b C) ([5e3f6f9](https://github.com/featherweight-design/concert-crawl/commit/5e3f6f9a34c56df0a27e0a46211c25dec1514749))
+* **web:** draw pending reports dashed, with an outlined pill and an icon tile ([3b17a1a](https://github.com/featherweight-design/concert-crawl/commit/3b17a1a99cd747cc91cc086ede62525601340583))
+* **web:** draw sold out in the accent, with no struck price ([2326ec4](https://github.com/featherweight-design/concert-crawl/commit/2326ec43b5c4d3bbf4fa109d670eb2457d9255bb))
+* **web:** draw the event stage as the boards do ([33f92ef](https://github.com/featherweight-design/concert-crawl/commit/33f92ef5e16cfea243b25fef0040d254e4a5d2a0))
+* **web:** draw the price cards with the gradient edge and a gradient button ([d6ce759](https://github.com/featherweight-design/concert-crawl/commit/d6ce759dcd606ac34fdf6d500d68cbe786e4a58c))
+* **web:** finish the event page fidelity pass ([604e72b](https://github.com/featherweight-design/concert-crawl/commit/604e72b044b4291d2c34337ae95134e6de730df8))
+* **web:** grab zone on the delete sheet handle only, tighten sheet drag tests ([8a1ed85](https://github.com/featherweight-design/concert-crawl/commit/8a1ed85323a778d87cc265fb7165e3c0521d9e6d))
+* **web:** keep a No longer listed title at full strength ([ed4edcd](https://github.com/featherweight-design/concert-crawl/commit/ed4edcd2653a0c277c7e10dbebf23109b4e674ca))
+* **web:** keep the phone sheet's Save tall and Add seats' focus on Seats (5b C) ([90cf2a3](https://github.com/featherweight-design/concert-crawl/commit/90cf2a3045ca59d932708e24ca378208e706ca32))
+* **web:** land Add seats' focus after the phone sheet mounts (5b C) ([c60fc6b](https://github.com/featherweight-design/concert-crawl/commit/c60fc6b87f112170b338d64b07fa0f9d93a69d6c))
+* **web:** review fixes for the event page fidelity pass ([af4ebba](https://github.com/featherweight-design/concert-crawl/commit/af4ebba662d8a5990a1ad2919ac404020c5cff99))
+* **web:** set the edit and new code footer buttons as drawn (5b C) ([a526ffa](https://github.com/featherweight-design/concert-crawl/commit/a526ffa77fb065ac2cfec409f79bcb14a09d107a))
+* **web:** stack genre chip above the status pill on the event stage ([f71968a](https://github.com/featherweight-design/concert-crawl/commit/f71968ae45601eabc9d6c3fe311bb4a3a4f9de18))
+* **web:** the community label sits inside the card, and More at reads larger ([9aee411](https://github.com/featherweight-design/concert-crawl/commit/9aee411f890ef15772d0de7b41687586cc6e9711))
+
+
+### Features
+
+* **api:** catalog generation also follows community price submissions ([8e35087](https://github.com/featherweight-design/concert-crawl/commit/8e3508743d533598cab6c78f2c0630cfa24f9734))
+* **api:** public catalog generation stamp for the web read cache ([d3cfc6a](https://github.com/featherweight-design/concert-crawl/commit/d3cfc6ac19332946813131bfa45ef8cf1ee8a0ce))
+* **web:** add the invite code edit and new code panels (5b C) ([00ea71e](https://github.com/featherweight-design/concert-crawl/commit/00ea71e683bde011499fb67a0131fd1e02775118))
+* **web:** drag down to dismiss the venues filter sheet and the delete sheet ([e6fc563](https://github.com/featherweight-design/concert-crawl/commit/e6fc563db1dabc1c41f7ea772079111ea3d2f97a))
+
 # [1.358.0](https://github.com/featherweight-design/concert-crawl/compare/v1.357.0...v1.358.0) (2026-11-12)
 
 
