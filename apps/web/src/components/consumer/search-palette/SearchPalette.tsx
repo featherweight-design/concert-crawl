@@ -24,7 +24,10 @@ import {
   SEARCH_FIELD_GRADIENT_EDGE,
 } from '../search/definitions/constants';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { ListboxRowsContext, resultOptionId } from '../search/ResultParts';
 import { PALETTE_SHEET_QUERY } from './definitions/constants';
+
+const LISTBOX_ID = 'search-palette-listbox';
 
 const copy = CONSUMER_COPY.search;
 
@@ -80,6 +83,31 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     selectedIdxRef.current = -1;
     setSelectedIdx(-1);
   }, [search.query]);
+
+  // A row reached by the arrow keys can sit below the fold of the scrolling
+  // body; keep it in view. `nearest` leaves the scroll alone when it already is.
+  useEffect(() => {
+    if (selectedIdx < 0) return;
+    const row = panelRef.current?.querySelector('[data-selected="true"]');
+    if (
+      row instanceof HTMLElement &&
+      typeof row.scrollIntoView === 'function'
+    ) {
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }, [selectedIdx]);
+
+  // The sheet and the dialog are two trees, so crossing the 640px line (a
+  // rotation) remounts the input and drops focus and caret. Put both back.
+  const sheetRef = useRef(sheet);
+  useEffect(() => {
+    if (sheetRef.current === sheet) return;
+    sheetRef.current = sheet;
+    const field = inputRef.current;
+    if (!open || field === null) return;
+    field.focus();
+    field.setSelectionRange(field.value.length, field.value.length);
+  }, [sheet, open]);
 
   useEffect(() => {
     if (open) {
@@ -242,6 +270,13 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
       onChange={(ev) => search.setQuery(ev.target.value)}
       placeholder={copy.paletteSearchPlaceholder}
       aria-label={copy.inputAriaLabel}
+      role="combobox"
+      aria-expanded="true"
+      aria-controls={LISTBOX_ID}
+      aria-autocomplete="list"
+      {...(selectedIdx >= 0
+        ? { 'aria-activedescendant': resultOptionId(selectedIdx) }
+        : {})}
       style={{
         flex: 1,
         minWidth: 0,
@@ -282,49 +317,54 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   ) : null;
 
   const body = (
-    <div
-      style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        minHeight: 0,
-        paddingTop: 2,
-      }}
-    >
-      {browsing && (
-        <SearchDefaultState
-          recentSearches={search.recentSearches}
-          popularEvents={popularEvents}
-          onPickQuery={search.setQuery}
-          onPickEvent={(type, value) => {
-            navigateTo(type, value);
-            onClose();
-          }}
-          onRemoveRecent={search.removeRecent}
-          selectedIdx={selectedIdx}
-          onHover={select}
-        />
-      )}
-      {!browsing && search.isLoading && <SearchLoadingState />}
-      {!browsing && !search.isLoading && hasResults && (
-        <SearchResultsState
-          artistResults={artistResults}
-          artistPageResults={artistPageResults}
-          venueResults={venueResults}
-          venueFirst={venueFirst}
-          selectedIdx={selectedIdx}
-          query={query}
-          onHover={select}
-          onNavigateTo={(type, value) => {
-            navigateTo(type, value);
-            onClose();
-          }}
-        />
-      )}
-      {!browsing && !search.isLoading && !hasResults && (
-        <SearchEmptyState query={query} onCtaClick={onClose} />
-      )}
-    </div>
+    <ListboxRowsContext.Provider value>
+      <div
+        id={LISTBOX_ID}
+        role="listbox"
+        aria-label={copy.paletteAriaLabel}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          minHeight: 0,
+          paddingTop: 2,
+        }}
+      >
+        {browsing && (
+          <SearchDefaultState
+            recentSearches={search.recentSearches}
+            popularEvents={popularEvents}
+            onPickQuery={search.setQuery}
+            onPickEvent={(type, value) => {
+              navigateTo(type, value);
+              onClose();
+            }}
+            onRemoveRecent={search.removeRecent}
+            selectedIdx={selectedIdx}
+            onHover={select}
+          />
+        )}
+        {!browsing && search.isLoading && <SearchLoadingState />}
+        {!browsing && !search.isLoading && hasResults && (
+          <SearchResultsState
+            artistResults={artistResults}
+            artistPageResults={artistPageResults}
+            venueResults={venueResults}
+            venueFirst={venueFirst}
+            selectedIdx={selectedIdx}
+            query={query}
+            onHover={select}
+            onNavigateTo={(type, value) => {
+              navigateTo(type, value);
+              onClose();
+            }}
+          />
+        )}
+        {!browsing && !search.isLoading && !hasResults && (
+          <SearchEmptyState query={query} onCtaClick={onClose} />
+        )}
+      </div>
+    </ListboxRowsContext.Provider>
   );
 
   if (sheet) {

@@ -43,6 +43,8 @@ const renderRow = (artist: ArtistSearchResult) =>
     <ArtistResultRow
       artist={artist}
       selected={false}
+      itemIdx={0}
+      listbox={false}
       onNavigate={() => {}}
       isSignedIn={false}
       surface={null}
