@@ -317,8 +317,8 @@ export function AccountMenuProvider({
   }, [signOut]);
 
   // Derive user display values
-  // Addendum 2 item 25: @handle, else the display name. The email only stands
-  // in when the account has neither, so the row is never blank.
+  // Addendum 2 item 25: @handle, else the display name. With neither, the row
+  // shows the email, as it does on main.
   const identityLabel = avatarHandle
     ? `@${avatarHandle}`
     : (user?.fullName ??

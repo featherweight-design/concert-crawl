@@ -427,6 +427,20 @@ describe('account menu identity (addendum 2 item 25)', () => {
     expect(screen.getByText('@hugh')).toBeInTheDocument();
     expect(screen.queryByText(/founder/i)).toBeNull();
   });
+
+  it('shows the email, as main does, when there is no handle or display name', async () => {
+    signIn();
+    fetchMe.mockResolvedValue({
+      handle: null,
+      avatarColor: null,
+      submissionCount: 0,
+      theme: 'electric',
+    });
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+
+    expect(screen.getByText('hugh@example.com')).toBeInTheDocument();
+  });
 });
 
 describe('#737 inbox strip', () => {
