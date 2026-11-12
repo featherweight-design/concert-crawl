@@ -1,3 +1,10 @@
+## [1.330.2](https://github.com/featherweight-design/concert-crawl/compare/v1.330.1...v1.330.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** cancelled event title struck, status chip under the title ([b184bee](https://github.com/featherweight-design/concert-crawl/commit/b184beed99b0c4fdd24ee29e149f3c24e300edb4))
+
 ## [1.330.1](https://github.com/featherweight-design/concert-crawl/compare/v1.330.0...v1.330.1) (2026-11-12)
 
 
