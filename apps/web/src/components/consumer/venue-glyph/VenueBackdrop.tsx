@@ -225,8 +225,8 @@ export function VenueBackdrop({
           `repeating-linear-gradient(0deg, transparent 0 12px, ${ground} 12px 16px)`,
           `repeating-linear-gradient(90deg, ${to} 0 40px, transparent 40px 44px)`,
         ].join(', '),
-        maskImage: 'linear-gradient(180deg, transparent, #000)',
-        WebkitMaskImage: 'linear-gradient(180deg, transparent, #000)',
+        maskImage: `linear-gradient(180deg, transparent, ${MASK_BLACK})`,
+        WebkitMaskImage: `linear-gradient(180deg, transparent, ${MASK_BLACK})`,
       }}
     />
   );
