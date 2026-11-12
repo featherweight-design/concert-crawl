@@ -146,7 +146,7 @@ describe('AppHeader — signed-out auth affordances (#794)', () => {
       expect(
         screen.getByRole('link', { name: 'My shows' }).className,
         route,
-      ).toContain('font-bold');
+      ).toContain('font-semibold text-fg');
       unmount();
     }
   });
