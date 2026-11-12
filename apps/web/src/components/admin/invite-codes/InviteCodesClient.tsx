@@ -228,7 +228,10 @@ export function InviteCodesClient() {
     );
   } else if (isPhone) {
     body = (
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+      <ul
+        data-testid="invite-codes-list"
+        style={{ listStyle: 'none', margin: 0, padding: 0 }}
+      >
         {rows.map(({ row, status }) => (
           <li
             key={row.id}
@@ -271,6 +274,7 @@ export function InviteCodesClient() {
   } else {
     body = (
       <div
+        data-testid="invite-codes-list"
         style={{
           borderRadius: 14,
           border: '1px solid var(--border)',
@@ -377,37 +381,41 @@ export function InviteCodesClient() {
         gap: isPhone ? 10 : 16,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          gap: 16,
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: isPhone ? 24 : 28,
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {COPY.title}
-          </h1>
-          <p
-            style={{
-              margin: '4px 0 0',
-              fontSize: isPhone ? 12.5 : 13.5,
-              color: 'var(--fg-muted)',
-            }}
-          >
-            {isPhone ? COPY.tabs.codes : COPY.subtitle}
-          </p>
+      {/* On the phone the shell's top bar carries the page title, as the
+          mobile board draws it, so the page doesn't repeat it. */}
+      {!isPhone && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 16,
+          }}
+        >
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {COPY.title}
+            </h1>
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: 13.5,
+                color: 'var(--fg-muted)',
+              }}
+            >
+              {COPY.subtitle}
+            </p>
+          </div>
+          {newButton}
         </div>
-        {!isPhone && newButton}
-      </div>
+      )}
       <Tabs
         isPhone={isPhone}
         counts={{
