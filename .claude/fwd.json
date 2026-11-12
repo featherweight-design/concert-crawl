@@ -59,10 +59,7 @@
     "aliases": {
       "@/": "apps/web/src/"
     },
-    "packageDir": [
-      "apps/e2e",
-      "apps/web"
-    ],
+    "packageDir": ["apps/e2e", "apps/web"],
     "tokens": {
       "declare": [
         "apps/web/src/app/globals.css",
@@ -73,11 +70,16 @@
         "apps/web/src/components/**/*.{ts,tsx,css}",
         "apps/web/src/app/**/*.{ts,tsx,css}"
       ],
-      "hex": [
-        "apps/web/src/components/**/*.{ts,tsx}"
-      ],
+      "hex": ["apps/web/src/components/**/*.{ts,tsx}"],
       "hexFails": false
-    }
+    },
+    "loading": [
+      "[aria-busy=\"true\"]",
+      ".admin-skeleton",
+      ".ap-band-skeleton",
+      "[data-testid=\"shelf-skeleton-card\"]",
+      "[data-testid=\"me-avatar-skeleton\"]"
+    ]
   },
   "orchestrator": {
     "maxLanes": 4,

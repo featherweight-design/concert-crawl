@@ -46,6 +46,7 @@ export function ReleasePage({ releases }: ReleasePageProps) {
   return (
     <>
       <div
+        data-testid="release-page"
         style={{
           width: '100%',
           minHeight: '100%',

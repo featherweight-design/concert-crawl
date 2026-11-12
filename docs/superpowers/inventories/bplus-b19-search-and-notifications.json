@@ -8,6 +8,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {
@@ -23,6 +26,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {
@@ -42,6 +48,9 @@
       "steps": [
         {
           "goto": "/search",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "input[placeholder=\"Search artists, venues…\"]"
         }
       ]
@@ -52,6 +61,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {
@@ -80,6 +92,9 @@
         },
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {

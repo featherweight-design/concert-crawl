@@ -8,7 +8,10 @@
       "steps": [
         {
           "goto": "/changelog",
-          "wait": "h1"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"release-page\"]"
         }
       ]
     }

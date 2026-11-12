@@ -18,6 +18,9 @@
       "steps": [
         {
           "goto": "/me",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": ":is(#notifications, main h2):visible"
         }
       ]
@@ -29,6 +32,9 @@
       "steps": [
         {
           "goto": "/me",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": ":is(#notifications, main h2):visible"
         }
       ]

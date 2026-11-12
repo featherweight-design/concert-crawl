@@ -9,7 +9,7 @@
       "steps": [
         {
           "goto": "/changelog",
-          "wait": "h1"
+          "wait": "[data-testid=\"release-page\"]"
         }
       ]
     },

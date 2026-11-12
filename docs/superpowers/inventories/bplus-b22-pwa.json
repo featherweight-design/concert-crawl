@@ -8,6 +8,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {
@@ -25,7 +28,10 @@
       "steps": [
         {
           "goto": "/~offline",
-          "wait": "h1"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "h1:has-text(\"offline\")"
         }
       ]
     }

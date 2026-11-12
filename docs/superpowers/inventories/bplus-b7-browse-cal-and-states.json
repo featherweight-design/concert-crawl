@@ -8,6 +8,9 @@
       "steps": [
         {
           "goto": "/events?view=cal",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"day-tile\"]"
         }
       ]
@@ -18,6 +21,9 @@
       "steps": [
         {
           "goto": "/events?view=cal",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"day-tile\"]"
         },
         {
@@ -34,6 +40,9 @@
       "steps": [
         {
           "goto": "/events?search=zzqx-contact-sheet",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "a[href=\"/events\"]:has-text(\"Clear filters\")"
         }
       ]

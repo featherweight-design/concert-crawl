@@ -8,6 +8,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         }
       ]
