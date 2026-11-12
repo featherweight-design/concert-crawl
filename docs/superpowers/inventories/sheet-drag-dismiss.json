@@ -1,0 +1,83 @@
+{
+  "feature": "Sheet drag-down dismiss",
+  "note": "This PR adds a drag-down-to-close gesture to mobile sheets, which a screenshot cannot show. These sheets prove only that the OPEN states still render at 320 and 390 in Electric, Light and Pulse after the change. The gesture itself is covered by unit tests and a hand walk on a touch device. All rows are read-only.",
+  "widths": [
+    {
+      "label": "xs",
+      "width": 320,
+      "height": 640,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    }
+  ],
+  "rows": [
+    {
+      "id": "account-menu-sheet",
+      "label": "Account menu sheet open (pulled by its identity card)",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "settle": 2000
+        },
+        {
+          "clickRole": "button",
+          "name": "^Account menu"
+        },
+        {
+          "waitDialog": "^Account"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "modalshell-feedback-sheet",
+      "label": "ModalShell sheet open (Send feedback)",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"event-row\"]"
+        },
+        {
+          "clickRole": "button",
+          "name": "Send feedback"
+        },
+        {
+          "wait": "[data-testid=\"modal-scrim\"]"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "jump-picker-sheet",
+      "label": "JumpPicker open (Jump to a date, calendar view)",
+      "steps": [
+        {
+          "goto": "/events?view=cal",
+          "wait": "button[aria-haspopup=\"dialog\"]:visible"
+        },
+        {
+          "clickRole": "button",
+          "name": "Jump to a date"
+        },
+        {
+          "waitDialog": "Jump to a date"
+        },
+        {
+          "settle": 800
+        }
+      ]
+    }
+  ]
+}
