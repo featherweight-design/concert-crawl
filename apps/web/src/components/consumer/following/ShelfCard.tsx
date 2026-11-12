@@ -23,7 +23,10 @@
 import { useId } from 'react';
 import Link from 'next/link';
 import { formatPrice } from '@/components/consumer/definitions/lib';
-import { SHELF_CARD_BOX_CLASS } from '@/components/consumer/definitions/constants';
+import {
+  SHELF_CARD_ART_SCALE,
+  SHELF_CARD_BOX_CLASS,
+} from '@/components/consumer/definitions/constants';
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import {
   NF_FOLLOW_SIZES,
@@ -151,9 +154,9 @@ export const ShelfCard = ({
           card. The taste card beside this one was already a fill region, so
           the two now share the box and the art model.
 
-          `scale="hero"` because a fill region cannot tell the identity mark
-          how big it renders, and at ~186-203px it is hero territory by the
-          slot metrics' own 112px threshold.
+          The scale is passed because a fill region cannot tell the identity
+          mark how big it renders. It is the slot metrics' answer for the
+          box, shared with the taste card (SHELF_CARD_ART_SCALE).
 
           `radius={0}` because the card shell already clips with a 14px radius;
           rounding the art too would round the corners that sit against the
@@ -162,7 +165,7 @@ export const ShelfCard = ({
         surface="artist"
         name={artist.name}
         photoUrl={artist.photoUrl}
-        scale="hero"
+        scale={SHELF_CARD_ART_SCALE}
         radius={0}
       />
       <span

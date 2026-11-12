@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { slotScaleFor } from '@/components/consumer/image-slot/lib/slot-metrics';
 import {
+  SHELF_CARD_ART_SCALE,
   SHELF_CARD_BOX_CLASS,
   SHELF_CARD_PHONE,
   SHELF_CARD_WIDE,
   SHELF_RAIL_CAP_CLASS,
   SHELF_RAIL_DESKTOP_CARDS,
+  SHELF_RAIL_DESKTOP_GAP,
 } from './constants';
 
 // The box has to be a literal class string for Tailwind's scanner, so these
@@ -24,16 +27,23 @@ describe('browse shelf card box', () => {
     );
   });
 
-  // The 1040 desktop column holds five 180px cards and four 15px gaps whole.
+  // The board lays five cards on 15px gaps in the 1040 column with room to
+  // spare, and a sixth would overrun it: that is what the cap encodes.
   it('caps the desktop rail at the cards the column holds whole', () => {
     const column = 1040;
-    const rail =
-      SHELF_RAIL_DESKTOP_CARDS * SHELF_CARD_WIDE.width +
-      (SHELF_RAIL_DESKTOP_CARDS - 1) * 15;
-    expect(rail).toBeLessThanOrEqual(column);
-    expect(rail + 15 + SHELF_CARD_WIDE.width).toBeGreaterThan(column);
+    const railOf = (cards: number) =>
+      cards * SHELF_CARD_WIDE.width + (cards - 1) * SHELF_RAIL_DESKTOP_GAP;
+    expect(railOf(SHELF_RAIL_DESKTOP_CARDS)).toBe(960);
+    expect(railOf(SHELF_RAIL_DESKTOP_CARDS)).toBeLessThanOrEqual(column);
+    expect(railOf(SHELF_RAIL_DESKTOP_CARDS + 1)).toBeGreaterThan(column);
     expect(SHELF_RAIL_CAP_CLASS).toContain(
       `nth-child(n+${SHELF_RAIL_DESKTOP_CARDS + 1})`,
     );
+  });
+
+  // Both cards share one box, so they derive one detail density from it.
+  it('derives the art scale from the smallest box width', () => {
+    expect(SHELF_CARD_ART_SCALE).toBe(slotScaleFor(SHELF_CARD_PHONE.width));
+    expect(SHELF_CARD_ART_SCALE).toBe('hero');
   });
 });

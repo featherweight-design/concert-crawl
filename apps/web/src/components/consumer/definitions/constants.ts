@@ -4,6 +4,8 @@
 // and by the skeleton that reserves the slot before either paints
 // (spotify/DiscoveryShelfSkeleton.tsx).
 
+import { slotScaleFor } from '@/components/consumer/image-slot/lib/slot-metrics';
+
 /**
  * The card box at phone widths (below `sm`), in px. Sized to the B+ board
  * (bp-m-browse_m): 148 x 271 at 390, which leaves the Browse spotlight above
@@ -32,12 +34,26 @@ export const SHELF_CARD_BOX_CLASS =
 export const SHELF_RAIL_GAP_CLASS = 'gap-[11px] sm:gap-[15px]';
 
 /**
- * How many whole cards the desktop rail shows. The B+ desktop column (1040)
- * holds five 180px cards and their gaps exactly; a sixth was drawn hard-clipped
- * at the column edge. From `lg` the rail stops at five, so every card on screen
- * is a whole one. Below `lg` the rail scrolls and the peek is the affordance.
+ * How many whole cards the desktop rail shows. The B+ desktop board lays five
+ * 180px cards on 15px gaps (960px) left-aligned in the 1040 column, with the
+ * rest of the column empty; a sixth (1155px) does not fit and was drawn
+ * hard-clipped at the column edge. From `lg` the rail stops at five, so every
+ * card on screen is a whole one. Below `lg` the rail scrolls and the peek is
+ * the affordance.
  */
 export const SHELF_RAIL_DESKTOP_CARDS = 5;
 
+/** The desktop gap the cap is computed against, in px. */
+export const SHELF_RAIL_DESKTOP_GAP = 15;
+
 /** Hides every card past `SHELF_RAIL_DESKTOP_CARDS` from `lg` up. */
 export const SHELF_RAIL_CAP_CLASS = 'lg:[&>li:nth-child(n+6)]:hidden';
+
+/**
+ * The identity mark's detail density for both cards' art. Each card's art is a
+ * fill region whose smallest side, at the smallest box, is the card width (the
+ * art is taller than it is wide in both cards), so the scale is what the slot
+ * metrics derive for that width. One answer for both cards keeps the follow
+ * card and the taste card drawing the same mark in the same slot.
+ */
+export const SHELF_CARD_ART_SCALE = slotScaleFor(SHELF_CARD_PHONE.width);

@@ -131,12 +131,37 @@ describe('FollowShelf', () => {
     expect(art?.style.width).toBe('100%');
   });
 
-  // From lg the rail stops at the cards the 1040 column holds whole, so no
-  // sixth card is drawn hard-clipped at its edge.
-  it('caps the desktop rail at whole cards', () => {
-    renderShelf({ artists: [artist()] });
-    const rail = screen.getByTestId('shelf-card').parentElement;
+  // From lg "Your artists" stops at the cards the 1040 column holds whole,
+  // and hands the rest to My shows ▸ Artists.
+  const many = (count: number) =>
+    Array.from({ length: count }, (_, i) =>
+      artist({ key: `k${i}`, name: `Act ${i}` }),
+    );
+
+  it('caps your artists at whole cards and links to the rest', () => {
+    renderShelf({ mode: 'some', followCount: 7, artists: many(7) });
+    const rail = screen.getAllByTestId('shelf-card')[0]?.parentElement;
     expect(rail?.className).toContain('lg:[&>li:nth-child(n+6)]:hidden');
+    const seeAll = screen.getByTestId('shelf-see-all');
+    expect(seeAll.getAttribute('href')).toBe('/following');
+    expect(seeAll.textContent).toContain(FOLLOWING_COPY.yoursSeeAll);
+    expect(seeAll.getAttribute('aria-label')).toBe(
+      FOLLOWING_COPY.yoursSeeAllAria,
+    );
+  });
+
+  it('offers no see-all when every card already fits', () => {
+    renderShelf({ mode: 'some', followCount: 5, artists: many(5) });
+    expect(screen.queryByTestId('shelf-see-all')).toBeNull();
+  });
+
+  // The starter picks are a per-session shuffle no page lists, so the rail
+  // keeps scrolling rather than hiding cards it has nowhere to send.
+  it('leaves the starter rail uncapped', () => {
+    renderShelf({ mode: 'zero', artists: many(7) });
+    const rail = screen.getAllByTestId('shelf-card')[0]?.parentElement;
+    expect(rail?.className).not.toContain('nth-child');
+    expect(screen.queryByTestId('shelf-see-all')).toBeNull();
   });
 
   // The scale has to be passed, not derived: a fill region cannot tell the
