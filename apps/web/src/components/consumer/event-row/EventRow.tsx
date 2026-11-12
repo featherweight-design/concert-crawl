@@ -15,7 +15,7 @@ import { EVENT_ROW_COPY as copy } from './definitions/copy';
 import { SURFACES, type RowSurface } from './definitions/surfaces';
 import { rowMin } from './definitions/row-min';
 import { rowChips, chipBudget } from './lib/row-chips';
-import { isStruck, resolveRowStatus } from './lib/row-status';
+import { isFaded, isStruck, resolveRowStatus } from './lib/row-status';
 import { orderGenres } from './lib/order-genres';
 import type { EventRowShow } from './lib/row-model';
 
@@ -77,18 +77,26 @@ export const EventRow = ({
   // stays out of a module whose whole job is turning a show into chip data.
   const bucketMembers = bucketMembersFor(filterVibe);
   const chips = rowChips(show, surface, bucketMembers);
-  const status = resolveRowStatus(show.lifecycle, show.status);
+  const status = resolveRowStatus(show.lifecycle, show.status, show.delistedAt);
   const struck = isStruck(status);
+  // No longer listed (A5): grey and dashed, never Cancelled's red, and no
+  // strike, since nothing says the show is off. The genre gives way to the
+  // neutral edge so no colour on the row claims a state we do not know.
+  const removed = status === 'removed';
+  const chipUnderTitle = removed && narrow;
   // B+ rule 2: the lead genre, the one that dots the genre chip, colors the
   // image ring and the card's left edge. Decoration only; the chip names it.
-  const genre =
-    genreColor(orderGenres(show.genres, bucketMembers)[0]) ??
-    NEUTRAL_GENRE_COLOR;
+  const genre = removed
+    ? NEUTRAL_GENRE_COLOR
+    : (genreColor(orderGenres(show.genres, bucketMembers)[0]) ??
+      NEUTRAL_GENRE_COLOR);
 
   return (
     <div
+      data-row-status={removed ? 'removed' : undefined}
       className={cn(
         config.carded && 'border border-border bg-surface-1',
+        config.carded && removed && 'border-dashed',
         className,
       )}
       style={{
@@ -98,11 +106,15 @@ export const EventRow = ({
           ? `13px ${config.hasActionGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
           : '13px 0',
         borderRadius: config.carded ? 12 : undefined,
-        ...(config.carded && {
-          borderLeftWidth: 2,
-          borderLeftColor: genre,
-          background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
-        }),
+        ...(config.carded &&
+          !removed && {
+            borderLeftWidth: 2,
+            borderLeftColor: genre,
+            background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 7%, var(--surface-1)), var(--surface-1) 45%)`,
+          }),
+        // The board draws the whole card dashed with no genre edge and no
+        // wash: the row recedes rather than alarms.
+        ...(config.carded && removed && { background: 'transparent' }),
       }}
     >
       <div
@@ -132,7 +144,7 @@ export const EventRow = ({
               // pushes --fg-muted below the AA contrast floor.
               // The ring dims with it, deliberately: it is decoration, and a
               // full-strength ring around dimmed art would outshine the show.
-              opacity: struck || show.status === 'soldout' ? 0.55 : 1,
+              opacity: isFaded(status) ? 0.55 : 1,
             }}
           >
             <EventImage
@@ -202,14 +214,36 @@ export const EventRow = ({
             narrow={narrow}
             struck={struck}
           />
-          <MetaRow
-            chips={chips}
-            budget={chipBudget(hasSupportLine)}
-            className="mt-0.5"
-          />
+          {removed ? (
+            // Line 4 carries the explanation in place of the chips: the chip
+            // alone says what, and this says why and how sure we are.
+            <>
+              {/* On a narrow row the wide "No longer listed" chip would take
+                  the price slot and crush the title to ~50px, so it moves
+                  under the title instead. */}
+              {chipUnderTitle && config.showsPrice && (
+                <div style={{ marginTop: 4 }}>
+                  <PriceStack show={show} surface={surface} narrow={narrow} />
+                </div>
+              )}
+              <p
+                data-testid="row-removed-line"
+                className="text-fg-muted"
+                style={{ fontSize: 12, lineHeight: 1.35, margin: '2px 0 0' }}
+              >
+                {copy.removedLine}
+              </p>
+            </>
+          ) : (
+            <MetaRow
+              chips={chips}
+              budget={chipBudget(hasSupportLine)}
+              className="mt-0.5"
+            />
+          )}
         </div>
 
-        {config.showsPrice && (
+        {config.showsPrice && !chipUnderTitle && (
           <PriceStack show={show} surface={surface} narrow={narrow} />
         )}
 

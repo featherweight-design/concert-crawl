@@ -32,7 +32,10 @@ export const EVENT_ROW_COPY = {
   status: {
     cancelled: CONSUMER_COPY.cancelledLabel,
     postponed: CONSUMER_COPY.postponedLabel,
+    removed: CONSUMER_COPY.noLongerListedLabel,
   },
+  // Line 4 of a No longer listed row, in place of the chips.
+  removedLine: CONSUMER_COPY.noLongerListedLine,
   provenance: {
     boxoffice: 'Box office',
     standard: 'Community',
@@ -72,6 +75,9 @@ export const EVENT_ROW_COPY = {
     // one has to carry the status word itself.
     cancelled: 'This show has been cancelled',
     postponed: 'Postponed, new date not announced yet',
+    // The visible line beside it already says why, so this only names the
+    // state; it must not say cancelled.
+    removed: 'No longer listed by the venue',
     // Appended to the genre chip rather than replacing it, for the one case
     // where a unit degrades instead of dropping: the second genre stops being
     // drawn under width pressure, and this is where it survives.

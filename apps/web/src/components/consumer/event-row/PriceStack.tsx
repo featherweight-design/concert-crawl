@@ -42,7 +42,7 @@ const DeltaArrow = ({ up }: { up: boolean }) => (
 export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
   const minWidth = narrow ? 56 : 78;
   const amountSize = narrow ? 15 : 16.5;
-  const status = resolveRowStatus(show.lifecycle, show.status);
+  const status = resolveRowStatus(show.lifecycle, show.status, show.delistedAt);
 
   const slot = (children: React.ReactNode) => (
     <div
@@ -57,6 +57,21 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
   // that is why they can never be dropped: the slot sits outside the chip
   // budget and outside MetaRow's fit pass. They are the one thing that names
   // which problem the dim and the strike are gesturing at.
+  // No longer listed takes the slot exactly as Cancelled does, but in the
+  // neutral, always-dashed chip (`StatusChip` F3): it names a gap in what we
+  // know, not a confirmed state.
+  if (status === 'removed') {
+    return slot(
+      <span data-testid="row-removed">
+        <StatusChip
+          status="removed"
+          label={copy.status.removed}
+          srLabel={copy.a11y.removed}
+        />
+      </span>,
+    );
+  }
+
   if (status === 'cancelled') {
     return slot(
       <span data-testid="row-cancelled">

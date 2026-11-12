@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import {
   db,
+  eventReports,
   events,
   notifications,
   userEvents,
   venues,
 } from '@concert-crawl/db';
 import { fanoutWatchNotification } from '@concert-crawl/push';
+import { activePromotedReportWhere } from '../../../lib/sold-out.js';
 
 // The body of PATCH /v1/admin/events/:id: the transition rules and the
 // watcher fan-out.
@@ -99,6 +101,25 @@ export const updateEvent = async (id: string, body: EventPatch) => {
       })
       .where(eq(events.id, id))
       .returning();
+
+    // Moving a show off cancelled or postponed retires the fan report that
+    // was promoted into that status, as clearSoldOut does for sold out.
+    // Left promoted, it would be credited again on the event page if an
+    // admin later set the same status for a different reason.
+    if (
+      preUpdate &&
+      typeof body.status === 'string' &&
+      body.status !== preUpdate.status &&
+      (preUpdate.status === 'cancelled' || preUpdate.status === 'postponed')
+    ) {
+      await tx
+        .update(eventReports)
+        .set({
+          resolution: 'rejected',
+          adminNote: `admin moved the show off ${preUpdate.status}`,
+        })
+        .where(activePromotedReportWhere(id, preUpdate.status));
+    }
 
     // Watch-update fan-out category — computed inside the tx against the
     // locked pre-state row. Fires AFTER commit.

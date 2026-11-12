@@ -98,6 +98,9 @@ afterEach(() => {
   cleanup();
 });
 
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
+
 // Imported after mocks so vi.mock takes effect.
 import { EventDetailBanners, EventDetailPriceBlock } from './EventDetailClient';
 
@@ -379,6 +382,25 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
         />,
       );
       expect(screen.queryByText('Submit another price')).toBeNull();
+    });
+
+    // No longer listed is stored as cancelled, but nobody confirmed it, so the
+    // price surfaces keep inviting a submission (B+ A5, isCancelledForDetail).
+    it('is offered for a No longer listed event', () => {
+      render(
+        <EventDetailPriceBlock
+          event={buildBaseEvent({
+            status: 'cancelled',
+            delistedAt: '2026-11-04T10:00:00.000Z',
+            priceByTier: [
+              makeTierBlock({ tier: 'GA', headline: boxOfficeHeadline }),
+            ],
+          })}
+          reports={[]}
+          currentUserId={null}
+        />,
+      );
+      expect(screen.getByText('Submit another price')).toBeDefined();
     });
   });
 
@@ -1310,6 +1332,39 @@ function buildReport(overrides: Partial<EventReport> = {}): EventReport {
   };
 }
 
+describe('EventDetailBanners live status source', () => {
+  it('credits the fan report behind a promoted cancellation', () => {
+    render(
+      <EventDetailBanners
+        event={{
+          ...buildBaseEvent(),
+          status: 'cancelled',
+          statusReport: {
+            reporterHandle: 'sami',
+            confirmsCount: 3,
+            reportedAt: new Date().toISOString(),
+          },
+        }}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByText(/Reported by @sami · 3 confirms/)).toBeTruthy();
+    expect(screen.queryByText(/venue's calendar/)).toBeNull();
+  });
+
+  it("names the venue's calendar when no fan report is behind it", () => {
+    render(
+      <EventDetailBanners
+        event={{ ...buildBaseEvent(), status: 'postponed', statusReport: null }}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(screen.getByText(/From the venue's calendar/)).toBeTruthy();
+  });
+});
+
 describe('EventDetailBanners pending report', () => {
   // The API never counts the reporter toward the threshold (a reporter can't
   // confirm their own report), so the banner shows the confirms as they are.
@@ -1346,6 +1401,70 @@ describe('EventDetailBanners pending report', () => {
       />,
     );
     expect(screen.queryByText('1 of 2')).toBeNull();
+  });
+});
+
+describe('EventDetailBanners No longer listed', () => {
+  const delistedEvent = () =>
+    buildBaseEvent({
+      status: 'cancelled',
+      delistedAt: '2026-11-04T10:00:00.000Z',
+    });
+
+  it('mounts the neutral card and suppresses the red Cancelled banner', () => {
+    render(
+      <EventDetailBanners
+        event={delistedEvent()}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(
+      screen.getByRole('status', {
+        name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(REPORTING_COPY.liveReportBanner.headlines.cancelled),
+    ).toBeNull();
+  });
+
+  it('still shows the Cancelled banner for a confirmed cancellation', () => {
+    render(
+      <EventDetailBanners
+        event={buildBaseEvent({ status: 'cancelled', delistedAt: null })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    expect(
+      screen.getByText(REPORTING_COPY.liveReportBanner.headlines.cancelled),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('status', {
+        name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
+      }),
+    ).toBeNull();
+  });
+
+  it('drops a pending postponement report under the card, as for any cancelled show', () => {
+    render(
+      <EventDetailBanners
+        event={delistedEvent()}
+        reports={[buildReport({ status: 'postponed', isReporter: true })]}
+        currentUserId="user-reporter"
+      />,
+    );
+    expect(
+      screen.getByRole('status', {
+        name: CONSUMER_COPY.eventDetail.noLongerListedAriaLabel,
+      }),
+    ).toBeTruthy();
+    // A delisted show is a cancelled one underneath, and a cancelled show takes
+    // no pending report (a postponement claim on a show that is off is moot).
+    expect(
+      screen.queryByText(REPORTING_COPY.pendingReportBanner.postponedBadge),
+    ).toBeNull();
   });
 });
 

@@ -23,6 +23,8 @@ import type {
 } from '@concert-crawl/types';
 import { SP_POLICY } from '@concert-crawl/types';
 import { confirmEventReport, withdrawEventReport } from '@/lib/events';
+import { NoLongerListedCard } from '@/components/consumer/event-detail/NoLongerListedCard';
+import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { PendingCardB } from '@/components/consumer/PendingCardB';
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet';
 import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard';
@@ -146,6 +148,14 @@ function findPendingReport(
   return reports.find((rpt) => rpt.status === status) ?? null;
 }
 
+// A No longer listed show is the stale sweep's cancellation, which nobody
+// confirmed (B+ A5). Surfaces that treat a cancelled show as off (the price,
+// the refund CTA) must not treat this one that way.
+const isCancelledForDetail = (
+  event: EventDetailSharedProps['event'],
+): boolean =>
+  event.status === 'cancelled' && !isDelisted(event.status, event.delistedAt);
+
 // ── EventDetailBanners ───────────────────────────────────────────────
 // Renders above the event title: LiveReportBanner when the event is promoted,
 // PendingReportBanner when there is an unresolved community report.
@@ -180,14 +190,17 @@ export function EventDetailBanners({
   // Promoted status is reflected in event.status — admin resolves reports by promoting them.
   // The GET /reports endpoint only returns unresolved reports (resolvedAt IS NULL),
   // so we derive the live banner from the event itself.
+  const delisted = isDelisted(event.status, event.delistedAt);
   const liveReportStatus: 'cancelled' | 'postponed' | 'sold-out' | null =
-    event.status === 'cancelled'
-      ? 'cancelled'
-      : event.status === 'postponed'
-        ? 'postponed'
-        : event.priceStatus === 'soldout'
-          ? 'sold-out'
-          : null;
+    delisted
+      ? null
+      : event.status === 'cancelled'
+        ? 'cancelled'
+        : event.status === 'postponed'
+          ? 'postponed'
+          : event.priceStatus === 'soldout'
+            ? 'sold-out'
+            : null;
 
   // Show pending banner only when the event is NOT already in the promoted
   // state. A cancelled show takes no pending report at all: a postponement
@@ -233,7 +246,7 @@ export function EventDetailBanners({
   );
 
   // Nothing to render when no banners are active
-  if (liveReportStatus === null && activePendingReport === null) {
+  if (!delisted && liveReportStatus === null && activePendingReport === null) {
     return null;
   }
 
@@ -246,31 +259,37 @@ export function EventDetailBanners({
         ? 'postponed'
         : null;
 
-  // Derive reporter info from the promoted sold-out report when present
-  const liveReporter = (() => {
-    if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
-      const handle = event.soldOutReport.reporterHandle;
-      return handle != null ? { handle, url: '' } : null;
-    }
-    return null;
-  })();
+  // The promoted fan report behind the live status: sold out's own report,
+  // or the one behind a cancelled or postponed status. With none, the status
+  // came from the venue's calendar and the card says so.
+  const liveFanReport =
+    liveReportStatus === 'sold-out'
+      ? (event.soldOutReport ?? null)
+      : liveReportStatus !== null
+        ? (event.statusReport ?? null)
+        : null;
 
-  const liveConfirmCount = (() => {
-    if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
-      return event.soldOutReport.confirmsCount;
-    }
-    return undefined;
-  })();
+  const liveReporter =
+    liveFanReport?.reporterHandle != null
+      ? { handle: liveFanReport.reporterHandle, url: '' }
+      : null;
+  const liveConfirmCount = liveFanReport?.confirmsCount;
+  // A fan report dates the card from when it was filed. Otherwise it falls
+  // back to the event's last update.
+  const liveSince = liveFanReport?.reportedAt ?? event.updatedAt;
 
   return (
     <>
       {/* Fix 1: mt-3 gap between info block and status cards */}
       <div className="mb-3 mt-3">
+        {/* The stale sweep's cancellation: a neutral card, never the red
+            Cancelled banner (B+ A5). */}
+        {delisted && <NoLongerListedCard delistedAt={event.delistedAt} />}
         {/* Live (promoted) report banner */}
         {liveReportStatus !== null && (
           <LiveReportBanner
             status={liveReportStatus}
-            promotedAt={event.updatedAt}
+            promotedAt={liveSince}
             {...(liveConfirmCount !== undefined
               ? { confirmCount: liveConfirmCount }
               : {})}
@@ -646,19 +665,18 @@ export function EventDetailPriceBlock({
   // event that already has one. Routes into the branch's own SubmitPriceModal
   // so the optimistic state stays in sync; the modal self-gates the
   // rate-limit-exhausted case via the GET it runs on open.
-  const submitAnotherPriceCta =
-    event.status !== 'cancelled' ? (
-      <div className="mt-3">
-        <SubmitPriceCardButton
-          signedOut={priceGateSignedOut}
-          onClick={() => {
-            setPreselectedTier(null);
-            setSubmitPriceEditMode(false);
-            setSubmitPriceOpen(true);
-          }}
-        />
-      </div>
-    ) : null;
+  const submitAnotherPriceCta = !isCancelledForDetail(event) ? (
+    <div className="mt-3">
+      <SubmitPriceCardButton
+        signedOut={priceGateSignedOut}
+        onClick={() => {
+          setPreselectedTier(null);
+          setSubmitPriceEditMode(false);
+          setSubmitPriceOpen(true);
+        }}
+      />
+    </div>
+  ) : null;
 
   // Pending submissions surface (#1377). Renders one PendingCardB per block
   // that has a pending row, plus the CorroborationSheet the cards' Confirm
@@ -1590,7 +1608,7 @@ export function EventDetailPriceBlock({
       <>
         <MixedTierCard headline={headline} alternates={alternateRows} />
         {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
-        {event.status !== 'cancelled' && (
+        {!isCancelledForDetail(event) && (
           <div className="mt-3">
             <SubmitPriceCardCta
               eventId={event.id}
@@ -1682,7 +1700,7 @@ export function EventDetailPriceBlock({
             priceConfirmsCount={confirmsDisplay}
           />
           {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
-          {event.status !== 'cancelled' && (
+          {!isCancelledForDetail(event) && (
             <div className="mt-3">
               <SubmitPriceCardCta
                 eventId={event.id}
@@ -1864,7 +1882,7 @@ export function EventDetailPriceBlock({
             for the legacy pending path. Routes into the shared SubmitPriceModal
             below so a submission updates localSubmissions live (onSuccess /
             onWithdrawSuccess). The modal self-gates the exhausted case. */}
-        {event.status !== 'cancelled' && (
+        {!isCancelledForDetail(event) && (
           <div className="mt-3">
             <SubmitPriceCardButton
               signedOut={priceGateSignedOut}
@@ -1939,7 +1957,7 @@ export function EventDetailPriceBlock({
           : {})}
       />
       {/* Fix 14: hide SubmitPriceCardCta for cancelled events */}
-      {!noPriceState && event.status !== 'cancelled' && (
+      {!noPriceState && !isCancelledForDetail(event) && (
         <div className="mt-3">
           <SubmitPriceCardCta
             eventId={event.id}

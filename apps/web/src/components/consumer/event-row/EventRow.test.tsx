@@ -6,6 +6,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { EventRow } from './EventRow';
 import type { EventRowShow } from './lib/row-model';
 import { rowChips } from './lib/row-chips';
+import { EVENT_ROW_COPY } from './definitions/copy';
 
 vi.mock('next/link', () => ({
   __esModule: true,
@@ -59,6 +60,7 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     isWatching: false,
     status: 'live',
     lifecycle: 'upcoming',
+    delistedAt: null,
     ...partial,
   };
 }
@@ -500,5 +502,62 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     const card = container.firstElementChild;
     if (!(card instanceof HTMLElement)) throw new Error('no card');
     expect(card.style.borderLeftColor).toBe('var(--genre-folk)');
+  });
+});
+
+describe('EventRow — No longer listed (A5)', () => {
+  const removedShow = () =>
+    makeShow({
+      lifecycle: 'cancelled',
+      delistedAt: '2026-11-04T10:00:00.000Z',
+      genres: ['hip-hop'],
+    });
+
+  it('draws a dashed edge, no strike, and the explanation line', () => {
+    const { container } = render(
+      <EventRow show={removedShow()} surface="browse" />,
+    );
+    const row = container.querySelector<HTMLElement>(
+      '[data-row-status="removed"]',
+    );
+    expect(row).not.toBeNull();
+    expect(row?.className).toContain('border-dashed');
+    expect(screen.getByTestId('row-removed-line').textContent).toBe(
+      EVENT_ROW_COPY.removedLine,
+    );
+    expect(container.querySelector('[style*="line-through"]')).toBeNull();
+    expect(container.querySelector('.line-through')).toBeNull();
+  });
+
+  it('leaves a confirmed cancellation as a struck, non-removed row', () => {
+    const { container } = render(
+      <EventRow
+        show={makeShow({ lifecycle: 'cancelled', delistedAt: null })}
+        surface="browse"
+      />,
+    );
+    expect(container.querySelector('[data-row-status]')).toBeNull();
+    expect(screen.queryByTestId('row-removed-line')).toBeNull();
+  });
+
+  it('keeps the chip in the price slot on a wide row', () => {
+    render(<EventRow show={removedShow()} surface="browse" />);
+    const textColumn = screen.getByTestId('row-removed-line').parentElement;
+    expect(textColumn?.contains(screen.getByTestId('row-removed'))).toBe(false);
+  });
+
+  it('moves the chip under the title on a narrow row', () => {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ width: 300 } as DOMRect);
+    try {
+      render(<EventRow show={removedShow()} surface="browse" />);
+      const textColumn = screen.getByTestId('row-removed-line').parentElement;
+      expect(textColumn?.contains(screen.getByTestId('row-removed'))).toBe(
+        true,
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

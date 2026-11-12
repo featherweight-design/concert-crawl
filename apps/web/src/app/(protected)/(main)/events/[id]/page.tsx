@@ -251,6 +251,7 @@ export default async function EventDetailPage({
         ) : (
           <EventTicketCta
             status={event.status}
+            delistedAt={event.delistedAt}
             ticketHref={safeTicketUrl}
             soldOut={event.priceStatus === 'soldout'}
             href={ctaHref}
@@ -288,6 +289,7 @@ export default async function EventDetailPage({
           tourName={event.tourName}
           fallbackTitle={event.title}
           status={event.status}
+          delistedAt={event.delistedAt}
           surface="detail"
           headlinerAs="h1"
           artistSlug={event.artistSlug}

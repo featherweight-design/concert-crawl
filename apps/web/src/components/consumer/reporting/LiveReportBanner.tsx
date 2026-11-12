@@ -211,6 +211,9 @@ export const LiveReportBanner = ({
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
             color: 'var(--fg-subtle)',
+            // A handle has no spaces to wrap at, so a 20-character one can
+            // break mid-word rather than run past the card at 320.
+            overflowWrap: 'anywhere',
           }}
         >
           {subLabel}

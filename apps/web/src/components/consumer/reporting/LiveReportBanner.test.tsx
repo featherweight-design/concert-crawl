@@ -57,4 +57,19 @@ describe('LiveReportBanner', () => {
 
     expect(screen.getByText(/Reported by @sami · 3 confirms/)).toBeTruthy();
   });
+
+  it('lets a max-length handle break inside the card rather than overflow', () => {
+    // Handles are up to 20 characters with no spaces (users.ts HANDLE_REGEX).
+    render(
+      <LiveReportBanner
+        status="cancelled"
+        promotedAt={twoHoursAgo()}
+        confirmCount={0}
+        reporter={{ handle: 'a'.repeat(20), url: '' }}
+      />,
+    );
+
+    const line = screen.getByText(/Reported by @a{20}/);
+    expect(line.style.overflowWrap).toBe('anywhere');
+  });
 });
