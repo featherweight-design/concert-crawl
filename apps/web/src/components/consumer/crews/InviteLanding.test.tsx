@@ -98,6 +98,17 @@ describe('InviteLanding (#1226)', () => {
 
   // The API's handle is nullable all the way through: a member without one is
   // never given an invented name (#762).
+  // A 53-character handle once ran past the phone column and was clipped.
+  it('lets a long inviter handle wrap inside the column', () => {
+    mount();
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title).toHaveClass(
+      'min-w-0',
+      'max-w-full',
+      '[overflow-wrap:anywhere]',
+    );
+  });
+
   it('falls back to the nameless title when there is no inviter handle', () => {
     mount({ invitedByHandle: null });
     expect(

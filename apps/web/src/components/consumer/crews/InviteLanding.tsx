@@ -135,7 +135,10 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
           </InviteEyebrow>
           {/* Names the inviter: analytics autocapture skips it. */}
           <h1
-            className="ph-no-capture text-[27px] sm:text-[30px]"
+            // A handle is one unbroken word, and a 50-character one ran
+            // 822px wide in a 304px column. min-w-0 lets the item shrink in
+            // the flex column; anywhere lets the handle break.
+            className="ph-no-capture min-w-0 max-w-full text-[27px] [overflow-wrap:anywhere] sm:text-[30px]"
             style={{
               margin: 0,
               fontWeight: 900,
