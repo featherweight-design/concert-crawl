@@ -10,9 +10,6 @@ const asObject = (qs: URLSearchParams): Record<string, string> =>
 
 describe('buildEventsApiParams', () => {
   it('translates the chip params the API does not accept under their URL names', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-05-14T18:00:00Z'));
-
     const qs = buildEventsApiParams(
       new URLSearchParams({
         filterWhere: 'ogden-theatre',
@@ -26,7 +23,6 @@ describe('buildEventsApiParams', () => {
     expect(asObject(qs)).toEqual({
       search: 'khruangbin',
       venueSlug: 'ogden-theatre',
-      from: '2026-05-14',
       filterPrice: 'under-25',
       filterVibe: 'indie',
       offset: '20',
@@ -85,40 +81,6 @@ describe('buildEventsApiParams', () => {
 
     expect(qs.get('from')).toBe('2026-05-14');
     expect(qs.get('to')).toBe('2026-05-14');
-  });
-
-  // The service worker replays /v1/events stale-while-revalidate for 24h, and
-  // the URL used to carry no start date, so after midnight Mountain the list
-  // came back as yesterday's, with yesterday's date above "Tonight". The start
-  // is spelled out so each Denver day is its own cache key.
-  describe("the default start is Denver's today, written out", () => {
-    const fromAt = (iso: string): string | null => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(iso));
-      return buildEventsApiParams(new URLSearchParams(), { limit: 20 }).get(
-        'from',
-      );
-    };
-
-    it('is still the old day one second before Denver midnight', () => {
-      // 06:59:59Z is 23:59:59 MST on Nov 11.
-      expect(fromAt('2026-11-12T06:59:59Z')).toBe('2026-11-11');
-    });
-
-    it('is the new day at Denver midnight, while UTC is only at 07:00', () => {
-      expect(fromAt('2026-11-12T07:00:00Z')).toBe('2026-11-12');
-    });
-
-    it("stays on Denver's day on a Denver evening, when UTC has already turned over", () => {
-      // 21:22 MST on Nov 11 is 04:22Z on Nov 12.
-      expect(fromAt('2026-11-12T04:22:00Z')).toBe('2026-11-11');
-    });
-
-    it('differs between two days, so the cached URL does too', () => {
-      const first = fromAt('2026-11-11T20:00:00Z');
-      const second = fromAt('2026-11-12T20:00:00Z');
-      expect(first).not.toBe(second);
-    });
   });
 
   it('falls back to an explicit from/to when no chip is set', () => {

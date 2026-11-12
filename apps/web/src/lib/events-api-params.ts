@@ -14,7 +14,6 @@
 // which only the caller knows.
 
 import { filterWhenToDateRange } from '@/components/consumer/definitions/lib';
-import { localDateString } from '@/lib/time';
 
 /** Pagination plus the scope flags, which only the caller can decide. */
 export interface EventsApiOptions {
@@ -67,16 +66,9 @@ export const buildEventsApiParams = (
   // under a chip label still claiming the week.
   const filterWhen = read(params, 'filterWhen');
   const range = filterWhen ? filterWhenToDateRange(filterWhen) : null;
-  // A window with no start always starts at Denver's today, written out. The
-  // API would default to the same day, but an implicit start leaves the URL
-  // identical from one day to the next, and the service worker replays
-  // /v1/events stale-while-revalidate for 24 hours: after midnight Mountain the
-  // list came back as yesterday's, with yesterday's date above "Tonight".
-  // Spelling the day out puts it in the cache key, so a new day is a new entry.
-  const from =
-    range?.from ?? read(params, 'from') ?? localDateString('America/Denver');
+  const from = range?.from ?? read(params, 'from');
   const to = range?.to ?? read(params, 'to');
-  qs.set('from', from);
+  if (from) qs.set('from', from);
   if (to) qs.set('to', to);
 
   const filterPrice = read(params, 'filterPrice');
