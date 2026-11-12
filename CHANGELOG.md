@@ -1,3 +1,15 @@
+# [1.335.0](https://github.com/featherweight-design/concert-crawl/compare/v1.334.1...v1.335.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** ignore the bare * route in the Sentry route tag, document SENTRY_USER_HASH_KEY ([b948bfe](https://github.com/featherweight-design/concert-crawl/commit/b948bfe8f86db38a70e5955c7f12ab55aca81e1e))
+
+
+### Features
+
+* **api:** tag Sentry errors with app, route pattern, tier and keyed user hash ([e5e741d](https://github.com/featherweight-design/concert-crawl/commit/e5e741dfcbce99c292360424951844b9eb6f9532))
+
 ## [1.334.1](https://github.com/featherweight-design/concert-crawl/compare/v1.334.0...v1.334.1) (2026-11-12)
 
 
