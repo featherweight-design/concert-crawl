@@ -8,9 +8,9 @@ import {
 
 describe('records start', () => {
   it('derives every form from the one month', () => {
-    expect(RECORDS_START_MONTH).toBe('2026-03');
-    expect(recordsStartFloor()).toBe('2026-03-01');
-    expect(recordsStartLabel()).toBe('March 2026');
-    expect(recordsStartShort()).toBe('MAR 2026');
+    expect(RECORDS_START_MONTH).toBe('2026-05');
+    expect(recordsStartFloor()).toBe('2026-05-01');
+    expect(recordsStartLabel()).toBe('May 2026');
+    expect(recordsStartShort()).toBe('MAY 2026');
   });
 });
