@@ -29,6 +29,10 @@ const querySchema = z.object({
 // the position it was read from, and no row is skipped or repeated.
 const createdMs = sql<Date>`date_trunc('milliseconds', ${auditLog.createdAt})`;
 
+// The same instant as epoch milliseconds, read as a double so the value never
+// depends on how a driver parses a timestamp expression.
+const createdEpochMs = sql<number>`(extract(epoch from ${createdMs}) * 1000)::float8`;
+
 const cursorSchema = z.object({ at: z.iso.datetime(), id: z.guid() });
 
 const encodeCursor = (at: Date, id: string): string =>
@@ -75,7 +79,7 @@ auditLogAdminRouter.get(
         action: auditLog.action,
         targetId: auditLog.targetId,
         metadata: auditLog.metadata,
-        createdAt: createdMs,
+        createdEpochMs,
       })
       .from(auditLog)
       .leftJoin(userProfiles, eq(userProfiles.userId, auditLog.actorId))
@@ -101,7 +105,7 @@ auditLogAdminRouter.get(
     const last = page.at(-1);
     const nextCursor =
       rows.length > limit && last
-        ? encodeCursor(new Date(last.createdAt), last.id)
+        ? encodeCursor(new Date(Number(last.createdEpochMs)), last.id)
         : null;
 
     const data: AuditLogItem[] = page.map((row) => {
@@ -113,7 +117,7 @@ auditLogAdminRouter.get(
         action: row.action,
         targetId: row.targetId,
         metadata: isRecord(row.metadata) ? row.metadata : null,
-        createdAt: new Date(row.createdAt).toISOString(),
+        createdAt: new Date(Number(row.createdEpochMs)).toISOString(),
       };
     });
 
