@@ -336,11 +336,11 @@ export function CrewPatch({
   const chord = CREW_CHORD_TOKENS[identity.chord];
   const pri = `var(${chord.primary})`;
   const sec = `var(${chord.secondary})`;
-  // micro drops the weave and the stitch: at 24-28px they turn to mud, and the
-  // sigil plus chord is what makes a crew recognisable in a picker.
+  // micro drops the weave: at 24-28px it turns to mud, and the sigil plus
+  // chord is what makes a crew recognisable in a picker.
   const showWeave = scale !== 'micro';
-  const showStitch = scale === 'hero';
-  const sw = scale === 'hero' ? 1.6 : 2.2;
+  const hero = scale === 'hero';
+  const sw = hero ? 1.6 : 2.2;
 
   return (
     <svg
@@ -349,7 +349,15 @@ export function CrewPatch({
       viewBox="0 0 100 100"
       aria-hidden="true"
       focusable="false"
-      style={{ display: 'block', flexShrink: 0, overflow: 'visible' }}
+      style={{
+        display: 'block',
+        flexShrink: 0,
+        overflow: 'visible',
+        // The soft glow in the chord colour that goes with the hero rim.
+        filter: hero
+          ? `drop-shadow(0 0 14px color-mix(in oklch, ${pri} 45%, transparent))`
+          : undefined,
+      }}
     >
       <defs>
         <clipPath id={`${uid}-clip`}>
@@ -389,24 +397,12 @@ export function CrewPatch({
         rx={SQUIRCLE_RADIUS}
         ry={SQUIRCLE_RADIUS}
         fill="none"
-        stroke="var(--border-strong)"
-        strokeWidth="2"
+        // The hero patch's rim is drawn in the crew's chord colour, about 3px,
+        // with a soft outer glow and no stitch (bp-s-invite_m, bp-s-invite_d);
+        // the smaller scales keep the quiet neutral rim.
+        stroke={hero ? pri : 'var(--border-strong)'}
+        strokeWidth={hero ? 3 : 2}
       />
-      {showStitch && (
-        <rect
-          x="7.5"
-          y="7.5"
-          width="85"
-          height="85"
-          rx={SQUIRCLE_RADIUS - 5}
-          ry={SQUIRCLE_RADIUS - 5}
-          fill="none"
-          stroke="var(--fg-subtle)"
-          strokeWidth="1.1"
-          strokeDasharray="3 4.5"
-          strokeOpacity="0.55"
-        />
-      )}
     </svg>
   );
 }

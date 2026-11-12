@@ -70,17 +70,45 @@ describe('CrewPatch rendering', () => {
     expect(micro.container.querySelector('pattern')).toBeNull();
   });
 
-  it('draws the stitch ring only at hero scale', () => {
-    const stitchCount = (scale: 'hero' | 'tile' | 'micro') => {
-      const { container } = render(
+  it('draws no stitch ring at any scale', () => {
+    for (const scale of ['hero', 'tile', 'micro'] as const) {
+      const { container, unmount } = render(
         <CrewPatch crewId="crew-alpha" scale={scale} />,
       );
-      return container.querySelectorAll('rect[stroke-dasharray="3 4.5"]')
-        .length;
+      expect(container.querySelectorAll('rect[stroke-dasharray]')).toHaveLength(
+        0,
+      );
+      unmount();
+    }
+  });
+
+  it('rims the hero patch in its chord colour, 3px, with an outer glow; the smaller scales keep the neutral rim', () => {
+    const rim = (scale: 'hero' | 'tile') => {
+      const { container, unmount } = render(
+        <CrewPatch crewId="crew-alpha" scale={scale} />,
+      );
+      const svg = container.querySelector('svg') as SVGElement;
+      const rects = Array.from(container.querySelectorAll('svg > rect'));
+      const edge = rects[rects.length - 1] as SVGRectElement;
+      const result = {
+        stroke: edge.getAttribute('stroke'),
+        width: edge.getAttribute('stroke-width'),
+        filter: svg.style.filter,
+      };
+      unmount();
+      return result;
     };
-    expect(stitchCount('hero')).toBe(1);
-    expect(stitchCount('tile')).toBe(0);
-    expect(stitchCount('micro')).toBe(0);
+
+    const hero = rim('hero');
+    expect(hero.stroke).toMatch(/^var\(--/);
+    expect(hero.stroke).not.toBe('var(--border-strong)');
+    expect(hero.width).toBe('3');
+    expect(hero.filter).toContain('drop-shadow');
+
+    const tile = rim('tile');
+    expect(tile.stroke).toBe('var(--border-strong)');
+    expect(tile.width).toBe('2');
+    expect(tile.filter).toBe('');
   });
 
   it('honours the requested pixel size', () => {

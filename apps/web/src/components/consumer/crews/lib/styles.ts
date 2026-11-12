@@ -52,12 +52,14 @@ export const pillGhost: React.CSSProperties = {
 };
 
 /**
- * A card whose border runs cyan to pink (the invite landing). The fill is
- * painted on the padding box and the gradient on the border box, so the edge
- * follows the radius without a pseudo-element.
+ * A card whose border runs cyan at the top left, pink along the top right and
+ * the bottom left, and fades to the plain border at the bottom right (the
+ * invite landing: bp-s-invite_m, invite_stale_m). It is the shared gradient
+ * edge the price cards wear. The fill is painted on the padding box and the
+ * gradient on the border box, so the edge follows the radius.
  */
 export const gradientEdgeCard: React.CSSProperties = {
   border: '1px solid transparent',
   background:
-    'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--accent) 40%, var(--border)) 70%, var(--accent)) border-box',
+    'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
 };

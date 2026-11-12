@@ -28,7 +28,11 @@ export const InviteShell = ({
       tightGap ? '' : 'sm:gap-[22px]'
     }`}
     style={{
-      background: 'var(--bg)',
+      // The invite's page glow: a strong purple-pink wash from the top centre
+      // behind the patch and card, fading to the ground by mid-screen
+      // (bp-s-invite_m, invite_member_m, invite_stale_m, invite_d).
+      background:
+        'radial-gradient(ellipse 85% 55% at 50% 0%, color-mix(in oklch, var(--accent) 34%, color-mix(in oklch, var(--signal) 22%, transparent)) 0%, transparent 100%), var(--bg)',
       color: 'var(--fg)',
       fontFamily: 'var(--font-ui)',
     }}

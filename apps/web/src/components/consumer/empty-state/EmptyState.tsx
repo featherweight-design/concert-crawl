@@ -51,7 +51,7 @@ export interface EmptyStateCardProps extends EmptyStateCommonProps {
 
 export type EmptyStateProps = EmptyStateRailProps | EmptyStateCardProps;
 
-export type EmptyStateGlyph = 'dots' | 'calendar';
+export type EmptyStateGlyph = 'dots' | 'calendar' | 'tickets';
 
 /** Scattered dots: a sky with nothing in it (B+ `empty_filtered_m`). */
 const DOTS: readonly { cx: number; cy: number }[] = [
@@ -81,6 +81,27 @@ function MedallionGlyph({ glyph }: { glyph: EmptyStateGlyph }) {
           strokeWidth={1.6}
           strokeLinecap="round"
         />
+      </svg>
+    );
+  }
+  if (glyph === 'tickets') {
+    // Three tickets fanned over one another: a night out with a crew (B14
+    // crew_been_m). Each is a notched ticket outline.
+    const ticket =
+      'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5V9a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 15.5V13a2 2 0 0 0 0-4V6.5Z';
+    return (
+      <svg width={52} height={52} viewBox="0 0 28 28" fill="none" aria-hidden>
+        {[-14, 0, 14].map((angle) => (
+          <g key={angle} transform={`rotate(${angle} 14 14) translate(2 2)`}>
+            <path
+              d={ticket}
+              stroke="var(--fg-muted)"
+              strokeWidth={1.3}
+              strokeLinejoin="round"
+              opacity={angle === 0 ? 1 : 0.6}
+            />
+          </g>
+        ))}
       </svg>
     );
   }
