@@ -71,26 +71,23 @@ export const candidateCards = (
   kind: ToCheckKind,
 ): CandidateCard[] => {
   const candidates = row.candidates ?? [];
+  // The artist fans see now, from the snapshot or, when the snapshot lacks
+  // it, from the row itself.
+  const current: ArtistCandidate | null = row.spotifyArtistId
+    ? (candidates.find((each) => each.id === row.spotifyArtistId) ?? {
+        id: row.spotifyArtistId,
+        name: row.name,
+        imageUrl: row.photoUrl,
+        genres: null,
+      })
+    : null;
   if (kind === 'check') {
-    const current = candidates.find((each) => each.id === row.spotifyArtistId);
-    if (current) return [{ type: 'artist', candidate: current }];
-    return row.spotifyArtistId
-      ? [
-          {
-            type: 'artist',
-            candidate: {
-              id: row.spotifyArtistId,
-              name: row.name,
-              imageUrl: row.photoUrl,
-              genres: null,
-            },
-          },
-        ]
-      : [];
+    return current ? [{ type: 'artist', candidate: current }] : [];
   }
-  // The current match leads, so a reported row shows what fans see now.
+  // The current match leads, so a reported row shows what fans see now and
+  // is what the primary button keeps by default.
   const ordered = [
-    ...candidates.filter((each) => each.id === row.spotifyArtistId),
+    ...(current ? [current] : []),
     ...candidates.filter((each) => each.id !== row.spotifyArtistId),
   ];
   const cards: CandidateCard[] = ordered
