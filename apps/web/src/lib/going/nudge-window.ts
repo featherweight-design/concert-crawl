@@ -22,7 +22,7 @@ const calendarDayFormatter = new Intl.DateTimeFormat('en-CA', {
 });
 
 // formatToParts rather than parsing the formatted string, matching
-// lib/time.ts:localDateString and settings/plan/lib/resolve-plan-card.ts —
+// lib/time.ts:localDateString —
 // locale output is not a stable parse target across runtimes.
 const zonedUtcMidnight = (at: Date): number => {
   const parts = calendarDayFormatter.formatToParts(at);

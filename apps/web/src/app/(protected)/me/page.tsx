@@ -1,10 +1,8 @@
 import { Suspense } from 'react';
-import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { SpotifyReturnFlow } from '@/components/consumer/spotify/SpotifyReturnFlow';
 import { fetchMe, fetchMySubmissions } from '@/lib/users';
 import { isFeatureEnabled } from '@/lib/feature-flags';
-import { isScaRegion } from '@/lib/sca-region';
 import { SettingsRoute } from '@/components/settings/SettingsRoute';
 import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop';
 import { ThemeSync } from '@/components/settings/ThemeSync';
@@ -18,19 +16,13 @@ export default async function MePage() {
 
   const isAdmin = sessionClaims?.metadata?.role === 'admin';
 
-  const [profile, submissions, requestHeaders, spotifyEnabled] =
-    await Promise.all([
-      fetchMe(token),
-      fetchMySubmissions(token),
-      headers(),
-      // Resolved once here so both settings routes agree and the Connections
-      // section never flashes in before a client-side flag read lands.
-      isFeatureEnabled('spotify-sync'),
-    ]);
-  // Spec §1.7: SCA notice gating, resolved server-side from Vercel's
-  // country header. Unknown (local dev, header absent) fails safe to true.
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
-
+  const [profile, submissions, spotifyEnabled] = await Promise.all([
+    fetchMe(token),
+    fetchMySubmissions(token),
+    // Resolved once here so both settings routes agree and the Connections
+    // section never flashes in before a client-side flag read lands.
+    isFeatureEnabled('spotify-sync'),
+  ]);
   return (
     <>
       <ThemeSync serverTheme={profile.theme} />
@@ -45,7 +37,6 @@ export default async function MePage() {
         <SettingsRoute
           profile={profile}
           submissions={submissions}
-          scaRegion={scaRegion}
           isAdmin={isAdmin}
           spotifyEnabled={spotifyEnabled}
         />
@@ -55,7 +46,6 @@ export default async function MePage() {
         <SettingsRouteDesktop
           profile={profile}
           submissions={submissions}
-          scaRegion={scaRegion}
           spotifyEnabled={spotifyEnabled}
         />
       </div>

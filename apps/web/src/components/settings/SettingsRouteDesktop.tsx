@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import { useClerk, useUser } from '@clerk/nextjs';
 import { Avatar } from './Avatar';
 import { CredChip } from './CredChip';
-import { PlanPanel } from './plan';
 import { ThemePickerInline } from './ThemePickerInline';
 import { MySubmissionsList } from './MySubmissionsList';
 import { DangerZone } from './DangerZone';
@@ -29,7 +28,6 @@ const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 type NavSection =
   | 'profile'
-  | 'plan'
   | 'appearance'
   | 'connections'
   | 'notifications'
@@ -39,7 +37,6 @@ type NavSection =
 
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'profile', label: SETTINGS_COPY.profileSection },
-  { key: 'plan', label: SETTINGS_COPY.planSectionDesktop },
   { key: 'submissions', label: SETTINGS_COPY.submissionsSection },
   { key: 'appearance', label: SETTINGS_COPY.appearanceSection },
   { key: 'notifications', label: NOTIFICATIONS_COPY.heading },
@@ -71,20 +68,6 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
         strokeWidth="1.5"
         strokeLinecap="round"
       />
-    </svg>
-  ),
-  plan: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect
-        x="2"
-        y="4"
-        width="12"
-        height="9"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path d="M2 7h12" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   ),
   submissions: (
@@ -160,7 +143,6 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
 interface SettingsRouteDesktopProps {
   profile: UserProfileResponse;
   submissions: UserSubmissionItem[];
-  scaRegion: boolean;
   /**
    * The `spotify-sync` release flag, resolved server-side on `/me` and passed
    * to both settings routes so mobile and desktop never disagree and the
@@ -172,7 +154,6 @@ interface SettingsRouteDesktopProps {
 export function SettingsRouteDesktop({
   profile,
   submissions,
-  scaRegion,
   spotifyEnabled,
 }: SettingsRouteDesktopProps) {
   const { openUserProfile } = useClerk();
@@ -412,24 +393,6 @@ export function SettingsRouteDesktop({
           <div style={{ maxWidth: 640, margin: '0 auto' }}>
             {activeSection === 'profile' && profilePanel}
 
-            {activeSection === 'plan' && (
-              <div className="flex flex-col gap-5">
-                <div>
-                  <h2 className="text-[22px] font-extrabold text-fg">
-                    {SETTINGS_COPY.planSectionDesktop}
-                  </h2>
-                  <p className="text-[13px] text-fg-muted">
-                    {SETTINGS_COPY.planSectionSubDesktop}
-                  </p>
-                </div>
-                <PlanPanel
-                  planState={profile.planState}
-                  scaRegion={scaRegion}
-                  variant="desktop"
-                />
-              </div>
-            )}
-
             {activeSection === 'appearance' && (
               <div className="flex flex-col gap-5">
                 <div>
@@ -459,7 +422,7 @@ export function SettingsRouteDesktop({
             )}
 
             {activeSection === 'notifications' && (
-              <NotificationsSection variant="desktop" scaRegion={scaRegion} />
+              <NotificationsSection variant="desktop" />
             )}
 
             {activeSection === 'submissions' && submissionsPanel}
