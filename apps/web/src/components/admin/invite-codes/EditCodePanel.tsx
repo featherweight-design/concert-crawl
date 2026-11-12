@@ -16,6 +16,7 @@ import {
   type ExpiryChoice,
 } from './code-rules';
 import {
+  CANCEL,
   ExpiryPills,
   Field,
   INPUT,
@@ -99,7 +100,7 @@ export const EditCodePanel = ({
             onClick={save}
             fullWidth={isPhone}
             variant="gradient"
-            style={{ height: 40, fontSize: 14, flex: 1 }}
+            style={{ height: 40, fontSize: 14, flex: 1, borderRadius: 9 }}
           >
             {COPY.save}
           </AdminButton>
@@ -108,7 +109,7 @@ export const EditCodePanel = ({
             variant="outline"
             onClick={onClose}
             fullWidth={isPhone}
-            style={{ height: 40, fontSize: 14 }}
+            style={CANCEL}
           >
             {COPY.cancel}
           </AdminButton>

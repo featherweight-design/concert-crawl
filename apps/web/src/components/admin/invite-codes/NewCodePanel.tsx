@@ -14,6 +14,7 @@ import {
   type ExpiryChoice,
 } from './code-rules';
 import {
+  CANCEL,
   ExpiryPills,
   Field,
   Hint,
@@ -99,6 +100,7 @@ export const NewCodePanel = ({
               height: isPhone ? 46 : 40,
               fontSize: isPhone ? 15 : 14,
               flex: 1,
+              borderRadius: 9,
             }}
           >
             {COPY.make}
@@ -110,7 +112,7 @@ export const NewCodePanel = ({
               variant="outline"
               disabled={pending}
               onClick={onClose}
-              style={{ height: 40, fontSize: 14 }}
+              style={CANCEL}
             >
               {COPY.cancel}
             </AdminButton>

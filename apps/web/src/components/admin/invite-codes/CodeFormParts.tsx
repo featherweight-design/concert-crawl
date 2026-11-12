@@ -18,6 +18,16 @@ export const INPUT: CSSProperties = {
   boxSizing: 'border-box',
 };
 
+/** The drawn secondary Cancel: raised fill, strong border, 9px corners. */
+export const CANCEL: CSSProperties = {
+  height: 40,
+  fontSize: 14,
+  fontWeight: 600,
+  borderRadius: 9,
+  color: 'var(--fg)',
+  background: 'var(--surface-2)',
+};
+
 export const Hint = ({
   children,
   tone = 'var(--fg-subtle)',
