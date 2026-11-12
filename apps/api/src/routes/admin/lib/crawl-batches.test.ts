@@ -108,7 +108,13 @@ describe('groupCrawlBatches: nightly', () => {
       triggers: [],
       now: NOW,
     });
-    expect(batch?.counts).toEqual({ ok: 1, unchanged: 1, notOk: 2, total: 4 });
+    expect(batch?.counts).toEqual({
+      ok: 1,
+      unchanged: 1,
+      skipped: 1,
+      notOk: 1,
+      total: 4,
+    });
     expect(batch?.eventsFound).toBe(20);
     expect(batch?.venueCount).toBe(4);
   });
@@ -237,6 +243,52 @@ describe('groupCrawlBatches: by hand', () => {
     const nightly = batches.find((batch) => batch.kind === 'nightly');
     expect(nightly?.counts.total).toBe(1);
     expect(nightly?.runs.map((entry) => entry.id)).toEqual(['scheduled']);
+  });
+});
+
+describe('groupCrawlBatches: a trigger whose run is not linked yet', () => {
+  it('claims a run on its venue that started after it, so the run is not filed as nightly', () => {
+    const batches = groupCrawlBatches({
+      runs: [
+        run('scheduled', '2026-11-12T10:10:00Z', { venueId: 'venue-a' }),
+        // Started minutes after the trigger; crawl_run_id is not written yet.
+        run('hand', '2026-11-12T16:02:00Z', { venueId: 'venue-b' }),
+      ],
+      triggers: [
+        trigger('t1', '2026-11-12T16:00:00Z', {
+          venueId: 'venue-b',
+          status: 'processing',
+        }),
+      ],
+      now: NOW,
+    });
+    const nightly = batches.find((batch) => batch.kind === 'nightly');
+    expect(nightly?.runs.map((entry) => entry.id)).toEqual(['scheduled']);
+    const byHand = batches.find((batch) => batch.kind === 'by_hand');
+    expect(byHand?.runs.map((entry) => entry.id)).toEqual(['hand']);
+    expect(byHand?.pending).toBe(0);
+  });
+
+  it('does not claim a run on another venue, or one hours later', () => {
+    const batches = groupCrawlBatches({
+      runs: [
+        run('other-venue', '2026-11-12T16:02:00Z', { venueId: 'venue-c' }),
+        run('too-late', '2026-11-12T23:30:00Z', { venueId: 'venue-b' }),
+      ],
+      triggers: [
+        trigger('t1', '2026-11-12T16:00:00Z', {
+          venueId: 'venue-b',
+          status: 'processing',
+        }),
+      ],
+      now: NOW,
+    });
+    const nightly = batches.find((batch) => batch.kind === 'nightly');
+    expect(nightly?.runs.map((entry) => entry.id).sort()).toEqual([
+      'other-venue',
+      'too-late',
+    ]);
+    expect(batches.find((batch) => batch.kind === 'by_hand')?.pending).toBe(1);
   });
 });
 

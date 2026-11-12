@@ -509,12 +509,14 @@ export interface CrawlBatchRun {
 }
 
 export interface CrawlBatchCounts {
-  /** Runs that fetched and read the venue's page (or found it unchanged). */
+  /** Runs that fetched and read the venue's page. */
   ok: number;
-  /** Failed or partial runs, and skips that are not "page unchanged". */
+  /** Failed or partial runs, and skips for a reason an admin has to look at. */
   notOk: number;
   /** Runs that left the page alone because it had not changed. */
   unchanged: number;
+  /** Runs skipped on purpose: the venue's crawl is paused. */
+  skipped: number;
   total: number;
 }
 

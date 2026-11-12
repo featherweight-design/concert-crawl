@@ -22,6 +22,8 @@ import { addDays, denverDate } from './needs-you/keys.js';
 
 /** Triggers by one person closer together than this are one by-hand batch. */
 export const BURST_GAP_MS = 10 * 60 * 1000;
+/** An unlinked trigger claims a run on its venue starting within this long. */
+export const TRIGGER_CLAIM_WINDOW_MS = 6 * 60 * 60 * 1000;
 /** A gap this long inside a night starts a new wave: a retry of the night. */
 export const WAVE_GAP_MS = 60 * 60 * 1000;
 /** After this Mountain hour a night with no scheduled run did not start. */
@@ -105,12 +107,15 @@ const countRuns = (runs: readonly BatchRunInput[]): CrawlBatchCounts => {
     ok: 0,
     notOk: 0,
     unchanged: 0,
+    skipped: 0,
     total: runs.length,
   };
   for (const run of runs) {
     if (run.status === 'success') counts.ok += 1;
     else if (run.status === 'skipped' && run.reason === 'page_unchanged') {
       counts.unchanged += 1;
+    } else if (run.status === 'skipped' && run.reason === 'crawl_paused') {
+      counts.skipped += 1;
     } else counts.notOk += 1;
   }
   return counts;
@@ -167,6 +172,35 @@ export const groupCrawlBatches = ({
       trigger.crawlRunId === null ? [] : [trigger.crawlRunId],
     ),
   );
+  // The crawler writes a trigger's crawl_run_id only after the venue's whole
+  // run (prices, fan-out) is done, so a run a trigger asked for can sit
+  // unlinked for a while, or for good if that work threw. A run that starts
+  // within a few hours of an unlinked trigger on its venue belongs to it.
+  const claimedRunByTrigger = new Map<string, string>();
+  const unlinked = triggers
+    .filter(
+      (trigger) =>
+        trigger.crawlRunId === null &&
+        (trigger.status === 'processing' || trigger.status === 'failed'),
+    )
+    .sort(
+      (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
+    );
+  for (const run of [...runs].sort(byTime)) {
+    if (triggerRunIds.has(run.id)) continue;
+    const trigger = unlinked.find(
+      (candidate) =>
+        !claimedRunByTrigger.has(candidate.id) &&
+        candidate.venueId === run.venueId &&
+        candidate.createdAt.getTime() <= run.createdAt.getTime() &&
+        run.createdAt.getTime() - candidate.createdAt.getTime() <=
+          TRIGGER_CLAIM_WINDOW_MS,
+    );
+    if (trigger !== undefined) {
+      claimedRunByTrigger.set(trigger.id, run.id);
+      triggerRunIds.add(run.id);
+    }
+  }
   const runById = new Map(runs.map((run) => [run.id, run]));
   const batches: { sortAt: number; batch: CrawlBatchDetail }[] = [];
 
@@ -220,7 +254,7 @@ export const groupCrawlBatches = ({
           night,
           actor: null,
           venueCount: 0,
-          counts: { ok: 0, notOk: 0, unchanged: 0, total: 0 },
+          counts: { ok: 0, notOk: 0, unchanged: 0, skipped: 0, total: 0 },
           eventsFound: 0,
           eventsInserted: 0,
           pending: 0,
@@ -257,9 +291,10 @@ export const groupCrawlBatches = ({
     const first = burst[0];
     if (first === undefined) continue;
     const burstRuns = burst
-      .flatMap((trigger) =>
-        trigger.crawlRunId === null ? [] : [runById.get(trigger.crawlRunId)],
-      )
+      .flatMap((trigger) => {
+        const runId = trigger.crawlRunId ?? claimedRunByTrigger.get(trigger.id);
+        return runId === undefined ? [] : [runById.get(runId)];
+      })
       .flatMap((run) => (run === undefined ? [] : [run]))
       .sort(byTime);
     const actor = first.triggeredBy;
@@ -279,6 +314,7 @@ export const groupCrawlBatches = ({
         pending: burst.filter(
           (trigger) =>
             trigger.crawlRunId === null &&
+            !claimedRunByTrigger.has(trigger.id) &&
             (trigger.status === 'pending' || trigger.status === 'processing'),
         ).length,
         retried: false,
