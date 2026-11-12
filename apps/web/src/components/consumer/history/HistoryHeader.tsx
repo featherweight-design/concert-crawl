@@ -156,7 +156,7 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
   return (
     <header
       data-testid="history-header"
-      className="mb-5 pb-4 sm:mb-6 sm:pb-5"
+      className="mb-5 border-b border-transparent pb-4 sm:mb-6 sm:pb-5"
       style={MY_SHOWS_HEADER_RULE_STYLE}
     >
       {/* The tier chip that used to sit opposite the eyebrow is gone — this

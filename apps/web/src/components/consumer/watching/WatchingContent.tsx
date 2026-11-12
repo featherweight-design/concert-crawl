@@ -168,7 +168,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
       {displayedShows.length > 0 && (
         <div
           data-testid="watching-header"
-          className="mb-5 pb-4 sm:mb-6 sm:pb-5"
+          className="mb-5 border-b border-transparent pb-4 sm:mb-6 sm:pb-5"
           style={MY_SHOWS_HEADER_RULE_STYLE}
         >
           <p

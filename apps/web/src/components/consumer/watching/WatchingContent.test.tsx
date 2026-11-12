@@ -3,10 +3,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WatchingShow } from '@concert-crawl/types';
-import {
-  MY_SHOWS_HEADER_RULE,
-  MY_SHOWS_HEADER_RULE_STYLE,
-} from '@/components/consumer/history/definitions/constants';
 
 // The header is under test, not the rows or the tabs: both are stubbed so the
 // list renders without a QueryClientProvider or a router.
@@ -55,11 +51,11 @@ describe('WatchingContent header rule (B+ `bp-m-watching_m`)', () => {
   it('draws the gradient hairline, not the plain border', () => {
     render(<WatchingContent initialShows={[show]} />);
     const header = screen.getByTestId('watching-header');
-    expect(header.className).not.toContain('border-b');
-    // The same recipe as Concerts, so the two tabs can never drift apart.
-    expect(MY_SHOWS_HEADER_RULE_STYLE.backgroundImage).toBe(
-      MY_SHOWS_HEADER_RULE,
-    );
+    expect(header.classList).toContain('border-b');
+    expect(header.classList).toContain('border-transparent');
+    expect(header.classList).not.toContain('border-border');
+    expect(header.style.backgroundOrigin).toBe('border-box');
+    expect(header.style.backgroundClip).toBe('border-box');
     expect(header.style.backgroundImage).toContain('var(--signal) 60%');
     expect(header.style.backgroundImage).toContain('var(--border) 75%');
     expect(header.style.backgroundSize).toBe('100% 1px');

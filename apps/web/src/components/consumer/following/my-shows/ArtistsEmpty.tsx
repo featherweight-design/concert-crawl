@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { MyShowsEmptyCard } from '@/components/consumer/history/MyShowsEmptyCard';
+import { PASSPORT_CTA_GLOW } from '@/components/consumer/passport/definitions/styles';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants';
 
@@ -35,7 +36,7 @@ const primaryStyle = {
   fontWeight: 800,
   letterSpacing: '-0.01em',
   textDecoration: 'none',
-  boxShadow: '0 8px 24px color-mix(in oklch, var(--signal) 22%, transparent)',
+  boxShadow: PASSPORT_CTA_GLOW,
 } as const;
 
 const RING = 44;

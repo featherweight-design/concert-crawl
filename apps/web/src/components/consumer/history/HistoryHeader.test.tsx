@@ -158,10 +158,21 @@ describe('HistoryHeader rule', () => {
     );
   });
 
+  // The rule must sit in a 1px transparent border row, as the old `border-b`
+  // did, or the header loses 1px and everything below moves up.
+  it('keeps the border row and paints the rule into it', () => {
+    render(<HistoryHeader stats={STATS} />);
+    const header = screen.getByTestId('history-header');
+    expect(header.classList).toContain('border-b');
+    expect(header.classList).toContain('border-transparent');
+    expect(header.classList).not.toContain('border-border');
+    expect(header.style.backgroundOrigin).toBe('border-box');
+    expect(header.style.backgroundClip).toBe('border-box');
+  });
+
   it('draws the gradient hairline along the bottom, not the plain border', () => {
     render(<HistoryHeader stats={STATS} />);
     const header = screen.getByTestId('history-header');
-    expect(header.className).not.toContain('border-b');
     expect(header.style.backgroundImage).toContain('var(--signal) 60%');
     expect(header.style.backgroundImage).toContain('var(--accent) 40%');
     expect(header.style.backgroundImage).toContain('var(--border) 75%');
