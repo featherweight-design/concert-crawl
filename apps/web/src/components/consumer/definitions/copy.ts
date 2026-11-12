@@ -1508,6 +1508,17 @@ export const CONSUMER_COPY = {
     ceilingLabel: 'Ceiling',
     ceilingPlaceholder: 'optional',
     howFoundLabel: 'How you found out *',
+    howFoundOptions: {
+      boughtMyself: 'Bought it myself',
+      sawListing: 'Saw the listing',
+      atTheVenue: 'At the venue',
+    },
+    validation: {
+      floorMin: 'Has to be at least $1.',
+      cap: 'Cap is $2,000.',
+      ceilingBelowFloor: "Ceiling can't be below floor.",
+      howFoundRequired: 'Tell us how you found out.',
+    },
     honestyDisclaimer: 'By submitting, you confirm this is accurate.',
     // Fine print under the submit form's honesty disclaimer
     honestyFootnote:
@@ -1518,11 +1529,12 @@ export const CONSUMER_COPY = {
     successHeading: 'Update submitted.',
     successBody: 'Your update is pending. Confirms move it forward.',
     successBackButton: 'Back to show',
-    // A 409 `price_check_update_pending`: another update already holds this
-    // price's check (until migration 0100 lets several fans file one each).
+    // A 409 `price_check_update_pending`. The API sends the same code when
+    // another fan's update holds the check (until migration 0100) and when the
+    // viewer already has one, so the line names neither.
     updatePendingHeading: 'Already waiting.',
     updatePendingBody:
-      'Another fan’s update is ahead of yours. Check back once it’s reviewed.',
+      'An update is already in review. Check back once it’s reviewed.',
     errorHeading: "Didn't go through.",
     errorBody:
       "Couldn't reach the server. Your inputs are still here. Try again or come back later.",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { SPNumberField } from './SPNumberField';
@@ -22,9 +22,9 @@ const copy = CONSUMER_COPY.counterSubmitSheet;
 type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue';
 
 const HOW_FOUND_OPTIONS: { value: HowFound; label: string }[] = [
-  { value: 'bought_myself', label: 'Bought it myself' },
-  { value: 'saw_listing', label: 'Saw the listing' },
-  { value: 'at_the_venue', label: 'At the venue' },
+  { value: 'bought_myself', label: copy.howFoundOptions.boughtMyself },
+  { value: 'saw_listing', label: copy.howFoundOptions.sawListing },
+  { value: 'at_the_venue', label: copy.howFoundOptions.atTheVenue },
 ];
 
 const isValidHowFound = (value: string): value is HowFound =>
@@ -34,7 +34,9 @@ type SheetState =
   'form' | 'submitting' | 'success' | 'update_pending' | 'error';
 
 // B9a's 409 for an update the price's check cannot take yet: another fan's
-// update holds it (until migration 0100), or the viewer already has one.
+// update holds it (until migration 0100), or the viewer already has one. The
+// response carries the same code for both; only its prose `error` differs, so
+// the sheet does not try to tell them apart.
 const UPDATE_PENDING_CODE = 'price_check_update_pending';
 
 // A failing endpoint can answer with HTML or an empty body, so narrow the
@@ -109,21 +111,21 @@ const validateForm = (
   const floorNum = Number(floor);
 
   if (!floor || isNaN(floorNum) || floorNum < SP_POLICY.floorMin) {
-    errors.floor = 'Has to be at least $1.';
+    errors.floor = copy.validation.floorMin;
   } else if (floorNum > SP_POLICY.floorMax) {
-    errors.floor = 'Cap is $2,000.';
+    errors.floor = copy.validation.cap;
   }
 
   if (ceiling) {
     const ceilingNum = Number(ceiling);
     if (isNaN(ceilingNum) || ceilingNum > SP_POLICY.ceilingMax) {
-      errors.ceiling = 'Cap is $2,000.';
+      errors.ceiling = copy.validation.cap;
     } else if (!errors.floor && ceilingNum < floorNum) {
-      errors.ceiling = "Ceiling can't be below floor.";
+      errors.ceiling = copy.validation.ceilingBelowFloor;
     }
   }
 
-  if (!howFound) errors.howFound = 'Tell us how you found out.';
+  if (!howFound) errors.howFound = copy.validation.howFoundRequired;
 
   return errors;
 };
@@ -147,6 +149,11 @@ export function CounterSubmitSheet({
   const [ceiling, setCeiling] = useState('');
   const [howFound, setHowFound] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  // Set once the server has a new answer for this price (a filed update, or a
+  // 409 that says one is already in review). The page refreshes when the sheet
+  // is dismissed, not on arrival: a refresh flips the card's viewerAction,
+  // and refreshing under an open sheet would swap the result for the card.
+  const staleRef = useRef(false);
 
   const subtitle =
     currentCeiling != null
@@ -190,31 +197,19 @@ export function CounterSubmitSheet({
       if (!res.ok) {
         const payload: unknown = await res.json().catch(() => null);
         if (isUpdatePendingConflict(res.status, payload)) {
+          staleRef.current = true;
           setSheetState('update_pending');
           return;
         }
         throw new Error(apiErrorMessage(payload) ?? 'Submission failed');
       }
-      router.refresh();
+      staleRef.current = true;
       setSheetState('success');
     } catch (err) {
       console.error('CounterSubmitSheet: price update failed', err);
       setSheetState('error');
     }
-  }, [
-    floor,
-    ceiling,
-    howFound,
-    getToken,
-    eventId,
-    disputedSubmissionId,
-    router,
-  ]);
-
-  const handleSuccess = useCallback(() => {
-    onSuccess?.();
-    onClose();
-  }, [onSuccess, onClose]);
+  }, [floor, ceiling, howFound, getToken, eventId, disputedSubmissionId]);
 
   const handleReset = useCallback(() => {
     setSheetState('form');
@@ -222,13 +217,30 @@ export function CounterSubmitSheet({
   }, []);
 
   const handleClose = useCallback(() => {
+    const wasSuccess = sheetState === 'success';
     setSheetState('form');
     setFloor('');
     setCeiling('');
     setHowFound(null);
     setFieldErrors({});
+    if (staleRef.current) {
+      staleRef.current = false;
+      router.refresh();
+    }
+    if (wasSuccess) onSuccess?.();
     onClose();
-  }, [onClose]);
+  }, [sheetState, router, onSuccess, onClose]);
+
+  // One live region for the sheet's whole life: its text changes, the node
+  // does not, so a screen reader announces each result.
+  const announcement =
+    sheetState === 'success'
+      ? `${copy.successHeading} ${copy.successBody}`
+      : sheetState === 'update_pending'
+        ? `${copy.updatePendingHeading} ${copy.updatePendingBody}`
+        : sheetState === 'error'
+          ? `${copy.errorHeading} ${copy.errorBody}`
+          : '';
 
   const rail = RAIL[sheetState];
   const headerNode = (
@@ -327,14 +339,37 @@ export function CounterSubmitSheet({
       header={headerNode}
       footer={footerNode}
     >
-      {sheetState === 'success' && <SuccessState onClose={handleSuccess} />}
+      <p role="status" className="sr-only" data-testid="counter-sheet-status">
+        {announcement}
+      </p>
+
+      {sheetState === 'success' && (
+        <ResultState
+          heading={copy.successHeading}
+          body={copy.successBody}
+          primaryLabel={copy.successBackButton}
+          onPrimary={handleClose}
+        />
+      )}
 
       {sheetState === 'update_pending' && (
-        <UpdatePendingState onClose={handleClose} />
+        <ResultState
+          heading={copy.updatePendingHeading}
+          body={copy.updatePendingBody}
+          primaryLabel={copy.successBackButton}
+          onPrimary={handleClose}
+        />
       )}
 
       {sheetState === 'error' && (
-        <ErrorState onReset={handleReset} onClose={handleClose} />
+        <ResultState
+          heading={copy.errorHeading}
+          body={copy.errorBody}
+          primaryLabel={copy.errorTryAgainButton}
+          onPrimary={handleReset}
+          secondaryLabel={copy.errorCloseButton}
+          onSecondary={handleClose}
+        />
       )}
 
       {(sheetState === 'form' || sheetState === 'submitting') && (
@@ -438,76 +473,64 @@ export function CounterSubmitSheet({
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
 
-function SuccessState({ onClose }: { onClose: () => void }) {
-  const copy = CONSUMER_COPY.counterSubmitSheet;
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-        padding: '8px 0',
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          fontSize: 30,
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.0,
-          color: 'var(--fg)',
-        }}
-      >
-        {copy.successHeading}
-      </p>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 14,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.55,
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {copy.successBody}
-      </p>
-      <button
-        type="button"
-        onClick={onClose}
-        style={{
-          all: 'unset',
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 48,
-          width: '100%',
-          boxSizing: 'border-box',
-          background: PRIMARY_GRADIENT,
-          color: 'var(--fg-on-accent)',
-          borderRadius: 10,
-          fontFamily: 'var(--font-ui)',
-          fontWeight: 800,
-          fontSize: 14.5,
-          letterSpacing: '-0.005em',
-          marginTop: 4,
-        }}
-      >
-        {copy.successBackButton}
-      </button>
-    </div>
-  );
+const primaryButtonStyle: React.CSSProperties = {
+  all: 'unset',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 48,
+  width: '100%',
+  boxSizing: 'border-box',
+  background: PRIMARY_GRADIENT,
+  color: 'var(--fg-on-accent)',
+  borderRadius: 12,
+  fontFamily: 'var(--font-ui)',
+  fontWeight: 800,
+  fontSize: 15,
+  letterSpacing: '-0.005em',
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  all: 'unset',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 44,
+  width: '100%',
+  boxSizing: 'border-box',
+  color: 'var(--fg-muted)',
+  fontFamily: 'var(--font-ui)',
+  fontWeight: 700,
+  fontSize: 13,
+  letterSpacing: '-0.005em',
+};
+
+interface ResultStateProps {
+  heading: string;
+  body: string;
+  primaryLabel: string;
+  onPrimary: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 }
 
-function ErrorState({
-  onReset,
-  onClose,
-}: {
-  onReset: () => void;
-  onClose: () => void;
-}) {
-  const copy = CONSUMER_COPY.counterSubmitSheet;
+// Success, update already in review, and error share one shape. Focus moves
+// to the heading when it mounts: the button that triggered the change is gone,
+// so focus would otherwise fall back to the dialog root and skip the result.
+function ResultState({
+  heading,
+  body,
+  primaryLabel,
+  onPrimary,
+  secondaryLabel,
+  onSecondary,
+}: ResultStateProps) {
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
   return (
     <div
       style={{
@@ -517,7 +540,9 @@ function ErrorState({
         padding: '8px 0',
       }}
     >
-      <p
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
         style={{
           margin: 0,
           fontSize: 30,
@@ -525,10 +550,11 @@ function ErrorState({
           letterSpacing: '-0.035em',
           lineHeight: 1.0,
           color: 'var(--fg)',
+          outline: 'none',
         }}
       >
-        {copy.errorHeading}
-      </p>
+        {heading}
+      </h2>
       <p
         style={{
           margin: 0,
@@ -538,7 +564,7 @@ function ErrorState({
           letterSpacing: '-0.005em',
         }}
       >
-        {copy.errorBody}
+        {body}
       </p>
       <div
         style={{
@@ -548,61 +574,30 @@ function ErrorState({
           marginTop: 4,
         }}
       >
-        <button
-          type="button"
-          onClick={onReset}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 48,
-            width: '100%',
-            boxSizing: 'border-box',
-            background: PRIMARY_GRADIENT,
-            color: 'var(--fg-on-accent)',
-            borderRadius: 10,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 800,
-            fontSize: 14.5,
-            letterSpacing: '-0.005em',
-          }}
-        >
-          {copy.errorTryAgainButton}
+        <button type="button" onClick={onPrimary} style={primaryButtonStyle}>
+          {primaryLabel}
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 44,
-            width: '100%',
-            boxSizing: 'border-box',
-            color: 'var(--fg-muted)',
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 700,
-            fontSize: 13,
-            letterSpacing: '-0.005em',
-          }}
-        >
-          {copy.errorCloseButton}
-        </button>
+        {secondaryLabel !== undefined && onSecondary !== undefined && (
+          <button
+            type="button"
+            onClick={onSecondary}
+            style={secondaryButtonStyle}
+          >
+            {secondaryLabel}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 // A read-only field: drawn dashed, with a check, because the update always
-// lands in the checked price's tier and vendor (`more-st-counter_m`).
+// lands in the checked price's tier and vendor (`more-st-counter_m`). A
+// term/definition pair, so the value is read with its label.
 function LockedField({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span
+    <dl style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0 }}>
+      <dt
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 10,
@@ -614,10 +609,11 @@ function LockedField({ label, value }: { label: string; value: string }) {
         }}
       >
         {label}
-      </span>
-      <div
+      </dt>
+      <dd
         className="flex min-w-0 items-center justify-between rounded-md px-3 h-[46px]"
         style={{
+          margin: 0,
           border: '1px dashed var(--border-strong)',
           background: 'var(--surface-1)',
           color: 'var(--fg-muted)',
@@ -643,72 +639,7 @@ function LockedField({ label, value }: { label: string; value: string }) {
             strokeLinejoin="round"
           />
         </svg>
-      </div>
-    </div>
-  );
-}
-
-// The 409 `price_check_update_pending` answer: not an error, so it reads as a
-// status (rail "Waiting") with one way back, rather than "Try again".
-function UpdatePendingState({ onClose }: { onClose: () => void }) {
-  const copy = CONSUMER_COPY.counterSubmitSheet;
-  return (
-    <div
-      role="status"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-        padding: '8px 0',
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          fontSize: 30,
-          fontWeight: 900,
-          letterSpacing: '-0.035em',
-          lineHeight: 1.0,
-          color: 'var(--fg)',
-        }}
-      >
-        {copy.updatePendingHeading}
-      </p>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 14,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.55,
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {copy.updatePendingBody}
-      </p>
-      <button
-        type="button"
-        onClick={onClose}
-        style={{
-          all: 'unset',
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 48,
-          width: '100%',
-          boxSizing: 'border-box',
-          background: PRIMARY_GRADIENT,
-          color: 'var(--fg-on-accent)',
-          borderRadius: 12,
-          fontFamily: 'var(--font-ui)',
-          fontWeight: 800,
-          fontSize: 15,
-          letterSpacing: '-0.005em',
-          marginTop: 4,
-        }}
-      >
-        {copy.successBackButton}
-      </button>
-    </div>
+      </dd>
+    </dl>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { CounterSubmitSheet } from './CounterSubmitSheet';
@@ -161,9 +161,20 @@ export const DisputedPriceCard = ({
   const { getToken } = useAuth();
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [withdrawState, setWithdrawState] = useState<
-    'idle' | 'withdrawing' | 'error'
-  >('idle');
+  // Keyed to the counter it was for, so a refresh that hands the card a
+  // different viewerCounterId (or none) drops a stale error or spinner without
+  // an effect.
+  const [withdraw, setWithdraw] = useState<{
+    counterId: string;
+    state: 'withdrawing' | 'error';
+  } | null>(null);
+  const withdrawState =
+    withdraw !== null && withdraw.counterId === viewerCounterId
+      ? withdraw.state
+      : 'idle';
+  // A ref, not state: two clicks in one frame both read the same render.
+  const inFlightRef = useRef<string | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const handleOpenSheet = useCallback(() => {
     setIsSheetOpen(true);
@@ -179,28 +190,38 @@ export const DisputedPriceCard = ({
   }, [onUpdateSuccess]);
 
   const handleWithdraw = useCallback(async () => {
-    if (viewerCounterId === null) return;
-    setWithdrawState('withdrawing');
+    const counterId = viewerCounterId;
+    if (counterId === null || inFlightRef.current === counterId) return;
+    inFlightRef.current = counterId;
+    setWithdraw({ counterId, state: 'withdrawing' });
+    const fail = (reason: unknown) => {
+      console.error('DisputedPriceCard: withdraw failed', reason);
+      inFlightRef.current = null;
+      setWithdraw({ counterId, state: 'error' });
+    };
     try {
       const token = await getToken();
       if (!token) {
-        setWithdrawState('error');
+        fail('no token');
         return;
       }
-      const res = await fetch(`${API_URL}/v1/submissions/${viewerCounterId}`, {
+      const res = await fetch(`${API_URL}/v1/submissions/${counterId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        console.error('DisputedPriceCard: withdraw failed', res.status);
-        setWithdrawState('error');
+      // A 404 means the update is already gone (withdrawn in another tab, or
+      // archived when the check was decided): the outcome the fan asked for.
+      if (!res.ok && res.status !== 404) {
+        fail(res.status);
         return;
       }
-      setWithdrawState('idle');
+      // Stay 'withdrawing' until the refresh replaces viewerCounterId, so the
+      // button cannot fire again in between. The button is about to go, so
+      // focus moves to the card rather than falling back to the page.
+      cardRef.current?.focus();
       router.refresh();
     } catch (err) {
-      console.error('DisputedPriceCard: withdraw failed', err);
-      setWithdrawState('error');
+      fail(err);
     }
   }, [viewerCounterId, getToken, router]);
 
@@ -217,6 +238,8 @@ export const DisputedPriceCard = ({
     <>
       <div
         id={anchorId}
+        ref={cardRef}
+        tabIndex={-1}
         data-testid="price-check-card"
         style={{
           borderRadius: 14,
@@ -225,6 +248,7 @@ export const DisputedPriceCard = ({
           background:
             'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, color-mix(in oklab, var(--signal) 70%, transparent), color-mix(in oklab, var(--accent) 70%, transparent)) border-box',
           overflow: 'hidden',
+          outline: 'none',
         }}
       >
         {/* Update strip: pending, so its edge is dashed (rule 3) */}
@@ -418,7 +442,10 @@ export const DisputedPriceCard = ({
         )}
       </div>
 
-      {viewerAction === 'submit_update' && (
+      {/* Stays mounted while open: a filed update flips viewerAction to
+          'withdraw' on the next refresh, and the sheet must keep showing its
+          result until the fan dismisses it. */}
+      {(viewerAction === 'submit_update' || isSheetOpen) && (
         <CounterSubmitSheet
           open={isSheetOpen}
           onClose={handleCloseSheet}

@@ -127,7 +127,13 @@ describe('CounterSubmitSheet slot', () => {
     expect(
       screen.getByText(/Currently listed: \$40 on AXS\./),
     ).toBeInTheDocument();
-    expect(screen.getByText('VIP')).toBeInTheDocument();
+    // Each locked value is read with its label (a term/definition pair).
+    expect(screen.getAllByRole('term').map((node) => node.textContent)).toEqual(
+      ['Tier', 'Where it’s listed'],
+    );
+    expect(
+      screen.getAllByRole('definition').map((node) => node.textContent),
+    ).toEqual(['VIP', 'AXS']);
     expect(screen.getByText('AXS')).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /tier/i })).toBeNull();
   });
@@ -174,7 +180,7 @@ describe('CounterSubmitSheet update already pending (409)', () => {
     expect(await screen.findByText('Already waiting.')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Another fan’s update is ahead of yours. Check back once it’s reviewed.',
+        'An update is already in review. Check back once it’s reviewed.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByTestId('sheet-rail')).toHaveTextContent('Waiting');
@@ -182,7 +188,11 @@ describe('CounterSubmitSheet update already pending (409)', () => {
     expect(
       screen.queryByText('Another update is already pending on this price.'),
     ).toBeNull();
+    // Refreshing now would flip the card under the open sheet: it waits for
+    // the fan to dismiss the result.
     expect(refresh).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to show' }));
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('treats any other 409 as an error', async () => {
@@ -201,5 +211,61 @@ describe('CounterSubmitSheet update already pending (409)', () => {
     submit();
 
     expect(await screen.findByText("Didn't go through.")).toBeInTheDocument();
+  });
+});
+
+describe('CounterSubmitSheet result states', () => {
+  it('holds the success state, refreshing only on dismiss', async () => {
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <CounterSubmitSheet
+        open
+        onClose={onClose}
+        eventId="evt-1"
+        disputedSubmissionId="sub-1"
+        currentFloor={40}
+        currentVendor="AXS"
+        onSuccess={onSuccess}
+      />,
+    );
+    fillRequiredFields();
+    submit();
+
+    const heading = await screen.findByRole('heading', {
+      name: 'Update submitted.',
+    });
+    expect(refresh).not.toHaveBeenCalled();
+    // Focus follows the result, since the submit button is gone.
+    expect(heading).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to show' }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('announces each result in one live region that stays mounted', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 500 })),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderSheet();
+    const region = screen.getByRole('status');
+    expect(region).toHaveTextContent('');
+
+    fillRequiredFields();
+    submit();
+    await screen.findByRole('heading', { name: "Didn't go through." });
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent("Didn't go through.");
+    expect(
+      screen.getByRole('heading', { name: "Didn't go through." }),
+    ).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent('');
   });
 });

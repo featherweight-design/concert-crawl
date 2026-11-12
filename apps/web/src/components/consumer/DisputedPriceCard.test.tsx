@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
+import '@testing-library/jest-dom';
 import {
   describe,
   it,
@@ -22,7 +23,8 @@ import {
 // that needs the full Next.js + Clerk runtime. The pill + anchor logic
 // under test lives entirely outside the sheet.
 vi.mock('./CounterSubmitSheet', () => ({
-  CounterSubmitSheet: () => null,
+  CounterSubmitSheet: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="counter-sheet" /> : null,
 }));
 
 const getToken = vi.fn(async () => 'test-token');
@@ -245,6 +247,85 @@ describe('DisputedPriceCard', () => {
 
       expect(await screen.findByRole('alert')).toBeTruthy();
       expect(refresh).not.toHaveBeenCalled();
+    });
+  });
+
+  // A filed update flips viewerAction to 'withdraw' on the next refresh; the
+  // open sheet must outlive that so its success state stays on screen.
+  it('keeps an open sheet mounted when viewerAction changes', () => {
+    const { rerender } = render(<DisputedPriceCard {...buildProps()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Submit an update' }));
+    expect(screen.getByTestId('counter-sheet')).toBeTruthy();
+
+    rerender(
+      <DisputedPriceCard
+        {...buildProps({
+          viewerAction: 'withdraw',
+          viewerCounterId: 'counter-mine',
+        })}
+      />,
+    );
+    expect(screen.getByTestId('counter-sheet')).toBeTruthy();
+  });
+
+  describe('withdraw guards', () => {
+    const withdrawProps = buildProps({
+      viewerAction: 'withdraw',
+      viewerCounterId: 'counter-mine',
+    });
+
+    it('sends one DELETE for a double click', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(JSON.stringify({ success: true }))),
+      );
+      render(<DisputedPriceCard {...withdrawProps} />);
+      const button = screen.getByRole('button', { name: 'Withdraw' });
+      fireEvent.click(button);
+      fireEvent.click(button);
+
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      expect(vi.mocked(global.fetch)).toHaveBeenCalledTimes(1);
+      // Still withdrawing until the refresh hands the card new props.
+      expect(
+        screen.getByRole('button', { name: 'Withdrawing…' }),
+      ).toBeDisabled();
+      // The button is about to go: focus lands on the card.
+      expect(screen.getByTestId('price-check-card')).toHaveFocus();
+    });
+
+    it('treats a 404 as already withdrawn: refresh, no error', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(null, { status: 404 })),
+      );
+      render(<DisputedPriceCard {...withdrawProps} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }));
+
+      await waitFor(() => expect(refresh).toHaveBeenCalled());
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('drops a stale error when viewerCounterId changes', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(null, { status: 500 })),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { rerender } = render(<DisputedPriceCard {...withdrawProps} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }));
+      expect(await screen.findByRole('alert')).toBeTruthy();
+
+      rerender(
+        <DisputedPriceCard
+          {...buildProps({
+            viewerAction: 'withdraw',
+            viewerCounterId: 'counter-newer',
+          })}
+        />,
+      );
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Withdraw' })).toBeEnabled();
     });
   });
 });
