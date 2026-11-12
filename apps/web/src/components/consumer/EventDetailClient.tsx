@@ -256,20 +256,14 @@ export function EventDetailBanners({
         ? (event.statusReport ?? null)
         : null;
 
-  const liveReporter = (() => {
-    if (liveFanReport != null) {
-      const handle = liveFanReport.reporterHandle;
-      return handle != null ? { handle, url: '' } : null;
-    }
-    return null;
-  })();
-
-  const liveConfirmCount = (() => {
-    if (liveFanReport != null) {
-      return liveFanReport.confirmsCount;
-    }
-    return undefined;
-  })();
+  const liveReporter =
+    liveFanReport?.reporterHandle != null
+      ? { handle: liveFanReport.reporterHandle, url: '' }
+      : null;
+  const liveConfirmCount = liveFanReport?.confirmsCount;
+  // A fan report dates the card from when it was filed. Otherwise it falls
+  // back to the event's last update.
+  const liveSince = liveFanReport?.reportedAt ?? event.updatedAt;
 
   return (
     <>
@@ -279,7 +273,7 @@ export function EventDetailBanners({
         {liveReportStatus !== null && (
           <LiveReportBanner
             status={liveReportStatus}
-            promotedAt={event.updatedAt}
+            promotedAt={liveSince}
             {...(liveConfirmCount !== undefined
               ? { confirmCount: liveConfirmCount }
               : {})}

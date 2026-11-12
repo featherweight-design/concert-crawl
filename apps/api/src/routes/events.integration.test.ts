@@ -296,6 +296,30 @@ describe('GET /v1/events/:id — integration', () => {
       });
     });
 
+    it('credits the latest promotion when more than one report was promoted', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { status: 'cancelled' });
+      await seedUserProfile('user_early', { handle: 'early' });
+      await seedUserProfile('user_late', { handle: 'late' });
+      await seedEventReport(event.id, 'user_early', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date('2026-01-01T00:00:00Z'),
+      });
+      await seedEventReport(event.id, 'user_late', {
+        status: 'cancelled',
+        resolution: 'promoted',
+        resolvedAt: new Date('2026-02-01T00:00:00Z'),
+      });
+
+      const res = await app.request(`/v1/events/${event.id}`);
+      const body = (await res.json()) as {
+        data: { statusReport: { reporterHandle: string | null } | null };
+      };
+
+      expect(body.data.statusReport?.reporterHandle).toBe('late');
+    });
+
     it('ignores a pending or rejected report, and a report of another status', async () => {
       const venue = await seedVenue();
       const event = await seedEvent(venue.id, { status: 'postponed' });
