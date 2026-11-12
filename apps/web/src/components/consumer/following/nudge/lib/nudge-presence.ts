@@ -1,9 +1,10 @@
 'use client';
 
-// Whether a follow nudge is on screen right now, for the one other surface
-// that opens after a watch: the post-watch push sheet. A watch can raise both,
-// and without this they open on top of each other. The nudge goes first; the
-// push sheet waits for it to close, then opens.
+// Whether a floating follow nudge is on screen right now, for the one other
+// surface that opens after a watch: the post-watch push sheet. A watch can
+// raise both, and without this they open on top of each other. The nudge goes
+// first; the push sheet waits for it to close, then opens. Event detail's
+// inline card sits in the page, not over it, so it never holds.
 //
 // Module state rather than context: the floating nudge lives in the
 // (protected) layout and the push sheet inside whichever watch control was
@@ -21,9 +22,18 @@ export const holdFollowNudgeOpen = (): (() => void) => {
     released = true;
     openCount -= 1;
     if (openCount > 0) return;
-    const ready = [...waiters];
+    // Only the newest wait runs. The push ask is one per session, so the
+    // others would only stack more sheets on it; they are dropped.
+    const newest = [...waiters].at(-1);
     waiters.clear();
-    for (const run of ready) run();
+    if (newest === undefined) return;
+    try {
+      newest();
+    } catch (runErr) {
+      // It runs inside the nudge's effect cleanup; a throw must not escape
+      // into React's commit.
+      console.warn('follow nudge: post-watch wait failed', runErr);
+    }
   };
 };
 

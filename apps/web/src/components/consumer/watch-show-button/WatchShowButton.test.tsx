@@ -54,29 +54,7 @@ const watchedShow = (eventId: string): WatchingShow => ({
 });
 
 const watchingData = vi.fn<() => WatchingShow[]>(() => []);
-// evt_1 as the Watching cache holds it once a watch has landed.
-const watchedRow: WatchingShow = {
-  userEventId: 'ue_1',
-  eventId: 'evt_1',
-  artist: 'A',
-  venueName: 'V',
-  venueSlug: 'v',
-  date: '2026-08-14',
-  showTime: null,
-  ticketUrl: null,
-  ticketLinks: null,
-  savedAt: '2026-07-19T00:00:00Z',
-  savedPrice: null,
-  currentPrice: null,
-  priceSourceCategory: null,
-  eventStatus: 'upcoming',
-  watchStatus: 'live',
-  updatedAt: '2026-07-19T00:00:00Z',
-  priceObservedAt: null,
-  imageUrl: null,
-  artistPhotoUrl: null,
-  attendingAt: null,
-};
+
 vi.mock('@/lib/queries/use-watching', () => ({
   useWatching: () => ({ data: watchingData() }),
 }));
@@ -240,7 +218,7 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
       ).toBeNull();
 
       // The watch has landed in the cache by the time the nudge is answered.
-      watchingData.mockReturnValue([watchedRow]);
+      watchingData.mockReturnValue([watchedShow('evt_1')]);
       view.rerender(buttonTree());
       await act(async () => {
         releaseNudge();
@@ -268,6 +246,38 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
       expect(
         screen.queryByRole('button', { name: /turn on notifications/i }),
       ).toBeNull();
+    } finally {
+      releaseNudge();
+    }
+  });
+
+  it('an unwatch from this button cancels a waiting ask, and a re-watch asks again', async () => {
+    const releaseNudge = holdFollowNudgeOpen();
+    try {
+      const view = renderButton();
+      fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(pendingFollowNudgeWaits()).toBe(1);
+
+      // Now watched: the next tap is an unwatch.
+      watchingData.mockReturnValue([watchedShow('evt_1')]);
+      view.rerender(buttonTree());
+      fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+      expect(pendingFollowNudgeWaits()).toBe(0);
+
+      // Unwatched again, the nudge gone: a fresh watch still gets the ask.
+      watchingData.mockReturnValue([]);
+      view.rerender(buttonTree());
+      releaseNudge();
+      fireEvent.click(screen.getByRole('button', { name: /watch/i }));
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(
+        screen.getByRole('button', { name: /turn on notifications/i }),
+      ).not.toBeNull();
     } finally {
       releaseNudge();
     }

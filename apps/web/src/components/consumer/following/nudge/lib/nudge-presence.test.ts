@@ -21,6 +21,28 @@ describe('nudge presence', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it('runs only the newest wait, so two buttons never stack two sheets', () => {
+    const release = holdFollowNudgeOpen();
+    const older = vi.fn();
+    const newer = vi.fn();
+    whenFollowNudgeClosed(older);
+    whenFollowNudgeClosed(newer);
+    release();
+    expect(older).not.toHaveBeenCalled();
+    expect(newer).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a throwing wait out of the caller', () => {
+    const release = holdFollowNudgeOpen();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    whenFollowNudgeClosed(() => {
+      throw new Error('boom');
+    });
+    expect(() => release()).not.toThrow();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('a cancelled wait never runs, and a double release counts once', () => {
     const release = holdFollowNudgeOpen();
     const run = vi.fn();

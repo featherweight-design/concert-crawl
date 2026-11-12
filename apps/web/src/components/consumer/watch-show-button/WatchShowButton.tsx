@@ -90,6 +90,24 @@ export function WatchShowButton({
   const scheduledTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Cancels a sheet that is waiting for the follow nudge to close.
   const cancelNudgeWaitRef = useRef<(() => void) | null>(null);
+
+  // Tears down an ask that hasn't shown yet: the 500ms delay, or the wait for
+  // the follow nudge after it. True when there was one to cancel. Refs only,
+  // so it is stable across renders and safe from the unmount cleanup.
+  const cancelPendingAsk = (): boolean => {
+    let cancelled = false;
+    if (scheduledTimerRef.current !== null) {
+      clearTimeout(scheduledTimerRef.current);
+      scheduledTimerRef.current = null;
+      cancelled = true;
+    }
+    if (cancelNudgeWaitRef.current !== null) {
+      cancelNudgeWaitRef.current();
+      cancelNudgeWaitRef.current = null;
+      cancelled = true;
+    }
+    return cancelled;
+  };
   // Latest known masterEnabled — kept in a ref so the 500ms setTimeout can
   // re-read it at fire time. Without this a fast-tap Watch before the
   // preferences query resolves would slip past the gate and open a sheet
@@ -180,18 +198,12 @@ export function WatchShowButton({
     // updates the cache to the flipped state, so reading `isWatching` after
     // the click would already show the target state.
     const wasWatching = cacheWatching;
-    // If the user is un-watching within the 500ms sheet-delay window, cancel
-    // any pending timer so we don't open the ask for a show they just
-    // stopped watching. Also reset the session guard so a subsequent
-    // re-watch still qualifies.
-    if (wasWatching && cancelNudgeWaitRef.current !== null) {
-      cancelNudgeWaitRef.current();
-      cancelNudgeWaitRef.current = null;
-      askedThisSessionRef.current = false;
-    }
-    if (wasWatching && scheduledTimerRef.current !== null) {
-      clearTimeout(scheduledTimerRef.current);
-      scheduledTimerRef.current = null;
+    // If the user is un-watching while the ask is still pending (inside the
+    // 500ms sheet delay, or past it and waiting for the follow nudge to
+    // close), cancel it so we don't open the ask for a show they just stopped
+    // watching. Also reset the session guard so a subsequent re-watch still
+    // qualifies.
+    if (wasWatching && cancelPendingAsk()) {
       askedThisSessionRef.current = false;
     }
     toggle.mutate(eventId, {
@@ -228,9 +240,16 @@ export function WatchShowButton({
           cancelNudgeWaitRef.current = whenFollowNudgeClosed(() => {
             cancelNudgeWaitRef.current = null;
             if (masterEnabledRef.current === true) return;
+            // A long wait can outlast a decline made elsewhere on this device.
+            if (waited && hasDismissedPostWatchAsk()) return;
             // A wait can outlast the watch: unwatched from another control or
             // tab while the nudge was up means there is nothing to ask for.
-            if (waited && !watchingRef.current) return;
+            if (waited && !watchingRef.current) {
+              // Same as an unwatch from this button: the ask never showed, so
+              // a re-watch still qualifies.
+              askedThisSessionRef.current = false;
+              return;
+            }
             setPromptVariant(variant);
           });
           waited = cancelNudgeWaitRef.current !== null;
@@ -239,15 +258,7 @@ export function WatchShowButton({
     });
   };
 
-  useEffect(
-    () => () => {
-      if (scheduledTimerRef.current !== null) {
-        clearTimeout(scheduledTimerRef.current);
-      }
-      cancelNudgeWaitRef.current?.();
-    },
-    [],
-  );
+  useEffect(() => () => void cancelPendingAsk(), []);
 
   const closeSheet = () => {
     setPromptVariant(null);
