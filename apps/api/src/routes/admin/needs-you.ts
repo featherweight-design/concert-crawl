@@ -3,11 +3,11 @@
 // snooze. Answering is a later stage.
 
 import { zValidator } from '@hono/zod-validator';
-import { getAuth } from '@hono/clerk-auth';
 import { and, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { adminQueueSnoozes, db } from '@concert-crawl/db';
+import { getAuthUser } from '../../middleware/auth.js';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
 import {
@@ -89,7 +89,15 @@ needsYouAdminRouter.post(
     if (!parsedKey) {
       return ctx.json({ success: false, error: 'Unknown item kind' }, 400);
     }
-    const actorId = getAuth(ctx)?.userId ?? 'unknown';
+    const { userId: actorId } = getAuthUser(ctx);
+
+    // Both shapes need a key that names a current item: a typo or a stale key
+    // would otherwise leave an orphan row and a misleading audit entry.
+    const items = await loadNeedsYouItems({ now: new Date() }, parsedKey.kind);
+    const item = items.find((candidate) => candidate.key === key);
+    if (!item) {
+      return ctx.json({ success: false, error: 'Item not found' }, 404);
+    }
 
     if ('until' in body) {
       const until = new Date(body.until);
@@ -117,13 +125,8 @@ needsYouAdminRouter.post(
       });
     }
 
-    // Not useful is per kind per venue, so it needs the venue of the item the
-    // key names. A key that is not a current item has none to take it from.
-    const items = await loadNeedsYouItems({ now: new Date() }, parsedKey.kind);
-    const item = items.find((candidate) => candidate.key === key);
-    if (!item) {
-      return ctx.json({ success: false, error: 'Item not found' }, 404);
-    }
+    // Not useful is per kind per venue, so it takes the venue of the item the
+    // key names.
     if (item.venueId === null) {
       return ctx.json(
         { success: false, error: 'This item is not tied to a venue' },
@@ -171,7 +174,7 @@ needsYouAdminRouter.delete(
     if (!parsedKey) {
       return ctx.json({ success: false, error: 'Unknown item kind' }, 400);
     }
-    const actorId = getAuth(ctx)?.userId ?? 'unknown';
+    const { userId: actorId } = getAuthUser(ctx);
 
     const removed = await db
       .delete(adminQueueSnoozes)
