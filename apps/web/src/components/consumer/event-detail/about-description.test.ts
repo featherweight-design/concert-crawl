@@ -3,24 +3,34 @@ import { aboutDescription } from './about-description';
 
 describe('aboutDescription', () => {
   it.each([
-    'Canceled',
-    'cancelled',
-    '  POSTPONED ',
-    'Sold Out',
-    'rescheduled',
-    '   ',
-    '',
-  ])('hides a status-only description %j', (value) => {
-    expect(aboutDescription(value)).toBeNull();
+    ['Canceled', 'cancelled'],
+    ['  CANCELLED. ', 'cancelled'],
+    ['canceled!', 'cancelled'],
+    ['Postponed', 'postponed'],
+    ['postponed…', 'postponed'],
+  ])('hides %j when status is %s', (value, status) => {
+    expect(aboutDescription(value, status)).toBeNull();
   });
 
-  it('hides a missing description', () => {
-    expect(aboutDescription(null)).toBeNull();
-    expect(aboutDescription(undefined)).toBeNull();
+  it.each([
+    ['Canceled', 'upcoming'],
+    ['Canceled', 'postponed'],
+    ['Postponed', 'cancelled'],
+    ['Sold Out', 'upcoming'],
+    ['Sold-out', 'cancelled'],
+    ['Rescheduled', 'postponed'],
+  ])('keeps %j when status is %s', (value, status) => {
+    expect(aboutDescription(value, status)).toBe(value);
   });
 
-  it('keeps real prose, even when it mentions a status', () => {
+  it('hides a missing or blank description', () => {
+    expect(aboutDescription(null, 'upcoming')).toBeNull();
+    expect(aboutDescription(undefined, 'upcoming')).toBeNull();
+    expect(aboutDescription('   ', 'upcoming')).toBeNull();
+  });
+
+  it('keeps real prose, even when it mentions the status', () => {
     const text = 'Canceled due to illness. Refunds at point of purchase.';
-    expect(aboutDescription(text)).toBe(text);
+    expect(aboutDescription(text, 'cancelled')).toBe(text);
   });
 });

@@ -101,6 +101,43 @@ const buildEvent = (
   ...overrides,
 });
 
+describe('PublicEventDetail About block', () => {
+  afterEach(cleanup);
+
+  it('hides a "Canceled" description on a cancelled event', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ status: 'cancelled', description: 'Canceled' })}
+        related={[]}
+      />,
+    );
+    expect(screen.queryByTestId('event-about')).toBeNull();
+  });
+
+  it('keeps "Canceled" when the status does not match', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ status: 'upcoming', description: 'Canceled' })}
+        related={[]}
+      />,
+    );
+    expect(screen.getByTestId('event-about')).toBeTruthy();
+  });
+
+  it('keeps real text on a cancelled event', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          status: 'cancelled',
+          description: 'Canceled due to illness.',
+        })}
+        related={[]}
+      />,
+    );
+    expect(screen.getByText('Canceled due to illness.')).toBeTruthy();
+  });
+});
+
 describe('PublicEventDetail (#72)', () => {
   it('renders the show, and one account CTA pointed at /sign-up', () => {
     render(<PublicEventDetail event={buildEvent()} related={[]} />);

@@ -44,7 +44,7 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { ShareButton } from './ShareButton';
-import { aboutDescription } from './about-description';
+import { EventAbout } from './EventAbout';
 import { PublicEventView } from './PublicEventView';
 
 import {
@@ -338,26 +338,7 @@ export const PublicEventDetail = ({
             />
           </div>
 
-          {aboutDescription(event.description) && (
-            <div className="mt-4">
-              <p
-                className="mb-1.5 uppercase text-fg-subtle"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                {copy.aboutLabel}
-              </p>
-              <p
-                className="text-[13px] leading-[1.55] text-fg-muted"
-                style={{ textWrap: 'pretty' }}
-              >
-                {event.description}
-              </p>
-            </div>
-          )}
+          <EventAbout description={event.description} status={event.status} />
 
           {/* Same EventRow as the public browse list. */}
           {related.length > 0 && (
