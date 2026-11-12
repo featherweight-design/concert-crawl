@@ -406,7 +406,7 @@ describe('DELETE /v1/admin/venues/:id — integration (hard delete)', () => {
   it('refuses to delete a venue that has shows, and keeps the venue and its shows', async () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Venue X', slug: 'venue-x' });
-    const event = await seedEvent(venue.id);
+    const event = await seedEvent(venue.id, { date: '2099-01-01' });
     await seedEvent(venue.id, { artist: 'Second Artist', date: '2020-01-01' });
 
     const res = await app.request(`/v1/admin/venues/${venue.id}`, {
