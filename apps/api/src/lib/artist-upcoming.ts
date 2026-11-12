@@ -69,3 +69,10 @@ export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
   sql<
     string | null
   >`(SELECT MIN(${events.date}) ${upcomingShowsFrom(withinDays)})`;
+
+/**
+ * How many shows `hasUpcomingShowExpr` would accept for this artist. Built
+ * from the same fragment, so a row the filter lists never reads 0.
+ */
+export const upcomingShowCountExpr = (): SQL<number> =>
+  sql<number>`(SELECT count(*)::int ${upcomingShowsFrom(undefined)})`;
