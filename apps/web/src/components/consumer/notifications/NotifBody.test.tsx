@@ -354,7 +354,13 @@ describe('NotifBody — unwired controls never render', () => {
 
 describe('NotifItem', () => {
   it('gives an unread row a category rail, a dot and a bold title', () => {
-    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />);
+    render(
+      <NotifItem
+        item={notification({ category: 'watch.backonsale' })}
+        onOpen={vi.fn()}
+        now={NOW}
+      />,
+    );
     const row = screen.getByRole('button');
     // jsdom drops a `border-left` shorthand carrying a var(), so assert on
     // the serialised inline style rather than the computed one.
