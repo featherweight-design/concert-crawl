@@ -22,6 +22,7 @@ const show = (
   artistPhotoUrl: null,
   venueName: 'Bluebird Theater',
   venueSlug: 'bluebird-theater',
+  venueCity: 'Denver',
   neighborhood: null,
   date,
   dateLabel: 'Mon, Feb 22',
