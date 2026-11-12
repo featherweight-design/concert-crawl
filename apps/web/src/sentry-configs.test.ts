@@ -18,6 +18,7 @@ describe.each([
     expect(init.mock.calls[0]?.[0]).toMatchObject({
       dataCollection: SENTRY_PRIVACY_OPTIONS.dataCollection,
       attachStacktrace: false,
+      initialScope: { tags: { app: 'concert-crawl' } },
       beforeBreadcrumb: expect.any(Function),
       beforeSend: expect.any(Function),
     });
