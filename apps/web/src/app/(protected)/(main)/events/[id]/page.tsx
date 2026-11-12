@@ -207,6 +207,18 @@ export default async function EventDetailPage({
     safeEventUrl ??
     (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null);
 
+  // A cancelled show leads with its status card, straight under the hero, and
+  // drops what only a live show needs: the watch strip ("Watch to track the
+  // price") and the price card. The board for it draws neither.
+  const cancelled = event.status === 'cancelled';
+  const statusBanners = (
+    <EventDetailBanners
+      event={event}
+      reports={reports}
+      currentUserId={userId ?? null}
+    />
+  );
+
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
     // horizontally: the full-bleed hero plus data-dependent status/price cards
@@ -248,20 +260,24 @@ export default async function EventDetailPage({
               handoff's CommitBlockV2: the commitment and the watch strip are
               two halves of the same decision, so they share a border rather
               than reading as two unrelated blocks. */}
-          <div className="mt-3">
-            <EventDetailCtaBlock event={event} scaRegion={scaRegion}>
-              {/* Crew presence rides with Going, not with the eye: they are
+          {cancelled && statusBanners}
+
+          {!cancelled && (
+            <div className="mt-3">
+              <EventDetailCtaBlock event={event} scaRegion={scaRegion}>
+                {/* Crew presence rides with Going, not with the eye: they are
                   different populations, and a status line belongs to the
                   control it describes. Watching follows it, unchanged. */}
-              <CrewGoingZone eventId={event.id} />
-              <WatchZone
-                eventId={event.id}
-                initialWatching={event.isWatching}
-                artist={event.artist}
-                scaRegion={scaRegion}
-              />
-            </EventDetailCtaBlock>
-          </div>
+                <CrewGoingZone eventId={event.id} />
+                <WatchZone
+                  eventId={event.id}
+                  initialWatching={event.isWatching}
+                  artist={event.artist}
+                  scaRegion={scaRegion}
+                />
+              </EventDetailCtaBlock>
+            </div>
+          )}
 
           {/* The bill follow block, directly under the Watch CTA (native
               following, PR 7). Following an act here does not touch the
@@ -323,22 +339,20 @@ export default async function EventDetailPage({
           </div>
 
           {/* Phase 8.5 — live/pending report banners render below the info block */}
-          <EventDetailBanners
-            event={event}
-            reports={reports}
-            currentUserId={userId ?? null}
-          />
+          {!cancelled && statusBanners}
 
           {/* Phase 8.5 — price slot. Renders the appropriate card based on event
               and community report state. Falls back to the standard PriceDisplay
               when no Phase 8.5 override applies. */}
-          <div className="mt-4">
-            <EventDetailPriceBlock
-              event={event}
-              reports={reports}
-              currentUserId={userId ?? null}
-            />
-          </div>
+          {!cancelled && (
+            <div className="mt-4">
+              <EventDetailPriceBlock
+                event={event}
+                reports={reports}
+                currentUserId={userId ?? null}
+              />
+            </div>
+          )}
 
           {/* Primary CTA — always renders on all events. Postponed swaps it for
               the Watch toggle (no date to buy for yet); cancelled relabels the

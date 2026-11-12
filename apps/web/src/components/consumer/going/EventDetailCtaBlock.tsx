@@ -86,9 +86,10 @@ export const EventDetailCtaBlock = ({
   }, [serverGoing, optimisticGoing]);
 
   // A cancelled show has no night to commit to, matching the API's history
-  // filter, which excludes cancelled events outright. The strip still renders:
-  // watching is free and ungated, so suppressing the commitment must never take
-  // the eye down with it.
+  // filter, which excludes cancelled events outright. The event page doesn't
+  // mount this block on a cancelled show at all (its board leads with the
+  // status card and has no watch strip); this branch keeps any other host
+  // from offering Going on one.
   if (event.status === 'cancelled') {
     return <>{children}</>;
   }

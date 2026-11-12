@@ -52,9 +52,10 @@ describe('EventTicketCta', () => {
     );
     expect(screen.queryByText(copy.refundInfo)).toBeNull();
     expect(screen.queryByText(copy.getTickets)).toBeNull();
-    expect(
-      screen.getByRole('link', { name: copy.visitVenueWebsite }),
-    ).toBeTruthy();
+    const link = screen.getByRole('link', { name: copy.visitVenueWebsite });
+    // Outlined like refund info, never the filled primary: nothing to buy.
+    expect(link.style.background).toBe('');
+    expect(link.style.border).toContain('1.5px solid');
   });
 
   it('falls back to no tickets when a cancelled show has no link', () => {
