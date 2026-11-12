@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { AA_TEXT_CONTRAST, contrastRatio } from './contrast';
 import { THEMES, THEME_NAMES, type ThemeName } from './themes';
 
 const REQUIRED_TOKENS = [
@@ -31,6 +32,8 @@ const REQUIRED_TOKENS = [
   'image-tint',
   'shadow-soft',
   'shadow-strong',
+  // Derived by contrast in `withDerived`, not hand-listed.
+  'toast-action',
 ] as const;
 
 const ALL_THEME_NAMES: ThemeName[] = [
@@ -73,6 +76,23 @@ describe('THEMES', () => {
           expect(typeof value, `--${token} is not a string`).toBe('string');
           expect(value.length, `--${token} is empty`).toBeGreaterThan(0);
         }
+      });
+
+      // The toast action sits on `--surface-3`. It must read at AA, and it
+      // stays the board's `--signal` wherever `--signal` itself does.
+      it('draws the toast action at AA on surface-3, keeping signal where it passes', () => {
+        const tokens = THEMES[name];
+        const ground = tokens['surface-3'] ?? '';
+        const action = tokens['toast-action'] ?? '';
+        const signalRatio = contrastRatio(tokens.signal ?? '', ground);
+        expect(signalRatio).not.toBeNull();
+        expect(
+          contrastRatio(action, ground),
+          `--toast-action ${action} on --surface-3 ${ground}`,
+        ).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+        expect(action).toBe(
+          (signalRatio ?? 0) >= AA_TEXT_CONTRAST ? tokens.signal : tokens.fg,
+        );
       });
     });
   }
