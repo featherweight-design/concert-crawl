@@ -126,10 +126,19 @@ const Tile = ({
   </span>
 );
 
+/**
+ * The column's name for screen readers. The drawn header row is visual only,
+ * since each row is one link, so every cell carries its own name.
+ */
+const ColumnName = ({ name }: { name: string }) => (
+  <span className="sr-only">{COPY.cellName(name)}</span>
+);
+
 const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
   <Link
     href={`/admin/venues/${venue.id}`}
     data-testid="venue-row"
+    data-venue-id={venue.id}
     className="hover:bg-[var(--surface-2)]"
     style={{
       display: 'grid',
@@ -176,9 +185,11 @@ const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
       </span>
     </span>
     <span style={{ minWidth: 0 }}>
+      <ColumnName name={COPY.columns.onSite} />
       <VenueStatus venue={venue} inList only="onSite" />
     </span>
     <span style={{ minWidth: 0 }}>
+      <ColumnName name={COPY.columns.crawling} />
       <VenueStatus
         venue={venue}
         inList
@@ -193,10 +204,17 @@ const DesktopRow = ({ venue }: { venue: VenueWithEventCount }) => (
         fontVariantNumeric: 'tabular-nums',
       }}
     >
+      <ColumnName name={COPY.columns.upcoming} />
       {venue.eventCount.toLocaleString('en-US')}
     </span>
-    <span style={RUN_LINE}>{latestRunLine(venue)}</span>
-    <Robots allowed={venue.robotsTxtAllowed} />
+    <span style={RUN_LINE}>
+      <ColumnName name={COPY.columns.latestRun} />
+      {latestRunLine(venue)}
+    </span>
+    <span>
+      <ColumnName name={COPY.columns.robots} />
+      <Robots allowed={venue.robotsTxtAllowed} />
+    </span>
   </Link>
 );
 
@@ -204,6 +222,7 @@ const PhoneCard = ({ venue }: { venue: VenueWithEventCount }) => (
   <Link
     href={`/admin/venues/${venue.id}`}
     data-testid="venue-row"
+    data-venue-id={venue.id}
     style={{
       display: 'flex',
       gap: 12,
@@ -307,7 +326,10 @@ export const VenuesList = ({
       <input
         type="search"
         value={query}
-        onChange={(evt) => setQuery(evt.target.value)}
+        onChange={(evt) => {
+          setQuery(evt.target.value);
+          setExpanded(false);
+        }}
         placeholder={COPY.search}
         aria-label={COPY.search}
         style={{
@@ -324,8 +346,17 @@ export const VenuesList = ({
   const foldRow = folded.length > 0 && (
     <button
       type="button"
-      aria-expanded={false}
-      onClick={() => setExpanded(true)}
+      onClick={() => {
+        // The button goes once the rows are out, so focus moves to the
+        // first row it revealed rather than falling to the page.
+        const firstId = folded[0]?.id;
+        setExpanded(true);
+        requestAnimationFrame(() =>
+          document
+            .querySelector<HTMLElement>(`[data-venue-id="${firstId}"]`)
+            ?.focus(),
+        );
+      }}
       style={{
         ...FOLD_ROW,
         padding: isPhone ? '12px 0' : '12px 18px',
