@@ -8,6 +8,7 @@ import {
   identityFor,
 } from '../identity-art/IdentityArt';
 import { VenueNeonArt, venueGlyphKey } from '../venue-glyph';
+import { VenueName } from '../venue-name/VenueName';
 import {
   fmtNum,
   fmtDistance,
@@ -16,6 +17,21 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex;
+
+/** The FLAGSHIP chip sits on a dark pill whatever the theme, so a fixed neon. */
+export const FLAGSHIP_CHIP_COLOR = '#FFE36B'; // fwd-allow-hex: board art colour
+
+/**
+ * The flagship card edge: a cyan, violet, pink gradient border over the card
+ * surface, with a soft warm glow outside it (bp-venues.jpg, bp-m-venues_m.jpg).
+ */
+const FLAGSHIP_EDGE = {
+  border: '1px solid transparent',
+  background:
+    'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--genre-metal) 50%, var(--accent)) border-box',
+  boxShadow:
+    '0 10px 40px -10px color-mix(in oklab, var(--accent) 35%, transparent), 0 0 24px -6px color-mix(in oklab, var(--warning) 25%, transparent)',
+} as const;
 
 interface VenueFeatureCardProps {
   venue: VenueWithDistance;
@@ -31,8 +47,9 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
     <Link href={`/venues/${venue.slug}`} className="group block w-full">
       {/* Desktop — horizontal card */}
       <div
-        className="hidden lg:grid rounded-[14px] overflow-hidden border border-border group-hover:border-border-strong bg-surface-1 group-hover:bg-surface-2 transition-all"
-        style={{ gridTemplateColumns: '360px 1fr' }}
+        data-testid="venue-feature-card-desktop"
+        className="hidden lg:grid rounded-[14px] overflow-hidden transition-all"
+        style={{ ...FLAGSHIP_EDGE, gridTemplateColumns: '360px 1fr' }}
       >
         {/* Left — identity art panel */}
         <div
@@ -66,8 +83,9 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               fontWeight: 600,
               letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: '#F1E6D5',
+              color: FLAGSHIP_CHIP_COLOR,
             }}
+            data-testid="flagship-chip"
           >
             {VENUES_INDEX_COPY.featureCard.flagship}
           </div>
@@ -147,7 +165,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               className="mt-2.5 line-clamp-2 text-[34px] font-extrabold text-fg leading-[1.05]"
               style={{ letterSpacing: '-0.03em' }}
             >
-              {venue.name}
+              <VenueName name={venue.name} />
             </div>
             <div
               className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1"
@@ -240,7 +258,11 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
       </div>
 
       {/* Mobile — vertical card */}
-      <div className="lg:hidden rounded-[14px] overflow-hidden border border-border bg-surface-1">
+      <div
+        data-testid="venue-feature-card-mobile"
+        className="lg:hidden rounded-[14px] overflow-hidden"
+        style={FLAGSHIP_EDGE}
+      >
         <div
           className="relative"
           style={{ height: 180, background: identity.palette.bg }}
@@ -271,8 +293,9 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               fontWeight: 600,
               letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: '#F1E6D5',
+              color: FLAGSHIP_CHIP_COLOR,
             }}
+            data-testid="flagship-chip"
           >
             {VENUES_INDEX_COPY.featureCard.flagship}
           </div>
@@ -323,7 +346,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
             className="mt-2 text-2xl font-extrabold text-fg leading-[1.1]"
             style={{ letterSpacing: '-0.03em' }}
           >
-            {venue.name}
+            <VenueName name={venue.name} />
           </div>
           <div
             className="mt-1.5 flex items-center gap-2 flex-wrap"

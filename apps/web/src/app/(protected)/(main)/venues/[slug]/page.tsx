@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/consumer/empty-state';
 import { googleMapsUrl } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueTile } from '@/components/consumer/venue-glyph';
+import { VenueName } from '@/components/consumer/venue-name/VenueName';
 import { VenueHero } from '@/components/consumer/venue-profile/VenueHero';
 import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList';
 import { StatPill } from '@/components/consumer/venue-profile/StatPill';
@@ -86,10 +87,18 @@ export default async function VenueProfilePage({
       {/* Content */}
       <div className="relative -mt-10 flex-1 pb-24 sm:pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
-          {/* Type chip */}
-          {venue.venueType && (
-            <div className="mb-3">
+          {/* Icon tile with the type chip to its right (hero-m-redrocks.jpg),
+              then the full-width title on the next line. */}
+          <div className="flex items-end gap-3">
+            <span className="shrink-0 sm:hidden">
+              <VenueTile slug={venue.slug} name={venue.name} size={64} />
+            </span>
+            <span className="hidden shrink-0 sm:inline-flex">
+              <VenueTile slug={venue.slug} name={venue.name} size={72} />
+            </span>
+            {venue.venueType && (
               <span
+                data-testid="venue-type-chip"
                 className="inline-block rounded-[6px] border border-border-strong bg-surface-2 px-2.5 py-1 uppercase text-fg"
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -100,31 +109,20 @@ export default async function VenueProfilePage({
               >
                 {venue.venueType}
               </span>
-            </div>
-          )}
-
-          {/* Tile + venue name */}
-          <div className="flex items-center gap-3.5 sm:gap-5">
-            <span className="shrink-0 sm:hidden">
-              <VenueTile slug={venue.slug} name={venue.name} size={64} />
-            </span>
-            <span className="hidden shrink-0 sm:inline-flex">
-              <VenueTile slug={venue.slug} name={venue.name} size={72} />
-            </span>
-            <h1
-              data-testid="venue-name"
-              className="min-w-0 text-[30px] text-fg sm:text-[44px]"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontWeight: 900,
-                letterSpacing: '-0.035em',
-                lineHeight: 1.05,
-                margin: 0,
-              }}
-            >
-              {venue.name}
-            </h1>
+            )}
           </div>
+          <h1
+            data-testid="venue-name"
+            className="mt-3.5 min-w-0 text-[30px] text-fg sm:text-[44px]"
+            style={{
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 900,
+              letterSpacing: '-0.035em',
+              lineHeight: 1.05,
+            }}
+          >
+            <VenueName name={venue.name} />
+          </h1>
 
           {/* City + Directions */}
           <div className="mt-2.5 flex items-center gap-2">

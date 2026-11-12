@@ -1,7 +1,5 @@
 import { useId } from 'react';
 
-import { VenueIdentityTile } from '@/components/consumer/venues-index/VenueIdentityTile';
-
 import { venueGlyphKey } from './definitions/venue-glyph-keys';
 import { GlyphGradient, GlyphShapes } from './VenueGlyph';
 
@@ -26,8 +24,7 @@ interface VenueTileProps {
 
 /**
  * The venue icon tile: a rounded square edged in the venue's gradient, with its
- * glyph. A venue without a glyph gets its existing identity tile
- * (`VenueIdentityTile`), so venue imagery stays on one chain.
+ * glyph. A venue without a glyph gets the same square with no glyph.
  */
 export function VenueTile({
   slug,
@@ -42,14 +39,28 @@ export function VenueTile({
     : { 'aria-hidden': true };
 
   if (glyphKey === null) {
+    // The README's "neutral fallback tile for any future venue": the same
+    // rounded square as the glyph tiles, with no glyph and a quiet edge.
     return (
-      <span
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 96 96"
+        focusable="false"
         data-venue-tile="fallback"
-        style={{ display: 'inline-flex' }}
         {...a11y}
       >
-        <VenueIdentityTile name={name} size={size} />
-      </span>
+        <rect
+          x="0.8"
+          y="0.8"
+          width="94.4"
+          height="94.4"
+          rx="22.2"
+          fill={TILE_GROUND}
+          strokeWidth="1.6"
+          style={{ stroke: 'var(--border-strong)' }}
+        />
+      </svg>
     );
   }
 

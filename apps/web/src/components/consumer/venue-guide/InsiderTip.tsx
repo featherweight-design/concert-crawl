@@ -16,8 +16,11 @@ export const InsiderTip = ({ body }: InsiderTipProps) => (
     style={{
       padding: '13px 14px',
       borderRadius: 10,
-      background: 'var(--surface-1)',
-      border: '1px solid var(--border)',
+      // A gradient edge: the surface painted to the padding box over the
+      // gradient painted to the border box (venue-light-m.html, INSIDER TIP).
+      border: '1px solid transparent',
+      background:
+        'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--accent), var(--signal) 50%, var(--border)) border-box',
       marginBottom: 14,
     }}
   >
