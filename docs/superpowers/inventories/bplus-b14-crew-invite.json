@@ -1,0 +1,26 @@
+{
+  "feature": "B14 \u00b7 Crew invite landing (its own inventory: one theme, so a run stays inside the invite lookup's 30-per-10-minutes budget)",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "invite",
+      "label": "/crew/join/[token]: the invite landing",
+      "steps": [
+        {
+          "goto": "/crew/join/${CC_CREW_INVITE_TOKEN}",
+          "wait": "button:has-text(\"Join \")"
+        }
+      ]
+    }
+  ],
+  "note": "Split out of bplus-b14-crews.json. GET /v1/crew-invites/:token is rate-limited (30 per 10 minutes per user, fail-closed), so this row runs one theme only, and it waits on the Join button so the error panel (also an h1) can't pass for the landing."
+}
