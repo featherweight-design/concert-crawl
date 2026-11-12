@@ -34,6 +34,8 @@ const ClearGlyph = () => (
 interface FilterSegmentProps {
   eyebrow: string;
   value: string;
+  /** A count after the value ("+1") that never truncates. */
+  suffix?: string;
   /** A mark before the value: the venue tile, genre dot or crew patch. */
   leading?: ReactNode;
   active: boolean;
@@ -49,6 +51,7 @@ interface FilterSegmentProps {
 export function FilterSegment({
   eyebrow,
   value,
+  suffix,
   leading,
   active,
   open,
@@ -102,6 +105,24 @@ export function FilterSegment({
             >
               {value}
             </span>
+            {/* A whitespace-only node: no flex item, so the gap spaces it on
+                screen, but the text still reads "Bluebird +1". */}
+            {suffix !== undefined && ' '}
+            {suffix !== undefined && (
+              <span
+                data-testid="segment-more"
+                className="shrink-0"
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  color: 'var(--fg)',
+                }}
+              >
+                {suffix}
+              </span>
+            )}
           </span>
         </span>
         {!active && (
