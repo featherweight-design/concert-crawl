@@ -47,47 +47,53 @@ export function SubmitPriceCardButton({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 10,
-        padding: '10px 12px',
-        borderRadius: 8,
+        // more-p-price_states, measured: a 74px dashed card, radius 12,
+        // 11px / 16px inside, the copy column wrapping before the CTA.
+        gap: 16,
+        padding: '11px 16px',
+        borderRadius: 12,
         border: '1px dashed var(--border-strong)',
         color: 'var(--fg-muted)',
         width: '100%',
         boxSizing: 'border-box',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <span
+          data-testid="submit-another-heading"
           style={{
             fontFamily: 'var(--font-ui)',
             fontWeight: 700,
-            fontSize: 12.5,
+            fontSize: 14,
+            lineHeight: 1.25,
             color: 'var(--fg)',
-            letterSpacing: '-0.005em',
           }}
         >
           {copy.submitPriceCardCta.heading}
         </span>
         <span
+          data-testid="submit-another-body"
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 11.5,
+            fontSize: 12.5,
+            lineHeight: '16px',
             color: 'var(--fg-muted)',
-            letterSpacing: '-0.005em',
           }}
         >
           {copy.submitPriceCardCta.subheading}
         </span>
       </div>
       <span
+        data-testid="submit-another-cta"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: 4,
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
+          fontSize: 9.5,
+          fontWeight: 700,
           color: 'var(--signal)',
-          letterSpacing: '0.06em',
+          letterSpacing: '0.14em',
           textTransform: 'uppercase',
           flexShrink: 0,
         }}

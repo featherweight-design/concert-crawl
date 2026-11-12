@@ -200,15 +200,28 @@ describe('PendingCardB', () => {
       );
       const link = screen.getByRole('link', { name: '@friend' });
       expect(link.getAttribute('href')).toBe('https://example.com/friend');
-      expect(screen.queryByText('you')).toBeNull();
+      expect(screen.getByTestId('pending-attribution').textContent).toBe(
+        'Submitted by @friend',
+      );
     });
 
     it('view "other" with a null submitter renders "an anonymous fan"', () => {
       render(
         <PendingCardB {...buildProps({ view: 'other', submitter: null })} />,
       );
-      expect(screen.getByText('an anonymous fan')).toBeTruthy();
+      expect(screen.getByTestId('pending-attribution').textContent).toBe(
+        'Submitted by an anonymous fan',
+      );
       expect(screen.queryByRole('link', { name: '@friend' })).toBeNull();
+    });
+
+    it('sets the line in sans 12.5px, upright, with no age (more-p-price_states)', () => {
+      render(<PendingCardB {...buildProps({ submittedAt: minutesAgo(12) })} />);
+      const line = screen.getByTestId('pending-attribution');
+      expect(line.style.fontSize).toBe('12.5px');
+      expect(line.style.fontStyle).toBe('');
+      expect(line.textContent).not.toMatch(/ago/);
+      expect(screen.queryByText('12m ago')).toBeNull();
     });
 
     it('view "submitter" renders "you" regardless of submitter prop', () => {
@@ -220,7 +233,9 @@ describe('PendingCardB', () => {
           })}
         />,
       );
-      expect(screen.getByText('you')).toBeTruthy();
+      expect(screen.getByTestId('pending-attribution').textContent).toBe(
+        'Submitted by you',
+      );
       expect(screen.queryByRole('link', { name: '@friend' })).toBeNull();
     });
 
@@ -234,7 +249,9 @@ describe('PendingCardB', () => {
           })}
         />,
       );
-      expect(screen.getByText('you')).toBeTruthy();
+      expect(screen.getByTestId('pending-attribution').textContent).toBe(
+        'Submitted by you',
+      );
     });
   });
 
@@ -368,28 +385,51 @@ describe('PendingCardB', () => {
     });
   });
 
-  describe('formatTimeAgo', () => {
-    it('renders minutes when under an hour', () => {
-      render(<PendingCardB {...buildProps({ submittedAt: minutesAgo(12) })} />);
-      expect(screen.getByText('12m ago')).toBeTruthy();
+  describe('board layout (more-p-price_states)', () => {
+    it('leads the strip with the dots, then one PENDING line', () => {
+      render(<PendingCardB {...buildProps({ confirms: 1, needed: 2 })} />);
+      const left = screen.getByTestId('pending-strip-left');
+      expect(left.firstElementChild).toBe(
+        screen.getByTestId('pending-strip-dots'),
+      );
+      expect(left.textContent).toBe('Pending · 1 of 2 confirmed');
+      expect(left.style.letterSpacing).toBe('0.14em');
+      expect(
+        screen.getByTestId('pending-strip-dots').querySelectorAll('svg'),
+      ).toHaveLength(2);
+      expect(
+        screen.getByTestId('pending-strip-to-go').style.letterSpacing,
+      ).toBe('0.14em');
     });
 
-    it('renders hours when between 1 and 24 hours', () => {
-      // 2 hours = 120 minutes
-      render(
-        <PendingCardB {...buildProps({ submittedAt: minutesAgo(2 * 60) })} />,
-      );
-      expect(screen.getByText('2h ago')).toBeTruthy();
+    it('puts tier and vendor in one mono qualifier after the price', () => {
+      render(<PendingCardB {...buildProps({ tier: 'GA', vendor: 'AXS' })} />);
+      const qualifier = screen.getByTestId('pending-qualifier');
+      expect(qualifier.textContent).toBe('GA · seen on AXS');
+      expect(qualifier.style.textTransform).toBe('uppercase');
+      expect(qualifier.style.letterSpacing).toBe('0.14em');
     });
 
-    it('renders days when 24+ hours', () => {
-      // 3 days = 72 hours = 4320 minutes
-      render(
-        <PendingCardB
-          {...buildProps({ submittedAt: minutesAgo(3 * 24 * 60) })}
-        />,
+    it('draws Confirm first and full-width, then the outlined second button', () => {
+      render(<PendingCardB {...buildProps({ view: 'other' })} />);
+      const footer = screen.getByTestId('pending-footer');
+      const buttons = footer.querySelectorAll('button');
+      expect(buttons[0]).toBe(screen.getByTestId('pending-confirm'));
+      expect(buttons[1]).toBe(screen.getByTestId('pending-saw-different'));
+      expect(buttons[0]?.style.height).toBe('40px');
+      expect(buttons[1]?.style.height).toBe('40px');
+      expect(footer.style.borderTop).toBe('');
+    });
+
+    it('gives your submission a waiting line between the label and actions', () => {
+      render(<PendingCardB {...buildProps({ view: 'submitter' })} />);
+      expect(screen.getByTestId('pending-waiting').textContent).toBe(
+        'Waiting on one more fan',
       );
-      expect(screen.getByText('3d ago')).toBeTruthy();
+      const footer = screen.getByTestId('pending-footer');
+      expect(footer.firstElementChild).toBe(
+        screen.getByTestId('pending-your-submission'),
+      );
     });
   });
 
