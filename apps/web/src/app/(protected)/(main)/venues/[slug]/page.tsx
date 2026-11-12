@@ -112,6 +112,7 @@ export default async function VenueProfilePage({
               <VenueTile slug={venue.slug} name={venue.name} size={72} />
             </span>
             <h1
+              data-testid="venue-name"
               className="min-w-0 text-[30px] text-fg sm:text-[44px]"
               style={{
                 fontFamily: 'var(--font-ui)',
