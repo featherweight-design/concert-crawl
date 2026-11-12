@@ -8,17 +8,21 @@
 // the band until its own restyle, so this is a sibling rather than a rewrite.
 
 import type { ReactNode } from 'react';
+import type { EventStatus } from '@concert-crawl/types';
 import { EventImage } from '@/components/consumer/event-image';
 import { Panel } from '@/components/consumer/image-slot';
 import type { SlotSource } from '@/components/consumer/image-slot';
 import { slotSources } from '@/components/consumer/image-slot/lib/slot-metrics';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
+import { stageMetaParts } from './lib/meta';
 
 type EventSlotSource = Extract<SlotSource, { surface: 'event' }>;
 
 /** The card's tilt, in degrees. Never animated: the card simply sits askew. */
-export const STAGE_CARD_TILT = -2;
-export const STAGE_CARD_RADIUS = 16;
+export const STAGE_CARD_TILT = -2.5;
+export const STAGE_CARD_RADIUS = 18;
+/** The cancelled hero's drained look: backdrop and card, genre ring included. */
+export const STAGE_DESATURATE = 'grayscale(.85)';
 
 // Each theme's own pair, mixed into the theme's ground so the wash stays light
 // on Light and dark on the dark themes, which is what keeps --fg readable over
@@ -46,9 +50,12 @@ const RAYS_MASK =
  */
 export const StageBackdrop = ({
   art,
+  desaturated = false,
 }: {
   /** Absent on the loading skeleton, which draws the wash alone. */
   art?: { name: string } & EventSlotSource;
+  /** A cancelled show's hero, drained of colour (more-st-ev_canc_m). */
+  desaturated?: boolean;
 }) => {
   const hasSource = art !== undefined;
   const { primary, secondary } = art
@@ -60,6 +67,7 @@ export const StageBackdrop = ({
       aria-hidden
       data-testid="stage-backdrop"
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      style={desaturated ? { filter: STAGE_DESATURATE } : undefined}
     >
       {hasSource && (
         <div
@@ -101,9 +109,12 @@ export const StageBackdrop = ({
   );
 };
 
-/** The genre ring on a card: 1.25px in the genre's color plus its glow. */
+/**
+ * The genre ring on a card, as drawn: a 2px ring in the genre's color, a 7px
+ * translucent halo band around it (16%), and a wide soft shadow (40%).
+ */
 export const stageRing = (ring: string): string =>
-  `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px var(--shadow-strong)`;
+  `0 0 0 2px ${ring}, 0 0 0 7px color-mix(in oklch, ${ring} 16%, transparent), 0 30px 70px color-mix(in oklch, ${ring} 40%, transparent)`;
 
 export type StageShellProps = {
   backdrop: ReactNode;
@@ -169,29 +180,68 @@ export const StageCountdown = ({ label }: { label: string }) => (
       fontSize: 11,
       letterSpacing: '0.22em',
       lineHeight: 1.2,
-      border: '1px solid var(--border-strong)',
-      background: 'color-mix(in oklch, var(--surface-1) 88%, transparent)',
+      // The gradient edge, as drawn: a transparent border with the fill on the
+      // padding box and the signal-to-accent gradient on the border box.
+      border: '1px solid transparent',
+      background:
+        'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
     }}
   >
     <span
       aria-hidden
       className="inline-block shrink-0 rounded-full"
-      style={{ width: 7, height: 7, background: 'var(--signal)' }}
+      style={{
+        width: 7,
+        height: 7,
+        background: 'var(--signal)',
+        boxShadow: '0 0 10px var(--signal)',
+      }}
     />
     {label}
   </span>
 );
 
-/** The date and venue line under the genre chips. */
-export const StageMeta = ({ children }: { children: ReactNode }) => (
+/**
+ * The date and venue line under the genre chips. `struck` is a postponed
+ * show's old date, drawn struck through ahead of the rest of the line.
+ */
+export const StageMeta = ({
+  children,
+  struck,
+}: {
+  children: ReactNode;
+  struck?: string | null;
+}) => (
   <p
     data-testid="stage-meta"
     className="m-0 mt-3 font-mono uppercase text-fg-muted"
     style={{ fontSize: 11, letterSpacing: '0.16em', lineHeight: 1.5 }}
   >
+    {struck ? (
+      <>
+        <s data-testid="stage-meta-struck">{struck}</s>
+        {' · '}
+      </>
+    ) : null}
     {children}
   </p>
 );
+
+/** The meta line for an event, striking a postponed show's old date. */
+export const EventStageMeta = ({
+  date,
+  timezone,
+  venueName,
+  status,
+}: {
+  date: string;
+  timezone: string;
+  venueName: string;
+  status: EventStatus;
+}) => {
+  const { struck, text } = stageMetaParts(date, timezone, venueName, status);
+  return <StageMeta struck={struck}>{text}</StageMeta>;
+};
 
 export type EventStageProps = {
   /** The headliner: keys the generated art when no photograph resolves. */
@@ -199,6 +249,8 @@ export type EventStageProps = {
   /** The lead genre, whose color rings the card. Null draws the neutral ring. */
   leadGenre: string | null;
   countdown: string | null;
+  /** A cancelled show's hero is desaturated; every other status keeps its colour. */
+  status?: EventStatus;
   children: ReactNode;
   back?: ReactNode;
   actions?: ReactNode;
@@ -208,15 +260,19 @@ export const EventStage = ({
   name,
   leadGenre,
   countdown,
+  status,
   children,
   back,
   actions,
   ...source
 }: EventStageProps) => {
   const ring = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
+  const desaturated = status === 'cancelled';
   return (
     <StageShell
-      backdrop={<StageBackdrop art={{ name, ...source }} />}
+      backdrop={
+        <StageBackdrop art={{ name, ...source }} desaturated={desaturated} />
+      }
       back={back}
       actions={actions}
       eyebrow={countdown ? <StageCountdown label={countdown} /> : null}
@@ -227,6 +283,7 @@ export const EventStage = ({
             borderRadius: STAGE_CARD_RADIUS,
             transform: `rotate(${STAGE_CARD_TILT}deg)`,
             boxShadow: stageRing(ring),
+            filter: desaturated ? STAGE_DESATURATE : undefined,
           }}
         >
           <Panel

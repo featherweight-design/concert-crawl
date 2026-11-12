@@ -30,9 +30,8 @@ import { SectionHeader } from '@/components/consumer/section-header';
 import { Eye } from 'lucide-react';
 import {
   EventStage,
-  StageMeta,
+  EventStageMeta,
   eventCountdown,
-  stageMetaLine,
 } from '@/components/consumer/event-stage';
 import { GenreChips } from '@/components/consumer/GenreChips';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
@@ -128,6 +127,7 @@ export const PublicEventDetail = ({
           event.venue.timezone,
           event.status,
         )}
+        status={event.status}
         surface="event"
         artworkUrl={event.imageUrl}
         photoUrl={event.artistPhotoUrl ?? null}
@@ -159,9 +159,12 @@ export const PublicEventDetail = ({
           genres={event.genre}
           className="mt-3 justify-center sm:justify-start"
         />
-        <StageMeta>
-          {stageMetaLine(event.date, event.venue.timezone, event.venue.name)}
-        </StageMeta>
+        <EventStageMeta
+          date={event.date}
+          timezone={event.venue.timezone}
+          venueName={event.venue.name}
+          status={event.status}
+        />
       </EventStage>
       <PublicEventView eventId={event.id} />
 

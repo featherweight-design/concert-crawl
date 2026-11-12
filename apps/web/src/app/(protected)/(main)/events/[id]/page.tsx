@@ -23,9 +23,8 @@ import {
 import { fetchEventReports } from '@/lib/events';
 import {
   EventStage,
-  StageMeta,
+  EventStageMeta,
   eventCountdown,
-  stageMetaLine,
 } from '@/components/consumer/event-stage';
 import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import { ShareButton } from '@/components/consumer/event-detail/ShareButton';
@@ -284,6 +283,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           event.venue.timezone,
           event.status,
         )}
+        status={event.status}
         surface="event"
         artworkUrl={event.imageUrl}
         photoUrl={event.artistPhotoUrl ?? null}
@@ -311,9 +311,12 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           genres={event.genre}
           className="mt-3 justify-center sm:justify-start"
         />
-        <StageMeta>
-          {stageMetaLine(event.date, event.venue.timezone, event.venue.name)}
-        </StageMeta>
+        <EventStageMeta
+          date={event.date}
+          timezone={event.venue.timezone}
+          venueName={event.venue.name}
+          status={event.status}
+        />
       </EventStage>
 
       <div className="flex-1">
