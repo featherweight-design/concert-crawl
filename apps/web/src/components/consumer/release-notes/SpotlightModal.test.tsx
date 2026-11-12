@@ -43,6 +43,18 @@ describe('SpotlightModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('keeps the eyebrow and the close button off the hero art', () => {
+    render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
+    // The hero's stats, chips and artist tags fill every corner of the stage,
+    // so the close button and the FEATURE DROP eyebrow share a strip above it
+    // rather than floating over it (they landed on chips at 390 and 1300).
+    const close = screen.getByLabelText('Close');
+    const eyebrow = screen.getByText(/v0\.5\.0-beta/);
+    expect(close.style.position).not.toBe('absolute');
+    expect(eyebrow.parentElement?.style.position).not.toBe('absolute');
+    expect(close.parentElement?.contains(eyebrow)).toBe(true);
+  });
+
   it('calls onClose when "Maybe later" is clicked', () => {
     const onClose = vi.fn();
     render(<SpotlightModal release={RELEASE} onClose={onClose} />);

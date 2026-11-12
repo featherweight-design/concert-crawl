@@ -374,8 +374,11 @@ const SHOWTIME_HERO_KEYFRAMES = `
   @keyframes pcPriceTagDrift {
     0%   { opacity: 0; transform: translate(0, 0); }
     12%  { opacity: 1; }
-    55%  { opacity: 0.85; transform: translate(calc(var(--pc-dx, 0px) * 0.6), calc(var(--pc-dy, 0px) * 0.6)); }
-    100% { opacity: 0;    transform: translate(calc(var(--pc-dx, 0px) * 0.95), calc(var(--pc-dy, 0px) * 0.95)); }
+    /* The tags drift inward and fade out in the outer ring: the centre holds
+       the price and its eyebrow, and a tag that travelled over them landed on
+       the text. A fifth of the way is as far as the ring stays clear. */
+    55%  { opacity: 0.85; transform: translate(calc(var(--pc-dx, 0px) * 0.1), calc(var(--pc-dy, 0px) * 0.1)); }
+    100% { opacity: 0;    transform: translate(calc(var(--pc-dx, 0px) * 0.18), calc(var(--pc-dy, 0px) * 0.18)); }
   }
 
   /* ── p2 ── */
