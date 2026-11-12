@@ -829,7 +829,7 @@ export const ADMIN_COPY = {
       shortName: {
         label: 'Short name',
         placeholder: 'e.g. Bluebird',
-        hint: 'Optional. Narrow tiles show this instead of the full name. Leave blank to use the full name. Up to 20 characters.',
+        hint: 'Narrow tiles show this instead of the full name. Optional, up to 20 characters.',
       },
       slug: {
         label: 'Slug',
