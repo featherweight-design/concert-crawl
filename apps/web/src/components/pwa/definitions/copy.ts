@@ -80,8 +80,7 @@ export const OFFLINE_COPY = {
     sub: "The shows you've already looked at are saved on your phone. Live prices and anything new will load when you're back.",
     retry: 'Try again',
     shortcutsLabel: 'Saved on your phone',
-    // The tile in the page's header (a struck-through signal). Decorative: the
-    // eyebrow and title carry the meaning.
+    // The chip in the page's header. Visible text, read like any other.
     cachedBadge: 'Offline · cached OK',
     authNote:
       "Your account stuff (watchlist, settings) needs a connection. It'll be back when you are.",
