@@ -132,6 +132,8 @@ export const LiveReportBanner = ({
 
   return (
     <div
+      data-testid="live-report-banner"
+      data-status={status}
       style={{
         borderRadius: '12px',
         background: token.bg,
