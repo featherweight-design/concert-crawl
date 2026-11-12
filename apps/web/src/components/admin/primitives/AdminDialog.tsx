@@ -118,6 +118,9 @@ export const AdminDialog = ({
               color: 'var(--fg)',
               letterSpacing: '-0.02em',
               lineHeight: 1.15,
+              // A long unbroken handle ("Make @<50 chars> an admin?") wraps
+              // inside the dialog instead of being clipped at its edge.
+              overflowWrap: 'anywhere',
             }}
           >
             {heading}

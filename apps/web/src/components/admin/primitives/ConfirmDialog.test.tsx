@@ -57,6 +57,18 @@ describe('ConfirmDialog', () => {
     ).toBeVisible();
   });
 
+  it.each([
+    ['desktop', false],
+    ['phone', true],
+  ])('sets overflow-wrap on a long unbroken title on %s', (_label, phone) => {
+    setPhone(phone);
+    const title = `Make @${'x'.repeat(50)} an admin?`;
+    renderDialog({ title });
+    expect(
+      screen.getByRole('heading', { name: title }).style.overflowWrap,
+    ).toBe('anywhere');
+  });
+
   it('opens on Cancel on the phone, never on a dangerous action', () => {
     setPhone(true);
     renderDialog({ tone: 'danger' });
