@@ -281,7 +281,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           style={{ height: 180, background: identity.palette.bg }}
         >
           {glyphKey !== null ? (
-            <VenueNeonArt glyphKey={glyphKey} glyphSize={120} />
+            <VenueNeonArt glyphKey={glyphKey} glyphSize={120} align="end" />
           ) : (
             <IdentityArt
               name={venue.name}

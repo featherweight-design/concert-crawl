@@ -101,4 +101,12 @@ describe('VenueNeonArt', () => {
     );
     expect(container.innerHTML).toContain('sm:justify-end');
   });
+
+  it('sits toward the right at every width for align="end"', () => {
+    const { container } = render(
+      <VenueNeonArt glyphKey="redrocks" glyphSize={120} align="end" />,
+    );
+    expect(container.innerHTML).toContain('justify-end pr-[13%]');
+    expect(container.innerHTML).not.toContain('sm:justify-end');
+  });
 });

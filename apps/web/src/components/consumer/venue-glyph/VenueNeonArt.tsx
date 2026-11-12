@@ -29,9 +29,11 @@ interface VenueNeonArtProps {
   glyphSizeSm?: number;
   /**
    * Where the sign sits: always centred, or centred on a phone and toward the
-   * right from `sm` up, where the page title takes the left.
+   * right from `sm` up, where the page title takes the left; or toward the
+   * right at every width (the phone flagship card, which keeps its badge on
+   * the left).
    */
-  align?: 'center' | 'endFromSm';
+  align?: 'center' | 'endFromSm' | 'end';
   /** The backdrop family; defaults to the board's assignment for this venue. */
   setting?: VenueHeroSetting;
   className?: string;
@@ -83,6 +85,7 @@ export function VenueNeonArt({
         className={cn(
           'absolute inset-0 flex items-center justify-center',
           align === 'endFromSm' && 'sm:justify-end sm:pr-[14%]',
+          align === 'end' && 'justify-end pr-[13%]',
         )}
       >
         <svg
