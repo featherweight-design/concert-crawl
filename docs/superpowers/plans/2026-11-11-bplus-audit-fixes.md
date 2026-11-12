@@ -145,12 +145,12 @@ None. Every ambiguity above resolved from a drawn pattern. au2's Mission Ballroo
 | 1 `/events` sold-out row | a4 `sold-out-chip`, 9 | checked | SOLD OUT sits in the price slot at the row's right. The board (`more-st-rows_board`) puts it inline after the name, with `—` in the price slot. | minor | Chip inline after the headliner; price slot shows `—` | a6 |
 | 1, 3 row edge | b5, f3 `watching` | checked | The left edge takes the genre colour on a sold-out row. On the board, status wins: pink for sold out, red for cancelled, amber for postponed. | minor | Status tone overrides the genre edge on status rows | a6 |
 | 3 `/watching` | f3 `watching`, 12 | checked | Watching rows have no left edge and no genre chip. The board's rows (shared by browse, watching, artist and crew) have both. | minor | Use the browse row's edge and chip on Watching | a6 |
-| 3 `/watching` removed | f3 `watching` | checked | The watched removed show (fixture 71c2d6c5) isn't listed at all. The board draws a dashed "NO LONGER LISTED" row with "The venue took this show down. It may be off." | major | Render the removed watch as the No longer listed row (A5 shipped the state in the API) | a6 |
+| 3 `/watching` removed | f3 `watching` | checked | The watched removed show (fixture 71c2d6c5) isn't listed at all. The board draws a dashed "NO LONGER LISTED" row with "The venue took this show down. It may be off." | major | Covered by #140 (A5 option 2, the No longer listed row; 9d, held) | 9d #140 |
 | 3 `/watching` cancelled, postponed | f3 `watching` | checked | Confirms the rows major above: the date is struck and the title isn't, and postponed is struck too. | (above) | (above) | a6 |
 | 7 Posters | s7, 12 | checked | Confirms au2's blocker: the Night/Paper picker overlaps its own sub-lines at 390, 640 and 1300. The code card, seats line and preview all render. | (blocker above) | (above) | au2 |
 | 8 Reported queue | s8, 24 | checked | Renders: Reported (1), a row with a `1 REPORT` badge and a Reports action, and an Artists nav badge of 1. The sheet's `reported` cells still showed Ambiguous selected because the click landed before hydration (a probe that waits passes). The inventory now waits for the table before clicking. | none | — | — |
 
-**Still unchecked:** the bell's wrong-artist category (s8) needs a notification row, and `/I/<code>` for the poster code wasn't sheeted (no inventory row).
+**Still unchecked:** the bell's wrong-artist category (s8) needs a notification row (9d is seeding one). `/I/<code>` now has its own inventory, `bplus-s7-poster-link.json` (signed out, `CC_POSTER_CODE`), to run on the next stack turn.
 
 ## Needed before the unchecked cells can run (DB writes, orchestrator to route)
 
@@ -165,7 +165,8 @@ None. Every ambiguity above resolved from a drawn pattern. au2's Mission Ballroo
 | severity | a6 | 11 | au2 | total |
 |---|---|---|---|---|
 | blocker | 0 | 0 | 1 | 1 |
-| major | 3 | 3 | 2 | 8 |
+| major | 2 | 3 | 2 | 8 |
 | minor | 14 | 7 | 3 | 24 |
+| major routed to 9d (#140) | | | | 1 |
 
 Counted from the runtime tables only, including the 2026-11-12 re-run; au2's static rows are separate. The a6 minors include the B6/B10/B17/B20 items, which ride with those screen PRs.
