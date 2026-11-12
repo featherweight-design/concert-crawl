@@ -41,7 +41,8 @@ describe('makeMusicBrainzLookup', () => {
   });
 
   it('waits at least a second between calls', async () => {
-    let clock = 0;
+    // Well past the first call's window, so only the second call has to wait.
+    let clock = 1_000_000;
     const sleeps: number[] = [];
     const lookup = makeMusicBrainzLookup({
       fetchImpl: reply([]),
