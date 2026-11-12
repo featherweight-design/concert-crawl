@@ -1105,7 +1105,7 @@ export const CONSUMER_COPY = {
     notFoundBrowseButton: 'Browse shows',
     // The gone page's tile and eyebrow (B+ B8, bp-s-public_gone_m).
     notFoundCode: '404',
-    notFoundEyebrow: 'Show not found',
+    notFoundEyebrow: 'Shared link',
   },
 
   // ── PendingCardB ────────────────────────────────────────────────
