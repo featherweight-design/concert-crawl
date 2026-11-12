@@ -343,11 +343,20 @@ export const GoingButton = ({
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            borderRight: `1.5px dashed ${
-              isOn
-                ? `color-mix(in oklch, ${accent} 75%, transparent)`
-                : 'var(--border-strong)'
-            }`,
+            // A stamped night keeps its stamp on a dark tile beside the filled
+            // bar (event_stamped_m), so the venue-coloured rings stay visible.
+            ...(state === 'past-yes'
+              ? {
+                  background: 'var(--bg)',
+                  borderRadius: `${sizes.radius - 1}px 0 0 ${sizes.radius - 1}px`,
+                }
+              : {
+                  borderRight: `1.5px dashed ${
+                    isOn
+                      ? `color-mix(in oklch, ${accent} 75%, transparent)`
+                      : 'var(--border-strong)'
+                  }`,
+                }),
           }}
         >
           {isPast && show.venue ? (
