@@ -138,6 +138,7 @@ export const PublicEventDetail = ({
           tourName={event.tourName}
           fallbackTitle={event.title}
           status={event.status}
+          delistedAt={event.delistedAt}
           surface="detail"
           headlinerAs="h1"
         />
@@ -191,6 +192,7 @@ export const PublicEventDetail = ({
             <div className="mt-5">
               <EventTicketCta
                 status={event.status}
+                delistedAt={event.delistedAt}
                 ticketHref={safeTicketUrl}
                 soldOut={event.priceStatus === 'soldout'}
                 href={ctaHref}
