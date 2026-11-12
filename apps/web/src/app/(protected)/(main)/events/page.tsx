@@ -295,20 +295,26 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   //   (a lens needs a token). `seedArtistSuggestions` never throws.
   const availabilityPromise: Promise<EventsAvailabilityResponse | undefined> =
     view === 'cal'
-      ? (() => {
-          const availabilityWindow = pickerWindow(today);
-          return fetchAvailability(
-            availabilityWindow.from,
-            availabilityWindow.to,
-            token,
-          ).catch((err: unknown) => {
+      ? (async () => {
+          // try/catch inside the async function: a synchronous throw degrades
+          // to a client fetch exactly as an async rejection does.
+          try {
+            const availabilityWindow = pickerWindow(today);
+            return await fetchAvailability(
+              availabilityWindow.from,
+              availabilityWindow.to,
+              token,
+            );
+          } catch (err) {
             console.error('availability prefetch failed', err);
             return undefined;
-          });
+          }
         })()
       : Promise.resolve(undefined);
+  // One predicate for the start and for the read below, so they cannot drift.
+  const startedAnonymousSuggestions = token === null && view === 'list';
   const anonymousSuggestionsPromise: Promise<ArtistSuggestion[] | undefined> =
-    token === null && view === 'list'
+    startedAnonymousSuggestions
       ? seedArtistSuggestions(SHELF_SUGGESTION_POOL)
       : Promise.resolve(undefined);
 
@@ -411,7 +417,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   // fetchCrewShows await above.
   const suggestions =
     shelfMode === 'zero'
-      ? token === null
+      ? startedAnonymousSuggestions
         ? anonymousSuggestions
         : await seedArtistSuggestions(SHELF_SUGGESTION_POOL)
       : undefined;
