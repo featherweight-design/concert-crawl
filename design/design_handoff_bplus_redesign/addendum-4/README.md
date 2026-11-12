@@ -15,7 +15,7 @@ Canvas: https://claude.ai/artifact/8Nroa2y1jVk8kBZ2AtQUuz
 | 1 | What's new popup hero | **Ruling:** Showtime wins. No board. |
 | 2 | Crew patch rim | **Ruling:** crew colour wins. `02/patch-rim-spec` |
 | 3 | CTA gradient end | **Ruling:** keep `--accent`, add one derived stop. `03/cta-gradient-end` |
-| 4 | Venue short names | **Hugh** (new field). Recommendation A. `04/where-tiles-m` |
+| 4 | Venue short names | **Decided with Hugh (2026-11-12): A**, an optional short name. `04/where-tiles-m` |
 | 5 | Price age stamp and pending trust pill | **Keep both**, drawn. `05/price-states-age-trust` |
 | 6 | Stale and archived in Submitted prices | **Keep** the CLOSED pill, plus a reason line. `06/submitted-closed-m` |
 | 7 | Vibe full list back link | **Keep** "‹ Filters". `07/vibe-full-m` |
@@ -52,9 +52,9 @@ Board: `03/cta-gradient-end`. This is a visual call; Hugh can overrule it.
 
 ## 4. Venue tiles: short names
 
-**Hugh's call** (it adds a field). **Recommendation: A, an optional short name per venue.**
+**Decided with Hugh (2026-11-12): A, an optional short name per venue.**
 
-- **A (recommended):** an optional `shortName` on the venue, set in admin Venue Details (the Look card). Captions under about 90px use it: the Where tiles, and the Venues collected grid. Everywhere else keeps the full name. With no short name, the tile falls back to B. The proposed names for all 21 venues are on the board; they are drafts.
+- **A (chosen):** an optional `shortName` on the venue, set in admin Venue Details (the Look card). Captions under about 90px use it: the Where tiles, and the Venues collected grid. Everywhere else keeps the full name. With no short name, the tile falls back to B. The proposed names for all 21 venues are on the board; they are drafts.
 - **B:** no field. Full name, two lines, then an ellipsis. It works, but "Cervantes' Masterpiece Ballroom" and "The Fillmore Auditorium" clip, and the tiles stop matching the boards.
 - Deriving the name from `splitVenueName` was considered and rejected. It gives "Cervantes' Masterpiece", "Meow Wolf Denver", "Larimer" and "Church", and it can't be corrected without a code change.
 
@@ -89,9 +89,9 @@ Board: `04/where-tiles-m`. Either way, the 2-line clamp stays as the fallback.
   - Up next and "0 of 21" venues collected sit below or beside it.
   - There's no Share or Save image, since there's nothing to share yet. The subtitle is "Your first stamp lands after Feb 22." (draft).
 
-## Question for Hugh
+## Decided with Hugh
 
-- **Item 4:** add an optional short-name field per venue (A, recommended), or live with the 2-line clamp (B)?
+- **Item 4 (2026-11-12):** A. Add an optional `shortName` per venue, with the 2-line clamp as the fallback. The 21 short names on the board are drafts, so admin can change them.
 
 ## Files
 
