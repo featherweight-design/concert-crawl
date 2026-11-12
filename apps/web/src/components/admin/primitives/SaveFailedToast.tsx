@@ -12,12 +12,15 @@ const copy = ADMIN_COPY.states.saveFailed;
  */
 export const SaveFailedToast = ({
   what,
+  title,
   saved,
   onRetry,
   retrying = false,
 }: {
   /** The thing that didn't change, e.g. "Crews". */
   what: string;
+  /** In place of "Couldn't change {what}", for an action that isn't a change. */
+  title?: string;
   /** What is still saved, as a sentence, e.g. "Staging is still Beta." */
   saved: string;
   onRetry: () => void;
@@ -47,7 +50,7 @@ export const SaveFailedToast = ({
           overflowWrap: 'anywhere',
         }}
       >
-        {copy.title(what)}
+        {title ?? copy.title(what)}
       </div>
       <div
         style={{

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { VenueWithEventCount } from '@concert-crawl/types';
 import {
   addDays,
   buildPauseBody,
+  canRecrawl,
+  fanOut,
   formFromBody,
   isPickable,
   monthGrid,
@@ -146,5 +149,44 @@ describe('pause rules', () => {
         resume: { mode: 'in_days', days: 14 },
       }).choice,
     ).toBe('twoWeeks');
+  });
+});
+
+describe('bulk rules', () => {
+  it('re-crawls only a live, verified venue that is crawling', () => {
+    const base = {
+      active: true,
+      verified: true,
+      crawlPausedAt: null,
+      blockedAt: null,
+      consecutiveFailures: 0,
+      robotsTxtAllowed: true,
+    };
+    // fixture: the rule reads only these fields
+    const row = (over: object) => ({ ...base, ...over }) as VenueWithEventCount;
+    expect(canRecrawl(row({}))).toBe(true);
+    expect(canRecrawl(row({ crawlPausedAt: TODAY }))).toBe(false);
+    expect(
+      canRecrawl(row({ crawlPausedAt: TODAY, consecutiveFailures: 3 })),
+    ).toBe(false);
+    expect(canRecrawl(row({ blockedAt: TODAY }))).toBe(false);
+    expect(canRecrawl(row({ robotsTxtAllowed: false }))).toBe(false);
+    expect(canRecrawl(row({ active: false }))).toBe(false);
+    expect(canRecrawl(row({ verified: false }))).toBe(false);
+  });
+
+  it('fans out per id and collects failures and the first inline error', async () => {
+    const result = await fanOut(['a', 'b', 'c', 'd'], (id) => {
+      if (id === 'b') return Promise.reject(new Error('network'));
+      if (id === 'c') {
+        return Promise.resolve({ ok: false, error: 'Pick a date after today' });
+      }
+      if (id === 'd') return Promise.resolve({ ok: false, error: null });
+      return Promise.resolve({ ok: true });
+    });
+    expect(result).toEqual({
+      failed: ['b', 'c', 'd'],
+      inlineError: 'Pick a date after today',
+    });
   });
 });

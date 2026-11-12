@@ -491,6 +491,13 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* Venues Select (3a): each row's checkbox is visually hidden inside the row,
+   so the ring goes on the row (inset: the table clips its overflow). */
+[data-select-option]:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
 /* ── In-app notifications (#737) ──────────────────────────────────────────
    The panel is a port of design_handoff_in_app_notifications, whose components
    style themselves inline. These rules are the ones inline styles cannot
