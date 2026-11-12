@@ -1285,7 +1285,6 @@ export const CONSUMER_COPY = {
     // Month heading: "NOVEMBER · 6" (month name, then how many that month).
     submissionsMonthHeading: (month: string, count: number) =>
       `${month} · ${count}`,
-    submissionsFilterEmpty: 'No prices here.',
     submissionsConfirmedSuffixDesktop: (confirmedCount: number) =>
       ` · ${confirmedCount} confirmed by other fans.`,
 
