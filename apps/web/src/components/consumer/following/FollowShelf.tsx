@@ -15,7 +15,9 @@
 // Mode is decided on the SERVER from the SSR follow seed, so the slot never
 // renders one shelf and swaps to another after a client fetch lands.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
 import { useAuth } from '@clerk/nextjs';
 import type { PickerEntry } from '@concert-crawl/types';
@@ -25,10 +27,7 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { ShelfCard } from './ShelfCard';
 import { FOLLOWING_COPY } from './definitions/copy';
-import {
-  SHELF_RAIL_CAP_CLASS,
-  SHELF_RAIL_GAP_CLASS,
-} from '@/components/consumer/definitions/constants';
+import { SHELF_RAIL_GAP_CLASS } from '@/components/consumer/definitions/constants';
 import { SHELF_VISIBLE_CARDS } from './definitions/constants';
 import type { ShelfArtist, ShelfMode } from './definitions/types';
 import { readSessionSeed, shuffleWithSeed } from './lib/shuffle';
@@ -49,13 +48,15 @@ const ShelfHead = ({
   eyebrow,
   title,
   body,
+  action,
 }: {
   eyebrow: string;
   title: string;
   body?: string;
+  action?: ReactNode;
 }) => (
   <div className="mb-[11px] flex items-end justify-between gap-3">
-    <div className="flex min-w-0 flex-col gap-[5px]">
+    <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
       <span
         className="font-bold uppercase"
         style={{
@@ -67,12 +68,17 @@ const ShelfHead = ({
       >
         {eyebrow}
       </span>
-      <h2
-        className="font-extrabold text-fg"
-        style={{ fontSize: 15.5, letterSpacing: '-0.02em' }}
-      >
-        {title}
-      </h2>
+      {/* The action shares the title's row, on the right (addendum 2,
+          `shelf-see-all-m`), with the eyebrow above both. */}
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          className="min-w-0 font-extrabold text-fg"
+          style={{ fontSize: 15.5, letterSpacing: '-0.02em' }}
+        >
+          {title}
+        </h2>
+        {action}
+      </div>
       {body !== undefined && (
         <p
           className="text-fg-muted"
@@ -100,6 +106,8 @@ export const FollowShelf = ({
   scaRegion,
 }: FollowShelfProps) => {
   const { isSignedIn } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { surface } = useEntitlement('following');
   const { data: planState } = usePlanState();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -155,11 +163,13 @@ export const FollowShelf = ({
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
-  // From lg the rail stops at the cards the column holds whole, as the board
-  // draws it. Only "Your artists" takes that cap: My shows ▸ Artists
-  // (/following) lists every follow. The starter shelf's picks are a
-  // per-session shuffle no page lists, so it keeps scrolling.
-  const capped = mode === 'some';
+  // See all turns on the My artists filter in Browse (addendum 2, item 20),
+  // the same URL change the filter chip makes: every other param kept, the
+  // page offset dropped.
+  const seeAllParams = new URLSearchParams(searchParams.toString());
+  seeAllParams.set('filterFollowing', '1');
+  seeAllParams.delete('offset');
+  const seeAllHref = `${pathname}?${seeAllParams.toString()}`;
 
   return (
     <section aria-label={FOLLOWING_COPY.shelfAria} className="mb-5 pt-1.5">
@@ -173,6 +183,20 @@ export const FollowShelf = ({
         <ShelfHead
           eyebrow={FOLLOWING_COPY.yoursEyebrow(followCount)}
           title={FOLLOWING_COPY.yoursTitle}
+          action={
+            <Link
+              href={seeAllHref}
+              replace
+              scroll={false}
+              aria-label={FOLLOWING_COPY.yoursSeeAllAria}
+              data-testid="shelf-see-all"
+              className="inline-flex shrink-0 items-center gap-[5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+              style={{ fontSize: 12.5, color: 'var(--signal)' }}
+            >
+              {FOLLOWING_COPY.yoursSeeAll}
+              <ChevronGlyph />
+            </Link>
+          }
         />
       )}
 
@@ -182,11 +206,11 @@ export const FollowShelf = ({
           and leak into the page's scrollWidth at 320px (the #33 mechanism).
           The scroller pads 12px on every side so a card's genre glow isn't
           clipped; from sm up a matching negative margin keeps the cards
-          aligned with the page. A capped rail stops at the cards the column
-          holds whole from lg, so nothing is drawn hard-clipped at its edge. */}
+          aligned with the page. Up to ten cards scroll sideways at every
+          width, with no end card (addendum 2, item 20). */}
       <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:-mx-3 sm:max-w-[calc(100%+1.5rem)]">
         <ul
-          className={`flex list-none overflow-x-auto px-4 py-3 sm:px-3 ${SHELF_RAIL_GAP_CLASS} ${capped ? SHELF_RAIL_CAP_CLASS : ''}`}
+          className={`flex list-none overflow-x-auto px-4 py-3 sm:px-3 ${SHELF_RAIL_GAP_CLASS}`}
         >
           {visible.map((artist) => (
             <ShelfCard
