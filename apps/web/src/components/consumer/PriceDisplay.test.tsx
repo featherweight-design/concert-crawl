@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { PriceDisplay } from '@/components/consumer/PriceDisplay';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { PRICE_HEADLINE_SIZE } from '@/components/consumer/glyphs';
 import { stubMatchMedia } from '@/test-utils/match-media';
 import { TIP_CONTENT } from '@/components/ui/cc-tip';
 
@@ -80,7 +79,7 @@ describe('PriceDisplay live community card (more-p-price_states)', () => {
     render(<PriceDisplay {...base} />);
 
     const headline = screen.getByText('$44–$60');
-    expect(headline.style.fontSize).toBe(`${PRICE_HEADLINE_SIZE}px`);
+    expect(headline.style.fontSize).toBe('34px');
     expect(headline.style.fontWeight).toBe('900');
     const eyebrow = screen.getByText(priceCopy.ticketsLabel);
     expect(eyebrow.style.fontSize).toBe('9.5px');
@@ -183,8 +182,6 @@ describe('PriceDisplay live box office card (more-p-price_states)', () => {
   it('draws the $38 at the same scale as the community price', () => {
     render(<PriceDisplay {...boxOffice} />);
 
-    expect(screen.getByText('$38').style.fontSize).toBe(
-      `${PRICE_HEADLINE_SIZE}px`,
-    );
+    expect(screen.getByText('$38').style.fontSize).toBe('34px');
   });
 });

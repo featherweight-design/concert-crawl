@@ -147,7 +147,10 @@ export const ReportFooterLink = ({
           boxSizing: 'border-box',
         }}
       >
-        {/* Amber icon tile: 36px, radius 10, warning at 10% fill / 40% edge */}
+        {/* Amber icon tile: 36px, radius 10. The boards draw it as
+            rgba(255,210,122,0.1) fill and 0.4 edge, which is --warning at
+            10% / 40%; REPORT_AMBER's 14% / 36% is the reported card's edge, not
+            this tile. The artist card (wrong-artist page_m) copies this tile. */}
         <span
           aria-hidden="true"
           data-testid="report-icon-tile"

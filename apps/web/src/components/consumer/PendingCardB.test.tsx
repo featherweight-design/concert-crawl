@@ -15,7 +15,6 @@ import { SP_POLICY } from '@concert-crawl/types';
 import { PendingCardB, type PendingCardBProps } from './PendingCardB';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { stubMatchMedia } from '@/test-utils/match-media';
-import { PRICE_EYEBROW, PRICE_HEADLINE_SIZE } from './glyphs';
 
 const counterPointerLabel =
   CONSUMER_COPY.priceRegion.dispute.counterPointerLabel;
@@ -70,7 +69,7 @@ describe('PendingCardB', () => {
       render(<PendingCardB {...buildProps()} />);
 
       const headline = screen.getByTestId('pending-price-headline');
-      expect(headline.style.fontSize).toBe(`${PRICE_HEADLINE_SIZE}px`);
+      expect(headline.style.fontSize).toBe('34px');
       expect(headline.style.fontWeight).toBe('900');
     });
 
@@ -78,8 +77,8 @@ describe('PendingCardB', () => {
       render(<PendingCardB {...buildProps()} />);
 
       const eyebrow = screen.getByText(CONSUMER_COPY.pendingCardB.ticketsLabel);
-      expect(eyebrow.style.fontSize).toBe(PRICE_EYEBROW.size);
-      expect(eyebrow.style.letterSpacing).toBe(PRICE_EYEBROW.tracking);
+      expect(eyebrow.style.fontSize).toBe('9.5px');
+      expect(eyebrow.style.letterSpacing).toBe('0.14em');
     });
   });
 

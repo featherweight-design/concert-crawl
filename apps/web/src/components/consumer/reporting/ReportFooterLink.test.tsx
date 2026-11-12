@@ -59,9 +59,9 @@ describe('ReportFooterLink', () => {
       <ReportFooterLink liveStatus={null} onOpen={vi.fn()} />,
     );
 
-    expect(container.firstElementChild?.getAttribute('style')).toContain(
-      'dashed',
-    );
+    const style = container.firstElementChild?.getAttribute('style') ?? '';
+    expect(style).toContain('dashed');
+    expect(style).toContain('border-strong');
   });
 
   describe("as another surface's card", () => {
