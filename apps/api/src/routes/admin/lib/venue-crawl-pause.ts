@@ -81,7 +81,12 @@ export const resolvePauseDetails = (
     resumeOn = addDays(today, body.resume.days);
   } else if (body.resume.mode === 'on') {
     const { date } = body.resume;
-    if (Number.isNaN(Date.parse(`${date}T00:00:00Z`))) {
+    // Round-trips, so 2026-02-30 (which Date.parse rolls to Mar 2) is refused.
+    const parsed = new Date(`${date}T00:00:00Z`);
+    if (
+      Number.isNaN(parsed.getTime()) ||
+      parsed.toISOString().slice(0, 10) !== date
+    ) {
       return { ok: false, error: 'That is not a date' };
     }
     if (date <= today) {
@@ -94,7 +99,7 @@ export const resolvePauseDetails = (
   }
   return {
     ok: true,
-    details: { reason: body.reason, note: body.note ?? null, resumeOn },
+    details: { reason: body.reason, note: body.note || null, resumeOn },
   };
 };
 
@@ -110,7 +115,10 @@ export const resolvePauseDetails = (
 export const pauseVenueCrawl = async (id: string, details: PauseDetails) =>
   db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ crawlPausedAt: venues.crawlPausedAt })
+      .select({
+        crawlPausedAt: venues.crawlPausedAt,
+        removedAt: venues.removedAt,
+      })
       .from(venues)
       .where(eq(venues.id, id))
       .for('update');
@@ -121,7 +129,8 @@ export const pauseVenueCrawl = async (id: string, details: PauseDetails) =>
         crawlPausedAt: existing.crawlPausedAt ?? new Date(),
         crawlPauseReason: details.reason,
         crawlPauseNote: details.note,
-        crawlResumeOn: details.resumeOn,
+        // A removed venue never resumes by itself.
+        crawlResumeOn: existing.removedAt === null ? details.resumeOn : null,
       })
       .where(eq(venues.id, id))
       .returning();
