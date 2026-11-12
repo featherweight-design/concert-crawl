@@ -3,7 +3,12 @@ import { createApp } from './app.js';
 
 // Same lightweight mocks as routes/health.test.ts: createApp registers every
 // route, so an unmocked import reaches the real Postgres client.
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
+// Spread the real module so a new drizzle-orm import elsewhere in the app
+// doesn't break this suite; only the operators it inspects are mocked.
+vi.mock('drizzle-orm', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('drizzle-orm')>()),
+  eq: vi.fn(),
+}));
 vi.mock('@concert-crawl/db', () => ({
   db: { select: vi.fn(), insert: vi.fn() },
   venues: {},

@@ -15,7 +15,10 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
 }));
 
-vi.mock('drizzle-orm', () => ({
+// Spread the real module so a new drizzle-orm import elsewhere in the app
+// doesn't break this suite; only the operators it inspects are mocked.
+vi.mock('drizzle-orm', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('drizzle-orm')>()),
   eq: vi.fn(),
   desc: vi.fn(),
   and: vi.fn(),
