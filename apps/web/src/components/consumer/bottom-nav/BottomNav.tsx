@@ -22,6 +22,7 @@ const STATIC_TABS = [
     key: COPY.nav.tabs[0].key,
     label: COPY.nav.tabs[0].label,
     href: COPY.nav.tabs[0].href,
+    matchPrefixes: COPY.nav.tabs[0].matchPrefixes,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
         <line
@@ -125,18 +126,18 @@ const STATIC_TABS = [
 interface MeAvatarProps {
   handle: string;
   avatarColor: AvatarColor | null;
-  isActive: boolean;
 }
 
-function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
+function MeAvatar({ handle, avatarColor }: MeAvatarProps) {
   const letter = handle.charAt(0).toUpperCase();
   const tone = avatarColor ?? 'signal';
   const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`;
-  const tintBorder = `color-mix(in oklch, var(--${tone}) 50%, transparent)`;
 
   return (
     <div
       aria-hidden="true"
+      data-testid="me-avatar"
+      data-avatar-edge="solid"
       style={{
         width: 28,
         height: 28,
@@ -151,8 +152,10 @@ function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
         fontWeight: 800,
         fontFamily: 'var(--font-ui)',
         userSelect: 'none',
-        outline: isActive ? `2px solid ${tintBorder}` : 'none',
-        outlineOffset: 2,
+        // B+ draws the 28px disc with a full-colour 1.5px edge on every
+        // board, active or not (browse-320, notif-shows-m).
+        border: `1.5px solid var(--${tone})`,
+        boxSizing: 'border-box',
       }}
     >
       {letter}
@@ -176,17 +179,23 @@ function MeAvatarSkeleton() {
   );
 }
 
-function PersonIcon() {
+// A resolved profile with no handle yet. A neutral disc, never a person glyph:
+// the glyph used to flash in for the instant before the avatar arrived.
+function MeAvatarPlaceholder() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-      <circle cx="9" cy="6.5" r="3" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M3 16c0-3.314 2.686-5 6-5s6 1.686 6 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
+    <div
+      aria-hidden="true"
+      data-testid="me-avatar-placeholder"
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: '50%',
+        flexShrink: 0,
+        background: 'var(--surface-2)',
+        border: '1px dashed var(--border-strong)',
+        boxSizing: 'border-box',
+      }}
+    />
   );
 }
 
@@ -215,6 +224,10 @@ export function BottomNav() {
       return;
     }
     let cancelled = false;
+    // The signed-out branch above marks the profile loaded. Clerk flipping to
+    // signed in must reopen the loading state, or the slot paints its fallback
+    // for the whole of the first fetch.
+    setProfileLoaded(false);
     void (async () => {
       const token = await getToken();
       if (!token || cancelled) {
@@ -321,6 +334,8 @@ export function BottomNav() {
         }
         aria-haspopup="dialog"
         aria-expanded={menuOpen}
+        aria-busy={isSignedIn && !profileLoaded ? true : undefined}
+        data-avatar-state={isSignedIn && !profileLoaded ? 'loading' : 'ready'}
         className="flex cursor-pointer flex-col items-center justify-center gap-[3px]"
         style={{
           width: 56,
@@ -338,13 +353,9 @@ export function BottomNav() {
           ) : !profileLoaded ? (
             <MeAvatarSkeleton />
           ) : avatarHandle !== null ? (
-            <MeAvatar
-              handle={avatarHandle}
-              avatarColor={avatarColor}
-              isActive={isMeActive}
-            />
+            <MeAvatar handle={avatarHandle} avatarColor={avatarColor} />
           ) : (
-            <PersonIcon />
+            <MeAvatarPlaceholder />
           )}
           {piped && (
             <NotifPip

@@ -7,6 +7,11 @@ interface AvatarProps {
   ringed?: boolean;
   className?: string;
   loading?: boolean;
+  /**
+   * `tint` is the half-strength edge every in-page avatar wears; `solid` is the
+   * full avatar colour the header disc draws on every B+ board.
+   */
+  edge?: 'tint' | 'solid';
 }
 
 export function Avatar({
@@ -16,12 +21,15 @@ export function Avatar({
   ringed = false,
   className,
   loading = false,
+  edge = 'tint',
 }: AvatarProps) {
   if (loading) {
     return (
       <div
         className={className}
         aria-hidden="true"
+        aria-busy="true"
+        data-avatar-state="loading"
         style={{
           width: size,
           height: size,
@@ -39,7 +47,10 @@ export function Avatar({
 
   const tone = avatarColor ?? 'signal';
   const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`;
-  const tintBorder = `1.5px solid color-mix(in oklch, var(--${tone}) 50%, transparent)`;
+  const tintBorder =
+    edge === 'solid'
+      ? `1.5px solid var(--${tone})`
+      : `1.5px solid color-mix(in oklch, var(--${tone}) 50%, transparent)`;
   const ringStyle =
     ringed && !isAnonymous
       ? `0 0 0 3px color-mix(in oklch, var(--${tone}) 14%, transparent)`
@@ -68,6 +79,7 @@ export function Avatar({
         userSelect: 'none',
       }}
       aria-hidden="true"
+      data-avatar-edge={isAnonymous ? undefined : edge}
     >
       {letter}
     </div>

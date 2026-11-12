@@ -133,6 +133,37 @@ describe('BottomNav slot 4 (#794)', () => {
   });
 });
 
+describe('BottomNav account avatar (Chrome B17)', () => {
+  const signedIn = () => {
+    mockAuth = {
+      isSignedIn: true,
+      isLoaded: true,
+      getToken: async () => 'token',
+    };
+  };
+
+  it('holds a neutral loading disc, not a person glyph, before the profile lands', () => {
+    signedIn();
+    render(<BottomNav />);
+    const trigger = screen.getByRole('button', { name: /account/i });
+    expect(trigger.getAttribute('aria-busy')).toBe('true');
+    expect(trigger.getAttribute('data-avatar-state')).toBe('loading');
+    expect(screen.getByTestId('me-avatar-skeleton')).not.toBeNull();
+    expect(trigger.querySelector('svg')).toBeNull();
+  });
+
+  it('draws the loaded disc with the solid edge whether or not /me is active', async () => {
+    signedIn();
+    render(<BottomNav />);
+    const avatar = await screen.findByTestId('me-avatar');
+    expect(avatar.getAttribute('data-avatar-edge')).toBe('solid');
+    expect(avatar.textContent).toBe('H');
+    const trigger = screen.getByRole('button', { name: /account/i });
+    expect(trigger.getAttribute('aria-busy')).toBeNull();
+    expect(trigger.getAttribute('data-avatar-state')).toBe('ready');
+  });
+});
+
 describe('BottomNav crews slot (#1226)', () => {
   it('renders five destination tabs in the locked order', () => {
     render(<BottomNav />);
@@ -213,6 +244,14 @@ describe('BottomNav crews slot (#1226)', () => {
       watching.querySelector('svg')?.innerHTML,
     );
     expect(crews.querySelectorAll('circle')).toHaveLength(3);
+  });
+
+  it('lights browse on an artist page', () => {
+    pathname.current = '/artists/some-band';
+    render(<BottomNav />);
+    expect(
+      screen.getByRole('link', { name: 'browse' }).getAttribute('aria-current'),
+    ).toBe('page');
   });
 
   // B+: the current tab carries a short gradient bar on the nav's top edge.
