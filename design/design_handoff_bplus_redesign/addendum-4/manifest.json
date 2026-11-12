@@ -1,0 +1,74 @@
+[
+ {
+  "section": "02-crew-patch-rim",
+  "name": "patch-rim-spec",
+  "title": "Crew patch · rim and glow values",
+  "note": "The rim takes the crew’s secondary colour at every size; the glow only from 56px up.",
+  "w": 1180,
+  "h": 900
+ },
+ {
+  "section": "03-gradient-end",
+  "name": "cta-gradient-end",
+  "title": "Gradient end · --accent stays, CTA fills end at --cta-end",
+  "note": "One derived stop for filled CTAs; nothing else changes.",
+  "w": 1180,
+  "h": 460
+ },
+ {
+  "section": "04-venue-short-names",
+  "name": "where-tiles-m",
+  "title": "Where tiles · short name vs 2-line clamp",
+  "note": "A is recommended and needs Hugh’s yes (a new venue field).",
+  "w": 1280,
+  "h": 980
+ },
+ {
+  "section": "05-price-cards",
+  "name": "price-states-age-trust",
+  "title": "Price cards · price age and pending trust pill",
+  "note": "Both shipped features kept and drawn.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "06-submitted-prices-closed",
+  "name": "submitted-closed-m",
+  "title": "Submitted prices · closed rows under All",
+  "note": "The interim CLOSED pill is kept, with a reason line.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "07-vibe-back-link",
+  "name": "vibe-full-m",
+  "title": "Vibe · the full list with ‹ Filters",
+  "note": "The interim back link is kept: the same header as Where.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-passport",
+  "name": "passport-next-d",
+  "title": "Passport · upcoming, nothing stamped yet, desktop",
+  "note": "The interim is kept: the booklet, a dashed NEXT stamp in slot 1, no Share or Save.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "08-passport",
+  "name": "passport-next-m",
+  "title": "Passport · upcoming, nothing stamped yet, phone",
+  "note": "",
+  "w": 390,
+  "h": 1200
+ },
+ {
+  "section": "08-passport",
+  "name": "passport-empty-title-m",
+  "title": "Passport · empty, phone, retitled",
+  "note": "The one board that said “Passport” now says “Your Passport”.",
+  "w": 390,
+  "h": 844
+ }
+]
