@@ -23,6 +23,9 @@ export function SpotlightModal({
   const heroRef = useRef<HTMLDivElement>(null);
   const [heroScale, setHeroScale] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
+  // The stage is drawn 580×300; its box follows the scale so a narrow sheet
+  // has no blank band under the art.
+  const stageHeight = Math.round(300 * heroScale);
 
   useEffect(() => {
     if (!sp) return;
@@ -99,89 +102,23 @@ export function SpotlightModal({
           color: 'var(--fg)',
         }}
       >
-        {/* hero — 580×300 Showtime stage per SHOWTIME_HANDOFF.md §2 */}
+        {/* Header strip: the eyebrow and the close button live here, on the
+            sheet, not over the art. The hero's own stats, chips and artist
+            tags sit in every corner of the stage, so anything laid over it
+            will land on one of them. */}
         <div
-          ref={heroRef}
           style={{
-            position: 'relative',
-            height: 300,
-            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
             flexShrink: 0,
+            padding: isMobile ? '10px 14px 10px 22px' : '10px 14px 10px 30px',
           }}
         >
-          {/* Scale wrapper: always present; scale=1 when container ≥ 580px */}
-          <div
-            style={{
-              width: '100%',
-              height: 300,
-              overflow: 'hidden',
-              position: 'relative',
-            }}
-          >
-            <div
-              style={{
-                width: 580,
-                height: 300,
-                transform: `scale(${heroScale})`,
-                transformOrigin: 'top left',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-              }}
-            >
-              <SpotlightHero hero={sp.hero} />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={COPY.modal.closeAriaLabel}
-            style={{
-              all: 'unset',
-              cursor: 'pointer',
-              position: 'absolute',
-              top: 14,
-              right: 14,
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              background: 'rgba(0,0,0,0.45)',
-              border: '1px solid var(--border-strong)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--fg)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M3 3l6 6M9 3l-6 6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-
-          <div
-            style={{
-              position: 'absolute',
-              left: 22,
-              bottom: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span
+              aria-hidden
               style={{
                 width: 6,
                 height: 6,
@@ -199,12 +136,82 @@ export function SpotlightModal({
                 color: 'var(--accent)',
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
-                textShadow: '0 1px 4px rgba(0,0,0,0.6)',
               }}
             >
               {COPY.modal.featureDropPrefix}
               {release.version}
             </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={COPY.modal.closeAriaLabel}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border-strong)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--fg)',
+            }}
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M3 3l6 6M9 3l-6 6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* hero — 580×300 Showtime stage per SHOWTIME_HANDOFF.md §2. Its box
+            is as tall as the scaled stage, so a narrow sheet has no blank band
+            under the art. */}
+        <div
+          ref={heroRef}
+          style={{
+            position: 'relative',
+            height: stageHeight,
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}
+        >
+          {/* Scale wrapper: always present; scale=1 when container ≥ 580px */}
+          <div
+            style={{
+              width: '100%',
+              height: stageHeight,
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
+            <div
+              style={{
+                width: 580,
+                height: 300,
+                transform: `scale(${heroScale})`,
+                transformOrigin: 'top left',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+              }}
+            >
+              <SpotlightHero hero={sp.hero} />
+            </div>
           </div>
         </div>
 
