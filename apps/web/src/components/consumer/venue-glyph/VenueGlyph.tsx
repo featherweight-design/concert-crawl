@@ -60,12 +60,20 @@ export function GlyphShapes({
   glyphKey,
   paint,
   strokeWidth = 1.13,
+  neonFilled = false,
 }: {
   glyphKey: VenueGlyphKey;
   paint: string;
   /** In glyph-grid units. A caller drawing the glyph small thickens it to stay legible. */
   strokeWidth?: number;
+  /**
+   * The hero's treatment of a `filled` shape: a 30% fill in the venue's second
+   * colour under a solid 5.25px stroke in its first, a tube rather than the
+   * tile's flat silhouette.
+   */
+  neonFilled?: boolean;
 }) {
+  const { from, to } = VENUE_GLYPHS[glyphKey];
   return (
     <g
       fill="none"
@@ -77,6 +85,17 @@ export function GlyphShapes({
       {VENUE_GLYPHS[glyphKey].shapes.map((shape, i) =>
         shape.kind === 'circle' ? (
           <circle key={i} cx={shape.cx} cy={shape.cy} r={shape.radius} />
+        ) : shape.filled && neonFilled ? (
+          <path
+            key={i}
+            d={shape.pathData}
+            transform={shape.transform}
+            fill={to}
+            fillOpacity={0.3}
+            stroke={from}
+            strokeWidth={5.25}
+            vectorEffect="non-scaling-stroke"
+          />
         ) : (
           <path
             key={i}
