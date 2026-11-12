@@ -159,7 +159,9 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
         </svg>
         {/* The moon and its stars are their own top-left layer at a fixed size,
             not part of the sliced skyline: a wide, short hero crops the top of
-            the skyline's box, and the moon would go with it. */}
+            the skyline's box, and the moon would go with it. The venue page's
+            back chip sits at the far left (14px in, 36px wide), so the layer
+            starts 48px in and the moon clears it. */}
         <svg
           viewBox="0 0 150 100"
           width={150}
@@ -167,7 +169,7 @@ export function VenueBackdrop({ setting, from, to, uid }: VenueBackdropProps) {
           aria-hidden="true"
           focusable="false"
           data-venue-moon=""
-          style={{ position: 'absolute', left: 0, top: 0, display: 'block' }}
+          style={{ position: 'absolute', left: 48, top: 0, display: 'block' }}
         >
           <defs>
             <radialGradient id={moonId}>
