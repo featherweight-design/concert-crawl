@@ -186,13 +186,13 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
                 fontFamily: 'var(--font-mono)',
                 fontSize: 12,
                 color: 'var(--fg-muted)',
-                letterSpacing: '0.04em',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
               }}
             >
               <span>
                 {[venue.neighborhood, venue.city].filter(Boolean).join(' · ')}
               </span>
-              <span style={{ color: 'var(--fg-subtle)' }}>·</span>
               <span
                 className="flex items-center gap-1 whitespace-nowrap"
                 style={{ color: 'var(--signal)' }}
@@ -337,43 +337,23 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           )}
         </div>
         <div className="p-4 pb-4.5">
-          {venue.venueType && (
-            <span
-              style={{
-                display: 'inline-block',
-                padding: '3px 9px',
-                borderRadius: 5,
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border-strong)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 500,
-                letterSpacing: '0.04em',
-                color: 'var(--fg-muted)',
-              }}
-            >
-              {venue.venueType}
-            </span>
-          )}
           <div
-            className="mt-2 text-2xl font-extrabold text-fg leading-[1.1]"
+            className="text-2xl font-extrabold text-fg leading-[1.1]"
             style={{ letterSpacing: '-0.03em' }}
           >
             <VenueName name={venue.name} />
           </div>
           <div
-            className="mt-1.5 flex items-center gap-2 flex-wrap"
+            className="mt-1.5 flex items-center gap-3 flex-wrap"
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: 11,
               color: 'var(--fg-muted)',
-              letterSpacing: '0.04em',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
             }}
           >
-            <span>
-              {[venue.neighborhood, venue.city].filter(Boolean).join(' · ')}
-            </span>
-            <span style={{ color: 'var(--fg-subtle)' }}>·</span>
+            <span>{venue.neighborhood ?? venue.city}</span>
             <span
               className="flex items-center gap-1"
               style={{ color: 'var(--signal)' }}

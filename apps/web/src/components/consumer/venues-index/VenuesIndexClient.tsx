@@ -65,7 +65,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
       {/* Page heading — reactive to filtered count */}
       <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] sm:gap-[14px]">
         <h1
-          className="m-0 bg-clip-text text-[28px] font-extrabold text-transparent sm:text-[40px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]"
+          className="m-0 bg-clip-text text-[36px] font-extrabold text-transparent sm:text-[44px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]"
           style={{
             backgroundImage:
               'linear-gradient(90deg, var(--signal), var(--accent))',
