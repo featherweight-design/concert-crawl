@@ -170,8 +170,12 @@ describe('PassportContent', () => {
       'rotate(-5deg)',
     ]);
 
+    // A tilt is a transform on a stamp's box. Shapes inside an SVG drawing
+    // (IdentityArt turns its pattern with `rotate(180 200 200)`) are the art's
+    // own geometry, not a tilt, so the sweep stops at each drawing's root.
     const outside = Array.from(container.querySelectorAll('*')).filter(
-      (node) => !booklet.contains(node),
+      (node) =>
+        !booklet.contains(node) && node.parentElement?.closest('svg') == null,
     );
     expect(outside.length).toBeGreaterThan(0);
     outside.forEach((node) => {
