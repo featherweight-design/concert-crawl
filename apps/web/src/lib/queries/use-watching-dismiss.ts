@@ -5,7 +5,7 @@
 // use-watch-toggle.ts, but it never touches the watch itself: the row leaves
 // the cache, the watch stays, and nobody else's list changes.
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import { z } from 'zod';
@@ -68,24 +68,36 @@ export const isStillListed = (err: unknown): boolean =>
  * Hiding is two things only: the cache, and the `hiding` set. The cache drops
  * the row at once. The set keeps it out of the list while the POST is out,
  * whatever a mid-flight refetch writes, and turns away a second tap before
- * React has re-rendered. The set is always cleared before the settle's cache
- * write, so the render that write triggers already sees the final answer.
+ * React has re-rendered. Every change to the set also bumps a render counter,
+ * so a settle re-renders even when its cache write changes nothing (a refetch
+ * that landed mid-POST already put the row back in the cache, and only the set
+ * was hiding it).
  */
 export function useWatchingDismiss() {
   const queryClient = useQueryClient();
   const { getToken, userId } = useAuth();
   const hidingRef = useRef<Set<string>>(new Set());
+  const [hidingVersion, setHidingVersion] = useState(0);
 
+  const setHiding = useCallback((eventId: string, hiding: boolean) => {
+    if (hiding) hidingRef.current.add(eventId);
+    else hidingRef.current.delete(eventId);
+    setHidingVersion((version) => version + 1);
+  }, []);
+
+  // hidingVersion is in the deps so a change to the set hands consumers a new
+  // function, and anything memoised on it reads the set again.
   const isHiding = useCallback(
     (eventId: string) => hidingRef.current.has(eventId),
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hidingVersion is the set's change signal: a new function per change makes consumers re-read the ref
+    [hidingVersion],
   );
 
   const dismiss = useCallback(
     (input: WatchingDismissInput): Promise<WatchingDismissResponse> => {
       const key = watchingQueryKey(userId);
       const { eventId } = input.show;
-      if (input.dismissed) hidingRef.current.add(eventId);
+      if (input.dismissed) setHiding(eventId, true);
       const mutation = queryClient
         .getMutationCache()
         .build<
@@ -133,7 +145,7 @@ export function useWatchingDismiss() {
           onSuccess: (_data, { show, dismissed }) => {
             // The server has said yes. A refetch that landed mid-flight may
             // have carried the old answer back in, so apply it again.
-            if (dismissed) hidingRef.current.delete(show.eventId);
+            if (dismissed) setHiding(show.eventId, false);
             queryClient.setQueryData<WatchingShow[]>(key, (current) => {
               if (!current) return current;
               return dismissed
@@ -142,7 +154,9 @@ export function useWatchingDismiss() {
             });
           },
           onError: (err, { show, dismissed }, context) => {
-            if (dismissed) hidingRef.current.delete(show.eventId);
+            // Clearing the set re-renders on its own, so the row shows again
+            // even when the rollback below finds it already in the cache.
+            if (dismissed) setHiding(show.eventId, false);
             // A 409 means the show is listed again, so the row we hold is
             // stale: it would bring back a dismiss × the show no longer has.
             // Leave it out and let the settle refetch bring the fresh row.
@@ -167,7 +181,7 @@ export function useWatchingDismiss() {
         });
       return mutation.execute(input);
     },
-    [queryClient, getToken, userId],
+    [queryClient, getToken, userId, setHiding],
   );
 
   return { dismiss, isHiding };

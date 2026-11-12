@@ -222,7 +222,8 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
     async (show: WatchingShow) => {
       try {
         await dismiss({ show, dismissed: false });
-      } catch {
+      } catch (err) {
+        console.warn('watching dismiss undo failed', err);
         // A failed Undo is the error toast (addendum 3, ruling 32), with one
         // more go at it, since the Undo toast it replaced is gone.
         toast.error(COPY.dismiss.undoFailed, {
@@ -253,6 +254,7 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
             onUndo: () => void restore(show),
           }),
         (err: unknown) => {
+          console.warn('watching dismiss failed', err);
           // The row is coming back: at once from the rollback, or with the
           // refetch after a 409. Its × gets focus back when it lands, and the
           // error toast (a live region) says why it is still there.
