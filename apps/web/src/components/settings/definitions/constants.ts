@@ -45,5 +45,3 @@ export const AVATAR_COLORS: AvatarColor[] = [
   'success',
   'warning',
 ];
-
-export const SUBMISSION_CAP_MOBILE = 3;

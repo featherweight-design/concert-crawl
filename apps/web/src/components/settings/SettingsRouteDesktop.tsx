@@ -12,6 +12,7 @@ import { SIGNAL_TO_ACCENT } from './definitions/styles';
 import { CredChip } from './CredChip';
 import { ThemePickerInline } from './ThemePickerInline';
 import { MySubmissionsList } from './MySubmissionsList';
+import { SubmissionStats } from './SubmissionStats';
 import { DangerZone } from './DangerZone';
 import { DataExportRow } from './DataExportRow';
 import { LegalLinksCard } from './LegalLinksCard';
@@ -32,7 +33,7 @@ import type {
 const SETTINGS_COPY = CONSUMER_COPY.settings;
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
 
-type NavSection =
+export type NavSection =
   | 'profile'
   | 'appearance'
   | 'connections'
@@ -83,17 +84,23 @@ interface SettingsRouteDesktopProps {
    * Connections section does not flash in before the client read lands.
    */
   spotifyEnabled: boolean;
+  /**
+   * The section to open when the URL carries no `?section=`. The dedicated
+   * submitted-prices page uses it to land a desktop visitor on that panel.
+   */
+  initialSection?: NavSection;
 }
 
 export function SettingsRouteDesktop({
   profile,
   submissions,
   spotifyEnabled,
+  initialSection,
 }: SettingsRouteDesktopProps) {
   const { openUserProfile } = useClerk();
   const { user } = useUser();
   const searchParams = useSearchParams();
-  const sectionParam = searchParams.get('section');
+  const sectionParam = searchParams.get('section') ?? initialSection ?? null;
   const [activeSection, setActiveSection] = useState<NavSection>(() =>
     resolveSection(sectionParam, spotifyEnabled),
   );
@@ -101,9 +108,12 @@ export function SettingsRouteDesktop({
 
   useEffect(() => {
     setActiveSection(
-      resolveSection(searchParams.get('section'), spotifyEnabled),
+      resolveSection(
+        searchParams.get('section') ?? initialSection ?? null,
+        spotifyEnabled,
+      ),
     );
-  }, [searchParams, spotifyEnabled]);
+  }, [searchParams, spotifyEnabled, initialSection]);
 
   // The Connections section holds nothing but the Spotify link, and its own
   // heading copy is Spotify's, so the flag takes the whole section rather than
@@ -192,11 +202,12 @@ export function SettingsRouteDesktop({
           </>
         }
       />
-      <MySubmissionsList
-        submissions={submissions}
-        totalCount={profile.submissionCount}
-        cap={submissions.length}
+      <SubmissionStats
+        submitted={profile.submissionCount}
+        confirmed={confirmedCount}
+        cred={profile.cred}
       />
+      <MySubmissionsList submissions={submissions} />
     </div>
   );
 
