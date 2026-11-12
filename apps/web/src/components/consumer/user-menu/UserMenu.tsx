@@ -970,7 +970,14 @@ function UserMenuSheet(props: MenuBodyProps) {
         // pinned to the bottom would sit partly behind the URL bar.
         ...(isNotifMode(props)
           ? { height: '88svh', display: 'flex', flexDirection: 'column' }
-          : {}),
+          : {
+              // The menu grows to its content but never past the screen: on a
+              // short phone (320x568) its rows scroll above the version
+              // footer instead of the footer covering Sign out.
+              maxHeight: '92svh',
+              display: 'flex',
+              flexDirection: 'column',
+            }),
       }}
     >
       {/* Drag handle */}
@@ -991,9 +998,17 @@ function UserMenuSheet(props: MenuBodyProps) {
           }}
         />
       </div>
-      {/* No maxHeight: the sheet is bottom-anchored and grows to its content,
-          where the popover has to be bounded against the viewport. */}
-      <MenuShellContent props={props} panelClosable />
+      {/* The menu body scrolls inside the sheet's own max height (above); the
+          notifications panel already scrolls itself, so it is left alone. */}
+      <div
+        style={
+          isNotifMode(props)
+            ? { display: 'contents' }
+            : { overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }
+        }
+      >
+        <MenuShellContent props={props} panelClosable />
+      </div>
     </div>
   );
 }
