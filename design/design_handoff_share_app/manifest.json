@@ -1,0 +1,186 @@
+[
+ {
+  "section": "01-where-it-lives",
+  "name": "menu-m",
+  "title": "Account menu · phone",
+  "note": "One new row, last in You: Share Concert Crawl, with the QR tile in accent. YOUR INVITE says what it is before launch.",
+  "w": 390,
+  "h": 920
+ },
+ {
+  "section": "01-where-it-lives",
+  "name": "menu-d",
+  "title": "Account menu · desktop",
+  "note": "Same row in the popover, shown hovered.",
+  "w": 1300,
+  "h": 1000
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-m",
+  "title": "Share sheet",
+  "note": "The QR is a ticket: code above the perforation, who joined with it below. Share… opens the phone’s own sheet with the link and a line of text.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-none-m",
+  "title": "Share sheet · no one yet",
+  "note": "Three empty seats say “room for people” without promising a number. The code never runs out.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-many-m",
+  "title": "Share sheet · six joined",
+  "note": "Four faces, then +2.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "fullscreen-m",
+  "title": "Full screen",
+  "note": "Tap the code or Full screen. Always white, whatever the theme, so it scans in a dark room. Keeps the screen awake (Wake Lock) until Done.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-320",
+  "title": "Share sheet · at 320",
+  "note": "The QR drops to 196px; the link stays on one line.",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-d",
+  "title": "Share dialog · desktop",
+  "note": "The live BottomSheet becomes a centered dialog. Copy link leads; Share… shows only where the browser has it; no Full screen.",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-light-m",
+  "title": "Share sheet · Light",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-the-share-sheet",
+  "name": "sheet-light-d",
+  "title": "Share dialog · desktop, Light",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "03-states",
+  "name": "loading-m",
+  "title": "Making your invite",
+  "note": "First open makes the code. The ticket keeps its size, so nothing jumps when the QR lands.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-states",
+  "name": "copied-m",
+  "title": "Link copied",
+  "note": "Live string. The press turns success for 2 seconds, then goes back.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-states",
+  "name": "share-failed-m",
+  "title": "Share failed",
+  "note": "The phone refused (not a cancel: a cancel says nothing). Points to Copy link.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-states",
+  "name": "error-m",
+  "title": "Couldn’t make the code",
+  "note": "Network or server. Try again sits in the QR’s place; the presses wait.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-states",
+  "name": "off-m",
+  "title": "Code turned off",
+  "note": "An admin revoked this person’s code (it ended up somewhere public). The QR falls back to the plain site, which is the waitlist before launch.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-after-launch",
+  "name": "open-m",
+  "title": "After launch",
+  "note": "No invite needed: a plain link to concertcrawl.app, no stub, a different title. Same row, same sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-after-launch",
+  "name": "open-fullscreen-m",
+  "title": "After launch · full screen",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-after-launch",
+  "name": "open-d",
+  "title": "After launch · desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "04-after-launch",
+  "name": "signed-out-m",
+  "title": "After launch · signed out",
+  "note": "Guests can share too once there is no gate. The row goes first in App. Before launch it is absent signed out.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-the-friends-side",
+  "name": "unfurl-d",
+  "title": "Link preview",
+  "note": "What a pasted /i/ link unfurls as. One image for every code: it names nobody, so it can be cached.",
+  "w": 1200,
+  "h": 630
+ },
+ {
+  "section": "05-the-friends-side",
+  "name": "invite-from-m",
+  "title": "Invite page · from a friend",
+  "note": "The existing “from a link or QR” board, with the sharer’s first name in the line. Optional: see question 2.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-parts",
+  "name": "parts-d",
+  "title": "Parts · Electric",
+  "note": "Every state of the ticket, the row and the presses.",
+  "w": 1300,
+  "h": 1160
+ },
+ {
+  "section": "06-parts",
+  "name": "parts-light-d",
+  "title": "Parts · Light",
+  "note": "",
+  "w": 1300,
+  "h": 1160
+ }
+]
