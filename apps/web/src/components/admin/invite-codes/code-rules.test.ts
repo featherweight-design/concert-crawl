@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   cleanCode,
+  codeActions,
   codeLabel,
   codeProblem,
   expiresAtFor,
   initialExpiry,
   makerName,
   roleLabel,
+  seatCap,
   seatsFloorError,
   seatsFrom,
   shortDate,
@@ -68,25 +70,81 @@ describe('seats', () => {
 });
 
 describe('codeLabel and makerName', () => {
+  const admin = { kind: 'admin' as const, createdByHandle: 'jules' };
+
   it('derives "Poster ·" for any code with more than one seat', () => {
     expect(
-      codeLabel({ label: 'Hi-Dive bathroom', maxUses: 50, kind: 'admin' }),
+      codeLabel({ ...admin, label: 'Hi-Dive bathroom', maxUses: 50 }),
     ).toBe('Poster · Hi-Dive bathroom');
-    expect(codeLabel({ label: null, maxUses: 50, kind: 'admin' })).toBe(
-      'Poster',
-    );
-    expect(codeLabel({ label: 'For Mira', maxUses: 1, kind: 'admin' })).toBe(
+    expect(codeLabel({ ...admin, label: null, maxUses: 50 })).toBe('Poster');
+    expect(codeLabel({ ...admin, label: 'For Mira', maxUses: 1 })).toBe(
       'For Mira',
     );
-    // A member's own share code is not a poster whatever its seat cap.
+  });
+
+  it('labels a member share code "Personal · @handle", never a poster', () => {
     expect(
-      codeLabel({ label: null, maxUses: 10_000, kind: 'member' }),
-    ).toBeNull();
+      codeLabel({
+        label: null,
+        maxUses: 10_000,
+        kind: 'member',
+        createdByHandle: 'mira',
+      }),
+    ).toBe('Personal · @mira');
+    expect(
+      codeLabel({
+        label: null,
+        maxUses: 10_000,
+        kind: 'member',
+        createdByHandle: null,
+      }),
+    ).toBe('Personal');
   });
 
   it('names a maker with no handle "A former admin"', () => {
     expect(makerName({ createdByHandle: 'jules' })).toBe('@jules');
     expect(makerName({ createdByHandle: null })).toBe('A former admin');
+  });
+
+  it('never calls a member without a handle a former admin', () => {
+    expect(makerName({ createdByHandle: null, kind: 'member' })).toBe(
+      'No handle yet',
+    );
+  });
+});
+
+describe('seatCap', () => {
+  it('hides a member code’s 10,000 ceiling and keeps an admin cap', () => {
+    expect(seatCap({ kind: 'member', maxUses: 10_000 })).toBeNull();
+    expect(seatCap({ kind: 'admin', maxUses: 50 })).toBe(50);
+  });
+});
+
+describe('codeActions', () => {
+  const admin = { kind: 'admin' as const, maxUses: 50 };
+  const member = { kind: 'member' as const, maxUses: 10_000 };
+
+  it('offers an admin code everything its status allows', () => {
+    expect(codeActions(admin, 'active')).toEqual([
+      'copy',
+      'poster',
+      'joined',
+      'edit',
+      'revoke',
+    ]);
+    expect(codeActions(admin, 'revoked')).toEqual([
+      'copy',
+      'joined',
+      'reactivate',
+    ]);
+  });
+
+  it('keeps Revoke and who joined on a member code, never Edit or Reactivate', () => {
+    expect(codeActions(member, 'active')).toEqual(['copy', 'joined', 'revoke']);
+    // Full is not ended, so it keeps Revoke too.
+    expect(codeActions(member, 'full')).toEqual(['copy', 'joined', 'revoke']);
+    expect(codeActions(member, 'revoked')).toEqual(['copy', 'joined']);
+    expect(codeActions(member, 'expired')).toEqual(['copy', 'joined']);
   });
 });
 

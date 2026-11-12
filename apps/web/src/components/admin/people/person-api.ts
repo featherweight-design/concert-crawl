@@ -22,7 +22,7 @@ import {
 /** The roles the segment can set; `sub_admin` is never set here. */
 export type SettableRole = Exclude<Role, 'sub_admin'>;
 
-const JOIN_KINDS = ['code', 'poster', 'founder', 'test'] as const;
+const JOIN_KINDS = ['code', 'poster', 'member', 'founder', 'test'] as const;
 
 const isJoinKind = (value: unknown): value is PersonJoinSource['kind'] =>
   JOIN_KINDS.some((kind) => kind === value);

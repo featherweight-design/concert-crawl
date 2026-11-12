@@ -16,7 +16,6 @@ import {
 } from '@/components/admin/primitives';
 import {
   inviteStatus,
-  isPosterCode,
   MAX_SEATS,
   seatsTaken,
   type InviteStatus,
@@ -26,11 +25,15 @@ import { codesApi, type CodeEdit } from './codes-api';
 import { PeopleTabs } from '../people/PeopleTabs';
 import {
   STATUS_KIND,
+  codeActions,
   codeLabel,
   countPosters,
   isEnded,
+  isMemberCode,
   makerName,
+  seatCap,
   shortDate,
+  type CodeAction,
 } from './code-rules';
 import { MONO } from './code-styles';
 import { InviteCodesRowsSkeleton } from './InviteCodesSkeleton';
@@ -192,49 +195,32 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   ): RowMenuItem[] => {
     const host = origin.replace(/^https?:\/\//, '');
     const joined = seatsTaken(row);
-    const copy: RowMenuItem = {
-      key: 'copy',
-      icon: MENU_ICONS.copy,
-      label: COPY.menu.copyLink,
-      hint: isEnded(status) ? COPY.menu.copyLinkEnded : `${host}/i/${row.code}`,
-      onSelect: () => copyLink(row),
-    };
-    const see: RowMenuItem = {
-      key: 'joined',
-      icon: MENU_ICONS.joined,
-      label: COPY.menu.seeWhoJoined,
-      hint: COPY.menu.seeWhoJoinedHint(joined),
-      onSelect: () => setOpen({ kind: 'code', id: row.id }),
-    };
-    if (isEnded(status)) {
-      return [
-        copy,
-        see,
-        {
-          key: 'reactivate',
-          icon: MENU_ICONS.reactivate,
-          label: COPY.menu.reactivate,
-          hint: COPY.menu.reactivateHint,
-          onSelect: () => setOpen({ kind: 'reactivate', id: row.id }),
-        },
-      ];
-    }
-    return [
-      copy,
-      // The Posters tab can only pick a live code with a seat left.
-      ...(isPosterCode(row) && status === 'active'
-        ? [
-            {
-              key: 'poster',
-              icon: MENU_ICONS.poster,
-              label: COPY.menu.makePoster,
-              hint: COPY.menu.makePosterHint,
-              onSelect: () => router.push(postersHref({ code: row.id })),
-            },
-          ]
-        : []),
-      see,
-      {
+    // Which items show is `codeActions`' call; this only draws them.
+    const items: Record<CodeAction, RowMenuItem> = {
+      copy: {
+        key: 'copy',
+        icon: MENU_ICONS.copy,
+        label: COPY.menu.copyLink,
+        hint: isEnded(status)
+          ? COPY.menu.copyLinkEnded
+          : `${host}/i/${row.code}`,
+        onSelect: () => copyLink(row),
+      },
+      poster: {
+        key: 'poster',
+        icon: MENU_ICONS.poster,
+        label: COPY.menu.makePoster,
+        hint: COPY.menu.makePosterHint,
+        onSelect: () => router.push(postersHref({ code: row.id })),
+      },
+      joined: {
+        key: 'joined',
+        icon: MENU_ICONS.joined,
+        label: COPY.menu.seeWhoJoined,
+        hint: COPY.menu.seeWhoJoinedHint(joined),
+        onSelect: () => setOpen({ kind: 'code', id: row.id }),
+      },
+      edit: {
         key: 'edit',
         icon: MENU_ICONS.edit,
         label: COPY.menu.edit,
@@ -242,7 +228,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
         onSelect: () =>
           setOpen({ kind: 'edit', id: row.id, focusSeats: false }),
       },
-      {
+      revoke: {
         key: 'revoke',
         icon: MENU_ICONS.revoke,
         label: COPY.menu.revoke,
@@ -251,7 +237,15 @@ export function InviteCodesClient({ origin }: { origin: string }) {
         divided: true,
         onSelect: () => setOpen({ kind: 'revoke', id: row.id }),
       },
-    ];
+      reactivate: {
+        key: 'reactivate',
+        icon: MENU_ICONS.reactivate,
+        label: COPY.menu.reactivate,
+        hint: COPY.menu.reactivateHint,
+        onSelect: () => setOpen({ kind: 'reactivate', id: row.id }),
+      },
+    };
+    return codeActions(row, status).map((action) => items[action]);
   };
 
   const rows = (codes ?? []).map((row) => ({
@@ -345,7 +339,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <SeatsBar
                   used={seatsTaken(row)}
-                  max={row.maxUses}
+                  max={seatCap(row)}
                   full={status === 'full'}
                   width={120}
                 />
@@ -434,7 +428,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
                   <td style={CELL}>
                     <SeatsBar
                       used={seatsTaken(row)}
-                      max={row.maxUses}
+                      max={seatCap(row)}
                       full={status === 'full'}
                     />
                   </td>
@@ -571,8 +565,12 @@ export function InviteCodesClient({ origin }: { origin: string }) {
           status={inviteStatus(openRow, now)}
           api={api}
           onCopy={() => copyLink(openRow)}
-          onAddSeats={() =>
-            setOpen({ kind: 'edit', id: openRow.id, focusSeats: true })
+          // A member's share code takes no seats (409 `member_code`).
+          onAddSeats={
+            isMemberCode(openRow)
+              ? undefined
+              : () =>
+                  setOpen({ kind: 'edit', id: openRow.id, focusSeats: true })
           }
           onRevoke={() => setOpen({ kind: 'revoke', id: openRow.id })}
           onReactivate={() => setOpen({ kind: 'reactivate', id: openRow.id })}

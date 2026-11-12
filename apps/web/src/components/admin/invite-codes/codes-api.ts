@@ -31,8 +31,22 @@ export const isCount = (value: unknown): value is number =>
 const isRoleOrNull = (value: unknown): value is Role | null =>
   value === null || isRole(value);
 
-export const isInviteCode = (value: unknown): value is InviteCode =>
+const isCodeKind = (value: unknown): value is InviteCode['kind'] =>
+  value === 'admin' || value === 'member';
+
+/**
+ * Fills a code's `kind` in place. An API from before member codes sends none,
+ * and every code was an admin's then; a kind this build doesn't know is left
+ * for the guard to refuse. Runs before the guard, so the guard can be honest.
+ */
+const withKind = (value: unknown): unknown =>
+  isRecord(value) && value['kind'] === undefined
+    ? { ...value, kind: 'admin' }
+    : value;
+
+const isInviteCodeShape = (value: unknown): value is InviteCode =>
   isRecord(value) &&
+  isCodeKind(value['kind']) &&
   isText(value['id']) &&
   isText(value['code']) &&
   isText(value['createdBy']) &&
@@ -46,11 +60,23 @@ export const isInviteCode = (value: unknown): value is InviteCode =>
   isCount(value['maxUses']) &&
   isCount(value['useCount']);
 
-export const isAdminInviteCode = (value: unknown): value is AdminInviteCode =>
-  isInviteCode(value) &&
+const isAdminInviteCodeShape = (value: unknown): value is AdminInviteCode =>
+  isInviteCodeShape(value) &&
   isRecord(value) &&
   isTextOrNull(value['createdByHandle']) &&
   isTextOrNull(value['lastUsedAt']);
+
+/** One code from the API, its missing `kind` read as admin; null if malformed. */
+export const inviteCodeFrom = (value: unknown): InviteCode | null => {
+  const code = withKind(value);
+  return isInviteCodeShape(code) ? code : null;
+};
+
+/** One list row from the API, as `inviteCodeFrom`; null if malformed. */
+export const adminInviteCodeFrom = (value: unknown): AdminInviteCode | null => {
+  const code = withKind(value);
+  return isAdminInviteCodeShape(code) ? code : null;
+};
 
 const isRedemption = (value: unknown): value is InviteCodeRedemption =>
   isRecord(value) &&
@@ -141,17 +167,20 @@ export const call = async (
 
 /** One code back from a write. */
 const oneCode = async (pending: Promise<unknown>): Promise<InviteCode> => {
-  const data = await pending;
-  if (!isInviteCode(data)) throw new ShapeError('code');
-  return data;
+  const code = inviteCodeFrom(await pending);
+  if (!code) throw new ShapeError('code');
+  return code;
 };
 
 export const codesApi = (getToken: GetToken) => ({
   list: async (): Promise<AdminInviteCode[]> => {
     const data = await call(getToken, BASE);
-    if (!Array.isArray(data) || !data.every(isAdminInviteCode))
+    if (!Array.isArray(data)) throw new ShapeError('codes');
+    const codes = data.map(adminInviteCodeFrom);
+    // One malformed row fails the whole list into Couldn't load.
+    if (!codes.every((code): code is AdminInviteCode => code !== null))
       throw new ShapeError('codes');
-    return data;
+    return codes;
   },
   /** The People tab's count, as the People list counts everyone. */
   peopleTotal: async (): Promise<number> => {

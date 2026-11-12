@@ -2132,11 +2132,16 @@ export const ADMIN_COPY = {
       revoked: 'Revoked',
     },
     seatsUsed: (used: number, max: number) => `${used} of ${max}`,
+    // A member's share code: its cap is a ceiling, never drawn.
+    seatsJoined: (joined: number) => `${joined} joined`,
     never: 'Never',
     expiresOn: (date: string | null) =>
       date ? `Expires ${date}` : 'Expires never',
     posterLabel: (label: string | null) =>
       label ? `Poster · ${label}` : 'Poster',
+    // A member's own share code, from `design_handoff_share_app`.
+    memberLabel: (handle: string | null) =>
+      handle ? `Personal · @${handle}` : 'Personal',
     formerAdmin: 'A former admin',
     footer:
       'Revoked and expired codes stay listed, so you can see who they brought in.',

@@ -30,6 +30,11 @@ const person = (id: string, isTestAccount = false): AdminPerson => ({
 describe('joinedLabel', () => {
   it.each([
     [{ kind: 'code', code: 'REDROCKS', label: null }, 'Oct 2 · code REDROCKS'],
+    // A member's share code reads as a code does.
+    [
+      { kind: 'member', code: 'BETA-7F3A-91C2', label: null },
+      'Oct 2 · code BETA-7F3A-91C2',
+    ],
     [
       { kind: 'poster', code: 'HIDIVE', label: 'Hi-Dive' },
       'Oct 2 · poster HIDIVE',
@@ -118,9 +123,14 @@ describe('joinSourceFrom', () => {
       joinSourceFrom({ kind: 'poster', code: 'HIDIVE', label: 'Hi-Dive' }),
     ).toEqual({ kind: 'poster', code: 'HIDIVE', label: 'Hi-Dive' });
   });
+  it('keeps a member share code', () => {
+    expect(
+      joinSourceFrom({ kind: 'member', code: 'BETA-7F3A-91C2', label: null }),
+    ).toEqual({ kind: 'member', code: 'BETA-7F3A-91C2', label: null });
+  });
   it('reads a kind it does not know as no source, so JOINED shows the date', () => {
     expect(
-      joinSourceFrom({ kind: 'member', code: 'MIRA', label: null }),
+      joinSourceFrom({ kind: 'venue', code: 'MIRA', label: null }),
     ).toBeNull();
     expect(joinSourceFrom(null)).toBeNull();
   });

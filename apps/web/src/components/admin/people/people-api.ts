@@ -50,7 +50,7 @@ export interface PeopleQuery {
   offset: number;
 }
 
-const JOIN_KINDS = ['code', 'poster', 'founder', 'test'] as const;
+const JOIN_KINDS = ['code', 'poster', 'member', 'founder', 'test'] as const;
 
 const isJoinKind = (value: unknown): value is PersonJoinSource['kind'] =>
   JOIN_KINDS.some((kind) => kind === value);

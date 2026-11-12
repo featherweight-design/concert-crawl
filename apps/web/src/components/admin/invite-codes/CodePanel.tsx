@@ -19,8 +19,10 @@ import type { CodesApi } from './codes-api';
 import {
   codeLabel,
   isEnded,
+  isMemberCode,
   makerName,
   roleLabel,
+  seatCap,
   shortDate,
 } from './code-rules';
 import { peopleWithCodeHref } from '../people/people-rules';
@@ -56,7 +58,7 @@ export const CodePanel = ({
   api: CodesApi;
   onCopy: () => void;
   /** Opens Edit with Seats in focus; omitted, Add seats isn't offered. */
-  onAddSeats?: () => void;
+  onAddSeats?: (() => void) | undefined;
   onRevoke: () => void;
   onReactivate: () => void;
   onClose: () => void;
@@ -81,6 +83,22 @@ export const CodePanel = ({
   const ended = isEnded(status);
   const used = seatsTaken(code);
   const label = codeLabel(code);
+  // A member's share code: Revoke and who joined only (409 `member_code`).
+  const member = isMemberCode(code);
+
+  let footer;
+  if (ended) {
+    footer = member ? undefined : (
+      <AdminButton
+        type="button"
+        variant="outline"
+        onClick={onReactivate}
+        style={SECONDARY}
+      >
+        {COPY.menu.reactivate}
+      </AdminButton>
+    );
+  }
 
   return (
     <CodeSurface
@@ -88,21 +106,17 @@ export const CodePanel = ({
       footerLayout="ruled"
       title={<CodeTitle code={code.code} />}
       label={code.code}
-      subtitle={COPY.panel.byline(label, makerName(code))}
+      // "Personal · @mira" already names its maker; a byline would say it twice.
+      subtitle={
+        member && label ? label : COPY.panel.byline(label, makerName(code))
+      }
       onClose={onClose}
       footer={
         ended ? (
-          <AdminButton
-            type="button"
-            variant="outline"
-            onClick={onReactivate}
-            style={SECONDARY}
-          >
-            {COPY.menu.reactivate}
-          </AdminButton>
+          footer
         ) : (
           <>
-            {onAddSeats && (
+            {onAddSeats && !member && (
               <AdminButton
                 type="button"
                 variant="outline"
@@ -162,7 +176,7 @@ export const CodePanel = ({
             </Link>
           )}
         </div>
-        <SeatsBar used={used} max={code.maxUses} full={status === 'full'} />
+        <SeatsBar used={used} max={seatCap(code)} full={status === 'full'} />
         <div>
           <div style={KV_ROW}>
             <span style={{ color: 'var(--fg-muted)' }}>
