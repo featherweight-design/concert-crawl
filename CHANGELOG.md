@@ -1,3 +1,27 @@
+# [1.350.0](https://github.com/featherweight-design/concert-crawl/compare/v1.349.0...v1.350.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** address review on the b+ browse audit fixes ([be4c0ac](https://github.com/featherweight-design/concert-crawl/commit/be4c0acdbbf704364162ff7fbc2738e855de502c))
+* **web:** address the /code-review on the b+ browse audit ([1ecbbca](https://github.com/featherweight-design/concert-crawl/commit/1ecbbcac28d9708a227fcc2d2a851d73c06bba61))
+* **web:** address the risk checklist on the b+ browse audit ([8923284](https://github.com/featherweight-design/concert-crawl/commit/8923284f99ba785ca1b2a3f72f68f3998e176e3e))
+* **web:** b+ audit fixes for browse rows, shelf, spotlight and feedback tab ([8cd9be5](https://github.com/featherweight-design/concert-crawl/commit/8cd9be5cc4c0c6e9ec1fbf1908863971db0a8d88))
+* **web:** bring back See all on the artists shelf, ten cards scrolling ([341d76e](https://github.com/featherweight-design/concert-crawl/commit/341d76edf5ff05a873ae92df0fa2dcbb1851e79c)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **web:** drop the sold-out chip below a title it would squeeze ([bbe991e](https://github.com/featherweight-design/concert-crawl/commit/bbe991ee6eda74c70c8f893cbb2f278fb0ce402e))
+* **web:** drop the undrawn See all link from the artists shelf ([c80cdd7](https://github.com/featherweight-design/concert-crawl/commit/c80cdd7bf2333981a476c269219977ac578738ab))
+* **web:** keep the passport booklet inside a phone-width column ([8809130](https://github.com/featherweight-design/concert-crawl/commit/8809130136ddeb86a16a55d19eab8d7d73dc8905))
+* **web:** passport booklet review fixes ([b518d30](https://github.com/featherweight-design/concert-crawl/commit/b518d302b09ab292faaca05db9b099bcce247439))
+* **web:** remove the lifecycle nudges and their dead plan links ([57ff5a9](https://github.com/featherweight-design/concert-crawl/commit/57ff5a9143ddd92f8c8021136c87f9de329a0a35))
+* **web:** sold-out chip on the title line, status-colored row edge ([d60299a](https://github.com/featherweight-design/concert-crawl/commit/d60299a5328b6cc0178d3ef6d1406dac6e25b048))
+
+
+### Features
+
+* **web:** draw the empty desktop passport as the open book ([2eb034c](https://github.com/featherweight-design/concert-crawl/commit/2eb034c4f493475e2480eb588381d0f86ea11ffe)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+* **web:** give booklet stamps their slot tilt ([35a0e6d](https://github.com/featherweight-design/concert-crawl/commit/35a0e6d0e849c387a30e5aa0b70b51d8813305b7))
+* **web:** passport booklet with the up next stub (B+ B13) ([d0d5760](https://github.com/featherweight-design/concert-crawl/commit/d0d5760819d0780b52e7f60536270c40f47adf24))
+
 # [1.349.0](https://github.com/featherweight-design/concert-crawl/compare/v1.348.0...v1.349.0) (2026-11-12)
 
 
