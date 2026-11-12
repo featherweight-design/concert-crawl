@@ -7,7 +7,12 @@
       "label": "/events/[id]: cancelled, Refund info CTA",
       "steps": [
         {
-          "goto": "/events/${CC_CANCELLED_EVENT_ID}",
+          "goto": "/events/${CC_CANCELLED_EVENT_ID}"
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"live-report-banner\"][data-status=\"cancelled\"]"
         }
       ]
@@ -17,7 +22,12 @@
       "label": "/events/[id]: postponed, Watching for the new date",
       "steps": [
         {
-          "goto": "/events/${CC_POSTPONED_EVENT_ID}",
+          "goto": "/events/${CC_POSTPONED_EVENT_ID}"
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"live-report-banner\"][data-status=\"postponed\"]"
         }
       ]
