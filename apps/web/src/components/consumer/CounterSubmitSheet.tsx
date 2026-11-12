@@ -277,40 +277,9 @@ export function CounterSubmitSheet({
     </>
   );
 
-  const footerNode =
-    sheetState === 'form' || sheetState === 'submitting' ? (
-      <>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={sheetState === 'submitting'}
-          style={{
-            all: 'unset',
-            cursor: sheetState === 'submitting' ? 'not-allowed' : 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            height: 48,
-            width: '100%',
-            boxSizing: 'border-box',
-            background: PRIMARY_GRADIENT,
-            color: 'var(--fg-on-accent)',
-            borderRadius: 12,
-            fontFamily: 'var(--font-ui)',
-            fontWeight: 800,
-            fontSize: 15,
-            letterSpacing: '-0.005em',
-            opacity: sheetState === 'submitting' ? 0.45 : 1,
-            transition: 'opacity var(--motion-fast) var(--motion-ease)',
-          }}
-        >
-          {sheetState === 'submitting'
-            ? copy.submittingButton
-            : copy.submitButton}
-        </button>
-      </>
-    ) : undefined;
+  // Addendum 2 item 28 (`counter-how-found-m`): Submit stays disabled until a
+  // "How you found out" chip is picked.
+  const submitDisabled = sheetState === 'submitting' || howFound === null;
 
   // Gated here rather than at the trigger, matching SubmitPriceModal: the
   // counter POST needs a Clerk token, so a signed-out visitor previously filled
@@ -337,7 +306,6 @@ export function CounterSubmitSheet({
       ariaLabel={copy.heading}
       sheetHeight="tall"
       header={headerNode}
-      footer={footerNode}
     >
       <p role="status" className="sr-only" data-testid="counter-sheet-status">
         {announcement}
@@ -373,99 +341,132 @@ export function CounterSubmitSheet({
       )}
 
       {(sheetState === 'form' || sheetState === 'submitting') && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
-            opacity: sheetState === 'submitting' ? 0.6 : 1,
-            pointerEvents: sheetState === 'submitting' ? 'none' : 'auto',
-          }}
-        >
-          {/* The slot the update lands in: locked to the checked price */}
-          <div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 12,
-              }}
-            >
-              <LockedField
-                label={copy.tierLabel}
-                value={currentTier ?? EMPTY_SLOT}
-              />
-              <LockedField label={copy.vendorLabel} value={currentVendor} />
-            </div>
-            <p
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: '11.5px',
-                color: 'var(--fg-subtle)',
-                lineHeight: 1.4,
-                margin: '8px 0 0',
-              }}
-            >
-              {copy.lockedHint}
-            </p>
-          </div>
-
-          {/* Price fields */}
-          <div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 12,
-              }}
-            >
-              <SPNumberField
-                id="counter-floor"
-                label={copy.floorLabel}
-                value={floor}
-                onChange={setFloor}
-                placeholder={copy.floorPlaceholder}
-                required
-                error={fieldErrors.floor}
-              />
-              <SPNumberField
-                id="counter-ceiling"
-                label={copy.ceilingLabel}
-                value={ceiling}
-                onChange={setCeiling}
-                placeholder={copy.ceilingPlaceholder}
-                error={fieldErrors.ceiling}
-              />
-            </div>
-          </div>
-
-          {/* How found chips */}
-          <ChipGroup
-            label={copy.howFoundLabel}
-            options={HOW_FOUND_OPTIONS}
-            value={howFound}
-            onChange={setHowFound}
-            error={fieldErrors.howFound}
-          />
-
-          {/* Honesty disclaimer */}
+        <>
           <div
             style={{
-              borderRadius: 10,
-              border: '1px solid var(--border)',
-              background: 'color-mix(in oklab, var(--fg) 4%, transparent)',
-              padding: '10px 12px',
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 9,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
-              lineHeight: 1.6,
-              textTransform: 'uppercase' as const,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 20,
+              opacity: sheetState === 'submitting' ? 0.6 : 1,
+              pointerEvents: sheetState === 'submitting' ? 'none' : 'auto',
             }}
           >
-            {copy.honestyFootnote}
+            {/* The slot the update lands in: locked to the checked price */}
+            <div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 12,
+                }}
+              >
+                <LockedField
+                  label={copy.tierLabel}
+                  value={currentTier ?? EMPTY_SLOT}
+                />
+                <LockedField label={copy.vendorLabel} value={currentVendor} />
+              </div>
+              <p
+                style={{
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '11.5px',
+                  color: 'var(--fg-subtle)',
+                  lineHeight: 1.4,
+                  margin: '8px 0 0',
+                }}
+              >
+                {copy.lockedHint}
+              </p>
+            </div>
+
+            {/* Price fields */}
+            <div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 12,
+                }}
+              >
+                <SPNumberField
+                  id="counter-floor"
+                  label={copy.floorLabel}
+                  value={floor}
+                  onChange={setFloor}
+                  placeholder={copy.floorPlaceholder}
+                  required
+                  error={fieldErrors.floor}
+                />
+                <SPNumberField
+                  id="counter-ceiling"
+                  label={copy.ceilingLabel}
+                  value={ceiling}
+                  onChange={setCeiling}
+                  placeholder={copy.ceilingPlaceholder}
+                  error={fieldErrors.ceiling}
+                />
+              </div>
+            </div>
+
+            {/* Addendum 2 item 28 (`counter-how-found-m`): the single-choice
+                chips sit between the price fields and Submit. */}
+            <ChipGroup
+              label={copy.howFoundLabel}
+              options={HOW_FOUND_OPTIONS}
+              value={howFound}
+              onChange={setHowFound}
+              error={fieldErrors.howFound}
+            />
           </div>
-        </div>
+
+          {/* Submit follows the chips, and the honesty footnote is centred
+              under it in small subtle text. Outside the dimmed column, so
+              the button's own disabled opacity is the only one it wears. */}
+          <div style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitDisabled}
+              style={{
+                all: 'unset',
+                cursor: submitDisabled ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                height: 48,
+                width: '100%',
+                boxSizing: 'border-box',
+                background: PRIMARY_GRADIENT,
+                color: 'var(--fg-on-accent)',
+                borderRadius: 12,
+                fontFamily: 'var(--font-ui)',
+                fontWeight: 800,
+                fontSize: 15,
+                letterSpacing: '-0.005em',
+                opacity: submitDisabled ? 0.45 : 1,
+                transition: 'opacity var(--motion-fast) var(--motion-ease)',
+              }}
+            >
+              {sheetState === 'submitting'
+                ? copy.submittingButton
+                : copy.submitButton}
+            </button>
+            <p
+              data-testid="counter-honesty-footnote"
+              style={{
+                margin: '10px 0 0',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 12,
+                lineHeight: 1.45,
+                color: 'var(--fg-subtle)',
+                textAlign: 'center',
+              }}
+            >
+              {copy.honestyFootnote}
+            </p>
+          </div>
+        </>
       )}
     </ModalShell>
   );

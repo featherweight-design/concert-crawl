@@ -269,3 +269,59 @@ describe('CounterSubmitSheet result states', () => {
     expect(region).toHaveTextContent('');
   });
 });
+
+// Addendum 2 item 28, board `28-price-check-counter/counter-how-found-m`.
+describe('CounterSubmitSheet how you found out', () => {
+  const submitButton = () =>
+    screen.getByRole('button', { name: 'Submit update' });
+
+  it('keeps Submit disabled until a chip is picked', () => {
+    renderSheet();
+    fireEvent.change(screen.getByLabelText(/floor/i), {
+      target: { value: '55' },
+    });
+    expect(submitButton()).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Saw the listing' }));
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it('is single-choice', () => {
+    renderSheet();
+    fireEvent.click(screen.getByRole('button', { name: 'Bought it myself' }));
+    fireEvent.click(screen.getByRole('button', { name: 'At the venue' }));
+    const pressed = screen
+      .getAllByRole('button', { pressed: true })
+      .map((node) => node.textContent);
+    expect(pressed).toEqual(['At the venue']);
+  });
+
+  it('runs price fields, then the chips, then Submit, then the footnote', () => {
+    renderSheet();
+    const ceiling = screen.getByLabelText(/ceiling/i);
+    const chip = screen.getByRole('button', { name: 'Bought it myself' });
+    const submit = submitButton();
+    const footnote = screen.getByTestId('counter-honesty-footnote');
+
+    const follows = (first: Node, second: Node) =>
+      Boolean(
+        first.compareDocumentPosition(second) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    expect(follows(ceiling, chip)).toBe(true);
+    expect(follows(chip, submit)).toBe(true);
+    expect(follows(submit, footnote)).toBe(true);
+  });
+
+  it('centres the honesty footnote under the button in small subtle text', () => {
+    renderSheet();
+    const footnote = screen.getByTestId('counter-honesty-footnote');
+    expect(footnote).toHaveTextContent(
+      'By submitting you confirm this is accurate to the best of your knowledge. Intentionally false reports may result in account suspension.',
+    );
+    expect(footnote.style.textAlign).toBe('center');
+    expect(footnote.style.fontSize).toBe('12px');
+    expect(footnote.style.color).toBe('var(--fg-subtle)');
+    expect(footnote.style.textTransform).toBe('');
+  });
+});
