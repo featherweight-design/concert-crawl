@@ -1492,3 +1492,112 @@ export interface AuditLogItem {
   metadata: Record<string, unknown> | null;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Admin Needs you queue (admin redesign 2a)
+// ---------------------------------------------------------------------------
+
+export type NeedsYouKind =
+  | 'show-dropped'
+  | 'show-moved'
+  | 'venue-failing'
+  | 'venue-blocked'
+  | 'artist'
+  | 'event-low-confidence'
+  | 'price-check'
+  | 'price-batch'
+  | 'bug';
+
+// One drawn answer button. `slug` is the drawn label, snake-cased, and is what
+// POST /needs-you/items/:key/answer takes. `notifiesFans` answers sit behind a
+// confirm dialog and have no Undo; `undoable` ones can be taken back until the
+// item's state changes again.
+export interface NeedsYouAnswerOption {
+  slug: string;
+  label: string;
+  notifiesFans: boolean;
+  undoable: boolean;
+  suggested: boolean;
+}
+
+// Fields every card carries. `key` is `<kind>:<id>[:<evidenceKey>]`. `fanDate`
+// is the earliest date a fan will see the affected show(s), as YYYY-MM-DD, or
+// null when the item is not tied to a show (a bug, a blocked venue with no
+// upcoming shows). The queue is ordered by it, soonest first.
+export interface NeedsYouItemBase {
+  key: string;
+  kind: NeedsYouKind;
+  title: string;
+  venueId: string | null;
+  venueName: string | null;
+  fanDate: string | null;
+  watchers: number;
+  answers: NeedsYouAnswerOption[];
+}
+
+export interface NeedsYouEvidenceLine {
+  label: string;
+  value: string;
+}
+
+export type NeedsYouItem =
+  | (NeedsYouItemBase & {
+      kind: 'show-dropped';
+      eventId: string;
+      classification: MissingClassification;
+      lastSeenAt: string | null;
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'show-moved';
+      eventId: string;
+      moveTo: { eventId: string; title: string; venueName: string | null };
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'venue-failing' | 'venue-blocked';
+      cause: string | null;
+      lastRuns: {
+        at: string;
+        status: CrawlStatus;
+        errorMessage: string | null;
+      }[];
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'artist';
+      artistId: string;
+      matchStatus: string;
+      reportCount: number;
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'event-low-confidence';
+      eventId: string;
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'price-check';
+      contestId: string;
+      listedPrice: string | null;
+      checkedPrice: string | null;
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'price-batch';
+      submissionIds: string[];
+      evidence: NeedsYouEvidenceLine[];
+    })
+  | (NeedsYouItemBase & {
+      kind: 'bug';
+      feedbackId: string;
+      evidence: NeedsYouEvidenceLine[];
+    });
+
+// The badge: decisions waiting and nothing else. A batch is one decision.
+// `handledToday` is needs_you.answer audit rows since midnight Mountain Time.
+export interface NeedsYouCount {
+  decisions: number;
+  byKind: Record<NeedsYouKind, number>;
+  handledToday: number;
+}

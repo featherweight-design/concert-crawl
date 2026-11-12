@@ -567,6 +567,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'basis as feature_flags.updated_by.',
   },
   {
+    tableName: 'admin_queue_snoozes',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: ['created_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Admin queue config. `created_by` is the admin who snoozed, not a ' +
+      'customer, and stays as the record of who acted — same basis as ' +
+      'feature_flags.updated_by.',
+  },
+  {
     tableName: 'rate_limit_buckets',
     disposition: 'delete',
     userIdColumn: 'user_id',
