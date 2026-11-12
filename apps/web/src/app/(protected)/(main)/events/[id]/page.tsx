@@ -449,6 +449,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           {related.length > 0 && (
             <div className="mt-6">
               <SectionHeader
+                large
                 title={`${copy.moreAtVenuePrefix} ${event.venue.name}`}
                 count={`${related.length} ${related.length !== 1 ? copy.showPlural : copy.showSingular}`}
               />

@@ -890,15 +890,13 @@ function CommunityHandoffCard({
         overflow: 'hidden',
       }}
     >
-      {/* Community badge — pinned top-right */}
+      {/* Community label: plain cyan mono text inside the card, top right,
+          not a boxed tab on its border (bp-m-event_m_end). */}
       <span
         style={{
           position: 'absolute',
-          top: 0,
-          right: 0,
-          padding: '3px 8px',
-          borderRadius: '0 0 0 6px',
-          background: `color-mix(in oklab, ${COMMUNITY} 20%, transparent)`,
+          top: 14,
+          right: 14,
           color: COMMUNITY,
           fontFamily: 'var(--font-mono)',
           fontSize: 9,
