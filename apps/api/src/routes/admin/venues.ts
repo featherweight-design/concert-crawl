@@ -538,7 +538,11 @@ venuesAdminRouter.patch(
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
-    if (hideReason === 'other' && (hideNote ?? '') === '') {
+    if (
+      body.active === false &&
+      hideReason === 'other' &&
+      (hideNote ?? '') === ''
+    ) {
       return ctx.json(
         { success: false, error: 'Other needs a note', field: 'hideNote' },
         422,
@@ -547,22 +551,30 @@ venuesAdminRouter.patch(
     // Hiding an already-hidden venue keeps who hid it and why; showing it again
     // clears the explanation along with the removal marker.
     const hidingNow = body.active === false && existing.active;
-    const hiddenFields = hidingNow
-      ? {
-          hiddenAt: new Date(),
-          hiddenBy: getAuthUser(ctx).userId,
-          hiddenReason: hideReason ?? null,
-          hiddenNote:
-            hideNote === undefined || hideNote === '' ? null : hideNote,
-        }
-      : body.active === true
+    // A venue hidden before reasons were stored can be given one by hiding it
+    // again; one that already has a reason keeps its first hider and reason.
+    const recordingReason =
+      body.active === false &&
+      !existing.active &&
+      existing.hiddenReason === null &&
+      hideReason !== undefined;
+    const hiddenFields =
+      hidingNow || recordingReason
         ? {
-            hiddenAt: null,
-            hiddenBy: null,
-            hiddenReason: null,
-            hiddenNote: null,
+            hiddenAt: existing.hiddenAt ?? new Date(),
+            hiddenBy: existing.hiddenBy ?? getAuthUser(ctx).userId,
+            hiddenReason: hideReason ?? null,
+            hiddenNote:
+              hideNote === undefined || hideNote === '' ? null : hideNote,
           }
-        : {};
+        : body.active === true
+          ? {
+              hiddenAt: null,
+              hiddenBy: null,
+              hiddenReason: null,
+              hiddenNote: null,
+            }
+          : {};
 
     if (body.slug && body.slug !== existing.slug) {
       const [slugConflict] = await db
@@ -797,6 +809,11 @@ venuesAdminRouter.patch(
           platform: nextPlatform,
           platformVenueId: nextPlatformVenueId,
         },
+        // The same request may hide or show the venue; the trail keeps both.
+        ...(hidingNow
+          ? { hide: { reason: hideReason ?? null, note: hideNote ?? null } }
+          : {}),
+        ...(body.active === true && !existing.active ? { show: true } : {}),
       });
     } else if (hidingNow) {
       ctx.set('auditAction', 'venue.hide');
@@ -1041,44 +1058,48 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
   }
 
   // A venue with shows or Watchers is hidden, never deleted: the delete would
-  // detach its shows and drop its crawl history.
-  const blockers = await deleteBlockers(id);
-  if (
-    blockers.pastShows > 0 ||
-    blockers.upcomingShows > 0 ||
-    blockers.watchers > 0
-  ) {
+  // detach its shows and drop its crawl history. The counts are read under the
+  // venue's row lock, in the delete's own transaction.
+  const outcome = await db.transaction(async (tx) => {
+    await tx
+      .select({ id: venues.id })
+      .from(venues)
+      .where(eq(venues.id, id))
+      .for('update');
+    const blockers = await deleteBlockers(id, tx);
+    if (
+      blockers.pastShows > 0 ||
+      blockers.upcomingShows > 0 ||
+      blockers.watchers > 0
+    ) {
+      return { blocked: blockers };
+    }
+
+    // Null out venue_id on any event that slipped in since the count, so it
+    // stays published rather than being lost with the venue.
+    const detached = await tx
+      .update(events)
+      .set({ venueId: null })
+      .where(eq(events.venueId, id))
+      .returning({ id: events.id });
+
+    // Hard delete venue; crawl_runs cascade-delete automatically
+    await tx.delete(venues).where(eq(venues.id, id));
+
+    return { eventsDetached: detached.length };
+  });
+  if ('blocked' in outcome) {
     return ctx.json(
       {
         success: false,
         error: 'This venue has shows or Watchers, so it can only be hidden',
         code: 'has_history',
-        ...blockers,
+        ...outcome.blocked,
       },
       409,
     );
   }
-
-  const eventsDetached = await db.transaction(async (tx) => {
-    // Count events before detaching
-    const [eventCountResult] = await tx
-      .select({ total: count(events.id) })
-      .from(events)
-      .where(eq(events.venueId, id));
-
-    const detachedCount = eventCountResult?.total ?? 0;
-
-    // Null out venue_id on events so they remain published
-    await tx
-      .update(events)
-      .set({ venueId: null })
-      .where(eq(events.venueId, id));
-
-    // Hard delete venue; crawl_runs cascade-delete automatically
-    await tx.delete(venues).where(eq(venues.id, id));
-
-    return detachedCount;
-  });
+  const { eventsDetached } = outcome;
 
   ctx.set('auditAction', 'venue.delete');
   ctx.set('auditTargetId', id);
