@@ -1,3 +1,20 @@
+# [1.345.0](https://github.com/featherweight-design/concert-crawl/compare/v1.344.0...v1.345.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** an Undo restores even if the show was delisted meanwhile; warn when no restore token ([69e21d3](https://github.com/featherweight-design/concert-crawl/commit/69e21d3657b0602d5e217b6e96e04b0066fb5db6))
+* **api:** build the attended-venues alias per call so route mocks can import past-shows ([e4c1cae](https://github.com/featherweight-design/concert-crawl/commit/e4c1caedeb6b7b4f099b40f53f6e5d09175183fa))
+* **api:** keep an applied needs-you answer when its audit row fails ([bc93c64](https://github.com/featherweight-design/concert-crawl/commit/bc93c64f4e3e088642b16701341531edfde0a4df))
+* **api:** reject an impossible past-shows cursor with 400, not a Postgres 500 ([21bf174](https://github.com/featherweight-design/concert-crawl/commit/21bf1744a6d2529377ebc1bf5586728cea7654fe))
+* **types:** records start is May 2026 ([78cc523](https://github.com/featherweight-design/concert-crawl/commit/78cc523e0d7e7fb4c50cc04371f8771633351006))
+
+
+### Features
+
+* **api:** add the needs-you answer and undo endpoints with the show answers ([e5dd2dd](https://github.com/featherweight-design/concert-crawl/commit/e5dd2ddd70489a7a00bf84335ffccc7b140d347e))
+* **api:** edit your Concerts API (past-show PUT, restore token, past-shows list) ([2727907](https://github.com/featherweight-design/concert-crawl/commit/2727907e583634cd0da0866ac58480c8c4f838b5))
+
 # [1.344.0](https://github.com/featherweight-design/concert-crawl/compare/v1.343.0...v1.344.0) (2026-11-12)
 
 
