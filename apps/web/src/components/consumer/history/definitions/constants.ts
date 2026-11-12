@@ -45,7 +45,8 @@ export const HISTORY_DENSITY_CONFIG: Record<
     gap: 14,
     titleSize: 14.5,
     metaSize: 11.5,
-    stampSize: 44,
+    // The board row's stamp (`addendum-3/04/one-stamp-m`), phone and desktop.
+    stampSize: 58,
   },
   roomy: {
     artSize: 64,

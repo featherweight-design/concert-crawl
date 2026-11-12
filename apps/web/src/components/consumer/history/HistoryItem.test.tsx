@@ -139,6 +139,32 @@ describe('HistoryItem', () => {
     );
   });
 
+  // The board row stamp (`one-stamp-m`) is 58px.
+  it("draws the row stamp at the board's 58px", () => {
+    const { container } = render(<HistoryItem show={SHOW} density="cozy" />);
+    const stamp = container.querySelector<HTMLElement>('[data-venue-stamp]');
+    expect(stamp?.style.width).toBe('58px');
+  });
+
+  // The staging bug: the stamp hashed the artist, so one venue wore many colours.
+  it('colours the stamp by its venue, so two artists at one venue match', () => {
+    const ringFor = (artist: string, venueSlug: string) => {
+      const { container } = render(
+        <HistoryItem show={{ ...SHOW, artist, venueSlug }} density="cozy" />,
+      );
+      const stroke = container
+        .querySelector('[data-venue-stamp-ring]')
+        ?.getAttribute('stroke');
+      cleanup();
+      return stroke;
+    };
+    // Gothic on the boards: ring #FFE36B.
+    expect(ringFor('Wednesday', 'gothic-theatre')).toBe('#FFE36B');
+    expect(ringFor('Khruangbin', 'gothic-theatre')).toBe('#FFE36B');
+    // Larimer Lounge: ring #FF6B8A.
+    expect(ringFor('Wednesday', 'larimer-lounge')).toBe('#FF6B8A');
+  });
+
   it('stamps an upcoming night with the dashed stamp it will become', () => {
     const { container } = render(
       <HistoryItem show={SHOW} density="cozy" stamp="dashed" />,

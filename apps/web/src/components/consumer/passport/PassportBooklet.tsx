@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type CSSProperties } from 'react';
+import { Fragment, useRef, useState, type CSSProperties } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   BookletStamp,
@@ -29,8 +29,31 @@ const COPY = CONSUMER_COPY.passport;
 /** How far a finger has to travel before the page turns. */
 const SWIPE_THRESHOLD = 40;
 
-/** Two stamps and their gaps still fit a 320px phone. */
-const STAMP_SIZE = 116;
+/**
+ * The board's booklet stamp (`addendum-2/04/passport-{m,d}`). On a 320px phone
+ * the page is 286px inside the main gutter and the booklet's 1px border, so the
+ * page's 12px side padding leaves 262px for two stamps and a 12px gap (260).
+ */
+export const STAMP_SIZE = 124;
+
+/** The booklet's drop shadow, as the boards draw it on every theme they draw. */
+export const BOOKLET_SHADOW = '0 40px 100px rgba(0, 0, 0, 0.5)';
+
+/** The frame: a 1px gradient hairline that fades into the border. */
+export const BOOKLET_FRAME =
+  'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box';
+
+/** The page split: a 5-on, 5-off dashed hairline in `--border-strong`. */
+export const BOOKLET_SPLIT_DASH =
+  'var(--border-strong) 0 5px, transparent 5px 10px';
+const SPLIT_DOWN: CSSProperties = {
+  width: 1,
+  background: `repeating-linear-gradient(180deg, ${BOOKLET_SPLIT_DASH})`,
+};
+const SPLIT_ACROSS: CSSProperties = {
+  height: 1,
+  background: `repeating-linear-gradient(90deg, ${BOOKLET_SPLIT_DASH})`,
+};
 
 const MONO_LABEL =
   'font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle';
@@ -46,7 +69,7 @@ function StampPage({ page, size }: { page: BookletPage; size: number }) {
   return (
     <div
       data-booklet-leaf={`page-${page.number}`}
-      className="relative grid h-full grid-cols-2 place-items-center gap-3 px-4 pb-8 pt-5"
+      className="relative grid h-full grid-cols-2 place-items-center gap-3 px-3 pb-8 pt-5"
       style={PAGE_GROUND}
     >
       {page.slots.map((slot, index) => {
@@ -197,9 +220,11 @@ function BookletView({
       <div
         className="overflow-hidden rounded-[22px]"
         style={{
-          border: '1.5px solid transparent',
-          background:
-            'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+          // The board's frame (`passport-{m,d}`): a 1px gradient hairline that
+          // fades into the border, and a deep drop shadow.
+          border: '1px solid transparent',
+          background: BOOKLET_FRAME,
+          boxShadow: BOOKLET_SHADOW,
           // The page turns sideways; vertical drags stay the browser's scroll.
           touchAction: stack ? 'pan-y' : undefined,
         }}
@@ -226,18 +251,26 @@ function BookletView({
         <div
           className={
             stack
-              ? 'flex flex-col divide-y divide-dashed divide-border'
-              : 'grid min-h-[340px] grid-cols-2 divide-x divide-dashed divide-border'
+              ? 'flex flex-col'
+              : 'grid min-h-[340px] grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]'
           }
         >
-          {spread.map((leaf) => (
-            <Leaf
-              key={leafNumber(leaf)}
-              leaf={leaf}
-              identity={identity}
-              stats={stats}
-              size={STAMP_SIZE}
-            />
+          {spread.map((leaf, index) => (
+            <Fragment key={leafNumber(leaf)}>
+              {index > 0 && (
+                <span
+                  aria-hidden="true"
+                  data-booklet-split=""
+                  style={stack ? SPLIT_ACROSS : SPLIT_DOWN}
+                />
+              )}
+              <Leaf
+                leaf={leaf}
+                identity={identity}
+                stats={stats}
+                size={STAMP_SIZE}
+              />
+            </Fragment>
           ))}
         </div>
       </div>

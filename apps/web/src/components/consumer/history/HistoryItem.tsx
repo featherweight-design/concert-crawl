@@ -179,7 +179,6 @@ export const HistoryItem = ({
         <VenueStamp
           venueSlug={show.venueSlug}
           venueName={show.venueName}
-          seed={show.artist}
           variant={stamp}
           size={cfg.stampSize}
         />

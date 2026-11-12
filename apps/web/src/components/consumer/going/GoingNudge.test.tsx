@@ -5,7 +5,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { GoingNudge } from './GoingNudge';
 import { GOING_COPY } from './definitions/copy';
-import { stampAccentFor, stampInkFor } from '@/components/consumer/venue-stamp';
+import { stampColorsFor } from '@/components/consumer/venue-stamp';
 
 afterEach(cleanup);
 
@@ -117,13 +117,29 @@ describe('GoingNudge', () => {
     ).toHaveAttribute('data-venue-glyph', 'mission');
   });
 
-  // Rule 4: "Yes, going" is filled with the stamp's ink, not the raw accent.
-  it('fills "Yes, going" with the dashed stamp\'s own ink', () => {
+  // Rule 4: "Yes, going" is filled with the venue's stamp colour, pure hex.
+  it('fills "Yes, going" with the venue\'s stamp colour, not an artist hash', () => {
     renderNudge();
-    const ink = stampInkFor(stampAccentFor(SHOW.artist));
     const yes = screen.getByRole('button', { name: GOING_COPY.nudge.yes });
-    expect(yes.getAttribute('style')).toContain('color-mix(in oklch');
-    expect(yes.getAttribute('style')).toContain('50%');
-    expect(ink).toContain(stampAccentFor(SHOW.artist));
+    // Mission Ballroom's ring colour on the boards.
+    expect(stampColorsFor(SHOW.venueSlug).ring).toBe('#A075FF');
+    expect(yes.style.background.toLowerCase()).toMatch(
+      /#a075ff|rgb\(160, 117, 255\)/,
+    );
+    expect(yes.getAttribute('style')).not.toContain('color-mix');
+  });
+
+  // Audit row (`bp-watching`): the pill leads with the stamp motif, a dashed
+  // ring around a check, on a pale disc.
+  it('leads "Yes, going" with a dashed-ring check on a pale disc', () => {
+    renderNudge();
+    const icon = screen.getByTestId('going-nudge-yes-icon');
+    expect(icon.querySelector('circle')?.getAttribute('stroke-dasharray')).toBe(
+      '3 2.5',
+    );
+    expect(icon.querySelector('path')).not.toBeNull();
+    expect(icon.parentElement?.style.background).toBe(
+      'color-mix(in oklch, var(--fg) 85%, transparent)',
+    );
   });
 });

@@ -2,7 +2,9 @@ import Link from 'next/link';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { Panel } from '@/components/consumer/image-slot';
-import { VenueStamp } from '@/components/consumer/venue-stamp';
+import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
+import { VenueTile } from '@/components/consumer/venue-glyph';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { daysUntil } from '@/lib/passport/booklet';
 import { stampDateParts } from '@/lib/passport/stamp';
 
@@ -14,13 +16,25 @@ export const UP_NEXT_STUBS = 2;
 const MONO_LABEL =
   'font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle';
 
-/** A notch punched out of the stub's edge, in the page colour. */
+// The torn-off end of the stub, as `addendum-2/04/passport-m` draws it, in px.
+export const STUB_WIDTH = 80;
+export const GHOST_SIZE = 56;
+export const GHOST_TILE_SIZE = 18;
+export const GHOST_TILE_OPACITY = 0.45;
+const NOTCH_SIZE = 16;
+
+/** A notch punched out of the stub's edge, on the perforation, in the page colour. */
 function Notch({ edge }: { edge: 'top' | 'bottom' }) {
   return (
     <span
       aria-hidden="true"
-      className="absolute right-[88px] size-3.5 translate-x-1/2 rounded-full border border-border bg-bg"
-      style={edge === 'top' ? { top: -8 } : { bottom: -8 }}
+      className="absolute translate-x-1/2 rounded-full border border-border bg-bg"
+      style={{
+        right: STUB_WIDTH,
+        width: NOTCH_SIZE,
+        height: NOTCH_SIZE,
+        ...(edge === 'top' ? { top: -8 } : { bottom: -8 }),
+      }}
     />
   );
 }
@@ -36,6 +50,7 @@ function UpNextStub({
 }) {
   const days = COPY.inDays(daysUntil(show.date, today));
   const date = stampDateParts(show.date);
+  const genre = genreColor(show.genre) ?? NEUTRAL_GENRE_COLOR;
   return (
     <Link
       href={`/events/${show.eventId}`}
@@ -43,12 +58,19 @@ function UpNextStub({
       className="relative flex min-h-[92px] items-stretch rounded-2xl border border-border bg-surface-1 text-fg no-underline"
     >
       <span className="flex min-w-0 flex-1 items-center gap-3.5 py-3 pl-3.5 pr-3">
-        <Panel
-          surface="artist"
-          name={show.artist}
-          photoUrl={show.artistPhotoUrl}
-          size={first ? 54 : 44}
-        />
+        {/* The genre image ring, as every row that frames its artwork. */}
+        <span
+          data-testid="up-next-art"
+          className="block shrink-0 overflow-hidden rounded-md"
+          style={{ boxShadow: genreRing(genre) }}
+        >
+          <Panel
+            surface="artist"
+            name={show.artist}
+            photoUrl={show.artistPhotoUrl}
+            size={first ? 54 : 44}
+          />
+        </span>
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-signal">
             {first ? `${COPY.nextStamp} · ${days}` : days}
@@ -63,20 +85,49 @@ function UpNextStub({
       </span>
       <span
         aria-hidden="true"
-        className="flex w-[88px] shrink-0 flex-col items-center justify-center gap-1.5 border-l border-dashed border-border-strong"
+        className="flex shrink-0 items-center justify-center border-dashed border-border-strong"
+        style={{ width: STUB_WIDTH, borderLeftWidth: 1.5 }}
       >
-        <VenueStamp
-          venueSlug={show.venueSlug}
-          venueName={show.venueName}
-          seed={show.artist}
-          variant="dashed"
-          size={first ? 44 : 38}
-        />
-        {date !== null && (
-          <span className="font-mono text-[10px] tracking-[0.14em] text-fg-subtle">
-            {`${date.month} ${date.day}`}
+        {/* The ghost of the stamp to come (`passport-m`): a grey dashed ring
+            holding the greyed venue tile, with the date inside the ring. */}
+        <span
+          data-up-next-ghost=""
+          className="flex flex-col items-center justify-center rounded-full border-dashed border-border-strong"
+          style={{
+            width: GHOST_SIZE,
+            height: GHOST_SIZE,
+            borderWidth: 1.5,
+            gap: 6,
+          }}
+        >
+          <span
+            data-up-next-ghost-tile=""
+            style={{
+              display: 'flex',
+              filter: 'grayscale(1)',
+              opacity: GHOST_TILE_OPACITY,
+            }}
+          >
+            <VenueTile
+              slug={show.venueSlug}
+              name={show.venueName}
+              size={GHOST_TILE_SIZE}
+            />
           </span>
-        )}
+          {date !== null && (
+            <span
+              data-up-next-ghost-date=""
+              className="font-mono text-fg-subtle"
+              style={{
+                fontSize: 8.5,
+                fontWeight: 600,
+                letterSpacing: '0.14em',
+              }}
+            >
+              {`${date.month} ${date.day}`}
+            </span>
+          )}
+        </span>
       </span>
       <Notch edge="top" />
       <Notch edge="bottom" />
@@ -93,7 +144,7 @@ interface UpNextStubsProps {
 
 /**
  * Up next as a ticket stub (B+ rule 1): the show, a perforation, and the
- * dashed stamp it will become torn off at the right.
+ * ghost of the stamp it will become torn off at the right.
  */
 export function UpNextStubs({ queue, today }: UpNextStubsProps) {
   if (queue.length === 0) return null;

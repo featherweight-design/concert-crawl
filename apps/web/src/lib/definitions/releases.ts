@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.62.1-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'fixed',
+        text: "Stamps on Concerts and in your Passport now wear their venue's colors.",
+      },
+    ],
+  },
+  {
     version: 'v0.62.0-beta',
     date: 'Nov 12, 2026',
     headline: null,

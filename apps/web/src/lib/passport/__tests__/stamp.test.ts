@@ -1,5 +1,49 @@
 import { describe, expect, it } from 'vitest';
-import { passportHandle, passportRotation, stampDateParts } from '../stamp';
+import { VENUE_SLUG_GLYPHS } from '@/components/consumer/venue-glyph';
+import {
+  STAMP_ACCENTS,
+  passportHandle,
+  passportRotation,
+  stampColorsFor,
+  stampDateParts,
+  stampGlowFor,
+} from '../stamp';
+
+// B+ addendum 3 rule 4: a stamp is in its venue's colours. The values are the
+// boards' own (`one-stamp-m`, `concerts-round-stamps-*`, `passport-*`): ring and
+// text in the venue's `to`, glyph in its `from`, pure hex.
+describe('stampColorsFor', () => {
+  it.each([
+    ['bluebird-theater', '#4DA3FF', '#7AE6FF'],
+    ['mission-ballroom', '#A075FF', '#7AE6FF'],
+    ['ball-arena', '#7AE6FF', '#4DA3FF'],
+    ['cervantes-masterpiece-ballroom', '#FFB838', '#FF6A3D'],
+    ['gothic-theatre', '#FFE36B', '#FFB838'],
+  ])('draws %s with the board ring %s and glyph %s', (slug, ring, glyph) => {
+    expect(stampColorsFor(slug)).toEqual({ ring, glyph });
+  });
+
+  it('never mixes the venue colour toward the theme text', () => {
+    for (const slug of Object.keys(VENUE_SLUG_GLYPHS)) {
+      const { ring, glyph } = stampColorsFor(slug);
+      expect(ring).toMatch(/^#[0-9A-F]{6}$/);
+      expect(glyph).toMatch(/^#[0-9A-F]{6}$/);
+    }
+  });
+
+  it('gives a venue with no glyph one stable palette accent for ring and glyph', () => {
+    const colors = stampColorsFor('the-velvet-room');
+    expect(STAMP_ACCENTS).toContain(colors.ring);
+    expect(colors.glyph).toBe(colors.ring);
+    expect(stampColorsFor('the-velvet-room')).toEqual(colors);
+  });
+});
+
+describe('stampGlowFor', () => {
+  it('glows in the ring colour at 30%', () => {
+    expect(stampGlowFor('#4DA3FF', 5)).toBe('drop-shadow(0 0 5px #4DA3FF4D)');
+  });
+});
 
 describe('stampDateParts', () => {
   // The punch is the event's own calendar day, so the month and the day can

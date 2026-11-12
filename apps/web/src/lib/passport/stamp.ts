@@ -1,5 +1,7 @@
 import { ia_hashName } from '@/components/consumer/identity-art/IdentityArt';
 import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy';
+import { VENUE_GLYPHS } from '@/components/consumer/venue-glyph/definitions/glyphs';
+import { venueGlyphKey } from '@/components/consumer/venue-glyph/definitions/venue-glyph-keys';
 import { DENVER_TIME_ZONE } from '@/lib/time';
 
 // Hex is allowed here because this is identity data, not theming — the same
@@ -15,32 +17,48 @@ export const STAMP_ACCENTS = [
 ] as const;
 
 /**
- * A stamp's ink colour, stable per seed (the artist). The B+ `VenueStamp` keeps
- * the hash the ticket-stub stamp used (#70), so a show kept its colour when B12
- * swapped one for the other. The `stamp-accent` namespace keeps it independent
- * of the going button's glyph stream.
+ * An accent from the palette above, stable per seed. The event page's going
+ * stub hashes the artist through it; a stamp uses it only for a venue that has
+ * no glyph yet (see `stampColorsFor`). The `stamp-accent` namespace keeps it
+ * independent of the going button's glyph stream.
  */
 export const stampAccentFor = (seed: string): string =>
   STAMP_ACCENTS[ia_hashName(seed, 'stamp-accent') % STAMP_ACCENTS.length]!;
 
-/** How much of the accent survives in the ink; the rest is the theme's `--fg`. */
-export const STAMP_INK_SHARE = 50;
+export interface StampColors {
+  /** The rings, the inscriptions and anything "filled with the stamp's colour". */
+  ring: string;
+  /** The venue glyph at the centre. */
+  glyph: string;
+}
 
 /**
- * The ink a stamp is actually drawn in: the accent pulled toward the theme's
- * text colour, where the pale accents on their own wash out on the light
- * theme. Anything filled "with the stamp's colour" (B+ rule 4's "Yes, going")
- * uses this, so the fill and the stamp beside it match.
+ * A stamp's colours, from its venue (B+ addendum 3 rule 4: "filled in the
+ * venue's stamp color"). The boards draw the rings and text in the venue's
+ * `to` colour and the glyph in its `from`, both as pure hex: no mix toward
+ * `--fg`. Every stamp board is on a dark theme, so the Light theme takes the
+ * same hex until Design draws it.
  *
- * 50% rather than F4's 55%: "Yes, going" sets `--bg` text on this fill, and at
- * 55% the pale accents (#FFE36B, #C9F26E) fell to 4.1:1 on the light theme.
- * At 50% the worst case across all seven accents and nine themes is 4.8:1
- * (WCAG relative luminance, oklch mix computed per theme's `--bg`/`--fg`), and
- * a stamp ring only gains contrast against `--surface-2` by moving toward
- * `--fg`.
+ * A venue with no glyph yet has no venue colours, so it takes one accent from
+ * the existing stamp palette, hashed on its slug: still one colour per venue,
+ * whoever played.
  */
-export const stampInkFor = (accent: string): string =>
-  `color-mix(in oklch, ${accent} ${STAMP_INK_SHARE}%, var(--fg))`;
+export const stampColorsFor = (venueSlug: string): StampColors => {
+  const key = venueGlyphKey(venueSlug);
+  if (key === null) {
+    const accent = stampAccentFor(venueSlug);
+    return { ring: accent, glyph: accent };
+  }
+  const { from, to } = VENUE_GLYPHS[key];
+  return { ring: to, glyph: from };
+};
+
+/**
+ * The boards' stamp glow, `drop-shadow(0 0 Npx <ring> at 30%)`. The ring is
+ * always a six-digit hex, so the alpha is appended as two hex digits (0x4D).
+ */
+export const stampGlowFor = (ring: string, blur: number): string =>
+  `drop-shadow(0 0 ${blur}px ${ring}4D)`;
 
 /**
  * Deterministic ±2° tilt per show, so the wall reads as stamped rather than

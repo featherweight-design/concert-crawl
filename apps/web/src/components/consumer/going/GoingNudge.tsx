@@ -9,14 +9,13 @@
 // B+ (README "My shows", rule 4): from sm up the dashed stamp the night will
 // become leads the prompt, and the heading "Going to this show?" is followed by
 // the day count (addendum 2 item 5). "Yes, going" is filled with that stamp's
-// own ink. The caller owns the window check and the per-device memory; this component only draws
+// venue colour. The caller owns the window check and the per-device memory; this component only draws
 // and reports whether the night was committed to or the nudge dismissed.
 
 import type { CSSProperties } from 'react';
 import type { WatchingShow } from '@concert-crawl/types';
 import { GOING_COPY } from './definitions/copy';
-import { stampAccentFor } from './lib/stamp';
-import { VenueStamp, stampInkFor } from '@/components/consumer/venue-stamp';
+import { VenueStamp, stampColorsFor } from '@/components/consumer/venue-stamp';
 import { daysUntilLabel } from '@/lib/going/nudge-window';
 
 type GoingNudgeProps = {
@@ -27,19 +26,32 @@ type GoingNudgeProps = {
 
 const MIN_TAP_TARGET = 44;
 
-const CheckIcon = () => (
+/**
+ * The stamp motif inside "Yes, going" (`bp-watching`): a dashed ring around a
+ * check, in the label's colour, on the pale disc behind it.
+ */
+const StampCheckIcon = () => (
   <svg
-    width={11}
-    height={11}
+    data-testid="going-nudge-yes-icon"
+    width={14}
+    height={14}
     viewBox="0 0 24 24"
     fill="none"
     aria-hidden="true"
     focusable="false"
   >
-    <path
-      d="M20 6L9 17l-5-5"
+    <circle
+      cx={12}
+      cy={12}
+      r={10}
       stroke="currentColor"
-      strokeWidth="3"
+      strokeWidth={2}
+      strokeDasharray="3 2.5"
+    />
+    <path
+      d="M16.5 8.5L10.5 15l-3-3"
+      stroke="currentColor"
+      strokeWidth={2.6}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -73,10 +85,10 @@ const RESET: CSSProperties = {
 };
 
 export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
-  const accent = stampAccentFor(show.artist);
-  // The dashed stamp's own ink, so "Yes, going" is filled with exactly the
-  // colour of the stamp it sits beside (rule 4).
-  const ink = stampInkFor(accent);
+  // Rule 4: "Yes, going" is filled with the venue's stamp colour, the ring
+  // colour the stamp takes once the night is attended. Pure hex, as the stamp
+  // boards draw it; the banner's tints come from the same colour.
+  const accent = stampColorsFor(show.venueSlug).ring;
 
   return (
     <div
@@ -107,7 +119,6 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
         <VenueStamp
           venueSlug={show.venueSlug}
           venueName={show.venueName}
-          seed={show.artist}
           variant="dashed"
           size={32}
         />
@@ -160,7 +171,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           ...RESET,
           padding: '7px 12px 7px 7px',
           borderRadius: 999,
-          background: ink,
+          background: accent,
           color: 'var(--bg)',
           fontSize: 12,
           fontWeight: 800,
@@ -180,10 +191,11 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
             width: 18,
             height: 18,
             borderRadius: '50%',
-            background: 'color-mix(in oklch, var(--bg) 18%, transparent)',
+            // The pale disc the boards draw the stamp motif on.
+            background: 'color-mix(in oklch, var(--fg) 85%, transparent)',
           }}
         >
-          <CheckIcon />
+          <StampCheckIcon />
         </span>
         {GOING_COPY.nudge.yes}
       </button>

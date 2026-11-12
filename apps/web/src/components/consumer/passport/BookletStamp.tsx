@@ -1,34 +1,45 @@
 import { useId } from 'react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
+import { venueGlyphKey } from '@/components/consumer/venue-glyph';
+import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
+import { VenueStamp } from '@/components/consumer/venue-stamp';
 import {
-  VenueStamp,
-  stampAccentFor,
-  stampInkFor,
-} from '@/components/consumer/venue-stamp';
-import { stampDateParts } from '@/lib/passport/stamp';
+  stampColorsFor,
+  stampDateParts,
+  stampGlowFor,
+} from '@/lib/passport/stamp';
 
 const COPY = CONSUMER_COPY.passport;
 
-const VIEWBOX = 120;
+// The booklet stamp as `addendum-2/04/passport-{m,d}` draw it, in the board's
+// own 124-unit box (the board stamp is 124px), scaled to the slot.
+const VIEWBOX = 124;
 const CENTRE = VIEWBOX / 2;
-const OUTER_RADIUS = 57;
-// The band runs from the venue ring (r 34) to the outer ring (r 57). Both
-// lines sit on an alphabetic baseline, and a glyph's top points along the
-// path's left normal: outward on the clockwise top arc, inward on the
-// anticlockwise bottom one. So the top baseline sits low in the band and the
-// bottom baseline high, with the caps (about 7 units) inside the band.
-/** Caps reach outward to about r 52. */
-const TOP_TEXT_RADIUS = 45.5;
-/** Caps reach inward to about r 43. */
-const BOTTOM_TEXT_RADIUS = 50;
-/** The venue ring at the centre, in viewBox units. */
-const VENUE_STAMP_BOX = 74;
-/** Past this, an artist name no longer fits the top arc. */
-const MAX_ARTIST_CHARS = 22;
+const OUTER_RADIUS = 59;
+const OUTER_STROKE = 2.4;
+/** The dashed inner ring, in the ring colour. */
+const INNER_RADIUS = 52;
+const INNER_STROKE = 1;
+export const BOOKLET_INNER_DASH = '3 3';
+/** The artist's baseline, over the top. */
+const ARTIST_RADIUS = 42.16;
+/** The glyph's 24-unit grid, centred across and set slightly low. */
+const GLYPH_BOX = 39.68;
+const GLYPH_X = (VIEWBOX - GLYPH_BOX) / 2;
+const GLYPH_Y = 44.64;
+/** In glyph-grid units. */
+const GLYPH_STROKE = 1.7;
+/** The straight date's baseline. */
+const DATE_Y = 104.16;
+const STAMP_OPACITY = 0.95;
+const GLOW_BLUR = 8;
+/** Past this, an artist name no longer fits the top arc (9.3 mono at 1.5 tracking). */
+const MAX_ARTIST_CHARS = 18;
 
-const arc = (radius: number, overTop: boolean): string =>
-  `M ${CENTRE - radius} ${CENTRE} A ${radius} ${radius} 0 0 ${overTop ? 1 : 0} ${CENTRE + radius} ${CENTRE}`;
+const topArc = (radius: number): string =>
+  `M ${CENTRE - radius} ${CENTRE} A ${radius} ${radius} 0 0 1 ${CENTRE + radius} ${CENTRE}`;
 
 const fitArtist = (artist: string): string => {
   const upper = artist.toUpperCase();
@@ -58,18 +69,19 @@ interface BookletStampProps {
 }
 
 /**
- * A night in the booklet: the one Passport stamp (B+ rule 4, the venue ring
- * with its glyph) inside an ink band that prints who played and the date. The
- * band is the booklet's frame around the stamp, not a second stamp, so it
- * takes the stamp's own ink. The whole stamp takes its slot's booklet tilt.
+ * A night in the booklet, drawn as the passport boards draw it (B+ rule 4, in
+ * the venue's colours): a solid outer ring and a dashed inner ring, the artist
+ * on the top arc, the bare venue glyph, and a straight date beneath it. The
+ * whole stamp takes its slot's booklet tilt; the straight date is what lets
+ * the tilt read on a concentric face.
  */
 export function BookletStamp({ show, size, tilt = 0 }: BookletStampProps) {
   const uid = useId().replace(/:/g, '');
-  const ink = stampInkFor(stampAccentFor(show.artist));
+  const colors = stampColorsFor(show.venueSlug);
+  const glyphKey = venueGlyphKey(show.venueSlug);
   const date = stampDateParts(show.date);
   const topId = `bs${uid}t`;
-  const bottomId = `bs${uid}b`;
-  const stampSize = Math.round((size * VENUE_STAMP_BOX) / VIEWBOX);
+  const scale = size / VIEWBOX;
 
   return (
     <span
@@ -83,8 +95,33 @@ export function BookletStamp({ show, size, tilt = 0 }: BookletStampProps) {
         height: size,
         flexShrink: 0,
         transform: tiltStyle(tilt),
+        opacity: STAMP_OPACITY,
+        filter: stampGlowFor(colors.ring, GLOW_BLUR),
       }}
     >
+      {glyphKey === null && (
+        <span
+          data-booklet-stamp-fallback=""
+          style={{
+            position: 'absolute',
+            left: GLYPH_X * scale,
+            top: GLYPH_Y * scale,
+            width: GLYPH_BOX * scale,
+            height: GLYPH_BOX * scale,
+            borderRadius: '50%',
+            overflow: 'hidden',
+          }}
+        >
+          <IdentityArt
+            name={show.venueName}
+            kind="venue"
+            scale="tile"
+            grain={0.08}
+            width="100%"
+            height="100%"
+          />
+        </span>
+      )}
       <svg
         width={size}
         height={size}
@@ -94,61 +131,71 @@ export function BookletStamp({ show, size, tilt = 0 }: BookletStampProps) {
         style={{ position: 'absolute', inset: 0, display: 'block' }}
       >
         <defs>
-          <path id={topId} d={arc(TOP_TEXT_RADIUS, true)} />
-          <path id={bottomId} d={arc(BOTTOM_TEXT_RADIUS, false)} />
+          <path id={topId} d={topArc(ARTIST_RADIUS)} />
         </defs>
         <circle
+          data-booklet-ring=""
           cx={CENTRE}
           cy={CENTRE}
           r={OUTER_RADIUS}
           fill="none"
-          stroke={ink}
-          strokeWidth={2.2}
+          stroke={colors.ring}
+          strokeWidth={OUTER_STROKE}
+        />
+        <circle
+          data-booklet-inner-ring=""
+          cx={CENTRE}
+          cy={CENTRE}
+          r={INNER_RADIUS}
+          fill="none"
+          stroke={colors.ring}
+          strokeWidth={INNER_STROKE}
+          strokeDasharray={BOOKLET_INNER_DASH}
         />
         <text
-          fill={ink}
+          data-booklet-artist=""
+          fill={colors.ring}
           fontFamily="var(--font-mono)"
-          fontSize={8.5}
+          fontSize={9.3}
           fontWeight={700}
-          letterSpacing="0.14em"
+          letterSpacing={1.5}
         >
           <textPath href={`#${topId}`} startOffset="50%" textAnchor="middle">
             {fitArtist(show.artist)}
           </textPath>
         </text>
+        {glyphKey !== null && (
+          <svg
+            x={GLYPH_X}
+            y={GLYPH_Y}
+            width={GLYPH_BOX}
+            height={GLYPH_BOX}
+            viewBox="0 0 24 24"
+            data-venue-glyph={glyphKey}
+          >
+            <GlyphShapes
+              glyphKey={glyphKey}
+              paint={colors.glyph}
+              strokeWidth={GLYPH_STROKE}
+            />
+          </svg>
+        )}
         {date !== null && (
           <text
-            fill={ink}
+            data-booklet-date=""
+            x={CENTRE}
+            y={DATE_Y}
+            textAnchor="middle"
+            fill={colors.ring}
             fontFamily="var(--font-mono)"
-            fontSize={9.5}
+            fontSize={10.5}
             fontWeight={700}
-            letterSpacing="0.16em"
+            letterSpacing={2}
           >
-            <textPath
-              href={`#${bottomId}`}
-              startOffset="50%"
-              textAnchor="middle"
-            >
-              {`${date.month} ${date.day}`}
-            </textPath>
+            {`${date.month} ${date.day}`}
           </text>
         )}
       </svg>
-      <span
-        style={{
-          position: 'absolute',
-          top: (size - stampSize) / 2,
-          left: (size - stampSize) / 2,
-          display: 'flex',
-        }}
-      >
-        <VenueStamp
-          venueSlug={show.venueSlug}
-          venueName={show.venueName}
-          seed={show.artist}
-          size={stampSize}
-        />
-      </span>
     </span>
   );
 }
@@ -170,7 +217,6 @@ export function NextSlot({ show, size, tilt = 0 }: BookletStampProps) {
       <VenueStamp
         venueSlug={show.venueSlug}
         venueName={show.venueName}
-        seed={show.artist}
         variant="dashed"
         size={Math.round(size * 0.32)}
       />

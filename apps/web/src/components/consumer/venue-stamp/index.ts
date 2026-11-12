@@ -1,8 +1,15 @@
 export {
-  DASHED_OPACITY,
+  DASHED_GLYPH_OPACITY,
   DASHED_RING,
+  INNER_DASH,
   VenueStamp,
   glyphStrokeFor,
+  stampRings,
   type VenueStampVariant,
 } from './VenueStamp';
-export { stampAccentFor, stampInkFor } from '@/lib/passport/stamp';
+export {
+  stampAccentFor,
+  stampColorsFor,
+  stampGlowFor,
+  type StampColors,
+} from '@/lib/passport/stamp';
