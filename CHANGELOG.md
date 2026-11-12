@@ -1,3 +1,19 @@
+# [1.349.0](https://github.com/featherweight-design/concert-crawl/compare/v1.348.0...v1.349.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** keep the venue stat values in their pills and the loading header in place ([ae36a31](https://github.com/featherweight-design/concert-crawl/commit/ae36a31aa954bc08f668708276ca212dc34254b0))
+* **web:** lead venue day groups with the browse date tile ([0c76f12](https://github.com/featherweight-design/concert-crawl/commit/0c76f128c82a95d1da3294764dd0841408e7f70a))
+* **web:** remove the paid-plan leftovers from Settings ([5fe036e](https://github.com/featherweight-design/concert-crawl/commit/5fe036e9e92cdc466d43740470bdcf1a26d83a1c))
+* **web:** tag the neon glyph ground as board art ([5bdc720](https://github.com/featherweight-design/concert-crawl/commit/5bdc720892d6b56fb6a922849e6f831ca341e518))
+* **web:** ungroup venue Upcoming, wrap stats, pale Light venue hero ([c6c311f](https://github.com/featherweight-design/concert-crawl/commit/c6c311f630a04600f5b47a89b45db74cf51a8727)), closes [#178](https://github.com/featherweight-design/concert-crawl/issues/178)
+
+
+### Features
+
+* **web:** b+ venues list tiles, neon glyph hero and venue skeletons ([d8d5981](https://github.com/featherweight-design/concert-crawl/commit/d8d59811a4171143dd780af065057686179c2592))
+
 # [1.348.0](https://github.com/featherweight-design/concert-crawl/compare/v1.347.0...v1.348.0) (2026-11-12)
 
 
