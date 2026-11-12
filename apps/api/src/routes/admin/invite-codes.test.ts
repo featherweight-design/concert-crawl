@@ -117,11 +117,7 @@ describe('Admin invite code routes', () => {
     mockSendInviteCodeEmail.mockReset();
   });
 
-  it('GET /v1/admin/invite-codes returns 200 for admin', async () => {
-    adminAuth();
-    const res = await createApp().request('/v1/admin/invite-codes');
-    expect(res.status).toBe(200);
-  });
+  // GET (handles, last used) is covered in invite-codes.integration.test.ts.
 
   it('POST /v1/admin/invite-codes generates a code and returns 201', async () => {
     adminAuth();
