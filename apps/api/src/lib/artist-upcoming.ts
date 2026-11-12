@@ -29,7 +29,7 @@ import { todayInDenver } from './time.js';
  * `event-billing.ts` for why the raw `canonical_artist` column is only a
  * fallback.
  */
-export const hasUpcomingShowExpr = (): SQL<boolean> => {
+export const hasUpcomingShowExpr = (withinDays?: number): SQL<boolean> => {
   return sql`EXISTS (
     SELECT 1
     FROM ${events}
@@ -41,5 +41,32 @@ export const hasUpcomingShowExpr = (): SQL<boolean> => {
       AND ${events.firstMissingAt} IS NULL
       AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
       AND ${events.date} >= ${todayInDenver()}
+      ${upcomingBound(withinDays)}
   )`;
 };
+
+// Optional upper bound on the show date, in days from Denver today. Absent, the
+// predicate is unbounded, which is what every existing caller wants.
+const upcomingBound = (withinDays: number | undefined): SQL =>
+  withinDays === undefined
+    ? sql``
+    : sql`AND ${events.date} <= (${todayInDenver()}::date + ${withinDays}::int)`;
+
+/**
+ * The soonest date `hasUpcomingShowExpr` would accept for this artist, or null.
+ * Same predicate, so a row that passes the filter always has a date to show.
+ */
+export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
+  sql<string | null>`(
+    SELECT MIN(${events.date})
+    FROM ${events}
+    JOIN ${venues}
+      ON ${events.venueId} = ${venues.id}
+     AND ${venues.active} = true
+    WHERE ${billsCanonicalName(artists.canonicalName)}
+      AND ${events.hiddenFromConsumer} = false
+      AND ${events.firstMissingAt} IS NULL
+      AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
+      AND ${events.date} >= ${todayInDenver()}
+      ${upcomingBound(withinDays)}
+  )`;

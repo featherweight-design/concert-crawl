@@ -129,6 +129,27 @@ describe('GET /v1/admin/feedback', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it('filters by category alongside status', async () => {
+    adminAuth();
+    const { db } = await import('@concert-crawl/db');
+    const { and, eq } = await import('drizzle-orm');
+    vi.mocked(db.select().from().where().orderBy().limit).mockResolvedValueOnce(
+      [mockFeedbackRow],
+    );
+    const res = await createApp().request(
+      '/v1/admin/feedback?status=unread&category=bug',
+    );
+    expect(res.status).toBe(200);
+    expect(vi.mocked(eq)).toHaveBeenCalledWith('category', 'bug');
+    expect(vi.mocked(and)).toHaveBeenCalled();
+  });
+
+  it('rejects an unknown category', async () => {
+    adminAuth();
+    const res = await createApp().request('/v1/admin/feedback?category=rumour');
+    expect(res.status).toBe(400);
+  });
 });
 
 describe('GET /v1/admin/feedback/counts', () => {
