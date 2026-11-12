@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import type { EventStatus } from '@concert-crawl/types';
 
 vi.mock('@/components/consumer/event-image', () => ({
   EventImage: ({
@@ -31,11 +32,13 @@ const renderStage = (
   overrides: Partial<{
     leadGenre: string | null;
     countdown: string | null;
+    status: EventStatus;
   }> = {},
 ) =>
   render(
     <EventStage
       name="Tokimonsta"
+      status={overrides.status ?? 'upcoming'}
       leadGenre={
         'leadGenre' in overrides ? (overrides.leadGenre ?? null) : 'electronic'
       }
