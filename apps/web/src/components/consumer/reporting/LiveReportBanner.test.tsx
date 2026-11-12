@@ -73,3 +73,17 @@ describe('LiveReportBanner', () => {
     expect(line.style.overflowWrap).toBe('anywhere');
   });
 });
+
+describe('LiveReportBanner admin source line', () => {
+  it('reads Confirmed by Concert Crawl when an admin set the status', () => {
+    render(
+      <LiveReportBanner
+        status="cancelled"
+        promotedAt={twoHoursAgo()}
+        adminConfirmed
+      />,
+    );
+    expect(screen.getByText(copy.confirmedByConcertCrawl('2h'))).toBeTruthy();
+    expect(screen.queryByText(/venue's calendar/)).toBeNull();
+  });
+});

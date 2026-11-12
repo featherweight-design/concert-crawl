@@ -23,7 +23,10 @@ import type {
 } from '@concert-crawl/types';
 import { SP_POLICY } from '@concert-crawl/types';
 import { confirmEventReport, withdrawEventReport } from '@/lib/events';
-import { NoLongerListedCard } from '@/components/consumer/event-detail/NoLongerListedCard';
+import {
+  EventStatusCard,
+  liveStatusOf,
+} from '@/components/consumer/event-detail/EventStatusCard';
 import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { PendingCardB } from '@/components/consumer/PendingCardB';
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet';
@@ -32,8 +35,6 @@ import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiv
 import { PendingStack } from '@/components/consumer/multi-tier/PendingStack';
 import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner';
 import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard';
-import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner';
-import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
 import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink';
 import {
   ReportSheet,
@@ -195,16 +196,7 @@ export function EventDetailBanners({
   // The GET /reports endpoint only returns unresolved reports (resolvedAt IS NULL),
   // so we derive the live banner from the event itself.
   const delisted = isDelisted(event.status, event.delistedAt);
-  const liveReportStatus: 'cancelled' | 'postponed' | 'sold-out' | null =
-    delisted
-      ? null
-      : event.status === 'cancelled'
-        ? 'cancelled'
-        : event.status === 'postponed'
-          ? 'postponed'
-          : event.priceStatus === 'soldout'
-            ? 'sold-out'
-            : null;
+  const liveReportStatus = liveStatusOf(event);
 
   // Show pending banner only when the event is NOT already in the promoted
   // state. A cancelled show takes no pending report at all: a postponement
@@ -279,50 +271,14 @@ export function EventDetailBanners({
       activePendingReport?.status !== 'available',
     ).length > 0;
 
-  // The promoted fan report behind the live status: sold out's own report,
-  // or the one behind a cancelled or postponed status. With none, the status
-  // came from the venue's calendar and the card says so.
-  const liveFanReport =
-    liveReportStatus === 'sold-out'
-      ? (event.soldOutReport ?? null)
-      : liveReportStatus !== null
-        ? (event.statusReport ?? null)
-        : null;
-
-  const liveReporter =
-    liveFanReport?.reporterHandle != null
-      ? { handle: liveFanReport.reporterHandle, url: '' }
-      : null;
-  const liveConfirmCount = liveFanReport?.confirmsCount;
-  // A fan report dates the card from when it was filed. Otherwise it falls
-  // back to the event's last update.
-  const liveSince = liveFanReport?.reportedAt ?? event.updatedAt;
-
   return (
     <>
       {/* Fix 1: mt-3 gap between info block and status cards */}
       <div className="mb-3 mt-3">
         {/* The stale sweep's cancellation: a neutral card, never the red
             Cancelled banner (B+ A5). */}
-        {delisted && <NoLongerListedCard delistedAt={event.delistedAt} />}
-        {/* Live (promoted) report banner */}
-        {liveReportStatus !== null && (
-          <LiveReportBanner
-            status={liveReportStatus}
-            promotedAt={liveSince}
-            {...(liveConfirmCount !== undefined
-              ? { confirmCount: liveConfirmCount }
-              : {})}
-            reporter={liveReporter}
-            body={
-              liveReportStatus === 'cancelled'
-                ? REPORTING_COPY.liveReportBanner.cancelledBody[cancelledRefund]
-                : liveReportStatus === 'postponed'
-                  ? REPORTING_COPY.liveReportBanner.postponedBody
-                  : REPORTING_COPY.liveReportBanner.soldOutBody
-            }
-          />
-        )}
+        {/* Shared with the public share page (EventStatusCard). */}
+        <EventStatusCard event={event} cancelledRefund={cancelledRefund} />
 
         {/* Pending community report banner */}
         {activePendingReport !== null && (

@@ -111,6 +111,8 @@ export interface LiveReportBannerProps {
   reporter?: { handle: string; url: string } | null;
   /** The card's second sentence, under the headline. */
   body?: string | undefined;
+  /** An admin set this status by hand: the source line says so. */
+  adminConfirmed?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -121,6 +123,7 @@ export const LiveReportBanner = ({
   confirmCount,
   reporter,
   body,
+  adminConfirmed = false,
 }: LiveReportBannerProps) => {
   const tone = TONE[status];
   const Glyph = GLYPHS_16[status];
@@ -129,6 +132,9 @@ export const LiveReportBanner = ({
   const headline = copy.headlines[status];
 
   const subLabel = (() => {
+    if (adminConfirmed && reporter == null && confirmCount === undefined) {
+      return copy.confirmedByConcertCrawl(timeAgo);
+    }
     // A crawled change has no reporter and no confirms, so "0 confirms" would
     // read as a report nobody backed. It names the venue's calendar instead.
     if (reporter == null && confirmCount === undefined) {

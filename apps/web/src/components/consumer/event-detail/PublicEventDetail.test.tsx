@@ -396,3 +396,78 @@ describe('PublicEventDetail (#72)', () => {
     });
   });
 });
+
+describe('PublicEventDetail status card (B+ addendum 3)', () => {
+  it('draws no status card for a live show', () => {
+    render(<PublicEventDetail event={buildEvent()} related={[]} />);
+    expect(screen.queryByTestId('event-status-card')).toBeNull();
+  });
+
+  it('draws the same read-only card for a cancelled show, with no watch control', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ status: 'cancelled' })}
+        related={[]}
+      />,
+    );
+    const card = screen.getByTestId('event-status-card');
+    expect(card.getAttribute('data-read-only')).toBe('true');
+    expect(
+      card
+        .querySelector('[data-testid="live-report-banner"]')
+        ?.getAttribute('data-status'),
+    ).toBe('cancelled');
+    expect(card.querySelector('button, a')).toBeNull();
+  });
+
+  it('draws the No longer listed card for a delisted show', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          status: 'cancelled',
+          delistedAt: '2026-11-01T12:00:00.000Z',
+        })}
+        related={[]}
+      />,
+    );
+    const card = screen.getByTestId('event-status-card');
+    expect(card.querySelector('[role="status"]')).not.toBeNull();
+    expect(card.querySelector('[data-testid="live-report-banner"]')).toBeNull();
+  });
+
+  it('reads "Confirmed by Concert Crawl" for an admin-set status', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          status: 'postponed',
+          statusSource: 'admin',
+          statusReport: null,
+        })}
+        related={[]}
+      />,
+    );
+    expect(screen.getByText(/^Confirmed by Concert Crawl · /)).toBeDefined();
+  });
+});
+
+describe('PublicEventDetail status card privacy', () => {
+  it('never shows a promoted report handle to an anonymous visitor', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          status: 'cancelled',
+          statusReport: {
+            reporterHandle: 'fanhandle',
+            confirmsCount: 3,
+            reportedAt: '2026-11-01T12:00:00.000Z',
+          },
+        })}
+        related={[]}
+      />,
+    );
+    const card = screen.getByTestId('event-status-card');
+    expect(card.textContent ?? '').not.toContain('fanhandle');
+    expect(card.textContent ?? '').not.toContain('@');
+    expect(card.textContent ?? '').toMatch(/3 confirms/);
+  });
+});
