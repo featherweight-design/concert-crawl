@@ -1,3 +1,15 @@
+# [1.342.0](https://github.com/featherweight-design/concert-crawl/compare/v1.341.1...v1.342.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **db:** make the snooze row shapes unrepresentable and refuse a bad date ([38559b0](https://github.com/featherweight-design/concert-crawl/commit/38559b0a5395d305666630f84ce4559d81356113))
+
+
+### Features
+
+* **db:** admin_queue_snoozes, the Needs you types and the key and snooze helpers ([1776db9](https://github.com/featherweight-design/concert-crawl/commit/1776db937b1005177fa67cfc5a17342cf05c156d))
+
 ## [1.341.1](https://github.com/featherweight-design/concert-crawl/compare/v1.341.0...v1.341.1) (2026-11-12)
 
 
