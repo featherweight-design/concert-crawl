@@ -97,12 +97,15 @@ describe('ArtistShowRow', () => {
         toJSON: () => ({}),
       });
 
-    it('wraps the venue name instead of truncating it', () => {
-      const spy = atWidth(288);
+    // At 320 "tba" and the eye left the name ~90px, and a two-line clamp cut
+    // it to "Red Rocks / Amphithe…". The price moves under the name instead,
+    // as EventRow moves a wide chip under the title, and nothing clamps it.
+    it('shows the whole venue name, unclamped, with the price moved under it', () => {
+      const spy = atWidth(292);
       try {
         render(
           <ArtistShowRow
-            show={show({ venue: "Fiddler's Green Amphitheatre" })}
+            show={show({ venue: 'Red Rocks Amphitheatre' })}
             artist="Puma Blue"
             photoUrl={null}
           />,
@@ -111,9 +114,58 @@ describe('ArtistShowRow', () => {
           'true',
         );
         const venue = screen.getByTestId('artist-show-venue');
+        expect(venue.textContent).toBe('Red Rocks Amphitheatre');
         expect(venue.className).not.toContain('truncate');
-        expect(venue.dataset.lines).toBe('2');
-        expect(venue.textContent).toBe("Fiddler's Green Amphitheatre");
+        expect(venue.dataset.lines).toBe('all');
+        expect(venue.style.getPropertyValue('-webkit-line-clamp')).toBe('');
+        expect(venue.style.display).not.toBe('-webkit-box');
+        expect(venue.style.overflow).not.toBe('hidden');
+        // The price rides the meta line, so the right side holds only the eye.
+        const meta = screen.getByTestId('artist-show-meta');
+        const under = screen.getByTestId('artist-show-price-under');
+        expect(meta.contains(under)).toBe(true);
+        expect(under.textContent).toBe(EVENT_ROW_COPY.price.tba);
+        expect(screen.getAllByText(EVENT_ROW_COPY.price.tba)).toHaveLength(1);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('keeps the price column and the two-line name at 390', () => {
+      // A 390 viewport less the 16px gutters is a 358px row.
+      const spy = atWidth(358);
+      try {
+        render(
+          <ArtistShowRow
+            show={show({ venue: 'Red Rocks Amphitheatre' })}
+            artist="Puma Blue"
+            photoUrl={null}
+          />,
+        );
+        expect(screen.getByTestId('artist-show-row').dataset.narrow).toBe(
+          'true',
+        );
+        expect(screen.getByTestId('artist-show-venue').dataset.lines).toBe('2');
+        expect(screen.queryByTestId('artist-show-price-under')).toBeNull();
+        expect(screen.getByText(EVENT_ROW_COPY.price.tba)).toBeTruthy();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('still carries the price when there is no time or city', () => {
+      const spy = atWidth(292);
+      try {
+        render(
+          <ArtistShowRow
+            show={show({ showTime: null, city: '' })}
+            artist="Puma Blue"
+            photoUrl={null}
+          />,
+        );
+        expect(screen.getByTestId('artist-show-price-under').textContent).toBe(
+          EVENT_ROW_COPY.price.tba,
+        );
       } finally {
         spy.mockRestore();
       }
