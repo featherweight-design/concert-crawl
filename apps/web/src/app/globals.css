@@ -752,3 +752,13 @@
 :root[data-theme='light'] .venue-name-gradient {
   background-image: linear-gradient(90deg, #0080a0, #e0297a);
 }
+
+/* The beta pill's label (components/brand/beta-pill). Dark themes keep the
+   board's signal; on the light theme the signal is ~4.0:1 on the pill's tint,
+   below AA for 10px bold, so the label darkens toward the foreground. */
+.beta-pill-label {
+  color: var(--signal);
+}
+:root[data-theme='light'] .beta-pill-label {
+  color: color-mix(in srgb, var(--signal) 70%, var(--fg));
+}

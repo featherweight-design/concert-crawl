@@ -28,7 +28,11 @@ interface VenueTileProps {
   edgeWeight?: number;
 }
 
-/** The corner radius, in viewBox units, of the 1.2px-edge board tile: 6.6 of 30. */
+/**
+ * The corner radius, in viewBox units, of the 1.2px-edge board tile: 22% of the
+ * tile (6.6px at 30). The viewBox scales with `size`, so the rendered radius is
+ * always 0.22 * size px (the stroke centreline; the outer edge adds half the edge).
+ */
 const WEIGHTED_RADIUS = 21.12;
 
 /**

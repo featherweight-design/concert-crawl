@@ -7,6 +7,7 @@ import { LANDING_COPY } from '@/app/_components/definitions/copy';
 export function BetaPill() {
   return (
     <span
+      className="beta-pill-label"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -18,7 +19,6 @@ export function BetaPill() {
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 10,
         fontWeight: 700,
-        color: 'var(--signal)',
         letterSpacing: '0.16em',
         textTransform: 'uppercase',
         whiteSpace: 'nowrap',

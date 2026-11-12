@@ -12,15 +12,19 @@ const COPY = LANDING_COPY.invite;
 
 type Slot = 'left' | 'centre' | 'right';
 
-// Each slot's offset from the fan's centre, as a fraction of the card width,
-// and its tilt. The side cards sit behind and lower than the centre one.
+// Each slot's side (-1, 0, 1) from the fan's centre, scaled by --fan-dx (a
+// fraction of the card width), its drop and its tilt. The side cards sit behind
+// and lower than the centre one. --fan-dx is the board's 0.62 from 390px up;
+// below, 0.45 keeps the rotated side cards inside the viewport (at 320 the
+// card is 147px and its 9deg bounding box 88px from its centre, so the offset
+// must stay under 68px = 0.46; 375 and 360 allow 0.465).
 const SLOT_POSE: Record<
   Slot,
-  { dx: number; dy: number; rotate: number; z: number }
+  { side: number; dy: number; rotate: number; z: number }
 > = {
-  left: { dx: -0.62, dy: 0.1, rotate: -9, z: 1 },
-  centre: { dx: 0, dy: 0, rotate: -2, z: 3 },
-  right: { dx: 0.62, dy: 0.12, rotate: 8, z: 2 },
+  left: { side: -1, dy: 0.1, rotate: -9, z: 1 },
+  centre: { side: 0, dy: 0, rotate: -2, z: 3 },
+  right: { side: 1, dy: 0.12, rotate: 8, z: 2 },
 };
 
 /**
@@ -63,7 +67,7 @@ function FanCard({ show, slot }: { show: InviteShow; slot: Slot }) {
         top: 0,
         width: 'var(--fan-card-w)',
         aspectRatio: '3 / 4',
-        transform: `translateX(calc(-50% + var(--fan-card-w) * ${pose.dx})) translateY(calc(var(--fan-card-w) * ${pose.dy})) rotate(${pose.rotate}deg)`,
+        transform: `translateX(calc(-50% + var(--fan-card-w) * var(--fan-dx) * ${pose.side}))translateY(calc(var(--fan-card-w) * ${pose.dy})) rotate(${pose.rotate}deg)`,
         zIndex: pose.z,
         borderRadius: 16,
         overflow: 'hidden',
@@ -216,7 +220,7 @@ export function ShowFan({ shows }: { shows: InviteShow[] }) {
 
   return (
     <div
-      className="[--fan-card-w:min(46vw,220px)] md:[--fan-card-w:250px]"
+      className="[--fan-card-w:min(46vw,220px)] [--fan-dx:0.45] min-[390px]:[--fan-dx:0.62] md:[--fan-card-w:250px]"
       style={{
         position: 'relative',
         width: '100%',
