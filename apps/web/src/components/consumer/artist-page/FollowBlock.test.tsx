@@ -74,6 +74,6 @@ describe('FollowBlock', () => {
     expect(getByRole('button')).not.toBeNull();
     const sub = container.querySelector('[data-follow-pitch]');
     expect(sub).not.toBeNull();
-    expect(sub?.getAttribute('style')).toContain('font-size: 11.5px');
+    expect(sub?.getAttribute('style')).toContain('font-size: 12.5px');
   });
 });

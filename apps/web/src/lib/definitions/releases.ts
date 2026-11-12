@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.63.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: "Artist pages have a new look: Follow sits up top, and their Denver dates come first, each with its venue's icon.",
+      },
+    ],
+  },
+  {
     version: 'v0.62.1-beta',
     date: 'Nov 12, 2026',
     headline: null,

@@ -6,7 +6,12 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ArtistPageContent } from '@/components/consumer/artist-page/ArtistPageContent';
+import {
+  ARTIST_CARD_TILT,
+  ArtistStageShell,
+} from '@/components/consumer/artist-page/ArtistStage';
 import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
+import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
 
 import ArtistLoading from './loading';
 
@@ -24,7 +29,7 @@ vi.mock('@/theme', () => ({
   useTheme: () => ({ theme: 'electric', setTheme: () => undefined }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: () => null,
 }));
 
@@ -58,89 +63,57 @@ const LOADED: ArtistDetailResponse = {
   match: null,
 };
 
+// Board `06-states/bp-s-load_artist_m`, on the stage geometry the loaded page
+// uses (README rule 9: skeletons hold the layout).
 describe('artist route skeleton', () => {
-  it('stands the mobile band up at the height the real band uses', () => {
+  it('stands the stage up with the same shell the loaded page uses', () => {
     const skeleton = render(<ArtistLoading />).container;
     const loaded = render(<ArtistPageContent data={LOADED} />).container;
 
-    const band = skeleton.querySelector('.ap-band-skeleton');
-    expect(band).not.toBeNull();
+    const stageClass = (root: Element) =>
+      root.querySelector('[data-testid="hero-band"]')?.className;
+    expect(stageClass(skeleton)).toBeDefined();
+    expect(stageClass(skeleton)).toBe(stageClass(loaded));
+    // The shell is the one export both render, so a geometry change moves both.
+    expect(ArtistStageShell).toBeTypeOf('function');
+  });
 
-    // The panel column is what sets the band's height, so the two must agree
-    // on it exactly — 128px of art either way.
-    expect(band?.querySelector('.w-32')).not.toBeNull();
+  it("draws the portrait as the tilted card, not the board's old circle", () => {
+    const { getByTestId } = render(<ArtistLoading />);
+    const card = getByTestId('stage-card-skeleton');
+    expect(card.style.transform).toBe(`rotate(${ARTIST_CARD_TILT}deg)`);
+  });
+
+  it('keeps the back control live while the data loads', () => {
+    const { container } = render(<ArtistLoading />);
+    expect(container.querySelector('button[aria-label="Back"]')).not.toBeNull();
+  });
+
+  it('reserves the follow pill at the height the loaded control uses', () => {
+    const { container } = render(<ArtistLoading />);
+    const heights = Array.from(
+      container.querySelectorAll<HTMLElement>('[style]'),
+    ).map((node) => node.style.height);
+    expect(heights).toContain(`${NF_FOLLOW_SIZES.primary.height}px`);
+    // Mobile reserves it in the same block the loaded page puts it in.
     expect(
-      band?.querySelector<HTMLElement>('.w-32 [style]')?.style.height,
-    ).toBe('128px');
-    expect(
-      loaded.querySelector('[data-testid="hero-band"] .w-32'),
+      container.querySelector('.ap-shell > .ap-block-follow'),
     ).not.toBeNull();
   });
 
-  // Regression guard: the skeleton omitted the desktop crumb, so the whole grid
-  // jumped down 38px when content arrived (name top 98 → 136).
-  describe('desktop crumb slot', () => {
-    it('reserves a crumb above the grid', () => {
-      const { container } = render(<ArtistLoading />);
-      const shell = container.querySelector('.ap-shell');
-
-      const first = shell?.firstElementChild;
-      expect(first?.className).toContain('hidden');
-      expect(first?.className).toContain('md:block');
-      expect(first?.nextElementSibling?.className).toContain('ap-grid');
-    });
-
-    it('places it exactly where the loaded page places its crumb', () => {
-      const skeleton = render(<ArtistLoading />).container;
-      const loaded = render(<ArtistPageContent data={LOADED} />).container;
-
-      const shellChildren = (root: Element) =>
-        Array.from(root.querySelector('.ap-shell')?.children ?? []).map(
-          (child) => child.className,
-        );
-
-      // Same number of shell-level blocks, same responsive classes, same order.
-      expect(shellChildren(skeleton)).toEqual(shellChildren(loaded));
-    });
-
-    it('gives the crumb the same box metrics as the real crumb', () => {
-      const skeleton = render(<ArtistLoading />).container;
-      const loaded = render(<ArtistPageContent data={LOADED} />).container;
-
-      const skeletonCrumb = skeleton.querySelector<HTMLElement>(
-        '.ap-shell > div > div',
-      );
-      const loadedCrumb = loaded.querySelector<HTMLElement>('.ap-shell nav');
-
-      expect(skeletonCrumb).not.toBeNull();
-      expect(loadedCrumb).not.toBeNull();
-      // Height is driven by font-size + margin-bottom; a drift in either is the
-      // 38px shift coming back.
-      expect(skeletonCrumb?.style.fontSize).toBe(loadedCrumb?.style.fontSize);
-      expect(skeletonCrumb?.style.marginBottom).toBe(
-        loadedCrumb?.style.marginBottom,
-      );
-    });
+  it('draws three carded rows with neutral edges', () => {
+    const { getAllByTestId } = render(<ArtistLoading />);
+    const rows = getAllByTestId('artist-row-skeleton');
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row.style.borderLeftColor).toBe('var(--border-strong)');
+    }
   });
 
-  // PR-E renders no Follow button at either viewport, so the skeleton must not
-  // reserve one — a slot that collapses on load is the same layout-shift lie as
-  // the missing crumb, just in the other direction. The height comes from the
-  // size table rather than a literal, so a future size pass moves both together.
-  it('reserves the Follow slot at the height the loaded page uses', () => {
-    // PR-E deliberately reserved nothing here, because PR-E rendered no Follow
-    // button and a reserved slot would have been a 68px layout-shift lie. PR-F
-    // ships the button, so the lie is now the other way round: leaving the box
-    // out makes the page jump the moment the payload lands.
-    const skeleton = render(<ArtistLoading />).container;
-    const loaded = render(<ArtistPageContent data={LOADED} />).container;
-
-    // The loaded page puts a Follow control inside the shell at every viewport.
-    expect(loaded.querySelector('.ap-shell button[aria-label]')).not.toBeNull();
-
-    const heights = Array.from(
-      skeleton.querySelectorAll<HTMLElement>('[style]'),
-    ).map((node) => node.style.height);
-    expect(heights).toContain(`${NF_FOLLOW_SIZES.primary.height}px`);
+  it('announces itself once', () => {
+    const { getAllByRole } = render(<ArtistLoading />);
+    const status = getAllByRole('status');
+    expect(status).toHaveLength(1);
+    expect(status[0]?.textContent).toBe(ARTIST_COPY.loadingArtist);
   });
 });

@@ -507,6 +507,38 @@ describe('FollowButton', () => {
       expect(get2('button').style.color).toBe('var(--fg)');
     });
 
+    it('draws the hero skin as the gradient, then an outline once following', () => {
+      const { getByRole, rerender } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          size="primary"
+          tone="hero"
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      );
+      expect(getByRole('button').style.background).toContain('linear-gradient');
+      expect(getByRole('button').style.color).toBe('var(--fg-on-accent)');
+
+      rerender(
+        <FollowButton
+          name="Wax Harbour"
+          following
+          signedOut={false}
+          size="primary"
+          tone="hero"
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      );
+      expect(getByRole('button').style.background).not.toContain(
+        'linear-gradient',
+      );
+      expect(getByRole('button').style.color).toBe('var(--signal)');
+    });
+
     it('keeps locked at --fg so the gate never reads quieter than the action', () => {
       const { getByRole } = render(
         <FollowButton

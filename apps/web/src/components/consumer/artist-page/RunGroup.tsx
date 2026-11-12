@@ -3,7 +3,9 @@ import Link from 'next/link';
 import React from 'react';
 
 import { StatusPill } from '@/components/consumer/StatusPill';
+import { cardedEdge } from '@/components/consumer/event-row/lib/carded-edge';
 import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
+import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
 import { AP_PILL_FONT_SIZE } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';
@@ -19,15 +21,15 @@ interface RunGroupProps {
 }
 
 /** A residency reads as one booking with several nights, not several bookings. */
+// It wears the carded row's genre edge (B+ `09-artist`), so a run sits in the
+// list as one more card rather than a different kind of object.
 export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
   <div
     data-show-item=""
+    className="border border-border bg-surface-1"
     style={{
-      borderRadius: 12,
-      border: '1px solid var(--border)',
-      background: 'var(--surface-1)',
+      ...cardedEdge(genreColor(shows[0]?.genres[0]) ?? NEUTRAL_GENRE_COLOR),
       padding: 12,
-      margin: '2px 0',
     }}
   >
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>

@@ -53,12 +53,9 @@ const show = (
   status,
 });
 
-/**
- * A run is a `RunGroup` card and a one-off is now an `EventRow`, so counting
- * items means counting both markers rather than the one they used to share.
- */
+/** A run card and a one-off row both carry the item marker. */
 const items = (container: HTMLElement) =>
-  container.querySelectorAll('[data-show-item], [data-testid="event-row"]');
+  container.querySelectorAll('[data-show-item]');
 
 /** Three runs of three, plus four one-offs: 5 items, 13 shows. */
 const thirteenShows = (): ArtistShow[] => [
@@ -86,8 +83,8 @@ describe('UpcomingShows', () => {
         shows={thirteenShows()}
       />,
     );
-    // The head carries no count — it duplicated "Upcoming" and clipped at 320px.
-    expect(queryByText(ARTIST_COPY.showCount(13))).toBeNull();
+    // B+ `09-artist` draws the count beside the title, in shows.
+    expect(queryByText(ARTIST_COPY.showCount(13))).not.toBeNull();
     // A run is one item; the label is always in shows.
     expect(items(container)).toHaveLength(5);
     expect(getByText(ARTIST_COPY.showAll(13))).toBeTruthy();
@@ -202,9 +199,7 @@ describe('UpcomingShows', () => {
     expect(container.querySelectorAll('a')).toHaveLength(3);
   });
 
-  it('rules under every one-off that has something below it', () => {
-    // Item order: one-off, one-off, run. Two rules — the second one-off still
-    // needs a bottom edge even though a run card follows it.
+  it('draws every item as a card, with no rules between them', () => {
     const { container } = render(
       <UpcomingShows
         photoUrl={null}
@@ -218,23 +213,33 @@ describe('UpcomingShows', () => {
         ]}
       />,
     );
-    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(0);
+    expect(
+      container.querySelectorAll('[data-testid="artist-show-row"]'),
+    ).toHaveLength(2);
+    expect(items(container)).toHaveLength(3);
   });
 
-  it('draws no rule above the first item or under a run card', () => {
-    // Item order: run, one-off. The run card carries its own edge.
-    const { container } = render(
+  it('draws the dashed note under the rows when the page passes one', () => {
+    const { container, rerender } = render(
       <UpcomingShows
         photoUrl={null}
-        name="The Cold Fronts"
-        shows={[
-          show('2026-08-05', "Ophelia's"),
-          show('2026-08-06', "Ophelia's"),
-          show('2026-08-07', "Ophelia's"),
-          show('2026-09-20', 'Solo One'),
-        ]}
+        name="Wax Harbour"
+        shows={[show('2026-08-08', 'Hi-Dive', 15)]}
+        note={ARTIST_COPY.upcomingNote}
       />,
     );
-    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(0);
+    const note = container.querySelector<HTMLElement>('[data-upcoming-note]');
+    expect(note?.textContent).toBe(ARTIST_COPY.upcomingNote);
+    expect(note?.style.border).toContain('dashed');
+
+    rerender(
+      <UpcomingShows
+        photoUrl={null}
+        name="Wax Harbour"
+        shows={[show('2026-08-08', 'Hi-Dive', 15)]}
+      />,
+    );
+    expect(container.querySelector('[data-upcoming-note]')).toBeNull();
   });
 });

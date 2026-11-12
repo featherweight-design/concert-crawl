@@ -7,22 +7,23 @@ import { SHOWS_VISIBLE } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';
 import { firstIso, showsInItem } from './definitions/types';
 import { groupShows } from './lib/group-shows';
+import { ArtistShowRow } from './ArtistShowRow';
 import { RunGroup } from './RunGroup';
 import { SectionHead } from './SectionHead';
-import { EventRow } from '@/components/consumer/event-row/EventRow';
-import { fromArtistShow } from '@/components/consumer/event-row/lib/row-model';
-import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
 
 interface UpcomingShowsProps {
   name: string;
   photoUrl: string | null;
   shows: ArtistShow[];
+  /** The dashed line under the rows; the page picks it by follow state. */
+  note?: string | null;
 }
 
 export const UpcomingShows = ({
   name,
   photoUrl,
   shows,
+  note = null,
 }: UpcomingShowsProps) => {
   const [expanded, setExpanded] = useState(false);
   const items = useMemo(() => groupShows(shows), [shows]);
@@ -35,52 +36,32 @@ export const UpcomingShows = ({
 
   return (
     <section aria-label={ARTIST_COPY.showsListAria(name)}>
-      {/* No count. In a short list "Upcoming" and "2 SHOWS" say the same thing
-          twice, and the mono count is the string that clips at 320px. The
-          number still appears where it does work: the "Show all N shows"
-          control below, which is the only place it is news. */}
-      <SectionHead id="upcoming" title={ARTIST_COPY.upcomingTitle} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {visible.map((item, index) => (
-          <React.Fragment
-            key={
-              item.kind === 'run'
-                ? `run-${item.venueSlug}-${firstIso(item)}`
-                : item.eventId
-            }
-          >
-            {/* A hairline under any one-off that has something below it. A run
-                card is a card — it needs no rule above another card, but a
-                one-off still needs its own bottom edge. */}
-            {index > 0 && visible[index - 1]?.kind === 'one' ? (
-              <div
-                aria-hidden="true"
-                data-show-divider=""
-                style={{
-                  height: 1,
-                  background: 'var(--border)',
-                  marginLeft: 56,
-                }}
-              />
-            ) : null}
-            {item.kind === 'run' ? (
-              <RunGroup
-                venue={item.venue}
-                city={item.city}
-                shows={item.shows}
-                artist={name}
-              />
-            ) : (
-              <EventRow
-                show={fromArtistShow(item, name, photoUrl)}
-                surface="artist"
-                action={
-                  <WatchShowButton eventId={item.eventId} artist={name} />
-                }
-              />
-            )}
-          </React.Fragment>
-        ))}
+      {/* B+ `09-artist` puts the count beside the title, before the rule, so
+          the rule takes the slack and the count never clips at 320px. */}
+      <SectionHead
+        id="upcoming"
+        title={ARTIST_COPY.upcomingTitle}
+        count={ARTIST_COPY.showCount(showCount)}
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {visible.map((item) =>
+          item.kind === 'run' ? (
+            <RunGroup
+              key={`run-${item.venueSlug}-${firstIso(item)}`}
+              venue={item.venue}
+              city={item.city}
+              shows={item.shows}
+              artist={name}
+            />
+          ) : (
+            <ArtistShowRow
+              key={item.eventId}
+              show={item}
+              artist={name}
+              photoUrl={photoUrl}
+            />
+          ),
+        )}
       </div>
       {truncated ? (
         <button
@@ -103,6 +84,24 @@ export const UpcomingShows = ({
         >
           {expanded ? ARTIST_COPY.showFewer : ARTIST_COPY.showAll(showCount)}
         </button>
+      ) : null}
+      {note ? (
+        <p
+          data-upcoming-note=""
+          style={{
+            margin: '12px 0 0',
+            padding: '13px 16px',
+            borderRadius: 12,
+            border: '1px dashed var(--border-strong)',
+            fontFamily: 'Inter, system-ui',
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: 'var(--fg-muted)',
+            textWrap: 'pretty',
+          }}
+        >
+          {note}
+        </p>
       ) : null}
       {/* EXTENSION POINT (Item 3): when history outgrows a single response,
           this control is where pagination lands — the API caps at 50 rows and

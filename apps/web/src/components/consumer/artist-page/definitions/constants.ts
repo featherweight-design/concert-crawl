@@ -27,19 +27,15 @@ export const RESIDENCY_WINDOW = 21;
 export const SHOWS_VISIBLE = 5;
 
 /**
- * The band's height at the NARROW end: 16 top pad + a 44px back row + 12 gap +
- * the 128px panel + 18 bottom pad.
+ * The mobile stage's height at the narrow end (B+ `09-artist`): 16 top pad +
+ * 32 above the card + the 250px card (200 wide at 4:5) + 24 + the eyebrow,
+ * a one-line name and the genre chips (~96) + 24 bottom pad.
  *
- * It is a seed, not the truth. `HeroBand` steps its panel to 208 and grows its
- * padding at `sm` (640), while this page stays on its mobile layout until `md`
- * (768), so between those two widths the real band is far taller. The page
- * measures the rendered band and uses this only for SSR and the first paint,
- * before layout exists to be measured.
+ * It is a seed, not the truth. A long name wraps and an ungenred artist has no
+ * chips, so the page measures the rendered stage and uses this only for SSR
+ * and the first paint, before layout exists to be measured.
  */
-export const AP_BAND_H = 218;
-
-/** Desktop rail slot, per the imagery handoff's slot table (#1525). */
-export const AP_RAIL_W = 208;
+export const AP_BAND_H = 442;
 
 /** Below this width the page uses the narrow type ramp and padding. */
 export const AP_NARROW_BP = 360;
