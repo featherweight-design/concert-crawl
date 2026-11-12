@@ -160,7 +160,7 @@ describe('BottomNav crews slot (#1226)', () => {
       expect(link.style.minHeight).toBe('44px');
       // A clipped label is what "5 slots at 320" actually risks, so assert the
       // label is neither ellipsised nor wrapped.
-      const label = link.querySelector('span');
+      const label = link.querySelector('span:not([aria-hidden])');
       expect(label?.className).toContain('whitespace-nowrap');
       expect(label?.className).not.toContain('truncate');
     }
