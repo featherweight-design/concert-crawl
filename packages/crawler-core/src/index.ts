@@ -55,6 +55,8 @@ export {
   sweepStaleEvents,
   STALE_EVENT_CANCEL_DAYS,
 } from './lib/stale-event-sweep.js';
+export { sweepExpiredPageBodies } from './lib/page-body-sweep.js';
+export type { PageBodySweepResult } from './lib/page-body-sweep.js';
 export { rederiveEventArtists } from './rederive-event-artists.js';
 export type {
   RederiveChange,

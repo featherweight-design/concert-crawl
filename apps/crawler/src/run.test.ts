@@ -102,6 +102,11 @@ const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined);
 // the resolved-null default is its worst-case observable behavior.
 const mockRunArtistFanoutSafely = vi.fn().mockResolvedValue(null);
 const mockSweepStaleEvents = vi.fn().mockResolvedValue({ cancelled: 0 });
+const mockSweepExpiredPageBodies = vi.fn().mockResolvedValue({
+  expired: 0,
+  remainingBodies: 0,
+  remainingBytes: 0,
+});
 const mockEvaluateRunHealth = vi.fn<(outcomes: unknown[]) => unknown[]>(
   () => [],
 );
@@ -111,6 +116,7 @@ vi.mock('@concert-crawl/crawler-core', () => ({
   tagEventsWithGenres: mockTagEventsWithGenres,
   runArtistFanoutSafely: mockRunArtistFanoutSafely,
   sweepStaleEvents: mockSweepStaleEvents,
+  sweepExpiredPageBodies: mockSweepExpiredPageBodies,
   evaluateRunHealth: mockEvaluateRunHealth,
   reportRunHealth: mockReportRunHealth,
   crawlFailureGrouping: (message: string) => ({
@@ -461,6 +467,23 @@ describe('runDailyCrawl', () => {
     const { runDailyCrawl } = await import('./run.js');
     // The sweep only tidies rows the crawl already wrote, so its failure must
     // never take down an otherwise successful crawl.
+    await expect(runDailyCrawl()).resolves.not.toThrow();
+
+    expect(mockSentryCaptureException).toHaveBeenCalledWith(sweepError);
+  });
+
+  it('runs the page body sweep once after the crawl (1e)', async () => {
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+
+    expect(mockSweepExpiredPageBodies).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failing page body sweep without failing the crawl (1e)', async () => {
+    const sweepError = new Error('body sweep exploded');
+    mockSweepExpiredPageBodies.mockRejectedValueOnce(sweepError);
+
+    const { runDailyCrawl } = await import('./run.js');
     await expect(runDailyCrawl()).resolves.not.toThrow();
 
     expect(mockSentryCaptureException).toHaveBeenCalledWith(sweepError);

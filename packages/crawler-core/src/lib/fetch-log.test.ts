@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { gunzipSync } from 'node:zlib';
 import {
   FetchLog,
   MAX_FETCH_LOG_ENTRIES,
   MAX_FETCH_LOG_FAILURES,
+  MAX_PAGE_BODY_BYTES,
+  PAGE_BODY_RETENTION_DAYS,
 } from './fetch-log.js';
 
 describe('FetchLog', () => {
@@ -115,5 +118,73 @@ describe('FetchLog', () => {
     const bad = log.entries.filter((entry) => entry.httpStatus === 500);
     expect(ok).toHaveLength(MAX_FETCH_LOG_ENTRIES);
     expect(bad).toHaveLength(MAX_FETCH_LOG_ENTRIES + 20);
+  });
+
+  describe('page bodies (1e)', () => {
+    const ok = (body: string, status = 200) => ({
+      url: 'https://v.example/',
+      httpStatus: status,
+      mode: 'http' as const,
+      body,
+    });
+
+    it('keeps no body unless body storage is on', () => {
+      const log = new FetchLog({ keepBodies: false });
+      log.record(ok('<html>hi</html>'));
+      expect(log.entries[0]).toMatchObject({
+        htmlGz: null,
+        bodyExpiresAt: null,
+        bodyTruncated: false,
+      });
+    });
+
+    it('keeps a gzipped body that round-trips, with an expiry 14 days out', () => {
+      const log = new FetchLog({ keepBodies: true });
+      log.record(ok('<html>héllo</html>'));
+      const [entry] = log.entries;
+      expect(gunzipSync(entry?.htmlGz ?? Buffer.alloc(0)).toString()).toBe(
+        '<html>héllo</html>',
+      );
+      const days =
+        ((entry?.bodyExpiresAt?.getTime() ?? 0) -
+          (entry?.fetchedAt.getTime() ?? 0)) /
+        (24 * 60 * 60 * 1000);
+      expect(days).toBe(PAGE_BODY_RETENTION_DAYS);
+    });
+
+    it('skips a body over the size cap and marks the page truncated', () => {
+      const log = new FetchLog({ keepBodies: true });
+      log.record(ok('x'.repeat(MAX_PAGE_BODY_BYTES + 1)));
+      expect(log.entries[0]).toMatchObject({
+        htmlGz: null,
+        bodyExpiresAt: null,
+        bodyTruncated: true,
+      });
+      expect(log.entries[0]?.bytes).toBe(MAX_PAGE_BODY_BYTES + 1);
+    });
+
+    it('keeps no body for a failed request, even with one read', () => {
+      const log = new FetchLog({ keepBodies: true });
+      log.record(ok('<html>blocked</html>', 403));
+      expect(log.entries[0]?.htmlGz).toBeNull();
+      expect(log.entries[0]?.bodyTruncated).toBe(false);
+    });
+
+    it('reads CRAWL_PAGE_BODIES for the default', () => {
+      const original = process.env['CRAWL_PAGE_BODIES'];
+      try {
+        process.env['CRAWL_PAGE_BODIES'] = 'on';
+        const on = new FetchLog();
+        on.record(ok('a'));
+        expect(on.entries[0]?.htmlGz).not.toBeNull();
+        delete process.env['CRAWL_PAGE_BODIES'];
+        const off = new FetchLog();
+        off.record(ok('a'));
+        expect(off.entries[0]?.htmlGz).toBeNull();
+      } finally {
+        if (original === undefined) delete process.env['CRAWL_PAGE_BODIES'];
+        else process.env['CRAWL_PAGE_BODIES'] = original;
+      }
+    });
   });
 });
