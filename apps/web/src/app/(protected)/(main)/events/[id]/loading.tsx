@@ -59,7 +59,7 @@ export default function EventDetailLoading() {
       </StageShell>
 
       <div className="flex-1">
-        <div className="mx-auto box-border w-full max-w-[880px] px-[18px] pb-24 pt-5 sm:px-8 sm:pb-16">
+        <div className="mx-auto box-border w-full max-w-[824px] px-[18px] pb-24 pt-5 sm:px-8 sm:pb-16">
           {/* The Your move card. */}
           <div
             className="mt-3 flex flex-col gap-3 rounded-[14px] p-4"

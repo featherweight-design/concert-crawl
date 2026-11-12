@@ -10,6 +10,7 @@
 // chips, and the filter bar's own markup is untouched.
 
 import { useId, useRef, useState } from 'react';
+import { Users } from 'lucide-react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { CrewSummary } from '@concert-crawl/types';
 
@@ -122,7 +123,7 @@ const CrewPickerRow = ({
           color: 'var(--fg-subtle)',
         }}
       >
-        <LensGlyph size={16} />
+        <Users size={16} aria-hidden="true" />
       </span>
     ) : (
       <CrewPatch

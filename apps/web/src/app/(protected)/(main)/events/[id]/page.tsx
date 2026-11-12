@@ -29,6 +29,7 @@ import {
 } from '@/components/consumer/event-stage';
 import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import { ShareButton } from '@/components/consumer/event-detail/ShareButton';
+import { aboutDescription } from '@/components/consumer/event-detail/about-description';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { SectionHeader } from '@/components/consumer/section-header';
 import { WatchZone } from '@/components/consumer/watchers';
@@ -329,7 +330,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
       </EventStage>
 
       <div className="flex-1">
-        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
+        <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
           {/* Commit block — directly under title (#70). One card, per the
               handoff's CommitBlockV2: the commitment and the watch strip are
               two halves of the same decision, so they share a border rather
@@ -432,7 +433,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           {!leadsWithStatus && primaryCta}
 
           {/* About — after CTA, per design */}
-          {event.description && (
+          {aboutDescription(event.description) && (
             <div className="mt-4">
               <p
                 className="mb-1.5 uppercase text-fg-subtle"

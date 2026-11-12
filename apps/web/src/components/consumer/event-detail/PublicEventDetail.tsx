@@ -44,6 +44,7 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { ShareButton } from './ShareButton';
+import { aboutDescription } from './about-description';
 import { PublicEventView } from './PublicEventView';
 
 import {
@@ -171,7 +172,7 @@ export const PublicEventDetail = ({
       <PublicEventView eventId={event.id} />
 
       <div className="flex-1">
-        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
+        <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
           {/* The board's order (bp-s-public_m, _d): what it costs, the way to
               buy it, then the account. Side by side from `sm` up, the account
               card in the right column. */}
@@ -337,7 +338,7 @@ export const PublicEventDetail = ({
             />
           </div>
 
-          {event.description && (
+          {aboutDescription(event.description) && (
             <div className="mt-4">
               <p
                 className="mb-1.5 uppercase text-fg-subtle"
