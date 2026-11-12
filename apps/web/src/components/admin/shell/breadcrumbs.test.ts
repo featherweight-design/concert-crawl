@@ -32,6 +32,22 @@ describe('buildBreadcrumbs', () => {
     ]);
   });
 
+  it('labels the invite codes Posters page Posters, not Details', () => {
+    const crumbs = buildBreadcrumbs('/admin/invite-codes/posters', [
+      {
+        key: 'invite-codes',
+        label: 'Invite codes',
+        href: '/admin/invite-codes',
+        iconName: 'Key',
+        section: 'account',
+      },
+    ]);
+    expect(crumbs).toEqual([
+      { label: 'Invite codes', href: '/admin/invite-codes' },
+      { label: 'Posters' },
+    ]);
+  });
+
   it('returns section link + sub-label on a review sub-page', () => {
     const crumbs = buildBreadcrumbs('/admin/review/abc123', NAV);
     expect(crumbs).toEqual([

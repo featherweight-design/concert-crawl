@@ -38,6 +38,10 @@ export function buildBreadcrumbs(
       sub === 'robots-audit' ? ADMIN_COPY.robotsAudit.page.title : 'Edit venue';
   }
 
+  if (section.key === 'invite-codes' && sub === 'posters') {
+    subLabel = ADMIN_COPY.inviteCodes.poster.tabs.posters;
+  }
+
   // Review subpages carry an optional `?from=<tab>` param so the breadcrumb
   // returns the admin to whichever Review tab they came from (#1083). Only
   // the Review section honours this — other sections keep their canonical

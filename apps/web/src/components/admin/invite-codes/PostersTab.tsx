@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   Download,
@@ -140,10 +142,18 @@ export function PostersTab({
 
   return (
     <div className="poster-page pt-page" data-testid="posters-tab">
+      <Link href="/admin/invite-codes" prefetch={false} className="pt-back">
+        <ArrowLeft size={16} aria-hidden />
+        {copy.tabs.label}
+      </Link>
       <SectionHead
         title={copy.title}
         subtitle={copy.subtitle}
-        actions={<InviteCodesTabs active="posters" />}
+        actions={
+          <div className="pt-tabs">
+            <InviteCodesTabs active="posters" />
+          </div>
+        }
       />
       <div className="pt-grid">
         <div className="pt-steps">
