@@ -296,6 +296,62 @@ describe('ArtistsClient', () => {
     });
   });
 
+  it('keeps the current match from Change match (Looks right), pinned to its status', async () => {
+    listFor = () => ({
+      data: [row({ spotifyArtistId: 'sp9', autoMatchedAt: null })],
+      total: 1,
+    });
+    render(<ArtistsClient />);
+    fireEvent.click(await screen.findByRole('tab', { name: /Matched/ }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'More for Kyle Emerson' }),
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Change match/ }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Looks right: Search Pick' }),
+    );
+    await waitFor(() => {
+      const patch = vi
+        .mocked(fetch)
+        .mock.calls.find(([, init]) => init?.method === 'PATCH');
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({
+        spotifyArtistId: 'sp9',
+        expectedStatus: 'matched',
+      });
+    });
+  });
+
+  it('opens the artist search full screen from the phone row’s Pick and Search', async () => {
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    });
+    listFor = () => ({
+      data: [
+        row({
+          matchStatus: 'no_match',
+          spotifyArtistId: null,
+          autoMatchedAt: null,
+          candidates: [],
+        }),
+      ],
+      total: 1,
+    });
+    render(<ArtistsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Pick: Kyle Emerson' }),
+    );
+    expect(await screen.findByTestId('admin-sheet')).toBeTruthy();
+    // The back link returns to the list.
+    fireEvent.click(screen.getByRole('button', { name: 'Artists' }));
+    await waitFor(() => expect(screen.queryByTestId('admin-sheet')).toBeNull());
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Search: Kyle Emerson' }),
+    );
+    expect(await screen.findByTestId('admin-sheet')).toBeTruthy();
+  });
+
   it('saves a pick from the artist search with the loaded status', async () => {
     listFor = () => ({
       data: [

@@ -316,7 +316,6 @@ export const artistsApi = (getToken: GetToken) => ({
     if (!Array.isArray(reports)) throw new ShapeError('reports');
     return reports.filter(isReport);
   },
-  /** The match job's saved candidates (cache-first on the server). */
   /**
    * The Spotify artists for one row. With no query it reads the match job's
    * saved snapshot (cache-first on the server); a query searches Spotify

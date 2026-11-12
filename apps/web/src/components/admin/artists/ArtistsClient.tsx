@@ -719,9 +719,17 @@ export function ArtistsClient() {
       onClose={() => setSearching(null)}
       onUse={(candidate) => {
         setSearching(null);
+        // The panel opened on a snapshot of the row. Save against the row as
+        // the list holds it now, so the write and its expectedStatus match
+        // what is on screen; if it has left the list, reload instead.
+        const current = list?.rows.find((each) => each.id === searching.id);
+        if (!current) {
+          void loadRef.current();
+          return;
+        }
         // Keeping the current match is Looks right; anything else is Use.
-        const write = primaryWrite(searching, candidate);
-        if (write) void runWrite(searching, write);
+        const write = primaryWrite(current, candidate);
+        if (write) void runWrite(current, write);
       }}
       onNotAnArtist={() => {
         setSearching(null);

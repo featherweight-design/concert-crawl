@@ -50,7 +50,12 @@ const json = (body: unknown) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+/** What a candidates call answers, from its URL. Tests swap it per case. */
+let respond: (url: string) => Promise<Response>;
+
 beforeEach(() => {
+  respond = async () =>
+    json({ success: true, data: CANDIDATES, query: 'Cashmere' });
   window.matchMedia = vi.fn().mockReturnValue({
     matches: false,
     addEventListener: () => undefined,
@@ -58,11 +63,21 @@ beforeEach(() => {
   });
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () =>
-      json({ success: true, data: CANDIDATES, query: 'Cashmere' }),
-    ),
+    vi.fn(async (input: string) => respond(String(input))),
   );
 });
+
+/** A held response, released by the returned function. */
+const held = (body: unknown) => {
+  let release = () => undefined as void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    response: gate.then(() => json(body)),
+    release: () => release(),
+  };
+};
 
 afterEach(() => {
   cleanup();
@@ -145,6 +160,98 @@ describe('ArtistSearchPanel on desktop', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Not an artist' }));
     expect(onNotAnArtist).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ArtistSearchPanel requests and states', () => {
+  const submit = (value: string) => {
+    const input = screen.getByRole('searchbox', {
+      name: 'Search Spotify by name',
+    });
+    fireEvent.change(input, { target: { value } });
+    fireEvent.submit(input);
+  };
+
+  it('ignores a submit while a search is out, so no older answer can land late', async () => {
+    const first = held({ success: true, data: CANDIDATES });
+    respond = () => first.response;
+    renderPanel(false);
+    submit('Cashmere Cat');
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
+    first.release();
+    expect(await screen.findByText('2 results')).toBeInTheDocument();
+  });
+
+  it('never runs the same search twice in a row', async () => {
+    renderPanel(false);
+    await screen.findByText('2 results');
+    submit('Cashmere Cat');
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
+    await screen.findByText('2 results');
+    submit('Cashmere Cat');
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops an answer that lands after the panel closed', async () => {
+    const first = held({ success: true, data: CANDIDATES });
+    respond = () => first.response;
+    renderPanel(false);
+    cleanup();
+    first.release();
+    await first.response;
+    expect(screen.queryByText('2 results')).toBeNull();
+  });
+
+  it('says Spotify could not be reached, and lets the same search run again', async () => {
+    respond = async () =>
+      new Response(JSON.stringify({ success: false }), { status: 503 });
+    renderPanel(false);
+    expect(
+      await screen.findByText("Couldn't reach Spotify."),
+    ).toBeInTheDocument();
+    submit('Cashmere');
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
+  });
+
+  it('prompts a search when nothing is saved, and says so when a search finds nobody', async () => {
+    respond = async () => json({ success: true, data: [] });
+    renderPanel(false);
+    expect(
+      await screen.findByText(
+        'Nothing saved for this name yet. Search Spotify above.',
+      ),
+    ).toBeInTheDocument();
+    submit('zzqq');
+    expect(
+      await screen.findByText('No artist by that name. Try another spelling.'),
+    ).toBeInTheDocument();
+  });
+
+  it('says when Exact name hides every hit', async () => {
+    respond = async () =>
+      json({
+        success: true,
+        data: CANDIDATES.map((each) => ({ ...each, isExactMatch: false })),
+      });
+    renderPanel(false);
+    await screen.findByText('2 results');
+    fireEvent.click(screen.getByRole('button', { name: 'Exact name' }));
+    expect(
+      screen.getByText(
+        'No exact name match. Turn off Exact name to see the rest.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('labels the current match Looks right and marks it current', async () => {
+    renderPanel(false);
+    const keep = await screen.findByRole('button', {
+      name: 'Looks right: Cashmere',
+    });
+    expect(keep.closest('li')).toHaveAttribute('aria-current', 'true');
+    expect(
+      screen.getByRole('list', { name: 'Spotify artists for Cashmere' }),
+    ).toBeInTheDocument();
   });
 });
 

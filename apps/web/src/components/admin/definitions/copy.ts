@@ -2570,8 +2570,15 @@ export const ADMIN_COPY = {
       results: (count: number) =>
         `${count} ${count === 1 ? 'result' : 'results'}`,
       loading: 'Searching Spotify…',
+      // Whole-sentence lines end with a period; labels and the loading line
+      // don't.
       failed: "Couldn't reach Spotify.",
+      // A typed search that found nobody.
       empty: 'No artist by that name. Try another spelling.',
+      // Opened on a row with no saved candidates.
+      noSaved: 'Nothing saved for this name yet. Search Spotify above.',
+      // Exact name hid every hit.
+      noExact: 'No exact name match. Turn off Exact name to see the rest.',
       use: 'Use',
     },
     // The open reports on a reported row: what Looks right would dismiss.
