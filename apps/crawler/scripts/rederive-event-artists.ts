@@ -1,5 +1,6 @@
 import {
-  adjudicateEvent,
+  adjudicateEventWithUsage,
+  calculateCost,
   rederiveEventArtists,
 } from '@concert-crawl/crawler-core';
 
@@ -30,21 +31,64 @@ const parseLimit = (): number | undefined => {
   return value;
 };
 
+// `--max-cost-usd=N` ends the pass once the Haiku calls it made cost N or
+// more (checked before each row, so it can overshoot by one call), and the
+// cumulative cost is logged as it grows. `--only-flattened` reads only rows
+// whose artist joins names with " & " or " + ", the rows the flattened-billing
+// rule can change, so every row read is a row that can cost a call.
+const parseMaxCost = (): number | undefined => {
+  const flag = process.argv.find((arg) => arg.startsWith('--max-cost-usd='));
+  if (flag === undefined) return undefined;
+  const raw = flag.slice('--max-cost-usd='.length);
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`--max-cost-usd expects a positive number, got "${raw}"`);
+  }
+  return value;
+};
+
 async function main(): Promise<void> {
   const dryRun = !process.argv.includes('--apply');
   const limit = parseLimit();
+  const maxCostUsd = parseMaxCost();
+  const onlyFlattenedBillings = process.argv.includes('--only-flattened');
+  let spentUsd = 0;
+  let calls = 0;
 
   console.warn(
     `[rederive-event-artists] starting — ${dryRun ? 'DRY RUN' : 'APPLY'}${
       limit === undefined ? '' : ` limit=${limit}`
+    }${maxCostUsd === undefined ? '' : ` max-cost-usd=${maxCostUsd}`}${
+      onlyFlattenedBillings ? ' only-flattened' : ''
     }`,
   );
 
   const result = await rederiveEventArtists({
     dryRun,
-    adjudicate: adjudicateEvent,
+    adjudicate: async (input) => {
+      const { verdict, usage } = await adjudicateEventWithUsage(input);
+      spentUsd += calculateCost(usage);
+      calls += 1;
+      if (calls % 25 === 0) {
+        console.warn(
+          `[rederive-event-artists] ${calls} calls, $${spentUsd.toFixed(4)} spent`,
+        );
+      }
+      return verdict;
+    },
     limit,
+    onlyFlattenedBillings,
+    shouldStop: () => maxCostUsd !== undefined && spentUsd >= maxCostUsd,
+    sampleSize: 1000,
   });
+  if (result.stopped) {
+    console.warn(
+      `[rederive-event-artists] COST CAP HIT at $${spentUsd.toFixed(4)}: the pass stopped early and the remaining rows were not read.`,
+    );
+  }
+  console.warn(
+    `[rederive-event-artists] haiku calls=${calls} cost=$${spentUsd.toFixed(4)}`,
+  );
 
   for (const change of result.sample) {
     console.warn(

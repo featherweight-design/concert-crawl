@@ -33,7 +33,7 @@
  * keeps every row current.
  */
 
-import { asc, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt, like, or } from 'drizzle-orm';
 import { db, events, venues } from '@concert-crawl/db';
 import {
   CRAWLER_USER_AGENT,
@@ -97,6 +97,8 @@ export interface RederiveEventArtistsResult {
   updated: number;
   /** Rows this run newly hid because the verdict was "not a concert". */
   hidden: number;
+  /** True when `shouldStop` ended the pass before every row was read. */
+  stopped: boolean;
   strategies: Record<RederiveStrategy, number>;
   /** Up to 25 changes, for eyeballing before an apply run. */
   sample: RederiveChange[];
@@ -108,6 +110,20 @@ export interface RederiveEventArtistsOptions {
   adjudicate: Adjudicator;
   /** Cap on rows read. Left undefined, the whole table is walked. */
   limit?: number | undefined;
+  /**
+   * Reads only rows whose stored `artist` joins names with " & " or " + ": the
+   * rows the flattened-billing rule can change. Filtered in SQL, so the other
+   * rows are never read and the count of rows read is the count of rows that
+   * can cost a call.
+   */
+  onlyFlattenedBillings?: boolean;
+  /**
+   * Checked before each row. Returning true ends the pass at once, leaving the
+   * remaining rows untouched. How the runner enforces a spend cap.
+   */
+  shouldStop?: () => boolean;
+  /** How many changes the result lists. Defaults to 25. */
+  sampleSize?: number;
   /**
    * Paced between adjudications only — the free paths cost nothing to run
    * flat out. Anthropic's limit is far above this; the interval exists so a
@@ -205,6 +221,7 @@ export async function rederiveEventArtists(
   let derived = 0;
   let updated = 0;
   let hidden = 0;
+  let stopped = false;
 
   // Keyset-paginated on id so memory stays bounded and a run interrupted
   // partway resumes predictably rather than re-walking a random slice.
@@ -234,7 +251,14 @@ export async function rederiveEventArtists(
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(cursor === null ? undefined : gt(events.id, cursor))
+      .where(
+        and(
+          cursor === null ? undefined : gt(events.id, cursor),
+          options.onlyFlattenedBillings
+            ? or(like(events.artist, '% & %'), like(events.artist, '% + %'))
+            : undefined,
+        ),
+      )
       .orderBy(asc(events.id))
       .limit(Math.min(BATCH_SIZE, remaining));
 
@@ -242,6 +266,10 @@ export async function rederiveEventArtists(
     cursor = batch[batch.length - 1]!.id;
 
     for (const row of batch) {
+      if (options.shouldStop?.()) {
+        stopped = true;
+        break;
+      }
       scanned += 1;
 
       // `artist` is the DISPLAY string. When it merely repeats the title it
@@ -334,7 +362,7 @@ export async function rederiveEventArtists(
         sameBill(row.canonicalSupporting, canonicalSupporting);
       if (unchanged) continue;
 
-      if (sample.length < SAMPLE_SIZE) {
+      if (sample.length < (options.sampleSize ?? SAMPLE_SIZE)) {
         sample.push({
           eventId: row.id,
           title: row.title,
@@ -365,7 +393,8 @@ export async function rederiveEventArtists(
         })
         .where(eq(events.id, row.id));
     }
+    if (stopped) break;
   }
 
-  return { scanned, derived, updated, hidden, strategies, sample };
+  return { scanned, derived, updated, hidden, stopped, strategies, sample };
 }
