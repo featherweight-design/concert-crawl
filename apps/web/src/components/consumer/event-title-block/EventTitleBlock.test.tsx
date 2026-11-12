@@ -355,6 +355,24 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
       expect(title.className).toContain('text-fg-muted');
     });
 
+    it('stacks the genre chip above the status pill', () => {
+      render(
+        <EventTitleBlock
+          headliner="Wednesday"
+          supportingArtists={[]}
+          tourName={null}
+          surface="detail"
+          status="cancelled"
+          beforePill={<span data-testid="chips">Rock</span>}
+        />,
+      );
+      const chips = screen.getByTestId('chips');
+      const pill = screen.getByText(/cancelled/i);
+      expect(
+        chips.compareDocumentPosition(pill) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     it('keeps a No longer listed title at full strength and unstruck', () => {
       renderCancelled('2026-11-04T10:00:00.000Z');
       const title = screen.getByText('Wednesday');

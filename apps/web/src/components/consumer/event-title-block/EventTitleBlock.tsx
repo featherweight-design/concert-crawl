@@ -69,6 +69,12 @@ interface EventTitleBlockProps {
    * below `sm` and keeps it on desktop. Omitted, the line renders unwrapped.
    */
   supportClassName?: string;
+  /**
+   * Rendered between the supporting line and the detail status pill. The board
+   * stacks title, genre chip, status pill, date, so the chips come from the
+   * page and sit above the pill.
+   */
+  beforePill?: React.ReactNode;
 }
 
 export const EventTitleBlock = ({
@@ -88,6 +94,7 @@ export const EventTitleBlock = ({
   headSize,
   centered = false,
   supportClassName,
+  beforePill,
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface];
   // `detail` is the surface that renders on the event stage's wash (B8), the
@@ -220,6 +227,8 @@ export const EventTitleBlock = ({
             {supportingLine}
           </div>
         ))}
+
+      {beforePill}
 
       {pillBelow && hasPill && (
         <div className="flex" style={{ marginTop: 2 }}>
