@@ -7,8 +7,10 @@
 // the venue's stamp colour and snaps the venue's stamp into the stub hole — so
 // the button visually *becomes* the stamp it will be in Concerts. The B+ board
 // (`addendum-3/04/event-past-d`) draws it: the venue's ring colour as the
-// fill, a dark hole holding the venue glyph in a double-ringed rounded square,
-// and dark ink. Two artists at one venue get the same stub.
+// fill, a dark hole holding the venue's stamp, and dark ink. Two artists at
+// one venue get the same stub. The stamp in the hole is the shared round
+// VenueStamp, untilted (addendum 3 rule 4, addendum 4 item 8), which
+// supersedes the board's rounded square.
 //
 // `past-yes` is a read-only fact; `past-no` is the "I went" pill, a live tap that
 // stamps the night (edit-concerts PR3). Taking a stamp back out goes through the
@@ -16,11 +18,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
-import { venueGlyphKey } from '@/components/consumer/venue-glyph';
-import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
 import { VenueStamp } from '@/components/consumer/venue-stamp/VenueStamp';
-import { stampColorsFor, stampGlowFor } from '@/lib/passport/stamp';
+import { stampColorsFor } from '@/lib/passport/stamp';
 import { useThemeName } from '@/theme';
 import { GOING_COPY } from './definitions/copy';
 import { pillInkFor } from './lib/pill-ink';
@@ -70,16 +69,6 @@ export const GOING_BUTTON_SIZES: Record<
   lg: { height: 50, padX: 20, font: 15, gap: 8, hole: 36, radius: 10 },
 };
 
-// The stub's stamp, in the board's own 36-unit box (`event-past-d`), scaled
-// to the hole: a solid outer and a solid inner rounded square in the venue's
-// ring colour, and the bare glyph at 40% in its glyph colour, with a glow.
-export const STUB_STAMP_VIEWBOX = 36;
-export const STUB_STAMP_OUTER = { inset: 1.5, radius: 7.2, stroke: 2 };
-export const STUB_STAMP_INNER = { inset: 6, radius: 4.7, stroke: 0.9 };
-const STUB_GLYPH_OFFSET = 10.8;
-const STUB_GLYPH_SCALE = 0.6;
-const STUB_GLYPH_STROKE = 1.8;
-const STUB_GLOW_BLUR = 5;
 /** The perforation's ink on the filled stub, as a share of the label ink. */
 const PERFORATION_INK = 35;
 
@@ -170,106 +159,6 @@ const CheckIcon = ({ size }: { size: number }) => (
     />
   </svg>
 );
-
-/**
- * The venue's stamp in the stub hole, as `event-past-d` draws it. Exported so
- * any other stub (the "You went" tile) draws the same stamp.
- */
-export const StubStamp = ({
-  venueSlug,
-  venueName,
-  size,
-}: {
-  venueSlug: string;
-  venueName: string;
-  size: number;
-}) => {
-  const colors = stampColorsFor(venueSlug);
-  const glyphKey = venueGlyphKey(venueSlug);
-  const scale = size / STUB_STAMP_VIEWBOX;
-  const innerSide = STUB_STAMP_VIEWBOX - STUB_STAMP_INNER.inset * 2;
-  return (
-    <span
-      data-going-cta-stamp=""
-      style={{
-        position: 'relative',
-        display: 'block',
-        width: size,
-        height: size,
-        flexShrink: 0,
-      }}
-    >
-      {glyphKey === null && (
-        <span
-          data-going-cta-stamp-fallback=""
-          style={{
-            position: 'absolute',
-            inset: STUB_STAMP_INNER.inset * scale,
-            borderRadius: STUB_STAMP_INNER.radius * scale,
-            overflow: 'hidden',
-          }}
-        >
-          <IdentityArt
-            name={venueName}
-            kind="venue"
-            scale="tile"
-            grain={0.08}
-            width="100%"
-            height="100%"
-          />
-        </span>
-      )}
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${STUB_STAMP_VIEWBOX} ${STUB_STAMP_VIEWBOX}`}
-        aria-hidden="true"
-        focusable="false"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'block',
-          filter: stampGlowFor(colors.ring, STUB_GLOW_BLUR),
-        }}
-      >
-        <rect
-          data-going-cta-stamp-ring=""
-          x={STUB_STAMP_OUTER.inset}
-          y={STUB_STAMP_OUTER.inset}
-          width={STUB_STAMP_VIEWBOX - STUB_STAMP_OUTER.inset * 2}
-          height={STUB_STAMP_VIEWBOX - STUB_STAMP_OUTER.inset * 2}
-          rx={STUB_STAMP_OUTER.radius}
-          fill="none"
-          stroke={colors.ring}
-          strokeWidth={STUB_STAMP_OUTER.stroke}
-        />
-        <rect
-          data-going-cta-stamp-inner-ring=""
-          x={STUB_STAMP_INNER.inset}
-          y={STUB_STAMP_INNER.inset}
-          width={innerSide}
-          height={innerSide}
-          rx={STUB_STAMP_INNER.radius}
-          fill="none"
-          stroke={colors.ring}
-          strokeWidth={STUB_STAMP_INNER.stroke}
-        />
-        {glyphKey !== null && (
-          <g
-            data-going-cta-stamp-glyph={glyphKey}
-            transform={`translate(${STUB_GLYPH_OFFSET} ${STUB_GLYPH_OFFSET}) scale(${STUB_GLYPH_SCALE})`}
-          >
-            <GlyphShapes
-              glyphKey={glyphKey}
-              paint={colors.glyph}
-              strokeWidth={STUB_GLYPH_STROKE}
-            />
-          </g>
-        )}
-      </svg>
-    </span>
-  );
-};
 
 export const GoingButton = ({
   show,
@@ -472,7 +361,9 @@ export const GoingButton = ({
           }}
         >
           {isOn ? (
-            <StubStamp
+            // The shared round VenueStamp, straight: only the Passport
+            // booklet tilts (addendum 3 rule 4, addendum 4 item 8).
+            <VenueStamp
               venueSlug={show.venueSlug}
               venueName={show.venueName}
               size={sizes.hole}

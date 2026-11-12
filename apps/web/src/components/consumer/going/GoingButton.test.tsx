@@ -59,7 +59,8 @@ describe('GoingButton', () => {
   });
 
   // event_unmarked_m: the dashed ghost of the venue's stamp until the night is
-  // stamped; the filled stub's own stamp is the shared StubStamp (#265).
+  // stamped; the filled stub's own stamp is the solid VenueStamp (addendum 4
+  // item 8).
   it('draws the venue stamp as a dashed ghost on an unstamped night', () => {
     const { container } = render(<GoingButton show={SHOW} state="past-no" />);
     expect(
@@ -178,7 +179,7 @@ describe('GoingButton', () => {
   it('leaves the uncommitted stub unfilled', () => {
     const { container } = render(<GoingButton show={SHOW} />);
     const button = container.querySelector('button');
-    expect(container.querySelector('[data-going-cta-stamp]')).toBeNull();
+    expect(container.querySelector('[data-venue-stamp]')).toBeNull();
     expect(button?.style.background).toBe('var(--surface-1)');
     expect(button?.style.border).toContain('var(--border-strong)');
   });
@@ -233,10 +234,10 @@ describe('GoingButton', () => {
         const result = {
           fill: button?.style.background,
           ring: container
-            .querySelector('[data-going-cta-stamp-ring]')
+            .querySelector('[data-venue-stamp-ring]')
             ?.getAttribute('stroke'),
           glyph: container
-            .querySelector('[data-going-cta-stamp-glyph] > g')
+            .querySelector('[data-venue-glyph] > g')
             ?.getAttribute('stroke'),
         };
         cleanup();
@@ -253,55 +254,82 @@ describe('GoingButton', () => {
     },
   );
 
-  // `event-past-d`: a 50px stub, a 50px dark hole behind a dashed
-  // perforation, a 36px double-ringed rounded square holding the glyph at
-  // 40%, and dark ink.
-  it("draws the committed stub as the board's", () => {
+  // `event-past-d` for the stub: a 50px stub, a 50px dark hole behind a
+  // dashed perforation, a 36px stamp, and dark ink. The stamp itself is the
+  // round VenueStamp (addendum 3 rule 4, addendum 4 item 8), never the
+  // board's rounded square.
+  it.each(['going', 'past-yes'] as const)(
+    "draws the committed stub as the board's, with the round stamp (%s)",
+    (state) => {
+      const { container } = render(
+        <GoingButton show={SHOW} state={state} size="lg" />,
+      );
+      const button = container.querySelector('button');
+      expect(button?.style.height).toBe('50px');
+      expect(button?.style.borderRadius).toBe('10px');
+      expect(button?.style.color).toBe('var(--bg)');
+
+      const hole = container.querySelector<HTMLElement>(
+        '[data-going-cta-hole]',
+      );
+      expect(hole?.style.width).toBe('50px');
+      expect(hole?.style.background).toBe('var(--bg)');
+      expect(hole?.style.borderRight).toContain('dashed');
+
+      // One stamp, the solid VenueStamp, and no rounded-square stub stamp.
+      expect(hole?.querySelectorAll('[data-venue-stamp]')).toHaveLength(1);
+      expect(container.querySelector('[data-going-cta-stamp]')).toBeNull();
+      expect(container.querySelector('rect')).toBeNull();
+
+      const stamp = hole?.querySelector<HTMLElement>(
+        '[data-venue-stamp="solid"]',
+      );
+      expect(stamp?.style.width).toBe('36px');
+      expect(stamp?.style.height).toBe('36px');
+      const svg = stamp?.querySelector<SVGSVGElement>(':scope > svg');
+      expect(svg?.getAttribute('viewBox')).toBe('0 0 36 36');
+      expect(svg?.style.filter).toContain('5px');
+      expect(svg?.style.filter).toContain(`${CHURCH_RING}4D`);
+
+      const outer = stamp?.querySelector('[data-venue-stamp-ring]');
+      expect(outer?.tagName.toLowerCase()).toBe('circle');
+      expect(outer?.getAttribute('cx')).toBe('18');
+      expect(outer?.getAttribute('r')).toBe('16.5');
+      expect(outer?.getAttribute('stroke-width')).toBe('2');
+      expect(outer?.getAttribute('stroke')).toBe(CHURCH_RING);
+      expect(outer?.getAttribute('fill')).toBe('none');
+      expect(outer?.getAttribute('stroke-dasharray')).toBeNull();
+
+      const inner = stamp?.querySelector('[data-venue-stamp-inner-ring]');
+      expect(inner?.tagName.toLowerCase()).toBe('circle');
+      expect(inner?.getAttribute('r')).toBe('12');
+      expect(inner?.getAttribute('stroke-width')).toBe('0.9');
+      expect(inner?.getAttribute('stroke-dasharray')).toBe('2.5 2.5');
+      expect(inner?.getAttribute('stroke')).toBe(CHURCH_RING);
+
+      const glyph = stamp?.querySelector('[data-venue-glyph]');
+      expect(glyph?.getAttribute('data-venue-glyph')).toBe('church');
+      expect(glyph?.getAttribute('x')).toBe('10.8');
+      expect(glyph?.getAttribute('width')).toBe('14.4');
+      const paint = glyph?.querySelector(':scope > g');
+      expect(paint?.getAttribute('stroke')).toBe(CHURCH_GLYPH);
+      expect(paint?.getAttribute('stroke-width')).toBe('1.8');
+    },
+  );
+
+  // Tilt is the Passport booklet's alone: the stub's stamp sits straight.
+  it('never tilts the stub stamp', () => {
     const { container } = render(
-      <GoingButton show={SHOW} state="going" size="lg" />,
+      <GoingButton show={SHOW} state="past-yes" size="lg" />,
     );
-    const button = container.querySelector('button');
-    expect(button?.style.height).toBe('50px');
-    expect(button?.style.borderRadius).toBe('10px');
-    expect(button?.style.color).toBe('var(--bg)');
-
-    const hole = container.querySelector<HTMLElement>('[data-going-cta-hole]');
-    expect(hole?.style.width).toBe('50px');
-    expect(hole?.style.background).toBe('var(--bg)');
-    expect(hole?.style.borderRight).toContain('dashed');
-
-    const stamp = container.querySelector<HTMLElement>(
-      '[data-going-cta-stamp]',
-    );
-    expect(stamp?.style.width).toBe('36px');
-    const svg = stamp?.querySelector('svg');
-    expect(svg?.getAttribute('viewBox')).toBe('0 0 36 36');
-    expect(svg?.style.filter).toContain(`${CHURCH_RING}4D`);
-
-    const outer = container.querySelector('[data-going-cta-stamp-ring]');
-    expect(outer?.tagName.toLowerCase()).toBe('rect');
-    expect(outer?.getAttribute('x')).toBe('1.5');
-    expect(outer?.getAttribute('width')).toBe('33');
-    expect(outer?.getAttribute('rx')).toBe('7.2');
-    expect(outer?.getAttribute('stroke-width')).toBe('2');
-    expect(outer?.getAttribute('fill')).toBe('none');
-
-    const inner = container.querySelector('[data-going-cta-stamp-inner-ring]');
-    expect(inner?.getAttribute('x')).toBe('6');
-    expect(inner?.getAttribute('width')).toBe('24');
-    expect(inner?.getAttribute('rx')).toBe('4.7');
-    expect(inner?.getAttribute('stroke-width')).toBe('0.9');
-    expect(inner?.getAttribute('stroke-dasharray')).toBeNull();
-    expect(inner?.getAttribute('stroke')).toBe(CHURCH_RING);
-
-    const glyph = container.querySelector('[data-going-cta-stamp-glyph]');
-    expect(glyph?.getAttribute('data-going-cta-stamp-glyph')).toBe('church');
-    expect(glyph?.getAttribute('transform')).toBe(
-      'translate(10.8 10.8) scale(0.6)',
-    );
-    expect(
-      glyph?.querySelector(':scope > g')?.getAttribute('stroke-width'),
-    ).toBe('1.8');
+    const hole = container.querySelector('[data-going-cta-hole]');
+    if (!hole) throw new Error('no stub hole rendered');
+    expect(hole.querySelector('[data-venue-stamp="solid"]')).not.toBeNull();
+    const nodes = [hole, ...hole.querySelectorAll('*')];
+    for (const node of nodes) {
+      expect(node.hasAttribute('transform')).toBe(false);
+      expect(node.getAttribute('style') ?? '').not.toMatch(/rotate|transform/);
+    }
   });
 
   it('falls back to the venue art in the stamp for a venue with no glyph', () => {
@@ -311,9 +339,9 @@ describe('GoingButton', () => {
         state="going"
       />,
     );
-    expect(container.querySelector('[data-going-cta-stamp-glyph]')).toBeNull();
+    expect(container.querySelector('[data-venue-glyph]')).toBeNull();
     expect(
-      container.querySelector('[data-going-cta-stamp-fallback]'),
+      container.querySelector('[data-venue-stamp-fallback]'),
     ).not.toBeNull();
   });
 });
