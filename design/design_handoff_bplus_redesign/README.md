@@ -151,7 +151,7 @@ These are the parts to build once and reuse.
 - Cancelled shows get a crawler-source line and are never offered Get tickets.
 - New boards: the Tickets available pending state, 320px fixes, desktop empty Passport, the desktop notifications panel, Light venue pages, the error page's refused report and in-app error, the shelf's See all, venue tiles in Submitted prices, and the Price check counter's How you found out.
 
-Open questions for design are listed at the end of that README.
+Hugh's decisions on its open questions (2026-11-12) are at the end of that README.
 
 ## Open decisions (Hugh)
 
