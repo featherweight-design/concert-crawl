@@ -11,7 +11,7 @@ import { Hono } from 'hono';
 import { getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { createClerkClient } from '@clerk/backend';
+import { createClerkClient, type User } from '@clerk/backend';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   db,
@@ -19,10 +19,14 @@ import {
   userEvents,
   userProfiles,
 } from '@concert-crawl/db';
-import type { Role } from '@concert-crawl/types';
+import type { PersonDetail, Role } from '@concert-crawl/types';
 import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types';
 import { isClerkNotFound } from '../../lib/clerk-errors.js';
-import { idSchema } from '../../lib/id-schema.js';
+import {
+  loadJoinSources,
+  loadPersonOurSide,
+  resolveInviteCodeIds,
+} from './lib/people-detail.js';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
 
@@ -125,8 +129,12 @@ const iso = (ms: number | null): string | null =>
 const listQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
   role: z.enum(['admin', 'sub_admin', 'promoter', 'beta', 'user']).optional(),
-  // Only people who redeemed this invite code (5b's "See all" on a code).
-  code: idSchema.optional(),
+  // Only people who redeemed this invite code (5b's "See all" on a code): the
+  // code as people write it ("REDROCKS") or its id.
+  code: z.string().trim().min(1).max(255).optional(),
+  // Test accounts are left out of the list and every count by default (ruling
+  // #4); `only` is the Test accounts chip, `include` is everyone.
+  test: z.enum(['exclude', 'only', 'include']).default('exclude'),
   sort: z.enum(['last-active', 'newest']).default('last-active'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).max(100_000).default(0),
@@ -145,7 +153,8 @@ peopleAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { search, role, code, sort, limit, offset } = ctx.req.valid('query');
+    const { search, role, code, test, sort, limit, offset } =
+      ctx.req.valid('query');
     const scan = await scanClerkUsers(Date.now());
 
     const profiles = await db
@@ -165,20 +174,26 @@ peopleAdminRouter.get(
     );
 
     // An unknown code simply matches nobody.
+    const codeIds =
+      code === undefined ? null : await resolveInviteCodeIds(code);
     const redeemers =
-      code === undefined
+      codeIds === null
         ? null
         : new Set(
-            (
-              await db
-                .select({ userId: inviteCodeRedemptions.userId })
-                .from(inviteCodeRedemptions)
-                .where(eq(inviteCodeRedemptions.codeId, code))
-            ).map((row) => row.userId),
+            codeIds.length === 0
+              ? []
+              : (
+                  await db
+                    .select({ userId: inviteCodeRedemptions.userId })
+                    .from(inviteCodeRedemptions)
+                    .where(inArray(inviteCodeRedemptions.codeId, codeIds))
+                ).map((row) => row.userId),
           );
 
     const needle = (search ?? '').toLowerCase();
     const matches = (user: ScannedUser): boolean => {
+      if (test === 'exclude' && testAccounts.has(user.id)) return false;
+      if (test === 'only' && !testAccounts.has(user.id)) return false;
       if (role !== undefined && user.role !== role) return false;
       if (redeemers !== null && !redeemers.has(user.id)) return false;
       if (needle === '') return true;
@@ -223,12 +238,22 @@ peopleAdminRouter.get(
       for (const row of rows) watching.set(row.userId, row.value);
     }
 
-    // Every role in the hierarchy, so a role with nobody in it reads 0.
-    const counts: Record<string, number> = { total: scan.users.length };
+    // Every role in the hierarchy, so a role with nobody in it reads 0. Test
+    // accounts are counted on their own, not in the total or a role.
+    const counts: Record<string, number> = { total: 0, test: 0 };
     for (const known of ROLE_HIERARCHY) counts[known] = 0;
     for (const user of scan.users) {
+      if (testAccounts.has(user.id)) {
+        counts['test'] = (counts['test'] ?? 0) + 1;
+        continue;
+      }
+      counts['total'] = (counts['total'] ?? 0) + 1;
       counts[user.role] = (counts[user.role] ?? 0) + 1;
     }
+    const joinSources = await loadJoinSources(
+      page.map((user) => user.id),
+      testAccounts,
+    );
 
     return ctx.json({
       success: true,
@@ -242,12 +267,76 @@ peopleAdminRouter.get(
           lastActiveAt: iso(user.lastActiveAt),
           watching: watching.get(user.id) ?? 0,
           isTestAccount: testAccounts.has(user.id),
+          joinSource: joinSources.get(user.id) ?? null,
         })),
         total: filtered.length,
         counts,
         truncated: scan.truncated,
       },
     });
+  },
+);
+
+/** How a person signs in, from what Clerk holds: "Google", "email", "password". */
+const signInMethodsOf = (user: User): string[] => {
+  const methods: string[] = [];
+  for (const account of user.externalAccounts) {
+    const provider = account.provider.replace(/^oauth_/, '');
+    methods.push(provider.charAt(0).toUpperCase() + provider.slice(1));
+  }
+  const emailCode = user.emailAddresses.some(
+    (address) => address.verification?.strategy === 'email_code',
+  );
+  if (emailCode) methods.push('email');
+  if (user.passwordEnabled) methods.push('password');
+  return [...new Set(methods)];
+};
+
+// GET /v1/admin/people/:userId — the person page. Identity from Clerk (masked
+// email, sign-in methods, role), the rest from our own database. Reading it is
+// not audited (nothing is revealed that the list does not already show); the
+// full email stays behind the audited show-email action.
+peopleAdminRouter.get(
+  '/:userId',
+  zValidator('param', userIdParamSchema, validationHook),
+  async (ctx) => {
+    const { userId } = ctx.req.valid('param');
+    let user: User;
+    try {
+      user = await clerkClient.users.getUser(userId);
+    } catch (err: unknown) {
+      if (isClerkNotFound(err)) {
+        return ctx.json({ success: false, error: 'Person not found' }, 404);
+      }
+      throw err;
+    }
+    const [profile] = await db
+      .select({
+        handle: userProfiles.handle,
+        isTestAccount: userProfiles.isTestAccount,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId));
+    const isTest = profile?.isTestAccount ?? false;
+    const ours = await loadPersonOurSide(userId, isTest);
+    const rawRole = (user.publicMetadata as { role?: unknown }).role;
+
+    const detail: PersonDetail = {
+      id: user.id,
+      handle: profile?.handle ?? user.username ?? null,
+      role: isRole(rawRole) ? rawRole : 'user',
+      createdAt: iso(user.createdAt ?? null),
+      lastActiveAt: iso(user.lastActiveAt ?? null),
+      isTestAccount: isTest,
+      founder: ours.founder,
+      emailMasked: maskEmail(user.emailAddresses[0]?.emailAddress ?? ''),
+      signInMethods: signInMethodsOf(user),
+      joinSource: ours.joinSource,
+      codeRedeemerCount: ours.codeRedeemerCount,
+      stats: ours.stats,
+      recent: ours.recent,
+    };
+    return ctx.json({ success: true, data: detail });
   },
 );
 

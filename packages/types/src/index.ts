@@ -1773,3 +1773,59 @@ export interface NeedsYouCount {
   byKind: Record<NeedsYouKind, number>;
   handledToday: number;
 }
+
+// ── Admin People (redesign 5a) ───────────────────────────────────────────────
+
+/** How a person came in: a personal invite code, a poster code (a multi-use
+ * code with a label), the founder window, or a test account. */
+export interface PersonJoinSource {
+  kind: 'code' | 'poster' | 'founder' | 'test';
+  /** The invite code string, for `code` and `poster`. */
+  code: string | null;
+  /** Where a poster was put, e.g. "Hi-Dive bathroom, Nov". */
+  label: string | null;
+}
+
+/** One line of "Recent": the five newest of a person's reports, prices and feedback. */
+export type PersonRecent =
+  | {
+      kind: 'price';
+      at: string;
+      priceMin: string;
+      priceMax: string | null;
+      artist: string;
+      venueName: string;
+    }
+  | { kind: 'feedback'; at: string; message: string }
+  | {
+      kind: 'report';
+      at: string;
+      /** `wrong_artist` and friends for an artist report; the show status for an event report. */
+      about: 'artist' | 'event';
+      reason: string;
+      subject: string;
+    };
+
+export interface PersonDetail {
+  id: string;
+  handle: string | null;
+  role: Role;
+  createdAt: string | null;
+  lastActiveAt: string | null;
+  isTestAccount: boolean;
+  founder: boolean;
+  emailMasked: string;
+  /** "Google", "email", "password" ... from Clerk; empty when none is known. */
+  signInMethods: string[];
+  joinSource: PersonJoinSource | null;
+  /** For a code or poster: how many people joined with it (this person included). */
+  codeRedeemerCount: number | null;
+  stats: {
+    watching: number;
+    /** Past shows they marked going. */
+    concerts: number;
+    submittedPrices: number;
+    feedback: number;
+  };
+  recent: PersonRecent[];
+}

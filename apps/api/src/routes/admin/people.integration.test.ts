@@ -3,7 +3,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 interface FakeClerkUser {
   id: string;
   username: string | null;
-  emailAddresses: Array<{ emailAddress: string }>;
+  emailAddresses: Array<{
+    emailAddress: string;
+    verification?: { strategy: string };
+  }>;
+  externalAccounts: Array<{ provider: string }>;
+  passwordEnabled: boolean;
   publicMetadata: { role?: string };
   createdAt: number;
   lastActiveAt: number | null;
@@ -76,8 +81,11 @@ vi.mock('@clerk/backend', () => ({
 import { eq } from 'drizzle-orm';
 import {
   auditLog,
+  feedback,
   inviteCodeRedemptions,
   inviteCodes,
+  priceSubmissions,
+  subscriptions,
   userProfiles,
 } from '@concert-crawl/db';
 import { createApp } from '../../app.js';
@@ -104,6 +112,8 @@ const person = (
   id,
   username: null,
   emailAddresses: [{ emailAddress: `${id}@example.com` }],
+  externalAccounts: [],
+  passwordEnabled: false,
   publicMetadata: {},
   createdAt: Date.parse('2026-10-01T00:00:00Z'),
   lastActiveAt: null,
@@ -274,7 +284,215 @@ describe('admin people', () => {
       await get('?code=00000000-0000-0000-0000-000000000000')
     ).json();
     expect(none.data.people).toEqual([]);
-    expect((await get('?code=not-a-uuid')).status).toBe(400);
+    // The code as people write it works too, in any case; an unknown one matches nobody.
+    const byString: ListBody = await (await get('?code=hidive')).json();
+    expect(byString.data.people.map((row) => row.id).sort()).toEqual([
+      'user_a',
+      'user_c',
+    ]);
+    expect(
+      ((await (await get('?code=NOSUCH')).json()) as ListBody).data.people,
+    ).toEqual([]);
+  });
+
+  it('leaves test accounts out of the list and every count, and lists them on their own', async () => {
+    setAuth('admin');
+    clerk.users = [
+      person('user_a', { publicMetadata: { role: 'beta' } }),
+      person('user_b'),
+      person('user_t', { publicMetadata: { role: 'beta' } }),
+    ];
+    await seedUserProfile('user_t', { isTestAccount: true });
+
+    const everyone: ListBody = await (await get('')).json();
+    expect(everyone.data.people.map((row) => row.id).sort()).toEqual([
+      'user_a',
+      'user_b',
+    ]);
+    expect(everyone.data.total).toBe(2);
+    expect(everyone.data.counts).toMatchObject({ total: 2, beta: 1, test: 1 });
+
+    const tests: ListBody = await (await get('?test=only')).json();
+    expect(tests.data.people.map((row) => row.id)).toEqual(['user_t']);
+    expect(tests.data.total).toBe(1);
+
+    const all: ListBody = await (await get('?test=include')).json();
+    expect(all.data.total).toBe(3);
+  });
+
+  it('puts the join source on list rows: code, poster, founder, test', async () => {
+    setAuth('admin');
+    clerk.users = [
+      person('user_c1'),
+      person('user_p1'),
+      person('user_f1'),
+      person('user_t1'),
+      person('user_n1'),
+    ];
+    const [personal] = await testDb
+      .insert(inviteCodes)
+      .values({ code: 'REDROCKS', createdBy: 'user_admin' })
+      .returning({ id: inviteCodes.id });
+    const [poster] = await testDb
+      .insert(inviteCodes)
+      .values({
+        code: 'HIDIVE',
+        createdBy: 'user_admin',
+        maxUses: 50,
+        label: 'Hi-Dive bathroom',
+      })
+      .returning({ id: inviteCodes.id });
+    await testDb.insert(inviteCodeRedemptions).values([
+      { codeId: personal?.id ?? '', userId: 'user_c1' },
+      { codeId: poster?.id ?? '', userId: 'user_p1' },
+    ]);
+    await testDb.insert(subscriptions).values({
+      userId: 'user_f1',
+      stripeCustomerId: 'cus_f',
+      stripeSubscriptionId: 'sub_f',
+      tier: 'founder',
+      founder: true,
+    });
+    await seedUserProfile('user_t1', { isTestAccount: true });
+
+    const res = await get('?test=include');
+    const body = (await res.json()) as {
+      data: {
+        people: Array<{
+          id: string;
+          joinSource: {
+            kind: string;
+            code: string | null;
+            label: string | null;
+          } | null;
+        }>;
+      };
+    };
+    const source = (id: string) =>
+      body.data.people.find((row) => row.id === id)?.joinSource;
+    expect(source('user_c1')).toEqual({
+      kind: 'code',
+      code: 'REDROCKS',
+      label: null,
+    });
+    expect(source('user_p1')).toEqual({
+      kind: 'poster',
+      code: 'HIDIVE',
+      label: 'Hi-Dive bathroom',
+    });
+    expect(source('user_f1')).toEqual({
+      kind: 'founder',
+      code: null,
+      label: null,
+    });
+    expect(source('user_t1')).toEqual({
+      kind: 'test',
+      code: null,
+      label: null,
+    });
+    expect(source('user_n1')).toBeNull();
+  });
+
+  it('reads one person: join source with how many joined with the code, sign-in methods, stats and the five newest things they did', async () => {
+    setAuth('admin');
+    clerk.users = [
+      person('user_m', {
+        username: 'mira.k',
+        publicMetadata: { role: 'beta' },
+        emailAddresses: [
+          {
+            emailAddress: 'mira.kowalski@gmail.com',
+            verification: { strategy: 'email_code' },
+          },
+        ],
+        externalAccounts: [{ provider: 'oauth_google' }],
+      }),
+      person('user_o'),
+    ];
+    const [code] = await testDb
+      .insert(inviteCodes)
+      .values({ code: 'REDROCKS', createdBy: 'user_admin', maxUses: 5 })
+      .returning({ id: inviteCodes.id });
+    await testDb.insert(inviteCodeRedemptions).values([
+      { codeId: code?.id ?? '', userId: 'user_m' },
+      { codeId: code?.id ?? '', userId: 'user_o' },
+    ]);
+    const venue = await seedVenue({ name: 'Gothic Theatre' });
+    const past = await seedEvent(venue.id, {
+      artist: 'Ninth Key',
+      date: '2020-01-01',
+    });
+    const future = await seedEvent(venue.id, {
+      artist: 'Cashmere',
+      date: '2099-01-01',
+    });
+    await seedUserEvent('user_m', future.id);
+    await seedUserEvent('user_m', past.id, {
+      status: 'going',
+      attendingAt: new Date('2020-01-01T02:00:00Z'),
+    });
+    await testDb.insert(priceSubmissions).values({
+      eventId: past.id,
+      userId: 'user_m',
+      priceMin: '35',
+      priceMax: '65',
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      howFound: 'bought_myself',
+      createdAt: new Date('2026-11-10T12:00:00Z'),
+    });
+    await testDb.insert(feedback).values({
+      userId: 'user_m',
+      pageUrl: '/events',
+      category: 'bug',
+      message: 'Map button does nothing on iPhone',
+      createdAt: new Date('2026-11-08T12:00:00Z'),
+    });
+
+    const res = await get('/user_m');
+    expect(res.status).toBe(200);
+    const { data } = (await res.json()) as { data: Record<string, unknown> };
+    expect(data).toMatchObject({
+      id: 'user_m',
+      handle: 'mira.k',
+      role: 'beta',
+      isTestAccount: false,
+      founder: false,
+      emailMasked: 'm***@gmail.com',
+      signInMethods: ['Google', 'email'],
+      joinSource: { kind: 'code', code: 'REDROCKS', label: null },
+      codeRedeemerCount: 2,
+      stats: { watching: 1, concerts: 1, submittedPrices: 1, feedback: 1 },
+    });
+    expect(JSON.stringify(data)).not.toContain('mira.kowalski');
+    const recent = data['recent'] as Array<{ kind: string }>;
+    expect(recent.map((row) => row.kind)).toEqual(['price', 'feedback']);
+    expect(recent[0]).toMatchObject({
+      kind: 'price',
+      priceMin: '35.00',
+      priceMax: '65.00',
+      artist: 'Ninth Key',
+      venueName: 'Gothic Theatre',
+    });
+  });
+
+  it('reads a person with no code, no activity and no profile, and 404s an unknown one; admin only', async () => {
+    setAuth('admin');
+    clerk.users = [person('user_blank')];
+    const { data } = (await (await get('/user_blank')).json()) as {
+      data: Record<string, unknown>;
+    };
+    expect(data).toMatchObject({
+      handle: null,
+      joinSource: null,
+      codeRedeemerCount: null,
+      signInMethods: [],
+      stats: { watching: 0, concerts: 0, submittedPrices: 0, feedback: 0 },
+      recent: [],
+    });
+    expect((await get('/user_missing')).status).toBe(404);
+    setAuth('user');
+    expect((await get('/user_blank')).status).toBe(403);
   });
 
   it('tags a person as a test account (creating the profile), audited, with the previous value for Undo', async () => {
@@ -293,7 +511,7 @@ describe('admin people', () => {
       .where(eq(userProfiles.userId, 'user_a'));
     expect(profile?.isTestAccount).toBe(true);
 
-    const listed: ListBody = await (await get('')).json();
+    const listed: ListBody = await (await get('?test=include')).json();
     expect(listed.data.people[0]?.isTestAccount).toBe(true);
 
     const off = await post('/user_a/test-account', { isTest: false });
