@@ -10,7 +10,7 @@
         {
           "goto": "/I/${CC_POSTER_CODE}",
           "expectRedirect": "/auth/code",
-          "wait": "input[type=\"text\"][autocomplete=\"off\"]"
+          "wait": "text=Looks good"
         }
       ]
     }
