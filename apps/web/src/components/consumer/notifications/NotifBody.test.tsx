@@ -582,8 +582,10 @@ describe('NotifItem', () => {
       />,
     );
     expect(screen.getByText('Update')).toBeInTheDocument();
-    expect(screen.getByRole('button').getAttribute('style')).toContain(
-      'border-left: 2px solid var(--fg-muted)',
+    const style = screen.getByRole('button').getAttribute('style');
+    expect(style).toContain('box-shadow: inset 2px 0 0 var(--fg-muted)');
+    expect(style).toContain(
+      'background: color-mix(in srgb, var(--fg-muted) 4%, transparent)',
     );
   });
 
@@ -718,9 +720,10 @@ describe('NotifBody — B+ states', () => {
     const { container, rerender } = render(
       <NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />,
     );
-    const unreadLayers = container.querySelectorAll(
-      '.notif-row > span[aria-hidden="true"]',
-    ).length;
+    const rowStyle = (): string | null =>
+      container.querySelector('.notif-row')?.getAttribute('style') ?? null;
+    expect(rowStyle()).toContain('color-mix(in srgb');
+    expect(rowStyle()).toContain('box-shadow: inset 2px 0 0');
     rerender(
       <NotifItem
         item={notification({ readAt: '2026-07-24T19:00:00-06:00' })}
@@ -728,9 +731,8 @@ describe('NotifBody — B+ states', () => {
         now={NOW}
       />,
     );
-    const readLayers = container.querySelectorAll(
-      '.notif-row > span[aria-hidden="true"]',
-    ).length;
-    expect(unreadLayers).toBe(readLayers + 1);
+    expect(rowStyle()).toContain('background: transparent');
+    expect(rowStyle()).toContain('box-shadow: none');
+    expect(rowStyle()).not.toContain('color-mix');
   });
 });
