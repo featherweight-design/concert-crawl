@@ -1,3 +1,10 @@
+## [1.330.1](https://github.com/featherweight-design/concert-crawl/compare/v1.330.0...v1.330.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** draw the invite landing's show images as plain img ([af76c79](https://github.com/featherweight-design/concert-crawl/commit/af76c79c39cfea5eca03d25c71f4391f2bb621f6))
+
 # [1.330.0](https://github.com/featherweight-design/concert-crawl/compare/v1.329.2...v1.330.0) (2026-11-11)
 
 
