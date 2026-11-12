@@ -1,0 +1,714 @@
+[
+ {
+  "section": "01-sign-in",
+  "name": "start-m",
+  "title": "Sign in · start",
+  "note": "Google first, then email. Continue goes to the password step for every email, so nothing says whether an account exists.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "start-320",
+  "title": "Sign in · start at 320",
+  "note": "The foot wraps under its link; every target stays 44px.",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "01-sign-in",
+  "name": "start-d",
+  "title": "Sign in · start, desktop",
+  "note": "One 440px panel with the sheet’s blue-to-pink edge. The venue row is the only brand flourish.",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "01-sign-in",
+  "name": "start-light-m",
+  "title": "Sign in · start, Light",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "start-light-d",
+  "title": "Sign in · start, desktop, Light",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "01-sign-in",
+  "name": "start-email-error-m",
+  "title": "Sign in · not an email",
+  "note": "Checked on Continue, before Clerk. The only thing we say about the address is its shape.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "password-m",
+  "title": "Password step",
+  "note": "For every email, known or not. Change goes back with the email kept.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "password-d",
+  "title": "Password step, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "01-sign-in",
+  "name": "didnt-work-m",
+  "title": "It didn’t work",
+  "note": "One line for a wrong password, an unknown email and a code-only account. Password is cleared, email stays.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "busy-m",
+  "title": "Signing in",
+  "note": "The press dims and reads Signing in…; the field locks. Padded to about 900 ms so timing gives nothing away.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "email-code-m",
+  "title": "Email me a code instead",
+  "note": "Same words for every email. One input under the boxes takes paste and one-time-code autofill.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "email-code-wrong-m",
+  "title": "Email code · wrong",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "email-code-expired-m",
+  "title": "Email code · ran out",
+  "note": "The press becomes Send a new code.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "email-code-resent-m",
+  "title": "Email code · new code sent",
+  "note": "A quiet note, not a toast, so it stays while they look for the email.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "new-device-m",
+  "title": "New-device code",
+  "note": "Clerk’s device check after a right password. Its own eyebrow and title, so it never reads as a second password.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "01-sign-in",
+  "name": "new-device-d",
+  "title": "New-device code, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "01-sign-in",
+  "name": "breached-m",
+  "title": "Breached password",
+  "note": "Clerk refuses a password found in a breach. Warning, not danger: nothing they did wrong here.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-email-m",
+  "title": "Forgot password · email",
+  "note": "The email from sign-in comes along.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-code-m",
+  "title": "Code and new password",
+  "note": "One screen. Padded to about 1500 ms; the same words whether or not the account exists.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-too-short-m",
+  "title": "New password · too short",
+  "note": "Checked on the press, before Clerk.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-weak-m",
+  "title": "New password · too easy",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-breached-m",
+  "title": "New password · breached",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-busy-m",
+  "title": "Saving",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-done-m",
+  "title": "Password changed",
+  "note": "Clerk signs them in. About a second here, then back to where they came from.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "02-forgot-password",
+  "name": "forgot-code-d",
+  "title": "Code and new password, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 960
+ },
+ {
+  "section": "03-google",
+  "name": "google-busy-m",
+  "title": "Google · opening",
+  "note": "The Google press dims and reads Opening Google…; everything else locks.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-google",
+  "name": "google-returning-m",
+  "title": "Google · back, signing in",
+  "note": "The /sso-callback page. No form; it also holds the bot-check slot for a transfer.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-google",
+  "name": "google-returning-d",
+  "title": "Google · back, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "03-google",
+  "name": "google-cancelled-m",
+  "title": "Google · cancelled",
+  "note": "Back on the start with a quiet note above the button. Not red: they chose to leave.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "03-google",
+  "name": "google-refused-m",
+  "title": "Google · new person, invite-only",
+  "note": "Google proved the address, so we can say plainly there’s no account. No account is made; the card points to the invite code.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "03-google",
+  "name": "google-refused-d",
+  "title": "Google · new person, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 960
+ },
+ {
+  "section": "03-google",
+  "name": "google-consent-return-m",
+  "title": "Google · back, consent still needed",
+  "note": "Only when Clerk returns legal_accepted as missing (a transfer from sign-in after launch). Same checkbox, nothing else asked.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "03-google",
+  "name": "google-consent-return-error-m",
+  "title": "Google · consent pressed unticked",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-prefilled-m",
+  "title": "Invite · from a link or QR",
+  "note": "The code arrives in ?code= and is checked for shape at once. They still press Continue.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-typing-m",
+  "title": "Invite · typing",
+  "note": "Uppercased and dashed as they type. Continue wakes when the code is whole.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-plain-m",
+  "title": "Invite · a plain code",
+  "note": "A named code (4 to 20 letters and numbers, no BETA-) is whole as soon as it is 4 long.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-busy-m",
+  "title": "Invite · checking",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-notfound-m",
+  "title": "Invite · not found",
+  "note": "Live copy.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-used-m",
+  "title": "Invite · already used",
+  "note": "Live line, plus where to go if it was theirs.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-expired-m",
+  "title": "Invite · expired",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-ratelimit-m",
+  "title": "Invite · too many tries",
+  "note": "The field locks and the press counts down.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-320",
+  "title": "Invite · at 320",
+  "note": "",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-d",
+  "title": "Invite · desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "04-invite-code",
+  "name": "code-light-m",
+  "title": "Invite · Light",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-m",
+  "title": "Sign up · the form",
+  "note": "The invite shows as Applied at the top. Consent sits above both presses, so Google waits for it too.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-ticked-m",
+  "title": "Sign up · consent ticked",
+  "note": "",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-unticked-press-m",
+  "title": "Sign up · pressed while unticked",
+  "note": "Make my account or Google, pressed unticked: the box goes red, focus moves to it, and the line is read out. Nothing is sent.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-legal-open-m",
+  "title": "Sign up · Terms open",
+  "note": "A link opens the live page in a sheet. Back to the form keeps every field and the tick.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-too-short-m",
+  "title": "Sign up · password too short",
+  "note": "Checked on the press.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-weak-m",
+  "title": "Sign up · password too easy",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-breached-m",
+  "title": "Sign up · password breached",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-bot-check-m",
+  "title": "Sign up · bot check",
+  "note": "Smart CAPTCHA usually passes unseen. When it asks, its widget fills #clerk-captcha under consent and the press waits for it.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-busy-m",
+  "title": "Sign up · making the account",
+  "note": "",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "05-sign-up",
+  "name": "verify-m",
+  "title": "Verify email · code",
+  "note": "Step 3. Shown for every email, taken or not: a stranger learns nothing.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "verify-wrong-m",
+  "title": "Verify email · wrong code",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "email-used-m",
+  "title": "Email already used",
+  "note": "The same screen as Verify, here after Send a new code. No code ever comes for a taken address, so the line under it points them to sign in.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-done-m",
+  "title": "Account made · the hand-off",
+  "note": "The press turns to You’re in and the step trail lights its core. Then /auth/complete redeems the invite and onboarding starts.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-launch-m",
+  "title": "Sign up · after launch",
+  "note": "No invite step: two steps, no Applied chip, no Beta Agreement in the consent line.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-320",
+  "title": "Sign up · at 320",
+  "note": "Consent wraps to three lines; the box stays top-aligned.",
+  "w": 320,
+  "h": 940
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-d",
+  "title": "Sign up · desktop",
+  "note": "",
+  "w": 1300,
+  "h": 1020
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-unticked-press-d",
+  "title": "Sign up · pressed unticked, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 1060
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-legal-open-d",
+  "title": "Sign up · Terms open, desktop",
+  "note": "A centered dialog over the panel.",
+  "w": 1300,
+  "h": 1020
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-light-m",
+  "title": "Sign up · Light",
+  "note": "",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "05-sign-up",
+  "name": "signup-unticked-press-light-m",
+  "title": "Sign up · pressed unticked, Light",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-watch-m",
+  "title": "From Watch",
+  "note": "The show replaces the title block. Sign in and sign up both carry it.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-follow-m",
+  "title": "From Follow",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-crew-m",
+  "title": "From a crew invite",
+  "note": "The crew patch and the host’s name. Nothing about the crew’s plans, as on the invite.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-page-m",
+  "title": "From a protected page",
+  "note": "Named for known pages (My shows, Settings, Crews); anything else reads Sign in to keep going.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-signup-watch-m",
+  "title": "From Watch, new person",
+  "note": "Sign up keeps the same card through the invite code and the email check.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-watch-d",
+  "title": "From Watch, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "06-arriving-with-intent",
+  "name": "intent-return-m",
+  "title": "Back on the show",
+  "note": "The Watch they pressed is replayed once, with a toast. Follow and crew joins work the same way.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "loading-m",
+  "title": "Loading",
+  "note": "The form’s own shape, held still. role=status reads Loading the sign-in form.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "loading-d",
+  "title": "Loading, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "blocked-m",
+  "title": "Sign-in blocked",
+  "note": "Live copy, after 10 seconds with no Clerk. Names no browser. Try again is a full reload.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "blocked-d",
+  "title": "Sign-in blocked, desktop",
+  "note": "",
+  "w": 1300,
+  "h": 900
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "blocked-light-m",
+  "title": "Sign-in blocked, Light",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "offline-m",
+  "title": "Network dropped",
+  "note": "A banner over the step they were on. Fields keep their text; the press waits until they’re back.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "07-loading-and-trouble",
+  "name": "rate-limited-m",
+  "title": "Rate limited",
+  "note": "Clerk’s 429. The field locks and the press counts down, then wakes.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "09-parts",
+  "name": "parts-d",
+  "title": "Parts · Electric",
+  "note": "Every state of every piece: field, consent, presses, Google, code boxes and the step trail.",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "09-parts",
+  "name": "parts-light-d",
+  "title": "Parts · Light",
+  "note": "",
+  "w": 1300,
+  "h": 1140
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-electric",
+  "title": "Electric",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-jade",
+  "title": "Jade",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-light",
+  "title": "Light",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-pulse",
+  "title": "Pulse",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-forge",
+  "title": "Forge",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-blue-note",
+  "title": "Blue Note",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-drip",
+  "title": "Drip",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-cedar",
+  "title": "Cedar",
+  "note": "",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "08-nine-themes",
+  "name": "start-gloss",
+  "title": "Gloss",
+  "note": "",
+  "w": 390,
+  "h": 844
+ }
+]
