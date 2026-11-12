@@ -26,10 +26,11 @@ node ~/.claude/fwd/skills/feature-acceptance/check-tokens.mjs
   before the page's scripts run, which the inline script in `app/layout.tsx` reads before paint, and the kit reads
   `<html data-theme>` back after every row, so a theme the page did not draw fails the cell. Files are
   `<row>-<width>-<theme>.png`. An inventory's own `themes` replaces the set (B16 and B18 do; see App-shell pitfalls).
-- **Widths:** `phone` 390 (touch), `sm` 640, `desktop` 1300. 640 is Tailwind `sm`, the one shell breakpoint:
+- **Widths:** `xs` 320 (touch), `phone` 390 (touch), `sm` 640, `desktop` 1300. 320 is the mobile-first floor, so
+  every sheet photographs it. 640 is Tailwind `sm`, the one shell breakpoint:
   below it AppHeader's mobile bar and BottomNav, from it the sticky TopNav and no BottomNav; filter chips open a
-  bottom sheet below it and a popover from it. The B+ boards are drawn at 390 and 1300. The 320 mobile-first floor is
-  not a default width; an inventory that needs it carries its own `widths`.
+  bottom sheet below it and a popover from it. The B+ boards are drawn at 390 and 1300, and addendum 2 adds 320
+  boards (`addendum-2/boards/15-320px/`). An inventory's own `widths` still replaces the set.
 - **Inventories:** `docs/superpowers/inventories/`, one file per plan row of
   `docs/superpowers/plans/2026-11-11-bplus-redesign.md` (`bplus-<row>-<slug>.json`; a row with signed-out surfaces has a
   separate `…-signed-out.json`, since `signedOut` is per inventory). Each inventory's `note` names the handoff boards
