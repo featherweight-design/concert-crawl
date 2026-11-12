@@ -185,3 +185,12 @@ Tags: **[Design]** needs a drawing or a design call, **[Hugh product]** needs a 
 | --- | --- | --- |
 | `02-mobile/bp-m-venues_m` | The vendor picker's selected state isn't drawn | [Design] A one-token change, read from code. Confirm the selected state. |
 | `06-states/bp-s-push_ios_m` and the other sheet boards | Each sheet is drawn alone | [Design] The follow nudge and the push sheet show one at a time, nudge first. Confirm. |
+
+## Undrawn widths (lane 11)
+
+Both of these already happen on main. Screenshots are available from lane 11 on request.
+
+| board | what it says | the question |
+| --- | --- | --- |
+| 06-states/bp-s-offline_pill_m (390 only) and the desktop top nav (1300) | At 640 (sm), signed in and offline, the top nav holds the wordmark, Browse / Venues / My shows / Crews, search, the offline pill and the avatar. They don't fit: Crews is clipped behind search, the pill runs off the right edge, and the avatar is pushed off-screen. | [Design] What does the 640 top nav drop or collapse while the offline pill is showing? |
+| 08-prices-and-status/more-st-ev_post_m (390) | At 320, a long one-word headliner in the event hero title is clipped mid-word ("DeathByR"), with no wrap and no ellipsis. | [Design] At 320, should a long hero title wrap, shrink, or ellipsise? |
