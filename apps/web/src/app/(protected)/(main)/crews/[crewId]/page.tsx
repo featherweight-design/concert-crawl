@@ -29,8 +29,13 @@ export default async function CrewPage({
   } catch (err) {
     // The API answers 403 whether or not the crew exists, so ids stay
     // unprobeable. Both answers become the same 404 here for the same reason:
-    // a distinct "you're not in this one" would confirm it exists.
-    if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
+    // a distinct "you're not in this one" would confirm it exists. A 400 is the
+    // API refusing a malformed id (the only input on this route), which is just
+    // as much "no such crew" and must not read as a connection error.
+    if (
+      err instanceof ApiError &&
+      (err.status === 400 || err.status === 403 || err.status === 404)
+    ) {
       notFound();
     }
     // Anything else is a real failure, so it reaches error.tsx and its retry
