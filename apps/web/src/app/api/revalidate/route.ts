@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -15,6 +15,20 @@ type RevalidatablePath = (typeof REVALIDATABLE_PATHS)[number];
 // `paths: string[]` variant can be added later without a breaking change.
 // Hand-written rather than Zod: apps/web carries no Zod dependency, and one
 // allowlisted string field does not justify adding one.
+// Tags the same allowlist rule covers: only the catalog cache's own tag.
+const REVALIDATABLE_TAGS = ['catalog'] as const;
+
+type RevalidatableTag = (typeof REVALIDATABLE_TAGS)[number];
+
+const readRevalidatableTags = (body: unknown): RevalidatableTag[] => {
+  if (typeof body !== 'object' || body === null || !('tags' in body)) {
+    return [];
+  }
+  const { tags } = body;
+  if (!Array.isArray(tags)) return [];
+  return REVALIDATABLE_TAGS.filter((allowed) => tags.includes(allowed));
+};
+
 const readRevalidatablePath = (body: unknown): RevalidatablePath | null => {
   if (typeof body !== 'object' || body === null || !('path' in body)) {
     return null;
@@ -57,14 +71,21 @@ export async function POST(request: NextRequest) {
   }
 
   const path = readRevalidatablePath(rawBody);
-  if (path === null) {
+  const tags = readRevalidatableTags(rawBody);
+  // A body names a path, tags, or both; naming neither allowlisted is a 400.
+  if (path === null && tags.length === 0) {
     return NextResponse.json(
-      { error: 'Invalid body: path must be a revalidatable path' },
+      {
+        error: 'Invalid body: name a revalidatable path or a revalidatable tag',
+      },
       { status: 400 },
     );
   }
 
-  revalidatePath(path);
+  if (path !== null) revalidatePath(path);
+  // `{ expire: 0 }`: the next read refetches, rather than serving the stale
+  // entry once while it revalidates (the crawler wants the new shows now).
+  for (const tag of tags) revalidateTag(tag, { expire: 0 });
 
   return new NextResponse(null, { status: 204 });
 }

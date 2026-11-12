@@ -1,5 +1,6 @@
 import LandingClientShell from './_components/LandingClientShell';
-import { publicApiClient, ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/api';
+import { publicCatalogGet } from '@/lib/catalog-cache';
 import { denverTodayUtcMs } from '@/lib/time';
 import type { EventsListResponse, VenuePublic } from '@concert-crawl/types';
 import { posterVenues } from '@/lib/poster/poster-rule';
@@ -118,7 +119,7 @@ interface LandingShows {
 // four, and the private-beta landing's card fan and ticker take up to ten.
 async function fetchLandingShows(): Promise<LandingShows> {
   try {
-    const result = await publicApiClient.get<EventsListResponse>(
+    const result = await publicCatalogGet<EventsListResponse>(
       '/v1/events?limit=10',
     );
     if (!result?.data?.length)
@@ -174,7 +175,7 @@ async function fetchLandingShows(): Promise<LandingShows> {
 // Null on failure, and the page drops the row rather than show a wrong count.
 async function fetchInviteVenues(): Promise<InviteVenue[] | null> {
   try {
-    const venues = await publicApiClient.get<VenuePublic[]>('/v1/venues');
+    const venues = await publicCatalogGet<VenuePublic[]>('/v1/venues');
     return posterVenues(venues).map(({ slug, name }) => ({ slug, name }));
   } catch (err) {
     console.error(
@@ -191,7 +192,7 @@ async function fetchInviteVenues(): Promise<InviteVenue[] | null> {
 // of a wrong number.
 async function fetchWeekCount(): Promise<number | null> {
   try {
-    const result = await publicApiClient.get<EventsListResponse>(
+    const result = await publicCatalogGet<EventsListResponse>(
       `/v1/events?limit=1&to=${futureDateString(6)}`,
     );
     return typeof result?.total === 'number' ? result.total : null;
