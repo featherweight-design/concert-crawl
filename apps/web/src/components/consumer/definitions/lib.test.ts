@@ -10,6 +10,7 @@ import {
   isEventPast,
   isToday,
   pickCalendarSelectedDate,
+  browseShowCount,
   type CalendarWeekDayLite,
 } from './lib';
 import { CONSUMER_COPY } from './copy';
@@ -365,5 +366,18 @@ describe('formatShowTime / formatShowTimeShort (B24 invite landing)', () => {
   it('is null, not a throw, for a malformed time', () => {
     expect(formatShowTime('soon')).toBeNull();
     expect(formatShowTimeShort('8:xx')).toBeNull();
+  });
+});
+
+describe('browseShowCount', () => {
+  it('gives the count line its number in both views (Cal included)', () => {
+    // Regression: Cal view used to pass null, so the line `bp-s-cal_d` draws
+    // under the bar never rendered.
+    expect(browseShowCount({ total: 214, lensActive: false })).toBe(214);
+    expect(browseShowCount({ total: 0, lensActive: false })).toBe(0);
+  });
+
+  it('hides the number under the crew lens, which carries its own', () => {
+    expect(browseShowCount({ total: 214, lensActive: true })).toBeNull();
   });
 });

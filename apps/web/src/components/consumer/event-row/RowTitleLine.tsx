@@ -84,6 +84,13 @@ interface RowTitleLineProps {
    * there rather than measured against a line it no longer has.
    */
   trailing?: ReactNode;
+  /**
+   * Tint the title in the signal on hover. Off for a carded row: its link is
+   * stretched over the whole card, so a pointer resting anywhere on the card
+   * (left there by a tap in the jump sheet above it, say) turned the title
+   * cyan, reading as a selected row. The B+ boards draw every title in --fg.
+   */
+  hoverTint?: boolean;
 }
 
 /**
@@ -107,6 +114,11 @@ const TITLE_BESIDE_CHIP: CSSProperties = {
   maxWidth: 'max-content',
 };
 
+const titleColorClass = (struck: boolean, hoverTint: boolean): string => {
+  if (struck) return 'text-fg-muted';
+  return hoverTint ? 'text-fg group-hover/eventtitle:text-signal' : 'text-fg';
+};
+
 export const RowTitleLine = ({
   headliner,
   tourName,
@@ -115,6 +127,7 @@ export const RowTitleLine = ({
   narrow = false,
   struck = false,
   trailing,
+  hoverTint = true,
 }: RowTitleLineProps) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -238,7 +251,7 @@ export const RowTitleLine = ({
         data-struck={struck || undefined}
         // A struck title stays muted on hover: brightening it to the signal
         // color would make a cancelled show read as a live one.
-        className={`min-w-0 truncate transition-colors ${struck ? 'text-fg-muted' : 'text-fg group-hover/eventtitle:text-signal'}`}
+        className={`min-w-0 truncate transition-colors ${titleColorClass(struck, hoverTint)}`}
         // The strike is a decoration on the title box only, so the measuring
         // copy below keeps the same advance widths and the fit never moves.
         style={{

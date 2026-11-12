@@ -198,6 +198,20 @@ export function currentWeekDays(
   });
 }
 
+/**
+ * The number on the count line under Browse's desktop filter bar. List and
+ * Cal both draw it (`bp-s-cal_d` puts "N SHOWS" under the bar), so it is the
+ * events response's `total` in either view; in Cal that is the shown week's
+ * shows under the bar's filters. Only the crew lens hides it, since the lens
+ * replaces Browse's list and carries its own count.
+ */
+export function browseShowCount(args: {
+  total: number;
+  lensActive: boolean;
+}): number | null {
+  return args.lensActive ? null : args.total;
+}
+
 export interface CalendarWeekDayLite {
   date: string;
   hasEvents: boolean;

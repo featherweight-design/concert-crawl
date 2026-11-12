@@ -255,6 +255,14 @@ describe('FilterBar desktop segmented bar', () => {
     expect(screen.queryByRole('button', { name: copy.clearAll })).toBeNull();
   });
 
+  it('counts shows in Cal view too (`bp-s-cal_d`)', () => {
+    searchParams.current = new URLSearchParams('view=cal');
+    renderBar({ showCount: 12 });
+    expect(screen.getByTestId('filter-count-line').textContent).toBe(
+      copy.showCount(12),
+    );
+  });
+
   it('counts matches and offers Clear all once a filter is on', () => {
     searchParams.current = new URLSearchParams(
       'filterVibe=indie&filterWhere=globe-hall&filterFollowing=1',

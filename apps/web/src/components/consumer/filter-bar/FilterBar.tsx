@@ -154,7 +154,8 @@ interface FilterBarProps {
   followCount?: number | null;
   /**
    * The events response's `total`, for the count line under the desktop bar.
-   * Null hides the number (Cal view, the crew lens, which carries its own).
+   * Null hides the number (the crew lens, which carries its own). Cal view
+   * shows it too: `bp-s-cal_d` draws the line under the bar.
    */
   showCount?: number | null;
 }

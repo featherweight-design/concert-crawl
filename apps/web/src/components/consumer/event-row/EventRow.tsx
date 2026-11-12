@@ -200,6 +200,7 @@ export const EventRow = ({
               promotesTour={config.promotesTour}
               narrow={narrow}
               struck={struck}
+              hoverTint={!config.carded}
               trailing={
                 status === 'soldout' ? (
                   <span data-testid="row-sold-out">

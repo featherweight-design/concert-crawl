@@ -298,6 +298,52 @@ describe('CalendarView B+ states', () => {
       searchString.current = '';
     }
   });
+
+  // Cross-check #28: the second row's title rendered cyan at 390. Its only
+  // non-fg colour was the hover tint, and a carded row's link is stretched
+  // over the whole card, so a resting pointer anywhere on it lit the title.
+  // `bp-s-cal_m` draws every title in --fg.
+  it('draws every row title in --fg with no hover tint', () => {
+    render(
+      <CalendarView
+        days={days}
+        events={[
+          makeEvent({ id: 'a', date: '2026-04-28', artist: 'Puma Blue' }),
+          makeEvent({ id: 'b', date: '2026-04-28', artist: 'Big Signal' }),
+        ]}
+        initialSelectedDate="2026-04-28"
+        today="2026-04-28"
+        watchedIds={['b']}
+        prevWeekHref={null}
+        nextWeekHref="/events?view=cal&weekOffset=1"
+        initialAvailability={{
+          data: [{ date: '2026-04-28', count: 2 }],
+          from: '2026-04-01',
+          to: '2027-04-30',
+        }}
+      />,
+      { wrapper },
+    );
+    const titles = screen.getAllByTestId('row-title');
+    expect(titles).toHaveLength(2);
+    for (const title of titles) {
+      expect(title.classList.contains('text-fg')).toBe(true);
+      expect(title.className).not.toContain('signal');
+    }
+  });
+
+  it('sets the month at 17px with the jump cue inline at 12px', () => {
+    setup();
+    const month = screen.getByTestId('cal-month');
+    expect(month.style.fontSize).toBe('17px');
+    // One size at every width: no phone-only step up.
+    expect(month.className).toBe('');
+    const cue = screen.getByRole('button', { name: /Jump to a date/ });
+    expect(cue.style.fontSize).toBe('12px');
+    // Inline: the cue shares the month's row.
+    expect(cue.parentElement).toBe(screen.getByTestId('cal-month-row'));
+    expect(month.parentElement).toBe(cue.parentElement);
+  });
 });
 
 describe('CalendarView URL handling', () => {

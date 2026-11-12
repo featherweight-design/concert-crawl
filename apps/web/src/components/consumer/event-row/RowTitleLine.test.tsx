@@ -6,6 +6,27 @@ import { describe, expect, it } from 'vitest';
 import { RowTitleLine } from './RowTitleLine';
 
 describe('RowTitleLine', () => {
+  it('tints the title on hover by default', () => {
+    render(<RowTitleLine headliner="Big Signal" tourName={null} showsTour />);
+    expect(screen.getByTestId('row-title').className).toContain(
+      'group-hover/eventtitle:text-signal',
+    );
+  });
+
+  it('keeps the title in --fg when the hover tint is off (carded rows)', () => {
+    render(
+      <RowTitleLine
+        headliner="Big Signal"
+        tourName={null}
+        showsTour
+        hoverTint={false}
+      />,
+    );
+    const title = screen.getByTestId('row-title');
+    expect(title).toHaveClass('text-fg');
+    expect(title.className).not.toContain('signal');
+  });
+
   it('renders the headliner alone when the surface carries no tour clause', () => {
     render(
       <RowTitleLine

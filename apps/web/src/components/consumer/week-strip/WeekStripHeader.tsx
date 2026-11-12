@@ -48,10 +48,11 @@ const ensureStyles = (): void => {
   document.head.appendChild(styleEl);
 };
 
+// The boards' week chevrons: 30px squares, 9px corners, 6px apart.
 const chevStyle: CSSProperties = {
-  width: 38,
-  height: 38,
-  borderRadius: 10,
+  width: 30,
+  height: 30,
+  borderRadius: 9,
   border: '1px solid var(--border-strong)',
   boxSizing: 'border-box',
   display: 'flex',
@@ -61,8 +62,8 @@ const chevStyle: CSSProperties = {
 
 const CalendarGlyph = () => (
   <svg
-    width={15}
-    height={15}
+    width={12}
+    height={12}
     viewBox="0 0 16 16"
     fill="none"
     aria-hidden="true"
@@ -87,16 +88,18 @@ const CalendarGlyph = () => (
 
 const ChevronGlyph = ({ dir }: { dir: 'left' | 'right' }) => (
   <svg
-    width={14}
-    height={14}
+    width={10}
+    height={10}
     viewBox="0 0 16 16"
     fill="none"
     aria-hidden="true"
   >
     <path
-      d={dir === 'left' ? 'M10 3L5 8l5 5' : 'M6 3l5 5-5 5'}
+      // The board's right chevron, and its mirror: the board's own left
+      // glyph is a broken path that draws a slash, so it is not copied.
+      d={dir === 'left' ? 'M10 4L6 8l4 4' : 'M6 4l4 4-4 4'}
       stroke="var(--fg-muted)"
-      strokeWidth={2}
+      strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -143,16 +146,24 @@ export const WeekStripHeader = ({
 
   return (
     <div style={{ position: 'relative' }}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        {/* The month is the heading; the jump cue sits beside it and wraps
-            under it at 320px rather than pushing the chevrons off. */}
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+      <div
+        className="flex items-center justify-between gap-2"
+        style={{ marginBottom: 10 }}
+      >
+        {/* The month is the heading; the jump cue sits inline beside it, as
+            `bp-s-cal_m` and `bp-s-cal_d` both draw it (17px month, 12px cue,
+            one size at every width). It wraps under the month only when the
+            row cannot hold it, rather than pushing the chevrons off. */}
+        <div
+          data-testid="cal-month-row"
+          className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
+        >
           <span
-            className="text-[20px] sm:text-[17px]"
+            data-testid="cal-month"
             style={{
               fontFamily: 'Inter, system-ui',
+              fontSize: 17,
               fontWeight: 800,
-              letterSpacing: '-0.02em',
               color: 'var(--fg)',
               lineHeight: 1.1,
             }}
@@ -162,14 +173,16 @@ export const WeekStripHeader = ({
           <button
             type="button"
             ref={cueRef}
-            className="cjp-cue inline-flex cursor-pointer items-center gap-1.5 text-[15px] sm:text-[13px]"
+            className="cjp-cue inline-flex cursor-pointer items-center"
             aria-haspopup="dialog"
             aria-expanded={open}
             aria-label={`${monthLabel}. ${CONSUMER_COPY.jumpPickerCueSuffix}`}
             onClick={() => (open ? close() : openPicker())}
             style={{
               fontFamily: 'Inter, system-ui',
+              fontSize: 12,
               fontWeight: 700,
+              gap: 5,
               color: 'var(--signal)',
               background: 'transparent',
               border: 0,
@@ -181,7 +194,7 @@ export const WeekStripHeader = ({
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {showBackToToday && (
             <BackToTodayControl
               todaySpoken={accessibleDayLabelFor(today)}
