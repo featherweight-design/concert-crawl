@@ -1,3 +1,26 @@
+# [1.353.0](https://github.com/featherweight-design/concert-crawl/compare/v1.352.0...v1.353.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** address the /code-review on admin email delivery (1c-1) ([0a72630](https://github.com/featherweight-design/concert-crawl/commit/0a72630a3c93b9f010f56165da3f4fac9ec818ae))
+* **api:** drop the unreachable resend-id branch from the delivery grace ([8328dc9](https://github.com/featherweight-design/concert-crawl/commit/8328dc9d1bfd61f59b93349589108c89c7082abc))
+* **api:** refuse a redeem miss in the extra slot; key the bucket to the account ([224e3ae](https://github.com/featherweight-design/concert-crawl/commit/224e3ae5e0678fac027ce3870496ed503ec3facb))
+* limit redeem misses per account, answer taken codes from the constraint ([8f0d07a](https://github.com/featherweight-design/concert-crawl/commit/8f0d07abf6ef27efca6a3d957eaac6af50329a92))
+* **web:** code entry copy and hint cover custom codes ([a3fbadd](https://github.com/featherweight-design/concert-crawl/commit/a3fbadd7bc14fd703a6029dfdaa4bdb6aa693d59))
+* **web:** drop the undrawn empty-filter line from Submitted prices ([fdff030](https://github.com/featherweight-design/concert-crawl/commit/fdff0302e662d8514baa761aa107d6e6141a7c07))
+* **web:** submitted-prices counts come from the list, clamp formatAgo, reword the venue comment ([1064c5c](https://github.com/featherweight-design/concert-crawl/commit/1064c5c34851298cd071a7ae1c374612245982b2))
+* **web:** the latest submission keeps its price at 320 ([73eddfc](https://github.com/featherweight-design/concert-crawl/commit/73eddfce0b5ca7137ef7c9ff5fb81347674c5479))
+* **web:** two theme columns below 360px so the names stay readable ([317ca53](https://github.com/featherweight-design/concert-crawl/commit/317ca53b3d359cdf555349c4fca10df98afb7db8))
+
+
+### Features
+
+* **api:** admin email delivery counts for the Health site tile (admin 1c) ([043fc96](https://github.com/featherweight-design/concert-crawl/commit/043fc9668c959a5f33eac1bc261972009c148cdf))
+* custom invite codes across create, validate and redeem ([ce9d151](https://github.com/featherweight-design/concert-crawl/commit/ce9d151e230a41a7526e155fc9a05311b81a0816))
+* **web:** restyle mobile Settings, the theme picker and submitted prices ([8627618](https://github.com/featherweight-design/concert-crawl/commit/8627618dc8c43df92e9b8c6dbe341399e3cf2cb5))
+* **web:** venue tiles, month grouping and filters with counts on Submitted prices ([ac6f5c4](https://github.com/featherweight-design/concert-crawl/commit/ac6f5c41a96d04e373534f6bf726845ea42ac07c))
+
 # [1.352.0](https://github.com/featherweight-design/concert-crawl/compare/v1.351.0...v1.352.0) (2026-11-12)
 
 
