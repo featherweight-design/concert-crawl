@@ -10,8 +10,10 @@ import {
   waitFor,
 } from '@testing-library/react';
 import type { AdminInviteCode } from '@concert-crawl/types';
-import { CodeTakenError } from './codes-api';
+import { CodeTakenError, codesApi } from './codes-api';
+import { CodePanel } from './CodePanel';
 import { EditCodePanel } from './EditCodePanel';
+import { SeatsBar } from './SeatsBar';
 import { NewCodePanel } from './NewCodePanel';
 
 const NOW = new Date('2026-11-12T12:00:00Z');
@@ -43,6 +45,94 @@ beforeEach(() => {
   }));
 });
 afterEach(cleanup);
+
+// A member's own share code, as GET /v1/admin/invite-codes returns it.
+const memberCode = (over: Partial<AdminInviteCode> = {}) =>
+  code({
+    code: 'BETA-7F3A-91C2',
+    label: null,
+    maxUses: 10_000,
+    useCount: 4,
+    createdByHandle: 'mira',
+    kind: 'member',
+    ...over,
+  });
+
+const panelApi = () => ({
+  ...codesApi(async () => null),
+  redemptions: vi.fn(async () => ({ data: [], total: 4 })),
+});
+
+const renderPanel = (
+  panelCode: AdminInviteCode,
+  status: 'active' | 'full' | 'revoked',
+) =>
+  render(
+    <CodePanel
+      code={panelCode}
+      status={status}
+      api={panelApi()}
+      onCopy={vi.fn()}
+      onAddSeats={vi.fn()}
+      onRevoke={vi.fn()}
+      onReactivate={vi.fn()}
+      onClose={vi.fn()}
+    />,
+  );
+
+describe('CodePanel on a member share code', () => {
+  it('keeps Revoke and hides Add seats', async () => {
+    renderPanel(memberCode(), 'active');
+    expect(
+      await screen.findByRole('button', { name: 'Revoke…' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Add seats' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Who joined with it · 4')).toBeInTheDocument();
+  });
+
+  it('offers no Reactivate once revoked', async () => {
+    renderPanel(memberCode({ revokedAt: '2026-11-10T18:00:00Z' }), 'revoked');
+    await screen.findByText('Who joined with it · 4');
+    expect(
+      screen.queryByRole('button', { name: 'Reactivate…' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('reads "Personal · @handle" and "N joined", never the 10,000 cap', async () => {
+    renderPanel(memberCode(), 'active');
+    await screen.findByText('Who joined with it · 4');
+    expect(screen.getByText('Personal · @mira')).toBeInTheDocument();
+    expect(screen.getByText('4 joined')).toBeInTheDocument();
+    expect(screen.queryByText(/10000|10,000/)).not.toBeInTheDocument();
+  });
+
+  it('still offers an admin code Add seats, and Reactivate once ended', async () => {
+    renderPanel(code(), 'active');
+    expect(
+      await screen.findByRole('button', { name: 'Add seats' }),
+    ).toBeInTheDocument();
+    cleanup();
+    renderPanel(code({ revokedAt: '2026-11-10T18:00:00Z' }), 'revoked');
+    expect(
+      await screen.findByRole('button', { name: 'Reactivate…' }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('SeatsBar', () => {
+  it('draws "23 of 50" with a cap', () => {
+    render(<SeatsBar used={23} max={50} full={false} />);
+    expect(screen.getByText('23 of 50')).toBeInTheDocument();
+  });
+
+  it('draws "N joined" alone with no cap', () => {
+    render(<SeatsBar used={4} max={null} full={false} />);
+    expect(screen.getByText('4 joined')).toBeInTheDocument();
+    expect(screen.queryByText(/ of /)).not.toBeInTheDocument();
+  });
+});
 
 describe('EditCodePanel', () => {
   it('refuses seats below the number used, inline', () => {

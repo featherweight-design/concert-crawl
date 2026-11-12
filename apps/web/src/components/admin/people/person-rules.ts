@@ -85,7 +85,13 @@ export const inviteCodeLabel = (
   isPhone: boolean,
 ): string | null => {
   const source = person.joinSource;
-  if (!source?.code || (source.kind !== 'code' && source.kind !== 'poster'))
+  // A member's share code reads as a code does (`code` and `member` alike).
+  if (
+    !source?.code ||
+    (source.kind !== 'code' &&
+      source.kind !== 'member' &&
+      source.kind !== 'poster')
+  )
     return null;
   if (isPhone || person.codeRedeemerCount === null) return source.code;
   return COPY.inviteCodeCount(source.code, person.codeRedeemerCount);

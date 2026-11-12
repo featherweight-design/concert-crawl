@@ -56,17 +56,69 @@ const SHORT_DATE = new Intl.DateTimeFormat('en-US', {
 export const shortDate = (iso: string): string =>
   SHORT_DATE.format(new Date(iso));
 
+/** A member's own share code (the share sheet's), not an admin's. */
+export const isMemberCode = (code: Pick<AdminInviteCode, 'kind'>): boolean =>
+  code.kind === 'member';
+
 /**
  * A poster is any admin code with more than one seat; the prefix is never
  * stored. A member's own share code is not a poster whatever its seat cap.
  */
 export const codeLabel = (
-  code: Pick<AdminInviteCode, 'label' | 'maxUses' | 'kind'>,
-): string | null =>
-  isPosterCode(code) ? COPY.posterLabel(code.label) : code.label;
+  code: Pick<AdminInviteCode, 'label' | 'maxUses' | 'kind' | 'createdByHandle'>,
+): string | null => {
+  // A member's own share code reads as whose it is: "Personal · @mira".
+  if (isMemberCode(code)) return COPY.memberLabel(code.createdByHandle);
+  return isPosterCode(code) ? COPY.posterLabel(code.label) : code.label;
+};
 
-export const makerName = (code: Pick<AdminInviteCode, 'createdByHandle'>) =>
-  code.createdByHandle ? `@${code.createdByHandle}` : COPY.formerAdmin;
+/**
+ * Who made it. A member code with no handle is someone who hasn't picked one
+ * yet, never a former admin: the code ends with the account.
+ */
+export const makerName = (
+  code: Pick<AdminInviteCode, 'createdByHandle'> &
+    Partial<Pick<AdminInviteCode, 'kind'>>,
+) => {
+  if (code.createdByHandle) return `@${code.createdByHandle}`;
+  return code.kind === 'member' ? COPY.panel.noHandle : COPY.formerAdmin;
+};
+
+/**
+ * The seat cap to draw, or null when there is none to show. A member code's
+ * 10,000 is a ceiling, not a limit anyone set, so it reads "N joined" with no
+ * cap, as the share sheet draws an unlimited code.
+ */
+export const seatCap = (
+  code: Pick<AdminInviteCode, 'kind' | 'maxUses'>,
+): number | null => (isMemberCode(code) ? null : code.maxUses);
+
+/** What a code's ⋯ menu offers, in drawn order. */
+export type CodeAction =
+  'copy' | 'poster' | 'joined' | 'edit' | 'revoke' | 'reactivate';
+
+/**
+ * The actions a code offers. A member code is not an admin's to edit, add
+ * seats to or bring back (the API answers 409 `member_code`), so Revoke and
+ * who joined are all it keeps.
+ */
+export const codeActions = (
+  code: Pick<AdminInviteCode, 'kind' | 'maxUses'>,
+  status: InviteStatus,
+): CodeAction[] => {
+  const member = isMemberCode(code);
+  if (isEnded(status)) {
+    return member ? ['copy', 'joined'] : ['copy', 'joined', 'reactivate'];
+  }
+  return [
+    'copy',
+    // The Posters tab can only pick a live code with a seat left.
+    ...(isPosterCode(code) && status === 'active' ? ['poster' as const] : []),
+    'joined',
+    ...(member ? [] : ['edit' as const]),
+    'revoke',
+  ];
+};
 
 /** A role worth naming beside a joiner; a plain member says nothing. */
 export const roleLabel = (role: Role | null): string | null =>
