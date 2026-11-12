@@ -13,6 +13,29 @@ const STATUS_LABELS: Record<'sold-out' | 'cancelled' | 'postponed', string> = {
   postponed: 'postponed',
 };
 
+/**
+ * The event page's tile glyph: an amber clock, drawn on bp-event and every
+ * B+ event board that reaches the foot of the page (17px, 1.6 stroke).
+ */
+const StatusClockIcon = () => (
+  <svg
+    width="17"
+    height="17"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    data-testid="report-status-clock"
+    style={{ display: 'block', flex: 'none' }}
+  >
+    <circle cx="8" cy="8" r="6" />
+    <path d="M8 4.6V8l2.4 1.6" />
+  </svg>
+);
+
 export interface ReportFooterLinkProps {
   /** Event page only. The artist card leaves it out. */
   liveStatus?: null | 'sold-out' | 'cancelled' | 'postponed';
@@ -25,8 +48,8 @@ export interface ReportFooterLinkProps {
   signedOut?: boolean;
   /**
    * The card is shared with the artist page (wrong-artist reports), which
-   * brings its own words and a tile. Left out, the card is the event page's
-   * status card exactly as it always was.
+   * brings its own words and glyph. Left out, the card is the event page's
+   * status card: its words and the amber clock.
    */
   icon?: ReactNode;
   title?: string;
@@ -72,44 +95,15 @@ export const ReportFooterLink = ({
     ariaSignedOut ??
     (hasStatus ? copy.ariaSignedOutHasStatus : copy.ariaSignedOut);
 
-  const text = (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 700,
-          fontSize: '14px',
-          color: 'var(--fg)',
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {title}
-      </span>
-      <span
-        style={{
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '12px',
-          color: 'var(--fg-muted)',
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {subtitle}
-      </span>
-    </div>
-  );
-
   return (
     <div
       style={{
         width: '100%',
-        padding: flush ? '24px 0 0' : '24px 18px 32px',
-        borderTop: '1px dashed var(--border)',
+        // Board: margin-top 10, padding-top 22 under a dashed strong rule.
+        // A flush host owns its own spacing above the rule.
+        marginTop: flush ? 0 : '10px',
+        padding: flush ? '22px 0 0' : '22px 18px 32px',
+        borderTop: '1px dashed var(--border-strong)',
         background: 'var(--bg)',
         color: 'var(--fg)',
         boxSizing: 'border-box',
@@ -119,11 +113,12 @@ export const ReportFooterLink = ({
       <p
         style={{
           fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '9px',
+          fontSize: '9.5px',
+          fontWeight: 500,
           textTransform: 'uppercase',
-          letterSpacing: '0.08em',
+          letterSpacing: '0.14em',
           color: 'var(--fg-subtle)',
-          margin: '0 0 10px',
+          margin: 0,
         }}
       >
         {copy.eyebrow}
@@ -137,10 +132,11 @@ export const ReportFooterLink = ({
         {...(signedOut ? { 'aria-label': signedOutName } : {})}
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 14px',
-          borderRadius: '10px',
+          gap: '14px',
+          marginTop: '10px',
+          padding: '15px 18px',
+          borderRadius: '14px',
           background: 'var(--surface-1)',
           border: reported
             ? `1px dashed ${AMBER.border}`
@@ -148,44 +144,56 @@ export const ReportFooterLink = ({
           cursor: 'pointer',
           width: '100%',
           textAlign: 'left',
+          boxSizing: 'border-box',
         }}
       >
-        {icon === undefined ? (
-          text
-        ) : (
+        {/* Amber icon tile: 36px, radius 10, warning at 10% fill / 40% edge */}
+        <span
+          aria-hidden="true"
+          data-testid="report-icon-tile"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            flexShrink: 0,
+            color: AMBER.color,
+            background: 'color-mix(in oklab, var(--warning) 10%, transparent)',
+            border:
+              '1px solid color-mix(in oklab, var(--warning) 40%, transparent)',
+          }}
+        >
+          {icon ?? <StatusClockIcon />}
+        </span>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              minWidth: 0,
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: '15.5px',
+              color: 'var(--fg)',
             }}
           >
-            <span
-              aria-hidden="true"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                flexShrink: 0,
-                color: AMBER.color,
-                background: AMBER.bgStrong,
-                border: `1px solid ${AMBER.border}`,
-              }}
-            >
-              {icon}
-            </span>
-            {text}
+            {title}
           </div>
-        )}
+          <div
+            style={{
+              marginTop: '3px',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '13.5px',
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {subtitle}
+          </div>
+        </div>
 
         {reportedChip !== undefined ? (
           <span
             style={{
-              marginLeft: '8px',
               flexShrink: 0,
               padding: '3px 7px',
               borderRadius: 6,
@@ -200,23 +208,23 @@ export const ReportFooterLink = ({
             {reportedChip}
           </span>
         ) : (
-          /* Arrow icon */
+          /* Chevron: 14px, 1.8 stroke, muted */
           <svg
-            width="16"
-            height="16"
+            width="14"
+            height="14"
             viewBox="0 0 16 16"
             fill="none"
             aria-hidden="true"
             style={{
-              marginLeft: '8px',
               flexShrink: 0,
+              display: 'block',
               color: 'var(--fg-muted)',
             }}
           >
             <path
-              d="M6 4L10 8L6 12"
+              d="M6 4l4 4-4 4"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -229,10 +237,11 @@ export const ReportFooterLink = ({
         style={{
           fontFamily: 'JetBrains Mono, monospace',
           fontSize: '9px',
+          fontWeight: 500,
           color: 'var(--fg-subtle)',
           margin: '10px 0 0',
           lineHeight: 1.5,
-          letterSpacing: '0.04em',
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
         }}
       >

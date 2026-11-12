@@ -297,6 +297,73 @@ export function TrustMark({
   );
 }
 
+// ── Community corner badge (more-p-price_states) ─────────────────
+// The live community card's tier mark: an outlined mono-caps badge at top
+// right. The community tier wears the theme's signal, as the pending card does.
+const COMMUNITY_SIGNAL = 'var(--signal)';
+
+function CommunityCornerBadge() {
+  return (
+    <span
+      data-testid="price-community-badge"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '4px 7px',
+        borderRadius: 5,
+        background: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 12%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${COMMUNITY_SIGNAL} 50%, transparent)`,
+        color: COMMUNITY_SIGNAL,
+        fontFamily: 'var(--font-mono)',
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
+      {copy.priceDisplay.communityLabel}
+    </span>
+  );
+}
+
+// ── Community attribution (more-p-price_states) ──────────────────
+// "Submitted by @handle · N fans confirmed", sans, muted. A submission with no
+// handle reads "Submitted by an anonymous fan"; the confirms clause only shows
+// once a fan other than the submitter has confirmed.
+function CommunityAttribution({
+  submitter,
+  confirmsCount,
+}: {
+  submitter: { handle: string } | null | undefined;
+  confirmsCount: number | null;
+}) {
+  const confirms =
+    confirmsCount != null && confirmsCount > 0
+      ? ` · ${confirmsCount} ${confirmsCount !== 1 ? copy.priceDisplay.fansConfirmedSuffix : copy.priceDisplay.fanConfirmedSuffix}`
+      : '';
+  return (
+    <div
+      data-testid="price-community-attribution"
+      style={{
+        fontFamily: 'var(--font-ui)',
+        fontSize: 12.5,
+        color: 'var(--fg-muted)',
+      }}
+    >
+      {copy.priceDisplay.submittedByPrefix}{' '}
+      {submitter ? (
+        <span className="ph-no-capture">@{submitter.handle}</span>
+      ) : (
+        copy.priceDisplay.anonymousFan
+      )}
+      {confirms}
+    </div>
+  );
+}
+
 // ── Sparkline ────────────────────────────────────────────────────
 // Renders only when ≥4 datapoints AND sourceKind is not community or boxoffice.
 // flag: colors the line — 'drop' = success green, 'rise' = warning, null = fg-subtle
@@ -1188,6 +1255,14 @@ export function PriceDisplay({
       ? `$${Math.round(face)}–$${Math.round(faceMax)}`
       : formatUSD(allInFace, { whole: allInFace >= 10 });
 
+  // Mirrors what the footer's rows can draw. StillAccurateAction needs a stamp,
+  // so the stamp covers it.
+  const hasFooter =
+    Boolean(effectiveObservedAt) ||
+    (isCommunity && soldOut && priceObj.submitter != null) ||
+    (sourceName != null && sourceName !== '' && !isBoxOffice) ||
+    priceObj.verification != null;
+
   return (
     <div
       style={{
@@ -1229,6 +1304,10 @@ export function PriceDisplay({
         {hasSpark && range14d && (
           <Sparkline values={range14d} flag={sparkFlag} dim={soldOut} />
         )}
+        {/* A live community price wears its tier as an outlined badge at top
+            right, not inline after the number (more-p-price_states). Community
+            never draws a sparkline, so the corner is free. */}
+        {!soldOut && isCommunity && <CommunityCornerBadge />}
       </div>
 
       {/* Headline number */}
@@ -1257,13 +1336,25 @@ export function PriceDisplay({
 
         {!soldOut && (
           <span
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 600,
-              fontSize: 12,
-              color: isBoxOffice ? GOLD : 'var(--fg-muted)',
-              letterSpacing: '-0.005em',
-            }}
+            style={
+              isCommunity
+                ? // more-p-price_states: "STARTING, ALL-IN" in mono caps.
+                  {
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 500,
+                    fontSize: 10,
+                    color: 'var(--fg-muted)',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                  }
+                : {
+                    fontFamily: 'var(--font-ui)',
+                    fontWeight: 600,
+                    fontSize: 12,
+                    color: isBoxOffice ? GOLD : 'var(--fg-muted)',
+                    letterSpacing: '-0.005em',
+                  }
+            }
           >
             {isBoxOffice
               ? copy.priceDisplay.faceValueNoFees
@@ -1275,8 +1366,8 @@ export function PriceDisplay({
           </span>
         )}
 
-        {/* Trust mark — all four tiers */}
-        {!soldOut && <TrustMark kind={sourceKind} />}
+        {/* Trust mark — inline for the other tiers; community's sits top right */}
+        {!soldOut && !isCommunity && <TrustMark kind={sourceKind} />}
 
         {/* Sold out pill */}
         {soldOut && (
@@ -1376,35 +1467,10 @@ export function PriceDisplay({
                 </span>
               </div>
             )}
-          {priceObj.submitter ? (
-            <a
-              href={priceObj.submitter.url}
-              className="ph-no-capture"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-                textDecoration: 'underline',
-                textDecorationColor: 'var(--border-strong)',
-                textUnderlineOffset: 2,
-              }}
-            >
-              @{priceObj.submitter.handle}
-            </a>
-          ) : (
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                color: 'var(--fg-subtle)',
-                letterSpacing: '0.04em',
-                fontStyle: 'italic',
-              }}
-            >
-              {copy.priceDisplay.anonymousFan}
-            </span>
-          )}
+          <CommunityAttribution
+            submitter={priceObj.submitter}
+            confirmsCount={priceObj.confirmsCount ?? null}
+          />
         </div>
       )}
 
@@ -1456,85 +1522,50 @@ export function PriceDisplay({
         </div>
       )}
 
-      {/* Footer — stale stamp · submitter · source + verification line */}
-      <div
-        style={{
-          marginTop: 10,
-          paddingTop: 9,
-          borderTop: '1px solid var(--border)',
-        }}
-      >
-        {/* Row 1: stale stamp, submitter handle (community/boxoffice), source name (primary/resale) */}
+      {/* Footer — stale stamp · submitter · source + verification line.
+          Drawn only when it has something to say: a rule over an empty row
+          is the blank footer more-p-price_states never draws. */}
+      {hasFooter && (
         <div
+          data-testid="price-card-footer"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            flexWrap: 'wrap',
+            marginTop: 10,
+            paddingTop: 9,
+            borderTop: '1px solid var(--border)',
           }}
         >
-          <StaleStamp observedAt={effectiveObservedAt} />
-          {/* Gated on the stamp the way MultiTierLiveCard gates it: with no
+          {/* Row 1: stale stamp, submitter handle (community/boxoffice), source name (primary/resale) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <StaleStamp observedAt={effectiveObservedAt} />
+            {/* Gated on the stamp the way MultiTierLiveCard gates it: with no
               observation there is nothing to call stale, and mounting the
               action regardless makes every surface rendering a price depend on
               the app router even where the affordance can never appear. */}
-          {effectiveObservedAt && (
-            <StillAccurateAction
-              eventId={eventId}
-              submissionId={priceSubmissionId}
-              observedAt={effectiveObservedAt}
-              {...(onSighted ? { onSighted } : {})}
-            />
-          )}
-          {/* Submitter handle — community tier only (boxoffice uses BoxOfficeAttribution above) */}
-          {isCommunity && priceObj.submitter && (
-            <>
-              {effectiveObservedAt && (
-                <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
-                  ·
-                </span>
-              )}
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  color: 'var(--fg-subtle)',
-                  letterSpacing: '0.04em',
-                }}
-                className="ph-no-capture"
-              >
-                @{priceObj.submitter.handle}
-              </span>
-            </>
-          )}
-          {/* Source name — primary and resale tiers */}
-          {sourceName && !isCommunity && !isBoxOffice && (
-            <>
-              {effectiveObservedAt && (
-                <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
-                  ·
-                </span>
-              )}
-              {sourceUrl ? (
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
-                    color: 'var(--fg-subtle)',
-                    textDecoration: 'none',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  {sourceName}
-                  <ExternalIcon />
-                </a>
-              ) : (
+            {effectiveObservedAt && (
+              <StillAccurateAction
+                eventId={eventId}
+                submissionId={priceSubmissionId}
+                observedAt={effectiveObservedAt}
+                {...(onSighted ? { onSighted } : {})}
+              />
+            )}
+            {/* Submitter handle — a sold-out community price only. A live one
+              names its submitter in CommunityAttribution above, and boxoffice
+              uses BoxOfficeAttribution. */}
+            {isCommunity && soldOut && priceObj.submitter && (
+              <>
+                {effectiveObservedAt && (
+                  <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
+                    ·
+                  </span>
+                )}
                 <span
                   style={{
                     fontFamily: 'var(--font-mono)',
@@ -1542,66 +1573,110 @@ export function PriceDisplay({
                     color: 'var(--fg-subtle)',
                     letterSpacing: '0.04em',
                   }}
+                  className="ph-no-capture"
                 >
-                  {sourceName}
+                  @{priceObj.submitter.handle}
                 </span>
-              )}
-            </>
-          )}
-          {/* Source name for resale community tier (e.g. SeatGeek) */}
-          {sourceName && isCommunity && (
-            <>
-              <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>·</span>
-              {sourceUrl ? (
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 3,
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
-                    color: 'var(--fg-subtle)',
-                    textDecoration: 'none',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  {sourceName}
-                  <ExternalIcon />
-                </a>
-              ) : (
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
-                    color: 'var(--fg-subtle)',
-                    letterSpacing: '0.04em',
-                  }}
-                >
-                  {sourceName}
+              </>
+            )}
+            {/* Source name — primary and resale tiers */}
+            {sourceName && !isCommunity && !isBoxOffice && (
+              <>
+                {effectiveObservedAt && (
+                  <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
+                    ·
+                  </span>
+                )}
+                {sourceUrl ? (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      color: 'var(--fg-subtle)',
+                      textDecoration: 'none',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {sourceName}
+                    <ExternalIcon />
+                  </a>
+                ) : (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      color: 'var(--fg-subtle)',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {sourceName}
+                  </span>
+                )}
+              </>
+            )}
+            {/* Source name for resale community tier (e.g. SeatGeek) */}
+            {sourceName && isCommunity && (
+              <>
+                <span style={{ color: 'var(--fg-subtle)', opacity: 0.4 }}>
+                  ·
                 </span>
-              )}
-            </>
+                {sourceUrl ? (
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 3,
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      color: 'var(--fg-subtle)',
+                      textDecoration: 'none',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {sourceName}
+                    <ExternalIcon />
+                  </a>
+                ) : (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      color: 'var(--fg-subtle)',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {sourceName}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+          {/* Row 2: verification — "Verified by the team" (admin) or "Verified by @handle" (fan) */}
+          {priceObj.verification && (
+            <div style={{ marginTop: 5 }}>
+              <VerifiedStamp
+                verification={priceObj.verification}
+                subject={
+                  isBoxOffice &&
+                  priceObj.alternates &&
+                  priceObj.alternates.length > 0
+                    ? 'Box-office price'
+                    : null
+                }
+              />
+            </div>
           )}
         </div>
-        {/* Row 2: verification — "Verified by the team" (admin) or "Verified by @handle" (fan) */}
-        {priceObj.verification && (
-          <div style={{ marginTop: 5 }}>
-            <VerifiedStamp
-              verification={priceObj.verification}
-              subject={
-                isBoxOffice &&
-                priceObj.alternates &&
-                priceObj.alternates.length > 0
-                  ? 'Box-office price'
-                  : null
-              }
-            />
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
