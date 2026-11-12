@@ -10,9 +10,9 @@ export interface PageSkeletonProps {
   rows?: number;
   /** A search box above the filters, as Events and Venues draw it. */
   search?: boolean;
+  /** The loaded row's height on this page, so nothing jumps (#178 item 29). */
+  rowHeight: number;
 }
-
-const ROW_HEIGHT = 69;
 
 /**
  * Loading in the page's final shape (rule 9): the same tabs, filters and rows,
@@ -26,6 +26,7 @@ export const PageSkeleton = ({
   columns = 3,
   rows = 7,
   search = false,
+  rowHeight,
 }: PageSkeletonProps) => (
   <div
     data-testid="page-skeleton"
@@ -66,7 +67,7 @@ export const PageSkeleton = ({
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            height: ROW_HEIGHT,
+            height: rowHeight,
             borderBottom: '1px solid var(--border)',
           }}
         >
