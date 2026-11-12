@@ -14,6 +14,15 @@ describe('isTabActive', () => {
     expect(isTabActive({ href: '/venues' }, '/artists/some-band')).toBe(false);
   });
 
+  it('lights My shows on the passport, as both nav boards draw it', () => {
+    const myShows = {
+      href: '/watching',
+      matchPrefixes: ['/history', '/following', '/passport'],
+    };
+    expect(isTabActive(myShows, '/passport')).toBe(true);
+    expect(isTabActive({ href: '/events' }, '/passport')).toBe(false);
+  });
+
   it('treats matchPrefixes as additive to the href', () => {
     const tab = { href: '/watching', matchPrefixes: ['/history'] };
     expect(isTabActive(tab, '/watching')).toBe(true);

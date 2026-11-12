@@ -813,7 +813,7 @@ export const CONSUMER_COPY = {
         {
           label: 'My shows',
           href: '/watching',
-          matchPrefixes: ['/history', '/following'],
+          matchPrefixes: ['/history', '/following', '/passport'],
         },
         { label: 'Crews', href: '/crews' },
       ] as const,
@@ -851,7 +851,7 @@ export const CONSUMER_COPY = {
           key: 'watching',
           label: 'my shows',
           href: '/watching',
-          matchPrefixes: ['/history', '/following'],
+          matchPrefixes: ['/history', '/following', '/passport'],
         },
         { key: 'crews', label: 'crews', href: '/crews' },
       ] as const,
