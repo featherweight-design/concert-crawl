@@ -39,14 +39,12 @@ import { requireFlag } from '../middleware/feature-flag.js';
 /**
  * 72 bits is only strong if enumeration is also expensive. Keyed on the Clerk
  * id now that the route is authenticated — a better key than an IP, and it
- * sidesteps the `x-forwarded-for` derivation entirely.
+ * sidesteps the IP derivation entirely.
  *
  * The budget is held in Postgres (#528), so it is one budget across every API
  * instance and survives restarts. If this endpoint is ever flipped public, the
- * key has to fall back
- * to the IP derivation in routes/waitlist.ts
- * (`.split(',')[0]?.trim() ?? 'unknown'`) — do not invent a second convention
- * at that point.
+ * key has to fall back to `clientIp(ctx)` in lib/client-ip.ts — do not invent
+ * a second convention at that point.
  */
 const TOKEN_LIMIT = 30;
 const TOKEN_WINDOW_MS = 10 * 60 * 1000;

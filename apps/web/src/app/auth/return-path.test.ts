@@ -7,18 +7,29 @@
 // cookie, and /auth/complete spends it — so the four edits are not plumbing
 // nobody exercises. The middleware's first hop has its own suite in
 // src/proxy.test.ts.
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-const { cookieStore, redirectCalls, authState } = vi.hoisted(() => {
-  const cookies = new Map<string, string>();
-  const redirects: string[] = [];
-  const auth: { userId: string | null } = { userId: 'user_new_arrival' };
-  return { cookieStore: cookies, redirectCalls: redirects, authState: auth };
-});
+const { cookieStore, redirectCalls, authState, requestHeaders } = vi.hoisted(
+  () => {
+    const cookies = new Map<string, string>();
+    const redirects: string[] = [];
+    const auth: { userId: string | null } = { userId: 'user_new_arrival' };
+    const incoming = new Map<string, string>();
+    return {
+      cookieStore: cookies,
+      redirectCalls: redirects,
+      authState: auth,
+      requestHeaders: incoming,
+    };
+  },
+);
 
 vi.mock('next/headers', () => ({
+  headers: async () => ({
+    get: (name: string) => requestHeaders.get(name.toLowerCase()) ?? null,
+  }),
   cookies: async () => ({
     get: (name: string) => {
       const value = cookieStore.get(name);
@@ -89,6 +100,7 @@ const runToRedirect = async (work: () => Promise<unknown>): Promise<string> => {
 
 beforeEach(() => {
   cookieStore.clear();
+  requestHeaders.clear();
   redirectCalls.length = 0;
   authState.userId = 'user_new_arrival';
   vi.stubEnv('INVITE_COOKIE_SECRET', SECRET);
@@ -360,5 +372,53 @@ describe('the code screen accepts both code shapes (admin 5b custom codes)', () 
       error: 'invalid_format',
     });
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+});
+
+// The action calls the API from the web function, so without help the API
+// sees one IP for every visitor and its miss limit becomes a shared bucket.
+describe('the code screen forwards the visitor IP to the miss limit', () => {
+  const SERVICE_KEY = 'test-internal-secret';
+
+  const sentHeaders = (): Record<string, string> => {
+    const init = vi.mocked(fetch).mock.calls[0]?.[1];
+    return Object.fromEntries(new Headers(init?.headers).entries());
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('sends the visitor IP and the service key when the secret is set', async () => {
+    vi.stubEnv('INTERNAL_API_SECRET', SERVICE_KEY);
+    requestHeaders.set('x-vercel-forwarded-for', '198.51.100.7');
+    requestHeaders.set('x-real-ip', '198.51.100.7');
+    requestHeaders.set('x-forwarded-for', '203.0.113.9, 10.0.0.1');
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE));
+
+    const sent = sentHeaders();
+    expect(sent['x-client-ip']).toBe('198.51.100.7');
+    expect(sent['x-service-key']).toBe(SERVICE_KEY);
+  });
+
+  it('falls back to the first x-forwarded-for hop', async () => {
+    vi.stubEnv('INTERNAL_API_SECRET', SERVICE_KEY);
+    requestHeaders.set('x-forwarded-for', ' 203.0.113.9 , 10.0.0.1');
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE));
+
+    expect(sentHeaders()['x-client-ip']).toBe('203.0.113.9');
+  });
+
+  it('sends neither header when the secret is unset', async () => {
+    vi.stubEnv('INTERNAL_API_SECRET', undefined);
+    requestHeaders.set('x-vercel-forwarded-for', '198.51.100.7');
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE));
+
+    const sent = sentHeaders();
+    expect(sent).not.toHaveProperty('x-client-ip');
+    expect(sent).not.toHaveProperty('x-service-key');
   });
 });
