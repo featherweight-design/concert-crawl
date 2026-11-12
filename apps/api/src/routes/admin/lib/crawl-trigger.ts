@@ -7,6 +7,7 @@ export type QueueVenueCrawlResult =
   | { ok: 'not_found' }
   | { ok: 'not_crawlable' }
   | { ok: 'paused' }
+  | { ok: 'robots_disallowed' }
   | { ok: 'failed' };
 
 /**
@@ -25,6 +26,10 @@ export const queueVenueCrawl = async (
   // say so now. The crawler pauses a venue itself at its third failure;
   // resuming it is the recovery step.
   if (venue.crawlPausedAt !== null) return { ok: 'paused' };
+  // robots.txt disallows us: never overridden, `force` included (force only
+  // bypasses the page-unchanged skip). `null` is "not checked yet", which the
+  // crawler itself resolves before it fetches anything.
+  if (venue.robotsTxtAllowed === false) return { ok: 'robots_disallowed' };
 
   const inserted = await db
     .insert(crawlTriggers)

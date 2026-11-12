@@ -1828,4 +1828,26 @@ export interface PersonDetail {
     feedback: number;
   };
   recent: PersonRecent[];
+
+// ── Admin venues (redesign 3a) ───────────────────────────────────────────────
+
+/** Why an admin hid a venue from the site. */
+export type VenueHideReason = 'venue_closed' | 'not_music_venue' | 'other';
+
+/** The latest crawl run of a venue, as the admin list shows it. */
+export interface VenueLatestRun {
+  status: CrawlStatus;
+  reason: CrawlRunReason | null;
+  at: string;
+  eventsFound: number;
+  eventsInserted: number;
+  /** The first 300 characters of the error, for a failed run. */
+  errorMessage: string | null;
+}
+
+/** What a hard delete of a venue would destroy; any above zero refuses it. */
+export interface VenueDeleteBlockers {
+  pastShows: number;
+  upcomingShows: number;
+  watchers: number;
 }

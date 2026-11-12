@@ -78,6 +78,15 @@ export const venues = pgTable(
     // takes its PAST shows off artist pages and search, which deactivation alone
     // keeps (#1299). Activating the venue clears it.
     removedAt: timestamp('removed_at', { withTimezone: true }),
+    // Who paused the crawl (an admin's user id); NULL for a crawler auto-pause.
+    crawlPausedBy: text('crawl_paused_by'),
+    // Why, when and by whom a venue was hidden from the site (3a). Explanations
+    // only: `active` stays the switch. NULL on a venue hidden before these
+    // existed, or never hidden; showing it again clears them.
+    hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+    hiddenBy: text('hidden_by'),
+    hiddenReason: text('hidden_reason'),
+    hiddenNote: text('hidden_note'),
     lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
       withTimezone: true,
     }),
@@ -154,6 +163,10 @@ export const venues = pgTable(
     check(
       'venues_crawl_pause_reason_check',
       sql`${table.crawlPauseReason} IS NULL OR ${table.crawlPauseReason} IN ('waiting_on_permission', 'site_broken_or_moved', 'other')`,
+    ),
+    check(
+      'venues_hidden_reason_check',
+      sql`${table.hiddenReason} IS NULL OR ${table.hiddenReason} IN ('venue_closed', 'not_music_venue', 'other')`,
     ),
   ],
 );

@@ -202,6 +202,17 @@ crawlAdminRouter.post(
         409,
       );
     }
+    if (queued.ok === 'robots_disallowed') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'robots.txt disallows crawling this venue. We never override it.',
+          code: 'robots_disallowed',
+        },
+        409,
+      );
+    }
     if (queued.ok === 'failed') {
       return ctx.json(
         { success: false, error: 'Failed to create crawl trigger' },

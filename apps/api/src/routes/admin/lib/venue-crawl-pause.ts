@@ -112,7 +112,11 @@ export const resolvePauseDetails = (
  * The row lock makes overlapping pauses serialize, so the second one sees the
  * first's timestamp instead of overwriting it.
  */
-export const pauseVenueCrawl = async (id: string, details: PauseDetails) =>
+export const pauseVenueCrawl = async (
+  id: string,
+  details: PauseDetails,
+  pausedBy: string | null,
+) =>
   db.transaction(async (tx) => {
     const [existing] = await tx
       .select({
@@ -127,6 +131,8 @@ export const pauseVenueCrawl = async (id: string, details: PauseDetails) =>
       .update(venues)
       .set({
         crawlPausedAt: existing.crawlPausedAt ?? new Date(),
+        // Who paused it first: pausing again to edit the reason keeps the original.
+        ...(existing.crawlPausedAt === null ? { crawlPausedBy: pausedBy } : {}),
         crawlPauseReason: details.reason,
         crawlPauseNote: details.note,
         // A removed venue never resumes by itself.
