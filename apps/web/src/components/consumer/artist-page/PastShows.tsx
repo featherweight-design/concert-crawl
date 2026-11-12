@@ -3,7 +3,7 @@ import React from 'react';
 
 import { CRAWL_SINCE } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';
-import { VenueStamp } from '@/components/consumer/venue-stamp/VenueStamp';
+import { VenueTile } from '@/components/consumer/venue-glyph';
 import { WentPill } from '@/components/consumer/went-pill/WentPill';
 import { formatEventDate } from '../definitions/lib';
 import { fmtDate } from './DateStamp';
@@ -92,10 +92,12 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
                     color: 'var(--fg)',
                   }}
                 >
-                  <VenueStamp
-                    venueSlug={show.venueSlug}
-                    venueName={show.venue}
-                    size={22}
+                  {/* The venue's rounded-square icon tile, as the upcoming
+                      rows draw it (artist_past_m), not the round stamp. */}
+                  <VenueTile
+                    slug={show.venueSlug}
+                    name={show.venue}
+                    size={24}
                   />
                   <span
                     style={{
