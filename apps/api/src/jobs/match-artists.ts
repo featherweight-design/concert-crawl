@@ -279,7 +279,7 @@ export const runMatchArtists = async (
       }
 
       if (result.status === 'matched') {
-        await db
+        const written = await db
           .update(artists)
           .set({
             matchStatus: 'matched',
@@ -296,7 +296,13 @@ export const runMatchArtists = async (
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
           })
-          .where(eq(artists.id, row.id));
+          // A human answer given while Spotify was searching wins here too.
+          // Unguarded, a not-an-artist ruling made mid-search was overwritten
+          // to matched with its hide left on, and an admin's own pick was
+          // replaced by the job's.
+          .where(and(eq(artists.id, row.id), unchangedSince(row.updatedAt)))
+          .returning({ id: artists.id });
+        if (written.length === 0) continue;
         if (isRefresh) {
           summary.photosRefreshed += 1;
         } else {
