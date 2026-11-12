@@ -50,7 +50,7 @@ const FAILSAFE_MS = LAUNCH_MS.total + 1500;
 const at = (ms: number) => ms / LAUNCH_MS.total;
 
 export function LaunchAnimation() {
-  const { enabled, isLoading } = useFeatureFlag('launch-animation');
+  const { enabled, loaded } = useFeatureFlag('launch-animation');
   const [playing, setPlaying] = useState(false);
 
   // The cold-start decision, once, on mount, from what is already on the device.
@@ -75,11 +75,12 @@ export function LaunchAnimation() {
   // Declared after the decision effect on purpose: effects run in order, and the
   // decision must read the PREVIOUS start's cached answer before this one
   // overwrites it.
-  // Remember the flag's answer for the next cold start. Only once it has really
-  // arrived: the registry default before the fetch must not overwrite it.
+  // Remember the flag's answer for the next cold start. Only once the fetch
+  // has really returned data: neither the registry default before it nor the
+  // fallback after a failed one (offline cold start) may overwrite it.
   useEffect(() => {
-    if (!isLoading) writeStored('local', LAUNCH_FLAG_KEY, enabled ? '1' : '0');
-  }, [enabled, isLoading]);
+    if (loaded) writeStored('local', LAUNCH_FLAG_KEY, enabled ? '1' : '0');
+  }, [enabled, loaded]);
 
   return playing ? <LaunchStage onDone={() => setPlaying(false)} /> : null;
 }
@@ -105,6 +106,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
     const landY = LAUNCH_LANDING.top + LANDING_PX / 2 - vh / 2;
     const centred = (scale: number) => `translate(0px, 0px) scale(${scale})`;
     const animations: (Animation | null)[] = [];
+    let cancelled = false;
     const run = (
       element: Element | null,
       keyframes: Keyframe[],
@@ -129,12 +131,13 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
     // header logo's spot.
     run(markRef.current, [
       { offset: 0, transform: centred(START_SCALE), opacity: 1 },
-      { offset: at(LAUNCH_MS.growStart), transform: centred(START_SCALE) },
       {
-        offset: at(LAUNCH_MS.growEnd),
-        transform: centred(FULL_SCALE),
+        offset: at(LAUNCH_MS.growStart),
+        transform: centred(START_SCALE),
+        // WAAPI applies a keyframe's easing to the segment that STARTS there.
         easing: EXPO_OUT,
       },
+      { offset: at(LAUNCH_MS.growEnd), transform: centred(FULL_SCALE) },
       { offset: at(LAUNCH_MS.shrinkStart), transform: centred(FULL_SCALE) },
       {
         offset: 1,
@@ -205,12 +208,12 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
         offset: at(LAUNCH_MS.wordStart),
         opacity: 0,
         transform: 'translateY(14px)',
+        easing: EXPO_OUT,
       },
       {
         offset: at(LAUNCH_MS.wordEnd),
         opacity: 1,
         transform: 'translateY(0px)',
-        easing: EXPO_OUT,
       },
       {
         offset: at(LAUNCH_MS.shrinkStart),
@@ -233,12 +236,19 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
     );
     animations.push(backdrop);
     if (backdrop !== null) {
-      const finish = () => doneRef.current();
-      void backdrop.finished.then(finish, finish);
+      // Only a real finish ends it: a cancel (effect cleanup, StrictMode's
+      // dev remount) rejects `finished` and must not dismiss the overlay.
+      void backdrop.finished.then(
+        () => {
+          if (!cancelled) doneRef.current();
+        },
+        () => undefined,
+      );
     }
 
     const failsafe = window.setTimeout(() => doneRef.current(), FAILSAFE_MS);
     return () => {
+      cancelled = true;
       window.clearTimeout(failsafe);
       animations.forEach((animation) => animation?.cancel());
     };
@@ -275,6 +285,7 @@ function LaunchStage({ onDone }: { onDone: () => void }) {
       />
       <div
         ref={markRef}
+        data-testid="launch-mark"
         style={{
           position: 'absolute',
           left: `calc(50% - ${MARK_PX / 2}px)`,

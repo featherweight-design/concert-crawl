@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 
-const flagState = { enabled: true, isLoading: false };
+const flagState = { enabled: true, isLoading: false, loaded: true };
 vi.mock('@/lib/queries/use-feature-flags', () => ({
   useFeatureFlag: () => flagState,
 }));
@@ -20,12 +20,14 @@ const stubDisplay = (standalone: boolean, reduced = false) => {
 beforeEach(() => {
   flagState.enabled = true;
   flagState.isLoading = false;
+  flagState.loaded = true;
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
 
 afterEach(() => {
   cleanup();
+  delete (Element.prototype as { animate?: unknown }).animate;
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -50,9 +52,7 @@ describe('LaunchAnimation', () => {
     stubDisplay(true);
     window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
     render(<LaunchAnimation />);
-    const mark = screen
-      .getByTestId('launch-animation')
-      .querySelector<HTMLElement>('div:nth-of-type(2)');
+    const mark = screen.getByTestId('launch-mark');
     expect(mark?.style.width).toBe('96px');
     expect(mark?.style.left).toBe('calc(50% - 48px)');
     expect(mark?.style.top).toBe('calc(50% - 48px)');
@@ -90,8 +90,43 @@ describe('LaunchAnimation', () => {
   it('never stores the registry default before the flag has loaded', () => {
     stubDisplay(true);
     flagState.isLoading = true;
+    flagState.loaded = false;
     flagState.enabled = false;
     render(<LaunchAnimation />);
     expect(window.localStorage.getItem(LAUNCH_FLAG_KEY)).toBeNull();
+  });
+
+  it('does not overwrite the cached flag after a failed fetch', () => {
+    stubDisplay(true);
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    // Offline cold start: not pending, no data, registry default false.
+    flagState.isLoading = false;
+    flagState.loaded = false;
+    flagState.enabled = false;
+    render(<LaunchAnimation />);
+    expect(window.localStorage.getItem(LAUNCH_FLAG_KEY)).toBe('1');
+  });
+
+  it('does not dismiss the overlay when the effect is cancelled on unmount', async () => {
+    stubDisplay(true);
+    window.localStorage.setItem(LAUNCH_FLAG_KEY, '1');
+    let reject: (reason: unknown) => void = () => undefined;
+    const finished = new Promise<Animation>((_resolve, rej) => {
+      reject = rej;
+    });
+    const cancel = vi.fn(() => reject(new DOMException('', 'AbortError')));
+    Element.prototype.animate = vi.fn(
+      () => ({ finished, cancel }) as unknown as Animation,
+    );
+    const view = render(<LaunchAnimation />);
+    expect(screen.getByTestId('launch-animation')).toBeTruthy();
+    // StrictMode-style: cleanup cancels, the rejection must not call onDone.
+    view.rerender(<LaunchAnimation />);
+    await act(async () => {
+      cancel();
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId('launch-animation')).not.toBeNull();
+    delete (Element.prototype as { animate?: unknown }).animate;
   });
 });

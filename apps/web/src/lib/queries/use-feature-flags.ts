@@ -47,11 +47,14 @@ export function useFeatureFlags() {
 // rather hold their render than show the default can read `isLoading`.
 export function useFeatureFlag(key: FeatureFlagKey): {
   isLoading: boolean;
+  /** True only once a fetch has returned data (false after a failed one). */
+  loaded: boolean;
   enabled: boolean;
 } {
   const { data, isPending } = useFeatureFlags();
   return {
     isLoading: isPending,
+    loaded: data !== undefined,
     enabled: (data ?? featureFlagDefaults())[key],
   };
 }
