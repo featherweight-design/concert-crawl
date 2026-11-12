@@ -8,6 +8,7 @@ import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { useReleaseReadState } from './useReleaseReadState';
 import { FeatureDropPill } from './FeatureDropPill';
 import { SpotlightModal } from './SpotlightModal';
+import { spotlightAvailable } from './spotlight-gate';
 
 const LATEST = RELEASES[0];
 
@@ -16,6 +17,7 @@ export function FeatureDropPillGate() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useAuth();
   const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes');
+  const { enabled: spotifySync } = useFeatureFlag('spotify-sync');
 
   const latestVersion = LATEST?.version ?? '';
   const { pillDismissed, dismissPill } = useReleaseReadState(latestVersion);
@@ -41,7 +43,13 @@ export function FeatureDropPillGate() {
     void router.push(LATEST.spotlight.ctaHref);
   }, [router]);
 
-  if (!LATEST?.spotlight || pillDismissed || hidden) return null;
+  if (
+    !LATEST ||
+    !spotlightAvailable(LATEST, spotifySync) ||
+    pillDismissed ||
+    hidden
+  )
+    return null;
 
   return (
     <>
