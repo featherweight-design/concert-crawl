@@ -1,5 +1,6 @@
 export {
   EventStage,
+  EventStageMeta,
   StageShell,
   StageBackdrop,
   StageCountdown,
@@ -10,5 +11,5 @@ export {
   type StageShellProps,
 } from './EventStage';
 export { eventCountdown, daysUntilEvent } from './lib/countdown';
-export { stageMetaLine } from './lib/meta';
+export { stageMetaLine, stageMetaParts } from './lib/meta';
 export { EVENT_STAGE_COPY } from './definitions/copy';

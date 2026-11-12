@@ -62,14 +62,48 @@ describe('<EventStage />', () => {
     renderStage();
     const card = screen.getByTestId('stage-card');
     expect(card.style.transform).toBe(`rotate(${STAGE_CARD_TILT}deg)`);
-    expect(card.style.boxShadow).toContain('1.25px var(--genre-electronic)');
+    expect(card.style.boxShadow).toContain('2px var(--genre-electronic)');
+  });
+
+  it('draws the ring with its translucent halo band, tilted -2.5 and radius 18', () => {
+    renderStage();
+    const card = screen.getByTestId('stage-card');
+    expect(STAGE_CARD_TILT).toBe(-2.5);
+    expect(card.style.borderRadius).toBe('18px');
+    // The 7px halo at 16% and the wide soft shadow at 40%.
+    expect(card.style.boxShadow).toContain('0 0 0 7px');
+    expect(card.style.boxShadow).toContain('16%');
+    expect(card.style.boxShadow).toContain('0 30px 70px');
+  });
+
+  it('desaturates the backdrop and the card of a cancelled show only', () => {
+    const { unmount } = renderStage({ status: 'cancelled' });
+    expect(screen.getByTestId('stage-backdrop').style.filter).toBe(
+      'grayscale(.85)',
+    );
+    expect(screen.getByTestId('stage-card').style.filter).toBe(
+      'grayscale(.85)',
+    );
+    unmount();
+
+    renderStage({ status: 'postponed' });
+    expect(screen.getByTestId('stage-backdrop').style.filter).toBe('');
+    expect(screen.getByTestId('stage-card').style.filter).toBe('');
   });
 
   it('falls back to the neutral ring for an ungenred show', () => {
     renderStage({ leadGenre: null });
     expect(screen.getByTestId('stage-card').style.boxShadow).toContain(
-      '1.25px var(--border-strong)',
+      '2px var(--border-strong)',
     );
+  });
+
+  it('draws the countdown pill with the gradient edge and a glowing dot', () => {
+    renderStage({ countdown: '4 days away' });
+    const pill = screen.getByTestId('stage-countdown');
+    expect(pill.style.border).toContain('transparent');
+    expect(pill.style.background).toContain('border-box');
+    expect(pill.style.background).toContain('var(--accent)');
   });
 
   it('washes the backdrop in the theme pair, hidden from assistive tech', () => {
