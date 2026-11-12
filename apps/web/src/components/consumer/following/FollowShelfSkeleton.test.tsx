@@ -42,7 +42,8 @@ describe('FollowShelfSkeleton', () => {
     const cards = screen.getAllByTestId('follow-shelf-skeleton-card');
     expect(cards).toHaveLength(5);
     expect(
-      cards.filter((card) => card.className.includes('hidden')),
+      // `classList.contains`, not a substring: every card is overflow-hidden.
+      cards.filter((card) => card.classList.contains('hidden')),
     ).toHaveLength(2);
     for (const card of cards) {
       for (const cls of SHELF_CARD_BOX_CLASS.split(' ')) {
