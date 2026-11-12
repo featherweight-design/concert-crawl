@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AdminPerson, PeopleApi, PeoplePage } from './people-api';
 import {
   chipCount,
+  codeNameFor,
   fetchPeople,
   joinedLabel,
   lastActiveLabel,
+  peopleWithCodeHref,
   personHref,
 } from './people-rules';
 
@@ -102,6 +104,26 @@ describe('fetchPeople', () => {
       offset: 0,
     });
     expect(result.people.map((each) => each.id)).toEqual(['t1']);
+  });
+});
+
+describe('peopleWithCodeHref', () => {
+  it('names the code as written, not its id', () => {
+    expect(peopleWithCodeHref('RED ROCKS')).toBe(
+      '/admin/people?code=RED%20ROCKS',
+    );
+  });
+});
+
+describe('codeNameFor', () => {
+  const codes = [{ id: 'c1', code: 'REDROCKS' }];
+  it('finds the code by its string, any case, or by an older link’s id', () => {
+    expect(codeNameFor('redrocks', codes)).toBe('REDROCKS');
+    expect(codeNameFor('c1', codes)).toBe('REDROCKS');
+  });
+  it('has no name for an unknown code or before the codes load', () => {
+    expect(codeNameFor('NOPE', codes)).toBeNull();
+    expect(codeNameFor('REDROCKS', null)).toBeNull();
   });
 });
 

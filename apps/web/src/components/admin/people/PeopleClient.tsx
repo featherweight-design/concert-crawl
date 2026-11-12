@@ -26,6 +26,7 @@ import {
   PAGE_SIZE,
   ROLE_KIND,
   chipCount,
+  codeNameFor,
   fetchPeople,
   joinedLabel,
   lastActiveLabel,
@@ -267,13 +268,7 @@ export function PeopleClient({ code }: { code: string | null }) {
   };
 
   const now = new Date();
-  // `?code=` is the code as written ("REDROCKS"); an older link carries its id.
-  const codeName = code
-    ? (allCodes?.find(
-        (each) =>
-          each.id === code || each.code.toUpperCase() === code.toUpperCase(),
-      )?.code ?? null)
-    : null;
+  const codeName = code ? codeNameFor(code, allCodes) : null;
 
   const searchBox = (
     <label
