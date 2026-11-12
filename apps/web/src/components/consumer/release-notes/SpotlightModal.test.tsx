@@ -50,8 +50,9 @@ describe('SpotlightModal', () => {
     // rather than floating over it (they landed on chips at 390 and 1300).
     const close = screen.getByLabelText('Close');
     const eyebrow = screen.getByText(/v0\.5\.0-beta/);
-    expect(close.style.position).not.toBe('absolute');
-    expect(eyebrow.parentElement?.style.position).not.toBe('absolute');
+    const hero = screen.getByTestId('spotlight-hero');
+    expect(hero.contains(close)).toBe(false);
+    expect(hero.contains(eyebrow)).toBe(false);
     expect(close.parentElement?.contains(eyebrow)).toBe(true);
   });
 
