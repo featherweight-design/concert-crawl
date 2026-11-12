@@ -37,7 +37,7 @@ describe('ReportFooterLink', () => {
     expect(screen.getByText(copy.titleHasStatus)).toBeTruthy();
   });
 
-  it('keeps the status card as it was when no overrides are passed', () => {
+  it('draws the event status card as bp-event does when no overrides are passed', () => {
     const { container } = render(
       <ReportFooterLink liveStatus={null} onOpen={vi.fn()} />,
     );
@@ -45,10 +45,22 @@ describe('ReportFooterLink', () => {
     expect(screen.getByText(copy.title)).toBeTruthy();
     expect(screen.getByText(copy.subtitle)).toBeTruthy();
     expect(screen.getByText(copy.bottomNote)).toBeTruthy();
-    // No tile, no chip: the chevron stays and the card is at rest.
-    expect(container.querySelectorAll('svg')).toHaveLength(1);
+    // The amber clock tile leads the row; the chevron trails it, no chip.
+    expect(screen.getByTestId('report-icon-tile')).toBeTruthy();
+    expect(screen.getByTestId('report-status-clock')).toBeTruthy();
+    expect(container.querySelectorAll('svg')).toHaveLength(2);
     expect(screen.getByRole('button').hasAttribute('data-reported')).toBe(
       false,
+    );
+  });
+
+  it('draws a dashed rule above the eyebrow', () => {
+    const { container } = render(
+      <ReportFooterLink liveStatus={null} onOpen={vi.fn()} />,
+    );
+
+    expect(container.firstElementChild?.getAttribute('style')).toContain(
+      'dashed',
     );
   });
 

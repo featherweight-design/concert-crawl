@@ -1964,6 +1964,9 @@ export function EventDetailPriceBlock({
         priceApprovalKind={event.priceApprovalKind ?? null}
         priceApprovedAt={event.priceApprovedAt ?? null}
         priceAlternates={event.priceAlternates ?? null}
+        // The API counts the live submission's fan confirms; the community
+        // card reads them as "N fans confirmed" (more-p-price_states).
+        priceConfirmsCount={event.priceConfirmsCount ?? null}
         {...(noPriceState
           ? { onSubmitPrice: () => setSubmitPriceOpen(true) }
           : {})}
