@@ -62,6 +62,18 @@ describe('PinkWave', () => {
     expect(svg?.style.overflow).toBe('');
   });
 
+  it('can leave the halo out, and then sizes its box for the bare core', () => {
+    const { container } = render(<PinkWave scale="sm" halo={false} />);
+    expect(container.querySelectorAll('[data-part="halo"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-part="dot"]')).toHaveLength(7);
+    expect(container.querySelectorAll('[data-part="core"]')).toHaveLength(1);
+    // The core (r 7) at its 1.35x pulse needs 18.9 units of height.
+    const svg = container.querySelector('svg');
+    expect(Number(svg?.getAttribute('height'))).toBeCloseTo(18.9);
+    // Seven dots and the core animate; no rings.
+    expect(animate).toHaveBeenCalledTimes(8);
+  });
+
   it('turns each dot pink and has it blue again as the next dot lights', () => {
     render(<PinkWave />);
     // The trail dots animate first, smallest first.

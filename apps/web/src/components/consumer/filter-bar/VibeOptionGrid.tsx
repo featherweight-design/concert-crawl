@@ -11,7 +11,7 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { GenreDot } from '@/components/consumer/GenreDot';
 import { genreColor } from '@/lib/genre-color';
 import { CheckboxMark } from './CheckboxMark';
-import { getFilterOptions, orderVibes } from './filter-defs';
+import { getFilterOptions, VIBE_ORDER } from './filter-defs';
 
 const copy = CONSUMER_COPY.filterBar.popover;
 
@@ -36,17 +36,17 @@ const rowStyle = (checked: boolean, color: string): CSSProperties => ({
 });
 
 interface VibeOptionGridProps {
-  genres: readonly string[];
   selected: readonly string[];
   onToggle: (genre: string) => void;
 }
 
-export function VibeOptionGrid({
-  genres,
-  selected,
-  onToggle,
-}: VibeOptionGridProps) {
-  const options = getFilterOptions('vibe', [], orderVibes(genres));
+/**
+ * Every one of the 16 buckets, always, in the board's order: `vibe_pop_d`
+ * draws them all, and no board hides a bucket without shows. Picking an empty
+ * one simply returns no shows.
+ */
+export function VibeOptionGrid({ selected, onToggle }: VibeOptionGridProps) {
+  const options = getFilterOptions('vibe', [], [...VIBE_ORDER]);
   return (
     <div className="grid grid-cols-2 gap-x-2.5 gap-y-1">
       {options.map((option) => {

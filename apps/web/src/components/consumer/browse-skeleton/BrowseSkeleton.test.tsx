@@ -86,6 +86,14 @@ describe('BrowseSkeleton', () => {
     expect(animate).toHaveBeenCalled();
   });
 
+  it('ends the loading dots on the core, with no large ringed dot after it (load_browse_d)', () => {
+    const { container } = render(<BrowseSkeleton />);
+    const wave = screen.getByRole('status').parentElement;
+    expect(wave?.querySelectorAll('[data-part="dot"]')).toHaveLength(7);
+    expect(wave?.querySelectorAll('[data-part="core"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-part="halo"]')).toHaveLength(0);
+  });
+
   it('sets "Loading shows" after mount so the live region announces it', () => {
     // Server markup (no effects) carries an empty region; the text arrives
     // once the client mounts, which is the change a screen reader reads.

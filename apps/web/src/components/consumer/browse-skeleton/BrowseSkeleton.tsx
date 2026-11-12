@@ -78,7 +78,8 @@ export const BrowseSkeleton = ({ rows = 4 }: BrowseSkeletonProps) => (
       <SkeletonBlock width={120} height={22} radius={8} />
       <div className="flex shrink-0 items-center gap-3">
         <LoadingShowsStatus />
-        <PinkWave scale="sm" />
+        {/* load_browse_d ends the trail on the core alone: no halo rings. */}
+        <PinkWave scale="sm" halo={false} />
       </div>
     </div>
     <div className="flex flex-col gap-2.5">

@@ -23,8 +23,6 @@ const GAP = 6;
 
 const DOT_RADII = TRAIL.map((dot) => dot.radius);
 const HALO_OUTER = HALO[0].radius;
-/** Room for the halo at the top of its bloom, so nothing paints outside. */
-const BLOOM = HALO_OUTER * CORE_PULSE;
 
 /** Dot i lights here, peaks pink half a step later and is blue as i+1 lights. */
 const litAt = (i: number) => FIRST_DOT_MS + DOT_STEP_MS * i;
@@ -43,10 +41,16 @@ const DOT_X = DOT_RADII.reduce<number[]>((xs, radius, i) => {
 }, []);
 const LAST_DOT_EDGE =
   DOT_X[DOT_X.length - 1]! + DOT_RADII[DOT_RADII.length - 1]! * DOT_SWELL;
-const CORE_X = LAST_DOT_EDGE + GAP + BLOOM;
-const WIDTH = CORE_X + BLOOM;
-const HEIGHT = BLOOM * 2;
-const MID_Y = BLOOM;
+
+/**
+ * The box: room for the largest thing at the top of its bloom (the outer halo,
+ * or the bare core when there is none), so nothing paints outside it.
+ */
+const geometry = (halo: boolean) => {
+  const bloom = (halo ? HALO_OUTER : CORE_RADIUS) * CORE_PULSE;
+  const coreX = LAST_DOT_EDGE + GAP + bloom;
+  return { coreX, width: coreX + bloom, height: bloom * 2, midY: bloom };
+};
 
 const SCALES = { sm: 1, md: 2, lg: 4 } as const;
 export type PinkWaveScale = keyof typeof SCALES;
@@ -65,10 +69,17 @@ const SWELL_STYLE = {
 export function PinkWave({
   scale = 'md',
   rest = false,
+  halo = true,
 }: {
   scale?: PinkWaveScale;
   /** Hold on the resting frame, as the pull zone does until it passes 74px. */
   rest?: boolean;
+  /**
+   * Draw the halo rings around the core. Browse's "Loading shows" line leaves
+   * them out: `load_browse_d` ends the trail on the bare core, with no large
+   * ringed dot after it.
+   */
+  halo?: boolean;
 }) {
   const prefersReduced = useReducedMotion();
   const reduced = prefersReduced || rest;
@@ -144,27 +155,28 @@ export function PinkWave({
     return () => {
       for (const animation of running) animation?.cancel();
     };
-  }, [reduced]);
+  }, [reduced, halo]);
 
   const factor = SCALES[scale];
+  const { coreX, width, height, midY } = geometry(halo);
   return (
     <svg
-      width={WIDTH * factor}
-      height={HEIGHT * factor}
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      width={width * factor}
+      height={height * factor}
+      viewBox={`0 0 ${width} ${height}`}
       aria-hidden="true"
       focusable="false"
       data-pink-wave={reduced ? 'still' : 'running'}
     >
-      {HALO.map((ring, i) => (
+      {(halo ? HALO : []).map((ring, i) => (
         <circle
           key={ring.radius}
           ref={(node) => {
             haloRefs.current[i] = node;
           }}
           data-part="halo"
-          cx={CORE_X}
-          cy={MID_Y}
+          cx={coreX}
+          cy={midY}
           r={ring.radius}
           fill="var(--accent)"
           opacity={ring.opacity}
@@ -174,8 +186,8 @@ export function PinkWave({
       <circle
         ref={coreRef}
         data-part="core"
-        cx={CORE_X}
-        cy={MID_Y}
+        cx={coreX}
+        cy={midY}
         r={CORE_RADIUS}
         fill="var(--signal)"
         style={SWELL_STYLE}
@@ -188,7 +200,7 @@ export function PinkWave({
           }}
           data-part="dot"
           cx={DOT_X[i]}
-          cy={MID_Y}
+          cy={midY}
           r={radius}
           fill="var(--signal)"
           opacity={trailOpacity(i)}
