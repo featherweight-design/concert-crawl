@@ -185,4 +185,40 @@ describe('cached-content', () => {
     );
     expect(await getCachedEvents()).toEqual([]);
   });
+
+  it('carries the display fields a B+ offline row draws, and drops mistyped ones', async () => {
+    vi.stubGlobal(
+      'caches',
+      makeCacheStorage({
+        'public-api': [
+          {
+            url: 'https://api.example.com/v1/events',
+            body: eventsResponse([
+              {
+                ...sampleEvent,
+                artist: 'Jonah Kagen',
+                imageUrl: 'https://img.example.com/a.jpg',
+                artistPhotoUrl: null,
+                genre: ['folk'],
+                showTime: '20:00:00',
+                ticketPriceMin: '22.00',
+              },
+              { ...sampleEvent, id: 'evt-2', genre: [1, 2], showTime: 5 },
+            ]),
+          },
+        ],
+      }),
+    );
+    const [rich, sloppy] = await getCachedEvents();
+    expect(rich).toMatchObject({
+      artist: 'Jonah Kagen',
+      imageUrl: 'https://img.example.com/a.jpg',
+      genre: ['folk'],
+      showTime: '20:00:00',
+      ticketPriceMin: '22.00',
+    });
+    expect(rich).not.toHaveProperty('artistPhotoUrl');
+    expect(sloppy).not.toHaveProperty('genre');
+    expect(sloppy).not.toHaveProperty('showTime');
+  });
 });

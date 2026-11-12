@@ -16,6 +16,7 @@ import { buildEventsApiParams } from '@/lib/events-api-params';
 import { auth } from '@/lib/auth';
 import { fetchWatching } from '@/lib/watching';
 import { HeroEventCard } from '@/components/consumer/hero-event-card';
+import { PullToRefresh } from '@/components/consumer/pink-wave/PullToRefresh';
 import { FilterBar } from '@/components/consumer/filter-bar';
 import { EmptyState } from '@/components/consumer/empty-state';
 import { EventsList } from '@/components/consumer/events-list';
@@ -482,6 +483,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     // uses -mx-4 + overflow-x-auto to reach the viewport edge on mobile) so its
     // horizontal scroll never leaks to the page and breaks the 320px baseline.
     <main className="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+      <PullToRefresh />
       {/* Broken-Spotify-link notice — renders nothing unless the connection
           is in an error/revoked state. */}
       <SpotifyStatusBanner />

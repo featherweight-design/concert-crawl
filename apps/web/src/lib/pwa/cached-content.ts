@@ -7,6 +7,15 @@ interface CachedEvent {
   title: string;
   date: string;
   venue: { name: string; slug: string };
+  // B+ offline rows draw the same night as Browse, so the card carries the
+  // display fields too. All optional: a response cached by an earlier API
+  // version has none of them and must still read as a usable shortcut.
+  artist?: string;
+  imageUrl?: string | null;
+  artistPhotoUrl?: string | null;
+  genre?: string[] | null;
+  showTime?: string | null;
+  ticketPriceMin?: string | null;
 }
 
 // Matches the display-relevant subset of the venue rows returned by
@@ -35,6 +44,40 @@ const isCachedEvent = (value: unknown): value is CachedEvent => {
   if (!('name' in venue) || typeof venue.name !== 'string') return false;
   if (!('slug' in venue) || typeof venue.slug !== 'string') return false;
   return true;
+};
+
+const readString = (value: object, key: string): string | undefined => {
+  const field: unknown = Reflect.get(value, key);
+  return typeof field === 'string' ? field : undefined;
+};
+
+/**
+ * Lifts the optional display fields off a validated cache row. A field of the
+ * wrong type is dropped rather than failing the row, since a cached response
+ * is untrusted input from an older deploy. Absent stays absent (never null),
+ * so a row from an older API round-trips unchanged.
+ */
+export const toCachedEvent = (event: CachedEvent): CachedEvent => {
+  const artist = readString(event, 'artist');
+  const imageUrl = readString(event, 'imageUrl');
+  const artistPhotoUrl = readString(event, 'artistPhotoUrl');
+  const showTime = readString(event, 'showTime');
+  const ticketPriceMin = readString(event, 'ticketPriceMin');
+  const genre: unknown = Reflect.get(event, 'genre');
+  return {
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    venue: event.venue,
+    ...(artist === undefined ? {} : { artist }),
+    ...(imageUrl === undefined ? {} : { imageUrl }),
+    ...(artistPhotoUrl === undefined ? {} : { artistPhotoUrl }),
+    ...(showTime === undefined ? {} : { showTime }),
+    ...(ticketPriceMin === undefined ? {} : { ticketPriceMin }),
+    ...(Array.isArray(genre) && genre.every((item) => typeof item === 'string')
+      ? { genre }
+      : {}),
+  };
 };
 
 const isCachedVenue = (value: unknown): value is CachedVenue => {
@@ -117,8 +160,8 @@ const readCollection = async <T>(
   }
 };
 
-export const getCachedEvents = (): Promise<CachedEvent[]> =>
-  readCollection('/v1/events', isCachedEvent);
+export const getCachedEvents = async (): Promise<CachedEvent[]> =>
+  (await readCollection('/v1/events', isCachedEvent)).map(toCachedEvent);
 
 export const getCachedVenues = (): Promise<CachedVenue[]> =>
   readCollection('/v1/venues', isCachedVenue);
