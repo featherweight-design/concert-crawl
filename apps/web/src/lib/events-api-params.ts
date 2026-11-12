@@ -7,7 +7,8 @@
 // forwarded the page URL almost verbatim. `listEventsSchema` is a plain
 // (non-strict) Zod object, so the untranslated keys were stripped rather than
 // rejected — page 2 came back 200 with unfiltered rows appended to a filtered
-// page 1, under a banner still claiming the scope.
+// page 1, under a banner still claiming the scope. The schema is strict now,
+// so a key this module forgets to translate is a 400, never a silent widening.
 //
 // Scope flags are passed in rather than read off the URL: whether a viewer may
 // actually hold `taste` or `following` depends on a token and an entitlement,
@@ -29,13 +30,28 @@ export type BrowseParams =
 
 // A repeated key (`?filterVibe=indie&filterVibe=punk`) reaches the two callers
 // in different shapes: Next hands the server component an array, while the
-// client holds a URLSearchParams. Both take the first value, because anything
-// else reopens the page-1/page-2 scope mismatch this module exists to close —
-// from the other side.
+// client holds a URLSearchParams. A single-valued param takes the first value
+// from either, because anything else reopens the page-1/page-2 scope mismatch
+// this module exists to close — from the other side.
 const read = (params: BrowseParams, key: string): string | undefined => {
   const raw = params instanceof URLSearchParams ? params.get(key) : params[key];
   const value = Array.isArray(raw) ? raw[0] : raw;
   return typeof value === 'string' && value !== '' ? value : undefined;
+};
+
+// Where and Vibe are multi-select (Design addendum 2, item 6), so they read
+// EVERY value, from both shapes alike: repeated keys, a comma list, or the
+// legacy single value a bookmark carries. Blanks and repeats are dropped. The
+// two readers must agree on the whole list, not just its head, or Load More
+// appends rows from a different venue set than page 1 showed.
+const readList = (params: BrowseParams, key: string): string[] => {
+  const raw =
+    params instanceof URLSearchParams ? params.getAll(key) : params[key];
+  const values = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
+  const items = values
+    .flatMap((value) => value.split(','))
+    .filter((value) => value.trim() !== '');
+  return [...new Set(items)];
 };
 
 /**
@@ -55,9 +71,13 @@ export const buildEventsApiParams = (
   if (search) qs.set('search', search);
 
   // `filterWhere` is the chip. `venueSlug` is accepted too because the server
-  // component always did; nothing in the app links with it today.
-  const venueSlug = read(params, 'filterWhere') ?? read(params, 'venueSlug');
-  if (venueSlug) qs.set('venueSlug', venueSlug);
+  // component always did; nothing in the app links with it today. The API
+  // takes a list comma-separated, the format its other list params use, so a
+  // single value goes out exactly as it always did.
+  const whereList = readList(params, 'filterWhere');
+  const venueSlugs =
+    whereList.length > 0 ? whereList : readList(params, 'venueSlug');
+  if (venueSlugs.length > 0) qs.set('venueSlug', venueSlugs.join(','));
 
   // `filterWhen` wins over an explicit from/to, which is what the server
   // component always did, and the window is taken as a PAIR. Resolving the two
@@ -74,8 +94,8 @@ export const buildEventsApiParams = (
   const filterPrice = read(params, 'filterPrice');
   if (filterPrice) qs.set('filterPrice', filterPrice);
 
-  const filterVibe = read(params, 'filterVibe');
-  if (filterVibe) qs.set('filterVibe', filterVibe);
+  const filterVibe = readList(params, 'filterVibe');
+  if (filterVibe.length > 0) qs.set('filterVibe', filterVibe.join(','));
 
   if (taste) qs.set('taste', '1');
   if (following) qs.set('following', '1');

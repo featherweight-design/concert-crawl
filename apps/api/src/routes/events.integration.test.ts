@@ -699,18 +699,21 @@ describe('GET /v1/events/:id — integration', () => {
       isFresh(detail.data.priceByTier[0]?.headline?.observedAt ?? null),
     ).toBe(true);
 
-    const list = (await (
-      await app.request(`/v1/events?venueId=${venue.id}`)
-    ).json()) as {
-      data: {
-        data: Array<{
-          id: string;
-          priceByTier: Array<{
-            headline: { observedAt: string } | null;
-          }> | null;
-        }>;
+    const list =
+      (await // `venueSlug`, not `venueId`: the list schema is strict, and an
+      // unknown key is a 400 rather than a silently ignored filter.
+      (
+        await app.request(`/v1/events?venueSlug=${venue.slug}`)
+      ).json()) as {
+        data: {
+          data: Array<{
+            id: string;
+            priceByTier: Array<{
+              headline: { observedAt: string } | null;
+            }> | null;
+          }>;
+        };
       };
-    };
     const listRow = list.data.data.find((row) => row.id === event.id);
     expect(
       isFresh(listRow?.priceByTier?.[0]?.headline?.observedAt ?? null),
@@ -1516,6 +1519,12 @@ describe('GET /v1/events — filterVibe', () => {
     // Fallback = single-value overlap; House Night should NOT match.
     expect(body.data.data).toHaveLength(1);
     expect(body.data.data[0]?.title).toBe('Only Dubstep');
+  });
+
+  it('returns 400 for a filterVibe list item exceeding 100 characters', async () => {
+    const longGenre = 'a'.repeat(101);
+    const res = await app.request(`/v1/events?filterVibe=rock,${longGenre}`);
+    expect(res.status).toBe(400);
   });
 
   it('returns 400 for a filterVibe value exceeding 100 characters', async () => {
@@ -2345,5 +2354,144 @@ describe('GET /v1/events — tonight stays listed after the UTC rollover', () =>
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { data: { date: string }[] } };
     expect(body.data.data.map((row) => row.date)).toEqual(['2026-11-09']);
+  });
+});
+
+// Where and Vibe are multi-select (Design addendum 2, item 6): OR within a
+// filter, AND across filters. The list goes out comma-separated, a repeated
+// key is accepted too, and the legacy single value keeps working unchanged.
+describe('GET /v1/events — multi-value Where and Vibe', () => {
+  beforeEach(async () => {
+    await clearTables();
+  });
+
+  const titlesFor = async (query: string): Promise<string[]> => {
+    const res = await app.request(`/v1/events?${query}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(body.data.total).toBe(body.data.data.length);
+    return body.data.data.map((row) => row.title).sort();
+  };
+
+  const seedThreeVenues = async () => {
+    const ogden = await seedVenue({ name: 'Ogden', slug: 'ogden' });
+    const bluebird = await seedVenue({ name: 'Bluebird', slug: 'bluebird' });
+    const gothic = await seedVenue({ name: 'Gothic', slug: 'gothic' });
+    await seedEvent(ogden.id, {
+      artist: 'Artist 1',
+      title: 'Ogden Rock',
+      genre: ['rock'],
+      date: '2027-06-01',
+    });
+    await seedEvent(ogden.id, {
+      artist: 'Artist 2',
+      title: 'Ogden Jazz',
+      genre: ['jazz'],
+      date: '2027-06-02',
+    });
+    await seedEvent(bluebird.id, {
+      artist: 'Artist 3',
+      title: 'Bluebird Punk',
+      genre: ['punk'],
+      date: '2027-06-01',
+    });
+    await seedEvent(gothic.id, {
+      artist: 'Artist 4',
+      title: 'Gothic Rock',
+      genre: ['rock'],
+      date: '2027-06-01',
+    });
+  };
+
+  it('filters by one venue', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=ogden')).toEqual([
+      'Ogden Jazz',
+      'Ogden Rock',
+    ]);
+  });
+
+  it('ORs two venues', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=ogden,bluebird')).toEqual([
+      'Bluebird Punk',
+      'Ogden Jazz',
+      'Ogden Rock',
+    ]);
+  });
+
+  it('accepts two venues as a repeated key too', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=ogden&venueSlug=bluebird')).toEqual([
+      'Bluebird Punk',
+      'Ogden Jazz',
+      'Ogden Rock',
+    ]);
+  });
+
+  it('ignores an unknown slug alongside a known one', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=no-such-venue,bluebird')).toEqual([
+      'Bluebird Punk',
+    ]);
+  });
+
+  it('returns nothing when no listed venue exists', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=no-such-venue,nor-this')).toEqual([]);
+  });
+
+  it('ORs two vibes', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('filterVibe=jazz,punk')).toEqual([
+      'Bluebird Punk',
+      'Ogden Jazz',
+    ]);
+  });
+
+  it('ANDs the venue list with the vibe list', async () => {
+    await seedThreeVenues();
+    // Ogden or Gothic, and rock or punk: Bluebird Punk is the wrong venue and
+    // Ogden Jazz the wrong vibe.
+    expect(
+      await titlesFor('venueSlug=ogden,gothic&filterVibe=rock,punk'),
+    ).toEqual(['Gothic Rock', 'Ogden Rock']);
+  });
+
+  it('keeps a legacy single-value URL working unchanged', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=ogden&filterVibe=rock')).toEqual([
+      'Ogden Rock',
+    ]);
+  });
+
+  it('treats an empty list as no filter', async () => {
+    await seedThreeVenues();
+    expect(await titlesFor('venueSlug=&filterVibe=,')).toHaveLength(4);
+  });
+
+  it('rejects an unknown param instead of ignoring it', async () => {
+    await seedThreeVenues();
+    // The page-URL name, not the API's: before the schema was strict this
+    // came back 200 with the venue filter silently dropped (#1698).
+    const res = await app.request('/v1/events?filterWhere=ogden');
+    expect(res.status).toBe(400);
+  });
+
+  it('caps each list at 25 values', async () => {
+    const slugs = (count: number): string =>
+      Array.from({ length: count }, (_, i) => `venue-${i}`).join(',');
+
+    expect(
+      (await app.request(`/v1/events?venueSlug=${slugs(25)}`)).status,
+    ).toBe(200);
+    expect(
+      (await app.request(`/v1/events?venueSlug=${slugs(26)}`)).status,
+    ).toBe(400);
+    expect(
+      (await app.request(`/v1/events?filterVibe=${slugs(26)}`)).status,
+    ).toBe(400);
   });
 });

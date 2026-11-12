@@ -119,6 +119,24 @@ describe('useEvents pagination', () => {
     expect(params.has('filterWhere')).toBe(false);
   });
 
+  it('keeps every Where and Vibe value on page 2', async () => {
+    // Where and Vibe are multi-select: page 2 must ask for the same venue
+    // and vibe SETS page 1 did, not just the first of each.
+    const nextPage = await renderAndLoadMore(
+      'filterWhere=ogden-theatre&filterWhere=bluebird&filterVibe=indie&filterVibe=punk',
+    );
+
+    const params = new URL(nextPage, 'https://x').searchParams;
+    expect(params.get('offset')).toBe('20');
+    expect(params.getAll('venueSlug')).toEqual(['ogden-theatre,bluebird']);
+    expect(params.getAll('filterVibe')).toEqual(['indie,punk']);
+    expect(params.has('filterWhere')).toBe(false);
+    // Page 1 asked for the same sets.
+    const firstPage = new URL(allRequests()[0]!, 'https://x').searchParams;
+    expect(firstPage.get('venueSlug')).toBe('ogden-theatre,bluebird');
+    expect(firstPage.get('filterVibe')).toBe('indie,punk');
+  });
+
   it('drops a scope a signed-out viewer cannot hold', async () => {
     const nextPage = await renderAndLoadMore('filterFollowing=1&filterTaste=1');
 
