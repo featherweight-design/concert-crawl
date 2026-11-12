@@ -29,6 +29,7 @@ import {
   userArtistFollows,
   userBilling,
   userCred,
+  userEventDismissals,
   userEvents,
   userNotificationPreferences,
   userProfiles,
@@ -419,6 +420,9 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
 
   // ---- Activity ----
   await seedUserEvent(userId, event.id);
+  await testDb
+    .insert(userEventDismissals)
+    .values({ userId, eventId: event.id });
   await testDb.insert(userArtistFollows).values({
     userId,
     artistName: `Deletion Artist ${nonce}`,
