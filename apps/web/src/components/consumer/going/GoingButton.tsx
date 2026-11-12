@@ -237,11 +237,21 @@ export const GoingButton = ({
     borderRadius: sizes.radius,
     // The forward action reads on --signal; the accent only ever appears once
     // the night is committed. A verb never sits on --danger.
-    background: isOn
-      ? `color-mix(in oklch, ${accent} 22%, var(--surface-1))`
-      : 'var(--surface-1)',
+    // "You went" is a solid fill in the stamp colour with a dark label
+    // (event-past-remove-d); "Going" keeps the tint.
+    background:
+      state === 'past-yes'
+        ? accent
+        : isOn
+          ? `color-mix(in oklch, ${accent} 22%, var(--surface-1))`
+          : 'var(--surface-1)',
     border: `1.5px solid ${isOn ? accent : 'var(--border-strong)'}`,
-    color: isDeclined ? 'var(--fg-subtle)' : 'var(--fg)',
+    color:
+      state === 'past-yes'
+        ? 'var(--fg-on-accent)'
+        : isDeclined
+          ? 'var(--fg-subtle)'
+          : 'var(--fg)',
     fontFamily: 'var(--font-ui)',
     fontWeight: 700,
     fontSize: sizes.font,

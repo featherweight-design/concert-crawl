@@ -27,6 +27,7 @@ import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay';
 import { GoingButton, GOING_BUTTON_SIZES } from './GoingButton';
 import { goingStateFor } from './lib/cta-state';
 import { GOING_COPY } from './definitions/copy';
+import { gradientEdge } from '@/lib/gradient-edge';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
 // Structurally narrowed to the fields this row actually reads, so an
@@ -179,8 +180,11 @@ export const EventDetailCtaBlock = ({
         flexDirection: 'column',
         gap: 11,
         padding: 14,
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
+        // "Your move" / "That night": the gradient edge and a soft accent
+        // glow, as drawn (event-past-remove-d, event-after-remove-m).
+        ...gradientEdge('var(--surface-1)'),
+        boxShadow:
+          '0 0 40px color-mix(in oklab, var(--accent) 12%, transparent)',
         borderRadius: 14,
       }}
     >

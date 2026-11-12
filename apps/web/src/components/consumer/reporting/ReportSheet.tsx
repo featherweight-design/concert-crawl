@@ -392,7 +392,13 @@ export const ReportSheet = ({
             disabled={selectedType === null}
             aria-describedby={selectedType === null ? hintId : undefined}
             style={{
-              background: 'var(--signal)',
+              // Continue takes the picked status's colour (README: each
+              // status's Continue and File buttons take its color); signal
+              // until one is picked.
+              background:
+                selectedType === null
+                  ? 'var(--signal)'
+                  : REPORT_TOKENS[selectedType].color,
               height: 48,
               borderRadius: 10,
               fontFamily: 'Inter, sans-serif',

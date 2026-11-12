@@ -89,7 +89,10 @@ export const EventTitleBlock = ({
   // up there. See SupportingLine, which makes the
   // same call for the line below these.
   const dimQuiet = surface === 'detail' ? 'text-fg-muted' : 'text-fg-subtle';
-  const dim = status !== 'upcoming';
+  // Only a cancelled show is dimmed. Postponed and No longer listed keep the
+  // name at full strength: nothing says they are off (more-st-ev_post_m,
+  // event-nll-m).
+  const dim = status === 'cancelled';
   const openers = supportingArtists ?? [];
   const hasOpeners = openers.length > 0;
   // `null` marks a legacy/pre-recrawl row (the crawler never wrote this field);
@@ -100,7 +103,12 @@ export const EventTitleBlock = ({
   const isLegacyRow = supportingArtists === null;
   // The pill itself decides whether to render; this only drives whether the
   // row that would contain it exists at all.
-  const hasPill = status !== 'upcoming';
+  //
+  // The detail hero of a No longer listed show draws no chip: the dashed card
+  // below carries it (event-nll-m).
+  const hasPill =
+    status !== 'upcoming' &&
+    !(surface === 'detail' && isDelisted(status, delistedAt));
   // B+ (`08-prices-and-status/more-st-ev_canc_m`): on the detail page the
   // status chip sits under the title, not in the tour row above it.
   const pillBelow = surface === 'detail';
@@ -164,6 +172,13 @@ export const EventTitleBlock = ({
             status === 'cancelled' &&
             !isDelisted(status, delistedAt)
               ? 'line-through'
+              : undefined,
+          // A heavier strike on the 64px headline, as drawn.
+          textDecorationThickness:
+            surface === 'detail' &&
+            status === 'cancelled' &&
+            !isDelisted(status, delistedAt)
+              ? '3px'
               : undefined,
           fontSize: headSize ?? ramp.head,
           fontWeight: surface === 'detail' ? 900 : 800,
