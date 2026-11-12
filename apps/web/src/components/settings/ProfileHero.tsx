@@ -61,6 +61,11 @@ export function ProfileHero({
   const isAnon = !handle;
   const isCard = layout === 'card';
   const { first, second } = avatarPair(avatarColor, avatarSecondColor);
+  // One colour (second falls back to first) is a solid band, no stripes.
+  const isStriped = first !== second;
+  const stripes = isStriped
+    ? 'repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in oklch, var(--fg) 9%, transparent) 7px 8px), '
+    : '';
 
   // roleBadge takes precedence; show displayRole badge only for crew/artist (not fan/staff)
   const showRoleBadge = roleBadge !== null;
@@ -174,9 +179,11 @@ export function ProfileHero({
       {/* Striped banner in the avatar's two colours. Decorative, so the Edit
           button is the only thing in it. */}
       <div
+        data-testid="profile-banner"
+        data-striped={isStriped}
         className="relative h-[70px]"
         style={{
-          backgroundImage: `repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in oklch, var(--fg) 9%, transparent) 7px 8px), linear-gradient(90deg, color-mix(in oklch, var(--${first}) 42%, var(--bg)), color-mix(in oklch, var(--${second}) 42%, var(--bg)))`,
+          backgroundImage: `${stripes}linear-gradient(90deg, color-mix(in oklch, var(--${first}) 42%, var(--bg)), color-mix(in oklch, var(--${second}) 42%, var(--bg)))`,
         }}
       >
         {onEdit ? (
