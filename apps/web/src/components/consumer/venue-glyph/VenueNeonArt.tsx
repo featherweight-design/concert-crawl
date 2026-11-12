@@ -3,6 +3,11 @@ import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
 import { VENUE_GLYPHS, type VenueGlyphKey } from './definitions/glyphs';
+import {
+  VENUE_HERO_SETTINGS,
+  type VenueHeroSetting,
+} from './definitions/venue-settings';
+import { VenueBackdrop } from './VenueBackdrop';
 import { GlyphGradient, GlyphShapes } from './VenueGlyph';
 
 /**
@@ -15,13 +20,20 @@ const NIGHT_GROUND = '#0B0D1F'; // fwd-allow-hex: board art colour
 
 interface VenueNeonArtProps {
   glyphKey: VenueGlyphKey;
-  /** Edge of the glyph's square, px. */
+  /**
+   * Edge of the glyph's square, px (the svg draws a 28-unit box around the
+   * 24-unit grid, so the grid itself is 24/28 of this).
+   */
   glyphSize: number;
+  /** A larger edge from `sm` up; omit to keep `glyphSize` at every width. */
+  glyphSizeSm?: number;
   /**
    * Where the sign sits: always centred, or centred on a phone and toward the
    * right from `sm` up, where the page title takes the left.
    */
   align?: 'center' | 'endFromSm';
+  /** The backdrop family; defaults to the board's assignment for this venue. */
+  setting?: VenueHeroSetting;
   className?: string;
 }
 
@@ -35,19 +47,22 @@ interface VenueNeonArtProps {
 export function VenueNeonArt({
   glyphKey,
   glyphSize,
+  glyphSizeSm,
   align = 'center',
+  setting = VENUE_HERO_SETTINGS[glyphKey],
   className,
 }: VenueNeonArtProps) {
   const uid = useId().replace(/:/g, '');
   const gradientId = `vn${uid}g`;
   const glowId = `vn${uid}f`;
   const { from, to } = VENUE_GLYPHS[glyphKey];
-  const discSize = Math.round(glyphSize * 1.45);
+  const responsive = glyphSizeSm !== undefined;
 
   return (
     <div
       aria-hidden="true"
       data-venue-neon={glyphKey}
+      data-venue-setting={setting}
       className={className}
       style={{
         position: 'absolute',
@@ -59,66 +74,71 @@ export function VenueNeonArt({
         ].join(', '),
       }}
     >
-      {/* Brick courses, the quiet backdrop the boards draw behind every sign. */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          opacity: 0.07,
-          backgroundImage: [
-            `repeating-linear-gradient(0deg, transparent 0 12px, ${NIGHT_GROUND} 12px 16px)`,
-            `repeating-linear-gradient(90deg, ${to} 0 40px, transparent 40px 44px)`,
-          ].join(', '),
-          maskImage: 'linear-gradient(180deg, transparent, #000)',
-          WebkitMaskImage: 'linear-gradient(180deg, transparent, #000)',
-        }}
-      />
+      <VenueBackdrop setting={setting} from={from} to={to} uid={uid} />
       <div
         className={cn(
           'absolute inset-0 flex items-center justify-center',
           align === 'endFromSm' && 'sm:justify-end sm:pr-[14%]',
         )}
       >
-        <div
+        <svg
+          width={glyphSize}
+          height={glyphSize}
+          viewBox="-2 -2 28 28"
+          focusable="false"
+          data-venue-glyph={glyphKey}
+          className={
+            responsive ? 'w-(--vn-size) sm:w-(--vn-size-sm)' : undefined
+          }
           style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: discSize,
-            height: discSize,
-            borderRadius: '50%',
-            background: `radial-gradient(circle, color-mix(in oklch, ${to} 22%, transparent) 0%, color-mix(in oklch, ${from} 12%, transparent) 62%, transparent 72%)`,
+            overflow: 'visible',
+            ...(responsive
+              ? {
+                  '--vn-size': `${glyphSize}px`,
+                  '--vn-size-sm': `${glyphSizeSm}px`,
+                  height: 'auto',
+                  aspectRatio: '1',
+                }
+              : null),
           }}
         >
-          <svg
-            width={glyphSize}
-            height={glyphSize}
-            viewBox="-2 -2 28 28"
-            focusable="false"
-            data-venue-glyph={glyphKey}
-            style={{ overflow: 'visible' }}
-          >
-            <defs>
-              <GlyphGradient id={gradientId} glyphKey={glyphKey} />
-              <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="0.45" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-            <g filter={`url(#${glowId})`}>
-              <GlyphShapes
-                glyphKey={glyphKey}
-                paint={`url(#${gradientId})`}
-                strokeWidth={0.9}
-              />
-            </g>
-          </svg>
-        </div>
+          <defs>
+            <GlyphGradient id={gradientId} glyphKey={glyphKey} />
+            <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="0.45" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Two flat halo discs spanning the glyph box (r210 and r130 of the board's 420). */}
+          <circle
+            data-venue-halo="outer"
+            cx={12}
+            cy={12}
+            r={14}
+            fill={to}
+            fillOpacity={0.1}
+          />
+          <circle
+            data-venue-halo="inner"
+            cx={12}
+            cy={12}
+            r={8.67}
+            fill={from}
+            fillOpacity={0.1}
+          />
+          <g filter={`url(#${glowId})`}>
+            <GlyphShapes
+              glyphKey={glyphKey}
+              paint={`url(#${gradientId})`}
+              strokeWidth={0.9}
+              neonFilled
+            />
+          </g>
+        </svg>
       </div>
     </div>
   );

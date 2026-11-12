@@ -15,7 +15,13 @@ export function VenueHero({ slug, name }: VenueHeroProps) {
   return (
     <div className="relative h-[380px] w-full shrink-0 sm:h-[400px]">
       {glyphKey !== null ? (
-        <VenueNeonArt glyphKey={glyphKey} glyphSize={196} align="endFromSm" />
+        // The 24-unit grid draws at ~267px on a phone and ~295px from sm.
+        <VenueNeonArt
+          glyphKey={glyphKey}
+          glyphSize={312}
+          glyphSizeSm={344}
+          align="endFromSm"
+        />
       ) : (
         <>
           <div data-testid="venue-hero-identity" className="absolute inset-0">
