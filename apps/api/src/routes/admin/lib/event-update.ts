@@ -52,7 +52,7 @@ export const eventPatchSchema = z.object({
   hiddenFromConsumer: z.boolean().optional(),
 });
 
-export type EventPatch = z.infer<typeof eventPatchSchema>;
+export type EventPatch = z.input<typeof eventPatchSchema>;
 
 /**
  * Partial event update with the watch-update fan-out (#1107, #1311). Returns
