@@ -189,6 +189,10 @@ export const REPORTING_COPY = {
     // confirms (addendum 2, 13-cancelled-variants/event-cancelled-by-crawler).
     fromVenueCalendar: (timeAgo: string) =>
       `From the venue's calendar · ${timeAgo}`,
+    // A status an admin set by hand (B+ addendum 3, decided with Hugh
+    // 2026-11-12).
+    confirmedByConcertCrawl: (timeAgo: string) =>
+      `Confirmed by Concert Crawl · ${timeAgo}`,
     // A cancelled card's second sentence names who handles the refund: the
     // ticket vendor, or the venue when its website is the only link we have.
     cancelledBody: {

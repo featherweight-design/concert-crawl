@@ -55,6 +55,7 @@ import {
   IconUsers,
 } from './InfoRow';
 import { EventTicketCta } from './EventTicketCta';
+import { EventStatusCard } from './EventStatusCard';
 
 const copy = CONSUMER_COPY.eventDetail;
 const publicCopy = CONSUMER_COPY.publicEvent;
@@ -173,6 +174,20 @@ export const PublicEventDetail = ({
 
       <div className="flex-1">
         <div className="mx-auto w-full max-w-[824px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
+          {/* The same status card as the signed-in page, read-only: no
+              Watching action (B+ addendum 3). A No longer listed show gets the
+              NLL card through it. Renders nothing for a live show. */}
+          <div className="mb-5 empty:hidden">
+            <EventStatusCard
+              event={event}
+              readOnly
+              cancelledRefund={
+                !safeTicketUrl && event.priceStatus !== 'soldout' && ctaHref
+                  ? 'venue'
+                  : 'vendor'
+              }
+            />
+          </div>
           {/* The board's order (bp-s-public_m, _d): what it costs, the way to
               buy it, then the account. Side by side from `sm` up, the account
               card in the right column. */}
