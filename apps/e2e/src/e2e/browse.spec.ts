@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 import { isVisibleWithin } from '../fixtures/presence';
+import { venueShort } from '../helpers/venue-short';
 
 // `waitForLoadState('networkidle')` is deliberately absent from this file. The
 // browse page keeps react-query polling in the background, so networkidle either
@@ -52,9 +53,11 @@ test.describe('browse events page', () => {
     await firstVenueOption.click();
 
     // The filter lives in the URL, and the chip relabels itself to the active
-    // venue — both have to agree for the filter to have actually landed.
+    // venue — both have to agree for the filter to have actually landed. The
+    // chip shows the short name ("Bluebird", not "Bluebird Theater"), so the
+    // row's full name goes through the same shortening before the compare.
     await page.waitForURL(/filterWhere=/, { timeout: 15_000 });
-    await expect(venueChip).toContainText(venueLabel);
+    await expect(venueChip).toContainText(venueShort(venueLabel));
   });
 
   test('load more fetches additional events', async ({ page }) => {

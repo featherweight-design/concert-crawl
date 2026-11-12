@@ -45,7 +45,7 @@ interface VibeOptionGridProps {
  * draws them all, and no board hides a bucket without shows. Picking an empty
  * one simply returns no shows.
  */
-export function VibeOptionGrid({ selected, onToggle }: VibeOptionGridProps) {
+export const VibeOptionGrid = ({ selected, onToggle }: VibeOptionGridProps) => {
   const options = getFilterOptions('vibe', [], [...VIBE_ORDER]);
   return (
     <div className="grid grid-cols-2 gap-x-2.5 gap-y-1">
@@ -91,7 +91,7 @@ export function VibeOptionGrid({ selected, onToggle }: VibeOptionGridProps) {
       })}
     </div>
   );
-}
+};
 
 interface VibeShowButtonProps {
   count: number;
@@ -99,7 +99,7 @@ interface VibeShowButtonProps {
 }
 
 /** The footer's "Show N shows": applies nothing new, it closes the popover. */
-export function VibeShowButton({ count, onClick }: VibeShowButtonProps) {
+export const VibeShowButton = ({ count, onClick }: VibeShowButtonProps) => {
   return (
     <button
       type="button"
@@ -116,4 +116,4 @@ export function VibeShowButton({ count, onClick }: VibeShowButtonProps) {
       {copy.vibeShow(count)}
     </button>
   );
-}
+};

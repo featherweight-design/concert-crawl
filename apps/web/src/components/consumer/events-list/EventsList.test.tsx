@@ -4,6 +4,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { EventWithVenue } from '@concert-crawl/types';
+import type * as OrderGenres from '@/components/consumer/event-row/lib/order-genres';
 
 let searchString = '';
 let pages: { data: EventWithVenue[] }[] = [];
@@ -22,17 +23,45 @@ vi.mock('@/lib/queries/use-events', () => ({
 vi.mock('@/lib/queries/use-watching', () => ({
   useWatching: () => ({ data: [] }),
 }));
-vi.mock('@/components/consumer/event-row', () => ({
-  EventRow: ({ show }: { show: { id: string } }) => (
-    <div data-testid="row">{show.id}</div>
-  ),
-  fromEventWithVenue: (event: { id: string }) => ({ id: event.id }),
-}));
+// The stub keeps the row's genre lead real: it orders the show's genres by the
+// vibes the list handed it, through the same helpers the real row uses, so a
+// test can read which genres a row leads with.
+vi.mock('@/components/consumer/event-row', async () => {
+  const { orderGenres, vibeBucketMembers } = await vi.importActual<
+    typeof OrderGenres
+  >('@/components/consumer/event-row/lib/order-genres');
+  return {
+    EventRow: ({
+      show,
+      filterVibes = [],
+    }: {
+      show: { id: string; genres: readonly string[] };
+      filterVibes?: readonly string[];
+    }) => (
+      <div
+        data-testid="row"
+        data-lead-genres={orderGenres(
+          show.genres,
+          vibeBucketMembers(filterVibes),
+        ).join('|')}
+      >
+        {show.id}
+      </div>
+    ),
+    fromEventWithVenue: (event: { id: string; genre?: string[] }) => ({
+      id: event.id,
+      genres: event.genre ?? [],
+    }),
+  };
+});
 
 import { EventsList } from './EventsList';
 
-const eventOn = (id: string, date: string): EventWithVenue =>
-  ({ id, date }) as unknown as EventWithVenue;
+const eventOn = (
+  id: string,
+  date: string,
+  genre: string[] = [],
+): EventWithVenue => ({ id, date, genre }) as unknown as EventWithVenue;
 
 const renderList = () =>
   render(
@@ -121,5 +150,26 @@ describe('EventsList day groups', () => {
 
     expect(headings()).toHaveLength(2);
     expect(screen.getByText('old')).toBeTruthy();
+  });
+});
+
+describe('EventsList vibe lead', () => {
+  // Addendum 3, lane a6 row 41: every chosen vibe is highlighted. The key
+  // repeats, so reading it with `.get()` would keep only the first vibe and
+  // the row would lead with jazz then its unmatched country.
+  it('leads each row with the genres every chosen vibe matched', () => {
+    searchString = 'filterVibe=jazz&filterVibe=rock';
+    pages = [
+      {
+        data: [
+          eventOn('show', '2026-11-11', ['country', 'jazz', 'garage rock']),
+        ],
+      },
+    ];
+    renderList();
+
+    expect(screen.getByTestId('row').getAttribute('data-lead-genres')).toBe(
+      'jazz|garage rock',
+    );
   });
 });

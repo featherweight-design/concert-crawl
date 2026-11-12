@@ -164,7 +164,7 @@ interface FilterBarProps {
  * before (`bp-f-filt_active_d`: "Bluebird +1" over two venue tiles,
  * "Electronic +1" over two genre dots). A single mark renders as it is.
  */
-function StackedMarks({
+const StackedMarks = ({
   children,
   testId,
   tight = false,
@@ -173,7 +173,7 @@ function StackedMarks({
   testId: string;
   /** The 7px dots overlap by a sliver; the 18px tiles by a third. */
   tight?: boolean;
-}) {
+}) => {
   return (
     <span
       aria-hidden
@@ -186,7 +186,7 @@ function StackedMarks({
       {children}
     </span>
   );
-}
+};
 
 export function FilterBar({
   venues,
@@ -420,10 +420,13 @@ export function FilterBar({
     [updateParams],
   );
 
-  // Rendered in exactly one place (the phone chip row, or the desktop count
-  // line), so its entitlement effects never run twice. It draws nothing until
-  // its entitlement resolves on the client, so choosing its home after
-  // hydration moves nothing the first paint drew.
+  // Mounted in one place at a time (the phone chip row, or the desktop count
+  // line, picked by `isDesktop`), so only one copy of its lapsed-entitlement
+  // effect is live. It can still move once after hydration, because the
+  // server snapshot reads as phone; it draws nothing until its entitlement
+  // resolves on the client, so that move shifts nothing the first paint drew.
+  // The My artists chip is different: both of its instances stay mounted and
+  // CSS shows one, so it takes an `ownsEffects` flag instead.
   const tasteChip = (
     <TasteFilterChip
       active={tasteActive}
@@ -637,7 +640,8 @@ export function FilterBar({
             Either chip can render nothing, and because each owns the divider
             that FOLLOWS it, no combination can strand a leading rule. The
             row is `sm:hidden`, so this chip and the bar's switch below both
-            render and CSS shows one per width. */}
+            render and CSS shows one per width; this one owns the
+            lapsed-entitlement release. */}
         <FollowFilterChip
           active={followActive}
           onToggle={toggleFollow}
@@ -700,8 +704,11 @@ export function FilterBar({
           className={SEGMENT_BAR_CLASS}
           style={segmentBarStyle(barActive)}
         >
+          {/* The phone row's chip above stays mounted at every width, so it
+              owns the lapsed-entitlement release; this one only draws. */}
           <FollowFilterChip
             variant="segment"
+            ownsEffects={false}
             active={followActive}
             onToggle={toggleFollow}
             followCount={followCount}

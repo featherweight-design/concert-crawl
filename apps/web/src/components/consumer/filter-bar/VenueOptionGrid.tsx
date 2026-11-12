@@ -33,11 +33,11 @@ interface VenueOptionGridProps {
   onToggle: (slug: string) => void;
 }
 
-export function VenueOptionGrid({
+export const VenueOptionGrid = ({
   venues,
   selected,
   onToggle,
-}: VenueOptionGridProps) {
+}: VenueOptionGridProps) => {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -133,4 +133,4 @@ export function VenueOptionGrid({
       )}
     </div>
   );
-}
+};

@@ -172,6 +172,17 @@ describe('FollowFilterChip', () => {
     expect(onToggle).toHaveBeenCalledWith(false);
   });
 
+  it('leaves the release to the owning instance when it does not own effects', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    };
+    const onToggle = vi.fn();
+    renderChip({ active: true, onToggle, ownsEffects: false });
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
   describe('segment variant (desktop bar)', () => {
     it('is a switch reading Off at rest', () => {
       entitlementState.current = ENTITLED;

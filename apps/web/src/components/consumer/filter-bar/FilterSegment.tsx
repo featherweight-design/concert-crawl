@@ -38,7 +38,7 @@ interface FilterSegmentProps {
   onClear: () => void;
 }
 
-export function FilterSegment({
+export const FilterSegment = ({
   eyebrow,
   value,
   suffix,
@@ -51,7 +51,7 @@ export function FilterSegment({
   openerRef,
   onToggle,
   onClear,
-}: FilterSegmentProps) {
+}: FilterSegmentProps) => {
   return (
     <div
       ref={anchorRef}
@@ -116,4 +116,4 @@ export function FilterSegment({
       )}
     </div>
   );
-}
+};
