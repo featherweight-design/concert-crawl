@@ -83,22 +83,24 @@ describe('GoingNudge', () => {
     expect(screen.getByRole('status').textContent).toMatch(/In \d+ days\./);
   });
 
-  // B+ "My shows": "Going? In N days." holds one line beside the button.
-  it('keeps the question and the day count on one unwrapping line', () => {
+  // Addendum 2 item 5: the heading is "Going to this show?", followed by the
+  // "In N days." line. "Going? In N days." was README shorthand, not copy.
+  it('reads "Going to this show?" then the day count', () => {
     renderNudge();
     const line = screen.getByTestId('going-nudge-line');
-    expect(line.textContent).toMatch(/^Going\? In \d+ days\.$/);
-    expect(line.style.whiteSpace).toBe('nowrap');
+    expect(GOING_COPY.nudge.heading).toBe('Going to this show?');
+    expect(line.textContent).toMatch(/^Going to this show\? In \d+ days\.$/);
+    expect(screen.getByTestId('going-nudge-days').textContent).toMatch(
+      /^In \d+ days\.$/,
+    );
   });
 
-  // At 320px only the question may shrink; the count must never clip.
-  it('lets only the question truncate, never the day count', () => {
+  // Nothing truncates the heading or the day count.
+  it('never truncates the heading or the day count', () => {
     renderNudge();
-    expect(screen.getByTestId('going-nudge-question')).toHaveClass('truncate');
-    const days = screen.getByTestId('going-nudge-days');
-    expect(days).not.toHaveClass('truncate');
-    expect(days.style.flexShrink).toBe('0');
-    expect(days.textContent).toMatch(/^In \d+ days\.$/);
+    const line = screen.getByTestId('going-nudge-line');
+    expect(line.querySelector('.truncate')).toBeNull();
+    expect(line.style.whiteSpace).not.toBe('nowrap');
   });
 
   // B+ rule 4: the upcoming night shows the dashed stamp it will become.
