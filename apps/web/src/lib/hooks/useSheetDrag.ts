@@ -1,8 +1,13 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  CSSProperties,
+  PointerEvent as ReactPointerEvent,
+  TransitionEvent as ReactTransitionEvent,
+} from 'react';
 import { prefersReducedMotion } from '@/lib/motion';
+import { useMediaQuery } from './useMediaQuery';
 
 /** Finger travel below this is still a tap, so a close button keeps its click. */
 export const DRAG_START_PX = 8;
@@ -32,8 +37,6 @@ interface ActiveDrag {
 
 type Phase = 'idle' | 'dragging' | 'settling';
 
-export type SheetDragZone = SheetDrag['zoneProps'];
-
 interface SheetDrag {
   /** Spread on the grab zone: the handle strip or the sheet's header. */
   zoneProps: {
@@ -41,14 +44,19 @@ interface SheetDrag {
     onPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
     onPointerUp: (event: ReactPointerEvent<HTMLElement>) => void;
     onPointerCancel: (event: ReactPointerEvent<HTMLElement>) => void;
-    /** The zone is small and not a scroller, so the finger is ours there. */
+    /**
+     * The zone is small and not a scroller, so on a phone the finger is ours
+     * there. From sm up the sheet is a modal and the zone is left alone.
+     */
     style: CSSProperties;
   };
   /** Merge into the sheet's style: it follows the finger, then settles back. */
   sheetStyle: CSSProperties | undefined;
-  /** Put on the sheet: ends the settle-back once its transition is over. */
-  onSheetTransitionEnd: () => void;
+  /** Put on the sheet: ends the settle-back once its own transition is over. */
+  onSheetTransitionEnd: (event: ReactTransitionEvent<HTMLElement>) => void;
 }
+
+export type SheetDragZone = SheetDrag['zoneProps'];
 
 /**
  * Drag-down dismiss for a mobile bottom sheet, shared by every sheet shell.
@@ -56,40 +64,66 @@ interface SheetDrag {
  * sheet's own scrolling and taps are untouched. Past a distance, or on a quick
  * flick, it calls `onDismiss`; otherwise it settles back. With reduced motion
  * it still follows the finger but snaps back without animating.
+ *
+ * Pass `open` when the surface stays mounted while closed, so a close in the
+ * middle of a drag or a settle never leaves the sheet pushed down on reopen.
  */
-export function useSheetDrag(onDismiss: () => void): SheetDrag {
+export function useSheetDrag(onDismiss: () => void, open = true): SheetDrag {
+  const onPhone = useMediaQuery(SHEET_QUERY);
   const [offset, setOffset] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
   const active = useRef<ActiveDrag | null>(null);
+  const offsetRef = useRef(0);
 
-  const onPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    if (!window.matchMedia?.(SHEET_QUERY).matches) return;
-    active.current = {
-      pointerId: event.pointerId,
-      startY: event.clientY,
-      startedAt: performance.now(),
-      moving: false,
-    };
+  const moveTo = useCallback((value: number) => {
+    offsetRef.current = value;
+    setOffset(value);
   }, []);
 
-  const onPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    const drag = active.current;
-    if (drag === null || drag.pointerId !== event.pointerId) return;
-    const distance = event.clientY - drag.startY;
-    if (!drag.moving) {
-      if (Math.abs(distance) < DRAG_START_PX) return;
-      // Upward first: not a dismiss gesture, leave it alone.
-      if (distance < 0) {
-        active.current = null;
-        return;
+  const rest = useCallback(() => {
+    active.current = null;
+    setPhase('idle');
+    moveTo(0);
+  }, [moveTo]);
+
+  useEffect(() => {
+    if (!open) rest();
+  }, [open, rest]);
+
+  const onPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      if (!onPhone) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      active.current = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startedAt: performance.now(),
+        moving: false,
+      };
+    },
+    [onPhone],
+  );
+
+  const onPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      const drag = active.current;
+      if (drag === null || drag.pointerId !== event.pointerId) return;
+      const distance = event.clientY - drag.startY;
+      if (!drag.moving) {
+        if (Math.abs(distance) < DRAG_START_PX) return;
+        // Upward first: not a dismiss gesture, leave it alone.
+        if (distance < 0) {
+          active.current = null;
+          return;
+        }
+        drag.moving = true;
+        setPhase('dragging');
+        event.currentTarget.setPointerCapture?.(event.pointerId);
       }
-      drag.moving = true;
-      setPhase('dragging');
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    }
-    setOffset(Math.max(0, distance));
-  }, []);
+      moveTo(Math.max(0, distance));
+    },
+    [moveTo],
+  );
 
   const finish = useCallback(
     (event: ReactPointerEvent<HTMLElement>, cancelled: boolean) => {
@@ -101,19 +135,19 @@ export function useSheetDrag(onDismiss: () => void): SheetDrag {
       const elapsed = performance.now() - drag.startedAt;
       if (!cancelled && shouldDismiss(distance, elapsed)) {
         onDismiss();
-        setPhase('idle');
-        setOffset(0);
+        rest();
         return;
       }
-      if (prefersReducedMotion()) {
-        setPhase('idle');
-        setOffset(0);
+      // Nothing to animate back from (already at rest, or no motion allowed):
+      // no transition would fire, so go straight to idle instead of settling.
+      if (offsetRef.current === 0 || prefersReducedMotion()) {
+        rest();
         return;
       }
       setPhase('settling');
-      setOffset(0);
+      moveTo(0);
     },
-    [onDismiss],
+    [onDismiss, rest, moveTo],
   );
 
   const onPointerUp = useCallback(
@@ -125,9 +159,15 @@ export function useSheetDrag(onDismiss: () => void): SheetDrag {
     [finish],
   );
 
-  const onSheetTransitionEnd = useCallback(() => {
-    setPhase((current) => (current === 'settling' ? 'idle' : current));
-  }, []);
+  const onSheetTransitionEnd = useCallback(
+    (event: ReactTransitionEvent<HTMLElement>) => {
+      // Transitions bubble: a child's own (a day cell's hover, say) is not the
+      // sheet's settle finishing.
+      if (event.target !== event.currentTarget) return;
+      setPhase((current) => (current === 'settling' ? 'idle' : current));
+    },
+    [],
+  );
 
   return {
     zoneProps: {
@@ -135,7 +175,7 @@ export function useSheetDrag(onDismiss: () => void): SheetDrag {
       onPointerMove,
       onPointerUp,
       onPointerCancel,
-      style: { touchAction: 'none' },
+      style: onPhone ? { touchAction: 'none' } : {},
     },
     sheetStyle:
       phase === 'idle'
