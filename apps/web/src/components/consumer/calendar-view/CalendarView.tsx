@@ -78,10 +78,7 @@ export function CalendarView({
       : {}),
   });
 
-  const dayGenres = useMemo(
-    () => dayGenreColors(events, filterVibe),
-    [events, filterVibe],
-  );
+  const dayGenres = useMemo(() => dayGenreColors(events), [events]);
 
   const weekDates = useMemo(() => new Set(days.map((day) => day.date)), [days]);
 
