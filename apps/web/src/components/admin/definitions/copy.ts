@@ -2434,8 +2434,6 @@ export const ADMIN_COPY = {
     noResults: (itemLabel: string) => `No ${itemLabel}`,
   },
 
-  // The Spotify artist match-review queue (#1115, PR-C). Deliberately plain:
-  // this surface is exempt from the design pipeline.
   // 4c Artists (`06/artists-*`). Board strings are verbatim; the rest went
   // through copy-review.
   artists: {
@@ -2466,7 +2464,30 @@ export const ADMIN_COPY = {
       `${count} wrong-artist ${count === 1 ? 'report' : 'reports'}`,
     matchedAutomatically: 'Matched automatically',
     candidates: (name: string) => `Spotify artists for ${name}`,
-    searchCard: { title: 'Search', line: 'Pick someone else' },
+    searchCard: {
+      title: 'Search',
+      line: 'Pick someone else',
+      // A searched row arrives without the match job's candidates.
+      showCandidates: 'Show candidates',
+      loading: 'Loading…',
+      failed: "Couldn't reach Spotify",
+    },
+    // The open reports on a reported row: what Looks right would dismiss.
+    reportList: {
+      label: (name: string) => `Reports on ${name}`,
+      loading: 'Loading reports…',
+      failed: "Couldn't load the reports.",
+      reason: {
+        different_artist: 'Different artist, same name',
+        wrong_photo: 'Right music, wrong photo',
+        not_an_artist: 'Not an artist',
+        other: 'Something else',
+      },
+      age: (days: number) => (days < 1 ? 'today' : `${days}d ago`),
+      meta: (reason: string, age: string) => `${reason} · ${age}`,
+      separator: ' · ',
+      suggested: 'Suggested artist',
+    },
     useSelected: 'Use selected',
     looksRight: 'Looks right',
     notAnArtist: 'Not an artist',
@@ -2474,7 +2495,7 @@ export const ADMIN_COPY = {
     searchButton: 'Search',
     notAnArtistConfirm: {
       title: (name: string) => `Mark ${name} as not an artist?`,
-      body: 'Its page comes down and matching stops. You can send it back from Not artists.',
+      body: 'Its page comes down and matching stops.',
       confirm: 'Not an artist',
     },
     empty: {
