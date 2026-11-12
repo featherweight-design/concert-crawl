@@ -175,6 +175,42 @@ describe('BottomSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the bordered close and 24px padding by default', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const close = screen.getByRole('button', { name: /close/i });
+    expect(close.querySelector('span.border')).not.toBeNull();
+    expect(screen.getByRole('dialog').className).toContain(' p-6 ');
+  });
+
+  it('draws a bare close in the same 44px target and a 20px gutter on request', () => {
+    const onClose = vi.fn();
+    render(
+      <BottomSheet
+        open
+        onClose={onClose}
+        title="test"
+        closeVariant="bare"
+        inset="tight"
+      >
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    const close = screen.getByRole('button', { name: /close/i });
+    expect(close.querySelector('span.border')).toBeNull();
+    expect(close.querySelector('svg')).not.toBeNull();
+    expect(close.className).toContain('h-11');
+    expect(close.className).toContain('w-11');
+    const sheet = screen.getByRole('dialog').className;
+    expect(sheet).toContain('px-5');
+    expect(sheet).not.toContain(' p-6 ');
+    fireEvent.click(close);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('closes when the scrim is clicked', () => {
     const onClose = vi.fn();
     const { container } = render(
