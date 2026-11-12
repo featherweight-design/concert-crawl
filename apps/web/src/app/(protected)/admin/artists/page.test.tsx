@@ -276,20 +276,28 @@ describe('AdminArtistsPage', () => {
   });
 
   it('keeps a resolved row in place during a search', async () => {
-    harness.list = [row(), row({ id: 'artist-2', name: 'Bingo Hall' })];
     harness.patched = row({ matchStatus: 'not_an_artist' });
     await renderLoaded();
 
+    // Only the search answers with the second row, so seeing it rendered is
+    // proof the search's load has landed. The notice is not: it renders in
+    // the commit that starts that load. Syncing on the notice let the click
+    // race the load, which can fail three ways depending on timing: the loading
+    // panel had swapped the table out (no row to click), the load landed
+    // under the PATCH and its generation bump dropped the write (no badge),
+    // or its GETs were counted after the baseline.
+    harness.list = [row(), row({ id: 'artist-2', name: 'Bingo Hall' })];
     fireEvent.change(screen.getByLabelText('Search artists'), {
       target: { value: 'bingo' },
     });
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          'Searching every status and every date. Clear the box to filter by chip.',
-        ),
-      ).toBeDefined(),
-    );
+    // `setRows`, the generation bump and `setIsLoading(false)` run in one
+    // synchronous block, so once the row is on screen the load is done.
+    await waitFor(() => expect(screen.getByText('Bingo Hall')).toBeDefined());
+    expect(
+      screen.getByText(
+        'Searching every status and every date. Clear the box to filter by chip.',
+      ),
+    ).toBeDefined();
     const getsAfterSearch = getCount();
 
     fireEvent.click(
