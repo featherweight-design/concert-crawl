@@ -11,7 +11,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "a[href^=\"/venues/\"]"
@@ -27,7 +27,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"venue-name\"]"
@@ -43,7 +43,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"venue-name\"]"
@@ -59,7 +59,7 @@
           "settle": 1000
         },
         {
-          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         {
           "wait": "[data-testid=\"venue-name\"]"
