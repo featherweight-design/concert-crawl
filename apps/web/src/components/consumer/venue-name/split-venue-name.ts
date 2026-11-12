@@ -1,8 +1,10 @@
 /**
  * Venue nouns that name the kind of room, not the venue. The B+ boards leave
  * these plain and gradient the distinctive words ("The Church Nightclub",
- * "Red Rocks Amphitheatre"). The addendum-3 ruling is not in the repo, so this
- * is a small explicit list.
+ * "Red Rocks Amphitheatre"). The addendum-3 ruling names Theatre, Theater,
+ * Hall, Club, Nightclub, Ballroom, Lounge, Pavilion, Amphitheatre, Arena and
+ * Room; the rest of this list is the extra nouns we also treat as generic.
+ * "box" is deliberately not here: "The Black Box" gradients "Box".
  */
 const GENERIC_VENUE_NOUNS: ReadonlySet<string> = new Set([
   'amphitheatre',
@@ -17,7 +19,6 @@ const GENERIC_VENUE_NOUNS: ReadonlySet<string> = new Set([
   'club',
   'pavilion',
   'arena',
-  'box',
   'garden',
   'gardens',
   'room',
@@ -50,10 +51,11 @@ function isDistinctive(word: string): boolean {
 }
 
 /**
- * Picks the run of distinctive words that ends at the last word which is not
- * a generic venue noun or a leading article. "Red Rocks Amphitheatre" gives
- * "Red Rocks"; "The Church Nightclub" gives "Church". A name with no
- * distinctive word (all generic) gives null and renders plain.
+ * Picks the last word that is not a generic venue noun or a leading article
+ * (addendum-3 B11 "Name gradient"). "Red Rocks Amphitheatre" gives "Rocks";
+ * "The Black Box" gives "Box"; "The Church Nightclub" gives "Church"; a
+ * one-word name takes it whole. A name with no distinctive word (all generic)
+ * gives null and renders plain.
  */
 export function splitVenueName(name: string): VenueNameParts | null {
   const words = [...name.matchAll(/\S+/g)].map((match) => ({
@@ -68,9 +70,7 @@ export function splitVenueName(name: string): VenueNameParts | null {
     }
   }
   if (last === -1) return null;
-  let first = last;
-  while (first > 0 && isDistinctive(words[first - 1]!.text)) first -= 1;
-  const startIndex = words[first]!.start;
+  const startIndex = words[last]!.start;
   const endIndex = words[last]!.start + words[last]!.text.length;
   return {
     before: name.slice(0, startIndex),

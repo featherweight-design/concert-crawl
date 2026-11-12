@@ -117,6 +117,7 @@ export function VenueNeonArt({
         to={to}
         ground={ground}
         uid={uid}
+        wide={responsive}
       />
       <div
         className={cn(

@@ -24,6 +24,17 @@ describe('VenueHero', () => {
     ).not.toBeNull();
   });
 
+  it('draws the desktop sign about a quarter larger than before', () => {
+    const { container } = render(
+      <VenueHero slug="the-church-nightclub" name="The Church Nightclub" />,
+    );
+    const glyph = container.querySelector(
+      'svg[data-venue-glyph="church"]',
+    ) as SVGElement;
+    expect(glyph.style.getPropertyValue('--vn-size')).toBe('163px');
+    expect(glyph.style.getPropertyValue('--vn-size-sm')).toBe('245px');
+  });
+
   it('keeps the identity art for a venue without one', () => {
     const { container } = render(
       <VenueHero slug="new-room-denver" name="New Room" />,
