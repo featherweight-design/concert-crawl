@@ -66,9 +66,10 @@ export const BrowseSkeleton = ({ rows = 4 }: BrowseSkeletonProps) => (
     {/* The chrome renders as it looks live (rule 9; Hugh's audit ruling:
         match the mock), inert. It follows FilterBar through ./chrome, so the
         B6a/B6b filter bar restyle updates it there, not here. */}
-    {/* The My artists chip stays off: the live chip renders nothing until
-        its entitlement resolves, so drawing it here could show a chip that
-        then vanishes. */}
+    {/* On the phone the My artists chip stays off: the live chip renders
+        nothing until its entitlement resolves, so drawing it here could show
+        a chip that then vanishes. From sm up the preview draws the segmented
+        bar as `load_browse_d` does, My artists and Who included. */}
     <div className="mb-5">
       <FilterBarPreview />
     </div>

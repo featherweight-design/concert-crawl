@@ -18,7 +18,7 @@
 // filtering (#794's identical-pixels rule means the gate is told in the
 // aria-describedby sentence, not in the visible label).
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import type { PickerEntry } from '@concert-crawl/types';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
@@ -27,31 +27,18 @@ import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definit
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ChipDivider, SegmentDivider } from './ChipDivider';
-import { FOLLOW_CHIP_CLASS, followChipStyle } from './chrome';
+import {
+  FOLLOW_CHIP_CLASS,
+  LockGlyph,
+  SwitchTrack,
+  followChipStyle,
+  segmentEyebrowStyle as eyebrowStyle,
+  segmentValueStyle as valueStyle,
+} from './chrome';
 
 const SEGMENT_COPY = CONSUMER_COPY.filterBar.segment;
 
 const GATE_DESCRIPTION_ID = 'follow-scope-chip-gate';
-
-const LockGlyph = () => (
-  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
-    <rect
-      x="2.2"
-      y="5.4"
-      width="7.6"
-      height="5"
-      rx="1.2"
-      stroke="currentColor"
-      strokeWidth="1.3"
-    />
-    <path
-      d="M4 5.4V4a2 2 0 014 0v1.4"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-    />
-  </svg>
-);
 
 interface FollowFilterChipProps {
   active: boolean;
@@ -76,58 +63,6 @@ interface FollowFilterChipProps {
    */
   variant?: 'chip' | 'segment';
 }
-
-const eyebrowStyle = (active: boolean): CSSProperties => ({
-  fontFamily: 'var(--font-mono)',
-  fontSize: 9,
-  fontWeight: 700,
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-  color: active ? 'var(--signal)' : 'var(--fg-subtle)',
-});
-
-const valueStyle = (muted: boolean): CSSProperties => ({
-  fontFamily: 'var(--font-ui)',
-  fontSize: 15,
-  fontWeight: 600,
-  letterSpacing: '-0.01em',
-  color: muted ? 'var(--fg-subtle)' : 'var(--fg)',
-});
-
-/** The switch's track, drawn rather than a native checkbox so it can lock. */
-const SwitchTrack = ({ on, locked }: { on: boolean; locked: boolean }) => (
-  <span
-    aria-hidden
-    className="relative inline-flex shrink-0 items-center"
-    style={{
-      width: 30,
-      height: 18,
-      borderRadius: 9,
-      background: on ? 'var(--signal)' : 'var(--surface-2)',
-      border: locked
-        ? '1px dashed var(--border-strong)'
-        : `1px solid ${on ? 'var(--signal)' : 'var(--border-strong)'}`,
-      color: 'var(--fg-subtle)',
-    }}
-  >
-    {locked ? (
-      <span className="mx-auto inline-flex">
-        <LockGlyph />
-      </span>
-    ) : (
-      <span
-        className="absolute rounded-full transition-[left] duration-[var(--motion-fast)] ease-[var(--motion-ease)]"
-        style={{
-          top: 2,
-          left: on ? 14 : 2,
-          width: 12,
-          height: 12,
-          background: on ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-        }}
-      />
-    )}
-  </span>
-);
 
 export const FollowFilterChip = ({
   active,

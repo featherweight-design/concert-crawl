@@ -56,6 +56,50 @@ const PRICE_OPTIONS: FilterOption[] = [
 
 export const FILTER_ORDER: FilterKey[] = ['when', 'where', 'price', 'vibe'];
 
+/** A venue's name for sorting: a leading "The" is ignored, as the boards do. */
+const venueSortName = (name: string): string =>
+  name.replace(/^the\s+/i, '').trim();
+
+/**
+ * Orders venues by name, ignoring a leading "The" (`bp-f-filt_where_d`:
+ * Ball Arena, The Black Box, Bluebird Theater, ...).
+ */
+export const compareVenueNames = (left: string, right: string): number =>
+  venueSortName(left).localeCompare(venueSortName(right));
+
+/**
+ * The Vibe popover's order (`bp-vibe-vibe_pop_d`), read row by row across its
+ * two columns. A bucket missing here sorts after these, alphabetically.
+ */
+export const VIBE_ORDER: readonly string[] = [
+  'electronic',
+  'hip-hop',
+  'pop',
+  'indie',
+  'rock',
+  'metal',
+  'punk',
+  'folk',
+  'country',
+  'jazz',
+  'latin',
+  'reggae',
+  'jam',
+  'world',
+  'classical',
+  'comedy',
+];
+
+export const orderVibes = (genres: readonly string[]): string[] => {
+  const rank = (genre: string) => {
+    const index = VIBE_ORDER.indexOf(genre);
+    return index === -1 ? VIBE_ORDER.length : index;
+  };
+  return [...genres].sort(
+    (left, right) => rank(left) - rank(right) || left.localeCompare(right),
+  );
+};
+
 function genreLabel(genre: string): string {
   return genre.replace(
     /(^|[-&])([a-z])/g,

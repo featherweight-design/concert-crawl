@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,8 +8,16 @@ import {
   FILTER_DEFS,
   FILTER_ORDER,
 } from '@/components/consumer/filter-bar/filter-defs';
+import {
+  COUNT_ROW_CLASS,
+  SEGMENT_BAR_CLASS,
+  SEGMENT_BLOCK_CLASS,
+} from '@/components/consumer/filter-bar/chrome';
+import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { BrowseSkeleton } from './BrowseSkeleton';
+
+const copy = CONSUMER_COPY.filterBar;
 
 let reduced = false;
 const animate = vi.fn(() => ({ cancel: vi.fn() }));
@@ -54,8 +62,11 @@ describe('BrowseSkeleton', () => {
     render(<BrowseSkeleton />);
     expect(screen.getByText(CONSUMER_COPY.filterBar.locationLine)).toBeTruthy();
     expect(screen.getByText(CONSUMER_COPY.filterBar.headingTitle)).toBeTruthy();
+    const chips = screen.getByTestId('filter-bar-preview-chips');
     for (const key of FILTER_ORDER) {
-      expect(screen.getByText(FILTER_DEFS[key].placeholder)).toBeTruthy();
+      expect(
+        within(chips).getByText(FILTER_DEFS[key].placeholder),
+      ).toBeTruthy();
     }
     expect(screen.getByTestId('browse-hero-skeleton')).toBeTruthy();
     expect(screen.getAllByTestId('browse-row-skeleton')).toHaveLength(4);
@@ -88,9 +99,54 @@ describe('BrowseSkeleton', () => {
     expect(document.querySelector('[aria-busy]')).toBeNull();
   });
 
-  it('leaves out the My artists chip it cannot know about', () => {
+  it('leaves out the phone My artists chip it cannot know about', () => {
     render(<BrowseSkeleton />);
-    expect(screen.queryByText(FOLLOWING_COPY.chip)).toBeNull();
+    const chips = screen.getByTestId('filter-bar-preview-chips');
+    expect(within(chips).queryByText(FOLLOWING_COPY.chip)).toBeNull();
+  });
+
+  it('draws the desktop segmented bar at rest, as load_browse_d does', () => {
+    render(<BrowseSkeleton />);
+    const bar = screen.getByTestId('filter-bar-preview-bar');
+    // Phone gets the chip row, sm and up the bar: never both on screen.
+    expect(bar.className).toContain('hidden');
+    expect(bar.className).toContain('sm:flex');
+    expect(screen.getByTestId('filter-bar-preview-chips').className).toContain(
+      'sm:hidden',
+    );
+    expect(within(bar).getByText(FOLLOWING_COPY.chip)).toBeTruthy();
+    expect(within(bar).getByText(copy.segment.followOff)).toBeTruthy();
+    expect(within(bar).getByTestId('switch-track')).toBeTruthy();
+    const eyebrows = Array.from(
+      bar.querySelectorAll('[data-preview-segment]'),
+    ).map((node) => node.getAttribute('data-preview-segment'));
+    expect(eyebrows).toEqual([
+      copy.segment.whoEyebrow,
+      copy.whenLabel,
+      copy.whereLabel,
+      copy.segment.priceEyebrow,
+      copy.vibeLabel,
+    ]);
+    for (const value of [
+      CREWS_COPY.lens.pickerNone,
+      copy.segment.whenPlaceholder,
+      copy.wherePlaceholder,
+      copy.pricePlaceholder,
+      copy.vibePlaceholder,
+    ]) {
+      expect(within(bar).getByText(value)).toBeTruthy();
+    }
+    expect(within(bar).getByText(copy.showCountPending)).toBeTruthy();
+  });
+
+  it('holds the live bar block heights so nothing moves on load', () => {
+    render(<BrowseSkeleton />);
+    const bar = screen.getByTestId('filter-bar-preview-bar');
+    const [segmentBar, countRow] = Array.from(bar.children);
+    expect(bar.className).toBe(SEGMENT_BLOCK_CLASS);
+    expect(segmentBar?.className).toBe(SEGMENT_BAR_CLASS);
+    expect(segmentBar).toHaveStyle({ minHeight: '62px' });
+    expect(countRow?.className).toBe(COUNT_ROW_CLASS);
   });
 
   it('holds the wave still under reduced motion', () => {

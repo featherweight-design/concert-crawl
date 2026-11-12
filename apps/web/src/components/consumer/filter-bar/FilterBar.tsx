@@ -45,36 +45,46 @@ import { TasteFilterChip } from './TasteFilterChip';
 import {
   CHIP_ROW_CLASS,
   CHIP_ROW_STYLE,
+  COUNT_LINE_STYLE,
+  COUNT_ROW_CLASS,
   FILTER_CHIP_CLASS,
   HEADING_EYEBROW_CLASS,
   HEADING_EYEBROW_STYLE,
   HEADING_TITLE_CLASS,
   HEADING_TITLE_STYLE,
   IconChevDown,
+  SEGMENT_BAR_CLASS,
+  SEGMENT_BLOCK_CLASS,
   VIEW_SEGMENTS,
   VIEW_SEGMENT_CLASS,
   VIEW_TOGGLE_CLASS,
   VIEW_TOGGLE_STYLE,
   filterChipStyle,
+  segmentBarStyle,
   viewSegmentStyle,
 } from './chrome';
 import { FollowFilterChip } from './FollowFilterChip';
 import { FilterSegment } from './FilterSegment';
 import { SegmentDivider } from './ChipDivider';
 import { VenueOptionGrid } from './VenueOptionGrid';
+import { VibeOptionGrid, VibeShowButton } from './VibeOptionGrid';
 
 const copy = CONSUMER_COPY.filterBar;
 
 /** The desktop bar's segments: the four filter dimensions plus the crew lens. */
 type SegmentKey = FilterKey | 'who';
 
-/** Desktop popover widths. Where holds two columns of venues. */
+/**
+ * Desktop popover widths. Where and Vibe hold two columns (`bp-f-filt_where_d`
+ * 620px, `vibe_pop_d` 560px), each right-aligned to the bar.
+ */
 const POPOVER_WIDTH: Record<SegmentKey, number> = {
-  who: 340,
+  // `bp-f-filt_who_d` draws the crew lens 380 wide.
+  who: 380,
   when: 260,
   where: 620,
   price: 260,
-  vibe: 320,
+  vibe: 560,
 };
 
 /** The desktop eyebrow and popover title for each filter dimension. */
@@ -84,6 +94,9 @@ const SEGMENT_LABEL: Record<FilterKey, string> = {
   price: copy.segment.priceEyebrow,
   vibe: FILTER_DEFS.vibe.label,
 };
+
+/** A venue tile in the Where segment (`bp-f-filt_active_d`). */
+const SEGMENT_TILE_SIZE = 18;
 
 interface BarSegment {
   key: SegmentKey;
@@ -145,7 +158,7 @@ function StackedMarks({
 }: {
   children: ReactNode[];
   testId: string;
-  /** The 7px dots overlap by a sliver; the 20px tiles by a third. */
+  /** The 7px dots overlap by a sliver; the 18px tiles by a third. */
   tight?: boolean;
 }) {
   return (
@@ -221,6 +234,12 @@ export function FilterBar({
     Partial<Record<SegmentKey, HTMLButtonElement | null>>
   >({});
   const [opener, setOpener] = useState<HTMLElement | null>(null);
+  // The bar's right edge when a popover opened: Where and Vibe right-align to
+  // it rather than running past it (`bp-f-filt_where_d`, `vibe_pop_d`).
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barRight, setBarRight] = useState<number | undefined>(undefined);
+  const measureBar = () =>
+    setBarRight(barRef.current?.getBoundingClientRect().right);
 
   // Where and Vibe read every value of their repeated key through the API's
   // own list rule (trim, drop blanks, dedupe, cap), so the bar shows exactly
@@ -256,6 +275,7 @@ export function FilterBar({
     if (!openFilterKey || !isDesktop) return;
     const nextAnchor = segmentRefs.current[openFilterKey];
     setAnchorRect(nextAnchor?.getBoundingClientRect() ?? null);
+    setBarRight(barRef.current?.getBoundingClientRect().right);
   }, [openFilterKey, isDesktop]);
 
   useEffect(() => {
@@ -305,6 +325,10 @@ export function FilterBar({
   // link, a crew since left) resolves to null and the page reads as resting.
   const lensCrewId = searchParams.get('crew');
   const lensCrew = crews.find((crew) => crew.id === lensCrewId) ?? null;
+
+  // Any filter or scope on draws the whole bar's edge in the signal
+  // (`bp-f-filt_active_d`).
+  const barActive = activeFilterCount > 0 || followActive || lensCrew !== null;
 
   const setLensCrew = useCallback(
     (crewId: string | null) => {
@@ -372,7 +396,8 @@ export function FilterBar({
                 key={venue.slug}
                 slug={venue.slug}
                 name={venue.name}
-                size={20}
+                // The board's pair spans 30px: two 18px tiles, 6px tucked.
+                size={SEGMENT_TILE_SIZE}
               />
             ))}
           </StackedMarks>
@@ -605,11 +630,13 @@ export function FilterBar({
       </div>
 
       {/* Segmented filter bar (desktop, B+ B6a) */}
-      <div className="hidden flex-col gap-2.5 sm:flex">
+      <div className={SEGMENT_BLOCK_CLASS}>
         <div
+          ref={barRef}
           data-testid="filter-segment-bar"
-          className="flex items-stretch rounded-[14px] border border-border-strong p-1"
-          style={{ background: 'var(--surface-1)', minHeight: 62 }}
+          data-active={barActive ? 'true' : undefined}
+          className={SEGMENT_BAR_CLASS}
+          style={segmentBarStyle(barActive)}
         >
           {isDesktop && (
             <FollowFilterChip
@@ -655,6 +682,7 @@ export function FilterBar({
                       ]?.getBoundingClientRect() ?? null,
                     );
                     setOpener(openerRefs.current[segment.key] ?? null);
+                    measureBar();
                   }
                 }}
                 onClear={() => {
@@ -668,19 +696,9 @@ export function FilterBar({
           ))}
         </div>
 
-        <div className="flex min-h-[22px] items-center gap-3">
+        <div className={COUNT_ROW_CLASS}>
           {showCount !== null && (
-            <span
-              data-testid="filter-count-line"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: 'var(--fg-subtle)',
-              }}
-            >
+            <span data-testid="filter-count-line" style={COUNT_LINE_STYLE}>
               {activeFilterCount > 0
                 ? copy.showCountMatch(showCount)
                 : copy.showCount(showCount)}
@@ -733,24 +751,39 @@ export function FilterBar({
                 : undefined
           }
           width={POPOVER_WIDTH[openDimension]}
+          boundRight={barRight}
+          inset={
+            openDimension === 'where' || openDimension === 'vibe'
+              ? 'wide'
+              : 'list'
+          }
           options={activeOptions}
           value={activeValue}
           anchorRect={anchorRect}
           opener={opener}
-          renderLeading={
-            openDimension === 'vibe'
-              ? (option) => <GenreDot genre={option.value} />
-              : undefined
-          }
           multi={multiFor(openDimension)}
           onClose={closePopover}
           onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
+          // "Show N shows" reads the events response's total, the same count
+          // the line under the bar shows. Cal view and the crew lens have no
+          // total here, so the button is left out rather than given a guess.
+          footer={
+            openDimension === 'vibe' && showCount !== null ? (
+              <VibeShowButton count={showCount} onClick={closePopover} />
+            ) : undefined
+          }
         >
           {openDimension === 'where' ? (
             <VenueOptionGrid
               venues={venues}
               selected={filterValues.where}
               onToggle={(slug) => toggleFilterValue('where', slug)}
+            />
+          ) : openDimension === 'vibe' ? (
+            <VibeOptionGrid
+              genres={genres}
+              selected={filterValues.vibe}
+              onToggle={(genre) => toggleFilterValue('vibe', genre)}
             />
           ) : undefined}
         </FilterPopover>

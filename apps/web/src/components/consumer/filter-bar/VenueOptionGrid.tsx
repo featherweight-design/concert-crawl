@@ -11,6 +11,7 @@ import type { VenuePublic } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { CheckboxMark } from './CheckboxMark';
+import { compareVenueNames } from './filter-defs';
 
 const copy = CONSUMER_COPY.filterBar.popover;
 
@@ -49,15 +50,17 @@ export function VenueOptionGrid({
   const needle = query.trim().toLowerCase();
   const shown = venues
     .filter((venue) => venue.name.toLowerCase().includes(needle))
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareVenueNames(left.name, right.name));
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      {/* The board's field is sunk below the popover's surface, on the bar's
+          own fill. */}
       <label
         className="sticky top-0 z-10 flex items-center gap-2 rounded-[10px] border border-border-strong px-3"
         style={{
           height: 40,
-          background: 'var(--surface-1)',
+          background: 'var(--bg-elevated)',
           color: 'var(--fg-subtle)',
         }}
       >
@@ -80,7 +83,7 @@ export function VenueOptionGrid({
           {copy.whereNoMatch}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+        <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5">
           {shown.map((venue) => {
             const active = selected.includes(venue.slug);
             return (
@@ -91,8 +94,16 @@ export function VenueOptionGrid({
                 aria-checked={active}
                 data-testid="venue-option"
                 onClick={() => onToggle(venue.slug)}
-                // The board lifts a checked row onto the raised surface.
-                className={`flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2 ${active ? 'bg-surface-2' : ''}`}
+                // The board tints a checked row with the signal at 8%.
+                className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-3"
+                style={
+                  active
+                    ? {
+                        background:
+                          'color-mix(in oklab, var(--signal) 8%, transparent)',
+                      }
+                    : undefined
+                }
               >
                 <VenueTile slug={venue.slug} name={venue.name} size={28} />
                 <span className="flex min-w-0 flex-1 flex-col">
@@ -104,10 +115,7 @@ export function VenueOptionGrid({
                     {venue.name}
                   </span>
                   {venue.neighborhood && (
-                    <span
-                      className="truncate text-fg-subtle"
-                      style={{ fontSize: active ? 11 : 11.5 }}
-                    >
+                    <span className="truncate text-[11px] text-fg-subtle">
                       {venue.neighborhood}
                     </span>
                   )}

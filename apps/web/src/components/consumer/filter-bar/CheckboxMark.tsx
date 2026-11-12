@@ -6,9 +6,15 @@
 interface CheckboxMarkProps {
   checked: boolean;
   size?: number;
+  /** The checked fill. A Vibe row fills in its genre's color (`vibe_pop_d`). */
+  color?: string;
 }
 
-export function CheckboxMark({ checked, size = 18 }: CheckboxMarkProps) {
+export function CheckboxMark({
+  checked,
+  size = 18,
+  color = 'var(--signal)',
+}: CheckboxMarkProps) {
   return (
     <span
       aria-hidden
@@ -19,9 +25,9 @@ export function CheckboxMark({ checked, size = 18 }: CheckboxMarkProps) {
         height: size,
         borderRadius: 5,
         border: checked
-          ? '1.5px solid var(--signal)'
+          ? `1.5px solid ${color}`
           : '1.5px solid var(--border-strong)',
-        background: checked ? 'var(--signal)' : 'transparent',
+        background: checked ? color : 'transparent',
       }}
     >
       {checked && (

@@ -39,15 +39,19 @@ export const getPopoverPlacement = (
 };
 
 /**
- * The popover's left edge: under its anchor, pulled back inside the viewport
- * margin when a wide popover (the two-column Where list) would overrun it.
+ * The popover's left edge: under its anchor, pulled back when a wide popover
+ * (the two-column Where and Vibe lists) would overrun `boundRight`, the
+ * filter bar's right edge, as `bp-f-filt_where_d` and `vibe_pop_d` draw it.
+ * Never past the viewport margin on either side.
  */
 export const getPopoverLeft = (
   anchorLeft: number,
   width: number,
   viewportWidth: number,
+  boundRight: number = viewportWidth - VIEWPORT_MARGIN,
 ): number => {
-  const maxLeft = viewportWidth - width - VIEWPORT_MARGIN;
+  const right = Math.min(viewportWidth - VIEWPORT_MARGIN, boundRight);
+  const maxLeft = right - width;
   return Math.max(VIEWPORT_MARGIN, Math.min(anchorLeft, maxLeft));
 };
 
@@ -66,6 +70,15 @@ interface FilterPopoverProps {
   renderLeading?: ((option: FilterOption) => ReactNode) | undefined;
   /** Replaces the option list, for a body that is not a plain list. */
   children?: ReactNode | undefined;
+  /** Pinned under the scrolling body, such as Vibe's "Show N shows". */
+  footer?: ReactNode | undefined;
+  /** The right edge the popover must not pass: the filter bar's. */
+  boundRight?: number | undefined;
+  /**
+   * `wide` puts a custom body (the Where and Vibe grids) on the header's 16px
+   * inset, as the boards draw it. `list` keeps the rows' own padding.
+   */
+  inset?: 'list' | 'wide';
   /**
    * Multi-select (Where and Vibe, addendum 2 item 6). When given, each row is
    * a checkbox that toggles its value through `onToggle` and leaves the
@@ -95,6 +108,9 @@ export function FilterPopover({
   width,
   renderLeading,
   children,
+  footer,
+  boundRight,
+  inset = 'list',
   multi,
   onSelect,
   onClose,
@@ -182,7 +198,15 @@ export function FilterPopover({
   const left =
     fittedWidth === undefined
       ? anchorRect.left
-      : getPopoverLeft(anchorRect.left, fittedWidth, window.innerWidth);
+      : getPopoverLeft(
+          anchorRect.left,
+          fittedWidth,
+          window.innerWidth,
+          boundRight,
+        );
+  // The foot padding sits outside the scrolling body, so a list cut off by
+  // the viewport ends on a clean margin rather than a row clipped at the edge.
+  const wideBody = inset === 'wide';
 
   // The single-select rows apply and close at once, as the sheet does; the
   // header's Clear is the way back to the resting value. Multi-select rows
@@ -197,7 +221,8 @@ export function FilterPopover({
       ref={popoverRef}
       role="dialog"
       aria-label={`${title} filter`}
-      className="sheet-edge fixed z-50 hidden min-w-[240px] flex-col overscroll-contain [--sheet-bg:var(--bg-elevated)] sm:flex"
+      data-testid="filter-popover"
+      className={`sheet-edge fixed z-50 hidden min-w-[240px] flex-col overscroll-contain [--sheet-bg:var(--surface-2)] sm:flex ${wideBody ? 'pb-4' : 'pb-2'}`}
       style={{
         ...placement,
         left,
@@ -242,7 +267,10 @@ export function FilterPopover({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+      <div
+        data-testid="filter-popover-body"
+        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${wideBody ? 'px-4' : 'px-2'}`}
+      >
         {children ??
           options.map((option) =>
             multi ? (
@@ -264,6 +292,14 @@ export function FilterPopover({
             ),
           )}
       </div>
+      {footer !== undefined && footer !== null && (
+        <div
+          data-testid="filter-popover-footer"
+          className={`flex shrink-0 justify-end pt-4 ${wideBody ? 'px-4' : 'px-2'}`}
+        >
+          {footer}
+        </div>
+      )}
     </div>
   );
 }
@@ -277,8 +313,8 @@ interface CheckOptionProps {
 
 /**
  * A multi-select row: a real checkbox, with the same checked treatment the
- * Where list draws (`bp-f-filt_where_d`): the raised surface, a bolder label
- * and a filled box at the end.
+ * Where list draws (`bp-f-filt_where_d`): the signal tint at 8%, a bolder
+ * label and a filled box at the end.
  */
 function CheckOption({ label, checked, leading, onClick }: CheckOptionProps) {
   return (
@@ -287,9 +323,12 @@ function CheckOption({ label, checked, leading, onClick }: CheckOptionProps) {
       role="checkbox"
       aria-checked={checked}
       onClick={onClick}
-      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] text-left text-[13.5px] transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-2 ${checked ? 'bg-surface-2' : ''}`}
+      className="flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] text-left text-[13.5px] transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)] hover:bg-surface-3"
       style={{
         padding: '9px 10px',
+        ...(checked && {
+          background: 'color-mix(in oklab, var(--signal) 8%, transparent)',
+        }),
         color: checked ? 'var(--fg)' : 'var(--fg-muted)',
         fontWeight: checked ? 700 : 500,
       }}
