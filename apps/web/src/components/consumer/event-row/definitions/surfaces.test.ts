@@ -92,3 +92,21 @@ describe('venue surface', () => {
     expect(SURFACES.venue.carded).toBe(true);
   });
 });
+
+describe('related surface', () => {
+  // `bp-m-event_m_end`: the watch eye at the right, the 56px ringed tile.
+  it('declares the action gutter for the watch eye', () => {
+    expect(SURFACES.related.hasActionGutter).toBe(true);
+  });
+
+  it('keeps the 56px tile at narrow widths', () => {
+    expect(SURFACES.related.artSize).toEqual({ wide: 56, narrow: 56 });
+  });
+
+  it('leaves every other surface shrinking its art to 44 at narrow', () => {
+    for (const surface of SURFACE_NAMES) {
+      if (surface === 'related') continue;
+      expect(SURFACES[surface].artSize).toEqual({ wide: 56, narrow: 44 });
+    }
+  });
+});

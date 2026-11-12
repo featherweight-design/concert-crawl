@@ -456,6 +456,13 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
                       isWatching: rel.isWatching,
                     })}
                     surface="related"
+                    action={
+                      <WatchShowButton
+                        eventId={rel.id}
+                        initialWatching={rel.isWatching}
+                        artist={rel.artist}
+                      />
+                    }
                   />
                 </Fragment>
               ))}

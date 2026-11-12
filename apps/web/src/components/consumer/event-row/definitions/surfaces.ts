@@ -20,7 +20,23 @@ export type CarriedContext =
 
 export type MetaChipKind = 'crew' | 'following' | 'genre' | 'provenance';
 
+/** The artwork's edge in px, at a wide row and at a narrow (<=360px) one. */
+export interface RowArtSize {
+  wide: number;
+  narrow: number;
+}
+
+/**
+ * Most rows give the narrow title column the 12px back by shrinking the art to
+ * 44. The related list does not: the B+ event board (`bp-m-event_m_end`) draws
+ * its rows at a 358px column with the full 56px ringed tile.
+ */
+const SHRINKING_ART: RowArtSize = { wide: 56, narrow: 44 };
+const FULL_ART: RowArtSize = { wide: 56, narrow: 56 };
+
 export interface SurfaceConfig {
+  /** The artwork's size. Ring and clip follow it; nothing else keys on it. */
+  artSize: RowArtSize;
   /** Context the surface states elsewhere, so the row must not repeat it. */
   carries: readonly CarriedContext[];
   /** Which chips compete for the meta budget, best claim first. */
@@ -62,6 +78,7 @@ export interface SurfaceConfig {
 export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // Date group headers run the list, so every row under one is that date.
   browse: {
+    artSize: SHRINKING_ART,
     carries: ['date'],
     chipPriority: ['following', 'genre'],
     hasActionGutter: false,
@@ -74,6 +91,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   },
   // The venue is the page. Carded to match the B+ venue board (`bp-venue`).
   venue: {
+    artSize: SHRINKING_ART,
     carries: ['venue'],
     chipPriority: ['following', 'genre'],
     hasActionGutter: false,
@@ -86,10 +104,16 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   },
   // "More at this venue" / "More from this artist" on event detail. The list
   // has no headers at all, so the row states everything.
+  //
+  // The B+ event board draws each row with the watch eye at the right and the
+  // 56px ringed tile even at phone width. The gutter is a declaration, not a
+  // promise: the signed-out event page renders no watch control, passes no
+  // action, and so reserves no gutter.
   related: {
+    artSize: FULL_ART,
     carries: [],
     chipPriority: ['following', 'genre'],
-    hasActionGutter: false,
+    hasActionGutter: true,
     carded: false,
     showsDelta: false,
     showsPrice: true,
@@ -108,6 +132,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // the price surfaces that word it. Provenance leads, as `bp-watching` draws
   // it; genre follows (the more-st-rows board), within the two-chip budget.
   watching: {
+    artSize: SHRINKING_ART,
     carries: [],
     chipPriority: ['provenance', 'genre'],
     hasActionGutter: true,
@@ -127,6 +152,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // `CrewShow` carries no price, so the slot is suppressed rather than left to
   // announce a "TBA" the show never earned.
   crew: {
+    artSize: SHRINKING_ART,
     carries: ['date'],
     chipPriority: ['crew', 'following', 'genre'],
     hasActionGutter: false,
@@ -146,6 +172,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // priority, out by ordering alone. There is no removal rule to keep in
   // sync: a row with no crew chip gets `genre` back for free.
   crewLens: {
+    artSize: SHRINKING_ART,
     carries: ['date'],
     chipPriority: ['crew', 'following', 'genre'],
     hasActionGutter: false,
@@ -164,6 +191,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   //
   // The list has no date headers, so line 3 still states date, time and venue.
   artist: {
+    artSize: SHRINKING_ART,
     carries: ['artist'],
     chipPriority: ['genre'],
     hasActionGutter: true,
