@@ -9,6 +9,7 @@ import {
   fireEvent,
   act,
   waitFor,
+  within,
 } from '@testing-library/react';
 import type {
   EventDetailResponse,
@@ -102,7 +103,11 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { REPORTING_COPY } from '@/components/consumer/reporting/definitions/copy';
 
 // Imported after mocks so vi.mock takes effect.
-import { EventDetailBanners, EventDetailPriceBlock } from './EventDetailClient';
+import {
+  EventDetailBanners,
+  EventDetailFooter,
+  EventDetailPriceBlock,
+} from './EventDetailClient';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -1465,6 +1470,40 @@ describe('EventDetailBanners No longer listed', () => {
     expect(
       screen.queryByText(REPORTING_COPY.pendingReportBanner.postponedBadge),
     ).toBeNull();
+  });
+});
+
+describe('EventDetailBanners pending Tickets available report', () => {
+  it('does not offer Tickets available again from the "Saw something different?" sheet', () => {
+    render(
+      <EventDetailBanners
+        event={buildBaseEvent({ priceStatus: 'soldout' })}
+        reports={[buildReport({ status: 'available' })]}
+        currentUserId={null}
+      />,
+    );
+    fireEvent.click(screen.getByText('Tickets still available?'));
+
+    const group = screen.getByRole('radiogroup');
+    expect(within(group).queryByText('Tickets available')).toBeNull();
+    expect(within(group).getByText('Cancelled')).toBeTruthy();
+  });
+});
+
+describe('EventDetailFooter report link', () => {
+  it('hides the link when nothing is left to report', () => {
+    render(
+      <EventDetailFooter
+        event={buildBaseEvent({ status: 'cancelled' })}
+        reports={[]}
+      />,
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('shows the link while there is something to report', () => {
+    render(<EventDetailFooter event={buildBaseEvent()} reports={[]} />);
+    expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
   });
 });
 
