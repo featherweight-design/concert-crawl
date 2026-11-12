@@ -1,3 +1,17 @@
+## [1.377.2](https://github.com/featherweight-design/concert-crawl/compare/v1.377.1...v1.377.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** a malformed crew id is a not-found, not a connection error ([288d147](https://github.com/featherweight-design/concert-crawl/commit/288d147fe083b6ebd38e278846e47d05a2469d64))
+* **web:** b+ low batch, people glyph, status-only about, 760px column ([774097d](https://github.com/featherweight-design/concert-crawl/commit/774097deeede5654d6f67b85e4d5342c3226b87c))
+* **web:** browse cal header sizes, count line and title colour ([b4dd276](https://github.com/featherweight-design/concert-crawl/commit/b4dd276863ad2f0795d510d7b54191ef3296a416))
+* **web:** cal row focus ring, 44px week chevron hit area ([8ea4408](https://github.com/featherweight-design/concert-crawl/commit/8ea44080374568b8b63efc70a354fd1710cd0bba))
+* **web:** derive the price footer rows once, keep sold-out box office gold ([e586e40](https://github.com/featherweight-design/concert-crawl/commit/e586e406fef40df783350cda9bcf23c862e56097))
+* **web:** draw every price card state at more-p-price_states' measured scale ([d87a34b](https://github.com/featherweight-design/concert-crawl/commit/d87a34b8385148498c52c0aa52c4b52a75fe4f1f))
+* **web:** draw the event status and community price cards as the boards do ([8b563b9](https://github.com/featherweight-design/concert-crawl/commit/8b563b9ee11e33a0024ef238ca4dff03c098bf2f))
+* **web:** hide about only when its status word matches the event status ([41a4e8d](https://github.com/featherweight-design/concert-crawl/commit/41a4e8dd15c8c17eca6b712d3b55fe25604e55e5))
+
 ## [1.377.1](https://github.com/featherweight-design/concert-crawl/compare/v1.377.0...v1.377.1) (2026-11-12)
 
 
