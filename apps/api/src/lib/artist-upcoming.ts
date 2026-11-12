@@ -11,10 +11,7 @@ import { todayInDenver } from './time.js';
 
 // The FROM and WHERE both expressions share, so "has an upcoming show" and "the
 // soonest upcoming show" can never disagree about which shows count.
-const upcomingShowsFrom = (
-  withinDays: number | undefined,
-  bound: BoundKind = 'inclusive',
-): SQL => sql`
+const upcomingShowsFrom = (withinDays: number | undefined): SQL => sql`
     FROM ${events}
     JOIN ${venues}
       ON ${events.venueId} = ${venues.id}
@@ -24,31 +21,20 @@ const upcomingShowsFrom = (
       AND ${events.firstMissingAt} IS NULL
       AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
       AND ${events.date} >= ${todayInDenver()}
-      ${upcomingBound(withinDays, bound)}`;
-
-// `inclusive` takes a show on day `today + withinDays` (Needs you's horizon:
-// "not more than 60 days out"). `exclusive` stops the day before, so "the next
-// N days" is today plus N - 1 more, N calendar days in all.
-type BoundKind = 'inclusive' | 'exclusive';
+      ${upcomingBound(withinDays)}`;
 
 // Optional upper bound on the show date, in days from Denver today. Absent, the
 // predicate is unbounded, which is what every existing caller wants. A bound
 // that is not a whole, non-negative number of days is a caller bug, so it
 // throws here rather than reaching Postgres as an invalid integer.
-const upcomingBound = (
-  withinDays: number | undefined,
-  bound: BoundKind,
-): SQL => {
+const upcomingBound = (withinDays: number | undefined): SQL => {
   if (withinDays === undefined) return sql``;
   if (!Number.isInteger(withinDays) || withinDays < 0) {
     throw new RangeError(
       `withinDays must be a whole number >= 0, got ${withinDays}`,
     );
   }
-  const limit = sql`(${todayInDenver()}::date + ${withinDays}::int)`;
-  return bound === 'exclusive'
-    ? sql`AND ${events.date} < ${limit}`
-    : sql`AND ${events.date} <= ${limit}`;
+  return sql`AND ${events.date} <= (${todayInDenver()}::date + ${withinDays}::int)`;
 };
 
 /**
@@ -73,15 +59,6 @@ const upcomingBound = (
  */
 export const hasUpcomingShowExpr = (withinDays?: number): SQL<boolean> =>
   sql`EXISTS (SELECT 1 ${upcomingShowsFrom(withinDays)})`;
-
-/**
- * `hasUpcomingShowExpr` over "the next `days` days": today plus `days - 1`
- * more, so a show exactly `days` days out is not in it. A separate expression
- * rather than a change to the bound above, because Needs you's horizon counts
- * that last day in.
- */
-export const hasShowInNextDaysExpr = (days: number): SQL<boolean> =>
-  sql`EXISTS (SELECT 1 ${upcomingShowsFrom(days, 'exclusive')})`;
 
 /**
  * The soonest date `hasUpcomingShowExpr` would accept for this artist, or null.
