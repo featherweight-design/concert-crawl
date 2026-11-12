@@ -40,11 +40,9 @@ describe('FeedbackEdgeTab', () => {
     expect(anchor.className).toContain('max-xl:active:translate-x-0');
   });
 
-  it('carries a 12px transparent hit slop on phones and a focus-visible ring class', () => {
+  it('has no transparent hit slop, so it never steals a tap meant for content, and a focus-visible ring class', () => {
     render(<FeedbackEdgeTab />);
-    const slop = screen.getByTestId('feedback-edge-tab-hit-slop');
-    expect(slop.className).toContain('-left-3');
-    expect(slop.className).toContain('w-3');
+    expect(screen.queryByTestId('feedback-edge-tab-hit-slop')).toBeNull();
     const anchor = screen.getByTestId('feedback-edge-tab-anchor');
     expect(anchor.className).toContain('[&:has(:focus-visible)]:outline');
   });
