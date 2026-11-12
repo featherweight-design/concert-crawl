@@ -235,9 +235,13 @@ describe('GET /v1/events', () => {
   });
 
   it('returns empty data for an unknown venueSlug', async () => {
-    // venue lookup: select({id}).from(venues).where().limit(1) → terminal, empty
-    mockDb.where.mockReturnValueOnce(mockDb);
-    mockDb.limit.mockResolvedValueOnce([]);
+    // The venue filter is an inArray subquery now, not a lookup that returned
+    // early: the subquery's select().from(venues).where() is built first, then
+    // the count and rows queries run and simply match nothing.
+    mockDb.where.mockReturnValueOnce(mockDb); // venue subquery (built, never awaited)
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }]); // count
+    mockDb.where.mockReturnValueOnce(mockDb); // rows
+    mockDb.offset.mockResolvedValueOnce([]);
 
     const res = await createApp().request('/v1/events?venueSlug=unknown-slug');
     expect(res.status).toBe(200);
