@@ -6,13 +6,21 @@ on:
   push:
     branches: [main]
   # The merge queue builds a temporary merge_group ref and waits on the
-  # required checks (Install dependencies, Lint, Test, Typecheck, Build,
-  # Security audit), all of which live in this workflow. Without this
-  # trigger nothing reports and every queued PR stalls.
+  # required checks (Checks, Test, Build), all of which live in this workflow.
+  # Without this trigger nothing reports and every queued PR stalls.
   merge_group:
 
 permissions: read-all
 
+# Cancel a superseded run only on a pull request. Every other event gets a group
+# of its own, so a push to main or a queued merge is never cancelled or replaced.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || format('ci-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Why so few jobs: the org is on GitHub Free, capped at 20 concurrent jobs shared
+# with other repos, so a run's wall time is mostly runner queueing, not test time.
+# Every job here costs a queue slot, so work that can share one runner does.
 jobs:
   # The fwd-stack baseline: declared majors, the Node pin and pnpm checked
   # against the kit's baseline.json. Warn mode annotates and passes; it is not
@@ -22,15 +30,55 @@ jobs:
     with:
       mode: warn
 
-  security-audit:
-    name: Security audit
+  # Decides whether the heavy jobs run. A pull request that touches only docs,
+  # Markdown or .claude/ skips them; a skipped job satisfies a required check.
+  # Pushes to main and merge-queue runs always run everything. On a pull request
+  # the checkout is the merge commit, so HEAD^1 is the base tip and the diff
+  # against it is exactly the PR's change.
+  changes:
+    name: Changes
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 2
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 1
+          fetch-depth: 2
+
+      - name: Detect code changes
+        id: diff
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=false
+          while IFS= read -r file; do
+            case "$file" in
+              docs/*|.claude/*|*.md) ;;
+              *) code=true ;;
+            esac
+          done < <(git diff --name-only HEAD^1 HEAD)
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "code changed: $code"
+
+  # Everything that is quick and shares an install: the dependency audit, lint,
+  # typecheck, the unit tests of every workspace but web, and the scripts suites.
+  # Lint, typecheck and test go through one turbo invocation so they run in
+  # parallel on the runner and share its task graph.
+  checks:
+    name: Checks
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -43,6 +91,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Cache Turborepo
+        uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: turbo-checks-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-checks-${{ runner.os }}-
 
       # TEMPORARY (#951): `pnpm audit` hits npm's retired
       # /security/audits/quick endpoint and always returns HTTP 410 —
@@ -59,112 +114,40 @@ jobs:
         continue-on-error: true
         run: pnpm audit --audit-level=high
 
-  install:
-    name: Install dependencies
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
+      - name: Lint, typecheck and test (all workspaces but web)
+        run: pnpm turbo run lint typecheck test --filter=!@concert-crawl/web
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      # The web workspace's lint and typecheck are not covered by the line above
+      # (its tests are sharded below), so run them here.
+      - name: Lint and typecheck (web)
+        run: pnpm turbo run lint typecheck --filter=@concert-crawl/web
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-  typecheck:
-    name: Typecheck
-    needs: install
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Cache Turborepo
-        uses: actions/cache@v6
-        with:
-          path: .turbo
-          key: turbo-typecheck-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-typecheck-${{ runner.os }}-
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-  lint:
-    name: Lint
-    needs: install
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Cache Turborepo
-        uses: actions/cache@v6
-        with:
-          path: .turbo
-          key: turbo-lint-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-lint-${{ runner.os }}-
-
-      - name: Lint
-        run: pnpm lint
+      # scripts/ is not a workspace package, so the turbo runs above never
+      # reach it and its suites were passing only when someone ran them by
+      # hand. It needs no build ahead of it — the scripts reach workspace code
+      # source-relatively rather than by package specifier, deliberately, since
+      # they also run on a clean runner that has not built anything.
+      - name: Test scripts
+        run: pnpm test:scripts
 
   # `apps/web` is ~3200 of the repo's ~3400 unit tests and needs ~700 CPU-seconds.
-  # A GitHub standard runner is 2 vCPU, so no amount of worker tuning gets that
-  # under ~8 minutes — the only lever is more machines. Shard the web suite across
-  # four runners and run the other ten workspaces on a fifth, in parallel.
+  # A GitHub standard runner is 2 vCPU, so the suite is sharded across two
+  # runners, the most that is worth a queue slot each.
   #
   # Deliberately NOT run through `turbo run test`: Turbo hashes the task, not the
   # `--shard` argument, so every shard would replay shard 1's cached result and
   # silently skip its own tests. Build the workspace deps with Turbo (safe to
   # cache), then invoke vitest directly.
   test-web:
-    name: Test (web shard ${{ matrix.shard }}/4)
-    needs: install
+    name: Test (web shard ${{ matrix.shard }}/2)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -195,71 +178,36 @@ jobs:
 
       # No `--` before `--shard`: pnpm forwards it literally and vitest reads it
       # as the end of its filter list, silently ignoring the shard and running
-      # all 321 files in every shard.
+      # every file in every shard.
       - name: Test
-        run: pnpm --filter @concert-crawl/web run test --shard=${{ matrix.shard }}/4
+        run: pnpm --filter @concert-crawl/web run test --shard=${{ matrix.shard }}/2
 
-  test-workspaces:
-    name: Test (other workspaces)
-    needs: install
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.node-version'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Cache Turborepo
-        uses: actions/cache@v6
-        with:
-          path: .turbo
-          key: turbo-test-pkg-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-test-pkg-${{ runner.os }}-
-
-      - name: Test
-        run: pnpm turbo run test --filter=!@concert-crawl/web
-
-      # scripts/ is not a workspace package, so the turbo run above never
-      # reaches it and its suites were passing only when someone ran them by
-      # hand. It needs no build ahead of it — the scripts reach workspace code
-      # source-relatively rather than by package specifier, deliberately, since
-      # they also run on a clean runner that has not built anything.
-      - name: Test scripts
-        run: pnpm test:scripts
-
-  # Keeps a check literally named "Test" so the branch-protection rule does not
-  # have to change. `if: always()` matters — without it this job would be skipped
-  # when a shard fails, and a skipped required check never resolves.
+  # Keeps a check literally named "Test" for the branch-protection rule. It runs
+  # `if: always()`: without it this job would be skipped when a shard fails, and
+  # a skipped required check never resolves. A skipped shard is fine only when
+  # `changes` itself succeeded (a docs-only PR); if `changes` failed the shards
+  # skip too and that must fail here.
   test:
     name: Test
-    needs: [test-web, test-workspaces]
+    needs: [changes, test-web]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Check shard results
         run: |
-          echo "web shards:       ${{ needs.test-web.result }}"
-          echo "other workspaces: ${{ needs.test-workspaces.result }}"
-          [ "${{ needs.test-web.result }}" = "success" ] || exit 1
-          [ "${{ needs.test-workspaces.result }}" = "success" ] || exit 1
+          echo "changes:    ${{ needs.changes.result }}"
+          echo "web shards: ${{ needs.test-web.result }}"
+          [ "${{ needs.changes.result }}" = "success" ] || exit 1
+          case "${{ needs.test-web.result }}" in
+            success|skipped) ;;
+            *) exit 1 ;;
+          esac
 
   build:
     name: Build
-    needs: install
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -292,7 +240,8 @@ jobs:
 
   integration-test:
     name: Integration Tests
-    needs: install
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
