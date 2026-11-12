@@ -14,6 +14,11 @@
       "types": "./dist/sentry-data-collection.d.ts",
       "import": "./dist/sentry-data-collection.js",
       "default": "./dist/sentry-data-collection.js"
+    },
+    "./sentry-tags": {
+      "types": "./dist/sentry-tags.d.ts",
+      "import": "./dist/sentry-tags.js",
+      "default": "./dist/sentry-tags.js"
     }
   },
   "scripts": {
