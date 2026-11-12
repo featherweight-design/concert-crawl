@@ -12,6 +12,11 @@ export const ARTIST_COPY = {
   // The stage's eyebrow over the name (B+ `09-artist`). Uppercased in CSS.
   eyebrow: 'Artist',
 
+  // Share, in the stage's top-right (B+ `09-artist`). It shares the page's
+  // link; "Link copied" is the event sheet's own string, reused.
+  shareAria: 'Share this artist',
+  shareFailed: "Couldn't share the link. Try again.",
+
   // Follow — ONE affordance, one mental model.
   // A show is WATCHED; an artist is FOLLOWED. These are separate concepts and
   // this copy never conflates them.

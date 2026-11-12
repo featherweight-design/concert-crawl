@@ -555,6 +555,15 @@ describe('ArtistPageContent', () => {
       expect(card(container)?.querySelector('svg')).not.toBeNull();
     });
 
+    it('puts Share in the stage, opposite the back chip', () => {
+      const { container } = render(<ArtistPageContent data={withShows} />);
+      const stage = container.querySelector('[data-testid="hero-band"]');
+      expect(
+        stage?.querySelector(`button[aria-label="${ARTIST_COPY.shareAria}"]`),
+      ).not.toBeNull();
+      expect(stage?.querySelector('button[aria-label="Back"]')).not.toBeNull();
+    });
+
     it('draws the starburst on desktop only, in CSS', () => {
       setViewport(true);
       const { container } = render(<ArtistPageContent data={withPhoto} />);
