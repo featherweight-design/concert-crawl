@@ -1,3 +1,20 @@
+# [1.370.0](https://github.com/featherweight-design/concert-crawl/compare/v1.369.0...v1.370.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** call GlyphShapes inside the share stamp svg so satori renders it ([f231acd](https://github.com/featherweight-design/concert-crawl/commit/f231acd207cec1bad5a1e16e5b951799ff881b8e))
+* **web:** event-page going stub and Passport share card stamps follow the venue ([86d38b6](https://github.com/featherweight-design/concert-crawl/commit/86d38b6338d5ea05774fd330e395f9b6d38cc302)), closes [#245](https://github.com/featherweight-design/concert-crawl/issues/245)
+* **web:** notifications review fixes, row tests, panel edge offset, dead glyphs ([0c23366](https://github.com/featherweight-design/concert-crawl/commit/0c23366e1792fc86180edc9e0838fca69cc0b7be))
+* **web:** past-yes stub takes the contrast-picked ink, glow ids stay unique ([d2a2d75](https://github.com/featherweight-design/concert-crawl/commit/d2a2d750bada1fd349c9821d5da18cfcceb50833)), closes [#FF6B8A](https://github.com/featherweight-design/concert-crawl/issues/FF6B8A)
+* **web:** wrap long unbroken handles in admin toast titles and bodies ([4f37d93](https://github.com/featherweight-design/concert-crawl/commit/4f37d931fec07dde8ea821cb83b3714a0c8dc75f))
+
+
+### Features
+
+* **api:** name who paused or hid a venue, type the latest run on the row ([e96941e](https://github.com/featherweight-design/concert-crawl/commit/e96941e6a0407abd454032b1614c38137166f1a9))
+* **web:** notifications panel fidelity, rows, tab states, panel surface ([1477b85](https://github.com/featherweight-design/concert-crawl/commit/1477b85279011e240b916bbaf988a15fafc45652))
+
 # [1.369.0](https://github.com/featherweight-design/concert-crawl/compare/v1.368.0...v1.369.0) (2026-11-12)
 
 
