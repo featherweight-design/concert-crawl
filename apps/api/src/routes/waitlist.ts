@@ -4,7 +4,7 @@ import { validationHook } from '../lib/validator.js';
 import { z } from 'zod';
 import { db, waitlistEntries } from '@concert-crawl/db';
 import { checkRateLimit } from '../lib/rate-limit.js';
-import { clientIp } from '../lib/client-ip.js';
+import { clientIp, rateLimitKeyForIp } from '../lib/client-ip.js';
 
 const waitlistSchema = z.object({
   email: z.string().email(),
@@ -19,9 +19,12 @@ waitlistRouter.post(
     const ip = clientIp(ctx);
     // Fail open: the insert below is idempotent per email and the response never
     // reveals anything, so a brief unthrottled window only risks junk rows.
-    const limit = await checkRateLimit(`waitlist:${ip}`, 5, 60 * 60 * 1000, {
-      onStoreError: 'allow',
-    });
+    const limit = await checkRateLimit(
+      `waitlist:${rateLimitKeyForIp(ip)}`,
+      5,
+      60 * 60 * 1000,
+      { onStoreError: 'allow' },
+    );
     if (!limit.allowed) {
       ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)));
       return ctx.json({ success: false, error: 'Too many requests' }, 429);

@@ -6,7 +6,7 @@ import { db, inviteCodes, seatsTaken } from '@concert-crawl/db';
 import { eq } from 'drizzle-orm';
 import { isInviteCodeShape, normalizeInviteCode } from '@concert-crawl/types';
 import { checkRateLimit, refundRateLimit } from '../../lib/rate-limit.js';
-import { clientIp } from '../../lib/client-ip.js';
+import { clientIp, rateLimitKeyForIp } from '../../lib/client-ip.js';
 
 /** Wrong codes one IP may try per hour. Valid codes never count. */
 const MAX_MISSES = 10;
@@ -27,8 +27,7 @@ validateCodeRouter.post(
   '/',
   zValidator('json', codeSchema, validationHook),
   async (ctx) => {
-    const ip = clientIp(ctx);
-    const limitKey = `validate-code:${ip}`;
+    const limitKey = `validate-code:${rateLimitKeyForIp(clientIp(ctx))}`;
     // The brute-force guard counts misses only, because a poster code puts
     // many real people behind one IP (venue wifi, carrier NAT) and a real
     // code must never spend their budget, even once it is full or expired.

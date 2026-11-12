@@ -1,5 +1,6 @@
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import type { Context, MiddlewareHandler, Next } from 'hono';
+import { hasServiceKey } from '../lib/service-key.js';
 
 // Initialize Clerk middleware — verifies JWT from Authorization: Bearer <token>
 export const clerkAuth = clerkMiddleware();
@@ -11,8 +12,7 @@ export const serviceOrClerkAuth: MiddlewareHandler = async (
   ctx: Context,
   next: Next,
 ) => {
-  const serviceKey = process.env['INTERNAL_API_SECRET'];
-  if (serviceKey && ctx.req.header('x-service-key') === serviceKey) {
+  if (hasServiceKey(ctx)) {
     await next();
     return;
   }

@@ -9,6 +9,7 @@ import {
   RETURN_PATH_COOKIE_NAME,
 } from '@/lib/invite-cookie';
 import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent';
+import { serviceKeyHeaders } from '@/lib/api';
 import { isInviteCodeShape, normalizeInviteCode } from '@concert-crawl/types';
 
 type ValidationResult =
@@ -49,13 +50,17 @@ async function visitorIp(): Promise<string | undefined> {
  * service key; the API trusts `x-client-ip` only beside that key. Without the
  * secret neither header is sent and the API falls back to the shared bucket,
  * which fails safe (stricter, never looser).
+ *
+ * The key comes from lib/api's builder, but not its `request()`: this route
+ * answers `{ ok: true }` rather than the `{ success, data }` envelope
+ * `request()` unwraps, and the caller branches on the raw status.
  */
 async function forwardedIpHeaders(): Promise<Record<string, string>> {
-  const serviceKey = process.env.INTERNAL_API_SECRET;
-  if (!serviceKey) return {};
+  const service = serviceKeyHeaders();
+  if (!service['x-service-key']) return {};
   const ip = await visitorIp();
   if (!ip) return {};
-  return { 'x-client-ip': ip, 'x-service-key': serviceKey };
+  return { ...service, 'x-client-ip': ip };
 }
 
 export async function validateAndSetInviteCode(
