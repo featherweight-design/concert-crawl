@@ -415,7 +415,11 @@ describe('runDailyCrawl', () => {
       expect.objectContaining({
         // Grouped by cause, not by this call site.
         fingerprint: ['crawl.failed', 'key:Timeout 30000ms exceeded'],
-        tags: { crawl_error_kind: 'other' },
+        tags: {
+          crawl_error_kind: 'other',
+          venueId: 'venue-1',
+          crawlRunId: 'run-uuid-1',
+        },
         extra: expect.objectContaining({ venueId: 'venue-1' }),
       }),
     );
@@ -1068,7 +1072,11 @@ describe('runTriggeredCrawls', () => {
       expect.objectContaining({
         // Grouped by cause, not by this call site.
         fingerprint: ['crawl.failed', 'key:Timeout 30000ms exceeded'],
-        tags: { crawl_error_kind: 'other' },
+        tags: {
+          crawl_error_kind: 'other',
+          venueId: 'venue-a',
+          crawlRunId: 'run-uuid-1',
+        },
         extra: expect.objectContaining({
           venueId: 'venue-a',
           triggerId: 'trigger-1',
