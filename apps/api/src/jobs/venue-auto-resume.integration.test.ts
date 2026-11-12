@@ -109,6 +109,20 @@ describe('runVenueAutoResume', () => {
     ).toHaveLength(0);
   });
 
+  it('never resumes a removed venue, whatever date it carries', async () => {
+    const removed = await seedVenue({
+      name: 'Removed',
+      slug: 'removed',
+      active: false,
+      removedAt: pausedAt,
+      crawlPausedAt: pausedAt,
+      crawlResumeOn: addDays(today, -1),
+    });
+    const { resumed } = await runVenueAutoResume(now);
+    expect(resumed).toEqual([]);
+    expect((await stateOf(removed.id))?.crawlPausedAt).not.toBeNull();
+  });
+
   it('does nothing for a venue that is not paused, even with a stale date', async () => {
     const venue = await seedVenue({
       name: 'Not Paused',

@@ -1229,6 +1229,9 @@ venuesAdminRouter.post(
         .set({
           active: false,
           crawlPausedAt: existing.crawlPausedAt ?? new Date(),
+          // A removed venue never resumes by itself, whatever date an earlier
+          // pause set.
+          crawlResumeOn: null,
           removedAt: new Date(),
         })
         .where(eq(venues.id, id))
