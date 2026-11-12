@@ -251,20 +251,26 @@ export function FilterBar({
     (updates: Record<string, string | readonly string[]>) => {
       const params = new URLSearchParams(searchParams.toString());
       const nextPending: PendingLists = { ...pendingRef.current };
+      let listTouched = false;
       for (const key of MULTI_FILTER_KEYS) {
         const queryKey = FILTER_DEFS[key].queryKey;
         const update = updates[queryKey];
         if (update !== undefined) {
           nextPending[key] =
             typeof update === 'string' ? (update ? [update] : []) : update;
+          listTouched = true;
         }
         const list = nextPending[key];
         if (list === undefined) continue;
         params.delete(queryKey);
         for (const item of list) params.append(queryKey, item);
       }
-      pendingRef.current = nextPending;
-      setPending(nextPending);
+      // A write that holds no list (My artists, the crew lens) leaves the
+      // held lists as they are, so it costs the bar no re-render of its own.
+      if (listTouched) {
+        pendingRef.current = nextPending;
+        setPending(nextPending);
+      }
       for (const [key, value] of Object.entries(updates)) {
         params.delete(key);
         if (typeof value === 'string') {
