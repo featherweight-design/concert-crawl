@@ -9,6 +9,8 @@ import {
   LockGlyph,
   PendingDot,
   PendingTrustPill,
+  PRICE_EYEBROW,
+  PRICE_HEADLINE_SIZE,
 } from './glyphs';
 
 const copy = CONSUMER_COPY.pendingCardB;
@@ -334,15 +336,20 @@ export const PendingCardB = ({
             justifyContent: 'space-between',
           }}
         >
-          <Eyebrow color={isBox ? tok.color : 'var(--fg-subtle)'}>
+          <Eyebrow
+            color={isBox ? tok.color : 'var(--fg-subtle)'}
+            size={PRICE_EYEBROW.size}
+            tracking={PRICE_EYEBROW.tracking}
+          >
             {isBox ? copy.boxOfficeLabel : copy.ticketsLabel}
           </Eyebrow>
         </div>
 
-        {/* Headline row */}
+        {/* Headline row — the live card's scale (more-p-price_states draws
+            pending and live $44 at the same 34px) */}
         <div
           style={{
-            marginTop: '6px',
+            marginTop: '11px',
             display: 'flex',
             alignItems: 'baseline',
             gap: '10px',
@@ -350,13 +357,14 @@ export const PendingCardB = ({
           }}
         >
           <span
+            data-testid="pending-price-headline"
             style={{
               fontFamily: 'Inter, system-ui',
-              fontWeight: 800,
-              fontSize: '28px',
+              fontWeight: 900,
+              fontSize: `${PRICE_HEADLINE_SIZE}px`,
               color: 'var(--fg)',
               letterSpacing: '-0.025em',
-              lineHeight: 1.05,
+              lineHeight: 1,
             }}
           >
             {ceiling != null && ceiling > floor

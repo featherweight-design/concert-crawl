@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { PriceDisplay } from '@/components/consumer/PriceDisplay';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { PRICE_HEADLINE_SIZE } from '@/components/consumer/glyphs';
 import { stubMatchMedia } from '@/test-utils/match-media';
 import { TIP_CONTENT } from '@/components/ui/cc-tip';
 
@@ -71,7 +72,19 @@ describe('PriceDisplay live community card (more-p-price_states)', () => {
 
     const qualifier = screen.getByText(priceCopy.startingAllIn);
     expect(qualifier.style.textTransform).toBe('uppercase');
-    expect(qualifier.style.letterSpacing).toBe('0.1em');
+    expect(qualifier.style.letterSpacing).toBe('0.14em');
+    expect(qualifier.style.fontSize).toBe('9.5px');
+  });
+
+  it('draws the headline at the board scale with a 9.5px eyebrow', () => {
+    render(<PriceDisplay {...base} />);
+
+    const headline = screen.getByText('$44–$60');
+    expect(headline.style.fontSize).toBe(`${PRICE_HEADLINE_SIZE}px`);
+    expect(headline.style.fontWeight).toBe('900');
+    const eyebrow = screen.getByText(priceCopy.ticketsLabel);
+    expect(eyebrow.style.fontSize).toBe('9.5px');
+    expect(eyebrow.style.letterSpacing).toBe('0.14em');
   });
 
   it('attributes the submitter and the fans who confirmed', () => {
@@ -83,7 +96,7 @@ describe('PriceDisplay live community card (more-p-price_states)', () => {
       />,
     );
 
-    expect(screen.getByTestId('price-community-attribution').textContent).toBe(
+    expect(screen.getByTestId('price-submitter-attribution').textContent).toBe(
       `${priceCopy.submittedByPrefix} @hugh · 2 ${priceCopy.fansConfirmedSuffix}`,
     );
   });
@@ -91,7 +104,7 @@ describe('PriceDisplay live community card (more-p-price_states)', () => {
   it('names an anonymous submitter in the same line, upright', () => {
     render(<PriceDisplay {...base} />);
 
-    const line = screen.getByTestId('price-community-attribution');
+    const line = screen.getByTestId('price-submitter-attribution');
     expect(line.textContent).toBe(
       `${priceCopy.submittedByPrefix} ${priceCopy.anonymousFan}`,
     );
@@ -110,5 +123,68 @@ describe('PriceDisplay live community card (more-p-price_states)', () => {
 
     expect(screen.getByTestId('price-card-footer')).toBeTruthy();
     expect(screen.queryByTestId('price-community-badge')).toBeNull();
+  });
+});
+
+describe('PriceDisplay live box office card (more-p-price_states)', () => {
+  const priceCopy = CONSUMER_COPY.priceDisplay;
+  const boxOffice = {
+    priceMin: '38.00',
+    priceMax: null,
+    priceSource: 'community' as const,
+    priceVendor: 'VenueBoxOffice',
+    priceSourceCategory: 'boxoffice' as const,
+    venueName: 'Larimer Lounge',
+    ticketUrl: null,
+    eventId: 'evt_1',
+    artist: 'Test Artist',
+    date: '2026-09-01T02:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    stubMatchMedia(false);
+  });
+  afterEach(cleanup);
+
+  it('puts the box office badge top right, beside a grey eyebrow', () => {
+    render(<PriceDisplay {...boxOffice} />);
+
+    const badge = screen.getByTestId('price-boxoffice-badge');
+    expect(badge.textContent).toBe(priceCopy.boxOfficeTrustLabel);
+    expect(
+      badge.parentElement?.textContent?.includes(priceCopy.boxOfficeLabel),
+    ).toBe(true);
+    // Only the badge carries the label: nothing inline after the price.
+    expect(screen.getAllByText(priceCopy.boxOfficeTrustLabel)).toHaveLength(1);
+  });
+
+  it('sets "face value · no fees" in mono caps', () => {
+    render(<PriceDisplay {...boxOffice} />);
+
+    const qualifier = screen.getByText(priceCopy.faceValueNoFees);
+    expect(qualifier.style.textTransform).toBe('uppercase');
+    expect(qualifier.style.letterSpacing).toBe('0.14em');
+  });
+
+  it('attributes the submitter and the fans who confirmed, as community does', () => {
+    render(
+      <PriceDisplay
+        {...boxOffice}
+        priceSubmitterHandle="hugh"
+        priceConfirmsCount={2}
+      />,
+    );
+
+    expect(screen.getByTestId('price-submitter-attribution').textContent).toBe(
+      `${priceCopy.submittedByPrefix} @hugh · 2 ${priceCopy.fansConfirmedSuffix}`,
+    );
+  });
+
+  it('draws the $38 at the same scale as the community price', () => {
+    render(<PriceDisplay {...boxOffice} />);
+
+    expect(screen.getByText('$38').style.fontSize).toBe(
+      `${PRICE_HEADLINE_SIZE}px`,
+    );
   });
 });

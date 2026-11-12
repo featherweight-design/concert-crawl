@@ -14,6 +14,10 @@ import {
 import { relTimeAgo } from '@/components/consumer/lib/staleness';
 import { StaleStamp } from '@/components/consumer/StaleStamp';
 import { StillAccurateAction } from '@/components/consumer/StillAccurateAction';
+import {
+  PRICE_EYEBROW,
+  PRICE_HEADLINE_SIZE,
+} from '@/components/consumer/glyphs';
 
 const copy = CONSUMER_COPY;
 
@@ -109,6 +113,10 @@ const RESALE = 'var(--trust-resale)';
 const GOLD = 'oklch(0.66 0.14 78)';
 // Community color token — consumed from CSS variable so it responds to theme.
 const COMMUNITY = 'var(--trust-community)';
+
+// Price baseline to the cap top of "Submitted by" is 17px on the board; with
+// the headline at line-height 1 and the line at 1.25, that is a 9px gap.
+const ATTRIBUTION_GAP = 9;
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -297,25 +305,29 @@ export function TrustMark({
   );
 }
 
-// ── Community corner badge (more-p-price_states) ─────────────────
-// The live community card's tier mark: an outlined mono-caps badge at top
-// right. The community tier wears the theme's signal, as the pending card does.
+// ── Corner trust badge (more-p-price_states) ─────────────────────
+// A live community or box office card's tier mark: an outlined mono-caps
+// badge at top right, 19px tall (4px 8px around 9.5px caps, 1px edge, radius
+// 5). Community wears the theme's signal, as the pending card does; box office
+// wears its gold and the star.
 const COMMUNITY_SIGNAL = 'var(--signal)';
 
-function CommunityCornerBadge() {
+function CornerTrustBadge({ kind }: { kind: 'community' | 'boxoffice' }) {
+  const tint = kind === 'community' ? COMMUNITY_SIGNAL : GOLD;
   return (
     <span
-      data-testid="price-community-badge"
+      data-testid={`price-${kind}-badge`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '4px 7px',
+        gap: 5,
+        padding: '4px 8px',
         borderRadius: 5,
-        background: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 12%, transparent)`,
-        border: `1px solid color-mix(in oklab, ${COMMUNITY_SIGNAL} 50%, transparent)`,
-        color: COMMUNITY_SIGNAL,
+        background: `color-mix(in oklab, ${tint} 12%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${tint} 50%, transparent)`,
+        color: tint,
         fontFamily: 'var(--font-mono)',
-        fontSize: 9,
+        fontSize: 9.5,
         fontWeight: 700,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
@@ -324,16 +336,33 @@ function CommunityCornerBadge() {
         flexShrink: 0,
       }}
     >
-      {copy.priceDisplay.communityLabel}
+      {kind === 'boxoffice' && (
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 10 10"
+          style={{ flexShrink: 0 }}
+          aria-hidden
+        >
+          <path
+            d="M5 1l1.18 2.46L9 3.78l-2 1.92.55 2.8L5 7.2 2.45 8.5 3 5.7 1 3.78l2.82-.32L5 1z"
+            fill={tint}
+          />
+        </svg>
+      )}
+      {kind === 'community'
+        ? copy.priceDisplay.communityLabel
+        : copy.priceDisplay.boxOfficeTrustLabel}
     </span>
   );
 }
 
-// ── Community attribution (more-p-price_states) ──────────────────
-// "Submitted by @handle · N fans confirmed", sans, muted. A submission with no
-// handle reads "Submitted by an anonymous fan"; the confirms clause only shows
-// once a fan other than the submitter has confirmed.
-function CommunityAttribution({
+// ── Submitter attribution (more-p-price_states) ──────────────────
+// "Submitted by @handle · N fans confirmed", sans 12.5px, muted, on both the
+// community and the box office card. A submission with no handle reads
+// "Submitted by an anonymous fan"; the confirms clause only shows once a fan
+// other than the submitter has confirmed.
+function SubmitterAttribution({
   submitter,
   confirmsCount,
 }: {
@@ -346,10 +375,11 @@ function CommunityAttribution({
       : '';
   return (
     <div
-      data-testid="price-community-attribution"
+      data-testid="price-submitter-attribution"
       style={{
         fontFamily: 'var(--font-ui)',
         fontSize: 12.5,
+        lineHeight: 1.25,
         color: 'var(--fg-muted)',
       }}
     >
@@ -777,46 +807,15 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   // Render nothing unless we have at least the venue name
   if (!venueName) return null;
 
-  // Fan-corroborated box office price — no purchase/observation metadata recorded.
-  // Show simple "Submitted by @handle · N fans confirmed" attribution instead.
+  // Fan-corroborated box office price — no purchase/observation metadata
+  // recorded. The board's box office card reads the same line as community's.
   if (!boxOfficeAction) {
-    const confirmsText =
-      confirmsCount != null && confirmsCount > 0
-        ? ` · ${confirmsCount} ${confirmsCount !== 1 ? copy.priceDisplay.fansConfirmedSuffix : copy.priceDisplay.fanConfirmedSuffix}`
-        : '';
     return (
-      <div style={{ marginTop: 6 }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: 'var(--fg-muted)',
-            letterSpacing: '0.03em',
-          }}
-        >
-          {copy.priceDisplay.submittedByPrefix}{' '}
-          {submitter ? (
-            submitter.url ? (
-              <a
-                href={submitter.url}
-                className="ph-no-capture"
-                style={{
-                  color: 'inherit',
-                  textDecoration: 'underline',
-                  textDecorationColor: 'var(--border-strong)',
-                  textUnderlineOffset: 2,
-                }}
-              >
-                @{submitter.handle}
-              </a>
-            ) : (
-              <span className="ph-no-capture">@{submitter.handle}</span>
-            )
-          ) : (
-            <em>{copy.priceDisplay.anonymousFan}</em>
-          )}
-          {confirmsText}
-        </span>
+      <div style={{ marginTop: ATTRIBUTION_GAP }}>
+        <SubmitterAttribution
+          submitter={submitter}
+          confirmsCount={confirmsCount ?? null}
+        />
       </div>
     );
   }
@@ -1267,7 +1266,8 @@ export function PriceDisplay({
     <div
       style={{
         marginTop: 18,
-        padding: '14px 14px 12px',
+        // more-p-price_states, measured: 16px inside a 1px edge, radius 12.
+        padding: 16,
         borderRadius: 12,
         ...cardEdge,
         position: 'relative',
@@ -1279,15 +1279,18 @@ export function PriceDisplay({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 8,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              color: isBoxOffice ? GOLD : 'var(--fg-subtle)',
-              letterSpacing: '0.06em',
+              fontSize: PRICE_EYEBROW.size,
+              // The board's BOX OFFICE eyebrow is grey like TICKETS; the gold
+              // lives on the badge.
+              color: 'var(--fg-subtle)',
+              letterSpacing: PRICE_EYEBROW.tracking,
               textTransform: 'uppercase',
             }}
           >
@@ -1304,10 +1307,13 @@ export function PriceDisplay({
         {hasSpark && range14d && (
           <Sparkline values={range14d} flag={sparkFlag} dim={soldOut} />
         )}
-        {/* A live community price wears its tier as an outlined badge at top
-            right, not inline after the number (more-p-price_states). Community
-            never draws a sparkline, so the corner is free. */}
-        {!soldOut && isCommunity && <CommunityCornerBadge />}
+        {/* A live community or box office price wears its tier as an outlined
+            badge at top right, not inline after the number
+            (more-p-price_states). Neither draws a sparkline, so the corner is
+            free. */}
+        {!soldOut && (isCommunity || isBoxOffice) && (
+          <CornerTrustBadge kind={isCommunity ? 'community' : 'boxoffice'} />
+        )}
       </div>
 
       {/* Headline number */}
@@ -1315,8 +1321,8 @@ export function PriceDisplay({
         style={{
           display: 'flex',
           alignItems: 'baseline',
-          gap: 8,
-          marginTop: 6,
+          gap: 10,
+          marginTop: 11,
           flexWrap: 'wrap',
         }}
       >
@@ -1324,7 +1330,9 @@ export function PriceDisplay({
           style={{
             fontFamily: 'var(--font-ui)',
             fontWeight: 900,
-            fontSize: 28,
+            // more-p-price_states: 25px cap height measured on every state.
+            fontSize: PRICE_HEADLINE_SIZE,
+            lineHeight: 1,
             color: soldOut ? 'var(--fg-subtle)' : 'var(--fg)',
             letterSpacing: '-0.025em',
             textDecoration: soldOut ? 'line-through' : 'none',
@@ -1335,26 +1343,18 @@ export function PriceDisplay({
         </span>
 
         {!soldOut && (
+          // more-p-price_states: "STARTING, ALL-IN" and "FACE VALUE · NO FEES"
+          // in mono caps, 9.5px, 0.14em, muted.
           <span
-            style={
-              isCommunity
-                ? // more-p-price_states: "STARTING, ALL-IN" in mono caps.
-                  {
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 500,
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                  }
-                : {
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 600,
-                    fontSize: 12,
-                    color: isBoxOffice ? GOLD : 'var(--fg-muted)',
-                    letterSpacing: '-0.005em',
-                  }
-            }
+            data-testid="price-qualifier"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 500,
+              fontSize: 9.5,
+              color: 'var(--fg-muted)',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+            }}
           >
             {isBoxOffice
               ? copy.priceDisplay.faceValueNoFees
@@ -1366,8 +1366,11 @@ export function PriceDisplay({
           </span>
         )}
 
-        {/* Trust mark — inline for the other tiers; community's sits top right */}
-        {!soldOut && !isCommunity && <TrustMark kind={sourceKind} />}
+        {/* Trust mark — inline for primary and resale; community and box
+            office wear theirs top right */}
+        {!soldOut && !isCommunity && !isBoxOffice && (
+          <TrustMark kind={sourceKind} />
+        )}
 
         {/* Sold out pill */}
         {soldOut && (
@@ -1391,7 +1394,7 @@ export function PriceDisplay({
 
       {/* Source attribution — community shows submitter handle or "anonymous fan" */}
       {!soldOut && isCommunity && (
-        <div style={{ marginTop: 6 }}>
+        <div style={{ marginTop: ATTRIBUTION_GAP }}>
           {/* Community box-office context — shown when fan saw (not bought) the price
               at the venue in person or by phone. Renders above the @handle line. */}
           {priceObj.boxOfficeAction === 'saw' &&
@@ -1467,7 +1470,7 @@ export function PriceDisplay({
                 </span>
               </div>
             )}
-          <CommunityAttribution
+          <SubmitterAttribution
             submitter={priceObj.submitter}
             confirmsCount={priceObj.confirmsCount ?? null}
           />
@@ -1557,7 +1560,7 @@ export function PriceDisplay({
               />
             )}
             {/* Submitter handle — a sold-out community price only. A live one
-              names its submitter in CommunityAttribution above, and boxoffice
+              names its submitter in SubmitterAttribution above, and boxoffice
               uses BoxOfficeAttribution. */}
             {isCommunity && soldOut && priceObj.submitter && (
               <>
