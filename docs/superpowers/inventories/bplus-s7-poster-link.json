@@ -1,0 +1,18 @@
+{
+  "feature": "Surface 7 · poster QR link /I/<code>",
+  "note": "A poster's QR opens /I/<CODE>; the proxy redirects it to the invite screen with the code passed along (proxy.ts inviteShortLinkRedirect), and nothing redeems until the button. Signed out, since that is who scans a poster. Needs a multi-use code in CC_POSTER_CODE (scratch fixture: BETA-AUDT-0001). Board: 11-signed-out/inv-mob (the invite screen it lands on).",
+  "signedOut": true,
+  "rows": [
+    {
+      "id": "poster-link",
+      "label": "/I/<code>: lands on the invite screen with the code filled",
+      "steps": [
+        {
+          "goto": "/I/${CC_POSTER_CODE}",
+          "expectRedirect": "/auth/code",
+          "wait": "h1"
+        }
+      ]
+    }
+  ]
+}
