@@ -23,6 +23,7 @@ import {
   RESULT_ART_SIZE,
   RESULT_NAME_STYLE,
   RESULT_META_STYLE,
+  resultRowProps,
   resultRowStyle,
   ringColorFor,
 } from './ResultParts';
@@ -32,6 +33,10 @@ const copy = CONSUMER_COPY.search;
 interface ArtistResultRowProps {
   artist: ArtistSearchResult;
   selected: boolean;
+  /** The row's keyboard index, for its option id. */
+  itemIdx: number;
+  /** Inside the palette's listbox (the row is then an `option`). */
+  listbox: boolean;
   onHover?: () => void;
   onNavigate: () => void;
   /** Clerk's answer, `undefined` while it is still resolving. */
@@ -51,6 +56,8 @@ interface ArtistResultRowProps {
 export const ArtistResultRow = ({
   artist,
   selected,
+  itemIdx,
+  listbox,
   onHover,
   onNavigate,
   isSignedIn,
@@ -126,7 +133,7 @@ export const ArtistResultRow = ({
       <button
         type="button"
         onClick={onNavigate}
-        data-selected={selected ? 'true' : undefined}
+        {...resultRowProps(listbox, itemIdx, selected)}
         style={{
           all: 'unset',
           cursor: 'pointer',

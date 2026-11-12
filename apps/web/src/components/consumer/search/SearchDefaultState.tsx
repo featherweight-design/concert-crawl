@@ -9,7 +9,9 @@ import {
   RingArt,
   SectionLabel,
   formatDayLabel,
+  resultRowProps,
   resultRowStyle,
+  useListboxRows,
   ringColorFor,
 } from './ResultParts';
 
@@ -124,6 +126,7 @@ export function SearchDefaultState({
   selectedIdx = -1,
   onHover,
 }: SearchDefaultStateProps) {
+  const listbox = useListboxRows();
   return (
     <div
       style={{
@@ -176,7 +179,7 @@ export function SearchDefaultState({
                 type="button"
                 onClick={() => onPickEvent('artist', event.artist)}
                 onMouseEnter={() => onHover?.(idx)}
-                data-selected={selected ? 'true' : undefined}
+                {...resultRowProps(listbox, idx, selected)}
                 style={resultRowStyle(selected, ring)}
               >
                 <span

@@ -24,7 +24,9 @@ import {
   RingArt,
   SectionLabel,
   formatDayLabel,
+  resultRowProps,
   resultRowStyle,
+  useListboxRows,
   ringColorFor,
 } from './ResultParts';
 import {
@@ -85,6 +87,7 @@ function ArtistPageSection({
   onHover?: (idx: number) => void;
   onNavigateTo: (type: 'artistPage', value: { slug: string }) => void;
 }) {
+  const listbox = useListboxRows();
   const { isSignedIn } = useAuth();
   const { surface } = useEntitlement('following');
   const { data: planState } = usePlanState();
@@ -113,6 +116,8 @@ function ArtistPageSection({
               {...(query === undefined ? {} : { query })}
               artist={artist}
               selected={selectedIdx === itemIdx}
+              itemIdx={itemIdx}
+              listbox={listbox}
               {...hoverProps}
               onNavigate={() =>
                 onNavigateTo('artistPage', { slug: artist.slug })
@@ -239,6 +244,7 @@ function ArtistSection({
   onHover?: (idx: number) => void;
   onNavigateTo: (type: 'artist', value: string) => void;
 }) {
+  const listbox = useListboxRows();
   if (artistResults.length === 0) return null;
   return (
     <>
@@ -255,7 +261,7 @@ function ArtistSection({
             type="button"
             onClick={() => onNavigateTo('artist', artist.name)}
             onMouseEnter={() => onHover?.(itemIdx)}
-            data-selected={selected ? 'true' : undefined}
+            {...resultRowProps(listbox, itemIdx, selected)}
             style={resultRowStyle(selected, ring)}
           >
             <RingArt
@@ -307,6 +313,7 @@ function VenueSection({
     value: { slug: string; matchingEventId?: string },
   ) => void;
 }) {
+  const listbox = useListboxRows();
   if (venueResults.length === 0) return null;
   return (
     <>
@@ -327,7 +334,7 @@ function VenueSection({
               })
             }
             onMouseEnter={() => onHover?.(itemIdx)}
-            data-selected={selected ? 'true' : undefined}
+            {...resultRowProps(listbox, itemIdx, selected)}
             // A venue has no genre: its edge is the neutral ring, and its
             // identity is the glyph tile (README rule 5).
             style={resultRowStyle(selected, ringColorFor(null))}

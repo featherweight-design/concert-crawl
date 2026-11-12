@@ -163,7 +163,7 @@ describe('SearchPalette', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     // idx 0 = Radiohead (first artist)
-    const buttons = screen.getAllByRole('button', { name: /Radiohead/i });
+    const buttons = screen.getAllByRole('option', { name: /Radiohead/i });
     // The matching button should have data-selected="true"
     const selected = buttons.find(
       (btn) => btn.getAttribute('data-selected') === 'true',
@@ -171,12 +171,40 @@ describe('SearchPalette', () => {
     expect(selected).toBeTruthy();
   });
 
+  // The input is a combobox that points at the highlighted row, so a screen
+  // reader announces the arrow-key selection.
+  it('points the combobox at the highlighted option', () => {
+    render(<SearchPalette open={true} onClose={onClose} />);
+    const input = screen.getByRole('combobox');
+    expect(input.getAttribute('aria-activedescendant')).toBeNull();
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    const [selected] = screen.getAllByRole('option', { selected: true });
+    expect(selected?.id).toBeTruthy();
+    expect(input.getAttribute('aria-activedescendant')).toBe(selected?.id);
+  });
+
+  it('scrolls the highlighted row into view', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    render(<SearchPalette open={true} onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+  });
+
+  it('leaves Enter to a focused control inside the panel', () => {
+    render(<SearchPalette open={true} onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    screen.getByRole('button', { name: 'Clear' }).focus();
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+  });
+
   it('highlights the second result after two ArrowDowns', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     // idx 1 = Godspeed (second artist)
-    const buttons = screen.getAllByRole('button', { name: /Godspeed/i });
+    const buttons = screen.getAllByRole('option', { name: /Godspeed/i });
     const selected = buttons.find(
       (btn) => btn.getAttribute('data-selected') === 'true',
     );
@@ -187,7 +215,7 @@ describe('SearchPalette', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
     // No ArrowDown pressed — nothing should be selected
     const selectedButtons = screen
-      .getAllByRole('button')
+      .getAllByRole('option')
       .filter((btn) => btn.getAttribute('data-selected') === 'true');
     expect(selectedButtons).toHaveLength(0);
   });
@@ -197,7 +225,7 @@ describe('SearchPalette', () => {
     fireEvent.keyDown(window, { key: 'ArrowDown' }); // idx 0
     fireEvent.keyDown(window, { key: 'ArrowDown' }); // idx 1
     fireEvent.keyDown(window, { key: 'ArrowUp' }); // back to idx 0
-    const buttons = screen.getAllByRole('button', { name: /Radiohead/i });
+    const buttons = screen.getAllByRole('option', { name: /Radiohead/i });
     const selected = buttons.find(
       (btn) => btn.getAttribute('data-selected') === 'true',
     );
