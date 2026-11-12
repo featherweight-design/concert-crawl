@@ -417,6 +417,19 @@ export async function runDailyCrawl(): Promise<{
 }> {
   logger.info('Starting daily crawl');
 
+  // 1e — drop stored page bodies past their retention window. Housekeeping
+  // that needs no crawl data, so it runs first and a night with no active
+  // venues still expires them; it never fails the crawl.
+  try {
+    await sweepExpiredPageBodies();
+  } catch (bodySweepErr: unknown) {
+    Sentry.captureException(bodySweepErr);
+    logger.error(
+      { bodySweepErr },
+      'Page body sweep failed — crawl data unaffected',
+    );
+  }
+
   const activeVenues = await db
     .select({ id: venues.id, name: venues.name })
     .from(venues)
@@ -577,18 +590,6 @@ export async function runDailyCrawl(): Promise<{
     logger.error(
       { sweepErr },
       'Stale event sweep failed — crawl data unaffected',
-    );
-  }
-
-  // 1e — drop stored page bodies past their retention window. Housekeeping:
-  // it never fails the crawl.
-  try {
-    await sweepExpiredPageBodies();
-  } catch (bodySweepErr: unknown) {
-    Sentry.captureException(bodySweepErr);
-    logger.error(
-      { bodySweepErr },
-      'Page body sweep failed — crawl data unaffected',
     );
   }
 

@@ -82,8 +82,16 @@ export class FetchLog {
     const tooBig =
       keptBody !== undefined &&
       Buffer.byteLength(keptBody) > MAX_PAGE_BODY_BYTES;
-    const htmlGz =
-      keptBody !== undefined && !tooBig ? gzipSync(keptBody) : null;
+    // A body that cannot be compressed is simply not kept: it must never fail
+    // the fetch that read it.
+    let htmlGz: Buffer | null = null;
+    if (keptBody !== undefined && !tooBig) {
+      try {
+        htmlGz = gzipSync(keptBody);
+      } catch {
+        htmlGz = null;
+      }
+    }
     this.items.push({
       url: page.url,
       finalUrl: page.finalUrl ?? null,
