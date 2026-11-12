@@ -2,6 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
+import { count, eq, gte, max } from 'drizzle-orm';
+import { db, emailSendLog } from '@concert-crawl/db';
+import type { AdminEmailDelivery } from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
   sendAdminAlertEmail,
@@ -29,7 +32,51 @@ const testEmailBodySchema = z.object({
     .default('admin_alert'),
 });
 
+const deliveryQuerySchema = z.object({
+  hours: z.coerce.number().int().min(1).max(168).default(24),
+});
+
 export const notificationsAdminRouter = new Hono<AdminVariables>();
+
+// GET /v1/admin/notifications/delivery?hours=24 — transactional email outcomes
+// for the Health page's "The site" tile. Counts come from email_send_log by
+// status inside the window; lastSentAt is the newest 'sent' row at any age.
+// A row's created_at is when the send was claimed (it is written 'failed'
+// first and flipped to 'sent' on success), so it trails the real send by the
+// length of the Resend call. Read-only, so it writes no audit row.
+notificationsAdminRouter.get(
+  '/delivery',
+  zValidator('query', deliveryQuerySchema, validationHook),
+  async (ctx) => {
+    const { hours } = ctx.req.valid('query');
+    const since = new Date(Date.now() - hours * 3_600_000);
+
+    const [byStatus, lastSent] = await Promise.all([
+      db
+        .select({ status: emailSendLog.status, total: count() })
+        .from(emailSendLog)
+        .where(gte(emailSendLog.createdAt, since))
+        .groupBy(emailSendLog.status),
+      db
+        .select({ at: max(emailSendLog.createdAt) })
+        .from(emailSendLog)
+        .where(eq(emailSendLog.status, 'sent')),
+    ]);
+
+    const totalFor = (status: string): number =>
+      byStatus.find((row) => row.status === status)?.total ?? 0;
+    const lastSentAt = lastSent[0]?.at ?? null;
+
+    const data: AdminEmailDelivery = {
+      lastSentAt: lastSentAt === null ? null : lastSentAt.toISOString(),
+      sent: totalFor('sent'),
+      failed: totalFor('failed'),
+      suppressed: totalFor('suppressed'),
+      hours,
+    };
+    return ctx.json({ success: true, data });
+  },
+);
 
 // GET /v1/admin/notifications/test-email/options — enumerate every email the
 // app can send, grouped for the Admin > Settings picker. Sourced from the same

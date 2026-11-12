@@ -3,7 +3,11 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { adminSettings, db } from '@concert-crawl/db';
 import type { AdminSettingsRow } from '@concert-crawl/db';
-import type { AdminSettings } from '@concert-crawl/types';
+import {
+  LLM_BUDGET_WARN_AT_PERCENTS,
+  type AdminSettings,
+  type LlmBudgetWarnAtPercent,
+} from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
@@ -15,6 +19,14 @@ export const settingsAdminRouter = new Hono<AdminVariables>();
 
 const SETTINGS_ROW_ID = 1;
 export const MAX_LLM_MONTHLY_BUDGET_USD = 1000;
+// The board draws 75% selected; the column defaults to it too.
+const DEFAULT_LLM_BUDGET_WARN_AT_PERCENT: LlmBudgetWarnAtPercent = 75;
+
+function isLlmBudgetWarnAtPercent(
+  value: unknown,
+): value is LlmBudgetWarnAtPercent {
+  return LLM_BUDGET_WARN_AT_PERCENTS.some((percent) => percent === value);
+}
 
 const patchSchema = z
   .object({
@@ -24,6 +36,10 @@ const patchSchema = z
       .gt(0)
       .max(MAX_LLM_MONTHLY_BUDGET_USD)
       .nullable(),
+    llmBudgetWarnAtPercent: z.number().refine(isLlmBudgetWarnAtPercent, {
+      message: 'Pick 50, 75 or 90',
+    }),
+    llmBudgetFallbackToStructured: z.boolean(),
     approvePricesMyself: z.boolean(),
   })
   .partial()
@@ -32,9 +48,21 @@ const patchSchema = z
     message: 'Send at least one setting',
   });
 
+// The column's CHECK keeps it to the three choices; the guard only narrows.
+const warnAtPercentOf = (
+  row: AdminSettingsRow | undefined,
+): LlmBudgetWarnAtPercent => {
+  const stored = row?.llmBudgetWarnAtPercent;
+  return isLlmBudgetWarnAtPercent(stored)
+    ? stored
+    : DEFAULT_LLM_BUDGET_WARN_AT_PERCENT;
+};
+
 const toSettings = (row: AdminSettingsRow | undefined): AdminSettings => ({
   llmMonthlyBudgetUsd:
     row?.llmMonthlyBudgetUsd == null ? null : Number(row.llmMonthlyBudgetUsd),
+  llmBudgetWarnAtPercent: warnAtPercentOf(row),
+  llmBudgetFallbackToStructured: row?.llmBudgetFallbackToStructured ?? true,
   approvePricesMyself: row?.approvePricesMyself ?? false,
   updatedAt: row?.updatedAt.toISOString() ?? null,
   updatedBy: row?.updatedBy ?? null,
@@ -65,6 +93,14 @@ settingsAdminRouter.patch(
               patch.llmMonthlyBudgetUsd === null
                 ? null
                 : patch.llmMonthlyBudgetUsd.toFixed(2),
+          }),
+      ...(patch.llmBudgetWarnAtPercent === undefined
+        ? {}
+        : { llmBudgetWarnAtPercent: patch.llmBudgetWarnAtPercent }),
+      ...(patch.llmBudgetFallbackToStructured === undefined
+        ? {}
+        : {
+            llmBudgetFallbackToStructured: patch.llmBudgetFallbackToStructured,
           }),
       ...(patch.approvePricesMyself === undefined
         ? {}
@@ -106,10 +142,14 @@ settingsAdminRouter.patch(
     ctx.set('auditMeta', {
       before: {
         llmMonthlyBudgetUsd: before.llmMonthlyBudgetUsd,
+        llmBudgetWarnAtPercent: before.llmBudgetWarnAtPercent,
+        llmBudgetFallbackToStructured: before.llmBudgetFallbackToStructured,
         approvePricesMyself: before.approvePricesMyself,
       },
       after: {
         llmMonthlyBudgetUsd: after.llmMonthlyBudgetUsd,
+        llmBudgetWarnAtPercent: after.llmBudgetWarnAtPercent,
+        llmBudgetFallbackToStructured: after.llmBudgetFallbackToStructured,
         approvePricesMyself: after.approvePricesMyself,
       },
     });

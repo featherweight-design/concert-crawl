@@ -1,0 +1,24 @@
+meta {
+  name: Email Delivery
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/admin/notifications/delivery?hours=24
+  body: none
+  auth: bearer
+}
+
+params:query {
+  hours: 24
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+}
