@@ -51,7 +51,10 @@ export const OfflineFallback = () => {
   const empty = loaded && !hasContent;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-7 px-5 py-10">
+    <main
+      data-testid="offline-fallback"
+      className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-7 px-5 py-10"
+    >
       <div className="flex flex-col items-center gap-3 text-center">
         {empty ? <NothingCachedTile /> : <NoSignalTile />}
         <span
