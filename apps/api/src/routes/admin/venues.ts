@@ -41,6 +41,7 @@ import { checkRobots } from '@concert-crawl/crawler-core/robots';
 import {
   CRAWLER_USER_AGENT,
   VENUE_PLATFORMS,
+  VENUE_SHORT_NAME_MAX,
   platformRequiresVenueId,
 } from '@concert-crawl/types';
 import type {
@@ -160,6 +161,15 @@ export const updateVenueSchema = createVenueSchema
     hideNote: z.string().trim().max(500).optional(),
     verified: z.boolean().optional(),
     verifiedBy: z.string().max(200).nullable().optional(),
+    // The short caption for narrow tiles (B+ addendum 4, item 4). Trimmed
+    // first, so the 20-character cap counts what is stored; empty clears it.
+    shortName: z
+      .string()
+      .trim()
+      .max(VENUE_SHORT_NAME_MAX)
+      .nullable()
+      .optional()
+      .transform((val) => (val === '' ? null : val)),
     crawlMode: z.enum(['http', 'browser']).nullable().optional(),
     featured: z.boolean().optional(),
     priceUrl: httpUrl().nullable().optional(),

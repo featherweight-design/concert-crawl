@@ -42,6 +42,10 @@ export const venues = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
+    // Optional short caption for places narrower than about 90px (the Where
+    // tiles, the Venues collected grid). NULL means those places fall back to
+    // the full name under a 2-line clamp. Everywhere else shows `name`.
+    shortName: text('short_name'),
     slug: text('slug').notNull().unique(),
     websiteUrl: text('website_url').notNull(),
     city: text('city').notNull().default('Denver'),

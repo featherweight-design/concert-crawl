@@ -1,0 +1,15 @@
+-- Venue short names (B+ addendum 4, item 4; Hugh chose option A on 2026-11-12).
+--
+-- Expand-only. One nullable column: an optional short caption the Where tiles
+-- and the Venues collected grid use under about 90px. NULL on every existing
+-- row, which keeps today's behaviour (full name, 2-line clamp). Nothing is
+-- seeded; admin sets each name in Venue Details.
+--
+-- Numbered 0114 because 0112 and 0113 are reserved by other open branches. The
+-- migrator applies an entry only when its journal `when` is above the last one
+-- applied, so this entry's `when` must stay above 0112's and 0113's, and both
+-- of those must reach a database before this one does.
+--
+-- Down:
+--   ALTER TABLE venues DROP COLUMN IF EXISTS short_name;
+ALTER TABLE "venues" ADD COLUMN IF NOT EXISTS "short_name" text;

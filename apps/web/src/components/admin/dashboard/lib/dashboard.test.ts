@@ -51,6 +51,7 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
     id: 'venue-1',
     name: 'Test Venue',
+    shortName: null,
     slug: 'test-venue',
     websiteUrl: 'https://test.com',
     city: 'Denver',

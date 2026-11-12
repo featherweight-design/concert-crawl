@@ -11,7 +11,11 @@ import type {
   VenuePlatform,
   VenueWithCrawlHealth,
 } from '@concert-crawl/types';
-import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types';
+import {
+  VENUE_SHORT_NAME_MAX,
+  isVenuePlatform,
+  platformRequiresVenueId,
+} from '@concert-crawl/types';
 import {
   updateVenue,
   pauseVenue,
@@ -287,6 +291,7 @@ interface VDInputProps {
   min?: number;
   max?: number;
   step?: number;
+  maxLength?: number;
   list?: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
@@ -305,6 +310,7 @@ function VDInput({
   min,
   max,
   step,
+  maxLength,
   list,
   inputRef,
   onChange,
@@ -337,6 +343,7 @@ function VDInput({
       min={min}
       max={max}
       step={step}
+      maxLength={maxLength}
       list={list}
       onChange={onChange}
       onFocus={() => setFocused(true)}
@@ -581,10 +588,12 @@ export function VenueDetailsClient({
   const [neighborhoodVal, setNeighborhoodVal] = useState(
     venue.neighborhood ?? '',
   );
+  const [shortNameVal, setShortNameVal] = useState(venue.shortName ?? '');
   const [slugManual, setSlugManual] = useState(true);
   const [slugFocused, setSlugFocused] = useState(false);
   const dirtyFields: string[] = [
     ...(nameVal !== venue.name ? ['Name'] : []),
+    ...(shortNameVal !== (venue.shortName ?? '') ? ['Short name'] : []),
     ...(slugVal !== venue.slug ? ['Slug'] : []),
     ...(urlVal !== venue.websiteUrl ? ['URL'] : []),
     ...(cityVal !== venue.city ? ['City'] : []),
@@ -757,6 +766,7 @@ export function VenueDetailsClient({
 
   function handleDiscard() {
     setNameVal(venue.name);
+    setShortNameVal(venue.shortName ?? '');
     setSlugVal(venue.slug);
     setUrlVal(venue.websiteUrl);
     setCityVal(venue.city);
@@ -813,6 +823,7 @@ export function VenueDetailsClient({
 
     const formData = new FormData();
     formData.set('name', nameVal.trim());
+    formData.set('shortName', shortNameVal.trim());
     formData.set('slug', slugVal.trim());
     formData.set('websiteUrl', urlVal.trim());
     formData.set('city', cityVal.trim() || 'Denver');
@@ -1270,6 +1281,25 @@ export function VenueDetailsClient({
                 </div>
               </VDField>
             </div>
+
+            {/* Short name. Addendum 4 puts it on the Look card, which isn't
+                built yet, so it sits under the name until that card lands. */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.shortName.label}
+              htmlFor="edit-venue-short-name"
+              hint={ADMIN_COPY.venueDetailsClient.fields.shortName.hint}
+            >
+              <VDInput
+                id="edit-venue-short-name"
+                value={shortNameVal}
+                maxLength={VENUE_SHORT_NAME_MAX}
+                placeholder={
+                  ADMIN_COPY.venueDetailsClient.fields.shortName.placeholder
+                }
+                disabled={isDisabled}
+                onChange={(evt) => setShortNameVal(evt.target.value)}
+              />
+            </VDField>
 
             {/* Source URL */}
             <VDField

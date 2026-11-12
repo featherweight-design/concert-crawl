@@ -90,6 +90,7 @@ const buildVenue = (
 ): VenueWithCrawlHealth => ({
   id: 'venue-1',
   name: 'Test Venue',
+  shortName: null,
   slug: 'test-venue',
   websiteUrl: 'https://testvenue.example.com',
   city: 'Denver',

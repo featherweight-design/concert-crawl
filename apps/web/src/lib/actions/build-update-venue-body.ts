@@ -109,6 +109,16 @@ export function buildUpdateVenueBody(
       ? String(neighborhoodRaw).trim()
       : null;
 
+  // Absent means unchanged, so a caller that never shows the field can't clear
+  // it. Empty or whitespace-only clears it.
+  const shortNameRaw = formData.get('shortName');
+  const shortName =
+    shortNameRaw === null
+      ? undefined
+      : String(shortNameRaw).trim() === ''
+        ? null
+        : String(shortNameRaw).trim();
+
   const featuredRaw = formData.get('featured');
   const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined;
 
@@ -170,6 +180,7 @@ export function buildUpdateVenueBody(
 
   return {
     name: formData.get('name'),
+    shortName,
     slug: formData.get('slug'),
     websiteUrl: formData.get('websiteUrl'),
     city: formData.get('city') || 'Denver',

@@ -332,6 +332,10 @@ export const VENUE_PLATFORMS = ['aeg', 'livenation', 'detail-page'] as const;
 
 export type VenuePlatform = (typeof VENUE_PLATFORMS)[number];
 
+// The longest venue short name, in characters after trimming. Shared so the
+// admin Zod schema and the admin input's maxLength agree.
+export const VENUE_SHORT_NAME_MAX = 20;
+
 // Platforms whose fetcher addresses a venue by an opaque id on the
 // platform's own side. `detail-page` (#1295) is not one of them: it follows
 // links from the venue's own websiteUrl, so there is no third-party id to
@@ -395,6 +399,8 @@ export type CrawlPauseRequest =
 export interface Venue {
   id: string;
   name: string;
+  // Optional short caption for tiles under about 90px; null falls back to name.
+  shortName: string | null;
   slug: string;
   websiteUrl: string;
   city: string;
@@ -1171,6 +1177,8 @@ export interface EventsRelatedResponse {
 export interface VenuePublic {
   id: string;
   name: string;
+  // Optional short caption for tiles under about 90px; null falls back to name.
+  shortName: string | null;
   slug: string;
   city: string;
   timezone: string;
