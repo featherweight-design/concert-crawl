@@ -40,6 +40,19 @@ describe('rulingOf', () => {
     );
   });
 
+  it('never splits on the strength of a source that could not answer', async () => {
+    const down: JoinedEvidence = {
+      whole: async () => null,
+      part: async () => true,
+    };
+    expect(await rulingOf('Iron & Wine', down)).toBe('unresolved');
+    const partDown: JoinedEvidence = {
+      whole: async () => false,
+      part: async (name) => (name === 'Nas' ? true : null),
+    };
+    expect(await rulingOf('Nas & The Roots', partDown)).toBe('unresolved');
+  });
+
   it('has nothing to rule on a name that joins nothing', async () => {
     expect(await rulingOf('Dubfire', evidence([], []))).toBe('whole');
   });

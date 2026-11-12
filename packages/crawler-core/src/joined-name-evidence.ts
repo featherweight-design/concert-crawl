@@ -34,7 +34,9 @@ const ourArtistKnows = async (name: string): Promise<boolean> => {
 };
 
 export function makeJoinedEvidence(
-  mbHasArtist: (name: string) => Promise<boolean> = makeMusicBrainzLookup(),
+  mbHasArtist: (
+    name: string,
+  ) => Promise<boolean | null> = makeMusicBrainzLookup(),
 ): JoinedEvidence {
   const ours = new Map<string, boolean>();
   return {
@@ -46,7 +48,7 @@ export function makeJoinedEvidence(
         known = await ourArtistKnows(name);
         ours.set(key, known);
       }
-      return known || (await mbHasArtist(name));
+      return known ? true : await mbHasArtist(name);
     },
   };
 }

@@ -15,9 +15,9 @@ export type JoinedRuling = 'whole' | 'split' | 'unresolved';
 
 export interface JoinedEvidence {
   /** An independent source names an artist exactly like this whole string. */
-  whole: (name: string) => Promise<boolean>;
+  whole: (name: string) => Promise<boolean | null>;
   /** The name is a known artist. Never given a joined name. */
-  part: (name: string) => Promise<boolean>;
+  part: (name: string) => Promise<boolean | null>;
 }
 
 /** The joiners the ladder already treats as co-billing (see CO_BILLING_JOINERS). */
@@ -37,9 +37,12 @@ export async function rulingOf(
 ): Promise<JoinedRuling> {
   const parts = partsOf(name);
   if (parts.length === 0) return 'whole';
-  if (await evidence.whole(name)) return 'whole';
+  // null is "could not ask": a source that was down never counts as "no".
+  const whole = await evidence.whole(name);
+  if (whole === null) return 'unresolved';
+  if (whole) return 'whole';
   for (const part of parts) {
-    if (!(await evidence.part(part))) return 'unresolved';
+    if ((await evidence.part(part)) !== true) return 'unresolved';
   }
   return 'split';
 }

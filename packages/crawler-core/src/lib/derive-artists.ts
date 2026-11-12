@@ -219,7 +219,7 @@ async function withKnownPresenter(
     return headliners;
   const key = nameKey(presenter);
   if (headliners.some((name) => nameKey(name) === key)) return headliners;
-  return (await evidence.part(presenter))
+  return (await evidence.part(presenter)) === true
     ? [presenter, ...headliners]
     : headliners;
 }
