@@ -352,6 +352,7 @@ describe('admin people', () => {
       stripeSubscriptionId: 'sub_f',
       tier: 'founder',
       founder: true,
+      currentPeriodEnd: new Date('2027-01-01T00:00:00Z'),
     });
     await seedUserProfile('user_t1', { isTestAccount: true });
 
