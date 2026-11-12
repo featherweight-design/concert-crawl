@@ -8,7 +8,10 @@
 
 import { ia_hashName } from '../../identity-art/IdentityArt';
 
-// The accent lives with the passport stamp helpers so VenueStamp picks the same colour.
+// The accent palette lives with the passport stamp helpers. Stamps now take
+// their venue's colours (`stampColorsFor`); this artist-hashed accent is only
+// the event page's going stub, and VenueStamp's fallback for a venue with no
+// glyph (hashed on the venue slug, not the artist).
 export { STAMP_ACCENTS, stampAccentFor } from '@/lib/passport/stamp';
 
 export type StampGlyph = 'star' | 'diamond' | 'ring' | 'triangle';
