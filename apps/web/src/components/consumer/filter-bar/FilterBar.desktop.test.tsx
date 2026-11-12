@@ -277,6 +277,30 @@ describe('FilterBar desktop segmented bar', () => {
     ).toBe(copy.whereLabel);
   });
 
+  it('names the dimension on every phone chip, set or not', () => {
+    // The phone chip shows only its value, so without a hidden label a set
+    // chip read "Red Rocks" with no dimension, and at rest only "Any vibe".
+    searchParams.current = new URLSearchParams('filterVibe=electronic');
+    renderBar();
+    const bar = screen.getByTestId('filter-segment-bar');
+    const phoneChips = screen
+      .getAllByRole('button', { expanded: false })
+      .filter(
+        (button) =>
+          button.getAttribute('aria-haspopup') === 'dialog' &&
+          !bar.contains(button),
+      );
+    const names = phoneChips.map(
+      (button) => button.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    );
+    expect(names.some((name) => name.startsWith(`${copy.vibeLabel} `))).toBe(
+      true,
+    );
+    expect(names.some((name) => name.startsWith(`${copy.whereLabel} `))).toBe(
+      true,
+    );
+  });
+
   it('Where searches venues by name and applies a pick', () => {
     renderBar();
     fireEvent.click(screen.getByTestId('venue-chip'));
