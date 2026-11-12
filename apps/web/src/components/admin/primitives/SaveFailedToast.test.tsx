@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { SaveFailedToast } from './SaveFailedToast';
@@ -11,6 +11,15 @@ const LONG = '@' + 'x'.repeat(60);
 
 // Style contract only: jsdom has no layout, so these pin the inline
 // `overflowWrap` that makes a long handle wrap; they cannot measure it.
+// `Toast` reads useIsPhone, and jsdom ships no matchMedia.
+beforeEach(() => {
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+});
+
 describe('admin toasts set overflowWrap anywhere on their text', () => {
   it('SaveFailedToast title and body wrap anywhere', () => {
     render(
