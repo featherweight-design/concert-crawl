@@ -462,7 +462,7 @@ describe('Admin crawl routes', () => {
       expect(res.status).toBe(403);
     });
 
-    it('returns 400 for a non-UUID id and for a limit over 50', async () => {
+    it('returns 400 for a non-UUID id and for a limit over 200', async () => {
       adminAuth();
       const bad = await createApp().request(
         '/v1/admin/crawl/runs/not-a-uuid/pages',
