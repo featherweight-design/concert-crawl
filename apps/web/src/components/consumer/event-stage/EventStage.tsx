@@ -10,6 +10,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { EventStatus } from '@concert-crawl/types';
 import { EventImage } from '@/components/consumer/event-image';
+import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { Panel } from '@/components/consumer/image-slot';
 import type { SlotSource } from '@/components/consumer/image-slot';
 import { slotSources } from '@/components/consumer/image-slot/lib/slot-metrics';
@@ -284,6 +285,12 @@ export type EventStageProps = {
   /** A cancelled show's hero is desaturated; every other status keeps its colour. */
   status?: EventStatus;
   /**
+   * The stale sweep's marker. A No longer listed show is stored as cancelled
+   * but keeps its colour photo, genre ring and theme wash (event-nll-m/-d,
+   * addendum-2 item 12: "no grey photo"). Only its list row greys.
+   */
+  delistedAt?: string | null | undefined;
+  /**
    * The venue whose stamp colours a past night's hero on a phone
    * (event_unmarked_m, event_stamped_m): the venue's ring and glow, and
    * venue-coloured rays. The photo keeps its colour at every width, as
@@ -301,6 +308,7 @@ export const EventStage = ({
   leadGenre,
   countdown,
   status,
+  delistedAt,
   pastVenueSlug,
   children,
   back,
@@ -308,7 +316,7 @@ export const EventStage = ({
   ...source
 }: EventStageProps) => {
   const ring = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
-  const desaturated = status === 'cancelled';
+  const desaturated = status === 'cancelled' && !isDelisted(status, delistedAt);
   const venueRing =
     pastVenueSlug === undefined ? null : stampColorsFor(pastVenueSlug).ring;
   return (

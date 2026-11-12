@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { EventStatus } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { StatusPill } from '@/components/consumer/StatusPill';
+import { NoLongerListedChip } from '@/components/consumer/event-detail/NoLongerListedCard';
 import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { SupportingLine } from './SupportingLine';
 
@@ -127,6 +128,8 @@ export const EventTitleBlock = ({
       delistedCardBelow &&
       isDelisted(status, delistedAt)
     );
+  const heroDelistedChip =
+    surface === 'detail' && delistedCardBelow && isDelisted(status, delistedAt);
   // B+ (`08-prices-and-status/more-st-ev_canc_m`): on the detail page the
   // status chip sits under the title, not in the tour row above it.
   const pillBelow = surface === 'detail';
@@ -150,9 +153,24 @@ export const EventTitleBlock = ({
       className={`flex min-w-0 flex-col ${centered ? 'items-center text-center sm:items-start sm:text-left' : ''}`}
       style={{ gap: ramp.gap }}
     >
+      {heroDelistedChip && (
+        // event-nll-d draws the chip above the title from `sm` up, 14px clear
+        // of it; event-nll-m draws none, the card below carries it there.
+        <div
+          data-testid="title-nll-chip"
+          className="hidden sm:flex"
+          style={{ marginBottom: 14 - ramp.gap }}
+        >
+          <NoLongerListedChip />
+        </div>
+      )}
+
       {((hasPill && !pillBelow) || tourName) && (
         <div
-          className="flex min-w-0 items-center gap-2"
+          // The detail stage centres this row on a phone, so it is held to the
+          // column's width: unbounded, a long tour line outgrew the viewport
+          // and clipped at both edges. There it wraps rather than truncates.
+          className={`flex min-w-0 max-w-full items-center gap-2 ${surface === 'detail' ? 'justify-center sm:justify-start' : ''}`}
           style={{ marginBottom: 1 }}
         >
           {pillBelow ? null : (
@@ -165,7 +183,7 @@ export const EventTitleBlock = ({
           {tourName && (
             <div
               aria-label={CONSUMER_COPY.eventTitle.tourAriaLabel(tourName)}
-              className={`truncate font-mono uppercase tracking-[0.14em] ${dim ? dimQuiet : 'text-fg-muted'}`}
+              className={`min-w-0 font-mono uppercase tracking-[0.14em] ${surface === 'detail' ? 'whitespace-normal text-balance' : 'truncate'} ${dim ? dimQuiet : 'text-fg-muted'}`}
               style={{ fontSize: ramp.tour }}
             >
               {tourName}

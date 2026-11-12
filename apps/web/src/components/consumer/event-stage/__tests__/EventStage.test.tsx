@@ -97,6 +97,30 @@ describe('<EventStage />', () => {
     expect(screen.getByTestId('stage-card').style.filter).toBe('');
   });
 
+  // event-nll-m / event-nll-d: No longer listed is stored as cancelled, but its
+  // hero keeps the colour photo, the genre ring and the theme wash.
+  it('keeps the colour of a No longer listed hero', () => {
+    render(
+      <EventStage
+        name="The Grouch"
+        status="cancelled"
+        delistedAt="2026-11-04T09:00:00Z"
+        leadGenre="electronic"
+        countdown={null}
+        surface="event"
+        artworkUrl="https://example.test/art.jpg"
+        photoUrl="https://example.test/photo.jpg"
+      >
+        <h1>The Grouch</h1>
+      </EventStage>,
+    );
+    expect(screen.getByTestId('stage-backdrop').style.filter).toBe('');
+    const card = screen.getByTestId('stage-card');
+    expect(card.style.filter).toBe('');
+    expect(card.style.boxShadow).toContain('2px var(--genre-electronic)');
+    expect(card.innerHTML).not.toContain('max-sm:grayscale');
+  });
+
   // event_unmarked_m / event_stamped_m: a past night's phone hero wears the
   // venue's ring and rays; no board greys the photo, and event-past-d keeps the
   // colour, so the photo stays in colour at every width.

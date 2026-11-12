@@ -42,6 +42,26 @@ describe('SupportingLine', () => {
     expect(run?.className).toContain('whitespace-normal');
     expect(run?.className).not.toContain('truncate');
   });
+
+  // A wrapped detail bill stranded "with" at the left edge as its own flex
+  // item while the names centred. It flows inline now, as one block.
+  it('flows the detail line as one inline run, lead and names together', () => {
+    render(
+      <SupportingLine
+        artists={['Frost Children', 'Kavari', 'Izzy Camina', 'Sakr']}
+        surface="detail"
+      />,
+    );
+    const group = screen.getByRole('group');
+    expect(group.className).not.toContain('flex');
+    expect(group.className).toContain('text-balance');
+    expect(group.firstElementChild?.textContent).toBe('with');
+  });
+
+  it('keeps the card line a single flex row', () => {
+    render(<SupportingLine artists={['A', 'B']} surface="card" />);
+    expect(screen.getByRole('group').className).toContain('flex');
+  });
 });
 
 // #1115 PR-G — opt-in artist-page links. Only the detail surface passes

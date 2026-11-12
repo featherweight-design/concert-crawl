@@ -343,6 +343,37 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
     );
   });
 
+  // A long presenter line overflowed the 320px stage and clipped at both
+  // edges. On the detail surface it wraps inside the column.
+  it('wraps the tour line inside the column on the detail surface', () => {
+    const tour = "Presents Stick Figure at Fiddler's Green Amphitheatre";
+    const { unmount } = render(
+      <EventTitleBlock
+        headliner="Stick Figure"
+        supportingArtists={[]}
+        tourName={tour}
+        surface="detail"
+        centered
+      />,
+    );
+    const line = screen.getByText(tour);
+    expect(line.className).toContain('whitespace-normal');
+    expect(line.className).not.toContain('truncate');
+    expect(line.parentElement?.className).toContain('max-w-full');
+    expect(line.parentElement?.className).toContain('justify-center');
+    unmount();
+
+    render(
+      <EventTitleBlock
+        headliner="Stick Figure"
+        supportingArtists={[]}
+        tourName={tour}
+        surface="hero"
+      />,
+    );
+    expect(screen.getByText(tour).className).toContain('truncate');
+  });
+
   describe('status: cancelled', () => {
     const renderCancelled = (delistedAt: string | null) =>
       render(
@@ -412,6 +443,50 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
 
       renderCancelled('2026-11-04T10:00:00.000Z');
       expect(screen.getByTestId('status-pill-removed')).toBeDefined();
+    });
+
+    // event-nll-d draws the chip above the title in the hero; event-nll-m
+    // draws none there, the card below carries it.
+    it('draws the No longer listed chip above the title from sm up only', () => {
+      render(
+        <EventTitleBlock
+          headliner="Wednesday"
+          supportingArtists={[]}
+          tourName={null}
+          surface="detail"
+          status="cancelled"
+          delistedAt="2026-11-04T10:00:00.000Z"
+          delistedCardBelow
+        />,
+      );
+      const slot = screen.getByTestId('title-nll-chip');
+      expect(slot.className).toContain('hidden');
+      expect(slot.className).toContain('sm:flex');
+      expect(slot.style.marginBottom).toBe('9px');
+      expect(slot.textContent).toBe('No longer listed');
+      const title = screen.getByText('Wednesday');
+      expect(
+        slot.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('draws no hero chip for a confirmed cancellation or without the card below', () => {
+      const { unmount } = render(
+        <EventTitleBlock
+          headliner="Wednesday"
+          supportingArtists={[]}
+          tourName={null}
+          surface="detail"
+          status="cancelled"
+          delistedAt={null}
+          delistedCardBelow
+        />,
+      );
+      expect(screen.queryByTestId('title-nll-chip')).toBeNull();
+      unmount();
+
+      renderCancelled('2026-11-04T10:00:00.000Z');
+      expect(screen.queryByTestId('title-nll-chip')).toBeNull();
     });
 
     it('keeps a postponed title at full strength', () => {

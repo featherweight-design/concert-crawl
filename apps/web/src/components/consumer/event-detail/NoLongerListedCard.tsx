@@ -10,6 +10,35 @@ const copy = CONSUMER_COPY.eventDetail;
 
 const MUTED = 'var(--fg-subtle)';
 
+/**
+ * The NO LONGER LISTED chip, as drawn in the card and, from `sm` up, above the
+ * title in the hero (event-nll-d). One chip so the two never drift apart.
+ */
+export const NoLongerListedChip = () => (
+  <span
+    data-testid="nll-chip"
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      height: 19,
+      padding: '0 7px 0 8px',
+      borderRadius: 6,
+      border:
+        '1px solid color-mix(in oklab, var(--fg-subtle) 50%, transparent)',
+      background: 'color-mix(in oklab, var(--fg-subtle) 8%, transparent)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 9.5,
+      fontWeight: 700,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      color: MUTED,
+      lineHeight: 1,
+    }}
+  >
+    {CONSUMER_COPY.noLongerListedLabel}
+  </span>
+);
+
 export const NoLongerListedCard = ({
   delistedAt,
 }: {
@@ -60,27 +89,7 @@ export const NoLongerListedCard = ({
         </svg>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            height: 19,
-            padding: '0 7px 0 8px',
-            borderRadius: 6,
-            border:
-              '1px solid color-mix(in oklab, var(--fg-subtle) 50%, transparent)',
-            background: 'color-mix(in oklab, var(--fg-subtle) 8%, transparent)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9.5,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: MUTED,
-            lineHeight: 1,
-          }}
-        >
-          {CONSUMER_COPY.noLongerListedLabel}
-        </span>
+        <NoLongerListedChip />
         <div
           style={{
             fontFamily: 'Inter, sans-serif',
