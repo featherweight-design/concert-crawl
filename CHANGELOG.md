@@ -1,3 +1,17 @@
+# [1.340.0](https://github.com/featherweight-design/concert-crawl/compare/v1.339.0...v1.340.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **web:** the No longer listed chip sits under the title on a narrow row ([b2a47f9](https://github.com/featherweight-design/concert-crawl/commit/b2a47f9558d23343dd5d2828322f3ec5e5e8c2f7))
+
+
+### Features
+
+* **web:** finish the no longer listed detail side (B+ A5 PR2) ([33e6ac8](https://github.com/featherweight-design/concert-crawl/commit/33e6ac86d92db25e2d7f5f1232b639d4e585ef18))
+* **web:** no longer listed card follows addendum 2 item 12 ([5d321c9](https://github.com/featherweight-design/concert-crawl/commit/5d321c902490c8cf161bf82bc54f6631cba43c77))
+* **web:** no longer listed on watching rows, detail side unfinished (B+ A5 PR2, wip) ([38d55f7](https://github.com/featherweight-design/concert-crawl/commit/38d55f75f52f4d16a7093d494a5aaa76d8675616))
+
 # [1.339.0](https://github.com/featherweight-design/concert-crawl/compare/v1.338.0...v1.339.0) (2026-11-12)
 
 

@@ -54,6 +54,7 @@ import type { AdminVariables } from './index.js';
 import { venueGuideAdminRouter } from './venue-guide.js';
 import { TRIAGE_CONDITIONS } from './lib/triage.js';
 import { idSchema } from '../../lib/id-schema.js';
+import { pauseVenueCrawl } from './lib/venue-crawl-pause.js';
 import { todayInDenver } from '../../lib/time.js';
 
 const createVenueSchema = z.object({
@@ -1114,22 +1115,7 @@ venuesAdminRouter.post(
     const { id } = ctx.req.valid('param');
     const { reason } = ctx.req.valid('json');
 
-    // The row lock makes overlapping pauses serialize, so the second one sees
-    // the first's timestamp instead of overwriting it.
-    const result = await db.transaction(async (tx) => {
-      const [existing] = await tx
-        .select({ crawlPausedAt: venues.crawlPausedAt })
-        .from(venues)
-        .where(eq(venues.id, id))
-        .for('update');
-      if (!existing) return null;
-      const [updated] = await tx
-        .update(venues)
-        .set({ crawlPausedAt: existing.crawlPausedAt ?? new Date() })
-        .where(eq(venues.id, id))
-        .returning();
-      return { existing, venue: updated };
-    });
+    const result = await pauseVenueCrawl(id);
     if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
