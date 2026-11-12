@@ -1,0 +1,285 @@
+import type { CrawlRun, DailyCost, Venue } from '@concert-crawl/types';
+import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
+
+// Pure derivations for the Health page (admin 1c). No React, no fetches:
+// the page loads, these decide.
+
+const MT = 'America/Denver';
+const HOUR_MS = 3_600_000;
+/** The daily crawl starts at 3 AM MT (crawl rules). */
+const CRAWL_HOUR_MT = 3;
+
+/** One row of `GET /v1/admin/crawl/status`: a venue and its newest run. */
+export interface HealthStatusRow {
+  id: string;
+  name: string;
+  lastRun: Pick<
+    CrawlRun,
+    'status' | 'reason' | 'createdAt' | 'eventsFound' | 'eventsInserted'
+  > | null;
+}
+
+export type GridVenue = Pick<
+  Venue,
+  | 'id'
+  | 'active'
+  | 'crawlPausedAt'
+  | 'blockedAt'
+  | 'consecutiveFailures'
+  | 'robotsTxtAllowed'
+>;
+
+interface MtParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+}
+
+export const mtParts = (at: Date): MtParts => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: MT,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    hourCycle: 'h23',
+  }).formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes): number =>
+    Number(parts.find((part) => part.type === type)?.value);
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+  };
+};
+
+/**
+ * The UTC instant of 00:00 MT on a calendar date (day may overflow, as with
+ * `Date.UTC`). DST switches at 2 AM, so 07:00Z, which is midnight MST or 1 AM
+ * MDT, always reads that midnight's offset.
+ */
+const mtMidnight = (year: number, month: number, day: number): number => {
+  const probe = Date.UTC(year, month - 1, day, 7);
+  return probe - mtParts(new Date(probe)).hour * HOUR_MS;
+};
+
+export interface Window {
+  start: number;
+  end: number;
+}
+
+/**
+ * "Last night": the MT calendar day of the newest 3 AM crawl that has started.
+ * Before 3 AM that is yesterday. A by-hand run later the same day falls inside
+ * it too (gap G2).
+ */
+export const lastNightWindow = (now: Date): Window => {
+  const parts = mtParts(now);
+  const day = parts.hour < CRAWL_HOUR_MT ? parts.day - 1 : parts.day;
+  return {
+    start: mtMidnight(parts.year, parts.month, day),
+    end: mtMidnight(parts.year, parts.month, day + 1),
+  };
+};
+
+const inWindow = (iso: string, window: Window): boolean => {
+  const at = Date.parse(iso);
+  return at >= window.start && at < window.end;
+};
+
+const runLastNight = (row: HealthStatusRow, window: Window) =>
+  row.lastRun &&
+  row.lastRun.status !== 'in_progress' &&
+  inWindow(row.lastRun.createdAt, window)
+    ? row.lastRun
+    : null;
+
+export interface CrawlSummary {
+  ok: number;
+  total: number;
+  failed: number;
+  finishedAt: string | null;
+  shows: number;
+  added: number;
+}
+
+export const summarizeCrawl = (
+  rows: HealthStatusRow[],
+  window: Window,
+): CrawlSummary => {
+  const summary: CrawlSummary = {
+    ok: 0,
+    total: 0,
+    failed: 0,
+    finishedAt: null,
+    shows: 0,
+    added: 0,
+  };
+  for (const row of rows) {
+    const run = runLastNight(row, window);
+    if (!run) continue;
+    summary.total += 1;
+    if (run.status === 'failed') summary.failed += 1;
+    else summary.ok += 1;
+    summary.shows += run.eventsFound;
+    summary.added += run.eventsInserted;
+    if (!summary.finishedAt || run.createdAt > summary.finishedAt) {
+      summary.finishedAt = run.createdAt;
+    }
+  }
+  return summary;
+};
+
+/**
+ * Built states only: "Running" and "Didn't run" wait on 1d, and off-season
+ * "Quiet" is open. Any failure reads "N failed" (gap G1 asks where the line is).
+ */
+export type CrawlTileState = 'onTime' | 'failed' | 'noRuns';
+
+export const crawlTileState = (summary: CrawlSummary): CrawlTileState => {
+  if (summary.total === 0) return 'noRuns';
+  return summary.failed > 0 ? 'failed' : 'onTime';
+};
+
+export interface MonthToDate {
+  year: number;
+  month: number;
+  dayOfMonth: number;
+  daysInMonth: number;
+}
+
+export const monthToDate = (now: Date): MonthToDate => {
+  const parts = mtParts(now);
+  return {
+    year: parts.year,
+    month: parts.month,
+    dayOfMonth: parts.day,
+    daysInMonth: new Date(Date.UTC(parts.year, parts.month, 0)).getUTCDate(),
+  };
+};
+
+/** `noBudget` is gap G5: no budget set, so no pill and no budget line. */
+export type CostTileState = 'under' | 'willGoOver' | 'over' | 'noBudget';
+
+export const costTile = (
+  mtdUsd: number,
+  budgetUsd: number | null,
+  month: MonthToDate,
+): { state: CostTileState; paceUsd: number } => {
+  const paceUsd = (mtdUsd / month.dayOfMonth) * month.daysInMonth;
+  if (budgetUsd === null) return { state: 'noBudget', paceUsd };
+  if (mtdUsd > budgetUsd) return { state: 'over', paceUsd };
+  return { state: paceUsd > budgetUsd ? 'willGoOver' : 'under', paceUsd };
+};
+
+/** Every day of the month; days still to come carry `costUsd: null`. */
+export const monthSeries = (
+  days: DailyCost[],
+  month: MonthToDate,
+): Array<{ date: string; costUsd: number | null }> => {
+  const byDate = new Map(days.map((day) => [day.date, day.costUsd]));
+  const prefix = `${month.year}-${String(month.month).padStart(2, '0')}`;
+  return Array.from({ length: month.daysInMonth }, (_, i) => {
+    const date = `${prefix}-${String(i + 1).padStart(2, '0')}`;
+    return {
+      date,
+      costUsd: i < month.dayOfMonth ? (byDate.get(date) ?? 0) : null,
+    };
+  });
+};
+
+export interface ArtistCounts {
+  matched: number;
+  auto_matched: number;
+  /** The Artists To check tab's own count, and its "shows soon" chip. */
+  to_check: number;
+  to_check_soon: number;
+}
+
+export const artistsTile = (counts: ArtistCounts) => ({
+  matched: counts.matched + counts.auto_matched,
+  // With nothing unsure and soon, the tile reads the plain To check line.
+  soon: counts.to_check_soon > 0 ? counts.to_check_soon : null,
+  toCheck: counts.to_check,
+});
+
+export type GridGroup = 'failed' | 'paused' | 'quiet' | 'ok';
+export const GRID_GROUPS: GridGroup[] = ['failed', 'paused', 'quiet', 'ok'];
+
+export interface GridCell {
+  id: string;
+  name: string;
+  failures: number;
+  autoPaused: boolean;
+}
+
+/**
+ * Last night's venues, worst group first and by name within a group. A failed
+ * run outranks a pause, so the venue its 3rd failure just paused reads Failed.
+ * Quiet on purpose is "Page unchanged" only (gap G7).
+ */
+export const groupVenues = (
+  rows: HealthStatusRow[],
+  venues: GridVenue[],
+  window: Window,
+): Record<GridGroup, GridCell[]> => {
+  const groups: Record<GridGroup, GridCell[]> = {
+    failed: [],
+    paused: [],
+    quiet: [],
+    ok: [],
+  };
+  const venuesById = new Map(venues.map((venue) => [venue.id, venue]));
+  for (const row of rows) {
+    const venue = venuesById.get(row.id);
+    if (!venue) continue;
+    const { onSite, crawling } = deriveVenueStatusChips(venue);
+    // GAP G6: hidden, blocked and robots.txt venues have no drawn group, so
+    // they stay off the grid until Design draws one.
+    if (
+      onSite === 'hidden' ||
+      crawling === 'blocked' ||
+      crawling === 'robots_disallowed'
+    ) {
+      continue;
+    }
+    const run = runLastNight(row, window);
+    const cell: GridCell = {
+      id: row.id,
+      name: row.name,
+      failures: venue.consecutiveFailures,
+      autoPaused: crawling === 'auto_paused',
+    };
+    if (run?.status === 'failed') groups.failed.push(cell);
+    else if (crawling === 'paused' || crawling === 'auto_paused') {
+      groups.paused.push(cell);
+    } else if (!run) {
+      // No run last night and not paused is "Didn't run", which waits on 1d.
+      continue;
+    } else if (run.reason === 'page_unchanged') groups.quiet.push(cell);
+    else groups.ok.push(cell);
+  }
+  for (const key of GRID_GROUPS) {
+    groups[key].sort((left, right) => left.name.localeCompare(right.name));
+  }
+  return groups;
+};
+
+/** Board money: "$15", "$4.12", "$0.37". */
+export const formatUsd = (value: number): string =>
+  Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
+
+export const formatMtTime = (iso: string): string =>
+  new Intl.DateTimeFormat('en-US', {
+    timeZone: MT,
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(iso));
+
+/** "Nov" for a 1-based month. */
+export const formatMonth = (month: number): string =>
+  new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(2000, month - 1, 1)),
+  );

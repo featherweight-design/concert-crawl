@@ -10,9 +10,9 @@ interface ReviewCounts {
   prices: number;
 }
 
+/** The Artists To check tab's own count (the API still zeroes the old fields). */
 interface ArtistCounts {
-  unmatched: number;
-  ambiguous: number;
+  to_check: number;
 }
 
 const settledValue = <T,>(result: PromiseSettledResult<T>): T | null =>
@@ -50,10 +50,8 @@ export default async function AdminMorePage() {
     const artistCounts = settledValue(artists);
     data = {
       ...EMPTY,
-      // The Artists review list: no Spotify match, or a suspect one.
-      artistsToCheck: artistCounts
-        ? artistCounts.unmatched + artistCounts.ambiguous
-        : null,
+      // The Artists To check tab, the same number the tab itself shows.
+      artistsToCheck: artistCounts?.to_check ?? null,
       missingPrices: settledValue(review)?.prices ?? null,
       featureFlags: settledValue(flags)?.length ?? null,
       feedbackToRead: settledValue(feedback)?.unread ?? null,
