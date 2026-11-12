@@ -105,7 +105,14 @@ export const BottomSheet = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        style={drag.sheetStyle}
+        style={
+          maxWidth === undefined
+            ? drag.sheetStyle
+            : ({
+                ...drag.sheetStyle,
+                '--sheet-max': `${maxWidth}px`,
+              } as React.CSSProperties)
+        }
         onTransitionEnd={drag.onSheetTransitionEnd}
         // A bottom sheet on mobile, a centered modal from sm up: anchored to the
         // bottom edge of a wide viewport it read as a stray drawer. One media
@@ -115,11 +122,6 @@ export const BottomSheet = ({
         className={`fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none max-sm:sheet-edge sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl sm:border sm:border-border sm:bg-surface-1 ${
           maxWidth === undefined ? 'sm:max-w-md' : 'sm:max-w-[var(--sheet-max)]'
         }`}
-        style={
-          maxWidth === undefined
-            ? undefined
-            : ({ '--sheet-max': `${maxWidth}px` } as React.CSSProperties)
-        }
       >
         <h2 id={titleId} className="sr-only">
           {title}
