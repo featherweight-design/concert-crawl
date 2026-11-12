@@ -402,6 +402,16 @@ describe('the code screen forwards the visitor IP to the miss limit', () => {
     expect(sent['x-service-key']).toBe(SERVICE_KEY);
   });
 
+  it('prefers x-real-ip over x-forwarded-for when x-vercel-forwarded-for is absent', async () => {
+    vi.stubEnv('INTERNAL_API_SECRET', SERVICE_KEY);
+    requestHeaders.set('x-real-ip', '198.51.100.8');
+    requestHeaders.set('x-forwarded-for', '203.0.113.9');
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE));
+
+    expect(sentHeaders()['x-client-ip']).toBe('198.51.100.8');
+  });
+
   it('falls back to the first x-forwarded-for hop', async () => {
     vi.stubEnv('INTERNAL_API_SECRET', SERVICE_KEY);
     requestHeaders.set('x-forwarded-for', ' 203.0.113.9 , 10.0.0.1');

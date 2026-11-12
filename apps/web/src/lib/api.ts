@@ -1,7 +1,15 @@
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
-// Server-side only — undefined in the browser bundle (not NEXT_PUBLIC_).
-// Sent as x-service-key so the API can allow Next.js SSR calls without a user token.
-const SERVICE_KEY = process.env['INTERNAL_API_SECRET'];
+/**
+ * The shared-secret header the API trusts from this server: `x-service-key`
+ * set to INTERNAL_API_SECRET, or nothing when the secret is unset. Server-side
+ * only — the secret is undefined in the browser bundle (not NEXT_PUBLIC_). Lets
+ * the API allow Next.js SSR calls without a user token, and vouches for a
+ * forwarded visitor IP. Read per call, never logged.
+ */
+export function serviceKeyHeaders(): Record<string, string> {
+  const serviceKey = process.env['INTERNAL_API_SECRET'];
+  return serviceKey ? { 'x-service-key': serviceKey } : {};
+}
 
 export interface ZodIssue {
   path: (string | number)[];
@@ -78,9 +86,7 @@ async function request<T>(
   const authHeaders: Record<string, string> = token
     ? { Authorization: `Bearer ${token}` }
     : {};
-  const serviceHeaders: Record<string, string> = SERVICE_KEY
-    ? { 'x-service-key': SERVICE_KEY }
-    : {};
+  const serviceHeaders = serviceKeyHeaders();
 
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
