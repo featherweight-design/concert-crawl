@@ -23,6 +23,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import {
   crewMembers,
   crews,
+  events,
   notifications,
   subscriptions,
   userEvents,
@@ -513,6 +514,23 @@ describe('past shows and restore (edit your Concerts)', () => {
       const { data } = await del(event.id);
       await put(event.id, { restore: data.restore });
       expect(await mateRows()).toBe(0);
+    });
+
+    it('still restores when the show was delisted after the removal', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: UPCOMING });
+      const attendingAt = new Date('2026-02-03T04:05:06.789Z');
+      await seedUserEvent(USER_ID, event.id, { status: null, attendingAt });
+      const { data } = await del(event.id);
+      await testDb
+        .update(events)
+        .set({ firstMissingAt: new Date() })
+        .where(eq(events.id, event.id));
+
+      expect((await put(event.id, { restore: data.restore })).status).toBe(200);
+      expect((await rowFor(USER_ID, event.id))?.attendingAt?.getTime()).toBe(
+        attendingAt.getTime(),
+      );
     });
 
     it('rejects an expired token and invents no attendance', async () => {
