@@ -84,7 +84,10 @@ export const EventRow = ({
     return () => observer.disconnect();
   }, []);
 
-  const artSize = narrow ? 44 : 56;
+  const artSize = narrow ? config.artSize.narrow : config.artSize.wide;
+  // A surface declares the gutter; a caller with no action to put in it (the
+  // signed-out event page) does not pay 36px of title column for an empty box.
+  const hasGutter = config.hasActionGutter && action != null;
   const hasSupportLine = config.showsSupports && show.supports.length > 0;
   // Resolved once here rather than inside the chip builder, so the taxonomy
   // stays out of a module whose whole job is turning a show into chip data.
@@ -123,7 +126,7 @@ export const EventRow = ({
         // The card's left inset is tighter at narrow so the art keeps its size
         // rather than the title column paying for the padding.
         padding: config.carded
-          ? `13px ${config.hasActionGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
+          ? `13px ${hasGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
           : '13px 0',
         borderRadius: config.carded ? 12 : undefined,
         ...(config.carded && !removed && cardedEdge(edge)),
@@ -290,8 +293,9 @@ export const EventRow = ({
 
         {/* Reserved only where the surface has an action — reserving it on
             Browse collapses the title column to 80px at 320. */}
-        {config.hasActionGutter && (
+        {hasGutter && (
           <div
+            data-testid="row-action-gutter"
             className="flex shrink-0 items-center justify-center"
             style={{ width: 36 }}
           >

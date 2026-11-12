@@ -441,6 +441,87 @@ describe('EventRow — the action gutter', () => {
     );
     expect(screen.getByText('remove')).not.toBeNull();
   });
+
+  // The B+ event board draws the watch eye at the right of every "More at"
+  // row (`bp-m-event_m_end`).
+  it('puts the related row action in the gutter', () => {
+    render(
+      <EventRow
+        show={makeShow()}
+        surface="related"
+        action={<button type="button">watch</button>}
+      />,
+    );
+    const gutter = screen.getByTestId('row-action-gutter');
+    expect(gutter.contains(screen.getByText('watch'))).toBe(true);
+    expect(gutter.style.width).toBe('36px');
+  });
+
+  // The signed-out event page renders no watch control. An empty 36px box
+  // would cost its title column for nothing.
+  it('reserves no gutter on a related row with no action', () => {
+    render(<EventRow show={makeShow()} surface="related" />);
+    expect(screen.queryByTestId('row-action-gutter')).toBeNull();
+  });
+});
+
+describe('EventRow — artwork size', () => {
+  const artBox = () => screen.getByTestId('row-image-ring').parentElement;
+
+  function atWidth(width: number, run: () => void) {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({
+        x: 0,
+        y: 0,
+        width,
+        height: 0,
+        top: 0,
+        left: 0,
+        right: width,
+        bottom: 0,
+        toJSON: () => ({}),
+      });
+    try {
+      run();
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  it('draws 56px art on a wide row', () => {
+    atWidth(500, () => {
+      render(<EventRow show={makeShow()} surface="related" />);
+      expect(artBox()?.style.width).toBe('56px');
+      expect(artBox()?.style.height).toBe('56px');
+    });
+  });
+
+  // The board's related rows sit in a 358px column and keep the full tile.
+  it('keeps 56px art on a narrow related row', () => {
+    atWidth(358, () => {
+      render(<EventRow show={makeShow()} surface="related" />);
+      expect(screen.getByTestId('event-row').dataset.narrow).toBe('true');
+      expect(artBox()?.style.width).toBe('56px');
+      expect(artBox()?.style.height).toBe('56px');
+    });
+  });
+
+  it('still shrinks the art to 44px on a narrow Browse row', () => {
+    atWidth(358, () => {
+      render(<EventRow show={makeShow()} surface="browse" />);
+      expect(artBox()?.style.width).toBe('44px');
+    });
+  });
+
+  it('rings the related art in the lead genre', () => {
+    render(
+      <EventRow show={makeShow({ genres: ['rock'] })} surface="related" />,
+    );
+    const ring = screen.getByTestId('row-image-ring').style.boxShadow;
+    expect(ring).toContain('1.25px');
+    expect(ring).toContain('var(--genre-rock)');
+  });
 });
 
 describe('EventRow — the footer slot', () => {
