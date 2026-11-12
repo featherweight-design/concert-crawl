@@ -183,19 +183,24 @@ export const FollowShelf = ({
         <ShelfHead
           eyebrow={FOLLOWING_COPY.yoursEyebrow(followCount)}
           title={FOLLOWING_COPY.yoursTitle}
+          // Only where the follow filter is honoured. A downgraded viewer keeps
+          // the shelf so they can unfollow, but the filter chip drops the
+          // scope for them at once, so See all would do nothing.
           action={
-            <Link
-              href={seeAllHref}
-              replace
-              scroll={false}
-              aria-label={FOLLOWING_COPY.yoursSeeAllAria}
-              data-testid="shelf-see-all"
-              className="inline-flex shrink-0 items-center gap-[5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-              style={{ fontSize: 12.5, color: 'var(--signal)' }}
-            >
-              {FOLLOWING_COPY.yoursSeeAll}
-              <ChevronGlyph />
-            </Link>
+            surface === 'visible-active' && (
+              <Link
+                href={seeAllHref}
+                replace
+                scroll={false}
+                aria-label={FOLLOWING_COPY.yoursSeeAllAria}
+                data-testid="shelf-see-all"
+                className="inline-flex shrink-0 items-center gap-[5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+                style={{ fontSize: 12.5, color: 'var(--signal)' }}
+              >
+                {FOLLOWING_COPY.yoursSeeAll}
+                <ChevronGlyph />
+              </Link>
+            )
           }
         />
       )}

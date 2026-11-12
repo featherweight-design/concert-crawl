@@ -73,7 +73,15 @@ export function EventImage({
   const catchCompleted = useCallback(
     (img: HTMLImageElement | null) => {
       if (img === null || !img.complete || loadedSrc === active) return;
-      const fail = () => setFailure({ key, attempt: attempt + 1 });
+      // A decode can settle after the chain has moved on, or after the
+      // instance took a new source list. Only advance from the attempt this
+      // check was made for, so a late rejection never rewinds the chain.
+      const fail = () =>
+        setFailure((prev) =>
+          prev.key === key && prev.attempt === attempt
+            ? { key, attempt: attempt + 1 }
+            : prev,
+        );
       if (img.naturalWidth > 0) {
         setLoadedSrc(active);
         return;
