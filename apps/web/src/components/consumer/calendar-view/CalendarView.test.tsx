@@ -253,7 +253,10 @@ describe('CalendarView B+ states', () => {
     const tuesday = screen.getByRole('button', { name: /Tuesday, Apr 28/ });
     const dots = tuesday.querySelectorAll('[data-testid="day-dots"] > span');
     expect(dots).toHaveLength(2);
-    expect(dots[0]?.getAttribute('style')).toContain('var(--genre-jazz)');
+    // One show each, so the tie falls back to the bucket order, which is
+    // alphabetical: country before jazz.
+    expect(dots[0]?.getAttribute('style')).toContain('var(--genre-country)');
+    expect(dots[1]?.getAttribute('style')).toContain('var(--genre-jazz)');
   });
 });
 
