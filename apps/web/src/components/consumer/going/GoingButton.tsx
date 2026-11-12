@@ -10,14 +10,16 @@
 // fill, a dark hole holding the venue glyph in a double-ringed rounded square,
 // and dark ink. Two artists at one venue get the same stub.
 //
-// `past-yes` / `past-no` are read-only displays, not affordances: the
-// retroactive "I went, actually" toggle is out of scope for v1.
+// `past-yes` is a read-only fact; `past-no` is the "I went" pill, a live tap that
+// stamps the night (edit-concerts PR3). Taking a stamp back out goes through the
+// "Remove it from Concerts" line under the button, never the button itself.
 
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
 import { venueGlyphKey } from '@/components/consumer/venue-glyph';
 import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
+import { VenueStamp } from '@/components/consumer/venue-stamp/VenueStamp';
 import { stampColorsFor, stampGlowFor } from '@/lib/passport/stamp';
 import { useThemeName } from '@/theme';
 import { GOING_COPY } from './definitions/copy';
@@ -86,13 +88,22 @@ const MIN_TAP_TARGET = 44;
 // A plain YYYY-MM-DD is anchored at noon UTC before formatting — midnight would
 // slip to the previous day in any negative-offset zone and label the night the
 // user attended one day early.
-const formatWentDate = (date: string): string =>
+const formatDate = (
+  date: string,
+  options: Intl.DateTimeFormatOptions,
+): string =>
   new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    ...options,
     timeZone: 'America/Denver',
   }).format(new Date(`${date}T12:00:00Z`));
+
+/** The button's label date, as drawn: "Sat, Nov 7" (event_stamped_m). */
+const formatWentDate = (date: string): string =>
+  formatDate(date, { weekday: 'short', month: 'short', day: 'numeric' });
+
+/** The pill's accessible name keeps the year, which the drawn label drops. */
+const formatWentDateFull = (date: string): string =>
+  formatDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
 
 const LockIcon = ({ size }: { size: number }) => (
   <svg
@@ -276,10 +287,10 @@ export const GoingButton = ({
   // fall under AA with `--bg`, so the ink is picked by contrast (#220).
   const ink = pillInkFor(accent, useThemeName());
 
-  const isPast = state === 'past-yes' || state === 'past-no';
   const isOn = state === 'going' || state === 'past-yes';
-  const isDeclined = state === 'past-no';
-  const disabled = isPast || pending;
+  // A stamped night reads as a fact; the way back out is the "Remove it" line
+  // under the button. An unstamped past night is a live "I went" tap.
+  const disabled = state === 'past-yes' || pending;
 
   const [announcement, setAnnouncement] = useState('');
   const previousState = useRef(state);
@@ -375,14 +386,15 @@ export const GoingButton = ({
     border: `1.5px solid ${isOn ? accent : 'var(--border-strong)'}`,
     // Both committed states sit on the venue fill, so both take the
     // contrast-picked ink: `--fg-on-accent` is white, under AA on Light.
-    color: isOn ? ink.text : isDeclined ? 'var(--fg-subtle)' : 'var(--fg)',
+    color: isOn ? ink.text : 'var(--fg)',
     fontFamily: 'var(--font-ui)',
-    fontWeight: 700,
+    // The filled "You went" stub is 800 on the board; every other state is 700.
+    fontWeight: state === 'past-yes' ? 800 : 700,
     fontSize: sizes.font,
     letterSpacing: '-0.01em',
     // `pending` blocks a second tap but is deliberately invisible: the caller
     // commits optimistically, so dimming here would undo the point of it.
-    opacity: isDeclined ? 0.7 : 1,
+    opacity: 1,
     transition:
       'background 160ms, border-color 160ms, color 160ms, opacity 150ms',
   };
@@ -395,16 +407,26 @@ export const GoingButton = ({
         type="button"
         className="going-cta"
         disabled={disabled}
-        // The past states are read-only displays, not toggles — announcing
-        // aria-pressed=false on `past-yes` would claim the user isn't going to a
-        // show they already attended.
-        aria-pressed={isPast ? undefined : state === 'going'}
+        // `past-yes` is a read-only fact, so it carries no pressed state. The
+        // unstamped pill is a toggle that reads as off (addendum 3, item 56).
+        aria-pressed={
+          state === 'past-yes'
+            ? undefined
+            : state === 'past-no'
+              ? false
+              : state === 'going'
+        }
         aria-label={
           state === 'going'
             ? GOING_COPY.button.ariaGoing
             : state === 'default'
               ? GOING_COPY.button.ariaNotGoing
-              : undefined
+              : state === 'past-no'
+                ? GOING_COPY.past.ariaWent(
+                    show.artist,
+                    formatWentDateFull(show.date),
+                  )
+                : undefined
         }
         onClick={() => {
           if (disabled) return;
@@ -455,6 +477,15 @@ export const GoingButton = ({
               venueName={show.venueName}
               size={sizes.hole}
             />
+          ) : state === 'past-no' ? (
+            // The dashed ghost of the venue's stamp, until the night is
+            // stamped (event_unmarked_m).
+            <VenueStamp
+              venueSlug={show.venueSlug}
+              venueName={show.venueName}
+              variant="dashed"
+              size={sizes.hole}
+            />
           ) : (
             <svg
               width={sizes.hole - 8}
@@ -489,7 +520,7 @@ export const GoingButton = ({
             justifyContent: fullWidth ? 'center' : 'flex-start',
           }}
         >
-          {state === 'going' && (
+          {(state === 'going' || state === 'past-yes') && (
             <CheckIcon size={Math.round(sizes.font * 0.95)} />
           )}
           <span

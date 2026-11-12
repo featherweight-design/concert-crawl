@@ -2,7 +2,13 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
 import { ApiError } from '@/lib/api';
 import { stubMatchMedia } from '@/test-utils/match-media';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
@@ -17,7 +23,12 @@ let entitlement: EntitlementResult = {
 };
 const mutate = vi.fn();
 const refresh = vi.fn();
+const push = vi.fn();
+const showStampedToast = vi.fn();
+const showRemovedToast = vi.fn();
+const showAttendanceError = vi.fn();
 let isPending = false;
+const settled = { going: true, attendingAt: '2026-01-01T00:00:00.000Z' };
 
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
@@ -26,9 +37,14 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: null }),
 }));
 vi.mock('@/lib/queries/use-attending-toggle', () => ({
-  useAttendingToggle: () => ({ mutate, isPending }),
+  useAttendingToggle: () => ({ mutateAsync: mutate, isPending }),
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }));
+vi.mock('./lib/attendance-toasts', () => ({
+  showStampedToast: (arg: unknown) => showStampedToast(arg),
+  showRemovedToast: (arg: unknown) => showRemovedToast(arg),
+  showAttendanceError: (arg: unknown) => showAttendanceError(arg),
+}));
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
@@ -43,10 +59,14 @@ const event = (over: Partial<GoingCtaEvent> = {}): GoingCtaEvent => ({
   date: '2099-10-14',
   status: 'upcoming',
   attendingAt: null,
+  showTime: '20:00:00',
+  genre: ['rock'],
+  artistPhotoUrl: null,
   venue: {
     timezone: 'America/Denver',
-    slug: 'the-church-nightclub',
-    name: 'The Church Nightclub',
+    name: 'Gothic Theatre',
+    slug: 'gothic-theatre',
+    city: 'Englewood',
   },
   ...over,
 });
@@ -71,7 +91,12 @@ describe('EventDetailCtaBlock', () => {
     // The explainer trigger reads useIsMobileViewport; jsdom has no matchMedia.
     stubMatchMedia(false);
     mutate.mockReset();
+    mutate.mockResolvedValue(settled);
     refresh.mockReset();
+    push.mockReset();
+    showStampedToast.mockReset();
+    showRemovedToast.mockReset();
+    showAttendanceError.mockReset();
     isPending = false;
     entitlement = { isLoading: false, active: true, surface: 'visible-active' };
   });
@@ -95,9 +120,123 @@ describe('EventDetailCtaBlock', () => {
     expect(goingButton()).toHaveTextContent('You went');
   });
 
-  it('shows the declined state on a past show that was never marked', () => {
+  it('offers "I went" on a past show that was never marked, with the venue stamp line', () => {
     renderBlock({ date: '2020-10-14' });
     expect(goingButton()).toHaveTextContent(GOING_COPY.button.pastNo);
+    expect(
+      screen.getByText(GOING_COPY.past.hint('Gothic Theatre')),
+    ).toBeInTheDocument();
+    // The boards draw the ⓘ on a past night too.
+    expect(
+      screen.getByRole('button', { name: EXPLAINER_LABEL }),
+    ).toBeInTheDocument();
+  });
+
+  it('stamps the night on an "I went" tap and offers the Passport', async () => {
+    renderBlock({ date: '2020-10-14' });
+    fireEvent.click(goingButton());
+    expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
+    await waitFor(() => expect(showStampedToast).toHaveBeenCalled());
+    const arg = showStampedToast.mock.calls[0]?.[0] as {
+      artist: string;
+      onOpenPassport: () => void;
+    };
+    expect(arg.artist).toBe('Khruangbin');
+    arg.onOpenPassport();
+    expect(push).toHaveBeenCalledWith('/passport');
+  });
+
+  it('stamps a past night even without the entitlement', () => {
+    entitlement = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    };
+    renderBlock({ date: '2020-10-14' });
+    fireEvent.click(goingButton());
+    expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
+  });
+
+  it('keeps the "I went" pill and raises the error toast when a stamp fails', async () => {
+    mutate.mockRejectedValue(new Error('down'));
+    renderBlock({ date: '2020-10-14' });
+    fireEvent.click(goingButton());
+    await waitFor(() =>
+      expect(showAttendanceError).toHaveBeenCalledWith('save'),
+    );
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.pastNo);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  describe('taking a stamped night back out', () => {
+    const stamped = {
+      date: '2020-10-14',
+      attendingAt: '2020-10-14T00:00:00.000Z',
+    };
+    const openConfirm = () => {
+      renderBlock(stamped);
+      fireEvent.click(
+        screen.getByRole('button', { name: GOING_COPY.past.removeLink }),
+      );
+    };
+
+    it('asks first, with the show-page footnote', () => {
+      openConfirm();
+      expect(
+        screen.getAllByText(GOING_COPY.remove.title).length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getByText(GOING_COPY.remove.footnoteShowPage),
+      ).toBeInTheDocument();
+      expect(mutate).not.toHaveBeenCalled();
+    });
+
+    it('removes on confirm and offers Undo with the restore token', async () => {
+      const restore = { attendingAt: '2020-10-14T00:00:00.000Z', token: 't' };
+      mutate.mockResolvedValue({ going: false, attendingAt: null, restore });
+      openConfirm();
+      fireEvent.click(
+        screen.getByRole('button', { name: GOING_COPY.remove.confirm }),
+      );
+      expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: false });
+      await waitFor(() => expect(showRemovedToast).toHaveBeenCalled());
+      const arg = showRemovedToast.mock.calls[0]?.[0] as {
+        onUndo: (() => void) | null;
+      };
+      // The pill is back to "I went" before the server agrees.
+      expect(goingButton()).toHaveTextContent(GOING_COPY.button.pastNo);
+      arg.onUndo?.();
+      expect(mutate).toHaveBeenLastCalledWith({
+        eventId: 'ev1',
+        going: true,
+        restore,
+      });
+    });
+
+    it('offers no Undo when the server sent no restore token', async () => {
+      mutate.mockResolvedValue({ going: false, attendingAt: null });
+      openConfirm();
+      fireEvent.click(
+        screen.getByRole('button', { name: GOING_COPY.remove.confirm }),
+      );
+      await waitFor(() => expect(showRemovedToast).toHaveBeenCalled());
+      expect(showRemovedToast.mock.calls[0]?.[0]).toMatchObject({
+        onUndo: null,
+      });
+    });
+
+    it('stays open with a retry when the remove fails', async () => {
+      mutate.mockRejectedValue(new Error('down'));
+      openConfirm();
+      fireEvent.click(
+        screen.getByRole('button', { name: GOING_COPY.remove.confirm }),
+      );
+      expect(
+        await screen.findByRole('button', { name: GOING_COPY.remove.retry }),
+      ).toBeInTheDocument();
+      expect(showRemovedToast).not.toHaveBeenCalled();
+    });
   });
 
   it('renders nothing for a cancelled show', () => {
@@ -123,19 +262,13 @@ describe('EventDetailCtaBlock', () => {
   it('commits and refreshes the server-rendered page on tap', () => {
     renderBlock();
     fireEvent.click(goingButton());
-    expect(mutate).toHaveBeenCalledWith(
-      { eventId: 'ev1', going: true },
-      expect.anything(),
-    );
+    expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: true });
   });
 
   it('releases the commitment when tapped while going', () => {
     renderBlock({ attendingAt: '2026-01-01T00:00:00.000Z' });
     fireEvent.click(goingButton());
-    expect(mutate).toHaveBeenCalledWith(
-      { eventId: 'ev1', going: false },
-      expect.anything(),
-    );
+    expect(mutate).toHaveBeenCalledWith({ eventId: 'ev1', going: false });
   });
 
   it('routes a locked tap to the upgrade path instead of mutating', () => {
@@ -179,49 +312,47 @@ describe('EventDetailCtaBlock', () => {
     expect(screen.queryByText(GOING_COPY.locked.line)).toBeNull();
   });
 
-  it('puts the retry in the button and names what survived beneath it', () => {
-    mutate.mockImplementation((_input, options) => options.onError());
+  it('puts the retry in the button and names what survived beneath it', async () => {
+    mutate.mockRejectedValue(new Error('down'));
     renderBlock();
     fireEvent.click(goingButton());
-    expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry);
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       GOING_COPY.error.survived,
     );
+    expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry);
   });
 
-  it('retries the same intent when the failed button is tapped again', () => {
-    mutate.mockImplementation((_input, options) => options.onError());
+  it('retries the same intent when the failed button is tapped again', async () => {
+    mutate.mockRejectedValue(new Error('down'));
     renderBlock();
     fireEvent.click(goingButton());
-    mutate.mockImplementation(() => {});
+    await screen.findByRole('alert');
+    mutate.mockResolvedValue(settled);
     fireEvent.click(goingButton());
-    expect(mutate).toHaveBeenLastCalledWith(
-      { eventId: 'ev1', going: true },
-      expect.anything(),
-    );
+    expect(mutate).toHaveBeenLastCalledWith({ eventId: 'ev1', going: true });
   });
 
   // The error treatment reports as not-going, so a naive retry would
   // replay `going: true` and quietly no-op instead of releasing.
-  it('retries a failed release as a release, not as a fresh commitment', () => {
-    mutate.mockImplementation((_input, options) => options.onError());
+  it('retries a failed release as a release, not as a fresh commitment', async () => {
+    mutate.mockRejectedValue(new Error('down'));
     renderBlock({ attendingAt: '2026-01-01T00:00:00.000Z' });
     fireEvent.click(goingButton());
-    mutate.mockImplementation(() => {});
+    await screen.findByRole('alert');
+    mutate.mockResolvedValue(settled);
     fireEvent.click(goingButton());
-    expect(mutate).toHaveBeenLastCalledWith(
-      { eventId: 'ev1', going: false },
-      expect.anything(),
-    );
+    expect(mutate).toHaveBeenLastCalledWith({ eventId: 'ev1', going: false });
   });
 
-  it('keeps the locked treatment when a failure and a lost entitlement collide', () => {
-    mutate.mockImplementation((_input, options) => options.onError());
+  it('keeps the locked treatment when a failure and a lost entitlement collide', async () => {
+    mutate.mockRejectedValue(new Error('down'));
     const { rerender } = render(
       <EventDetailCtaBlock event={event()} scaRegion={false} />,
     );
     fireEvent.click(goingButton());
-    expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry);
+    await waitFor(() =>
+      expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry),
+    );
 
     // The entitlement lapses while the failure is still on screen.
     entitlement = {
@@ -254,7 +385,7 @@ describe('EventDetailCtaBlock', () => {
   // likely to ask what Going even is.
   it.each(['locked', 'error'] as const)(
     'keeps the explainer reachable in the %s treatment',
-    (treatment) => {
+    async (treatment) => {
       if (treatment === 'locked') {
         entitlement = {
           isLoading: false,
@@ -263,9 +394,10 @@ describe('EventDetailCtaBlock', () => {
         };
         renderBlock();
       } else {
-        mutate.mockImplementation((_input, options) => options.onError());
+        mutate.mockRejectedValue(new Error('down'));
         renderBlock();
         fireEvent.click(goingButton());
+        await screen.findByRole('alert');
       }
       expect(
         screen.getByRole('button', { name: EXPLAINER_LABEL }),
@@ -332,10 +464,19 @@ describe('EventDetailCtaBlock', () => {
     expect(screen.queryByRole('button', { name: EXPLAINER_LABEL })).toBeNull();
   });
 
+  it('drops the watch strip on a past night, as the boards do', () => {
+    render(
+      <EventDetailCtaBlock event={event({ date: '2020-10-14' })} scaRegion>
+        <div data-testid="watch-strip" />
+      </EventDetailCtaBlock>,
+    );
+    expect(screen.queryByTestId('watch-strip')).toBeNull();
+  });
+
   // The mutation only lands in the tree via router.refresh(), so without a
   // local override the button sat unchanged until the server HTML arrived.
   it('shows the committed state immediately, before the server agrees', () => {
-    mutate.mockImplementation(() => {});
+    mutate.mockReturnValue(new Promise(() => {}));
     renderBlock();
 
     fireEvent.click(
@@ -348,7 +489,7 @@ describe('EventDetailCtaBlock', () => {
   // finally arrives it carries the now-stale "going" state — the UI has to keep
   // showing the second tap rather than flashing back.
   it('holds the latest tap when a stale refresh arrives', () => {
-    mutate.mockImplementation(() => {});
+    mutate.mockReturnValue(new Promise(() => {}));
     const { rerender } = render(
       <EventDetailCtaBlock event={event()} scaRegion={false} />,
     );
@@ -370,30 +511,31 @@ describe('EventDetailCtaBlock', () => {
     );
   });
 
-  it('surfaces a failure without leaving the row silent', () => {
-    mutate.mockImplementation((_input, options) => options.onError());
+  it('surfaces a failure without leaving the row silent', async () => {
+    mutate.mockRejectedValue(new Error('down'));
     renderBlock();
     fireEvent.click(goingButton());
-    expect(screen.getByText(GOING_COPY.error.survived)).toBeInTheDocument();
+    expect(
+      await screen.findByText(GOING_COPY.error.survived),
+    ).toBeInTheDocument();
   });
 
-  it('routes a server-side entitlement 403 to the upgrade path, not the error line', () => {
-    mutate.mockImplementation((_input, options) =>
-      options.onError(
-        new ApiError(403, 'Upgrade required', 'entitlement_required'),
-      ),
+  it('routes a server-side entitlement 403 to the upgrade path, not the error line', async () => {
+    mutate.mockRejectedValue(
+      new ApiError(403, 'Upgrade required', 'entitlement_required'),
     );
     renderBlock();
     fireEvent.click(goingButton());
-    expect(screen.getByTestId('tier-picker')).toBeInTheDocument();
+    expect(await screen.findByTestId('tier-picker')).toBeInTheDocument();
     expect(screen.queryByText(GOING_COPY.error.survived)).toBeNull();
   });
 
-  it('refreshes the page after a successful commitment', () => {
-    mutate.mockImplementation((_input, options) => options.onSuccess());
+  it('refreshes the page after a successful commitment', async () => {
     renderBlock();
     fireEvent.click(goingButton());
-    expect(refresh).toHaveBeenCalled();
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    // An upcoming commitment is not a stamp.
+    expect(showStampedToast).not.toHaveBeenCalled();
   });
 
   it('disables the commitment while the toggle is in flight', () => {

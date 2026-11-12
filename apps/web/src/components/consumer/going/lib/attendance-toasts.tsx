@@ -60,6 +60,23 @@ export const showRemovedToast = ({
       : undefined,
   });
 
+/** "Stamped. {artist} is in your Concerts." with a link on to the Passport. */
+export const showStampedToast = ({
+  artist,
+  onOpenPassport,
+}: {
+  artist: string;
+  onOpenPassport: () => void;
+}) =>
+  toast(GOING_COPY.toast.stamped(artist), {
+    id: ATTENDANCE_TOAST_ID,
+    icon: <CheckIcon />,
+    duration: ATTENDANCE_TOAST_MS,
+    style: TOAST_STYLE,
+    actionButtonStyle: ACTION_STYLE,
+    action: { label: GOING_COPY.toast.openPassport, onClick: onOpenPassport },
+  });
+
 export const showAttendanceError = (kind: 'save' | 'undo') =>
   toast.error(
     kind === 'save' ? GOING_COPY.toast.saveFailed : GOING_COPY.toast.undoFailed,

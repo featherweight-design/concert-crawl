@@ -43,14 +43,36 @@ describe('GoingButton', () => {
     );
   });
 
-  it('omits aria-pressed in the read-only past states', () => {
-    for (const state of ['past-yes', 'past-no'] as const) {
-      render(<GoingButton show={SHOW} state={state} />);
-      expect(screen.getByRole('button').hasAttribute('aria-pressed')).toBe(
-        false,
-      );
-      cleanup();
-    }
+  it('omits aria-pressed on a stamped night and reads "I went" as off', () => {
+    render(<GoingButton show={SHOW} state="past-yes" />);
+    expect(screen.getByRole('button').hasAttribute('aria-pressed')).toBe(false);
+    cleanup();
+    render(<GoingButton show={SHOW} state="past-no" />);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('names the "I went" pill with the artist and date', () => {
+    render(<GoingButton show={SHOW} state="past-no" />);
+    expect(screen.getByRole('button')).toHaveAccessibleName(
+      GOING_COPY.past.ariaWent('Khruangbin', 'Oct 14, 2026'),
+    );
+  });
+
+  // event_unmarked_m: the dashed ghost of the venue's stamp until the night is
+  // stamped; the filled stub's own stamp is the shared StubStamp (#265).
+  it('draws the venue stamp as a dashed ghost on an unstamped night', () => {
+    const { container } = render(<GoingButton show={SHOW} state="past-no" />);
+    expect(
+      container.querySelector('[data-venue-stamp="dashed"]'),
+    ).not.toBeNull();
+  });
+
+  // event_stamped_m: the filled bar carries a ✓ and the board's 800 weight.
+  it('draws a ✓ and the 800 weight on a stamped night', () => {
+    render(<GoingButton show={SHOW} state="past-yes" />);
+    const button = screen.getByRole('button');
+    expect(button.querySelector('svg path[d^="M20 6"]')).not.toBeNull();
+    expect(button.style.fontWeight).toBe('800');
   });
 
   it('carries the focus-ring class that restores :focus-visible', () => {
@@ -63,13 +85,20 @@ describe('GoingButton', () => {
   it('renders the show date in past-yes, not the tap date', () => {
     render(<GoingButton show={SHOW} state="past-yes" />);
     expect(screen.getByRole('button')).toHaveTextContent(
-      'You went · Oct 14, 2026',
+      'You went · Wed, Oct 14',
     );
   });
 
-  it('renders the declined copy in past-no', () => {
+  it('renders "I went" in past-no', () => {
     render(<GoingButton show={SHOW} state="past-no" />);
-    expect(screen.getByRole('button')).toHaveTextContent("Didn't make it");
+    expect(screen.getByRole('button')).toHaveTextContent('I went');
+  });
+
+  it('reports going=true when the "I went" pill is tapped', () => {
+    const onChange = vi.fn();
+    render(<GoingButton show={SHOW} state="past-no" onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(onChange).toHaveBeenCalledWith(true);
   });
 
   it('reports going=true when tapped from default', () => {
@@ -86,17 +115,14 @@ describe('GoingButton', () => {
     expect(onChange).toHaveBeenCalledWith(false);
   });
 
-  it.each(['past-yes', 'past-no'] as const)(
-    '%s is a read-only display, not an affordance',
-    (state) => {
-      const onChange = vi.fn();
-      render(<GoingButton show={SHOW} state={state} onChange={onChange} />);
-      const button = screen.getByRole('button');
-      expect(button).toBeDisabled();
-      fireEvent.click(button);
-      expect(onChange).not.toHaveBeenCalled();
-    },
-  );
+  it('past-yes is a read-only display, not an affordance', () => {
+    const onChange = vi.fn();
+    render(<GoingButton show={SHOW} state="past-yes" onChange={onChange} />);
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onChange).not.toHaveBeenCalled();
+  });
 
   // Blocks a second tap but stays undimmed: the caller commits optimistically,
   // so dimming here would undo the point of the optimistic state.
