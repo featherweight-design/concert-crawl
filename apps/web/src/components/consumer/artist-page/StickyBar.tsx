@@ -4,33 +4,19 @@ import React from 'react';
 
 import { BackChip } from '../back-chip/BackChip';
 
-import { FollowButton, type FollowButtonProps } from './FollowButton';
-
-interface StickyBarProps extends Omit<
-  FollowButtonProps,
-  'size' | 'tone' | 'full'
-> {
+interface StickyBarProps {
+  /** The artist's name. */
+  name: string;
   /** True once the identity plate has scrolled past. */
   visible: boolean;
-  /**
-   * Whether the bar carries the page's one live follow. Decided by the page —
-   * with no upcoming shows the follow lives in the empty-upcoming block, and
-   * the bar must not grow a second one.
-   */
-  showFollow: boolean;
 }
 
 /**
- * Mobile only. On desktop the left rail is `position: sticky`, so wayfinding
- * and the follow stay on screen for the whole scroll — there is no desktop
- * sub-header, deliberately.
+ * Mobile only: back and the name once the stage has scrolled past. It never
+ * carries Follow, which stays under the hero and is not sticky (addendum 2,
+ * item 27). There is no desktop sub-header, deliberately.
  */
-export const StickyBar = ({
-  visible,
-  showFollow,
-  ...followProps
-}: StickyBarProps) => {
-  const { name } = followProps;
+export const StickyBar = ({ name, visible }: StickyBarProps) => {
   if (!visible) return null;
 
   return (
@@ -69,7 +55,6 @@ export const StickyBar = ({
       >
         {name}
       </span>
-      {showFollow ? <FollowButton {...followProps} size="row" /> : null}
     </div>
   );
 };
