@@ -144,9 +144,6 @@ const planStateBodySchema = z.object({
       roleComped: z.boolean(),
     }),
     roleBadge: z.string().nullable(),
-    showTrialEndedTakeover: z.boolean(),
-    showDayThirteenBanner: z.boolean(),
-    showPastDueBanner: z.boolean(),
     founderWindow: z.object({
       state: z.enum(['pre-launch', 'open', 'closed']),
       seatsTotal: z.number(),
@@ -426,7 +423,7 @@ describe('GET /v1/users/me — no card-less trial', () => {
   });
 });
 
-describe('GET /v1/users/me — lifecycle nudge flags + founder window', () => {
+describe('GET /v1/users/me — founder window', () => {
   const DAY_MS = 86400000;
   const HOUR_MS = 3600000;
 
@@ -437,109 +434,6 @@ describe('GET /v1/users/me — lifecycle nudge flags + founder window', () => {
     await clearTables();
     await clearBillingTables();
     await setFounderWindow();
-  });
-
-  it('shows the trial-ended takeover when the trial expired and was never shown', async () => {
-    setAuth();
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      trialEndsAt: new Date(Date.now() - DAY_MS),
-    });
-    const body = await fetchMe();
-    expect(body.data.showTrialEndedTakeover).toBe(true);
-    expect(body.data.showDayThirteenBanner).toBe(false);
-  });
-
-  it('does not re-show the takeover once shown after expiry', async () => {
-    setAuth();
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      trialEndsAt: new Date(Date.now() - DAY_MS),
-      lastTrialEndedShownAt: new Date(Date.now() - HOUR_MS),
-    });
-    const body = await fetchMe();
-    expect(body.data.showTrialEndedTakeover).toBe(false);
-  });
-
-  it('shows the day-13 banner inside the 48h→24h window', async () => {
-    setAuth();
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      trialEndsAt: new Date(Date.now() + 36 * HOUR_MS),
-    });
-    const body = await fetchMe();
-    expect(body.data.showDayThirteenBanner).toBe(true);
-    expect(body.data.showTrialEndedTakeover).toBe(false);
-  });
-
-  it('hides the day-13 banner when dismissed during this trial window', async () => {
-    setAuth();
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      trialEndsAt: new Date(Date.now() + 36 * HOUR_MS),
-      dayThirteenBannerDismissedAt: new Date(Date.now() - HOUR_MS),
-    });
-    const body = await fetchMe();
-    expect(body.data.showDayThirteenBanner).toBe(false);
-  });
-
-  it('suppresses the takeover and day-13 banner for a user with a live subscription', async () => {
-    setAuth();
-    await seedSubscription('user_test123', { status: 'active' });
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      trialEndsAt: new Date(Date.now() - DAY_MS),
-    });
-    const body = await fetchMe();
-    expect(body.data.showTrialEndedTakeover).toBe(false);
-    expect(body.data.showDayThirteenBanner).toBe(false);
-  });
-
-  it('shows the past-due banner for past_due with no dismissal', async () => {
-    setAuth();
-    await seedSubscription('user_test123', { status: 'past_due' });
-    const body = await fetchMe();
-    expect(body.data.showPastDueBanner).toBe(true);
-  });
-
-  it('hides the past-due banner when dismissed after the supplied sessionStartedAt', async () => {
-    setAuth();
-    await seedSubscription('user_test123', { status: 'past_due' });
-    const sessionStartedAt = new Date(Date.now() - 2 * HOUR_MS);
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      pastDueBannerDismissedAt: new Date(Date.now() - HOUR_MS),
-    });
-    const body = await fetchMe(
-      `?sessionStartedAt=${encodeURIComponent(sessionStartedAt.toISOString())}`,
-    );
-    expect(body.data.showPastDueBanner).toBe(false);
-  });
-
-  it('shows the past-due banner when the dismissal predates the supplied sessionStartedAt', async () => {
-    setAuth();
-    await seedSubscription('user_test123', { status: 'past_due' });
-    const sessionStartedAt = new Date(Date.now() - HOUR_MS);
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      pastDueBannerDismissedAt: new Date(Date.now() - 2 * HOUR_MS),
-    });
-    const body = await fetchMe(
-      `?sessionStartedAt=${encodeURIComponent(sessionStartedAt.toISOString())}`,
-    );
-    expect(body.data.showPastDueBanner).toBe(true);
-  });
-
-  it('ignores an invalid sessionStartedAt instead of returning 400', async () => {
-    setAuth();
-    await seedSubscription('user_test123', { status: 'past_due' });
-    await testDb.insert(userBilling).values({
-      userId: 'user_test123',
-      pastDueBannerDismissedAt: new Date(Date.now() - HOUR_MS),
-    });
-    // Invalid ⇒ treated as absent ⇒ any dismissal suppresses.
-    const body = await fetchMe('?sessionStartedAt=not-a-date');
-    expect(body.data.showPastDueBanner).toBe(false);
   });
 
   it('returns the founder window snapshot', async () => {

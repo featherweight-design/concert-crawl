@@ -31,7 +31,6 @@ import { apiLogger } from '../lib/logger.js';
 import { deleteUserData } from '../lib/user-data.js';
 import { getStripeClient, isStripeConfigured } from '../lib/stripe.js';
 import { isClerkNotFound } from '../lib/clerk-errors.js';
-import { evaluateNudgeFlags } from '../lib/nudges.js';
 import { loadPlanContext } from '../lib/plan.js';
 import { resolveFounderWindowView } from './billing-founder-window.js';
 import { AVATAR_COLORS } from '@concert-crawl/types';
@@ -95,7 +94,6 @@ function formatJoined(date: Date): string {
 
 // Optional narrowing input for the past-due banner predicate — invalid or
 // missing values fall back to null rather than 400.
-const sessionStartedAtSchema = z.string().datetime({ offset: true });
 
 // The profile surface must not 500 over a billing read — a missing
 // founder_window singleton falls back to the pre-launch view.
@@ -151,25 +149,6 @@ usersRouter.get('/me', async (ctx) => {
   );
   const { planState } = planContext;
 
-  const parsedSessionStartedAt = sessionStartedAtSchema.safeParse(
-    ctx.req.query('sessionStartedAt'),
-  );
-  const sessionStartedAt = parsedSessionStartedAt.success
-    ? new Date(parsedSessionStartedAt.data)
-    : null;
-
-  const nudgeFlags = evaluateNudgeFlags({
-    trialEndsAt: planContext.trialEndsAt,
-    lastTrialEndedShownAt: planContext.nudgeTimestamps.lastTrialEndedShownAt,
-    dayThirteenBannerDismissedAt:
-      planContext.nudgeTimestamps.dayThirteenBannerDismissedAt,
-    pastDueBannerDismissedAt:
-      planContext.nudgeTimestamps.pastDueBannerDismissedAt,
-    subscriptionStatus: planState.status,
-    sessionStartedAt,
-    now,
-  });
-
   const [submissionCountRow] = await db
     .select({ value: count() })
     .from(priceSubmissions)
@@ -210,9 +189,6 @@ usersRouter.get('/me', async (ctx) => {
     joined: formatJoined(accountCreatedAt ?? new Date()),
     submissionCount: submissionCountRow?.value ?? 0,
     cred: credRow?.priceCredScore ?? 0,
-    showTrialEndedTakeover: nudgeFlags.showTrialEndedTakeover,
-    showDayThirteenBanner: nudgeFlags.showDayThirteenBanner,
-    showPastDueBanner: nudgeFlags.showPastDueBanner,
     founderWindow: founderWindowView,
   };
 

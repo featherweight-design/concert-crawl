@@ -7,7 +7,7 @@ import { apiLogger } from './logger.js';
 
 // Pure derivation moved to @concert-crawl/entitlements (#763 PR 10) so the
 // crawler's Spotify fan-out can gate on plan without importing API code.
-// Re-exported here so existing consumers (plan.test.ts, nudges.ts) are
+// Re-exported here so existing consumers (plan.test.ts) are
 // unchanged.
 export {
   derivePlanState,
@@ -20,19 +20,12 @@ const publicMetadataSchema = z.object({
   plan: z.string().optional(),
 });
 
-// Nudge-predicate timestamps from user_billing, as Dates so callers never
-// reparse the PlanState ISO strings (eng infra spec Part 2 §6; PR 4.2).
 export interface PlanContext {
   planState: PlanState;
   trialEndsAt: Date | null;
-  nudgeTimestamps: {
-    lastTrialEndedShownAt: Date | null;
-    dayThirteenBannerDismissedAt: Date | null;
-    pastDueBannerDismissedAt: Date | null;
-  };
 }
 
-// Loads DB context and derives PlanState + nudge timestamps for an
+// Loads DB context and derives PlanState for an
 // authenticated user. publicMetadata is Clerk's untyped payload — parsed at
 // the boundary. Nothing seeds a trial any more (going free); an existing
 // trialEndsAt is still read.
@@ -110,12 +103,6 @@ export async function loadPlanContext(
   return {
     planState,
     trialEndsAt,
-    nudgeTimestamps: {
-      lastTrialEndedShownAt: billingRow?.lastTrialEndedShownAt ?? null,
-      dayThirteenBannerDismissedAt:
-        billingRow?.dayThirteenBannerDismissedAt ?? null,
-      pastDueBannerDismissedAt: billingRow?.pastDueBannerDismissedAt ?? null,
-    },
   };
 }
 

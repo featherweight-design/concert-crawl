@@ -7,17 +7,8 @@ import type {
 import type { ThemeName } from '@/theme/themes';
 import { apiClient } from './api';
 
-export async function fetchMe(
-  token: string,
-  // ISO timestamp for the browser-session marker (spec Decision 9). The
-  // API only uses it to narrow the past-due banner predicate (per-session
-  // dismissal); the trial-ended takeover and day-13 banner ignore it.
-  sessionStartedAt?: string,
-): Promise<UserProfileResponse> {
-  const query = sessionStartedAt
-    ? `?sessionStartedAt=${encodeURIComponent(sessionStartedAt)}`
-    : '';
-  return apiClient.get<UserProfileResponse>(`/v1/users/me${query}`, token);
+export async function fetchMe(token: string): Promise<UserProfileResponse> {
+  return apiClient.get<UserProfileResponse>('/v1/users/me', token);
 }
 
 export async function patchMe(
