@@ -18,6 +18,14 @@ const RAMP: Record<Surface, { lead: number; name: number }> = {
   detail: { lead: 13, name: 16 },
 };
 
+const NBSP = ' ';
+
+/**
+ * A name with its inner spaces made non-breaking, so a wrapped detail bill
+ * breaks only after a separator and "Izzy Camina" never splits.
+ */
+const keepWhole = (name: string): string => name.split(' ').join(NBSP);
+
 interface SupportingLineProps {
   artists: string[];
   surface?: Surface;
@@ -98,9 +106,14 @@ export const SupportingLine = ({
       // `detail` flows as one inline run, so a wrapped bill reads as a single
       // centred block with "with" glued to the first name; as two flex items,
       // "with" was stranded at the left edge while the names centred.
+      //
+      // `wrap-anywhere` (overflow-wrap: anywhere) is the fallback for one name
+      // wider than the whole line at 320: it breaks inside that name rather
+      // than overflow, and only then, since each name is otherwise a single
+      // unbreakable word (see `keepWhole`).
       className={
         overArt
-          ? 'min-w-0 text-balance'
+          ? 'min-w-0 text-balance wrap-anywhere'
           : `flex min-w-0 items-baseline ${isRow ? 'font-mono' : ''}`
       }
       style={{ lineHeight: 1.35 }}
@@ -118,23 +131,27 @@ export const SupportingLine = ({
       >
         {shown.map((name, index) => {
           const slug = linkedSlugs[index] ?? null;
+          const label = overArt ? keepWhole(name) : name;
           return (
             <span key={`${name}-${index}`}>
               {index > 0 && (
-                <span
-                  aria-hidden="true"
-                  className={`px-1.5 font-normal ${quietColor}`}
-                  style={{ fontSize: ramp.name }}
-                >
-                  {sep}
-                </span>
+                <>
+                  <span
+                    aria-hidden="true"
+                    className={`px-1.5 font-normal ${quietColor}`}
+                    style={{ fontSize: ramp.name }}
+                  >
+                    {sep}
+                  </span>
+                  {overArt && <wbr />}
+                </>
               )}
               {slug === null ? (
                 <span
                   className={`${isRow ? 'font-bold' : 'font-semibold'} ${nameColor}`}
                   style={nameStyle}
                 >
-                  {name}
+                  {label}
                 </span>
               ) : (
                 <Link
@@ -142,7 +159,7 @@ export const SupportingLine = ({
                   className={`${isRow ? 'font-bold' : 'font-semibold'} underline-offset-2 hover:underline focus-visible:underline ${nameColor}`}
                   style={nameStyle}
                 >
-                  {name}
+                  {label}
                 </Link>
               )}
             </span>
@@ -156,6 +173,7 @@ export const SupportingLine = ({
             >
               {sep}
             </span>
+            {overArt && <wbr />}
             <span
               className={`whitespace-nowrap font-mono font-medium ${quietColor}`}
               style={{ fontSize: ramp.name - 1.5, letterSpacing: '0.01em' }}

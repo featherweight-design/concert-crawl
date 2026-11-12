@@ -58,6 +58,46 @@ describe('SupportingLine', () => {
     expect(group.firstElementChild?.textContent).toBe('with');
   });
 
+  // A detail bill breaks only after a separator: each name is one unbreakable
+  // word (non-breaking inner spaces), with a <wbr> after every "·".
+  it('keeps each detail name whole and breaks only after a separator', () => {
+    const { container } = render(
+      <SupportingLine
+        artists={['Frost Children', 'Kavari', 'Izzy Camina']}
+        surface="detail"
+      />,
+    );
+    const run = container.querySelector('span.min-w-0');
+    expect(run?.textContent).toBe('Frost Children·Kavari·Izzy Camina');
+    expect(run?.textContent).not.toContain(' ');
+    const breaks = container.querySelectorAll('wbr');
+    expect(breaks).toHaveLength(2);
+    breaks.forEach((node) => {
+      expect(node.previousElementSibling?.textContent).toBe('·');
+    });
+  });
+
+  it('lets a single name wider than the line wrap rather than overflow', () => {
+    render(
+      <SupportingLine
+        artists={['The Extraordinarily Long Named Ensemble']}
+        surface="detail"
+      />,
+    );
+    expect(screen.getByRole('group').className).toContain('wrap-anywhere');
+  });
+
+  it('leaves card names and their spaces untouched', () => {
+    const { container } = render(
+      <SupportingLine artists={['Izzy Camina', 'Sakr']} surface="card" />,
+    );
+    expect(container.querySelector('span.min-w-0')?.textContent).toBe(
+      'Izzy Camina·Sakr',
+    );
+    expect(container.querySelectorAll('wbr')).toHaveLength(0);
+    expect(screen.getByRole('group').className).not.toContain('wrap-anywhere');
+  });
+
   it('keeps the card line a single flex row', () => {
     render(<SupportingLine artists={['A', 'B']} surface="card" />);
     expect(screen.getByRole('group').className).toContain('flex');
