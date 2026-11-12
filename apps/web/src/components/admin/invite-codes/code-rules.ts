@@ -38,7 +38,11 @@ export const countPosters = (
 ): number =>
   codes.filter((code) => {
     const status = inviteStatus(code, now);
-    return code.maxUses > 1 && (status === 'active' || status === 'full');
+    return (
+      code.kind !== 'member' &&
+      code.maxUses > 1 &&
+      (status === 'active' || status === 'full')
+    );
   }).length;
 
 /** An ended code is one Reactivate can bring back; Full is not ended. */
@@ -55,11 +59,17 @@ const SHORT_DATE = new Intl.DateTimeFormat('en-US', {
 export const shortDate = (iso: string): string =>
   SHORT_DATE.format(new Date(iso));
 
-/** A poster is any code with more than one seat; the prefix is never stored. */
+/**
+ * A poster is any admin code with more than one seat; the prefix is never
+ * stored. A member's own share code is not a poster whatever its seat cap.
+ */
 export const codeLabel = (
-  code: Pick<AdminInviteCode, 'label' | 'maxUses'>,
+  code: Pick<AdminInviteCode, 'label' | 'maxUses'> &
+    Partial<Pick<AdminInviteCode, 'kind'>>,
 ): string | null =>
-  code.maxUses > 1 ? COPY.posterLabel(code.label) : code.label;
+  code.kind !== 'member' && code.maxUses > 1
+    ? COPY.posterLabel(code.label)
+    : code.label;
 
 export const makerName = (code: Pick<AdminInviteCode, 'createdByHandle'>) =>
   code.createdByHandle ? `@${code.createdByHandle}` : COPY.formerAdmin;

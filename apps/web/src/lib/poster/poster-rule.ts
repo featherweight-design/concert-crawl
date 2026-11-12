@@ -55,10 +55,13 @@ export const seatsTaken = (
 ): number =>
   Math.max(code.useCount, code.usedBy != null || code.usedAt != null ? 1 : 0);
 
+// `kind` is optional so a caller holding only the status fields still works; an
+// absent kind reads as an admin code, which is what every code was before it.
 type StatusFields = Pick<
   InviteCode,
   'revokedAt' | 'expiresAt' | 'maxUses' | 'useCount' | 'usedBy' | 'usedAt'
->;
+> &
+  Partial<Pick<InviteCode, 'kind'>>;
 
 export type InviteStatus = 'active' | 'full' | 'expired' | 'revoked';
 
@@ -77,10 +80,14 @@ export const inviteStatus = (code: StatusFields, now: Date): InviteStatus => {
 
 /**
  * A poster is only worth printing for a live code that admits more than one
- * person: a personal code on a wall is spent by the first scan.
+ * person: a personal code on a wall is spent by the first scan. A member's own
+ * share code has a high seat cap too, but it is a person's, not a poster: it
+ * never lands on the Posters tab, whatever its `maxUses`.
  */
 export const isPrintable = (code: StatusFields, now: Date): boolean =>
-  code.maxUses > 1 && inviteStatus(code, now) === 'active';
+  code.kind !== 'member' &&
+  code.maxUses > 1 &&
+  inviteStatus(code, now) === 'active';
 
 /**
  * Characters one line of the poster's venue list is counted as holding. 10.5 px

@@ -36,7 +36,7 @@ import {
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { getAuthUser } from '../../middleware/auth.js';
-import { randomBytes } from 'crypto';
+import { generateInviteCode } from '../../lib/invite-code-generation.js';
 import type { AdminVariables } from './index.js';
 import { sendInviteCodeEmail } from '../../lib/email.js';
 import { apiLogger } from '../../lib/logger.js';
@@ -53,12 +53,6 @@ const MAX_INVITE_SEATS = 500;
 /** An expiry at or before `now` has ended the code. Null means never. */
 const isExpired = (expiresAt: Date | null, now: Date): boolean =>
   expiresAt != null && expiresAt <= now;
-
-function generateCode(): string {
-  // Format: BETA-XXXX-XXXX (uppercase hex, URL-safe)
-  const part = () => randomBytes(3).toString('hex').toUpperCase().slice(0, 4);
-  return `BETA-${part()}-${part()}`;
-}
 
 // The unique constraint on `invite_codes.code` (drizzle's default name for
 // `.unique()`). It is the only check that a custom code is free: the insert
@@ -496,7 +490,7 @@ inviteCodesAdminRouter.post(
       [code] = await db
         .insert(inviteCodes)
         .values({
-          code: customCode ?? generateCode(),
+          code: customCode ?? generateInviteCode(),
           createdBy: userId,
           expiresAt: expiresAt ? new Date(expiresAt) : null,
           label: label ?? null,

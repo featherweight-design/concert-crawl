@@ -66,11 +66,30 @@ export const inviteCodes = pgTable(
     useCount: integer('use_count').notNull().default(0),
     /** Where a multi-use code was put, e.g. "Hi-Dive bathroom, Nov". */
     label: text('label'),
+    /**
+     * Who the code belongs to in the product: `admin` (made by an admin, the
+     * poster and personal codes) or `member` (a person's own share code, one per
+     * account, made on first open of Share). Named `kind`, not "personal",
+     * because a 1-seat admin code is already called a personal code above.
+     * Readers that care key off this, never off `max_uses`. A member code has a
+     * high finite `max_uses` (MEMBER_CODE_SEATS), not NULL: every seat check
+     * compares against it.
+     */
+    kind: text('kind').notNull().default('admin'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => ({
+    kindCheck: check(
+      'invite_codes_kind_check',
+      sql`${table.kind} IN ('admin', 'member')`,
+    ),
+    // One member code per account: the get-or-create can race on a double open,
+    // and this is what makes the loser's insert a no-op.
+    memberOwnerIdx: uniqueIndex('invite_codes_member_owner_idx')
+      .on(table.createdBy)
+      .where(sql`${table.kind} = 'member'`),
     // The seat invariant, held by the database and not only by the claim.
     maxUsesCheck: check(
       'invite_codes_max_uses_check',

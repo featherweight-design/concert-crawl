@@ -1184,6 +1184,34 @@ export interface InviteCode {
   maxUses: number;
   useCount: number;
   label: string | null;
+  // Whose code it is: an admin's (posters, personal codes) or a member's own
+  // share code. Readers key off this, never off `maxUses`, which is a high
+  // finite number on a member code and not a signal.
+  kind: 'admin' | 'member';
+}
+
+/** One person who joined with the viewer's share code: initial and colors only. */
+export interface MeInviteJoiner {
+  handle: string | null;
+  avatarColor: string | null;
+  avatarSecondColor: string | null;
+}
+
+/**
+ * GET /v1/me/invite: the signed-in person's own share code, made on first read
+ * and reused for good. No launch `mode` and no `url`: the web decides whether
+ * the app is open and builds the link from its own origin.
+ */
+export interface MeInviteResponse {
+  code: string;
+  /** True when an admin turned the code off; it is returned, never replaced. */
+  revoked: boolean;
+  joined: {
+    /** Everyone who joined with it. */
+    count: number;
+    /** The newest few, for the strip. */
+    faces: MeInviteJoiner[];
+  };
 }
 
 // AdminInviteCode — one row of GET /v1/admin/invite-codes. The maker's handle
@@ -1786,7 +1814,7 @@ export interface NeedsYouCount {
 /** How a person came in: a personal invite code, a poster code (a multi-use
  * code with a label), the founder window, or a test account. */
 export interface PersonJoinSource {
-  kind: 'code' | 'poster' | 'founder' | 'test';
+  kind: 'code' | 'poster' | 'member' | 'founder' | 'test';
   /** The invite code string, for `code` and `poster`. */
   code: string | null;
   /** Where a poster was put, e.g. "Hi-Dive bathroom, Nov". */

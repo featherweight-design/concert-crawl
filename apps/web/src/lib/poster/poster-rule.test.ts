@@ -119,6 +119,13 @@ describe('isPrintable', () => {
     expect(isPrintable({ ...open, maxUses: 1 }, NOW)).toBe(false);
   });
 
+  it('never prints a member share code, whatever its seat cap', () => {
+    expect(isPrintable({ ...open, maxUses: 10_000, kind: 'member' }, NOW)).toBe(
+      false,
+    );
+    expect(isPrintable({ ...open, kind: 'admin' }, NOW)).toBe(true);
+  });
+
   it('prints a code with a seat left', () => {
     expect(isPrintable(open, NOW)).toBe(true);
     expect(isPrintable({ ...open, useCount: 49, usedBy: 'u' }, NOW)).toBe(true);

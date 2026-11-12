@@ -220,7 +220,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
     return [
       copy,
       // The Posters tab can only pick a live code with a seat left.
-      ...(row.maxUses > 1 && status === 'active'
+      ...(row.kind !== 'member' && row.maxUses > 1 && status === 'active'
         ? [
             {
               key: 'poster',

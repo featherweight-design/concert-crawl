@@ -29,6 +29,7 @@ import { catalogRouter } from './catalog.js';
 import { searchRouter } from './search.js';
 import { spotifyRouter } from './spotify.js';
 import { mePushRouter } from './me-push.js';
+import { meInviteRouter } from './me-invite.js';
 import { notificationsRouter } from './notifications.js';
 import { emailUnsubscribeRouter } from './email-unsubscribe.js';
 import { createFounderWindowRouter } from './billing-founder-window.js';
@@ -67,6 +68,7 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/search', searchRouter);
   app.route('/v1/spotify', spotifyRouter);
   app.route('/v1/me', mePushRouter);
+  app.route('/v1/me', meInviteRouter);
   app.route('/v1/me', meArtistFollowsRouter);
   // Viewer-scoped collection, so no `/me` prefix — same shape as /v1/watching.
   app.route('/v1/notifications', notificationsRouter);
