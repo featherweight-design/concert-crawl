@@ -20,7 +20,16 @@ interface VenueTileProps {
    * tile normally sits beside the venue's name, which already says it.
    */
   labelled?: boolean;
+  /**
+   * The edge's weight in rendered pixels. Unset keeps the tile's 1.6-unit edge
+   * in its 96 viewBox (about 0.57px at 34px); the invite landing's proof row
+   * sets 1.2 so the edge renders at the board's weight at any size.
+   */
+  edgeWeight?: number;
 }
+
+/** The corner radius, in viewBox units, of the 1.2px-edge board tile: 6.6 of 30. */
+const WEIGHTED_RADIUS = 21.12;
 
 /**
  * The venue icon tile: a rounded square edged in the venue's gradient, with its
@@ -31,7 +40,13 @@ export function VenueTile({
   name,
   size = 40,
   labelled = false,
+  edgeWeight,
 }: VenueTileProps) {
+  const weighted = edgeWeight !== undefined;
+  const edge = weighted ? (edgeWeight * 96) / size : 1.6;
+  const inset = edge / 2;
+  const side = 96 - edge;
+  const radius = weighted ? WEIGHTED_RADIUS : 22.2;
   const uid = useId().replace(/:/g, '');
   const glyphKey = venueGlyphKey(slug);
   const a11y = labelled
@@ -51,13 +66,13 @@ export function VenueTile({
         {...a11y}
       >
         <rect
-          x="0.8"
-          y="0.8"
-          width="94.4"
-          height="94.4"
-          rx="22.2"
+          x={inset}
+          y={inset}
+          width={side}
+          height={side}
+          rx={radius}
           fill={TILE_GROUND}
-          strokeWidth="1.6"
+          strokeWidth={edge}
           style={{ stroke: 'var(--border-strong)' }}
         />
       </svg>
@@ -80,14 +95,14 @@ export function VenueTile({
         <GlyphGradient id={glyphId} glyphKey={glyphKey} />
       </defs>
       <rect
-        x="0.8"
-        y="0.8"
-        width="94.4"
-        height="94.4"
-        rx="22.2"
+        x={inset}
+        y={inset}
+        width={side}
+        height={side}
+        rx={radius}
         fill={TILE_GROUND}
         stroke={`url(#${edgeId})`}
-        strokeWidth="1.6"
+        strokeWidth={edge}
       />
       <g transform="translate(12.48 12.48) scale(2.96)">
         <GlyphShapes glyphKey={glyphKey} paint={`url(#${glyphId})`} />

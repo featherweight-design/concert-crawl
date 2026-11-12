@@ -86,6 +86,23 @@ describe('VenueTile', () => {
     );
   });
 
+  it('keeps the 1.6-unit edge by default', () => {
+    const { container } = render(<VenueTile slug="hi-dive" name="Hi-Dive" />);
+    const rect = container.querySelector('rect');
+    expect(rect?.getAttribute('stroke-width')).toBe('1.6');
+    expect(rect?.getAttribute('rx')).toBe('22.2');
+  });
+
+  it('renders a 1.2px edge at 30px when edgeWeight is 1.2', () => {
+    const { container } = render(
+      <VenueTile slug="hi-dive" name="Hi-Dive" size={30} edgeWeight={1.2} />,
+    );
+    const rect = container.querySelector('rect');
+    const units = Number(rect?.getAttribute('stroke-width'));
+    expect((units * 30) / 96).toBeCloseTo(1.2, 5);
+    expect(Number(rect?.getAttribute('rx')) * (30 / 96)).toBeCloseTo(6.6, 5);
+  });
+
   it('is decorative by default', () => {
     const { container } = render(<VenueTile slug="hi-dive" name="Hi-Dive" />);
     const svg = container.querySelector('svg');

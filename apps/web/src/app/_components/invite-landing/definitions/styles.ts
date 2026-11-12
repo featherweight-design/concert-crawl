@@ -2,6 +2,28 @@
 export const INVITE_GRADIENT =
   'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)), var(--accent))';
 
+/**
+ * The invite code field's border: cyan to pink at 135deg, fading to the border
+ * colour at the bottom right (invite-320 field).
+ */
+export const INVITE_FIELD_BORDER =
+  'linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border))';
+
+/** The field's soft cyan drop shadow (invite-320 field). */
+export const INVITE_FIELD_SHADOW =
+  '0 18px 50px color-mix(in srgb, var(--signal) 12%, transparent)';
+
+/**
+ * The page's ambient wash (invite-320 root): violet from the top-left, cyan
+ * from the bottom-right, over a ground that deepens downward. The ground uses
+ * the theme's tokens, so Light keeps its light page as inv-light draws it.
+ */
+export const INVITE_PAGE_WASH = [
+  'radial-gradient(1100px 650px at 0% 0%, rgba(188, 119, 242, 0.15), transparent 65%)', // fwd-allow-hex: board art colour
+  'radial-gradient(900px 650px at 100% 100%, color-mix(in srgb, var(--signal) 9%, transparent), transparent 60%)',
+  'linear-gradient(180deg, var(--bg-elevated), var(--bg))',
+].join(', ');
+
 /** Mono caps for eyebrows, labels and the count line. */
 export const MONO_CAPS = {
   fontFamily: "'JetBrains Mono', monospace",

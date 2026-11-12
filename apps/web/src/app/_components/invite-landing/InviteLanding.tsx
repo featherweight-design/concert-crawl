@@ -10,7 +10,12 @@ import { InviteCodeField } from './InviteCodeField';
 import { ShowFan } from './ShowFan';
 import { WeekTicker } from './WeekTicker';
 import type { InviteShow, InviteVenue } from './definitions/types';
-import { FOCUS_RING, INVITE_GRADIENT, MONO_CAPS } from './definitions/styles';
+import {
+  FOCUS_RING,
+  INVITE_GRADIENT,
+  INVITE_PAGE_WASH,
+  MONO_CAPS,
+} from './definitions/styles';
 
 const COPY = LANDING_COPY.invite;
 
@@ -65,7 +70,7 @@ export function InviteLanding({
       style={{
         position: 'relative',
         minHeight: '100dvh',
-        background: 'var(--bg)',
+        background: INVITE_PAGE_WASH,
         color: 'var(--fg)',
         fontFamily: 'Inter, system-ui',
         display: 'flex',
@@ -228,9 +233,8 @@ export function InviteLanding({
 
           {venues !== null && venues.length > 0 && (
             <div className="mt-3 flex flex-col items-center gap-3 md:items-start">
-              {/* 6px gaps, as both boards space the row: twelve 34px tiles
-                  (474px) then fit the 480px column on one line, where 8px
-                  gaps (496px) wrapped the twelfth. It still wraps in a
+              {/* 6px gaps, as both boards space the row: twelve 30px tiles
+                  (426px) fit the 480px column on one line. It still wraps in a
                   narrower column (768-1100), which no board draws. */}
               <div className="flex flex-wrap justify-center gap-1.5 md:justify-start">
                 {venues.slice(0, DESKTOP_TILES).map((venue, index) => (
@@ -240,7 +244,12 @@ export function InviteLanding({
                       index >= PHONE_TILES ? 'max-md:hidden' : undefined
                     }
                   >
-                    <VenueTile slug={venue.slug} name={venue.name} size={34} />
+                    <VenueTile
+                      slug={venue.slug}
+                      name={venue.name}
+                      size={30}
+                      edgeWeight={1.2}
+                    />
                   </span>
                 ))}
               </div>
