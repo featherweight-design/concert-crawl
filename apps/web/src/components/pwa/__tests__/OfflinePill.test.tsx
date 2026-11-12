@@ -32,6 +32,15 @@ describe('OfflinePill', () => {
     expect(status.textContent).toMatch(/offline/i);
   });
 
+  it('stays on one line and ellipsises its label rather than wrapping (320px)', () => {
+    setOnline(false);
+    render(<OfflinePill />);
+    const status = screen.getByRole('status');
+    expect(status.className).toContain('whitespace-nowrap');
+    expect(status.className).toContain('min-w-0');
+    expect(status.querySelector('.truncate')?.textContent).toMatch(/offline/i);
+  });
+
   it('switches to visible when the online event fires false', () => {
     setOnline(true);
     render(<OfflinePill />);

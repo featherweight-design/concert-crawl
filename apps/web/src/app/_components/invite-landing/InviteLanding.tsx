@@ -94,6 +94,9 @@ export function InviteLanding({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          // At 320 the lockup and the beta pill don't fit on one line; the
+          // pill drops under the lockup rather than running off the edge.
+          flexWrap: 'wrap',
           gap: 8,
         }}
       >

@@ -40,7 +40,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
     <header className="w-full">
       {/* ── Mobile bar (hidden sm+) ─────────────────────── */}
       <div className="flex items-center justify-between bg-bg px-4 pb-2.5 pt-4 sm:hidden">
-        <Link href="/events" className="flex items-center gap-2">
+        <Link href="/events" className="flex shrink-0 items-center gap-2">
           <CCMark size={28} />
           <span
             className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
@@ -50,7 +50,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             <span className="text-accent">{copy.brand.accent}</span>
           </span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {rightSlots}
           <AuthCtaPair />
           <button
