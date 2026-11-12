@@ -1,28 +1,9 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import {
-  describe,
-  it,
-  expect,
-  afterEach,
-  beforeAll,
-  afterAll,
-  vi,
-} from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { SoldOutPriceCard } from './SoldOutPriceCard';
-
-const NOW = new Date('2026-06-24T12:00:00.000Z');
-
-beforeAll(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(NOW);
-});
-
-afterAll(() => {
-  vi.useRealTimers();
-});
 
 afterEach(() => {
   cleanup();
@@ -30,60 +11,52 @@ afterEach(() => {
 
 describe('SoldOutPriceCard', () => {
   describe('variant="has-listing" (default)', () => {
-    it('renders strikethrough price, Sold-out pill, and reporter caption', () => {
-      render(
-        <SoldOutPriceCard
-          priceMin={25}
-          priceMax={45}
-          reporterHandle="ada"
-          confirmsCount={3}
-          reportedAt={new Date(NOW.getTime() - 15 * 60_000).toISOString()}
-        />,
+    it('draws "Sold out" large in the accent, with the reporter caption and no price', () => {
+      const { container } = render(
+        <SoldOutPriceCard reporterHandle="ada" confirmsCount={3} />,
       );
 
-      const price = screen.getByText('$25–$45');
-      expect(price).toBeDefined();
-      const priceEl = price as HTMLElement;
-      expect(priceEl.style.textDecoration).toContain('line-through');
-
-      expect(screen.getByText('Sold out')).toBeDefined();
+      const heading = screen.getByText('Sold out') as HTMLElement;
+      expect(heading.style.color).toBe('var(--accent)');
+      expect(heading.style.fontSize).toBe('28px');
+      expect(heading.style.fontWeight).toBe('900');
+      expect(heading.style.textDecoration).not.toContain('line-through');
+      expect(container.textContent).not.toContain('$');
       expect(
         screen.getByText('Reported sold out by @ada · 3 fans confirmed'),
       ).toBeDefined();
-      // "as of 15m ago, could be stale · @ada"
-      expect(
-        screen.getByText(/as of 15m ago, could be stale · @ada/),
-      ).toBeDefined();
+    });
+
+    it('strokes the card in the accent, never amber', () => {
+      const { container } = render(
+        <SoldOutPriceCard reporterHandle="ada" confirmsCount={3} />,
+      );
+      const card = container.firstElementChild as HTMLElement;
+      expect(card.style.border).toContain('var(--accent)');
+      expect(card.style.borderRadius).toBe('16px');
+      expect(card.outerHTML).not.toContain('oklch(0.73 0.13 78)');
+      expect(card.outerHTML).not.toContain('--warning');
     });
 
     it('omits @handle when reporterHandle is null', () => {
-      render(
-        <SoldOutPriceCard
-          priceMin={25}
-          priceMax={null}
-          reporterHandle={null}
-          confirmsCount={1}
-          reportedAt={new Date(NOW.getTime() - 90 * 60_000).toISOString()}
-        />,
-      );
+      render(<SoldOutPriceCard reporterHandle={null} confirmsCount={1} />);
       expect(
         screen.getByText('Reported sold out · 1 fan confirmed'),
       ).toBeDefined();
-      expect(screen.getByText(/as of 1h ago, could be stale/)).toBeDefined();
     });
   });
 
   describe('variant="no-listing" (Q1 lock — Appendix A.2)', () => {
-    it('renders em-dash price (no strikethrough), Sold-out pill, and no-listing caption', () => {
+    it('renders em-dash price (no strikethrough), an accent Sold-out pill, and the no-listing caption', () => {
       render(<SoldOutPriceCard variant="no-listing" />);
 
       const price = screen.getByText('—');
-      expect(price).toBeDefined();
-      const priceEl = price as HTMLElement;
-      // no strikethrough — addendum-specified
-      expect(priceEl.style.textDecoration).not.toContain('line-through');
+      expect((price as HTMLElement).style.textDecoration).not.toContain(
+        'line-through',
+      );
 
-      expect(screen.getByText('Sold out')).toBeDefined();
+      const pill = screen.getByText('Sold out') as HTMLElement;
+      expect(pill.style.background).toBe('var(--accent)');
       expect(
         screen.getByText(
           'No tickets listed anywhere we can see. Not even resale.',
@@ -93,9 +66,7 @@ describe('SoldOutPriceCard', () => {
 
     it('does not render reporter caption when no-listing', () => {
       render(<SoldOutPriceCard variant="no-listing" />);
-      // The reporter caption is gone in no-listing mode.
       expect(screen.queryByText(/Reported sold out/)).toBeNull();
-      expect(screen.queryByText(/as of/)).toBeNull();
     });
   });
 });

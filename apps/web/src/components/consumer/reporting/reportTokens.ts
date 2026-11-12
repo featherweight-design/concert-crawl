@@ -15,11 +15,13 @@ export const REPORT_TOKENS = {
     label: 'Postponed',
     short: 'postponed',
   },
+  // Sold out is the accent, not amber (README rule 3; more-st-report_m,
+  // more-st-ev_sold_pending_m): amber stays with Postponed.
   'sold-out': {
-    color: 'var(--warning)',
-    bg: 'color-mix(in oklab, var(--warning) 8%, transparent)',
-    bgStrong: 'color-mix(in oklab, var(--warning) 14%, transparent)',
-    border: 'color-mix(in oklab, var(--warning) 36%, transparent)',
+    color: 'var(--accent)',
+    bg: 'color-mix(in oklab, var(--accent) 8%, transparent)',
+    bgStrong: 'color-mix(in oklab, var(--accent) 14%, transparent)',
+    border: 'color-mix(in oklab, var(--accent) 36%, transparent)',
     label: 'Sold out',
     short: 'sold-out',
   },

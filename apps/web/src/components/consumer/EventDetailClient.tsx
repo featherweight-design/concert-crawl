@@ -896,11 +896,8 @@ export function EventDetailPriceBlock({
     const soldOut = event.soldOutReport;
     return (
       <SoldOutPriceCard
-        priceMin={priceMin}
-        priceMax={priceMax}
         reporterHandle={soldOut.reporterHandle}
         confirmsCount={soldOut.confirmsCount}
-        reportedAt={soldOut.reportedAt}
       />
     );
   }
@@ -914,13 +911,7 @@ export function EventDetailPriceBlock({
   if (priceDecision.kind === 'sold-out-resale') {
     return (
       <>
-        <SoldOutPriceCard
-          priceMin={priceMin}
-          priceMax={priceMax}
-          reporterHandle={null}
-          confirmsCount={0}
-          reportedAt={event.priceObservedAt ?? new Date().toISOString()}
-        />
+        <SoldOutPriceCard reporterHandle={null} confirmsCount={0} />
         <div className="mt-3">
           <FaceValueCard
             variant="default"
