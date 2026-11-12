@@ -1,58 +1,53 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import {
-  Ban,
-  Copy,
-  LogOut,
-  MoreHorizontal,
-  Printer,
-  RotateCcw,
-  Tag,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
+import { MoreHorizontal, type LucideIcon } from 'lucide-react';
 
-export interface CodeMenuItem {
+export interface RowMenuItem {
   key: string;
   icon: LucideIcon;
   label: string;
   hint: string;
   danger?: boolean;
+  /** A quieter item, drawn in the muted colour (Artists' Not an artist…). */
+  muted?: boolean;
+  /**
+   * Shown but not yet usable. It stays in the arrow-key order and keeps the
+   * menu open when pressed, rather than closing it on a dead click.
+   */
+  disabled?: boolean;
   /** Draws the divider above it, as before Revoke…. */
   divided?: boolean;
   onSelect: () => void;
 }
 
-export const MENU_ICONS = {
-  signOut: LogOut,
-  copy: Copy,
-  poster: Printer,
-  joined: Users,
-  edit: Tag,
-  revoke: Ban,
-  reactivate: RotateCcw,
-} as const;
+const itemTone = (item: RowMenuItem): string =>
+  item.danger
+    ? 'var(--danger)'
+    : item.muted
+      ? 'var(--fg-muted)'
+      : 'var(--signal)';
 
 /**
- * The row's ⋯ menu (`07/code-row-menu`), on `EventRowMenu`'s open and close
- * handling, with the drawn icon tile and hint under each item.
+ * A row's ⋯ menu (`07/code-row-menu`, `11/artist-row-menu`): the drawn icon
+ * tile and a hint under each item, on `EventRowMenu`'s open and close
+ * handling. Invite codes, the person page and Artists share it.
  */
-export const CodeRowMenu = ({
+export const RowMenu = ({
   label,
   items,
   width = 320,
   triggerStyle,
 }: {
   label: string;
-  items: readonly CodeMenuItem[];
-  /** The menu's width; the person menu (`12/person-menu-d`) is 300. */
+  items: readonly RowMenuItem[];
+  /** The menu's width; the person and artist menus are 300. */
   width?: number;
   /** The person page draws its ⋯ as a 36px outlined button. */
   triggerStyle?: CSSProperties;
 }) => {
   // Where the menu opens, measured from the trigger. Fixed rather than
-  // absolute, because the table scrolls inside its card and would clip it.
+  // absolute, because a table scrolls inside its card and would clip it.
   const [open, setOpen] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -76,14 +71,14 @@ export const CodeRowMenu = ({
   useEffect(() => {
     if (!open) return undefined;
     const close = () => setOpen(null);
-    const handleClick = (evt: MouseEvent) => {
+    const onPointerOutside = (evt: MouseEvent) => {
       if (
         evt.target instanceof Node &&
         !containerRef.current?.contains(evt.target)
       )
         close();
     };
-    const handleEscape = (evt: KeyboardEvent) => {
+    const onEscape = (evt: KeyboardEvent) => {
       if (evt.key !== 'Escape') return;
       // Close, and hand focus back to the ⋯ that opened it.
       close();
@@ -92,7 +87,7 @@ export const CodeRowMenu = ({
     // A fixed menu would drift from its row, so it closes once a scroll
     // actually moves the ⋯ (a scroll elsewhere leaves it be).
     const anchor = triggerRef.current?.getBoundingClientRect();
-    const handleScroll = () => {
+    const onScroll = () => {
       const now = triggerRef.current?.getBoundingClientRect();
       if (
         !anchor ||
@@ -102,14 +97,14 @@ export const CodeRowMenu = ({
       )
         close();
     };
-    window.addEventListener('mousedown', handleClick);
-    window.addEventListener('keydown', handleEscape);
-    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('mousedown', onPointerOutside);
+    window.addEventListener('keydown', onEscape);
+    window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', close);
     return () => {
-      window.removeEventListener('mousedown', handleClick);
-      window.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('mousedown', onPointerOutside);
+      window.removeEventListener('keydown', onEscape);
+      window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', close);
     };
   }, [open]);
@@ -197,11 +192,11 @@ export const CodeRowMenu = ({
         >
           {items.map((item) => {
             const Icon = item.icon;
-            const tone = item.danger ? 'var(--danger)' : 'var(--signal)';
             return (
               <div key={item.key}>
                 {item.divided && (
                   <div
+                    role="separator"
                     style={{
                       height: 1,
                       background: 'var(--border)',
@@ -213,8 +208,16 @@ export const CodeRowMenu = ({
                   type="button"
                   role="menuitem"
                   tabIndex={-1}
+                  // aria-disabled, not disabled: a disabled button can't
+                  // hold focus, so a click on it would drop focus out of
+                  // the menu.
+                  aria-disabled={item.disabled || undefined}
                   onClick={(evt) => {
                     evt.stopPropagation();
+                    if (item.disabled) return;
+                    // Focus goes back to ⋯ first, so a dialog the item opens
+                    // restores focus there rather than to the page.
+                    triggerRef.current?.focus({ preventScroll: true });
                     setOpen(null);
                     item.onSelect();
                   }}
@@ -226,7 +229,8 @@ export const CodeRowMenu = ({
                     borderRadius: 10,
                     border: 'none',
                     background: 'transparent',
-                    cursor: 'pointer',
+                    cursor: item.disabled ? 'not-allowed' : 'pointer',
+                    opacity: item.disabled ? 0.55 : 1,
                     textAlign: 'left',
                   }}
                 >
@@ -241,7 +245,7 @@ export const CodeRowMenu = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: tone,
+                      color: itemTone(item),
                     }}
                   >
                     <Icon size={14} strokeWidth={1.7} />
@@ -252,7 +256,11 @@ export const CodeRowMenu = ({
                         display: 'block',
                         fontSize: 13.5,
                         fontWeight: 600,
-                        color: item.danger ? 'var(--danger)' : 'var(--fg)',
+                        color: item.danger
+                          ? 'var(--danger)'
+                          : item.muted
+                            ? 'var(--fg-muted)'
+                            : 'var(--fg)',
                       }}
                     >
                       {item.label}

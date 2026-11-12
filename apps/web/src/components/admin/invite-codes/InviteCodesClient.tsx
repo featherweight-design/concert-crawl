@@ -34,7 +34,8 @@ import {
 } from './code-rules';
 import { MONO } from './code-styles';
 import { InviteCodesRowsSkeleton } from './InviteCodesSkeleton';
-import { CodeRowMenu, MENU_ICONS, type CodeMenuItem } from './CodeRowMenu';
+import { RowMenu, type RowMenuItem } from '@/components/admin/primitives';
+import { MENU_ICONS } from './code-menu-icons';
 import { CodePanel } from './CodePanel';
 import { EditCodePanel } from './EditCodePanel';
 import { NewCodePanel } from './NewCodePanel';
@@ -188,17 +189,17 @@ export function InviteCodesClient({ origin }: { origin: string }) {
   const menuItems = (
     row: AdminInviteCode,
     status: InviteStatus,
-  ): CodeMenuItem[] => {
+  ): RowMenuItem[] => {
     const host = origin.replace(/^https?:\/\//, '');
     const joined = seatsTaken(row);
-    const copy: CodeMenuItem = {
+    const copy: RowMenuItem = {
       key: 'copy',
       icon: MENU_ICONS.copy,
       label: COPY.menu.copyLink,
       hint: isEnded(status) ? COPY.menu.copyLinkEnded : `${host}/i/${row.code}`,
       onSelect: () => copyLink(row),
     };
-    const see: CodeMenuItem = {
+    const see: RowMenuItem = {
       key: 'joined',
       icon: MENU_ICONS.joined,
       label: COPY.menu.seeWhoJoined,
@@ -453,7 +454,7 @@ export function InviteCodesClient({ origin }: { origin: string }) {
                     {makerName(row)}
                   </td>
                   <td style={{ ...CELL, paddingRight: 18 }}>
-                    <CodeRowMenu
+                    <RowMenu
                       label={COPY.menu.trigger(row.code)}
                       items={menuItems(row, status)}
                     />

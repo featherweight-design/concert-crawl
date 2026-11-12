@@ -17,7 +17,8 @@ import {
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { Hint } from '../invite-codes/CodeFormParts';
-import { CodeRowMenu, MENU_ICONS } from '../invite-codes/CodeRowMenu';
+import { RowMenu } from '@/components/admin/primitives';
+import { MENU_ICONS } from '../invite-codes/code-menu-icons';
 import { Avatar } from './PeopleClient';
 import { ROLE_KIND } from './people-rules';
 import { personApi, type SettableRole } from './person-api';
@@ -190,7 +191,7 @@ export function PersonClient({ userId }: { userId: string }) {
   // Your own page has no ⋯: the API won't sign you out of the session you
   // are using, and the menu's other item waits on 4d (HOLD).
   const menu = isSelf ? null : (
-    <CodeRowMenu
+    <RowMenu
       label={COPY.menu.label(name)}
       width={300}
       triggerStyle={{

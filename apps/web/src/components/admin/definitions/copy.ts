@@ -2536,18 +2536,14 @@ export const ADMIN_COPY = {
       elsewhereTitle: (tab: string) => `Not in ${tab}`,
       elsewhereBody: (tabs: string) => `That name is in ${tabs}.`,
       or: ' or ',
-      // A search page whose hits all sit in other tabs, with more pages after.
-      morePagesTitle: 'Nothing on this page',
-      morePagesBody: 'More results are on the next page.',
     },
     /** A row's buttons name the artist for screen readers. */
     actionFor: (action: string, name: string) => `${action}: ${name}`,
     // Under "Couldn't change {name}", so the name isn't said twice.
     stillIn: (tab: string) => `It's still in ${tab}.`,
     subtitleShort: 'The photo and genre fans see on every show.',
-    // The board's "Watching" is shows-only vocabulary; fans follow artists.
-    matchedMeta: (upcoming: number, followers: number) =>
-      `${upcoming} upcoming · ${followers} ${followers === 1 ? 'follower' : 'followers'}`,
+    matchedMeta: (upcoming: number, watching: number) =>
+      `${upcoming} upcoming · ${watching} Watching`,
     itsAnArtist: 'It’s an artist',
     changeMatch: 'Change match',
     menu: {

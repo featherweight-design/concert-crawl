@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AdminButton } from '@/components/admin/primitives';
+import { AdminButton, RowMenu } from '@/components/admin/primitives';
 import type { AdminArtistRow } from './artists-api';
 import { showLine } from './artist-rules';
 import { ArtistPhoto } from './ArtistPhoto';
@@ -34,83 +33,10 @@ const PHONE_ROW = {
   borderBottom: '1px solid var(--border)',
 } as const;
 
-const MenuItem = ({
-  icon,
-  title,
-  line,
-  muted,
-  disabled,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  line: string;
-  muted?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    role="menuitem"
-    disabled={disabled}
-    onClick={onClick}
-    style={{
-      display: 'flex',
-      gap: 12,
-      width: '100%',
-      padding: '9px 12px',
-      borderRadius: 10,
-      border: 'none',
-      background: 'transparent',
-      textAlign: 'left',
-      fontFamily: 'inherit',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      ...(disabled ? PENDING : {}),
-    }}
-  >
-    <span
-      aria-hidden
-      style={{
-        width: 28,
-        height: 28,
-        flex: 'none',
-        borderRadius: 8,
-        background: 'var(--surface-2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {icon}
-    </span>
-    <span>
-      <span
-        style={{
-          display: 'block',
-          fontSize: 13.5,
-          fontWeight: 600,
-          color: muted ? 'var(--fg-muted)' : 'var(--fg)',
-        }}
-      >
-        {title}
-      </span>
-      <span
-        style={{
-          display: 'block',
-          fontSize: 12,
-          color: 'var(--fg-muted)',
-          marginTop: 2,
-        }}
-      >
-        {line}
-      </span>
-    </span>
-  </button>
-);
-
 /**
- * The Matched row's ⋯ (`11/artist-row-menu`), on the EventRowMenu pattern.
- * No photo is held, so the menu draws Change match and Not an artist.
+ * The Matched row's ⋯ (`11/artist-row-menu`) on the shared row menu. No photo
+ * is held, so it draws Change match… (opens the artist search in 4c C) and
+ * Not an artist….
  */
 const ArtistRowMenu = ({
   row,
@@ -120,155 +46,32 @@ const ArtistRowMenu = ({
   row: AdminArtistRow;
   busy: boolean;
   onNotAnArtist: () => void;
-}) => {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-
-  /** Close and hand focus back to ⋯, so it never drops to the page. */
-  const close = () => {
-    setOpen(false);
-    triggerRef.current?.focus();
-  };
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const items = () =>
-      Array.from(
-        menuRef.current?.querySelectorAll<HTMLButtonElement>(
-          '[role="menuitem"]:not([disabled])',
-        ) ?? [],
-      );
-    // With no item enabled (a write in flight), the menu itself takes focus,
-    // so Escape and Tab still work from inside it.
-    (items()[0] ?? menuRef.current)?.focus();
-    const handleClick = (evt: MouseEvent) => {
-      if (
-        evt.target instanceof Node &&
-        !containerRef.current?.contains(evt.target)
-      ) {
-        setOpen(false);
-      }
-    };
-    const handleKey = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') {
-        setOpen(false);
-        triggerRef.current?.focus();
-        return;
-      }
-      if (evt.key !== 'ArrowDown' && evt.key !== 'ArrowUp') return;
-      const list = items();
-      if (list.length === 0) return;
-      evt.preventDefault();
-      const at = list.findIndex((item) => item === document.activeElement);
-      const down = evt.key === 'ArrowDown';
-      // From outside the items, Down lands on the first and Up on the last.
-      const next =
-        at < 0
-          ? down
-            ? 0
-            : list.length - 1
-          : (at + (down ? 1 : -1) + list.length) % list.length;
-      list[next]?.focus();
-    };
-    // Tabbing out of the menu closes it.
-    const handleFocusOut = (evt: FocusEvent) => {
-      if (
-        !(evt.relatedTarget instanceof Node) ||
-        !containerRef.current?.contains(evt.relatedTarget)
-      ) {
-        setOpen(false);
-      }
-    };
-    const container = containerRef.current;
-    window.addEventListener('mousedown', handleClick);
-    window.addEventListener('keydown', handleKey);
-    container?.addEventListener('focusout', handleFocusOut);
-    return () => {
-      window.removeEventListener('mousedown', handleClick);
-      window.removeEventListener('keydown', handleKey);
-      container?.removeEventListener('focusout', handleFocusOut);
-    };
-  }, [open]);
-
-  return (
-    <div
-      ref={containerRef}
-      style={{ position: 'relative', display: 'inline-block' }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label={COPY.menu.label(row.name)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-        style={{
-          border: 'none',
-          background: open ? 'var(--surface-2)' : 'transparent',
-          cursor: 'pointer',
-          padding: 7,
-          borderRadius: 7,
-          color: open ? 'var(--fg)' : 'var(--fg-muted)',
-          display: 'inline-flex',
-        }}
-      >
-        <MoreHorizontal size={16} />
-      </button>
-      {open && (
-        <div
-          ref={menuRef}
-          role="menu"
-          tabIndex={-1}
-          aria-label={COPY.menu.label(row.name)}
-          style={{
-            outline: 'none',
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            right: 0,
-            zIndex: 50,
-            width: 300,
-            padding: 6,
-            borderRadius: 14,
-            border: '1px solid var(--border-strong)',
-            background: 'var(--bg-elevated)',
-            boxShadow: 'var(--shadow-lg)',
-          }}
-        >
-          {/* Change match opens the artist search (4c C). */}
-          <MenuItem
-            icon={<Search size={14} color="var(--signal)" />}
-            title={COPY.menu.changeMatch}
-            line={COPY.menu.changeMatchLine}
-            disabled
-            onClick={() => undefined}
-          />
-          <div
-            role="separator"
-            style={{
-              height: 1,
-              background: 'var(--border)',
-              margin: '6px 8px',
-            }}
-          />
-          <MenuItem
-            icon={<X size={14} color="var(--fg-muted)" />}
-            title={COPY.menu.notAnArtist}
-            line={COPY.menu.notAnArtistLine}
-            muted
-            disabled={busy}
-            onClick={() => {
-              // Focus goes to ⋯ first, so the dialog restores it there.
-              close();
-              onNotAnArtist();
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
+}) => (
+  <RowMenu
+    label={COPY.menu.label(row.name)}
+    width={300}
+    items={[
+      {
+        key: 'change',
+        icon: Search,
+        label: COPY.menu.changeMatch,
+        hint: COPY.menu.changeMatchLine,
+        disabled: true,
+        onSelect: () => undefined,
+      },
+      {
+        key: 'not-an-artist',
+        icon: X,
+        label: COPY.menu.notAnArtist,
+        hint: COPY.menu.notAnArtistLine,
+        muted: true,
+        divided: true,
+        disabled: busy,
+        onSelect: onNotAnArtist,
+      },
+    ]}
+  />
+);
 
 /** One Matched row (`06/artists-matched`; the phone reuses the To check row). */
 export const MatchedRow = ({

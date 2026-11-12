@@ -43,3 +43,5 @@ export { SaveFailedToast } from './SaveFailedToast';
 export { useSnapBack } from './useSnapBack';
 export type { SnapBack } from './useSnapBack';
 export { useIsPhone, ADMIN_PHONE_MAX_WIDTH } from './useIsPhone';
+export { RowMenu } from './RowMenu';
+export type { RowMenuItem } from './RowMenu';

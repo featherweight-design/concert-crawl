@@ -63,10 +63,6 @@ const KindLine = ({
   );
 };
 
-const Photo = ({ url }: { url: string | null }) => (
-  <ArtistPhoto url={url} size={34} />
-);
-
 const CARD = {
   display: 'flex',
   alignItems: 'center',
@@ -148,7 +144,7 @@ const Card = ({
           ...(live ? { cursor: 'pointer' } : PENDING),
         }}
       >
-        <Photo url={null} />
+        <ArtistPhoto url={null} size={34} />
         <CardText title={COPY.searchCard.title} line={SEARCH_LINE[search]} />
       </button>
     );
@@ -166,7 +162,7 @@ const Card = ({
         ...(selected ? gradientBorder('var(--surface-2)') : PLAIN_CARD),
       }}
     >
-      <Photo url={candidate.imageUrl} />
+      <ArtistPhoto url={candidate.imageUrl} size={34} />
       {/* Genre only: place and listeners are held (4c rows 1, 2). */}
       <CardText title={candidate.name} line={candidate.genres?.[0] ?? null} />
     </button>
