@@ -5,6 +5,7 @@ const show = (over: Partial<AttendedShow> = {}): AttendedShow => ({
   id: 'show-1',
   artist: 'Snakebite Revival',
   venue: 'Bluebird Theater',
+  venueSlug: 'bluebird-theater',
   genre: 'punk',
   date: '2026-03-14',
   priceFinal: 28,
