@@ -200,14 +200,14 @@ export const DataExportRow = () => {
         disabled={disabled}
         aria-busy={pending || undefined}
         aria-describedby={limited ? LIMIT_ID : undefined}
-        className="flex min-h-[44px] w-full items-center gap-3.5 rounded-xl border border-border bg-surface-1 px-4 py-3.5 text-left transition-colors enabled:hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex min-h-[44px] w-full items-center gap-3.5 rounded-2xl border border-border bg-surface-1 px-4 py-3.5 text-left transition-colors enabled:hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span
           aria-hidden
-          className="flex shrink-0 items-center justify-center rounded-lg bg-surface-2"
+          className="flex shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface-2"
           style={{
-            width: 36,
-            height: 36,
+            width: 38,
+            height: 38,
             color: pending ? 'var(--fg-muted)' : 'var(--signal)',
           }}
         >

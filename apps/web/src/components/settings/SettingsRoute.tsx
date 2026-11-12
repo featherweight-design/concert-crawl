@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronRight, Users } from 'lucide-react';
 import { ProfileHero } from './ProfileHero';
 import { AccountManagementRow } from './AccountManagementRow';
 import { DataExportRow } from './DataExportRow';
@@ -124,7 +125,7 @@ export function SettingsRoute({
         )}
 
         {/* Account */}
-        <div className="flex flex-col gap-2 px-4">
+        <div className="flex flex-col gap-3 px-4">
           <SectionLabel>{SETTINGS_COPY.accountSection}</SectionLabel>
           <AccountManagementRow email={profile.email} />
           {/* Last thing in Account, above Danger zone but not in it: taking
@@ -134,41 +135,28 @@ export function SettingsRoute({
 
         {/* Admin link — only for admins */}
         {isAdmin && (
-          <>
-            <div className="px-4">
-              <SectionLabel>{SETTINGS_COPY.operationsSection}</SectionLabel>
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-1 px-4 py-3 transition-colors"
-              >
-                <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] bg-surface-2 text-signal">
-                  <svg
-                    width="11"
-                    height="11"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    aria-hidden
-                  >
-                    <path
-                      d="M8 1.5l5.5 2v4.2c0 3.4-2.4 6.4-5.5 7.3-3.1-0.9-5.5-3.9-5.5-7.3V3.5L8 1.5z"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                <span
-                  className="text-[13.5px] font-semibold text-fg"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    letterSpacing: '-0.005em',
-                  }}
-                >
-                  {SETTINGS_COPY.adminRow}
-                </span>
-              </Link>
-            </div>
-          </>
+          <div className="flex flex-col gap-2 px-4">
+            <SectionLabel>{SETTINGS_COPY.operationsSection}</SectionLabel>
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 rounded-2xl border border-border bg-surface-1 px-4 py-4 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+            >
+              <Users
+                size={17}
+                aria-hidden
+                className="shrink-0"
+                style={{ color: 'var(--warning)' }}
+              />
+              <span className="flex-1 text-[16px] font-bold tracking-[-0.005em] text-fg">
+                {SETTINGS_COPY.adminRow}
+              </span>
+              <ChevronRight
+                size={15}
+                aria-hidden
+                className="shrink-0 text-fg-subtle"
+              />
+            </Link>
+          </div>
         )}
 
         {/* Danger zone */}
