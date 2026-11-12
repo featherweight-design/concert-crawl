@@ -70,6 +70,10 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
     open ? <div data-testid="tier-picker" /> : null,
 }));
 
+vi.mock('./AddShowRow', () => ({
+  AddShowRow: () => <div data-testid="add-show-row" />,
+}));
+
 import { HistoryContent } from './HistoryContent';
 import { HISTORY_COPY } from './definitions/copy';
 import { GOING_COPY } from '@/components/consumer/going/definitions/copy';
@@ -174,6 +178,14 @@ describe('HistoryContent', () => {
     expect(
       screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
     ).not.toBeInTheDocument();
+  });
+
+  // Not drawn: a reader with no nights is the one most likely to add one.
+  it('offers the Add row under the empty state', () => {
+    render(
+      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
+    );
+    expect(screen.getByTestId('add-show-row')).toBeInTheDocument();
   });
 
   // B+ rule 4: the empty state shows unearned dashed venue stamps.
