@@ -24,8 +24,18 @@ import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { CCTip } from '@/components/ui/cc-tip';
 import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay';
+import {
+  formatEventDate,
+  formatShowTime,
+} from '@/components/consumer/definitions/lib';
 import { GoingButton, GOING_BUTTON_SIZES } from './GoingButton';
+import { RemoveConfirm } from './RemoveConfirm';
 import { goingStateFor } from './lib/cta-state';
+import {
+  showAttendanceError,
+  showRemovedToast,
+  showStampedToast,
+} from './lib/attendance-toasts';
 import { GOING_COPY } from './definitions/copy';
 import { gradientEdge } from '@/lib/gradient-edge';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
@@ -39,8 +49,20 @@ const OPTIMISTIC_STAMP = 'optimistic';
 
 export type GoingCtaEvent = Pick<
   EventDetailResponse,
-  'id' | 'artist' | 'date' | 'status' | 'attendingAt'
-> & { venue: Pick<EventDetailResponse['venue'], 'timezone'> };
+  | 'id'
+  | 'artist'
+  | 'date'
+  | 'status'
+  | 'attendingAt'
+  | 'showTime'
+  | 'genre'
+  | 'artistPhotoUrl'
+> & {
+  venue: Pick<
+    EventDetailResponse['venue'],
+    'timezone' | 'name' | 'slug' | 'city'
+  >;
+};
 
 export const EventDetailCtaBlock = ({
   event,
@@ -68,6 +90,12 @@ export const EventDetailCtaBlock = ({
   // button answer the tap immediately instead of sitting inert for a network
   // hop. `null` means "no pending override — trust the server".
   const [optimisticGoing, setOptimisticGoing] = useState<boolean | null>(null);
+  // The "Didn't make it?" confirm. It stays open until the remove lands, and
+  // keeps the failure so the button can offer "Try again" (addendum 3).
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removing, setRemoving] = useState<'idle' | 'pending' | 'failed'>(
+    'idle',
+  );
 
   const serverGoing = event.attendingAt !== null;
 
@@ -132,7 +160,45 @@ export const EventDetailCtaBlock = ({
     setPickerOpen(true);
   };
 
-  const onChange = (tapped: boolean) => {
+  // Undo of a remove: put back exactly the attendance the DELETE took out.
+  // `mutateAsync` rather than per-call callbacks, which the mutation observer
+  // drops once a second mutate starts.
+  const undoRemove = async (restore: {
+    attendingAt: string;
+    token: string;
+  }) => {
+    setOptimisticGoing(true);
+    try {
+      await toggle.mutateAsync({ eventId: event.id, going: true, restore });
+      router.refresh();
+    } catch {
+      setOptimisticGoing(null);
+      showAttendanceError('undo');
+    }
+  };
+
+  const confirmRemove = async () => {
+    setRemoving('pending');
+    try {
+      const result = await toggle.mutateAsync({
+        eventId: event.id,
+        going: false,
+      });
+      setOptimisticGoing(false);
+      setRemoveOpen(false);
+      setRemoving('idle');
+      router.refresh();
+      const restore = result.restore ?? null;
+      showRemovedToast({
+        artist: event.artist,
+        onUndo: restore ? () => void undoRemove(restore) : null,
+      });
+    } catch {
+      setRemoving('failed');
+    }
+  };
+
+  const onChange = async (tapped: boolean) => {
     // A retry replays the intent that failed rather than whatever the error
     // treatment itself reports.
     const going =
@@ -145,25 +211,42 @@ export const EventDetailCtaBlock = ({
     }
     setFailedIntent(null);
     setOptimisticGoing(going);
-    toggle.mutate(
-      { eventId: event.id, going },
-      {
-        // Event Detail is server-rendered, so the fresh attendingAt arrives
-        // via a refresh — the same pattern EventDetailClient uses elsewhere.
-        onSuccess: () => router.refresh(),
-        onError: (err) => {
-          setOptimisticGoing(null);
-          // A stale client entitlement can lose a race with server-side
-          // enforcement. The API brands that 403, so route to the same upgrade
-          // path a locked tap takes instead of showing a generic failure.
-          if (err instanceof ApiError && err.code === 'entitlement_required') {
-            openUpgrade();
-            return;
-          }
-          setFailedIntent(going);
-        },
-      },
-    );
+    try {
+      await toggle.mutateAsync({ eventId: event.id, going });
+      // Event Detail is server-rendered, so the fresh attendingAt arrives
+      // via a refresh — the same pattern EventDetailClient uses elsewhere.
+      router.refresh();
+      if (going && isPast) {
+        showStampedToast({
+          artist: event.artist,
+          onOpenPassport: () => router.push('/passport'),
+        });
+      }
+    } catch (err) {
+      setOptimisticGoing(null);
+      // A stale client entitlement can lose a race with server-side
+      // enforcement. The API brands that 403, so route to the same upgrade
+      // path a locked tap takes instead of showing a generic failure.
+      if (err instanceof ApiError && err.code === 'entitlement_required') {
+        openUpgrade();
+        return;
+      }
+      // A failed stamp is the error toast, not the retry button: the past pill
+      // stays an "I went" the reader can tap again.
+      if (isPast) {
+        showAttendanceError('save');
+        return;
+      }
+      setFailedIntent(going);
+    }
+  };
+
+  const pastLine: CSSProperties = {
+    margin: 0,
+    fontFamily: 'var(--font-ui)',
+    fontSize: 14,
+    lineHeight: 1.45,
+    color: 'var(--fg-muted)',
   };
 
   const supportLine: CSSProperties = {
@@ -217,7 +300,11 @@ export const EventDetailCtaBlock = ({
         {/* No children: CCTip's own info disc is the designed trigger, and it
             carries the open state and the 44px touch target that a hand-rolled
             glyph here would silently replace. */}
-        <CCTip tip="going-vs-watch" placement="bottom" align="end" />
+        {/* A past night has nothing to explain: no going-vs-watch to weigh
+            (addendum 3, item 19). */}
+        {!isPast && (
+          <CCTip tip="going-vs-watch" placement="bottom" align="end" />
+        )}
       </div>
 
       {/* Full width down to 320px — the button ellipsizes its own label, so
@@ -241,14 +328,40 @@ export const EventDetailCtaBlock = ({
         </div>
       ) : (
         <GoingButton
-          show={{ eventId: event.id, artist: event.artist, date: event.date }}
+          show={{
+            eventId: event.id,
+            artist: event.artist,
+            date: event.date,
+            venue: { slug: event.venue.slug, name: event.venue.name },
+          }}
           state={state}
           size="lg"
           fullWidth
           pending={toggle.isPending}
-          onChange={onChange}
+          onChange={(tapped) => void onChange(tapped)}
         />
       )}
+
+      {/* What the past button means, or the way back out of it
+          (event_unmarked_m, event_stamped_m). */}
+      {isLoading ? null : state === 'past-no' ? (
+        <p style={pastLine}>{GOING_COPY.past.hint(event.venue.name)}</p>
+      ) : state === 'past-yes' ? (
+        <p style={{ ...pastLine, textAlign: 'center' }}>
+          {GOING_COPY.past.removeLead}{' '}
+          <button
+            type="button"
+            onClick={() => {
+              setRemoving('idle');
+              setRemoveOpen(true);
+            }}
+            className="cursor-pointer border-0 bg-transparent p-0 font-bold text-fg underline decoration-[var(--border-strong)] underline-offset-4"
+            style={{ font: 'inherit', fontWeight: 700 }}
+          >
+            {GOING_COPY.past.removeLink}
+          </button>
+        </p>
+      ) : null}
 
       {children}
 
@@ -271,6 +384,36 @@ export const EventDetailCtaBlock = ({
           <CCTip tip="concert-history" placement="top" align="start" />
         </div>
       ) : null}
+
+      <RemoveConfirm
+        open={removeOpen}
+        onClose={() => setRemoveOpen(false)}
+        show={{
+          eventId: event.id,
+          artist: event.artist,
+          artistPhotoUrl: event.artistPhotoUrl ?? null,
+          venueName: event.venue.name,
+          venueSlug: event.venue.slug,
+          neighborhood: null,
+          date: event.date,
+          dateLabel: formatEventDate(event.date, event.venue.timezone, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          }),
+          showTime: formatShowTime(event.showTime),
+          priceFinal: null,
+          genre: event.genre?.[0] ?? null,
+          attendingAt: event.attendingAt ?? OPTIMISTIC_STAMP,
+          venueCity: event.venue.city,
+          venueTimezone: event.venue.timezone,
+          rawShowTime: event.showTime,
+        }}
+        footnote="show-page"
+        onConfirm={() => void confirmRemove()}
+        pending={removing === 'pending'}
+        failed={removing === 'failed'}
+      />
 
       <TierPickerSheet
         open={pickerOpen}
