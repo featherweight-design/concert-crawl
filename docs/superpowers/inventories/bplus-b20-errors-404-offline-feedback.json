@@ -79,6 +79,28 @@
           "content": "noindex"
         }
       ]
+    },
+    {
+      "id": "not-found-event",
+      "label": "/events/[id] unknown: the not-found page (soft 404, loading.tsx streams a 200)",
+      "steps": [
+        {
+          "goto": "/events/00000000-0000-0000-0000-000000000000",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"not-found-surface\"]"
+        }
+      ]
+    },
+    {
+      "id": "not-found-global",
+      "label": "unknown top-level path: the global not-found page (real 404)",
+      "steps": [
+        {
+          "goto": "/zzz-not-a-page",
+          "expectStatus": 404,
+          "wait": "[data-testid=\"not-found-surface\"]"
+        }
+      ]
     }
   ]
 }
