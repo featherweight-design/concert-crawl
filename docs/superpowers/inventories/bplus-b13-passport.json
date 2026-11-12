@@ -8,8 +8,13 @@
       "steps": [
         {
           "goto": "/passport",
-          "wait": "[data-testid=\"passport-booklet\"]",
           "settle": 1500
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"passport-booklet\"]"
         }
       ]
     },
@@ -20,8 +25,13 @@
       "steps": [
         {
           "goto": "/passport",
-          "wait": "[data-testid=\"passport-booklet\"]",
           "settle": 1500
+        },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"])"
+        },
+        {
+          "wait": "[data-testid=\"passport-booklet\"]"
         }
       ]
     }
