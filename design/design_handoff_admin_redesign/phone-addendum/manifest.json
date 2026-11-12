@@ -1,0 +1,306 @@
+[
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-pick",
+  "title": "Merge · pick the other listing",
+  "note": "Opens full screen from the event ⋯ menu (“Merge with another listing…”). The likely duplicate (same venue and day) is offered first; search covers the rest.",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-compare",
+  "title": "Merge · compare",
+  "note": "The two listings stack, one card each, with the same rows in the same order so you compare down the page instead of across it. Venue and day are shown once because they match.",
+  "w": 390,
+  "h": 960
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-compare-320",
+  "title": "Merge · compare at 320",
+  "note": "Same board at 320. Titles and lineups wrap; row values wrap under their label width; nothing clips or scrolls sideways.",
+  "w": 320,
+  "h": 1000
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-keep-second-320",
+  "title": "Merge · keep the second, at 320",
+  "note": "The button names the choice. Keeping a hand-added listing says the next crawl updates it instead of adding the crawled one back.",
+  "w": 320,
+  "h": 1040
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-loading",
+  "title": "Merge · loading",
+  "note": "Skeleton in the compare’s final shape. The main button is a placeholder until both listings load.",
+  "w": 390,
+  "h": 860
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-nothing-found",
+  "title": "Merge · no likely duplicate",
+  "note": "Empty state for the pick step. Search still works for a duplicate on another date or venue.",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-pick-loading",
+  "title": "Merge · pick, loading",
+  "note": "",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-merging",
+  "title": "Merge · merging",
+  "note": "The only spinner is inside the button while it saves.",
+  "w": 390,
+  "h": 960
+ },
+ {
+  "section": "gap-1-merge-duplicates",
+  "name": "merge-failed",
+  "title": "Merge · couldn’t merge",
+  "note": "Snaps back: both listings stay as they were and the button returns. Try again repeats the same merge.",
+  "w": 390,
+  "h": 960
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "run-detail-sheet",
+  "title": "How you get here: a run, as a sheet",
+  "note": "Tap a run on the venue’s Runs tab. The run detail opens as a sheet (rule 4), and Inspect page is its main action. Needs you items for a failing or quiet venue link to the same place.",
+  "w": 390,
+  "h": 720
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-read",
+  "title": "Inspect · what we read",
+  "note": "Phone-reachable, on purpose: a failing venue in Needs you should be checkable from a phone. “What we read” opens first, because on a phone it answers the question faster than the HTML.",
+  "w": 390,
+  "h": 720
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-read-320",
+  "title": "Inspect · what we read, at 320",
+  "note": "",
+  "w": 320,
+  "h": 760
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-fetched",
+  "title": "Inspect · what we fetched",
+  "note": "Page, Text and HTML, as on desktop. HTML wraps instead of scrolling sideways and opens at the highlight where the page stopped.",
+  "w": 390,
+  "h": 660
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-fetched-320",
+  "title": "Inspect · what we fetched, at 320",
+  "note": "",
+  "w": 320,
+  "h": 700
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-menu",
+  "title": "Inspect · ⋯ menu",
+  "note": "Desktop’s two header buttons move into the ⋯ menu. Compare opens the other run in this same view.",
+  "w": 390,
+  "h": 520
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-loading",
+  "title": "Inspect · loading",
+  "note": "",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-pages-gone",
+  "title": "Inspect · pages no longer kept",
+  "note": "Empty state: fetched pages are kept 14 days (the plan’s default retention). Counts and the reason stay on Runs.",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-2-inspect-a-fetched-page",
+  "name": "inspect-couldnt-load",
+  "title": "Inspect · couldn’t load",
+  "note": "Error pattern: the header stays, only the content area changes.",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-mobile",
+  "title": "Add a venue · start, mobile",
+  "note": "From the + on Venues. Start from scratch sits up top; each asked-for venue is a card with its robots.txt line and the same two answers as desktop. The two source cards from desktop become one footnote.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-mobile-320",
+  "title": "Add a venue · start, at 320",
+  "note": "",
+  "w": 320,
+  "h": 1080
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-nobody-asked-yet-mobile",
+  "title": "Start · nobody asked yet, mobile",
+  "note": "Empty state. Start from scratch becomes the main action.",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-loading-mobile",
+  "title": "Start · loading, mobile",
+  "note": "The title and Start from scratch are real at once; only the list is a skeleton.",
+  "w": 390,
+  "h": 760
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-couldnt-load-mobile",
+  "title": "Start · couldn’t load, mobile",
+  "note": "Start from scratch still works while the list is down.",
+  "w": 390,
+  "h": 640
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-not-for-us-mobile",
+  "title": "Start · not for us, with Undo",
+  "note": "Answered in place, like Needs you.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "start-not-for-us-failed-mobile",
+  "title": "Start · not for us didn’t save",
+  "note": "The card snaps back and the toast says so.",
+  "w": 390,
+  "h": 980
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "going-live-mobile",
+  "title": "Step 5 · going live",
+  "note": "Spinner inside the button only.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "go-live-failed-mobile",
+  "title": "Step 5 · go live failed",
+  "note": "Nothing is published and nobody is notified; the venue stays a draft with every step kept.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "gone-live-mobile",
+  "title": "Gone live · mobile",
+  "note": "Same words as desktop. Buttons stack full width, most used first. What’s still waiting becomes a short list instead of one line.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "gap-3-add-a-venue",
+  "name": "gone-live-mobile-320",
+  "title": "Gone live · at 320",
+  "note": "",
+  "w": 320,
+  "h": 844
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-mobile",
+  "title": "Venue · Source, mobile",
+  "note": "The desktop’s two columns stack in their order: How we read it, robots.txt, then the fixed rules. Advanced stays collapsed at the bottom of the first card. No Save bar until something changes.",
+  "w": 390,
+  "h": 1200
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-mobile-320",
+  "title": "Venue · Source, at 320",
+  "note": "Tabs scroll sideways (as on every venue tab). Values wrap under their labels.",
+  "w": 320,
+  "h": 1320
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-feed-edited",
+  "title": "Source · switched to a ticketing feed",
+  "note": "Picking a feed shows its two fields. A pinned Save bar appears with the change named; Test it now runs first.",
+  "w": 390,
+  "h": 1560
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-test-running",
+  "title": "Source · test running",
+  "note": "Each check ticks off as it happens; a test never publishes.",
+  "w": 390,
+  "h": 1560
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-advanced-open",
+  "title": "Source · Advanced open",
+  "note": "Three settings from today’s venue (page loading, wait until, wait for) and the debug toggle.",
+  "w": 390,
+  "h": 1620
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-robots-disallows",
+  "title": "Source · robots.txt disallows",
+  "note": "The robots card turns warning, crawling reads “Paused: robots.txt”, and Ask the venue is the way forward. We never override it.",
+  "w": 390,
+  "h": 1260
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-dont-crawl",
+  "title": "Source · don’t crawl",
+  "note": "The nearest thing to empty: no calendar, no robots check, no fixed rules to show.",
+  "w": 390,
+  "h": 720
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-loading",
+  "title": "Source · loading",
+  "note": "The venue header is already loaded from the tab you came from; the tab’s cards are skeletons.",
+  "w": 390,
+  "h": 1000
+ },
+ {
+  "section": "gap-4-venue-source",
+  "name": "source-save-failed",
+  "title": "Source · save failed",
+  "note": "Snaps back to what is saved (the calendar page) and says so.",
+  "w": 390,
+  "h": 1200
+ }
+]
