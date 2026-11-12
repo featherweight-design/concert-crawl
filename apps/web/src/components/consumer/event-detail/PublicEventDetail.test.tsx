@@ -36,7 +36,8 @@ vi.mock('@/components/consumer/event-row', () => ({
 }));
 
 // Pins "today" so the past-show case is deterministic.
-vi.mock('@/lib/time', () => ({
+vi.mock(import('@/lib/time'), async (importOriginal) => ({
+  ...(await importOriginal()),
   localDateString: () => '2026-08-02',
 }));
 
