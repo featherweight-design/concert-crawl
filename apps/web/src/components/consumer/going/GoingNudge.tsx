@@ -6,10 +6,10 @@
 // Appears beneath a Watching row while the night is still ahead. Tone is
 // helpful, not nagging — one line, accent-tinted, no exclamation.
 //
-// B+ (README "My shows", rule 4): the question and the day count hold one line
-// beside the button, and from sm up the dashed stamp the night will become
-// leads the prompt. "Yes, going" is filled with that stamp's own ink. The caller
-// owns the window check and the per-device memory; this component only draws
+// B+ (README "My shows", rule 4): from sm up the dashed stamp the night will
+// become leads the prompt, and the heading "Going to this show?" is followed by
+// the day count (addendum 2 item 5). "Yes, going" is filled with that stamp's
+// own ink. The caller owns the window check and the per-device memory; this component only draws
 // and reports whether the night was committed to or the nudge dismissed.
 
 import type { CSSProperties } from 'react';
@@ -121,30 +121,21 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
           gap: 2,
         }}
       >
-        {/* One line, always. Only the question may shrink: the day count is
-            its own non-truncating span, so at 320px it never clips. */}
+        {/* Addendum 2 item 5: the heading "Going to this show?" plus the day
+            count, as live. */}
         <span
           data-testid="going-nudge-line"
           style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: '0.3em',
-            minWidth: 0,
-            whiteSpace: 'nowrap',
             fontFamily: 'var(--font-ui)',
             fontSize: 12.5,
             fontWeight: 700,
             letterSpacing: '-0.005em',
           }}
         >
-          <span data-testid="going-nudge-question" className="min-w-0 truncate">
-            {GOING_COPY.nudge.heading}
-          </span>
-          {/* A real space for assistive tech; flex drops it visually and the
-              gap spaces the two. */}{' '}
+          {GOING_COPY.nudge.heading}{' '}
           <span
             data-testid="going-nudge-days"
-            style={{ flexShrink: 0, color: 'var(--fg-muted)', fontWeight: 500 }}
+            style={{ color: 'var(--fg-muted)', fontWeight: 500 }}
           >
             {daysUntilLabel(show)}
           </span>
