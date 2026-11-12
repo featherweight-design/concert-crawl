@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { PriceSource, SourceCategory } from '@concert-crawl/types';
 import { SubmitPriceModal } from '@/components/consumer/submit-price';
+import { gradientEdge } from '@/lib/gradient-edge';
 import { CCTip } from '@/components/ui/cc-tip';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display';
@@ -883,8 +884,8 @@ function CommunityHandoffCard({
         marginTop: 18,
         padding: '16px 14px 14px',
         borderRadius: 12,
-        background: `color-mix(in oklab, ${COMMUNITY} 6%, var(--surface-1))`,
-        border: `1px solid color-mix(in oklab, ${COMMUNITY} 32%, var(--border))`,
+        // The "No price yet" card: the gradient edge (bp-event, event-past-remove-d).
+        ...gradientEdge('var(--surface-1)'),
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -987,7 +988,11 @@ function CommunityHandoffCard({
           height: 44,
           width: '100%',
           borderRadius: 9,
-          background: 'var(--signal)',
+          // Submit a price: the signal-to-accent gradient with a soft glow.
+          background:
+            'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
+          boxShadow:
+            '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
           color: 'var(--fg-on-accent)',
           fontFamily: 'var(--font-ui)',
           fontWeight: 800,
@@ -1170,16 +1175,9 @@ export function PriceDisplay({
           : null
       : null;
 
-  // Card theming
-  const cardBg = isBoxOffice
-    ? `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`
-    : 'var(--surface-1)';
-  const cardBorder = isBoxOffice
-    ? `1px solid color-mix(in oklab, ${GOLD} 52%, var(--border))`
-    : '1px solid var(--border)';
-  const cardBoxShadow = isBoxOffice
-    ? `inset 0 1px 0 color-mix(in oklab, oklch(0.66 0.14 78) 40%, transparent)`
-    : undefined;
+  // Card theming: both live cards wear the signal-to-accent gradient edge, and
+  // a box office price is marked only by its gold chip (more-p-price_states).
+  const cardEdge = gradientEdge('var(--surface-1)');
 
   // Headline price — show all-in (face + fees) for non-boxoffice tiers when fees exist.
   // Box-office always shows face (no fees by definition). Ranges use face min/max only.
@@ -1198,9 +1196,7 @@ export function PriceDisplay({
         marginTop: 18,
         padding: '14px 14px 12px',
         borderRadius: 12,
-        background: cardBg,
-        border: cardBorder,
-        boxShadow: cardBoxShadow,
+        ...cardEdge,
         position: 'relative',
       }}
     >
