@@ -80,7 +80,7 @@
     }
   },
   "orchestrator": {
-    "maxLanes": 3,
-    "note": "3 per orchestrator while both projects run (Hugh, 2026-11-11, after the arm64 switch)."
+    "maxLanes": 4,
+    "note": "4 per orchestrator while both projects run: 2 Opus + 2 Sonnet (Hugh, 2026-11-11, after the arm64 switch)."
   }
 }
