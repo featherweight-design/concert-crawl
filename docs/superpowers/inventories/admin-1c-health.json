@@ -1,0 +1,53 @@
+{
+  "feature": "Admin 1c · Health",
+  "note": "Plan row 1c. CONTACT_SHEET_ROLE=admin. Boards: 03-health/health-desktop, health-mobile, tiles-in-each-state, llm-budget-panel; 07/loading-health. By hand: tile states other than the live one, Couldn't load. 1c-2 ships health and grid; 1c-3 adds done and budget.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 740,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "sm",
+      "width": 640,
+      "height": 900
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "health",
+      "label": "/admin Health",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"health-tiles\"]"
+        }
+      ]
+    },
+    {
+      "id": "grid",
+      "label": "/admin venue grid",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"venue-grid\"]"
+        },
+        {
+          "scrollTo": "[data-testid=\"venue-grid\"]"
+        }
+      ]
+    }
+  ]
+}

@@ -1,134 +1,54 @@
-export default function AdminDashboardLoading() {
+import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+
+const card = {
+  borderRadius: 14,
+  border: '1px solid var(--border)',
+  background: 'var(--bg-elevated)',
+  padding: '16px 18px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+} satisfies React.CSSProperties;
+
+const PANEL_LINES = ['85%', '72%', '58%', '45%', '32%'];
+
+const PanelSkeleton = () => (
+  <div style={{ ...card, minHeight: 240 }}>
+    <SkeletonBlock width={120} height={14} radius={6} />
+    {PANEL_LINES.map((width) => (
+      <SkeletonBlock key={width} width={width} height={10} radius={5} />
+    ))}
+  </div>
+);
+
+/**
+ * `07/loading-health`: the header, four tiles and the two columns. The board
+ * is desktop only (gap G14); the phone gets the same blocks, reflowed by the
+ * Health grid classes.
+ */
+export default function AdminHealthLoading() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Greeting */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div className="admin-skeleton" style={{ width: 220, height: 28 }} />
-        <div className="admin-skeleton" style={{ width: 160, height: 14 }} />
+    <div
+      data-testid="page-skeleton"
+      aria-busy="true"
+      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <SkeletonBlock width={200} height={28} radius={8} />
+        <SkeletonBlock width="min(380px, 100%)" height={12} radius={6} />
       </div>
-
-      {/* Stat row — 2×2 on mobile, 4-across from xl up. Mirrors the Venues
-          loading grid rather than the resting-state stat cards, which use
-          `repeat(auto-fit, minmax(180px, 1fr))` and land on 3–4 columns well
-          before xl. The gated breakpoint is a deliberate approximation for
-          the skeleton (Hugh's Venues reference), not a claim of parity —
-          what matters is that the four boxes stop being 80px slivers on
-          320–414px viewports (#1073). */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <div
-            key={idx}
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: 10,
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            <div className="admin-skeleton" style={{ width: 80, height: 12 }} />
-            <div className="admin-skeleton" style={{ width: 56, height: 28 }} />
-            <div
-              className="admin-skeleton"
-              style={{ width: '100%', height: 8, borderRadius: 4 }}
-            />
+      <div className="health-tiles">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} style={{ ...card, minHeight: 160 }}>
+            <SkeletonBlock width={120} height={14} radius={6} />
+            <SkeletonBlock width="80%" height={10} radius={5} />
+            <SkeletonBlock width="60%" height={10} radius={5} />
           </div>
         ))}
       </div>
-
-      {/* Attention feed */}
-      <div
-        style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          borderRadius: 10,
-          padding: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
-        <div className="admin-skeleton" style={{ width: 120, height: 14 }} />
-        {Array.from({ length: 2 }).map((_, idx) => (
-          <div
-            key={idx}
-            style={{ display: 'flex', gap: 12, alignItems: 'center' }}
-          >
-            <div
-              className="admin-skeleton"
-              style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0 }}
-            />
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-              }}
-            >
-              <div
-                className="admin-skeleton"
-                style={{ width: '60%', height: 13 }}
-              />
-              <div
-                className="admin-skeleton"
-                style={{ width: '40%', height: 11 }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Crawl health table */}
-      <div
-        style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          borderRadius: 10,
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid var(--border)',
-          }}
-        >
-          <div className="admin-skeleton" style={{ width: 160, height: 14 }} />
-        </div>
-        {Array.from({ length: 5 }).map((_, idx) => (
-          <div
-            key={idx}
-            style={{
-              padding: '10px 16px',
-              display: 'flex',
-              gap: 12,
-              alignItems: 'center',
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
-            <div
-              className="admin-skeleton"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                flexShrink: 0,
-              }}
-            />
-            <div
-              className="admin-skeleton"
-              style={{ width: 140, height: 13 }}
-            />
-            <div
-              className="admin-skeleton"
-              style={{ width: 64, height: 13, marginLeft: 'auto' }}
-            />
-            <div className="admin-skeleton" style={{ width: 52, height: 13 }} />
-          </div>
-        ))}
+      <div className="health-columns">
+        <PanelSkeleton />
+        <PanelSkeleton />
       </div>
     </div>
   );
