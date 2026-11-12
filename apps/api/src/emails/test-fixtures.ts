@@ -217,7 +217,7 @@ function buildRunDegradedSample(): BuiltTestEmail {
   // rate line, then the shared cause naming every venue it hit.
   const lines = [
     '8 of 20 venues failed this run.',
-    "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Ball Arena, Cervantes, Globe Hall, Hi-Dive, Larimer Lounge, Lost Lake Lounge, Meow Wolf Denver, Red Rocks Amphitheatre.",
+    "8 venues failed on the LLM account's usage limit or the monthly LLM budget in admin settings. This is account-wide, not a venue problem: Ball Arena, Cervantes, Globe Hall, Hi-Dive, Larimer Lounge, Lost Lake Lounge, Meow Wolf Denver, Red Rocks Amphitheatre.",
   ];
   return {
     fromCategory: 'alert',

@@ -131,6 +131,8 @@ describe('describeDegradation', () => {
   it('says an llm_quota cause is account-wide, not a venue problem', () => {
     const line = describeDegradation(QUOTA_CAUSE);
     expect(line).toContain('account-wide');
+    // Our own budget's skip shares the class, so the line names it too.
+    expect(line).toContain('monthly LLM budget');
     expect(line).toContain('Hi-Dive, Red Rocks');
   });
 

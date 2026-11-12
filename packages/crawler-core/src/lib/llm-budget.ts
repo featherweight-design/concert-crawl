@@ -8,12 +8,13 @@
 //   then fails as an account-wide condition (classed llm_quota), which never
 //   counts toward its three strikes.
 //
-// Month-to-date spend is the same source the admin cost tile sums
-// (crawl_runs.llm_cost_usd), bucketed by the Mountain Time calendar, from the
-// first of the current MT month.
+// Month-to-date spend is extraction cost (crawl_runs.llm_cost_usd, what the
+// admin cost tile sums) plus genre-tagging cost (cost_tracking), from the first
+// of the current Mountain Time month. On, the switch also skips adjudication
+// and genre tagging, so no Haiku call is made at all.
 
-import { sql } from 'drizzle-orm';
-import { adminSettings, crawlRuns, db } from '@concert-crawl/db';
+import { and, eq, sql } from 'drizzle-orm';
+import { adminSettings, costTracking, crawlRuns, db } from '@concert-crawl/db';
 
 export interface LlmBudgetStatus {
   /** null when no budget is set: the crawl never stops for it. */
@@ -71,15 +72,30 @@ export async function readLlmBudgetStatus(): Promise<LlmBudgetStatus> {
     return { budgetUsd, spentUsd: 0, stopWhenSpent };
   }
 
-  // The start of the current Mountain Time month as an instant, so the filter
-  // is a plain range on created_at.
-  const [spend] = await db
+  // The start of the current Mountain Time month as an instant, so each filter
+  // is a plain range on its timestamp.
+  const monthStart = sql`(date_trunc('month', now() AT TIME ZONE 'America/Denver') AT TIME ZONE 'America/Denver')`;
+  const [extraction] = await db
     .select({
       spentUsd: sql<number>`coalesce(sum(${crawlRuns.llmCostUsd}), 0)`,
     })
     .from(crawlRuns)
+    .where(sql`${crawlRuns.createdAt} >= ${monthStart}`);
+  // Genre tagging is Haiku too, recorded in cost_tracking rather than on the
+  // run. (cost_tracking's 'claude' rows duplicate crawl_runs, so only the
+  // tagger's are added.) Artist adjudication's cost is not recorded anywhere.
+  const [tagging] = await db
+    .select({
+      spentUsd: sql<number>`coalesce(sum(${costTracking.costUsd}), 0)`,
+    })
+    .from(costTracking)
     .where(
-      sql`${crawlRuns.createdAt} >= (date_trunc('month', now() AT TIME ZONE 'America/Denver') AT TIME ZONE 'America/Denver')`,
+      and(
+        eq(costTracking.service, 'genre-tagger'),
+        sql`${costTracking.recordedAt} >= ${monthStart}`,
+      ),
     );
-  return { budgetUsd, spentUsd: Number(spend?.spentUsd ?? 0), stopWhenSpent };
+  const spentUsd =
+    Number(extraction?.spentUsd ?? 0) + Number(tagging?.spentUsd ?? 0);
+  return { budgetUsd, spentUsd, stopWhenSpent };
 }

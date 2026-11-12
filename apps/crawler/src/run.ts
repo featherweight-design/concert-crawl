@@ -168,6 +168,12 @@ export async function loadLlmBudget(): Promise<LlmBudgetStatus | null> {
   return status;
 }
 
+// Spent with "If it runs out" on: genre tagging is a Haiku call too, so it is
+// skipped. Untagged events keep a null genre and are picked up by the first
+// run after the budget resets.
+const llmStopped = (llmBudget: LlmBudgetStatus | null): boolean =>
+  llmBudgetVerdict(llmBudget) === 'over_stop';
+
 async function isCrawlPaused(venueId: string): Promise<boolean> {
   const [row] = await db
     .select({ crawlPausedAt: venues.crawlPausedAt })
@@ -335,7 +341,9 @@ async function processTrigger(
       });
     }
     try {
-      await tagEventsWithGenres(trigger.venueId, crawlRun.id);
+      if (!llmStopped(llmBudget)) {
+        await tagEventsWithGenres(trigger.venueId, crawlRun.id);
+      }
     } catch (tagErr) {
       logger.error(
         { tagErr, venueId: trigger.venueId, triggerId: trigger.id },
@@ -582,7 +590,9 @@ export async function runDailyCrawl(): Promise<{
           }
           if (batch[idx]?.id) {
             try {
-              await tagEventsWithGenres(batch[idx].id, result.value.id);
+              if (!llmStopped(llmBudget)) {
+                await tagEventsWithGenres(batch[idx].id, result.value.id);
+              }
             } catch (tagErr) {
               logger.error(
                 { tagErr, venueId: batch[idx]?.id },

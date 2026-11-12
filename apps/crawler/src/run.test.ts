@@ -226,6 +226,8 @@ describe('runDailyCrawl', () => {
       for (const call of mockCrawlVenue.mock.calls) {
         expect(call[5]).toBe(spent);
       }
+      // With the switch off, genre tagging carries on past the budget.
+      expect(mockTagEventsWithGenres).toHaveBeenCalled();
       // Warned once for the run, not once per venue.
       const budgetWarnings = mockSentryLoggerWarn.mock.calls.filter(
         (call) => call[0] === 'llm.budget_spent',
@@ -254,6 +256,8 @@ describe('runDailyCrawl', () => {
         budget_usd: 20,
         action: 'skip_llm',
       });
+      // Genre tagging is a Haiku call too.
+      expect(mockTagEventsWithGenres).not.toHaveBeenCalled();
     });
 
     it('does not warn under budget', async () => {

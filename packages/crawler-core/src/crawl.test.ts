@@ -1513,6 +1513,44 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     vi.mocked(isAiUseAllowed).mockResolvedValue(true);
   });
 
+  // The monthly LLM budget (admin 1c, G8b): adjudication is a Haiku call too.
+  it.each([
+    { stopWhenSpent: true, adjudicates: false },
+    { stopWhenSpent: false, adjudicates: true },
+  ])(
+    'adjudicates past a spent budget only with "If it runs out" off (stop: $stopWhenSpent)',
+    async ({ stopWhenSpent, adjudicates }) => {
+      // The file-level beforeEach leaves this mock's calls alone.
+      vi.mocked(adjudicateEvent).mockClear();
+      const { venue, fetch } = seedPlatformVenue(1);
+      fetch.mockResolvedValueOnce({
+        events: [
+          {
+            title: 'Metallica',
+            rawTitle: 'Metallica',
+            artist: 'Metallica',
+            date: '2026-08-15',
+            confidence: 1,
+            sourceUrl: 'https://venue.example.com/calendar',
+          },
+        ],
+        sourceUrl: 'https://platform.example.com/graphql',
+      });
+
+      await crawlVenue(venue.id, mockBrowser, undefined, [], false, {
+        budgetUsd: 20,
+        spentUsd: 25,
+        stopWhenSpent,
+      });
+
+      if (adjudicates) {
+        expect(adjudicateEvent).toHaveBeenCalled();
+      } else {
+        expect(adjudicateEvent).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   // A manual trigger reaches crawlVenue directly, so the pause has to hold here
   // and not only in the daily and run-all venue queries.
   it('refuses a paused venue before any network request, with no strike', async () => {
