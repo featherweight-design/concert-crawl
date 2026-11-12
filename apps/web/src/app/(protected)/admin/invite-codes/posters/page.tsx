@@ -5,6 +5,7 @@ import { apiClient } from '@/lib/api';
 import { siteOrigin } from '@/lib/share/site-origin';
 import {
   inviteStatus,
+  isPosterCode,
   posterJoinUrl,
   posterTypedUrl,
   qrPath,
@@ -42,8 +43,7 @@ export default async function InviteCodePostersPage({
   const now = new Date();
   const origin = siteOrigin();
   const cards: PosterCodeCard[] = codes
-    // A member's own share code has a high cap too, but it is never a poster.
-    .filter((code) => code.kind !== 'member' && code.maxUses > 1)
+    .filter(isPosterCode)
     .map((code) => ({ code, status: inviteStatus(code, now) }))
     .filter(({ status }) => status === 'active' || status === 'full')
     .sort((left, right) =>

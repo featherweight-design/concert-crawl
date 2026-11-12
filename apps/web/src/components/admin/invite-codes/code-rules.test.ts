@@ -69,11 +69,19 @@ describe('seats', () => {
 
 describe('codeLabel and makerName', () => {
   it('derives "Poster ·" for any code with more than one seat', () => {
-    expect(codeLabel({ label: 'Hi-Dive bathroom', maxUses: 50 })).toBe(
-      'Poster · Hi-Dive bathroom',
+    expect(
+      codeLabel({ label: 'Hi-Dive bathroom', maxUses: 50, kind: 'admin' }),
+    ).toBe('Poster · Hi-Dive bathroom');
+    expect(codeLabel({ label: null, maxUses: 50, kind: 'admin' })).toBe(
+      'Poster',
     );
-    expect(codeLabel({ label: null, maxUses: 50 })).toBe('Poster');
-    expect(codeLabel({ label: 'For Mira', maxUses: 1 })).toBe('For Mira');
+    expect(codeLabel({ label: 'For Mira', maxUses: 1, kind: 'admin' })).toBe(
+      'For Mira',
+    );
+    // A member's own share code is not a poster whatever its seat cap.
+    expect(
+      codeLabel({ label: null, maxUses: 10_000, kind: 'member' }),
+    ).toBeNull();
   });
 
   it('names a maker with no handle "A former admin"', () => {

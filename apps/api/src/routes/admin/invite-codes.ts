@@ -197,6 +197,18 @@ inviteCodesAdminRouter.patch(
     if (!existing) {
       return ctx.json({ success: false, error: 'Invite code not found' }, 404);
     }
+    // A member's own share code is not edited: its seats and expiry are what make
+    // it "unlimited", and its label is nobody's to set. Revoke is the one control.
+    if (existing.kind === 'member') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'A member share code cannot be edited; revoke it instead',
+          code: 'member_code',
+        },
+        409,
+      );
+    }
     const now = new Date();
     // Edit is for live codes. An ended code comes back only through
     // reactivate, so its audit says so.

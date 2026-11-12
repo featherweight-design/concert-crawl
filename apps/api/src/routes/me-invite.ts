@@ -8,7 +8,7 @@
 // replaced, so turning it off sticks.
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, or } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   db,
@@ -19,6 +19,7 @@ import {
 import type { MeInviteResponse } from '@concert-crawl/types';
 import { requireAuth } from '../middleware/auth.js';
 import { checkRateLimit } from '../lib/rate-limit.js';
+import { apiLogger } from '../lib/logger.js';
 import {
   MEMBER_CODE_SEATS,
   generateInviteCode,
@@ -96,6 +97,12 @@ const getOrCreateMemberCode = async (userId: string) => {
       .onConflictDoNothing();
     const row = await findMemberCode(userId);
     if (row) return row;
+    // No row after an insert that did not throw: the `code` collided. Say so, so
+    // a repeat would be seen rather than burn the attempts silently.
+    apiLogger.warn(
+      { attempt: attempt + 1 },
+      'member invite code collided, retrying',
+    );
   }
   return null;
 };
@@ -125,11 +132,21 @@ meInviteRouter.get('/invite', requireAuth, async (ctx) => {
     return ctx.json({ success: false, error: 'Could not make a code' }, 503);
   }
 
+  // Test accounts (ours or a tester's) are left out of the count and the strip,
+  // as they are of the admin counts; a joiner with no profile row still counts.
+  const realJoiner = or(
+    isNull(userProfiles.isTestAccount),
+    eq(userProfiles.isTestAccount, false),
+  );
   const [[total], faces] = await Promise.all([
     db
       .select({ value: count() })
       .from(inviteCodeRedemptions)
-      .where(eq(inviteCodeRedemptions.codeId, member.id)),
+      .leftJoin(
+        userProfiles,
+        eq(userProfiles.userId, inviteCodeRedemptions.userId),
+      )
+      .where(and(eq(inviteCodeRedemptions.codeId, member.id), realJoiner)),
     db
       .select({
         handle: userProfiles.handle,
@@ -141,7 +158,7 @@ meInviteRouter.get('/invite', requireAuth, async (ctx) => {
         userProfiles,
         eq(userProfiles.userId, inviteCodeRedemptions.userId),
       )
-      .where(eq(inviteCodeRedemptions.codeId, member.id))
+      .where(and(eq(inviteCodeRedemptions.codeId, member.id), realJoiner))
       .orderBy(desc(inviteCodeRedemptions.redeemedAt))
       .limit(FACE_LIMIT),
   ]);

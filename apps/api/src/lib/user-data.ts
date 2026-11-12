@@ -22,6 +22,7 @@ import {
   crews,
   db,
   events,
+  inviteCodes,
   priceSubmissions,
   userEvents,
   venues,
@@ -48,6 +49,15 @@ export const deleteUserData = async (userId: string): Promise<void> => {
     // Crews first. Keepership has to transfer before `crew_members` rows go,
     // or there is no member left to promote.
     await reassignCrews(tx, userId);
+
+    // A member's own share code is theirs: `created_by` is a customer here, not
+    // an admin. It goes with them, so the link stops admitting people and no
+    // Clerk id of theirs survives on it; the redemptions it recorded cascade.
+    await tx
+      .delete(inviteCodes)
+      .where(
+        and(eq(inviteCodes.createdBy, userId), eq(inviteCodes.kind, 'member')),
+      );
 
     for (const entry of USER_DATA_REGISTRY) {
       if (entry.userIdColumn === null) continue;

@@ -9,7 +9,11 @@ import type {
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from '@/components/admin/primitives';
-import { seatsTaken, type InviteStatus } from '@/lib/poster/poster-rule';
+import {
+  isPosterCode,
+  seatsTaken,
+  type InviteStatus,
+} from '@/lib/poster/poster-rule';
 import { postersHref } from '@/lib/poster/posters-href';
 import type { CodesApi } from './codes-api';
 import {
@@ -136,29 +140,27 @@ export const CodePanel = ({
             {COPY.menu.copyLink}
           </AdminButton>
           {/* The Posters tab can only pick a live code with a seat left. */}
-          {status === 'active' &&
-            code.kind !== 'member' &&
-            code.maxUses > 1 && (
-              <Link
-                href={postersHref({ code: code.id })}
-                prefetch={false}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  height: 32,
-                  padding: '0 12px',
-                  ...BUTTON,
-                  textDecoration: 'none',
-                  color: 'var(--fg)',
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border-strong)',
-                }}
-              >
-                <Printer size={14} aria-hidden />
-                {COPY.menu.makePoster}
-              </Link>
-            )}
+          {status === 'active' && isPosterCode(code) && (
+            <Link
+              href={postersHref({ code: code.id })}
+              prefetch={false}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                height: 32,
+                padding: '0 12px',
+                ...BUTTON,
+                textDecoration: 'none',
+                color: 'var(--fg)',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-strong)',
+              }}
+            >
+              <Printer size={14} aria-hidden />
+              {COPY.menu.makePoster}
+            </Link>
+          )}
         </div>
         <SeatsBar used={used} max={code.maxUses} full={status === 'full'} />
         <div>
