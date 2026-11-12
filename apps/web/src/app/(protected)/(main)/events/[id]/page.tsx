@@ -29,7 +29,7 @@ import {
 } from '@/components/consumer/event-stage';
 import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import { ShareButton } from '@/components/consumer/event-detail/ShareButton';
-import { aboutDescription } from '@/components/consumer/event-detail/about-description';
+import { EventAbout } from '@/components/consumer/event-detail/EventAbout';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
 import { SectionHeader } from '@/components/consumer/section-header';
 import { WatchZone } from '@/components/consumer/watchers';
@@ -433,26 +433,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           {!leadsWithStatus && primaryCta}
 
           {/* About — after CTA, per design */}
-          {aboutDescription(event.description) && (
-            <div className="mt-4">
-              <p
-                className="mb-1.5 uppercase text-fg-subtle"
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '9px',
-                  letterSpacing: '0.06em',
-                }}
-              >
-                {copy.aboutLabel}
-              </p>
-              <p
-                className="text-[13px] leading-[1.55] text-fg-muted"
-                style={{ textWrap: 'pretty' }}
-              >
-                {event.description}
-              </p>
-            </div>
-          )}
+          <EventAbout description={event.description} status={event.status} />
 
           {/* Related shows */}
           {related.length > 0 && (
