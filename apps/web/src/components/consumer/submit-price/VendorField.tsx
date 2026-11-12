@@ -180,7 +180,9 @@ const VendorListbox = ({
     minHeight: 44,
     padding: '0 12px',
     borderRadius: 8,
-    background: selected ? 'var(--signal-wash)' : 'transparent',
+    background: selected
+      ? 'color-mix(in oklch, var(--signal) 14%, transparent)'
+      : 'transparent',
     color: selected ? 'var(--signal)' : 'var(--fg)',
     fontSize: 14.5,
     fontWeight: selected ? 700 : 500,

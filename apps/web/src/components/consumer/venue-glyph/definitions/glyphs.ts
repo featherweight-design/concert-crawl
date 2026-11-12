@@ -2,8 +2,8 @@
  * The 21 venue glyphs from the B+ handoff
  * (`design/design_handoff_bplus_redesign/assets/venues/<key>-icon.svg`).
  * Each glyph is drawn on a 24×24 grid as round-capped strokes in its venue's
- * two-stop gradient. The tile ground is not stored here: it is the theme's
- * `--surface-1`, which is the colour the assets were drawn on.
+ * two-stop gradient. The tile ground is not stored here: VenueTile fixes it
+ * at the colour the assets were drawn on.
  */
 
 export const VENUE_GLYPH_KEYS = [
@@ -46,8 +46,8 @@ export interface VenueGlyphDef {
 
 export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
   ballarena: {
-    from: '#4DA3FF',
-    to: '#7AE6FF',
+    from: '#4DA3FF', // fwd-allow-hex: board art colour
+    to: '#7AE6FF', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M2.5 12.5Q12 4.5 21.5 12.5' },
       { kind: 'path', pathData: 'M2.5 12.5v5Q12 22.5 21.5 17.5v-5' },
@@ -56,8 +56,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   blackbox: {
-    from: '#A075FF',
-    to: '#7AE6FF',
+    from: '#A075FF', // fwd-allow-hex: board art colour
+    to: '#7AE6FF', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M12 2.5l8.5 4.6v9.8L12 21.5l-8.5-4.6V7.1z' },
       { kind: 'path', pathData: 'M3.5 7.1L12 11.7l8.5-4.6' },
@@ -66,8 +66,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   bluebird: {
-    from: '#7AE6FF',
-    to: '#4DA3FF',
+    from: '#7AE6FF', // fwd-allow-hex: board art colour
+    to: '#4DA3FF', // fwd-allow-hex: board art colour
     shapes: [
       {
         kind: 'path',
@@ -79,8 +79,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   cervantes: {
-    from: '#FF6A3D',
-    to: '#FFB838',
+    from: '#FF6A3D', // fwd-allow-hex: board art colour
+    to: '#FFB838', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M2.5 12h12.5' },
       {
@@ -94,8 +94,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   church: {
-    from: '#A075FF',
-    to: '#FF6B8A',
+    from: '#A075FF', // fwd-allow-hex: board art colour
+    to: '#FF6B8A', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'circle', cx: 12, cy: 12, radius: 9.6 },
       { kind: 'circle', cx: 12, cy: 6.6, radius: 3.1 },
@@ -108,8 +108,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   fiddlers: {
-    from: '#5DD4D6',
-    to: '#C9F26E',
+    from: '#5DD4D6', // fwd-allow-hex: board art colour
+    to: '#C9F26E', // fwd-allow-hex: board art colour
     shapes: [
       {
         kind: 'path',
@@ -124,8 +124,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   fillmore: {
-    from: '#FFE36B',
-    to: '#FFB838',
+    from: '#FFE36B', // fwd-allow-hex: board art colour
+    to: '#FFB838', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M12 1.5v3.5' },
       { kind: 'circle', cx: 12, cy: 6.6, radius: 1.6 },
@@ -143,8 +143,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   globe: {
-    from: '#C9F26E',
-    to: '#5DD4D6',
+    from: '#C9F26E', // fwd-allow-hex: board art colour
+    to: '#5DD4D6', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'circle', cx: 12, cy: 10.5, radius: 7.5 },
       { kind: 'path', pathData: 'M12 3a4 7.5 0 0 0 0 15 4 7.5 0 0 0 0-15' },
@@ -156,8 +156,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   gothic: {
-    from: '#FFB838',
-    to: '#FFE36B',
+    from: '#FFB838', // fwd-allow-hex: board art colour
+    to: '#FFE36B', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M6.5 21.5V11Q6.5 5 12 2q5.5 3 5.5 9v10.5' },
       { kind: 'path', pathData: 'M12 21.5V12' },
@@ -167,8 +167,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   hidive: {
-    from: '#FF7BD4',
-    to: '#7AE6FF',
+    from: '#FF7BD4', // fwd-allow-hex: board art colour
+    to: '#7AE6FF', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M4 21.5V6.5M7.5 21.5V6.5' },
       { kind: 'path', pathData: 'M4 10.5h3.5M4 14.5h3.5M4 18.5h3.5' },
@@ -182,8 +182,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   junkyard: {
-    from: '#C9F26E',
-    to: '#FFB838',
+    from: '#C9F26E', // fwd-allow-hex: board art colour
+    to: '#FFB838', // fwd-allow-hex: board art colour
     shapes: [
       {
         kind: 'path',
@@ -194,8 +194,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   larimer: {
-    from: '#FFB838',
-    to: '#FF6B8A',
+    from: '#FFB838', // fwd-allow-hex: board art colour
+    to: '#FF6B8A', // fwd-allow-hex: board art colour
     shapes: [
       {
         kind: 'path',
@@ -208,8 +208,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   levitt: {
-    from: '#7AE6FF',
-    to: '#C9F26E',
+    from: '#7AE6FF', // fwd-allow-hex: board art colour
+    to: '#C9F26E', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M2 17.5Q12 1.5 22 17.5' },
       { kind: 'path', pathData: 'M6.5 17.5Q12 8 17.5 17.5' },
@@ -218,8 +218,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   lostlake: {
-    from: '#A075FF',
-    to: '#7AE6FF',
+    from: '#A075FF', // fwd-allow-hex: board art colour
+    to: '#7AE6FF', // fwd-allow-hex: board art colour
     shapes: [
       {
         kind: 'path',
@@ -237,8 +237,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   marquis: {
-    from: '#FFE36B',
-    to: '#FF7BD4',
+    from: '#FFE36B', // fwd-allow-hex: board art colour
+    to: '#FF7BD4', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M3 4.5h18v9.5H3z' },
       {
@@ -250,8 +250,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   meowwolf: {
-    from: '#C9F26E',
-    to: '#FF7BD4',
+    from: '#C9F26E', // fwd-allow-hex: board art colour
+    to: '#FF7BD4', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M4 21V9l3.5-6 3.5 4h2l3.5-4L20 9v12' },
       { kind: 'circle', cx: 12, cy: 14, radius: 4.2 },
@@ -259,8 +259,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   mission: {
-    from: '#7AE6FF',
-    to: '#A075FF',
+    from: '#7AE6FF', // fwd-allow-hex: board art colour
+    to: '#A075FF', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M12 1.5v3.5' },
       { kind: 'circle', cx: 12, cy: 13, radius: 8 },
@@ -270,8 +270,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   ogden: {
-    from: '#FFE36B',
-    to: '#FF6A3D',
+    from: '#FFE36B', // fwd-allow-hex: board art colour
+    to: '#FF6A3D', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M1.5 7.5l2.5-3h4.5l2.5 3z' },
       { kind: 'path', pathData: 'M13 7.5l2.5-3H20l2.5 3z' },
@@ -283,8 +283,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   oriental: {
-    from: '#FFB838',
-    to: '#5DD4D6',
+    from: '#FFB838', // fwd-allow-hex: board art colour
+    to: '#5DD4D6', // fwd-allow-hex: board art colour
     shapes: [
       {
         kind: 'path',
@@ -297,8 +297,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   redrocks: {
-    from: '#FFB838',
-    to: '#FF6A3D',
+    from: '#FFB838', // fwd-allow-hex: board art colour
+    to: '#FF6A3D', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M2.5 18.5L12.5 9.5l2.5 1.4-3 7.6z' },
       { kind: 'path', pathData: 'M10 18.5L20 5.5l2 2.2-2.4 10.8' },
@@ -310,8 +310,8 @@ export const VENUE_GLYPHS: Record<VenueGlyphKey, VenueGlyphDef> = {
     ],
   },
   summit: {
-    from: '#C9F26E',
-    to: '#7AE6FF',
+    from: '#C9F26E', // fwd-allow-hex: board art colour
+    to: '#7AE6FF', // fwd-allow-hex: board art colour
     shapes: [
       { kind: 'path', pathData: 'M1.5 20.5l7-11 3 4 3.6-7 7.4 14z' },
       { kind: 'path', pathData: 'M13.4 9.6l1.7-3.2 1.9 3.6-1.6-.8z' },

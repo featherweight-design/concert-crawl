@@ -10,7 +10,7 @@ import { GlyphGradient, GlyphShapes } from './VenueGlyph';
  * surface: the tile is the venue's icon, like an app icon, and its pale glyph
  * gradients vanish on a light theme's ground.
  */
-const TILE_GROUND = '#11162E';
+const TILE_GROUND = '#11162E'; // fwd-allow-hex: board art colour
 
 interface VenueTileProps {
   slug: string;
