@@ -37,6 +37,7 @@ import { HistoryHeader } from './HistoryHeader';
 import { HistoryItem } from './HistoryItem';
 import { HistoryEmpty } from './HistoryEmpty';
 import { HistoryLocked } from './HistoryLocked';
+import { AddShowRow } from './AddShowRow';
 import { SaveCalendarRow } from './SaveCalendarRow';
 import { PassportTeaser } from './PassportTeaser';
 import { groupHistoryByMonth } from './lib/buckets';
@@ -282,6 +283,11 @@ export const HistoryContent = ({
       <Shell>
         <MyShowsTabs active="history" />
         <HistoryEmpty />
+        {/* Not drawn: a reader with no nights is the one most likely to add
+            one, so the row follows the empty card. */}
+        <div className="mt-4">
+          <AddShowRow />
+        </div>
       </Shell>
     );
   }
@@ -301,6 +307,7 @@ export const HistoryContent = ({
         >
           <SaveCalendarRow count={history.past.length} />
           <PassportTeaser stats={history.stats} shows={history.past} />
+          <AddShowRow />
         </aside>
 
         <div className="flex flex-col gap-6 lg:col-start-1 lg:row-start-1">
