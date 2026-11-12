@@ -1,0 +1,56 @@
+{
+  "feature": "Edit Concerts PR3 · I went on the event page and the artist page",
+  "note": "Boards: design/design_handoff_edit_concerts/screens/ event_unmarked_m (event-unmarked), event_stamped_m (event-stamped), artist_past_m (artist-past); addendum 3 04-edit-your-concerts event-past-d (event-stamped, desktop) and event-past-remove-d (event-remove). Hand-walked, not in the sheet: the stamp / remove taps and their toasts (event_stamped_m toast, event-after-remove-m), since confirming mutates and the kit never does it; the signed-out pill (artist page, needs a signed-out session). Needs CC_WENT_EVENT_ID (a past event the audit user stamped), CC_UNWENT_EVENT_ID (a past event they did not), CC_PAST_ARTIST_SLUG (an artist with past shows).",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "sm", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "event-unmarked",
+      "label": "Past event, not stamped: the I went pill and its stamp line",
+      "steps": [
+        {
+          "goto": "/events/${CC_UNWENT_EVENT_ID}",
+          "wait": "button.going-cta"
+        }
+      ]
+    },
+    {
+      "id": "event-stamped",
+      "label": "Past event, stamped: You went and the Remove it line",
+      "steps": [
+        {
+          "goto": "/events/${CC_WENT_EVENT_ID}",
+          "wait": "button.going-cta"
+        }
+      ]
+    },
+    {
+      "id": "event-remove",
+      "label": "Remove it from Concerts opens the confirm (sheet on phone, dialog from sm)",
+      "steps": [
+        {
+          "goto": "/events/${CC_WENT_EVENT_ID}?cell=remove",
+          "wait": "button.going-cta"
+        },
+        { "clickRole": "button", "name": "^Remove it from Concerts$" },
+        { "waitDialog": "^Didn.t make it\\?$" }
+      ]
+    },
+    {
+      "id": "artist-past",
+      "label": "Artist page past shows: date tile, venue stamp, went pill",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/artists/${CC_PAST_ARTIST_SLUG}",
+          "wait": "h2:has-text(\"Previously\")",
+          "settle": 4000
+        }
+      ]
+    }
+  ]
+}

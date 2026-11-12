@@ -363,7 +363,10 @@ export const EventDetailCtaBlock = ({
         </p>
       ) : null}
 
-      {children}
+      {/* A night that is over has nothing to watch or to plan with a crew: the
+          boards (event_unmarked_m, event_stamped_m) end the card at the line
+          under the button. */}
+      {isPast ? null : children}
 
       {/* Only a real failure or the gate earns a line here. The standing
           support line is gone — "we'll add this to your history" restated what

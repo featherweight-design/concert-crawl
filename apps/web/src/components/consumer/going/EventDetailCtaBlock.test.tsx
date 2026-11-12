@@ -450,6 +450,15 @@ describe('EventDetailCtaBlock', () => {
     expect(screen.queryByRole('button', { name: EXPLAINER_LABEL })).toBeNull();
   });
 
+  it('drops the watch strip on a past night, as the boards do', () => {
+    render(
+      <EventDetailCtaBlock event={event({ date: '2020-10-14' })} scaRegion>
+        <div data-testid="watch-strip" />
+      </EventDetailCtaBlock>,
+    );
+    expect(screen.queryByTestId('watch-strip')).toBeNull();
+  });
+
   // The mutation only lands in the tree via router.refresh(), so without a
   // local override the button sat unchanged until the server HTML arrived.
   it('shows the committed state immediately, before the server agrees', () => {
