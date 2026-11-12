@@ -1,3 +1,20 @@
+# [1.369.0](https://github.com/featherweight-design/concert-crawl/compare/v1.368.0...v1.369.0) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** count superseded match-job writes and name 409s by cause ([c183ed2](https://github.com/featherweight-design/concert-crawl/commit/c183ed2305fae7aa47f00f1a6f55acc019e23dfe))
+* **api:** guard artist match writes, tighten the to-check window and query ([58736c5](https://github.com/featherweight-design/concert-crawl/commit/58736c5b39671e457a223f887a7cd06ea32c22e0))
+* **api:** guard the match job's exact-match write on updatedAt ([41f2cdb](https://github.com/featherweight-design/concert-crawl/commit/41f2cdbbf1351431f73504bb3fadb784e6fa5c43))
+* **api:** keep the to-check soon window inclusive to match needs you ([f8c78ba](https://github.com/featherweight-design/concert-crawl/commit/f8c78ba9e272ff8c94a4f857ab0bc4c39310086b))
+* **api:** make the artist status guard opt-in and close the match-job race ([ff171ed](https://github.com/featherweight-design/concert-crawl/commit/ff171ed72445cc66feee4c73b432aae1cdce3d0e))
+* member code ends with the account, one poster rule, no admin edit ([fcf3241](https://github.com/featherweight-design/concert-crawl/commit/fcf32415b2af0ff6a2dde14c656a1fbadb068ba4))
+
+
+### Features
+
+* **api:** member invite codes and GET /v1/me/invite ([0a01b71](https://github.com/featherweight-design/concert-crawl/commit/0a01b71f7151d54e3eac9b0c4e4ebc6bb24f39b5))
+
 # [1.368.0](https://github.com/featherweight-design/concert-crawl/compare/v1.367.0...v1.368.0) (2026-11-12)
 
 
