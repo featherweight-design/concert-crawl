@@ -231,18 +231,36 @@ describe('StandaloneError, signed in', () => {
     expect(readPendingReports()).toEqual([]);
   });
 
-  it('does not promise to keep a report the server refused for good', async () => {
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 422 }));
-    renderPage({});
-    pick(card.doing.price);
-    fireEvent.click(screen.getByRole('button', { name: card.send }));
+  it.each([422, 429])(
+    'shows a %i as refused: not saved, not retried, one Done',
+    async (status) => {
+      fetchMock.mockResolvedValueOnce(new Response(null, { status }));
+      renderPage({});
+      pick(card.doing.price);
+      fireEvent.click(screen.getByRole('button', { name: card.send }));
 
-    await screen.findByRole('heading', { name: card.failedHeading });
-    expect(screen.getByText(card.rejectedBody)).toBeInTheDocument();
-    expect(screen.queryByText(card.failedBody)).toBeNull();
-    expect(screen.queryByText(card.savedLabel)).toBeNull();
-    expect(readPendingReports()).toEqual([]);
-  });
+      const heading = await screen.findByRole('heading', {
+        name: card.refusedHeading,
+      });
+      await waitFor(() => expect(heading).toHaveFocus());
+      expect(screen.getByText(card.refusedBody)).toBeInTheDocument();
+      expect(screen.getByText(card.rail.refused)).toBeInTheDocument();
+      expect(screen.getByText(card.code.refused)).toBeInTheDocument();
+      expect(screen.queryByText(card.savedLabel)).toBeNull();
+      expect(screen.queryByRole('button', { name: card.sendAgain })).toBeNull();
+      expect(screen.queryByRole('button', { name: card.edit })).toBeNull();
+      expect(readPendingReports()).toEqual([]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole('button', { name: card.done }));
+      expect(
+        screen.queryByRole('heading', { name: card.refusedHeading }),
+      ).toBeNull();
+      // The error id stays on the page.
+      expect(screen.getByText('2849204133')).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('treats a network failure or timeout as failed', async () => {
     fetchMock.mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));

@@ -2,12 +2,16 @@
 
 import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { CREWS_COPY } from '@/components/consumer/crews';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { STANDALONE_ERROR_COPY } from '@/components/consumer/standalone-error/definitions/copy';
 import CrewError from './error';
 
+const signOut = vi.fn();
+vi.mock('@clerk/nextjs', () => ({
+  useClerk: () => ({ signOut }),
+}));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 vi.mock('@sentry/nextjs', () => ({
   captureException: () => 'evt',
@@ -16,24 +20,34 @@ vi.mock('@sentry/nextjs', () => ({
 
 afterEach(() => {
   cleanup();
+  signOut.mockClear();
   document.cookie = '__client_uat=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
 });
 
 describe('CrewError', () => {
-  // The crew home boundary catches before the app one, so it has to carry the
-  // report itself or a crew page failure could never be told to us.
-  it('offers a signed-in member the Tell us card, in the crew wording', () => {
+  // Addendum 2 item 18, `error-in-app-m`: the standalone page's error, Tell us
+  // card and error ID, with no crew wording.
+  it('shows a signed-in member the standalone error, Sign out and the Tell us card', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     document.cookie = '__client_uat=1731300000';
     render(<CrewError error={new Error('x')} reset={vi.fn()} />);
     expect(
-      screen.getByRole('heading', { name: CREWS_COPY.net.errCrewTitle }),
+      screen.getByRole('heading', {
+        level: 1,
+        name: STANDALONE_ERROR_COPY.heading,
+      }),
     ).toBeInTheDocument();
+    expect(screen.getByText(STANDALONE_ERROR_COPY.eyebrow)).toBeInTheDocument();
+    expect(screen.getByText(STANDALONE_ERROR_COPY.body)).toBeInTheDocument();
     expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: STANDALONE_ERROR_COPY.signOut }),
+    );
+    expect(signOut).toHaveBeenCalled();
   });
 
-  // Inside the app shell: the header is already there and the phone nav sits
-  // over the bottom, so the page drops its own logo and full height.
+  // Inside the app shell: the app header and bottom nav stay, so the page
+  // drops its own logo and full height.
   it('renders embedded, without a second logo', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const { container } = render(

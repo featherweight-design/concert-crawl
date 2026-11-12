@@ -321,10 +321,6 @@ export const CREWS_COPY = {
       "That's on us, not you. Your crews are fine. We just can't reach them this second.",
     retry: 'Try again',
     loadingCrew: 'OPENING THE CREW…',
-    // Distinct from the list's NO SIGNAL: one crew failed, not the whole page.
-    errCrewEyebrow: 'CONNECTION',
-    errCrewTitle: "Couldn't open this crew.",
-    errCrewBody: "The crew is fine. The connection isn't. Give it another go.",
     loadingInvite: 'CHECKING THE INVITE…',
     // Ours, stated as ours. Distinct from an expired or retired link, which
     // are normal outcomes rather than faults.

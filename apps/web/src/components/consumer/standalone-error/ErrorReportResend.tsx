@@ -34,7 +34,8 @@ export const flushPendingReports = async (): Promise<void> => {
       const result = await sendErrorReport(report);
       if (result === 'sent' || result === 'rejected') {
         done.push(report.errorId);
-      } else if (result === 'unauthorized') {
+      } else if (result === 'unauthorized' || result === 'limited') {
+        // Signed out, or rate limited: the rest would fare no better now.
         break;
       }
     }

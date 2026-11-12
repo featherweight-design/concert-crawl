@@ -35,6 +35,8 @@ export const STANDALONE_ERROR_COPY = {
       prompt: tellUs.edgeTab.label,
       sent: tellUs.modal.headerRail.success,
       failed: tellUs.modal.statusRail.errorLabel,
+      // Addendum 2 item 18 (error-report-refused-m), verbatim.
+      refused: "Didn't send · beta channel",
     },
     code: {
       prompt: 'OPTIONAL',
@@ -42,6 +44,7 @@ export const STANDALONE_ERROR_COPY = {
       sending: 'SENDING',
       sent: tellUs.modal.headerRail.codeSuccess,
       failed: tellUs.modal.headerRail.codeError,
+      refused: 'LIMIT',
     },
     heading: 'What were you doing?',
     sub: "One tap is enough. We'll send the error ID with it.",
@@ -64,8 +67,12 @@ export const STANDALONE_ERROR_COPY = {
     failedHeading: tellUs.modal.error.heading,
     failedBody:
       "We couldn't send that just now. It's saved on this device, and we'll send it the next time Concert Crawl opens.",
-    // A refusal the server would repeat: nothing is saved, so no promise.
-    rejectedBody: "We couldn't send that one.",
+    // A 429 or a 4xx the server would repeat: not saved, not retried, so the
+    // card makes no promise. Addendum 2 item 18, verbatim.
+    refusedHeading: 'Not sent.',
+    refusedBody:
+      "We couldn't take this report, so it isn't saved. If it keeps happening, the error ID below is all we need.",
+    done: 'Done',
     savedLabel: 'Saved on this device',
     sendAgain: 'Send again',
     edit: 'Edit',

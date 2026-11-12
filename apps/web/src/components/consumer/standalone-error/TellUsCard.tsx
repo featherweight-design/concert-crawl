@@ -14,16 +14,25 @@ import {
 
 const copy = STANDALONE_ERROR_COPY.card;
 
-export type CardState = 'prompt' | 'form' | 'sending' | 'sent' | 'failed';
+export type CardState =
+  'prompt' | 'form' | 'sending' | 'sent' | 'failed' | 'refused' | 'closed';
 
-type Tone = 'accent' | 'signal' | 'success' | 'danger';
+type Tone = 'accent' | 'signal' | 'success' | 'danger' | 'warning';
 
-const RAIL: Record<CardState, { label: string; code: string; tone: Tone }> = {
+const RAIL: Record<
+  Exclude<CardState, 'closed'>,
+  { label: string; code: string; tone: Tone }
+> = {
   prompt: { label: copy.rail.prompt, code: copy.code.prompt, tone: 'accent' },
   form: { label: copy.rail.prompt, code: copy.code.form, tone: 'accent' },
   sending: { label: copy.rail.prompt, code: copy.code.sending, tone: 'signal' },
   sent: { label: copy.rail.sent, code: copy.code.sent, tone: 'success' },
   failed: { label: copy.rail.failed, code: copy.code.failed, tone: 'danger' },
+  refused: {
+    label: copy.rail.refused,
+    code: copy.code.refused,
+    tone: 'warning',
+  },
 };
 
 interface TellUsCardProps {
@@ -39,7 +48,8 @@ interface TellUsCardProps {
 /**
  * The signed-in Tell us card: one tap on what they were doing is a report,
  * the note is optional, and a send that fails is kept on the device for the
- * next launch to deliver.
+ * next launch to deliver. One the server refuses (a 429 or a 4xx it would
+ * repeat) is neither kept nor retried: the card says Not sent and offers Done.
  */
 export const TellUsCard = ({
   errorId,
@@ -49,9 +59,6 @@ export const TellUsCard = ({
   onSignedOut,
 }: TellUsCardProps) => {
   const [state, setState] = useState<CardState>('prompt');
-  // Whether the failed report is kept for the next launch. A refusal the
-  // server would repeat is not, so the card must not promise it.
-  const [saved, setSaved] = useState(false);
   const [doing, setDoing] = useState<DoingKey | undefined>();
   const [note, setNote] = useState('');
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -59,7 +66,9 @@ export const TellUsCard = ({
 
   // Sent and failed replace what the person was looking at, so focus follows.
   useEffect(() => {
-    if (state === 'sent' || state === 'failed') headingRef.current?.focus();
+    if (state === 'sent' || state === 'failed' || state === 'refused') {
+      headingRef.current?.focus();
+    }
   }, [state]);
 
   const trimmedNote = note.trim();
@@ -86,13 +95,12 @@ export const TellUsCard = ({
       // launch after they sign back in.
       savePendingReport(body, owner);
       onSignedOut();
-    } else if (result === 'rejected') {
+    } else if (result === 'rejected' || result === 'limited') {
+      // Sending it again won't help, so it is not saved and not retried.
       removePendingReports([errorId]);
-      setSaved(false);
-      setState('failed');
+      setState('refused');
     } else {
       savePendingReport(body, owner);
-      setSaved(true);
       setState('failed');
     }
   };
@@ -107,6 +115,8 @@ export const TellUsCard = ({
     setNote('');
     setState('prompt');
   };
+
+  if (state === 'closed') return null;
 
   const rail = RAIL[state];
 
@@ -141,6 +151,27 @@ export const TellUsCard = ({
             </p>
           </div>
         </div>
+      ) : state === 'refused' ? (
+        <div>
+          <h2
+            id={headingId}
+            ref={headingRef}
+            tabIndex={-1}
+            className="cc-err-h2"
+          >
+            {copy.refusedHeading}
+          </h2>
+          <p className="cc-err-sub">{copy.refusedBody}</p>
+          <div className="cc-err-foot cc-err-foot-end">
+            <button
+              type="button"
+              className="cc-err-done"
+              onClick={() => setState('closed')}
+            >
+              {copy.done}
+            </button>
+          </div>
+        </div>
       ) : state === 'failed' ? (
         <form onSubmit={(event) => void submit(event)}>
           <h2
@@ -151,22 +182,18 @@ export const TellUsCard = ({
           >
             {copy.failedHeading}
           </h2>
-          <p className="cc-err-sub">
-            {saved ? copy.failedBody : copy.rejectedBody}
-          </p>
-          {saved && (
-            <div className="cc-err-saved">
-              <span className="cc-err-label">
-                <span className="cc-err-dot" />
-                {copy.savedLabel}
-              </span>
-              <p>
-                {doingLabel !== undefined && <strong>{doingLabel}.</strong>}
-                {doingLabel !== undefined && trimmedNote !== '' && ' '}
-                {trimmedNote}
-              </p>
-            </div>
-          )}
+          <p className="cc-err-sub">{copy.failedBody}</p>
+          <div className="cc-err-saved">
+            <span className="cc-err-label">
+              <span className="cc-err-dot" />
+              {copy.savedLabel}
+            </span>
+            <p>
+              {doingLabel !== undefined && <strong>{doingLabel}.</strong>}
+              {doingLabel !== undefined && trimmedNote !== '' && ' '}
+              {trimmedNote}
+            </p>
+          </div>
           <div className="cc-err-foot">
             <button
               type="button"

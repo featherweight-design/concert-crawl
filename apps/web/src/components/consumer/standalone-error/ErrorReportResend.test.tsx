@@ -129,6 +129,16 @@ describe('resending saved reports on launch', () => {
     expect(ids()).toEqual([]);
   });
 
+  it('keeps a saved report the server rate limits, for a later launch', async () => {
+    savePendingReport(report('g1'), OWNER);
+    savePendingReport(report('g2'), OWNER);
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 429 }));
+    await flushPendingReports();
+    // Stops at the first 429 rather than spending the rest on it.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(ids()).toHaveLength(2);
+  });
+
   it('stands back while another tab holds the lock', async () => {
     savePendingReport(report('f1'), OWNER);
     localStorage.setItem(RESEND_LOCK_KEY, `${Date.now()}:other`);

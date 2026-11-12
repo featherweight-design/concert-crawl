@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
-import { CREWS_COPY } from '@/components/consumer/crews';
 import {
   StandaloneError,
   useErrorId,
 } from '@/components/consumer/standalone-error';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
-// The crew home boundary catches before the app one, so it carries the same
-// page, Tell us card included, with the crew's own wording. It renders inside
-// the app shell, under the header and above the phone nav, so it is embedded.
+// The crew home boundary renders inside the app shell, so the app header and
+// bottom nav stay and the page drops its own logo (embedded). Addendum 2 item
+// 18 (`error-in-app-m`) draws it with the standalone page's error, Tell us
+// card and error ID unchanged: no crew wording, and Sign out when signed in.
 export default function CrewError({
   error,
   reset,
@@ -19,6 +21,8 @@ export default function CrewError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { signOut } = useClerk();
+  const router = useRouter();
   const onRetry = useErrorBoundaryRetry(reset);
   const errorId = useErrorId(error);
 
@@ -30,9 +34,7 @@ export default function CrewError({
     <StandaloneError
       errorId={errorId}
       onRetry={onRetry}
-      eyebrow={CREWS_COPY.net.errCrewEyebrow}
-      heading={CREWS_COPY.net.errCrewTitle}
-      body={CREWS_COPY.net.errCrewBody}
+      onSignOut={() => void signOut(() => router.push('/'))}
       embedded
     />
   );

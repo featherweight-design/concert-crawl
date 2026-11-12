@@ -31,9 +31,12 @@ export interface ErrorReportBody {
 
 /**
  * `rejected` is a 4xx the same report will always get again, so a saved copy
- * is dropped rather than retried forever.
+ * is dropped rather than retried forever. `limited` is a 429: the card treats
+ * it as refused (not saved, not retried), while a copy saved earlier stays
+ * for a later launch.
  */
-export type SendResult = 'sent' | 'unauthorized' | 'rejected' | 'failed';
+export type SendResult =
+  'sent' | 'unauthorized' | 'rejected' | 'limited' | 'failed';
 
 const cookieValues = (cookie: string, base: string): string[] =>
   cookie.split(';').flatMap((part) => {
@@ -96,7 +99,8 @@ export const newErrorId = (): string => {
   ).join('');
 };
 
-const RETRYABLE = new Set([408, 425, 429]);
+const RETRYABLE = new Set([408, 425]);
+const RATE_LIMITED = 429;
 
 export const sendErrorReport = async (
   body: ErrorReportBody,
@@ -118,6 +122,7 @@ export const sendErrorReport = async (
     });
     if (res.ok) return 'sent';
     if (res.status === 401) return 'unauthorized';
+    if (res.status === RATE_LIMITED) return 'limited';
     if (res.status < 500 && !RETRYABLE.has(res.status)) return 'rejected';
     return 'failed';
   } catch (err) {
