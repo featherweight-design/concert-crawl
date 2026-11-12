@@ -1,5 +1,5 @@
 {
-  "feature": "Surface 8 \u00b7 wrong-artist report, admin side (W4)",
+  "feature": "Surface 8 · wrong-artist report, admin side (W4)",
   "note": "Boards: design/design_handoff_wrong_artist_report/screens/admin_artists. Admin role.",
   "widths": [
     {
@@ -33,7 +33,7 @@
       "steps": [
         {
           "goto": "/admin/artists",
-          "wait": "h1",
+          "wait": "table tbody tr",
           "settle": 2000
         }
       ]
@@ -44,7 +44,7 @@
       "steps": [
         {
           "goto": "/admin/artists",
-          "wait": "table"
+          "wait": "button:has-text(\"Reported\")"
         },
         {
           "clickRole": "button",

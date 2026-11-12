@@ -8,7 +8,10 @@
       "steps": [
         {
           "goto": "/~offline",
-          "wait": "h1"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "h1:has-text(\"offline\")"
         }
       ]
     },
@@ -18,6 +21,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {
@@ -35,6 +41,9 @@
       "steps": [
         {
           "goto": "/events",
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
           "wait": "[data-testid=\"event-row\"]"
         },
         {
@@ -51,7 +60,10 @@
         {
           "goto": "/venues/no-such-venue",
           "expectStatus": 404,
-          "wait": "h1"
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        {
+          "wait": "[data-testid=\"not-found-surface\"]"
         }
       ]
     }

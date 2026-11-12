@@ -9,7 +9,7 @@
       "steps": [
         {
           "goto": "/auth/code",
-          "wait": "h1"
+          "wait": "input[type=\"text\"][autocomplete=\"off\"]"
         }
       ]
     },
@@ -20,7 +20,7 @@
         {
           "goto": "/sign-up",
           "expectRedirect": "/auth/code",
-          "wait": "h1"
+          "wait": "input[type=\"text\"][autocomplete=\"off\"]"
         }
       ]
     }
