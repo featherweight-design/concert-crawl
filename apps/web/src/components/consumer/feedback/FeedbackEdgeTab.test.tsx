@@ -24,7 +24,7 @@ describe('FeedbackEdgeTab', () => {
     expect(screen.getByTestId('feedback-modal')).not.toBeNull();
   });
 
-  it('anchors fixed to the right edge, under the sheets', () => {
+  it('carries the fixed, right-0 and z-[35] classes on the anchor', () => {
     render(<FeedbackEdgeTab />);
     const anchor = screen.getByTestId('feedback-edge-tab-anchor');
     expect(anchor.className).toContain('fixed');
@@ -32,11 +32,20 @@ describe('FeedbackEdgeTab', () => {
     expect(anchor.className).toContain('z-[35]');
   });
 
-  it('tucks in on phones and slides out on focus or press', () => {
+  it('carries the phone tuck and the focus-within and active slide-out classes', () => {
     render(<FeedbackEdgeTab />);
     const anchor = screen.getByTestId('feedback-edge-tab-anchor');
     expect(anchor.className).toContain('max-sm:translate-x-3');
     expect(anchor.className).toContain('max-sm:focus-within:translate-x-0');
     expect(anchor.className).toContain('max-sm:active:translate-x-0');
+  });
+
+  it('carries a 12px transparent hit slop on phones and a focus-visible ring class', () => {
+    render(<FeedbackEdgeTab />);
+    const slop = screen.getByTestId('feedback-edge-tab-hit-slop');
+    expect(slop.className).toContain('-left-3');
+    expect(slop.className).toContain('w-3');
+    const anchor = screen.getByTestId('feedback-edge-tab-anchor');
+    expect(anchor.className).toContain('[&:has(:focus-visible)]:outline');
   });
 });

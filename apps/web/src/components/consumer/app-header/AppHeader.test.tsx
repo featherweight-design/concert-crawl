@@ -209,7 +209,7 @@ describe('AppHeader crews tab (#1226)', () => {
   });
 
   // Chrome B17 fidelity.
-  it('shows the mark alone from 640 to 767 and the wordmark from md up', () => {
+  it('carries hidden and md:inline classes on the wordmark and a 32px bordered mark tile', () => {
     render(<AppHeader />);
     const wordmark = screen.getByTestId('header-wordmark');
     expect(wordmark.className).toContain('hidden');
@@ -223,7 +223,7 @@ describe('AppHeader crews tab (#1226)', () => {
     expect(desktopTile?.className).toContain('border');
   });
 
-  it('gives the phone header no fill and the desktop bar a translucent one', () => {
+  it('puts no bg class on the phone header and no bg-bg class on the desktop bar', () => {
     render(<AppHeader />);
     const phone = screen.getByTestId('header-mobile');
     expect(phone.className).not.toMatch(/\bbg-/);
@@ -232,7 +232,7 @@ describe('AppHeader crews tab (#1226)', () => {
     expect(desktop.className).toContain('border-b');
   });
 
-  it('draws the active tab as a radius-10 pill with a gradient border', () => {
+  it('gives the active tab rounded-[10px], a transparent border and an inline style the others lack', () => {
     render(<AppHeader />);
     const browse = screen.getByRole('link', { name: 'Browse' });
     expect(browse.className).toContain('rounded-[10px]');
@@ -242,7 +242,7 @@ describe('AppHeader crews tab (#1226)', () => {
     expect(venues.getAttribute('style')).toBeNull();
   });
 
-  it('keeps every tab on one line so Crews cannot clip at 640', () => {
+  it('gives every tab whitespace-nowrap and shrink-0 classes', () => {
     render(<AppHeader />);
     for (const label of ['Browse', 'Venues', 'My shows', 'Crews']) {
       const tab = screen.getByRole('link', { name: label });

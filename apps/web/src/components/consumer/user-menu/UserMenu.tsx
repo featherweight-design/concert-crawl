@@ -67,20 +67,34 @@ const POPOVER_EDGE_BACKGROUND = [
 interface CachedAvatar {
   handle: string | null;
   avatarColor: AvatarColor | null;
+  avatarSecondColor: AvatarColor | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isCachedAvatar(value: unknown): value is CachedAvatar {
-  if (!isRecord(value)) return false;
-  const { handle, avatarColor } = value;
-  const handleOk = handle === null || typeof handle === 'string';
-  const colorOk =
-    avatarColor === null ||
-    AVATAR_COLORS.some((color) => color === avatarColor);
-  return handleOk && colorOk;
+function isAvatarColorOrNull(value: unknown): value is AvatarColor | null {
+  return value === null || AVATAR_COLORS.some((color) => color === value);
+}
+
+// Entries written before the ring pair was cached lack avatarSecondColor; they
+// stay valid and read as no second colour.
+function parseCachedAvatar(value: unknown): CachedAvatar | null {
+  if (!isRecord(value)) return null;
+  const { handle, avatarColor, avatarSecondColor } = value;
+  if (!(handle === null || typeof handle === 'string')) return null;
+  if (!isAvatarColorOrNull(avatarColor)) return null;
+  if (
+    avatarSecondColor !== undefined &&
+    !isAvatarColorOrNull(avatarSecondColor)
+  )
+    return null;
+  return {
+    handle,
+    avatarColor,
+    avatarSecondColor: avatarSecondColor ?? null,
+  };
 }
 
 // Scope the cache per Clerk user so a different account signing in on a shared
@@ -94,7 +108,7 @@ function readAvatarCache(userId: string): CachedAvatar | null {
     const raw = window.localStorage.getItem(avatarCacheKey(userId));
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    return isCachedAvatar(parsed) ? parsed : null;
+    return parseCachedAvatar(parsed);
   } catch (err) {
     console.warn('UserMenu: could not read avatar cache', err);
     return null;
@@ -174,8 +188,6 @@ export function AccountMenuProvider({
     // so a previous account's cached handle/color or submission count can't
     // linger on a shared device until fetchMe resolves.
     setSubmissionCount(0);
-    // The second colour is not cached: it arrives with the profile fetch, and
-    // until then the ring draws the single colour.
     setAvatarSecondColor(null);
     if (!userId) {
       // Signed-out: there's nothing to fetch, so resolve the loading state
@@ -190,6 +202,7 @@ export function AccountMenuProvider({
     if (cached) {
       setAvatarHandle(cached.handle);
       setAvatarColor(cached.avatarColor);
+      setAvatarSecondColor(cached.avatarSecondColor);
       setAvatarLoaded(true);
     } else {
       setAvatarHandle(null);
@@ -300,16 +313,15 @@ export function AccountMenuProvider({
     if (!userId) return;
     let cancelled = false;
     void (async () => {
-      const token = await getToken();
-      if (cancelled) return;
-      if (!token) {
-        // Clerk is loaded but this user has no token: nothing to fetch. Keep any
-        // cached handle/color already seeded for this userId and just resolve
-        // the loading disc so the trigger shows its resolved state.
-        setAvatarLoaded(true);
-        return;
-      }
       try {
+        const token = await getToken();
+        if (cancelled) return;
+        if (!token) {
+          // Clerk is loaded but this user has no token: nothing to fetch. Keep
+          // any cached handle/color already seeded for this userId; the finally
+          // below resolves the loading disc.
+          return;
+        }
         // Shared with the other mount-time readers of /v1/users/me.
         const profile = await fetchMeShared(queryClient, userId, getToken);
         if (!cancelled) {
@@ -320,6 +332,7 @@ export function AccountMenuProvider({
           writeAvatarCache(userId, {
             handle: profile.handle,
             avatarColor: profile.avatarColor,
+            avatarSecondColor: profile.avatarSecondColor,
           });
         }
       } catch (err) {

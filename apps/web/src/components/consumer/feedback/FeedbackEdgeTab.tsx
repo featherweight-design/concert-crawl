@@ -16,7 +16,7 @@ export function FeedbackEdgeTab() {
           on focus or press. From 640 up it sits flush as drawn. */}
       <div
         data-testid="feedback-edge-tab-anchor"
-        className="fixed right-0 top-[44%] z-[35] transition-transform duration-[var(--motion-fast)] ease-[var(--motion-ease)] max-sm:translate-x-3 max-sm:focus-within:translate-x-0 max-sm:active:translate-x-0"
+        className="fixed right-0 top-[44%] z-[35] transition-transform duration-[var(--motion-fast)] ease-[var(--motion-ease)] max-sm:translate-x-3 max-sm:focus-within:translate-x-0 max-sm:active:translate-x-0 rounded-l-[10px] [&:has(:focus-visible)]:outline [&:has(:focus-visible)]:outline-2 [&:has(:focus-visible)]:outline-offset-2 [&:has(:focus-visible)]:outline-[var(--signal)]"
       >
         <button
           type="button"
@@ -25,6 +25,7 @@ export function FeedbackEdgeTab() {
           style={{
             all: 'unset',
             cursor: 'pointer',
+            position: 'relative',
             // Under every sheet and its scrim: the filter and verify sheets sit
             // at 40/50 and ModalShell at 90/100, and at 80 the tab drew over the
             // first two (the anchor carries zIndex 35). Over page content, which
@@ -43,6 +44,14 @@ export function FeedbackEdgeTab() {
             color: 'var(--fg)',
           }}
         >
+          {/* Transparent hit slop to the left of the tab. Tucked, only ~13px
+              of the tab shows, so this widens the tap target to 25px. It sits
+              inside the button, so it triggers the same click. */}
+          <span
+            aria-hidden="true"
+            data-testid="feedback-edge-tab-hit-slop"
+            className="absolute -left-3 top-0 hidden h-full w-3 max-sm:block"
+          />
           <span
             style={{
               width: 6,
