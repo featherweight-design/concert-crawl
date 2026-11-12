@@ -14,11 +14,19 @@ import { sentryTier } from '@concert-crawl/types/sentry-tags';
 export function SentryTierTag(): null {
   const { isLoaded, isSignedIn, sessionClaims } = useAuth();
 
+  // The plan string, not the claims object: a token refresh hands back a new
+  // object every time, which would reset and re-set the tag for nothing.
+  const tier = isLoaded
+    ? isSignedIn
+      ? sentryTier(sessionClaims)
+      : 'unknown'
+    : undefined;
+
   useEffect(() => {
-    if (!isLoaded) return;
-    Sentry.setTag('tier', isSignedIn ? sentryTier(sessionClaims) : 'unknown');
+    if (tier === undefined) return;
+    Sentry.setTag('tier', tier);
     return () => Sentry.setTag('tier', 'unknown');
-  }, [isLoaded, isSignedIn, sessionClaims]);
+  }, [tier]);
 
   return null;
 }

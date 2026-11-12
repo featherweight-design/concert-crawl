@@ -51,13 +51,17 @@ type IdentityTags = { tier?: string; userHash?: string | undefined };
 // error goes out untagged.
 const IDENTITY_TIMEOUT_MS = 300;
 
-function requestIdentityTags(): Promise<IdentityTags> {
-  return Promise.race([
-    readIdentityTags(),
-    new Promise<IdentityTags>((resolve) =>
-      setTimeout(() => resolve({}), IDENTITY_TIMEOUT_MS),
-    ),
-  ]);
+async function requestIdentityTags(): Promise<IdentityTags> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<IdentityTags>((resolve) => {
+    timer = setTimeout(() => resolve({}), IDENTITY_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([readIdentityTags(), timeout]);
+  } finally {
+    // Clear it when the lookup wins, so no timer outlives the error report.
+    clearTimeout(timer);
+  }
 }
 
 async function readIdentityTags(): Promise<IdentityTags> {
