@@ -71,6 +71,8 @@ const row = (
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   venueCity: 'Denver',
+  venueTimezone: 'America/Denver',
+  rawShowTime: null,
   neighborhood: null,
   date,
   dateLabel: 'Thu, May 14',
