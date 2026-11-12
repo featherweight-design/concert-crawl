@@ -1234,6 +1234,58 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
   });
 });
 
+describe('PATCH /v1/admin/events/:id — retiring a promoted status report', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  it('rejects the promoted cancelled report when an admin moves the show off cancelled', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { status: 'cancelled' });
+    const report = await seedEventReport(event.id, 'fan_reporter', {
+      status: 'cancelled',
+      resolution: 'promoted',
+      resolvedAt: new Date(),
+    });
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'upcoming' }),
+    });
+    expect(res.status).toBe(200);
+
+    const [row] = await testDb
+      .select({ resolution: eventReports.resolution })
+      .from(eventReports)
+      .where(eq(eventReports.id, report.id));
+    expect(row?.resolution).toBe('rejected');
+  });
+
+  it('keeps the promoted report when the status does not change', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { status: 'postponed' });
+    const report = await seedEventReport(event.id, 'fan_reporter', {
+      status: 'postponed',
+      resolution: 'promoted',
+      resolvedAt: new Date(),
+    });
+
+    await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'postponed' }),
+    });
+
+    const [row] = await testDb
+      .select({ resolution: eventReports.resolution })
+      .from(eventReports)
+      .where(eq(eventReports.id, report.id));
+    expect(row?.resolution).toBe('promoted');
+  });
+});
+
 describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   beforeEach(() => {
     setAdminAuth();
