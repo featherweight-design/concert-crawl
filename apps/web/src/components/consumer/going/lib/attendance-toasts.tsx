@@ -81,13 +81,18 @@ export const showRemovedToast = ({
     onUndo,
   });
 
-/** "Stamped. {artist} is in your Concerts." with a link on to the Passport. */
+/**
+ * "Stamped. {artist} is in your Concerts." with a link on to the Passport, or
+ * with an Undo where the reader stays put (the Add sheet, add-tapped-d).
+ */
 export const showStampedToast = ({
   artist,
   onOpenPassport,
+  onUndo,
 }: {
   artist: string;
-  onOpenPassport: () => void;
+  onOpenPassport?: () => void;
+  onUndo?: () => void;
 }) =>
   toast(GOING_COPY.toast.stamped(artist), {
     id: ATTENDANCE_TOAST_ID,
@@ -95,7 +100,11 @@ export const showStampedToast = ({
     duration: ATTENDANCE_TOAST_MS,
     style: TOAST_STYLE,
     actionButtonStyle: ACTION_STYLE,
-    action: { label: GOING_COPY.toast.openPassport, onClick: onOpenPassport },
+    action: onUndo
+      ? { label: GOING_COPY.toast.undo, onClick: onUndo }
+      : onOpenPassport
+        ? { label: GOING_COPY.toast.openPassport, onClick: onOpenPassport }
+        : undefined,
   });
 
 export const showAttendanceError = (kind: 'save' | 'undo') =>

@@ -116,4 +116,35 @@ export const HISTORY_COPY = {
       ].join(' · '),
     link: 'See your Passport →',
   },
+
+  // The Add sheet (COPY.md "Add a show you went to"; addendum 3 item 33 for
+  // `loadFailed`, `retry` and `clearSearch`). `since` and `SINCE` come from
+  // `recordsStartLabel()` and `recordsStartShort()`.
+  add: {
+    eyebrow: 'Concerts',
+    title: 'Add a show you went to',
+    subtitle: 'Find the night, tap I went, and it gets its stamp.',
+    done: 'Done',
+    searchPlaceholder: 'Artist or venue',
+    clearSearch: 'Clear search',
+    scopeAria: 'Which shows to list',
+    scopeAll: 'All Denver',
+    scopeVenues: 'My venues',
+    scopeFollows: 'Artists I follow',
+    recordsLead: (since: string) => `Our records start in ${since}.`,
+    recordsRest:
+      " Shows before then aren't in Concert Crawl, so they can't get a stamp.",
+    resultCount: (count: number) =>
+      `${count} ${count === 1 ? 'SHOW' : 'SHOWS'}`,
+    resultsFooter: (artist: string, since: string) =>
+      `That's every ${artist} show in Denver since ${since}.`,
+    endDivider: (since: string) => `THE START OF OUR RECORDS · ${since}`,
+    endLine:
+      "Nothing before this. Older nights aren't in Concert Crawl, so they can't get a stamp.",
+    emptyTitle: 'Not in our records.',
+    emptyBody: (since: string) =>
+      `We only have Denver shows from ${since} on. If it was more recent, try just the artist or just the venue.`,
+    loadFailed: "Couldn't load shows.",
+    retry: 'Try again',
+  },
 } as const;

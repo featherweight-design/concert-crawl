@@ -27,6 +27,16 @@ describe('groupHistoryByMonth', () => {
     expect(groupHistoryByMonth([])).toEqual([]);
   });
 
+  // The Add sheet draws the year on every month ("NOVEMBER 2026").
+  it('can always name the year, and groups any row with a date', () => {
+    const buckets = groupHistoryByMonth(
+      [{ date: `${currentYear}-05-14` }, { date: `${currentYear}-05-02` }],
+      { alwaysYear: true },
+    );
+    expect(buckets).toHaveLength(1);
+    expect(buckets[0]?.label).toBe(`May ${currentYear}`);
+  });
+
   it('groups shows in the same month into one bucket', () => {
     const buckets = groupHistoryByMonth([
       show('a', `${currentYear}-05-14`),
