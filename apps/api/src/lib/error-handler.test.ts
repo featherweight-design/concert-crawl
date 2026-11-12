@@ -20,6 +20,9 @@ vi.mock('@sentry/hono/node', async () => {
     withScope: vi.fn((callback: (scope: unknown) => void) =>
       callback({
         setTag: (key: string, value: string) => tags.set(key, value),
+        setTags: (all: Record<string, string>) => {
+          for (const [key, value] of Object.entries(all)) tags.set(key, value);
+        },
       }),
     ),
   };
@@ -134,6 +137,33 @@ describe('errorHandler', () => {
     expect(tags.get('userHash')).toMatch(/^[0-9a-f]{16}$/);
     expect([...tags.values()].join(' ')).not.toContain('user_2abcSECRET');
     expect(captureException).toHaveBeenCalledTimes(1);
+  });
+
+  // Tagging is best effort: if hashing throws, the original error must still
+  // be captured, logged and answered as a 500, not lost to a bare Hono 500.
+  it('still captures, logs and answers when the user hash throws', async () => {
+    process.env['SENTRY_USER_HASH_KEY'] = 'test-key';
+    const importKey = vi
+      .spyOn(crypto.subtle, 'importKey')
+      .mockRejectedValue(new Error('crypto unavailable'));
+    try {
+      const res = await signedInApp({}).request('/boom');
+
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'Internal server error',
+      });
+      expect(captureException).toHaveBeenCalledTimes(1);
+      expect(captureException).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'kaboom' }),
+        expect.anything(),
+      );
+      expect(apiLogger.error).toHaveBeenCalledTimes(1);
+      expect(tags.has('userHash')).toBe(false);
+    } finally {
+      importKey.mockRestore();
+    }
   });
 
   it('leaves userHash off when the key is unset', async () => {
