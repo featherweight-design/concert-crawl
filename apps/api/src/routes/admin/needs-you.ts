@@ -35,6 +35,8 @@ const keyParamSchema = z.object({
     .refine((key) => parseItemKey(key) !== null, 'Unknown item kind'),
 });
 
+const MAX_SNOOZE_MS = 366 * 24 * 60 * 60 * 1000;
+
 const snoozeBodySchema = z.union([
   z
     .object({
@@ -44,6 +46,12 @@ const snoozeBodySchema = z.union([
         .refine(
           (value) => Date.parse(value) > Date.now(),
           'until must be in the future',
+        )
+        // A snooze is for a while, not for good: a far-future value is a typo
+        // (a wrong year) that would hide a decision from the queue for years.
+        .refine(
+          (value) => Date.parse(value) <= Date.now() + MAX_SNOOZE_MS,
+          'until must be within a year',
         ),
     })
     .strict(),
@@ -203,10 +211,15 @@ needsYouAdminRouter.delete(
     ctx.set('auditAction', 'needs_you.unsnooze');
     ctx.set('auditTargetId', key);
     ctx.set('auditActorId', actorId);
-    ctx.set('auditMeta', { cleared: removed.length + clearedNotUseful });
+    // Reported apart: dropping the kind-and-venue mute reaches every item of
+    // that kind at that venue, and the admin should see that they did it.
+    ctx.set('auditMeta', {
+      clearedSnoozes: removed.length,
+      clearedNotUseful,
+    });
     return ctx.json({
       success: true,
-      data: { key, cleared: removed.length + clearedNotUseful },
+      data: { key, clearedSnoozes: removed.length, clearedNotUseful },
     });
   },
 );

@@ -287,8 +287,33 @@ describe('admin needs-you routes', () => {
 
     const res = await unsnooze(lowKey(two.id));
     expect(res.status).toBe(200);
+    // The venue-wide mute is reported apart from the item's own snooze.
+    expect(await res.json()).toMatchObject({
+      data: { clearedSnoozes: 0, clearedNotUseful: 1 },
+    });
     expect(keys(await list())).toEqual(
       expect.arrayContaining([lowKey(one.id), lowKey(two.id)]),
+    );
+  });
+
+  it('unsnoozing a key that is no longer a current item clears nothing and still audits', async () => {
+    setAuth('admin');
+    const res = await unsnooze('event-low-confidence:gone');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      data: { clearedSnoozes: 0, clearedNotUseful: 0 },
+    });
+    expect(await auditRows('needs_you.unsnooze')).toHaveLength(1);
+  });
+
+  it('refuses a snooze that lasts more than a year', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const event = await seedLowConfidence(venue.id, 'Far Act', inDays(5));
+    const farOff = inHours(400 * 24).toISOString();
+
+    expect((await snooze(lowKey(event.id), { until: farOff })).status).toBe(
+      400,
     );
   });
 });
