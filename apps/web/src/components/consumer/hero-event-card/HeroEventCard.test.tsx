@@ -29,7 +29,8 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-import { HeroEventCard } from './HeroEventCard';
+import { HeroEventCard, spotlightGlow } from './HeroEventCard';
+import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
 afterEach(() => {
   cleanup();
@@ -229,5 +230,24 @@ describe('HeroEventCard genre color', () => {
     for (const dot of screen.getAllByTestId('genre-dot')) {
       expect(dot.style.background).toBe('var(--genre-rock)');
     }
+  });
+
+  it('glows the card in the lead genre color', () => {
+    render(
+      <HeroEventCard
+        event={{ ...baseEvent, genre: ['alternative', 'metal'] }}
+      />,
+    );
+    expect(screen.getByTestId('hero-event-card').style.boxShadow).toBe(
+      '0 0 28px color-mix(in oklch, var(--genre-rock) 22%, transparent)',
+    );
+  });
+
+  // Addendum-2 item 23: an ungenred show gets a neutral ring and no glow.
+  it('drops the outer glow for an ungenred show', () => {
+    render(<HeroEventCard event={{ ...baseEvent, genre: [] }} />);
+    const shadow = screen.getByTestId('hero-event-card').style.boxShadow;
+    expect(shadow).not.toContain('28px');
+    expect(spotlightGlow(NEUTRAL_GENRE_COLOR)).toBe('none');
   });
 });

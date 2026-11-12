@@ -12,6 +12,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import { EventImage } from '@/components/consumer/event-image';
 import { Panel } from '@/components/consumer/image-slot';
+import { NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 
 /** The card's tilt, in degrees. Never animated: the card simply sits askew. */
 export const ARTIST_CARD_TILT = -2;
@@ -36,9 +37,18 @@ const starburst = (ring: string) =>
 const STARBURST_MASK =
   'radial-gradient(circle at 50% 50%, black 0%, black 30%, transparent 70%)';
 
-/** The genre ring on the card: 1.25px in the genre's color plus its glow. */
+/**
+ * The genre ring on the card: 1.25px in the genre's color plus its glow.
+ *
+ * An ungenred artist (the `NEUTRAL_GENRE_COLOR` fallback) keeps the 1.25px
+ * ring and drops the glow and the shadow, as `stageRing`, `genreRing` and
+ * `GenreDot` do (addendum-2 item 23: "a neutral ring and no glow"). The
+ * loading skeleton frames itself in the neutral color, so it follows too.
+ */
 export const artistRing = (ring: string): string =>
-  `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px var(--shadow-strong)`;
+  ring === NEUTRAL_GENRE_COLOR
+    ? `0 0 0 1.25px ${ring}`
+    : `0 0 0 1.25px ${ring}, 0 0 24px color-mix(in oklch, ${ring} 40%, transparent), 0 18px 36px -20px var(--shadow-strong)`;
 
 /**
  * The card's shape: it fills its slot (200px wide on mobile) at 4:5, so 200 ×

@@ -20,6 +20,12 @@ const HERO_ART_SIZES = [
   { size: 130, className: 'hidden sm:block' },
 ] as const;
 
+/** The spotlight's outer glow in its lead genre's color; none when ungenred. */
+export const spotlightGlow = (genre: string): string =>
+  genre === NEUTRAL_GENRE_COLOR
+    ? 'none'
+    : `0 0 28px color-mix(in oklch, ${genre} 22%, transparent)`;
+
 interface HeroEventCardProps {
   event: EventWithVenue;
   label?: string;
@@ -61,7 +67,10 @@ export function HeroEventCard({
         // on the page meant to read warm. The light theme showed the old flat
         // fill most plainly.
         background: `linear-gradient(90deg, color-mix(in oklch, ${genre} 20%, var(--surface-1)), var(--surface-1) 55%) padding-box, linear-gradient(120deg, ${genre}, var(--accent)) border-box`,
-        boxShadow: `0 0 28px color-mix(in oklch, ${genre} 22%, transparent)`,
+        // An ungenred show gets no glow, the rule `genreRing` and `stageRing`
+        // follow (addendum-2 item 23). The B5 boards draw only a genred
+        // spotlight, so none shows a neutral one glowing.
+        boxShadow: spotlightGlow(genre),
       }}
     >
       <Link
