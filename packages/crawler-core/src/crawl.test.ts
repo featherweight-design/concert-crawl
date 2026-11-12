@@ -27,6 +27,7 @@ import {
   stripStyleBlocks,
 } from './crawl.js';
 import { hashEvent } from './lib/hash.js';
+import { FetchLog } from './lib/fetch-log.js';
 import { RobotsDisallowedError } from './lib/robots-fetch.js';
 import { canonicalizeTitle } from './lib/canonical-title.js';
 
@@ -1391,6 +1392,7 @@ describe('crawlVenue — fetch options', () => {
       3000,
       'load',
       undefined,
+      expect.any(FetchLog),
     );
   });
 
@@ -1414,6 +1416,7 @@ describe('crawlVenue — fetch options', () => {
       venue.crawlDelayMs,
       venue.crawlWaitUntil,
       '.event-list-item',
+      expect.any(FetchLog),
     );
   });
 
@@ -1437,6 +1440,7 @@ describe('crawlVenue — fetch options', () => {
       venue.crawlDelayMs,
       venue.crawlWaitUntil,
       undefined,
+      expect.any(FetchLog),
     );
   });
 });
@@ -1707,6 +1711,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPageHttp).toHaveBeenCalledWith(
       venue.websiteUrl,
       venue.crawlDelayMs,
+      expect.any(FetchLog),
     );
     expect(mockFetchPage).not.toHaveBeenCalled();
   });
@@ -1723,6 +1728,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
       venue.crawlDelayMs,
       venue.crawlWaitUntil,
       undefined,
+      expect.any(FetchLog),
     );
     expect(mockFetchPageHttp).not.toHaveBeenCalled();
   });
@@ -1734,7 +1740,11 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
     await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockFetchPageHttp).toHaveBeenCalledWith(venue.websiteUrl, 10_000);
+    expect(mockFetchPageHttp).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      10_000,
+      expect.any(FetchLog),
+    );
   });
 
   it('ignores a Crawl-delay faster than our own pacing', async () => {
@@ -1744,7 +1754,11 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
     await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockFetchPageHttp).toHaveBeenCalledWith(venue.websiteUrl, 3_000);
+    expect(mockFetchPageHttp).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      3_000,
+      expect.any(FetchLog),
+    );
   });
 
   it('skips the run when the site asks for a Crawl-delay longer than the cap', async () => {
@@ -1942,6 +1956,7 @@ describe('crawlVenue — crawlMode orchestration', () => {
         expect.anything(),
         expect.anything(),
         undefined,
+        expect.any(FetchLog),
       );
     });
 
