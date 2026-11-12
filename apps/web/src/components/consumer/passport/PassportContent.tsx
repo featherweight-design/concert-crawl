@@ -128,7 +128,7 @@ export const PassportContent = ({
 
   return (
     <Shell>
-      <div className="grid gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
         <header className="flex flex-col gap-2 [grid-area:head]">
           <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle sm:block">
             {COPY.breadcrumb}
@@ -139,7 +139,10 @@ export const PassportContent = ({
           </p>
         </header>
 
-        <div className="[grid-area:book]" data-testid="passport-booklet">
+        <div
+          className="min-w-0 [grid-area:book]"
+          data-testid="passport-booklet"
+        >
           <PassportBooklet pages={pages} identity={identity} stats={stats} />
         </div>
 

@@ -124,6 +124,16 @@ describe('PassportContent', () => {
     expect(screen.getAllByText('@hugh')).toHaveLength(2);
   });
 
+  // At 390 the booklet's pager is wider than the phone, and an auto grid
+  // track grew to fit it (999px in a 358px column). The track and the cell
+  // both have to allow shrinking for the booklet to stay on screen.
+  it('keeps the booklet inside a phone-width column', () => {
+    renderContent({});
+    const book = screen.getByTestId('passport-booklet');
+    expect(book).toHaveClass('min-w-0');
+    expect(book.parentElement).toHaveClass('grid-cols-[minmax(0,1fr)]');
+  });
+
   it('counts Venues collected against the active venues', () => {
     renderContent({});
 
