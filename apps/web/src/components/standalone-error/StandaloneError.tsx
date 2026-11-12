@@ -77,32 +77,36 @@ const BrokenMark = () => (
     style={{
       width: 72,
       height: 72,
-      borderRadius: 22,
+      borderRadius: 21,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'color-mix(in oklch, var(--danger) 12%, var(--surface-2))',
-      border: '1px solid color-mix(in oklch, var(--danger) 45%, var(--border))',
+      // Board (addendum-2 18-error-page): danger at 8% fill, 40% border.
+      background: 'color-mix(in srgb, var(--danger) 8%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
     }}
   >
-    <svg width="48" height="48" viewBox="0 0 96 96" focusable="false">
-      <circle cx="72" cy="24" r="20" fill="var(--danger)" opacity="0.28" />
-      <circle cx="72" cy="24" r="12" fill="var(--danger)" opacity="0.5" />
-      <circle cx="72" cy="24" r="7" fill="var(--bg)" />
+    <svg width="49" height="49" viewBox="0 0 96 96" focusable="false">
+      <circle cx="72" cy="24" r="20" fill="var(--danger)" opacity="0.22" />
+      <circle cx="72" cy="24" r="12" fill="var(--danger)" opacity="0.42" />
+      <circle cx="72" cy="24" r="7" fill="var(--surface-2)" />
+      {/* The drawn coordinates: the trail runs straight to (42,58), then the
+          last two dots sag and fall away under the core. */}
       {[
-        [14, 76, 1.5],
-        [24, 70, 2],
-        [34, 64, 2.5],
-        [42, 58, 3],
-        [58, 48, 4],
-      ].map(([cx, cy, radius], idx) => (
+        [14, 76, 1.5, 0.35],
+        [24, 70, 2, 0.44],
+        [34, 64, 2.5, 0.53],
+        [42, 58, 3, 0.62],
+        [56, 60, 4, 0.71],
+        [66, 70, 3.2, 0.8],
+      ].map(([cx, cy, radius, opacity]) => (
         <circle
           key={cx}
           cx={cx}
           cy={cy}
           r={radius}
           fill="var(--signal)"
-          opacity={0.35 + idx * 0.11}
+          opacity={opacity}
         />
       ))}
     </svg>
