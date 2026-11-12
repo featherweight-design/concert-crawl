@@ -4,6 +4,7 @@ config({ path: fileURLToPath(new URL('../.env.local', import.meta.url)) });
 
 import * as Sentry from '@sentry/node';
 import { SENTRY_PRIVACY_OPTIONS } from '@concert-crawl/types/sentry';
+import { SENTRY_INITIAL_SCOPE } from '@concert-crawl/types/sentry-tags';
 
 const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local';
 
@@ -13,6 +14,7 @@ Sentry.init({
   // The deployed commit, written to the run's env file by crawler-run.yml.
   // Unset locally and on a manual run without it.
   release: process.env['GIT_SHA'] || undefined,
+  initialScope: SENTRY_INITIAL_SCOPE,
   // See apps/api/src/instrument.ts — local runs never send, so dev noise
   // cannot bury real production errors.
   enabled: environment !== 'local',
