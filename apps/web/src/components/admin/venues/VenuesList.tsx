@@ -24,11 +24,39 @@ import {
   type VenueFilter,
   type VenueListRow,
 } from './venue-list-rules';
+import { PausePanel } from './PausePanel';
+import {
+  SELECT_BAR_HEIGHT,
+  SelectBar,
+  SelectBox,
+  useVenueBulk,
+} from './VenueBulk';
 
 const COPY = ADMIN_COPY.venuesList;
 
 /** `04/venues-desktop`: the dot, venue, two chips, count, run line, robots. */
 const COLUMNS = '8px minmax(0, 1.6fr) 96px 196px 84px minmax(0, 1.4fr) 92px';
+/** `A3/03/venues-select-d`: the 18px checkbox takes the dot's place. */
+const SELECT_COLUMNS =
+  '18px minmax(0, 1.6fr) 96px 196px 84px minmax(0, 1.4fr) 92px';
+
+/** The head's Select / Done button (`A3/03/venues-select-d`). */
+const HEAD_BUTTON: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 36,
+  padding: '0 12px',
+  borderRadius: 9,
+  fontSize: 13,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  fontFamily: 'inherit',
+  cursor: 'pointer',
+  background: 'var(--surface-2)',
+  color: 'var(--fg)',
+  border: '1px solid var(--border-strong)',
+};
 
 const HEAD_CELL: CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -127,27 +155,71 @@ const ColumnName = ({ name }: { name: string }) => (
   <span className="sr-only">{COPY.cellName(name)}</span>
 );
 
-const DesktopRow = ({ venue }: { venue: VenueListRow }) => (
-  <Link
-    href={`/admin/venues/${venue.id}`}
-    data-testid="venue-row"
-    data-venue-id={venue.id}
-    className="hover:bg-[var(--surface-2)]"
-    style={{
-      display: 'grid',
-      gridTemplateColumns: COLUMNS,
-      alignItems: 'center',
-      gap: 12,
-      padding: '10px 18px',
-      borderTop: '1px solid var(--border)',
-      color: 'var(--fg)',
-      textDecoration: 'none',
-      // The boards set type at the browser's normal leading, not the body's.
-      lineHeight: 1.25,
-    }}
-  >
-    {/* HOLD: the Needs you dot waits on 2a (ruling 18). */}
-    <span aria-hidden />
+const ROW: CSSProperties = {
+  display: 'grid',
+  alignItems: 'center',
+  gap: 12,
+  padding: '10px 18px',
+  borderTop: '1px solid var(--border)',
+  color: 'var(--fg)',
+  textDecoration: 'none',
+  // The boards set type at the browser's normal leading, not the body's.
+  lineHeight: 1.25,
+};
+
+/**
+ * A row opens the venue page; in Select mode (`A3/03/venues-select-d`) the
+ * whole row toggles its checkbox instead, and a picked row takes a signal wash.
+ */
+const DesktopRow = ({
+  venue,
+  select,
+}: {
+  venue: VenueListRow;
+  select?: { on: boolean; onToggle: () => void };
+}) =>
+  select ? (
+    <label
+      data-testid="venue-row"
+      data-venue-id={venue.id}
+      data-select-option
+      style={{
+        ...ROW,
+        gridTemplateColumns: SELECT_COLUMNS,
+        cursor: 'pointer',
+        background: select.on
+          ? 'color-mix(in srgb, var(--signal) 6%, transparent)'
+          : undefined,
+      }}
+    >
+      <span style={{ display: 'flex' }}>
+        <input
+          type="checkbox"
+          className="sr-only"
+          checked={select.on}
+          onChange={select.onToggle}
+          aria-label={COPY.selectVenue(venue.name)}
+        />
+        <SelectBox on={select.on} />
+      </span>
+      <RowCells venue={venue} />
+    </label>
+  ) : (
+    <Link
+      href={`/admin/venues/${venue.id}`}
+      data-testid="venue-row"
+      data-venue-id={venue.id}
+      className="hover:bg-[var(--surface-2)]"
+      style={{ ...ROW, gridTemplateColumns: COLUMNS }}
+    >
+      {/* HOLD: the Needs you dot waits on 2a (ruling 18). */}
+      <span aria-hidden />
+      <RowCells venue={venue} />
+    </Link>
+  );
+
+const RowCells = ({ venue }: { venue: VenueListRow }) => (
+  <>
     <span
       style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}
     >
@@ -208,7 +280,7 @@ const DesktopRow = ({ venue }: { venue: VenueListRow }) => (
       <ColumnName name={COPY.columns.robots} />
       <Robots allowed={venue.robotsTxtAllowed} />
     </span>
-  </Link>
+  </>
 );
 
 const PhoneCard = ({ venue }: { venue: VenueListRow }) => (
@@ -287,6 +359,11 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
   const { shown, folded } = folds
     ? foldOk(sorted)
     : { shown: sorted, folded: [] };
+  const bulk = useVenueBulk(listed);
+  // No phone board draws Select, so the phone has none.
+  const selecting = bulk.selecting && !isPhone;
+  const allShown =
+    shown.length > 0 && shown.every((venue) => bulk.selected.has(venue.id));
 
   if (venues === null) {
     return <CouldntLoad page={COPY.title} onRetry={() => router.refresh()} />;
@@ -410,7 +487,16 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
         ) : (
           <>
             {search}
-            <AddVenueModal />
+            <button
+              type="button"
+              aria-pressed={selecting}
+              onClick={selecting ? bulk.stop : bulk.start}
+              style={HEAD_BUTTON}
+            >
+              {selecting ? COPY.done : COPY.select}
+            </button>
+            {/* `A3/03/venues-select-d` drops Add a venue while selecting. */}
+            {!selecting && <AddVenueModal />}
           </>
         )}
       </div>
@@ -453,6 +539,8 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
         })}
       </div>
 
+      {!isPhone && bulk.toast}
+
       {sorted.length === 0 ? (
         <EmptyState title={COPY.noMatch} />
       ) : isPhone ? (
@@ -472,27 +560,90 @@ export const VenuesList = ({ venues }: { venues: VenueListRow[] | null }) => {
           }}
         >
           <div
-            aria-hidden
             style={{
               display: 'grid',
-              gridTemplateColumns: COLUMNS,
+              gridTemplateColumns: selecting ? SELECT_COLUMNS : COLUMNS,
+              alignItems: 'center',
               gap: 12,
               padding: '12px 18px',
             }}
           >
-            <span />
-            <span style={HEAD_CELL}>{COPY.columns.venue}</span>
-            <span style={HEAD_CELL}>{COPY.columns.onSite}</span>
-            <span style={HEAD_CELL}>{COPY.columns.crawling}</span>
-            <span style={HEAD_CELL}>{COPY.columns.upcoming}</span>
-            <span style={HEAD_CELL}>{COPY.columns.latestRun}</span>
-            <span style={HEAD_CELL}>{COPY.columns.robots}</span>
+            {selecting ? (
+              <label
+                data-select-option
+                style={{ display: 'flex', cursor: 'pointer', borderRadius: 5 }}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={allShown}
+                  onChange={() =>
+                    bulk.setMany(
+                      shown.map((venue) => venue.id),
+                      !allShown,
+                    )
+                  }
+                  aria-label={COPY.selectAll}
+                />
+                <SelectBox on={allShown} />
+              </label>
+            ) : (
+              <span />
+            )}
+            <span aria-hidden style={HEAD_CELL}>
+              {COPY.columns.venue}
+            </span>
+            {/* The drawn head is visual only; each cell names its column. */}
+            <span aria-hidden style={HEAD_CELL}>
+              {COPY.columns.onSite}
+            </span>
+            <span aria-hidden style={HEAD_CELL}>
+              {COPY.columns.crawling}
+            </span>
+            <span aria-hidden style={HEAD_CELL}>
+              {COPY.columns.upcoming}
+            </span>
+            <span aria-hidden style={HEAD_CELL}>
+              {COPY.columns.latestRun}
+            </span>
+            <span aria-hidden style={HEAD_CELL}>
+              {COPY.columns.robots}
+            </span>
           </div>
           {shown.map((venue) => (
-            <DesktopRow key={venue.id} venue={venue} />
+            <DesktopRow
+              key={venue.id}
+              venue={venue}
+              {...(selecting && {
+                select: {
+                  on: bulk.selected.has(venue.id),
+                  onToggle: () => bulk.toggle(venue.id),
+                },
+              })}
+            />
           ))}
           {foldRow}
         </div>
+      )}
+      {selecting && (
+        <>
+          {/* Room for the pinned bar, so the last row can scroll clear. */}
+          <div aria-hidden style={{ height: SELECT_BAR_HEIGHT - 16 }} />
+          <SelectBar bulk={bulk} />
+        </>
+      )}
+      {bulk.pausing && bulk.picked.length > 0 && (
+        <PausePanel
+          venues={bulk.picked}
+          onClose={bulk.closePause}
+          onSubmit={(body) =>
+            bulk.pause(
+              bulk.picked.map((venue) => venue.id),
+              body,
+            )
+          }
+          refused={bulk.refused}
+        />
       )}
     </div>
   );

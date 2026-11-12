@@ -561,6 +561,34 @@ export const ADMIN_COPY = {
       site_broken_or_moved: 'site down or moved',
     },
     moreOk: (count: number) => `${count} more, all OK`,
+    // Select mode and its bottom bar (`A3/03/venues-select-d`).
+    select: 'Select',
+    done: 'Done',
+    selectAll: 'Select every venue shown',
+    selectVenue: (name: string) => `Select ${name}`,
+    bulk: {
+      selected: (count: number) => `${count} selected`,
+      clear: 'Clear',
+      recrawl: (count: number) => `Re-crawl ${count}`,
+      pause: (count: number) => `Pause crawling ${count}…`,
+      // `A3/03/re-crawl-states`: the reason beside a disabled Re-crawl.
+      recrawlPaused: 'Resume crawling to re-crawl',
+      // Rule 10, through `states.saveFailed`: "Couldn't change {what}".
+      pauseFailed: (names: string) => `crawling for ${names}`,
+      recrawlFailed: (names: string) => `Couldn't re-crawl ${names}`,
+      othersDone: (count: number, done: 'paused' | 'queued') =>
+        count === 1
+          ? `The other one is ${done}.`
+          : `The other ${count} are ${done}.`,
+      pauseNoneDone: 'Crawling is as it was.',
+      // No hour: the daily crawl's cron is `7 9 * * *` UTC, which is 02:07
+      // MST in winter and 03:07 MDT in summer.
+      recrawlNoneDone: 'The nightly crawl still runs.',
+      names: (names: readonly string[]) =>
+        names.length > 3
+          ? `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
+          : new Intl.ListFormat('en-US', { type: 'conjunction' }).format(names),
+    },
     /** A row cell's column name, read before its value by screen readers. */
     cellName: (column: string) => `${column}: `,
     noMatch: 'No venues match the current filter.',

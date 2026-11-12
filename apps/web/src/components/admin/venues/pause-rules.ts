@@ -3,9 +3,13 @@ import type {
   CrawlPauseRequest,
   CrawlPauseResume,
   Venue,
+  VenueWithEventCount,
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AUTO_PAUSE_FAILURES } from '@/lib/admin/venue-status';
+import {
+  AUTO_PAUSE_FAILURES,
+  deriveVenueStatusChips,
+} from '@/lib/admin/venue-status';
 import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 
 /**
@@ -170,3 +174,46 @@ export const formFromBody = (
 
 /** What a pause attempt came back with (see `pauseCrawling`). */
 export type PauseOutcome = { ok: true } | { ok: false; error: string | null };
+
+/**
+ * Re-crawl is for a live venue we're crawling. Paused and auto-paused venues
+ * wait on Resume (orchestrator ruling, bulk too); blocked and robots-disallowed
+ * ones are refused by the crawl rules, and the API refuses hidden and
+ * unverified venues.
+ */
+export const canRecrawl = (venue: VenueWithEventCount): boolean => {
+  const { onSite, crawling } = deriveVenueStatusChips(venue);
+  return onSite === 'live' && crawling === 'crawling' && venue.verified;
+};
+
+export interface FanOutResult {
+  /** Ids whose action did not land, in the order they were sent. */
+  failed: string[];
+  /** A refusal of the body itself (a 422 date error), shown in the panel. */
+  inlineError: string | null;
+}
+
+/**
+ * Bulk actions have no endpoint of their own, so each id is sent alone (rule
+ * 10 then reports the ones that failed). A thrown call and a refused one both
+ * count as failed.
+ */
+export const fanOut = async (
+  ids: readonly string[],
+  send: (id: string) => Promise<PauseOutcome>,
+): Promise<FanOutResult> => {
+  const settled = await Promise.allSettled(ids.map((id) => send(id)));
+  const failed: string[] = [];
+  let inlineError: string | null = null;
+  settled.forEach((result, index) => {
+    const id = ids[index];
+    if (id === undefined) return;
+    if (result.status === 'rejected') {
+      failed.push(id);
+    } else if (!result.value.ok) {
+      failed.push(id);
+      inlineError ??= result.value.error;
+    }
+  });
+  return { failed, inlineError };
+};

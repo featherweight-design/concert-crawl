@@ -1,14 +1,9 @@
 'use client';
 
-import {
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { useContentBox } from './useContentBox';
 import { useDialogKeyboard } from './useDialogKeyboard';
 
 export interface SidePanelProps {
@@ -121,33 +116,6 @@ const panelStyle = (width: number): React.CSSProperties => ({
   background: 'var(--bg-elevated)',
   borderLeft: '1px solid var(--border)',
 });
-
-interface ContentBox {
-  top: number;
-  left: number;
-}
-
-/**
- * The scrim covers the content area only, leaving the sidebar and topbar
- * undimmed (`03/llm-budget-panel`). The shell marks that area with
- * `data-admin-content`; without it (tests, the phone) the scrim fills the
- * viewport.
- */
-const useContentBox = (): ContentBox => {
-  const [box, setBox] = useState<ContentBox>({ top: 0, left: 0 });
-  useLayoutEffect(() => {
-    const content = document.querySelector('[data-admin-content]');
-    if (!content) return;
-    const measure = () => {
-      const rect = content.getBoundingClientRect();
-      setBox({ top: rect.top, left: rect.left });
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
-  return box;
-};
 
 const OverlayPanel = ({
   width = 460,
