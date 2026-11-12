@@ -215,20 +215,13 @@ describe('PendingCardB', () => {
       expect(screen.queryByRole('link', { name: '@friend' })).toBeNull();
     });
 
-    it('sets the line in sans 12.5px with no age (more-p-price_states)', () => {
-      render(<PendingCardB {...buildProps({ submittedAt: minutesAgo(12) })} />);
-      const line = screen.getByTestId('pending-attribution');
-      expect(line.style.fontSize).toBe('12.5px');
-      expect(line.textContent).not.toMatch(/ago/);
-      expect(screen.queryByText('12m ago')).toBeNull();
-    });
-
-    it('keeps an anonymous submitter upright: nothing in the line is italic', () => {
+    it('keeps an anonymous submitter upright in a 12.5px line: nothing is italic', () => {
       render(
         <PendingCardB {...buildProps({ view: 'other', submitter: null })} />,
       );
       const line = screen.getByTestId('pending-attribution');
       expect(line.textContent).toBe('Submitted by an anonymous fan');
+      expect(line.style.fontSize).toBe('12.5px');
       // Covers the line and every descendant, so a restored italic span fails.
       expect(line.getAttribute('style') ?? '').not.toMatch(/italic/);
       expect(line.querySelector('[style*="italic"]')).toBeNull();
@@ -441,6 +434,49 @@ describe('PendingCardB', () => {
       expect(footer.firstElementChild).toBe(
         screen.getByTestId('pending-your-submission'),
       );
+    });
+
+    it('sets the strip, qualifier and labels at the measured 9.5px', () => {
+      render(<PendingCardB {...buildProps({ view: 'submitter' })} />);
+      expect(screen.getByTestId('pending-strip-left').style.fontSize).toBe(
+        '9.5px',
+      );
+      expect(screen.getByTestId('pending-qualifier').style.fontSize).toBe(
+        '9.5px',
+      );
+      expect(screen.getByTestId('pending-your-submission').style.fontSize).toBe(
+        '9.5px',
+      );
+      expect(screen.getByTestId('pending-waiting').style.fontSize).toBe(
+        '13.5px',
+      );
+    });
+  });
+
+  describe('keyboard focus (all:unset restoration)', () => {
+    it('gives Confirm and Saw a different number? the focus-ring class', () => {
+      render(<PendingCardB {...buildProps({ view: 'other' })} />);
+      expect(
+        screen
+          .getByRole('button', { name: /confirm price/i })
+          .classList.contains('pending-card-action'),
+      ).toBe(true);
+      expect(
+        screen
+          .getByRole('button', { name: /saw a different number/i })
+          .classList.contains('pending-card-action'),
+      ).toBe(true);
+    });
+
+    it('gives Edit and Withdraw the focus-ring class', () => {
+      render(<PendingCardB {...buildProps({ view: 'submitter' })} />);
+      for (const name of ['Edit', 'Withdraw']) {
+        expect(
+          screen
+            .getByRole('button', { name })
+            .classList.contains('pending-card-action'),
+        ).toBe(true);
+      }
     });
   });
 
