@@ -1,0 +1,88 @@
+{
+  "feature": "Venue hero settings",
+  "note": "Read-only. Photographs the venue hero backdrop settings (outdoor, arena, street), the glyph size, halo and neon-outline fill, and the venues index flagship card at 320, 390 and 1300 in Electric, Light and Pulse.",
+  "widths": [
+    { "label": "xs", "width": 320, "height": 640, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "red-rocks",
+      "label": "Red Rocks (outdoor: stars, ridge, no brick)",
+      "steps": [
+        {
+          "goto": "/venues/red-rocks-amphitheatre",
+          "expectStatus": 200,
+          "wait": "[data-venue-neon]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "ball-arena",
+      "label": "Ball Arena (arena: skyline, windows, crescent moon)",
+      "steps": [
+        {
+          "goto": "/venues/ball-arena",
+          "expectStatus": 200,
+          "wait": "[data-venue-neon]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "mission-ballroom",
+      "label": "Mission Ballroom (arena setting, Ballroom type)",
+      "steps": [
+        {
+          "goto": "/venues/mission-ballroom",
+          "expectStatus": 200,
+          "wait": "[data-venue-neon]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "summit",
+      "label": "Summit Music Hall (outdoor setting, Music Hall type)",
+      "steps": [
+        {
+          "goto": "/venues/summit-music-hall",
+          "expectStatus": 200,
+          "wait": "[data-venue-neon]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "ogden",
+      "label": "Ogden Theatre (street: brick, regression)",
+      "steps": [
+        {
+          "goto": "/venues/ogden-theatre",
+          "expectStatus": 200,
+          "wait": "[data-venue-neon]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "bluebird",
+      "label": "Bluebird Theater (street, filled glyph neon-outline)",
+      "steps": [
+        {
+          "goto": "/venues/bluebird-theater",
+          "expectStatus": 200,
+          "wait": "[data-venue-neon]"
+        },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "venues-index",
+      "label": "Venues index (flagship card)",
+      "steps": [{ "goto": "/venues", "expectStatus": 200 }, { "settle": 2500 }]
+    }
+  ]
+}
