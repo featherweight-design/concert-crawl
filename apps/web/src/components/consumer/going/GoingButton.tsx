@@ -9,8 +9,9 @@
 // (`addendum-3/04/event-past-d`) draws it: the venue's ring colour as the
 // fill, a dark hole holding the venue's stamp, and dark ink. Two artists at
 // one venue get the same stub. The stamp in the hole is the shared round
-// VenueStamp, untilted (addendum 3 rule 4, addendum 4 item 8), which
-// supersedes the board's rounded square.
+// VenueStamp, untilted (design/design_handoff_bplus_redesign/README.md rule 4,
+// and addendum 4 item 8 (PR #311)), which supersedes the board's rounded
+// square.
 //
 // `past-yes` is a read-only fact; `past-no` is the "I went" pill, a live tap that
 // stamps the night (edit-concerts PR3). Taking a stamp back out goes through the
@@ -362,7 +363,8 @@ export const GoingButton = ({
         >
           {isOn ? (
             // The shared round VenueStamp, straight: only the Passport
-            // booklet tilts (addendum 3 rule 4, addendum 4 item 8).
+            // booklet tilts (design/design_handoff_bplus_redesign/README.md
+            // rule 4, and addendum 4 item 8 (PR #311)).
             <VenueStamp
               venueSlug={show.venueSlug}
               venueName={show.venueName}

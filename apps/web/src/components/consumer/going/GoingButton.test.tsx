@@ -60,7 +60,7 @@ describe('GoingButton', () => {
 
   // event_unmarked_m: the dashed ghost of the venue's stamp until the night is
   // stamped; the filled stub's own stamp is the solid VenueStamp (addendum 4
-  // item 8).
+  // item 8 (PR #311)).
   it('draws the venue stamp as a dashed ghost on an unstamped night', () => {
     const { container } = render(<GoingButton show={SHOW} state="past-no" />);
     expect(
@@ -256,8 +256,8 @@ describe('GoingButton', () => {
 
   // `event-past-d` for the stub: a 50px stub, a 50px dark hole behind a
   // dashed perforation, a 36px stamp, and dark ink. The stamp itself is the
-  // round VenueStamp (addendum 3 rule 4, addendum 4 item 8), never the
-  // board's rounded square.
+  // round VenueStamp (design/design_handoff_bplus_redesign/README.md rule 4,
+  // and addendum 4 item 8 (PR #311)), never the board's rounded square.
   it.each(['going', 'past-yes'] as const)(
     "draws the committed stub as the board's, with the round stamp (%s)",
     (state) => {
@@ -276,46 +276,39 @@ describe('GoingButton', () => {
       expect(hole?.style.background).toBe('var(--bg)');
       expect(hole?.style.borderRight).toContain('dashed');
 
-      // One stamp, the solid VenueStamp, and no rounded-square stub stamp.
-      expect(hole?.querySelectorAll('[data-venue-stamp]')).toHaveLength(1);
-      expect(container.querySelector('[data-going-cta-stamp]')).toBeNull();
-      expect(container.querySelector('rect')).toBeNull();
-
+      // Exactly one stamp in the hole: the solid VenueStamp. Its geometry is
+      // VenueStamp's own and is tested in VenueStamp.test.tsx.
+      expect(container.querySelectorAll('[data-venue-stamp]')).toHaveLength(1);
       const stamp = hole?.querySelector<HTMLElement>(
         '[data-venue-stamp="solid"]',
       );
       expect(stamp?.style.width).toBe('36px');
       expect(stamp?.style.height).toBe('36px');
-      const svg = stamp?.querySelector<SVGSVGElement>(':scope > svg');
-      expect(svg?.getAttribute('viewBox')).toBe('0 0 36 36');
-      expect(svg?.style.filter).toContain('5px');
-      expect(svg?.style.filter).toContain(`${CHURCH_RING}4D`);
-
-      const outer = stamp?.querySelector('[data-venue-stamp-ring]');
-      expect(outer?.tagName.toLowerCase()).toBe('circle');
-      expect(outer?.getAttribute('cx')).toBe('18');
-      expect(outer?.getAttribute('r')).toBe('16.5');
-      expect(outer?.getAttribute('stroke-width')).toBe('2');
-      expect(outer?.getAttribute('stroke')).toBe(CHURCH_RING);
-      expect(outer?.getAttribute('fill')).toBe('none');
-      expect(outer?.getAttribute('stroke-dasharray')).toBeNull();
-
-      const inner = stamp?.querySelector('[data-venue-stamp-inner-ring]');
-      expect(inner?.tagName.toLowerCase()).toBe('circle');
-      expect(inner?.getAttribute('r')).toBe('12');
-      expect(inner?.getAttribute('stroke-width')).toBe('0.9');
-      expect(inner?.getAttribute('stroke-dasharray')).toBe('2.5 2.5');
-      expect(inner?.getAttribute('stroke')).toBe(CHURCH_RING);
-
-      const glyph = stamp?.querySelector('[data-venue-glyph]');
-      expect(glyph?.getAttribute('data-venue-glyph')).toBe('church');
-      expect(glyph?.getAttribute('x')).toBe('10.8');
-      expect(glyph?.getAttribute('width')).toBe('14.4');
-      const paint = glyph?.querySelector(':scope > g');
-      expect(paint?.getAttribute('stroke')).toBe(CHURCH_GLYPH);
-      expect(paint?.getAttribute('stroke-width')).toBe('1.8');
+      expect(
+        stamp
+          ?.querySelector('[data-venue-glyph]')
+          ?.getAttribute('data-venue-glyph'),
+      ).toBe('church');
     },
   );
+
+  // Only `lg` renders in the app today (EventDetailCtaBlock), but every size
+  // fills its hole with the same solid stamp at the hole's size.
+  it.each([
+    ['sm', '28px'],
+    ['md', '32px'],
+    ['lg', '36px'],
+  ] as const)('sizes the stamp to the %s hole (%s)', (size, px) => {
+    const { container } = render(
+      <GoingButton show={SHOW} state="past-yes" size={size} />,
+    );
+    expect(container.querySelectorAll('[data-venue-stamp]')).toHaveLength(1);
+    const stamp = container.querySelector<HTMLElement>(
+      '[data-going-cta-hole] [data-venue-stamp="solid"]',
+    );
+    expect(stamp?.style.width).toBe(px);
+    expect(stamp?.style.height).toBe(px);
+  });
 
   // Tilt is the Passport booklet's alone: the stub's stamp sits straight.
   it('never tilts the stub stamp', () => {
