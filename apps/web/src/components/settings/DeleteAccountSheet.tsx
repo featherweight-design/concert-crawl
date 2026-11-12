@@ -193,12 +193,14 @@ export function DeleteAccountSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-sheet-title"
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-5 rounded-t-2xl p-6"
+        // The B+ sheet edge (globals.css `sheet-edge`, as UserMenuSheet and the
+        // other sheets use it). Its gradient is the sheet's border and its
+        // fill, so no inline background or border-top here, either of which
+        // would paint over it.
+        className="sheet-edge fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-5 rounded-t-[22px] p-6 [--sheet-bg:var(--bg-elevated)]"
         style={{
-          background: 'var(--bg)',
           maxWidth: '480px',
           margin: '0 auto',
-          borderTop: '1px solid var(--danger)',
           boxShadow: '0 -24px 60px -10px rgba(0,0,0,0.5)',
           maxHeight: '90svh',
           overflowY: 'auto',
