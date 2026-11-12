@@ -263,7 +263,7 @@ describe('NotifBody — tabs (addendum 2, item 1)', () => {
       screen.getByRole('tab', {
         // Whitespace-tolerant: the accessible-name pass may pad the cue.
         name: new RegExp(
-          `^${NOTIFICATIONS_COPY.segments.alerts}\\s+${NOTIFICATIONS_COPY.tabUnread}$`,
+          `^${NOTIFICATIONS_COPY.segments.alerts}\\s*${NOTIFICATIONS_COPY.tabUnread}$`,
         ),
       }),
     ).toBeInTheDocument();
