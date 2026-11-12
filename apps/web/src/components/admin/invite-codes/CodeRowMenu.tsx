@@ -58,8 +58,11 @@ export const CodeRowMenu = ({
 
   // Opening moves focus into the menu, on its first item.
   useEffect(() => {
+    // preventScroll: focusing must not scroll the table under a fixed menu.
     if (isOpen)
-      menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+      menuRef.current
+        ?.querySelector<HTMLElement>('[role="menuitem"]')
+        ?.focus({ preventScroll: true });
   }, [isOpen]);
 
   useEffect(() => {
@@ -78,15 +81,27 @@ export const CodeRowMenu = ({
       close();
       triggerRef.current?.focus();
     };
+    // A fixed menu would drift from its row, so it closes once a scroll
+    // actually moves the ⋯ (a scroll elsewhere leaves it be).
+    const anchor = triggerRef.current?.getBoundingClientRect();
+    const handleScroll = () => {
+      const now = triggerRef.current?.getBoundingClientRect();
+      if (
+        !anchor ||
+        !now ||
+        Math.abs(now.top - anchor.top) > 1 ||
+        Math.abs(now.left - anchor.left) > 1
+      )
+        close();
+    };
     window.addEventListener('mousedown', handleClick);
     window.addEventListener('keydown', handleEscape);
-    // A fixed menu would drift from its row, so scrolling closes it.
-    window.addEventListener('scroll', close, true);
+    window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', close);
     return () => {
       window.removeEventListener('mousedown', handleClick);
       window.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', close);
     };
   }, [open]);
@@ -121,7 +136,9 @@ export const CodeRowMenu = ({
           border: 'none',
           background: open ? 'var(--surface-2)' : 'transparent',
           cursor: 'pointer',
-          padding: 4,
+          // 16px icon + 2px each side = the drawn 20px column, so the
+          // trigger never widens the table past its card.
+          padding: 2,
           borderRadius: 7,
           color: open ? 'var(--fg)' : 'var(--fg-muted)',
           display: 'inline-flex',
@@ -145,10 +162,12 @@ export const CodeRowMenu = ({
               evt.preventDefault();
               const next =
                 (at + (step[evt.key] ?? 0) + all.length) % all.length;
-              all[next]?.focus();
+              all[next]?.focus({ preventScroll: true });
             } else if (evt.key === 'Home' || evt.key === 'End') {
               evt.preventDefault();
-              all[evt.key === 'Home' ? 0 : all.length - 1]?.focus();
+              all[evt.key === 'Home' ? 0 : all.length - 1]?.focus({
+                preventScroll: true,
+              });
             } else if (evt.key === 'Tab') {
               // Leaving the menu closes it rather than stranding it open.
               setOpen(null);
