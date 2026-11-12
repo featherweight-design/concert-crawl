@@ -1,3 +1,12 @@
+## [1.342.2](https://github.com/featherweight-design/concert-crawl/compare/v1.342.1...v1.342.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **api:** key the price batch by the submissions it holds ([4adab8e](https://github.com/featherweight-design/concert-crawl/commit/4adab8e31b38bb27f3ae15748b6755370b12932c))
+* **api:** one question per show, stable venue keys, bounded watcher lookups ([6002d32](https://github.com/featherweight-design/concert-crawl/commit/6002d32b3180a56aecbb7bdb81a4bf0d047e31de))
+* **api:** price items skip shows a fan cannot see ([85e05de](https://github.com/featherweight-design/concert-crawl/commit/85e05de8d78c8831ca0a39152128fede65cdc102))
+
 ## [1.342.1](https://github.com/featherweight-design/concert-crawl/compare/v1.342.0...v1.342.1) (2026-11-12)
 
 
