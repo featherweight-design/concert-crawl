@@ -1,13 +1,22 @@
 interface SectionHeaderProps {
   title: string;
   count?: string;
+  /**
+   * The event page's heading, set larger (about 17px) than the 14px the other
+   * lists use (bp-m-event_m_end: "More at {venue}").
+   */
+  large?: boolean;
 }
 
-export function SectionHeader({ title, count }: SectionHeaderProps) {
+export function SectionHeader({
+  title,
+  count,
+  large = false,
+}: SectionHeaderProps) {
   return (
     <div className="mb-1 flex items-center gap-2">
       <span
-        className="shrink-0 text-[14px] text-fg"
+        className={`shrink-0 text-fg ${large ? 'text-[17px]' : 'text-[14px]'}`}
         style={{
           fontFamily: 'var(--font-ui)',
           fontWeight: 800,
