@@ -4,6 +4,10 @@ import { denverTodayUtcMs } from '@/lib/time';
 import type { EventsListResponse, VenuePublic } from '@concert-crawl/types';
 import { posterVenues } from '@/lib/poster/poster-rule';
 import { isPublicBrowseEnabled } from '@/lib/launch-mode';
+import {
+  formatShowTime as formatTickerTime,
+  formatShowTimeShort,
+} from '@/components/consumer/definitions/lib';
 import type {
   InviteShow,
   InviteVenue,
@@ -144,7 +148,9 @@ async function fetchLandingShows(): Promise<LandingShows> {
         venue: row.venue.name,
         tonight: row.date === today,
         dateShort: formatDateShort(row.date),
-        showTime: formatShowTime(row.showTime),
+        // The ticker reads "6:00 PM" and the cards "6 PM", as B+ draws them.
+        showTime: formatTickerTime(row.showTime ?? null) ?? '',
+        showTimeShort: formatShowTimeShort(row.showTime ?? null) ?? '',
         genre: row.genre?.[0] ?? null,
         imageUrl: row.imageUrl,
         artistPhotoUrl: row.artistPhotoUrl ?? null,
