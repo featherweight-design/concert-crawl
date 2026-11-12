@@ -78,14 +78,14 @@ describe('VenueNeonArt', () => {
     expect(bird?.getAttribute('vector-effect')).toBe('non-scaling-stroke');
   });
 
-  it('a flagship card keeps its soft halo and its flat glyph fill', () => {
+  it('a flagship card draws the same two halo discs and keeps its flat glyph fill', () => {
     const { container } = render(
       <VenueNeonArt glyphKey="bluebird" glyphSize={150} />,
     );
     expect(container.querySelectorAll('circle[data-venue-halo]')).toHaveLength(
-      1,
+      2,
     );
-    expect(container.querySelector('[data-venue-halo="soft"]')).not.toBeNull();
+    expect(container.querySelector('[data-venue-halo="soft"]')).toBeNull();
     const bird = container.querySelector('svg[data-venue-glyph] path');
     expect(bird?.getAttribute('fill-opacity')).not.toBe('0.3');
     expect(bird?.getAttribute('stroke-width')).not.toBe('5.25');

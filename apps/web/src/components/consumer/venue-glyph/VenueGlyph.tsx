@@ -1,6 +1,7 @@
 import { useId } from 'react';
 
 import { VENUE_GLYPHS, type VenueGlyphKey } from './definitions/glyphs';
+import { VENUE_NEON } from './definitions/venue-neon';
 
 interface VenueGlyphProps {
   glyphKey: VenueGlyphKey;
@@ -61,6 +62,7 @@ export function GlyphShapes({
   paint,
   strokeWidth = 1.13,
   neonFilled = false,
+  multicolour = false,
 }: {
   glyphKey: VenueGlyphKey;
   paint: string;
@@ -72,8 +74,15 @@ export function GlyphShapes({
    * tile's flat silhouette.
    */
   neonFilled?: boolean;
+  /**
+   * The neon boards' treatment: every shape strokes in its own colour from
+   * `VENUE_NEON` (a filled shape fills in the venue's `fillColor`) instead of
+   * all of them sharing `paint`. The tile and the stamps leave it off.
+   */
+  multicolour?: boolean;
 }) {
   const { from, to } = VENUE_GLYPHS[glyphKey];
+  const neon = multicolour ? VENUE_NEON[glyphKey] : null;
   return (
     <g
       fill="none"
@@ -82,30 +91,43 @@ export function GlyphShapes({
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {VENUE_GLYPHS[glyphKey].shapes.map((shape, i) =>
-        shape.kind === 'circle' ? (
-          <circle key={i} cx={shape.cx} cy={shape.cy} r={shape.radius} />
-        ) : shape.filled && neonFilled ? (
+      {VENUE_GLYPHS[glyphKey].shapes.map((shape, i) => {
+        const colour = neon?.shapeColors[i];
+        if (shape.kind === 'circle') {
+          return (
+            <circle
+              key={i}
+              cx={shape.cx}
+              cy={shape.cy}
+              r={shape.radius}
+              stroke={colour}
+            />
+          );
+        }
+        if (shape.filled && neonFilled) {
+          return (
+            <path
+              key={i}
+              d={shape.pathData}
+              transform={shape.transform}
+              fill={neon?.fillColor ?? to}
+              fillOpacity={0.3}
+              stroke={colour ?? from}
+              strokeWidth={5.25}
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        }
+        return (
           <path
             key={i}
             d={shape.pathData}
             transform={shape.transform}
-            fill={to}
-            fillOpacity={0.3}
-            stroke={from}
-            strokeWidth={5.25}
-            vectorEffect="non-scaling-stroke"
+            fill={shape.filled ? (neon?.fillColor ?? paint) : undefined}
+            stroke={shape.filled ? 'none' : colour}
           />
-        ) : (
-          <path
-            key={i}
-            d={shape.pathData}
-            transform={shape.transform}
-            fill={shape.filled ? paint : undefined}
-            stroke={shape.filled ? 'none' : undefined}
-          />
-        ),
-      )}
+        );
+      })}
     </g>
   );
 }
