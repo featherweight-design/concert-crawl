@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { FilterOption } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -28,12 +27,9 @@ export function FilterSheet({
   onSelect,
   onClose,
 }: FilterSheetProps) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!open || !mounted) return null;
+  // Never rendered by the server (it only opens after a tap), so `document` is
+  // always there once this gets past the early return.
+  if (!open) return null;
 
   // Portalled to the body, as ModalShell is: the chip strip lives beside the
   // venue and event cards inside scrolling, positioned ancestors, and a sheet
@@ -41,7 +37,7 @@ export function FilterSheet({
   // whole-card links answering taps meant for the sheet. z-[90] is the shared
   // dialog band, above the persistent chrome.
   return createPortal(
-    <div className="fixed inset-0 z-[90] sm:hidden" aria-hidden={!open}>
+    <div className="fixed inset-0 z-[90] sm:hidden">
       <button
         type="button"
         className="absolute inset-0"
