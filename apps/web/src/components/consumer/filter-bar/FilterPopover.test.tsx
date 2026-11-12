@@ -2,11 +2,12 @@
 
 import '@testing-library/jest-dom';
 import { render, fireEvent, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import {
   FilterPopover,
   getPopoverLeft,
   getPopoverPlacement,
+  getScrollIntoRoom,
 } from './FilterPopover';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
@@ -18,10 +19,11 @@ describe('getPopoverPlacement', () => {
     });
   });
 
-  it('flips above the chip when the room below is short', () => {
+  it('never flips above the chip, even when the room below is short', () => {
+    // The boards always drop the menu below the bar; opening scrolls for room.
     expect(getPopoverPlacement({ top: 760, bottom: 794 }, 900)).toEqual({
-      bottom: 146,
-      maxHeight: 738,
+      top: 800,
+      maxHeight: 84,
     });
   });
 
@@ -44,6 +46,109 @@ describe('getPopoverPlacement', () => {
       top: 50,
       maxHeight: 0,
     });
+  });
+});
+
+describe('getScrollIntoRoom', () => {
+  it('does not scroll when the menu already fits below', () => {
+    expect(getScrollIntoRoom({ top: 380, bottom: 414 }, 900, 300)).toBe(0);
+  });
+
+  it('scrolls just enough for the menu to fit below', () => {
+    // 900 - 794 - 6 - 16 = 84 below; a 300px menu needs 216 more.
+    expect(getScrollIntoRoom({ top: 760, bottom: 794 }, 900, 300)).toBe(216);
+  });
+
+  it('makes at least the minimum room for a short menu', () => {
+    expect(getScrollIntoRoom({ top: 760, bottom: 794 }, 900, 100)).toBe(156);
+  });
+
+  it('caps the room it makes for a tall menu', () => {
+    expect(getScrollIntoRoom({ top: 760, bottom: 794 }, 900, 2000)).toBe(436);
+  });
+
+  it('never tucks the chip under the sticky site header', () => {
+    // The chip may rise to 64 + 16 = 80 from the top, so 40px at most.
+    expect(getScrollIntoRoom({ top: 120, bottom: 154 }, 300, 400)).toBe(40);
+    expect(getScrollIntoRoom({ top: 70, bottom: 104 }, 300, 400)).toBe(0);
+  });
+});
+
+describe('FilterPopover opened low in the viewport', () => {
+  let scrollYDescriptor: PropertyDescriptor | undefined;
+  let innerHeight: number;
+
+  beforeEach(() => {
+    scrollYDescriptor = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    innerHeight = window.innerHeight;
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      writable: true,
+      value: 0,
+    });
+    window.innerHeight = 900;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.innerHeight = innerHeight;
+    if (scrollYDescriptor) {
+      Object.defineProperty(window, 'scrollY', scrollYDescriptor);
+    }
+  });
+
+  const mockScroll = (limit: number) =>
+    vi
+      .spyOn(window, 'scrollBy')
+      .mockImplementation((options?: ScrollToOptions | number) => {
+        const by = typeof options === 'number' ? options : (options?.top ?? 0);
+        window.scrollY = Math.min(window.scrollY + by, limit);
+      });
+
+  const renderLow = () => {
+    const onClose = vi.fn();
+    render(
+      <FilterPopover
+        open
+        title="Where"
+        options={[{ value: 'ogden', label: 'Ogden Theatre' }]}
+        value=""
+        anchorRect={new DOMRect(0, 760, 120, 34)}
+        onSelect={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    return onClose;
+  };
+
+  it('scrolls the bar up instantly and opens below it', () => {
+    const scrollBy = mockScroll(10_000);
+    renderLow();
+    // jsdom measures no content, so it makes the 240px minimum: 156 more.
+    expect(scrollBy).toHaveBeenCalledWith({ top: 156, behavior: 'instant' });
+    const popover = screen.getByTestId('filter-popover');
+    expect(popover.style.top).toBe('644px');
+    expect(popover.style.maxHeight).toBe('240px');
+    expect(popover.style.bottom).toBe('');
+  });
+
+  it('is not closed by its own scroll, but is by the next one', () => {
+    mockScroll(10_000);
+    const onClose = renderLow();
+    fireEvent.scroll(window);
+    expect(onClose).not.toHaveBeenCalled();
+
+    window.scrollY = 300;
+    fireEvent.scroll(window);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('caps its height to the room a short page could make, still below', () => {
+    mockScroll(50);
+    renderLow();
+    const popover = screen.getByTestId('filter-popover');
+    expect(popover.style.top).toBe('750px');
+    expect(popover.style.maxHeight).toBe('134px');
   });
 });
 
@@ -147,7 +252,11 @@ describe('FilterPopover', () => {
   };
 
   it('closes when the window scrolls', () => {
+    const scrollBy = vi.spyOn(window, 'scrollBy');
     const onClose = renderOpen();
+    // Room enough below the chip, so opening scrolled nothing.
+    expect(scrollBy).not.toHaveBeenCalled();
+    scrollBy.mockRestore();
     fireEvent.scroll(window);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
