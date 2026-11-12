@@ -1,4 +1,8 @@
-import type { VenueLatestRun, VenueWithEventCount } from '@concert-crawl/types';
+import type {
+  NeedsYouItem,
+  VenueLatestRun,
+  VenueWithEventCount,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
 import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
@@ -6,12 +10,47 @@ import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 const COPY = ADMIN_COPY.venuesList;
 
 /**
- * Filter chips that ship now. "Needs a look" counts venues with a Needs you
- * dot (ruling 17), and the dot waits on 2a (ruling 18), so both are held.
- * Drafts wait on 3e, and "robots.txt changed" on its storage.
+ * Filter chips that ship now, in the board's order (`04/venues-desktop`).
+ * "Needs a look" counts venues with a Needs you dot (ruling 17); 2a has
+ * landed, so it ships. Drafts wait on 3e, and "robots.txt changed" on its
+ * storage. Disallowed is ruling 16's addition, last.
  */
-export const VENUE_FILTERS = ['all', 'paused', 'hidden', 'disallowed'] as const;
+export const VENUE_FILTERS = [
+  'all',
+  'needsLook',
+  'paused',
+  'hidden',
+  'disallowed',
+] as const;
 export type VenueFilter = (typeof VENUE_FILTERS)[number];
+
+/**
+ * A venue row the rules read: the API's row, plus whether it has an item
+ * waiting in Needs you (the pink dot). `needsLook` is unset when the Needs you
+ * list didn't load.
+ */
+export type RankedVenue = VenueWithEventCount & { needsLook?: boolean };
+
+/**
+ * Open Needs you items per venue, for the dot and the "Needs a look" chip.
+ * Every item with a venue counts, whatever its kind: the board's note is
+ * "Pink dot: something in Needs you" (`04/venues-desktop`), and a venue's
+ * dropped show or price check is as much a look as its failing crawl.
+ *
+ * This groups the full list from `GET /v1/admin/needs-you`, which relies on
+ * that list being uncapped (it returns every open item). If it is ever paged,
+ * this must switch to a per-venue count from `/needs-you/count`.
+ */
+export const needsByVenue = (
+  items: readonly Pick<NeedsYouItem, 'venueId'>[],
+): Map<string, number> => {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (item.venueId === null) continue;
+    counts.set(item.venueId, (counts.get(item.venueId) ?? 0) + 1);
+  }
+  return counts;
+};
 
 /** OK rows shown before the rest fold into "{N} more, all OK" (ruling 21). */
 export const VISIBLE_ROWS = 10;
@@ -23,6 +62,7 @@ export const VISIBLE_ROWS = 10;
  */
 export interface VenueListRow extends VenueWithEventCount {
   latestRun: VenueLatestRun | null;
+  needsLook?: boolean;
 }
 
 const RUN = COPY.latestRun;
@@ -135,13 +175,15 @@ export const crawlingLabel = (
 };
 
 export const matchesFilter = (
-  venue: VenueWithEventCount,
+  venue: RankedVenue,
   filter: VenueFilter,
 ): boolean => {
   const chips = deriveVenueStatusChips(venue);
   switch (filter) {
     case 'all':
       return true;
+    case 'needsLook':
+      return venue.needsLook === true;
     case 'paused':
       return chips.onSite === 'live' && chips.crawling === 'paused';
     case 'hidden':
@@ -165,16 +207,18 @@ export const matchesSearch = (
 const OK_RANK = 6;
 
 /**
- * Worst first (ruling 19): blocked, auto-paused, failing, paused, then OK by
- * name. Rank 3 is the Needs you dot, held until 2a. A hidden venue isn't
- * crawled, so it reads as not OK and sorts after paused, before OK.
+ * Worst first (ruling 19): blocked, auto-paused, failing, the Needs you dot,
+ * paused, then OK by name. A dot outranks paused, so a paused venue with an
+ * item waiting rises to rank 3. A hidden venue isn't crawled, so it reads as
+ * not OK and sorts after paused, before OK.
  */
-export const worstRank = (venue: VenueWithEventCount): number => {
+export const worstRank = (venue: RankedVenue): number => {
   const { onSite, crawling } = deriveVenueStatusChips(venue);
   if (onSite === 'hidden') return 5;
   if (crawling === 'blocked') return 0;
   if (crawling === 'auto_paused') return 1;
   if (crawling === 'crawling' && isFailing(venue)) return 2;
+  if (venue.needsLook === true) return 3;
   if (crawling === 'paused' || crawling === 'robots_disallowed') return 4;
   return OK_RANK;
 };
@@ -182,10 +226,10 @@ export const worstRank = (venue: VenueWithEventCount): number => {
 const isFailing = (venue: VenueWithEventCount): boolean =>
   venue.consecutiveFailures > 0 || venue.lastRunStatus === 'failed';
 
-export const isOk = (venue: VenueWithEventCount): boolean =>
+export const isOk = (venue: RankedVenue): boolean =>
   worstRank(venue) === OK_RANK;
 
-export const sortWorstFirst = <T extends VenueWithEventCount>(
+export const sortWorstFirst = <T extends RankedVenue>(
   venues: readonly T[],
 ): T[] =>
   [...venues].sort(
@@ -198,7 +242,7 @@ export const sortWorstFirst = <T extends VenueWithEventCount>(
  * OK venues fill up to `VISIBLE_ROWS`. OK venues sort last, so the fold is
  * always the tail. A fold of one row would hide nothing worth hiding.
  */
-export const foldOk = <T extends VenueWithEventCount>(
+export const foldOk = <T extends RankedVenue>(
   sorted: readonly T[],
 ): { shown: T[]; folded: T[] } => {
   const firstOk = sorted.findIndex(isOk);

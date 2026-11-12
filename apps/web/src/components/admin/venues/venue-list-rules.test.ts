@@ -5,6 +5,7 @@ import {
   foldOk,
   latestRunLine,
   matchesFilter,
+  needsByVenue,
   sortWorstFirst,
   type VenueListRow,
 } from './venue-list-rules';
@@ -65,6 +66,48 @@ describe('venue list rules', () => {
       'Abe',
       'Zed',
     ]);
+  });
+
+  it('ranks the Needs you dot after failing and before paused (ruling 19)', () => {
+    const sorted = sortWorstFirst([
+      venue('Ok'),
+      venue('Paused', { crawlPausedAt: PAUSED }),
+      venue('Dot', { needsLook: true }),
+      venue('Failing', { lastRunStatus: 'failed', consecutiveFailures: 1 }),
+      venue('Paused dot', { crawlPausedAt: PAUSED, needsLook: true }),
+    ]);
+    expect(sorted.map((row) => row.name)).toEqual([
+      'Failing',
+      'Dot',
+      'Paused dot',
+      'Paused',
+      'Ok',
+    ]);
+    // A dot is not OK, so it never folds away.
+    expect(foldOk(sorted).shown.map((row) => row.name)).toContain('Dot');
+  });
+
+  it('counts every Needs you item with a venue, of any kind, per venue', () => {
+    const counts = needsByVenue([
+      { venueId: 'a' },
+      { venueId: 'a' },
+      { venueId: 'b' },
+      { venueId: null },
+    ]);
+    expect([...counts.entries()]).toEqual([
+      ['a', 2],
+      ['b', 1],
+    ]);
+  });
+
+  it('filters Needs a look to the venues with a dot', () => {
+    expect(matchesFilter(venue('A', { needsLook: true }), 'needsLook')).toBe(
+      true,
+    );
+    expect(matchesFilter(venue('B', { needsLook: false }), 'needsLook')).toBe(
+      false,
+    );
+    expect(matchesFilter(venue('C'), 'needsLook')).toBe(false);
   });
 
   it('folds OK venues past ten rows, never a single one', () => {
