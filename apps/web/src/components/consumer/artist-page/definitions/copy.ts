@@ -68,7 +68,9 @@ export const ARTIST_COPY = {
 
   // Past shows — crawl data only. Setlists and deep history were dropped with
   // #1170; this is the modest version, and it says out loud where it stops.
-  pastTitle: 'Previously',
+  // The board's heading (artist_past_m); it was "Previously" before the rows
+  // became stampable.
+  pastTitle: 'Past shows',
   pastNote: (since: string) =>
     `Concert Crawl started crawling in ${since}. Shows before that aren't tracked.`,
 

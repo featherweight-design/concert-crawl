@@ -3,7 +3,16 @@
 import React from 'react';
 import type { ArtistPastShow } from '@concert-crawl/types';
 import { cleanup, render } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Each row's pill reaches for the router and the attendance mutation.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => '/artists/nightjar-choir',
+}));
+vi.mock('@/lib/queries/use-attending-toggle', () => ({
+  useAttendingToggle: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 
 import { CRAWL_SINCE } from './definitions/constants';
 import { ARTIST_COPY } from './definitions/copy';

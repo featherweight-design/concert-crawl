@@ -27,6 +27,11 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+// Past rows carry the "I went" pill, which mutates attendance.
+vi.mock('@/lib/queries/use-attending-toggle', () => ({
+  useAttendingToggle: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }));
