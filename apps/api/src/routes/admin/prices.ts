@@ -289,11 +289,14 @@ const hasOpenPriceCheck = (): SQL<boolean> => {
 /** The search clause over the show, the venue and the fan's handle. */
 const searchClauseOf = (search: string): SQL | undefined => {
   const pattern = containsPattern(search);
-  const handlePattern = containsPattern(search.replace(/^@/, ''));
+  const handle = search.replace(/^@/, '');
+  // A bare "@" has no handle to look for; matching '%%' would list every fan.
   return or(
     ilike(events.title, pattern),
     ilike(venues.name, pattern),
-    ilike(userProfiles.handle, handlePattern),
+    handle === ''
+      ? undefined
+      : ilike(userProfiles.handle, containsPattern(handle)),
   );
 };
 
@@ -422,7 +425,7 @@ pricesAdminRouter.get(
       list.map((row) => ({
         ...row,
         state: stateOf(row),
-        rejection: parseRejection(row.archivedReason),
+        rejection: parseRejection(row),
       }));
 
     if (!count) {
@@ -691,7 +694,7 @@ pricesAdminRouter.get(
         rows: rows.map(({ archivedReason, ...row }) => ({
           ...row,
           state: stateOf(row),
-          rejection: parseRejection(archivedReason),
+          rejection: parseRejection({ ...row, archivedReason }),
         })),
       },
     });

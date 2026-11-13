@@ -1370,6 +1370,43 @@ describe('POST /v1/admin/prices/submissions/:id/reject', () => {
     expect(found?.rejection).toEqual({ reason: 'resale', note: null });
   });
 
+  it('does not read a re-approved price as rejected', async () => {
+    const event = await seedShow('reject-reapprove');
+    const row = await seedPriceSubmission(event.id, 'rej_re_user', {
+      status: 'pending',
+    });
+    await reject(row.id, { reason: 'other' });
+    await app.request(`/v1/admin/prices/submissions/${row.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'corroborated' }),
+    });
+    const res = await app.request(
+      '/v1/admin/prices/submissions?count=true&state=all',
+      { headers: ADMIN_HEADERS },
+    );
+    const body = (await res.json()) as {
+      data: {
+        rows: Array<{ id: string; state: string; rejection: unknown }>;
+      };
+    };
+    const found = body.data.rows.find((entry) => entry.id === row.id);
+    expect(found?.state).toBe('published');
+    expect(found?.rejection).toBeNull();
+  });
+
+  it('a bare "@" search does not match every handle', async () => {
+    const event = await seedShow('reject-at');
+    await seedUserProfile('rej_at_user', { handle: 'someone' });
+    await seedPriceSubmission(event.id, 'rej_at_user');
+    const res = await app.request(
+      '/v1/admin/prices/submissions?count=true&state=all&search=%40',
+      { headers: ADMIN_HEADERS },
+    );
+    const body = (await res.json()) as { data: { total: number } };
+    expect(body.data.total).toBe(0);
+  });
+
   it('refuses a price that is not waiting', async () => {
     const event = await seedShow('reject-published');
     const row = await seedPriceSubmission(event.id, 'rej_pub_user', {
