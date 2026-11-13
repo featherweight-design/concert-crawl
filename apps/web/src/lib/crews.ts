@@ -1,4 +1,5 @@
 import type {
+  EventsQueryKey,
   Crew,
   CrewDetail,
   CrewInvite,
@@ -7,6 +8,7 @@ import type {
   PublicCrewInvite,
 } from '@concert-crawl/types';
 import { apiClient } from './api';
+import { buildEventsApiParams, type BrowseParams } from './events-api-params';
 
 /**
  * The 409 code on join when the crew filled up between the landing render and
@@ -82,13 +84,39 @@ export async function fetchCrew(
 export async function fetchCrewShows(
   token: string,
   crewId: string,
+  /** The lens's filter query, from `crewLensFilterQuery`. Empty means none. */
+  filterQuery = '',
 ): Promise<CrewShow[]> {
   const data = await apiClient.get<CrewShowsResponse>(
-    `/v1/crews/${crewId}/shows`,
+    `/v1/crews/${crewId}/shows${filterQuery ? `?${filterQuery}` : ''}`,
     token,
   );
   return data.shows;
 }
+
+// The four Browse filters a crew lens honours (When, Where, Price, Vibe), as
+// the events endpoint's own keys. Search and the scope flags stay Browse's.
+const LENS_FILTER_KEYS: readonly EventsQueryKey[] = [
+  'from',
+  'to',
+  'venueSlug',
+  'filterPrice',
+  'filterVibe',
+];
+
+/**
+ * The lens feed's filter query, translated from Browse's page URL by the same
+ * mapper the events list uses, so the lens and the list read one filter the
+ * same way. Empty when no filter is set.
+ */
+export const crewLensFilterQuery = (params: BrowseParams): string => {
+  const full = buildEventsApiParams(params, { limit: 1 });
+  const lens = new URLSearchParams();
+  for (const key of LENS_FILTER_KEYS) {
+    for (const value of full.getAll(key)) lens.append(key, value);
+  }
+  return lens.toString();
+};
 
 /**
  * The invite sheet needs the token in hand before the copy button is tapped:

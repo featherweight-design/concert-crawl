@@ -11,7 +11,7 @@
 
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
-import { and, asc, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   crewInvites,
@@ -19,8 +19,13 @@ import {
   crewMutes,
   crews,
   db,
+  events,
   userProfiles,
 } from '@concert-crawl/db';
+import {
+  eventFilterConditions,
+  eventFilterShape,
+} from '../lib/event-filters.js';
 import type {
   CrewDetail,
   CrewInvite,
@@ -401,9 +406,24 @@ crewsRouter.get('/:crewId/shows', async (ctx) => {
     .from(crewMembers)
     .where(eq(crewMembers.crewId, parsed.data));
 
+  // The lens honours Browse's When, Where, Price and Vibe: the same keys and
+  // the same predicates as GET /v1/events. An invalid value is a 400 here, not
+  // an unfiltered list, so a lens never claims a filter it did not apply.
+  const filters = z.object(eventFilterShape).safeParse({
+    from: ctx.req.query('from'),
+    to: ctx.req.query('to'),
+    venueSlug: ctx.req.queries('venueSlug'),
+    filterPrice: ctx.req.query('filterPrice'),
+    filterVibe: ctx.req.queries('filterVibe'),
+  });
+  if (!filters.success)
+    return ctx.json({ success: false, error: 'Invalid filter' }, 400);
+  const { from, ...rest } = filters.data;
+
   const shows = await loadCrewShows(
     memberRows.map((row) => row.userId),
     'upcoming',
+    [...(from ? [gte(events.date, from)] : []), ...eventFilterConditions(rest)],
   );
   return ctx.json({ success: true, data: { shows } });
 });

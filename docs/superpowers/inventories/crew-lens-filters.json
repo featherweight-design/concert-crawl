@@ -1,0 +1,32 @@
+{
+  "feature": "Browse · the crew lens keeps When, Where, Price and Vibe applied, visible and removable",
+  "note": "Hugh's ruling (2026-11-13): with a crew lens on, the four filters stay applied and visible on the desktop bar and the phone chips. Needs CC_LENS_CREW_ID, a crew the audit user is in with an upcoming attended show at bluebird-theater with no price and the rock genre.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "lens-filters-match",
+      "label": "Browse with the lens and filters that keep the show",
+      "steps": [
+        {
+          "goto": "/events?crew=${CC_LENS_CREW_ID}&filterWhere=bluebird-theater&filterVibe=rock&filterPrice=tbd",
+          "wait": "text=Violet Grohl",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "lens-filters-empty",
+      "label": "Browse with the lens and a filter that hides every show",
+      "steps": [
+        {
+          "goto": "/events?crew=${CC_LENS_CREW_ID}&filterPrice=50-plus",
+          "wait": "text=Crickets.",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}

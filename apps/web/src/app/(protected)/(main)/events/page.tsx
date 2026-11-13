@@ -41,9 +41,9 @@ import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf';
 import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import { fetchSpotifyConnection, fetchTastePicks } from '@/lib/spotify';
-import { fetchCrews, fetchCrewShows } from '@/lib/crews';
+import { crewLensFilterQuery, fetchCrews, fetchCrewShows } from '@/lib/crews';
 import { isFeatureEnabled } from '@/lib/feature-flags';
-import { CrewLensList } from '@/components/consumer/crews';
+import { CREWS_COPY, CrewLensList } from '@/components/consumer/crews';
 import { FollowShelf } from '@/components/consumer/following';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { SHELF_SUGGESTION_POOL } from '@/components/consumer/following/definitions/constants';
@@ -360,6 +360,9 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
     typeof lensParam === 'string'
       ? (crews.find((crew) => crew.id === lensParam) ?? null)
       : null;
+  // The lens keeps When, Where, Price and Vibe applied (Hugh's ruling): the
+  // feed takes the same filters the list does.
+  const lensFilterQuery = crewLensFilterQuery(params);
   let lensShows: CrewShow[] = [];
   // Tracked separately from the empty list: a failed fetch that fell through to
   // `[]` would otherwise render as "nobody is going to anything".
@@ -367,7 +370,7 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
   if (lensCrew !== null) {
     if (token) {
       try {
-        lensShows = await fetchCrewShows(token, lensCrew.id);
+        lensShows = await fetchCrewShows(token, lensCrew.id, lensFilterQuery);
       } catch (err) {
         console.error('[browse] crew lens shows load failed', err);
         lensFailed = true;
@@ -604,19 +607,43 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
         </div>
       )}
 
-      {/* The lens replaces the calendar rather than composing with it: its feed
-          is the crew's attendance query, which the events endpoint's filters
-          have no purchase on. Everything below is Browse's own list. */}
-      {lensActive && (
-        <CrewLensList
-          crewId={lensCrew.id}
-          crewName={lensCrew.name}
-          patchSalt={lensCrew.patchSalt}
-          shows={lensShows}
-          failed={lensFailed}
-          clearLensHref={clearLensHref}
-        />
-      )}
+      {/* The lens replaces the calendar, but its feed honours When, Where,
+          Price and Vibe: the API applies the events endpoint's own predicates
+          to the crew's attendance query. Filters that hide every show get the
+          filtered empty state, not "your people are homebodies", which would
+          be a lie about the crew. Everything below is Browse's own list. */}
+      {lensActive &&
+        !lensFailed &&
+        lensShows.length === 0 &&
+        lensFilterQuery !== '' && (
+          <EmptyState
+            layout="card"
+            glyph="dots"
+            eyebrow={copy.emptyFilteredEyebrow}
+            title={copy.emptyFilteredTitle}
+            body={copy.emptyFilteredBody}
+            primaryCta={{
+              label: copy.emptyFilteredCta,
+              href: `/events?crew=${lensCrew.id}`,
+            }}
+            // The way out of the lens keeps the filters, as on the list.
+            secondaryCta={{
+              label: CREWS_COPY.lens.emptyCta,
+              href: clearLensHref,
+            }}
+          />
+        )}
+      {lensActive &&
+        (lensFailed || lensShows.length > 0 || lensFilterQuery === '') && (
+          <CrewLensList
+            crewId={lensCrew.id}
+            crewName={lensCrew.name}
+            patchSalt={lensCrew.patchSalt}
+            shows={lensShows}
+            failed={lensFailed}
+            clearLensHref={clearLensHref}
+          />
+        )}
 
       {tasteNudgeConnect && !lensActive && (
         <EmptyState

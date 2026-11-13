@@ -412,6 +412,71 @@ describe('/v1/crews', () => {
       ).json()) as ShowsBody;
       expect(body.data.shows.map((show) => show.eventId)).toEqual([eventId]);
     });
+
+    // The lens keeps When, Where, Price and Vibe applied: the feed takes the
+    // events endpoint's own keys and predicates.
+    describe('lens filters', () => {
+      const seedLensShow = async (
+        slug: string,
+        date: string,
+        extra: { ticketPriceMin?: string; genre?: string[] },
+      ): Promise<string> => {
+        const venue = await seedVenue({ name: `Venue ${slug}`, slug });
+        const event = await seedEvent(venue.id, {
+          date,
+          artist: `Act ${slug}`,
+          ...extra,
+        });
+        await seedUserEvent(KEEPER, event.id, {
+          status: null,
+          attendingAt: new Date(),
+        });
+        return event.id;
+      };
+
+      const lens = async (crewId: string, query: string): Promise<string[]> => {
+        const res = await app.request(`/v1/crews/${crewId}/shows?${query}`);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as ShowsBody;
+        return body.data.shows.map((show) => show.eventId);
+      };
+
+      it('narrows by Where, Price, Vibe and the When window', async () => {
+        const cheapRock = await seedLensShow('lf-cheap', dayOffset(3), {
+          ticketPriceMin: '15',
+          genre: ['rock'],
+        });
+        const priceyJazz = await seedLensShow('lf-pricey', dayOffset(10), {
+          ticketPriceMin: '60',
+          genre: ['jazz'],
+        });
+        const crewId = await seedCrew([KEEPER, MATE]);
+        setAuth();
+
+        expect(await lens(crewId, '')).toEqual([cheapRock, priceyJazz]);
+        expect(await lens(crewId, 'venueSlug=lf-pricey')).toEqual([priceyJazz]);
+        expect(await lens(crewId, 'filterPrice=under-25')).toEqual([cheapRock]);
+        expect(await lens(crewId, 'filterPrice=50-plus')).toEqual([priceyJazz]);
+        expect(await lens(crewId, 'filterVibe=jazz')).toEqual([priceyJazz]);
+        expect(await lens(crewId, `to=${dayOffset(5)}`)).toEqual([cheapRock]);
+        expect(await lens(crewId, `from=${dayOffset(5)}`)).toEqual([
+          priceyJazz,
+        ]);
+        // Filters AND together.
+        expect(
+          await lens(crewId, 'venueSlug=lf-cheap&filterPrice=50-plus'),
+        ).toEqual([]);
+      });
+
+      it('rejects an invalid filter instead of returning an unfiltered list', async () => {
+        const crewId = await seedCrew([KEEPER, MATE]);
+        setAuth();
+        const res = await app.request(
+          `/v1/crews/${crewId}/shows?filterPrice=cheap`,
+        );
+        expect(res.status).toBe(400);
+      });
+    });
   });
 
   // The event-detail crew line. Two properties carry the weight: the viewer is

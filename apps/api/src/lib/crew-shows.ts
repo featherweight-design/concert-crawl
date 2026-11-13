@@ -6,7 +6,17 @@
 // user_events_user_attending_idx. A crew is capped at 12 members, so the
 // widest possible query is a 12-way `user_id IN (...)` against that index.
 
-import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
+import {
+  type SQL,
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  ne,
+  sql,
+} from 'drizzle-orm';
 import {
   artists,
   crewMembers,
@@ -49,6 +59,7 @@ const minGoingFor = (tense: CrewShowTense): number =>
 const selectAttendanceRows = async (
   memberIds: string[],
   tense: CrewShowTense,
+  extraConditions: SQL[],
 ) =>
   db
     .select({
@@ -84,6 +95,7 @@ const selectAttendanceRows = async (
         // is going to. Postponed rows stay in: the surviving date is the one
         // that matters (#1212).
         ne(events.status, 'cancelled'),
+        ...extraConditions,
       ),
     )
     .orderBy(
@@ -105,10 +117,12 @@ const selectAttendanceRows = async (
 export const loadCrewShows = async (
   memberIds: string[],
   tense: CrewShowTense,
+  /** The Browse filters (When, Where, Price, Vibe) a crew lens applies. */
+  extraConditions: SQL[] = [],
 ): Promise<CrewShow[]> => {
   if (memberIds.length === 0) return [];
 
-  const rows = await selectAttendanceRows(memberIds, tense);
+  const rows = await selectAttendanceRows(memberIds, tense, extraConditions);
   const minGoing = minGoingFor(tense);
   const byEvent = new Map<string, CrewShow>();
 
