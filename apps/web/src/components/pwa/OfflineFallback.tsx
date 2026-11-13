@@ -58,7 +58,7 @@ export const OfflineFallback = () => {
         data-testid="offline-fallback"
         // Under the header (56px) with room for the bottom nav; the icon block
         // sits about 120px from the top, as bp-s-offline_empty_m draws it.
-        className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-2xl flex-col gap-7 px-5 pb-28 pt-16"
+        className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col gap-7 px-5 pb-28 pt-16"
       >
         <div className="flex flex-col items-center gap-3 text-center">
           {empty ? <NothingCachedTile /> : <NoSignalTile />}

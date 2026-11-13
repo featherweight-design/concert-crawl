@@ -36,7 +36,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const target = query ? `/auth/complete?${query}` : '/auth/complete';
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
+    <main className="flex min-h-dvh items-center justify-center">
       {/* forceRedirectUrl routes new users through `/auth/complete`, which
           consumes the invite cookie set by `/auth/code` and POSTs
           `/v1/auth/redeem-code` so the invite row is marked used. Without

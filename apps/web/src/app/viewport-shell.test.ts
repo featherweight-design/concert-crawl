@@ -47,6 +47,23 @@ describe('mobile viewport shell', () => {
     expect(shell).not.toContain('min-h-screen');
   });
 
+  // The pages outside the phone shell had the same bug: `100vh` is the
+  // largest viewport, so each was a toolbar taller than the screen.
+  it.each([
+    'legal/terms/page.tsx',
+    'legal/privacy/page.tsx',
+    'legal/beta/page.tsx',
+    'sign-in/[[...sign-in]]/page.tsx',
+    'sign-up/[[...sign-up]]/page.tsx',
+    'bot/page.tsx',
+    '(protected)/(main)/events/[id]/submissions/[submissionId]/dispute/page.tsx',
+    '(protected)/admin/layout.tsx',
+    '../components/pwa/OfflineFallback.tsx',
+  ])('%s sizes to the dynamic viewport', (file) => {
+    const source = readFileSync(resolve(__dirname, file), 'utf8');
+    expect(source).not.toMatch(/min-h-screen|\b100vh\b|\bh-screen\b/);
+  });
+
   it('pads the phone shell for every live inset', () => {
     const shell = tokens(PHONE_SHELL_CLASS);
     expect(shell).toContain('pb-[env(safe-area-inset-bottom)]');

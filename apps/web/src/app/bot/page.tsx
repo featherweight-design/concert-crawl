@@ -150,7 +150,7 @@ export default function BotPage() {
       data-theme="light"
       data-testid="bot-page-root"
       style={LIGHT_THEME_STYLE}
-      className="min-h-screen bg-bg text-fg"
+      className="min-h-dvh bg-bg text-fg"
     >
       <div className="mx-auto max-w-[720px] px-5 py-10 min-[560px]:px-10">
         <header className="mb-10 border-b border-border pb-6">
