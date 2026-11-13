@@ -33,7 +33,7 @@
  * keeps every row current.
  */
 
-import { and, asc, eq, gt, like, or } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, like, or } from 'drizzle-orm';
 import { db, events, venues } from '@concert-crawl/db';
 import {
   CRAWLER_USER_AGENT,
@@ -320,6 +320,10 @@ export async function rederiveEventArtists(
       .where(
         and(
           cursor === null ? undefined : gt(events.id, cursor),
+          // Admin 4a: a show added by hand and a lineup an admin saved keep
+          // their bill; skipping them here also spends no Haiku on them.
+          eq(events.manual, false),
+          isNull(events.lineupEditedAt),
           options.onlyFlattenedBillings
             ? or(like(events.artist, '% & %'), like(events.artist, '% + %'))
             : undefined,
@@ -550,7 +554,15 @@ export async function rederiveEventArtists(
           ...(hides ? { hiddenFromConsumer: true } : {}),
           updatedAt: new Date(),
         })
-        .where(eq(events.id, row.id));
+        // Re-checked at write time: an admin may save the lineup while the
+        // run is adjudicating this row.
+        .where(
+          and(
+            eq(events.id, row.id),
+            eq(events.manual, false),
+            isNull(events.lineupEditedAt),
+          ),
+        );
     }
     if (stopped) break;
   }

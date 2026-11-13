@@ -179,6 +179,20 @@ export const events = pgTable(
     // never "Cancelled". Cleared when anyone confirms a real cancellation or
     // sets the show back to upcoming.
     delistedAt: timestamp('delisted_at', { withTimezone: true }),
+    // Admin 4a: a show added by hand, for one the crawler cannot see. The
+    // crawl never removes it (Pass 2, the stale sweep and drift reconcile skip
+    // it) and never rewrites its title, times, description or lineup. A crawled
+    // listing that lands on it updates crawl-owned fields only (ticket links
+    // when it has one, event page, status, seen). The one exception is
+    // alignToNights setting the show time when it joins a listing to the
+    // same night (an empty time, or a morning misread of an evening show).
+    manual: boolean('manual').notNull().default(false),
+    // Clerk user id of the admin who added a manual show. NULL on crawled rows.
+    createdBy: text('created_by'),
+    // Set when an admin saves the lineup. While set, nothing that writes the
+    // bill (the crawl upsert, Repair event artists, merge-duplicate-nights)
+    // may overwrite the four artist arrays.
+    lineupEditedAt: timestamp('lineup_edited_at', { withTimezone: true }),
     // search_vector is a generated column managed via raw SQL in migration
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

@@ -1,14 +1,28 @@
 import type { Browser } from 'playwright';
-import { and, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
   db,
   venues,
   crawlRuns,
+  eventRedirects,
   events,
   notifications,
   costTracking,
 } from '@concert-crawl/db';
-import type { CrawlRun, CrawlRunReason } from '@concert-crawl/db';
+import type { CrawlRun, CrawlRunReason, TicketLink } from '@concert-crawl/db';
 import { reportFailure } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT, showTimeKey } from '@concert-crawl/types';
 import {
@@ -369,6 +383,144 @@ async function markEventsSeenForVenue(
       ),
     );
 }
+
+/**
+ * Admin 4a (READINESS A1): a listing whose crawl key belongs to an event an
+ * admin merged away updates the merge target instead of inserting the
+ * duplicate again. It writes crawl-owned fields only: the ticket links (a
+ * manual target takes them; a crawled target, which has its own listing, only
+ * fills ones it lacks) and the seen marks, so Pass 2 never counts the target
+ * missing while this listing is still up. Title, lineup, date and times stay
+ * as the target has them.
+ *
+ * A listing is routed only when its key has no live row of its own: none in
+ * `existingIdFor`, or the one there is the merged-away source (an admin merged
+ * it while this crawl was extracting). A target no longer upcoming takes
+ * nothing, and the listing is upserted as any relisted show is. A target an
+ * admin moved to another venue takes nothing either, and the listing is
+ * dropped: its fields and seen marks belong to the old venue's page.
+ *
+ * Returns the listings left to upsert and the keys it consumed.
+ */
+async function routeMergedListings<
+  T extends {
+    canonicalArtist: string;
+    date: string;
+    showTime: string | null;
+    ticketUrl: string | null;
+    ticketLinks: TicketLink[] | null;
+    eventUrl: string | null;
+  },
+>(
+  venueId: string,
+  listings: T[],
+  existingIdFor: (listing: T) => string | undefined,
+  seenAt: Date,
+): Promise<{ remaining: T[]; routedKeys: Set<string> }> {
+  const routedKeys = new Set<string>();
+  if (listings.length === 0) return { remaining: listings, routedKeys };
+  const dates = [...new Set(listings.map((listing) => listing.date))];
+  const redirects = await db
+    .select({
+      sourceId: eventRedirects.sourceId,
+      targetId: eventRedirects.targetId,
+      targetVenueId: events.venueId,
+      targetStatus: events.status,
+      canonicalArtist: eventRedirects.sourceCanonicalArtist,
+      date: eventRedirects.sourceDate,
+      showTime: eventRedirects.sourceShowTime,
+    })
+    .from(eventRedirects)
+    .innerJoin(events, eq(events.id, eventRedirects.targetId))
+    .where(
+      and(
+        eq(eventRedirects.sourceVenueId, venueId),
+        inArray(eventRedirects.sourceDate, dates),
+      ),
+    )
+    // Oldest first, so where two merges left one key the latest one wins,
+    // the same target on every crawl.
+    .orderBy(asc(eventRedirects.createdAt));
+  if (redirects.length === 0) return { remaining: listings, routedKeys };
+  const redirectByKey = new Map<string, (typeof redirects)[number]>();
+  for (const redirect of redirects) {
+    if (redirect.canonicalArtist === null || redirect.date === null) continue;
+    redirectByKey.set(
+      dedupKey(redirect.canonicalArtist, redirect.date, redirect.showTime),
+      redirect,
+    );
+  }
+  const remaining: T[] = [];
+  for (const listing of listings) {
+    const key = dedupKey(
+      listing.canonicalArtist,
+      listing.date,
+      listing.showTime,
+    );
+    const redirect = redirectByKey.get(key);
+    const existingId = existingIdFor(listing);
+    if (
+      redirect === undefined ||
+      (existingId !== undefined && existingId !== redirect.sourceId) ||
+      redirect.targetStatus !== 'upcoming'
+    ) {
+      remaining.push(listing);
+      continue;
+    }
+    routedKeys.add(key);
+    if (redirect.targetVenueId !== venueId) continue;
+    const targetId = redirect.targetId;
+    // A listing never erases a link. Where it has one, a manual target takes
+    // it and a crawled target (which has its own listing) only fills an
+    // empty one; the URL and the links derived from it move as a pair.
+    const takesLink = sql`(${events.manual} OR ${events.ticketUrl} IS NULL)`;
+    const ticket =
+      listing.ticketUrl === null
+        ? {}
+        : {
+            ticketUrl: sql`CASE WHEN ${takesLink} THEN ${listing.ticketUrl}::text ELSE ${events.ticketUrl} END`,
+            ticketLinks: sql`CASE WHEN ${takesLink} THEN ${JSON.stringify(listing.ticketLinks)}::jsonb ELSE ${events.ticketLinks} END`,
+          };
+    const page =
+      listing.eventUrl === null
+        ? {}
+        : {
+            eventUrl: sql`CASE WHEN ${events.manual} OR ${events.eventUrl} IS NULL THEN ${listing.eventUrl}::text ELSE ${events.eventUrl} END`,
+          };
+    // Re-checked at write time: an admin may cancel the target meanwhile.
+    const routed = await db
+      .update(events)
+      .set({
+        ...ticket,
+        ...page,
+        lastSeenAt: seenAt,
+        firstMissingAt: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(events.id, targetId), eq(events.status, 'upcoming')))
+      .returning({ id: events.id });
+    if (routed.length === 0) {
+      routedKeys.delete(key);
+      remaining.push(listing);
+    }
+  }
+  return { remaining, routedKeys };
+}
+
+/**
+ * Admin 4a: the crawl upsert's value for a listing-owned column. A show added
+ * by hand keeps what the admin entered; every other row takes the crawl's.
+ */
+const listingOwned = (column: AnyPgColumn, crawled: SQL): SQL =>
+  sql`CASE WHEN ${events.manual} THEN ${column} ELSE ${crawled} END`;
+
+/**
+ * Admin 4a: the crawl upsert's value for one of the four bill columns. A
+ * manual show, or a lineup an admin saved (`lineup_edited_at`), keeps its
+ * bill; otherwise the stored bill survives a NULL (no-verdict) crawl.
+ */
+const billOwned = (column: AnyPgColumn, excluded: string): SQL =>
+  sql`CASE WHEN ${events.manual} OR ${events.lineupEditedAt} IS NOT NULL THEN ${column} ELSE COALESCE(${sql.raw(`excluded.${excluded}`)}, ${column}) END`;
 
 // crawlVenue's return value: the crawl_runs row plus the DB ids of events
 // this run INSERTED (as opposed to updated). The Spotify fan-out (#763 §10.1)
@@ -1008,6 +1160,8 @@ export async function crawlVenue(
         verified: events.verified,
         eventUrl: events.eventUrl,
         updatedAt: events.updatedAt,
+        manual: events.manual,
+        lineupEditedAt: events.lineupEditedAt,
       })
       .from(events)
       .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')));
@@ -1165,6 +1319,10 @@ export async function crawlVenue(
     // upsert's RETURNING clause by checking each returned (canonical_artist,
     // date, show_time) key against existingMap. Feeds the Spotify fan-out (#763 §10.1).
     const insertedEventIds: string[] = [];
+    // Admin 4a: keys of listings routed to a merge target. Their bill names
+    // the target's show, whose lineup is the target's own, so it is not
+    // projected.
+    const mergedListingKeys = new Set<string>();
     // Track (canonical_artist, date, show_time) tuples seen this run so the
     // stale-event detection below can refresh last_seen_at for them. Includes
     // both freshly-inserted and unchanged-hash events — "seen" means "the
@@ -1251,6 +1409,9 @@ export async function crawlVenue(
       // under its new key.
       const { aligned, promotions } = alignToNights(enriched, existingRows);
       for (const promotion of promotions) {
+        // Admin 4a: this also applies to a manual row. It only joins a
+        // listing to the same night (an empty time, or a morning misread of
+        // an evening show); skipping it would list the show twice.
         await db
           .update(events)
           .set({ showTime: promotion.showTime, updatedAt: new Date() })
@@ -1307,8 +1468,11 @@ export async function crawlVenue(
         const existing = existingMap.get(
           dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
         );
+        // Admin 4a: a manual row keeps what the admin typed, so a listing
+        // that words it differently is expected, not a change to alert on.
         if (
           !existing ||
+          existing.manual ||
           existing.verified !== true ||
           existing.sourceHash === null
         ) {
@@ -1393,6 +1557,11 @@ export async function crawlVenue(
               derived: string[] | null,
               stored: unknown,
             ): boolean => {
+              // Admin 4a: the upsert never writes a manual or saved bill, so
+              // a listing that bills it differently is not a reason to write.
+              if (existing.manual || existing.lineupEditedAt !== null) {
+                return false;
+              }
               if (derived === null) return false;
               if (!Array.isArray(stored) || stored.length !== derived.length) {
                 return true;
@@ -1510,108 +1679,160 @@ export async function crawlVenue(
           };
         });
 
-        for (const evt of eventsToUpsert) {
-          if (
-            existingMap.has(
-              dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
-            )
-          ) {
-            eventsUpdated++;
-          } else {
-            eventsInserted++;
-          }
-        }
+        const hasRow = (value: (typeof eventValues)[number]): boolean =>
+          existingMap.has(
+            dedupKey(value.canonicalArtist, value.date, value.showTime),
+          );
+        // Admin 4a: a listing whose key an admin merged away updates the
+        // merge target, never inserts again.
+        const { remaining: valuesToUpsert, routedKeys } =
+          await routeMergedListings(
+            venueId,
+            eventValues,
+            (value) =>
+              existingMap.get(
+                dedupKey(value.canonicalArtist, value.date, value.showTime),
+              )?.id,
+            startedAtDate,
+          );
+        for (const key of routedKeys) mergedListingKeys.add(key);
+        const updatedCount = valuesToUpsert.filter(hasRow).length;
+        eventsUpdated += updatedCount + routedKeys.size;
+        eventsInserted += valuesToUpsert.length - updatedCount;
 
-        const upsertedRows = await db
-          .insert(events)
-          .values(eventValues)
-          .onConflictDoUpdate({
-            // Conflict target is the partial UNIQUE index added in 0057 —
-            // (venue_id, date, canonical_artist, show_time) NULLS NOT
-            // DISTINCT WHERE status='upcoming'. targetWhere mirrors the
-            // partial index predicate so Postgres can identify the index
-            // for ON CONFLICT resolution. Status overrides (cancelled,
-            // postponed) sit outside this index and won't be touched by
-            // future crawls. (#1053)
-            target: [
-              events.venueId,
-              events.date,
-              events.canonicalArtist,
-              events.showTime,
-            ],
-            targetWhere: eq(events.status, 'upcoming'),
-            set: {
-              title: sql`excluded.title`,
-              // canonical_title is now a display/search field only (#1053).
-              // We still write it on conflict so the row tracks the latest
-              // billing title from the crawler. Any future code path that
-              // updates `title` MUST also update `canonical_title` to keep
-              // the pair in lock-step.
-              canonicalTitle: sql`excluded.canonical_title`,
-              // canonical_artist + show_time are the load-bearing dedup
-              // pair (#1053). Writing excluded.* here is a no-op on the
-              // stored values (they matched to reach this conflict), but
-              // keeping them explicit documents the invariant: any future
-              // code path that writes artist/show_time MUST keep
-              // canonical_artist in lock-step.
-              canonicalArtist: sql`excluded.canonical_artist`,
-              // artist intentionally NOT updated — once the winner row is
-              // established, its artist string stays. Otherwise the field
-              // could flip between extractions on compound-title shows.
-              // headliners tracks the latest billing from the crawler, so a
-              // bill that turns into a co-headline (or drops back to one act)
-              // is picked up on re-crawl. Any path writing headliners MUST
-              // write canonical_headliners in the same statement (#1203).
-              //
-              // The array is taken wholesale. It used to be rebuilt as
-              // array_prepend(stored artist, excluded[2:]) to hold the old
-              // headliners[0] === artist invariant, but the derivation ladder
-              // retired that invariant: `artist` is now the event's DISPLAY
-              // string and can be an event-shaped title ("Jazz Series presents")
-              // while headliners holds the real bill (["Kokoroko"]). Re-pinning
-              // there would collapse a correct bill back to [title] on the next
-              // upsert and desynchronize this column from canonical_headliners.
-              //
-              // NULL is the ladder reaching no verdict at all, which only the
-              // adjudicator-outage path emits. The stored bill is kept: a
-              // transient Haiku failure must not erase a correct answer and
-              // de-project its artists until some later crawl happens to
-              // succeed. The four columns below preserve it in lock-step.
-              headliners: sql`COALESCE(excluded.headliners, ${events.headliners})`,
-              canonicalHeadliners: sql`COALESCE(excluded.canonical_headliners, ${events.canonicalHeadliners})`,
-              supportingArtists: sql`COALESCE(excluded.supporting_artists, ${events.supportingArtists})`,
-              canonicalSupporting: sql`COALESCE(excluded.canonical_supporting, ${events.canonicalSupporting})`,
-              // tour_name is admin-editable (#992) and only ever auto-populated
-              // by the LLM extractor — schema.org JSON-LD has no such field,
-              // so a JSON-LD re-crawl always arrives with NULL. Taking
-              // excluded.tour_name wholesale would wipe an admin's manual entry
-              // on the very next nightly crawl. COALESCE lets a freshly
-              // extracted name win when the crawler actually has one, and
-              // preserves the stored value when it does not.
-              tourName: sql`COALESCE(excluded.tour_name, ${events.tourName})`,
-              doorsTime: sql`excluded.doors_time`,
-              showTime: sql`excluded.show_time`,
-              ticketUrl: sql`excluded.ticket_url`,
-              ticketLinks: sql`excluded.ticket_links`,
-              eventUrl: sql`excluded.event_url`,
-              description: sql`excluded.description`,
-              imageUrl: sql`excluded.image_url`,
-              status: sql`excluded.status`,
-              extractionStrategy: sql`excluded.extraction_strategy`,
-              confidenceScore: sql`excluded.confidence_score`,
-              sourceHash: sql`excluded.source_hash`,
-              updatedAt: new Date(),
-              // One-way promotion: once verified, stays verified; promotes to
-              // true when confidence crosses the threshold on re-crawl.
-              verified: sql`CASE WHEN excluded.verified = TRUE THEN TRUE ELSE ${events.verified} END`,
-            },
-          })
-          .returning({
-            id: events.id,
-            canonicalArtist: events.canonicalArtist,
-            date: events.date,
-            showTime: events.showTime,
-          });
+        const upsertedRows =
+          valuesToUpsert.length === 0
+            ? []
+            : await db
+                .insert(events)
+                .values(valuesToUpsert)
+                .onConflictDoUpdate({
+                  // Conflict target is the partial UNIQUE index added in 0057 —
+                  // (venue_id, date, canonical_artist, show_time) NULLS NOT
+                  // DISTINCT WHERE status='upcoming'. targetWhere mirrors the
+                  // partial index predicate so Postgres can identify the index
+                  // for ON CONFLICT resolution. Status overrides (cancelled,
+                  // postponed) sit outside this index and won't be touched by
+                  // future crawls. (#1053)
+                  target: [
+                    events.venueId,
+                    events.date,
+                    events.canonicalArtist,
+                    events.showTime,
+                  ],
+                  targetWhere: eq(events.status, 'upcoming'),
+                  set: {
+                    title: listingOwned(events.title, sql`excluded.title`),
+                    // canonical_title is now a display/search field only (#1053).
+                    // We still write it on conflict so the row tracks the latest
+                    // billing title from the crawler. Any future code path that
+                    // updates `title` MUST also update `canonical_title` to keep
+                    // the pair in lock-step.
+                    canonicalTitle: listingOwned(
+                      events.canonicalTitle,
+                      sql`excluded.canonical_title`,
+                    ),
+                    // canonical_artist + show_time are the load-bearing dedup
+                    // pair (#1053). Writing excluded.* here is a no-op on the
+                    // stored values (they matched to reach this conflict), but
+                    // keeping them explicit documents the invariant: any future
+                    // code path that writes artist/show_time MUST keep
+                    // canonical_artist in lock-step.
+                    canonicalArtist: sql`excluded.canonical_artist`,
+                    // artist intentionally NOT updated — once the winner row is
+                    // established, its artist string stays. Otherwise the field
+                    // could flip between extractions on compound-title shows.
+                    // headliners tracks the latest billing from the crawler, so a
+                    // bill that turns into a co-headline (or drops back to one act)
+                    // is picked up on re-crawl. Any path writing headliners MUST
+                    // write canonical_headliners in the same statement (#1203).
+                    //
+                    // The array is taken wholesale. It used to be rebuilt as
+                    // array_prepend(stored artist, excluded[2:]) to hold the old
+                    // headliners[0] === artist invariant, but the derivation ladder
+                    // retired that invariant: `artist` is now the event's DISPLAY
+                    // string and can be an event-shaped title ("Jazz Series presents")
+                    // while headliners holds the real bill (["Kokoroko"]). Re-pinning
+                    // there would collapse a correct bill back to [title] on the next
+                    // upsert and desynchronize this column from canonical_headliners.
+                    //
+                    // NULL is the ladder reaching no verdict at all, which only the
+                    // adjudicator-outage path emits. The stored bill is kept: a
+                    // transient Haiku failure must not erase a correct answer and
+                    // de-project its artists until some later crawl happens to
+                    // succeed. The four columns below preserve it in lock-step.
+                    //
+                    // Admin 4a: a manual show or an admin-saved lineup
+                    // (`lineup_edited_at`) keeps its bill whatever the crawl says.
+                    headliners: billOwned(events.headliners, 'headliners'),
+                    canonicalHeadliners: billOwned(
+                      events.canonicalHeadliners,
+                      'canonical_headliners',
+                    ),
+                    supportingArtists: billOwned(
+                      events.supportingArtists,
+                      'supporting_artists',
+                    ),
+                    canonicalSupporting: billOwned(
+                      events.canonicalSupporting,
+                      'canonical_supporting',
+                    ),
+                    // tour_name is admin-editable (#992) and only ever auto-populated
+                    // by the LLM extractor — schema.org JSON-LD has no such field,
+                    // so a JSON-LD re-crawl always arrives with NULL. Taking
+                    // excluded.tour_name wholesale would wipe an admin's manual entry
+                    // on the very next nightly crawl. COALESCE lets a freshly
+                    // extracted name win when the crawler actually has one, and
+                    // preserves the stored value when it does not.
+                    //
+                    // Admin 4a (READINESS A1): on a show added by hand, every
+                    // listing-owned column keeps what the admin entered
+                    // (`listingOwned`); the crawl still writes the crawl-owned
+                    // ones (ticket links, event page, status, hash).
+                    tourName: listingOwned(
+                      events.tourName,
+                      sql`COALESCE(excluded.tour_name, ${events.tourName})`,
+                    ),
+                    doorsTime: listingOwned(
+                      events.doorsTime,
+                      sql`excluded.doors_time`,
+                    ),
+                    showTime: sql`excluded.show_time`,
+                    // A listing with no link never erases one an admin typed
+                    // on a manual row; the URL and its links move as a pair.
+                    ticketUrl: sql`CASE WHEN ${events.manual} AND excluded.ticket_url IS NULL THEN ${events.ticketUrl} ELSE excluded.ticket_url END`,
+                    ticketLinks: sql`CASE WHEN ${events.manual} AND excluded.ticket_url IS NULL THEN ${events.ticketLinks} ELSE excluded.ticket_links END`,
+                    eventUrl: sql`CASE WHEN ${events.manual} AND excluded.event_url IS NULL THEN ${events.eventUrl} ELSE excluded.event_url END`,
+                    description: listingOwned(
+                      events.description,
+                      sql`excluded.description`,
+                    ),
+                    imageUrl: listingOwned(
+                      events.imageUrl,
+                      sql`excluded.image_url`,
+                    ),
+                    status: sql`excluded.status`,
+                    extractionStrategy: listingOwned(
+                      events.extractionStrategy,
+                      sql`excluded.extraction_strategy`,
+                    ),
+                    confidenceScore: listingOwned(
+                      events.confidenceScore,
+                      sql`excluded.confidence_score`,
+                    ),
+                    sourceHash: sql`excluded.source_hash`,
+                    updatedAt: new Date(),
+                    // One-way promotion: once verified, stays verified; promotes to
+                    // true when confidence crosses the threshold on re-crawl.
+                    verified: sql`CASE WHEN excluded.verified = TRUE THEN TRUE ELSE ${events.verified} END`,
+                  },
+                })
+                .returning({
+                  id: events.id,
+                  canonicalArtist: events.canonicalArtist,
+                  date: events.date,
+                  showTime: events.showTime,
+                });
 
         // A returned row whose (canonical_artist, date, show_time) key was
         // absent from existingMap (loaded before the upsert) is a fresh
@@ -1667,15 +1888,24 @@ export async function crawlVenue(
       // other than the LLM emit no verdict at all, and treating "unclassified"
       // as "not a concert" would stop projecting most of the catalogue.
       const hiddenKeys = await hiddenEventKeys(venueId);
+      // Admin 4a: a manual row or a saved lineup keeps the admin's bill, so
+      // the listing's bill names no artist of that show and is not projected.
+      const billLockedKeys = new Set(
+        [...existingMap]
+          .filter(([, row]) => row.manual || row.lineupEditedAt !== null)
+          .map(([key]) => key),
+      );
       await projectArtists(
         eventsWithHashes
-          .filter(
-            (evt) =>
+          .filter((evt) => {
+            const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
+            return (
               evt.isConcert !== false &&
-              !hiddenKeys.has(
-                dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
-              ),
-          )
+              !hiddenKeys.has(key) &&
+              !billLockedKeys.has(key) &&
+              !mergedListingKeys.has(key)
+            );
+          })
           .flatMap((evt) => [
             // Headliners, NOT `evt.artist`. `artist` is the event's display
             // string and the seed for `canonical_artist`, the live dedup key —
@@ -1777,6 +2007,9 @@ export async function crawlVenue(
             gte(events.date, DENVER_TODAY),
             lt(events.lastSeenAt, startedAtDate),
             isNull(events.firstMissingAt),
+            // Admin 4a: a show added by hand is one the crawl can't see, so
+            // its absence from the listing is never "missing".
+            eq(events.manual, false),
           ),
         );
     }

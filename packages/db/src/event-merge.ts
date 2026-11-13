@@ -11,6 +11,7 @@ import {
   userEventDismissals,
   userEvents,
 } from './schema/index.js';
+import type { Event } from './schema/index.js';
 
 export interface MergeEventRowsInput {
   sourceId: string;
@@ -29,6 +30,11 @@ export interface MergeEventRowsInput {
 
 export interface MergeEventRowsResult {
   counts: Record<string, number>;
+  /**
+   * The deleted source row as it was, for an audit written outside this
+   * function (a Needs you answer records it as its `before`).
+   */
+  source: Event;
   /** People who were watching the row that is gone, read before anything moved. */
   movedWatcherIds: string[];
 }
@@ -57,6 +63,19 @@ export const mergeEventRows = async ({
     throw new Error('Cannot merge an event into itself');
   }
   return db.transaction(async (tx) => {
+    // The whole source row, locked: its crawl key goes on the redirect (so
+    // the crawl keeps updating the target instead of re-inserting the
+    // duplicate) and the full row goes in the audit, since the row itself is
+    // deleted below. Missing here means a concurrent merge or delete won.
+    const [sourceRow] = await tx
+      .select()
+      .from(events)
+      .where(eq(events.id, sourceId))
+      .for('update');
+    if (!sourceRow) {
+      throw new Error('Source event disappeared mid-merge');
+    }
+
     // Captured BEFORE any row moves: these are the users who were watching
     // the row that is disappearing, and they are the only ones for whom
     // anything changed. Reading watchers off the target after the merge
@@ -194,12 +213,18 @@ export const mergeEventRows = async ({
       .update(eventRedirects)
       .set({ targetId })
       .where(eq(eventRedirects.targetId, sourceId));
+    const sourceKey = {
+      sourceVenueId: sourceRow.venueId,
+      sourceDate: sourceRow.date,
+      sourceCanonicalArtist: sourceRow.canonicalArtist,
+      sourceShowTime: sourceRow.showTime,
+    };
     await tx
       .insert(eventRedirects)
-      .values({ sourceId, targetId })
+      .values({ sourceId, targetId, ...sourceKey })
       .onConflictDoUpdate({
         target: eventRedirects.sourceId,
-        set: { targetId },
+        set: { targetId, ...sourceKey },
       });
 
     // With every reference moved, deleting the source row is safe — there's
@@ -239,6 +264,7 @@ export const mergeEventRows = async ({
         targetId,
         metadata: {
           sourceId,
+          source: sourceRow,
           referencesMoved: counts,
           suggestion: suggestion ?? null,
           notifyWatchers,
@@ -248,6 +274,7 @@ export const mergeEventRows = async ({
 
     return {
       counts,
+      source: sourceRow,
       movedWatcherIds: movedWatchers.map((row) => row.userId),
     };
   });

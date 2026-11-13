@@ -7,6 +7,7 @@ import {
   userEvents,
   venues,
 } from '@concert-crawl/db';
+import type { Event } from '@concert-crawl/db';
 import { fanoutWatchNotification } from '@concert-crawl/push';
 
 export interface MergeEventsInput {
@@ -25,7 +26,12 @@ export interface MergeEventsInput {
 }
 
 export type MergeEventsResult =
-  | { ok: 'merged'; referencesMoved: Record<string, number> }
+  | {
+      ok: 'merged';
+      referencesMoved: Record<string, number>;
+      /** The deleted source row as it was, for an audit written by the caller. */
+      source: Event;
+    }
   | { ok: 'source_not_found' }
   | { ok: 'target_not_found' };
 
@@ -110,5 +116,9 @@ export const mergeEvents = async ({
     );
   }
 
-  return { ok: 'merged', referencesMoved: merged.counts };
+  return {
+    ok: 'merged',
+    referencesMoved: merged.counts,
+    source: merged.source,
+  };
 };

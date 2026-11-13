@@ -25,7 +25,7 @@
  * ("Rossi" and "Rossi.") the pair is listed for the admin artists queue.
  */
 
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   artists,
   auditLog,
@@ -225,6 +225,9 @@ const fillsFrom = (
   for (const group of FILL_GROUPS) {
     const anchor = group[0];
     if (survivor[anchor] !== null) continue;
+    // Admin 4a: a lineup an admin saved is never filled from a donor's bill,
+    // even where it is empty (an admin may have cleared the supports).
+    if (anchor === 'headliners' && survivor.lineupEditedAt !== null) continue;
     const donor = donors.find((row) => row[anchor] != null);
     if (!donor) continue;
     fields.push(anchor);
@@ -251,7 +254,9 @@ export async function mergeDuplicateNights(
       showTime: events.showTime,
     })
     .from(events)
-    .where(eq(events.status, 'upcoming'));
+    // Admin 4a: shows added by hand are left out; an admin merges them by
+    // hand, so the cleanup never deletes or rewrites one.
+    .where(and(eq(events.status, 'upcoming'), eq(events.manual, false)));
 
   // Only the venue and date buckets that hold more than one row can contain a
   // duplicate, so references are counted for those alone.
