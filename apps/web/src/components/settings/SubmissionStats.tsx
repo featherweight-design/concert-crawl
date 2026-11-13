@@ -17,15 +17,16 @@ const Tile = ({
   label: string;
   color: string;
 }) => (
-  <div className="min-w-0 rounded-2xl border border-border bg-surface-1 px-4 py-3.5">
+  <div className="min-w-0 rounded-2xl border border-border bg-surface-1 px-3 py-3.5 min-[400px]:px-4">
     <div
       className="text-[28px] font-black leading-none tracking-[-0.03em]"
       style={{ color }}
     >
       {value.toLocaleString()}
     </div>
+    {/* A label steps down to a second line rather than clipping ("CRED EARN…"). */}
     <div
-      className="mt-2.5 truncate text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
+      className="mt-2.5 text-[10px] font-bold uppercase leading-snug tracking-[0.1em] text-fg-subtle min-[400px]:tracking-[0.14em]"
       style={{ fontFamily: 'var(--font-mono)' }}
     >
       {label}

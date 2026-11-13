@@ -104,15 +104,15 @@ export const ThemeCard = ({
         </span>
       </span>
 
-      <span className="flex items-baseline justify-between gap-1.5">
+      <span className="flex items-start justify-between gap-1.5">
         <span
-          className="min-w-0 flex-1 truncate text-[13px] font-bold"
+          className="shrink-0 text-[13px] font-bold"
           style={{ color: tokens['fg'], letterSpacing: '-0.005em' }}
         >
           {meta.label}
         </span>
         <span
-          className="max-w-[55%] shrink-0 truncate text-[8px] font-semibold uppercase tracking-[0.1em]"
+          className="min-w-0 pt-[3px] text-right text-[8px] font-semibold uppercase leading-tight tracking-[0.1em]"
           style={{
             fontFamily: 'var(--font-mono)',
             color: tokens['fg-subtle'],

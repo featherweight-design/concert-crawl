@@ -227,7 +227,7 @@ export const DataExportRow = () => {
             {COPY.label}
           </span>
           <span
-            className="mt-[3px] block truncate"
+            className="mt-[3px] block"
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: 11.5,

@@ -25,7 +25,7 @@ export function SubmissionItem({
   return (
     <Link
       href={`/events/${submission.eventId}`}
-      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
+      className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
       style={isLast ? undefined : { borderBottom: '1px solid var(--border)' }}
     >
       {/* The venue's tile, none has an image. A submission whose event has no
@@ -48,7 +48,7 @@ export function SubmissionItem({
           {submission.venue}
           {submission.date && ` · ${formatDate(submission.date)}`}
         </span>
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <StatusPill status={submission.status} />
           {!closed && confirms > 0 && (
             <span className="text-[12px] text-fg-muted">
