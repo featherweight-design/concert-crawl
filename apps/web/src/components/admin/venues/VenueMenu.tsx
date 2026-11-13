@@ -45,14 +45,26 @@ export const VenueMenu = ({
   venue,
   triggerStyle,
   onFailure,
+  onBusy,
 }: {
   venue: VenueWithCrawlHealth;
   triggerStyle?: CSSProperties;
   onFailure: (failure: VenueMenuFailure | null) => void;
+  /** Whether a change is in flight, so the header's Try again can hold. */
+  onBusy?: (busy: boolean) => void;
 }) => {
   const router = useRouter();
   const [dialog, setDialog] = useState<Dialog>(null);
-  const [refused, setRefused] = useState<VenueDeleteBlockers | null>(null);
+  // A 409's counts, kept only against the `deleteBlockers` they refused: the
+  // refresh that follows brings the server's own, which win from then on.
+  const [refusal, setRefusal] = useState<{
+    blockers: VenueDeleteBlockers;
+    against: VenueWithCrawlHealth['deleteBlockers'];
+  } | null>(null);
+  const refused =
+    refusal !== null && refusal.against === venue.deleteBlockers
+      ? refusal.blockers
+      : null;
   const [pauseRefused, setPauseRefused] = useState<{
     body: CrawlPauseRequest;
     error: string;
@@ -66,11 +78,19 @@ export const VenueMenu = ({
     if (busyRef.current) return false;
     busyRef.current = true;
     setBusy(true);
+    onBusy?.(true);
     void task().finally(() => {
       busyRef.current = false;
       setBusy(false);
+      onBusy?.(false);
     });
     return true;
+  };
+
+  // No dialog opens while a change runs, so Show then Take down can't race.
+  const open = (next: Exclude<Dialog, null>) => {
+    if (busyRef.current) return;
+    setDialog(next);
   };
 
   /** A failure whose Try again holds the toast while it runs. */
@@ -110,11 +130,14 @@ export const VenueMenu = ({
   // other failure closes it with a toast whose Try again reopens a refusal.
   const pause = async (body: CrawlPauseRequest): Promise<string | null> => {
     const outcome = await pauseCrawling(venue.id, body).catch(
-      (): PauseOutcome => ({ ok: false, error: null }),
+      (err: unknown): PauseOutcome => {
+        console.warn('VenueMenu: pause failed', { venueId: venue.id, err });
+        return { ok: false, error: null };
+      },
     );
     if (!outcome.ok && outcome.error !== null) return outcome.error;
     setDialog(null);
-    router.refresh();
+    if (outcome.ok) router.refresh();
     onFailure(
       outcome.ok
         ? null
@@ -136,7 +159,7 @@ export const VenueMenu = ({
     {
       pause: () => {
         setPauseRefused(null);
-        setDialog('pause');
+        open('pause');
       },
       resume: () =>
         attempt(
@@ -156,9 +179,9 @@ export const VenueMenu = ({
           COPY.failed.show(venue.name),
           COPY.failed.showSaved,
         ),
-      hide: () => setDialog('hide'),
-      takeDown: () => setDialog('takeDown'),
-      remove: () => setDialog('remove'),
+      hide: () => open('hide'),
+      takeDown: () => open('takeDown'),
+      remove: () => open('remove'),
     },
     refused,
     busy,
@@ -170,12 +193,11 @@ export const VenueMenu = ({
     close();
     router.refresh();
   };
-  // A taken-down or deleted venue leaves the list, so the page goes back to
-  // it. A delete carries its name and the shows it kept, unlinked, as the old
-  // delete dialog did.
-  const leave = (path = '/admin/venues') => {
+  // A taken-down or deleted venue is done with, so the page goes back to the
+  // Venues list, as the old danger zone's delete did.
+  const leave = () => {
     onFailure(null);
-    router.push(path);
+    router.push('/admin/venues');
   };
 
   return (
@@ -208,23 +230,15 @@ export const VenueMenu = ({
         <HideConfirm venue={venue} onCancel={close} onDone={stay} />
       )}
       {dialog === 'takeDown' && (
-        <TakeDownConfirm
-          venue={venue}
-          onCancel={close}
-          onDone={() => leave()}
-        />
+        <TakeDownConfirm venue={venue} onCancel={close} onDone={leave} />
       )}
       {dialog === 'remove' && (
         <DeleteConfirm
           venue={venue}
           onCancel={close}
-          onDone={(eventsDetached) =>
-            leave(
-              `/admin/venues?deleted=${encodeURIComponent(venue.name)}&detached=${eventsDetached}`,
-            )
-          }
+          onDone={leave}
           onRefused={(blockers) => {
-            setRefused(blockers);
+            setRefusal({ blockers, against: venue.deleteBlockers });
             router.refresh();
           }}
         />

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useState } from 'react';
 import {
   render,
   screen,
@@ -9,6 +10,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
+import { SaveFailedToast } from '@/components/admin/primitives';
 
 const mockRefresh = vi.fn();
 const mockPush = vi.fn();
@@ -22,10 +24,11 @@ const mockTryDelete = vi.fn();
 const mockResume = vi.fn();
 const mockFeatured = vi.fn();
 const mockActivate = vi.fn();
+const mockPause = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
   activateVenue: (...args: unknown[]) => mockActivate(...args),
   hideVenue: (...args: unknown[]) => mockHide(...args),
-  pauseCrawling: vi.fn(),
+  pauseCrawling: (...args: unknown[]) => mockPause(...args),
   removeVenue: (...args: unknown[]) => mockRemove(...args),
   resumeCrawling: (...args: unknown[]) => mockResume(...args),
   setVenueFeatured: (...args: unknown[]) => mockFeatured(...args),
@@ -159,6 +162,7 @@ beforeEach(() => {
     mockResume,
     mockFeatured,
     mockActivate,
+    mockPause,
     onFailure,
   ])
     mock.mockReset();
@@ -212,6 +216,14 @@ describe('VenueMenu — rows per state', () => {
     ]);
   });
 
+  it('a hand pause with a reason and 3+ failures stays a hand pause, as the chip says', () => {
+    openMenu(buildVenue({ ...PAUSED, consecutiveFailures: 4 }));
+    expect(rows()[0]).toBe(
+      `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission.`,
+    );
+    expect(rows()[2]).toBe(`${MENU.hide}|${MENU.hideHint(235)}`);
+  });
+
   it('blocked while paused shares the auto-paused menu', () => {
     openMenu(buildVenue({ ...PAUSED, blockedAt: '2026-10-28T18:00:00.000Z' }));
     expect(rows()[2]).toBe(`${MENU.hide}|${MENU.hideHint(null)}`);
@@ -221,7 +233,8 @@ describe('VenueMenu — rows per state', () => {
     openMenu(buildVenue({ ...HIDDEN, deleteBlockers: NO_BLOCKERS }));
     expect(rows()).toEqual([
       `${MENU.show}|Hidden by @hugh, Nov 2: venue closed.`,
-      `${MENU.pause}|${MENU.pauseHint}`,
+      // Its shows are already off the site, so not "Shows stay listed".
+      `${MENU.pause}|${MENU.pauseHintHidden}`,
       `${MENU.delete}|${MENU.deleteHint}`,
       `${MENU.takeDown}|${MENU.takeDownHint}`,
     ]);
@@ -359,7 +372,7 @@ describe('VenueMenu — each row opens its dialog', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('Delete venue… opens the Delete confirm; a delete leaves with its detached count', async () => {
+  it('Delete venue… opens the Delete confirm; a delete goes back to Venues', async () => {
     mockTryDelete.mockResolvedValue({ ok: true, eventsDetached: 2 });
     openMenu(buildVenue({ ...HIDDEN, deleteBlockers: NO_BLOCKERS }));
     fireEvent.click(row('delete'));
@@ -369,11 +382,7 @@ describe('VenueMenu — each row opens its dialog', () => {
       screen.getByRole('button', { name: CONFIRMS.remove.confirm }),
     );
     await waitFor(() => expect(mockTryDelete).toHaveBeenCalledWith('venue-1'));
-    await waitFor(() =>
-      expect(mockPush).toHaveBeenCalledWith(
-        '/admin/venues?deleted=Ball%20Arena&detached=2',
-      ),
-    );
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/admin/venues'));
   });
 
   it('a 409 draws the refused Delete row in the menu', async () => {
@@ -407,6 +416,156 @@ describe('VenueMenu — each row opens its dialog', () => {
     fireEvent.click(trigger());
     expect(rows()[2]).toBe(`${MENU.deleteRefusedLabel}|${refusal}`);
     expect(row('delete').getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('the refresh after a 409 brings the server’s counts, which win over the 409’s', async () => {
+    mockTryDelete.mockResolvedValue({
+      ok: false,
+      refused: { pastShows: 12, upcomingShows: 0, watchers: 3 },
+    });
+    const view = render(
+      <VenueMenu
+        venue={buildVenue({ ...HIDDEN, deleteBlockers: NO_BLOCKERS })}
+        onFailure={onFailure}
+      />,
+    );
+    fireEvent.click(trigger());
+    fireEvent.click(row('delete'));
+    typeVenueName('Ball Arena');
+    fireEvent.click(
+      screen.getByRole('button', { name: CONFIRMS.remove.confirm }),
+    );
+    await screen.findByRole('alert');
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.confirm.cancel }),
+    );
+
+    // The refreshed payload: one past show now, no Watchers.
+    view.rerender(
+      <VenueMenu
+        venue={buildVenue({
+          ...HIDDEN,
+          deleteBlockers: { pastShows: 1, upcomingShows: 0, watchers: 0 },
+        })}
+        onFailure={onFailure}
+      />,
+    );
+    fireEvent.click(trigger());
+    expect(rows()[2]).toBe(
+      `${MENU.deleteRefusedLabel}|${CONFIRMS.deleteRefused(1, 0, 0)}`,
+    );
+    fireEvent.click(trigger());
+
+    // And a later refresh with no blockers offers Delete again.
+    view.rerender(
+      <VenueMenu
+        venue={buildVenue({ ...HIDDEN, deleteBlockers: { ...NO_BLOCKERS } })}
+        onFailure={onFailure}
+      />,
+    );
+    fireEvent.click(trigger());
+    expect(rows()[2]).toBe(`${MENU.delete}|${MENU.deleteHint}`);
+  });
+});
+
+/** The header's toast, so a test can press its Try again. */
+const WithToast = ({ venue }: { venue: VenueWithCrawlHealth }) => {
+  const [failure, setFailure] = useState<VenueMenuFailure | null>(null);
+  return (
+    <>
+      <VenueMenu venue={venue} onFailure={setFailure} />
+      {failure !== null && (
+        <SaveFailedToast
+          what={failure.what}
+          saved={failure.saved}
+          onRetry={failure.retry}
+          retrying={failure.retrying}
+        />
+      )}
+    </>
+  );
+};
+
+describe('VenueMenu — Pause failures (as the old CrawlPauseControl)', () => {
+  const PANEL = ADMIN_COPY.pausePanel;
+  const openPause = () => {
+    render(<WithToast venue={buildVenue()} />);
+    fireEvent.click(trigger());
+    fireEvent.click(row('pause'));
+  };
+
+  it('a pause refreshes and closes the panel', async () => {
+    mockPause.mockResolvedValueOnce({ ok: true });
+    openPause();
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
+    await waitFor(() =>
+      expect(mockPause).toHaveBeenCalledWith('venue-1', {
+        reason: 'waiting_on_permission',
+        resume: { mode: 'manual' },
+      }),
+    );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(screen.queryByText(PANEL.title('Ball Arena'))).toBeNull();
+  });
+
+  it('closes on a failed save, does not refresh, and offers Try again', async () => {
+    mockPause.mockResolvedValueOnce({ ok: false, error: null });
+    mockPause.mockResolvedValueOnce({ ok: true });
+    openPause();
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(mockRefresh).not.toHaveBeenCalled();
+    expect(screen.queryByText(PANEL.title('Ball Arena'))).toBeNull();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    );
+    await waitFor(() => expect(mockPause).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId('save-failed')).toBeNull());
+    expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it('a thrown pause logs and goes to the toast', async () => {
+    mockPause.mockRejectedValueOnce(new Error('network'));
+    openPause();
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(console.warn).toHaveBeenCalledWith(
+      'VenueMenu: pause failed',
+      expect.objectContaining({ venueId: 'venue-1' }),
+    );
+  });
+
+  it('reopens the panel with the refusal inline when Try again is refused', async () => {
+    mockPause
+      .mockResolvedValueOnce({ ok: false, error: null })
+      .mockResolvedValueOnce({ ok: false, error: 'Pick a date after today' });
+    openPause();
+    fireEvent.click(
+      screen.getByRole('radio', { name: PANEL.reasons.site_broken_or_moved }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: PANEL.submit }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(screen.queryByText(PANEL.title('Ball Arena'))).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText(PANEL.title('Ball Arena'))).toBeTruthy(),
+    );
+    // It reopens on the choices that were sent.
+    const sent = screen.getByRole('radio', {
+      name: PANEL.reasons.site_broken_or_moved,
+    });
+    expect(sent instanceof HTMLInputElement && sent.checked).toBe(true);
+    expect(
+      screen.getByText(PANEL.dateError('Pick a date after today')),
+    ).toBeTruthy();
+    expect(screen.queryByTestId('save-failed')).toBeNull();
   });
 });
 
@@ -444,8 +603,9 @@ describe('VenueMenu — immediate changes', () => {
     openMenu(buildVenue(PAUSED));
     fireEvent.click(row('resume'));
     fireEvent.click(trigger());
-    expect(row('resume').getAttribute('aria-disabled')).toBe('true');
-    expect(row('flagship').getAttribute('aria-disabled')).toBe('true');
+    // Every row holds, the dialog rows too.
+    for (const key of ['resume', 'flagship', 'hide', 'take-down'])
+      expect(row(key).getAttribute('aria-disabled')).toBe('true');
     fireEvent.click(row('resume'));
     fireEvent.click(row('flagship'));
     expect(mockResume).toHaveBeenCalledTimes(1);

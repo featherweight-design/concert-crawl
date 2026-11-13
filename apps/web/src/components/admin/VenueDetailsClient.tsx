@@ -14,7 +14,6 @@ import type {
 import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types';
 import {
   updateVenue,
-  pauseVenue,
   activateVenue,
   generateVenueAbout,
   probeVenuePlatform,
@@ -27,6 +26,7 @@ import {
 } from '@/components/admin/primitives';
 import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
 import { VenueHeader } from '@/components/admin/venues/VenueHeader';
+import { HideConfirm } from '@/components/admin/venues/VenueConfirms';
 import { VenueSummaryLine } from '@/components/admin/venues/VenueSummaryLine';
 import { deriveVenueStatus } from '@/lib/admin/venue-status';
 import {
@@ -498,6 +498,7 @@ export function VenueDetailsClient({
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [hideOpen, setHideOpen] = useState(false);
   const { setPageTitle } = usePageTitle();
 
   useEffect(() => {
@@ -860,13 +861,19 @@ export function VenueDetailsClient({
     }
   }
 
+  // The Basics Status toggle runs the ⋯ menu's own actions, so the two can't
+  // disagree (orchestrator ruling): Paused opens the Hide confirm, with its
+  // required reason, and Active is Show on site. A taken-down venue can't be
+  // re-published from here; its Active is disabled.
+  const removed = venue.removedAt !== null;
   function handleStatusChange(newStatus: 'active' | 'paused') {
+    if (newStatus === 'paused') {
+      if (venue.active && !removed) setHideOpen(true);
+      return;
+    }
+    if (venue.active || removed) return;
     startTransition(async () => {
-      if (newStatus === 'active') {
-        await activateVenue(venue.id);
-      } else {
-        await pauseVenue(venue.id);
-      }
+      await activateVenue(venue.id);
       router.refresh();
     });
   }
@@ -1213,13 +1220,22 @@ export function VenueDetailsClient({
                         {statuses.map(({ value, label, dot }) => {
                           const isActive = currentStatus === value;
                           const isBlocked = value === 'blocked';
+                          const takenDown = value === 'active' && removed;
                           return (
                             <button
                               key={value}
                               type="button"
-                              disabled={isPending || isBlocked}
+                              data-testid={`venue-status-${value}`}
+                              disabled={isPending || isBlocked || takenDown}
+                              aria-describedby={
+                                takenDown
+                                  ? 'venue-status-taken-down'
+                                  : undefined
+                              }
                               onClick={() =>
-                                !isBlocked && handleStatusChange(value)
+                                !isBlocked &&
+                                !takenDown &&
+                                handleStatusChange(value)
                               }
                               style={{
                                 display: 'inline-flex',
@@ -1242,11 +1258,14 @@ export function VenueDetailsClient({
                                 fontSize: 12,
                                 fontWeight: 700,
                                 cursor:
-                                  isPending || isBlocked
+                                  isPending || isBlocked || takenDown
                                     ? 'not-allowed'
                                     : 'pointer',
                                 transition: 'background .12s, color .12s',
-                                opacity: isBlocked && !isActive ? 0.4 : 1,
+                                opacity:
+                                  (isBlocked || takenDown) && !isActive
+                                    ? 0.4
+                                    : 1,
                               }}
                             >
                               <span
@@ -1265,6 +1284,31 @@ export function VenueDetailsClient({
                           );
                         })}
                       </div>
+                      {removed && (
+                        <div
+                          id="venue-status-taken-down"
+                          style={{
+                            fontSize: 12,
+                            color: 'var(--fg-muted)',
+                            marginTop: 6,
+                          }}
+                        >
+                          {
+                            ADMIN_COPY.venueDetailsClient.fields.status
+                              .takenDown
+                          }
+                        </div>
+                      )}
+                      {hideOpen && (
+                        <HideConfirm
+                          venue={venue}
+                          onCancel={() => setHideOpen(false)}
+                          onDone={() => {
+                            setHideOpen(false);
+                            router.refresh();
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })()}

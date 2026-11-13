@@ -22,6 +22,16 @@ describe('deriveVenueStatusChips', () => {
       'auto_paused',
     ],
     [
+      'paused with a reason after 3+ failures is a hand pause',
+      {
+        crawlPausedAt: AT,
+        consecutiveFailures: 4,
+        crawlPauseReason: 'site_broken_or_moved',
+      },
+      'live',
+      'paused',
+    ],
+    [
       'paused with 2 failures is still a hand pause',
       { crawlPausedAt: AT, consecutiveFailures: 2 },
       'live',

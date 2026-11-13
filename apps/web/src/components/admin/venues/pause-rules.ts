@@ -6,10 +6,7 @@ import type {
   VenueWithEventCount,
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import {
-  AUTO_PAUSE_FAILURES,
-  deriveVenueStatusChips,
-} from '@/lib/admin/venue-status';
+import { deriveVenueStatusChips, isAutoPause } from '@/lib/admin/venue-status';
 import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 
 /**
@@ -107,13 +104,23 @@ export type PausedVenue = Pick<
   | 'consecutiveFailures'
 > & { crawlPausedByName?: string | null };
 
-/** The reason as the line says it; an Other note loses its own full stop. */
-const reasonText = (venue: PausedVenue): string | null => {
-  const reason = venue.crawlPauseReason ?? null;
-  if (reason === 'other') {
-    return venue.crawlPauseNote?.trim().replace(/\.+$/, '') || null;
-  }
-  return reason === null ? null : PAUSE_LINE.reasons[reason];
+/** "Oct 28", in Mountain Time, as the paused and hidden lines date it. */
+export const shortDate = (iso: string): string =>
+  formatISODate(iso, DENVER_TIME_ZONE, { month: 'short', day: 'numeric' });
+
+/**
+ * A pause or hide reason as its line says it: a listed reason's words, or an
+ * Other note, which loses its own full stop. Null with no reason (or a blank
+ * note).
+ */
+export const reasonText = (
+  reason: string | null | undefined,
+  note: string | null | undefined,
+  labels: Readonly<Partial<Record<string, string>>>,
+): string | null => {
+  if (reason === null || reason === undefined) return null;
+  if (reason === 'other') return note?.trim().replace(/\.+$/, '') || null;
+  return labels[reason] ?? null;
 };
 
 /**
@@ -130,15 +137,15 @@ const reasonText = (venue: PausedVenue): string | null => {
  */
 export const pausedStateLine = (venue: PausedVenue): string | null => {
   if (venue.crawlPausedAt === null) return null;
-  const date = formatISODate(venue.crawlPausedAt, DENVER_TIME_ZONE, {
-    month: 'short',
-    day: 'numeric',
-  });
+  // The chip's own rule, so the line and the crawling chip agree.
+  if (isAutoPause(venue)) return PAUSE_LINE.autoPaused;
+  const date = shortDate(venue.crawlPausedAt);
   const name = venue.crawlPausedByName ?? null;
-  const why = reasonText(venue);
-  if (why === null && venue.consecutiveFailures >= AUTO_PAUSE_FAILURES) {
-    return PAUSE_LINE.autoPaused;
-  }
+  const why = reasonText(
+    venue.crawlPauseReason,
+    venue.crawlPauseNote,
+    PAUSE_LINE.reasons,
+  );
   if (name !== null) return PAUSE_LINE.pausedBy(name, date, why);
   return why === null
     ? PAUSE_LINE.pausedSince(date)

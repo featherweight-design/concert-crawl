@@ -2,23 +2,36 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 
 // ───── Mocks ─────────────────────────────────────────────────────────────────
 
 const mockUpdateVenue = vi.fn();
+const mockPauseVenue = vi.fn();
+const mockActivateVenue = vi.fn();
+const mockHideVenue = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
   updateVenue: (...args: unknown[]) => mockUpdateVenue(...args),
-  pauseVenue: vi.fn(),
-  activateVenue: vi.fn(),
+  pauseVenue: (...args: unknown[]) => mockPauseVenue(...args),
+  activateVenue: (...args: unknown[]) => mockActivateVenue(...args),
+  hideVenue: (...args: unknown[]) => mockHideVenue(...args),
+  removeVenue: vi.fn(),
+  tryDeleteVenue: vi.fn(),
   setVenueFeatured: vi.fn(),
   generateVenueAbout: vi.fn(),
   probeVenuePlatform: vi.fn(),
 }));
 
+const mockRefresh = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), refresh: mockRefresh }),
 }));
 
 vi.mock('next/link', () => ({
@@ -197,5 +210,84 @@ describe('VenueDetailsClient — venue header', () => {
     const line = screen.getByTestId('venue-summary-line').textContent ?? '';
     expect(line).toContain(ADMIN_COPY.venueHeader.summary.strategy.auto);
     expect(line).not.toContain('consec.');
+  });
+});
+
+// The Basics Status toggle runs the ⋯ menu's actions (orchestrator ruling):
+// Paused is the Hide confirm, Active is Show on site, and a taken-down venue
+// can't be re-published from here.
+describe('VenueDetailsClient — Status toggle', () => {
+  const CONFIRMS = ADMIN_COPY.venueConfirms;
+  const STATUS = ADMIN_COPY.venueDetailsClient.fields.status;
+
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', matchMediaStub);
+    for (const mock of [
+      mockPauseVenue,
+      mockActivateVenue,
+      mockHideVenue,
+      mockRefresh,
+    ])
+      mock.mockReset();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('Paused opens the Hide confirm and never calls pauseVenue', () => {
+    render(<VenueDetailsClient venue={buildVenue()} />);
+    fireEvent.click(screen.getByTestId('venue-status-paused'));
+    expect(screen.getByText(CONFIRMS.hide.title('Test Venue'))).toBeTruthy();
+    expect(mockPauseVenue).not.toHaveBeenCalled();
+    expect(mockHideVenue).not.toHaveBeenCalled();
+  });
+
+  it('confirming sends hideVenue with the chosen reason, then refreshes', async () => {
+    mockHideVenue.mockResolvedValue(undefined);
+    render(<VenueDetailsClient venue={buildVenue()} />);
+    fireEvent.click(screen.getByTestId('venue-status-paused'));
+    fireEvent.click(
+      screen.getByRole('radio', { name: CONFIRMS.hide.reasons.venue_closed }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: CONFIRMS.hide.confirm }),
+    );
+    await waitFor(() =>
+      expect(mockHideVenue).toHaveBeenCalledWith(
+        'venue-1',
+        'venue_closed',
+        null,
+      ),
+    );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(mockPauseVenue).not.toHaveBeenCalled();
+  });
+
+  it('Active on a hidden venue shows it at once, as Show on site does', async () => {
+    mockActivateVenue.mockResolvedValue(undefined);
+    render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
+    fireEvent.click(screen.getByTestId('venue-status-active'));
+    await waitFor(() =>
+      expect(mockActivateVenue).toHaveBeenCalledWith('venue-1'),
+    );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it('a taken-down venue’s Active is disabled and says why', () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({
+          active: false,
+          removedAt: '2026-11-02T18:00:00.000Z',
+        })}
+      />,
+    );
+    const active = screen.getByTestId('venue-status-active');
+    expect(active.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(STATUS.takenDown)).toBeTruthy();
+    fireEvent.click(active);
+    expect(mockActivateVenue).not.toHaveBeenCalled();
   });
 });

@@ -32,6 +32,22 @@ export interface VenueStatusChips {
 export const AUTO_PAUSE_FAILURES = 3;
 
 /**
+ * The one rule for an automatic pause, shared by the crawling chip, the paused
+ * line and the ⋯ menu so they never disagree: paused, no reason, and 3+
+ * failures. Every admin pause path requires a reason (`pauseBodySchema`) and
+ * the crawler's auto-pause writes none, so a pause with a reason is a hand
+ * pause however many failures are on the counter. Blocked is its own case.
+ */
+export const isAutoPause = (
+  venue: Pick<Venue, 'crawlPausedAt' | 'consecutiveFailures'> & {
+    crawlPauseReason?: Venue['crawlPauseReason'];
+  },
+): boolean =>
+  venue.crawlPausedAt !== null &&
+  (venue.crawlPauseReason ?? null) === null &&
+  venue.consecutiveFailures >= AUTO_PAUSE_FAILURES;
+
+/**
  * The two-axis venue status (plan decision 6, rule 2): whether the venue is on
  * the site, and whether we're crawling it. Pausing never hides; hiding is
  * `active=false`. Blocked wins over everything on the crawl axis because a
@@ -40,10 +56,8 @@ export const AUTO_PAUSE_FAILURES = 3;
  * `draft` arrives with 3c's `went_live_at`; until then every venue is live or
  * hidden.
  *
- * Known limit until 3c's `crawl_paused_reason`: nothing records who paused a
- * venue, so a pause with 3+ failures on the counter reads as the automatic
- * one. The crawler only sets `crawlPausedAt` on the third failure, so that is
- * the common case; a hand pause after a failing streak is the rare miss.
+ * Auto-paused is `isAutoPause`: a pause with a reason is a hand pause even
+ * after a failing streak.
  */
 export function deriveVenueStatusChips(
   venue: Pick<
@@ -53,7 +67,7 @@ export function deriveVenueStatusChips(
     | 'blockedAt'
     | 'consecutiveFailures'
     | 'robotsTxtAllowed'
-  >,
+  > & { crawlPauseReason?: Venue['crawlPauseReason'] },
 ): VenueStatusChips {
   const onSite: VenueOnSite = venue.active ? 'live' : 'hidden';
   if (venue.blockedAt !== null) return { onSite, crawling: 'blocked' };
@@ -63,10 +77,7 @@ export function deriveVenueStatusChips(
   if (venue.crawlPausedAt !== null) {
     return {
       onSite,
-      crawling:
-        venue.consecutiveFailures >= AUTO_PAUSE_FAILURES
-          ? 'auto_paused'
-          : 'paused',
+      crawling: isAutoPause(venue) ? 'auto_paused' : 'paused',
     };
   }
   return { onSite, crawling: 'crawling' };

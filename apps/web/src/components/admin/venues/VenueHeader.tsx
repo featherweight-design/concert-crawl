@@ -109,6 +109,9 @@ const RecrawlNotice = ({
 export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
   const isPhone = useIsPhone();
   const [failure, setFailure] = useState<VenueMenuFailure | null>(null);
+  // While any menu change runs, the toast's Try again holds rather than
+  // swallowing a press.
+  const [menuBusy, setMenuBusy] = useState(false);
   const off = recrawlOff(venue);
   const recrawl = useRecrawl(venue.id, off !== null);
   const line = headerLine(venue, isPhone);
@@ -259,6 +262,7 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
           <VenueMenu
             venue={venue}
             onFailure={setFailure}
+            onBusy={setMenuBusy}
             triggerStyle={{
               ...BUTTON,
               width: 36,
@@ -283,7 +287,8 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
           what={failure.what}
           saved={failure.saved}
           onRetry={failure.retry}
-          retrying={failure.retrying}
+          retrying={failure.retrying || menuBusy}
+          onDismiss={() => setFailure(null)}
         />
       )}
       {notice !== undefined && (
