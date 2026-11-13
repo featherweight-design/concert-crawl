@@ -8,12 +8,15 @@ import { AdminTabs } from '@/components/admin/primitives';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { apiClient } from '@/lib/api';
 import type { RunPage } from '@/components/admin/crawl-runs/run-data';
+import { shortUrl } from '@/components/admin/crawl-runs/runs-rules';
 import { InspectCouldntLoad, PagesGone } from './InspectStates';
 import {
-  INSPECT_TABS,
+  INSPECT_CSP,
   defaultInspectTab,
   goneReason,
+  inspectTabs,
   isFeedPage,
+  pageSrcDoc,
   pageText,
   parseBody,
   stoppedHerePage,
@@ -118,7 +121,57 @@ const StoppedHere = ({ page }: { page: number }) => (
   </div>
 );
 
-const TabPanel = ({ tab, html }: { tab: InspectTab; html: string }) => {
+/**
+ * The Page tab: the defused copy (`pageSrcDoc`) in a frame that is never
+ * part of the app's document. `sandbox=""` is every restriction: no scripts,
+ * an opaque origin, no forms, popups or top navigation. A srcdoc frame has
+ * no HTTP response to carry a policy, so the CSP rides twice: as the meta
+ * first in its head, and as the `csp` attribute (CSP Embedded Enforcement,
+ * where the browser supports it). It also inherits the admin page's own
+ * policy; policies only intersect, so each can only make it stricter.
+ */
+const PageFrame = ({
+  html,
+  page,
+  phone,
+}: {
+  html: string;
+  page: string;
+  phone: boolean;
+}) => {
+  const srcDoc = useMemo(() => pageSrcDoc(html), [html]);
+  return (
+    <iframe
+      data-testid="inspect-frame"
+      title={COPY.frameTitle(page)}
+      sandbox=""
+      csp={INSPECT_CSP}
+      referrerPolicy="no-referrer"
+      srcDoc={srcDoc}
+      style={{
+        display: 'block',
+        width: '100%',
+        height: phone ? 420 : 520,
+        border: '1px solid var(--border)',
+        borderRadius: 10,
+        // Venue pages assume a white page.
+        background: '#fff',
+      }}
+    />
+  );
+};
+
+const TabPanel = ({
+  tab,
+  html,
+  page,
+  phone,
+}: {
+  tab: InspectTab;
+  html: string;
+  page: string;
+  phone: boolean;
+}) => {
   // Parsed only when the Text tab is open, and once per body.
   const text = useMemo(
     () => (tab === 'text' ? pageText(html) : ''),
@@ -132,7 +185,9 @@ const TabPanel = ({ tab, html }: { tab: InspectTab; html: string }) => {
       </pre>
     );
   }
-  // The Page tab's panel (a sandboxed srcdoc iframe) goes here in 3b part 5b.
+  if (tab === 'page') {
+    return <PageFrame html={html} page={page} phone={phone} />;
+  }
   return (
     <div
       data-testid="inspect-text"
@@ -158,10 +213,10 @@ const BodySkeleton = () => (
 );
 
 /**
- * What we fetched (`04/inspect-a-fetched-page`, `G2/inspect-fetched`): Text
- * and HTML (the Page tab is 5b). It opens on HTML, or on Text for a feed
- * (`fetch_mode = 'api'`). Desktop is one full-width column: What we read is
- * HOLD (rule 5).
+ * What we fetched (`04/inspect-a-fetched-page`, `G2/inspect-fetched`): Page,
+ * Text and HTML. It opens on HTML, as the board does; a feed
+ * (`fetch_mode = 'api'`) has no Page and opens on Text. Desktop is one
+ * full-width column: What we read is HOLD (rule 5).
  */
 export const InspectFetched = ({
   page,
@@ -177,9 +232,11 @@ export const InspectFetched = ({
   phone: boolean;
 }) => {
   const { state, retry } = useInspectBody(page.id);
-  const [tab, setTab] = useState<InspectTab>(
-    defaultInspectTab(isFeedPage(page)),
-  );
+  const feed = isFeedPage(page);
+  const tabs = inspectTabs(feed);
+  const [chosen, setChosen] = useState<InspectTab>(defaultInspectTab(feed));
+  // A tab this page lacks (Page on a feed) reads as the default.
+  const tab = tabs.includes(chosen) ? chosen : defaultInspectTab(feed);
   const stopped = stoppedHerePage(pages, page.id);
 
   if (state?.kind === 'gone') {
@@ -226,9 +283,9 @@ export const InspectFetched = ({
           {COPY.fetched}
         </h2>
         <AdminTabs
-          tabs={INSPECT_TABS.map((key) => ({ key, label: COPY.tabs[key] }))}
+          tabs={tabs.map((key) => ({ key, label: COPY.tabs[key] }))}
           value={tab}
-          onChange={setTab}
+          onChange={setChosen}
           label={COPY.tabsLabel}
           tabId={tabId}
           panelId={() => panelId}
@@ -254,7 +311,12 @@ export const InspectFetched = ({
             {tab === 'html' && stopped !== null && (
               <StoppedHere page={stopped} />
             )}
-            <TabPanel tab={tab} html={state.html} />
+            <TabPanel
+              tab={tab}
+              html={state.html}
+              page={shortUrl(page.url, null)}
+              phone={phone}
+            />
           </>
         )}
       </div>

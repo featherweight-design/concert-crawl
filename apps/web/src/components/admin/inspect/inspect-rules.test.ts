@@ -3,14 +3,18 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { ApiError } from '@/lib/api';
 import {
+  INSPECT_CSP,
   INSPECT_TABS,
   defaultInspectTab,
   goneReason,
+  inspectTabs,
   isFeedPage,
+  pageSrcDoc,
   pageText,
   parseBody,
   pickInspectPage,
   stoppedHerePage,
+  withCsp,
 } from './inspect-rules';
 import {
   defaultInspectPage,
@@ -104,19 +108,154 @@ describe('stoppedHerePage', () => {
 });
 
 describe('tabs', () => {
-  it('Text and HTML only: the Page tab is 5b', () => {
-    expect(INSPECT_TABS).toEqual(['text', 'html']);
+  it('Page, Text and HTML, in the board’s order', () => {
+    expect(INSPECT_TABS).toEqual(['page', 'text', 'html']);
   });
 
-  it('a feed opens on Text', () => {
+  it('a feed has no Page and opens on Text', () => {
     expect(isFeedPage({ fetchMode: 'api' })).toBe(true);
+    expect(inspectTabs(true)).toEqual(['text', 'html']);
     expect(defaultInspectTab(true)).toBe('text');
   });
 
-  it('a fetched page opens on HTML', () => {
+  it('a fetched page has Page, Text and HTML, and opens on HTML', () => {
     expect(isFeedPage({ fetchMode: 'browser' })).toBe(false);
     expect(isFeedPage({})).toBe(false);
+    expect(inspectTabs(false)).toEqual(['page', 'text', 'html']);
     expect(defaultInspectTab(false)).toBe('html');
+  });
+});
+
+/** How a browser reads a srcdoc: parsed as an HTML document. */
+const parsed = (srcDoc: string) =>
+  new DOMParser().parseFromString(srcDoc, 'text/html');
+
+/** The CSP meta is the head's first element, carrying the whole policy. */
+const expectCspFirst = (srcDoc: string) => {
+  const first = parsed(srcDoc).head.firstElementChild;
+  expect(first?.tagName).toBe('META');
+  expect(first?.getAttribute('http-equiv')).toBe('Content-Security-Policy');
+  expect(first?.getAttribute('content')).toBe(INSPECT_CSP);
+};
+
+describe('the Page tab’s policy', () => {
+  it('loads nothing but data: images and inline styles, and pins base and forms', () => {
+    expect(INSPECT_CSP).toBe(
+      "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'",
+    );
+  });
+});
+
+describe('withCsp', () => {
+  const BODY = '<html><head><title>x</title></head><body><p>Show</p></body>';
+
+  it('goes right after a leading doctype, and first in the head', () => {
+    const html = `<!DOCTYPE html>${BODY}`;
+    const out = withCsp(html);
+    expect(out.startsWith('<!DOCTYPE html><meta ')).toBe(true);
+    expectCspFirst(out);
+    // Standards mode is kept.
+    expect(parsed(out).compatMode).toBe('CSS1Compat');
+  });
+
+  it('allows HTML whitespace and a BOM before the doctype', () => {
+    for (const lead of ['\t\n\f\r ', '﻿', '﻿\n  ']) {
+      const out = withCsp(`${lead}<!doctype html>${BODY}`);
+      expect(out.startsWith('﻿')).toBe(false);
+      expect(out.indexOf('<meta ')).toBeLessThan(out.indexOf('<html>'));
+      expectCspFirst(out);
+    }
+  });
+
+  it('anything else before the doctype: the meta goes before everything', () => {
+    // U+00A0, U+000B and U+2028 match JS \s but are not HTML whitespace.
+    for (const lead of [' ', '\u000B', ' ', '<!-- <head> -->', 'text']) {
+      const out = withCsp(`${lead}<!doctype html>${BODY}`);
+      expect(out.startsWith('<meta ')).toBe(true);
+      expectCspFirst(out);
+    }
+  });
+
+  it('no doctype: the meta goes before everything', () => {
+    const out = withCsp(BODY);
+    expect(out.startsWith('<meta ')).toBe(true);
+    expectCspFirst(out);
+  });
+
+  it('a <head> in a comment or a script can’t pull it out of the head', () => {
+    expectCspFirst(withCsp('<!-- <head></head> --><body>x</body>'));
+    expectCspFirst(
+      withCsp('<!doctype html><script>"<head>"</script><body>x</body>'),
+    );
+  });
+});
+
+describe('pageSrcDoc', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(window, '__inspectRan');
+  });
+
+  it('keeps the page’s text and inline styles, with the CSP meta first', () => {
+    const out = pageSrcDoc(
+      '<html><head><style>p{color:red}</style></head><body><p style="margin:0">Tate McRae</p></body></html>',
+    );
+    expect(out.startsWith('<!doctype html><meta ')).toBe(true);
+    const doc = parsed(out);
+    expectCspFirst(out);
+    expect(doc.body.textContent).toBe('Tate McRae');
+    expect(doc.querySelector('style')?.textContent).toBe('p{color:red}');
+    expect(doc.querySelector('p')?.getAttribute('style')).toBe('margin:0');
+  });
+
+  it('takes away every way to navigate the frame', () => {
+    const out = pageSrcDoc(
+      '<html><head><base href="https://venue.test/"><meta http-equiv="Refresh" content="0; url=https://venue.test/"><meta charset="utf-8"></head>' +
+        '<body><a href="https://venue.test/events">Events</a>' +
+        '<map name="m"><area href="https://venue.test/a" alt="a"></map>' +
+        '<form action="https://venue.test/go"><button formaction="https://venue.test/b">Go</button></form>' +
+        '<svg><a href="https://venue.test/s"><text>s</text></a></svg></body></html>',
+    );
+    const doc = parsed(out);
+    expectCspFirst(out);
+    expect(doc.querySelectorAll('a')).toHaveLength(2);
+    doc.querySelectorAll('a, area').forEach((node) => {
+      expect(node.hasAttribute('href')).toBe(false);
+    });
+    expect(doc.querySelector('base')).toBeNull();
+    expect(doc.querySelector('meta[http-equiv="Refresh"]')).toBeNull();
+    expect(doc.querySelector('meta[charset]')).not.toBeNull();
+    expect(doc.querySelector('form')?.hasAttribute('action')).toBe(false);
+    expect(doc.querySelector('button')?.hasAttribute('formaction')).toBe(false);
+    expect(out).not.toContain('venue.test');
+  });
+
+  it('leaves no script, handler or embedded document to run', () => {
+    const out = pageSrcDoc(
+      '<html><head><script src="https://venue.test/a.js"></script></head>' +
+        '<body onload="alert(3)"><p>Show</p><script>alert(1)</script>' +
+        '<img src=x onerror="alert(2)"><noscript><p>No JS</p></noscript>' +
+        '<iframe src="https://venue.test/"></iframe><object data="x"></object>' +
+        '<embed src="x"><template><script>alert(4)</script></template>' +
+        '<div OnClick="alert(5)">x</div></body></html>',
+    );
+    expect(out.toLowerCase()).not.toContain('<script');
+    expect(out).not.toMatch(/\son[a-z]+\s*=/i);
+    expect(out).not.toContain('alert(');
+    const doc = parsed(out);
+    expectCspFirst(out);
+    expect(
+      doc.querySelector('noscript, iframe, object, embed, template'),
+    ).toBeNull();
+    // The image stays: the CSP keeps it from loading.
+    expect(doc.querySelector('img')?.getAttribute('src')).toBe('x');
+    expect(Reflect.get(window, '__inspectRan')).toBeUndefined();
+    expect(document.body.innerHTML).toBe('');
+  });
+
+  it('puts the meta first whatever came before the page’s own doctype', () => {
+    for (const lead of [' ', '\u000B', ' ', '<!-- c -->', 'text']) {
+      expectCspFirst(pageSrcDoc(`${lead}<!doctype html><p>x</p>`));
+    }
   });
 });
 
