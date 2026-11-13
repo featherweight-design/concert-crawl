@@ -89,7 +89,8 @@ const RESET: CSSProperties = {
 export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
   // Rule 4: "Yes, going" is filled with the venue's stamp colour, the ring
   // colour the stamp takes once the night is attended. Pure hex, as the stamp
-  // boards draw it; the banner's tints come from the same colour.
+  // boards draw it. The same colour is the panel's left bar; the panel itself
+  // is neutral.
   const accent = stampColorsFor(show.venueSlug).ring;
   // The boards draw `--bg` ink on that fill, all on dark themes. On Light the
   // pale venue colours fall to about 1.2:1 with `--bg`, so the ink is picked
@@ -112,7 +113,9 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
         padding: '10px 12px 10px 14px',
         background: 'color-mix(in oklch, var(--bg) 55%, var(--surface-1))',
         borderStyle: 'solid',
-        borderWidth: 0,
+        borderTopWidth: 0,
+        borderRightWidth: 0,
+        borderBottomWidth: 0,
         borderLeftWidth: 3,
         borderLeftColor: accent,
         borderRadius: 10,
