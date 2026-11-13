@@ -1,6 +1,7 @@
 import type { CrawlRun, DailyCost, Venue } from '@concert-crawl/types';
 import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
 import { formatCost } from '@/components/admin/primitives/utils';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 // Pure derivations for the Health page (admin 1c). No React, no fetches:
 // the page loads, these decide.
@@ -208,7 +209,36 @@ export interface ArtistCounts {
   /** The Artists To check tab's own count, and its "shows soon" chip. */
   to_check: number;
   to_check_soon: number;
+  /** To check with a show later than the soon window, and with no show. */
+  to_check_later: number;
+  to_check_none: number;
+  no_match: number;
 }
+
+/** Artist sync's four rows, in the board's order. */
+export const artistSyncRows = (counts: ArtistCounts) =>
+  [
+    {
+      key: 'matched',
+      label: ADMIN_COPY.health.artistSync.matched,
+      count: counts.matched + counts.auto_matched,
+    },
+    {
+      key: 'soon',
+      label: ADMIN_COPY.health.artistSync.unsureSoon,
+      count: counts.to_check_soon,
+    },
+    {
+      key: 'later',
+      label: ADMIN_COPY.health.artistSync.unsureLater,
+      count: counts.to_check_later + counts.to_check_none,
+    },
+    {
+      key: 'none',
+      label: ADMIN_COPY.health.artistSync.noMatch,
+      count: counts.no_match,
+    },
+  ] as const;
 
 export const artistsTile = (counts: ArtistCounts) => ({
   matched: counts.matched + counts.auto_matched,

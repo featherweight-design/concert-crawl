@@ -4,6 +4,7 @@ import type {
   AdminDailyCosts,
   AdminEmailDelivery,
   AdminSettings,
+  AuditLogItem,
   Venue,
 } from '@concert-crawl/types';
 import { fetchNeedsYouDecisions } from '@/components/admin/shell/needs-you-count';
@@ -14,6 +15,13 @@ import {
 } from '@/components/admin/health/HealthTiles';
 import { VenueGrid } from '@/components/admin/health/VenueGrid';
 import { CostByDay } from '@/components/admin/health/CostByDay';
+import { DoneForYou } from '@/components/admin/health/DoneForYou';
+import { ArtistSync } from '@/components/admin/health/ArtistSync';
+import { SiteCard } from '@/components/admin/health/SiteCard';
+import {
+  DONE_AUDIT_LIMIT,
+  doneForYouRows,
+} from '@/components/admin/health/done-for-you';
 import {
   artistsTile,
   costTile,
@@ -49,7 +57,8 @@ export default async function AdminHealthPage() {
       throw new Error(`Failed to load ${path}`, { cause: err });
     });
 
-  const [status, venues, costs, settings, artists, delivery, needsYou] =
+  const lastNight = lastNightWindow(now);
+  const [status, venues, costs, settings, artists, delivery, needsYou, done] =
     await Promise.all([
       load<HealthStatusRow[]>('/v1/admin/crawl/status'),
       load<Venue[]>('/v1/admin/venues'),
@@ -63,9 +72,19 @@ export default async function AdminHealthPage() {
         console.error('[admin] failed to load the Needs you count:', err);
         return null;
       }),
+      // Done for you degrades its own panel: a night's log failing to load must
+      // not take the tiles down with it.
+      apiClient
+        .get<AuditLogItem[]>(
+          `/v1/admin/audit-log?actor=system&since=${encodeURIComponent(new Date(lastNight.start).toISOString())}&limit=${DONE_AUDIT_LIMIT}`,
+          token,
+        )
+        .catch((err: unknown) => {
+          console.error('[admin] failed to load Done for you:', err);
+          return null;
+        }),
     ]);
 
-  const lastNight = lastNightWindow(now);
   const budgetUsd = settings.llmMonthlyBudgetUsd;
   // Summed from this month's own days, not `costs.totalUsd`: if the API's
   // "today" has crossed midnight into the next month, its window drops the
@@ -98,8 +117,22 @@ export default async function AdminHealthPage() {
             month={month.month}
             budgetUsd={budgetUsd}
           />
+          <DoneForYou
+            rows={
+              done === null
+                ? null
+                : doneForYouRows(done, done.length >= DONE_AUDIT_LIMIT)
+            }
+          />
         </div>
-        {/* 1c-3: Artist sync and The site, desktop only (gap G12). */}
+        {/* Artist sync and The site: desktop only (gap G12). */}
+        <div
+          className="health-desk"
+          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
+          <ArtistSync counts={artists} artistsHref={navItem('artists').href} />
+          <SiteCard delivery={delivery} />
+        </div>
       </div>
     </div>
   );

@@ -18,6 +18,23 @@ const TRIAGE_ERROR_CLASS_LABELS: Record<string, string> = {
   unknown: 'Unclassified error',
 };
 
+/** 1 → "1st", 12 → "12th", 23 → "23rd". */
+const ordinal = (count: number): string => {
+  const tens = count % 100;
+  const ones = count % 10;
+  const suffix =
+    tens >= 11 && tens <= 13
+      ? 'th'
+      : ones === 1
+        ? 'st'
+        : ones === 2
+          ? 'nd'
+          : ones === 3
+            ? 'rd'
+            : 'th';
+  return `${count}${suffix}`;
+};
+
 const venueCount = (count: number): string =>
   `${count.toLocaleString('en-US')} ${count === 1 ? 'venue' : 'venues'}`;
 
@@ -105,21 +122,8 @@ export const ADMIN_COPY = {
         quiet: 'Quiet on purpose',
         ok: 'OK',
       },
-      failure: (count: number, autoPaused: boolean) => {
-        const tens = count % 100;
-        const ones = count % 10;
-        const suffix =
-          tens >= 11 && tens <= 13
-            ? 'th'
-            : ones === 1
-              ? 'st'
-              : ones === 2
-                ? 'nd'
-                : ones === 3
-                  ? 'rd'
-                  : 'th';
-        return `${count}${suffix} failure${autoPaused ? ' · auto-paused' : ''}`;
-      },
+      failure: (count: number, autoPaused: boolean) =>
+        `${ordinal(count)} failure${autoPaused ? ' · auto-paused' : ''}`,
       paused: 'Paused',
       pageUnchanged: 'Page unchanged',
       footer: 'Worst first. Every venue opens its own page.',
@@ -133,6 +137,45 @@ export const ADMIN_COPY = {
       chartLabel: (month: string, total: string) =>
         `LLM cost by day in ${month}: ${total} so far`,
       day: (date: string, amount: string) => `${date}: ${amount}`,
+    },
+    doneForYou: {
+      title: 'Done for you overnight',
+      allActivity: 'All activity',
+      empty: 'Nothing to report overnight.',
+      failed: 'Couldn’t load what was done overnight.',
+      // `atLeast`: the audit read was a full page, so the true count may be
+      // higher and the line says "N+" rather than a number it cannot back.
+      published: (count: number, atLeast: boolean) =>
+        `Published ${count}${atLeast ? '+' : ''} ${count === 1 && !atLeast ? 'price' : 'prices'} a second fan confirmed`,
+      paused: (venue: string, failures: number) =>
+        `Paused crawling ${venue} after its ${ordinal(failures)} failure`,
+      blocked: (venue: string) => `Flagged ${venue} as blocking the crawler`,
+      merged: (venue: string, count: number) =>
+        `Merged ${count} duplicate ${count === 1 ? 'listing' : 'listings'} at ${venue}`,
+      cancelled: (count: number, atLeast: boolean) =>
+        `Marked ${count}${atLeast ? '+' : ''} ${count === 1 && !atLeast ? 'show' : 'shows'} cancelled after the venue stopped listing ${count === 1 && !atLeast ? 'it' : 'them'}`,
+      matched: (count: number, atLeast: boolean) =>
+        `Matched ${count}${atLeast ? '+' : ''} ${count === 1 && !atLeast ? 'artist' : 'artists'} to a photo and genre`,
+    },
+    artistSync: {
+      title: 'Artist sync',
+      artists: 'Artists',
+      matched: 'Matched',
+      unsureSoon: 'Unsure, show in 60 days',
+      unsureLater: 'Unsure, later or no show',
+      noMatch: 'No match',
+      footnote:
+        'Unsure artists with a show in the next 60 days are in Needs you. The rest wait on Artists.',
+    },
+    site: {
+      title: 'The site',
+      emails: 'Emails',
+      lastSent: (time: string, hours: number) =>
+        `Last ${hours} h · last sent ${time}`,
+      noneSent: (hours: number) => `Last ${hours} h · none sent`,
+      sending: 'Sending',
+      failed: (count: number) => `${count} failed`,
+      quiet: 'Quiet',
     },
   },
 
