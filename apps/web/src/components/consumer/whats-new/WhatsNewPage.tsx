@@ -42,7 +42,7 @@ function Card({ card, first }: { card: FeatureCard; first: boolean }) {
         >
           {card.eyebrow}
         </p>
-        <h2 className="mb-1.5 mt-2 text-[22px] font-black leading-tight tracking-[-0.03em] text-fg lg:text-[26px]">
+        <h2 className="mb-1.5 mt-2 text-[20px] font-black leading-tight tracking-[-0.03em] text-fg">
           {card.title}
         </h2>
         <p className="m-0 text-[15px] leading-relaxed text-fg-muted">
@@ -67,7 +67,7 @@ export function WhatsNewPage({ cards }: { cards: FeatureCard[] }) {
 
   return (
     <>
-      <main className="mx-auto w-full max-w-[1000px] px-4 pb-28 pt-3 sm:px-8 sm:pt-12">
+      <main className="mx-auto w-full max-w-[1064px] px-4 pb-28 pt-3 sm:px-8 sm:pt-12">
         <div className="sm:hidden">
           <BackChip inline fallbackHref="/events" />
         </div>

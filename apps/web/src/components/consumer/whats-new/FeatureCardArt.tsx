@@ -58,22 +58,31 @@ const SAMPLE_SHOWS: HistoryShow[] = COPY.stampSamples.map((sample, index) => ({
   rawShowTime: null,
 }));
 
-const STAMP_TILTS = [-8, 6, 10];
+// Scattered and turned as the board strews them: each stamp's size, tilt and
+// drop. BookletStamp has one round shape (its colours come from the venue), so
+// the board's square middle stamp is drawn round here.
+const STAMPS = [
+  { size: 92, tilt: -12, drop: -4 },
+  { size: 84, tilt: 14, drop: 14 },
+  { size: 88, tilt: 6, drop: -8 },
+];
 
 function VenuesArt() {
   return (
     <div
       data-testid="feature-art-venues"
-      className="mx-auto flex max-w-[300px] flex-wrap justify-center gap-2.5 lg:max-w-[700px]"
+      // Two rows of 4 tiles on a phone, two rows of 7 from lg, as the board
+      // draws them; the tile scales with its box.
+      className="mx-auto flex max-w-[276px] flex-wrap justify-center gap-3 min-[390px]:max-w-[308px] lg:max-w-[700px] lg:gap-5"
     >
       {TILE_SLUGS.map((slug, index) => (
         <span
           key={slug}
-          className={
+          className={`h-[60px] w-[60px] min-[390px]:h-[68px] min-[390px]:w-[68px] lg:h-20 lg:w-20 [&>svg]:h-full [&>svg]:w-full ${
             index >= PHONE_TILES ? 'hidden lg:inline-flex' : 'inline-flex'
-          }
+          }`}
         >
-          <VenueTile slug={slug} name={humanise(slug)} size={52} multicolour />
+          <VenueTile slug={slug} name={humanise(slug)} size={80} multicolour />
         </span>
       ))}
     </div>
@@ -107,16 +116,20 @@ function PassportArt() {
   return (
     <div
       data-testid="feature-art-passport"
-      className="flex items-center justify-center gap-3"
+      className="flex items-center justify-center gap-2 min-[390px]:gap-6"
     >
-      {SAMPLE_SHOWS.map((show, index) => (
-        <BookletStamp
-          key={show.eventId}
-          show={show}
-          size={82}
-          tilt={STAMP_TILTS[index] ?? 0}
-        />
-      ))}
+      {SAMPLE_SHOWS.map((show, index) => {
+        const stamp = STAMPS[index] ?? STAMPS[0]!;
+        return (
+          <span
+            key={show.eventId}
+            className="inline-flex"
+            style={{ marginTop: stamp.drop }}
+          >
+            <BookletStamp show={show} size={stamp.size} tilt={stamp.tilt} />
+          </span>
+        );
+      })}
     </div>
   );
 }
