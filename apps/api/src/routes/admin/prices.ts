@@ -1,5 +1,18 @@
 import { Hono } from 'hono';
-import { and, asc, count, desc, eq, gte, isNull, max, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  isNull,
+  max,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import * as Sentry from '@sentry/hono/node';
@@ -8,6 +21,7 @@ import {
   events,
   priceRetrievalLog,
   priceSubmissions,
+  userProfiles,
   venues,
 } from '@concert-crawl/db';
 import { runPricePipeline } from '@concert-crawl/price-pipeline';
@@ -19,6 +33,7 @@ import { runBackgroundTask } from '../../lib/background-tasks.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { setSubmissionStatus } from './lib/price-submission-status.js';
+import { containsPattern } from '../../lib/escape-like.js';
 
 const logger = createLogger('admin:prices');
 
@@ -227,9 +242,62 @@ const submissionsQuerySchema = z.object({
     .optional()
     .transform((val) => val === 'true'),
   status: z.enum(['pending', 'all']).optional().default('pending'),
+  // The Submitted prices tab's filter chips (redesign 4d). When given it
+  // replaces `status`; the four states are mutually exclusive, so the chip
+  // counts add up to All: a price with an open Price check is "price-check"
+  // whatever its own status is.
+  state: z.enum(['all', 'waiting', 'published', 'price-check']).optional(),
+  // "Search shows or people": the show's title, the venue's name, or the
+  // fan's handle.
+  search: z.string().trim().min(1).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+/** A price with a pending counter (an open Price check) filed against it. */
+const hasOpenPriceCheck = sql<boolean>`EXISTS (
+  SELECT 1 FROM price_submissions counter
+  WHERE counter.disputed_submission_id = ${priceSubmissions.id}
+    AND counter.status = 'pending'
+)`;
+
+/** The WHERE clause of one filter chip. */
+const stateClause = (
+  state: 'all' | 'waiting' | 'published' | 'price-check',
+): SQL | undefined => {
+  switch (state) {
+    case 'price-check':
+      return hasOpenPriceCheck;
+    case 'waiting':
+      return and(
+        eq(priceSubmissions.status, 'pending'),
+        sql`NOT ${hasOpenPriceCheck}`,
+      );
+    case 'published':
+      return and(
+        eq(priceSubmissions.status, 'corroborated'),
+        sql`NOT ${hasOpenPriceCheck}`,
+      );
+    default:
+      return undefined;
+  }
+};
+
+type SubmissionState =
+  'waiting' | 'published' | 'price-check' | 'not-used' | 'stale';
+
+/** The state a row is shown in; a price with an open Price check wins. */
+const stateOf = (row: {
+  status: string;
+  priceCheck: boolean;
+}): SubmissionState => {
+  if (row.priceCheck) return 'price-check';
+  if (row.status === 'pending') return 'waiting';
+  if (row.status === 'corroborated') return 'published';
+  if (row.status === 'stale') return 'stale';
+  // archived (a rejection) and disputed both read as "Not used".
+  return 'not-used';
+};
 
 pricesAdminRouter.get(
   '/submissions',
@@ -239,7 +307,8 @@ pricesAdminRouter.get(
     }
   }),
   async (ctx) => {
-    const { count, status, limit, offset } = ctx.req.valid('query');
+    const { count, status, state, search, limit, offset } =
+      ctx.req.valid('query');
 
     // Exclude contest counter rows (`disputed_submission_id IS NOT NULL`)
     // from the legacy submissions queue. Counters are adjudicated through
@@ -249,9 +318,23 @@ pricesAdminRouter.get(
     // pill (matched in /v1/admin/review/counts → `prices`). The list
     // endpoint and the counts query stay in lock-step with this filter.
     const statusClause =
-      status === 'pending' ? eq(priceSubmissions.status, 'pending') : undefined;
+      state === undefined
+        ? status === 'pending'
+          ? eq(priceSubmissions.status, 'pending')
+          : undefined
+        : stateClause(state);
+    const pattern = search === undefined ? undefined : containsPattern(search);
+    const searchClause =
+      pattern === undefined
+        ? undefined
+        : or(
+            ilike(events.title, pattern),
+            ilike(venues.name, pattern),
+            ilike(userProfiles.handle, pattern),
+          );
     const whereClause = and(
       statusClause,
+      searchClause,
       isNull(priceSubmissions.disputedSubmissionId),
     );
 
@@ -260,6 +343,15 @@ pricesAdminRouter.get(
         id: priceSubmissions.id,
         eventId: priceSubmissions.eventId,
         userId: priceSubmissions.userId,
+        // The fan's @handle (null when they have none); the admin UI shows
+        // this, never the Clerk id.
+        handle: userProfiles.handle,
+        // Fans who confirmed this price (the submitter is not counted).
+        backedBy: sql<number>`(
+          SELECT count(*)::int FROM submission_confirms sc
+          WHERE sc.submission_id = ${priceSubmissions.id}
+        )`,
+        priceCheck: hasOpenPriceCheck,
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
         status: priceSubmissions.status,
@@ -281,25 +373,59 @@ pricesAdminRouter.get(
       .from(priceSubmissions)
       .leftJoin(events, eq(priceSubmissions.eventId, events.id))
       .leftJoin(venues, eq(events.venueId, venues.id))
+      .leftJoin(userProfiles, eq(priceSubmissions.userId, userProfiles.userId))
       .where(whereClause)
       .orderBy(desc(priceSubmissions.createdAt))
       .limit(limit)
       .offset(offset);
 
+    const withState = (
+      list: Awaited<typeof rowsPromise>,
+    ): (Awaited<typeof rowsPromise>[number] & { state: SubmissionState })[] =>
+      list.map((row) => ({ ...row, state: stateOf(row) }));
+
     if (!count) {
       const rows = await rowsPromise;
-      return ctx.json({ success: true, data: rows });
+      return ctx.json({ success: true, data: withState(rows) });
     }
 
     const countQuery = db
       .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions)
+      .leftJoin(events, eq(priceSubmissions.eventId, events.id))
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .leftJoin(userProfiles, eq(priceSubmissions.userId, userProfiles.userId))
       .where(whereClause);
     const [rows, countResult] = await Promise.all([rowsPromise, countQuery]);
     const total = countResult[0]?.total ?? 0;
-    return ctx.json({ success: true, data: { rows, total } });
+    return ctx.json({ success: true, data: { rows: withState(rows), total } });
   },
 );
+
+// GET /v1/admin/prices/submissions/counts — the Submitted prices filter chips.
+// The four states are mutually exclusive over the same base filter as the list
+// (no contest counter rows), so Waiting + Published + Price check never exceeds
+// All (the rest are "Not used" and stale rows, shown under All only).
+pricesAdminRouter.get('/submissions/counts', async (ctx) => {
+  const base = isNull(priceSubmissions.disputedSubmissionId);
+  const countWhere = async (clause: SQL | undefined): Promise<number> => {
+    const [row] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(priceSubmissions)
+      .where(and(base, clause));
+    return row?.total ?? 0;
+  };
+  const [all, waiting, published, priceCheck] = await Promise.all([
+    countWhere(undefined),
+    countWhere(stateClause('waiting')),
+    countWhere(stateClause('published')),
+    countWhere(stateClause('price-check')),
+  ]);
+  return ctx.json({
+    success: true,
+    data: { all, waiting, published, priceCheck },
+  });
+});
 
 // GET /v1/admin/prices/submissions/count — pending submissions count for dashboard
 //

@@ -43,7 +43,9 @@ import {
   seedEvent,
   seedPriceRetrievalLog,
   seedPriceSubmission,
+  seedSubmissionConfirm,
   seedUserEvent,
+  seedUserProfile,
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -1283,6 +1285,140 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
     };
     expect(body.data.total).toBe(2);
     expect(body.data.rows).toHaveLength(2);
+  });
+});
+
+// Redesign 4d: the Submitted prices tab shows the fan's @handle (never the
+// Clerk id), how many fans back each price, one of four exclusive states, and
+// a search over the show, the venue and the handle.
+describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  type Row = {
+    id: string;
+    handle: string | null;
+    backedBy: number;
+    state: string;
+    eventTitle: string | null;
+  };
+  const list = async (query = ''): Promise<Row[]> => {
+    const res = await app.request(
+      `/v1/admin/prices/submissions?count=true&state=all${query}`,
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { rows: Row[] } };
+    return body.data.rows;
+  };
+
+  const seedTab = async () => {
+    const venue = await seedVenue({
+      name: 'Mission Ballroom',
+      slug: 'mission',
+    });
+    const waitingEvent = await seedEvent(venue.id, {
+      title: 'Vince Staples',
+      artist: 'Vince Staples',
+      date: '2099-10-01',
+    });
+    const publishedEvent = await seedEvent(venue.id, {
+      title: 'Japanese Breakfast',
+      artist: 'Japanese Breakfast',
+      date: '2099-10-02',
+    });
+    const checkedEvent = await seedEvent(venue.id, {
+      title: 'Big Thief',
+      artist: 'Big Thief',
+      date: '2099-10-03',
+    });
+    await seedUserProfile('user_anna', { handle: 'annab' });
+    const waiting = await seedPriceSubmission(waitingEvent.id, 'user_anna', {
+      status: 'pending',
+    });
+    const published = await seedPriceSubmission(publishedEvent.id, 'user_b', {
+      status: 'corroborated',
+    });
+    await seedSubmissionConfirm(published.id, 'user_c');
+    await seedSubmissionConfirm(published.id, 'user_d');
+    const checked = await seedPriceSubmission(checkedEvent.id, 'user_e', {
+      status: 'corroborated',
+    });
+    await seedPriceSubmission(checkedEvent.id, 'user_f', {
+      status: 'pending',
+      disputedSubmissionId: checked.id,
+    });
+    const rejected = await seedPriceSubmission(waitingEvent.id, 'user_g', {
+      status: 'archived',
+    });
+    return { waiting, published, checked, rejected };
+  };
+
+  it("shows the fan's handle and how many fans back each price", async () => {
+    const { waiting, published } = await seedTab();
+    const rows = await list();
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(byId.get(waiting.id)?.handle).toBe('annab');
+    expect(byId.get(published.id)?.handle).toBeNull();
+    expect(byId.get(published.id)?.backedBy).toBe(2);
+    expect(byId.get(waiting.id)?.backedBy).toBe(0);
+  });
+
+  it('puts every row in exactly one state: a price with an open Price check is a price-check', async () => {
+    const { waiting, published, checked, rejected } = await seedTab();
+    const byId = new Map((await list()).map((row) => [row.id, row.state]));
+    expect(byId.get(waiting.id)).toBe('waiting');
+    expect(byId.get(published.id)).toBe('published');
+    expect(byId.get(checked.id)).toBe('price-check');
+    expect(byId.get(rejected.id)).toBe('not-used');
+  });
+
+  it('filters by chip, and the chip counts add up', async () => {
+    const { waiting, published, checked } = await seedTab();
+    const only = async (state: string) =>
+      (
+        await (
+          await app.request(
+            `/v1/admin/prices/submissions?count=true&state=${state}`,
+            { headers: ADMIN_HEADERS },
+          )
+        ).json()
+      ).data.rows.map((row: { id: string }) => row.id);
+    expect(await only('waiting')).toEqual([waiting.id]);
+    expect(await only('published')).toEqual([published.id]);
+    expect(await only('price-check')).toEqual([checked.id]);
+
+    const res = await app.request('/v1/admin/prices/submissions/counts', {
+      headers: ADMIN_HEADERS,
+    });
+    const body = (await res.json()) as {
+      data: {
+        all: number;
+        waiting: number;
+        published: number;
+        priceCheck: number;
+      };
+    };
+    // The counter row is not a row of this tab; the rejected price is under All.
+    expect(body.data).toEqual({
+      all: 4,
+      waiting: 1,
+      published: 1,
+      priceCheck: 1,
+    });
+  });
+
+  it('searches the show, the venue and the handle, and treats % literally', async () => {
+    await seedTab();
+    expect((await list('&search=vince')).map((row) => row.eventTitle)).toEqual([
+      'Vince Staples',
+      'Vince Staples',
+    ]);
+    expect(await list('&search=annab')).toHaveLength(1);
+    expect(await list('&search=mission')).toHaveLength(4);
+    expect(await list('&search=50%25')).toHaveLength(0);
   });
 });
 
