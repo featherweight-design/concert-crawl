@@ -41,6 +41,7 @@ export const NotifBody = ({
   hasMore = false,
   isLoadingMore = false,
   unreadCount,
+  unreadByCategory,
   onOpen,
   onMarkAll,
   onClose,
@@ -59,6 +60,8 @@ export const NotifBody = ({
   isLoadingMore?: boolean;
   /** Window-wide count from the API. Falls back to the loaded page. */
   unreadCount?: number;
+  /** Window-wide unread by raw category; drives the tab dots in every state. */
+  unreadByCategory?: Record<string, number> | undefined;
   onOpen?: (item: ConsumerNotification) => void;
   onMarkAll?: () => void;
   onClose?: () => void;
@@ -78,10 +81,17 @@ export const NotifBody = ({
   // Opens on Shows. The header count stays the total across all three tabs.
   const [tab, setTab] = useState<NotificationTab>(DEFAULT_NOTIFICATION_TAB);
   const isEmpty = state === 'ready' && items.length === 0;
+  // Window-wide split wins when the caller has one (it survives the loading
+  // and failed states, where `items` may be empty); otherwise the loaded page.
+  // Neither source invents a dot: no cached data means no dot.
   const unreadTabs = new Set<NotificationTab>(
-    items
-      .filter((item) => item.readAt === null)
-      .map((item) => tabFor(item.category)),
+    unreadByCategory === undefined
+      ? items
+          .filter((item) => item.readAt === null)
+          .map((item) => tabFor(item.category))
+      : Object.entries(unreadByCategory)
+          .filter(([, value]) => value > 0)
+          .map(([category]) => tabFor(category)),
   );
   const visible = items.filter((item) => tabFor(item.category) === tab);
   const derived = unreadCount ?? countUnread(items);

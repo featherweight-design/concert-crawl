@@ -809,3 +809,51 @@ describe('NotifBody — B+ states', () => {
     expect(rowStyle()).not.toContain('color-mix');
   });
 });
+
+describe('NotifBody — tab dots from the cached per-category counts', () => {
+  const split = { 'watch.pricedrop': 2, 'artist.new_show': 1 };
+
+  it('keeps the dots while loading when a cached count is above zero', () => {
+    render(<NotifBody state="loading" unreadByCategory={split} now={NOW} />);
+    // Shows is the open tab (never dotted); Alerts and Prices carry dots.
+    expect(screen.getByTestId('notif-tab-dot-alerts')).toBeInTheDocument();
+    expect(screen.getByTestId('notif-tab-dot-prices')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+  });
+
+  it('draws no dot for a zero count or with nothing cached', () => {
+    render(
+      <NotifBody
+        state="loading"
+        unreadByCategory={{ 'contest.resolved': 0 }}
+        now={NOW}
+      />,
+    );
+    expect(screen.queryByTestId('notif-tab-dot-prices')).toBeNull();
+    cleanup();
+    render(<NotifBody state="loading" now={NOW} />);
+    expect(screen.queryByTestId('notif-tab-dot-alerts')).toBeNull();
+    expect(screen.queryByTestId('notif-tab-dot-prices')).toBeNull();
+  });
+
+  it('keeps the dots in the failed state', () => {
+    render(<NotifBody state="error" unreadByCategory={split} now={NOW} />);
+    expect(screen.getByTestId('notif-tab-dot-prices')).toBeInTheDocument();
+  });
+
+  it('keeps the dots in the empty and populated states', () => {
+    render(<NotifBody unreadByCategory={split} items={[]} now={NOW} />);
+    expect(screen.getByTestId('notif-tab-dot-prices')).toBeInTheDocument();
+    cleanup();
+    render(
+      <NotifBody
+        unreadByCategory={split}
+        items={[notification({ category: 'watch.pricedrop' })]}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByTestId('notif-tab-dot-prices')).toBeInTheDocument();
+  });
+});

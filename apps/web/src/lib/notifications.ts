@@ -78,6 +78,11 @@ export interface NotificationListResult {
   items: ConsumerNotification[];
   /** Uncapped by design — the visible affordance is a dot, this is for speech. */
   unreadCount: number;
+  /**
+   * Window-wide unread split by RAW category string, for the tab dots. Absent
+   * when an older API answered; the panel then falls back to the loaded page.
+   */
+  unreadByCategory?: Record<string, number> | undefined;
   hasMore: boolean;
   /** Opaque. Echo back, never parse. */
   nextCursor: string | null;
@@ -137,6 +142,18 @@ const isNullableTimestamp = (value: unknown): value is string | null =>
 const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
+const parseUnreadByCategory = (
+  value: unknown,
+): Record<string, number> | undefined => {
+  if (!isRecord(value)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (!isCount(entry)) return undefined;
+    out[key] = entry;
+  }
+  return out;
+};
+
 const parseItem = (value: unknown): ConsumerNotification | null => {
   if (!isRecord(value)) return null;
   const { id, category, title, body, actionUrl, readAt, createdAt, metadata } =
@@ -170,6 +187,9 @@ export const safeParseNotificationList = (
     return { success: false, error: 'Notification payload is not an object' };
   }
   const { items, unreadCount, hasMore, nextCursor, seenAt } = value;
+  // Optional and degrade-only: a malformed split drops the dots' window-wide
+  // source (they fall back to the loaded page) rather than failing the panel.
+  const unreadByCategory = parseUnreadByCategory(value['unreadByCategory']);
   if (!Array.isArray(items)) {
     return { success: false, error: 'Notification payload has no items array' };
   }
@@ -235,6 +255,7 @@ export const safeParseNotificationList = (
     data: {
       items: parsed,
       unreadCount,
+      ...(unreadByCategory === undefined ? {} : { unreadByCategory }),
       hasMore: canPage,
       nextCursor: cursor,
       seenAt,
