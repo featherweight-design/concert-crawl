@@ -4,10 +4,10 @@ import type {
   AdminDailyCosts,
   AdminEmailDelivery,
   AdminSettings,
-  NeedsYouCount,
   Venue,
 } from '@concert-crawl/types';
 import { TriagePanel, parseTriageResponse } from '@/components/admin/triage';
+import { fetchNeedsYouDecisions } from '@/components/admin/shell/needs-you-count';
 import { navItem } from '@/components/admin/shell/nav';
 import {
   HealthHeader,
@@ -58,12 +58,10 @@ export default async function AdminHealthPage() {
       load<ArtistCounts>('/v1/admin/artists/counts'),
       load<AdminEmailDelivery>('/v1/admin/notifications/delivery'),
       // One count for the summary and the button (G11), so they never disagree.
-      load<NeedsYouCount>('/v1/admin/needs-you/count')
-        .then((count) => count.decisions)
-        .catch((err: unknown) => {
-          console.error('[admin] failed to load the Needs you count:', err);
-          return null;
-        }),
+      fetchNeedsYouDecisions(token).catch((err: unknown) => {
+        console.error('[admin] failed to load the Needs you count:', err);
+        return null;
+      }),
       // Interim until 2b (decision 20): degrades to its own one-line message.
       load<unknown>('/v1/admin/triage')
         .then(parseTriageResponse)

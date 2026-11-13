@@ -14,6 +14,19 @@ const cell = (name: string, failures = 0, autoPaused = false) => ({
 });
 
 describe('VenueGrid', () => {
+  it('draws the Crawl runs chevron and label on one line, desktop only', () => {
+    render(
+      <VenueGrid
+        crawlRunsHref="/admin/crawl"
+        groups={{ failed: [], paused: [], quiet: [], ok: [cell('Ogden')] }}
+      />,
+    );
+    const link = screen.getByRole('link', { name: /Crawl runs/ });
+    expect(link.style.display).toBe('inline-flex');
+    expect(link.style.alignItems).toBe('center');
+    expect(link.parentElement).toHaveClass('health-desk');
+  });
+
   it('draws each group with its count, line and link', () => {
     render(
       <VenueGrid

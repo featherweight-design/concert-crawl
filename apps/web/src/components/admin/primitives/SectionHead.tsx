@@ -1,6 +1,8 @@
 interface SectionHeadProps {
   eyebrow?: string;
   title: React.ReactNode;
+  /** Class on the h1, e.g. to hide it where the shell already shows the title. */
+  titleClassName?: string;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
 }
@@ -8,6 +10,7 @@ interface SectionHeadProps {
 export const SectionHead = ({
   eyebrow,
   title,
+  titleClassName,
   subtitle,
   actions,
 }: SectionHeadProps) => (
@@ -43,6 +46,7 @@ export const SectionHead = ({
           parent so the intrinsic min-content of the H1 doesn't pin the
           column to the widest token. */}
       <h1
+        className={titleClassName}
         style={{
           margin: 0,
           fontFamily: "'Inter', sans-serif",
