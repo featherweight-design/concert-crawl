@@ -10,6 +10,7 @@ import {
 } from '@/components/consumer/modal-shell/crew-surface';
 import { CCOverlayHost } from '@/components/ui/cc-overlay/CCOverlayHost';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useAnchoredPosition } from '@/components/ui/cc-overlay/lib/use-anchored-position';
 import { CREWS_COPY } from './definitions/copy';
 
@@ -266,6 +267,8 @@ const OptionsPopover = ({
 
   // Tab cycles inside the panel, as it does in the sheet this replaces.
   useFocusTrap(panelRef, open && position !== null);
+  // The full-viewport scrim below covers the page, so the page holds still.
+  useBodyScrollLock(open && position !== null);
 
   // Closing hands focus back to the button that opened it. A row that opens
   // another sheet is then that sheet's trigger, so it restores here in turn.

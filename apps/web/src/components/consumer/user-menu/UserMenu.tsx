@@ -1055,6 +1055,9 @@ function MenuBody({
 
 function UserMenuPopover(props: MenuBodyProps) {
   useFocusTrap(props.surfaceRef, props.open);
+  // The popover always renders over the full-viewport dim (bp-account), so
+  // the page behind holds still just as it does under the phone sheet.
+  useBodyScrollLock(props.open);
   return (
     <div
       ref={props.surfaceRef}
@@ -1110,8 +1113,7 @@ function UserMenuPopover(props: MenuBodyProps) {
 
 function UserMenuSheet(props: MenuBodyProps) {
   useFocusTrap(props.surfaceRef, props.open);
-  // The phone sheet only: the desktop popover has no scrim and leaves the
-  // page live.
+  // The page behind holds still; the desktop popover takes the same lock.
   useBodyScrollLock(props.open);
   const drag = useSheetDrag(props.onDismiss);
   return (

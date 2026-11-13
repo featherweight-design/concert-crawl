@@ -5,6 +5,7 @@ import { render, cleanup } from '@testing-library/react';
 import {
   bodyScrollLockCount,
   lockBodyScroll,
+  resetBodyScrollLockForTests,
   useBodyScrollLock,
 } from './useBodyScrollLock';
 
@@ -25,9 +26,9 @@ const setScrollY = (value: number) =>
 afterEach(() => {
   cleanup();
   setScrollY(0);
+  resetBodyScrollLockForTests();
   html().style.overflow = '';
   document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
   vi.restoreAllMocks();
 });
 

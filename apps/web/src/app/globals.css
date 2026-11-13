@@ -122,11 +122,28 @@
     @apply border-border;
   }
 
+  /* The page scroll lock (useBodyScrollLock) hides the root overflow; a
+     reserved gutter keeps a desktop scrollbar's disappearance from widening
+     the page under the dialog. Overlay scrollbars (phones) reserve nothing. */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     font-family: var(--font-ui);
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+  }
+
+  /* A fling at the end of a sheet's or dialog's own scroll area stays there
+     rather than chaining to the locked page (iOS 16+ and every evergreen
+     browser). Harmless on elements that do not scroll. */
+  [role='dialog'],
+  [role='dialog'] *,
+  [role='alertdialog'],
+  [role='alertdialog'] * {
+    overscroll-behavior: contain;
   }
 
   code,
