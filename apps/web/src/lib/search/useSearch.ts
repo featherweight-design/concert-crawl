@@ -99,20 +99,49 @@ function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
   return Array.from(map.values());
 }
 
+// Lower-case, accents folded away ("Théâtre" reads "theatre"), anything that is
+// not a letter or digit a single space.
+const foldName = (text: string): string =>
+  text
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
 /**
- * Whether a venue's own name answers the query: the whole query is the name, or
- * a word in the name starts with it ("red" finds Red Rocks Amphitheatre), or the
- * query reads on past the name ("Bluebird Theater tonight"). A venue is a
+ * Whether the query starts a venue's name, is the whole name, or reads on past
+ * it ("bluebird", "red rocks", "bluebird theater tonight"). A word in the middle
+ * of the name does not count. This is also what puts Venues ahead of Artists in
+ * the results (`venueFirst`): the board's order is Artists, Venues, then Artist
+ * pages, and only a query that names a venue from its start earns the swap.
+ */
+export function venueLeadsQuery(venueName: string, query: string): boolean {
+  const name = foldName(venueName);
+  const needle = foldName(query);
+  if (name === '' || needle === '') return false;
+  return name === needle || name.startsWith(needle) || needle.startsWith(name);
+}
+
+/**
+ * Whether a venue's own name answers the query: it leads the query (above), or
+ * the query is a run of words inside the name, the last by prefix ("rocks"
+ * finds Red Rocks Amphitheatre; "black box" finds The Black Box). A venue is a
  * result for its name, not for hosting an event that matched.
  */
 export function venueNameMatches(venueName: string, query: string): boolean {
-  const name = venueName.toLowerCase().trim();
-  const needle = query.toLowerCase().trim();
-  if (needle === '') return false;
-  if (name === needle || name.startsWith(needle) || needle.startsWith(name)) {
-    return true;
-  }
-  return name.split(/[^a-z0-9]+/).some((word) => word.startsWith(needle));
+  if (venueLeadsQuery(venueName, query)) return true;
+  const nameWords = foldName(venueName).split(' ');
+  const needleWords = foldName(query).split(' ');
+  return nameWords.some((_, start) =>
+    needleWords.every((word, offset) => {
+      const nameWord = nameWords[start + offset];
+      if (nameWord === undefined) return false;
+      return offset === needleWords.length - 1
+        ? nameWord.startsWith(word)
+        : nameWord === word;
+    }),
+  );
 }
 
 /**
@@ -141,16 +170,6 @@ export function deriveVenueResults(
     }
   }
   return Array.from(map.values());
-}
-
-function venueMatchesQuery(venueName: string, query: string): boolean {
-  const normalizedName = venueName.toLowerCase().trim();
-  const normalizedQuery = query.toLowerCase().trim();
-  return (
-    normalizedName === normalizedQuery ||
-    normalizedName.startsWith(normalizedQuery) ||
-    normalizedQuery.startsWith(normalizedName)
-  );
 }
 
 export function useSearch() {
@@ -332,7 +351,7 @@ export function useSearch() {
 
   const venueFirst =
     venueResults.length > 0 &&
-    venueResults.some((venue) => venueMatchesQuery(venue.name, query.trim()));
+    venueResults.some((venue) => venueLeadsQuery(venue.name, query));
 
   return {
     query,

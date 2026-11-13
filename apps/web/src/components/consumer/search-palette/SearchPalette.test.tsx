@@ -277,6 +277,20 @@ describe('SearchPalette', () => {
     expect(mockNavigateTo).not.toHaveBeenCalled();
   });
 
+  it('highlights nothing and ignores Enter while results are still loading', () => {
+    mockHookState.isLoading = true;
+    try {
+      const { container } = render(
+        <SearchPalette open={true} onClose={onClose} />,
+      );
+      fireEvent.keyDown(window, { key: 'Enter' });
+      expect(mockNavigateTo).not.toHaveBeenCalled();
+      expect(container.querySelector('[aria-selected="true"]')).toBeNull();
+    } finally {
+      mockHookState.isLoading = false;
+    }
+  });
+
   it('clamps ArrowDown at the last result', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
     // 3 total results, pressing down 10 times should clamp to idx 2
