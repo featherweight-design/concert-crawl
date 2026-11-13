@@ -264,6 +264,10 @@ describe('price and bug helpers', () => {
     expect(whatOf(batch('8'))).toBe(
       '8 new prices, each confirmed by a second fan.',
     );
+    // An API that has not sent the count yet (a rollout window).
+    expect(
+      whatOf({ kind: 'price-batch', evidence: [] } as unknown as QueueRow),
+    ).toBe('New prices, each confirmed by a second fan.');
   });
 
   it('counts minutes since, and null for a bad instant', () => {
