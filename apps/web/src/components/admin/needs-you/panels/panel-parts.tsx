@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { Check, Pause, RefreshCw, type LucideIcon } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, StatusBadge } from '@/components/admin/primitives';
@@ -176,8 +176,15 @@ export const AnswerButtons = ({
             gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
           }}
         >
-          {extra}
-          {others.map((answer) => button(answer, false))}
+          {/* The board's order: the lead, then Check source, then the rest.
+              With no lead drawn full width, the first answer stands in. */}
+          {lead?.suggested && extra}
+          {others.map((answer, index) => (
+            <Fragment key={answer.slug}>
+              {button(answer, false)}
+              {!lead?.suggested && index === 0 && extra}
+            </Fragment>
+          ))}
         </div>
         {note && (
           <p
