@@ -78,6 +78,9 @@ describe('isPublicCacheableDocument', () => {
       expect(isPublicCacheableDocument(page('/changelog'), launched)).toBe(
         true,
       );
+      expect(isPublicCacheableDocument(page('/whats-new'), launched)).toBe(
+        true,
+      );
     }
   });
 

@@ -525,9 +525,9 @@ export const CONSUMER_COPY = {
     },
 
     versionFooter: {
-      ariaLabel: 'View changelog',
+      ariaLabel: 'What’s new',
       unreadLabel: 'What’s new',
-      readLabel: 'Changelog',
+      readLabel: 'What’s new',
     },
 
     featureDropPill: {

@@ -19,7 +19,7 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
   const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes');
 
   // Below every hook, so a late-landing flag read cannot change the hook
-  // count. The footer's only action is a push to /changelog, which the same
+  // count. The footer's only action is a push to /whats-new, which the same
   // flag 404s.
   if (!releaseNotesEnabled) return null;
 
