@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { Check } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -54,6 +54,16 @@ export const PriceBatchSheet = ({
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [refused, setRefused] = useState(false);
+
+  // The sheet's trap puts focus on its first enabled control, which is Cancel
+  // while the prices load (Approve is off at 0), and that draws Cancel's focus
+  // ring. Rest focus on the list's own box instead, so the sheet opens neutral.
+  // It runs after the trap's own effect (a parent effect follows its children).
+  const restRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => restRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const wanted = useMemo(() => new Set(row.submissionIds), [row.submissionIds]);
 
@@ -139,7 +149,12 @@ export const PriceBatchSheet = ({
       footer={footer}
       dismissible={!busy}
     >
-      <div data-testid="price-batch-sheet">
+      <div
+        ref={restRef}
+        tabIndex={-1}
+        data-testid="price-batch-sheet"
+        style={{ outline: 'none' }}
+      >
         {load.kind === 'loading' && (
           <p role="status" style={note}>
             {copy.loading}
@@ -247,6 +262,11 @@ export const PriceBatchSheet = ({
                           display: 'block',
                           fontSize: 12.5,
                           color: 'var(--fg-muted)',
+                          // One line, as the board draws it; a long venue or a
+                          // narrow phone cuts with an ellipsis.
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
                         {[entry.venueName, entry.date && metaDate(entry.date)]

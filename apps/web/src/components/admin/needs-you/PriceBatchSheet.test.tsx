@@ -173,6 +173,18 @@ describe('<PriceBatchSheet />', () => {
     expect(screen.getByRole('button', { name: 'Approve 1' })).toBeEnabled();
   });
 
+  it('opens with focus at rest, not on Cancel, and keeps each meta line to one line', async () => {
+    mount(['a']);
+    await screen.findByText('Marian Hill');
+    await waitFor(() =>
+      expect(screen.getByTestId('price-batch-sheet')).toHaveFocus(),
+    );
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toHaveFocus();
+    const meta = screen.getByText('Bluebird Theater · Sun Feb 22');
+    expect(meta.style.whiteSpace).toBe('nowrap');
+    expect(meta.style.textOverflow).toBe('ellipsis');
+  });
+
   it('closes on Cancel', async () => {
     const onClose = vi.fn();
     mount(
