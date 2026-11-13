@@ -74,6 +74,9 @@ const tabStyle = (
     ? {
         flex: 1,
         height: 32,
+        // A shrink-to-fit strip (Inspect's header) would otherwise run the
+        // labels together; a full-width one (Artists on phone) still fills.
+        padding: '0 12px',
         borderRadius: 7,
         fontSize: 12.5,
         fontWeight: 600,
