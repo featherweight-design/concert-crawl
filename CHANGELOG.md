@@ -1,3 +1,17 @@
+# [1.399.0](https://github.com/featherweight-design/concert-crawl/compare/v1.398.0...v1.399.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** find the Runs interim link by role in the tabs suite ([a108a65](https://github.com/featherweight-design/concert-crawl/commit/a108a65ef082a3f97fbab4e393956c31ca4409e8))
+* **web:** the venue name is the page's one h1; drop the Venue detail heading ([b539ae5](https://github.com/featherweight-design/concert-crawl/commit/b539ae5dd72ac0e471ff2cdaef3bbcea8c66459e))
+* **web:** venue tabs switch on the client and open a refused field's tab ([daaa841](https://github.com/featherweight-design/concert-crawl/commit/daaa841eb88b8cac7906b9b81cd973c6235f073d))
+
+
+### Features
+
+* **web:** venue page tab shell (3b part 1) ([4b98637](https://github.com/featherweight-design/concert-crawl/commit/4b98637c89a6c3a5ab058c55bcbf37699469a682))
+
 # [1.398.0](https://github.com/featherweight-design/concert-crawl/compare/v1.397.2...v1.398.0) (2026-11-13)
 
 
