@@ -21,7 +21,6 @@ import type { Recrawl } from '../useRecrawl';
 import { headerLine, recrawlOff } from '../venue-header-rules';
 import type { OverviewData, OverviewSnooze } from './overview-data';
 import {
-  EVENTS_BY_VENUE_READY,
   LAST_RUNS,
   NEEDS_YOU_KIND_LABEL,
   isUnchanged,
@@ -409,23 +408,11 @@ const ShowsCard = ({
   phone: boolean;
 }) => {
   const full = venue.lastFullRun ?? null;
+  // Open in Events is left off: `/admin/events` redirects and drops `?venue=`
+  // today, so the link would lie. The 4b Events PR adds it back here once the
+  // Events page honours `?venue=`.
   return (
-    <Card
-      title={COPY.shows.title}
-      phone={phone}
-      testId="overview-shows"
-      action={
-        EVENTS_BY_VENUE_READY ? (
-          <Link
-            href={`/admin/events?venue=${encodeURIComponent(venue.id)}`}
-            style={{ ...linkButton('ghost', false), height: 28 }}
-          >
-            <ChevronRight size={14} aria-hidden />
-            {COPY.shows.openInEvents}
-          </Link>
-        ) : undefined
-      }
-    >
+    <Card title={COPY.shows.title} phone={phone} testId="overview-shows">
       <div>
         <Row label={COPY.shows.upcoming}>
           <b>{(venue.upcomingShows ?? 0).toLocaleString('en-US')}</b>

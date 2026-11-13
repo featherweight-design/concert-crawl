@@ -28,6 +28,16 @@ export type RunRow = z.infer<typeof runRowSchema>;
 
 export const parseRunRows = parseRows(runRowSchema);
 
+/** `GET /v1/admin/crawl/runs/:id`: one run, with the venue it belongs to. */
+const inspectRunSchema = runRowSchema.extend({ venueId: z.string() });
+export type InspectRun = z.infer<typeof inspectRunSchema>;
+
+/** One run, or null when the body isn't one. */
+export const parseRun = (raw: unknown): InspectRun | null => {
+  const parsed = inspectRunSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+};
+
 /** `GET /v1/admin/crawl/runs/:id/pages`, oldest first: what the run detail reads. */
 const runPageSchema = z.object({
   id: z.string(),
@@ -35,6 +45,9 @@ const runPageSchema = z.object({
   finalUrl: z.string().nullable(),
   httpStatus: z.number().nullable(),
   bytes: z.number().nullable(),
+  // 'browser' | 'http' | 'api'. Kept as a string so a new mode never drops
+  // the row; Inspect only asks whether it is 'api' (a feed).
+  fetchMode: z.string().optional(),
 });
 export type RunPage = z.infer<typeof runPageSchema>;
 

@@ -32,7 +32,7 @@ vi.mock('next/link', () => ({
 
 import { RunDetailPanel } from './RunDetailPanel';
 import type { RunPage, RunRow } from './run-data';
-import { INSPECT_READY, type LastFullRun } from './runs-rules';
+import type { LastFullRun } from './runs-rules';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const DETAIL = ADMIN_COPY.runDetail;
@@ -286,15 +286,86 @@ describe('RunDetailPanel', () => {
     expect(after[0]!.textContent).toContain('example.com/new');
   });
 
-  it('hides Inspect page and Compare until Inspect lands', async () => {
-    expect(INSPECT_READY).toBe(false);
-    mockGet.mockResolvedValue([page()]);
+  it('Inspect page opens on the first failed page, and Compare on the last full run', async () => {
+    mockGet.mockResolvedValue([
+      page(),
+      page({ id: 'page-2', httpStatus: 503 }),
+    ]);
     renderPanel();
     await screen.findAllByTestId('run-page');
-    expect(screen.queryByRole('link', { name: DETAIL.inspect })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('link', { name: DETAIL.inspect }).getAttribute('href'),
+      ).toBe('/admin/venues/venue-1/inspect/run-9?page=page-2'),
+    );
+    // Compare keeps the page: the last full run's page fetched from its URL.
     expect(
-      screen.queryByRole('link', { name: DETAIL.compare('Nov 7') }),
-    ).toBeNull();
+      screen
+        .getByRole('link', { name: DETAIL.compare('Nov 7') })
+        .getAttribute('href'),
+    ).toBe(
+      `/admin/venues/venue-1/inspect/run-7?url=${encodeURIComponent('https://www.ballarena.com/events')}`,
+    );
+  });
+
+  it('each PAGES row has its own Inspect link, beside the live URL', async () => {
+    const second = 'https://www.ballarena.com/events?page=2';
+    mockGet.mockResolvedValue([page(), page({ id: 'page-2', url: second })]);
+    renderPanel();
+    const rows = await screen.findAllByTestId('run-page');
+    const inspect = within(rows[1]!).getByRole('link', {
+      name: DETAIL.inspectRowLabel(second),
+    });
+    expect(inspect.getAttribute('href')).toBe(
+      '/admin/venues/venue-1/inspect/run-9?page=page-2',
+    );
+    expect(
+      within(rows[1]!).getByRole('link', { name: second }).getAttribute('href'),
+    ).toBe(second);
+    expect(
+      within(rows[0]!).getByTestId('run-page-inspect').getAttribute('href'),
+    ).toBe('/admin/venues/venue-1/inspect/run-9?page=page-1');
+  });
+
+  it('Inspect page opens on the first page when none failed', async () => {
+    mockGet.mockResolvedValue([page(), page({ id: 'page-2' })]);
+    renderPanel();
+    await screen.findAllByTestId('run-page');
+    expect(
+      screen.getByRole('link', { name: DETAIL.inspect }).getAttribute('href'),
+    ).toBe('/admin/venues/venue-1/inspect/run-9?page=page-1');
+  });
+
+  it('leaves Compare off without an earlier full run', async () => {
+    mockGet.mockResolvedValue([page()]);
+    render(
+      <RunDetailPanel
+        venueId="venue-1"
+        run={row()}
+        lastFullRun={null}
+        phone={false}
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findAllByTestId('run-page');
+    expect(screen.getByRole('link', { name: DETAIL.inspect })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /^Compare/ })).toBeNull();
+  });
+
+  it('a run whose pages loaded and are none offers neither Inspect nor Compare', async () => {
+    mockGet.mockResolvedValue([]);
+    renderPanel();
+    await waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());
+    expect(screen.queryByRole('link', { name: DETAIL.inspect })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Compare/ })).toBeNull();
+  });
+
+  it('while the pages load, Inspect lets the route pick its default', () => {
+    mockGet.mockReturnValue(new Promise(() => {}));
+    renderPanel();
+    expect(
+      screen.getByRole('link', { name: DETAIL.inspect }).getAttribute('href'),
+    ).toBe('/admin/venues/venue-1/inspect/run-9');
   });
 
   it('closes from its ✕', async () => {

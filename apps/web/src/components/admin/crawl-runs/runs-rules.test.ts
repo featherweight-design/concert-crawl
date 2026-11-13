@@ -3,9 +3,9 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { shortTime } from '@/components/admin/venues/overview/overview-rules';
 import type { RunRow } from './run-data';
 import {
-  INSPECT_READY,
   RUNS_CAP,
   RUNS_STEP,
+  defaultInspectPage,
   filterRuns,
   firstFailedPage,
   hasMore,
@@ -236,13 +236,45 @@ describe('shortTime', () => {
   });
 });
 
-describe('Inspect gate', () => {
-  it('stays hidden until Inspect lands (3b part 5)', () => {
-    expect(INSPECT_READY).toBe(false);
+describe('defaultInspectPage', () => {
+  it('is the first failed page', () => {
+    const pages = [
+      { id: 'a', httpStatus: 200 },
+      { id: 'b', httpStatus: 503 },
+      { id: 'c', httpStatus: 404 },
+    ];
+    expect(defaultInspectPage(pages)?.id).toBe('b');
+  });
+
+  it('is the first page when none failed, and null with none', () => {
+    expect(
+      defaultInspectPage([
+        { id: 'a', httpStatus: null },
+        { id: 'b', httpStatus: 301 },
+      ])?.id,
+    ).toBe('a');
+    expect(defaultInspectPage([])).toBeNull();
   });
 });
 
 describe('inspectHref', () => {
+  it('names the page when given one', () => {
+    expect(inspectHref('venue-1', 'run-9', { page: 'page/2' })).toBe(
+      '/admin/venues/venue-1/inspect/run-9?page=page%2F2',
+    );
+    expect(inspectHref('venue-1', 'run-9', { page: null })).toBe(
+      '/admin/venues/venue-1/inspect/run-9',
+    );
+  });
+
+  it('carries the page’s URL for Compare', () => {
+    expect(
+      inspectHref('venue-1', 'run-7', { url: 'https://x.com/a?b=1&c' }),
+    ).toBe(
+      '/admin/venues/venue-1/inspect/run-7?url=https%3A%2F%2Fx.com%2Fa%3Fb%3D1%26c',
+    );
+  });
+
   it('points at the venue’s Inspect route for the run', () => {
     expect(inspectHref('venue-1', 'run-9')).toBe(
       '/admin/venues/venue-1/inspect/run-9',
