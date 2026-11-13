@@ -195,6 +195,67 @@ const SECONDARY_STYLE: CSSProperties = {
   justifyContent: 'center',
 };
 
+/**
+ * The layout, in one <style> so the page needs no shared CSS. A phone is one
+ * centred column (copy, then the Tell us card, then the Error ID chip). From
+ * 900px the signed-in page splits as the desktop boards draw it: the copy and
+ * the chip on the left, a 440px card on the right, vertically centred; the
+ * signed-out page stays one centred column with the buttons in a row.
+ * `!important` on the desktop button rules only: the phone styles are inline.
+ */
+const LAYOUT_CSS = `
+.cc-se-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'copy' 'aside' 'chip';
+  max-width: 400px;
+  margin: 0 auto;
+  padding-top: 56px;
+  row-gap: 12px;
+  justify-items: center;
+  text-align: center;
+}
+.cc-se-copy {
+  grid-area: copy;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.cc-se-aside { grid-area: aside; width: 100%; }
+.cc-se-chip { grid-area: chip; margin-top: 12px; }
+.cc-se-heading { font-size: 30px; }
+.cc-se-actions { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 4px; margin-top: 12px; }
+.cc-se-try { width: 100%; min-height: 52px; border-radius: 16px; font-size: 17px; }
+@media (min-width: 900px) {
+  .cc-se-grid { max-width: 1100px; padding-top: 96px; row-gap: 0; }
+  .cc-se-grid[data-split='true'] {
+    grid-template-columns: minmax(0, 1fr) 440px;
+    grid-template-areas: 'copy aside' 'chip aside';
+    column-gap: 60px;
+    max-width: 1000px;
+    justify-items: start;
+    align-items: center;
+    text-align: left;
+  }
+  .cc-se-grid[data-split='true'] .cc-se-copy { align-items: flex-start; align-self: end; }
+  .cc-se-grid[data-split='true'] .cc-se-chip { align-self: start; margin-top: 28px; }
+  .cc-se-grid[data-split='true'] .cc-se-actions { justify-content: flex-start; }
+  .cc-se-heading { font-size: 44px; }
+  .cc-se-chip { margin-top: 28px; }
+  .cc-se-copy p { max-width: 410px; }
+  .cc-se-actions { flex-direction: row; justify-content: center; gap: 10px; width: auto; margin-top: 16px; }
+  .cc-se-try { width: auto; min-height: 48px; padding: 0 28px; border-radius: 14px; font-size: 15px; }
+  .cc-se-second {
+    min-height: 48px; padding: 0 24px !important; border-radius: 14px;
+    border: 1px solid var(--border-strong) !important;
+    background: var(--surface-1) !important; color: var(--fg) !important;
+    font-size: 15px !important;
+  }
+}
+`;
+
 export interface StandaloneErrorProps {
   /** `error.digest`, or the id minted for a browser throw. Omitted: no chip. */
   errorId?: string | undefined;
@@ -227,91 +288,88 @@ export const StandaloneError = ({
       fontFamily: 'var(--font-ui, system-ui, sans-serif)',
     }}
   >
+    <style>{LAYOUT_CSS}</style>
     <header>
       <Logo />
     </header>
-    <main
-      style={{
-        maxWidth: 400,
-        margin: '0 auto',
-        paddingTop: 56,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 12,
-        textAlign: 'center',
-      }}
-    >
-      <BrokenMark />
-      <p
-        style={{
-          margin: '16px 0 0',
-          fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          color: 'var(--danger)',
-        }}
-      >
-        {copy.eyebrow}
-      </p>
-      <h1
-        style={{
-          margin: 0,
-          fontWeight: 900,
-          fontSize: 30,
-          letterSpacing: '-0.04em',
-          lineHeight: 1.1,
-        }}
-      >
-        {copy.errorHeading}
-      </h1>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 15,
-          lineHeight: 1.55,
-          color: 'var(--fg-muted)',
-        }}
-      >
-        {onSignOut ? copy.errorBody : copy.signedOutBody}
-      </p>
-      <button
-        type="button"
-        onClick={onRetry}
-        style={{
-          marginTop: 12,
-          width: '100%',
-          minHeight: 52,
-          borderRadius: 16,
-          border: 'none',
-          background: 'linear-gradient(90deg, var(--signal), var(--accent))',
-          boxShadow:
-            '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
-          color: 'var(--fg-on-accent)',
-          fontFamily: 'inherit',
-          fontSize: 17,
-          fontWeight: 800,
-          cursor: 'pointer',
-        }}
-      >
-        {copy.tryAgainButton}
-      </button>
-      {onSignOut ? (
-        <button type="button" onClick={onSignOut} style={SECONDARY_STYLE}>
-          {copy.signOutButton}
-        </button>
-      ) : (
-        // eslint-disable-next-line @next/next/no-html-link-for-pages -- standalone error page, no router
-        <a href="/" style={SECONDARY_STYLE}>
-          {copy.goHomeButton}
-        </a>
-      )}
-      {/* The Tell us card comes before the chip, as the boards draw it. */}
-      {children}
+    <main className="cc-se-grid" data-split={children ? 'true' : undefined}>
+      <div className="cc-se-copy">
+        <BrokenMark />
+        <p
+          style={{
+            margin: '16px 0 0',
+            fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'var(--danger)',
+          }}
+        >
+          {copy.eyebrow}
+        </p>
+        <h1
+          className="cc-se-heading"
+          style={{
+            margin: 0,
+            fontWeight: 900,
+            letterSpacing: '-0.04em',
+            lineHeight: 1.1,
+          }}
+        >
+          {copy.errorHeading}
+        </h1>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 15,
+            lineHeight: 1.55,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {onSignOut ? copy.errorBody : copy.signedOutBody}
+        </p>
+        <div className="cc-se-actions">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="cc-se-try"
+            style={{
+              border: 'none',
+              background:
+                'linear-gradient(90deg, var(--signal), var(--accent))',
+              boxShadow:
+                '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
+              color: 'var(--fg-on-accent)',
+              fontFamily: 'inherit',
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}
+          >
+            {copy.tryAgainButton}
+          </button>
+          {onSignOut ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="cc-se-second"
+              style={SECONDARY_STYLE}
+            >
+              {copy.signOutButton}
+            </button>
+          ) : (
+            // eslint-disable-next-line @next/next/no-html-link-for-pages -- standalone error page, no router
+            <a href="/" className="cc-se-second" style={SECONDARY_STYLE}>
+              {copy.goHomeButton}
+            </a>
+          )}
+        </div>
+      </div>
+      {/* The Tell us card comes before the chip on a phone, beside the copy on
+          a wide screen, as the boards draw it. */}
+      {children ? <div className="cc-se-aside">{children}</div> : null}
       {errorId ? (
-        <div style={{ marginTop: 24 }}>
+        <div className="cc-se-chip">
           <ErrorIdChip errorId={errorId} />
         </div>
       ) : null}
