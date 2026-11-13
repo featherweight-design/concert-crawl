@@ -207,7 +207,7 @@ const LAYOUT_CSS = `
 .cc-se-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'copy' 'aside' 'chip';
+  grid-template-areas: 'copy' 'chip';
   max-width: 400px;
   margin: 0 auto;
   padding-top: 56px;
@@ -223,6 +223,7 @@ const LAYOUT_CSS = `
   gap: 12px;
   width: 100%;
 }
+.cc-se-grid[data-split='true'] { grid-template-areas: 'copy' 'aside' 'chip'; }
 .cc-se-aside { grid-area: aside; width: 100%; }
 .cc-se-chip { grid-area: chip; margin-top: 12px; }
 .cc-se-heading { font-size: 30px; }
@@ -337,7 +338,9 @@ export const StandaloneError = ({
             style={{
               border: 'none',
               background:
-                'linear-gradient(90deg, var(--signal), var(--cta-end))',
+                // `--cta-end` comes from globals.css, which `global-error` (it
+                // replaces the root layout) never loads: fall back to the accent.
+                'linear-gradient(90deg, var(--signal), var(--cta-end, var(--accent)))',
               boxShadow:
                 '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
               color: 'var(--fg-on-accent)',

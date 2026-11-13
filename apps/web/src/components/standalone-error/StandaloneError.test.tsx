@@ -134,12 +134,14 @@ describe('StandaloneError', () => {
       expect(css).toContain("grid-template-areas: 'copy aside' 'chip aside'");
     });
 
-    it('draws Try again as a fill that ends on --cta-end', () => {
+    // global-error replaces the root layout, so globals.css (where --cta-end is
+    // defined) is not loaded: the fill must still resolve to a colour there.
+    it('draws Try again as a fill that ends on --cta-end, falling back to the accent', () => {
       render(<StandaloneError errorId="1" onRetry={vi.fn()} />);
       expect(
         screen.getByRole('button', { name: copy.tryAgainButton }).style
           .background,
-      ).toContain('var(--cta-end)');
+      ).toContain('var(--cta-end, var(--accent))');
     });
   });
 });
