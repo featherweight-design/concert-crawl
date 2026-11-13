@@ -1,3 +1,19 @@
+# [1.420.0](https://github.com/featherweight-design/concert-crawl/compare/v1.419.6...v1.420.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** tolerate the old web's floored delay, answer a removed venue first ([2391d61](https://github.com/featherweight-design/concert-crawl/commit/2391d61efce2964b48cb97797797c990ce280838)), closes [#397](https://github.com/featherweight-design/concert-crawl/issues/397)
+* **api:** tolerate unchanged crawl-rule keys for one release ([ba3c8b9](https://github.com/featherweight-design/concert-crawl/commit/ba3c8b996ef7b6c801841196c57e400b643f62d0)), closes [#404](https://github.com/featherweight-design/concert-crawl/issues/404)
+* **web:** always send the ticket vendor so clearing it saves ([01a3b18](https://github.com/featherweight-design/concert-crawl/commit/01a3b183238185abed390d3a1d148b5ca6e6c7c3))
+* **web:** show the paced request delay read-only after the floor landed ([ebad526](https://github.com/featherweight-design/concert-crawl/commit/ebad526547a573b3645f81606a402544d0fa7acb)), closes [#397](https://github.com/featherweight-design/concert-crawl/issues/397)
+* **web:** stop telling admins to raise the request delay on a 429 ([19a92ca](https://github.com/featherweight-design/concert-crawl/commit/19a92ca7f2288e607862e47c31cc13272f0d1fd5))
+
+
+### Features
+
+* **api:** crawl-rule fields are not patchable (3b part 6a) ([1d729ed](https://github.com/featherweight-design/concert-crawl/commit/1d729edf6c79012593623b535c7c94ffc2e54508))
+
 ## [1.419.6](https://github.com/featherweight-design/concert-crawl/compare/v1.419.5...v1.419.6) (2026-11-13)
 
 
