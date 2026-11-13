@@ -18,13 +18,19 @@ export const NotFoundSurface = () => (
   <main
     data-testid="not-found-surface"
     aria-label={copy.heading}
+    // Bottom padding is a class so the phone can take more: 48px sat under the
+    // 52px BottomNav. 80px on the phone is the clearance every page under
+    // the nav keeps; the shell adds the safe-area inset beneath it.
+    className="pb-12 max-sm:pb-20"
     style={{
       minHeight: '60vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      padding: '64px 24px 48px',
+      paddingTop: 64,
+      paddingLeft: 24,
+      paddingRight: 24,
       textAlign: 'center',
       color: 'var(--fg)',
       fontFamily: 'var(--font-ui)',

@@ -11,6 +11,7 @@
 // theme flush, the Sentry tier tag). All of those belong to a page the app
 // opened, not to a path that does not exist.
 import { AppHeader } from '@/components/consumer/app-header';
+import { PHONE_SHELL_CLASS } from '@/components/consumer/app-shell/phone-shell';
 import { BottomNav } from '@/components/consumer/bottom-nav';
 import { NotFoundSurface } from '@/components/consumer/not-found-surface';
 import { SearchPaletteProvider } from '@/components/consumer/search-palette/SearchPaletteProvider';
@@ -18,9 +19,8 @@ import { AccountMenuProvider } from '@/components/consumer/user-menu';
 import { OfflinePill } from '@/components/pwa/OfflinePill';
 
 const GlobalNotFound = () => (
-  // Same shell sizing as the (main) layout: the dynamic viewport plus the
-  // safe-area inset the BottomNav grows by.
-  <div className="page-ambient flex min-h-dvh flex-col overflow-x-clip pb-[env(safe-area-inset-bottom)] sm:pb-0">
+  // The same outer block as the (main) layout.
+  <div data-testid="phone-shell" className={PHONE_SHELL_CLASS}>
     <AccountMenuProvider>
       <SearchPaletteProvider>
         <AppHeader rightSlots={<OfflinePill />} />

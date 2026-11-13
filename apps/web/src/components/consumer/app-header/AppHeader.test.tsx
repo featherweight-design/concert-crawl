@@ -223,6 +223,16 @@ describe('AppHeader crews tab (#1226)', () => {
     expect(desktopTile?.className).toContain('border');
   });
 
+  // viewport-fit=cover puts the page under the status bar (and iOS's
+  // black-translucent standalone bar), so the phone bar's top pad must add
+  // the inset to its drawn 16px.
+  it('pads the phone header below the status-bar inset', () => {
+    render(<AppHeader />);
+    const classes = screen.getByTestId('header-mobile').className.split(/\s+/);
+    expect(classes).toContain('pt-[calc(1rem+env(safe-area-inset-top))]');
+    expect(classes).not.toContain('pt-4');
+  });
+
   it('puts no bg class on the phone header and no bg-bg class on the desktop bar', () => {
     render(<AppHeader />);
     const phone = screen.getByTestId('header-mobile');

@@ -169,6 +169,9 @@ export function BottomNav() {
       style={{
         height: 'calc(52px + env(safe-area-inset-bottom, 0px))',
         paddingBottom: 'env(safe-area-inset-bottom, 2px)',
+        // Fixed, so the shell's side padding never reaches it.
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
       }}
       aria-label={COPY.nav.ariaLabel}
     >
