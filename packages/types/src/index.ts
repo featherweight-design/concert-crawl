@@ -1954,9 +1954,9 @@ export type NeedsYouItem =
       /** Upcoming, visible, currently-seen published shows at the venue. */
       showCount?: number;
       /**
-       * venue-failing only: successful runs in a row immediately before the
-       * current failure streak (skipped runs ignored; scans the last 100 runs,
-       * so it tops out at 100). Null on venue-blocked.
+       * Successful runs in a row immediately before the current failure (or
+       * the block), skipped runs ignored; scans the last 100 runs, so it tops
+       * out at 100.
        */
       okStreakBefore?: number | null;
       /** venue-blocked only: pages the latest run fetched; null if none recorded. */
