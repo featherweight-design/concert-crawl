@@ -3,12 +3,15 @@ import {
   and,
   asc,
   count,
+  countDistinct,
   desc,
   eq,
   exists,
+  gt,
   gte,
   ilike,
   isNull,
+  lt,
   max,
   ne,
   or,
@@ -20,10 +23,12 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import * as Sentry from '@sentry/hono/node';
 import {
+  auditLog,
   db,
   events,
   priceRetrievalLog,
   priceSubmissions,
+  userEvents,
   userProfiles,
   venues,
 } from '@concert-crawl/db';
@@ -62,6 +67,74 @@ const eventsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+/** Fans Watching a show (a correlated count, built per request). */
+const watchingCountOf = (): SQL<number> =>
+  sql<number>`(${db
+    .select({ n: count() })
+    .from(userEvents)
+    .where(
+      and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),
+    )})`;
+
+/**
+ * The Missing a price list: soonest show first, then the one most fans are
+ * Watching, then id so the order is total (the "next" cursor depends on it).
+ */
+const missingOrder = () => [
+  asc(events.date),
+  desc(watchingCountOf()),
+  asc(events.id),
+];
+
+/** Upcoming, visible shows (the base of the Missing a price tab). */
+const upcomingVisibleClauses = (today: string) => [
+  eq(events.status, 'upcoming'),
+  gte(events.date, today),
+  eq(events.hiddenFromConsumer, false),
+];
+
+const denverToday = (): string =>
+  new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+
+// One row shape for the Missing a price list and its "next" cursor. A single
+// aggregating join (not two correlated subqueries per row): price_retrieval_log
+// grouped by event_id once, then LEFT JOINed in. Built per request so importing
+// this router never touches the database layer (route unit tests mock it).
+const missingEventsQuery = () => {
+  const latestLog = db
+    .select({
+      eventId: priceRetrievalLog.eventId,
+      lastRetrievedAt: max(priceRetrievalLog.attemptedAt).as(
+        'last_retrieved_at',
+      ),
+      lastOutcome: sql<string | null>`(
+          array_agg(${priceRetrievalLog.outcome} ORDER BY ${priceRetrievalLog.attemptedAt} DESC)
+        )[1]`.as('last_outcome'),
+    })
+    .from(priceRetrievalLog)
+    .groupBy(priceRetrievalLog.eventId)
+    .as('latest_log');
+
+  return db
+    .select({
+      eventId: events.id,
+      eventTitle: events.title,
+      artist: events.artist,
+      venueName: venues.name,
+      date: events.date,
+      ticketUrl: events.ticketUrl,
+      priceMin: events.ticketPriceMin,
+      priceMax: events.ticketPriceMax,
+      priceSource: events.priceSource,
+      watching: watchingCountOf(),
+      lastRetrievedAt: latestLog.lastRetrievedAt,
+      lastOutcome: latestLog.lastOutcome,
+    })
+    .from(events)
+    .leftJoin(venues, eq(events.venueId, venues.id))
+    .leftJoin(latestLog, eq(latestLog.eventId, events.id));
+};
+
 // GET /v1/admin/prices/events — upcoming events with current price data + last retrieval info
 pricesAdminRouter.get(
   '/events',
@@ -72,57 +145,19 @@ pricesAdminRouter.get(
   }),
   async (ctx) => {
     const { missingOnly, count, limit, offset } = ctx.req.valid('query');
-    const today = new Date().toLocaleDateString('en-CA', {
-      timeZone: 'America/Denver',
-    });
-
     // Exclude admin-hidden non-concerts (#732, same pattern as #712 on the
     // Missing tab). Events flagged hidden_from_consumer=true have already
     // been triaged as non-concerts — they shouldn't appear in the missing-
     // price queue or skew the coverage %.
     const conditions = [
-      eq(events.status, 'upcoming'),
-      gte(events.date, today),
-      eq(events.hiddenFromConsumer, false),
+      ...upcomingVisibleClauses(denverToday()),
       ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
     ];
     const whereClause = and(...conditions);
 
-    // Use a single aggregating join instead of two correlated subqueries per row.
-    // The subquery groups price_retrieval_log by event_id once, then LEFT JOINs in.
-    const latestLog = db
-      .select({
-        eventId: priceRetrievalLog.eventId,
-        lastRetrievedAt: max(priceRetrievalLog.attemptedAt).as(
-          'last_retrieved_at',
-        ),
-        lastOutcome: sql<string | null>`(
-          array_agg(${priceRetrievalLog.outcome} ORDER BY ${priceRetrievalLog.attemptedAt} DESC)
-        )[1]`.as('last_outcome'),
-      })
-      .from(priceRetrievalLog)
-      .groupBy(priceRetrievalLog.eventId)
-      .as('latest_log');
-
-    const rowsPromise = db
-      .select({
-        eventId: events.id,
-        eventTitle: events.title,
-        artist: events.artist,
-        venueName: venues.name,
-        date: events.date,
-        ticketUrl: events.ticketUrl,
-        priceMin: events.ticketPriceMin,
-        priceMax: events.ticketPriceMax,
-        priceSource: events.priceSource,
-        lastRetrievedAt: latestLog.lastRetrievedAt,
-        lastOutcome: latestLog.lastOutcome,
-      })
-      .from(events)
-      .leftJoin(venues, eq(events.venueId, venues.id))
-      .leftJoin(latestLog, eq(latestLog.eventId, events.id))
+    const rowsPromise = missingEventsQuery()
       .where(whereClause)
-      .orderBy(asc(events.date), asc(events.id))
+      .orderBy(...missingOrder())
       .limit(limit)
       .offset(offset);
 
@@ -140,6 +175,107 @@ pricesAdminRouter.get(
     return ctx.json({ success: true, data: { rows, total } } as const);
   },
 );
+
+const missingNextQuerySchema = z.object({ after: idSchema.optional() });
+
+// GET /v1/admin/prices/missing/next?after=<eventId> — the show after `after`
+// in the Missing a price order (the add panel's "Save and next"), or the first
+// one without `after`. `after` need not still be missing: the position comes
+// from its date, Watching count and id, so a show that just got its price
+// still points at the right neighbour. `data` is null at the end of the list.
+pricesAdminRouter.get(
+  '/missing/next',
+  zValidator('query', missingNextQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422);
+    }
+  }),
+  async (ctx) => {
+    const { after } = ctx.req.valid('query');
+    const missing = and(
+      ...upcomingVisibleClauses(denverToday()),
+      isNull(events.ticketPriceMin),
+    );
+
+    let position: SQL | undefined;
+    if (after !== undefined) {
+      const [anchor] = await db
+        .select({
+          date: events.date,
+          watching: watchingCountOf(),
+        })
+        .from(events)
+        .where(eq(events.id, after))
+        .limit(1);
+      if (!anchor) {
+        return ctx.json({ success: false, error: 'Event not found' }, 404);
+      }
+      // Strictly after `after` in (date asc, watching desc, id asc).
+      position = or(
+        gt(events.date, anchor.date),
+        and(
+          eq(events.date, anchor.date),
+          lt(watchingCountOf(), anchor.watching),
+        ),
+        and(
+          eq(events.date, anchor.date),
+          eq(watchingCountOf(), anchor.watching),
+          gt(events.id, after),
+        ),
+      );
+    }
+
+    const [row] = await missingEventsQuery()
+      .where(and(missing, position))
+      .orderBy(...missingOrder())
+      .limit(1);
+    return ctx.json({ success: true, data: row ?? null });
+  },
+);
+
+// GET /v1/admin/prices/tabs — the four numbers on the Prices tab strip, in one
+// call: shows missing a price, Submitted prices, open and resolved Price checks,
+// and how many fans submitted a price in the last 30 days.
+pricesAdminRouter.get('/tabs', async (ctx) => {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const notACounter = isNull(priceSubmissions.disputedSubmissionId);
+  const [[missing], [submitted], [checksOpen], [checksResolved], [people]] =
+    await Promise.all([
+      db
+        .select({ n: count() })
+        .from(events)
+        .where(
+          and(
+            ...upcomingVisibleClauses(denverToday()),
+            isNull(events.ticketPriceMin),
+          ),
+        ),
+      db.select({ n: count() }).from(priceSubmissions).where(notACounter),
+      // One open check per price, however many fans have an update pending.
+      db
+        .select({ n: countDistinct(priceSubmissions.disputedSubmissionId) })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.status, 'pending')),
+      db
+        .select({ n: count() })
+        .from(auditLog)
+        .where(eq(auditLog.action, 'contest.resolve')),
+      db
+        .select({ n: countDistinct(priceSubmissions.userId) })
+        .from(priceSubmissions)
+        .where(gte(priceSubmissions.createdAt, since)),
+    ]);
+  return ctx.json({
+    success: true,
+    data: {
+      missing: missing?.n ?? 0,
+      submitted: submitted?.n ?? 0,
+      checksOpen: checksOpen?.n ?? 0,
+      checksResolved: checksResolved?.n ?? 0,
+      peopleSubmitting: people?.n ?? 0,
+    },
+  });
+});
 
 // GET /v1/admin/prices/health — per-source × per-venue success rates
 pricesAdminRouter.get('/health', async (ctx) => {
@@ -748,13 +884,22 @@ pricesAdminRouter.post(
     const adminUser = getAuthUser(ctx);
 
     const [event] = await db
-      .select({ id: events.id })
+      .select({ id: events.id, ticketPriceMin: events.ticketPriceMin })
       .from(events)
       .where(eq(events.id, eventId))
       .limit(1);
 
     if (!event)
       return ctx.json({ success: false, error: 'Event not found' }, 404);
+
+    // The Missing a price tab adds a price to a show without one. A show that
+    // already has a price is changed through a Price check, not overwritten.
+    if (event.ticketPriceMin !== null) {
+      return ctx.json(
+        { success: false, error: 'This show already has a price' },
+        409,
+      );
+    }
 
     await db.transaction(async (tx) => {
       await tx.insert(priceSubmissions).values({
