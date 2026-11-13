@@ -37,6 +37,8 @@ export const reconcileDriftDuplicates = async (
         FROM events
         WHERE status = 'upcoming'
           AND first_missing_at IS NOT NULL
+          -- Admin 4a: a show added by hand is never deleted by the crawl.
+          AND manual = false
           AND venue_id = ${venueId}
           AND date >= (NOW() AT TIME ZONE 'America/Denver')::date
       ),

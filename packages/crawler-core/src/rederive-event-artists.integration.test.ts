@@ -175,6 +175,41 @@ describe('rederive-event-artists integration', () => {
     expect(result.hidden).toBe(0);
   });
 
+  it.each([
+    ['a lineup an admin saved', { lineupEditedAt: new Date() }],
+    ['a show added by hand', { manual: true }],
+  ])('never rewrites the bill of %s (admin 4a)', async (_label, lock) => {
+    const venue = await seedVenue();
+    const title = 'Halloween Cover Show: Wire + Misfits';
+    const event = await seedEvent(venue.id, {
+      title,
+      artist: 'Wire',
+      canonicalArtist: 'wire',
+      canonicalTitle: title.toLowerCase(),
+      date: '2026-10-31',
+      headliners: ['Wire'],
+      canonicalHeadliners: ['wire'],
+      supportingArtists: ['Misfits'],
+      canonicalSupporting: ['misfits'],
+    });
+    await db.update(events).set(lock).where(eq(events.id, event.id));
+    // Would clear the bill on any row the pass reads.
+    const adjudicate: Adjudicator = vi.fn(async () => ({
+      isConcert: true,
+      headliners: [],
+      supportingArtists: [],
+      coversOtherArtists: true,
+    }));
+
+    const result = await run(adjudicate, false);
+
+    const after = await readEvent(event.id);
+    expect(after.headliners).toEqual(['Wire']);
+    expect(after.supportingArtists).toEqual(['Misfits']);
+    expect(adjudicate).not.toHaveBeenCalled();
+    expect(result.scanned).toBe(0);
+  });
+
   it('lists each change with the bill it replaces', async () => {
     const venue = await seedVenue();
     await seedEvent(venue.id, {
