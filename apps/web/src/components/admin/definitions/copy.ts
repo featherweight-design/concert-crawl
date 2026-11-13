@@ -685,6 +685,87 @@ export const ADMIN_COPY = {
     },
   },
 
+  // The venue page's Overview tab (3b part 3: `04/venue-overview`, phone
+  // `A3/03/venue-overview-m`, `A3/03/last-14-runs-legend`,
+  // `A3/01/warnings-off-overview-d`). Run outcome words and reasons are
+  // `venuesList.latestRun`'s, so the list and the page say a run the same way.
+  venueOverview: {
+    latestRun: {
+      title: 'Latest run',
+      // "Nov 11 · 3:02 AM", Mountain Time.
+      when: (date: string, time: string) => `${date} · ${time}`,
+      // 1d ruling 8 and the board's caption.
+      unchanged: (date: string, shows: number) =>
+        `The calendar page hasn’t changed since ${date}’s full run, so we kept its ${showCount(shows)} and didn’t re-read it. Nothing to do.`,
+      // No full run on record to name.
+      unchangedNoFullRun:
+        'The calendar page hasn’t changed since the last run, so we didn’t re-read it. Nothing to do.',
+      found: (shows: number, added: number) =>
+        added > 0
+          ? `Found ${showCount(shows)}, ${added.toLocaleString('en-US')} new.`
+          : `Found ${showCount(shows)}.`,
+      // A reason line ("Failed: timed out") as a sentence.
+      sentence: (line: string) => `${line}.`,
+      openRun: 'Open run',
+      recrawlAnyway: 'Re-crawl anyway',
+    },
+    lastRuns: {
+      title: 'Last 14 runs',
+      allRuns: 'All runs',
+      chart: 'Last 14 runs, oldest first',
+      legend: 'What the bars mean',
+      // Bar kinds in `A3/03/last-14-runs-legend` order. Low is HOLD.
+      kinds: {
+        found: 'Shows found',
+        unchanged: 'Skipped, unchanged',
+        partial: 'Partial',
+        failed: 'Failed',
+        paused: 'Paused or not crawled',
+      },
+      bar: (date: string, kind: string) => `${date}: ${kind}`,
+    },
+    shows: {
+      title: 'Shows',
+      openInEvents: 'Open in Events',
+      upcoming: 'Upcoming shows on the site',
+      lastFullRun: 'Found in the last full run',
+      lastFullRunValue: (shows: number, date: string) =>
+        `${shows.toLocaleString('en-US')} (${date})`,
+      noneYet: 'None yet',
+      hidden: 'Hidden, not counted',
+    },
+    needsYou: {
+      title: 'In Needs you',
+      empty: (venue: string) => `Nothing waiting for ${venue}.`,
+      turnedOff: 'Warnings you turned off',
+      // "Off since Nov 3, by @hugh · “It’s normal for this venue”"
+      offSince: (date: string, by: string, reason: string | null) =>
+        reason
+          ? `Off since ${date}, by ${by} · “${reason}”`
+          : `Off since ${date}, by ${by}`,
+      handle: (name: string) => `@${name}`,
+      turnBackOn: 'Turn back on',
+      // Its accessible name, so each row's button says which warning.
+      turnBackOnLabel: (kind: string) => `Turn back on: ${kind}`,
+      // Rule 10 through `states.saveFailed`: "Couldn't change Shows moving.
+      // It is still off. Nothing changed."
+      turnBackOnSaved: 'It is still off.',
+      // What each kind of warning is called once turned off. Only the first
+      // five can be turned off as Not useful; the rest are named anyway.
+      kinds: {
+        'show-dropped': 'Shows dropping off the calendar',
+        'show-moved': 'Shows moving',
+        'venue-failing': 'Failing crawls',
+        'venue-blocked': 'Blocked crawls',
+        'event-low-confidence': 'Listings we’re unsure of',
+        artist: 'Artist matches',
+        'price-check': 'Price checks',
+        'price-batch': 'Submitted prices',
+        bug: 'Bug reports',
+      },
+    },
+  },
+
   robotsAudit: {
     page: {
       eyebrow: 'Venues · robots.txt',
@@ -935,15 +1016,6 @@ export const ADMIN_COPY = {
         label: 'Street address',
         placeholder: 'e.g. 1380 W Florida Ave, Denver, CO 80223',
         hint: 'Powers the embedded map on the public venue page. Leave blank to show the placeholder map.',
-      },
-      status: {
-        label: 'Status',
-        ariaLabel: 'Venue status',
-        // Why Active is off on a taken-down venue (`removedAt`).
-        takenDown: 'Taken down at their request.',
-        active: 'Active',
-        paused: 'Paused',
-        blocked: 'Blocked',
       },
       primaryVendor: 'Primary vendor',
       ticketUrl: {

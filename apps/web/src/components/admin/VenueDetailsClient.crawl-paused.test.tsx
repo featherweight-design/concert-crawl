@@ -2,26 +2,16 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ReactNode } from 'react';
-import {
-  render,
-  screen,
-  cleanup,
-  fireEvent,
-  waitFor,
-} from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 
 // ───── Mocks ─────────────────────────────────────────────────────────────────
 
-const mockUpdateVenue = vi.fn();
-const mockPauseVenue = vi.fn();
-const mockActivateVenue = vi.fn();
-const mockHideVenue = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
-  updateVenue: (...args: unknown[]) => mockUpdateVenue(...args),
-  pauseVenue: (...args: unknown[]) => mockPauseVenue(...args),
-  activateVenue: (...args: unknown[]) => mockActivateVenue(...args),
-  hideVenue: (...args: unknown[]) => mockHideVenue(...args),
+  updateVenue: vi.fn(),
+  pauseVenue: vi.fn(),
+  activateVenue: vi.fn(),
+  hideVenue: vi.fn(),
   removeVenue: vi.fn(),
   tryDeleteVenue: vi.fn(),
   setVenueFeatured: vi.fn(),
@@ -40,6 +30,10 @@ vi.mock('next/link', () => ({
   ),
 }));
 
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: () => Promise.resolve('test-token') }),
+}));
+
 vi.mock('@/components/admin/shell/PageTitleContext', () => ({
   usePageTitle: () => ({ setPageTitle: vi.fn() }),
 }));
@@ -55,11 +49,36 @@ vi.mock('./generate-field/GenerateField', () => ({
   GenerateField: () => null,
 }));
 
+// The page owns the one re-crawl and hands it to the header and Overview.
+const mockStart = vi.fn();
+const recrawlState = { current: 'idle' };
+vi.mock('@/components/admin/venues/useRecrawl', () => ({
+  useRecrawl: () => ({
+    state: recrawlState.current,
+    reason: null,
+    start: (...args: unknown[]) => mockStart(...args),
+    retry: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
 // The header (status chips, Re-crawl, the ⋯ menu) has its own suites; here it
-// only has to be handed the venue.
+// only has to be handed the venue and the page's re-crawl.
 vi.mock('@/components/admin/venues/VenueHeader', () => ({
-  VenueHeader: ({ venue }: { venue: { name: string } }) => (
-    <div data-testid="venue-header-stub">{venue.name}</div>
+  VenueHeader: ({
+    venue,
+    recrawl,
+  }: {
+    venue: { name: string };
+    recrawl: { start: () => void };
+  }) => (
+    <button
+      type="button"
+      data-testid="venue-header-stub"
+      onClick={() => recrawl.start()}
+    >
+      {venue.name}
+    </button>
   ),
 }));
 
@@ -134,19 +153,23 @@ const buildVenue = (
 
 const ACTIONS = ADMIN_COPY.venueDetailsClient.actions;
 const DANGER = ADMIN_COPY.venueDetailsClient.dangerZone;
+const OVERVIEW = ADMIN_COPY.venueOverview;
+
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', matchMediaStub);
+  mockStart.mockReset();
+  mockRefresh.mockReset();
+  recrawlState.current = 'idle';
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 // The old paused pill became the header's crawling chip ("Paused"), which
 // `VenueHeader.test.tsx` covers. This checks the page hands the header the
 // venue, and that the ⋯ menu (`VenueMenu.test.tsx`) replaced the danger zone.
 describe('VenueDetailsClient — venue header', () => {
-  beforeEach(() => {
-    vi.stubGlobal('matchMedia', matchMediaStub);
-  });
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-  });
-
   it('renders the header for a paused venue', () => {
     render(
       <VenueDetailsClient
@@ -183,146 +206,24 @@ describe('VenueDetailsClient — venue header', () => {
     expect(screen.queryByTestId('crawl-pause-line')).toBeNull();
     expect(screen.queryByText(DANGER.delete.description)).toBeNull();
   });
-
-  it('keeps the old card’s crawl summary under the header until part 5', () => {
-    const HEADER = ADMIN_COPY.venueHeader.summary;
-    const SUMMARY = ADMIN_COPY.venueDetailsClient.summary;
-    render(
-      <VenueDetailsClient
-        initialTab="details"
-        venue={buildVenue({
-          extractionStrategy: 'structured_data',
-          consecutiveFailures: 2,
-          crawlHealth: {
-            sevenDayPercent: 86,
-            sparkline: [],
-            lastCrawledAt: null,
-            avgDurationMs: null,
-            eventsTracked: 42,
-            consecutiveFails: 2,
-          },
-        })}
-      />,
-    );
-    const line = screen.getByTestId('venue-summary-line').textContent ?? '';
-    expect(line).toContain(HEADER.strategy.structured_data);
-    expect(line).toContain(HEADER.consecutiveFailures(2));
-    expect(line).toContain(`${SUMMARY.lastCrawl} ${SUMMARY.never}`);
-    expect(line).toContain(`42 ${SUMMARY.eventsLive}`);
-    expect(line).toContain(`${SUMMARY.health} 86%`);
-  });
-
-  it('leaves the failures badge off a venue with none', () => {
-    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
-    const line = screen.getByTestId('venue-summary-line').textContent ?? '';
-    expect(line).toContain(ADMIN_COPY.venueHeader.summary.strategy.auto);
-    expect(line).not.toContain('consec.');
-  });
 });
 
-// The Basics Status toggle runs the ⋯ menu's actions (orchestrator ruling):
-// Paused is the Hide confirm, Active is Show on site, and a taken-down venue
-// can't be re-published from here.
-describe('VenueDetailsClient — Status toggle', () => {
-  const CONFIRMS = ADMIN_COPY.venueConfirms;
-  const STATUS = ADMIN_COPY.venueDetailsClient.fields.status;
-
-  beforeEach(() => {
-    vi.stubGlobal('matchMedia', matchMediaStub);
-    for (const mock of [
-      mockPauseVenue,
-      mockActivateVenue,
-      mockHideVenue,
-      mockRefresh,
-    ])
-      mock.mockReset();
-  });
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-  });
-
-  it('Paused opens the Hide confirm and never calls pauseVenue', () => {
-    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
-    fireEvent.click(screen.getByTestId('venue-status-paused'));
-    expect(screen.getByText(CONFIRMS.hide.title('Test Venue'))).toBeTruthy();
-    expect(mockPauseVenue).not.toHaveBeenCalled();
-    expect(mockHideVenue).not.toHaveBeenCalled();
-  });
-
-  it('confirming sends hideVenue with the chosen reason, then refreshes', async () => {
-    mockHideVenue.mockResolvedValue(undefined);
-    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
-    fireEvent.click(screen.getByTestId('venue-status-paused'));
-    fireEvent.click(
-      screen.getByRole('radio', { name: CONFIRMS.hide.reasons.venue_closed }),
-    );
-    fireEvent.click(
-      screen.getByRole('button', { name: CONFIRMS.hide.confirm }),
-    );
-    await waitFor(() =>
-      expect(mockHideVenue).toHaveBeenCalledWith(
-        'venue-1',
-        'venue_closed',
-        null,
-      ),
-    );
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(mockPauseVenue).not.toHaveBeenCalled();
-  });
-
-  it('Active on a hidden venue shows it at once, as Show on site does', async () => {
-    mockActivateVenue.mockResolvedValue({ ok: true });
-    render(
-      <VenueDetailsClient
-        initialTab="details"
-        venue={buildVenue({ active: false })}
-      />,
-    );
-    fireEvent.click(screen.getByTestId('venue-status-active'));
-    await waitFor(() =>
-      expect(mockActivateVenue).toHaveBeenCalledWith('venue-1'),
-    );
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
-  });
-
-  // A page loaded before the venue was removed still offers Active. The API
-  // refuses it (409 venue_removed); its reason goes to the page's banner.
-  it('a refused Active on a stale page shows the API’s reason', async () => {
-    const refusal =
-      'This venue asked us to remove its data, so it stays off the site.';
-    mockActivateVenue.mockResolvedValue({ ok: false, error: refusal });
-    render(
-      <VenueDetailsClient
-        initialTab="details"
-        venue={buildVenue({ active: false })}
-      />,
-    );
-    fireEvent.click(screen.getByTestId('venue-status-active'));
-    expect(await screen.findByText(refusal)).toBeTruthy();
-    expect(mockActivateVenue).toHaveBeenCalledWith('venue-1');
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
-  });
-
-  it('any other Active failure shows the unexpected-error banner and still refreshes', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockActivateVenue.mockRejectedValue(new Error('boom'));
-    render(
-      <VenueDetailsClient
-        initialTab="details"
-        venue={buildVenue({ active: false })}
-      />,
-    );
-    fireEvent.click(screen.getByTestId('venue-status-active'));
+// 3b part 3: the Overview cards replace the summary line, and the Basics
+// Status toggle is gone (Live and Hidden are the header's chip and ⋯ menu).
+describe('VenueDetailsClient — Overview', () => {
+  it('draws the Overview cards, not the old summary line', () => {
+    render(<VenueDetailsClient venue={buildVenue({ latestRun: null })} />);
+    expect(screen.getByTestId('venue-overview')).toBeTruthy();
+    expect(screen.queryByTestId('venue-summary-line')).toBeNull();
     expect(
-      await screen.findByText(ADMIN_COPY.venueDetailsClient.errors.unexpected),
+      screen.getByRole('region', { name: OVERVIEW.latestRun.title }),
     ).toBeTruthy();
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
-    errorSpy.mockRestore();
+    expect(
+      screen.getByText(ADMIN_COPY.venuesList.latestRun.never),
+    ).toBeTruthy();
   });
 
-  it('a taken-down venue’s Active is disabled and says why', () => {
+  it('has no Status toggle on Details, and no taken-down line', () => {
     render(
       <VenueDetailsClient
         initialTab="details"
@@ -332,10 +233,57 @@ describe('VenueDetailsClient — Status toggle', () => {
         })}
       />,
     );
-    const active = screen.getByTestId('venue-status-active');
-    expect(active.hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText(STATUS.takenDown)).toBeTruthy();
-    fireEvent.click(active);
-    expect(mockActivateVenue).not.toHaveBeenCalled();
+    for (const status of ['active', 'paused', 'blocked']) {
+      expect(screen.queryByTestId(`venue-status-${status}`)).toBeNull();
+    }
+    expect(screen.queryByRole('group', { name: 'Venue status' })).toBeNull();
+  });
+
+  it('Re-crawl anyway starts the page’s one re-crawl, forced', () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({
+          latestRun: {
+            id: 'run-9',
+            status: 'skipped',
+            reason: 'page_unchanged',
+            at: '2026-11-11T10:02:00.000Z',
+            eventsFound: 0,
+            eventsInserted: 0,
+            errorMessage: null,
+          },
+          lastFullRun: { at: '2026-11-10T10:00:00.000Z', eventsFound: 106 },
+        })}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: OVERVIEW.latestRun.recrawlAnyway }),
+    );
+    expect(mockStart).toHaveBeenCalledWith(true);
+    fireEvent.click(screen.getByTestId('venue-header-stub'));
+    expect(mockStart).toHaveBeenLastCalledWith();
+  });
+
+  it('Re-crawl anyway holds while the shared re-crawl is busy', () => {
+    recrawlState.current = 'running';
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({
+          latestRun: {
+            id: 'run-9',
+            status: 'skipped',
+            reason: 'page_unchanged',
+            at: '2026-11-11T10:02:00.000Z',
+            eventsFound: 0,
+            eventsInserted: 0,
+            errorMessage: null,
+          },
+        })}
+      />,
+    );
+    const button = screen.getByRole('button', {
+      name: OVERVIEW.latestRun.recrawlAnyway,
+    });
+    expect(button.hasAttribute('disabled')).toBe(true);
   });
 });

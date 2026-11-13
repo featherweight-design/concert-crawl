@@ -1,0 +1,281 @@
+import { describe, it, expect } from 'vitest';
+import type { CrawlRun, VenueLatestRun } from '@concert-crawl/types';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import {
+  NEEDS_YOU_KIND_LABEL,
+  barKind,
+  isUnchanged,
+  legendKinds,
+  offSinceLine,
+  runBars,
+  runOutcome,
+  runSentence,
+  runWhen,
+} from './overview-rules';
+import {
+  parseOverviewNeedsYou,
+  parseOverviewRuns,
+  parseOverviewSnoozes,
+} from './overview-data';
+
+const RUN = ADMIN_COPY.venuesList.latestRun;
+const COPY = ADMIN_COPY.venueOverview;
+
+const latest = (over: Partial<VenueLatestRun> = {}): VenueLatestRun => ({
+  id: 'run-1',
+  status: 'success',
+  reason: null,
+  at: '2026-11-11T10:02:00.000Z',
+  eventsFound: 106,
+  eventsInserted: 0,
+  errorMessage: null,
+  ...over,
+});
+
+type BarRun = Pick<CrawlRun, 'id' | 'status' | 'reason' | 'createdAt'>;
+const run = (over: Partial<BarRun> = {}): BarRun => ({
+  id: 'run',
+  status: 'success',
+  reason: null,
+  createdAt: '2026-11-11T10:02:00.000Z',
+  ...over,
+});
+
+describe('runWhen', () => {
+  it('reads date and time in Mountain Time', () => {
+    // 10:02 UTC is 3:02 AM MST.
+    expect(runWhen('2026-11-11T10:02:00.000Z')).toBe('Nov 11 · 3:02 AM');
+  });
+});
+
+describe('runOutcome', () => {
+  it('uses the list’s outcome words, Unchanged for an unchanged skip', () => {
+    expect(runOutcome({ status: 'success', reason: null })).toBe(RUN.success);
+    expect(runOutcome({ status: 'partial', reason: null })).toBe(RUN.partial);
+    expect(runOutcome({ status: 'failed', reason: 'timeout' })).toBe(
+      RUN.failed,
+    );
+    expect(runOutcome({ status: 'skipped', reason: 'page_unchanged' })).toBe(
+      RUN.unchanged,
+    );
+    expect(runOutcome({ status: 'skipped', reason: 'crawl_paused' })).toBe(
+      RUN.skipped,
+    );
+  });
+
+  it('offers Re-crawl anyway only on an unchanged skip', () => {
+    expect(isUnchanged({ status: 'skipped', reason: 'page_unchanged' })).toBe(
+      true,
+    );
+    expect(isUnchanged({ status: 'skipped', reason: 'crawl_paused' })).toBe(
+      false,
+    );
+    expect(isUnchanged({ status: 'success', reason: null })).toBe(false);
+  });
+});
+
+describe('runSentence', () => {
+  it('names the last full run on Unchanged (the board’s caption)', () => {
+    expect(
+      runSentence(latest({ status: 'skipped', reason: 'page_unchanged' }), {
+        at: '2026-11-10T10:00:00.000Z',
+        eventsFound: 106,
+      }),
+    ).toBe(
+      'The calendar page hasn’t changed since Nov 10’s full run, so we kept its 106 shows and didn’t re-read it. Nothing to do.',
+    );
+  });
+
+  it('falls back when there is no full run to name', () => {
+    expect(
+      runSentence(
+        latest({ status: 'skipped', reason: 'page_unchanged' }),
+        null,
+      ),
+    ).toBe(COPY.latestRun.unchangedNoFullRun);
+  });
+
+  it('says how many shows a run read, and how many were new', () => {
+    expect(runSentence(latest({ eventsInserted: 2 }), null)).toBe(
+      'Found 106 shows, 2 new.',
+    );
+    expect(
+      runSentence(latest({ status: 'partial', eventsFound: 1 }), null),
+    ).toBe('Found 1 show.');
+  });
+
+  it('reads other outcomes as the list’s reason line', () => {
+    expect(
+      runSentence(latest({ status: 'failed', reason: 'timeout' }), null),
+    ).toBe('Failed: timed out.');
+    expect(
+      runSentence(
+        latest({ status: 'skipped', reason: 'robots_disallowed' }),
+        null,
+      ),
+    ).toBe('robots.txt: disallowed.');
+    expect(
+      runSentence(
+        latest({ status: 'failed', reason: null, errorMessage: 'boom\nstack' }),
+        null,
+      ),
+    ).toBe('Failed: boom.');
+    expect(
+      runSentence(latest({ status: 'skipped', reason: null }), null),
+    ).toBeNull();
+  });
+});
+
+describe('barKind', () => {
+  it('maps each run to its drawn bar', () => {
+    expect(barKind({ status: 'success', reason: null })).toBe('found');
+    expect(barKind({ status: 'partial', reason: null })).toBe('partial');
+    expect(barKind({ status: 'failed', reason: 'timeout' })).toBe('failed');
+    expect(barKind({ status: 'skipped', reason: 'page_unchanged' })).toBe(
+      'unchanged',
+    );
+    for (const reason of [
+      'crawl_paused',
+      'robots_disallowed',
+      'robots_unreachable',
+      'llm_account',
+      null,
+    ] as const) {
+      expect(barKind({ status: 'skipped', reason })).toBe('paused');
+    }
+    expect(barKind({ status: 'in_progress', reason: null })).toBeNull();
+  });
+});
+
+describe('runBars', () => {
+  it('keeps the newest 14 settled runs, oldest first, each labelled', () => {
+    const runs = Array.from({ length: 16 }, (_, index) =>
+      run({
+        id: `run-${index}`,
+        // Newest first, a day apart.
+        createdAt: new Date(
+          Date.UTC(2026, 10, 20 - index, 10, 2),
+        ).toISOString(),
+      }),
+    );
+    runs.splice(1, 0, run({ id: 'going', status: 'in_progress' }));
+    const bars = runBars(runs);
+    expect(bars).toHaveLength(14);
+    expect(bars[13]?.id).toBe('run-0');
+    expect(bars[0]?.id).toBe('run-13');
+    expect(bars.some((bar) => bar.id === 'going')).toBe(false);
+    expect(bars[13]?.label).toBe('Nov 20: Shows found');
+  });
+
+  it('draws fewer bars for fewer runs, and none for none', () => {
+    expect(runBars([run()])).toHaveLength(1);
+    expect(runBars([])).toEqual([]);
+  });
+});
+
+describe('legendKinds', () => {
+  it('lists only the kinds drawn, in the legend’s order', () => {
+    const bars = runBars([
+      run({ id: 'a', status: 'failed' }),
+      run({ id: 'b', status: 'skipped', reason: 'page_unchanged' }),
+      run({ id: 'c' }),
+    ]);
+    expect(legendKinds(bars)).toEqual(['found', 'unchanged', 'failed']);
+    expect(legendKinds([])).toEqual([]);
+  });
+});
+
+describe('NEEDS_YOU_KIND_LABEL', () => {
+  it('maps each Needs you kind to its label', () => {
+    expect(NEEDS_YOU_KIND_LABEL['show-dropped']).toBe('show');
+    expect(NEEDS_YOU_KIND_LABEL['show-moved']).toBe('show');
+    expect(NEEDS_YOU_KIND_LABEL['venue-failing']).toBe('venue');
+    expect(NEEDS_YOU_KIND_LABEL['venue-blocked']).toBe('venue');
+    expect(NEEDS_YOU_KIND_LABEL['event-low-confidence']).toBe('event');
+    expect(NEEDS_YOU_KIND_LABEL.artist).toBe('artist');
+    expect(NEEDS_YOU_KIND_LABEL['price-batch']).toBe('prices');
+    expect(NEEDS_YOU_KIND_LABEL['price-check']).toBe('priceCheck');
+    expect(NEEDS_YOU_KIND_LABEL.bug).toBe('bug');
+  });
+});
+
+describe('offSinceLine', () => {
+  const snooze = {
+    createdAt: '2026-11-03T18:00:00.000Z',
+    createdByName: 'hugh',
+    reason: 'It’s normal for this venue',
+  };
+
+  it('tags the admin and quotes the reason', () => {
+    expect(offSinceLine(snooze)).toBe(
+      'Off since Nov 3, by @hugh · “It’s normal for this venue”',
+    );
+  });
+
+  it('leaves the reason off when there is none', () => {
+    expect(offSinceLine({ ...snooze, reason: null })).toBe(
+      'Off since Nov 3, by @hugh',
+    );
+  });
+
+  it('never tags a former admin', () => {
+    expect(
+      offSinceLine({
+        ...snooze,
+        createdByName: 'a former admin',
+        reason: null,
+      }),
+    ).toBe('Off since Nov 3, by a former admin');
+  });
+});
+
+describe('the Overview’s boundary checks', () => {
+  it('keeps a run list and reads an unknown reason as none', () => {
+    expect(
+      parseOverviewRuns([
+        {
+          id: 'r',
+          status: 'skipped',
+          reason: 'something_new',
+          createdAt: '2026-11-11T10:02:00.000Z',
+          eventsFound: 0,
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'r',
+        status: 'skipped',
+        reason: null,
+        createdAt: '2026-11-11T10:02:00.000Z',
+      },
+    ]);
+  });
+
+  it('refuses a body that isn’t the list', () => {
+    expect(parseOverviewRuns({ data: [] })).toBeNull();
+    expect(
+      parseOverviewNeedsYou([{ key: 'k', kind: 'nope', title: 't' }]),
+    ).toBeNull();
+    expect(parseOverviewSnoozes(null)).toBeNull();
+  });
+
+  it('keeps Needs you items and snoozes', () => {
+    expect(
+      parseOverviewNeedsYou([
+        { key: 'k', kind: 'bug', title: 'Broken', venueId: 'v' },
+      ]),
+    ).toEqual([{ key: 'k', kind: 'bug', title: 'Broken' }]);
+    expect(
+      parseOverviewSnoozes([
+        {
+          id: 's',
+          kind: 'show-dropped',
+          venueId: 'v',
+          reason: null,
+          createdAt: '2026-11-03T18:00:00.000Z',
+          createdByName: 'hugh',
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+});

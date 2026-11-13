@@ -1,7 +1,7 @@
 'use client';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
-import { useState, useRef, useTransition, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type {
@@ -14,7 +14,6 @@ import type {
 import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types';
 import {
   updateVenue,
-  activateVenue,
   generateVenueAbout,
   probeVenuePlatform,
 } from '@/lib/actions/venues';
@@ -32,9 +31,10 @@ import {
 } from '@/lib/admin/venue-tabs';
 import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
 import { VenueHeader } from '@/components/admin/venues/VenueHeader';
-import { HideConfirm } from '@/components/admin/venues/VenueConfirms';
-import { VenueSummaryLine } from '@/components/admin/venues/VenueSummaryLine';
-import { deriveVenueStatus } from '@/lib/admin/venue-status';
+import { useRecrawl } from '@/components/admin/venues/useRecrawl';
+import { recrawlOff } from '@/components/admin/venues/venue-header-rules';
+import { OverviewTab } from '@/components/admin/venues/overview/OverviewTab';
+import type { OverviewData } from '@/components/admin/venues/overview/overview-data';
 import {
   IdentityArt,
   ia_getInitials,
@@ -490,7 +490,11 @@ interface Props {
   guideLoadFailed?: boolean;
   /** The tab `?tab=` opened on (3b); Overview when absent. */
   initialTab?: VenueTab;
+  /** Overview's runs and Needs you fetches; null where one failed. */
+  overview?: OverviewData;
 }
+
+const NO_OVERVIEW: OverviewData = { runs: [], needsYou: [], snoozes: [] };
 
 const TAB_COPY = ADMIN_COPY.venueDetailsClient.tabs;
 const VENUE_TAB_LABEL: Record<VenueTab, string> = {
@@ -580,9 +584,13 @@ export function VenueDetailsClient({
   guide = EMPTY_GUIDE,
   guideLoadFailed = false,
   initialTab = 'overview',
+  overview = NO_OVERVIEW,
 }: Props) {
   const router = useRouter();
   const isPhone = useIsPhone();
+  // One re-crawl for the page: the header's Re-crawl and Overview's Re-crawl
+  // anyway read and start the same one.
+  const recrawl = useRecrawl(venue.id, recrawlOff(venue) !== null);
   const [tab, setTab] = useState<VenueTab>(initialTab);
   // A navigation to another `?tab=` re-renders the page with a new initial
   // tab; follow it (adjusting state during render, not in an effect).
@@ -630,8 +638,6 @@ export function VenueDetailsClient({
     focusAfterRender.current = home.inputId;
     changeTab(home.tab);
   };
-  const [isPending, startTransition] = useTransition();
-  const [hideOpen, setHideOpen] = useState(false);
   const { setPageTitle } = usePageTitle();
 
   useEffect(() => {
@@ -994,34 +1000,6 @@ export function VenueDetailsClient({
     }
   }
 
-  // The Basics Status toggle runs the ⋯ menu's own actions, so the two can't
-  // disagree (orchestrator ruling): Paused opens the Hide confirm, with its
-  // required reason, and Active is Show on site. A taken-down venue can't be
-  // re-published from here; its Active is disabled.
-  const removed = venue.removedAt !== null;
-  function handleStatusChange(newStatus: 'active' | 'paused') {
-    if (newStatus === 'paused') {
-      if (venue.active && !removed) setHideOpen(true);
-      return;
-    }
-    if (venue.active || removed) return;
-    setSaveError(null);
-    startTransition(async () => {
-      // A page loaded before the venue was removed still offers Active; the
-      // API refuses it (409 venue_removed) and its reason goes to the banner.
-      // Any other failure throws, and says so as the save path does.
-      try {
-        const outcome = await activateVenue(venue.id);
-        if (!outcome.ok) setSaveError(outcome.error);
-      } catch (err: unknown) {
-        console.error('activateVenue failed', err);
-        setSaveError(ADMIN_COPY.venueDetailsClient.errors.unexpected);
-      } finally {
-        router.refresh();
-      }
-    });
-  }
-
   return (
     <div
       style={{
@@ -1034,7 +1012,7 @@ export function VenueDetailsClient({
       }}
     >
       {/* The venue header holds the page's one h1 (the venue name). */}
-      <VenueHeader venue={venue} />
+      <VenueHeader venue={venue} recrawl={recrawl} />
 
       <AdminTabs
         tabs={VENUE_TAB_ITEMS}
@@ -1072,9 +1050,7 @@ export function VenueDetailsClient({
       )}
 
       <VenueTabPanel tab="overview" active={tab}>
-        {/* Last crawl, 7-day health, strategy and failures from the old header
-            card, until 3a part 5 draws the Overview cards. */}
-        <VenueSummaryLine venue={venue} />
+        <OverviewTab venue={venue} data={overview} recrawl={recrawl} />
       </VenueTabPanel>
 
       <VenueTabPanel tab="runs" active={tab}>
@@ -1316,7 +1292,7 @@ export function VenueDetailsClient({
               />
             </VDField>
 
-            {/* City + Status row */}
+            {/* City (Live and Hidden are the header's chip and ⋯ menu) */}
             <div
               style={{
                 display: 'grid',
@@ -1335,142 +1311,6 @@ export function VenueDetailsClient({
                   disabled={isDisabled}
                   onChange={(evt) => setCityVal(evt.target.value)}
                 />
-              </VDField>
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.status.label}
-                htmlFor="venue-status-toggle"
-              >
-                {(() => {
-                  const currentStatus = deriveVenueStatus(venue);
-                  const statuses = [
-                    {
-                      value: 'active' as const,
-                      label: ADMIN_COPY.venueDetailsClient.fields.status.active,
-                      dot: 'var(--success)',
-                    },
-                    {
-                      value: 'paused' as const,
-                      label: ADMIN_COPY.venueDetailsClient.fields.status.paused,
-                      dot: 'var(--warning)',
-                    },
-                    {
-                      value: 'blocked' as const,
-                      label:
-                        ADMIN_COPY.venueDetailsClient.fields.status.blocked,
-                      dot: 'var(--danger)',
-                    },
-                  ];
-                  return (
-                    <div style={{ alignSelf: 'flex-start' }}>
-                      <div
-                        id="venue-status-toggle"
-                        role="group"
-                        aria-label={
-                          ADMIN_COPY.venueDetailsClient.fields.status.ariaLabel
-                        }
-                        style={{
-                          display: 'inline-flex',
-                          padding: 2,
-                          borderRadius: 8,
-                          background: 'var(--surface-1)',
-                          border: '1px solid var(--border)',
-                        }}
-                      >
-                        {statuses.map(({ value, label, dot }) => {
-                          const isActive = currentStatus === value;
-                          const isBlocked = value === 'blocked';
-                          const takenDown = value === 'active' && removed;
-                          return (
-                            <button
-                              key={value}
-                              type="button"
-                              data-testid={`venue-status-${value}`}
-                              disabled={isPending || isBlocked || takenDown}
-                              aria-describedby={
-                                takenDown
-                                  ? 'venue-status-taken-down'
-                                  : undefined
-                              }
-                              onClick={() =>
-                                !isBlocked &&
-                                !takenDown &&
-                                handleStatusChange(value)
-                              }
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 5,
-                                padding: '6px 12px',
-                                borderRadius: 6,
-                                border: 'none',
-                                background: isActive
-                                  ? value === 'blocked'
-                                    ? 'color-mix(in oklab, var(--danger) 14%, var(--surface-1))'
-                                    : value === 'active'
-                                      ? 'color-mix(in oklab, var(--success) 18%, var(--surface-1))'
-                                      : 'color-mix(in oklab, var(--warning) 18%, var(--surface-1))'
-                                  : 'transparent',
-                                color: isActive
-                                  ? 'var(--fg)'
-                                  : 'var(--fg-muted)',
-                                fontFamily: "'Inter', sans-serif",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                cursor:
-                                  isPending || isBlocked || takenDown
-                                    ? 'not-allowed'
-                                    : 'pointer',
-                                transition: 'background .12s, color .12s',
-                                opacity:
-                                  (isBlocked || takenDown) && !isActive
-                                    ? 0.4
-                                    : 1,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '50%',
-                                  background: isActive
-                                    ? dot
-                                    : 'var(--fg-muted)',
-                                  flexShrink: 0,
-                                }}
-                              />
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {removed && (
-                        <div
-                          id="venue-status-taken-down"
-                          style={{
-                            fontSize: 12,
-                            color: 'var(--fg-muted)',
-                            marginTop: 6,
-                          }}
-                        >
-                          {
-                            ADMIN_COPY.venueDetailsClient.fields.status
-                              .takenDown
-                          }
-                        </div>
-                      )}
-                      {hideOpen && (
-                        <HideConfirm
-                          venue={venue}
-                          onCancel={() => setHideOpen(false)}
-                          onDone={() => {
-                            setHideOpen(false);
-                            router.refresh();
-                          }}
-                        />
-                      )}
-                    </div>
-                  );
-                })()}
               </VDField>
             </div>
           </div>

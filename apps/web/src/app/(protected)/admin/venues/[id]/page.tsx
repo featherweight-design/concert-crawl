@@ -4,6 +4,12 @@ import type { VenueGuide, VenueWithCrawlHealth } from '@concert-crawl/types';
 import { VenueDetailsClient } from '@/components/admin/VenueDetailsClient';
 import { notFound } from 'next/navigation';
 import { parseVenueTab } from '@/lib/admin/venue-tabs';
+import {
+  parseOverviewNeedsYou,
+  parseOverviewRuns,
+  parseOverviewSnoozes,
+} from '@/components/admin/venues/overview/overview-data';
+import { LAST_RUNS } from '@/components/admin/venues/overview/overview-rules';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -34,24 +40,62 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
     notFound();
   }
 
+  /**
+   * One of the Overview's own fetches. A failure, or a body that doesn't hold
+   * to the shape its card reads, is null: Couldn't load in that card only.
+   */
+  const overviewFetch = <T,>(
+    what: string,
+    path: string,
+    parse: (raw: unknown) => T | null,
+  ): Promise<T | null> =>
+    apiClient
+      .get<unknown>(path, token)
+      .then((raw) => {
+        const parsed = parse(raw);
+        if (parsed === null) {
+          console.error(`VenueDetailPage: ${what}: unexpected shape`, { id });
+        }
+        return parsed;
+      })
+      .catch((err: unknown) => {
+        console.error(`VenueDetailPage: could not load ${what}`, { id, err });
+        return null;
+      });
+  const venueQuery = `venueId=${encodeURIComponent(id)}`;
+
   // #764 — a guide fetch failure must not take down the whole venue page. It
   // MUST, however, disable authoring: the empty fallback is indistinguishable
   // from a genuinely empty guide, and saving it would send `chips: []`, which
   // the PUT handler treats as "delete every chip for this venue".
-  let guide: VenueGuide = EMPTY_GUIDE;
   let guideLoadFailed = false;
-  try {
-    guide = await apiClient.get<VenueGuide>(
-      `/v1/admin/venues/${id}/guide`,
-      token,
-    );
-  } catch (err: unknown) {
-    guideLoadFailed = true;
-    console.error('VenueDetailPage: could not load the first-timer guide', {
-      id,
-      err,
-    });
-  }
+  const [guide, runs, needsYou, snoozes] = await Promise.all([
+    apiClient
+      .get<VenueGuide>(`/v1/admin/venues/${id}/guide`, token)
+      .catch((err: unknown) => {
+        guideLoadFailed = true;
+        console.error('VenueDetailPage: could not load the first-timer guide', {
+          id,
+          err,
+        });
+        return EMPTY_GUIDE;
+      }),
+    overviewFetch(
+      'runs',
+      `/v1/admin/crawl/runs?${venueQuery}&limit=${LAST_RUNS}`,
+      parseOverviewRuns,
+    ),
+    overviewFetch(
+      'needs-you',
+      `/v1/admin/needs-you?${venueQuery}`,
+      parseOverviewNeedsYou,
+    ),
+    overviewFetch(
+      'snoozes',
+      `/v1/admin/needs-you/snoozes?${venueQuery}`,
+      parseOverviewSnoozes,
+    ),
+  ]);
 
   return (
     <VenueDetailsClient
@@ -59,6 +103,7 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
       guide={guide}
       guideLoadFailed={guideLoadFailed}
       initialTab={tab}
+      overview={{ runs, needsYou, snoozes }}
     />
   );
 }
