@@ -2690,6 +2690,9 @@ export const ADMIN_COPY = {
         },
         ourPace: 'Our pace',
         pace: '1 page every 3–5 s',
+        beforeThis: 'Before this',
+        okRuns: (count: number) =>
+          `${count} OK ${count === 1 ? 'run' : 'runs'} in a row`,
         pagesRun: 'Pages this run',
         pages: (count: number) => `${count} ${count === 1 ? 'page' : 'pages'}`,
         refused:
