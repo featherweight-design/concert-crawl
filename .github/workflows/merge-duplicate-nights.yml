@@ -15,8 +15,11 @@ name: Merge duplicate nights
 #   secrets: a dispatch from any other branch is skipped.
 # - `environment: production` holds the job behind that environment's
 #   protection rules (required reviewers) before any secret is released.
-# - Each night merges in its own transaction (the admin merge's own core), so a
-#   failure skips that night and is listed, never half-applied.
+# - Each folded row merges in its own transaction (the admin merge's own core),
+#   and the plan is re-checked against the live rows just before it runs, so a
+#   row that changed since the dry run is skipped. A night that fails part-way
+#   can have its earlier rows merged; the summary says so, and a fill that
+#   fails after a merge is listed with the values it could not write.
 # - Dispatches never overlap: one cleanup at a time.
 #
 # What a merge does: every watch, going mark and attendance stamp, report, price

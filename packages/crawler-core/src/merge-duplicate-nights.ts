@@ -12,8 +12,14 @@
  *
  * Dry by default. The survivor is the row people already point at (most user
  * references), then a timed one, then the lowest id. Whatever the survivor
- * lacks (a time, links, an image, a description, prices) is filled from the
- * rows folded into it, after they are gone.
+ * lacks (a time, links, an image, a description, prices, a bill) is filled from
+ * the rows folded into it, after they are gone, in coherent groups taken from
+ * one row each (a price range and its source never come from two listings).
+ *
+ * Each folded row is its own transaction (the merge core's), and the fill is a
+ * separate step after them, so a night can be partly applied: the plan is
+ * re-checked against the live rows just before it runs, a fill that fails is
+ * reported with the values it could not write, and nothing is retried silently.
  *
  * An artist merge is NOT done here: where the doubled rows name two artists
  * ("Rossi" and "Rossi.") the pair is listed for the admin artists queue.
@@ -22,6 +28,7 @@
 import { eq, inArray, sql } from 'drizzle-orm';
 import {
   artists,
+  auditLog,
   db,
   eventReports,
   events,
@@ -29,26 +36,34 @@ import {
   priceSubmissions,
   userEvents,
 } from '@concert-crawl/db';
-import { showTimeKey } from '@concert-crawl/types';
+import { sameNight, showTimeKey } from '@concert-crawl/types';
 import { alignToNights } from './lib/align-nights.js';
 
 export const CLEANUP_ACTOR = 'system:duplicate-night-cleanup';
 
-/** Columns the survivor takes from a folded row when it has none of its own. */
-const FILL_FIELDS = [
-  'showTime',
-  'doorsTime',
-  'ticketUrl',
-  'ticketLinks',
-  'eventUrl',
-  'imageUrl',
-  'description',
-  'tourName',
-  'ticketPriceMin',
-  'ticketPriceMax',
-  'priceSource',
-] as const;
-type FillField = (typeof FILL_FIELDS)[number];
+/**
+ * Columns the survivor takes from a folded row when it has none of its own. A
+ * group is taken from ONE row (the first that holds the group's first column),
+ * so related values stay a pair: a price range and its source, a ticket link and
+ * its typed links, the bill and its canonical forms.
+ */
+const FILL_GROUPS = [
+  ['showTime', 'doorsTime'],
+  ['ticketUrl', 'ticketLinks'],
+  ['eventUrl'],
+  ['imageUrl'],
+  ['description'],
+  ['tourName'],
+  ['genre'],
+  ['ticketPriceMin', 'ticketPriceMax', 'priceSource'],
+  [
+    'headliners',
+    'canonicalHeadliners',
+    'supportingArtists',
+    'canonicalSupporting',
+  ],
+] as const satisfies readonly (readonly (keyof typeof events.$inferSelect)[])[];
+type FillField = (typeof FILL_GROUPS)[number][number];
 
 export interface NightRow {
   id: string;
@@ -66,11 +81,13 @@ export interface NightGroupPlan {
   date: string;
   survivor: NightRow;
   losers: NightRow[];
-  /** Columns the survivor will take from a folded row. */
+  /** The first column of each group the survivor will take from a folded row. */
   fills: FillField[];
   /** Filled in by an apply run. */
-  outcome?: 'merged' | 'failed';
+  outcome?: 'merged' | 'failed' | 'skipped';
   error?: string;
+  /** A fill that failed after the merge, with the values it could not write. */
+  fillError?: string;
 }
 
 export interface ArtistReview {
@@ -85,6 +102,7 @@ export interface MergeDuplicateNightsResult {
   groups: NightGroupPlan[];
   merged: number;
   failed: number;
+  skipped: number;
   artistReviews: ArtistReview[];
 }
 
@@ -93,6 +111,8 @@ export interface MergeDuplicateNightsOptions {
   /** Cap on groups merged in one run (a first sample). Unset means all. */
   maxGroups?: number | undefined;
 }
+
+const CHUNK = 500;
 
 /** The survivor: most references, then a timed row, then the lowest id. */
 export const chooseSurvivor = (rows: readonly NightRow[]): NightRow => {
@@ -122,14 +142,39 @@ const countBy = async (
   ids: readonly string[],
 ): Promise<Map<string, number>> => {
   const result = new Map<string, number>();
-  if (ids.length === 0) return result;
-  const rows = await db
-    .select({ eventId: table.eventId, total: sql<number>`count(*)::int` })
-    .from(table)
-    .where(inArray(table.eventId, [...ids]))
-    .groupBy(table.eventId);
-  for (const row of rows) result.set(row.eventId, row.total);
+  for (let start = 0; start < ids.length; start += CHUNK) {
+    const rows = await db
+      .select({ eventId: table.eventId, total: sql<number>`count(*)::int` })
+      .from(table)
+      .where(inArray(table.eventId, ids.slice(start, start + CHUNK)))
+      .groupBy(table.eventId);
+    for (const row of rows) result.set(row.eventId, row.total);
+  }
   return result;
+};
+
+type EventRow = typeof events.$inferSelect;
+
+/** The groups the survivor can still fill: every empty column, from one donor. */
+const fillsFrom = (
+  survivor: EventRow,
+  donors: readonly EventRow[],
+): { fields: FillField[]; values: Partial<EventRow> } => {
+  const fields: FillField[] = [];
+  const values: Partial<EventRow> = {};
+  for (const group of FILL_GROUPS) {
+    const anchor = group[0];
+    if (survivor[anchor] !== null) continue;
+    const donor = donors.find((row) => row[anchor] != null);
+    if (!donor) continue;
+    fields.push(anchor);
+    for (const field of group) {
+      if (survivor[field] === null && donor[field] != null) {
+        Object.assign(values, { [field]: donor[field] });
+      }
+    }
+  }
+  return { fields, values };
 };
 
 export async function mergeDuplicateNights(
@@ -200,32 +245,34 @@ export async function mergeDuplicateNights(
     ),
   );
 
-  // What each survivor would take from the rows folded into it.
-  const fullRows = new Map<string, typeof events.$inferSelect>();
-  const planIds = plans.flatMap((plan) => [
-    plan.survivor.id,
-    ...plan.losers.map((loser) => loser.id),
-  ]);
-  for (let start = 0; start < planIds.length; start += 500) {
-    const chunk = planIds.slice(start, start + 500);
-    for (const row of await db
-      .select()
-      .from(events)
-      .where(inArray(events.id, chunk))) {
-      fullRows.set(row.id, row);
+  const loadRows = async (
+    ids: readonly string[],
+  ): Promise<Map<string, EventRow>> => {
+    const found = new Map<string, EventRow>();
+    for (let start = 0; start < ids.length; start += CHUNK) {
+      for (const row of await db
+        .select()
+        .from(events)
+        .where(inArray(events.id, ids.slice(start, start + CHUNK)))) {
+        found.set(row.id, row);
+      }
     }
-  }
+    return found;
+  };
+
+  // What each survivor would take from the rows folded into it.
+  const fullRows = await loadRows(
+    plans.flatMap((plan) => [
+      plan.survivor.id,
+      ...plan.losers.map((loser) => loser.id),
+    ]),
+  );
   for (const plan of plans) {
     const survivor = fullRows.get(plan.survivor.id);
-    plan.fills = survivor
-      ? FILL_FIELDS.filter(
-          (field) =>
-            survivor[field] === null &&
-            plan.losers.some(
-              (loser) => fullRows.get(loser.id)?.[field] != null,
-            ),
-        )
-      : [];
+    const donors = plan.losers
+      .map((loser) => fullRows.get(loser.id))
+      .filter((row): row is EventRow => row !== undefined);
+    plan.fills = survivor ? fillsFrom(survivor, donors).fields : [];
   }
 
   // Doubled rows that name two artists: listed for the admin artists queue.
@@ -253,47 +300,82 @@ export async function mergeDuplicateNights(
     groups: plans,
     merged: 0,
     failed: 0,
+    skipped: 0,
     artistReviews,
   };
   if (options.dryRun) return result;
 
   for (const plan of plans.slice(0, options.maxGroups ?? plans.length)) {
     try {
-      // What the survivor may take, read BEFORE the folded rows are deleted.
-      const donors = plan.losers
-        .map((loser) => fullRows.get(loser.id))
-        .filter((row): row is typeof events.$inferSelect => row !== undefined);
-      for (const loser of plan.losers) {
+      // The plan is read from a snapshot that can be hours old: re-read the
+      // live rows and fold in only those that are still this night.
+      const live = await loadRows([
+        plan.survivor.id,
+        ...plan.losers.map((loser) => loser.id),
+      ]);
+      const survivor = live.get(plan.survivor.id);
+      const losers = plan.losers
+        .map((loser) => live.get(loser.id))
+        .filter(
+          (row): row is EventRow =>
+            row !== undefined &&
+            survivor !== undefined &&
+            row.status === 'upcoming' &&
+            sameNight(row, survivor),
+        );
+      if (!survivor || survivor.status !== 'upcoming' || losers.length === 0) {
+        plan.outcome = 'skipped';
+        plan.error = 'changed since it was planned';
+        result.skipped += 1;
+        continue;
+      }
+
+      for (const loser of losers) {
         await mergeEventRows({
           sourceId: loser.id,
-          targetId: plan.survivor.id,
+          targetId: survivor.id,
           actorId: CLEANUP_ACTOR,
           suggestion: null,
           notifyWatchers: false,
         });
       }
-      // The folded rows are gone, so a time taken from one cannot collide with
-      // it on the unique index. Re-read: only a field still empty is filled.
-      const [current] = await db
-        .select()
-        .from(events)
-        .where(eq(events.id, plan.survivor.id));
-      const take: Partial<typeof events.$inferInsert> = {};
-      for (const field of plan.fills) {
-        const donor = donors.find((row) => row[field] != null);
-        if (current && current[field] === null && donor) {
-          Object.assign(take, { [field]: donor[field] });
-        }
-      }
-      if (Object.keys(take).length > 0) {
-        await db
-          .update(events)
-          .set({ ...take, updatedAt: new Date() })
-          .where(eq(events.id, plan.survivor.id));
-      }
       plan.outcome = 'merged';
       result.merged += 1;
+
+      // The folded rows are gone, so a time taken from one cannot collide with
+      // it on the unique index. Re-read the survivor: only a field still empty
+      // is filled. A failure here is reported with the values it could not
+      // write, since the donors no longer exist.
+      let unwritten: Partial<EventRow> = {};
+      try {
+        const [current] = await db
+          .select()
+          .from(events)
+          .where(eq(events.id, survivor.id));
+        const { fields, values } = current
+          ? fillsFrom(current, losers)
+          : { fields: [], values: {} };
+        unwritten = values;
+        if (fields.length > 0) {
+          await db
+            .update(events)
+            .set({ ...values, updatedAt: new Date() })
+            .where(eq(events.id, survivor.id));
+          await db.insert(auditLog).values({
+            actorId: CLEANUP_ACTOR,
+            action: 'event.fill_from_merge',
+            targetId: survivor.id,
+            metadata: {
+              fromIds: losers.map((loser) => loser.id),
+              fields: Object.keys(values),
+            },
+          });
+        }
+      } catch (err) {
+        plan.fillError = `${err instanceof Error ? err.message : String(err)}; unwritten values: ${JSON.stringify(unwritten)}`;
+      }
     } catch (err) {
+      // A fold that failed part-way leaves the rows folded before it merged.
       plan.outcome = 'failed';
       plan.error = err instanceof Error ? err.message : String(err);
       result.failed += 1;

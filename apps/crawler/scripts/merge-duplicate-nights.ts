@@ -29,7 +29,14 @@ const parseSummaryFile = (): string | undefined => {
 // A step summary over 1 MiB fails the step; a group row is a few hundred bytes.
 const SUMMARY_MAX_ROWS = 1200;
 
-const cell = (text: string): string => text.replace(/\|/g, '\\|');
+// Crawled titles and database errors are untrusted text going into a Markdown
+// table: no pipes, line breaks or HTML.
+const cell = (text: string): string =>
+  text
+    .replace(/\r?\n/g, ' ')
+    .replace(/\|/g, '\\|')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 const time = (showTime: string | null): string => showTime ?? 'no time';
 
 async function main(): Promise<void> {
@@ -48,7 +55,7 @@ async function main(): Promise<void> {
     rows.reduce((total, row) => total + row.refs, 0);
   console.warn(
     `[merge-duplicate-nights] scanned=${result.scanned} groups=${result.groups.length} ` +
-      `${dryRun ? 'would-merge' : 'merged'}=${dryRun ? result.groups.length : result.merged} failed=${result.failed} ` +
+      `${dryRun ? 'would-merge' : 'merged'}=${dryRun ? result.groups.length : result.merged} failed=${result.failed} skipped=${result.skipped} ` +
       `artist-reviews=${result.artistReviews.length}`,
   );
   for (const plan of result.groups) {
@@ -61,7 +68,9 @@ async function main(): Promise<void> {
           )
           .join(', ') +
         `${plan.fills.length > 0 ? ` fills ${plan.fills.join(',')}` : ''}` +
-        `${plan.outcome === 'failed' ? ` FAILED: ${plan.error}` : ''}`,
+        `${plan.outcome === 'failed' ? ` FAILED: ${plan.error}` : ''}` +
+        `${plan.outcome === 'skipped' ? ` SKIPPED: ${plan.error}` : ''}` +
+        `${plan.fillError === undefined ? '' : ` FILL FAILED: ${plan.fillError}`}`,
     );
   }
   if (dryRun) {
@@ -77,7 +86,7 @@ async function main(): Promise<void> {
       `Scanned ${result.scanned} upcoming-status events · ${result.groups.length} nights stored more than once · ` +
         `${result.groups.reduce((total, plan) => total + plan.losers.length, 0)} rows to fold in · ` +
         `${refs(result.groups.flatMap((plan) => plan.losers))} user references on those rows move to the survivor` +
-        `${dryRun ? '' : ` · merged ${result.merged} · failed ${result.failed}`}`,
+        `${dryRun ? '' : `. This run reached ${result.merged + result.failed + result.skipped} of them: merged ${result.merged} · failed ${result.failed} · skipped (changed since planned) ${result.skipped}`}`,
       '',
       `### Nights (${result.groups.length})`,
       '',
@@ -103,8 +112,14 @@ async function main(): Promise<void> {
                   ? 'would merge'
                   : 'not reached (max-groups)'
                 : plan.outcome === 'merged'
-                  ? 'merged'
-                  : cell(`FAILED: ${plan.error ?? ''}`)
+                  ? plan.fillError === undefined
+                    ? 'merged'
+                    : cell(`merged, FILL FAILED: ${plan.fillError}`)
+                  : plan.outcome === 'skipped'
+                    ? cell(`skipped: ${plan.error ?? ''}`)
+                    : cell(
+                        `FAILED (earlier rows of the night may be merged): ${plan.error ?? ''}`,
+                      )
             } |`,
         ),
       ...(result.groups.length > SUMMARY_MAX_ROWS
