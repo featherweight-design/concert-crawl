@@ -19,9 +19,10 @@ export function SpotlightModal({
   onCTA,
 }: SpotlightModalProps) {
   const sp = release.spotlight;
-  const featureName = sp ? COPY.modal.heroFeatureNames[sp.hero] : undefined;
+  const featureName = sp ? COPY.modal.heroFeatureNames.get(sp.hero) : undefined;
   const [step, setStep] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
+  const pressedBackdrop = useRef(true);
   const [heroScale, setHeroScale] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
   // The stage is drawn 580×300; its box follows the scale so a narrow sheet
@@ -81,8 +82,15 @@ export function SpotlightModal({
         zIndex: 200,
       }}
       // A tap on the backdrop closes it, like Escape and Maybe later.
+      // A drag that starts inside the card (selecting text) and ends over the
+      // backdrop is not a tap on it.
+      onPointerDown={(ev) => {
+        pressedBackdrop.current = ev.target === ev.currentTarget;
+      }}
       onClick={(ev) => {
-        if (ev.target === ev.currentTarget) onClose();
+        if (ev.target === ev.currentTarget && pressedBackdrop.current) {
+          onClose();
+        }
       }}
     >
       <div
