@@ -6,7 +6,6 @@ vi.mock('@concert-crawl/crawler-core/robots', () => ({
   CrawlSkipError: class CrawlSkipError extends Error {},
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
   resolveCrawlDelayMs: vi.fn().mockReturnValue(3000),
-  MIN_CRAWL_DELAY_MS: 3000,
 }));
 // Zero out the pause so the suite doesn't sleep; the delay it was asked for
 // is asserted on the jitter call instead.

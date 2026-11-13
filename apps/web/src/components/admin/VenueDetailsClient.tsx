@@ -10,7 +10,11 @@ import type {
   VenuePlatform,
   VenueWithCrawlHealth,
 } from '@concert-crawl/types';
-import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types';
+import {
+  isVenuePlatform,
+  MIN_CRAWL_DELAY_MS,
+  platformRequiresVenueId,
+} from '@concert-crawl/types';
 import {
   updateVenue,
   generateVenueAbout,
@@ -586,10 +590,6 @@ const EMPTY_GUIDE: VenueGuide = {
   publishedAt: null,
 };
 
-// The crawl rules' 3 s floor. Mirrors MIN_CRAWL_DELAY_MS in crawler-core,
-// which the web can't import; the API and the crawler both enforce it.
-const MIN_CRAWL_DELAY_MS = 3000;
-
 export function VenueDetailsClient({
   venue,
   guide = EMPTY_GUIDE,
@@ -722,7 +722,11 @@ export function VenueDetailsClient({
     ...(cityVal !== venue.city ? ['City'] : []),
     ...(addressVal !== (venue.address ?? '') ? ['Address'] : []),
     ...(waitUntilVal !== venue.crawlWaitUntil ? ['Wait until'] : []),
-    ...(crawlDelayVal !== initialCrawlDelay ? ['Crawl delay'] : []),
+    // Against the STORED value: a legacy row under the floor opens at 3000,
+    // so it reads as changed from the start and every save names the fix.
+    ...(crawlDelayVal !== venue.crawlDelayMs
+      ? [ADMIN_COPY.venueDetailsClient.fields.requestDelay.label]
+      : []),
     ...((waitForSelectorVal || null) !== venue.crawlWaitForSelector
       ? ['Selector']
       : []),

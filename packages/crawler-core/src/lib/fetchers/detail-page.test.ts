@@ -363,19 +363,25 @@ describe('detailPageFetcher.fetch', () => {
 
   it('requests the listing and one detail page when firstPageOnly is set', async () => {
     // The admin probe sets this. The listing carries no event data of its
-    // own, so the probe follows its first link and returns that page's
-    // events: two requests, no sitemap, no other detail pages.
+    // own, so the probe follows one link and returns that page's events:
+    // never more than one detail page.
     vi.mocked(jitter).mockClear();
     const fetchMock = mockSiteFetch({
       listing: `<a href="/e/one">1</a><a href="/e/two">2</a><a href="/e/three">3</a>`,
+      sitemap: '',
     });
     const result = await detailPageFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
       firstPageOnly: true,
     });
 
-    expect(pageRequests(fetchMock)).toEqual([LISTING_URL, `${ORIGIN}/e/one`]);
-    // Both requests are paced through jitter, which floors them at 3 s.
+    // The sitemap read 404s here; listing plus exactly one detail page.
+    expect(pageRequests(fetchMock)).toEqual([
+      `${ORIGIN}/sitemap.xml`,
+      LISTING_URL,
+      `${ORIGIN}/e/one`,
+    ]);
+    // Both paced requests go through jitter, which floors them at 3 s.
     expect(jitter).toHaveBeenCalledTimes(2);
     expect(result.sourceUrl).toBe(LISTING_URL);
     expect(result.events).toHaveLength(1);
@@ -383,11 +389,65 @@ describe('detailPageFetcher.fetch', () => {
     expect(result.meta?.truncatedCount).toBe(0);
   });
 
+  it('skips a nav link for the event link further down when there is no sitemap', async () => {
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/about">About</a><a href="/faq">FAQ</a><a href="/e/one">1</a>`,
+      sitemap: '',
+    });
+    await detailPageFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+
+    expect(pageRequests(fetchMock)).toEqual([
+      `${ORIGIN}/sitemap.xml`,
+      LISTING_URL,
+      `${ORIGIN}/e/one`,
+    ]);
+  });
+
+  it('follows the sitemap to the event link when the venue publishes one', async () => {
+    // The sitemap vouches for /e/listed only, so the probe passes over both
+    // the nav link and an unlisted event-shaped link ahead of it.
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/about">About</a><a href="/e/unlisted">0</a><a href="/e/listed">1</a>`,
+      sitemap: `<urlset><url><loc>${ORIGIN}/e/listed</loc></url></urlset>`,
+    });
+    await detailPageFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+
+    expect(pageRequests(fetchMock)).toEqual([
+      `${ORIGIN}/sitemap.xml`,
+      LISTING_URL,
+      `${ORIGIN}/e/listed`,
+    ]);
+  });
+
+  it('fetches no detail page when no link qualifies', async () => {
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/about">About</a><a href="/faq">FAQ</a>`,
+      sitemap: '',
+    });
+    const result = await detailPageFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+
+    expect(pageRequests(fetchMock)).toEqual([
+      `${ORIGIN}/sitemap.xml`,
+      LISTING_URL,
+    ]);
+    expect(result.events).toEqual([]);
+  });
+
   it('fails a first-page-only fetch whose one detail page fails', async () => {
     // The probe reads a single detail page, so a failed one is the answer,
     // not a page to skip past with an ok and no events.
     const fetchMock = mockSiteFetch({
       listing: `<a href="/e/one">1</a><a href="/e/two">2</a>`,
+      sitemap: '',
       detail: () => ({ ok: false, status: 404, body: '' }),
     });
     await expect(
@@ -396,18 +456,28 @@ describe('detailPageFetcher.fetch', () => {
         firstPageOnly: true,
       }),
     ).rejects.toThrow(DetailPageFetchError);
-    expect(pageRequests(fetchMock)).toEqual([LISTING_URL, `${ORIGIN}/e/one`]);
+    expect(pageRequests(fetchMock)).toEqual([
+      `${ORIGIN}/sitemap.xml`,
+      LISTING_URL,
+      `${ORIGIN}/e/one`,
+    ]);
   });
 
   it('still fails a first-page-only fetch whose listing has no links', async () => {
-    const fetchMock = mockSiteFetch({ listing: '<p>Nothing here</p>' });
+    const fetchMock = mockSiteFetch({
+      listing: '<p>Nothing here</p>',
+      sitemap: '',
+    });
     await expect(
       detailPageFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         firstPageOnly: true,
       }),
     ).rejects.toBeInstanceOf(CalendarNotFoundError);
-    expect(pageRequests(fetchMock)).toEqual([LISTING_URL]);
+    expect(pageRequests(fetchMock)).toEqual([
+      `${ORIGIN}/sitemap.xml`,
+      LISTING_URL,
+    ]);
   });
 
   it('never requests a cross-origin URL', async () => {

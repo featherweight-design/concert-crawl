@@ -35,13 +35,16 @@ import {
   dispatch,
   AegSchemaError,
   PlatformFetchDeadlineError,
+  type PlatformSource,
 } from '@concert-crawl/crawler-core/fetchers';
 import {
   checkRobots,
-  MIN_CRAWL_DELAY_MS,
+  getCrawlDelayMs,
+  resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots';
 import {
   CRAWLER_USER_AGENT,
+  MIN_CRAWL_DELAY_MS,
   VENUE_PLATFORMS,
   platformRequiresVenueId,
 } from '@concert-crawl/types';
@@ -1014,11 +1017,25 @@ venuesAdminRouter.patch(
 );
 
 // A hung platform CDN connection must not pin an API worker slot — the
-// probe aborts and reports fetch_error after this window. This is the
-// whole-probe ceiling, not a per-request one: even with `firstPageOnly`,
-// the Live Nation adapter reads a sitemap and then a calendar page, each
-// paced, so a per-request value alone would not bound the probe (#1184).
+// probe aborts and reports fetch_error after this window. It caps each
+// request, and is the requests' share of the whole-probe budget below: even
+// with `firstPageOnly` an adapter makes more than one request (Live Nation's
+// sitemap and calendar page), so a per-request value alone would not bound
+// the probe (#1184).
 const PROBE_TIMEOUT_MS = 15_000;
+
+/**
+ * The probe's whole budget: every paced wait it takes at the resolved delay
+ * plus a full second of jitter, with PROBE_TIMEOUT_MS on top for the requests
+ * themselves. Sized from the delay because a pacing wait is never cut short
+ * (it breaches instead), so a fixed 15 s would fail any venue whose site asks
+ * for a long Crawl-delay. detail-page paces the listing and one detail page;
+ * every other adapter paces one listing request.
+ */
+function probeBudgetMs(source: PlatformSource, crawlDelayMs: number): number {
+  const pacedWaits = source === 'detail-page' ? 2 : 1;
+  return (crawlDelayMs + 1_000) * pacedWaits + PROBE_TIMEOUT_MS;
+}
 
 const probePlatformSchema = z.object({
   platform: z.enum(VENUE_PLATFORMS).nullable().optional(),
@@ -1090,13 +1107,31 @@ venuesAdminRouter.post(
       }
       const startedAt = Date.now();
       try {
-        // Paced like a crawl, and stopped after the first listing response:
-        // the probe only proves the platform answers, so it never paginates
-        // or follows detail pages, and can't hit the venue more than once.
+        // Paced exactly as the crawl paces this venue: its stored delay, or
+        // the site's robots.txt Crawl-delay when that is longer, never under
+        // the 3 s floor. AEG and VenuePilot then apply their own hosts'
+        // Crawl-delay on top, as they do in a crawl.
+        const crawlDelayMs = resolveCrawlDelayMs(
+          candidate.crawlDelayMs,
+          await getCrawlDelayMs(candidate.websiteUrl, CRAWLER_USER_AGENT),
+          { venueId: id, url: candidate.websiteUrl },
+        );
+        if (crawlDelayMs === null) {
+          return {
+            ok: false,
+            reason: 'fetch_error',
+            error: `Not probed: ${candidate.websiteUrl} asks in robots.txt for a Crawl-delay above the crawler's cap, so the crawl skips this venue too`,
+          };
+        }
+        // Stopped after the first listing response (see `firstPageOnly`):
+        // the probe proves the platform answers, never walks the calendar.
         const result = await fetcher.fetch(candidate, {
-          crawlDelayMs: MIN_CRAWL_DELAY_MS,
+          crawlDelayMs,
           perRequestTimeoutMs: PROBE_TIMEOUT_MS,
-          overallTimeoutMs: PROBE_TIMEOUT_MS,
+          overallTimeoutMs: probeBudgetMs(fetcher.source, crawlDelayMs),
+          // The budget is sized from crawlDelayMs, so an adapter whose host
+          // asks for a longer Crawl-delay widens it rather than breaching.
+          budgetFollowsCrawlDelay: true,
           firstPageOnly: true,
         });
         return {

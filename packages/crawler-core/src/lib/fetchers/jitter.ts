@@ -8,9 +8,8 @@
 // It is also where the 3 second floor is enforced for every wait: each pacing
 // wait in the crawler, the admin probe's included, goes through this function,
 // so no caller can pass a short or zero delay and pace faster than the rule.
-// robots.ts imports nothing, so taking the constant from it adds no cycle.
 
-import { MIN_CRAWL_DELAY_MS } from '../robots.js';
+import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
 
 /**
  * Turn a crawl delay into the wait to actually take: the delay, floored at

@@ -6,6 +6,7 @@
 // was N × timeoutMs, so a caller asking for a 15s budget could wait minutes.
 
 import { createLogger } from '@concert-crawl/logger';
+import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
 
 const logger = createLogger('platform-fetch-deadline');
 
@@ -41,11 +42,12 @@ export interface FetchDeadline {
   ): Promise<TResult>;
 
   /**
-   * Sleeps for the inter-request crawl delay, never past the remaining
-   * budget. Politeness pacing is real wall-clock time, so an unbounded sleep
-   * between requests would overshoot the overall deadline by up to a full
-   * delay however tightly each request is capped. Returning early is safe:
-   * the next `run` sees the spent budget and throws the breach itself.
+   * Sleeps for the inter-request crawl delay, never less than
+   * MIN_CRAWL_DELAY_MS. Every caller is a pace before a request, so the wait
+   * is never cut short: when the remaining budget can't hold the whole wait,
+   * this throws `PlatformFetchDeadlineError` up front rather than sleeping a
+   * truncated wait and letting a request go out early. A delay of 0 or less
+   * waits nothing; jitter() never returns one, so only a test stub does.
    */
   wait(delayMs: number): Promise<void>;
 
@@ -110,12 +112,20 @@ export const createDeadline = ({
 
     async wait(delayMs) {
       if (delayMs <= 0) return;
-      const capped =
-        overallTimeoutMs === undefined
-          ? delayMs
-          : Math.min(delayMs, Math.max(0, overallTimeoutMs - elapsed()));
-      if (capped <= 0) return;
-      await new Promise((resolve) => setTimeout(resolve, capped));
+      const pace = Math.max(delayMs, MIN_CRAWL_DELAY_MS);
+      if (overallTimeoutMs !== undefined) {
+        const spent = elapsed();
+        if (overallTimeoutMs - spent < pace) {
+          // Reported at the point the wait would have ended, which is where
+          // the budget runs out; nothing is requested.
+          throw new PlatformFetchDeadlineError(
+            overallTimeoutMs,
+            spent + pace,
+            'pacing wait',
+          );
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, pace));
     },
 
     async run(stage, request) {

@@ -253,6 +253,18 @@ export function extractCandidateUrls(
 }
 
 /**
+ * Whether a normalized candidate looks like one event's own page rather than
+ * a site page: at least two path segments (`/e/<slug>`, and `/e/<slug>` is
+ * also where a `/tickets` link lands once normalized), where `/about`,
+ * `/faq` and `/` have one or none. Only the probe uses it, and only when no
+ * sitemap narrowed the listing's links; the full crawl follows every link
+ * and lets a page with no Event JSON-LD count as one.
+ */
+export function isDetailShaped(url: string): boolean {
+  return new URL(url).pathname.split('/').filter(Boolean).length >= 2;
+}
+
+/**
  * Read the same-origin URLs a sitemap advertises, normalized the same way
  * as listing anchors so the two sets can be intersected.
  */
@@ -297,15 +309,10 @@ async function detailPageFetch(
   // request budget re-reading the past. Intersecting it with the calendar's
   // own links keeps discovery scoped to what the venue is currently
   // advertising while guaranteeing we only ever request pages the site
-  // itself publishes as crawlable.
-  // The probe (firstPageOnly) skips it: it reads the listing and the first
-  // detail page it links to, two requests in all, so there is no set of
-  // detail pages for the sitemap to narrow.
+  // itself publishes as crawlable. The probe (firstPageOnly) reads it too:
+  // it is what keeps the probe's one detail page off a nav link.
   let sitemapUrls = new Set<string>();
-  if (
-    !opts.firstPageOnly &&
-    (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT))
-  ) {
+  if (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT)) {
     try {
       sitemapUrls = parseSitemapUrls(
         await deadline.run('sitemap', (timeoutMs) =>
@@ -361,12 +368,18 @@ async function detailPageFetch(
   // Checked one at a time and stopped at the cap: a link-heavy listing can
   // yield hundreds of candidates, and only MAX_DETAIL_PAGES of them will ever
   // be fetched. Resolving robots.txt for the rest is wasted work and noise.
-  // The probe follows one: enough to show the events come through.
+  // The probe follows one: enough to show the events come through. With no
+  // sitemap to vouch for its links it takes only a detail-shaped one, so it
+  // never spends its one request on /about; none means no detail fetch.
   const detailCap = opts.firstPageOnly ? 1 : MAX_DETAIL_PAGES;
+  const pool =
+    opts.firstPageOnly && inSitemap.length === 0
+      ? allowlisted.filter(isDetailShaped)
+      : allowlisted;
   const detailUrls: string[] = [];
   let examinedCount = 0;
   let robotsSkippedCount = 0;
-  for (const url of allowlisted) {
+  for (const url of pool) {
     if (detailUrls.length >= detailCap) break;
     examinedCount++;
     if (await isAllowed(url, CRAWLER_USER_AGENT)) {

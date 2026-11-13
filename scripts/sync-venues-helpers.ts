@@ -1,6 +1,33 @@
 // Pure diff logic for scripts/sync-venues.ts, split out so it can be tested
 // without a database.
 
+import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/crawler-core/robots';
+
+/**
+ * Refuses a seed that would store a crawl delay under the crawl rules' 3 s
+ * floor. The crawler floors it at run time anyway, but the API refuses such a
+ * row and the admin form then has to correct it, so it must not be written in
+ * the first place. Throws, like the script's other bad-input checks, naming
+ * every offending slug so one run reports them all.
+ */
+export const assertCrawlDelayFloor = (
+  seedVenues: readonly { slug: string; crawlDelayMs?: number | null }[],
+): void => {
+  const below = seedVenues.filter(
+    (venue) =>
+      venue.crawlDelayMs !== undefined &&
+      venue.crawlDelayMs !== null &&
+      venue.crawlDelayMs < MIN_CRAWL_DELAY_MS,
+  );
+  if (below.length > 0) {
+    throw new Error(
+      `SEED_VENUES sets crawlDelayMs under the ${MIN_CRAWL_DELAY_MS}ms floor for: ${below
+        .map((venue) => `${venue.slug} (${venue.crawlDelayMs})`)
+        .join(', ')}`,
+    );
+  }
+};
+
 // The fields the upsert writes with a plain `excluded.<col>`, so a straight
 // value comparison models them exactly.
 //

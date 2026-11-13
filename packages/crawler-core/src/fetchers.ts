@@ -21,5 +21,6 @@ export type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
+  PlatformSource,
   VenuePlatform,
 } from './lib/fetchers/index.js';

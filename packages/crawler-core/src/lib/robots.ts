@@ -6,6 +6,8 @@
 //   - `none`: a 4xx ("unavailable" in RFC 9309 §2.3.1.3) — no rules apply
 //   - `unreachable`: a 5xx, a 429, a timeout or a network error — RFC 9309
 //     §2.3.1.4 says to assume complete disallow, so we do not crawl
+import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
+
 type RobotsFetch =
   | { kind: 'text'; text: string }
   | { kind: 'none'; status: number }
@@ -32,10 +34,9 @@ const ROBOTS_TIMEOUT_MS = 10_000;
 // than this is skipped for the run instead (see `resolveCrawlDelayMs`).
 export const CRAWL_DELAY_CAP_MS = 30_000;
 
-// The crawl rules' floor: never less than 3 seconds between requests to a
-// venue, whatever its stored `crawl_delay_ms` says (the admin form once
-// accepted 1 s). Jitter is added on top of this, never taken from it.
-export const MIN_CRAWL_DELAY_MS = 3_000;
+// The crawl rules' 3 s floor, declared once in @concert-crawl/types and
+// re-exported here so existing crawler-core imports keep working.
+export { MIN_CRAWL_DELAY_MS };
 
 /**
  * The product tokens Anthropic documents for its crawlers. Page text that a

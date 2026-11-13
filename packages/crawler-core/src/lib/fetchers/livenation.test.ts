@@ -8,14 +8,20 @@ import {
   reassembleFlightPayload,
   extractEventRecords,
   parseCalendarUrls,
+  pickProbeMonth,
 } from './livenation.js';
 import type { Venue } from '@concert-crawl/db';
 import { PlatformFetchDeadlineError } from './deadline.js';
 import { CrawlSkipError } from '../robots.js';
+import { jitter } from './jitter.js';
 
 // jitter() floors every wait at 3 s, so the real one would make each of the
-// 13 page requests here sleep 3-4 s. The floor is pinned by jitter.test.ts.
-vi.mock('./jitter.js', () => ({ jitter: () => 0 }));
+// 13 page requests here sleep 3-4 s. Stubbed to 0 by default (the floor is
+// pinned by jitter.test.ts); a test whose assertion rests on a real pacing
+// wait switches the real one back in for that wait.
+vi.mock('./jitter.js', () => ({ jitter: vi.fn(() => 0) }));
+const { jitter: realJitter } =
+  await vi.importActual<typeof import('./jitter.js')>('./jitter.js');
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -204,8 +210,40 @@ describe('flight payload parsing', () => {
   });
 });
 
+describe('pickProbeMonth', () => {
+  const months = ['2026-07', '2026-08', '2026-11', '2027-01'].map(
+    (month) => `https://venue.example.com/shows/calendar/${month}`,
+  );
+
+  it('picks the current month in Mountain Time, past months notwithstanding', () => {
+    expect(pickProbeMonth(months, new Date('2026-11-13T12:00:00-07:00'))).toBe(
+      months[2],
+    );
+  });
+
+  it('reads the month in Mountain Time, not UTC', () => {
+    // 2026-12-01 03:00 UTC is still 30 November in Denver.
+    expect(pickProbeMonth(months, new Date('2026-12-01T03:00:00Z'))).toBe(
+      months[2],
+    );
+  });
+
+  it('picks the first future month when the current one is not listed', () => {
+    expect(pickProbeMonth(months, new Date('2026-09-15T12:00:00-06:00'))).toBe(
+      months[2],
+    );
+  });
+
+  it('falls back to the latest month when every month is past', () => {
+    expect(pickProbeMonth(months, new Date('2027-03-01T12:00:00-07:00'))).toBe(
+      months[3],
+    );
+  });
+});
+
 describe('liveNationFetcher.fetch', () => {
   beforeEach(() => {
+    vi.mocked(jitter).mockImplementation(() => 0);
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
   afterEach(() => {
@@ -225,30 +263,30 @@ describe('liveNationFetcher.fetch', () => {
     expect(result.meta?.calendarMonthsFetched).toBe(12);
   });
 
-  it('reads the sitemap and only the first month when firstPageOnly is set', async () => {
+  it('reads the sitemap and only the current month when firstPageOnly is set', async () => {
     // The admin probe sets this: one listing request proves the site answers,
     // and walking all 12 months would hit the venue a dozen times per probe.
+    // The captured sitemap runs 2026-07 to 2027-06, so on 2026-11-13 its
+    // first four months are past: the probe must skip them for November.
+    vi.setSystemTime(new Date('2026-11-13T12:00:00-07:00'));
     const fetchMock = mockSiteFetch();
     const result = await liveNationFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
       firstPageOnly: true,
     });
-    const firstMonth = parseCalendarUrls(
-      SITEMAP_XML,
-      'https://www.fillmoredenver.com',
-    )[0];
+    const november = 'https://www.fillmoredenver.com/shows/calendar/2026-11';
     const pageUrls = fetchMock.mock.calls
       .map(([url]) => String(url))
       .filter((url) => !url.endsWith('/robots.txt'));
     // 1 sitemap + 1 month, never the other 11.
     expect(pageUrls).toEqual([
       'https://www.fillmoredenver.com/sitemap.xml',
-      firstMonth,
+      november,
     ]);
     expect(result.meta?.calendarMonthsFetched).toBe(1);
     expect(result.events.length).toBeGreaterThan(0);
     for (const event of result.events) {
-      expect(event.sourceUrl).toBe(firstMonth);
+      expect(event.sourceUrl).toBe(november);
     }
   });
 
@@ -492,6 +530,11 @@ describe('liveNationFetcher.fetch', () => {
     const fetchMock = mockCalendarRedirect(origin, target, {
       otherRobots: 'User-agent: *\nAllow: /\nCrawl-delay: 20\n',
     });
+    // The redirect hop's 20 s pacing wait is what must breach the budget, so
+    // it runs through the real jitter (on the suite's fake timers). The
+    // month's own pace, asked with the venue's 0, stays stubbed so the run
+    // reaches the redirect inside the 200ms budget.
+    vi.mocked(jitter).mockImplementation((ms) => (ms > 0 ? realJitter(ms) : 0));
     const startedAt = Date.now();
     await expect(
       liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {

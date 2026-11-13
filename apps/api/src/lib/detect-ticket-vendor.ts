@@ -2,11 +2,10 @@ import { jitter } from '@concert-crawl/crawler-core/jitter';
 import {
   checkRobots,
   getCrawlDelayMs,
-  MIN_CRAWL_DELAY_MS,
   resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots';
 import { fetchFollowingRobots } from '@concert-crawl/crawler-core/robots-fetch';
-import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import { CRAWLER_USER_AGENT, MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
 import type { TicketVendor } from '@concert-crawl/types';
 import { apiLogger } from './logger.js';
 
