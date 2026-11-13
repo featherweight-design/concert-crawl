@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Share } from 'lucide-react';
+import { Check, Copy, Maximize2, Share } from 'lucide-react';
 import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { SIGNAL_TO_ACCENT } from '@/components/settings/definitions/styles';
@@ -18,6 +18,7 @@ import { siteOrigin } from '@/lib/share/site-origin';
 import { SHARE_APP_COPY } from './definitions/copy';
 import { qrPath } from '@/lib/poster/poster-rule';
 import { shareAppLink, type ShareAppMode } from './share-app-link';
+import { ShareFullScreen } from './ShareFullScreen';
 import { ShareTicket, type TicketBody, type TicketLower } from './ShareTicket';
 
 const COPY = SHARE_APP_COPY;
@@ -59,6 +60,7 @@ export const ShareAppSheet = ({
   capabilities,
 }: ShareAppSheetProps) => {
   const [status, setStatus] = useState<PressStatus>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   const isPhone = useIsMobileViewport();
   // Open mode has no code to make: the query stays off and the API is never
   // called.
@@ -83,7 +85,10 @@ export const ShareAppSheet = ({
   // The sheet can stay mounted while closed; a stale "Link copied" or failure
   // line would greet the next opening.
   useEffect(() => {
-    if (!open) setStatus(null);
+    if (!open) {
+      setStatus(null);
+      setFullscreen(false);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -107,6 +112,11 @@ export const ShareAppSheet = ({
   const { qrText } = link;
   const qr = useMemo(() => (ready ? qrPath(qrText) : null), [ready, qrText]);
 
+  const openFullscreen = () => {
+    track('app_share_destination_selected', { destination: 'fullscreen' });
+    setFullscreen(true);
+  };
+
   let body: TicketBody;
   let lower: TicketLower;
   if (pending) {
@@ -121,6 +131,7 @@ export const ShareAppSheet = ({
       qr,
       ariaLabel: link.personal ? COPY.qrAria : COPY.qrAriaOpen,
       shownUrl: link.shownUrl,
+      ...(isPhone && { onOpenFullscreen: openFullscreen }),
     };
     if (mode === 'open') lower = { kind: 'none' };
     else if (data?.revoked === true) lower = { kind: 'off' };
@@ -185,6 +196,16 @@ export const ShareAppSheet = ({
     />
   );
 
+  const fullscreenPress = (
+    <Press
+      primary={false}
+      disabled={!ready}
+      onClick={openFullscreen}
+      icon={<Maximize2 size={15} strokeWidth={1.75} aria-hidden="true" />}
+      label={COPY.fullscreen}
+    />
+  );
+
   return (
     <BottomSheet
       open={open}
@@ -223,23 +244,25 @@ export const ShareAppSheet = ({
       </div>
 
       {/* Board: the lead press on its own line, then a row of half-width
-          presses. Full screen (PR 3) joins that row beside Copy link, which
-          then loses its lone full width. 🔸 Until then Copy link is alone in
-          the row. Nothing here may shrink: a short viewport scrolls the sheet. */}
+          presses. On a phone Full screen sits beside Copy link in that row; the
+          desktop dialog has no Full screen. Nothing here may shrink: a short
+          viewport scrolls the sheet. */}
       <div className="mt-4 flex flex-col gap-2.5 [&>*]:shrink-0">
         {shareLeads ? (
           <>
             {sharePress(true)}
             <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
               {copyPress(false)}
+              {fullscreenPress}
             </div>
           </>
         ) : (
           <>
             {copyPress(true)}
-            {canShare && (
+            {(canShare || isPhone) && (
               <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
-                {sharePress(false)}
+                {canShare && sharePress(false)}
+                {isPhone && fullscreenPress}
               </div>
             )}
           </>
@@ -275,6 +298,21 @@ export const ShareAppSheet = ({
           </p>
         )}
       </div>
+      {qr !== null && ready && (
+        <ShareFullScreen
+          open={fullscreen && isPhone}
+          onClose={() => setFullscreen(false)}
+          personal={link.personal}
+          qr={qr}
+          ariaLabel={link.personal ? COPY.qrAria : COPY.qrAriaOpen}
+          shownUrl={link.shownUrl}
+          joined={
+            lower.kind === 'joined'
+              ? { count: lower.count, faces: lower.faces }
+              : null
+          }
+        />
+      )}
     </BottomSheet>
   );
 };

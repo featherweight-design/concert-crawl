@@ -37,6 +37,9 @@ const isAlwaysPublic = createRouteMatcher([
   // wordmark and the landing page's own subheading and reads nothing
   // user-specific. Exact path, not a prefix: nothing else under /api/og.
   '/api/og',
+  // The invite link's card, fetched by the same kind of crawler for a pasted
+  // `/i/<code>` link. It names nobody and reads nothing user-specific.
+  '/api/og/invite',
   // The crawler cron POSTs here machine-to-machine with an `x-revalidate-token`
   // header and no Clerk session, so gating it 307'd every call to /sign-in and
   // #1442's proactive revalidation never once fired in prod. The route
