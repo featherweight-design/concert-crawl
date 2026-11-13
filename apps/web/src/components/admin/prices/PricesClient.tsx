@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -137,19 +137,28 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
   const [approveOn, setApproveOn] = useState<boolean | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [adding, setAdding] = useState<MissingRow | null>(null);
+  const savingApprove = useRef(false);
 
+  // Only the newest load may write: a slow older one must not overwrite it.
+  const latestLoad = useRef(0);
   const load = useCallback(
     async (at: number) => {
+      const mine = ++latestLoad.current;
       try {
         const [nextCounts, list] = await Promise.all([
           api.tabs(),
           api.missing((at - 1) * MISSING_PAGE_SIZE, MISSING_PAGE_SIZE),
         ]);
+        if (mine !== latestLoad.current) return;
         setCounts(nextCounts);
         setRows(list.rows);
         setFailed(false);
+        // The last row of the last page just got its price: step back a page.
+        if (list.rows.length === 0 && at > 1 && nextCounts.missing > 0) {
+          setPage(Math.ceil(nextCounts.missing / MISSING_PAGE_SIZE));
+        }
       } catch {
-        setFailed(true);
+        if (mine === latestLoad.current) setFailed(true);
       }
     },
     [api],
@@ -158,6 +167,9 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
   useEffect(() => {
     void load(page);
   }, [load, page]);
+
+  // A link to `?tab=` while the page is mounted changes the prop, not the mount.
+  useEffect(() => setTab(initialTab), [initialTab]);
 
   useEffect(() => {
     // The toggle is a convenience: a failed read hides it, not the page.
@@ -172,7 +184,9 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
   };
 
   const onToggle = async () => {
-    if (approveOn === null) return;
+    // One save at a time: a second click mid-request would race the rollback.
+    if (approveOn === null || savingApprove.current) return;
+    savingApprove.current = true;
     const next = !approveOn;
     setApproveOn(next);
     try {
@@ -180,6 +194,8 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
     } catch {
       setApproveOn(!next);
       setNotice(COPY.approve.saveFailed);
+    } finally {
+      savingApprove.current = false;
     }
   };
 

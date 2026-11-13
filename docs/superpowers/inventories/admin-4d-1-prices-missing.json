@@ -1,0 +1,45 @@
+{
+  "feature": "Admin 4d · Prices shell, Missing a price, add a price",
+  "note": "Plan row 4d, UI PR 1. CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/prices-missing-a-price, prices-add-a-price-in-flow, prices-mobile, add-a-price-mobile, prices-nothing-missing. By hand: nothing-missing (needs a database where every show has a price) and Publish and next (it writes). The Submitted prices and Price checks tabs are interim links until 4d PR 2 and 3.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "missing",
+      "label": "/admin/prices (Missing a price)",
+      "steps": [
+        {
+          "goto": "/admin/prices",
+          "wait": "[aria-label=\"Shows missing a price\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "add-price",
+      "label": "Add a price panel / sheet",
+      "steps": [
+        {
+          "goto": "/admin/prices",
+          "wait": "[aria-label=\"Shows missing a price\"]"
+        },
+        { "click": "button:has-text(\"Add price\"):visible >> nth=0" },
+        { "wait": "[role=\"dialog\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "submitted-tab",
+      "label": "Submitted prices tab (interim link)",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[role=\"tabpanel\"]",
+          "settle": 400
+        }
+      ]
+    }
+  ]
+}
