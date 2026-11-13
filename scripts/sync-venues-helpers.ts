@@ -1,7 +1,9 @@
 // Pure diff logic for scripts/sync-venues.ts, split out so it can be tested
 // without a database.
 
-import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/crawler-core/robots';
+// Source-relative, as every script reaches workspace code: scripts run on a
+// clean CI runner that has built nothing, so a package specifier (dist) fails.
+import { MIN_CRAWL_DELAY_MS } from '../packages/types/src/crawler-identity.js';
 
 /**
  * Refuses a seed that would store a crawl delay under the crawl rules' 3 s
