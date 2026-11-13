@@ -1,0 +1,64 @@
+{
+  "feature": "Edit Concerts PR4 · Add a show you went to",
+  "note": "Boards: design/design_handoff_edit_concerts/screens/ add_sheet_m (phone) and add_dialog_d (sm, desktop) = add-sheet; add_search_m and addendum 3 04-edit-your-concerts/add-search-d = add-search; add_none_m = add-none. Hand-walked, not in the sheet: add-tapped-d (tapping a pill mutates), add-unmark-m, add_end_m (scroll inside the sheet to the records floor; the kit's scroll moves the page, not the sheet), add-loading-m (throttle), add-error-m and add-tap-failed-m (block /v1/history/past-shows, or fail the PUT), the empty-Concerts placement of the row (no board), Electric and Light themes. Requires CC_PAST_ARTIST_NAME, the display name of an artist with more than one past show in our records.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "sm", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "add-sheet",
+      "label": "Add sheet opened, records note",
+      "steps": [
+        {
+          "goto": "/history?cell=sheet",
+          "wait": "[data-testid=\"add-show-row\"]"
+        },
+        { "click": "[data-testid=\"add-show-row\"]" },
+        { "waitDialog": "^Add a show you went to$" },
+        {
+          "wait": "[data-testid=\"add-records-note\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "add-search",
+      "label": "Search one artist",
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"add-show-row\"]" },
+        { "click": "[data-testid=\"add-show-row\"]" },
+        { "waitDialog": "^Add a show you went to$" },
+        {
+          "fill": "input[type=\"search\"]",
+          "text": "${CC_PAST_ARTIST_NAME}",
+          "wait": "[data-testid=\"add-show-count\"]",
+          "settle": 400
+        }
+      ]
+    },
+    {
+      "id": "add-none",
+      "label": "No results",
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"add-show-row\"]" },
+        { "click": "[data-testid=\"add-show-row\"]" },
+        { "waitDialog": "^Add a show you went to$" },
+        {
+          "fill": "input[type=\"search\"]",
+          "text": "zz no such show zz",
+          "wait": "[data-testid=\"add-show-none\"]"
+        }
+      ]
+    },
+    {
+      "id": "concerts-add-row",
+      "label": "/history rail with the Add row (last: a cell after another can miss its trigger)",
+      "steps": [
+        { "goto": "/history", "wait": "[data-testid=\"add-show-row\"]" }
+      ]
+    }
+  ]
+}
