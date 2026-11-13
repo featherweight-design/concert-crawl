@@ -71,6 +71,26 @@ describe('classifyBillChange: what the repair may write', () => {
     });
   });
 
+  it('refuses to demote a stored headliner to supporting', () => {
+    expect(
+      verdict(
+        { h: ['Def Leppard', 'Goo Goo Dolls'] },
+        { h: ['Def Leppard'], s: ['Goo Goo Dolls'] },
+      ),
+    ).toEqual({ write: false, reason: 'would-drop-stored-headliner' });
+  });
+
+  it('writes "Telly & Friends" as Telly, and refuses a bare respelling', () => {
+    expect(verdict({ h: ['Telly & Friends'] }, { h: ['Telly'] })).toEqual({
+      write: true,
+      kind: 'dedupe',
+    });
+    expect(verdict({ h: ['kokoroko'] }, { h: ['Kokoroko'] })).toEqual({
+      write: false,
+      reason: 'nothing-evidenced',
+    });
+  });
+
   it('refuses to add an artist: a series, a raw title, a fused name', () => {
     expect(verdict({ h: [] }, { h: ['BASS BINGO'] })).toEqual({
       write: false,

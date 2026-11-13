@@ -71,6 +71,10 @@ const parseSummaryFile = (): string | undefined => {
 
 // A step summary over 1 MiB fails the step; a row is a few hundred bytes.
 const SUMMARY_MAX_ROWS = 1500;
+// The not-written table shares the 1 MiB step summary with the change list and
+// the unresolved names, so it is capped lower; the log carries the first rows.
+const NOT_WRITTEN_MAX_ROWS = 600;
+const NOT_WRITTEN_LOG_ROWS = 400;
 
 const cell = (text: string): string => text.replace(/\|/g, '\\|');
 const names = (list: readonly string[]): string =>
@@ -153,7 +157,7 @@ async function main(): Promise<void> {
   console.warn(
     `[rederive-event-artists] MusicBrainz lookups — found=${mb.found} not-found=${mb.notFound} unavailable=${mb.unavailable}`,
   );
-  for (const item of result.notWritten) {
+  for (const item of result.notWritten.slice(0, NOT_WRITTEN_LOG_ROWS)) {
     console.warn(
       `[rederive-event-artists] not written (${item.reason}) "${item.title}": stored [${names(item.before.headliners)}] / [${names(item.before.supportingArtists)}], guess [${names(item.guess.headliners)}] / [${names(item.guess.supportingArtists)}]`,
     );
@@ -206,36 +210,44 @@ async function main(): Promise<void> {
             '',
           ]
         : []),
-      `### Not written: nothing stored evidences the change (${result.notWritten.length})`,
-      '',
-      'The pass only splits a stored joined name the evidence ruled two acts, clears a tribute or cover night, and removes repeats. These rows would have dropped a stored act, added an artist, or have no stored bill to compare with, so they are left exactly as they are. The guess is what the ladder would have written, for a human to read.',
-      '',
-      'By reason: ' +
-        Object.entries(
-          result.notWritten.reduce<Record<string, number>>((counts, item) => {
-            counts[item.reason] = (counts[item.reason] ?? 0) + 1;
-            return counts;
-          }, {}),
-        )
-          .map(([reason, count]) => `${reason} ${count}`)
-          .join(' · '),
-      '',
-      '| Event | Reason | Stored: headliners / supporting | Ladder guess: headliners / supporting |',
-      '|---|---|---|---|',
-      ...result.notWritten
-        .slice(0, SUMMARY_MAX_ROWS)
-        .map(
-          (item) =>
-            `| ${cell(item.title)} | ${item.reason} | ` +
-            `${cell(names(item.before.headliners))} / ${cell(names(item.before.supportingArtists))} | ` +
-            `${cell(names(item.guess.headliners))} / ${cell(names(item.guess.supportingArtists))} |`,
-        ),
-      ...(result.notWritten.length > SUMMARY_MAX_ROWS
-        ? [
+      ...(result.notWritten.length === 0
+        ? []
+        : [
+            `### Not written: nothing stored evidences the change (${result.notWritten.length})`,
             '',
-            `…and ${result.notWritten.length - SUMMARY_MAX_ROWS} more not written; the step log lists every one.`,
-          ]
-        : []),
+            'The pass only splits a stored joined name the evidence ruled two acts, clears a tribute or cover night, and removes repeats. These rows would have dropped a stored act, added an artist, or have no stored bill to compare with, so they are left exactly as they are. The guess is what the ladder would have written, for a human to read.',
+            '',
+            'By reason: ' +
+              Object.entries(
+                result.notWritten.reduce<Record<string, number>>(
+                  (counts, item) => {
+                    counts[item.reason] = (counts[item.reason] ?? 0) + 1;
+                    return counts;
+                  },
+                  {},
+                ),
+              )
+                .map(([reason, count]) => `${reason} ${count}`)
+                .join(' · '),
+            '',
+            '| Event | Reason | Stored: headliners / supporting | Ladder guess: headliners / supporting |',
+            '|---|---|---|---|',
+            ...result.notWritten
+              .slice(0, NOT_WRITTEN_MAX_ROWS)
+              .map(
+                (item) =>
+                  `| ${cell(item.title)} | ${item.reason} | ` +
+                  `${cell(names(item.before.headliners))} / ${cell(names(item.before.supportingArtists))} | ` +
+                  `${cell(names(item.guess.headliners))} / ${cell(names(item.guess.supportingArtists))} |`,
+              ),
+            ...(result.notWritten.length > NOT_WRITTEN_MAX_ROWS
+              ? [
+                  '',
+                  `…and ${result.notWritten.length - NOT_WRITTEN_MAX_ROWS} more not written; the step log lists the first ${NOT_WRITTEN_LOG_ROWS}.`,
+                ]
+              : []),
+            '',
+          ]),
       '',
       `### Unresolved joined names (${result.unresolvedJoined.length}), left unwritten`,
       '',

@@ -465,6 +465,10 @@ export async function rederiveEventArtists(
       // stored to compare with is left as it was and listed for a human.
       // A hide only happens when `hideNonConcerts` was asked for, which is its
       // own deliberate switch (off by default); the bill rule governs the rest.
+      // `derived` counts every row the ladder produced a bill for, written or
+      // not; the strategies below add up to it plus the rows listed as not
+      // evidenced.
+      derived += 1;
       if (!unchanged && !hides) {
         const verdict = classifyBillChange({
           stored: {
@@ -496,7 +500,6 @@ export async function rederiveEventArtists(
         }
       }
 
-      derived += 1;
       strategies[strategy] += 1;
       if (hides) hidden += 1;
       if (unchanged) continue;
