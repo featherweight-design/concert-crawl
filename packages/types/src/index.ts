@@ -1891,6 +1891,9 @@ export interface NeedsYouEvidenceLine {
   value: string;
 }
 
+/** A crawl run's recorded robots.txt result (`crawl_runs.robots_txt_blocked`). */
+export type NeedsYouRobotsResult = 'yes' | 'no' | 'unchecked';
+
 export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'show-dropped';
@@ -1947,7 +1950,7 @@ export type NeedsYouItem =
        * venue-blocked only: the latest run's robots.txt result as recorded
        * (`yes` blocked, `no`, `unchecked`), or null.
        */
-      robots?: string | null;
+      robots?: NeedsYouRobotsResult | null;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
