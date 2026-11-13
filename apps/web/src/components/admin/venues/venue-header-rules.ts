@@ -6,26 +6,38 @@ const COPY = ADMIN_COPY.venueHeader;
 /** What the header's rules read from the venue. */
 export type HeaderVenue = Pick<
   VenueWithCrawlHealth,
-  'active' | 'robotsTxtAllowed' | 'crawlPausedAt' | 'neighborhood'
+  | 'active'
+  | 'verified'
+  | 'robotsTxtAllowed'
+  | 'crawlPausedAt'
+  | 'neighborhood'
+  | 'slug'
 > & { deleteBlockers?: VenueWithCrawlHealth['deleteBlockers'] };
 
 /** Why Re-crawl is off, or null when it can run (`A3/03/re-crawl-states`). */
 export type RecrawlOff = keyof typeof COPY.recrawlOff;
 
 /**
- * The API refuses all three (`queueVenueCrawl`): a hidden venue (400), a
- * robots.txt disallow (409, never overridden) and a paused crawl (409).
+ * The API refuses all four (`queueVenueCrawl`): a hidden or unverified venue
+ * (400), a robots.txt disallow (409, never overridden) and a paused crawl
+ * (409).
  */
 export const recrawlOff = (venue: HeaderVenue): RecrawlOff | null => {
   if (!venue.active) return 'hidden';
+  if (!venue.verified) return 'unverified';
   if (venue.robotsTxtAllowed === false) return 'robots';
   // Paused and auto-paused alike (orchestrator ruling): resume first.
   if (venue.crawlPausedAt !== null) return 'paused';
   return null;
 };
 
-/** View on site is hidden for hidden (and, once 3e lands, draft) venues. */
-export const showsViewOnSite = (venue: HeaderVenue): boolean => venue.active;
+/**
+ * View on site opens our public venue page, not the venue's own website: the
+ * handoff hides it for hidden (and, once 3e lands, draft) venues, which only
+ * makes sense of a page we publish. Null when there is no page to open.
+ */
+export const viewOnSiteHref = (venue: HeaderVenue): string | null =>
+  venue.active ? `/venues/${encodeURIComponent(venue.slug)}` : null;
 
 /**
  * The line beside the chips: "Central Platte Valley · 235 upcoming", or why

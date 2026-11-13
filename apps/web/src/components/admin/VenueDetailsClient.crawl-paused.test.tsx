@@ -161,4 +161,38 @@ describe('VenueDetailsClient — venue header', () => {
     render(<VenueDetailsClient venue={buildVenue({ featured: true })} />);
     expect(screen.getByRole('button', { name: ACTIONS.flagship })).toBeTruthy();
   });
+
+  it('keeps the old card’s crawl summary under the header until part 5', () => {
+    const HEADER = ADMIN_COPY.venueHeader.summary;
+    const SUMMARY = ADMIN_COPY.venueDetailsClient.summary;
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({
+          extractionStrategy: 'structured_data',
+          consecutiveFailures: 2,
+          crawlHealth: {
+            sevenDayPercent: 86,
+            sparkline: [],
+            lastCrawledAt: null,
+            avgDurationMs: null,
+            eventsTracked: 42,
+            consecutiveFails: 2,
+          },
+        })}
+      />,
+    );
+    const line = screen.getByTestId('venue-summary-line').textContent ?? '';
+    expect(line).toContain(HEADER.strategy.structured_data);
+    expect(line).toContain(HEADER.consecutiveFailures(2));
+    expect(line).toContain(`${SUMMARY.lastCrawl} ${SUMMARY.never}`);
+    expect(line).toContain(`42 ${SUMMARY.eventsLive}`);
+    expect(line).toContain(`${SUMMARY.health} 86%`);
+  });
+
+  it('leaves the failures badge off a venue with none', () => {
+    render(<VenueDetailsClient venue={buildVenue()} />);
+    const line = screen.getByTestId('venue-summary-line').textContent ?? '';
+    expect(line).toContain(ADMIN_COPY.venueHeader.summary.strategy.auto);
+    expect(line).not.toContain('consec.');
+  });
 });
