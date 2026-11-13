@@ -30,7 +30,7 @@ export interface EvidenceLine {
 }
 
 /** The extra fields an answer carries next to its slug. */
-export type AnswerParams = Record<string, string>;
+export type AnswerParams = Record<string, string | string[]>;
 
 /** One stored Spotify candidate for an artist match question. */
 export interface ArtistCandidate {
@@ -148,6 +148,8 @@ export interface QueueRow {
   priceFacts: PriceFacts | null;
   /** A bug item's facts; null on other kinds. */
   bugFacts: BugFacts | null;
+  /** A price batch's submissions (empty on other kinds). */
+  submissionIds: string[];
 }
 
 // Every kind the API serves. A `Record` so a kind added to the type fails to
@@ -338,6 +340,9 @@ const rowFrom = (value: unknown): QueueRow | null => {
       value['kind'] === 'event-low-confidence' ? eventFactsFrom(value) : null,
     priceFacts: value['kind'] === 'price-check' ? priceFactsFrom(value) : null,
     bugFacts: value['kind'] === 'bug' ? bugFactsFrom(value) : null,
+    submissionIds: Array.isArray(value['submissionIds'])
+      ? value['submissionIds'].filter(isText)
+      : [],
   };
 };
 
