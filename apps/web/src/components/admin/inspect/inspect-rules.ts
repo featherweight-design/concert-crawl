@@ -11,8 +11,9 @@ import {
  * never inserted as HTML in the app's document. The HTML tab shows it as
  * React text, the Text tab reads `textContent` from an inert DOMParser
  * document, and the Page tab hands a defused copy (`pageSrcDoc`) to a
- * `sandbox=""` srcdoc iframe under a CSP that allows no network loads but
- * `data:` images.
+ * `sandbox=""` srcdoc iframe: no scripts and an opaque origin, subresources
+ * blocked by a CSP, the ways to navigate taken out of the markup, and no
+ * frame at all when the copy can't be shown to be safe.
  */
 
 // ── Which page ───────────────────────────────────────────────
@@ -83,10 +84,10 @@ export const defaultInspectTab = (feed: boolean): InspectTab =>
 // ── The Page tab ─────────────────────────────────────────────
 
 /**
- * The Page frame's policy: no script, no fetch, no font, no frame and no
+ * The Page frame's policy for subresources: no script, fetch, font, frame or
  * remote image or stylesheet; inline styles and `data:` images only. It
- * can't stop the frame navigating itself (a link click), so `pageSrcDoc`
- * takes the ways to navigate out of the markup.
+ * governs neither navigation (a link click) nor resource hints such as
+ * `dns-prefetch`, so `pageSrcDoc` takes those out of the markup.
  */
 export const INSPECT_CSP =
   "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'";
@@ -117,46 +118,121 @@ export const withCsp = (html: string): string => {
   return `${doctype[2] ?? ''}${INSPECT_CSP_META}${rest}`;
 };
 
-/** What can run, or embed another document, in the frame. */
-const INERT_REMOVED =
-  'script, noscript, template, iframe, frame, frameset, object, embed, base';
+/**
+ * Elements removed outright, by lowercased local name (SVG's are camelCase,
+ * and a CSS type selector matches them case-sensitively):
+ * - what can run or embed another document: script, noscript, template,
+ *   frames, object, embed;
+ * - what can point the frame elsewhere: `<base>`, and SVG animation (SMIL),
+ *   which can set an `href` back after it has been removed;
+ * - `<link>`: a stylesheet is blocked by the CSP anyway, but `dns-prefetch`
+ *   and `preconnect` hints are not governed by it.
+ */
+const REMOVED_ELEMENTS = new Set([
+  'script',
+  'noscript',
+  'template',
+  'iframe',
+  'frame',
+  'frameset',
+  'object',
+  'embed',
+  'base',
+  'link',
+  'animate',
+  'set',
+  'animatemotion',
+  'animatetransform',
+  'discard',
+]);
 
-const XLINK = 'http://www.w3.org/1999/xlink';
+/** Attributes that navigate or submit, by local name (so `xlink:href` too). */
+const NAVIGATING_ATTRIBUTES = new Set(['href', 'action', 'formaction']);
+
+const isRefreshMeta = (node: Element): boolean =>
+  node.localName.toLowerCase() === 'meta' &&
+  (node.getAttribute('http-equiv') ?? '').trim().toLowerCase() === 'refresh';
+
+const isRemovedElement = (node: Element): boolean =>
+  REMOVED_ELEMENTS.has(node.localName.toLowerCase()) || isRefreshMeta(node);
+
+const isRemovedAttribute = (attr: Attr): boolean => {
+  const local = attr.localName.toLowerCase();
+  return (
+    NAVIGATING_ATTRIBUTES.has(local) ||
+    local.startsWith('on') ||
+    attr.name.toLowerCase().startsWith('on')
+  );
+};
+
+const parseHtml = (html: string): Document =>
+  new DOMParser().parseFromString(html, 'text/html');
 
 /**
- * The Page tab's `srcdoc`. The body is parsed into an inert DOMParser
- * document (nothing runs or loads), and in that copy only:
- * - script, noscript, template, frames, object, embed and `<base>` go;
- * - every `on*` attribute goes;
- * - `<meta http-equiv="refresh">` goes;
- * - links and areas lose `href`, forms `action`, buttons `formaction`;
- * so the frame can't run anything or navigate itself to the live page.
- * The copy is serialised as a standards document and the CSP meta goes
- * first in its head (`withCsp`).
+ * One pass: parse into an inert DOMParser document (nothing runs or loads),
+ * drop the removed elements and attributes, and serialise as a standards
+ * document. A srcdoc document is never in quirks mode (the HTML parser
+ * exempts it), so the doctype changes nothing in the frame; it makes this
+ * parse, and the check's, build the same tree the frame will.
  */
-export const pageSrcDoc = (html: string): string => {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll(INERT_REMOVED).forEach((node) => node.remove());
-  doc.querySelectorAll('meta[http-equiv]').forEach((node) => {
-    const equiv = node.getAttribute('http-equiv') ?? '';
-    if (equiv.trim().toLowerCase() === 'refresh') node.remove();
-  });
-  doc.querySelectorAll('a, area').forEach((node) => {
-    node.removeAttribute('href');
-    node.removeAttributeNS(XLINK, 'href');
-  });
-  doc
-    .querySelectorAll('form')
-    .forEach((node) => node.removeAttribute('action'));
-  doc
-    .querySelectorAll('[formaction]')
-    .forEach((node) => node.removeAttribute('formaction'));
-  doc.querySelectorAll('*').forEach((node) => {
+const defusePass = (html: string): string => {
+  const doc = parseHtml(html);
+  Array.from(doc.querySelectorAll('*')).forEach((node) => {
+    if (isRemovedElement(node)) {
+      node.remove();
+      return;
+    }
     Array.from(node.attributes)
-      .filter((attr) => attr.name.toLowerCase().startsWith('on'))
-      .forEach((attr) => node.removeAttribute(attr.name));
+      .filter(isRemovedAttribute)
+      .forEach((attr) => node.removeAttributeNode(attr));
   });
-  return withCsp(`<!doctype html>${doc.documentElement.outerHTML}`);
+  return `<!doctype html>${doc.documentElement.outerHTML}`;
+};
+
+/**
+ * The check on the exact string the frame gets: the CSP meta is the head's
+ * first element, and nothing removed is left anywhere.
+ */
+const isSafeSrcDoc = (srcDoc: string): boolean => {
+  const doc = parseHtml(srcDoc);
+  const first = doc.head.firstElementChild;
+  if (
+    first === null ||
+    first.localName !== 'meta' ||
+    first.getAttribute('http-equiv') !== 'Content-Security-Policy' ||
+    first.getAttribute('content') !== INSPECT_CSP
+  ) {
+    return false;
+  }
+  return Array.from(doc.querySelectorAll('*')).every(
+    (node) =>
+      !isRemovedElement(node) &&
+      !Array.from(node.attributes).some(isRemovedAttribute),
+  );
+};
+
+const MAX_PASSES = 5;
+
+/**
+ * The Page tab's `srcdoc`, or null when it can't be shown safely. Markup can
+ * parse differently once serialised (mutation XSS), so the defused copy is
+ * re-parsed and defused again until the string stops changing, at most
+ * `MAX_PASSES` times. The CSP meta then goes first in the head (`withCsp`),
+ * and that exact string is parsed once more and checked. A copy that never
+ * settles, or fails the check, is null: the tab shows no frame.
+ */
+export const pageSrcDoc = (html: string): string | null => {
+  let previous = html;
+  let current = defusePass(html);
+  let passes = 1;
+  while (current !== previous) {
+    if (passes === MAX_PASSES) return null;
+    previous = current;
+    current = defusePass(current);
+    passes += 1;
+  }
+  const srcDoc = withCsp(current);
+  return isSafeSrcDoc(srcDoc) ? srcDoc : null;
 };
 
 // ── The Text tab ─────────────────────────────────────────────

@@ -121,25 +121,38 @@ const StoppedHere = ({ page }: { page: number }) => (
   </div>
 );
 
+// Venue pages assume a white page, whatever the admin theme.
+const FRAME_BACKGROUND = '#fff';
+
 /**
  * The Page tab: the defused copy (`pageSrcDoc`) in a frame that is never
  * part of the app's document. `sandbox=""` is every restriction: no scripts,
  * an opaque origin, no forms, popups or top navigation. A srcdoc frame has
- * no HTTP response to carry a policy, so the CSP rides twice: as the meta
- * first in its head, and as the `csp` attribute (CSP Embedded Enforcement,
- * where the browser supports it). It also inherits the admin page's own
- * policy; policies only intersect, so each can only make it stricter.
+ * no HTTP response to carry a policy, so the CSP that blocks subresources
+ * rides twice: as the meta first in its head, and as the `csp` attribute
+ * (CSP Embedded Enforcement, where the browser supports it). The ways to
+ * navigate are out of the markup. A copy that can't be shown safely gets a
+ * line instead of a frame.
  */
 const PageFrame = ({
-  html,
+  srcDoc,
   page,
   phone,
 }: {
-  html: string;
+  srcDoc: string | null;
   page: string;
   phone: boolean;
 }) => {
-  const srcDoc = useMemo(() => pageSrcDoc(html), [html]);
+  if (srcDoc === null) {
+    return (
+      <p
+        data-testid="inspect-page-unsafe"
+        style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}
+      >
+        {COPY.pageUnsafe}
+      </p>
+    );
+  }
   return (
     <iframe
       data-testid="inspect-frame"
@@ -154,8 +167,7 @@ const PageFrame = ({
         height: phone ? 420 : 520,
         border: '1px solid var(--border)',
         borderRadius: 10,
-        // Venue pages assume a white page.
-        background: '#fff',
+        background: FRAME_BACKGROUND,
       }}
     />
   );
@@ -177,6 +189,15 @@ const TabPanel = ({
     () => (tab === 'text' ? pageText(html) : ''),
     [tab, html],
   );
+  // Defused once per body, and only once the Page tab is opened: TabPanel
+  // stays mounted across tab switches, so reopening Page reuses it.
+  const srcDoc = useMemo(() => {
+    let cached: { value: string | null } | null = null;
+    return () => {
+      cached ??= { value: pageSrcDoc(html) };
+      return cached.value;
+    };
+  }, [html]);
   if (tab === 'html') {
     // React text: escaped, never parsed as HTML.
     return (
@@ -186,7 +207,7 @@ const TabPanel = ({
     );
   }
   if (tab === 'page') {
-    return <PageFrame html={html} page={page} phone={phone} />;
+    return <PageFrame srcDoc={srcDoc()} page={page} phone={phone} />;
   }
   return (
     <div
@@ -234,9 +255,7 @@ export const InspectFetched = ({
   const { state, retry } = useInspectBody(page.id);
   const feed = isFeedPage(page);
   const tabs = inspectTabs(feed);
-  const [chosen, setChosen] = useState<InspectTab>(defaultInspectTab(feed));
-  // A tab this page lacks (Page on a feed) reads as the default.
-  const tab = tabs.includes(chosen) ? chosen : defaultInspectTab(feed);
+  const [tab, setTab] = useState<InspectTab>(defaultInspectTab(feed));
   const stopped = stoppedHerePage(pages, page.id);
 
   if (state?.kind === 'gone') {
@@ -285,7 +304,7 @@ export const InspectFetched = ({
         <AdminTabs
           tabs={tabs.map((key) => ({ key, label: COPY.tabs[key] }))}
           value={tab}
-          onChange={setChosen}
+          onChange={setTab}
           label={COPY.tabsLabel}
           tabId={tabId}
           panelId={() => panelId}
