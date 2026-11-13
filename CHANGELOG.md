@@ -1,3 +1,11 @@
+## [1.392.2](https://github.com/featherweight-design/concert-crawl/compare/v1.392.1...v1.392.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** 390 truncations in settings and submitted prices ([eadc262](https://github.com/featherweight-design/concert-crawl/commit/eadc262f9631482b3796925d155736db268e0116))
+* **web:** the Passport identity page reads since before the first stamp ([63ceb5a](https://github.com/featherweight-design/concert-crawl/commit/63ceb5a048a6698c24b8fe03665e46095700c812))
+
 ## [1.392.1](https://github.com/featherweight-design/concert-crawl/compare/v1.392.0...v1.392.1) (2026-11-13)
 
 
