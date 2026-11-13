@@ -22,21 +22,55 @@ describe('updateVenueSchema', () => {
     expect(updateVenueSchema.parse({})).toEqual({});
   });
 
-  it('still validates a supplied crawl delay', () => {
-    expect(updateVenueSchema.safeParse({ crawlDelayMs: 500 }).success).toBe(
-      false,
+  // The crawl rules are read-only (3b ruling d): any value, even a slower
+  // delay or the current one, is refused with the crawl-rules message.
+  it.each([
+    ['crawlDelayMs', 500],
+    ['crawlDelayMs', 3000],
+    ['crawlDelayMs', 10000],
+    ['crawlDelayMs', null],
+    ['robotsTxtAllowed', true],
+    ['robotsTxtAllowed', null],
+    ['robotsTxtCheckedAt', '2026-11-13T10:00:00.000Z'],
+    ['userAgent', 'ConcertCrawl/2.0'],
+  ])('refuses %s = %j as fixed by the crawl rules', (key, value) => {
+    const result = updateVenueSchema.safeParse({ [key]: value });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual([key]);
+    expect(result.error?.issues[0]?.message).toMatch(
+      /^Fixed by the crawl rules/,
     );
-    // The crawl rules' 3-second floor: 1 s and 2.999 s were once accepted.
-    for (const below of [1000, 2999]) {
-      expect(updateVenueSchema.safeParse({ crawlDelayMs: below }).success).toBe(
-        false,
-      );
-    }
-    expect(updateVenueSchema.parse({ crawlDelayMs: 3000 })).toEqual({
-      crawlDelayMs: 3000,
-    });
-    expect(updateVenueSchema.parse({ crawlDelayMs: 10000 })).toEqual({
-      crawlDelayMs: 10000,
-    });
   });
+
+  it('refuses any key it does not know rather than stripping it', () => {
+    const result = updateVenueSchema.safeParse({
+      name: 'Gothic',
+      crawlPausedAt: null,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.code).toBe('unrecognized_keys');
+  });
+
+  it('accepts every field the Source tab saves', () => {
+    expect(
+      updateVenueSchema.safeParse({
+        websiteUrl: 'https://gothic.example/events',
+        extractionStrategy: null,
+        platform: 'aeg',
+        platformVenueId: '89',
+        apiProvider: null,
+        apiAccountId: null,
+        crawlMode: 'browser',
+        crawlWaitUntil: 'load',
+        crawlWaitForSelector: '.event-list',
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each(['javascript:alert(1)', 'ftp://gothic.example/events'])(
+    'refuses a calendar page of %s',
+    (websiteUrl) => {
+      expect(updateVenueSchema.safeParse({ websiteUrl }).success).toBe(false);
+    },
+  );
 });

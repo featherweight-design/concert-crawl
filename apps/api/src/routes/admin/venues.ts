@@ -160,15 +160,29 @@ const createVenueSchema = z.object({
     }),
 });
 
+// robots.txt compliance, the request delay and the user agent are the crawl
+// rules: shown in Source, never edited (3b ruling d). A PATCH naming one is
+// refused with this message rather than quietly dropped, so a caller can't
+// believe it loosened a rule. The robots columns are the crawler's alone.
+const FIXED_BY_CRAWL_RULES =
+  'Fixed by the crawl rules: robots.txt, the request delay and the user agent cannot be changed';
+const fixedByCrawlRules = z.never({ error: FIXED_BY_CRAWL_RULES }).optional();
+
 // Zod 4 applies a default inside .partial(), so every field that carries a
 // create-time default is redeclared here from its unwrapped (default-free)
 // create schema. Otherwise a PATCH that only toggles `verified` would reset
-// the venue's city, crawl delay and wait strategy to the create defaults.
+// the venue's city and wait strategy to the create defaults.
+//
+// Strict: an unknown key (a user agent, a pause or blocked column) is a 400,
+// never silently stripped.
 export const updateVenueSchema = createVenueSchema
   .partial()
   .extend({
     city: createVenueSchema.shape.city.unwrap().optional(),
-    crawlDelayMs: createVenueSchema.shape.crawlDelayMs.unwrap().optional(),
+    crawlDelayMs: fixedByCrawlRules,
+    robotsTxtAllowed: fixedByCrawlRules,
+    robotsTxtCheckedAt: fixedByCrawlRules,
+    userAgent: fixedByCrawlRules,
     crawlWaitUntil: createVenueSchema.shape.crawlWaitUntil.unwrap().optional(),
     active: z.boolean().optional(),
     // Why a venue is hidden (`active: false`), kept on the venue and in the
@@ -227,6 +241,7 @@ export const updateVenueSchema = createVenueSchema
         return trimmed === '' ? null : trimmed;
       }),
   })
+  .strict()
   .refine(
     // When the payload sets an id-bearing platform, platformVenueId must ride
     // along in the SAME payload as a non-empty string. Requiring it in the

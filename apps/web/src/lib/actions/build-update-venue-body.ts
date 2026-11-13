@@ -16,19 +16,24 @@ function matchLiteral<T extends string>(
 // synchronous export from a server-action file, and (b) the FormData→JSON
 // normalization (notably the paired apiProvider/apiAccountId fields) stays
 // unit-testable without pulling in the Next.js server runtime.
+//
+// A key missing from the FormData leaves its field out of the body, so one
+// tab's save (Source, 3b part 6) sends only that tab's fields. The request
+// delay is never sent: the crawl rules are read-only and the API refuses it.
 export function buildUpdateVenueBody(
   formData: FormData,
 ): Record<string, unknown> {
-  const crawlDelayRaw = formData.get('crawlDelayMs');
-  const crawlDelayNum = crawlDelayRaw
-    ? Number(String(crawlDelayRaw))
-    : undefined;
-  const crawlDelayMs =
-    crawlDelayNum !== undefined &&
-    Number.isFinite(crawlDelayNum) &&
-    Number.isInteger(crawlDelayNum)
-      ? crawlDelayNum
-      : undefined;
+  /** Absent → undefined (left out of the JSON body); present → `read(raw)`. */
+  const ifPresent = <T>(
+    key: string,
+    read: (raw: FormDataEntryValue) => T,
+  ): T | undefined => {
+    const raw = formData.get(key);
+    return raw === null ? undefined : read(raw);
+  };
+  /** A trimmed string, with empty as null (clear). */
+  const trimmedOrNull = (raw: FormDataEntryValue): string | null =>
+    String(raw).trim() === '' ? null : String(raw).trim();
 
   const crawlWaitUntilRaw = String(formData.get('crawlWaitUntil') ?? '');
   const VALID_WAIT_UNTIL = ['networkidle', 'load', 'domcontentloaded'] as const;
@@ -45,11 +50,7 @@ export function buildUpdateVenueBody(
         ? null
         : String(crawlWaitForSelectorRaw).trim();
 
-  const ticketVendorRaw = formData.get('ticketVendor');
-  const ticketVendor =
-    ticketVendorRaw === null || String(ticketVendorRaw).trim() === ''
-      ? null
-      : String(ticketVendorRaw).trim();
+  const ticketVendor = ifPresent('ticketVendor', trimmedOrNull);
 
   const crawlModeRaw = formData.get('crawlMode');
   const crawlMode =
@@ -59,64 +60,36 @@ export function buildUpdateVenueBody(
         ? null
         : undefined;
 
-  const extractionStrategyRaw = String(
-    formData.get('extractionStrategy') ?? '',
-  );
   const VALID_EXTRACTION_STRATEGIES = [
     'structured_data',
     'llm',
     'manual',
   ] as const;
-  const extractionStrategy =
-    matchLiteral(extractionStrategyRaw, VALID_EXTRACTION_STRATEGIES) ??
-    (extractionStrategyRaw === '' ? null : undefined);
+  const extractionStrategy = ifPresent('extractionStrategy', (raw) =>
+    String(raw) === ''
+      ? null
+      : matchLiteral(String(raw), VALID_EXTRACTION_STRATEGIES),
+  );
 
-  const addressRaw = formData.get('address');
-  const address =
-    addressRaw !== null && String(addressRaw).trim()
-      ? String(addressRaw).trim()
-      : null;
+  const address = ifPresent('address', trimmedOrNull);
 
-  const capacityRaw = formData.get('capacity');
-  const capacityTrimmed =
-    capacityRaw !== null ? String(capacityRaw).trim() : '';
-  let capacity: number | null | undefined;
-  if (capacityTrimmed === '') {
-    capacity = null;
-  } else {
-    const num = Number(capacityTrimmed);
-    capacity =
-      Number.isFinite(num) && Number.isInteger(num) && num > 0
-        ? num
-        : undefined;
-  }
+  const capacity = ifPresent('capacity', (raw) => {
+    const trimmed = String(raw).trim();
+    if (trimmed === '') return null;
+    const num = Number(trimmed);
+    return Number.isFinite(num) && Number.isInteger(num) && num > 0
+      ? num
+      : undefined;
+  });
 
-  const venueTypeRaw = formData.get('venueType');
-  const venueType =
-    venueTypeRaw !== null && String(venueTypeRaw).trim()
-      ? String(venueTypeRaw).trim()
-      : null;
-
-  const aboutRaw = formData.get('about');
-  const about =
-    aboutRaw !== null && String(aboutRaw).trim()
-      ? String(aboutRaw).trim()
-      : null;
-
-  const neighborhoodRaw = formData.get('neighborhood');
-  const neighborhood =
-    neighborhoodRaw !== null && String(neighborhoodRaw).trim()
-      ? String(neighborhoodRaw).trim()
-      : null;
+  const venueType = ifPresent('venueType', trimmedOrNull);
+  const about = ifPresent('about', trimmedOrNull);
+  const neighborhood = ifPresent('neighborhood', trimmedOrNull);
 
   const featuredRaw = formData.get('featured');
   const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined;
 
-  const priceUrlRaw = formData.get('priceUrl');
-  const priceUrl =
-    priceUrlRaw !== null && String(priceUrlRaw).trim()
-      ? String(priceUrlRaw).trim()
-      : null;
+  const priceUrl = ifPresent('priceUrl', trimmedOrNull);
 
   const debugCaptureHtmlRaw = formData.get('debugCaptureHtml');
   const debugCaptureHtml =
@@ -169,16 +142,15 @@ export function buildUpdateVenueBody(
         : apiAccountIdStr;
 
   return {
-    name: formData.get('name'),
-    slug: formData.get('slug'),
-    websiteUrl: formData.get('websiteUrl'),
-    city: formData.get('city') || 'Denver',
+    name: ifPresent('name', String),
+    slug: ifPresent('slug', String),
+    websiteUrl: ifPresent('websiteUrl', (raw) => String(raw).trim()),
+    city: ifPresent('city', (raw) => String(raw) || 'Denver'),
     // Absent means unchanged: the settings save never sends it.
     active: formData.has('active')
       ? formData.get('active') === 'true'
       : undefined,
     crawlWaitUntil,
-    crawlDelayMs,
     crawlWaitForSelector,
     ticketVendor,
     crawlMode,
