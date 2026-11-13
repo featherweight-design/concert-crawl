@@ -122,6 +122,18 @@ export const submittedApi = (getToken: GetToken) => ({
     };
   },
 
+  /** Correct a waiting or published price (`PATCH .../:id/price`). */
+  editPrice: async (
+    id: string,
+    priceMin: string,
+    priceMax: string | null,
+  ): Promise<void> => {
+    await call(getToken, `/v1/admin/prices/submissions/${id}/price`, {
+      method: 'PATCH',
+      body: { priceMin, priceMax },
+    });
+  },
+
   reject: async (
     id: string,
     reason: RejectionReason,
