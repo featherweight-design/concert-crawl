@@ -801,7 +801,7 @@ const checkerCounts = async (
     .select({
       userId: priceSubmissions.userId,
       all: sql<number>`count(*)::int`,
-      approved: sql<number>`count(*) filter (where ${priceSubmissions.status} in ('corroborated', 'verified'))::int`,
+      approved: sql<number>`count(*) filter (where ${priceSubmissions.status} = 'corroborated')::int`,
     })
     .from(priceSubmissions)
     // Their track record: the prices they submitted, not the price checks
