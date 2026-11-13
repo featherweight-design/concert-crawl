@@ -1,3 +1,19 @@
+# [1.385.0](https://github.com/featherweight-design/concert-crawl/compare/v1.384.0...v1.385.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** address the Tell us card review ([a73a9dd](https://github.com/featherweight-design/concert-crawl/commit/a73a9dd26f78e9379855cc6d2bd7c46aa185429e))
+* **web:** the error ID chip sits under the Tell us card, as drawn ([6e7fe01](https://github.com/featherweight-design/concert-crawl/commit/6e7fe017f583fd890a10ae1cc2f0b680c5377a74))
+
+
+### Features
+
+* **web:** --cta-end, the derived end stop for gradient-filled CTAs ([915e0f8](https://github.com/featherweight-design/concert-crawl/commit/915e0f882fcd3387011c184e5a14cebc87a241e7))
+* **web:** route the hand-rolled CTA end stops and the edge stop through --cta-end ([ff15a4f](https://github.com/featherweight-design/concert-crawl/commit/ff15a4fdaae19d9a7c157edccefcbefdffbd0024))
+* **web:** the Tell us card for the error page, with a saved-for-next-launch retry ([845b913](https://github.com/featherweight-design/concert-crawl/commit/845b913d74e25e34723b301fd5680a2468d535b9))
+* **web:** wire the Tell us card into the route error boundaries ([4c68874](https://github.com/featherweight-design/concert-crawl/commit/4c68874ade4a162b3084b381c29c72c57ec87591))
+
 # [1.384.0](https://github.com/featherweight-design/concert-crawl/compare/v1.383.0...v1.384.0) (2026-11-13)
 
 
