@@ -29,7 +29,8 @@ const pillBase: React.CSSProperties = {
 export const CREW_ROW = {
   minHeight: 72,
   radius: 16,
-  patch: 52,
+  /** 76px: the addendum-4 patch-rim board labels the Crews list patch 76px. */
+  patch: 76,
   gap: (wide: boolean) => (wide ? 15 : 13),
   padding: (wide: boolean) =>
     wide ? '14px 18px 14px 15px' : '14px 14px 14px 15px',

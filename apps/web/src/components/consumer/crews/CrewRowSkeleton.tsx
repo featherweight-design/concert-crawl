@@ -50,7 +50,11 @@ export const CrewRowSkeleton = ({ wide }: { wide: boolean }) => (
       minHeight: CREW_ROW.minHeight,
     }}
   >
-    <Shimmer width={CREW_ROW.patch} height={CREW_ROW.patch} radius={15} />
+    <Shimmer
+      width={CREW_ROW.patch}
+      height={CREW_ROW.patch}
+      radius={CREW_ROW.patch / 4}
+    />
     <span
       style={{
         flex: 1,
