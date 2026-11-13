@@ -27,7 +27,7 @@ export default function PrivacyPage() {
   const copy = LEGAL_COPY.privacy;
 
   return (
-    <div className="min-h-screen bg-bg text-fg">
+    <div className="min-h-dvh bg-bg text-fg">
       <div className="mx-auto max-w-2xl px-6 py-16">
         <Link
           href="/"

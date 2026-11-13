@@ -39,7 +39,7 @@ export default async function AdminLayout({
       <div
         style={{
           display: 'flex',
-          height: '100vh',
+          height: '100dvh',
           overflow: 'hidden',
           background: 'var(--bg)',
           color: 'var(--fg)',
