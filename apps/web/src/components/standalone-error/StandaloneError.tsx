@@ -337,7 +337,7 @@ export const StandaloneError = ({
             style={{
               border: 'none',
               background:
-                'linear-gradient(90deg, var(--signal), var(--accent))',
+                'linear-gradient(90deg, var(--signal), var(--cta-end))',
               boxShadow:
                 '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
               color: 'var(--fg-on-accent)',
