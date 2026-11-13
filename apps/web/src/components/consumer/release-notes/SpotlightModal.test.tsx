@@ -56,6 +56,11 @@ describe('SpotlightModal', () => {
     if (!(backdrop instanceof HTMLElement)) throw new Error('no backdrop');
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(2);
+
+    // A drag that began inside the card and ended on the backdrop does not close.
+    fireEvent.pointerDown(dialog);
+    fireEvent.click(backdrop);
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 
   it('puts the eyebrow in the body above the title, off the hero art', () => {
