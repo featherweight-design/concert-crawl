@@ -38,6 +38,8 @@ export interface QueueRow {
   venueName: string | null;
   /** The show's date in Mountain Time, `YYYY-MM-DD`, or null. */
   fanDate: string | null;
+  /** The show's start (`HH:MM:SS`, venue-local) on the kinds that have one. */
+  showTime: string | null;
   watchers: number;
   answers: NeedsYouAnswer[];
   evidence: EvidenceLine[];
@@ -103,6 +105,7 @@ const rowFrom = (value: unknown): QueueRow | null => {
     venueId: value['venueId'],
     venueName: value['venueName'],
     fanDate: value['fanDate'],
+    showTime: isText(value['showTime']) ? value['showTime'] : null,
     watchers: value['watchers'],
     answers: value['answers'],
     evidence: evidenceFrom(value['evidence']),
