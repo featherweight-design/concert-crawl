@@ -781,10 +781,10 @@ export function EventDetailPriceBlock({
                 : {}),
               tier: activeAtt.tier,
               vendor: activeAtt.pending.vendor,
-              kind:
-                activeAtt.pending.vendor === 'VenueBoxOffice'
-                  ? 'boxoffice'
-                  : 'community',
+              kind: resolvePendingKind(
+                activeAtt.pending.vendor,
+                activeAtt.pending.sourceCategory,
+              ),
               submitter: activeAtt.pending.submitterHandle
                 ? { handle: activeAtt.pending.submitterHandle, url: '' }
                 : null,
@@ -1787,10 +1787,10 @@ export function EventDetailPriceBlock({
                 : {}),
               tier: activeCorroboration.tier,
               vendor: activeCorroboration.vendor,
-              kind:
-                activeCorroboration.vendor === 'VenueBoxOffice'
-                  ? 'boxoffice'
-                  : 'community',
+              kind: resolvePendingKind(
+                activeCorroboration.vendor,
+                activeCorroboration.sourceCategory,
+              ),
               submitter: activeCorroboration.submitterHandle
                 ? { handle: activeCorroboration.submitterHandle, url: '' }
                 : null,
