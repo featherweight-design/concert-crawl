@@ -10,6 +10,7 @@
 import Link from 'next/link';
 import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
 import { VenueStamp } from '@/components/consumer/venue-stamp';
+import { DENVER_TIME_ZONE } from '@/lib/time';
 import { HISTORY_COPY } from './definitions/copy';
 import { PASSPORT_ROUTE } from './definitions/constants';
 
@@ -36,6 +37,16 @@ export const teaserStampsFor = (
   }
   return picked;
 };
+
+// The year in Mountain Time, so the server and the browser agree on it whatever
+// zone either runs in.
+export const denverYear = (now: Date = new Date()): number =>
+  Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: DENVER_TIME_ZONE,
+      year: 'numeric',
+    }).format(now),
+  );
 
 const TeaserBody = ({
   stats,
@@ -73,7 +84,7 @@ const TeaserBody = ({
               background: 'var(--signal)',
             }}
           />
-          {COPY.eyebrow(new Date().getFullYear())}
+          {COPY.eyebrow(denverYear())}
         </span>
         <span
           style={{
