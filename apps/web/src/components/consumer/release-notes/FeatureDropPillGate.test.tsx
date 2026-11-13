@@ -108,6 +108,8 @@ describe('FeatureDropPillGate — signed-out gating (#794)', () => {
   it('still hides on /changelog and admin routes', () => {
     pathname = '/changelog';
     expect(render(<FeatureDropPillGate />).container.innerHTML).toBe('');
+    pathname = '/whats-new';
+    expect(render(<FeatureDropPillGate />).container.innerHTML).toBe('');
     pathname = '/admin/venues';
     expect(render(<FeatureDropPillGate />).container.innerHTML).toBe('');
   });

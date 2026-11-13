@@ -73,7 +73,7 @@ const isAlwaysPublic = createRouteMatcher([
   // sign-up.
   '/changelog(.*)',
   // The feature page the same menu row opens: static cards from releases.ts.
-  '/whats-new(.*)',
+  '/whats-new',
   // Serwist precaches the offline fallback with a plain navigation fetch that
   // carries no session. Gating it redirects that fetch, so the fallback never
   // lands in the cache and an offline navigation dies with ERR_FAILED instead

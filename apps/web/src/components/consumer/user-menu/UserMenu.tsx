@@ -284,7 +284,7 @@ export function AccountMenuProvider({
   );
 
   // Rows that navigate within the same layout (the version footer's push to
-  // /changelog) would otherwise leave the menu open on top of the destination.
+  // /whats-new) would otherwise leave the menu open on top of the destination.
   // No focus restore: the trigger the menu came from may not exist on the new
   // page, and stealing focus back from a fresh page is worse than leaving it.
   useEffect(() => {
