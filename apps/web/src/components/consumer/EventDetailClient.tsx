@@ -62,6 +62,7 @@ import {
   type ProvenanceCTAKind,
 } from '@/components/consumer/price-region';
 import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree';
+import { resolvePendingKind } from '@/components/consumer/lib/price-source-kind';
 import { denverTodayUtcMs } from '@/lib/time';
 
 // Without the fallback an unset var interpolates as the literal `undefined`,
@@ -687,7 +688,6 @@ export function EventDetailPriceBlock({
         tier: block.tier,
         pending: firstPending,
       });
-      const isBoxOffice = firstPending.vendor === 'VenueBoxOffice';
       cardPropsList.push({
         floor: parseFloat(firstPending.priceMin),
         ...(firstPending.priceMax != null
@@ -695,7 +695,10 @@ export function EventDetailPriceBlock({
           : {}),
         tier: block.tier,
         vendor: firstPending.vendor,
-        kind: isBoxOffice ? 'boxoffice' : 'community',
+        kind: resolvePendingKind(
+          firstPending.vendor,
+          firstPending.sourceCategory,
+        ),
         submitter: firstPending.submitterHandle
           ? { handle: firstPending.submitterHandle, url: '' }
           : null,
@@ -1718,7 +1721,6 @@ export function EventDetailPriceBlock({
         sub.confirmsCount,
         localConfirms[sub.id] ?? 0,
       );
-      const isBoxOffice = sub.vendor === 'VenueBoxOffice';
       const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
         ? 'submitter'
         : 'other';
@@ -1727,7 +1729,7 @@ export function EventDetailPriceBlock({
         ...(sub.priceMax !== null ? { ceiling: parseFloat(sub.priceMax) } : {}),
         tier: sub.tier,
         vendor: sub.vendor,
-        kind: isBoxOffice ? 'boxoffice' : 'community',
+        kind: resolvePendingKind(sub.vendor, sub.sourceCategory),
         submitter: sub.submitterHandle
           ? { handle: sub.submitterHandle, url: '' }
           : null,

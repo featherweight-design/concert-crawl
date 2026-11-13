@@ -1174,6 +1174,37 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getByText('Submit another price')).toBeDefined();
   });
 
+  // Regression: the page picked the pending card's kind from
+  // `vendor === 'VenueBoxOffice'` alone, so a pending resale price was handed
+  // over as community and never showed its Resale pill (addendum 4 item 5).
+  it('gives a pending resale submission the Resale trust pill', () => {
+    const event = buildBaseEvent({
+      priceByTier: null,
+      pendingSubmissions: [
+        {
+          id: 'p-resale',
+          priceMin: '44',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'StubHub',
+          howFound: 'saw_listing',
+          sourceCategory: 'resale',
+          note: null,
+          submitterHandle: 'hugh',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.getByTestId('trust-pill-resale')).toBeDefined();
+    expect(screen.queryByTestId('trust-pill-community')).toBeNull();
+  });
+
   // Regression — issue #895 (post-submit form re-open). Submitting from the
   // no-price branch populates localSubmissions, which flips the decision tree
   // to the legacy pending branch (4) and remounts the SubmitPriceModal. The

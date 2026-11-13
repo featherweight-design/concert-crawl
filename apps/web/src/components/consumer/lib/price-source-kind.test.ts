@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { resolveAlternateKind, resolveSourceKind } from './price-source-kind';
+import {
+  resolveAlternateKind,
+  resolvePendingKind,
+  resolveSourceKind,
+} from './price-source-kind';
+
+describe('resolvePendingKind', () => {
+  it('marks a pending resale submission as resale, not community', () => {
+    expect(resolvePendingKind('StubHub', 'resale')).toBe('resale');
+  });
+
+  it('keeps box office and standard pending submissions as before', () => {
+    expect(resolvePendingKind('VenueBoxOffice', 'boxoffice')).toBe('boxoffice');
+    expect(resolvePendingKind('AXS', 'standard')).toBe('community');
+  });
+
+  it('falls back to the vendor for a row with no sourceCategory', () => {
+    expect(resolvePendingKind('VenueBoxOffice', null)).toBe('boxoffice');
+    expect(resolvePendingKind('SeatGeek', null)).toBe('resale');
+    expect(resolvePendingKind('Etix', null)).toBe('community');
+  });
+});
 
 // The submit form asks "Where's the price from?" (box office / standard /
 // resale) and stores the answer as sourceCategory. These resolvers decide

@@ -1252,7 +1252,7 @@ export function PriceDisplay({
           whiteSpace: 'nowrap',
         }}
       >
-        <StaleStamp observedAt={effectiveObservedAt} />
+        <StaleStamp observedAt={effectiveObservedAt} variant="line" />
         <StillAccurateAction
           eventId={eventId}
           submissionId={priceSubmissionId}
