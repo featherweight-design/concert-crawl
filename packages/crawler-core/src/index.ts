@@ -24,6 +24,7 @@ export {
   ARTIST_SLUG_FALLBACK_PREFIX,
 } from '@concert-crawl/types';
 export {
+  AUTO_APPROVE_THRESHOLD,
   crawlVenue,
   type CrawlVenueResult,
   type BrowserSource,

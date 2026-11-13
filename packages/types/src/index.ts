@@ -1891,6 +1891,21 @@ export interface NeedsYouEvidenceLine {
   value: string;
 }
 
+/** One stored Spotify candidate for an artist match question. */
+export interface NeedsYouArtistCandidate {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  genres: string[] | null;
+  spotifyUrl: string | null;
+  /** The artist's current match. */
+  current: boolean;
+  /** The candidate's name is the artist's own name. */
+  exact: boolean;
+  /** An artist with this Spotify id has shows in our own events. */
+  playsDenver: boolean;
+}
+
 /** A crawl run's recorded robots.txt result (`crawl_runs.robots_txt_blocked`). */
 export type NeedsYouRobotsResult = 'yes' | 'no' | 'unchecked';
 
@@ -1958,12 +1973,30 @@ export type NeedsYouItem =
       artistId: string;
       matchStatus: string;
       reportCount: number;
+      /** The venue of the artist's next show (within the queue's window). */
+      nextShowVenue?: string | null;
+      /** The artist's current Spotify match, if any. */
+      spotifyArtistId?: string | null;
+      /** The artist's current photo, if any. */
+      photoUrl?: string | null;
+      /** Reasons on the open reports (`different_artist`, `wrong_photo`, ...). */
+      reportReasons?: string[];
+      /** The stored Spotify candidates, exact name match first, at most 5. */
+      candidates?: NeedsYouArtistCandidate[];
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
       kind: 'event-low-confidence';
       eventId: string;
       showTime: string | null;
+      /** The extracted headliner (`events.artist`), or null. */
+      artist?: string | null;
+      /** The venue's own description of the show, when the crawl kept one. */
+      description?: string | null;
+      /** The extractor's confidence (0 to 1), or null. */
+      confidence?: number | null;
+      /** The auto-approve bar the crawler holds extracted events to. */
+      autoApproveBar?: number;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
@@ -1971,6 +2004,22 @@ export type NeedsYouItem =
       contestId: string;
       listedPrice: string | null;
       checkedPrice: string | null;
+      /** The listed price's top end, or null for an open-ended "from" price. */
+      listedMax?: string | null;
+      /** The checked price's top end, or null for an open-ended "from" price. */
+      checkedMax?: string | null;
+      /** The ticket tier the check is for (`ga`, `vip`, ...). */
+      tier?: string;
+      /** When the listed price was submitted, and when it was checked (ISO). */
+      listedAt?: string;
+      checkedAt?: string;
+      /** Fans backing the checked price (`corroboration_count`). */
+      checkedFans?: number;
+      /** The show's ticket page, if the event has one. */
+      ticketUrl?: string | null;
+      /** The checking fan's prices: all, and how many are approved. */
+      checkerSubmissions?: number;
+      checkerApproved?: number;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
@@ -1981,6 +2030,16 @@ export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'bug';
       feedbackId: string;
+      /** The full report (the title is cut at 80 characters). */
+      message?: string;
+      /** When it was reported (ISO). */
+      createdAt?: string;
+      /** The reporter's handle; null once the account is gone. */
+      handle?: string | null;
+      /** The screenshot the reporter attached, as stored, if any. */
+      screenshot?: string | null;
+      /** The GitHub issue the report was filed as, if any. */
+      issueUrl?: string | null;
       evidence: NeedsYouEvidenceLine[];
     });
 
