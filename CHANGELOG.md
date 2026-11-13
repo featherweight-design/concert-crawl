@@ -1,3 +1,20 @@
+# [1.403.0](https://github.com/featherweight-design/concert-crawl/compare/v1.402.0...v1.403.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** apply the Overview review fixes ([d72c8e8](https://github.com/featherweight-design/concert-crawl/commit/d72c8e8ff241eeebda4e7d0ed180c33611d3a2f3))
+* **web:** draw the runs legend as the overview board does ([f0dc93e](https://github.com/featherweight-design/concert-crawl/commit/f0dc93e207a85965cf07def1397b699f142c06f9))
+* **web:** fold U+202F in the Overview run time ([d47c740](https://github.com/featherweight-design/concert-crawl/commit/d47c7400be2c9165fec5befec42d87162fa2b011))
+* **web:** harden the venue overview tab against review findings ([411e672](https://github.com/featherweight-design/concert-crawl/commit/411e672b003c093530a64bddcb9ee1335e915bd6))
+
+
+### Features
+
+* **api:** gate rejection on archived rows, ignore a bare @ search ([0785416](https://github.com/featherweight-design/concert-crawl/commit/078541672b1c306143665e17acea6540a036a30d))
+* **api:** reject a waiting price with a reason, list a fan's other prices ([ae2ce08](https://github.com/featherweight-design/concert-crawl/commit/ae2ce083bbab5ccb2fab3ad250a29571a5dcd31e))
+* **web:** venue Overview tab with Latest run, Last 14 runs, Shows and In Needs you ([46f5cc2](https://github.com/featherweight-design/concert-crawl/commit/46f5cc26c5bdaa198bef2652a470e3434861e6a1))
+
 # [1.402.0](https://github.com/featherweight-design/concert-crawl/compare/v1.401.0...v1.402.0) (2026-11-13)
 
 
