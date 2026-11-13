@@ -1,3 +1,19 @@
+# [1.418.0](https://github.com/featherweight-design/concert-crawl/compare/v1.417.0...v1.418.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** whats-new art, title and width as the board ([99a5d6f](https://github.com/featherweight-design/concert-crawl/commit/99a5d6fdcb7de5d8cad6b613bc0ea205a15e9beb))
+* **web:** whats-new footer labels, tests, exact path ([fbc90dc](https://github.com/featherweight-design/concert-crawl/commit/fbc90dcf59b685c8424c0530e053d6c2efc8d63f))
+* **web:** whats-new marks seen, exact cache path, tests ([7e9e0fd](https://github.com/featherweight-design/concert-crawl/commit/7e9e0fdd698184c089260a0bae05c5da0b53cf14))
+* **web:** whats-new tiles fit 4 across at 320 ([536ed69](https://github.com/featherweight-design/concert-crawl/commit/536ed6960f812a08215726663fb61954effa2296))
+* **web:** whats-new venue tiles from the board ([efc6aaa](https://github.com/featherweight-design/concert-crawl/commit/efc6aaa51d247c0b1400e5c436e478ebb399572a))
+
+
+### Features
+
+* **web:** the what's new feature page ([b8ca0c7](https://github.com/featherweight-design/concert-crawl/commit/b8ca0c7547e642a9c524934b2623593c79c36c5f))
+
 # [1.417.0](https://github.com/featherweight-design/concert-crawl/compare/v1.416.0...v1.417.0) (2026-11-13)
 
 
