@@ -632,7 +632,8 @@ describe('Needs you sources and ranking', () => {
       tier: 'ga',
       checkedFans: 1,
       ticketUrl: 'https://tickets.example.com/clipse',
-      checkerSubmissions: 2,
+      // The checker's other prices only: the check itself is not counted.
+      checkerSubmissions: 1,
       checkerApproved: 1,
     });
     expect(items[0]).toHaveProperty('listedAt');
@@ -659,5 +660,29 @@ describe('Needs you sources and ranking', () => {
       issueUrl: 'https://github.com/example/repo/issues/1',
     });
     expect(item?.title.length).toBeLessThanOrEqual(80);
+  });
+
+  it('keeps only an inline image, under the cap, as a bug screenshot', async () => {
+    await testDb.insert(feedback).values([
+      {
+        pageUrl: 'https://concertcrawl.app/a',
+        category: 'bug',
+        message: 'Tracking link',
+        metadata: { screenshot: 'https://tracker.example.com/pixel.png' },
+      },
+      {
+        pageUrl: 'https://concertcrawl.app/b',
+        category: 'bug',
+        message: 'Huge image',
+        metadata: {
+          screenshot: `data:image/png;base64,${'A'.repeat(250_000)}`,
+        },
+      },
+    ]);
+    const items = await listNeedsYou({ kind: 'bug', now: now() });
+    expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item).toMatchObject({ screenshot: null });
+    }
   });
 });
