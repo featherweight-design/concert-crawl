@@ -1294,6 +1294,143 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
   });
 });
 
+// Redesign 4d: editing the price on a waiting or published submission (the row
+// menu's "Edit price"). Audited; bounded; Price check rows are locked out.
+describe('PATCH /v1/admin/prices/submissions/:id/price', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const edit = (id: string, body: unknown) =>
+    app.request(`/v1/admin/prices/submissions/${id}/price`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify(body),
+    });
+
+  const seedShow = async (slug: string, overrides = {}) => {
+    const venue = await seedVenue({ name: 'Edit Hall', slug });
+    return seedEvent(venue.id, {
+      title: `Show ${slug}`,
+      artist: `Artist ${slug}`,
+      date: '2099-11-01',
+      ...overrides,
+    });
+  };
+
+  const priceOf = async (id: string) => {
+    const [row] = await testDb
+      .select({
+        min: priceSubmissions.priceMin,
+        max: priceSubmissions.priceMax,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id));
+    return row;
+  };
+
+  it('edits a waiting price and audits before and after', async () => {
+    const event = await seedShow('edit-pending');
+    const row = await seedPriceSubmission(event.id, 'edit_user', {
+      status: 'pending',
+      priceMin: '40.00',
+    });
+    const res = await edit(row.id, { priceMin: '45', priceMax: '60.50' });
+    expect(res.status).toBe(200);
+    expect(await priceOf(row.id)).toEqual({ min: '45.00', max: '60.50' });
+
+    const [audit] = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'price.submission.edit_price'));
+    expect(audit?.targetId).toBe(row.id);
+    expect(audit?.metadata).toMatchObject({
+      before: { priceMin: '40.00' },
+      after: { priceMin: '45', priceMax: '60.50' },
+      eventUpdated: false,
+    });
+  });
+
+  it("moves the show's price when the published price is what it shows", async () => {
+    const event = await seedShow('edit-projected', {
+      ticketPriceMin: '40.00',
+      ticketPriceMax: '40.00',
+      priceSource: 'community',
+    });
+    const row = await seedPriceSubmission(event.id, 'edit_pub_user', {
+      status: 'corroborated',
+      priceMin: '40.00',
+      priceMax: '40.00',
+    });
+    expect(
+      (await edit(row.id, { priceMin: '42', priceMax: '42' })).status,
+    ).toBe(200);
+    const [after] = await testDb
+      .select({ min: events.ticketPriceMin, max: events.ticketPriceMax })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(after).toEqual({ min: '42.00', max: '42.00' });
+  });
+
+  it('leaves the show alone when its price came from somewhere else', async () => {
+    const event = await seedShow('edit-not-projected', {
+      ticketPriceMin: '99.00',
+      priceSource: 'community',
+    });
+    const row = await seedPriceSubmission(event.id, 'edit_other_user', {
+      status: 'corroborated',
+      priceMin: '40.00',
+    });
+    expect((await edit(row.id, { priceMin: '42' })).status).toBe(200);
+    const [after] = await testDb
+      .select({ min: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(after?.min).toBe('99.00');
+  });
+
+  it('refuses a price that is not waiting or published', async () => {
+    const event = await seedShow('edit-archived');
+    const row = await seedPriceSubmission(event.id, 'edit_arch_user', {
+      status: 'archived',
+    });
+    expect((await edit(row.id, { priceMin: '42' })).status).toBe(409);
+  });
+
+  it('refuses a price with an open Price check, and a counter row', async () => {
+    const event = await seedShow('edit-contest');
+    const parent = await seedPriceSubmission(event.id, 'edit_parent', {
+      status: 'pending',
+    });
+    const counter = await seedPriceSubmission(event.id, 'edit_counter', {
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+    expect((await edit(parent.id, { priceMin: '42' })).status).toBe(409);
+    expect((await edit(counter.id, { priceMin: '42' })).status).toBe(409);
+  });
+
+  it('422s a bad amount and 404s an unknown id', async () => {
+    const event = await seedShow('edit-bad');
+    const row = await seedPriceSubmission(event.id, 'edit_bad_user');
+    for (const body of [
+      { priceMin: '-5' },
+      { priceMin: '12.345' },
+      { priceMin: 'free' },
+      { priceMin: '2001' },
+      { priceMin: '50', priceMax: '40' },
+      {},
+    ]) {
+      expect((await edit(row.id, body)).status).toBe(422);
+    }
+    expect(
+      (await edit('00000000-0000-0000-0000-000000000000', { priceMin: '42' }))
+        .status,
+    ).toBe(404);
+  });
+});
+
 // Redesign 4d: rejecting a waiting price. A rejection is `archived` with the
 // reason in archived_reason, never `disputed` (that is a Price check).
 describe('POST /v1/admin/prices/submissions/:id/reject', () => {

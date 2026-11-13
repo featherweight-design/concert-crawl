@@ -34,7 +34,11 @@ import {
 } from '@concert-crawl/db';
 import { runPricePipeline } from '@concert-crawl/price-pipeline';
 import { createLogger } from '@concert-crawl/logger';
-import { VENDOR_VALUES, deriveSourceCategory } from '@concert-crawl/types';
+import {
+  SP_POLICY,
+  VENDOR_VALUES,
+  deriveSourceCategory,
+} from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
 import { apiLogger } from '../../lib/logger.js';
 import { runBackgroundTask } from '../../lib/background-tasks.js';
@@ -42,6 +46,7 @@ import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { setSubmissionStatus } from './lib/price-submission-status.js';
 import { containsPattern } from '../../lib/escape-like.js';
+import { editSubmissionPrice } from './lib/price-edit.js';
 import {
   parseRejection,
   REJECTION_REASONS,
@@ -711,6 +716,81 @@ pricesAdminRouter.patch(
     ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditAction', 'price.submission.update');
     ctx.set('auditTargetId', id);
+
+    return ctx.json({ success: true, data: result.updated });
+  },
+);
+
+// A dollar amount with at most two decimals, within the policy's ceiling. Zero
+// is allowed (a free show); the consumer path's floor of 1 is a fan-input rule.
+const dollarsSchema = z
+  .string()
+  .regex(/^\d+(\.\d{1,2})?$/)
+  .refine((value) => Number(value) <= SP_POLICY.ceilingMax);
+
+const editPriceSchema = z
+  .object({
+    priceMin: dollarsSchema,
+    priceMax: dollarsSchema.nullable().optional(),
+  })
+  .refine(
+    (body) =>
+      body.priceMax === null ||
+      body.priceMax === undefined ||
+      Number(body.priceMax) >= Number(body.priceMin),
+    { message: 'priceMax must be at least priceMin' },
+  );
+
+// PATCH /v1/admin/prices/submissions/:id/price — correct a waiting or published
+// price (the Submitted prices row menu's "Edit price"). A published price that
+// is the show's displayed figure moves the show's price with it.
+pricesAdminRouter.patch(
+  '/submissions/:id/price',
+  zValidator('param', z.object({ id: idSchema }), (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid id' }, 400);
+    }
+  }),
+  zValidator('json', editPriceSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid price' }, 422);
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const { priceMin, priceMax } = ctx.req.valid('json');
+
+    const result = await editSubmissionPrice(id, priceMin, priceMax ?? null);
+    if (result.ok === 'contest_lockout') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'This price is part of a Price check. Resolve it from the Price checks tab.',
+        },
+        409,
+      );
+    }
+    if (result.ok === 'not_editable') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Only a waiting or published price can be edited',
+        },
+        409,
+      );
+    }
+    if (!result.ok)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
+
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    ctx.set('auditAction', 'price.submission.edit_price');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditMeta', {
+      before: result.before,
+      after: { priceMin, priceMax: priceMax ?? null },
+      eventUpdated: result.eventUpdated,
+    });
 
     return ctx.json({ success: true, data: result.updated });
   },
