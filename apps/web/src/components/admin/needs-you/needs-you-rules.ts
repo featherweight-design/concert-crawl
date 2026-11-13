@@ -130,8 +130,22 @@ export const metaOf = (row: QueueRow): string =>
     .filter((part): part is string => part !== null)
     .join(' · ');
 
-const evidenceValue = (row: QueueRow, label: string): string | null =>
-  row.evidence.find((line) => line.label === label)?.value ?? null;
+const ISO_DATE = /^(\d{4}-\d{2}-\d{2})(?:T|$)/;
+
+/**
+ * An evidence line's value as the queue says it: an ISO date as "Thu Nov 12",
+ * an artist's match status in words, anything else as the API sent it.
+ */
+export const evidenceText = (label: string, value: string): string => {
+  if (label === 'Match status') return COPY.matchStatus(value);
+  const date = ISO_DATE.exec(value)?.[1];
+  return date ? metaDate(date) : value;
+};
+
+const evidenceValue = (row: QueueRow, label: string): string | null => {
+  const value = row.evidence.find((line) => line.label === label)?.value;
+  return value === undefined ? null : evidenceText(label, value);
+};
 
 /** The right-hand figure on a card's top line. */
 export const impactOf = (row: QueueRow): string => {

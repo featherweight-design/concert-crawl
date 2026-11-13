@@ -7,7 +7,7 @@ import {
   SidePanel,
   useIsPhone,
 } from '@/components/admin/primitives';
-import { kindLabelOf, metaOf, whatOf } from './needs-you-rules';
+import { evidenceText, kindLabelOf, metaOf, whatOf } from './needs-you-rules';
 import type { NeedsYouAnswer, QueueRow } from './needs-you-api';
 
 const COPY = ADMIN_COPY.needsYou;
@@ -33,6 +33,8 @@ export const EvidenceSlot = ({
   onAnswer,
 }: EvidenceSlotProps) => {
   const isPhone = useIsPhone();
+  // The lead answer: the one the API suggests, else the first drawn.
+  const lead = row.answers.find((answer) => answer.suggested) ?? row.answers[0];
   return (
     <SidePanel
       inline={!isPhone}
@@ -73,7 +75,7 @@ export const EvidenceSlot = ({
                       textAlign: 'right',
                     }}
                   >
-                    {line.value}
+                    {evidenceText(line.label, line.value)}
                   </dd>
                 </div>
               ))}
@@ -86,7 +88,7 @@ export const EvidenceSlot = ({
             {row.answers.map((answer) => (
               <AdminButton
                 key={answer.slug}
-                variant={answer.suggested ? 'gradient' : 'outline'}
+                variant={answer === lead ? 'gradient' : 'outline'}
                 disabled={busy}
                 data-testid="needs-you-answer"
                 data-slug={answer.slug}

@@ -2248,9 +2248,9 @@ export const ADMIN_COPY = {
         status
           ? `The site refused the crawler (HTTP ${status}).`
           : 'The site refused the crawler.',
-      // The API sends the match status as an enum; say it in words.
+      // `status` arrives already in words (`matchStatus` below).
       artist: (status: string | null, reports: string | null) =>
-        `${status === 'no_match' ? 'No match found' : status === 'ambiguous' ? 'More than one artist fits' : `Match status: ${status ?? 'unknown'}`}${reports ? `. ${reports} open reports.` : '.'}`,
+        `${status ?? 'No match status'}${reports ? `. ${reports} open reports.` : '.'}`,
       eventLowConfidence: (confidence: string | null) =>
         `Reads like it may not be a concert${confidence ? `. Confidence ${confidence}` : ''}.`,
       priceCheck: (listed: string | null, checked: string | null) =>
@@ -2275,6 +2275,14 @@ export const ADMIN_COPY = {
       details: 'DETAILS',
     },
     list: 'Decisions waiting',
+    // The API sends an artist's match status as an enum; the queue says it in
+    // words, and passes an unknown status through as it came.
+    matchStatus: (status: string) =>
+      status === 'no_match'
+        ? 'No match found'
+        : status === 'ambiguous'
+          ? 'More than one artist fits'
+          : status,
     // `02/answered-with-undo`: the dashed line that takes the answered card's place.
     answered: (name: string, label: string) => `${name} marked ${label}.`,
     snoozedLine: (name: string) => `${name} snoozed.`,

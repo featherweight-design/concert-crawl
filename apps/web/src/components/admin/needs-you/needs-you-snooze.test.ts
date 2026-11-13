@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   countAfterRemoval,
   eightAmMountain,
+  evidenceText,
   mountainDayAhead,
   snoozeDayLabel,
 } from './needs-you-rules';
@@ -21,6 +22,22 @@ describe('snooze times', () => {
 
   it('labels the return day', () => {
     expect(snoozeDayLabel('2026-11-18')).toBe('Wed, Nov 18');
+  });
+});
+
+describe('evidenceText', () => {
+  it('says an ISO date the way the rest of the app does', () => {
+    expect(evidenceText('Next show', '2026-11-12')).toBe('Thu Nov 12');
+    expect(evidenceText('Last seen', '2026-11-05T18:00:00Z')).toBe('Thu Nov 5');
+  });
+
+  it('puts an artist match status in words and passes the rest through', () => {
+    expect(evidenceText('Match status', 'no_match')).toBe('No match found');
+    expect(evidenceText('Match status', 'ambiguous')).toBe(
+      'More than one artist fits',
+    );
+    expect(evidenceText('Match status', 'unmatched')).toBe('unmatched');
+    expect(evidenceText('Page', '/events/abc')).toBe('/events/abc');
   });
 });
 
