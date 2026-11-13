@@ -86,17 +86,22 @@ needsYouAdminRouter.get(
   async (ctx) => {
     const { kind, venueId } = ctx.req.valid('query');
     const now = new Date();
+    // A venue's own view never shows the badge, so it needs no whole-queue list:
+    // only the asked-for kind's sources load, and the summary (its handled-today
+    // count) is skipped, so `count` is left out. The sources still read every
+    // venue and are filtered here; scoping them by venue in SQL is a follow-up.
+    if (venueId !== undefined) {
+      const scoped = await listNeedsYou({ now, ...(kind && { kind }) });
+      return ctx.json({
+        success: true,
+        data: scoped.filter((item) => item.venueId === venueId),
+      });
+    }
     const all = await listNeedsYou({ now });
-    const data = all.filter(
-      (item) =>
-        (kind === undefined || item.kind === kind) &&
-        (venueId === undefined || item.venueId === venueId),
-    );
-    // A venue's own view (the venue Overview, every page load) never shows the
-    // badge, so it skips the summary and its queries; `count` is left out.
-    if (venueId !== undefined) return ctx.json({ success: true, data });
-    // Otherwise the count always describes the whole queue, not the filtered
-    // view, so the badge does not change when an admin narrows the list.
+    const data =
+      kind === undefined ? all : all.filter((item) => item.kind === kind);
+    // The count always describes the whole queue, not the filtered view, so
+    // the badge does not change when an admin narrows the list.
     return ctx.json({
       success: true,
       data,
