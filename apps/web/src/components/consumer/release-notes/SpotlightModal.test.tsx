@@ -100,11 +100,12 @@ describe('SpotlightModal', () => {
     expect(dialog.style.border).toBe('');
   });
 
-  it('draws the primary CTA as the signal-to-accent gradient pill with a glow', () => {
+  it('draws the primary CTA as the signal-to-cta-end gradient pill with a glow', () => {
     render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
     const primary = screen.getByRole('button', { name: /try it/i });
     expect(primary.style.background).toContain('linear-gradient(135deg');
-    expect(primary.style.background).toContain('var(--accent)');
+    // A fill under dark label text ends on the derived stop (addendum-4 §3).
+    expect(primary.style.background).toContain('var(--cta-end)');
     expect(primary.style.boxShadow).toContain('var(--signal)');
   });
 
