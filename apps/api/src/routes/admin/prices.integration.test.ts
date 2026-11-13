@@ -1382,7 +1382,9 @@ describe('PATCH /v1/admin/prices/submissions/:id/price', () => {
       status: 'corroborated',
       priceMin: '40.00',
     });
-    expect((await edit(row.id, { priceMin: '42' })).status).toBe(200);
+    expect(
+      (await edit(row.id, { priceMin: '42', priceMax: null })).status,
+    ).toBe(200);
     const [after] = await testDb
       .select({ min: events.ticketPriceMin })
       .from(events)
@@ -1395,7 +1397,9 @@ describe('PATCH /v1/admin/prices/submissions/:id/price', () => {
     const row = await seedPriceSubmission(event.id, 'edit_arch_user', {
       status: 'archived',
     });
-    expect((await edit(row.id, { priceMin: '42' })).status).toBe(409);
+    expect(
+      (await edit(row.id, { priceMin: '42', priceMax: null })).status,
+    ).toBe(409);
   });
 
   it('refuses a price with an open Price check, and a counter row', async () => {
@@ -1407,15 +1411,21 @@ describe('PATCH /v1/admin/prices/submissions/:id/price', () => {
       status: 'pending',
       disputedSubmissionId: parent.id,
     });
-    expect((await edit(parent.id, { priceMin: '42' })).status).toBe(409);
-    expect((await edit(counter.id, { priceMin: '42' })).status).toBe(409);
+    expect(
+      (await edit(parent.id, { priceMin: '42', priceMax: null })).status,
+    ).toBe(409);
+    expect(
+      (await edit(counter.id, { priceMin: '42', priceMax: null })).status,
+    ).toBe(409);
   });
 
   it('422s a bad amount and 404s an unknown id', async () => {
     const event = await seedShow('edit-bad');
     const row = await seedPriceSubmission(event.id, 'edit_bad_user');
     for (const body of [
-      { priceMin: '-5' },
+      { priceMin: '42' },
+      { priceMin: '0042', priceMax: null },
+      { priceMin: '-5', priceMax: null },
       { priceMin: '12.345' },
       { priceMin: 'free' },
       { priceMin: '2001' },
@@ -1425,8 +1435,12 @@ describe('PATCH /v1/admin/prices/submissions/:id/price', () => {
       expect((await edit(row.id, body)).status).toBe(422);
     }
     expect(
-      (await edit('00000000-0000-0000-0000-000000000000', { priceMin: '42' }))
-        .status,
+      (
+        await edit('00000000-0000-0000-0000-000000000000', {
+          priceMin: '42',
+          priceMax: null,
+        })
+      ).status,
     ).toBe(404);
   });
 });
