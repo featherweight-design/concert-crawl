@@ -30,6 +30,7 @@ import { hashEvent } from './lib/hash.js';
 import { FetchLog } from './lib/fetch-log.js';
 import { RobotsDisallowedError } from './lib/robots-fetch.js';
 import { canonicalizeTitle } from './lib/canonical-title.js';
+import { FLATTENED_ESCALATION_CUTOFF } from './lib/derive-artists.js';
 
 const mockBrowser = {} as Browser;
 
@@ -1653,37 +1654,51 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
   // was stored whole before flattened names were escalated, and verdict reuse
   // handed that whole name back on every crawl, so rum.gold never got a page.
   describe('verdict reuse and a stored flattened name', () => {
-    function seedGaldive(headliners: string[], canonicalHeadliners: string[]) {
+    // Staging's Galdive row was last written 2026-11-04, before the cutoff.
+    const beforeCutoff = new Date('2026-11-04T09:09:23Z');
+
+    function seedFlattened(
+      name: string,
+      headliners: string[],
+      canonicalHeadliners: string[],
+      updatedAt: Date = beforeCutoff,
+    ) {
       const { venue, fetch } = seedPlatformVenue(1);
+      const date = '2027-02-12';
       stores.events.push({
         id: crypto.randomUUID(),
         venueId: venue.id,
-        title: 'Galdive & rum.gold',
-        artist: 'Galdive & rum.gold',
-        canonicalArtist: 'galdive',
-        canonicalTitle: canonicalizeTitle('Galdive & rum.gold'),
-        date: '2027-02-12',
+        title: name,
+        artist: name,
+        canonicalArtist: canonicalHeadliners[0],
+        canonicalTitle: canonicalizeTitle(name),
+        date,
         doorsTime: null,
         showTime: null,
         headliners,
         canonicalHeadliners,
         supportingArtists: [],
         canonicalSupporting: [],
-        sourceHash: null,
+        sourceHash: hashEvent({
+          title: name,
+          date,
+          doorsTime: null,
+          showTime: null,
+        }),
         verified: false,
         status: 'upcoming',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: beforeCutoff,
+        updatedAt,
       });
       fetch.mockResolvedValueOnce({
         events: [
           {
-            title: 'Galdive & rum.gold',
-            rawTitle: 'Galdive & rum.gold',
-            artist: 'Galdive & rum.gold',
-            observedPerformers: ['Galdive & rum.gold'],
+            title: name,
+            rawTitle: name,
+            artist: name,
+            observedPerformers: [name],
             observedSupportingArtists: [],
-            date: '2027-02-12',
+            date,
             confidence: 1,
             sourceUrl: 'https://venue.example.com/calendar',
           },
@@ -1692,6 +1707,63 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
       });
       return venue;
     }
+    const seedGaldive = (
+      headliners: string[],
+      canonicalHeadliners: string[],
+      updatedAt?: Date,
+    ) =>
+      seedFlattened(
+        'Galdive & rum.gold',
+        headliners,
+        canonicalHeadliners,
+        updatedAt,
+      );
+    const venueRows = (venueId: string) =>
+      stores.events.filter((row) => row.venueId === venueId);
+
+    it('does not re-rule a row written after the cutoff', async () => {
+      vi.mocked(adjudicateEvent).mockClear();
+      const venue = seedGaldive(
+        ['Galdive & rum.gold'],
+        ['galdive'],
+        new Date(FLATTENED_ESCALATION_CUTOFF.getTime() + 1000),
+      );
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(adjudicateEvent).not.toHaveBeenCalled();
+    });
+
+    it('does not re-rule when no adjudicator may answer (AI use closed)', async () => {
+      vi.mocked(adjudicateEvent).mockClear();
+      vi.mocked(isAiUseAllowed).mockResolvedValue(false);
+      const venue = seedGaldive(['Galdive & rum.gold'], ['galdive']);
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(adjudicateEvent).not.toHaveBeenCalled();
+      // Reused, not re-derived: nothing changed, so nothing is written.
+      expect(venueRows(venue.id)).toHaveLength(1);
+      vi.mocked(isAiUseAllowed).mockResolvedValue(true);
+    });
+
+    it('writes a re-ruled row even when the verdict keeps the name whole', async () => {
+      // "Iron & Wine" ruled one act stores the same bill. The write is what
+      // moves updated_at past the cutoff, so the re-rule happens once. (The
+      // store mock's upsert appends, so a second row is the write.)
+      vi.mocked(adjudicateEvent).mockClear();
+      vi.mocked(adjudicateEvent).mockResolvedValueOnce({
+        isConcert: true,
+        headliners: ['Iron & Wine'],
+        supportingArtists: [],
+      });
+      const venue = seedFlattened('Iron & Wine', ['Iron & Wine'], ['iron']);
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(adjudicateEvent).toHaveBeenCalledOnce();
+      expect(venueRows(venue.id)).toHaveLength(2);
+    });
 
     it('asks the adjudicator rather than reuse the name stored whole', async () => {
       vi.mocked(adjudicateEvent).mockClear();
@@ -1718,6 +1790,63 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
 
       expect(adjudicateEvent).not.toHaveBeenCalled();
     });
+  });
+});
+
+// The extractor now restores the venue's "with" in the title, but keeps the
+// fallback artist on the title as the model cleaned it, so a row stored as
+// "Clipse, J.I.D" keeps its dedup key and is updated, never duplicated.
+describe('crawlVenue — a restored "with" title keeps the dedup key', () => {
+  it('updates the row stored before the fix rather than inserting a second', async () => {
+    const venue = seedVenue();
+    const date = '2026-08-15';
+    stores.events.push({
+      id: crypto.randomUUID(),
+      venueId: venue.id,
+      title: 'Clipse, J.I.D',
+      artist: 'Clipse, J.I.D',
+      canonicalArtist: 'clipse, j.i.d',
+      canonicalTitle: canonicalizeTitle('Clipse, J.I.D'),
+      date,
+      doorsTime: null,
+      showTime: null,
+      sourceHash: hashEvent({
+        title: 'Clipse, J.I.D',
+        date,
+        doorsTime: null,
+        showTime: null,
+      }),
+      verified: false,
+      status: 'upcoming',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    });
+    // What extractWithLlm now returns for this listing: the title carries the
+    // venue's "with", the fallback artist is the model's cleaned title.
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Clipse with J.I.D',
+          rawTitle: 'Clipse with J.I.D.',
+          artist: 'Clipse, J.I.D',
+          observedPerformers: [],
+          observedSupportingArtists: [],
+          date,
+          confidence: 0.9,
+          sourceUrl: venue.websiteUrl,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.eventsInserted).toBe(0);
   });
 });
 

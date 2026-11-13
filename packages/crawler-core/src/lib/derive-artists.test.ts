@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   deriveArtists,
+  FLATTENED_ESCALATION_CUTOFF,
   isSuspiciousObservation,
   isTributeTitle,
   isUnruledFlattening,
@@ -843,6 +844,22 @@ describe('a "with" billing bills the acts after it as support', () => {
     expect(result.supportingArtists).toEqual(['J.I.D', 'Samara Cyn']);
   });
 
+  it('ignores a "with" in a raw subhead the cleaned title does not bill', async () => {
+    // The raw string's "with" sits in a presenter subhead, not between the two
+    // acts the cleaned title joins, so it is no evidence about this bill.
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Khruangbin & Leon Bridges',
+        rawTitle: 'Khruangbin presents Texas Sun with Leon Bridges & friends',
+        observedPerformers: ['Khruangbin', 'Leon Bridges'],
+      },
+      neverCalled,
+    );
+
+    expect(result.headliners).toEqual(['Khruangbin', 'Leon Bridges']);
+  });
+
   it('demotes every act after "w/"', async () => {
     const result = await deriveArtists(
       {
@@ -901,30 +918,55 @@ describe('a "with" billing bills the acts after it as support', () => {
 // the crawl's verdict reuse kept handing that whole name back, so the
 // escalation never ran and rum.gold never got an artist page.
 describe('isUnruledFlattening — a stored flattened name is not a verdict', () => {
-  it('refuses to reuse "Galdive & rum.gold" stored whole', () => {
+  // Staging's Galdive row was last written 2026-11-04, before the escalation.
+  const before = new Date('2026-11-04T09:09:23Z');
+  const after = new Date(FLATTENED_ESCALATION_CUTOFF.getTime() + 1000);
+
+  it('refuses to reuse "Galdive & rum.gold" stored whole before the cutoff', () => {
     expect(
-      isUnruledFlattening(['Galdive & rum.gold'], ['Galdive & rum.gold']),
+      isUnruledFlattening(
+        ['Galdive & rum.gold'],
+        ['Galdive & rum.gold'],
+        before,
+      ),
     ).toBe(true);
+  });
+
+  it('re-rules a row at most once: a write after the cutoff ends it', () => {
+    // "Iron & Wine" ruled one act stores the same whole name; the crawl
+    // rewrites a re-ruled row, so its updated_at is past the cutoff after.
+    expect(isUnruledFlattening(['Iron & Wine'], ['Iron & Wine'], after)).toBe(
+      false,
+    );
   });
 
   it('reuses a bill the adjudicator already split', () => {
     expect(
-      isUnruledFlattening(['Galdive & rum.gold'], ['Galdive', 'rum.gold']),
+      isUnruledFlattening(
+        ['Galdive & rum.gold'],
+        ['Galdive', 'rum.gold'],
+        before,
+      ),
     ).toBe(false);
   });
 
   it('only concerns a lone joined observation', () => {
-    expect(isUnruledFlattening(['Metallica'], ['Metallica'])).toBe(false);
+    expect(isUnruledFlattening(['Metallica'], ['Metallica'], before)).toBe(
+      false,
+    );
     expect(
       isUnruledFlattening(
         ['Desert Dwellers', 'Great Dane'],
         ['Desert Dwellers'],
+        before,
       ),
     ).toBe(false);
   });
 
   it('reads a never-ruled row as nothing to protect', () => {
-    expect(isUnruledFlattening(['Galdive & rum.gold'], null)).toBe(false);
+    expect(isUnruledFlattening(['Galdive & rum.gold'], null, before)).toBe(
+      false,
+    );
   });
 
   it('the escalation it lets through bills Galdive and rum.gold as two headliners', async () => {

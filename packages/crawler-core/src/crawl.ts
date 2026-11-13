@@ -52,6 +52,7 @@ import {
   mergeObservedSupporting,
   withBillingApplied,
   wouldAdjudicate,
+  type Adjudicator,
 } from './lib/derive-artists.js';
 import { calculateCost } from './lib/cost.js';
 import { dispatch } from './lib/fetchers/index.js';
@@ -1006,6 +1007,7 @@ export async function crawlVenue(
         sourceHash: events.sourceHash,
         verified: events.verified,
         eventUrl: events.eventUrl,
+        updatedAt: events.updatedAt,
       })
       .from(events)
       .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')));
@@ -1019,6 +1021,9 @@ export async function crawlVenue(
 
     let adjudicationCount = 0;
     let adjudicationReuseCount = 0;
+    // Rows re-ruled because their stored bill may predate the flattened-name
+    // escalation; each is written below even when its bill is unchanged.
+    const reRuledKeys = new Set<string>();
     const normalizedEvents: NormalizedEvent[] = [];
     // Every URL the platform payload came from must allow AI use. Asked once
     // per run, not per event.
@@ -1031,10 +1036,38 @@ export async function crawlVenue(
         return true;
       })());
 
+    // The adjudicator this event may use, or null when the run's LLM budget
+    // stopped it or a page it came from closes AI use.
+    const adjudicatorFor = async (
+      evt: NormalizedEvent,
+    ): Promise<Adjudicator | null> =>
+      !llmStopped &&
+      (await aiUseAllowedFor(evt.sourceUrl)) &&
+      (await payloadAiUseAllowed())
+        ? adjudicateEvent
+        : null;
+
     for (const evt of survivingEvents) {
-      const prior = existingMap.get(
-        dedupKey(canonicalizeArtist(evt.artist), evt.date, evt.showTime),
+      const eventKey = dedupKey(
+        canonicalizeArtist(evt.artist),
+        evt.date,
+        evt.showTime,
       );
+      const prior = existingMap.get(eventKey);
+      // A stored bill that may predate the flattened-name escalation
+      // ("Galdive & rum.gold" stored whole) is re-ruled once, and only when an
+      // adjudicator can actually answer: re-deriving without one just lands on
+      // the same fallback and would cost the reuse for nothing.
+      const reRule =
+        !force &&
+        prior !== undefined &&
+        prior.canonicalHeadliners !== null &&
+        isUnruledFlattening(
+          evt.observedPerformers,
+          prior.headliners,
+          prior.updatedAt,
+        ) &&
+        (await adjudicatorFor(evt)) !== null;
       // `force` re-runs the ladder from scratch, matching what it does to the
       // source-hash skip below. An extractor newly reporting isConcert:false
       // still goes through the ladder, so step 0 can retire a stored verdict.
@@ -1049,9 +1082,7 @@ export async function crawlVenue(
         wouldAdjudicate(evt) &&
         prior !== undefined &&
         prior.canonicalHeadliners !== null &&
-        // A stored bill that is still the flattened name itself was never
-        // ruled on, so it is not a verdict to reuse ("Galdive & rum.gold").
-        !isUnruledFlattening(evt.observedPerformers, prior.headliners) &&
+        !reRule &&
         prior.title === evt.title &&
         (prior.description ?? undefined) === evt.description
       ) {
@@ -1074,34 +1105,36 @@ export async function crawlVenue(
         // cost is that an opener REMOVED at the source lingers until the title
         // or description changes and the verdict is re-derived. Keeping a stale
         // name is the lesser harm, and it is the same call step 2 makes.
+        const merged = mergeObservedSupporting(
+          prior.headliners ?? [],
+          prior.supportingArtists ?? [],
+          evt.observedSupportingArtists,
+        );
+        if (!prior.headliners) {
+          // NULL is "no verdict" and stays exactly that (never []).
+          normalizedEvents.push({
+            ...evt,
+            headliners: prior.headliners,
+            supportingArtists: merged,
+          });
+          continue;
+        }
         // A verdict stored before the "with" rule existed still listed the act
         // after "with" as a co-headliner; the reused bill gets the same rule.
-        const reused = withBillingApplied(
-          evt,
-          prior.headliners ?? [],
-          mergeObservedSupporting(
-            prior.headliners ?? [],
-            prior.supportingArtists ?? [],
-            evt.observedSupportingArtists,
-          ),
-        );
+        const reused = withBillingApplied(evt, prior.headliners, merged);
         normalizedEvents.push({
           ...evt,
-          // No stored bill stays exactly that: NULL is "no verdict", never [].
-          headliners: prior.headliners ? reused.headliners : prior.headliners,
+          headliners: reused.headliners,
           supportingArtists: reused.supportingArtists,
         });
         continue;
       }
-      const derived = await deriveArtists(
-        evt,
-        !llmStopped &&
-          (await aiUseAllowedFor(evt.sourceUrl)) &&
-          (await payloadAiUseAllowed())
-          ? adjudicateEvent
-          : null,
-      );
+      const derived = await deriveArtists(evt, await adjudicatorFor(evt));
       if (derived.adjudicated) adjudicationCount += 1;
+      // A re-ruled row is written even when the verdict matches the stored
+      // bill ("Iron & Wine" ruled one act): the write moves its updated_at
+      // past the cutoff, so it is never re-ruled again.
+      if (reRule && derived.adjudicated) reRuledKeys.add(eventKey);
       normalizedEvents.push({
         ...evt,
         headliners: derived.headliners,
@@ -1325,6 +1358,15 @@ export async function crawlVenue(
               dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
             );
             if (!existing) return true; // new event
+            // Re-ruled once (see reRuledKeys): written so its updated_at
+            // records that the ruling happened.
+            if (
+              reRuledKeys.has(
+                dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
+              )
+            ) {
+              return true;
+            }
             // event_url is not part of sourceHash, so a row stored before
             // the extractor could name a show's own page would never be
             // rewritten by the hash check alone — leaving the "Get tickets"

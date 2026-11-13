@@ -6,13 +6,16 @@ import {
   rulingOf,
   type JoinedEvidence,
 } from './joined-names.js';
-import { demoteActsAfterWith, hasWithJoiner } from './with-billing.js';
+import { demoteActsAfterWith, keepWithJoiner } from './with-billing.js';
 
 /**
  * The venue said "X with Y": Y supports, whatever a source or a model listed
- * as co-headliners. Reads the stored title first and the verbatim `rawTitle`
- * when the title lost the joiner. Exported so the crawl's verdict-reuse branch
- * applies the same rule to a bill it did not re-derive.
+ * as co-headliners. Reads the cleaned title. `rawTitle` counts only through
+ * `keepWithJoiner`, i.e. where the cleaned title swapped a joiner between the
+ * same two words: a "with" elsewhere in the raw string (a subhead such as
+ * "presents Texas Sun with Leon Bridges") is not billing evidence. Exported so
+ * the crawl's verdict-reuse branch applies the same rule to a bill it did not
+ * re-derive.
  */
 export function withBillingApplied(
   event: { title: string; rawTitle?: string | undefined },
@@ -20,9 +23,9 @@ export function withBillingApplied(
   supportingArtists: string[],
 ): { headliners: string[]; supportingArtists: string[] } {
   const title =
-    !hasWithJoiner(event.title) && event.rawTitle !== undefined
-      ? event.rawTitle
-      : event.title;
+    event.rawTitle === undefined
+      ? event.title
+      : keepWithJoiner(event.title, event.rawTitle);
   return demoteActsAfterWith(title, headliners, supportingArtists);
 }
 
@@ -319,18 +322,30 @@ function isFlattenedBilling(observed: string[]): boolean {
 }
 
 /**
+ * Rows last written before this instant may hold a flattened name that step 1
+ * stored whole before flattened names were escalated (68bc15f2b, on main and
+ * in prod by 2026-11-13). Nothing on the row records whether a verdict was
+ * reached, so the write time is the marker: a row the crawl re-rules is
+ * rewritten (see `crawl.ts`), which moves its `updated_at` past this cutoff
+ * and makes the re-rule happen at most once per row.
+ */
+export const FLATTENED_ESCALATION_CUTOFF = new Date('2026-11-14T00:00:00Z');
+
+/**
  * True when a stored bill is the lone flattened name itself ("Galdive &
- * rum.gold" stored whole for an observation of exactly that). Such a bill is
- * not a verdict the crawl may reuse: it is what step 1 stored before flattened
- * names were escalated (68bc15f2b), or the fallback an outage or a no-AI venue
- * leaves, and reusing it would keep the escalation from ever running for a row
- * that already existed. The cost: a joined name the adjudicator rules one act
- * ("Iron & Wine") is asked again on each crawl, one Haiku call per such show.
+ * rum.gold" stored whole for an observation of exactly that) AND the row was
+ * last written before `FLATTENED_ESCALATION_CUTOFF`. Such a bill may be what
+ * step 1 stored before the escalation existed, and reusing it would keep the
+ * escalation from ever running for a row that already existed. A joined name
+ * the adjudicator rules one act ("Iron & Wine") reads the same, so the cutoff
+ * is what bounds the cost: one Haiku call per such row, once.
  */
 export function isUnruledFlattening(
   observedPerformers: string[] | undefined,
   storedHeadliners: readonly string[] | null,
+  storedAt: Date,
 ): boolean {
+  if (storedAt >= FLATTENED_ESCALATION_CUTOFF) return false;
   const observed = (observedPerformers ?? []).filter(
     (name) => name.trim().length > 0,
   );

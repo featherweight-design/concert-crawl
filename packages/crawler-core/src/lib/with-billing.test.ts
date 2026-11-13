@@ -36,6 +36,27 @@ describe('keepWithJoiner', () => {
     );
   });
 
+  it('writes the joiner in capitals in an all-caps title', () => {
+    expect(keepWithJoiner('CLIPSE & J.I.D', 'Clipse with J.I.D.')).toBe(
+      'CLIPSE WITH J.I.D',
+    );
+  });
+
+  it('matches the words around the joiner across diacritics', () => {
+    expect(keepWithJoiner('Beyoncé & JAY-Z', 'Beyonce with JAY-Z')).toBe(
+      'Beyoncé with JAY-Z',
+    );
+  });
+
+  it('restores the billing joiner, not one inside a band name', () => {
+    expect(
+      keepWithJoiner(
+        'Sleeping With Sirens & Memphis May Fire',
+        'Sleeping With Sirens with Memphis May Fire',
+      ),
+    ).toBe('Sleeping With Sirens with Memphis May Fire');
+  });
+
   it('leaves a genuine "&" co-headline alone', () => {
     expect(
       keepWithJoiner(
@@ -147,6 +168,32 @@ describe('demoteActsAfterWith', () => {
         [],
       ),
     ).toEqual({ headliners: ['Nas', 'The Roots'], supportingArtists: [] });
+  });
+
+  it('splits at the "with" after the lead act, not one inside its name', () => {
+    expect(
+      demoteActsAfterWith(
+        'Sleeping With Sirens with Memphis May Fire',
+        ['Sleeping With Sirens', 'Memphis May Fire'],
+        [],
+      ),
+    ).toEqual({
+      headliners: ['Sleeping With Sirens'],
+      supportingArtists: ['Memphis May Fire'],
+    });
+  });
+
+  it('finds names across diacritics', () => {
+    expect(
+      demoteActsAfterWith(
+        'Sigur Rós with Julianna Barwick',
+        ['Sigur Ros', 'Julianna Barwick'],
+        [],
+      ),
+    ).toEqual({
+      headliners: ['Sigur Ros'],
+      supportingArtists: ['Julianna Barwick'],
+    });
   });
 
   it('never moves the only headliner', () => {
