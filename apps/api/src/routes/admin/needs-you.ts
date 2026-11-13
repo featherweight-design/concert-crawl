@@ -40,12 +40,9 @@ const listQuerySchema = z.object({
   venueId: idSchema.optional(),
 });
 
-// Only Not useful entries are listed: a timed snooze is per item and has no
-// venue card to show it on. `notUseful=true` is accepted to say so explicitly.
-const snoozesQuerySchema = z.object({
-  venueId: idSchema,
-  notUseful: z.literal('true').optional(),
-});
+const snoozesQuerySchema = z.object({ venueId: idSchema });
+
+const snoozeIdParamSchema = z.object({ id: idSchema });
 
 const keyParamSchema = z.object({
   key: z
@@ -105,6 +102,9 @@ needsYouAdminRouter.get(
   },
 );
 
+// One venue's Not useful entries, for the venue Overview's WARNINGS YOU TURNED
+// OFF (3b). Only Not useful rows are listed: a timed snooze is per item and has
+// no venue card to show it on. Turn back on is DELETE /snoozes/:id.
 needsYouAdminRouter.get(
   '/snoozes',
   zValidator('query', snoozesQuerySchema, validationHook),
@@ -126,11 +126,6 @@ needsYouAdminRouter.get(
         ),
       )
       .orderBy(desc(adminQueueSnoozes.createdAt));
-    if (rows.length === 0) return ctx.json({ success: true, data: [] });
-
-    // Turn back on goes through DELETE /items/:key/snooze, which needs a
-    // current item's key; the source items still include the muted ones.
-    const items = await loadNeedsYouItems({ now: new Date() });
     const names = await adminNamesOf(rows.map((row) => row.createdBy));
     const data: NeedsYouNotUsefulSnooze[] = rows.flatMap((row) =>
       isKind(row.kind)
@@ -142,15 +137,46 @@ needsYouAdminRouter.get(
               reason: row.reason,
               createdAt: row.createdAt.toISOString(),
               createdByName: nameOf(names, row.createdBy) ?? FORMER_ADMIN,
-              itemKey:
-                items.find(
-                  (item) => item.kind === row.kind && item.venueId === venueId,
-                )?.key ?? null,
             },
           ]
         : [],
     );
     return ctx.json({ success: true, data });
+  },
+);
+
+// Turn back on one Not useful entry by its id. Only a Not useful row matches,
+// so a timed snooze sharing the id space is never touched.
+needsYouAdminRouter.delete(
+  '/snoozes/:id',
+  zValidator('param', snoozeIdParamSchema, validationHook),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const [removed] = await db
+      .delete(adminQueueSnoozes)
+      .where(
+        and(
+          eq(adminQueueSnoozes.id, id),
+          eq(adminQueueSnoozes.notUseful, true),
+        ),
+      )
+      .returning({
+        id: adminQueueSnoozes.id,
+        kind: adminQueueSnoozes.kind,
+        venueId: adminQueueSnoozes.venueId,
+      });
+    if (!removed) {
+      return ctx.json({ success: false, error: 'Snooze not found' }, 404);
+    }
+    ctx.set('auditAction', 'needs_you.unsnooze');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    ctx.set('auditMeta', {
+      notUseful: true,
+      kind: removed.kind,
+      venueId: removed.venueId,
+    });
+    return ctx.json({ success: true, data: { id } });
   },
 );
 

@@ -19,7 +19,6 @@ import {
 } from '@concert-crawl/db';
 import {
   and,
-  avg,
   count,
   desc,
   eq,
@@ -69,6 +68,7 @@ import {
   HIDE_REASONS,
   deleteBlockers,
   upcomingShowCount,
+  pastShowsAndWatchers,
   upcomingShowSplit,
 } from './lib/venue-hide.js';
 
@@ -413,25 +413,36 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  const recentRuns = await db
-    .select({
-      id: crawlRuns.id,
-      status: crawlRuns.status,
-      durationMs: crawlRuns.durationMs,
-      createdAt: crawlRuns.createdAt,
-    })
-    .from(crawlRuns)
-    .where(
-      and(eq(crawlRuns.venueId, id), gte(crawlRuns.createdAt, sevenDaysAgo)),
-    )
-    .orderBy(desc(crawlRuns.createdAt));
+  // The independent reads run together. The 7-day runs also serve the average
+  // duration and, when they hold them, Latest run and the last full run.
+  const [recentRuns, [eventsCountResult], shows, pastAndWatchers, adminNames] =
+    await Promise.all([
+      db
+        .select({ ...latestRunColumns, durationMs: crawlRuns.durationMs })
+        .from(crawlRuns)
+        .where(
+          and(
+            eq(crawlRuns.venueId, id),
+            gte(crawlRuns.createdAt, sevenDaysAgo),
+          ),
+        )
+        .orderBy(desc(crawlRuns.createdAt)),
+      db
+        .select({ total: count(events.id) })
+        .from(events)
+        .where(eq(events.venueId, id)),
+      // The Overview's Shows card (3b). `eventsTracked` counts past shows too.
+      upcomingShowSplit(id),
+      pastShowsAndWatchers(id),
+      adminNamesOf([venue.crawlPausedBy, venue.hiddenBy]),
+    ]);
 
   // Build sparkline: one entry per calendar day over the past 7 days.
   // 'skipped' is healthy alongside 'success' (page-hash dedup), so days
   // ending in either status render green.
   const dayMap = new Map<string, boolean>();
   for (const run of recentRuns) {
-    const dayKey = run.createdAt.toISOString().slice(0, 10);
+    const dayKey = run.at.toISOString().slice(0, 10);
     if (!dayMap.has(dayKey)) {
       dayMap.set(dayKey, run.status === 'success' || run.status === 'skipped');
     }
@@ -458,21 +469,17 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   const sevenDayPercent =
     runDays > 0 ? Math.round((successDays / runDays) * 100) : 0;
 
-  const avgDurationResult = await db
-    .select({ avg: avg(crawlRuns.durationMs) })
-    .from(crawlRuns)
-    .where(
-      and(eq(crawlRuns.venueId, id), gte(crawlRuns.createdAt, sevenDaysAgo)),
-    );
-
-  const avgDurationMs = avgDurationResult[0]?.avg
-    ? Math.round(Number(avgDurationResult[0].avg))
-    : null;
-
-  const [eventsCountResult] = await db
-    .select({ total: count(events.id) })
-    .from(events)
-    .where(eq(events.venueId, id));
+  // AVG over the same rows: nulls skipped, and no runs (or no durations)
+  // reads as null, as the SQL average did.
+  const durations = recentRuns.flatMap((run) =>
+    run.durationMs === null ? [] : [run.durationMs],
+  );
+  const avgDurationMs =
+    durations.length > 0
+      ? Math.round(
+          durations.reduce((sum, ms) => sum + ms, 0) / durations.length,
+        )
+      : null;
 
   const eventsTracked = eventsCountResult?.total ?? 0;
 
@@ -488,25 +495,33 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   };
 
   // What a delete would destroy, for the ⋯ menu to say so before it is tried.
-  const blockers = await deleteBlockers(id);
+  // Its upcoming count is the Shows split's total, so the two always agree.
+  const blockers = {
+    ...pastAndWatchers,
+    upcomingShows: shows.shown + shows.hidden,
+  };
 
-  // The Overview's Shows card and Latest run (3b). `eventsTracked` above
-  // counts past shows too, so the card needs its own upcoming split.
-  const shows = await upcomingShowSplit(id);
-  const [latestRun] = await db
-    .select(latestRunColumns)
-    .from(crawlRuns)
-    .where(eq(crawlRuns.venueId, id))
-    .orderBy(desc(crawlRuns.createdAt))
-    .limit(1);
-  const [lastFull] = await db
-    .select({ at: crawlRuns.createdAt, eventsFound: crawlRuns.eventsFound })
-    .from(crawlRuns)
-    .where(and(eq(crawlRuns.venueId, id), eq(crawlRuns.status, 'success')))
-    .orderBy(desc(crawlRuns.createdAt))
-    .limit(1);
-
-  const adminNames = await adminNamesOf([venue.crawlPausedBy, venue.hiddenBy]);
+  // Latest run and the last full run (3b) come from the 7-day runs when they
+  // hold them. Otherwise one query returns the latest success and the latest
+  // other run (DISTINCT ON whether it succeeded), which serves both.
+  let latestRun: Parameters<typeof latestRunOf>[0] = recentRuns[0];
+  let lastFull: { at: Date; eventsFound: number } | undefined = recentRuns.find(
+    (run) => run.status === 'success',
+  );
+  if (latestRun === undefined || lastFull === undefined) {
+    const succeeded = sql`(${crawlRuns.status} = 'success')`;
+    const older = await db
+      .selectDistinctOn([succeeded], latestRunColumns)
+      .from(crawlRuns)
+      .where(eq(crawlRuns.venueId, id))
+      .orderBy(succeeded, desc(crawlRuns.createdAt));
+    lastFull ??= older.find((run) => run.status === 'success');
+    latestRun ??= older.reduce<Parameters<typeof latestRunOf>[0]>(
+      (latest, run) =>
+        latest === undefined || run.at > latest.at ? run : latest,
+      undefined,
+    );
+  }
 
   return ctx.json({
     success: true,
@@ -841,6 +856,41 @@ venuesAdminRouter.patch(
       );
     }
 
+    // The Map pin is a pair (3b): half a pin is no pin, and the map would read
+    // it as a real place. Checked on the merged row, only when the payload
+    // touches either half, so unrelated PATCHes never fail on an old row.
+    const nextLat = body.lat !== undefined ? body.lat : existing.lat;
+    const nextLng = body.lng !== undefined ? body.lng : existing.lng;
+    if (
+      (body.lat !== undefined || body.lng !== undefined) &&
+      (nextLat === null) !== (nextLng === null)
+    ) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'lat and lng are set together, or cleared together',
+          field: body.lat === undefined ? 'lat' : 'lng',
+        },
+        400,
+      );
+    }
+
+    // Contact email is where Ask the venue writes, and the pin is what fans
+    // are shown, so a change to either keeps its before and after in the audit.
+    const contactBefore: Record<string, string | number | null> = {};
+    const contactAfter: Record<string, string | number | null> = {};
+    for (const field of ['lat', 'lng', 'contactEmail'] as const) {
+      const next = body[field];
+      if (next !== undefined && next !== existing[field]) {
+        contactBefore[field] = existing[field];
+        contactAfter[field] = next;
+      }
+    }
+    const contactMeta =
+      Object.keys(contactAfter).length > 0
+        ? { contact: { before: contactBefore, after: contactAfter } }
+        : {};
+
     const [updated] = await db
       .update(venues)
       .set({
@@ -880,6 +930,7 @@ venuesAdminRouter.patch(
           ? { hide: { reason: hideReason ?? null, note: hideNote ?? null } }
           : {}),
         ...(body.active === true && !existing.active ? { show: true } : {}),
+        ...contactMeta,
       });
     } else if (hidingNow) {
       ctx.set('auditAction', 'venue.hide');
@@ -887,11 +938,14 @@ venuesAdminRouter.patch(
         reason: hideReason ?? null,
         note: hideNote ?? null,
         upcomingShows: await upcomingShowCount(id),
+        ...contactMeta,
       });
     } else if (body.active === true && !existing.active) {
       ctx.set('auditAction', 'venue.show');
+      if ('contact' in contactMeta) ctx.set('auditMeta', contactMeta);
     } else {
       ctx.set('auditAction', 'venue.update');
+      if ('contact' in contactMeta) ctx.set('auditMeta', contactMeta);
     }
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', getAuthUser(ctx).userId);

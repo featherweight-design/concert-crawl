@@ -38,8 +38,9 @@ export const upcomingShowCount = async (
  */
 export const upcomingShowSplit = async (
   venueId: string,
+  reader: Reader = db,
 ): Promise<{ shown: number; hidden: number }> => {
-  const [row] = await db
+  const [row] = await reader
     .select({
       shown: sql<number>`count(*) filter (where not ${events.hiddenFromConsumer})::int`,
       hidden: sql<number>`count(*) filter (where ${events.hiddenFromConsumer})::int`,
@@ -65,7 +66,19 @@ export interface DeleteBlockers {
 export const deleteBlockers = async (
   venueId: string,
   reader: Reader = db,
-): Promise<DeleteBlockers> => {
+): Promise<DeleteBlockers> => ({
+  ...(await pastShowsAndWatchers(venueId, reader)),
+  upcomingShows: await upcomingShowCount(venueId, reader),
+});
+
+/**
+ * The delete blockers other than the upcoming count, for a caller that already
+ * has that count (the venue detail takes it from `upcomingShowSplit`).
+ */
+export const pastShowsAndWatchers = async (
+  venueId: string,
+  reader: Reader = db,
+): Promise<Omit<DeleteBlockers, 'upcomingShows'>> => {
   const today = todayInDenver();
   const [past] = await reader
     .select({ total: count(events.id) })
@@ -76,9 +89,5 @@ export const deleteBlockers = async (
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
     .where(and(eq(events.venueId, venueId), eq(userEvents.status, 'watching')));
-  return {
-    pastShows: past?.total ?? 0,
-    upcomingShows: await upcomingShowCount(venueId, reader),
-    watchers: watchers?.total ?? 0,
-  };
+  return { pastShows: past?.total ?? 0, watchers: watchers?.total ?? 0 };
 };
