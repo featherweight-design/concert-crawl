@@ -131,10 +131,11 @@ export const PriceChecksTab = () => {
 
   const decide = async (check: OpenCheck, answer: 'use' | 'keep') => {
     setBusyId(check.contestId);
-    setErrors((current) => {
-      const { [check.contestId]: _gone, ...rest } = current;
-      return rest;
-    });
+    setErrors((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([id]) => id !== check.contestId),
+      ),
+    );
     try {
       await api.resolve(check, answer, COPY.reason);
       await load();
@@ -297,7 +298,7 @@ export const PriceChecksTab = () => {
                         onClick={() => void decide(check, 'use')}
                         style={isPhone ? { flex: 1 } : undefined}
                       >
-                        {COPY.use(asked)}
+                        {COPY.takeAnswer(asked)}
                       </AdminButton>
                       <AdminButton
                         variant="ghost"
@@ -306,7 +307,7 @@ export const PriceChecksTab = () => {
                         onClick={() => void decide(check, 'keep')}
                         style={isPhone ? { flex: 1 } : undefined}
                       >
-                        {COPY.keep(listed)}
+                        {COPY.keepAnswer(listed)}
                       </AdminButton>
                     </div>
                     {errors[check.contestId] && (

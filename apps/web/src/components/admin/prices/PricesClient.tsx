@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -20,6 +19,7 @@ import {
   MissingTab,
   type LoadMoreState,
 } from './MissingTab';
+import { PriceChecksTab } from './PriceChecksTab';
 import { SubmittedTab } from './SubmittedTab';
 import {
   pricesApi,
@@ -381,12 +381,7 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
         ) : tab === 'submitted' ? (
           <SubmittedTab />
         ) : (
-          <Link
-            href="/admin/review?tab=prices"
-            style={{ fontSize: 14, color: 'var(--signal)' }}
-          >
-            {COPY.interim.checks}
-          </Link>
+          <PriceChecksTab />
         )}
       </div>
 

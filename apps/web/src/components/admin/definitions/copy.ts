@@ -2488,9 +2488,6 @@ export const ADMIN_COPY = {
       submitted: 'Submitted',
       checks: 'Checks',
     },
-    interim: {
-      checks: 'Open Price checks',
-    },
     missing: {
       hint: 'A backlog, not a queue: no badge. Soonest and most-Watched first, with the ticket page one tap away.',
       listLabel: 'Shows missing a price',
@@ -2549,8 +2546,8 @@ export const ADMIN_COPY = {
     today: 'Today',
     yesterday: 'Yesterday',
     noHandle: 'a fan',
-    use: (price: string) => `Use ${price}`,
-    keep: (price: string) => `Keep ${price}`,
+    takeAnswer: (price: string) => `Use ${price}`,
+    keepAnswer: (price: string) => `Keep ${price}`,
     // The audit reason the resolve API requires; the board draws no reason field.
     reason: 'Decided from Prices, Price checks.',
     resolveFailed: "Couldn't save that answer",
