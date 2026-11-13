@@ -477,7 +477,8 @@ const bugRow = (over: Partial<BugFacts> = {}) =>
 describe('BugPanel', () => {
   it('draws the report, who sent it and the page path', () => {
     open(bugRow());
-    expect(screen.getByText('“Button broken”')).toBeInTheDocument();
+    // The panel title quotes the message too, so it shows twice.
+    expect(screen.getAllByText('“Button broken”')).toHaveLength(2);
     expect(screen.getByText('@fan1')).toBeInTheDocument();
     expect(screen.getByText('/events/abc')).toBeInTheDocument();
   });

@@ -226,7 +226,11 @@ export const AnswerButtons = ({
       data-testid="needs-you-answer"
       data-slug={answer.slug}
       {...iconProps(answer.slug)}
-      onClick={() => onAnswer(answer, paramsOf?.(answer))}
+      onClick={() => {
+        const params = paramsOf?.(answer);
+        if (params) onAnswer(answer, params);
+        else onAnswer(answer);
+      }}
       style={
         wide
           ? { width: '100%', minHeight: 40, minWidth: 0 }
