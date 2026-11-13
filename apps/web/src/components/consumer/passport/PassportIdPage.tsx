@@ -11,6 +11,13 @@ export interface PassportIdentity {
   city: string | null;
   avatarColor: AvatarColor | null;
   year: number;
+  /**
+   * When the account began, formatted as "Apr 2026". The "since" on the card
+   * is the first stamp's month; before there is a stamp it is this, so an
+   * empty book still reads "DENVER · SINCE SEP 2026" (addendum 4
+   * `passport-next-d`).
+   */
+  joined?: string | null;
 }
 
 interface PassportIdPageProps {
@@ -55,7 +62,7 @@ function Stat({
 
 /** The booklet's identity page: who, since when, and the year in three numbers. */
 export function PassportIdPage({ identity, stats }: PassportIdPageProps) {
-  const since = sinceLabel(stats.first?.date);
+  const since = sinceLabel(stats.first?.date) ?? identity.joined ?? null;
   const placeLine = [
     identity.city,
     since === null ? null : `${PASSPORT_COPY.footerSincePrefix} ${since}`,

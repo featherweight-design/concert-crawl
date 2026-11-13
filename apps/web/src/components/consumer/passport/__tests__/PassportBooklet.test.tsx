@@ -61,6 +61,37 @@ const IDENTITY = {
   year: 2026,
 };
 
+describe('PassportIdPage since', () => {
+  afterEach(cleanup);
+
+  // `passport-next-d`: an empty book still reads "DENVER · SINCE SEP 2026".
+  it('falls back to the month the account began when there is no stamp yet', () => {
+    render(
+      <PassportBooklet
+        pages={bookletPages([], null)}
+        identity={{ ...IDENTITY, joined: 'Sep 2026' }}
+        stats={passportStats([])}
+      />,
+    );
+    const id = document.querySelector('[data-booklet-leaf="id"]');
+    expect(id).toHaveTextContent('Denver · SINCE Sep 2026');
+  });
+
+  it('prefers the first stamp once there is one', () => {
+    const past = [row(0)];
+    render(
+      <PassportBooklet
+        pages={bookletPages(past, null)}
+        identity={{ ...IDENTITY, joined: 'Sep 2026' }}
+        stats={passportStats(toAttendedShows(past))}
+      />,
+    );
+    const id = document.querySelector('[data-booklet-leaf="id"]');
+    expect(id).not.toHaveTextContent('Sep 2026');
+    expect(id).toHaveTextContent('SINCE');
+  });
+});
+
 const renderBooklet = (count: number, next: HistoryShow | null = null) => {
   const past = Array.from({ length: count }, (_, i) => row(i));
   return render(
