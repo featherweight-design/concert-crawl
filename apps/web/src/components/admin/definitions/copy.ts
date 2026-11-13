@@ -3582,9 +3582,6 @@ export const ADMIN_COPY = {
       'Rows clear themselves on the next clean crawl. Mark one expected and it returns the moment its figure moves.',
   },
 
-  // The acknowledge control in the crawl inspector. Every string here has to
-  // carry the same idea: this is not a dismiss. The figure is pinned, and the
-  // fault comes back the moment it moves.
   // 4d Prices, the Submitted prices tab (boards 06 prices-submitted-prices,
   // prices-row-menu, reject-a-submitted-price, submitted-prices-mobile).
   pricesSubmitted: {
@@ -3642,6 +3639,7 @@ export const ADMIN_COPY = {
     },
     reject: {
       eyebrow: 'Reject price',
+      thisShow: 'this show',
       title: (price: string, show: string) => `Reject ${price} for ${show}?`,
       body: (handle: string | null) =>
         `The price comes off the show, and ${handle === null ? 'the fan' : `@${handle}`} sees it as Not used in Submitted prices, with your reason.`,
@@ -3660,6 +3658,10 @@ export const ADMIN_COPY = {
       notWaiting: 'That price is no longer waiting for you.',
     },
   },
+
+  // The acknowledge control in the crawl inspector. Every string here has to
+  // carry the same idea: this is not a dismiss. The figure is pinned, and the
+  // fault comes back the moment it moves.
   faultAcknowledge: {
     title: 'Is this expected?',
     body: 'Pin the figure you judged expected. The fault stops showing, and comes straight back if that figure moves.',

@@ -12,7 +12,6 @@ import {
   type GetToken,
 } from '../invite-codes/codes-api';
 import {
-  isRejectionReason,
   isSubmissionState,
   type RejectionReason,
   type StateFilter,
@@ -128,7 +127,6 @@ export const submittedApi = (getToken: GetToken) => ({
     reason: RejectionReason,
     note: string,
   ): Promise<void> => {
-    if (!isRejectionReason(reason)) throw new Error('reason');
     await call(getToken, `/v1/admin/prices/submissions/${id}/reject`, {
       method: 'POST',
       body: { reason, ...(note === '' ? {} : { note }) },
