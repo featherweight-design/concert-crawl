@@ -73,12 +73,12 @@ function VenuesArt() {
       data-testid="feature-art-venues"
       // Two rows of 4 tiles on a phone, two rows of 7 from lg, as the board
       // draws them; the tile scales with its box.
-      className="mx-auto flex max-w-[276px] flex-wrap justify-center gap-3 min-[390px]:max-w-[308px] lg:max-w-[700px] lg:gap-5"
+      className="mx-auto flex max-w-[244px] flex-wrap justify-center gap-3 min-[390px]:max-w-[308px] lg:max-w-[700px] lg:gap-5"
     >
       {TILE_SLUGS.map((slug, index) => (
         <span
           key={slug}
-          className={`h-[60px] w-[60px] min-[390px]:h-[68px] min-[390px]:w-[68px] lg:h-20 lg:w-20 [&>svg]:h-full [&>svg]:w-full ${
+          className={`h-[52px] w-[52px] min-[390px]:h-[68px] min-[390px]:w-[68px] lg:h-20 lg:w-20 [&>svg]:h-full [&>svg]:w-full ${
             index >= PHONE_TILES ? 'hidden lg:inline-flex' : 'inline-flex'
           }`}
         >
@@ -93,13 +93,13 @@ function WatchingArt() {
   return (
     <span
       data-testid="feature-art-watching"
-      className="inline-flex h-[64px] w-[64px] items-center justify-center rounded-[18px] border-[1.5px] border-accent bg-surface-1 text-accent"
+      className="inline-flex h-[84px] w-[84px] items-center justify-center rounded-[22px] border-[1.5px] border-accent bg-surface-1 text-accent"
       style={{
         boxShadow:
           '0 0 22px color-mix(in oklab, var(--accent) 35%, transparent)',
       }}
     >
-      <Eye size={30} strokeWidth={1.6} aria-hidden />
+      <Eye size={38} strokeWidth={1.6} aria-hidden />
     </span>
   );
 }
