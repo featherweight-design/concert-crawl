@@ -397,6 +397,37 @@ describe('admin venues API, redesign 3b', () => {
       await expectRulesUntouched(venue.id);
     });
 
+    // The old web (#397) sends a legacy row's delay raised to the 3 s floor.
+    it('accepts the old web shape for a legacy row stored under the floor', async () => {
+      const venue = await seedVenue({
+        name: 'Gothic',
+        slug: 'gothic',
+        crawlDelayMs: 1000,
+      });
+      const res = await json('PATCH', `venues/${venue.id}`, {
+        name: 'Gothic Theatre',
+        crawlDelayMs: 3000,
+      });
+      expect(res.status).toBe(200);
+      const row = await venueRow(venue.id);
+      expect(row?.name).toBe('Gothic Theatre');
+      expect(row?.crawlDelayMs).toBe(1000);
+    });
+
+    it('answers a removed venue with its removal before the crawl rules', async () => {
+      const venue = await seedVenue({
+        name: 'Gothic',
+        slug: 'gothic',
+        crawlDelayMs: 5000,
+        removedAt: new Date('2026-11-01T00:00:00Z'),
+      });
+      const res = await json('PATCH', `venues/${venue.id}`, {
+        active: true,
+        crawlDelayMs: 1000,
+      });
+      expect(res.status).toBe(409);
+    });
+
     it.each([
       [{ crawlDelayMs: 1000 }],
       [{ crawlDelayMs: 3000 }],

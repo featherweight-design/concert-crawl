@@ -18,11 +18,17 @@ export function validationHook(
   ctx: Context,
 ): Response | undefined {
   if (result.success) return undefined;
-  return ctx.json(
-    {
-      success: false,
-      error: { issues: result.error.issues, name: 'ZodError' },
-    },
-    400,
-  );
+  return zodIssuesResponse(ctx, result.error.issues);
+}
+
+/**
+ * The 400 body `parseZodIssues` reads, for a handler that refuses a field
+ * after validation (the hook above is the other writer). One owner for the
+ * contract `{ success: false, error: { issues, name: 'ZodError' } }`.
+ */
+export function zodIssuesResponse(
+  ctx: Context,
+  issues: readonly unknown[],
+): Response {
+  return ctx.json({ success: false, error: { issues, name: 'ZodError' } }, 400);
 }

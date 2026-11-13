@@ -112,6 +112,31 @@ describe('changedCrawlRule', () => {
     ).toBeNull();
   });
 
+  // The old web (#397) sends a legacy row's delay raised to the 3 s floor.
+  it('tolerates the floored delay of a legacy row stored under the floor', () => {
+    expect(
+      changedCrawlRule(
+        { crawlDelayMs: 3000 },
+        { ...stored, crawlDelayMs: 1000 },
+      ),
+    ).toBeNull();
+    expect(
+      changedCrawlRule(
+        { crawlDelayMs: 1000 },
+        { ...stored, crawlDelayMs: 1000 },
+      ),
+    ).toBeNull();
+  });
+
+  it('refuses any other delay for a legacy row', () => {
+    expect(
+      changedCrawlRule(
+        { crawlDelayMs: 5000 },
+        { ...stored, crawlDelayMs: 1000 },
+      ),
+    ).toBe('crawlDelayMs');
+  });
+
   it('compares the robots check as an instant, not a string', () => {
     expect(
       changedCrawlRule(
