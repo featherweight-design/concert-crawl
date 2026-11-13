@@ -1648,6 +1648,77 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
       10 * crawlDelayMs,
     );
   });
+
+  // Bluebird (AEG) reports "Galdive & rum.gold" as one headlinersText. The row
+  // was stored whole before flattened names were escalated, and verdict reuse
+  // handed that whole name back on every crawl, so rum.gold never got a page.
+  describe('verdict reuse and a stored flattened name', () => {
+    function seedGaldive(headliners: string[], canonicalHeadliners: string[]) {
+      const { venue, fetch } = seedPlatformVenue(1);
+      stores.events.push({
+        id: crypto.randomUUID(),
+        venueId: venue.id,
+        title: 'Galdive & rum.gold',
+        artist: 'Galdive & rum.gold',
+        canonicalArtist: 'galdive',
+        canonicalTitle: canonicalizeTitle('Galdive & rum.gold'),
+        date: '2027-02-12',
+        doorsTime: null,
+        showTime: null,
+        headliners,
+        canonicalHeadliners,
+        supportingArtists: [],
+        canonicalSupporting: [],
+        sourceHash: null,
+        verified: false,
+        status: 'upcoming',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      fetch.mockResolvedValueOnce({
+        events: [
+          {
+            title: 'Galdive & rum.gold',
+            rawTitle: 'Galdive & rum.gold',
+            artist: 'Galdive & rum.gold',
+            observedPerformers: ['Galdive & rum.gold'],
+            observedSupportingArtists: [],
+            date: '2027-02-12',
+            confidence: 1,
+            sourceUrl: 'https://venue.example.com/calendar',
+          },
+        ],
+        sourceUrl: 'https://platform.example.com/graphql',
+      });
+      return venue;
+    }
+
+    it('asks the adjudicator rather than reuse the name stored whole', async () => {
+      vi.mocked(adjudicateEvent).mockClear();
+      vi.mocked(adjudicateEvent).mockResolvedValueOnce({
+        isConcert: true,
+        headliners: ['Galdive', 'rum.gold'],
+        supportingArtists: [],
+      });
+      const venue = seedGaldive(['Galdive & rum.gold'], ['galdive']);
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(adjudicateEvent).toHaveBeenCalledOnce();
+    });
+
+    it('still reuses a bill the adjudicator already split', async () => {
+      vi.mocked(adjudicateEvent).mockClear();
+      const venue = seedGaldive(
+        ['Galdive', 'rum.gold'],
+        ['galdive', 'rum.gold'],
+      );
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(adjudicateEvent).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('crawlVenue — LLM cost tracking', () => {
