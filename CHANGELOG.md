@@ -1,3 +1,16 @@
+## [1.397.1](https://github.com/featherweight-design/concert-crawl/compare/v1.397.0...v1.397.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** keep the removed-venue guard to the API and crawler; the web handling follows [#351](https://github.com/featherweight-design/concert-crawl/issues/351) ([7b780fb](https://github.com/featherweight-design/concert-crawl/commit/7b780fbcd1d7f8cdf41980916c492ce2098cf592))
+* **api:** refuse to show, resume or crawl a removed venue ([4308c16](https://github.com/featherweight-design/concert-crawl/commit/4308c1694a3602a9fb98e060eec3f3c21cdd2654))
+* close the removed-venue gaps from the risk and code reviews ([a9b9b8e](https://github.com/featherweight-design/concert-crawl/commit/a9b9b8ef79e39e0234745156ffbe8741b4085fc1))
+* **crawler:** a split part never lands in supporting, a model verdict alone never clears a bill ([38c9bfd](https://github.com/featherweight-design/concert-crawl/commit/38c9bfdf211d641b1aad1ddc2e65fa16264dc277))
+* **crawler:** name a refused demotion and a model-only cover verdict in the not-written list ([37a99a5](https://github.com/featherweight-design/concert-crawl/commit/37a99a52f457671949f53708de423475b287f67e))
+* **crawler:** never fold a multi-day pass into a night, join a 12-hour time misread ([4c80eae](https://github.com/featherweight-design/concert-crawl/commit/4c80eaed69d720f6e42b9ec539b10c9e0dd2cec1))
+* **crawler:** order-free misread join, evening time wins, no midnight placeholder ([4554bb9](https://github.com/featherweight-design/concert-crawl/commit/4554bb996e5f56390899e3b9bd16464169ea6960))
+
 # [1.397.0](https://github.com/featherweight-design/concert-crawl/compare/v1.396.0...v1.397.0) (2026-11-13)
 
 
