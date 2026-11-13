@@ -253,10 +253,14 @@ describe('DiscoveryShelf', () => {
     expect(screen.getByText(COPY.title)).toBeTruthy();
     expect(screen.getByText(COPY.eyebrow(2))).toBeTruthy();
     expect(screen.getByRole('list', { name: COPY.listAria })).toBeTruthy();
-    // Sideways only, like the Your artists rail: no vertical scrollbar.
-    expect(
-      screen.getByRole('list', { name: COPY.listAria }).className,
-    ).toContain('overflow-y-hidden');
+    // Sideways only, like the Your artists rail: no vertical scrollbar. The
+    // scroller clips, so it pads 4px all round to keep the 2px focus ring.
+    const railClass = screen.getByRole('list', {
+      name: COPY.listAria,
+    }).className;
+    expect(railClass).toContain('overflow-y-hidden');
+    expect(railClass).toContain('py-1');
+    expect(railClass).toContain('sm:px-1');
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(2);
 

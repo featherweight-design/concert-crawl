@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { HISTORY_COPY } from './definitions/copy';
-import { myShowsTabFor } from './MyShowsShell';
+import { isMyShowsPath, myShowsTabFor, MyShowsShell } from './MyShowsShell';
 import MyShowsLayout from '@/app/(protected)/(main)/(my-shows)/layout';
 
 const pathname = vi.hoisted(() => ({ current: '/watching' }));
@@ -59,6 +59,19 @@ describe('myShowsTabFor', () => {
   });
 });
 
+describe('isMyShowsPath', () => {
+  it.each([
+    ['/watching', true],
+    ['/history', true],
+    ['/following', true],
+    ['/events', false],
+    ['/watchingx', false],
+    [null, false],
+  ] as const)('%s is %s', (input, expected) => {
+    expect(isMyShowsPath(input)).toBe(expected);
+  });
+});
+
 // The regression: each route drew its own bar inside its own column, so the
 // bar remounted and moved on every tab switch. The layout owns it now.
 describe('My shows layout', () => {
@@ -91,6 +104,30 @@ describe('My shows layout', () => {
       screen.getByRole('navigation', { name: TABS.ariaLabel }),
     );
     expect(shell).toContainElement(screen.getByText('page body'));
+  });
+
+  it('keeps the same bar node across a tab switch', async () => {
+    pathname.current = '/watching';
+    const view = render(
+      <MyShowsShell signedIn>
+        <p>page body</p>
+      </MyShowsShell>,
+    );
+    const before = screen.getByRole('navigation', { name: TABS.ariaLabel });
+
+    pathname.current = '/history';
+    view.rerender(
+      <MyShowsShell signedIn>
+        <p>other page</p>
+      </MyShowsShell>,
+    );
+
+    const after = screen.getByRole('navigation', { name: TABS.ariaLabel });
+    expect(after).toBe(before);
+    expect(screen.getByRole('link', { name: TABS.concerts })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('draws no bar on signed-out Watching, the teaching state', async () => {

@@ -38,8 +38,10 @@ export const SHELF_RAIL_GAP_CLASS = 'gap-[11px] sm:gap-[15px]';
  * computes `overflow-y` to `auto` as well (CSS never lets one axis stay
  * `visible` beside a scrolling one), so any fraction of a pixel of vertical
  * overflow, a rounded card height or the scrollbar's own track, drew a second,
- * vertical scrollbar on the row. The vertical axis is pinned to `hidden`; the
- * rails' own padding already leaves room for the cards' glow.
+ * vertical scrollbar on the row. The vertical axis is pinned to `hidden`.
+ * A scroller clips everything outside its padding box, the cards' focus ring
+ * and glow included, so each rail pads at least 4px on every side to keep the
+ * 2px focus ring whole.
  */
 export const SHELF_RAIL_SCROLL_CLASS = 'overflow-x-auto overflow-y-hidden';
 

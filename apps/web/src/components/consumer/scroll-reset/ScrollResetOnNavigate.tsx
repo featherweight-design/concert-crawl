@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { isMyShowsPath } from '@/components/consumer/history/MyShowsShell';
 
 // useLayoutEffect warns during server rendering; the effect only ever has work
 // to do in the browser.
@@ -42,7 +43,14 @@ export function ScrollResetOnNavigate(): null {
 
   useIsomorphicLayoutEffect(() => {
     if (previous.current === pathname) return;
+    const from = previous.current;
     previous.current = pathname;
+    // A tap between My shows tabs swaps only the content under a tab row that
+    // stays mounted (MyShowsShell), so it keeps its place like a filter does.
+    if (isMyShowsPath(from) && isMyShowsPath(pathname)) {
+      historyPath.current = null;
+      return;
+    }
     const restoring = historyPath.current === pathname;
     historyPath.current = null;
     if (restoring) return;
