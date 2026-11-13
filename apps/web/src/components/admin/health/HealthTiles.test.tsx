@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import {
   HealthHeader,
@@ -14,7 +14,22 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => 'token' }),
 }));
 
-afterEach(cleanup);
+// The panel picks a side panel or a sheet by media query; jsdom has none.
+beforeEach(() => {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({
+      matches: false,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const props: HealthTilesProps = {
   crawl: {

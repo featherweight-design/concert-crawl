@@ -135,7 +135,7 @@ describe('<LlmBudgetControl />', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     const toast = await screen.findByTestId('save-failed');
-    expect(toast).toHaveTextContent('Couldn’t change the LLM budget');
+    expect(toast).toHaveTextContent("Couldn't change the LLM budget");
     expect(toast).toHaveTextContent('The budget is still $15.');
     expect(mockRefresh).not.toHaveBeenCalled();
     expect(screen.getByText('Monthly LLM budget')).toBeInTheDocument();
