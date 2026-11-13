@@ -24,6 +24,7 @@ export * from './artist-slug.js';
 // `@concert-crawl/crawler-core/canonical` subpath and every call site intact.
 export * from './canonical-artist.js';
 export * from './best-effort-artist-pick.js';
+export * from './night-match.js';
 
 // Shared by canonicalizeArtist here and canonicalizeTitle in crawler-core —
 // the precomposed Latin Extended letters that NFD will not split into base +
