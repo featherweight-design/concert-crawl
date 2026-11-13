@@ -2,8 +2,9 @@ name: Merge duplicate nights
 
 # One-off cleanup of events stored twice for one night: runs
 # apps/crawler/scripts/merge-duplicate-nights.ts against PRODUCTION data by
-# default, or against the STAGING database with `target: staging` (the staging
-# environment's DATABASE_URL_DIRECT, the same secret the staging API deploy uses).
+# default, or against the STAGING database with `target: staging`. Each target
+# runs in its own GitHub environment and reads that environment's own
+# CRAWLER_DATABASE_URL (the secret the crawler run workflow uses per environment).
 #
 # Safe by default. Dispatching it does a DRY RUN: nothing is written, and the
 # run's summary page lists every night it would merge (the row kept, the rows
@@ -13,17 +14,20 @@ name: Merge duplicate nights
 # sample.
 #
 # Guards:
-# - Only main's copy of this workflow and its script may read the production
-#   secrets: a dispatch from any other branch is skipped.
+# - Only main's copy of this workflow and its script may read either
+#   environment's secrets: a dispatch from any other branch is skipped.
 # - The job runs in the chosen target's environment (`production` or
-#   `staging`), behind that environment's protection rules, and reads only that
-#   environment's secret.
+#   `staging`), behind whatever protection rules that environment has (production
+#   has required reviewers; staging may not), and reads only that environment's
+#   secret.
+# - One run per target at a time, and a staging run never cancels or queues
+#   behind a production one.
 # - Each folded row merges in its own transaction (the admin merge's own core),
 #   and the plan is re-checked against the live rows just before it runs, so a
 #   row that changed since the dry run is skipped. A night that fails part-way
 #   can have its earlier rows merged; the summary says so, and a fill that
 #   fails after a merge is listed with the values it could not write.
-# - Dispatches never overlap: one cleanup at a time.
+# - Dispatches to one target never overlap: one cleanup at a time.
 #
 # What a merge does: every watch, going mark and attendance stamp, report, price
 # submission and price log on a folded row moves to the surviving row, the
@@ -44,7 +48,7 @@ on:
         type: string
         default: ''
       target:
-        description: 'Which database. Production is the default; staging uses the staging environment and its own direct database URL.'
+        description: 'Which database. Production is the default; staging runs in the staging environment against its own database.'
         type: choice
         options:
           - production
@@ -55,7 +59,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: merge-duplicate-nights
+  group: merge-duplicate-nights-${{ inputs.target }}
   cancel-in-progress: false
 
 jobs:
@@ -86,19 +90,25 @@ jobs:
       - name: Build the crawler's dependencies
         run: pnpm exec turbo run build --filter=@concert-crawl/crawler^...
 
-      # Checked by name, never printed. GitHub masks secret values in logs.
+      # Checked by name, never printed. GitHub masks secret values in logs. The
+      # secret is the same name in both environments (the job's environment picks
+      # which value it is), so there is no fallback from one to the other.
       - name: Verify configuration
         env:
-          TARGET_DATABASE_URL: ${{ inputs.target == 'staging' && secrets.DATABASE_URL_DIRECT || secrets.CRAWLER_DATABASE_URL }}
+          TARGET_ENV: ${{ inputs.target }}
+          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
         run: |
-          if [ -z "$TARGET_DATABASE_URL" ]; then
-            echo "Missing ${{ inputs.target }}-environment database secret"
+          case "$TARGET_ENV" in production|staging) ;; *)
+            echo "target must be production or staging (got '$TARGET_ENV')"; exit 1 ;;
+          esac
+          if [ -z "$CRAWLER_DATABASE_URL" ]; then
+            echo "Missing $TARGET_ENV-environment secret: CRAWLER_DATABASE_URL"
             exit 1
           fi
 
       - name: Merge duplicate nights (${{ inputs.apply && 'APPLY' || 'dry run' }})
         env:
-          DATABASE_URL: ${{ inputs.target == 'staging' && secrets.DATABASE_URL_DIRECT || secrets.CRAWLER_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
           APPLY: ${{ inputs.apply }}
           MAX_GROUPS: ${{ inputs.max_groups }}
         run: |
