@@ -69,7 +69,11 @@ describe('ShowFan', () => {
       <ShowFan shows={[show('a', null), show('b', null), show('c', null)]} />,
     );
     const root = container.querySelector<HTMLElement>('div')!;
-    expect(root.className).toContain('min-[390px]:[--fan-card-w:165px]');
+    // 165px at every phone width, as invite-320 draws it; the fan clips the
+    // side cards instead of shrinking them.
+    expect(root.className).toContain('[--fan-card-w:165px]');
+    expect(root.className).not.toContain('38vw');
+    expect(root.style.overflowX).toBe('clip');
     expect(root.className).toContain('[--fan-dx:0.65]');
     const cards = [
       ...container.querySelectorAll<HTMLElement>('[style*="rotate("]'),
