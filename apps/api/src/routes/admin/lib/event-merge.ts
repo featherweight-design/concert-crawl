@@ -1,12 +1,9 @@
-import { and, eq, or, sql } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import {
-  auditLog,
   db,
-  eventReports,
   events,
+  mergeEventRows,
   notifications,
-  priceRetrievalLog,
-  priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db';
@@ -34,8 +31,10 @@ export type MergeEventsResult =
 
 /**
  * Fold a source event into a target event: every user-side reference moves
- * onto the target and the source row is deleted, in one transaction. See
- * POST /v1/admin/events/:id/merge for the full contract.
+ * onto the target, a redirect records where the source went, and the source
+ * row is deleted, in one transaction (`mergeEventRows` in @concert-crawl/db,
+ * shared with the duplicate-night cleanup). See POST
+ * /v1/admin/events/:id/merge for the full contract.
  */
 export const mergeEvents = async ({
   sourceId,
@@ -69,140 +68,14 @@ export const mergeEvents = async ({
     return { ok: 'target_not_found' };
   }
 
-  const merged = await db.transaction(async (tx) => {
-    // Captured BEFORE any row moves: these are the users who were watching
-    // the row that is disappearing, and they are the only ones for whom
-    // anything changed. Reading watchers off the target after the merge
-    // would also sweep up people who only ever watched the target.
-    const movedWatchers = await tx
-      .select({ userId: userEvents.userId })
-      .from(userEvents)
-      .where(
-        and(
-          eq(userEvents.eventId, sourceId),
-          eq(userEvents.status, 'watching'),
-        ),
-      );
-
-    // user_events: drop conflicting source rows (target wins) before moving
-    // the rest. Doing the delete inside the same transaction means a partial
-    // failure rolls the drops back too.
-    // Before dropping the losing source rows, salvage their attendance onto
-    // the target: an attended night must not vanish because an admin merged
-    // two listings for the same show (#70). LEAST() keeps the earliest
-    // commitment, which is the honest timestamp for when the user decided.
-    // Postgres LEAST/GREATEST ignore NULL arguments (unlike most other SQL
-    // dialects and unlike ordinary operators) and return NULL only when
-    // every argument is NULL — so a watching-only target with a NULL
-    // attending_at correctly adopts the source's timestamp. No COALESCE
-    // wrapper needed; adding one would be a no-op here.
-    const coalescedAttending = await tx
-      .update(userEvents)
-      .set({
-        attendingAt: sql`LEAST(
-            ${userEvents.attendingAt},
-            (SELECT src.attending_at FROM ${userEvents} src
-              WHERE src.event_id = ${sourceId}
-                AND src.user_id = ${userEvents.userId})
-          )`,
-      })
-      .where(
-        and(
-          eq(userEvents.eventId, targetId),
-          sql`EXISTS (
-              SELECT 1 FROM ${userEvents} src
-              WHERE src.event_id = ${sourceId}
-                AND src.user_id = ${userEvents.userId}
-                AND src.attending_at IS NOT NULL
-            )`,
-        ),
-      )
-      .returning({ id: userEvents.id });
-
-    const droppedUserEvents = await tx
-      .delete(userEvents)
-      .where(
-        and(
-          eq(userEvents.eventId, sourceId),
-          sql`EXISTS (
-              SELECT 1 FROM ${userEvents} t
-              WHERE t.event_id = ${targetId}
-                AND t.user_id = ${userEvents.userId}
-            )`,
-        ),
-      )
-      .returning({ id: userEvents.id });
-
-    const movedUserEvents = await tx
-      .update(userEvents)
-      .set({ eventId: targetId })
-      .where(eq(userEvents.eventId, sourceId))
-      .returning({ id: userEvents.id });
-
-    const movedReports = await tx
-      .update(eventReports)
-      .set({ eventId: targetId })
-      .where(eq(eventReports.eventId, sourceId))
-      .returning({ id: eventReports.id });
-
-    const movedSubmissions = await tx
-      .update(priceSubmissions)
-      .set({ eventId: targetId, updatedAt: new Date() })
-      .where(eq(priceSubmissions.eventId, sourceId))
-      .returning({ id: priceSubmissions.id });
-
-    const movedLogs = await tx
-      .update(priceRetrievalLog)
-      .set({ eventId: targetId })
-      .where(eq(priceRetrievalLog.eventId, sourceId))
-      .returning({ id: priceRetrievalLog.id });
-
-    // With every reference moved, deleting the source row is safe — there's
-    // nothing left to cascade. Doing this last means a failure earlier in
-    // the transaction never reaches the destructive step.
-    //
-    // The DELETE returns the affected rows so we can detect a concurrent
-    // race: if a parallel merge (or delete) cleared the source between the
-    // pre-flight existence check and now, we'd otherwise commit a no-op
-    // with a misleading "success" + audit row. Throwing rolls the whole
-    // transaction back.
-    const deletedSource = await tx
-      .delete(events)
-      .where(eq(events.id, sourceId))
-      .returning({ id: events.id });
-    if (deletedSource.length === 0) {
-      throw new Error('Source event disappeared mid-merge');
-    }
-
-    const counts = {
-      userEventsMoved: movedUserEvents.length,
-      userEventsDropped: droppedUserEvents.length,
-      attendingCoalesced: coalescedAttending.length,
-      reportsMoved: movedReports.length,
-      submissionsMoved: movedSubmissions.length,
-      priceLogsMoved: movedLogs.length,
-    };
-
-    if (audit) {
-      await tx.insert(auditLog).values({
-        actorId,
-        action: 'event.merge',
-        targetId,
-        metadata: {
-          sourceId,
-          referencesMoved: counts,
-          suggestion: suggestion ?? null,
-          notifyWatchers,
-        },
-      });
-    }
-
-    return {
-      counts,
-      movedWatcherIds: movedWatchers.map((row) => row.userId),
-    };
+  const merged = await mergeEventRows({
+    sourceId,
+    targetId,
+    actorId,
+    suggestion,
+    notifyWatchers,
+    audit,
   });
-  const referencesMoved = merged.counts;
 
   // After commit, mirroring the PATCH call site: the fan-out is best-effort
   // by contract and never throws, so it must not sit inside the transaction
@@ -237,5 +110,5 @@ export const mergeEvents = async ({
     );
   }
 
-  return { ok: 'merged', referencesMoved };
+  return { ok: 'merged', referencesMoved: merged.counts };
 };

@@ -1,6 +1,7 @@
 export * from './venues.js';
 export * from './venue-guide.js';
 export * from './events.js';
+export * from './event-redirects.js';
 export * from './artist-reports.js';
 export * from './artists.js';
 export * from './crawl-runs.js';

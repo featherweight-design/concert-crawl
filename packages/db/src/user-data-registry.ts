@@ -429,6 +429,15 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     reason: 'Public event catalogue.',
   },
   {
+    tableName: 'event_redirects',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: [],
+    exportKey: null,
+    exportColumns: null,
+    reason: 'Where a merged-away public event went; no person is named.',
+  },
+  {
     tableName: 'artists',
     disposition: 'none',
     userIdColumn: null,
