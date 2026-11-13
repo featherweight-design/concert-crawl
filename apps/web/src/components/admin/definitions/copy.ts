@@ -685,7 +685,7 @@ export const ADMIN_COPY = {
       ranFailed: 'The re-crawl ran and failed. See Crawl history.',
       unknown:
         'The re-crawl was queued, but we couldn’t read its progress. See Crawl history.',
-      stalled: 'Still queued. Check Crawl history.',
+      stalled: 'Still queued. See Crawl history.',
       dismiss: 'Dismiss',
     },
     // The crawl summary the old header card carried, kept under the new
