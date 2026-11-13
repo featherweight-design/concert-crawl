@@ -9,8 +9,10 @@ import {
 /**
  * Inspect's pure rules (3b part 5). Fetched venue HTML is untrusted: it is
  * never inserted as HTML in the app's document. The HTML tab shows it as
- * React text and the Text tab reads `textContent` from an inert DOMParser
- * document.
+ * React text, the Text tab reads `textContent` from an inert DOMParser
+ * document, and the Page tab hands a defused copy (`pageSrcDoc`) to a
+ * `sandbox=""` srcdoc iframe under a CSP that allows no network loads but
+ * `data:` images.
  */
 
 // ── Which page ───────────────────────────────────────────────
@@ -62,17 +64,100 @@ export const stoppedHerePage = (
 
 // ── Tabs ─────────────────────────────────────────────────────
 
-// The Page tab (the sandboxed srcdoc iframe) joins these in 3b part 5b.
-export const INSPECT_TABS = ['text', 'html'] as const;
+// The board's order.
+export const INSPECT_TABS = ['page', 'text', 'html'] as const;
 export type InspectTab = (typeof INSPECT_TABS)[number];
 
 /** A feed read (`fetch_mode = 'api'`): there is no page to draw (row 31). */
 export const isFeedPage = (page: Pick<RunPage, 'fetchMode'>): boolean =>
   page.fetchMode === 'api';
 
+/** The tabs a page offers: a feed has no Page tab. */
+export const inspectTabs = (feed: boolean): readonly InspectTab[] =>
+  feed ? ['text', 'html'] : INSPECT_TABS;
+
 /** The tab Inspect opens on: Text for a feed, HTML otherwise (the board). */
 export const defaultInspectTab = (feed: boolean): InspectTab =>
   feed ? 'text' : 'html';
+
+// ── The Page tab ─────────────────────────────────────────────
+
+/**
+ * The Page frame's policy: no script, no fetch, no font, no frame and no
+ * remote image or stylesheet; inline styles and `data:` images only. It
+ * can't stop the frame navigating itself (a link click), so `pageSrcDoc`
+ * takes the ways to navigate out of the markup.
+ */
+export const INSPECT_CSP =
+  "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'";
+
+export const INSPECT_CSP_META = `<meta http-equiv="Content-Security-Policy" content="${INSPECT_CSP}">`;
+
+/**
+ * A leading doctype, after an optional BOM and HTML whitespace only (tab,
+ * LF, FF, CR, space: JS `\s` is wider, and U+00A0 or U+2028 there would make
+ * the parser open the body before the meta). The tokenizer ends a doctype at
+ * the first `>`, even inside a quoted identifier, so `[^>]*` matches what
+ * the browser reads.
+ */
+const LEADING_DOCTYPE = /^(﻿)?([\t\n\f\r ]*<!doctype[^>]*>)/i;
+
+/**
+ * The CSP meta placed so the parser makes it the head's first element. It
+ * goes right after a leading doctype (dropping a BOM, which a string has no
+ * use for and which would otherwise be text ahead of the head). If anything
+ * else comes first it goes before everything, and the page renders in quirks
+ * mode. Either way the parser opens the head for it, so a `<head>` hidden in
+ * a comment or a script can't pull it out of the head.
+ */
+export const withCsp = (html: string): string => {
+  const doctype = LEADING_DOCTYPE.exec(html);
+  if (doctype === null) return `${INSPECT_CSP_META}${html}`;
+  const rest = html.slice(doctype[0].length);
+  return `${doctype[2] ?? ''}${INSPECT_CSP_META}${rest}`;
+};
+
+/** What can run, or embed another document, in the frame. */
+const INERT_REMOVED =
+  'script, noscript, template, iframe, frame, frameset, object, embed, base';
+
+const XLINK = 'http://www.w3.org/1999/xlink';
+
+/**
+ * The Page tab's `srcdoc`. The body is parsed into an inert DOMParser
+ * document (nothing runs or loads), and in that copy only:
+ * - script, noscript, template, frames, object, embed and `<base>` go;
+ * - every `on*` attribute goes;
+ * - `<meta http-equiv="refresh">` goes;
+ * - links and areas lose `href`, forms `action`, buttons `formaction`;
+ * so the frame can't run anything or navigate itself to the live page.
+ * The copy is serialised as a standards document and the CSP meta goes
+ * first in its head (`withCsp`).
+ */
+export const pageSrcDoc = (html: string): string => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll(INERT_REMOVED).forEach((node) => node.remove());
+  doc.querySelectorAll('meta[http-equiv]').forEach((node) => {
+    const equiv = node.getAttribute('http-equiv') ?? '';
+    if (equiv.trim().toLowerCase() === 'refresh') node.remove();
+  });
+  doc.querySelectorAll('a, area').forEach((node) => {
+    node.removeAttribute('href');
+    node.removeAttributeNS(XLINK, 'href');
+  });
+  doc
+    .querySelectorAll('form')
+    .forEach((node) => node.removeAttribute('action'));
+  doc
+    .querySelectorAll('[formaction]')
+    .forEach((node) => node.removeAttribute('formaction'));
+  doc.querySelectorAll('*').forEach((node) => {
+    Array.from(node.attributes)
+      .filter((attr) => attr.name.toLowerCase().startsWith('on'))
+      .forEach((attr) => node.removeAttribute(attr.name));
+  });
+  return withCsp(`<!doctype html>${doc.documentElement.outerHTML}`);
+};
 
 // ── The Text tab ─────────────────────────────────────────────
 

@@ -933,7 +933,9 @@ export const ADMIN_COPY = {
     menuLabel: 'Inspect actions',
     fetched: 'What we fetched',
     tabsLabel: 'Show the page as',
-    tabs: { text: 'Text', html: 'HTML' },
+    tabs: { page: 'Page', text: 'Text', html: 'HTML' },
+    // The Page frame's title: "ballarena.com/events as fetched, scripts off".
+    frameTitle: (page: string) => `${page} as fetched, scripts off`,
     stoppedHere: (page: number) => `Stopped here: page ${page} never loaded`,
     keptFor: 'Fetched pages are kept for 14 days.',
     loading: 'Loading the page we fetched…',

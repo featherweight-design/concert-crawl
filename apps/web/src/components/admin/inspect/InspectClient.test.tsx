@@ -45,6 +45,7 @@ import { ApiError } from '@/lib/api';
 import { InspectClient, type InspectClientProps } from './InspectClient';
 import type { RunPage, RunRow } from '@/components/admin/crawl-runs/run-data';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { INSPECT_CSP, pageSrcDoc } from './inspect-rules';
 
 const COPY = ADMIN_COPY.inspect;
 
@@ -219,23 +220,99 @@ describe('InspectClient', () => {
     expect(Reflect.get(window, '__inspectRan')).toBeUndefined();
   });
 
-  it('has Text and HTML only, and switches between them', async () => {
+  it('has Page, Text and HTML, and switches between them', async () => {
     mockGet.mockResolvedValue({ html: HTML });
     render(<InspectClient {...props()} />);
     await screen.findByTestId('inspect-html');
     const tabs = within(screen.getByTestId('inspect-tabs'));
     expect(tabs.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      COPY.tabs.page,
       COPY.tabs.text,
       COPY.tabs.html,
     ]);
+    // No frame until the Page tab opens.
     expect(document.querySelector('iframe')).toBeNull();
 
     fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.text }));
     expect(screen.getByTestId('inspect-text').textContent).toBe('Tate McRae');
     expect(screen.queryByTestId('inspect-html')).toBeNull();
 
+    fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.page }));
+    expect(screen.getByTestId('inspect-frame')).toBeTruthy();
+    expect(screen.queryByTestId('inspect-text')).toBeNull();
+
     fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.html }));
     expect(screen.getByTestId('inspect-html')).toBeTruthy();
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+
+  it('draws the page only in a sandbox="" frame with no referrer and the CSP', async () => {
+    mockGet.mockResolvedValue({ html: HTML });
+    render(<InspectClient {...props()} />);
+    await screen.findByTestId('inspect-html');
+    const tabs = within(screen.getByTestId('inspect-tabs'));
+    fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.page }));
+    const frame = screen.getByTestId('inspect-frame');
+    expect(frame.tagName).toBe('IFRAME');
+    // Exactly empty: every sandbox restriction, no allow-* token.
+    expect(frame.getAttribute('sandbox')).toBe('');
+    expect(frame.hasAttribute('allow')).toBe(false);
+    expect(frame.getAttribute('referrerpolicy')).toBe('no-referrer');
+    expect(frame.getAttribute('csp')).toBe(INSPECT_CSP);
+    const title = frame.getAttribute('title') ?? '';
+    expect(title).not.toBe('');
+    expect(title).toBe(COPY.frameTitle('ballarena.com/events'));
+    const srcdoc = frame.getAttribute('srcdoc') ?? '';
+    expect(srcdoc).toBe(pageSrcDoc(HTML));
+    expect(srcdoc).not.toContain('__inspectRan');
+    // The page never joins the app's own document.
+    expect(screen.queryByText('Tate McRae')).toBeNull();
+    expect(document.querySelector('h1')?.textContent).not.toBe('Tate McRae');
+    expect(document.querySelector('script')).toBeNull();
+    expect(Reflect.get(window, '__inspectRan')).toBeUndefined();
+  });
+
+  it('a page’s scripts and handlers never run from the Page tab', async () => {
+    const body =
+      '<html><body onload="alert(3)"><script>alert(1)</script><img src=x onerror="alert(2)"><p>Show</p></body></html>';
+    mockGet.mockResolvedValue({ html: body });
+    const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    render(<InspectClient {...props()} />);
+    await screen.findByTestId('inspect-html');
+    const tabs = within(screen.getByTestId('inspect-tabs'));
+    fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.page }));
+    const srcdoc =
+      screen.getByTestId('inspect-frame').getAttribute('srcdoc') ?? '';
+    expect(srcdoc.toLowerCase()).not.toContain('<script');
+    expect(srcdoc).not.toMatch(/\son[a-z]+\s*=/i);
+    expect(srcdoc).not.toContain('alert(');
+    expect(document.querySelector('img[onerror]')).toBeNull();
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('sizes the frame to the card: 520 on desktop, 420 on the phone', async () => {
+    mockGet.mockResolvedValue({ html: HTML });
+    render(<InspectClient {...props()} />);
+    await screen.findByTestId('inspect-html');
+    fireEvent.click(
+      within(screen.getByTestId('inspect-tabs')).getByRole('tab', {
+        name: COPY.tabs.page,
+      }),
+    );
+    const frame = screen.getByTestId('inspect-frame');
+    expect(frame.style.height).toBe('520px');
+    expect(frame.style.width).toBe('100%');
+    cleanup();
+
+    phone = true;
+    render(<InspectClient {...props()} />);
+    await screen.findByTestId('inspect-html');
+    fireEvent.click(
+      within(screen.getByTestId('inspect-tabs')).getByRole('tab', {
+        name: COPY.tabs.page,
+      }),
+    );
+    expect(screen.getByTestId('inspect-frame').style.height).toBe('420px');
   });
 
   it('never makes the body’s markup into elements, on either tab', async () => {
@@ -261,7 +338,7 @@ describe('InspectClient', () => {
     expect(alert).not.toHaveBeenCalled();
   });
 
-  it('a feed run opens on Text', async () => {
+  it('a feed run opens on Text and has no Page', async () => {
     mockGet.mockResolvedValue({ html: '<rss><item>Jelly Roll</item></rss>' });
     const feed = page({ fetchMode: 'api' });
     render(<InspectClient {...props({ pages: [feed], page: feed })} />);
@@ -272,6 +349,9 @@ describe('InspectClient', () => {
         .getByRole('tab', { name: COPY.tabs.text })
         .getAttribute('aria-selected'),
     ).toBe('true');
+    expect(tabs.queryByRole('tab', { name: COPY.tabs.page })).toBeNull();
+    expect(tabs.getAllByRole('tab')).toHaveLength(2);
+    expect(screen.queryByTestId('inspect-frame')).toBeNull();
   });
 
   it('says where the run stopped, above the HTML', async () => {
