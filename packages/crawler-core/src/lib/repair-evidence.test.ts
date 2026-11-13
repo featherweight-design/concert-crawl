@@ -25,13 +25,26 @@ describe('classifyBillChange: what the repair may write', () => {
         { h: ['Concrete & Jerry Garcia'] },
         { h: ['Concrete'], s: ['Jerry Garcia'] },
       ),
-    ).toEqual({ write: false, reason: 'would-drop-stored-headliner' });
+    ).toEqual({ write: false, reason: 'would-demote-split-part' });
     expect(
       verdict(
         { h: ['Galdive & rum.gold'] },
         { h: ['Galdive'], s: ['rum.gold'] },
       ),
-    ).toEqual({ write: false, reason: 'would-drop-stored-headliner' });
+    ).toEqual({ write: false, reason: 'would-demote-split-part' });
+  });
+
+  it('still writes a split beside an unrelated stored supporting act, and refuses a partial three-part split', () => {
+    expect(
+      verdict(
+        { h: ['Nas & The Roots'], s: ['Local Opener'] },
+        { h: ['Nas', 'The Roots'], s: ['Local Opener'] },
+      ),
+    ).toEqual({ write: true, kind: 'split' });
+    // Only two of three parts reach the headliners: not a split.
+    expect(
+      verdict({ h: ['A + B + C'] }, { h: ['A', 'B'], s: ['C'] }),
+    ).toMatchObject({ write: false });
   });
 
   it('keeps the other stored acts beside a split', () => {
