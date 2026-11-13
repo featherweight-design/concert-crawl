@@ -1,3 +1,12 @@
+## [1.419.3](https://github.com/featherweight-design/concert-crawl/compare/v1.419.2...v1.419.3) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** budget every probe request and hop, deadline-aware hop waits ([d6b93a1](https://github.com/featherweight-design/concert-crawl/commit/d6b93a1c3f3d026584e6caca64da9763e4d7e7e6))
+* **crawler:** cap probe redirects, pace vendor detection ([2bcfb6b](https://github.com/featherweight-design/concert-crawl/commit/2bcfb6b70375623bc89d2b4c2c1685b65e2ca292))
+* **crawler:** pace every request to a venue, sitemap included ([5e97df5](https://github.com/featherweight-design/concert-crawl/commit/5e97df570b6c7c52f032f35f9e1d456581ed81f8))
+
 ## [1.419.2](https://github.com/featherweight-design/concert-crawl/compare/v1.419.1...v1.419.2) (2026-11-13)
 
 
