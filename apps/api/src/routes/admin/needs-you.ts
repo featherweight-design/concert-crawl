@@ -386,7 +386,14 @@ needsYouAdminRouter.post(
 
     const outcome = await handler.run(item, params, actorId);
     if (!outcome.ok) {
-      return ctx.json({ success: false, error: outcome.error }, outcome.status);
+      return ctx.json(
+        {
+          success: false,
+          error: outcome.error,
+          ...(outcome.code === undefined ? {} : { code: outcome.code }),
+        },
+        outcome.status,
+      );
     }
 
     // Notifying and non-undoable answers record no prior state.

@@ -7,7 +7,7 @@ import {
   pauseVenueCrawl,
   resolvePauseDetails,
 } from '../venue-crawl-pause.js';
-import { VENUE_REMOVED_ERROR } from '../venue-hide.js';
+import { VENUE_REMOVED_CODE, VENUE_REMOVED_ERROR } from '../venue-hide.js';
 import { define, fail, noParams } from './answer-kit.js';
 
 export const reCrawl = (
@@ -32,7 +32,7 @@ export const reCrawl = (
         case 'not_found':
           return fail(404, 'Venue not found');
         case 'removed':
-          return fail(409, VENUE_REMOVED_ERROR);
+          return fail(409, VENUE_REMOVED_ERROR, VENUE_REMOVED_CODE);
         case 'not_crawlable':
           return fail(422, 'Venue must be active and verified to crawl');
         case 'paused':

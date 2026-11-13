@@ -25,10 +25,11 @@ export type HideReason = (typeof HIDE_REASONS)[number];
  */
 export const VENUE_REMOVED_ERROR =
   'This venue asked us to remove its data, so it stays off the site.';
+export const VENUE_REMOVED_CODE = 'venue_removed';
 export const venueRemovedBody = {
   success: false,
   error: VENUE_REMOVED_ERROR,
-  code: 'venue_removed',
+  code: VENUE_REMOVED_CODE,
 } as const;
 
 /** The database or a transaction on it, so a count can join a delete's lock. */

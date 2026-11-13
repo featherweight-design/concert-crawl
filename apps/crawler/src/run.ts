@@ -488,6 +488,8 @@ export async function runDailyCrawl(): Promise<{
         eq(venues.verified, true),
         isNull(venues.blockedAt),
         isNull(venues.crawlPausedAt),
+        // A removed venue is never crawled, whatever its other columns say.
+        isNull(venues.removedAt),
       ),
     );
 

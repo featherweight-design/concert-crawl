@@ -239,6 +239,18 @@ export const updateVenueSchema = createVenueSchema
     },
   );
 
+// The PATCH fields that point or arm a venue's crawl. Changing any of them on a
+// removed venue is refused (409 venue_removed); sending one unchanged is not.
+const CRAWL_CONFIG_FIELDS = [
+  'verified',
+  'websiteUrl',
+  'platform',
+  'platformVenueId',
+  'apiProvider',
+  'apiAccountId',
+  'crawlMode',
+] as const;
+
 /** The latest crawl run of a venue, as the list and the detail show it. */
 const latestRunOf = (
   run:
@@ -624,9 +636,16 @@ venuesAdminRouter.patch(
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
-    // A removed venue asked us to remove its data: Show never brings it back.
-    // Restoring one needs a deliberate, separately approved path, not this one.
-    if (body.active === true && existing.removedAt !== null) {
+    // A removed venue asked us to remove its data: Show never brings it back,
+    // and nothing here re-points or re-arms its crawl. Its display fields
+    // (name, address, about...) can still be edited, and a full-form save that
+    // sends its crawl fields unchanged still goes through. Restoring a removed
+    // venue needs a deliberate, separately approved path, not this one.
+    const reconfiguresCrawl = CRAWL_CONFIG_FIELDS.some(
+      (key) => body[key] !== undefined && body[key] !== existing[key],
+    );
+    const refusedIfRemoved = body.active === true || reconfiguresCrawl;
+    if (refusedIfRemoved && existing.removedAt !== null) {
       return ctx.json(venueRemovedBody, 409);
     }
 
@@ -641,7 +660,7 @@ venuesAdminRouter.patch(
       );
     }
     // Hiding an already-hidden venue keeps who hid it and why; showing it again
-    // clears the explanation along with the removal marker.
+    // clears the explanation.
     const hidingNow = body.active === false && existing.active;
     // A venue hidden before reasons were stored can be given one by hiding it
     // again; one that already has a reason keeps its first hider and reason.
@@ -688,14 +707,6 @@ venuesAdminRouter.patch(
         : body.verified === false
           ? { verifiedBy: null, verifiedAt: null }
           : {};
-
-    // Ensure only one flagship at a time — clear others before setting this one
-    if (body.featured === true) {
-      await db
-        .update(venues)
-        .set({ featured: false })
-        .where(and(eq(venues.featured, true), not(eq(venues.id, id))));
-    }
 
     // Clear-on-id-less-platform (#721 wins over #665 here — the two issues
     // diverged on whether clearing platform should orphan platformVenueId):
@@ -902,28 +913,46 @@ venuesAdminRouter.patch(
         ? { contact: { before: contactBefore, after: contactAfter } }
         : {};
 
-    const [updated] = await db
-      .update(venues)
-      .set({
-        ...body,
-        ...platformClearFields,
-        ...apiProviderClearFields,
-        ...verificationFields,
-        // removed_at is never cleared here: a removed venue is refused above,
-        // and nothing in an ordinary edit undoes a removal.
-        ...hiddenFields,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(venues.id, id),
-          // A removal committed after the read above still wins over Show.
-          body.active === true ? isNull(venues.removedAt) : undefined,
-        ),
-      )
-      .returning();
+    // One transaction, the guarded venue write first: nothing else is written
+    // unless it lands, so a refusal never leaves the flagship cleared.
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(venues)
+        .set({
+          ...body,
+          ...platformClearFields,
+          ...apiProviderClearFields,
+          ...verificationFields,
+          // removed_at is never cleared here: a removed venue is refused above,
+          // and nothing in an ordinary edit undoes a removal.
+          ...hiddenFields,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(venues.id, id),
+            // A removal committed after the read above still wins.
+            refusedIfRemoved ? isNull(venues.removedAt) : undefined,
+          ),
+        )
+        .returning();
+      if (!row) return undefined;
+      // Only one flagship at a time.
+      if (body.featured === true) {
+        await tx
+          .update(venues)
+          .set({ featured: false })
+          .where(and(eq(venues.featured, true), not(eq(venues.id, id))));
+      }
+      return row;
+    });
     if (!updated) {
-      return body.active === true
+      // The venue changed under the read above: removed, or deleted.
+      const [current] = await db
+        .select({ removedAt: venues.removedAt })
+        .from(venues)
+        .where(eq(venues.id, id));
+      return current !== undefined && current.removedAt !== null
         ? ctx.json(venueRemovedBody, 409)
         : ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
@@ -1491,7 +1520,10 @@ const removeVenueSchema = z.object({
 // user-submitted price. The event rows stay, so users' Watching and Concerts
 // entries survive, minus the price snapshot each one captured. removed_at
 // also takes the venue's past shows off artist pages and search, which
-// deactivation alone keeps (#1299). Prices do not come back on reactivation.
+// deactivation alone keeps (#1299). There is no way back: Show, Resume and
+// crawl triggers all refuse a removed venue (409 venue_removed), and restoring
+// one needs a deliberate, separately approved path. The deleted prices are gone
+// for good either way.
 venuesAdminRouter.post(
   '/:id/remove',
   zValidator('param', crawlPauseParamSchema, validationHook),

@@ -123,6 +123,26 @@ describe('Needs you sources and ranking', () => {
     expect(keys).toEqual([`venue-blocked:${venue.id}`]);
   });
 
+  it('leaves out a fault on a removed venue', async () => {
+    const live = await seedVenue({
+      name: 'Blocked Hall',
+      slug: 'blocked-hall',
+      blockedAt: new Date(Date.now() - 3 * 24 * HOUR_MS),
+    });
+    await seedVenue({
+      name: 'Gone Hall',
+      slug: 'gone-hall',
+      active: false,
+      blockedAt: new Date(Date.now() - 3 * 24 * HOUR_MS),
+      crawlPausedAt: new Date(),
+      removedAt: new Date(),
+    });
+
+    expect(await keysOf({ kind: 'venue-blocked', now: now() })).toEqual([
+      `venue-blocked:${live.id}`,
+    ]);
+  });
+
   it('hides a snoozed item until the snooze passes', async () => {
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const event = await seedLowConfidence(venue.id, 'Snoozed Act', inDays(5));

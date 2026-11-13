@@ -44,6 +44,7 @@ vi.mock('@concert-crawl/db', () => ({
     verified: 'verified',
     priceUrl: 'priceUrl',
     crawlPausedAt: 'crawlPausedAt',
+    removedAt: 'removedAt',
   },
   crawlTriggers: {
     id: 'id',
@@ -187,6 +188,16 @@ describe('runDailyCrawl', () => {
     await runDailyCrawl();
 
     expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt');
+  });
+
+  it('leaves removed venues out of the daily venue list', async () => {
+    const { isNull } = await import('drizzle-orm');
+    mockDbChain.where.mockResolvedValue([]);
+
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+
+    expect(vi.mocked(isNull)).toHaveBeenCalledWith('removedAt');
   });
 
   it('calls crawlVenue for each active venue, passing a shared lazy browser provider', async () => {

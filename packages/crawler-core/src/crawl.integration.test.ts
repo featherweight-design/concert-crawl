@@ -150,6 +150,22 @@ beforeEach(async () => {
   mockExtractWithLlm.mockClear();
 });
 
+describe('crawlVenue — a removed venue', () => {
+  it('never fetches a venue removed at its request, whatever its other columns say', async () => {
+    const venue = await seedTestVenue();
+    // Still active, verified and unpaused: removed_at alone must stop it.
+    await db
+      .update(venues)
+      .set({ removedAt: new Date() })
+      .where(eq(venues.id, venue.id));
+
+    await expect(crawlVenue(venue.id, mockBrowser)).rejects.toThrow(/removed/);
+    expect(mockFetchPage).not.toHaveBeenCalled();
+    expect(mockFetchPageHttp).not.toHaveBeenCalled();
+    expect(mockExtractWithLlm).not.toHaveBeenCalled();
+  });
+});
+
 describe('crawlVenue — stale-event detection (#607)', () => {
   it('refreshes last_seen_at for returned events and marks missing events with first_missing_at', async () => {
     const venue = await seedTestVenue();

@@ -149,16 +149,39 @@ crawlAdminRouter.post('/', async (ctx) => {
 
   const force = await parseForce(ctx);
   const actor = getAuthUser(ctx).userId;
-  const inserted = await db
-    .insert(crawlTriggers)
-    .values(
-      activeVenues.map((venue) => ({
-        venueId: venue.id,
-        triggeredBy: actor,
-        force,
-      })),
-    )
-    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId });
+  const inserted = await db.transaction(async (tx) => {
+    // The read above takes no lock, so a removal can commit after it. This
+    // share lock waits out one in flight and re-checks removed_at, holding
+    // the rows until their triggers are written.
+    const unremoved = await tx
+      .select({ id: venues.id })
+      .from(venues)
+      .where(
+        and(
+          inArray(
+            venues.id,
+            activeVenues.map((venue) => venue.id),
+          ),
+          isNull(venues.removedAt),
+        ),
+      )
+      .for('share');
+    if (unremoved.length === 0) return [];
+    return tx
+      .insert(crawlTriggers)
+      .values(
+        unremoved.map((venue) => ({
+          venueId: venue.id,
+          triggeredBy: actor,
+          force,
+        })),
+      )
+      .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId });
+  });
+
+  if (inserted.length === 0) {
+    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202);
+  }
 
   ctx.set('auditAction', 'crawl.trigger_all');
   ctx.set('auditActorId', actor);

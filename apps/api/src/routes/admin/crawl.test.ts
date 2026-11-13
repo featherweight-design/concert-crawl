@@ -25,8 +25,8 @@ vi.mock('drizzle-orm', async (importOriginal) => ({
   isNull: vi.fn(),
 }));
 
-vi.mock('@concert-crawl/db', () => ({
-  db: {
+vi.mock('@concert-crawl/db', () => {
+  const db = {
     select: vi.fn().mockReturnThis(),
     selectDistinctOn: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
@@ -34,20 +34,30 @@ vi.mock('@concert-crawl/db', () => ({
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnValue([]),
+    // The trigger routes' share-locked re-read of removed_at: by default the
+    // venue is still there and not removed.
+    for: vi
+      .fn()
+      .mockResolvedValue([{ id: '00000000-0000-0000-0000-000000000001' }]),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([]),
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
-  },
-  venues: { blockedAt: 'venues.blocked_at' },
-  crawlRuns: {},
-  crawlRunPages: {},
-  crawlTriggers: {},
-  notifications: {},
-  auditLog: {},
-  inviteCodes: {},
-}));
+    // The transaction runs on the same chain, so per-test mocks still apply.
+    transaction: vi.fn((run: (tx: unknown) => unknown) => run(db)),
+  };
+  return {
+    db,
+    venues: { blockedAt: 'venues.blocked_at' },
+    crawlRuns: {},
+    crawlRunPages: {},
+    crawlTriggers: {},
+    notifications: {},
+    auditLog: {},
+    inviteCodes: {},
+  };
+});
 
 const VENUE_ID = '00000000-0000-0000-0000-000000000001';
 const RUN_ID = '00000000-0000-0000-0000-000000000002';
@@ -314,6 +324,24 @@ describe('Admin crawl routes', () => {
         method: 'POST',
       });
       expect(res.status).toBe(409);
+    });
+
+    it('returns 409 venue_removed and queues nothing when a removal lands after the read', async () => {
+      adminAuth();
+      mockDispatchCrawler.mockReset();
+      const { db } = await import('@concert-crawl/db');
+      // The share-locked re-read finds the venue removed. Queued before the
+      // read's mock, since reaching `.for` calls `where()`.
+      vi.mocked(db.select().from().where().for).mockResolvedValueOnce([]);
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue]);
+      vi.mocked(db.insert({}).values).mockClear();
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ code: 'venue_removed' });
+      expect(vi.mocked(db.insert({}).values)).not.toHaveBeenCalled();
+      expect(mockDispatchCrawler).not.toHaveBeenCalled();
     });
 
     it('returns 202 with triggerId and queues crawl trigger for valid venue', async () => {
