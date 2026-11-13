@@ -2635,6 +2635,29 @@ export const ADMIN_COPY = {
           : 'Nothing needs a decision.',
       openHealth: 'Open Health',
     },
+    // The price batch sheet (`02-needs-you/a-batch-of-prices`): a phone bottom
+    // sheet that lists the batch's prices to untick before Approve.
+    priceBatch: {
+      title: (count: number) =>
+        `${count} new ${count === 1 ? 'price' : 'prices'}`,
+      sub: 'Each one matches a second fan’s submission. Untick any you want to look at first.',
+      fans: (count: number) => `${count} ${count === 1 ? 'fan' : 'fans'}`,
+      approve: (count: number) => `Approve ${count}`,
+      approving: 'Approving…',
+      cancel: 'Cancel',
+      rowLabel: (name: string) => `Approve ${name}`,
+      loading: 'Loading the prices…',
+      loadFailed: 'Couldn’t load the prices.',
+      retry: 'Try again',
+      // Some of the batch is gone from the pending list (approved, rejected or
+      // withdrawn) since the queue was read.
+      gone: (count: number) =>
+        count === 1
+          ? '1 price is no longer waiting.'
+          : `${count} prices are no longer waiting.`,
+      allGone: 'None of these prices is waiting any more.',
+      approveFailed: 'Couldn’t approve. Nothing changed.',
+    },
     panel: {
       yourAnswer: 'YOUR ANSWER',
       details: 'DETAILS',
