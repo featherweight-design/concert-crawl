@@ -11,8 +11,8 @@ import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
 const IMAGE = '/api/og/invite';
 
 export const metadata: Metadata = {
-  title: SHARE_APP_COPY.ogEyebrow,
-  description: SHARE_APP_COPY.ogSub,
+  // Only the card is set here: the page's own title and description stay the
+  // site's, since this route is also where a visitor types a code by hand.
   openGraph: {
     type: 'website',
     title: SHARE_APP_COPY.ogTitle,

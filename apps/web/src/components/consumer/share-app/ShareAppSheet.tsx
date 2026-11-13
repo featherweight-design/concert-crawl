@@ -196,6 +196,13 @@ export const ShareAppSheet = ({
     />
   );
 
+  // Full screen is a phone page. A window that stops being a phone drops it for
+  // good, so growing back does not pop it up unasked.
+  const fullscreenUp = open && fullscreen && isPhone;
+  useEffect(() => {
+    if (!isPhone) setFullscreen(false);
+  }, [isPhone]);
+
   const fullscreenPress = (
     <Press
       primary={false}
@@ -207,100 +214,104 @@ export const ShareAppSheet = ({
   );
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      title={titleText}
-      maxWidth={DIALOG_WIDTH}
-      edgeFromSm
-      closeVariant="bare"
-      inset="tight"
-      raised
-      tall
-    >
-      {/* Grabber: decorative, phone only. The sheet closes by its X, Escape,
+    <>
+      <BottomSheet
+        open={open && !fullscreenUp}
+        onClose={onClose}
+        title={titleText}
+        maxWidth={DIALOG_WIDTH}
+        edgeFromSm
+        closeVariant="bare"
+        inset="tight"
+        raised
+        tall
+      >
+        {/* Grabber: decorative, phone only. The sheet closes by its X, Escape,
           the backdrop or a drag, all of which BottomSheet owns. */}
-      <div
-        aria-hidden="true"
-        className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-sm bg-border-strong sm:hidden"
-      />
-      {/* BottomSheet's own close sits first in the row above; the eyebrow is
+        <div
+          aria-hidden="true"
+          className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-sm bg-border-strong sm:hidden"
+        />
+        {/* BottomSheet's own close sits first in the row above; the eyebrow is
           pulled up into that row, and ignores the pointer so the close and the
           drag zone beneath it still work. */}
-      <div className="pointer-events-none -mt-11 flex min-h-11 items-center">
-        <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-signal">
-          {mode === 'invite' ? COPY.eyebrow : COPY.eyebrowOpen}
-        </span>
-      </div>
-      <p className="m-0 mt-0.5 text-balance text-[26px] font-black leading-[1.08] tracking-[-0.03em] text-fg">
-        {titleText}
-      </p>
-      <p className="m-0 mt-2 text-sm leading-normal text-fg-muted">
-        {mode === 'invite' ? COPY.bodyInvite : COPY.bodyOpen}
-      </p>
+        <div className="pointer-events-none -mt-11 flex min-h-11 items-center">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-signal">
+            {mode === 'invite' ? COPY.eyebrow : COPY.eyebrowOpen}
+          </span>
+        </div>
+        <p className="m-0 mt-0.5 text-balance text-[26px] font-black leading-[1.08] tracking-[-0.03em] text-fg">
+          {titleText}
+        </p>
+        <p className="m-0 mt-2 text-sm leading-normal text-fg-muted">
+          {mode === 'invite' ? COPY.bodyInvite : COPY.bodyOpen}
+        </p>
 
-      <div className="mt-[18px]">
-        <ShareTicket body={body} lower={lower} />
-      </div>
+        <div className="mt-[18px]">
+          <ShareTicket body={body} lower={lower} />
+        </div>
 
-      {/* Board: the lead press on its own line, then a row of half-width
+        {/* Board: the lead press on its own line, then a row of half-width
           presses. On a phone Full screen sits beside Copy link in that row; the
           desktop dialog has no Full screen. Nothing here may shrink: a short
           viewport scrolls the sheet. */}
-      <div className="mt-4 flex flex-col gap-2.5 [&>*]:shrink-0">
-        {shareLeads ? (
-          <>
-            {sharePress(true)}
-            <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
-              {copyPress(false)}
-              {fullscreenPress}
-            </div>
-          </>
-        ) : (
-          <>
-            {copyPress(true)}
-            {(canShare || isPhone) && (
+        <div className="mt-4 flex flex-col gap-2.5 [&>*]:shrink-0">
+          {shareLeads ? (
+            <>
+              {sharePress(true)}
               <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
-                {canShare && sharePress(false)}
-                {isPhone && fullscreenPress}
+                {copyPress(false)}
+                {fullscreenPress}
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </>
+          ) : (
+            <>
+              {copyPress(true)}
+              {(canShare || isPhone) && (
+                <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
+                  {canShare && sharePress(false)}
+                  {isPhone && fullscreenPress}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
-      {/* Polite, and always mounted so a change is announced. */}
-      {/* The sheet's 24px plus 26 = the 50px the phone board leaves under the
+        {/* Polite, and always mounted so a change is announced. */}
+        {/* The sheet's 24px plus 26 = the 50px the phone board leaves under the
           presses, or the home-indicator inset when that is larger. */}
-      <div
-        role="status"
-        aria-live="polite"
-        className="max-sm:pb-[max(26px,env(safe-area-inset-bottom))]"
-      >
-        {status === 'copied' && (
-          <span className="sr-only">{SHARE_COPY.copyLinkDone}</span>
-        )}
-        {(status === 'shareFailed' || status === 'copyFailed') && (
-          <p className="m-0 mt-[7px] flex items-start gap-[7px] text-[13px] leading-[1.45] text-danger">
-            <span
-              aria-hidden="true"
-              className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-extrabold leading-none"
-              style={{
-                background:
-                  'color-mix(in oklch, var(--danger) 16%, transparent)',
-              }}
-            >
-              !
-            </span>
-            <span>
-              {status === 'copyFailed' ? COPY.copyFailed : COPY.shareFailed}
-            </span>
-          </p>
-        )}
-      </div>
+        <div
+          role="status"
+          aria-live="polite"
+          className="max-sm:pb-[max(26px,env(safe-area-inset-bottom))]"
+        >
+          {status === 'copied' && (
+            <span className="sr-only">{SHARE_COPY.copyLinkDone}</span>
+          )}
+          {(status === 'shareFailed' || status === 'copyFailed') && (
+            <p className="m-0 mt-[7px] flex items-start gap-[7px] text-[13px] leading-[1.45] text-danger">
+              <span
+                aria-hidden="true"
+                className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-extrabold leading-none"
+                style={{
+                  background:
+                    'color-mix(in oklch, var(--danger) 16%, transparent)',
+                }}
+              >
+                !
+              </span>
+              <span>
+                {status === 'copyFailed' ? COPY.copyFailed : COPY.shareFailed}
+              </span>
+            </p>
+          )}
+        </div>
+      </BottomSheet>
+      {/* Beside the sheet, not inside it, and the sheet steps back while it is
+          up: two modals must not share one Escape and one Tab trap. */}
       {qr !== null && ready && (
         <ShareFullScreen
-          open={fullscreen && isPhone}
+          open={fullscreenUp}
           onClose={() => setFullscreen(false)}
           personal={link.personal}
           qr={qr}
@@ -313,7 +324,7 @@ export const ShareAppSheet = ({
           }
         />
       )}
-    </BottomSheet>
+    </>
   );
 };
 
