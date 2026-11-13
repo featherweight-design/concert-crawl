@@ -16,6 +16,25 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
+// A removed venue never reaches Needs you, so its re-crawl refusal can only
+// happen when a removal lands between the item load and the answer. This
+// stands in for that race; otherwise the real queueVenueCrawl runs.
+const { removalRace } = vi.hoisted(() => {
+  const state: { landed: boolean } = { landed: false };
+  return { removalRace: state };
+});
+
+vi.mock('./lib/crawl-trigger.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./lib/crawl-trigger.js')>();
+  return {
+    ...real,
+    queueVenueCrawl: (...args: Parameters<typeof real.queueVenueCrawl>) =>
+      removalRace.landed
+        ? Promise.resolve({ ok: 'removed' } as const)
+        : real.queueVenueCrawl(...args),
+  };
+});
+
 import { eq } from 'drizzle-orm';
 import { createApp } from '../../app.js';
 import { clearTables, seedEvent, seedVenue } from '../../test/helpers/seed.js';
@@ -62,7 +81,49 @@ const auditRows = (action: string) =>
 describe('admin needs-you answers', () => {
   beforeEach(async () => {
     authState.current = null;
+    removalRace.landed = false;
     await clearTables();
+  });
+
+  it('carries venue_removed through when a re-crawl answer meets a removal', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({
+      name: 'Blocked Hall',
+      slug: 'blocked-hall',
+      blockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+    });
+    const key = `venue-blocked:${venue.id}`;
+    expect((await itemsOf('venue-blocked')).map((item) => item.key)).toEqual([
+      key,
+    ]);
+
+    removalRace.landed = true;
+    const res = await answer(key, { answer: 're_crawl_once' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      success: false,
+      error:
+        'This venue asked us to remove its data, so it stays off the site.',
+      code: 'venue_removed',
+    });
+    expect(await auditRows('needs_you.answer')).toHaveLength(0);
+  });
+
+  it('does not offer a removed venue at all', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({
+      name: 'Gone Hall',
+      slug: 'gone-hall',
+      active: false,
+      blockedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      crawlPausedAt: new Date(),
+      removedAt: new Date(),
+    });
+    expect(await itemsOf('venue-blocked')).toEqual([]);
+    const res = await answer(`venue-blocked:${venue.id}`, {
+      answer: 're_crawl_once',
+    });
+    expect(res.status).toBe(404);
   });
 
   it('requires an admin role', async () => {

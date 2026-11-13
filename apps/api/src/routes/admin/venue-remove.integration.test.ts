@@ -414,6 +414,87 @@ describe('a removed venue stays off the site', () => {
     expect(await testDb.select().from(auditLog)).toHaveLength(0);
   });
 
+  it.each([
+    ['verified', { verified: false }],
+    ['websiteUrl', { websiteUrl: 'https://elsewhere.example.com' }],
+    ['platform', { platform: 'aeg', platformVenueId: '89' }],
+    ['crawlMode', { crawlMode: 'http' }],
+    ['apiProvider', { apiProvider: 'venuepilot', apiAccountId: '1105' }],
+  ])(
+    'refuses a PATCH that changes %s on a removed venue, writing nothing',
+    async (_field, patch) => {
+      const venue = await seedRemoved();
+      const res = await send('PATCH', `/v1/admin/venues/${venue.id}`, patch);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual(REMOVED_BODY);
+      expect(await venueRow(venue.id)).toEqual(venue);
+      expect(await testDb.select().from(auditLog)).toHaveLength(0);
+    },
+  );
+
+  it('still edits display fields on a removed venue, crawl fields sent unchanged included', async () => {
+    const venue = await seedRemoved();
+    const res = await send('PATCH', `/v1/admin/venues/${venue.id}`, {
+      name: 'Gone Hall',
+      address: '1 Main St',
+      // A full-form save sends these as they are.
+      websiteUrl: venue.websiteUrl,
+      verified: venue.verified,
+      platform: venue.platform,
+      crawlMode: venue.crawlMode,
+    });
+    expect(res.status).toBe(200);
+    expect(await venueRow(venue.id)).toMatchObject({
+      name: 'Gone Hall',
+      address: '1 Main St',
+      active: false,
+      removedAt: takenAt,
+      crawlPausedAt: takenAt,
+    });
+  });
+
+  it('refuses Show when the removal commits after the PATCH has read the venue', async () => {
+    const venue = await seedHidden();
+    let pending: Promise<Response> | undefined;
+
+    await testDb.transaction(async (tx) => {
+      await tx
+        .update(venues)
+        .set({ removedAt: takenAt })
+        .where(eq(venues.id, venue.id));
+      // A second connection: the API's own pool, blocked on the row lock.
+      pending = show(venue.id);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    if (!pending) throw new Error('the PATCH was never sent');
+    const res = await pending;
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual(REMOVED_BODY);
+    expect(await venueRow(venue.id)).toMatchObject({
+      active: false,
+      hiddenReason: 'venue_closed',
+      removedAt: takenAt,
+    });
+    expect(await testDb.select().from(auditLog)).toHaveLength(0);
+  });
+
+  it('answers 404, not venue_removed, when the venue is deleted under a Show', async () => {
+    const venue = await seedHidden();
+    let pending: Promise<Response> | undefined;
+
+    await testDb.transaction(async (tx) => {
+      await tx.delete(venues).where(eq(venues.id, venue.id));
+      pending = show(venue.id);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    if (!pending) throw new Error('the PATCH was never sent');
+    const res = await pending;
+
+    expect(res.status).toBe(404);
+    expect(await testDb.select().from(auditLog)).toHaveLength(0);
+  });
+
   it('refuses a crawl trigger on a removed venue whatever its other columns say', async () => {
     // Not a state POST /remove leaves, but removed_at alone must be enough.
     const venue = await seedVenue({

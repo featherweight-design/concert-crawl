@@ -464,11 +464,16 @@ export async function crawlVenue(
         eq(venues.id, venueId),
         eq(venues.active, true),
         eq(venues.verified, true),
+        // A venue removed at its request is never fetched again, whatever
+        // its other columns say (removal also hides and pauses it).
+        isNull(venues.removedAt),
       ),
     );
 
   if (!venue) {
-    throw new Error(`Venue ${venueId} not found or not active/verified`);
+    throw new Error(
+      `Venue ${venueId} not found, removed, or not active/verified`,
+    );
   }
 
   // A crawl pause (an admin's, or the crawler's own at the third consecutive

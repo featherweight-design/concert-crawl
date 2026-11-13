@@ -221,7 +221,10 @@ const venueFaultItems: Adapter = async ({ now }) => {
         lastUrlCoverageOkAt: venues.lastUrlCoverageOkAt,
       })
       .from(venues)
-      .where(eq(venues.verified, true)),
+      // A removed venue is never crawled again, so a fault on it is nothing
+      // to answer, and its re-crawl answer could only be refused. The venue
+      // list leaves it out the same way.
+      .where(and(eq(venues.verified, true), isNull(venues.removedAt))),
     db.execute(sql`
       SELECT id, venue_id, status, http_status_code, error_message,
              events_found, events_usable, events_inserted, events_updated,
@@ -236,6 +239,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
                ) AS rn
         FROM ${crawlRuns} cr
         JOIN ${venues} vn ON vn.id = cr.venue_id AND vn.verified = true
+          AND vn.removed_at IS NULL
       ) ranked
       WHERE rn <= ${TRIAGE_HISTORY_RUN_COUNT}
     `),

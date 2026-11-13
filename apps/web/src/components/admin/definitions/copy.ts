@@ -1122,6 +1122,8 @@ export const ADMIN_COPY = {
         reasonPlaceholder: 'e.g. venue asked us to stop',
         pauseButton: 'Pause crawling…',
         resumeButton: 'Resume crawling',
+        // A removed venue: Resume is disabled, and this says why.
+        removedLine: "Removed at the venue's request, so it isn't crawled.",
       },
       remove: {
         title: 'Remove venue data',
@@ -1129,7 +1131,7 @@ export const ADMIN_COPY = {
           "For a venue that asked us to take its data down. Takes its shows off the site, stops crawls and deletes every price for its shows, users' submitted prices included. Shows stay in users' lists.",
         trigger: 'Remove data',
         removedNote:
-          'Removed: off the site, crawling paused, prices deleted. To undo the first two, activate the venue and resume crawling.',
+          "Removed at the venue's request: off the site, not crawled, prices deleted. Restoring it needs a separate approval.",
         dialog: {
           eyebrow: 'Removal request',
           heading: (venueName: string) => `Remove ${venueName}'s data?`,
@@ -1151,6 +1153,10 @@ export const ADMIN_COPY = {
           'Takes the venue and all of its shows off the site, and stops crawls.',
         pauseButton: 'Pause venue',
         activateButton: 'Activate venue',
+        // A removed venue: Activate (and Active in the status toggle) is
+        // disabled, and this says why.
+        removedNote:
+          "Removed at the venue's request, so it stays off the site.",
       },
       delete: {
         title: 'Delete venue',

@@ -26,7 +26,15 @@ export type AnswerResult =
       /** Anything worth returning to the caller. */
       result?: Record<string, unknown>;
     }
-  | { ok: false; status: AnswerFailureStatus; error: string };
+  | AnswerFailure;
+
+/** A refused answer. `code` is the API's stable discriminator, when it has one. */
+export interface AnswerFailure {
+  ok: false;
+  status: AnswerFailureStatus;
+  error: string;
+  code?: string;
+}
 
 export type UndoResult =
   | { ok: true; restored: Record<string, unknown> }
@@ -46,10 +54,12 @@ export interface AnswerHandler {
 export const fail = (
   status: AnswerFailureStatus,
   error: string,
-): { ok: false; status: AnswerFailureStatus; error: string } => ({
+  code?: string,
+): AnswerFailure => ({
   ok: false,
   status,
   error,
+  ...(code === undefined ? {} : { code }),
 });
 
 export const STATE_CHANGED = 'This item has changed since it was answered';
