@@ -59,6 +59,8 @@ describe('mobile viewport shell', () => {
     '(protected)/(main)/events/[id]/submissions/[submissionId]/dispute/page.tsx',
     '(protected)/admin/layout.tsx',
     '../components/pwa/OfflineFallback.tsx',
+    '../components/standalone-error/StandaloneError.tsx',
+    '../components/admin/primitives/SidePanel.tsx',
   ])('%s sizes to the dynamic viewport', (file) => {
     const source = readFileSync(resolve(__dirname, file), 'utf8');
     expect(source).not.toMatch(/min-h-screen|\b100vh\b|\bh-screen\b/);

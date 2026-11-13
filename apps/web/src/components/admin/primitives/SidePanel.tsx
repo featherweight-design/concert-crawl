@@ -182,7 +182,7 @@ export const SidePanel = (props: SidePanelProps) => {
         position: 'sticky',
         top: 0,
         alignSelf: 'flex-start',
-        maxHeight: 'calc(100vh - 56px)',
+        maxHeight: 'calc(100dvh - 56px)',
         overflowY: 'auto',
       }}
     >

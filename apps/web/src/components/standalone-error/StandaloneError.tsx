@@ -286,7 +286,7 @@ export const StandaloneError = ({
   <div
     data-testid="standalone-error"
     style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       boxSizing: 'border-box',
       padding: '24px 20px 48px',
       background:
