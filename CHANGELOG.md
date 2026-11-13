@@ -1,3 +1,20 @@
+# [1.379.0](https://github.com/featherweight-design/concert-crawl/compare/v1.378.0...v1.379.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** address the review on the artist search panel (4c C) ([a671fb8](https://github.com/featherweight-design/concert-crawl/commit/a671fb8e2936040275bb8d443d044306b2d5b71a))
+* **web:** artist history line says it means past shows ([31f515b](https://github.com/featherweight-design/concert-crawl/commit/31f515b441f866cd6da540f0dd4e1a854a469bd8))
+* **web:** artist page run-row venue icon and whole Spotify tracks ([0327bcf](https://github.com/featherweight-design/concert-crawl/commit/0327bcf1957760147bc45b7a7fd224545d7a59e6))
+* **web:** hide the Connect Spotify spotlight while Spotify sync is off ([aab5d9c](https://github.com/featherweight-design/concert-crawl/commit/aab5d9cb953d74612e3b069b51a8fcb141c532d1))
+* **web:** keep the spotlight's close button and eyebrow off the hero art ([f0ddb13](https://github.com/featherweight-design/concert-crawl/commit/f0ddb132d052d85046ef1d724f189e4d29395aa3))
+* **web:** pin run header truncation and scope the measured embed height ([3858439](https://github.com/featherweight-design/concert-crawl/commit/385843929f8eb2e0ed14a7b3c50c234dbd7f2404))
+
+
+### Features
+
+* **web:** open the artist search panel and phone full screen (4c C) ([ccb025d](https://github.com/featherweight-design/concert-crawl/commit/ccb025d80976aae09dd38d154754e7d7c6b937c1))
+
 # [1.378.0](https://github.com/featherweight-design/concert-crawl/compare/v1.377.2...v1.378.0) (2026-11-13)
 
 
