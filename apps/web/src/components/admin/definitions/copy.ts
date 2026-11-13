@@ -24,11 +24,17 @@ const venueCount = (count: number): string =>
 const showCount = (count: number): string =>
   `${count.toLocaleString('en-US')} ${count === 1 ? 'show' : 'shows'}`;
 
-/** "235 upcoming shows", or "upcoming shows" when the count is unknown. */
-const upcomingCount = (count: number | null): string =>
-  count === null
-    ? 'upcoming shows'
-    : `${count.toLocaleString('en-US')} upcoming ${count === 1 ? 'show' : 'shows'}`;
+/**
+ * "Ball Arena and its 235 upcoming shows come off the site", "…and its
+ * upcoming shows come…" when the count is unknown, and "Ball Arena comes off
+ * the site" when it has none.
+ */
+const offTheSite = (venue: string, upcoming: number | null): string =>
+  upcoming === 0
+    ? `${venue} comes off the site`
+    : upcoming === null
+      ? `${venue} and its upcoming shows come off the site`
+      : `${venue} and its ${upcoming.toLocaleString('en-US')} upcoming ${upcoming === 1 ? 'show' : 'shows'} come off the site`;
 
 export const ADMIN_COPY = {
   // --- Health (plan row 1c; boards 03-health) ---
@@ -3035,29 +3041,27 @@ export const ADMIN_COPY = {
       deleteSaved: 'It is still here, hidden.',
     },
     // "Can't delete: it has 12 past shows and 3 people Watching them."
+    // With no shows at all (Watchers only), the shows clause drops.
     deleteRefused: (past: number, upcoming: number, watchers: number) => {
+      const people = `${watchers.toLocaleString('en-US')} ${watchers === 1 ? 'person' : 'people'}`;
+      if (past === 0 && upcoming === 0) {
+        return `Can’t delete: ${people} ${watchers === 1 ? 'is' : 'are'} Watching its shows. It stays hidden instead.`;
+      }
       const shows =
         upcoming > 0
           ? showCount(past + upcoming)
           : `${past.toLocaleString('en-US')} past ${past === 1 ? 'show' : 'shows'}`;
-      const people =
-        watchers === 0
-          ? ''
-          : ` and ${watchers.toLocaleString('en-US')} ${watchers === 1 ? 'person' : 'people'} Watching them`;
-      return `Can’t delete: it has ${shows}${people}. It stays hidden instead.`;
+      const watching = watchers === 0 ? '' : ` and ${people} Watching them`;
+      return `Can’t delete: it has ${shows}${watching}. It stays hidden instead.`;
     },
     // The board's "including Watching lists" is cut: Watching
-    // (`routes/watching.ts`) doesn't filter hidden venues.
+    // (`routes/watching.ts`) doesn't filter hidden venues. The Watchers count
+    // spans past shows too, so the clause carries no number.
     hide: {
       title: (venue: string) => `Hide ${venue} from the site?`,
-      // Null counts (no `deleteBlockers` on the payload) drop the numbers.
-      body: (venue: string, shows: number | null, watchers: number | null) => {
-        const watching =
-          watchers === null || watchers === 0
-            ? ''
-            : ` ${watchers.toLocaleString('en-US')} ${watchers === 1 ? 'person is' : 'people are'} Watching one of its shows; they get no notice.`;
-        return `${venue} and its ${upcomingCount(shows)} come off the site and out of search.${watching} Crawling stops too.`;
-      },
+      // A null count (no `deleteBlockers` on the payload) drops the number.
+      body: (venue: string, shows: number | null) =>
+        `${offTheSite(venue, shows)} and out of search. Fans Watching its shows get no notice. Crawling stops too.`,
       why: 'Why',
       reasons: {
         venue_closed: 'Venue closed',
@@ -3076,7 +3080,7 @@ export const ADMIN_COPY = {
     takeDown: {
       title: (venue: string) => `Take down ${venue}?`,
       body: (venue: string, shows: number | null) =>
-        `${venue} and its ${upcomingCount(shows)} come off the site, and every price fans submitted for its shows is deleted for good. Nobody gets a notice, and crawling stops.`,
+        `${offTheSite(venue, shows)}, and every price fans submitted for its shows is deleted for good. Nobody gets a notice, and crawling stops.`,
       warn: 'This can’t be undone. For a closed venue, hide it instead.',
       // Sent as the API's required reason, and kept in the audit log; the
       // note, when given, follows it there.

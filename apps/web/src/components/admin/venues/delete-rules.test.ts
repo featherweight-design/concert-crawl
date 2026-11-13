@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { deleteBlockersOf, deleteRefused } from './delete-rules';
+import {
+  deleteBlockersOf,
+  deleteRefused,
+  isVenueNotFound,
+} from './delete-rules';
 
 describe('deleteBlockersOf', () => {
   it('reads the three counts from the guard’s 409 body', () => {
@@ -27,6 +31,17 @@ describe('deleteBlockersOf', () => {
     expect(
       deleteBlockersOf({ pastShows: '1', upcomingShows: 0, watchers: 0 }),
     ).toBeNull();
+  });
+});
+
+describe('isVenueNotFound', () => {
+  it('is only the DELETE route’s own not-found body', () => {
+    expect(isVenueNotFound({ success: false, error: 'Venue not found' })).toBe(
+      true,
+    );
+    expect(isVenueNotFound({ success: false, error: 'Not Found' })).toBe(false);
+    expect(isVenueNotFound('Venue not found')).toBe(false);
+    expect(isVenueNotFound(null)).toBe(false);
   });
 });
 
