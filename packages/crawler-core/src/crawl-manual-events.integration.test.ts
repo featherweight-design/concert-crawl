@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import type { Browser } from 'playwright';
 import {
+  artists,
   auditLog,
   db,
   eventRedirects,
@@ -122,6 +123,9 @@ interface ExtractedEvent {
   sourceUrl: string;
   confidence: number;
   ticketUrl?: string;
+  eventUrl?: string;
+  observedPerformers?: string[];
+  observedSupportingArtists?: string[];
 }
 
 function makeEvent(
@@ -398,6 +402,37 @@ describe('crawlVenue — a lineup an admin saved (admin 4a)', () => {
     expect(after.canonicalSupporting).toEqual(['admin opener']);
   });
 
+  it('does not project the listing bill of a saved lineup as artists', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(21);
+
+    mockExtraction([makeEvent('Saved Bill', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    await db
+      .update(events)
+      .set({ lineupEditedAt: new Date() })
+      .where(eq(events.artist, 'Saved Bill'));
+
+    mockExtraction(
+      [
+        makeEvent('Saved Bill', date, {
+          title: 'Saved Bill (Late)',
+          rawTitle: 'Saved Bill (Late)',
+          observedPerformers: ['Saved Bill'],
+          observedSupportingArtists: ['Removed Opener'],
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const projected = await db
+      .select({ canonicalName: artists.canonicalName })
+      .from(artists)
+      .where(eq(artists.canonicalName, 'removed opener'));
+    expect(projected).toEqual([]);
+  });
+
   it('a duplicate-night fold never fills a saved lineup from a donor', async () => {
     const venue = await seedTestVenue();
     const date = futureDate(21);
@@ -506,6 +541,99 @@ describe('crawlVenue — a merged-away listing (admin 4a, READINESS A1)', () => 
     expect(after?.title).toBe(kept.title);
     expect(after?.ticketUrl).toBe('https://tickets.example.org/clipse');
     expect(after?.firstMissingAt).toBeNull();
+  });
+
+  it('a crawled target keeps its own ticket link and event page', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(24);
+
+    mockExtraction([
+      makeEvent('Own Link', date, {
+        ticketUrl: 'https://tickets.example.org/own',
+        eventUrl: 'https://manual.example.com/own',
+      }),
+      makeEvent('Other Link', date),
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+    const kept = await rowFor('Own Link');
+    const gone = await rowFor('Other Link');
+    await mergeEventRows({
+      sourceId: gone.id,
+      targetId: kept.id,
+      actorId: 'user_admin',
+      suggestion: null,
+      notifyWatchers: false,
+    });
+
+    mockExtraction(
+      [
+        makeEvent('Other Link', date, {
+          title: 'Other Link!',
+          rawTitle: 'Other Link!',
+          ticketUrl: 'https://tickets.example.org/other',
+          eventUrl: 'https://manual.example.com/other',
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const after = await rowFor('Own Link');
+    expect(after.ticketUrl).toBe('https://tickets.example.org/own');
+    expect(after.eventUrl).toBe('https://manual.example.com/own');
+  });
+
+  it('drops a listing whose merge target moved to another venue', async () => {
+    const venue = await seedTestVenue();
+    const elsewhere = await seedTestVenue();
+    const date = futureDate(25);
+
+    mockExtraction([makeEvent('Moved Act', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    const gone = await rowFor('Moved Act');
+    const [target] = await db
+      .insert(events)
+      .values({
+        venueId: elsewhere.id,
+        title: 'Moved Act at the new room',
+        artist: 'Moved Act (new room)',
+        canonicalArtist: 'moved act new room',
+        canonicalTitle: 'moved act at the new room',
+        date,
+      })
+      .returning();
+    if (!target) throw new Error('target insert returned no row');
+    await mergeEventRows({
+      sourceId: gone.id,
+      targetId: target.id,
+      actorId: 'user_admin',
+      suggestion: null,
+      notifyWatchers: false,
+    });
+
+    mockExtraction(
+      [
+        makeEvent('Moved Act', date, {
+          title: 'MOVED TO THE NEW ROOM',
+          rawTitle: 'MOVED TO THE NEW ROOM',
+          ticketUrl: 'https://tickets.example.org/old-room',
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const atOldVenue = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(atOldVenue).toEqual([]);
+    const [after] = await db
+      .select()
+      .from(events)
+      .where(eq(events.id, target.id));
+    expect(after?.ticketUrl).toBeNull();
+    expect(after?.lastSeenAt.getTime()).toBe(target.lastSeenAt.getTime());
   });
 
   it('inserts the listing again when the merge target has since been cancelled', async () => {
