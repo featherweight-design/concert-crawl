@@ -511,7 +511,7 @@ export function FilterBar({
         <CrewPatch
           crewId={lensCrew.id}
           patchSalt={lensCrew.patchSalt}
-          size={20}
+          size={18}
           scale="micro"
         />
       ) : null,
