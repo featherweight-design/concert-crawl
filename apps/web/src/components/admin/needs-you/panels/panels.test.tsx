@@ -439,6 +439,22 @@ describe('PriceCheckPanel', () => {
     open(priceRow({ ticketUrl: null }));
     expect(screen.queryByTestId('open-ticket-page')).toBeNull();
   });
+
+  it('draws CHECKED FOR YOU from the checker record and WHO SEES IT from the Watchers', () => {
+    open(priceRow());
+    expect(screen.getByText('CHECKED FOR YOU')).toBeInTheDocument();
+    expect(screen.getByText('The fan who checked')).toBeInTheDocument();
+    expect(screen.getByText('3 prices, all approved')).toBeInTheDocument();
+    expect(screen.getByText('WHO SEES IT')).toBeInTheDocument();
+    expect(
+      screen.getByText('3 people are Watching. The show is tomorrow.'),
+    ).toBeInTheDocument();
+  });
+
+  it('leaves CHECKED FOR YOU out when the fan has no record', () => {
+    open(priceRow({ checkerSubmissions: 0 }));
+    expect(screen.queryByText('CHECKED FOR YOU')).toBeNull();
+  });
 });
 
 const bugRow = (over: Partial<BugFacts> = {}) =>

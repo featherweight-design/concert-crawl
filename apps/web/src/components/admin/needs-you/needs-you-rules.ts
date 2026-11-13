@@ -201,14 +201,43 @@ export const whatOf = (row: QueueRow): string => {
       return what.eventLowConfidence(evidenceValue(row, 'Confidence'));
     case 'price-check':
       return what.priceCheck(
-        evidenceValue(row, 'Listed price'),
-        evidenceValue(row, 'Checked price'),
+        priceRangeOf(
+          row.priceFacts?.listed ?? null,
+          row.priceFacts?.listedMax ?? null,
+        ) ?? evidenceValue(row, 'Listed price'),
+        priceRangeOf(
+          row.priceFacts?.checked ?? null,
+          row.priceFacts?.checkedMax ?? null,
+        ) ?? evidenceValue(row, 'Checked price'),
       );
     case 'price-batch':
       return what.priceBatch(evidenceValue(row, 'Submissions'));
     case 'bug':
       return what.bug(evidenceValue(row, 'Page'));
   }
+};
+
+/**
+ * The label a card draws on an answer. A price check's two buttons name the
+ * price they pick ("Use $45", "Keep $29", as `needs-you-mobile` draws them);
+ * every other answer keeps the API's own label.
+ */
+export const cardLabelOf = (
+  row: QueueRow,
+  answer: { slug: string; label: string },
+): string => {
+  if (row.kind !== 'price-check') return answer.label;
+  const price = priceText(
+    answer.slug === 'use_checked_price'
+      ? (row.priceFacts?.checked ?? null)
+      : answer.slug === 'keep_listed_price'
+        ? (row.priceFacts?.listed ?? null)
+        : null,
+  );
+  if (price === null) return answer.label;
+  return answer.slug === 'use_checked_price'
+    ? COPY.panel.priceCheck.use(price)
+    : COPY.panel.priceCheck.keep(price);
 };
 
 /**

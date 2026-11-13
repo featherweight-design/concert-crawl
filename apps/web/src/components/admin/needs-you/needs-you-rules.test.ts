@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { QueueRow } from './needs-you-api';
 import {
+  cardLabelOf,
   causeText,
   countAfterRemoval,
   defaultParams,
@@ -19,6 +21,7 @@ import {
   snoozeDayLabel,
   statusPhrase,
   todayStamp,
+  whatOf,
   whenChipOf,
 } from './needs-you-rules';
 
@@ -217,6 +220,38 @@ describe('price and bug helpers', () => {
       reason: 'Decided from Needs you',
     });
     expect(defaultParams('still_on')).toBeUndefined();
+  });
+
+  it('names the prices on a price check card and its buttons', () => {
+    const base = {
+      kind: 'price-check',
+      priceFacts: {
+        listed: '29.00',
+        listedMax: '64.00',
+        checked: '45.00',
+        checkedMax: null,
+      },
+      evidence: [],
+    } as unknown as QueueRow;
+    expect(whatOf(base)).toBe('Listed $29–$64, a fan checked $45+.');
+    expect(
+      cardLabelOf(base, {
+        slug: 'use_checked_price',
+        label: 'Use checked price',
+      }),
+    ).toBe('Use $45');
+    expect(
+      cardLabelOf(base, {
+        slug: 'keep_listed_price',
+        label: 'Keep listed price',
+      }),
+    ).toBe('Keep $29');
+    expect(cardLabelOf(base, { slug: 'snooze', label: 'Snooze' })).toBe(
+      'Snooze',
+    );
+    expect(
+      cardLabelOf({ ...base, kind: 'bug' }, { slug: 'x', label: 'Resolve' }),
+    ).toBe('Resolve');
   });
 
   it('counts minutes since, and null for a bad instant', () => {
