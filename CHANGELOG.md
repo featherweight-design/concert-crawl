@@ -1,3 +1,15 @@
+# [1.391.0](https://github.com/featherweight-design/concert-crawl/compare/v1.390.0...v1.391.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** a merged id is a temporary uncacheable redirect, guard a self-merge ([3c1779a](https://github.com/featherweight-design/concert-crawl/commit/3c1779a917d161a676b44fc6f639db715017a102))
+
+
+### Features
+
+* **api:** follow merged events through a redirect table, share the merge core ([d5a6859](https://github.com/featherweight-design/concert-crawl/commit/d5a68590069de4b8f99e5b3320ed82a863e12876))
+
 # [1.390.0](https://github.com/featherweight-design/concert-crawl/compare/v1.389.0...v1.390.0) (2026-11-13)
 
 
