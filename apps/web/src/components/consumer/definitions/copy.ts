@@ -718,7 +718,9 @@ export const CONSUMER_COPY = {
 
     // Price options
     priceUnder25: 'Under $25',
-    price25to50: '$25 - $50',
+    // "to", as the B+ boards draw it: a spaced hyphen is voiced as "dash" or
+    // "minus" by screen readers.
+    price25to50: '$25 to $50',
     price50Plus: '$50+',
     priceTbd: 'Price TBA',
 
@@ -791,6 +793,20 @@ export const CONSUMER_COPY = {
       // The Vibe popover's footer button, with the events response's total.
       vibeShow: (count: number) =>
         `Show ${count} ${count === 1 ? 'show' : 'shows'}`,
+    },
+
+    // The phone Filters button and sheet (B+ B6b). Section eyebrows, Clear all,
+    // Clear, "Find a venue", the Vibe line and "Show N shows" reuse the
+    // strings above.
+    phone: {
+      filters: 'Filters',
+      filtersAria: (count: number) =>
+        count > 0 ? `Filters, ${count} on` : 'Filters',
+      // The link from a section to its full list: "All 21", "All 16".
+      allCount: (count: number) => `All ${count}`,
+      backAria: 'Back to Filters',
+      // The sheet's button when there is no count to show (Cal view).
+      apply: 'Apply filters',
     },
   },
 

@@ -61,22 +61,23 @@ describe('FollowFilterChip', () => {
     entitlementState.current = ENTITLED;
     const onToggle = vi.fn();
     renderChip({ onToggle });
-    const chip = screen.getByRole('button', { name: FOLLOWING_COPY.chipAria });
-    expect(chip.getAttribute('aria-pressed')).toBe('false');
-    expect(chip.textContent).toContain(FOLLOWING_COPY.chip);
+    // The phone pill (`bp-f-filt_m_rest`) is a switch beside "My artists".
+    const chip = screen.getByRole('switch', { name: FOLLOWING_COPY.chipAria });
+    expect(chip.getAttribute('aria-checked')).toBe('false');
+    expect(chip.textContent).toBe(FOLLOWING_COPY.chip);
+    expect(chip.querySelector('[data-testid="switch-track"]')).not.toBeNull();
     fireEvent.click(chip);
     expect(onToggle).toHaveBeenCalledWith(true);
   });
 
-  it('on: carries the count in the label and clears', () => {
+  it('on: the switch reads checked and a tap clears it', () => {
     entitlementState.current = ENTITLED;
     const onToggle = vi.fn();
     renderChip({ active: true, followCount: 12, onToggle });
-    const chip = screen.getByRole('button', {
-      name: FOLLOWING_COPY.chipActiveAria,
-    });
-    expect(chip.getAttribute('aria-pressed')).toBe('true');
-    expect(chip.textContent).toContain(FOLLOWING_COPY.chipActive(12));
+    const chip = screen.getByRole('switch', { name: FOLLOWING_COPY.chipAria });
+    expect(chip.getAttribute('aria-checked')).toBe('true');
+    // The board's pill draws no count.
+    expect(chip.textContent).toBe(FOLLOWING_COPY.chip);
     fireEvent.click(chip);
     expect(onToggle).toHaveBeenCalledWith(false);
   });
@@ -97,21 +98,22 @@ describe('FollowFilterChip', () => {
     entitlementState.current = ENTITLED;
     renderChip({ followCount: null });
     expect(
-      screen.getByRole('button', { name: FOLLOWING_COPY.chipAria }),
+      screen.getByRole('switch', { name: FOLLOWING_COPY.chipAria }),
     ).toBeTruthy();
   });
 
-  it('an active chip with an unknown count drops the number, never prints 0', () => {
-    entitlementState.current = ENTITLED;
-    renderChip({ followCount: null, active: true });
-    const chip = screen.getByTestId('follow-scope-chip');
-    // The ✕ clear glyph rides an active chip, so assert on the label rather
-    // than the whole node: the point is that no count, and specifically no
-    // zero, reaches the string.
-    expect(chip.textContent).toContain(FOLLOWING_COPY.chip);
-    expect(chip.textContent).not.toContain('·');
-    expect(chip.textContent).not.toContain('0');
-  });
+  it.each([null, 0, 12])(
+    'the active phone pill prints no count, whatever the count (%s)',
+    (followCount) => {
+      // The board's pill draws "My artists" alone, so neither an unknown
+      // count nor a known one, zero included, may reach its label.
+      entitlementState.current = ENTITLED;
+      renderChip({ followCount, active: true });
+      expect(screen.getByTestId('follow-scope-chip').textContent).toBe(
+        FOLLOWING_COPY.chip,
+      );
+    },
+  );
 
   // D1: entitlement is read BEFORE the count, so the paywall is reachable from
   // browse for a free user who has never followed anyone.
@@ -127,6 +129,9 @@ describe('FollowFilterChip', () => {
     });
     expect(chip.getAttribute('aria-disabled')).toBeNull();
     expect(chip.getAttribute('aria-pressed')).toBeNull();
+    // Locked draws the switch locked, on a dashed edge.
+    expect(chip.className).toContain('border-dashed');
+    expect(chip.querySelector('[data-testid="switch-track"]')).not.toBeNull();
   });
 
   it('locked taps open the picker at the paywall entry', () => {

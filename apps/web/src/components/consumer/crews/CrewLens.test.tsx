@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { stubMatchMedia } from '@/test-utils/match-media';
 import type { CrewSummary } from '@concert-crawl/types';
-import { CrewLensPill, CrewLensRail } from './CrewLens';
+import { CrewLensRail, CrewPickerBody } from './CrewLens';
 
 const crew = (id: string, name: string): CrewSummary => ({
   id,
@@ -23,69 +23,34 @@ const CREWS = [crew('c1', 'Thursdays'), crew('c2', 'Night Shift')];
 beforeEach(() => stubMatchMedia(true));
 afterEach(cleanup);
 
-describe('CrewLensPill', () => {
-  it('rests as the plural noun and reports itself off', () => {
+// The picker body behind the desktop bar's Who segment. (The heading pill that
+// used to open it is gone: B+ B6b moved the lens into the filter bar.)
+describe('CrewPickerBody', () => {
+  const renderPicker = (
+    selectedId: string | null,
+    onSelect: (crewId: string | null) => void = vi.fn(),
+  ) =>
     render(
-      <CrewLensPill
+      <CrewPickerBody
         crews={CREWS}
-        activeCrew={null}
-        onSelect={vi.fn()}
-        wide={false}
-      />,
-    );
-    const pill = screen.getByRole('button');
-    expect(pill).toHaveTextContent('Crews');
-    expect(pill).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  // The h1 immediately left of the pill already renders the crew's name, and at
-  // 390px both truncated rather than either one reading. The patch carries which
-  // crew visually; the label carries it for everyone else.
-  it('leaves the name to the heading and reports itself on', () => {
-    render(
-      <CrewLensPill
-        crews={CREWS}
-        activeCrew={CREWS[0]!}
-        onSelect={vi.fn()}
-        wide={false}
-      />,
-    );
-    const pill = screen.getByRole('button');
-    expect(pill).toHaveTextContent('Crews');
-    expect(pill).not.toHaveTextContent('Thursdays');
-    expect(pill).toHaveAttribute('aria-pressed', 'true');
-    expect(pill).toHaveAccessibleName(/Crew lens on: Thursdays/);
-  });
-
-  it('offers a reset row above the crews and applies a pick immediately', () => {
-    const onSelect = vi.fn();
-    render(
-      <CrewLensPill
-        crews={CREWS}
-        activeCrew={null}
+        selectedId={selectedId}
+        compact
         onSelect={onSelect}
-        wide={false}
       />,
     );
-    fireEvent.click(screen.getByRole('button'));
 
+  it('offers a reset row above the crews and reports a pick', () => {
+    const onSelect = vi.fn();
+    renderPicker(null, onSelect);
     expect(screen.getByText('Everyone')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Night Shift'));
     expect(onSelect).toHaveBeenCalledWith('c2');
-    // Selecting dismisses: no confirm step, like every shipped sheet.
-    expect(screen.queryByText('Everyone')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Everyone'));
+    expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 
   it('offers the crews as one single-select set, not loose toggles', () => {
-    render(
-      <CrewLensPill
-        crews={CREWS}
-        activeCrew={CREWS[0]!}
-        onSelect={vi.fn()}
-        wide={false}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button'));
+    renderPicker('c1');
 
     const group = screen.getByRole('radiogroup');
     expect(group).toBeInTheDocument();
@@ -102,15 +67,7 @@ describe('CrewLensPill', () => {
   });
 
   it('keeps the group to one tab stop and moves focus with the arrows', () => {
-    render(
-      <CrewLensPill
-        crews={CREWS}
-        activeCrew={CREWS[0]!}
-        onSelect={vi.fn()}
-        wide={false}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button'));
+    renderPicker('c1');
 
     const options = screen.getAllByRole('radio');
     expect(options.filter((opt) => opt.tabIndex === 0)).toHaveLength(1);

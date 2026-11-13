@@ -203,7 +203,9 @@ async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
 }
 
 export const apiClient = {
-  get: <T>(path: string, token: string) => request<T>(path, token),
+  // `options` carries an AbortSignal for a read a newer one supersedes.
+  get: <T>(path: string, token: string, options?: RequestInit) =>
+    request<T>(path, token, options),
 
   post: <T>(path: string, token: string, data: unknown) =>
     request<T>(path, token, {

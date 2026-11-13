@@ -72,11 +72,15 @@ describe('BrowseSkeleton', () => {
           el.querySelector('[data-testid="heading-accent"]') !== null,
       ),
     ).toBeTruthy();
+    // The phone row at rest (`bp-f-filt_m_rest`): the Filters pill, no chips.
     const chips = screen.getByTestId('filter-bar-preview-chips');
+    expect(
+      within(chips).getByText(CONSUMER_COPY.filterBar.phone.filters),
+    ).toBeTruthy();
     for (const key of FILTER_ORDER) {
       expect(
-        within(chips).getByText(FILTER_DEFS[key].placeholder),
-      ).toBeTruthy();
+        within(chips).queryByText(FILTER_DEFS[key].placeholder),
+      ).toBeNull();
     }
     expect(screen.getByTestId('browse-hero-skeleton')).toBeTruthy();
     expect(screen.getAllByTestId('browse-row-skeleton')).toHaveLength(4);

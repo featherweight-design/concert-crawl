@@ -57,6 +57,21 @@ const renderChip = (
   );
 
 describe('TasteFilterChip', () => {
+  it.each([
+    ['usable', 'visible-active'],
+    ['locked', 'paywall-on-tap'],
+  ] as const)(
+    '%s: 36px by default, 38px on the phone row beside its pills',
+    (_, surface) => {
+      entitlementState.current = { isLoading: false, active: false, surface };
+      const { unmount } = renderChip();
+      expect(screen.getByTestId('taste-chip').style.height).toBe('36px');
+      unmount();
+      renderChip({ height: 38 });
+      expect(screen.getByTestId('taste-chip').style.height).toBe('38px');
+    },
+  );
+
   it('renders nothing while the entitlement is resolving', () => {
     entitlementState.current = {
       isLoading: true,

@@ -1,13 +1,9 @@
 'use client';
 
-// The Browse crew lens (#1226 PR-6, handoff crew-browse-lens.jsx).
-//
-// A crew is deliberately NOT a filter. Every chip in the filter bar narrows the
-// calendar by an attribute of the show — date, venue, price, genre — and a crew
-// narrows it by who. Adding a fifth chip would put it in a row it does not
-// belong to and thicken a bar two design passes went out of their way to keep
-// thin. So the lens lives in the title-block row that already exists above the
-// chips, and the filter bar's own markup is untouched.
+// The Browse crew lens (#1226 PR-6, handoff crew-browse-lens.jsx): the crew
+// picker body and the rail that names an active lens. The picker opens from the
+// filter bar's Who (the desktop segment's popover, and the phone Filters
+// sheet's Who section since B+ B6b), not from a pill of its own.
 
 import { useId, useRef, useState } from 'react';
 import { Users } from 'lucide-react';
@@ -15,12 +11,6 @@ import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { CrewSummary } from '@concert-crawl/types';
 
 import { CrewPatch } from '@/components/consumer/crew-patch';
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
-import {
-  CCOverlay,
-  CCOverlayHost,
-  useOverlayTrigger,
-} from '@/components/ui/cc-overlay';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY;
@@ -46,19 +36,6 @@ export const LensGlyph = ({ size = 13 }: { size?: number }) => (
       fill="none"
     />
     <circle cx="8" cy="8" r="1.4" fill="currentColor" />
-  </svg>
-);
-
-const Chevron = ({ size = 9 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 10 10" aria-hidden="true">
-    <path
-      d="M2 4l3 3 3-3"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
   </svg>
 );
 
@@ -238,158 +215,6 @@ export const CrewPickerBody = ({
         />
       ))}
     </div>
-  );
-};
-
-interface CrewLensPillProps {
-  crews: CrewSummary[];
-  activeCrew: CrewSummary | null;
-  onSelect: (crewId: string | null) => void;
-  wide: boolean;
-}
-
-/**
- * The one control: a 32px pill beside the List/Cal toggle. Resting it costs a
- * word in a row that already had spare width; on, it carries the crew's own
- * patch so the pill and the page title agree at a glance.
- *
- * The picker is built to the shipped filter sheet's anatomy but deliberately
- * not to its API: `FILTER_DEFS` options are `{ value, label }` pairs describing
- * an attribute of a show, and feeding a crew through them would make the lens
- * a filter dimension, which is the exact thing this design argues against.
- */
-export const CrewLensPill = ({
-  crews,
-  activeCrew,
-  onSelect,
-  wide,
-}: CrewLensPillProps) => {
-  const isMobile = useIsMobileViewport();
-  const trigger = useOverlayTrigger({ isMobile });
-  const panelId = useId();
-  const on = activeCrew !== null;
-
-  // Selecting applies immediately and dismisses, like every shipped sheet.
-  const pick = (crewId: string | null) => {
-    trigger.close();
-    onSelect(crewId);
-  };
-
-  const body = (
-    <CrewPickerBody
-      crews={crews}
-      selectedId={activeCrew?.id ?? null}
-      compact={!isMobile}
-      onSelect={pick}
-    />
-  );
-
-  return (
-    <span className="relative inline-flex">
-      <button
-        ref={trigger.triggerRef}
-        type="button"
-        onClick={trigger.toggle}
-        aria-pressed={on}
-        aria-expanded={trigger.open}
-        aria-haspopup="dialog"
-        aria-controls={trigger.open ? panelId : undefined}
-        aria-label={on ? COPY.a11y.lensOn(activeCrew.name) : undefined}
-        className="inline-flex cursor-pointer items-center gap-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        style={{
-          height: 32,
-          minHeight: 32,
-          maxWidth: wide ? 200 : 126,
-          padding: on ? '0 8px 0 4px' : '0 9px 0 8px',
-          borderRadius: 8,
-          outlineColor: 'var(--focus)',
-          background: on
-            ? 'color-mix(in oklch, var(--signal) 16%, transparent)'
-            : 'transparent',
-          border: `1px solid ${on ? 'var(--signal)' : 'var(--border-strong)'}`,
-          color: on ? 'var(--signal)' : 'var(--fg-muted)',
-          fontFamily: 'var(--font-ui)',
-          fontWeight: 700,
-          fontSize: 11.5,
-          letterSpacing: '-0.005em',
-        }}
-      >
-        {on ? (
-          <CrewPatch
-            crewId={activeCrew.id}
-            patchSalt={activeCrew.patchSalt}
-            size={22}
-            scale="micro"
-          />
-        ) : (
-          <LensGlyph size={13} />
-        )}
-        {/* Never the crew's name, even when on: the h1 immediately left of
-            this pill already renders it, and at 390px both truncate rather
-            than either one reading. The patch above carries which crew, and
-            the aria-label names it for anyone who can't see the patch. */}
-        <span className="min-w-0 truncate">{COPY.lens.resting}</span>
-        <Chevron />
-      </button>
-      {trigger.open &&
-        (isMobile ? (
-          <CCOverlayHost>
-            <CCOverlay
-              id={panelId}
-              mode="sheet"
-              title={COPY.lens.railEyebrow}
-              onClose={trigger.close}
-            >
-              <div className="flex flex-col gap-[3px] pb-2.5">
-                <span
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 700,
-                    fontSize: 18,
-                    letterSpacing: '-0.02em',
-                    color: 'var(--fg)',
-                  }}
-                >
-                  {COPY.lens.pickerTitle}
-                </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: 12.5,
-                    color: 'var(--fg-muted)',
-                  }}
-                >
-                  {COPY.lens.pickerSub}
-                </span>
-              </div>
-              {body}
-            </CCOverlay>
-          </CCOverlayHost>
-        ) : (
-          <CCOverlay
-            id={panelId}
-            mode="popover"
-            title={COPY.lens.railEyebrow}
-            anchor={trigger.triggerNode}
-            placement="bottom"
-            align="end"
-            width={320}
-            onClose={trigger.close}
-          >
-            <div
-              className="pb-1.5"
-              style={{
-                fontFamily: 'var(--font-ui)',
-                fontSize: 11.5,
-                color: 'var(--fg-muted)',
-              }}
-            >
-              {COPY.lens.pickerSub}
-            </div>
-            {body}
-          </CCOverlay>
-        ))}
-    </span>
   );
 };
 

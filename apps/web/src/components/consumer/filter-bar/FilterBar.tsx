@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
+  Children,
   Fragment,
   useCallback,
   useEffect,
@@ -17,7 +18,6 @@ import {
 } from '@concert-crawl/types';
 import {
   CREWS_COPY,
-  CrewLensPill,
   CrewLensRail,
   CrewPickerBody,
 } from '@/components/consumer/crews';
@@ -28,7 +28,6 @@ import { cn } from '@/lib/utils';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { FilterPopover } from './FilterPopover';
-import { FilterSheet } from './FilterSheet';
 import {
   FILTER_DEFS,
   FILTER_ORDER,
@@ -40,33 +39,34 @@ import {
   getChipLabel,
   getFilterOptions,
   getFirstResolvedLabel,
-  isMultiFilter,
   toggleValue,
 } from './filter-defs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { TasteFilterChip } from './TasteFilterChip';
 import {
-  CHIP_ROW_CLASS,
-  CHIP_ROW_STYLE,
   COUNT_LINE_STYLE,
   COUNT_ROW_CLASS,
-  FILTER_CHIP_CLASS,
   HEADING_EYEBROW_CLASS,
   HEADING_EYEBROW_STYLE,
   HEADING_TITLE_CLASS,
   HEADING_TITLE_STYLE,
   HeadingTitleText,
-  IconChevDown,
   SEGMENT_BAR_CLASS,
   SEGMENT_BLOCK_CLASS,
   VIEW_SEGMENTS,
   VIEW_SEGMENT_CLASS,
   VIEW_TOGGLE_CLASS,
   VIEW_TOGGLE_STYLE,
-  filterChipStyle,
   segmentBarStyle,
   viewSegmentStyle,
 } from './chrome';
+import { draftUpdates, type FilterDraft } from './phone-draft';
+import {
+  FiltersButton,
+  PhoneFilterChips,
+  type PhoneChip,
+} from './PhoneFilterRow';
+import { PhoneFilterSheet } from './PhoneFilterSheet';
 import { FollowFilterChip } from './FollowFilterChip';
 import { FilterSegment } from './FilterSegment';
 import { SegmentDivider } from './ChipDivider';
@@ -101,6 +101,12 @@ const SEGMENT_LABEL: Record<FilterKey, string> = {
 
 /** A venue tile in the Where segment (`bp-f-filt_active_d`). */
 const SEGMENT_TILE_SIZE = 18;
+/** A phone chip's crew patch or venue tile (`browse-active-320.html`). */
+const PHONE_MARK_SIZE = 16;
+/** The phone chip's fill (`PhoneFilterRow`), which rings its venue tiles. */
+const PHONE_CHIP_FILL = 'var(--surface-2)';
+/** The phone row's pills (`PHONE_PILL_CLASS`), which the taste chip matches. */
+const PHONE_PILL_HEIGHT = 38;
 
 /** Tailwind's `sm`: from here up the segmented bar replaces the chip row. */
 const DESKTOP_QUERY = '(min-width: 640px)';
@@ -139,9 +145,9 @@ interface FilterBarProps {
   // unknown country as SCA, so unresolved mounts must show the notice too.
   scaRegion?: boolean;
   /**
-   * The viewer's crews, for the Browse lens (#1226). Empty or absent hides the
-   * lens pill entirely: a control that can only ever open an empty picker is
-   * worse than no control.
+   * The viewer's crews, for the Browse lens (#1226). Empty or absent leaves
+   * Who out of the phone sheet and the desktop bar: a control that can only
+   * ever open an empty picker is worse than no control.
    */
   crews?: CrewSummary[];
   /** Shows in the active lens, for the rail's count. Null when it failed. */
@@ -170,11 +176,19 @@ const StackedMarks = ({
   children,
   testId,
   tight = false,
+  ring,
 }: {
   children: ReactNode[];
   testId: string;
   /** The 7px dots overlap by a sliver; the 18px tiles by a third. */
   tight?: boolean;
+  /**
+   * The colour of a 2px ring cut around each mark, so a tucked tile reads
+   * apart from the one under it: the phone chip's fill
+   * (`browse-active-320.html`: `box-shadow: 0 0 0 2px var(--bgx)`, 4px
+   * corners). Off by default; the desktop segment draws no ring.
+   */
+  ring?: string;
 }) => {
   return (
     <span
@@ -185,7 +199,17 @@ const StackedMarks = ({
         tight ? '[&>*+*]:-ml-0.5' : '[&>*+*]:-ml-1.5',
       )}
     >
-      {children}
+      {ring === undefined
+        ? children
+        : Children.map(children, (child) => (
+            <span
+              data-testid="stack-ring"
+              className="inline-flex rounded-[4px]"
+              style={{ boxShadow: `0 0 0 2px ${ring}` }}
+            >
+              {child}
+            </span>
+          ))}
     </span>
   );
 };
@@ -293,12 +317,20 @@ export function FilterBar({
   );
 
   const [openFilterKey, setOpenFilterKey] = useState<SegmentKey | null>(null);
+  const [phoneSheetOpen, setPhoneSheetOpen] = useState(false);
+  const filtersButtonRef = useRef<HTMLButtonElement>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  // Never decides what the first paint draws: the chip row and the segmented
-  // bar both render and CSS (`sm:`) shows one. It picks only what a tap opens
-  // (the phone sheet or the desktop popover), which `venue-chip` is live for
-  // e2e, and the taste chip's one home. The server guesses the phone.
+  // Never decides what the first paint draws: the phone row and the segmented
+  // bar both render and CSS (`sm:`) shows one. It picks only whether a
+  // segment's popover shows, and the taste chip's one home. The server
+  // guesses the phone.
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  // The phone sheet is `sm:hidden`: a phone turned past 640px would hide it
+  // while its focus trap and Escape stayed live, so crossing to desktop
+  // closes it and drops its draft.
+  useEffect(() => {
+    if (isDesktop) setPhoneSheetOpen(false);
+  }, [isDesktop]);
   // Desktop segments anchor their popovers on the whole segment, ✕ included.
   const segmentRefs = useRef<
     Partial<Record<SegmentKey, HTMLDivElement | null>>
@@ -347,13 +379,11 @@ export function FilterBar({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // The crew lens has no sheet or option list of its own here: on mobile it is
-  // the heading's pill, and on desktop its popover body is the crew picker.
+  // The crew lens has no option list of its own here: on the phone it is the
+  // Filters sheet's Who, and on desktop its popover body is the crew picker.
   const openDimension: FilterKey | null =
     openFilterKey === 'who' ? null : openFilterKey;
-  const activeDef = openDimension ? FILTER_DEFS[openDimension] : null;
-  // The phone Vibe sheet lists all 16 buckets in the board's order, as the
-  // desktop popover does (`bp-vibe-vibe_sheet_m`), shows or not.
+  // Vibe lists all 16 buckets in the board's order, shows or not.
   const activeOptions =
     openDimension === 'vibe'
       ? getFilterOptions('vibe', venues, [...VIBE_ORDER])
@@ -379,14 +409,6 @@ export function FilterBar({
       [FILTER_DEFS[key].queryKey]: toggleValue(base, value),
     });
   };
-
-  const multiFor = (key: FilterKey) =>
-    isMultiFilter(key)
-      ? {
-          selected: filterValues[key],
-          onToggle: (value: string) => toggleFilterValue(key, value),
-        }
-      : undefined;
 
   // The lens rides a search param like every other Browse state, so it
   // survives a refresh and a shared URL. An id with no matching crew (a stale
@@ -435,13 +457,60 @@ export function FilterBar({
   // resolves on the client, so that move shifts nothing the first paint drew.
   // The My artists chip is different: both of its instances stay mounted and
   // CSS shows one, so it takes an `ownsEffects` flag instead.
-  const tasteChip = (
+  // The phone row draws it at the row pills' 38px; the count line keeps 36.
+  const tasteChip = (height?: number) => (
     <TasteFilterChip
       active={tasteActive}
       onToggle={(next) => updateParams({ filterTaste: next ? '1' : '' })}
       scaRegion={scaRegion}
+      {...(height !== undefined && { height })}
     />
   );
+
+  // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
+  // the genre dots for Vibe. It draws two; the stack shows the first two. The
+  // phone chips draw the same marks, with 16px tiles each ringed in the chip's
+  // fill (`browse-active-320`). The board rings tiles only, not dots.
+  const dimensionMarks = (
+    key: FilterKey,
+    tileSize: number,
+    testPrefix: string,
+    tileRing?: string,
+  ): ReactNode => {
+    const values = filterValues[key];
+    if (key === 'where') {
+      const picked = values
+        .map((slug) => venues.find((candidate) => candidate.slug === slug))
+        .filter((venue): venue is VenuePublic => venue !== undefined)
+        .slice(0, 2);
+      if (picked.length === 0) return null;
+      return (
+        <StackedMarks
+          testId={`${testPrefix}-venue-stack`}
+          {...(tileRing !== undefined && { ring: tileRing })}
+        >
+          {picked.map((venue) => (
+            <VenueTile
+              key={venue.slug}
+              slug={venue.slug}
+              name={venue.name}
+              size={tileSize}
+            />
+          ))}
+        </StackedMarks>
+      );
+    }
+    if (key === 'vibe' && values.length > 0) {
+      return (
+        <StackedMarks testId={`${testPrefix}-vibe-stack`} tight>
+          {values.slice(0, 2).map((genre) => (
+            <GenreDot key={genre} genre={genre} />
+          ))}
+        </StackedMarks>
+      );
+    }
+    return null;
+  };
 
   const dimensionSegment = (key: FilterKey): BarSegment => {
     const values = filterValues[key];
@@ -454,38 +523,8 @@ export function FilterBar({
       resolved !== null && resolved.rest > 0
         ? copy.segment.moreSuffix(resolved.rest)
         : undefined;
-    // `bp-f-filt_active_d` stacks a mark per pick: the venue tiles for Where,
-    // the genre dots for Vibe. It draws two; the stack shows the first two.
-    let leading: ReactNode = null;
-    if (key === 'where') {
-      const picked = values
-        .map((slug) => venues.find((candidate) => candidate.slug === slug))
-        .filter((venue): venue is VenuePublic => venue !== undefined)
-        .slice(0, 2);
-      if (picked.length > 0) {
-        leading = (
-          <StackedMarks testId="segment-venue-stack">
-            {picked.map((venue) => (
-              <VenueTile
-                key={venue.slug}
-                slug={venue.slug}
-                name={venue.name}
-                // The board's pair spans 30px: two 18px tiles, 6px tucked.
-                size={SEGMENT_TILE_SIZE}
-              />
-            ))}
-          </StackedMarks>
-        );
-      }
-    } else if (key === 'vibe' && values.length > 0) {
-      leading = (
-        <StackedMarks testId="segment-vibe-stack" tight>
-          {values.slice(0, 2).map((genre) => (
-            <GenreDot key={genre} genre={genre} />
-          ))}
-        </StackedMarks>
-      );
-    }
+    // The board's pair spans 30px: two 18px tiles, 6px tucked.
+    const leading = dimensionMarks(key, SEGMENT_TILE_SIZE, 'segment');
     return {
       key,
       eyebrow: SEGMENT_LABEL[key],
@@ -524,6 +563,67 @@ export function FilterBar({
     segments.push(dimensionSegment(key));
   }
 
+  // The phone row (B+ B6b): every active filter as a chip that removes it, the
+  // crew lens first and the rest in the bar's order. The Filters pill counts
+  // them (`bp-f-filt_m_active`).
+  // A removed chip unmounts the button that had focus, so focus moves to the
+  // Filters pill first rather than falling to the page's top.
+  const removeChip = (remove: () => void) => () => {
+    filtersButtonRef.current?.focus();
+    remove();
+  };
+  const phoneChips: PhoneChip[] = [];
+  if (lensCrew !== null) {
+    phoneChips.push({
+      key: 'who',
+      label: lensCrew.name,
+      leading: (
+        <CrewPatch
+          crewId={lensCrew.id}
+          patchSalt={lensCrew.patchSalt}
+          size={PHONE_MARK_SIZE}
+          // The board's 16px chip patch keeps its weave (`tile`), as the
+          // sheet's Who pill does.
+          scale="tile"
+        />
+      ),
+      onRemove: removeChip(() => setLensCrew(null)),
+    });
+  }
+  for (const key of FILTER_ORDER) {
+    if (key === 'when' && isCalendarView) continue;
+    if (filterValues[key].length === 0) continue;
+    // One pick reads as its name, several as "2 venues" or "2 vibes". A pick
+    // that resolves to nothing (a venue since removed, an old link's value)
+    // still narrows the list, so it keeps a chip under the dimension's name,
+    // as the desktop segment stays active under its placeholder.
+    const label =
+      getChipLabel(key, filterValues[key], venues, genres) ??
+      FILTER_DEFS[key].label;
+    phoneChips.push({
+      key,
+      label,
+      leading: dimensionMarks(key, PHONE_MARK_SIZE, 'chip', PHONE_CHIP_FILL),
+      onRemove: removeChip(() => setFilterValue(key, '')),
+    });
+  }
+
+  // "Show N shows" writes the whole draft at once, so one URL change and one
+  // fetch, with the offset reset as every other write does. A draft that
+  // changes nothing just closes: the list keeps its page and its window.
+  const applyDraft = (draft: FilterDraft) => {
+    const withCrew = crews.length > 0;
+    const updates = draftUpdates(draft, withCrew);
+    const applied = draftUpdates(
+      { values: filterValues, crew: lensCrew?.id ?? null },
+      withCrew,
+    );
+    if (JSON.stringify(updates) !== JSON.stringify(applied)) {
+      updateParams(updates);
+    }
+    setPhoneSheetOpen(false);
+  };
+
   return (
     <div
       className={cn(
@@ -532,7 +632,7 @@ export function FilterBar({
         className,
       )}
     >
-      {/* Heading row: title left, lens pill + List/Cal toggle right */}
+      {/* Heading row: title left, List/Cal toggle right */}
       <div className="flex items-end justify-between gap-2.5">
         <div className="flex min-w-0 flex-col gap-0.5">
           {/* The lens takes the eyebrow's slot rather than sitting beside it:
@@ -555,22 +655,9 @@ export function FilterBar({
           </h1>
         </div>
 
-        {/* Mobile only: from sm up the lens is the bar's Who segment. */}
-        {crews.length > 0 && (
-          <div
-            data-testid="crew-lens-pill-slot"
-            className="flex shrink-0 items-center sm:hidden"
-          >
-            <CrewLensPill
-              crews={crews}
-              activeCrew={lensCrew}
-              onSelect={setLensCrew}
-              // Only ever shown under sm, so always the phone width.
-              wide={false}
-            />
-          </div>
-        )}
-
+        {/* The crew lens lives in the Filters sheet's Who on the phone and in
+            the bar's Who segment from sm up, so the heading holds only the
+            title and this toggle: at 320 the full "What's on?" fits. */}
         {/* List / Cal toggle (B+ `bp-browse`): an icon segmented control. */}
         <div className={VIEW_TOGGLE_CLASS} style={VIEW_TOGGLE_STYLE}>
           {VIEW_SEGMENTS.map(({ key, label, Icon }) => {
@@ -622,89 +709,32 @@ export function FilterBar({
         />
       )}
 
-      {/* Filter chips (mobile) — Inter font, surface-1 inactive bg, placeholder
-          as default label. From sm up the segmented bar below replaces them. */}
-      <div className={cn(CHIP_ROW_CLASS, 'sm:hidden')} style={CHIP_ROW_STYLE}>
-        {activeFilterCount > 0 && (
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-dashed border-border-strong sm:hidden"
-            style={{ color: 'var(--fg-muted)' }}
-            aria-label={copy.clearAllFiltersAriaLabel}
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
-              <path
-                d="M3 3l10 10M13 3L3 13"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                fill="none"
-              />
-            </svg>
-          </button>
-        )}
-
-        {/* Scope chips lead the row (taste-filter.jsx: they're modes, so they
-            sit before the dimension chips, each split off by its own trailing
-            divider). "My artists" comes first: it scopes to a list the viewer
-            built by hand, where the taste chip scopes to one Spotify inferred.
-            Either chip can render nothing, and because each owns the divider
-            that FOLLOWS it, no combination can strand a leading rule. The
-            row is `sm:hidden`, so this chip and the bar's switch below both
-            render and CSS shows one per width; this one owns the
-            lapsed-entitlement release. */}
-        <FollowFilterChip
-          active={followActive}
-          onToggle={toggleFollow}
-          followCount={followCount}
-          scaRegion={scaRegion}
-        />
-        {!isDesktop && tasteChip}
-
-        {FILTER_ORDER.map((key) => {
-          if (key === 'when' && isCalendarView) return null;
-
-          const values = filterValues[key];
-          // One pick reads as its name, several as "2 venues" or "2 vibes"
-          // (`filt_m_active`). The B+ chip restyle itself is B6b.
-          const activeLabel = getChipLabel(key, values, venues, genres);
-          const displayLabel = activeLabel ?? FILTER_DEFS[key].placeholder;
-          const isActive = values.length > 0;
-          const isOpen = openFilterKey === key;
-
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={(event) => {
-                const nextOpen = isOpen ? null : key;
-                setOpenFilterKey(nextOpen);
-                if (nextOpen) {
-                  setAnchorRect(event.currentTarget.getBoundingClientRect());
-                  setOpener(event.currentTarget);
-                }
-              }}
-              // One `venue-chip` in the DOM at a time: the desktop segment
-              // carries it from sm up, and e2e locates it strictly.
-              data-testid={
-                key === 'where' && !isDesktop ? 'venue-chip' : undefined
-              }
-              className={cn(FILTER_CHIP_CLASS, 'cursor-pointer')}
-              style={filterChipStyle(isActive)}
-              aria-expanded={isOpen}
-              aria-haspopup="dialog"
-            >
-              {/* The chip shows only its value ("Any vibe", or "Red Rocks"
-                  once set), so a screen reader heard no dimension. The hidden
-                  label names it the way the desktop segment's eyebrow does:
-                  "Vibe Any vibe" at every width. */}
-              <span className="sr-only">{FILTER_DEFS[key].label} </span>
-              <span style={{ whiteSpace: 'nowrap' }}>{displayLabel}</span>
-              <IconChevDown size={11} />
-            </button>
-          );
-        })}
+      {/* Phone filters (B+ B6b): the Filters pill opens one sheet for Who,
+          When, Where, Price and Vibe; My artists stays a switch beside it;
+          each active filter shows under them as a chip that removes it. From
+          sm up the segmented bar below replaces the lot. */}
+      <div
+        data-testid="phone-filter-row"
+        className="flex flex-col gap-2.5 sm:hidden"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <FiltersButton
+            buttonRef={filtersButtonRef}
+            count={phoneChips.length}
+            open={phoneSheetOpen}
+            onOpen={() => setPhoneSheetOpen(true)}
+          />
+          {/* This switch and the bar's below both render, CSS showing one
+              per width; this one owns the lapsed-entitlement release. */}
+          <FollowFilterChip
+            active={followActive}
+            onToggle={toggleFollow}
+            followCount={followCount}
+            scaRegion={scaRegion}
+          />
+          {!isDesktop && tasteChip(PHONE_PILL_HEIGHT)}
+        </div>
+        {phoneChips.length > 0 && <PhoneFilterChips chips={phoneChips} />}
       </div>
 
       {/* Segmented filter bar (desktop, B+ B6a) */}
@@ -739,8 +769,12 @@ export function FilterBar({
                 active={segment.active}
                 open={openFilterKey === segment.key}
                 clearLabel={copy.segment.clearAria(segment.eyebrow)}
-                testId={
-                  segment.key === 'where' && isDesktop
+                // The only `venue-chip` in the DOM now the phone row has none,
+                // so it no longer waits on the media query to claim it. A
+                // literal `data-testid` here keeps it visible to the e2e
+                // testid guard.
+                data-testid={
+                  segment.key === 'where'
                     ? 'venue-chip'
                     : `filter-segment-${segment.key}`
                 }
@@ -799,22 +833,23 @@ export function FilterBar({
           )}
           {isDesktop && (
             <span className="ml-auto inline-flex items-center">
-              {tasteChip}
+              {tasteChip()}
             </span>
           )}
         </div>
       </div>
 
-      {activeDef && openDimension && (
-        <FilterSheet
-          open={!isDesktop}
-          title={activeDef.label}
-          placeholder={activeDef.placeholder}
-          options={activeOptions}
-          value={activeValue}
-          multi={multiFor(openDimension)}
-          onClose={closePopover}
-          onSelect={(nextValue) => setFilterValue(openDimension, nextValue)}
+      {phoneSheetOpen && (
+        <PhoneFilterSheet
+          initial={{ values: filterValues, crew: lensCrew?.id ?? null }}
+          venues={venues}
+          crews={crews}
+          lensCount={lensCount}
+          isCalendarView={isCalendarView}
+          baseQuery={searchParams.toString()}
+          appliedCount={showCount}
+          onApply={applyDraft}
+          onClose={() => setPhoneSheetOpen(false)}
         />
       )}
 

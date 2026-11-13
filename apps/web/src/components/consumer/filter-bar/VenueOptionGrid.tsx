@@ -31,21 +31,53 @@ interface VenueOptionGridProps {
   venues: VenuePublic[];
   selected: readonly string[];
   onToggle: (slug: string) => void;
+  /**
+   * `popover` is the desktop two-column list. `sheet` is the phone Where list
+   * (`bp-f-filt_venues_m`): one column, 36px tiles, a 14px name, and no
+   * focus on open, so the keyboard doesn't cover the list it opens on.
+   */
+  variant?: 'popover' | 'sheet';
 }
+
+const VARIANT = {
+  popover: {
+    grid: 'grid-cols-2',
+    gap: 'gap-y-1.5',
+    tile: 28,
+    name: 13.5,
+    sub: 11,
+    nameLead: undefined,
+    subLead: undefined,
+  },
+  // The board's rows land every 52px: a 48px row and a 4px gap. The 36px
+  // tile sets that height only while the two text lines stay under it, so
+  // they take 18px and 14px lines (32px) rather than the default 1.5 (38px).
+  sheet: {
+    grid: 'grid-cols-1',
+    gap: 'gap-y-1',
+    tile: 36,
+    name: 14,
+    sub: 11.5,
+    nameLead: '18px',
+    subLead: '14px',
+  },
+} as const;
 
 export const VenueOptionGrid = ({
   venues,
   selected,
   onToggle,
+  variant = 'popover',
 }: VenueOptionGridProps) => {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const look = VARIANT[variant];
 
   // The field is the fastest way to a venue in a list of twenty, so it takes
   // focus when the popover opens.
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (variant === 'popover') inputRef.current?.focus();
+  }, [variant]);
 
   // The API keeps the first 25 values of a list and drops the rest, so at the
   // cap an unticked row is disabled rather than accepting a pick it ignores.
@@ -86,7 +118,7 @@ export const VenueOptionGrid = ({
           {copy.whereNoMatch}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-x-2.5 gap-y-1.5">
+        <div className={`grid ${look.grid} gap-x-2.5 ${look.gap}`}>
           {shown.map((venue) => {
             const active = selected.includes(venue.slug);
             const disabled = atCap && !active;
@@ -110,17 +142,31 @@ export const VenueOptionGrid = ({
                     : undefined
                 }
               >
-                <VenueTile slug={venue.slug} name={venue.name} size={28} />
+                <VenueTile
+                  slug={venue.slug}
+                  name={venue.name}
+                  size={look.tile}
+                />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span
                     data-testid="venue-option-name"
-                    className="truncate text-[13.5px] text-fg"
-                    style={{ fontWeight: active ? 800 : 600 }}
+                    className="truncate text-fg"
+                    style={{
+                      fontSize: look.name,
+                      fontWeight: active ? 800 : 600,
+                      ...(look.nameLead && { lineHeight: look.nameLead }),
+                    }}
                   >
                     {venue.name}
                   </span>
                   {venue.neighborhood && (
-                    <span className="truncate text-[11px] text-fg-subtle">
+                    <span
+                      className="truncate text-fg-subtle"
+                      style={{
+                        fontSize: look.sub,
+                        ...(look.subLead && { lineHeight: look.subLead }),
+                      }}
+                    >
                       {venue.neighborhood}
                     </span>
                   )}

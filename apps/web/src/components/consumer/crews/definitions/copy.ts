@@ -298,11 +298,9 @@ export const CREWS_COPY = {
   // of the show, a crew narrows it by who. The strings say "going", never
   // "matching", for exactly that reason.
   lens: {
-    resting: 'Crews',
     railEyebrow: 'CREW LENS',
     railCount: (count: number) => `${count} ${plural(count, 'SHOW', 'SHOWS')}`,
     railClear: 'Clear',
-    pickerTitle: 'Look through a crew',
     pickerSub: 'The calendar, filtered to shows one of them is going to.',
     pickerNone: 'Everyone',
     pickerNoneMeta: 'EVERY SHOW IN DENVER',
@@ -379,8 +377,6 @@ export const CREWS_COPY = {
     reroll: 'Pull a new patch',
     options: 'Crew options',
     close: 'Close',
-    lensOn: (crew: string) =>
-      `Crew lens on: ${crew}. Only what a member is going to.`,
     lensOff: 'Crew lens off. Showing all shows.',
     // Names the picker's option set, which the radiogroup role requires.
     lensPicker: 'Look through a crew',
