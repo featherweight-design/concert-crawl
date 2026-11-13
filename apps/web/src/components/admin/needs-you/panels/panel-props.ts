@@ -1,4 +1,4 @@
-import type { NeedsYouAnswer, QueueRow } from '../needs-you-api';
+import type { AnswerParams, NeedsYouAnswer, QueueRow } from '../needs-you-api';
 
 /** What every kind's drawn panel body takes. */
 export interface PanelProps {
@@ -9,5 +9,5 @@ export interface PanelProps {
   ranksFirst: boolean;
   busy: boolean;
   /** The card's own answer handler (confirm-before-notify, navigation). */
-  onAnswer: (answer: NeedsYouAnswer) => void;
+  onAnswer: (answer: NeedsYouAnswer, params?: AnswerParams) => void;
 }

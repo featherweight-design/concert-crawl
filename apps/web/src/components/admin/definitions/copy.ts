@@ -2656,6 +2656,73 @@ export const ADMIN_COPY = {
         partial: 'Partial',
         skipped: 'Skipped',
       },
+      artist: {
+        title: (reports: number, name: string) =>
+          `${reports} ${reports === 1 ? 'fan says' : 'fans say'} this photo isn’t ${name}`,
+        reportsChip: (count: number) =>
+          `${count} ${count === 1 ? 'report' : 'reports'}`,
+        reportedPhoto: (count: number) =>
+          `${count} ${count === 1 ? 'fan' : 'fans'} reported the photo.`,
+        reportedOther: (count: number) =>
+          `${count} ${count === 1 ? 'fan' : 'fans'} reported this artist.`,
+        candidates: 'CANDIDATES, BEST FIRST',
+        playsDenver: 'Plays Denver',
+        current: 'Current',
+        use: (name: string) => `Use ${name}`,
+        keepPhoto: 'Keep current photo',
+      },
+      event: {
+        title: (name: string) => `Is “${name}” a concert?`,
+        whyUnsure: 'WHY WE’RE UNSURE',
+        underBar: (score: string, bar: string) =>
+          `Haiku gave it ${score}, under the ${bar} bar.`,
+        overBar: (score: string, bar: string) =>
+          `Haiku gave it ${score}, at or over the ${bar} bar, and it still waits for you.`,
+        fromPage: 'FROM THE VENUE’S PAGE',
+        wouldList: 'WHAT WE’D LIST',
+        artist: 'Artist',
+        when: 'When',
+        where: 'Where',
+        note: 'Not a concert hides it for good and teaches nothing automatically. It’s a show lists it as is.',
+        edit: 'Edit, then list',
+      },
+      priceCheck: {
+        titleStarts: (event: string, tier: string | null, price: string) =>
+          `${event}: a fan says ${tier ?? 'tickets'} starts at ${price}`,
+        titleIs: (event: string, tier: string | null, price: string) =>
+          `${event}: a fan says ${tier ?? 'tickets'} is ${price}`,
+        twoPrices: 'THE TWO PRICES',
+        listedNow: 'LISTED NOW',
+        check: 'PRICE CHECK',
+        submitted: (day: string) => `Submitted ${day}`,
+        fans: (count: number) => `${count} ${count === 1 ? 'fan' : 'fans'}`,
+        checker: 'The fan who checked',
+        checkerValue: (all: number, approved: number) =>
+          `${all} ${all === 1 ? 'price' : 'prices'}, ${approved === all ? 'all approved' : `${approved} approved`}`,
+        watching: (count: number, when: string) =>
+          `${count} ${count === 1 ? 'person is' : 'people are'} Watching. The show is ${when}.`,
+        use: (price: string) => `Use ${price}`,
+        keep: (price: string) => `Keep ${price}`,
+        openTicket: 'Open ticket page',
+        note: 'Both fans hear back in Submitted prices.',
+        today: 'Today',
+      },
+      bug: {
+        newChip: (ago: string) => `New · ${ago}`,
+        kind: 'Bug report',
+        report: 'REPORT',
+        context: 'CONTEXT',
+        from: 'From',
+        page: 'Page',
+        ago: (minutes: number) =>
+          minutes < 60
+            ? `${Math.max(1, minutes)} min ago`
+            : minutes < 60 * 24
+              ? `${Math.floor(minutes / 60)} h ago`
+              : `${Math.floor(minutes / (60 * 24))} d ago`,
+        screenshotAlt: 'The reporter’s screenshot',
+        openGithub: 'Open in GitHub',
+      },
       showDropped: {
         otherFine: (count: number, venue: string | null) =>
           `The other ${count} ${venue ?? 'venue'} ${count === 1 ? 'show' : 'shows'} crawled fine, so this isn’t a page problem.`,
@@ -2765,6 +2832,9 @@ export const ADMIN_COPY = {
       failed: "Couldn't undo that.",
       failedSaved: 'The answer stands.',
     },
+    // The reason a price check's answer records in the audit log: the board
+    // draws no reason field, so the queue states where the call was made.
+    priceCheckReason: 'Decided from Needs you',
     answerFailed: {
       title: "Couldn't save that answer",
       saved: 'The item is still waiting.',

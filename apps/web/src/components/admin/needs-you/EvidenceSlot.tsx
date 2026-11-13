@@ -14,9 +14,13 @@ import {
   panelTitleOf,
   whatOf,
 } from './needs-you-rules';
-import type { NeedsYouAnswer, QueueRow } from './needs-you-api';
+import type { AnswerParams, NeedsYouAnswer, QueueRow } from './needs-you-api';
 import { ShowDroppedPanel } from './panels/ShowDroppedPanel';
 import { ShowMovedPanel } from './panels/ShowMovedPanel';
+import { ArtistPanel } from './panels/ArtistPanel';
+import { BugPanel } from './panels/BugPanel';
+import { EventPanel } from './panels/EventPanel';
+import { PriceCheckPanel } from './panels/PriceCheckPanel';
 import { VenuePanel } from './panels/VenuePanel';
 
 const COPY = ADMIN_COPY.needsYou;
@@ -29,7 +33,7 @@ interface EvidenceSlotProps {
   ranksFirst: boolean;
   busy: boolean;
   onClose: () => void;
-  onAnswer: (answer: NeedsYouAnswer) => void;
+  onAnswer: (answer: NeedsYouAnswer, params?: AnswerParams) => void;
 }
 
 /** The kinds whose panel is drawn per kind; the rest keep the generic one. */
@@ -42,6 +46,14 @@ const drawnPanel = (kind: QueueRow['kind']) => {
     case 'venue-failing':
     case 'venue-blocked':
       return VenuePanel;
+    case 'artist':
+      return ArtistPanel;
+    case 'event-low-confidence':
+      return EventPanel;
+    case 'price-check':
+      return PriceCheckPanel;
+    case 'bug':
+      return BugPanel;
     default:
       return null;
   }

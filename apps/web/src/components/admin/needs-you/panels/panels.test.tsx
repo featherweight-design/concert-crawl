@@ -3,7 +3,14 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { EvidenceSlot } from '../EvidenceSlot';
-import type { NeedsYouAnswer, QueueRow } from '../needs-you-api';
+import type {
+  ArtistCandidate,
+  BugFacts,
+  EventFacts,
+  NeedsYouAnswer,
+  PriceFacts,
+  QueueRow,
+} from '../needs-you-api';
 
 const answer = (over: Partial<NeedsYouAnswer>): NeedsYouAnswer => ({
   slug: 'still_on',
@@ -40,6 +47,10 @@ const row = (over: Partial<QueueRow>): QueueRow => ({
   pagesThisRun: null,
   robots: null,
   otherShowsCrawledFine: null,
+  artistFacts: null,
+  eventFacts: null,
+  priceFacts: null,
+  bugFacts: null,
   ...over,
 });
 
@@ -244,5 +255,237 @@ describe('VenuePanel', () => {
     expect(
       screen.getByText('The Ogden refused our crawler'),
     ).toBeInTheDocument();
+  });
+});
+
+const candidate = (over: Partial<ArtistCandidate>): ArtistCandidate => ({
+  id: 'sp1',
+  name: 'Wild Child',
+  imageUrl: null,
+  genres: ['indie'],
+  current: false,
+  exact: true,
+  playsDenver: true,
+  ...over,
+});
+
+const artistRow = (
+  candidates: ArtistCandidate[],
+  over: Partial<QueueRow> = {},
+) =>
+  row({
+    key: 'artist:a1',
+    kind: 'artist',
+    title: 'Wild Child',
+    reportCount: 2,
+    answers: [
+      answer({
+        slug: 'pick_the_right_artist',
+        label: 'Pick the right artist',
+        suggested: true,
+      }),
+      answer({ slug: 'keep_this_match', label: 'Keep this match' }),
+    ],
+    artistFacts: {
+      nextShowVenue: 'Globe Hall',
+      spotifyArtistId: 'cur',
+      photoUrl: null,
+      reportReasons: ['wrong_photo'],
+      candidates,
+    },
+    ...over,
+  });
+
+describe('ArtistPanel', () => {
+  it('picks the best candidate and sends its id with the answer', () => {
+    const send = open(
+      artistRow([
+        candidate({ id: 'cur', name: 'Wild Child (current)', current: true }),
+        candidate({ id: 'sp2', name: 'Wild Child Band' }),
+      ]),
+    );
+    fireEvent.click(screen.getByText('Use Wild Child Band'));
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ slug: 'pick_the_right_artist' }),
+      { spotifyArtistId: 'sp2' },
+    );
+  });
+
+  it('follows the picked card, and relabels keep_this_match', () => {
+    const send = open(
+      artistRow([
+        candidate({ id: 'sp1', name: 'One' }),
+        candidate({ id: 'sp2', name: 'Two' }),
+      ]),
+    );
+    fireEvent.click(screen.getAllByTestId('artist-candidate')[1]!);
+    fireEvent.click(screen.getByText('Use Two'));
+    expect(send).toHaveBeenCalledWith(expect.anything(), {
+      spotifyArtistId: 'sp2',
+    });
+    expect(screen.getByText('Keep current photo')).toBeInTheDocument();
+  });
+
+  it('offers no pick when there is no candidate', () => {
+    open(artistRow([]));
+    expect(
+      document.querySelector('[data-slug="pick_the_right_artist"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-slug="keep_this_match"]'),
+    ).not.toBeNull();
+  });
+});
+
+const eventRow = (over: Partial<EventFacts> = {}) =>
+  row({
+    key: 'event-low-confidence:e9',
+    kind: 'event-low-confidence',
+    title: 'Open Mic Night',
+    answers: [
+      answer({ slug: 'its_a_show', label: 'It’s a show', suggested: true }),
+      answer({ slug: 'edit_then_list', label: 'Edit, then list' }),
+      answer({ slug: 'not_a_concert', label: 'Not a concert' }),
+    ],
+    eventFacts: {
+      eventId: 'e9',
+      artist: 'Open Mic Night',
+      description: 'Sign up at the door.',
+      confidence: 0.55,
+      autoApproveBar: 0.7,
+      ...over,
+    },
+  });
+
+describe('EventPanel', () => {
+  it('says which side of the bar the score is on', () => {
+    open(eventRow());
+    expect(screen.getByText(/0\.55/)).toBeInTheDocument();
+    cleanup();
+    open(eventRow({ confidence: 0.9 }));
+    expect(screen.getByText(/0\.90/)).toBeInTheDocument();
+  });
+
+  it('quotes the venue page and lists what would be listed', () => {
+    open(eventRow());
+    expect(screen.getByTestId('venue-quote')).toHaveTextContent(
+      '“Sign up at the door.”',
+    );
+    expect(screen.getByText('WHAT WE’D LIST')).toBeInTheDocument();
+    expect(screen.queryByText('Price')).toBeNull();
+  });
+
+  it('draws Edit, then list as a link to the event, not an answer', () => {
+    open(eventRow());
+    expect(screen.getByTestId('edit-event')).toHaveAttribute(
+      'href',
+      '/admin/events/e9',
+    );
+    expect(document.querySelector('[data-slug="edit_then_list"]')).toBeNull();
+  });
+});
+
+const priceRow = (over: Partial<PriceFacts> = {}) =>
+  row({
+    key: 'price-check:p1',
+    kind: 'price-check',
+    title: 'Wild Child',
+    watchers: 3,
+    answers: [
+      answer({
+        slug: 'use_checked_price',
+        label: 'Use the checked price',
+        suggested: true,
+      }),
+      answer({ slug: 'keep_listed_price', label: 'Keep the listed price' }),
+    ],
+    priceFacts: {
+      listed: '29.00',
+      listedMax: '64.00',
+      checked: '45.00',
+      checkedMax: null,
+      tier: 'GA',
+      listedAt: '2026-11-10T18:00:00.000Z',
+      checkedAt: '2026-11-12T16:00:00.000Z',
+      checkedFans: 2,
+      listedFans: 1,
+      ticketUrl: 'https://tickets.example/e',
+      checkerSubmissions: 3,
+      checkerApproved: 3,
+      ...over,
+    },
+  });
+
+describe('PriceCheckPanel', () => {
+  it('draws the two prices as ranges', () => {
+    open(priceRow());
+    expect(screen.getByTestId('price-listed')).toHaveTextContent('$29–$64');
+    expect(screen.getByTestId('price-checked')).toHaveTextContent('$45+');
+  });
+
+  it('labels the answers with the prices they pick', () => {
+    open(priceRow());
+    expect(screen.getByText('Use $45+')).toBeInTheDocument();
+    expect(screen.getByText('Keep $29–$64')).toBeInTheDocument();
+  });
+
+  it('opens the ticket page in a new tab, and only when there is one', () => {
+    open(priceRow());
+    expect(screen.getByTestId('open-ticket-page')).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+    cleanup();
+    open(priceRow({ ticketUrl: null }));
+    expect(screen.queryByTestId('open-ticket-page')).toBeNull();
+  });
+});
+
+const bugRow = (over: Partial<BugFacts> = {}) =>
+  row({
+    key: 'bug:b1',
+    kind: 'bug',
+    title: 'Button broken',
+    answers: [answer({ slug: 'resolve', label: 'Resolve', suggested: true })],
+    evidence: [{ label: 'Page', value: 'https://concertcrawl.app/events/abc' }],
+    bugFacts: {
+      message: 'Button broken',
+      createdAt: null,
+      handle: 'fan1',
+      screenshot: null,
+      issueUrl: null,
+      ...over,
+    },
+  });
+
+describe('BugPanel', () => {
+  it('draws the report, who sent it and the page path', () => {
+    open(bugRow());
+    expect(screen.getByText('“Button broken”')).toBeInTheDocument();
+    expect(screen.getByText('@fan1')).toBeInTheDocument();
+    expect(screen.getByText('/events/abc')).toBeInTheDocument();
+  });
+
+  it('draws a screenshot only when there is one', () => {
+    open(bugRow());
+    expect(screen.queryByTestId('bug-screenshot')).toBeNull();
+    cleanup();
+    open(bugRow({ screenshot: 'data:image/png;base64,AAAA' }));
+    expect(screen.getByTestId('bug-screenshot')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,AAAA',
+    );
+  });
+
+  it('links to GitHub only with an issue, and has no reply box', () => {
+    open(bugRow());
+    expect(screen.queryByTestId('open-github')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    cleanup();
+    open(bugRow({ issueUrl: 'https://github.com/o/r/issues/1' }));
+    expect(screen.getByTestId('open-github')).toHaveAttribute(
+      'href',
+      'https://github.com/o/r/issues/1',
+    );
   });
 });

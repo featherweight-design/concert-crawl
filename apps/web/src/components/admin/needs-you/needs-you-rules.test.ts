@@ -2,18 +2,23 @@ import { describe, expect, it } from 'vitest';
 import {
   causeText,
   countAfterRemoval,
+  defaultParams,
   eightAmMountain,
   evidenceText,
   lastRunsOf,
   latestRunWhen,
   leadFirst,
   metaTime,
+  minutesSince,
   robotsText,
   mountainDay,
   mountainDayAhead,
   mountainStamp,
+  pagePathOf,
+  priceRangeOf,
   snoozeDayLabel,
   statusPhrase,
+  todayStamp,
   whenChipOf,
 } from './needs-you-rules';
 
@@ -193,5 +198,47 @@ describe('countAfterRemoval', () => {
     const next = countAfterRemoval(count, 'bug', false);
     expect(next.handledToday).toBe(2);
     expect(next.byKind.bug).toBe(0);
+  });
+});
+
+describe('price and bug helpers', () => {
+  it('writes a price range as the board does', () => {
+    expect(priceRangeOf('29.00', '64.00')).toBe('$29–$64');
+    expect(priceRangeOf('45.00', null)).toBe('$45+');
+    expect(priceRangeOf('45.00', '45.00')).toBe('$45');
+    expect(priceRangeOf(null, null)).toBeNull();
+  });
+
+  it('sends the fixed reason with a price answer only', () => {
+    expect(defaultParams('use_checked_price')).toEqual({
+      reason: 'Decided from Needs you',
+    });
+    expect(defaultParams('keep_listed_price')).toEqual({
+      reason: 'Decided from Needs you',
+    });
+    expect(defaultParams('still_on')).toBeUndefined();
+  });
+
+  it('counts minutes since, and null for a bad instant', () => {
+    const now = Date.parse('2026-11-13T12:00:00Z');
+    expect(minutesSince('2026-11-13T11:30:00Z', now)).toBe(30);
+    expect(minutesSince('2026-11-13T13:00:00Z', now)).toBe(0);
+    expect(minutesSince('nope', now)).toBeNull();
+    expect(minutesSince(null, now)).toBeNull();
+  });
+
+  it('reduces a page URL to its path, or keeps what was sent', () => {
+    expect(pagePathOf('https://concertcrawl.app/events/abc?x=1')).toBe(
+      '/events/abc?x=1',
+    );
+    expect(pagePathOf('not a url')).toBe('not a url');
+  });
+
+  it('says Today for a stamp on today, a date otherwise', () => {
+    expect(todayStamp('2026-11-12T16:14:00Z', '2026-11-12')).toMatch(/^Today,/);
+    expect(todayStamp('2026-11-10T16:14:00Z', '2026-11-12')).not.toMatch(
+      /^Today/,
+    );
+    expect(todayStamp(null, '2026-11-12')).toBeNull();
   });
 });
