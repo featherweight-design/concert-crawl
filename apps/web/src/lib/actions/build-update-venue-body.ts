@@ -35,20 +35,15 @@ export function buildUpdateVenueBody(
   const trimmedOrNull = (raw: FormDataEntryValue): string | null =>
     String(raw).trim() === '' ? null : String(raw).trim();
 
-  const crawlWaitUntilRaw = String(formData.get('crawlWaitUntil') ?? '');
   const VALID_WAIT_UNTIL = ['networkidle', 'load', 'domcontentloaded'] as const;
-  const crawlWaitUntil = matchLiteral(crawlWaitUntilRaw, VALID_WAIT_UNTIL);
+  const crawlWaitUntil = ifPresent('crawlWaitUntil', (raw) =>
+    matchLiteral(String(raw), VALID_WAIT_UNTIL),
+  );
 
   // The browser-gate fields (crawl mode, selector, platform, API provider)
   // leave the body when their keys are absent, so a save that does not touch
   // them skips the API's browser-mode selector guard.
-  const crawlWaitForSelectorRaw = formData.get('crawlWaitForSelector');
-  const crawlWaitForSelector =
-    crawlWaitForSelectorRaw === null
-      ? undefined
-      : String(crawlWaitForSelectorRaw).trim() === ''
-        ? null
-        : String(crawlWaitForSelectorRaw).trim();
+  const crawlWaitForSelector = ifPresent('crawlWaitForSelector', trimmedOrNull);
 
   const ticketVendor = ifPresent('ticketVendor', trimmedOrNull);
 
@@ -86,14 +81,12 @@ export function buildUpdateVenueBody(
   const about = ifPresent('about', trimmedOrNull);
   const neighborhood = ifPresent('neighborhood', trimmedOrNull);
 
-  const featuredRaw = formData.get('featured');
-  const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined;
+  const isTrue = (raw: FormDataEntryValue): boolean => raw === 'true';
+  const featured = ifPresent('featured', isTrue);
 
   const priceUrl = ifPresent('priceUrl', trimmedOrNull);
 
-  const debugCaptureHtmlRaw = formData.get('debugCaptureHtml');
-  const debugCaptureHtml =
-    debugCaptureHtmlRaw !== null ? debugCaptureHtmlRaw === 'true' : undefined;
+  const debugCaptureHtml = ifPresent('debugCaptureHtml', isTrue);
 
   // Platform routing (#721/#665). Empty string means "Auto (no platform)".
   // When platform is null the API force-clears platformVenueId anyway, but
@@ -147,9 +140,7 @@ export function buildUpdateVenueBody(
     websiteUrl: ifPresent('websiteUrl', (raw) => String(raw).trim()),
     city: ifPresent('city', (raw) => String(raw) || 'Denver'),
     // Absent means unchanged: the settings save never sends it.
-    active: formData.has('active')
-      ? formData.get('active') === 'true'
-      : undefined,
+    active: ifPresent('active', isTrue),
     crawlWaitUntil,
     crawlWaitForSelector,
     ticketVendor,
