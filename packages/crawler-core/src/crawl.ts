@@ -1087,7 +1087,8 @@ export async function crawlVenue(
         );
         normalizedEvents.push({
           ...evt,
-          headliners: prior.headliners === null ? null : reused.headliners,
+          // No stored bill stays exactly that: NULL is "no verdict", never [].
+          headliners: prior.headliners ? reused.headliners : prior.headliners,
           supportingArtists: reused.supportingArtists,
         });
         continue;
