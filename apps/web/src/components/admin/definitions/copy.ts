@@ -2646,6 +2646,9 @@ export const ADMIN_COPY = {
       approving: 'Approving…',
       cancel: 'Cancel',
       rowLabel: (name: string) => `Approve ${name}`,
+      // A price whose show has no title, and the line's metadata separator.
+      untitled: 'Untitled show',
+      metaSeparator: ' · ',
       loading: 'Loading the prices…',
       loadFailed: 'Couldn’t load the prices.',
       retry: 'Try again',
