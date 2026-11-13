@@ -36,8 +36,11 @@ const refusal = (status: number, body: unknown) =>
 
 describe('tryDeleteVenue', () => {
   it('is ok when the delete goes through, with one DELETE call', async () => {
-    del.mockResolvedValue({ eventsDetached: 0 });
-    await expect(tryDeleteVenue('v1')).resolves.toEqual({ ok: true });
+    del.mockResolvedValue({ eventsDetached: 2 });
+    await expect(tryDeleteVenue('v1')).resolves.toEqual({
+      ok: true,
+      eventsDetached: 2,
+    });
     expect(del).toHaveBeenCalledTimes(1);
     expect(del).toHaveBeenCalledWith('/v1/admin/venues/v1', 'token');
   });
@@ -74,9 +77,32 @@ describe('tryDeleteVenue', () => {
     });
   });
 
-  it('treats a 404 as done: the venue is already gone', async () => {
-    del.mockRejectedValue(refusal(404, { success: false, error: 'not found' }));
-    await expect(tryDeleteVenue('v1')).resolves.toEqual({ ok: true });
+  it('treats the route’s own not-found 404 as done, and logs it', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    del.mockRejectedValue(
+      refusal(404, { success: false, error: 'Venue not found' }),
+    );
+    await expect(tryDeleteVenue('v1')).resolves.toEqual({
+      ok: true,
+      eventsDetached: 0,
+    });
+    expect(info).toHaveBeenCalledWith('tryDeleteVenue: already gone', {
+      id: 'v1',
+    });
+  });
+
+  it('treats any other 404 (a missing route, version skew) as a failure', async () => {
+    for (const body of [
+      { success: false, error: 'Not Found' },
+      undefined,
+      'Not Found',
+    ]) {
+      del.mockRejectedValue(refusal(404, body));
+      await expect(tryDeleteVenue('v1')).resolves.toEqual({
+        ok: false,
+        refused: null,
+      });
+    }
   });
 
   it('rethrows what is not an API refusal', async () => {

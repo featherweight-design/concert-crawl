@@ -61,11 +61,9 @@ interface ConfirmProps {
   onDone: () => void;
 }
 
-/** Upcoming shows and Watchers, or null when the payload has no counts. */
-const countsOf = (venue: VenueWithCrawlHealth) => ({
-  shows: venue.deleteBlockers?.upcomingShows ?? null,
-  watchers: venue.deleteBlockers?.watchers ?? null,
-});
+/** Upcoming shows, or null when the payload has no counts. */
+const countsOf = (venue: VenueWithCrawlHealth): number | null =>
+  venue.deleteBlockers?.upcomingShows ?? null;
 
 /**
  * A centred dialog on desktop and a sheet on the phone (`ConfirmDialog`),
@@ -82,6 +80,7 @@ const VenueConfirm = ({
   failedSaved,
   onCancel,
   act,
+  onDone,
   children,
 }: {
   title: string;
@@ -91,20 +90,40 @@ const VenueConfirm = ({
   failedWhat: string;
   failedSaved: string;
   onCancel: () => void;
-  /** Runs the action; a throw shows the failure inline. */
-  act: () => Promise<void>;
+  /**
+   * Runs the action: true once it went through, false when it settled the
+   * outcome itself (a refusal it shows). A throw shows the failure inline.
+   */
+  act: () => Promise<boolean>;
+  /** Runs after a success, outside the failure path. */
+  onDone: () => void;
   children: ReactNode;
 }) => {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
+  // Latched on success, so the confirm can't send again even if the caller
+  // keeps the dialog mounted.
+  const [done, setDone] = useState(false);
   const confirm = async () => {
+    if (done) return;
     setPending(true);
     setError(false);
-    await act().catch((err: unknown) => {
+    let succeeded = false;
+    try {
+      succeeded = await act();
+    } catch (err: unknown) {
       console.warn('VenueConfirm: action failed', { title, err });
       setError(true);
-    });
+    }
     setPending(false);
+    if (!succeeded) return;
+    setDone(true);
+    // The change went through; a throw here is the caller's, not a failure.
+    try {
+      onDone();
+    } catch (err: unknown) {
+      console.warn('VenueConfirm: onDone threw after success', { title, err });
+    }
   };
   return (
     <ConfirmDialog
@@ -115,7 +134,7 @@ const VenueConfirm = ({
       confirmVariant="dangerOutline"
       buttonSize="large"
       pending={pending}
-      confirmDisabled={!ready}
+      confirmDisabled={!ready || done}
       onConfirm={() => void confirm()}
       onCancel={onCancel}
       body={
@@ -159,8 +178,57 @@ const TypedName = ({
   );
 };
 
+/** A note with its drawn label above it, visible as well as announced. */
+const NoteField = ({
+  label,
+  placeholder,
+  maxLength,
+  required = false,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  maxLength: number;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  const isPhone = useIsPhone();
+  const noteId = useId();
+  return (
+    <div>
+      <label htmlFor={noteId} style={FIELD_LABEL}>
+        {label}
+      </label>
+      <textarea
+        id={noteId}
+        required={required}
+        maxLength={maxLength}
+        value={value}
+        placeholder={placeholder}
+        onChange={(evt) => onChange(evt.target.value)}
+        style={{ ...field(isPhone), minHeight: 52, resize: 'vertical' }}
+      />
+    </div>
+  );
+};
+
+/**
+ * Folds what a keyboard or autocorrect changes without meaning to: Unicode
+ * forms (NFKC), curly quotes to straight, runs of whitespace, and case.
+ */
+const foldName = (text: string): string =>
+  text
+    .normalize('NFKC')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
 const named = (typed: string, venue: VenueWithCrawlHealth): boolean =>
-  typed.trim() === venue.name.trim();
+  foldName(typed) === foldName(venue.name);
 
 /** Arrow keys walk a radio group and pick as they go, as native radios do. */
 const STEP: Record<string, number> = {
@@ -172,13 +240,11 @@ const STEP: Record<string, number> = {
 
 /** `A3/03/hide-other-d`: why it's hidden, with a required note for Other. */
 export const HideConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
-  const isPhone = useIsPhone();
-  const noteId = useId();
+  const whyId = useId();
   const radios = useRef<Array<HTMLButtonElement | null>>([]);
   const [reason, setReason] = useState<VenueHideReason | null>(null);
   const [note, setNote] = useState('');
   const trimmed = note.trim();
-  const { shows, watchers } = countsOf(venue);
 
   // A roving tabindex: one stop for the group, arrows move and pick.
   const onKey = (evt: KeyboardEvent, index: number) => {
@@ -202,19 +268,20 @@ export const HideConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
       failedSaved={COPY.failed.hideSaved}
       onCancel={onCancel}
       act={async () => {
-        if (reason === null) return;
+        if (reason === null) return false;
         await hideVenue(venue.id, reason, reason === 'other' ? trimmed : null);
-        onDone();
+        return true;
       }}
+      onDone={onDone}
     >
-      <div>{COPY.hide.body(venue.name, shows, watchers)}</div>
+      <div>{COPY.hide.body(venue.name, countsOf(venue))}</div>
       <div>
-        <div id={`${noteId}-why`} style={FIELD_LABEL}>
+        <div id={whyId} style={FIELD_LABEL}>
           {COPY.hide.why}
         </div>
         <div
           role="radiogroup"
-          aria-labelledby={`${noteId}-why`}
+          aria-labelledby={whyId}
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
         >
           {HIDE_REASONS.map((key, index) => (
@@ -260,15 +327,13 @@ export const HideConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
         </div>
       </div>
       {reason === 'other' && (
-        <textarea
-          id={noteId}
-          aria-label={COPY.hide.noteLabel}
-          required
-          maxLength={500}
-          value={note}
+        <NoteField
+          label={COPY.hide.noteLabel}
           placeholder={COPY.hide.notePlaceholder}
-          onChange={(evt) => setNote(evt.target.value)}
-          style={{ ...field(isPhone), minHeight: 52, resize: 'vertical' }}
+          maxLength={500}
+          required
+          value={note}
+          onChange={setNote}
         />
       )}
       <div style={SMALL}>{COPY.hide.foot}</div>
@@ -282,7 +347,6 @@ export const HideConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
  * typed, since this is the one action that can't be undone.
  */
 export const TakeDownConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
-  const isPhone = useIsPhone();
   const [typed, setTyped] = useState('');
   const [note, setNote] = useState('');
   return (
@@ -296,10 +360,11 @@ export const TakeDownConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
       onCancel={onCancel}
       act={async () => {
         await removeVenue(venue.id, COPY.takeDown.auditReason(note.trim()));
-        onDone();
+        return true;
       }}
+      onDone={onDone}
     >
-      <div>{COPY.takeDown.body(venue.name, countsOf(venue).shows)}</div>
+      <div>{COPY.takeDown.body(venue.name, countsOf(venue))}</div>
       <div
         style={{
           padding: '10px 12px',
@@ -335,13 +400,12 @@ export const TakeDownConfirm = ({ venue, onCancel, onDone }: ConfirmProps) => {
         </span>
         {COPY.takeDown.reason}
       </div>
-      <textarea
-        aria-label={COPY.takeDown.noteLabel}
+      <NoteField
+        label={COPY.takeDown.noteLabel}
+        placeholder={COPY.takeDown.notePlaceholder}
         maxLength={TAKE_DOWN_NOTE_MAX}
         value={note}
-        placeholder={COPY.takeDown.notePlaceholder}
-        onChange={(evt) => setNote(evt.target.value)}
-        style={{ ...field(isPhone), minHeight: 52, resize: 'vertical' }}
+        onChange={setNote}
       />
       <TypedName value={typed} onChange={setTyped} />
     </VenueConfirm>
@@ -359,9 +423,14 @@ export const DeleteConfirm = ({
   onCancel,
   onDone,
   onRefused,
-}: ConfirmProps & { onRefused: (blockers: VenueDeleteBlockers) => void }) => {
+}: Omit<ConfirmProps, 'onDone'> & {
+  /** Gets the shows kept, unlinked, for the caller's detached banner. */
+  onDone: (eventsDetached: number) => void;
+  onRefused: (blockers: VenueDeleteBlockers) => void;
+}) => {
   const [typed, setTyped] = useState('');
   const [refusal, setRefusal] = useState<string | null>(null);
+  const detached = useRef(0);
   return (
     <VenueConfirm
       title={COPY.remove.title(venue.name)}
@@ -373,12 +442,17 @@ export const DeleteConfirm = ({
       onCancel={onCancel}
       act={async () => {
         const outcome = await tryDeleteVenue(venue.id);
-        if (outcome.ok) return onDone();
+        if (outcome.ok) {
+          detached.current = outcome.eventsDetached;
+          return true;
+        }
         if (outcome.refused === null) throw new Error('delete refused');
         const { pastShows, upcomingShows, watchers } = outcome.refused;
         setRefusal(COPY.deleteRefused(pastShows, upcomingShows, watchers));
         onRefused(outcome.refused);
+        return false;
       }}
+      onDone={() => onDone(detached.current)}
     >
       <div>{COPY.remove.body}</div>
       <TypedName value={typed} onChange={setTyped} />

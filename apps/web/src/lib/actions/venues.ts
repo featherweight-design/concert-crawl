@@ -15,6 +15,7 @@ import type {
 import type { PauseOutcome } from '@/components/admin/venues/pause-rules';
 import {
   deleteBlockersOf,
+  isVenueNotFound,
   type DeleteVenueOutcome,
 } from '@/components/admin/venues/delete-rules';
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl';
@@ -266,16 +267,19 @@ export async function deleteVenue(
 // The venue page's Delete. A venue with shows or Watchers is refused with a
 // 409 and its counts, which come back as a value (a server action's thrown
 // message is redacted in production) so the page can say why. It wraps
-// `deleteVenue`, so there is one DELETE call. A 404 means the venue is already
-// gone (another tab, a double submit), which is what was asked.
+// `deleteVenue`, so there is one DELETE call. The route's own "Venue not found"
+// 404 means the venue is already gone (another tab, a double submit), which is
+// what was asked; any other 404 (a missing route, version skew) is a failure.
 export async function tryDeleteVenue(id: string): Promise<DeleteVenueOutcome> {
   try {
-    await deleteVenue(id);
+    const { eventsDetached } = await deleteVenue(id);
+    return { ok: true, eventsDetached };
   } catch (err: unknown) {
     if (!(err instanceof ApiError)) throw err;
-    if (err.status === 404) {
+    if (err.status === 404 && isVenueNotFound(err.body)) {
+      console.info('tryDeleteVenue: already gone', { id });
       revalidatePath('/admin/venues');
-      return { ok: true };
+      return { ok: true, eventsDetached: 0 };
     }
     console.warn('tryDeleteVenue: refused', { id, status: err.status });
     return {
@@ -283,7 +287,6 @@ export async function tryDeleteVenue(id: string): Promise<DeleteVenueOutcome> {
       refused: err.status === 409 ? deleteBlockersOf(err.body) : null,
     };
   }
-  return { ok: true };
 }
 
 // Hide from site with the drawn Why (`A3/03/hide-other-d`). The API stores the

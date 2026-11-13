@@ -132,21 +132,45 @@ describe('HideConfirm', () => {
   it('says what goes and holds Hide until a reason is picked', () => {
     renderHide();
     expect(screen.getByText(COPY.hide.title('Ball Arena'))).toBeTruthy();
-    expect(
-      screen.getByText(COPY.hide.body('Ball Arena', 235, 12)),
-    ).toBeTruthy();
+    expect(screen.getByText(COPY.hide.body('Ball Arena', 235))).toBeTruthy();
     expect(isDisabled(COPY.hide.confirm)).toBe(true);
     fireEvent.click(radio('venue_closed'));
     expect(isDisabled(COPY.hide.confirm)).toBe(false);
+  });
+
+  it('gives the upcoming count but no Watchers number (that count spans past shows)', () => {
+    expect(COPY.hide.body('Ball Arena', 235)).toBe(
+      'Ball Arena and its 235 upcoming shows come off the site and out of search. Fans Watching its shows get no notice. Crawling stops too.',
+    );
   });
 
   it('drops the counts when the payload has none', () => {
     const bare = buildVenue();
     delete bare.deleteBlockers;
     renderHide(bare);
-    const body = COPY.hide.body('Ball Arena', null, null);
+    const body = COPY.hide.body('Ball Arena', null);
     expect(screen.getByText(body)).toBeTruthy();
     expect(body).not.toMatch(/\d/);
+  });
+
+  it('never says "0 upcoming shows"', () => {
+    renderHide(
+      buildVenue({
+        deleteBlockers: { pastShows: 4, upcomingShows: 0, watchers: 1 },
+      }),
+    );
+    const body = COPY.hide.body('Ball Arena', 0);
+    expect(screen.getByText(body)).toBeTruthy();
+    expect(body).toMatch(/^Ball Arena comes off the site/);
+    expect(COPY.takeDown.body('Ball Arena', 0)).toMatch(
+      /^Ball Arena comes off the site,/,
+    );
+  });
+
+  it('shows the Other note’s label, not only its accessible name', () => {
+    renderHide();
+    fireEvent.click(radio('other'));
+    expect(screen.getByText(COPY.hide.noteLabel).tagName).toBe('LABEL');
   });
 
   it('Other needs a note before Hide runs, and sends it trimmed', async () => {
@@ -255,6 +279,59 @@ describe('TakeDownConfirm', () => {
     );
   });
 
+  it('shows the note’s label', () => {
+    renderTakeDown();
+    expect(screen.getByText(COPY.takeDown.noteLabel).tagName).toBe('LABEL');
+  });
+
+  it('matches the name across curly quotes, spacing and case', () => {
+    render(
+      <TakeDownConfirm
+        venue={buildVenue({ name: "Nocturne's  Jazz" })}
+        onCancel={onCancel}
+        onDone={onDone}
+      />,
+    );
+    typeVenueName(' nocturne’s jazz ');
+    expect(isDisabled(COPY.takeDown.confirm)).toBe(false);
+    typeVenueName('nocturnes jazz');
+    expect(isDisabled(COPY.takeDown.confirm)).toBe(true);
+  });
+
+  it('a second press after success sends nothing, even if the dialog stays', async () => {
+    mockRemove.mockResolvedValue({
+      submissionsDeleted: 0,
+      eventPricesCleared: 0,
+    });
+    renderTakeDown();
+    typeVenueName('Ball Arena');
+    fireEvent.click(button(COPY.takeDown.confirm));
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    expect(isDisabled(COPY.takeDown.confirm)).toBe(true);
+    fireEvent.click(button(COPY.takeDown.confirm));
+    expect(mockRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('a throw from onDone after success is logged, not shown as a failure', async () => {
+    mockRemove.mockResolvedValue({
+      submissionsDeleted: 0,
+      eventPricesCleared: 0,
+    });
+    onDone.mockImplementation(() => {
+      throw new Error('navigation failed');
+    });
+    renderTakeDown();
+    typeVenueName('Ball Arena');
+    fireEvent.click(button(COPY.takeDown.confirm));
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(isDisabled(COPY.takeDown.confirm)).toBe(true);
+    expect(console.warn).toHaveBeenCalledWith(
+      'VenueConfirm: onDone threw after success',
+      expect.anything(),
+    );
+  });
+
   it('Cancel takes nothing down', () => {
     renderTakeDown();
     fireEvent.click(button(ADMIN_COPY.confirm.cancel));
@@ -277,17 +354,19 @@ describe('DeleteConfirm', () => {
       />,
     );
 
-  it('holds Delete until the venue’s name is typed', async () => {
-    mockTryDelete.mockResolvedValue({ ok: true });
+  it('holds Delete until the name is typed, and hands on the detached count', async () => {
+    mockTryDelete.mockResolvedValue({ ok: true, eventsDetached: 2 });
     renderDelete();
     expect(isDisabled(COPY.remove.confirm)).toBe(true);
     typeVenueName('Ball');
     expect(isDisabled(COPY.remove.confirm)).toBe(true);
-    typeVenueName('Ball Arena');
+    typeVenueName('BALL ARENA');
     expect(isDisabled(COPY.remove.confirm)).toBe(false);
     fireEvent.click(button(COPY.remove.confirm));
     await waitFor(() => expect(mockTryDelete).toHaveBeenCalledWith('venue-1'));
-    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith(2));
+    fireEvent.click(button(COPY.remove.confirm));
+    expect(mockTryDelete).toHaveBeenCalledTimes(1);
   });
 
   it('a 409 body shows the refusal in the dialog and hands on its counts', async () => {
@@ -338,6 +417,15 @@ describe('the refused line', () => {
     );
     expect(COPY.deleteRefused(1, 2, 0)).toBe(
       'Can’t delete: it has 3 shows. It stays hidden instead.',
+    );
+  });
+
+  it('leaves the shows clause out when there are only Watchers', () => {
+    expect(COPY.deleteRefused(0, 0, 3)).toBe(
+      'Can’t delete: 3 people are Watching its shows. It stays hidden instead.',
+    );
+    expect(COPY.deleteRefused(0, 0, 1)).toBe(
+      'Can’t delete: 1 person is Watching its shows. It stays hidden instead.',
     );
   });
 });

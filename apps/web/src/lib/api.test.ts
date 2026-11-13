@@ -68,6 +68,32 @@ describe('apiClient', () => {
     expect(err instanceof ApiError ? err.status : null).toBe(404);
   });
 
+  // The venue delete guard's 409 carries its counts beside the message, so
+  // the whole body rides on the error for the caller to narrow.
+  it('carries the whole error body onto ApiError', async () => {
+    const body = {
+      success: false,
+      code: 'has_history',
+      pastShows: 12,
+      upcomingShows: 1,
+      watchers: 3,
+    };
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const { apiClient, ApiError } = await import('./api.js');
+    const err = await apiClient
+      .delete('/v1/admin/venues/v1', 'test-token')
+      .catch((caught: unknown) => caught);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err instanceof ApiError ? err.body : null).toEqual(body);
+    expect(err instanceof ApiError ? err.code : null).toBe('has_history');
+  });
+
   // A hand-rolled 400 names the input it rejects; the admin venue form marks
   // that input with it instead of a generic error (#1344).
   it('carries `field` off an error body onto ApiError', async () => {

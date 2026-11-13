@@ -70,7 +70,14 @@ export const ConfirmDialog = ({
       disabled={pending || confirmDisabled}
       onClick={onConfirm}
       fullWidth={isPhone}
-      style={{ ...large, ...(confirmDisabled && { opacity: 0.45 }) }}
+      // Dimmed, with no pointer, whenever it can't be pressed.
+      style={{
+        ...large,
+        ...((pending || confirmDisabled) && {
+          opacity: 0.45,
+          cursor: 'default',
+        }),
+      }}
     >
       {confirmLabel}
     </AdminButton>

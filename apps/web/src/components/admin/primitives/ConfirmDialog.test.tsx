@@ -89,6 +89,18 @@ describe('ConfirmDialog', () => {
     ).toBeDisabled();
   });
 
+  it('dims the confirm while pending, and not before', () => {
+    renderDialog();
+    expect(
+      screen.getByRole('button', { name: 'Pause crawling' }).style.opacity,
+    ).toBe('');
+    cleanup();
+    renderDialog({ pending: true });
+    expect(
+      screen.getByRole('button', { name: 'Pause crawling' }).style.opacity,
+    ).toBe('0.45');
+  });
+
   it('confirmDisabled holds only the confirm, and draws its icon', () => {
     const { onConfirm, onCancel } = renderDialog({
       confirmDisabled: true,
@@ -96,6 +108,8 @@ describe('ConfirmDialog', () => {
     });
     const confirm = screen.getByRole('button', { name: 'Pause crawling' });
     expect(confirm).toBeDisabled();
+    expect(confirm.style.opacity).toBe('0.45');
+    expect(confirm.style.cursor).toBe('default');
     expect(confirm.querySelector('svg')).not.toBeNull();
     fireEvent.click(confirm);
     expect(onConfirm).not.toHaveBeenCalled();
