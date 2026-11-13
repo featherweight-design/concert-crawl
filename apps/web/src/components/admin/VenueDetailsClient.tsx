@@ -2165,7 +2165,8 @@ export function VenueDetailsClient({
                     inputRef={crawlDelayRef}
                     defaultValue={venue.crawlDelayMs}
                     disabled={isDisabled}
-                    min={1000}
+                    // The crawl rules' 3 s floor (the API and crawler enforce it).
+                    min={3000}
                     max={30000}
                     step={500}
                     onChange={(evt) => {

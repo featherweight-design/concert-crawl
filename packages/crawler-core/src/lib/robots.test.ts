@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   CRAWL_DELAY_CAP_MS,
+  MIN_CRAWL_DELAY_MS,
   CrawlSkipError,
   checkRobots,
   getCrawlDelayMs,
@@ -430,6 +431,17 @@ describe('robots.ts', () => {
 
     it('never speeds up below our own delay', () => {
       expect(resolveCrawlDelayMs(3_000, 1_000)).toBe(3_000);
+    });
+
+    it('never goes below the 3-second floor, whatever the venue row says', () => {
+      expect(MIN_CRAWL_DELAY_MS).toBe(3_000);
+      expect(resolveCrawlDelayMs(1_000, null)).toBe(3_000);
+      expect(resolveCrawlDelayMs(0, null)).toBe(3_000);
+      expect(resolveCrawlDelayMs(2_999, 1_000)).toBe(3_000);
+    });
+
+    it('a site asking for more than the floor still wins', () => {
+      expect(resolveCrawlDelayMs(1_000, 5_000)).toBe(5_000);
     });
 
     it('slows down to the delay the site asked for', () => {

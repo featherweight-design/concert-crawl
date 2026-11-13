@@ -32,6 +32,11 @@ const ROBOTS_TIMEOUT_MS = 10_000;
 // than this is skipped for the run instead (see `resolveCrawlDelayMs`).
 export const CRAWL_DELAY_CAP_MS = 30_000;
 
+// The crawl rules' floor: never less than 3 seconds between requests to a
+// venue, whatever its stored `crawl_delay_ms` says (the admin form once
+// accepted 1 s). Jitter is added on top of this, never taken from it.
+export const MIN_CRAWL_DELAY_MS = 3_000;
+
 /**
  * The product tokens Anthropic documents for its crawlers. Page text that a
  * site has closed to these goes nowhere near the LLM extractor: we send it to
@@ -500,7 +505,7 @@ export function resolveCrawlDelayMs(
   }
 
   return Math.min(
-    Math.max(venueDelayMs, robotsDelayMs ?? 0),
+    Math.max(venueDelayMs, robotsDelayMs ?? 0, MIN_CRAWL_DELAY_MS),
     CRAWL_DELAY_CAP_MS,
   );
 }
