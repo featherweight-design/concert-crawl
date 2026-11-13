@@ -34,6 +34,8 @@ export const HealthHeader = ({
 }) => (
   <SectionHead
     title={copy.title}
+    // The phone shows the title once, in the shell's top bar.
+    titleClassName="health-desk"
     subtitle={
       needsYou === null ? undefined : (
         <Dual
@@ -44,28 +46,29 @@ export const HealthHeader = ({
     }
     actions={
       // The phone board has no button (gap G12).
-      <Link
-        href={href}
-        className="health-desk"
-        data-testid="health-open-needs-you"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          height: 34,
-          padding: '0 12px',
-          borderRadius: 9,
-          fontSize: 13,
-          fontWeight: 600,
-          textDecoration: 'none',
-          color: 'var(--fg)',
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border-strong)',
-        }}
-      >
-        <Inbox size={14} aria-hidden="true" />
-        {copy.openNeedsYou(needsYou)}
-      </Link>
+      <span className="health-desk">
+        <Link
+          href={href}
+          data-testid="health-open-needs-you"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            height: 34,
+            padding: '0 12px',
+            borderRadius: 9,
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: 'none',
+            color: 'var(--fg)',
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border-strong)',
+          }}
+        >
+          <Inbox size={14} aria-hidden="true" />
+          {copy.openNeedsYou(needsYou)}
+        </Link>
+      </span>
     }
   />
 );

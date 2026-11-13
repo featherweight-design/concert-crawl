@@ -107,6 +107,16 @@ describe('HealthHeader', () => {
     ).toHaveAttribute('href', '/admin/review');
   });
 
+  it('hides the button and the page title on the phone (class-driven, never an inline display)', () => {
+    render(<HealthHeader needsYou={14} href="/admin/review" />);
+    const link = screen.getByTestId('health-open-needs-you');
+    expect(link.parentElement).toHaveClass('health-desk');
+    expect(link.style.display).toBe('inline-flex');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveClass(
+      'health-desk',
+    );
+  });
+
   it('drops the count, not the button, when it fails to load', () => {
     render(<HealthHeader needsYou={null} href="/admin/review" />);
     expect(screen.queryByText(/Everything is running/)).toBeNull();

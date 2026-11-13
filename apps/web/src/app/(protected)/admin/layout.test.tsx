@@ -46,7 +46,7 @@ describe('AdminLayout', () => {
     expect(apiGet).not.toHaveBeenCalled();
   });
 
-  it('badges Needs you with the decision tabs, leaving price coverage out', async () => {
+  it('badges Needs you with the queue decision count, the number Health shows', async () => {
     requireAdminUser.mockResolvedValue({
       firstName: 'Hugh',
       email: 'h@x.test',
@@ -55,11 +55,21 @@ describe('AdminLayout', () => {
     apiGet.mockImplementation(async (path: string) =>
       path === '/v1/users/me'
         ? { handle: 'hugh' }
-        : { eventFlags: 2, prices: 200, missing: 3, priceContests: 1 },
+        : path === '/v1/admin/needs-you/count'
+          ? { decisions: 138, byKind: {}, handledToday: 0 }
+          : // The old interim source: must no longer feed the badge.
+            { eventFlags: 2, prices: 200, missing: 3, priceContests: 1 },
     );
     render(await AdminLayout({ children: <p>page</p> }));
-    expect(screen.getByTestId('shell')).toHaveAttribute('data-needs-you', '6');
-    expect(apiGet).toHaveBeenCalledWith('/v1/admin/review/counts', 'token');
+    expect(screen.getByTestId('shell')).toHaveAttribute(
+      'data-needs-you',
+      '138',
+    );
+    expect(apiGet).toHaveBeenCalledWith('/v1/admin/needs-you/count', 'token');
+    expect(apiGet).not.toHaveBeenCalledWith(
+      '/v1/admin/review/counts',
+      expect.anything(),
+    );
   });
 
   it('renders with a zero badge when the counts fail', async () => {

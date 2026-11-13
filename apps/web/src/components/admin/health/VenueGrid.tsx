@@ -110,23 +110,27 @@ export const VenueGrid = ({
         phoneCompact
         action={
           // The phone board has no Crawl runs link or footer (gap G12).
-          <Link
-            href={crawlRunsHref}
-            className="health-desk"
-            style={{
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: 'var(--fg-muted)',
-              textDecoration: 'none',
-            }}
-          >
-            <ChevronRight
-              size={12}
-              aria-hidden="true"
-              style={{ verticalAlign: 'middle', marginRight: 6 }}
-            />
-            {copy.crawlRuns}
-          </Link>
+          <span className="health-desk">
+            <Link
+              href={crawlRunsHref}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: 'var(--fg-muted)',
+                textDecoration: 'none',
+              }}
+            >
+              <ChevronRight
+                size={12}
+                aria-hidden="true"
+                style={{ flex: 'none' }}
+              />
+              {copy.crawlRuns}
+            </Link>
+          </span>
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
