@@ -158,6 +158,14 @@ describe('HistoryHeader rule', () => {
     );
   });
 
+  // The boards set the phone's stats in equal thirds; from sm they flow.
+  it('lays the stats out in equal thirds on a phone', () => {
+    render(<HistoryHeader stats={STATS} />);
+    const list = screen.getByTestId('history-header').querySelector('dl');
+    expect(list?.classList).toContain('grid-cols-3');
+    expect(list?.classList).toContain('sm:flex');
+  });
+
   // The rule must sit in a 1px transparent border row, as the old `border-b`
   // did, or the header loses 1px and everything below moves up.
   it('keeps the border row and paints the rule into it', () => {
