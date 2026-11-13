@@ -206,58 +206,15 @@ export const NAVIGATION_SLUGS: ReadonlySet<string> = new Set([
   'review',
 ]);
 
-const SNOOZE_HOUR = 8;
-
-/**
- * 8 AM Mountain on `date` (`YYYY-MM-DD`), as an ISO instant with the offset
- * Mountain Time has that day (-07:00 in winter, -06:00 in summer), so a snooze
- * returns at the drawn "tomorrow at 8 AM" whatever the viewer's own zone.
- */
-export const eightAmMountain = (date: string): string => {
-  const offsets = ['-07:00', '-06:00'];
-  for (const offset of offsets) {
-    const instant = `${date}T0${SNOOZE_HOUR}:00:00${offset}`;
-    const hour = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Denver',
-      hour: 'numeric',
-      hourCycle: 'h23',
-    }).format(new Date(instant));
-    if (Number(hour) === SNOOZE_HOUR) return instant;
-  }
-  return `${date}T0${SNOOZE_HOUR}:00:00${offsets[0]}`;
-};
-
-/** `YYYY-MM-DD`, `days` after Mountain Time's today. */
-export const mountainDayAhead = (now: Date, days: number): string => {
-  const today = mountainToday(now);
-  return new Date(dayNumber(today) * DAY_MS + days * DAY_MS)
-    .toISOString()
-    .slice(0, 10);
-};
-
-/** "Wed, Nov 18": a snooze's return day in the menu. */
-export const snoozeDayLabel = (date: string): string =>
-  new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(`${date}T00:00:00Z`));
-
 /**
  * The counts after an answer: one fewer decision of its kind, one more handled
- * today. A snooze leaves `handledToday` alone (nothing was decided).
+ * today.
  */
 export const countAfterRemoval = (
   count: NeedsYouCount,
   kind: NeedsYouKind,
-  handled: boolean,
 ): NeedsYouCount => ({
   decisions: Math.max(0, count.decisions - 1),
-  handledToday: count.handledToday + (handled ? 1 : 0),
+  handledToday: count.handledToday + 1,
   byKind: { ...count.byKind, [kind]: Math.max(0, count.byKind[kind] - 1) },
 });
-
-/** The card's headline name for an answered line: the title up to " w/ ". */
-export const answeredName = (title: string): string =>
-  title.split(' w/ ')[0] ?? title;

@@ -16,7 +16,6 @@ import {
   whenOf,
 } from './needs-you-rules';
 import type { NeedsYouAnswer, QueueRow } from './needs-you-api';
-import { SnoozeMenu } from './SnoozeMenu';
 
 interface QueueItemProps {
   row: QueueRow;
@@ -26,8 +25,6 @@ interface QueueItemProps {
   busy: boolean;
   onSelect: () => void;
   onAnswer: (answer: NeedsYouAnswer) => void;
-  onSnooze: (until: string) => void;
-  onNotUseful: (reason: string) => void;
 }
 
 const MONO: CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
@@ -45,8 +42,6 @@ export const QueueItem = ({
   busy,
   onSelect,
   onAnswer,
-  onSnooze,
-  onNotUseful,
 }: QueueItemProps) => {
   const isPhone = useIsPhone();
   const when = whenOf(row.fanDate, today);
@@ -183,19 +178,6 @@ export const QueueItem = ({
             {answer.label}
           </button>
         ))}
-        <span
-          style={{
-            marginLeft: isPhone ? 0 : 'auto',
-            gridColumn: isPhone ? '1 / -1' : undefined,
-            justifySelf: 'center',
-          }}
-        >
-          <SnoozeMenu
-            disabled={busy}
-            onSnooze={onSnooze}
-            onNotUseful={row.venueId ? onNotUseful : undefined}
-          />
-        </span>
       </div>
     </article>
   );
