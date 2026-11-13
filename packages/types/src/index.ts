@@ -1359,6 +1359,9 @@ export type SubmissionDisplayStatus =
   // Stale and archived. Listed under All only, never under a status filter.
   | 'closed';
 
+/** The two stored statuses that read as `closed`, so the page can say why. */
+export type SubmissionClosedReason = 'stale' | 'archived';
+
 /**
  * The one definition of how a stored submission status reads to the user
  * (addendum-3 Submitted prices ruling). Live (`confirmed`) is the corroborated
@@ -1450,6 +1453,8 @@ export interface UserSubmissionItem {
   corroborationCount: number; // fans who confirmed this price
   submittedAt: string; // ISO timestamp
   status: SubmissionDisplayStatus;
+  /** Why a `closed` row closed (addendum-4 §6). Absent on every other status. */
+  closedReason?: SubmissionClosedReason;
 }
 
 // Handle availability check response

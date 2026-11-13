@@ -18,6 +18,9 @@ export function SubmissionItem({
 }: SubmissionItemProps) {
   const ago = formatAgo(submission.submittedAt);
   const confirms = submission.corroborationCount;
+  // A closed row (stale or archived) is no longer a price that stands: its
+  // price goes muted and the line beside the pill says why (addendum-4 §6).
+  const closed = submission.status === 'closed';
 
   return (
     <Link
@@ -47,9 +50,14 @@ export function SubmissionItem({
         </span>
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <StatusPill status={submission.status} />
-          {confirms > 0 && (
+          {!closed && confirms > 0 && (
             <span className="text-[12px] text-fg-muted">
               {SETTINGS_COPY.submissionConfirms(confirms)}
+            </span>
+          )}
+          {closed && submission.closedReason !== undefined && (
+            <span className="text-[12px] text-fg-muted">
+              {SETTINGS_COPY.submissionClosedReason[submission.closedReason]}
             </span>
           )}
           {submission.status === 'confirmed' && (
@@ -70,7 +78,9 @@ export function SubmissionItem({
 
       {/* Right: the price, its tier, and when */}
       <div className="flex shrink-0 flex-col items-end gap-1">
-        <span className="text-[18px] font-black leading-none tracking-[-0.02em] text-fg">
+        <span
+          className={`text-[18px] font-black leading-none tracking-[-0.02em] ${closed ? 'text-fg-muted' : 'text-fg'}`}
+        >
           {priceLabelOf(submission)}
         </span>
         <span

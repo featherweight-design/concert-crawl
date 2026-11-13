@@ -1462,6 +1462,11 @@ export const CONSUMER_COPY = {
     // ── SubmissionItem ────────────────────────────────────────────
     submissionConfirms: (confirms: number) =>
       `${confirms} other ${confirms === 1 ? 'fan' : 'fans'} confirmed.`,
+    // Why a closed row closed, beside its CLOSED pill (addendum-4 §6).
+    submissionClosedReason: {
+      stale: 'No second fan in time',
+      archived: 'A newer price replaced it',
+    },
     submissionCredEarned: '+1 cred',
     submissionDisputed: 'Someone disputed this. Tap to see what they saw.',
 
