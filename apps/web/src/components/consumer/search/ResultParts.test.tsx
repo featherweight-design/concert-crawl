@@ -2,9 +2,33 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import { Highlight, RingArt, VenueDateLine, ringColorFor } from './ResultParts';
+import {
+  Highlight,
+  ResultPrice,
+  RingArt,
+  VenueDateLine,
+  ringColorFor,
+} from './ResultParts';
 
 afterEach(cleanup);
+
+// The API sends the price as a decimal string ("29.00"); the boards and every
+// other surface show whole dollars.
+describe('ResultPrice', () => {
+  const text = (value: string | null) =>
+    render(<ResultPrice value={value} />).container.textContent;
+
+  it('shows whole dollars, never cents', () => {
+    expect(text('29.00')).toBe('$29');
+    expect(text('45.00')).toBe('$45');
+    expect(text('15.50')).toBe('$16');
+  });
+
+  it('says Free for a zero price and the quiet fallback for none', () => {
+    expect(text('0.00')).toBe('Free');
+    expect(text(null)).not.toContain('$');
+  });
+});
 
 describe('RingArt', () => {
   const shadow = (genres: string[] | null): string => {

@@ -139,6 +139,21 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   } = search;
   const browsing = query.trim() === '';
 
+  // On a wide screen the first result is highlighted as soon as typed results
+  // arrive (more-r3-palette_typed: the yellow edge and wash on row one), so
+  // Enter opens it. The phone sheet has no resting highlight. Typing again
+  // clears it above and it comes back with the next results; an arrow key or a
+  // hover moves it off row one and this leaves it alone.
+  const typedResultCount =
+    artistResults.length + artistPageResults.length + venueResults.length;
+  useEffect(() => {
+    if (!open || sheet || browsing || typedResultCount === 0) return;
+    if (selectedIdxRef.current < 0) {
+      selectedIdxRef.current = 0;
+      setSelectedIdx(0);
+    }
+  }, [open, sheet, browsing, typedResultCount, query]);
+
   useEffect(() => {
     if (!open) return;
 

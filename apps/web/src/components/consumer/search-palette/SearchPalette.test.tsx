@@ -159,12 +159,12 @@ describe('SearchPalette', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('highlights the first result after one ArrowDown', () => {
+  // more-r3-palette_typed: on a wide screen the first result wears the highlight
+  // as soon as typed results arrive, with no key pressed.
+  it('highlights the first result on a wide screen as soon as results arrive', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
     // idx 0 = Radiohead (first artist)
     const buttons = screen.getAllByRole('option', { name: /Radiohead/i });
-    // The matching button should have data-selected="true"
     const selected = buttons.find(
       (btn) => btn.getAttribute('data-selected') === 'true',
     );
@@ -172,15 +172,17 @@ describe('SearchPalette', () => {
   });
 
   // The input is a combobox that points at the highlighted row, so a screen
-  // reader announces the arrow-key selection.
+  // reader announces the selection.
   it('points the combobox at the highlighted option', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
     const input = screen.getByRole('combobox');
-    expect(input.getAttribute('aria-activedescendant')).toBeNull();
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
     const [selected] = screen.getAllByRole('option', { selected: true });
     expect(selected?.id).toBeTruthy();
     expect(input.getAttribute('aria-activedescendant')).toBe(selected?.id);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    const [next] = screen.getAllByRole('option', { selected: true });
+    expect(next?.id).not.toBe(selected?.id);
+    expect(input.getAttribute('aria-activedescendant')).toBe(next?.id);
   });
 
   it('scrolls the highlighted row into view', () => {
@@ -206,9 +208,8 @@ describe('SearchPalette', () => {
     expect(mockNavigateTo).not.toHaveBeenCalled();
   });
 
-  it('highlights the second result after two ArrowDowns', () => {
+  it('highlights the second result after one ArrowDown from the first', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     // idx 1 = Godspeed (second artist)
     const buttons = screen.getAllByRole('option', { name: /Godspeed/i });
@@ -218,7 +219,8 @@ describe('SearchPalette', () => {
     expect(selected).toBeTruthy();
   });
 
-  it('de-highlights all rows at idx -1 (before any navigation)', () => {
+  it('leaves every row unhighlighted on the phone sheet (no resting highlight)', () => {
+    stubMatchMedia(true);
     render(<SearchPalette open={true} onClose={onClose} />);
     // No ArrowDown pressed — nothing should be selected
     const selectedButtons = screen
@@ -229,7 +231,7 @@ describe('SearchPalette', () => {
 
   it('moves highlight back up with ArrowUp', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
-    fireEvent.keyDown(window, { key: 'ArrowDown' }); // idx 0
+    // idx 0 is already highlighted on a wide screen
     fireEvent.keyDown(window, { key: 'ArrowDown' }); // idx 1
     fireEvent.keyDown(window, { key: 'ArrowUp' }); // back to idx 0
     const buttons = screen.getAllByRole('option', { name: /Radiohead/i });
@@ -239,7 +241,15 @@ describe('SearchPalette', () => {
     expect(selected).toBeTruthy();
   });
 
-  it('navigates with ArrowDown + Enter on artist result', () => {
+  it('opens the highlighted first result with Enter alone on a wide screen', () => {
+    render(<SearchPalette open={true} onClose={onClose} />);
+    fireEvent.keyDown(window, { key: 'Enter' }); // idx 0 = Radiohead
+    expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'Radiohead');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates with ArrowDown + Enter on the phone sheet', () => {
+    stubMatchMedia(true);
     render(<SearchPalette open={true} onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'ArrowDown' }); // select idx 0 = Radiohead
     fireEvent.keyDown(window, { key: 'Enter' });
@@ -247,10 +257,9 @@ describe('SearchPalette', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('navigates with ArrowDown x3 + Enter to select venue result', () => {
+  it('navigates with ArrowDown x2 + Enter to select venue result', () => {
     render(<SearchPalette open={true} onClose={onClose} />);
-    // 2 artists + 1 venue. ArrowDown x3 → idx 2 = Red Rocks venue
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    // 2 artists + 1 venue, idx 0 already highlighted. ArrowDown x2 → idx 2 = Red Rocks venue
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     fireEvent.keyDown(window, { key: 'Enter' });
@@ -261,7 +270,8 @@ describe('SearchPalette', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('does not navigate when Enter is pressed with no selection', () => {
+  it('does not navigate when Enter is pressed with no selection (phone sheet)', () => {
+    stubMatchMedia(true);
     render(<SearchPalette open={true} onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(mockNavigateTo).not.toHaveBeenCalled();
@@ -299,7 +309,8 @@ describe('SearchPalette — artist pages (#1115 PR-G)', () => {
   it('opens the artist page when the last row, after artists and venues, is selected', () => {
     render(<SearchPalette open onClose={onClose} />);
 
-    for (let step = 0; step < 4; step++) {
+    // Row 0 is already highlighted on a wide screen: three steps reach row 3.
+    for (let step = 0; step < 3; step++) {
       fireEvent.keyDown(window, { key: 'ArrowDown' });
     }
     fireEvent.keyDown(window, { key: 'Enter' });
@@ -313,7 +324,7 @@ describe('SearchPalette — artist pages (#1115 PR-G)', () => {
   it('reaches the event-derived artist rows ahead of the artist pages', () => {
     render(<SearchPalette open onClose={onClose} />);
 
-    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    // The first row is highlighted already; Enter opens it.
     fireEvent.keyDown(window, { key: 'Enter' });
 
     expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'Radiohead');
