@@ -26,11 +26,21 @@ export const encodeRejection = (
 
 export type Rejection = { reason: RejectionReason; note: string | null };
 
-/** The rejection an `archived_reason` carries, or null for any other value. */
-export const parseRejection = (
-  archivedReason: string | null,
-): Rejection | null => {
-  if (archivedReason === null || !archivedReason.startsWith(PREFIX)) {
+/**
+ * The rejection a row carries, or null. Only an `archived` row can be
+ * rejected: a rejected price that was later re-approved through the status
+ * route keeps its old `archived_reason`, and must not read as rejected.
+ */
+export const parseRejection = (row: {
+  status: string;
+  archivedReason: string | null;
+}): Rejection | null => {
+  const { archivedReason } = row;
+  if (
+    row.status !== 'archived' ||
+    archivedReason === null ||
+    !archivedReason.startsWith(PREFIX)
+  ) {
     return null;
   }
   const body = archivedReason.slice(PREFIX.length);
