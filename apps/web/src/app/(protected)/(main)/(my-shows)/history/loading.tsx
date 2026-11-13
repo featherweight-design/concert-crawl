@@ -2,7 +2,6 @@
 // the sub-tab bar renders for real, then the two-by-three stats, a month
 // heading and carded rows whose right column is the round venue stamp.
 
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
 import {
   MyShowsGroupSkeleton,
   MyShowsRowSkeleton,
@@ -14,9 +13,8 @@ export default function HistoryLoading() {
   return (
     <>
       <NavProgress />
-      {/* Matches HistoryContent's Shell. */}
-      <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8 lg:max-w-[960px]">
-        <MyShowsTabs active="history" />
+      {/* The column and the real sub-tab bar are the My shows layout's. */}
+      <main className="w-full flex-1">
         <MyShowsStatsSkeleton />
         <MyShowsGroupSkeleton />
         <div className="flex flex-col gap-2.5">

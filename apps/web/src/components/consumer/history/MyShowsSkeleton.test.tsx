@@ -10,9 +10,15 @@ import {
   HISTORY_DENSITY_CONFIG,
 } from './definitions/constants';
 import { HISTORY_COPY } from './definitions/copy';
-import WatchingLoading from '@/app/(protected)/(main)/watching/loading';
-import HistoryLoading from '@/app/(protected)/(main)/history/loading';
-import FollowingLoading from '@/app/(protected)/(main)/following/loading';
+import WatchingLoading from '@/app/(protected)/(main)/(my-shows)/watching/loading';
+import HistoryLoading from '@/app/(protected)/(main)/(my-shows)/history/loading';
+import FollowingLoading from '@/app/(protected)/(main)/(my-shows)/following/loading';
+import { MyShowsShell } from './MyShowsShell';
+
+const pathname = vi.hoisted(() => ({ current: '/watching' }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => pathname.current,
+}));
 
 vi.mock('next/link', () => ({
   default: ({
@@ -37,12 +43,22 @@ const TABS = HISTORY_COPY.tabs;
 // B+ rule 9 and `06-states/bp-s-load_*_m`: the chrome is real, the data is a
 // SkeletonBlock skeleton, and nothing rides the old skeletonPulse keyframes.
 describe.each([
-  ['Watching', WatchingLoading, TABS.watching, 4, 'pill'],
-  ['Concerts', HistoryLoading, TABS.concerts, 4, 'stamp'],
-  ['Artists', FollowingLoading, TABS.artists, 6, 'pill'],
-] as const)('%s loading', (_name, Loading, tab, rows, trailing) => {
-  it('renders the real sub-tab bar with its tab current', () => {
+  ['Watching', WatchingLoading, TABS.watching, '/watching', 4, 'pill'],
+  ['Concerts', HistoryLoading, TABS.concerts, '/history', 4, 'stamp'],
+  ['Artists', FollowingLoading, TABS.artists, '/following', 6, 'pill'],
+] as const)('%s loading', (_name, Loading, tab, path, rows, trailing) => {
+  it('leaves the sub-tab bar to the My shows layout', () => {
     render(<Loading />);
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  it('sits under the real sub-tab bar with its tab current', () => {
+    pathname.current = path;
+    render(
+      <MyShowsShell signedIn>
+        <Loading />
+      </MyShowsShell>,
+    );
     expect(screen.getByRole('link', { name: tab })).toHaveAttribute(
       'aria-current',
       'page',

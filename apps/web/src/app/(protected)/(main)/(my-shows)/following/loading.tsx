@@ -2,7 +2,6 @@
 // the sub-tab bar renders for real, then the header, the group heading and six
 // carded rows, the last two fading out as the board draws them.
 
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
 import {
   MyShowsGroupSkeleton,
   MyShowsHeadlineSkeleton,
@@ -17,9 +16,8 @@ export default function FollowingLoading() {
   return (
     <>
       <NavProgress />
-      {/* Matches MyShowsArtistsContent's mobile and desktop columns. */}
-      <main className="mx-auto w-full max-w-[940px] flex-1 px-4 pb-20 pt-4 sm:px-[30px] sm:pb-10 sm:pt-7">
-        <MyShowsTabs active="artists" />
+      {/* The column and the real sub-tab bar are the My shows layout's. */}
+      <main className="w-full flex-1">
         <MyShowsHeadlineSkeleton />
         <MyShowsGroupSkeleton />
         <div className="flex flex-col gap-2.5 sm:grid sm:grid-cols-2 sm:gap-3">

@@ -86,7 +86,19 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
         >
           {/* No tier chip: a subscriber shouldn't be sold the plan they're on,
               and HistoryLocked is where an unentitled user meets the price. */}
-          <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
+          {/* The label's width is its bold width whichever tab is current: an
+              invisible 700 copy shares the grid cell, so moving the weight
+              from one tab to another never nudges its neighbours. */}
+          <span className="grid" style={{ whiteSpace: 'nowrap' }}>
+            <span
+              aria-hidden
+              className="invisible col-start-1 row-start-1"
+              style={{ fontWeight: 700 }}
+            >
+              {tab.label}
+            </span>
+            <span className="col-start-1 row-start-1">{tab.label}</span>
+          </span>
           {count !== null && (
             <span
               aria-hidden

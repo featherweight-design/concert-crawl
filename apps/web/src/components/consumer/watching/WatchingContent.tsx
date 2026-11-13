@@ -7,7 +7,6 @@ import { useWatchToggle } from '@/lib/queries/use-watch-toggle';
 import { WatchingRow } from './WatchingRow';
 import { WatchingEmpty } from './WatchingEmpty';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
 import {
   MY_SHOWS_GRADIENT,
   MY_SHOWS_HEADER_RULE_STYLE,
@@ -289,10 +288,9 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
     <main
       ref={mainRef}
       tabIndex={-1}
-      className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 outline-none sm:px-8 sm:pb-10 sm:pt-8"
+      // The column and the sub-tab bar are the My shows layout's (MyShowsShell).
+      className="w-full flex-1 outline-none"
     >
-      <MyShowsTabs active="watching" />
-
       {/* Headline block. An empty list skips it: the empty card's own eyebrow
           and headline say it (B+ `bp-s-empty_watching_m`). */}
       {displayedShows.length > 0 && (

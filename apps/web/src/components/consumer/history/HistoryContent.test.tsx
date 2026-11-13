@@ -275,10 +275,11 @@ describe('HistoryContent', () => {
     expect(
       screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
     ).not.toBeInTheDocument();
-    // The sub-tabs stay put so the surface doesn't jump when data arrives.
+    // The sub-tabs belong to the My shows layout, which keeps them mounted
+    // across tabs, so the page draws no second bar of its own.
     expect(
-      screen.getByRole('navigation', { name: HISTORY_COPY.tabs.ariaLabel }),
-    ).toBeInTheDocument();
+      screen.queryByRole('navigation', { name: HISTORY_COPY.tabs.ariaLabel }),
+    ).not.toBeInTheDocument();
   });
 
   it('groups the rows into reverse-chronological month buckets', () => {
