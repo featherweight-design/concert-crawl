@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { VENUE_TABS, parseVenueTab, venueTabHref } from './venue-tabs';
+import {
+  VENUE_TABS,
+  parseVenueRun,
+  parseVenueTab,
+  venueTabHref,
+} from './venue-tabs';
 
 describe('parseVenueTab', () => {
   it.each(VENUE_TABS)('reads ?tab=%s', (tab) => {
@@ -20,6 +25,21 @@ describe('parseVenueTab', () => {
   it('opens Overview for a repeated ?tab=', () => {
     expect(parseVenueTab(['runs', 'source'])).toBe('overview');
   });
+});
+
+describe('parseVenueRun', () => {
+  const RUN_ID = '0b7c6f3e-8d2a-4c1b-9e5f-1a2b3c4d5e6f';
+
+  it('reads a run id', () => {
+    expect(parseVenueRun(RUN_ID)).toBe(RUN_ID);
+  });
+
+  it.each([undefined, '', 'run-1', `${RUN_ID} `, [RUN_ID, RUN_ID]])(
+    'opens no run for %j rather than throwing',
+    (raw) => {
+      expect(parseVenueRun(raw)).toBeNull();
+    },
+  );
 });
 
 describe('venueTabHref', () => {

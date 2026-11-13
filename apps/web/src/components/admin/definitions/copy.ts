@@ -768,6 +768,71 @@ export const ADMIN_COPY = {
     },
   },
 
+  // The venue page's Runs tab (3b part 4, `04/venue-runs`, `04/venue-runs-
+  // mobile`). Outcome words come from `venuesList.latestRun`.
+  venueRuns: {
+    title: 'Runs',
+    filters: {
+      label: 'Which runs',
+      all: 'All',
+      notOk: 'Not OK',
+      // The count beside Not OK, read out after the name.
+      notOkCount: (count: number) => `${count.toLocaleString('en-US')} not OK`,
+    },
+    // "106 shows · 2 new" (the row line for a run that read shows).
+    shows: (shows: number, added: number) =>
+      added > 0
+        ? `${showCount(shows)} · ${added.toLocaleString('en-US')} new`
+        : showCount(shows),
+    unchangedSince: (date: string) => `Page unchanged since ${date}`,
+    // "230 s"; a run with no recorded duration reads the dash.
+    duration: (seconds: number) => `${seconds.toLocaleString('en-US')} s`,
+    noDuration: '—',
+    // "$0.15"; nothing spent reads "$0", under a cent "<$0.01".
+    cost: (dollars: string) => `$${dollars}`,
+    noCost: '$0',
+    underACent: '<$0.01',
+    // A row's accessible name: "Nov 10, 3:01 AM: OK, 106 shows · 2 new".
+    rowLabel: (date: string, time: string, outcome: string, line: string) =>
+      `${date}, ${time}: ${outcome}, ${line}`,
+    // `A3/09/runs-filter-empty-d`.
+    filterEmpty: (count: number) =>
+      count === 1
+        ? 'The one run here was OK.'
+        : `All ${count.toLocaleString('en-US')} runs here were OK.`,
+    showAll: 'Show all',
+    // `A3/09/load-more`. The API sends no total, so the count is what's shown.
+    showing: (count: number) => `Showing ${count.toLocaleString('en-US')}`,
+    showingAll: (count: number) =>
+      `Showing all ${count.toLocaleString('en-US')}`,
+    loadMore: (count: number) => `Load ${count.toLocaleString('en-US')} more`,
+    loading: 'Loading',
+    loadMoreFailed: 'Couldn’t load more runs.',
+    tryAgain: 'Try again',
+  },
+
+  // A run's detail: the desktop side panel and the phone sheet
+  // (`07/a-runs-detail`, `G2/run-detail-sheet`). Shared with 1d.
+  runDetail: {
+    // "Nov 9 · 3:02 AM · 212 s · $0.14"
+    meta: (parts: readonly string[]) => parts.join(' · '),
+    pages: 'Pages',
+    // Couldn't load {this}.
+    pagesPage: 'this run’s pages',
+    loadingPages: 'Loading pages…',
+    noPages: 'No pages were kept for this run.',
+    // "200 · 1.9 MB"
+    pageLine: (parts: readonly string[]) => parts.join(' · '),
+    // A request that never got an HTTP status.
+    noResponse: 'No response',
+    firstFailure: 'First failure',
+    bytes: (count: number) => `${count.toLocaleString('en-US')} B`,
+    kilobytes: (count: number) => `${count.toLocaleString('en-US')} KB`,
+    megabytes: (count: string) => `${count} MB`,
+    inspect: 'Inspect page',
+    compare: (date: string) => `Compare with ${date}`,
+  },
+
   robotsAudit: {
     page: {
       eyebrow: 'Venues · robots.txt',
@@ -949,11 +1014,6 @@ export const ADMIN_COPY = {
       // A refused save opens the field's tab; this banner says where.
       refused: (field: string, tab: string) =>
         `Not saved. Check ${field} on the ${tab} tab.`,
-      // Until 3b part 2 draws this venue's runs here.
-      runsInterim: {
-        body: 'For now, this venue’s runs are on the Crawl runs page.',
-        link: 'Open Crawl runs',
-      },
     },
     actions: {
       viewOnSite: 'View on site',

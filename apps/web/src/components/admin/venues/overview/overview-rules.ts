@@ -22,19 +22,20 @@ export const shortDate = (iso: string): string =>
   formatISODate(iso, DENVER_TIME_ZONE, { month: 'short', day: 'numeric' });
 
 /**
- * "Nov 11 · 3:02 AM", Mountain Time (`04/venue-overview`). Newer ICU builds
- * put a narrow no-break space (U+202F) before AM/PM; it is folded to a plain
- * space so the line reads the same on every Node and browser.
+ * "3:02 AM", Mountain Time. Newer ICU builds put a narrow no-break space
+ * (U+202F) before AM/PM; it is folded to a plain space so the time reads the
+ * same on every Node and browser.
  */
+export const shortTime = (iso: string): string =>
+  formatISODate(iso, DENVER_TIME_ZONE, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).replace(/ /g, ' ');
+
+/** "Nov 11 · 3:02 AM", Mountain Time (`04/venue-overview`). */
 export const runWhen = (iso: string): string =>
-  COPY.latestRun.when(
-    shortDate(iso),
-    formatISODate(iso, DENVER_TIME_ZONE, {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }).replace(/ /g, ' '),
-  );
+  COPY.latestRun.when(shortDate(iso), shortTime(iso));
 
 /** The run the Latest run card reads: the venue's, or the list's newest. */
 type LatestRun = Pick<
@@ -73,36 +74,51 @@ export const runSentence = (
   if (run.status === 'success' || run.status === 'partial') {
     return COPY.latestRun.found(run.eventsFound, run.eventsInserted);
   }
-  const say = COPY.latestRun.sentence;
+  if (run.reason === 'page_unchanged') {
+    return lastFullRun
+      ? COPY.latestRun.unchanged(
+          shortDate(lastFullRun.at),
+          lastFullRun.eventsFound,
+        )
+      : COPY.latestRun.unchangedNoFullRun;
+  }
+  const line = runReasonLine(run);
+  return line === null ? null : COPY.latestRun.sentence(line);
+};
+
+/**
+ * The list's reason line for a run that read no shows ("Failed: timed out",
+ * "robots.txt: disallowed"). A failed run with no known reason reads its
+ * error's first line. Null when there is nothing to add (a skip with no
+ * recorded reason). Shared with the Runs tab's rows.
+ */
+export const runReasonLine = (
+  run: Pick<LatestRun, 'status' | 'reason' | 'errorMessage'>,
+): string | null => {
   switch (run.reason) {
     case 'page_unchanged':
-      return lastFullRun
-        ? COPY.latestRun.unchanged(
-            shortDate(lastFullRun.at),
-            lastFullRun.eventsFound,
-          )
-        : COPY.latestRun.unchangedNoFullRun;
+      return RUN.unchanged;
     case 'crawl_paused':
-      return say(RUN.withReason(RUN.skipped, RUN.reasons.crawl_paused));
+      return RUN.withReason(RUN.skipped, RUN.reasons.crawl_paused);
     case 'robots_disallowed':
     case 'robots_unreachable':
     case 'robots_crawl_delay':
-      return say(RUN.withReason(RUN.robots, RUN.reasons[run.reason]));
+      return RUN.withReason(RUN.robots, RUN.reasons[run.reason]);
     case 'blocked_http':
-      return say(RUN.blocked);
+      return RUN.blocked;
     case 'llm_account':
-      return say(RUN.withReason(RUN.notRun, RUN.reasons.llm_account));
+      return RUN.withReason(RUN.notRun, RUN.reasons.llm_account);
     case 'calendar_not_found':
     case 'no_events_found':
     case 'timeout':
-      return say(RUN.withReason(RUN.failed, RUN.reasons[run.reason]));
+      return RUN.withReason(RUN.failed, RUN.reasons[run.reason]);
     case 'error':
     case null:
       break;
   }
   if (run.status !== 'failed') return null;
   const first = run.errorMessage?.split('\n')[0]?.trim();
-  return first ? say(RUN.withReason(RUN.failed, first)) : null;
+  return first ? RUN.withReason(RUN.failed, first) : null;
 };
 
 /** The five drawn bar kinds (`A3/03/last-14-runs-legend`); Low is HOLD. */
