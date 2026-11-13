@@ -266,14 +266,14 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
-    id: 'admin-price-coverage',
-    path: '/admin/review?tab=prices',
+    id: 'admin-prices-missing',
+    path: '/admin/prices',
     tags: ['admin'],
     auth: 'admin',
   },
   {
-    id: 'admin-price-submissions',
-    path: '/admin/review?tab=submissions',
+    id: 'admin-prices-submitted',
+    path: '/admin/prices?tab=submitted',
     tags: ['admin'],
     auth: 'admin',
   },

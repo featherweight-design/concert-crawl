@@ -6,16 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { apiClient, ApiError } from '@/lib/api';
 import { SectionHead } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import {
-  reviewQueryKeys,
-  useInvalidateReviewQueries,
-  useReviewCounts,
-  useReviewPriceEvents,
-  type PriceEvent,
-  type ReviewCounts,
-} from '@/lib/queries/use-admin-review';
-import { useQueryClient } from '@tanstack/react-query';
-import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions';
+import { useInvalidateReviewQueries } from '@/lib/queries/use-admin-review';
 import { AdminReviewMobile } from './AdminReviewMobile';
 import { ReviewTabs } from './ReviewTabs';
 import { editEventHref } from '@/lib/admin/edit-event-link';
@@ -25,8 +16,6 @@ import {
   type ReviewTabKey,
 } from '@/lib/admin/review-tabs';
 import { buildReviewTabs } from './lib/build-review-tabs';
-import { PricesTabContent } from './_tabs/PricesTabContent';
-import { SubmissionsTabContent } from './_tabs/SubmissionsTabContent';
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent';
 import {
   EMPTY_PAGINATION,
@@ -39,24 +28,15 @@ import {
 import { type AllEvent } from './all/types';
 
 interface ReviewPageClientProps {
-  initialSubmissions: PriceSubmissionHistoryRow[];
-  initialSubmissionsTotal: number;
-  initialCounts: ReviewCounts;
   /** The Needs you decision count (the sidebar badge's source). */
   decisions: number;
 }
 
-export const ReviewPageClient = ({
-  initialSubmissions,
-  initialSubmissionsTotal,
-  initialCounts,
-  decisions,
-}: ReviewPageClientProps) => {
+export const ReviewPageClient = ({ decisions }: ReviewPageClientProps) => {
   const { getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
   const invalidate = useInvalidateReviewQueries();
 
   // Push helper — pushing an empty query string leaves a trailing "?" in
@@ -100,22 +80,7 @@ export const ReviewPageClient = ({
     [pushParams, searchParams],
   );
 
-  const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing');
-  const [error, setError] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(true);
-
-  // Price coverage: keyed by both the filter toggle and the current page so
-  // flipping the toggle resets to page 1 cleanly (handled in togglePriceFilter).
-  // Desktop only fetches when the prices tab is active; mobile renders every
-  // surface through a single shell (AdminReviewMobile owns the visible tab),
-  // so the query stays enabled there.
-  const priceEventsQuery = useReviewPriceEvents(
-    priceFilter,
-    pagination,
-    !isDesktop || activeTab === 'prices',
-  );
-  const priceEventsTotal = priceEventsQuery.data?.total ?? 0;
-  const priceEvents: PriceEvent[] = priceEventsQuery.data?.rows ?? [];
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1280px)');
@@ -124,81 +89,6 @@ export const ReviewPageClient = ({
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
-  const togglePriceFilter = useCallback(() => {
-    setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'));
-    // Reset to page 1 — page 5 of "missing" rarely lines up with page 5 of "all".
-    onPaginationChange({ page: 1, pageSize: pagination.pageSize });
-  }, [onPaginationChange, pagination.pageSize]);
-
-  // Tab-pill counts. SSR seeds initial values so the numbers paint on first
-  // render; subsequent mutations call `invalidate.counts()` to refresh.
-  const countsQuery = useReviewCounts(initialCounts);
-  const counts = countsQuery.data ?? initialCounts;
-
-  const addPrice = useCallback(
-    async (
-      eventId: string,
-      priceMin: string,
-      priceMax: string | null,
-      vendor: string,
-      howFound: string,
-    ) => {
-      setError(null);
-      try {
-        const token = await getToken();
-        if (!token) return;
-        await apiClient.post('/v1/admin/prices/submissions', token, {
-          eventId,
-          priceMin,
-          ...(priceMax !== null && { priceMax }),
-          vendor,
-          howFound,
-        });
-        // Optimistic patch on the active price-events cache slot: the row
-        // that just got a price gets the new min/max + 'community' source so
-        // the admin sees the change without waiting on a refetch. The
-        // invalidate below sweeps every (page, pageSize) slot so the truth
-        // wins eventually.
-        queryClient.setQueryData<{
-          rows: PriceEvent[];
-          total: number;
-        }>(
-          reviewQueryKeys.priceEvents(
-            priceFilter,
-            pagination.page,
-            pagination.pageSize,
-          ),
-          (prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              rows: prev.rows.map((ev) =>
-                ev.eventId === eventId
-                  ? { ...ev, priceMin, priceMax, priceSource: 'community' }
-                  : ev,
-              ),
-            };
-          },
-        );
-        void invalidate.priceEvents();
-        void invalidate.counts();
-      } catch (err) {
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to save price.';
-        console.error('addPrice error:', err);
-        setError(message);
-      }
-    },
-    [
-      getToken,
-      invalidate,
-      pagination.page,
-      pagination.pageSize,
-      priceFilter,
-      queryClient,
-    ],
-  );
 
   // The decisions waiting are Needs you's, not this page's tabs: the pill and
   // the mobile subtitle read the same count as the sidebar badge.
@@ -324,22 +214,6 @@ export const ReviewPageClient = ({
     window.open(`/events/${event.id}`, '_blank', 'noopener,noreferrer');
   };
 
-  const errorBanner = error && (
-    <div
-      style={{
-        padding: '10px 14px',
-        borderRadius: 8,
-        border: '1px solid color-mix(in oklab, var(--danger) 30%, transparent)',
-        background: 'color-mix(in oklab, var(--danger) 8%, transparent)',
-        fontSize: 13,
-        color: 'var(--danger)',
-        fontFamily: "'Inter', sans-serif",
-      }}
-    >
-      {error}
-    </div>
-  );
-
   if (!isDesktop) {
     const mobileSectionHead = (
       <div style={{ padding: '4px 0' }}>
@@ -378,7 +252,6 @@ export const ReviewPageClient = ({
         }}
       >
         <div style={{ flexShrink: 0 }}>{mobileSectionHead}</div>
-        {errorBanner && <div style={{ flexShrink: 0 }}>{errorBanner}</div>}
         <div
           style={{
             flex: 1,
@@ -388,24 +261,6 @@ export const ReviewPageClient = ({
           }}
         >
           <AdminReviewMobile
-            priceEvents={priceEvents}
-            onAddPrice={addPrice}
-            initialTab={activeTab}
-            submissionsCount={counts.prices}
-            initialSubmissions={initialSubmissions}
-            initialSubmissionsTotal={initialSubmissionsTotal}
-            pricesMissingOnly={priceFilter === 'missing'}
-            priceEventsPage={pagination.page}
-            priceEventsPageSize={pagination.pageSize}
-            priceEventsTotal={priceEventsTotal}
-            priceEventsLoading={priceEventsQuery.isFetching}
-            onTogglePriceFilter={togglePriceFilter}
-            onPriceEventsPageChange={(next) =>
-              onPaginationChange({ page: next, pageSize: pagination.pageSize })
-            }
-            onPriceEventsPageSizeChange={(next) =>
-              onPaginationChange({ page: 1, pageSize: next })
-            }
             onAllEventsRowClick={(id) =>
               router.push(editEventHref(id, activeTab))
             }
@@ -432,12 +287,11 @@ export const ReviewPageClient = ({
     );
   }
 
-  const tabs = buildReviewTabs(counts);
+  const tabs = buildReviewTabs();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {sectionHead}
-      {errorBanner}
 
       <ReviewTabs
         tabs={tabs}
@@ -445,32 +299,6 @@ export const ReviewPageClient = ({
         onChange={setActiveTab}
         aria-label={ADMIN_COPY.review.tabs.ariaLabel}
       />
-
-      {activeTab === 'prices' && (
-        <PricesTabContent
-          priceEvents={priceEvents}
-          priceEventsLoading={priceEventsQuery.isPending}
-          pricesMissingOnly={priceFilter === 'missing'}
-          onTogglePriceFilter={togglePriceFilter}
-          priceEventsPage={pagination.page}
-          priceEventsPageSize={pagination.pageSize}
-          priceEventsTotal={priceEventsTotal}
-          onPriceEventsPageChange={(next) =>
-            onPaginationChange({ page: next, pageSize: pagination.pageSize })
-          }
-          onPriceEventsPageSizeChange={(next) =>
-            onPaginationChange({ page: 1, pageSize: next })
-          }
-          onAddPrice={addPrice}
-        />
-      )}
-
-      {activeTab === 'submissions' && (
-        <SubmissionsTabContent
-          initialSubmissions={initialSubmissions}
-          initialTotal={initialSubmissionsTotal}
-        />
-      )}
 
       {activeTab === 'all-events' && (
         <AllEventsTabContent

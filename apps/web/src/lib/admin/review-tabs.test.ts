@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PRICES_HREF,
+  PRICES_SUBMITTED_HREF,
   RETIRED_REVIEW_TABS,
   REVIEW_TAB_KEYS,
   isRetiredReviewTab,
   isReviewTabKey,
   resolveReviewTab,
+  reviewPricesRedirect,
   reviewRedirectsToNeedsYou,
 } from './review-tabs';
 
 describe('REVIEW_TAB_KEYS', () => {
-  it('carries submissions and prices as separate tabs', () => {
-    // The split (#1610): `prices` keeps its key and now holds price coverage
-    // only, `submissions` is additive. Keeping `prices` is what preserves
-    // existing `?tab=prices` links and `?from=prices` editor round-trips.
-    expect(REVIEW_TAB_KEYS).toContain('prices');
-    expect(REVIEW_TAB_KEYS).toContain('submissions');
+  it('keeps only the all-events tab', () => {
+    // The price tabs moved to /admin/prices (4d); their URLs redirect.
+    expect([...REVIEW_TAB_KEYS]).toEqual(['all-events']);
   });
 
   it('has no duplicate keys', () => {
@@ -29,8 +29,10 @@ describe('isReviewTabKey', () => {
     }
   });
 
-  it('rejects unknown values and null', () => {
+  it('rejects unknown values, the retired price tabs and null', () => {
     expect(isReviewTabKey('price-submissions')).toBe(false);
+    expect(isReviewTabKey('prices')).toBe(false);
+    expect(isReviewTabKey('submissions')).toBe(false);
     expect(isReviewTabKey('')).toBe(false);
     expect(isReviewTabKey(null)).toBe(false);
   });
@@ -41,27 +43,15 @@ describe('resolveReviewTab', () => {
     resolveReviewTab(new URLSearchParams(query));
 
   it('reads an explicit ?tab= key', () => {
-    expect(resolve('tab=submissions')).toBe('submissions');
-    expect(resolve('tab=prices')).toBe('prices');
     expect(resolve('tab=all-events')).toBe('all-events');
   });
 
-  it('maps the legacy ?section=submissions onto the submissions tab', () => {
-    // Before the split this landed on `prices`, which then had to smooth-scroll
-    // to a `#submissions-section` anchor. The tab now IS that surface, so the
-    // legacy URL keeps working and lands somewhere more accurate.
-    expect(resolve('section=submissions')).toBe('submissions');
-  });
-
-  it('prefers an explicit ?tab= over the legacy ?section=', () => {
-    expect(resolve('tab=prices&section=submissions')).toBe('prices');
-  });
-
-  it('falls back to prices for unknown, retired or absent values', () => {
-    expect(resolve('')).toBe('prices');
-    expect(resolve('tab=nonsense')).toBe('prices');
-    expect(resolve('tab=missing')).toBe('prices');
-    expect(resolve('section=nonsense')).toBe('prices');
+  it('falls back to all-events for unknown, retired or absent values', () => {
+    expect(resolve('')).toBe('all-events');
+    expect(resolve('tab=nonsense')).toBe('all-events');
+    expect(resolve('tab=missing')).toBe('all-events');
+    expect(resolve('tab=prices')).toBe('all-events');
+    expect(resolve('section=submissions')).toBe('all-events');
   });
 });
 
@@ -93,28 +83,54 @@ describe('RETIRED_REVIEW_TABS', () => {
   });
 });
 
+describe('reviewPricesRedirect', () => {
+  it('sends the price coverage tab to Prices', () => {
+    expect(reviewPricesRedirect('prices', null)).toBe(PRICES_HREF);
+    expect(PRICES_HREF).toBe('/admin/prices');
+  });
+
+  it('sends the submissions tab and the legacy section to Submitted prices', () => {
+    expect(PRICES_SUBMITTED_HREF).toBe('/admin/prices?tab=submitted');
+    expect(reviewPricesRedirect('submissions', null)).toBe(
+      PRICES_SUBMITTED_HREF,
+    );
+    expect(reviewPricesRedirect(undefined, 'submissions')).toBe(
+      PRICES_SUBMITTED_HREF,
+    );
+    expect(reviewPricesRedirect(null, 'submissions')).toBe(
+      PRICES_SUBMITTED_HREF,
+    );
+  });
+
+  it('prefers an explicit ?tab= over the legacy ?section=', () => {
+    expect(reviewPricesRedirect('prices', 'submissions')).toBe(PRICES_HREF);
+    expect(reviewPricesRedirect('all-events', 'submissions')).toBeNull();
+  });
+
+  it('leaves every other URL alone', () => {
+    expect(reviewPricesRedirect('all-events', null)).toBeNull();
+    expect(reviewPricesRedirect('event-flags', null)).toBeNull();
+    expect(reviewPricesRedirect(undefined, undefined)).toBeNull();
+    expect(reviewPricesRedirect(null, 'nonsense')).toBeNull();
+  });
+});
+
 describe('reviewRedirectsToNeedsYou', () => {
-  it('redirects every retired tab, with or without ?section=', () => {
+  it('redirects every retired tab', () => {
     for (const key of RETIRED_REVIEW_TABS) {
-      expect(reviewRedirectsToNeedsYou(key, null)).toBe(true);
-      expect(reviewRedirectsToNeedsYou(key, 'submissions')).toBe(true);
+      expect(reviewRedirectsToNeedsYou(key)).toBe(true);
     }
   });
 
   it('redirects a missing or unknown tab', () => {
-    expect(reviewRedirectsToNeedsYou(undefined, undefined)).toBe(true);
-    expect(reviewRedirectsToNeedsYou(null, null)).toBe(true);
-    expect(reviewRedirectsToNeedsYou('nonsense', null)).toBe(true);
+    expect(reviewRedirectsToNeedsYou(undefined)).toBe(true);
+    expect(reviewRedirectsToNeedsYou(null)).toBe(true);
+    expect(reviewRedirectsToNeedsYou('nonsense')).toBe(true);
   });
 
   it('keeps every live tab on Review', () => {
     for (const key of REVIEW_TAB_KEYS) {
-      expect(reviewRedirectsToNeedsYou(key, null)).toBe(false);
+      expect(reviewRedirectsToNeedsYou(key)).toBe(false);
     }
-  });
-
-  it('keeps the legacy ?section=submissions on Review', () => {
-    expect(reviewRedirectsToNeedsYou(undefined, 'submissions')).toBe(false);
-    expect(reviewRedirectsToNeedsYou(null, 'submissions')).toBe(false);
   });
 });

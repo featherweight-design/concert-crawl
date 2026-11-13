@@ -13,12 +13,12 @@ describe('/admin/prices/submissions', () => {
     mockRedirect.mockClear();
   });
 
-  it('retires to the Review submissions tab', async () => {
-    // The submissions UI now lives inside Review as its own tab, so this
-    // standalone page is retired behind a redirect. Bookmarks and any stored
-    // deep links keep resolving instead of 404ing.
+  it('retires to the Submitted prices tab of Prices', async () => {
+    // Submitted prices is a tab of /admin/prices, so this standalone page is
+    // retired behind a redirect. Bookmarks and any stored deep links keep
+    // resolving instead of 404ing.
     const { default: PricesSubmissionsPage } = await import('./page');
     expect(() => PricesSubmissionsPage()).toThrow(/NEXT_REDIRECT/);
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/review?tab=submissions');
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/prices?tab=submitted');
   });
 });
