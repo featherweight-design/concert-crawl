@@ -1,3 +1,18 @@
+# [1.402.0](https://github.com/featherweight-design/concert-crawl/compare/v1.401.0...v1.402.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** load only the asked kind on a needs-you venue view ([ae68fee](https://github.com/featherweight-design/concert-crawl/commit/ae68feea31d5bfe9ff2401f5d6402a1b1d6f90d1))
+* **api:** search-aware chip counts in one query, Drizzle exists, backers from corroboration ([c4148b1](https://github.com/featherweight-design/concert-crawl/commit/c4148b1fcac9c9e8c38bb5edc6a920e00a5f350e))
+* **api:** skip the needs-you summary on a venue view ([610bc08](https://github.com/featherweight-design/concert-crawl/commit/610bc082e16cad4393e308e59004da4864603b3a))
+
+
+### Features
+
+* **api:** handles, backers, states, chips and search for the Submitted prices tab ([7ffc024](https://github.com/featherweight-design/concert-crawl/commit/7ffc024aaf13f87ee2c3bbfcdbcf13377677501b))
+* **api:** list resolved price checks with decider and date ([78cfbcd](https://github.com/featherweight-design/concert-crawl/commit/78cfbcd6e4c38da06aac72cadd2d5436f0caa127))
+
 # [1.401.0](https://github.com/featherweight-design/concert-crawl/compare/v1.400.0...v1.401.0) (2026-11-13)
 
 
