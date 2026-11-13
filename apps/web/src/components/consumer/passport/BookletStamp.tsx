@@ -2,9 +2,8 @@ import { useId } from 'react';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
-import { venueGlyphKey } from '@/components/consumer/venue-glyph';
+import { VenueTile, venueGlyphKey } from '@/components/consumer/venue-glyph';
 import { GlyphShapes } from '@/components/consumer/venue-glyph/VenueGlyph';
-import { VenueStamp } from '@/components/consumer/venue-stamp';
 import {
   stampColorsFor,
   stampDateParts,
@@ -218,12 +217,23 @@ export function NextSlot({ show, size }: Omit<BookletStampProps, 'tilt'>) {
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-signal">
         {COPY.nextSlot}
       </span>
-      <VenueStamp
-        venueSlug={show.venueSlug}
-        venueName={show.venueName}
-        variant="dashed"
-        size={Math.round(size * 0.32)}
-      />
+      {/* The kit's `ghost_stamp`: the venue's own tile in greyscale, not yet
+          stamped, so neither coloured nor tilted. */}
+      <span
+        data-booklet-ghost=""
+        aria-hidden="true"
+        style={{
+          display: 'inline-flex',
+          filter: 'grayscale(1)',
+          opacity: 0.75,
+        }}
+      >
+        <VenueTile
+          slug={show.venueSlug}
+          name={show.venueName}
+          size={Math.round(size * 0.36)}
+        />
+      </span>
       {date !== null && (
         <span className="font-mono text-[10px] tracking-[0.14em] text-fg-subtle">
           {`${date.month} ${date.day}`}
