@@ -4,6 +4,7 @@ import { SearchPaletteProvider } from '@/components/consumer/search-palette/Sear
 import { BottomNav } from '@/components/consumer/bottom-nav';
 import { InstallSlot } from '@/components/pwa/InstallSlot';
 import { LaunchAnimation } from '@/components/pwa/LaunchAnimation';
+import { ScrollResetOnNavigate } from '@/components/consumer/scroll-reset/ScrollResetOnNavigate';
 import { OfflinePill } from '@/components/pwa/OfflinePill';
 import { ReturnSeamReplay } from '@/components/consumer/return-seam/ReturnSeamReplay';
 import { PendingTierPicker } from '@/components/consumer/tier-picker/PendingTierPicker';
@@ -33,6 +34,9 @@ export default function MainLayout({
         {/* Cold start of the installed app only, no switch; draws over the
             page without blocking it. */}
         <LaunchAnimation />
+        {/* Next skips its own scroll reset when the new page's top is still on
+            screen, so a part-scrolled page landed the next one part way down. */}
+        <ScrollResetOnNavigate />
         {/* Above the header AND the page body: the header's two search
             triggers and the "find artists to follow" row in a page must open
             one palette, and those are siblings, not ancestor and descendant. */}
