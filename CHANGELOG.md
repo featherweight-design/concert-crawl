@@ -1,3 +1,13 @@
+## [1.397.2](https://github.com/featherweight-design/concert-crawl/compare/v1.397.1...v1.397.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** draw the event hero wash, title position and phone rays as the boards do ([2d00264](https://github.com/featherweight-design/concert-crawl/commit/2d00264ff108d42c7e0fd752086bdbccfae0e5aa))
+* **web:** draw the Tonight spotlight wash in the show's genre colour ([1c65584](https://github.com/featherweight-design/concert-crawl/commit/1c6558489eb9c7beeefa8064cdb8d7793b00d8c2))
+* **web:** no Try again on a removed-venue refusal; guard the Active path ([73c099d](https://github.com/featherweight-design/concert-crawl/commit/73c099df624362846af9f04da8c899360ef820a7))
+* **web:** show the API's removed-venue refusal instead of a redacted error ([a7a30d9](https://github.com/featherweight-design/concert-crawl/commit/a7a30d9ae0afc0529cfb53927835f3257626f71a))
+
 ## [1.397.1](https://github.com/featherweight-design/concert-crawl/compare/v1.397.0...v1.397.1) (2026-11-13)
 
 
