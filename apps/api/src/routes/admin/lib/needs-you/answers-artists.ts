@@ -177,7 +177,8 @@ export const keepThisMatch = define({
     }
 
     // An unconfirmed auto-match is confirmed; otherwise the answer says the
-    // page is right as it is, which dismisses its open reports.
+    // page is right as it is, which dismisses its open reports. The queue
+    // offers this answer by the same rule (`artistItems` in sources.ts).
     if (artist.autoMatchedAt !== null && artist.spotifyArtistId !== null) {
       const open = await db
         .select({ id: artistReports.id })

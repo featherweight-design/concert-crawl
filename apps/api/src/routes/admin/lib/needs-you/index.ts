@@ -35,6 +35,7 @@ export const listNeedsYou = async ({
  */
 const handledSince = async (now: Date): Promise<number> => {
   const undone = alias(auditLog, 'undone');
+  const dayStart = sql`(date_trunc('day', ${now.toISOString()}::timestamptz AT TIME ZONE ${MT_TIME_ZONE}) AT TIME ZONE ${MT_TIME_ZONE})`;
   const [row] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(auditLog)
@@ -48,14 +49,14 @@ const handledSince = async (now: Date): Promise<number> => {
             .where(
               and(
                 eq(undone.action, NEEDS_YOU_UNDO_ACTION),
+                // An undo follows its answer, so today's answers are only
+                // ever undone today: bounding it keeps the scan to one day.
+                gte(undone.createdAt, dayStart),
                 sql`${undone.metadata}->>'answerAuditId' = ${auditLog.id}::text`,
               ),
             ),
         ),
-        gte(
-          auditLog.createdAt,
-          sql`(date_trunc('day', ${now.toISOString()}::timestamptz AT TIME ZONE ${MT_TIME_ZONE}) AT TIME ZONE ${MT_TIME_ZONE})`,
-        ),
+        gte(auditLog.createdAt, dayStart),
       ),
     );
   return row?.total ?? 0;

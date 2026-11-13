@@ -358,6 +358,7 @@ const artistItems: Adapter = async () => {
       matchStatus: artists.matchStatus,
       // "Keep this match" confirms an unconfirmed auto-match or dismisses open
       // reports; with neither, the API refuses it (422), so it is not offered.
+      // Mirrors `keepThisMatch` in answers-artists.ts: change them together.
       confirmable: sql<boolean>`(${artists.autoMatchedAt} is not null and ${artists.spotifyArtistId} is not null)`,
       reportCount: openReports,
       nextShow: nextShowDateExpr(ARTIST_HORIZON_DAYS),
