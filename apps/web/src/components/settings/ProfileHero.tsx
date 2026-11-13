@@ -72,8 +72,10 @@ export function ProfileHero({
   const showDisplayBadge =
     !showRoleBadge && displayRole !== 'fan' && displayRole !== 'staff';
 
+  // `z-20` puts Edit above the avatar layer below (`z-10`), which rises 36px
+  // into this banner: the two must never compete for the same tap.
   const editClass =
-    'absolute right-3.5 top-1/2 -translate-y-1/2 rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
+    'absolute right-3.5 top-1/2 z-20 -translate-y-1/2 rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
   const editStyle = {
     background: 'color-mix(in oklch, var(--bg) 78%, transparent)',
     letterSpacing: '-0.005em',
@@ -203,7 +205,13 @@ export function ProfileHero({
       </div>
 
       <div className="flex flex-col gap-2 px-5 pb-4">
-        <div className="relative z-10 -mt-9">
+        {/* `self-start` keeps this layer as wide as the avatar. As a full-width
+            flex row it was a transparent `z-10` sheet over the lower half of
+            the banner, Edit included, and swallowed taps on the button. */}
+        <div
+          data-testid="profile-avatar-layer"
+          className="relative z-10 -mt-9 self-start"
+        >
           <AvatarRing
             handle={handle}
             avatarColor={avatarColor}

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ProfileHero } from './ProfileHero';
 
 // jsdom has no matchMedia, and ProfileHero reads the viewport through it.
@@ -57,5 +58,61 @@ describe('ProfileHero banner', () => {
     );
     expect(screen.getByTestId('profile-banner').dataset.striped).toBe('true');
     expect(bannerImage()).toContain('repeating-linear-gradient');
+  });
+});
+
+// jsdom does no hit-testing, so these pin the two classes that decide who gets
+// a tap where the avatar layer rises into the banner.
+describe('ProfileHero Edit button', () => {
+  const zOf = (el: Element) =>
+    Number(/(?:^|\s)z-(\d+)(?:\s|$)/.exec(el.className)?.[1] ?? 0);
+
+  it('keeps the avatar layer to the avatar width, off the Edit button', () => {
+    render(
+      <ProfileHero {...base} avatarColor="signal" avatarSecondColor={null} />,
+    );
+    const layer = screen.getByTestId('profile-avatar-layer');
+    expect(layer.className).toContain('self-start');
+  });
+
+  it.each([
+    ['link', undefined],
+    ['button', () => undefined],
+  ] as const)('stacks the Edit %s above the avatar layer', (role, onEdit) => {
+    render(
+      <ProfileHero
+        {...base}
+        avatarColor="signal"
+        avatarSecondColor={null}
+        {...(onEdit ? { onEdit } : {})}
+      />,
+    );
+    const edit = screen.getByRole(role, { name: 'Edit' });
+    const layer = screen.getByTestId('profile-avatar-layer');
+    expect(zOf(edit)).toBeGreaterThan(zOf(layer));
+  });
+
+  it('calls onEdit when the button is clicked', () => {
+    const onEdit = vi.fn();
+    render(
+      <ProfileHero
+        {...base}
+        avatarColor="signal"
+        avatarSecondColor={null}
+        onEdit={onEdit}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(onEdit).toHaveBeenCalledOnce();
+  });
+
+  it('links to /me/edit without an onEdit', () => {
+    render(
+      <ProfileHero {...base} avatarColor="signal" avatarSecondColor={null} />,
+    );
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      '/me/edit',
+    );
   });
 });
