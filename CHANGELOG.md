@@ -1,3 +1,16 @@
+# [1.409.0](https://github.com/featherweight-design/concert-crawl/compare/v1.408.0...v1.409.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** run detail review findings ([855aad6](https://github.com/featherweight-design/concert-crawl/commit/855aad6c9848596e8db6fe03cb5ac7aaebdc7cbf))
+
+
+### Features
+
+* **api:** venue slug on the missing-price rows ([c5b679e](https://github.com/featherweight-design/concert-crawl/commit/c5b679e39e7567abd600aa1c31c0d3c6dc783641))
+* **web:** run detail panel on the venue runs tab (3b part 4b) ([962b769](https://github.com/featherweight-design/concert-crawl/commit/962b769bf989f1999b5e917671f6a81a563840cc))
+
 # [1.408.0](https://github.com/featherweight-design/concert-crawl/compare/v1.407.1...v1.408.0) (2026-11-13)
 
 
