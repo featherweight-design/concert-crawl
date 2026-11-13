@@ -58,10 +58,18 @@ describe('SubmissionItem closed rows', () => {
     },
   );
 
+  it('a closed row with no reason still renders, with just the pill and the muted price', () => {
+    render(<SubmissionItem submission={row({ status: 'closed' })} />);
+
+    expect(screen.getByText('closed')).toBeTruthy();
+    expect(screen.getByText('$22').className).toContain('text-fg-muted');
+    expect(screen.queryByText(reasons.stale)).toBeNull();
+    expect(screen.queryByText(reasons.archived)).toBeNull();
+  });
+
   it('a live row keeps its price at full strength and its fan count', () => {
     render(<SubmissionItem submission={row({})} />);
 
-    expect(screen.getByText('$22').className).toContain('text-fg');
     expect(screen.getByText('$22').className).not.toContain('text-fg-muted');
     expect(screen.getByText(/fan confirmed/)).toBeTruthy();
     expect(screen.queryByText(reasons.stale)).toBeNull();

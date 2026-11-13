@@ -1,6 +1,34 @@
 import { describe, it, expect } from 'vitest';
 
-import { submissionDisplayStatus, tallySubmissionCounts } from './index.js';
+import {
+  submissionClosedReason,
+  submissionDisplayStatus,
+  tallySubmissionCounts,
+} from './index.js';
+
+describe('submissionClosedReason', () => {
+  it('names why a closed status closed, and only for those', () => {
+    expect(submissionClosedReason('stale')).toBe('stale');
+    expect(submissionClosedReason('archived')).toBe('archived');
+    expect(submissionClosedReason('corroborated')).toBeUndefined();
+    expect(submissionClosedReason('pending')).toBeUndefined();
+  });
+
+  it('agrees with submissionDisplayStatus: a status closes exactly when it has a reason', () => {
+    for (const stored of [
+      'pending',
+      'corroborated',
+      'disputed',
+      'stale',
+      'archived',
+      'something-new',
+    ]) {
+      expect(submissionDisplayStatus(stored) === 'closed').toBe(
+        submissionClosedReason(stored) !== undefined,
+      );
+    }
+  });
+});
 
 describe('submissionDisplayStatus', () => {
   it.each([

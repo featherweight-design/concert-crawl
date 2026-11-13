@@ -1374,9 +1374,20 @@ export const submissionDisplayStatus = (
 ): SubmissionDisplayStatus => {
   if (dbStatus === 'corroborated') return 'confirmed';
   if (dbStatus === 'disputed') return 'disputed';
-  if (dbStatus === 'stale' || dbStatus === 'archived') return 'closed';
+  if (submissionClosedReason(dbStatus) !== undefined) return 'closed';
   return 'pending';
 };
+
+/**
+ * Why a stored status reads as `closed`, or undefined when it does not. The
+ * one place that decides which statuses close, so `submissionDisplayStatus`
+ * and the API's `closedReason` can never disagree: a new closing status is
+ * added here and gets both.
+ */
+export const submissionClosedReason = (
+  dbStatus: string,
+): SubmissionClosedReason | undefined =>
+  dbStatus === 'stale' || dbStatus === 'archived' ? dbStatus : undefined;
 
 /**
  * What every surface that shows a submitted-price count reads: the menu (live),

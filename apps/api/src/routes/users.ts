@@ -35,6 +35,7 @@ import { loadPlanContext } from '../lib/plan.js';
 import { resolveFounderWindowView } from './billing-founder-window.js';
 import {
   AVATAR_COLORS,
+  submissionClosedReason,
   submissionDisplayStatus,
   tallySubmissionCounts,
 } from '@concert-crawl/types';
@@ -389,25 +390,29 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .where(eq(priceSubmissions.userId, auth.userId))
     .orderBy(desc(priceSubmissions.createdAt));
 
-  const data: UserSubmissionItem[] = rows.map((row) => ({
-    id: row.id,
-    eventId: row.eventId,
-    artist: row.artist ?? 'Unknown',
-    venue: row.venue ?? 'Unknown',
-    venueSlug: row.venueSlug,
-    date: row.date ?? '',
-    priceMin: Math.round(parseFloat(row.priceMin) * 100),
-    priceMax: row.priceMax ? Math.round(parseFloat(row.priceMax) * 100) : null,
-    tier: row.tier,
-    corroborationCount: row.corroborationCount,
-    submittedAt: row.submittedAt.toISOString(),
-    status: submissionDisplayStatus(row.status ?? 'pending'),
+  const data: UserSubmissionItem[] = rows.map((row) => {
+    const stored = row.status ?? 'pending';
     // A closed row says why: stale (no second fan in time) or archived (a newer
-    // price replaced it). Only those two stored statuses read as closed.
-    ...(row.status === 'stale' || row.status === 'archived'
-      ? { closedReason: row.status }
-      : {}),
-  }));
+    // price replaced it). The same helper decides `closed` and its reason.
+    const closedReason = submissionClosedReason(stored);
+    return {
+      id: row.id,
+      eventId: row.eventId,
+      artist: row.artist ?? 'Unknown',
+      venue: row.venue ?? 'Unknown',
+      venueSlug: row.venueSlug,
+      date: row.date ?? '',
+      priceMin: Math.round(parseFloat(row.priceMin) * 100),
+      priceMax: row.priceMax
+        ? Math.round(parseFloat(row.priceMax) * 100)
+        : null,
+      tier: row.tier,
+      corroborationCount: row.corroborationCount,
+      submittedAt: row.submittedAt.toISOString(),
+      status: submissionDisplayStatus(stored),
+      ...(closedReason === undefined ? {} : { closedReason }),
+    };
+  });
 
   return ctx.json({ success: true, data });
 });
