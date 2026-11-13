@@ -9,14 +9,15 @@ export function FeedbackEdgeTab() {
 
   return (
     <>
-      {/* The fixed anchor is a wrapper so the phone inset can be a class: the
-          button's `all: unset` would beat any class on the button itself.
-          Under 1280 the tab is half tucked behind the screen edge so it stops
-          covering page text (venue titles, artist rows at 390), and slides out
-          on focus or press. From 1280 up it sits flush as drawn. */}
+      {/* The fixed anchor is a wrapper so positioning and the focus ring can
+          be classes: the button's `all: unset` would beat any class on the
+          button itself. It sits flush at every width, as drawn. Under 1280 it
+          used to be half tucked behind the screen edge and slide out on focus
+          or press, but focus returned to it when the modal closed, so the tab
+          read as clipped until its first tap and whole ever after. */}
       <div
         data-testid="feedback-edge-tab-anchor"
-        className="fixed right-0 top-[70%] z-[35] transition-transform duration-[var(--motion-fast)] ease-[var(--motion-ease)] max-xl:translate-x-3 max-xl:focus-within:translate-x-0 max-xl:active:translate-x-0 rounded-l-[10px] [&:has(:focus-visible)]:outline [&:has(:focus-visible)]:outline-2 [&:has(:focus-visible)]:outline-offset-2 [&:has(:focus-visible)]:outline-[var(--signal)]"
+        className="fixed right-0 top-[70%] z-[35] rounded-l-[10px] [&:has(:focus-visible)]:outline [&:has(:focus-visible)]:outline-2 [&:has(:focus-visible)]:outline-offset-2 [&:has(:focus-visible)]:outline-[var(--signal)]"
       >
         <button
           type="button"
@@ -44,11 +45,9 @@ export function FeedbackEdgeTab() {
             color: 'var(--fg)',
           }}
         >
-          {/* No transparent hit slop: tucked, only ~15px of the tab shows and
-              that sliver is the whole target. A slop would steal taps meant
-              for content within 12px of the edge (the same class of bug as
-              the venues click-through). The target-size shortfall is a Design
-              question: the tab is on no board. */}
+          {/* No transparent hit slop: a slop would steal taps meant for
+              content near the edge (the same class of bug as the venues
+              click-through). The tab itself is the whole target. */}
           <span
             style={{
               width: 6,
