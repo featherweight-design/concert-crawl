@@ -13,6 +13,8 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
     consecutiveFailures: 0,
     crawlDelayMs: 3000,
     lastCrawledAt: null,
+    // A real row always carries removed_at; null is "not removed".
+    removedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -54,7 +56,13 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
     returning: vi.fn().mockResolvedValue([mockVenueRow]),
     where: vi.fn().mockReturnThis(),
     execute: vi.fn().mockResolvedValue(undefined),
+    // PATCH writes in a transaction; it runs on the same chain, so the
+    // per-test `returning` mocks still apply.
+    transaction: vi.fn(),
   };
+  mockDb.transaction.mockImplementation((run: (tx: unknown) => unknown) =>
+    run(mockDb),
+  );
 
   return { mockGetAuth: vi.fn(), mockDb };
 });
@@ -73,6 +81,8 @@ vi.mock('@concert-crawl/db', () => ({
     slug: 'slug',
     active: 'active',
     consecutiveFailures: 'consecutiveFailures',
+    removedAt: 'removed_at',
+    featured: 'featured',
   },
   events: { venueId: 'venue_id', status: 'status', date: 'date', id: 'id' },
   crawlRuns: {
