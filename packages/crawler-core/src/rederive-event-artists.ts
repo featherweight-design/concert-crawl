@@ -41,6 +41,7 @@ import {
 } from '@concert-crawl/types';
 import {
   deriveArtists,
+  isTributeTitle,
   wouldAdjudicate,
   type Adjudicator,
 } from './lib/derive-artists.js';
@@ -479,7 +480,13 @@ export async function rederiveEventArtists(
             headliners: result.headliners,
             supporting: result.supportingArtists,
           },
-          tribute: result.coversOtherArtists === true,
+          // Only the title word rule clears a bill here. A model verdict that a
+          // title is a cover night varies run to run (the same title with a
+          // trailing space was split once and emptied once), so it is not
+          // evidence; the title is trimmed so one title always gets one answer.
+          tribute:
+            result.coversOtherArtists === true &&
+            isTributeTitle(row.title.trim()),
         });
         if (!verdict.write) {
           strategies['not-evidenced'] += 1;
