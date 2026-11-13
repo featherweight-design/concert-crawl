@@ -40,8 +40,9 @@ export interface MergeEventRowsResult {
  * exist; the fan-out to watchers stays with the caller (it lives in the API
  * package and runs after this commits).
  *
- * Shared by the admin merge and the duplicate-night cleanup so the two cannot
- * disagree about what a merge keeps.
+ * Used by the admin merge today and by the duplicate-night cleanup next, so
+ * the two cannot disagree about what a merge keeps. Any other path that
+ * deletes an event does not write a redirect.
  */
 export const mergeEventRows = async ({
   sourceId,
@@ -50,8 +51,12 @@ export const mergeEventRows = async ({
   suggestion,
   notifyWatchers,
   audit = true,
-}: MergeEventRowsInput): Promise<MergeEventRowsResult> =>
-  db.transaction(async (tx) => {
+}: MergeEventRowsInput): Promise<MergeEventRowsResult> => {
+  // A row merged into itself would delete the survivor, and its redirect with it.
+  if (sourceId === targetId) {
+    throw new Error('Cannot merge an event into itself');
+  }
+  return db.transaction(async (tx) => {
     // Captured BEFORE any row moves: these are the users who were watching
     // the row that is disappearing, and they are the only ones for whom
     // anything changed. Reading watchers off the target after the merge
@@ -246,3 +251,4 @@ export const mergeEventRows = async ({
       movedWatcherIds: movedWatchers.map((row) => row.userId),
     };
   });
+};

@@ -2683,7 +2683,7 @@ describe('a merged-away event keeps answering at its old id', () => {
       body: JSON.stringify({ targetId }),
     });
 
-  it('records where the source went, and GET /v1/events/:id follows it with a 308', async () => {
+  it('records where the source went, and GET /v1/events/:id follows it with a 307', async () => {
     const venue = await seedVenue();
     const source = await seedEvent(venue.id, { date: '2099-09-01' });
     const target = await seedEvent(venue.id, { date: '2099-09-01' });
@@ -2699,10 +2699,9 @@ describe('a merged-away event keeps answering at its old id', () => {
     const res = await app.request(`/v1/events/${source.id}`, {
       redirect: 'manual',
     });
-    expect(res.status).toBe(308);
-    expect(new URL(res.headers.get('location') ?? '').pathname).toBe(
-      `/v1/events/${target.id}`,
-    );
+    expect(res.status).toBe(307);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(res.headers.get('location')).toBe(`/v1/events/${target.id}`);
     expect((await app.request(`/v1/events/${target.id}`)).status).toBe(200);
   });
 
