@@ -1559,6 +1559,15 @@ export const CONSUMER_COPY = {
     daysSuffix: 'd ago',
     hoursSuffix: 'h ago',
     minutesSuffix: 'm ago',
+    // Spelled out for the price card's own age line, which sets the age in mono
+    // caps: "3D AGO" reads as three-dimensional, "3 DAYS AGO" does not
+    // (copy-review, addendum 4 item 5).
+    daysAgoLong: (count: number) =>
+      `${count} ${count === 1 ? 'day' : 'days'} ago`,
+    hoursAgoLong: (count: number) =>
+      `${count} ${count === 1 ? 'hour' : 'hours'} ago`,
+    minutesAgoLong: (count: number) =>
+      `${count} ${count === 1 ? 'minute' : 'minutes'} ago`,
     unknown: 'unknown',
     // Deliberately not "Price check" (locked to the admin dispute review) and
     // deliberately not "confirm" (already the antonym of pending on the

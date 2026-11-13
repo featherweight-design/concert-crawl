@@ -57,8 +57,12 @@ interface PendingTokens {
   pill: string;
 }
 
-const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
-  if (kind === 'community') {
+// A pending resale card is drawn in the community card's cyan; only its pill
+// says Resale (price-states-age-trust).
+const pendingTokens = (
+  kind: 'community' | 'boxoffice' | 'resale',
+): PendingTokens => {
+  if (kind !== 'boxoffice') {
     return {
       color: COMMUNITY_SIGNAL,
       text: SIGNAL_TEXT,
@@ -146,7 +150,7 @@ export interface PendingCardBProps {
   ceiling?: number | null;
   tier: string;
   vendor: string;
-  kind: 'community' | 'boxoffice';
+  kind: 'community' | 'boxoffice' | 'resale';
   submitter: { handle: string; url: string } | null;
   /**
    * Kept on the contract for callers. The card no longer prints the age:

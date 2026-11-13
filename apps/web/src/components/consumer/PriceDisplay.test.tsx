@@ -169,7 +169,8 @@ describe('PriceDisplay price age (addendum 4 item 5)', () => {
     const ageLine = screen.getByTestId('price-age-line');
     // The attribution's wrapper is followed directly by the age line.
     expect(attribution.parentElement?.nextElementSibling).toBe(ageLine);
-    expect(ageLine.textContent).toBe('as of 3d ago');
+    // Spelled out: the line is set in caps, where "3D AGO" misreads.
+    expect(ageLine.textContent).toBe('as of 3 days ago');
     expect(ageLine.style.marginTop).toBe('6px');
     // The age left the footer: nothing else to show, so no footer at all.
     expect(screen.queryByTestId('price-card-footer')).toBeNull();
@@ -188,7 +189,7 @@ describe('PriceDisplay price age (addendum 4 item 5)', () => {
     render(<PriceDisplay {...base} priceObservedAt={daysAgo(9)} />);
 
     const ageLine = screen.getByTestId('price-age-line');
-    expect(ageLine.textContent).toBe('as of 9d ago');
+    expect(ageLine.textContent).toBe('as of 9 days ago');
     expect(screen.queryByText(/could be stale/)).toBeNull();
     expect(ageLine.querySelector('svg')).toBeNull();
   });
@@ -274,7 +275,7 @@ describe('PriceDisplay live box office card (price-states-age-trust)', () => {
     );
 
     expect(screen.getByTestId('price-age-line').textContent).toBe(
-      'as of 2h ago',
+      'as of 2 hours ago',
     );
   });
 });

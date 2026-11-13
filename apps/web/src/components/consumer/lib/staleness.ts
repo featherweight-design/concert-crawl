@@ -21,7 +21,14 @@ export function isPriceStale(observedAt: string | null | undefined): boolean {
   return Date.now() - observed > STALE_AFTER_MS;
 }
 
-export function relTimeAgo(observedAt: string): string {
+/**
+ * "3d ago" by default. `long` spells the unit out ("3 days ago") for the price
+ * card's age line, which is set in caps where "3D" would misread.
+ */
+export function relTimeAgo(
+  observedAt: string,
+  { long = false }: { long?: boolean } = {},
+): string {
   const observed = new Date(observedAt).getTime();
   // Without this an unparseable timestamp reads as "just now" — the most
   // reassuring possible answer to a question we cannot actually answer.
@@ -31,10 +38,15 @@ export function relTimeAgo(observedAt: string): string {
   // answer "just now" — the same false reassurance as an unparseable date.
   if (diff < 0) return copy.unknown;
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  if (days > 0) return `${days}${copy.daysSuffix}`;
+  if (days > 0)
+    return long ? copy.daysAgoLong(days) : `${days}${copy.daysSuffix}`;
   const hours = Math.floor(diff / (60 * 60 * 1000));
-  if (hours > 0) return `${hours}${copy.hoursSuffix}`;
+  if (hours > 0)
+    return long ? copy.hoursAgoLong(hours) : `${hours}${copy.hoursSuffix}`;
   const minutes = Math.floor(diff / (60 * 1000));
-  if (minutes > 0) return `${minutes}${copy.minutesSuffix}`;
+  if (minutes > 0)
+    return long
+      ? copy.minutesAgoLong(minutes)
+      : `${minutes}${copy.minutesSuffix}`;
   return copy.justNow;
 }

@@ -52,6 +52,18 @@ export function resolveSourceKind(
   return 'primary';
 }
 
+/**
+ * The trust kind of a pending submission, for the pending card's TrustPill.
+ * The event page used to test only `vendor === 'VenueBoxOffice'`, so a pending
+ * resale price came through as Community and never showed its Resale pill.
+ */
+export function resolvePendingKind(
+  vendor: string | null,
+  sourceCategory?: SourceCategory | null,
+): Exclude<SourceKind, 'primary'> {
+  return kindFromSourceCategory(sourceCategory, vendor);
+}
+
 export function resolveAlternateKind(
   vendor: string | null,
   sourceCategory?: SourceCategory | null,

@@ -39,6 +39,19 @@ describe('relTimeAgo', () => {
     expect(relTimeAgo(ago(5_000))).toBe('just now');
   });
 
+  it('spells the unit out, singular and plural, when long', () => {
+    freeze();
+    expect(relTimeAgo(ago(8 * 24 * 3600_000), { long: true })).toBe(
+      '8 days ago',
+    );
+    expect(relTimeAgo(ago(24 * 3600_000), { long: true })).toBe('1 day ago');
+    expect(relTimeAgo(ago(3 * 3600_000), { long: true })).toBe('3 hours ago');
+    expect(relTimeAgo(ago(3600_000), { long: true })).toBe('1 hour ago');
+    expect(relTimeAgo(ago(15 * 60_000), { long: true })).toBe('15 minutes ago');
+    expect(relTimeAgo(ago(60_000), { long: true })).toBe('1 minute ago');
+    expect(relTimeAgo(ago(5_000), { long: true })).toBe('just now');
+  });
+
   it('says unknown rather than "just now" for an unparseable timestamp', () => {
     expect(relTimeAgo('not-a-date')).toBe('unknown');
   });

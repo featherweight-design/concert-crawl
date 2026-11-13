@@ -10,17 +10,24 @@ const copy = CONSUMER_COPY.priceStaleness;
  * same way; Event Detail's multi-tier card had none, which is why the marker
  * showed on Watching but not on the event page (#1366).
  *
- * Addendum 4 item 5 (price-states-age-trust): plain subtle mono at every age.
- * The amber "could be stale" tone and dot are gone (Hugh dropped the stale
- * chip everywhere, 2026-11-10); past the threshold StillAccurateAction joins
- * the line instead.
+ * Plain subtle mono at every age. The amber "could be stale" tone and dot are
+ * gone (Hugh dropped the stale chip everywhere, 2026-11-10; addendum 4 item 5);
+ * past the threshold StillAccurateAction joins the line instead.
+ *
+ * - `inline` (default): inside another mono line, lowercase, "as of 3d ago".
+ * - `line`: the price card's own age line (price-states-age-trust), 0.06em
+ *   caps with the unit spelled out, "AS OF 3 DAYS AGO". Copy-review: in caps
+ *   "3D" reads as three-dimensional.
  */
 export function StaleStamp({
   observedAt,
+  variant = 'inline',
 }: {
   observedAt: string | null | undefined;
+  variant?: 'inline' | 'line';
 }) {
   if (!observedAt) return null;
+  const isLine = variant === 'line';
 
   return (
     <span
@@ -30,13 +37,17 @@ export function StaleStamp({
         whiteSpace: 'nowrap',
         fontFamily: 'var(--font-mono)',
         fontSize: 9,
-        fontWeight: 500,
         color: 'var(--price-text-subtle)',
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
+        ...(isLine
+          ? {
+              fontWeight: 500,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase' as const,
+            }
+          : { letterSpacing: '0.04em' }),
       }}
     >
-      {copy.asOf(relTimeAgo(observedAt))}
+      {copy.asOf(relTimeAgo(observedAt, { long: isLine }))}
     </span>
   );
 }
