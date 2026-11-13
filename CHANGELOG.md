@@ -1,3 +1,19 @@
+# [1.393.0](https://github.com/featherweight-design/concert-crawl/compare/v1.392.2...v1.393.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** refuse a demotion or a bare respelling, cap the not-written listing ([1d8a4c7](https://github.com/featherweight-design/concert-crawl/commit/1d8a4c7878d5a98dc993f76b2d47f00bb37ca471))
+* **crawler:** the artist repair writes only what the stored bill evidences ([ef0f8b9](https://github.com/featherweight-design/concert-crawl/commit/ef0f8b9456984b74a46a37eaff2400a608377f6b))
+* **web:** dim the page behind the desktop account menu ([36e0252](https://github.com/featherweight-design/concert-crawl/commit/36e025235959ee4a52683faaff719039a9beb27b))
+* **web:** invite fan keeps the board's card size at 320 ([cc354d3](https://github.com/featherweight-design/concert-crawl/commit/cc354d3ccb3f1127396596714fcad52c5fe91a4b))
+* **web:** settings desktop top bar as drawn ([7d1bded](https://github.com/featherweight-design/concert-crawl/commit/7d1bded52f70e7482cd9a85f8f78b35016006c01))
+
+
+### Features
+
+* **web:** notifications as a phone page ([a81adad](https://github.com/featherweight-design/concert-crawl/commit/a81adad8e12972f1fc71faae1d8a5ba21dfdc1b4))
+
 ## [1.392.2](https://github.com/featherweight-design/concert-crawl/compare/v1.392.1...v1.392.2) (2026-11-13)
 
 
