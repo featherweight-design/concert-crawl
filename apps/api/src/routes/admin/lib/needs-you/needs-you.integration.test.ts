@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { adminQueueSnoozes, auditLog, feedback } from '@concert-crawl/db';
+import {
+  adminQueueSnoozes,
+  auditLog,
+  crawlRunPages,
+  feedback,
+} from '@concert-crawl/db';
 import {
   clearTables,
   seedArtist,
+  seedCrawlRun,
   seedEvent,
   seedPriceSubmission,
   seedUserEvent,
@@ -157,6 +163,139 @@ describe('Needs you sources and ranking', () => {
 
     const keys = await keysOf({ kind: 'venue-blocked', now: now() });
     expect(keys).toEqual([`venue-blocked:${venue.id}`]);
+  });
+
+  it('carries live, paused, show count, OK streak and run counts on a failing venue', async () => {
+    const pausedAt = new Date(Date.now() - 2 * HOUR_MS);
+    const venue = await seedVenue({
+      name: 'Failing Hall',
+      slug: 'failing-hall',
+      crawlPausedAt: pausedAt,
+    });
+    await seedEvent(venue.id, { artist: 'Up One', date: inDays(5) });
+    await seedEvent(venue.id, { artist: 'Up Two', date: inDays(6) });
+    await seedEvent(venue.id, {
+      artist: 'Hidden Act',
+      date: inDays(7),
+      hiddenFromConsumer: true,
+    });
+    await seedEvent(venue.id, {
+      artist: 'Missing Act',
+      date: inDays(8),
+      firstMissingAt: new Date(),
+    });
+    const hoursAgo = (hours: number): Date =>
+      new Date(Date.now() - hours * HOUR_MS);
+    for (const hours of [12, 11, 10]) {
+      await seedCrawlRun(venue.id, {
+        status: 'success',
+        eventsFound: 40,
+        createdAt: hoursAgo(hours),
+      });
+    }
+    // A skipped run in the middle of the OK streak carries no reading.
+    await seedCrawlRun(venue.id, {
+      status: 'skipped',
+      reason: 'page_unchanged',
+      createdAt: hoursAgo(10.5),
+    });
+    for (const hours of [3, 2, 1]) {
+      await seedCrawlRun(venue.id, {
+        status: 'failed',
+        reason: 'error',
+        eventsFound: 0,
+        httpStatusCode: 500,
+        errorMessage: 'boom',
+        createdAt: hoursAgo(hours),
+      });
+    }
+
+    const [item] = await listNeedsYou({ kind: 'venue-failing', now: now() });
+    expect(item).toMatchObject({
+      kind: 'venue-failing',
+      venueLive: true,
+      pausedAt: pausedAt.toISOString(),
+      showCount: 2,
+      okStreakBefore: 3,
+    });
+    if (item?.kind !== 'venue-failing')
+      throw new Error('expected venue-failing');
+    expect(item.lastRuns).toHaveLength(5);
+    expect(item.lastRuns[0]).toMatchObject({
+      status: 'failed',
+      eventsFound: 0,
+      httpStatus: 500,
+    });
+    expect(item.lastRuns[4]).toMatchObject({
+      status: 'success',
+      eventsFound: 40,
+    });
+  });
+
+  it('carries the latest run page count and robots result on a blocked venue', async () => {
+    const venue = await seedVenue({
+      name: 'Blocked Pages Hall',
+      slug: 'blocked-pages-hall',
+      blockedAt: new Date(Date.now() - 3 * 24 * HOUR_MS),
+    });
+    const run = await seedCrawlRun(venue.id, {
+      status: 'failed',
+      reason: 'blocked_http',
+      httpStatusCode: 403,
+      robotsTxtBlocked: 'no',
+    });
+    await testDb.insert(crawlRunPages).values([
+      { crawlRunId: run.id, url: 'https://example.com/a', fetchMode: 'http' },
+      { crawlRunId: run.id, url: 'https://example.com/b', fetchMode: 'http' },
+    ]);
+
+    const [item] = await listNeedsYou({ kind: 'venue-blocked', now: now() });
+    expect(item).toMatchObject({
+      kind: 'venue-blocked',
+      pagesThisRun: 2,
+      robots: 'no',
+      venueLive: true,
+      pausedAt: null,
+      showCount: 0,
+    });
+  });
+
+  it('counts the other shows the latest successful crawl still saw on a dropped show', async () => {
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    const runAt = new Date(Date.now() - HOUR_MS);
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      durationMs: 60_000,
+      createdAt: runAt,
+    });
+    const seen = new Date(runAt.getTime() - 30_000);
+    const stale = new Date(runAt.getTime() - 24 * HOUR_MS);
+    await seedEvent(venue.id, {
+      artist: 'Seen One',
+      date: inDays(5),
+      lastSeenAt: seen,
+    });
+    await seedEvent(venue.id, {
+      artist: 'Seen Two',
+      date: inDays(6),
+      lastSeenAt: seen,
+    });
+    await seedEvent(venue.id, {
+      artist: 'Not Seen',
+      date: inDays(7),
+      lastSeenAt: stale,
+    });
+    const dropped = await seedEvent(venue.id, {
+      artist: 'Dropped Act',
+      date: inDays(4),
+      lastSeenAt: stale,
+      firstMissingAt: new Date(),
+    });
+
+    const items = await listNeedsYou({ kind: 'show-dropped', now: now() });
+    expect(
+      items.find((item) => 'eventId' in item && item.eventId === dropped.id),
+    ).toMatchObject({ kind: 'show-dropped', otherShowsCrawledFine: 2 });
   });
 
   it('leaves out a fault on a removed venue', async () => {

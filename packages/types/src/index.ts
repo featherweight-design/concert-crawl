@@ -1902,6 +1902,12 @@ export type NeedsYouItem =
       showTime: string | null;
       classification: MissingClassification;
       lastSeenAt: string | null;
+      /**
+       * Other upcoming shows at this venue that the venue's latest successful
+       * crawl run still saw (not missing, seen since that run began). Null when
+       * the venue has no successful run or the show has no venue.
+       */
+      otherShowsCrawledFine?: number | null;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
@@ -1918,7 +1924,30 @@ export type NeedsYouItem =
         at: string;
         status: CrawlStatus;
         errorMessage: string | null;
+        /** Events the run's extractor found (raw, before the usable guards). */
+        eventsFound?: number | null;
+        /** HTTP status the run recorded, or null when it recorded none. */
+        httpStatus?: number | null;
       }[];
+      /** The venue is published (`venues.active`). Pausing the crawl leaves it true. */
+      venueLive?: boolean;
+      /** When an admin paused crawling (`crawl_paused_at`, ISO), or null. */
+      pausedAt?: string | null;
+      /** Upcoming, visible, currently-seen published shows at the venue. */
+      showCount?: number;
+      /**
+       * venue-failing only: successful runs in a row immediately before the
+       * current failure streak (skipped runs ignored; scans the last 100 runs,
+       * so it tops out at 100). Null on venue-blocked.
+       */
+      okStreakBefore?: number | null;
+      /** venue-blocked only: pages the latest run fetched; null if none recorded. */
+      pagesThisRun?: number | null;
+      /**
+       * venue-blocked only: the latest run's robots.txt result as recorded
+       * (`yes` blocked, `no`, `unchecked`), or null.
+       */
+      robots?: string | null;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
