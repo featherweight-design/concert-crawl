@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { reportFailure } from '@concert-crawl/logger';
 import type { LLMResult, TokenUsage } from '../../types.js';
 import { cleanHtml, resolveExtractedUrl } from './clean-html.js';
+import { correctMorningTime } from './morning-time-guard.js';
 import { salvageJsonArrayPrefix } from './salvage-json-array.js';
 import { normalizeSupportingArtists } from '../normalize-supporting-artists.js';
 import { stripDescriptionHtml } from '../strip-description-html.js';
@@ -318,11 +319,13 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
             doorsTime: {
               type: ['string', 'null'],
-              description: 'HH:MM:SS or null',
+              description:
+                '24-hour HH:MM:SS or null. 7:30 PM is 19:30:00, never 07:30:00; a PM time is always 12:00:00 or later.',
             },
             showTime: {
               type: ['string', 'null'],
-              description: 'HH:MM:SS or null',
+              description:
+                '24-hour HH:MM:SS or null. 7:30 PM is 19:30:00, never 07:30:00; a PM time is always 12:00:00 or later.',
             },
             ticketUrl: {
               type: ['string', 'null'],
@@ -580,10 +583,17 @@ export async function extractWithLlm(
       date: evt.date,
       confidence: evt.confidence,
       sourceUrl,
+      // A morning hour the page shows only as PM is the model misreading
+      // "7:30 PM" as 07:30 (a Red Rocks show was stored at both); see
+      // morning-time-guard.ts.
       ...(evt.doorsTime != null &&
-        evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
+        evt.doorsTime !== '' && {
+          doorsTime: correctMorningTime(evt.doorsTime, cleanedHtml),
+        }),
       ...(evt.showTime != null &&
-        evt.showTime !== '' && { showTime: evt.showTime }),
+        evt.showTime !== '' && {
+          showTime: correctMorningTime(evt.showTime, cleanedHtml),
+        }),
       ...(ticketUrl != null && { ticketUrl }),
       ...(eventUrl != null && { eventUrl }),
       ...(description != null && description !== '' && { description }),
