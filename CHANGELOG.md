@@ -1,3 +1,16 @@
+# [1.406.0](https://github.com/featherweight-design/concert-crawl/compare/v1.405.0...v1.406.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** review's pending pill and mobile subtitle read the needs you decision count ([df22c7d](https://github.com/featherweight-design/concert-crawl/commit/df22c7dbcbf9aed32d363da72b31a627bbb322e6))
+
+
+### Features
+
+* **web:** needs you cards show the show time in the meta line ([f0db584](https://github.com/featherweight-design/concert-crawl/commit/f0db5847e15765ff0c9b51d1c64db6cdefe3957e))
+* **web:** retire review's decision tabs into needs you, redirects and tab-key drift test ([a967502](https://github.com/featherweight-design/concert-crawl/commit/a96750227306b721561f85d8cc5113e8d673dffe))
+
 # [1.405.0](https://github.com/featherweight-design/concert-crawl/compare/v1.404.0...v1.405.0) (2026-11-13)
 
 
