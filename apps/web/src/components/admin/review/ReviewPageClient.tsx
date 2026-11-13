@@ -25,7 +25,6 @@ import {
   type ReviewTabKey,
 } from '@/lib/admin/review-tabs';
 import { buildReviewTabs } from './lib/build-review-tabs';
-import { computePendingCount } from '@/lib/admin/review-pending';
 import { PricesTabContent } from './_tabs/PricesTabContent';
 import { SubmissionsTabContent } from './_tabs/SubmissionsTabContent';
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent';
@@ -43,12 +42,15 @@ interface ReviewPageClientProps {
   initialSubmissions: PriceSubmissionHistoryRow[];
   initialSubmissionsTotal: number;
   initialCounts: ReviewCounts;
+  /** The Needs you decision count (the sidebar badge's source). */
+  decisions: number;
 }
 
 export const ReviewPageClient = ({
   initialSubmissions,
   initialSubmissionsTotal,
   initialCounts,
+  decisions,
 }: ReviewPageClientProps) => {
   const { getToken } = useAuth();
   const router = useRouter();
@@ -198,10 +200,9 @@ export const ReviewPageClient = ({
     ],
   );
 
-  // Pending count formula is extracted so a unit test can pin it — see
-  // lib/admin/review-pending.ts. Server-driven counts so the number
-  // stays accurate beyond the first page of any individual tab.
-  const pendingCount = computePendingCount(counts);
+  // The decisions waiting are Needs you's, not this page's tabs: the pill and
+  // the mobile subtitle read the same count as the sidebar badge.
+  const pendingCount = decisions;
 
   const sectionHead = (
     <SectionHead
@@ -362,11 +363,7 @@ export const ReviewPageClient = ({
             color: 'var(--fg-muted)',
           }}
         >
-          {ADMIN_COPY.review.reviewPageClient.mobileSubtitle(
-            counts.eventFlags,
-            counts.prices,
-            counts.missing,
-          )}
+          {ADMIN_COPY.review.reviewPageClient.mobileSubtitle(pendingCount)}
         </div>
       </div>
     );
