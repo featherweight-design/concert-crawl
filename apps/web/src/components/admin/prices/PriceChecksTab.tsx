@@ -49,6 +49,24 @@ const pillStyle = (on: boolean): CSSProperties => ({
     : 'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
 });
 
+// "Use $X" is the tinted cyan answer (`06/prices-price-checks`); "Keep $Y" is
+// the quiet ghost beside it.
+const useButtonStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 28,
+  padding: '0 10px',
+  borderRadius: 9,
+  fontSize: 12.5,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  color: 'var(--signal)',
+  background: 'color-mix(in srgb, var(--signal) 12%, transparent)',
+  border: '1px solid color-mix(in srgb, var(--signal) 30%, transparent)',
+};
+
 const smallLabel: CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
   fontSize: 10,
@@ -79,7 +97,16 @@ const Side = ({
     <div style={{ fontSize: 22, fontWeight: 800, marginTop: 2 }}>
       {priceRange(side.priceMin, side.priceMax)}
     </div>
-    <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
+    <div
+      style={{
+        fontSize: 12,
+        color: 'var(--fg-muted)',
+        marginTop: 2,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
       {[filedWhen(side.observedAt, words), fan(side)]
         .filter(Boolean)
         .join(' · ')}
@@ -282,7 +309,7 @@ export const PriceChecksTab = () => {
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
+                        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                         gap: 16,
                       }}
                     >
@@ -329,15 +356,18 @@ export const PriceChecksTab = () => {
                         )}
                         {COPY.ticketPage}
                       </SafeExternalLink>
-                      <AdminButton
-                        variant="primary"
-                        size="sm"
+                      <button
+                        type="button"
                         disabled={busy}
                         onClick={() => void decide(check, 'use')}
-                        style={isPhone ? { flex: 1 } : undefined}
+                        style={{
+                          ...useButtonStyle,
+                          ...(isPhone ? { flex: 1 } : {}),
+                          ...(busy ? { opacity: 0.6, cursor: 'default' } : {}),
+                        }}
                       >
                         {COPY.takeAnswer(asked)}
-                      </AdminButton>
+                      </button>
                       <AdminButton
                         variant="ghost"
                         size="sm"
