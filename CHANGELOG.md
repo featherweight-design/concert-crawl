@@ -1,3 +1,18 @@
+# [1.387.0](https://github.com/featherweight-design/concert-crawl/compare/v1.386.0...v1.387.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** crew filter chip patch is 18px as the filter board draws it ([b2c872b](https://github.com/featherweight-design/concert-crawl/commit/b2c872b053e12828b5691a28aeec32d855690ef7))
+* **web:** guard the patch rim against a non-positive size ([bf46449](https://github.com/featherweight-design/concert-crawl/commit/bf46449634fa0cac5f1147cf6b77ecd483577e1b))
+* **web:** keep a stamped past night's phone hero photo in colour ([86d651f](https://github.com/featherweight-design/concert-crawl/commit/86d651fa53be3973b94323e1459186ec2aca94fb))
+* **web:** size the Crews list patch to the board's 76px ([43b1a72](https://github.com/featherweight-design/concert-crawl/commit/43b1a72e3a42d946050b24213dc1d22828ba5e5c))
+
+
+### Features
+
+* **web:** crew patch rim in the crew's colour (addendum 4 item 2) ([2a2a32e](https://github.com/featherweight-design/concert-crawl/commit/2a2a32e5620d7c05041bb1ba60db39dc32043e22))
+
 # [1.386.0](https://github.com/featherweight-design/concert-crawl/compare/v1.385.0...v1.386.0) (2026-11-13)
 
 
