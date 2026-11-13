@@ -1024,17 +1024,50 @@ venuesAdminRouter.patch(
 // the probe (#1184).
 const PROBE_TIMEOUT_MS = 15_000;
 
+// The most redirect hops one probe request may follow. It must equal
+// crawler-core's MAX_REDIRECTS, the cap `fetchFollowingRobots` enforces; it
+// is restated here because the API reads crawler-core's built output, and
+// venues-platform.integration.test.ts pins the two together.
+const MAX_PROBE_REDIRECT_HOPS = 20;
+
+// Paced requests each adapter makes with `firstPageOnly`. Live Nation reads
+// the sitemap and one month; detail-page reads the sitemap, the listing and
+// one detail page; AEG and VenuePilot read one listing each.
+const PROBE_PACED_REQUESTS: Record<PlatformSource, number> = {
+  aeg: 1,
+  venuepilot: 1,
+  livenation: 2,
+  'detail-page': 3,
+};
+
+// The adapters that follow redirects hop by hop, each hop after a pacing
+// wait of its own. AEG and VenuePilot never follow one.
+const PROBE_FOLLOWS_REDIRECTS: ReadonlySet<PlatformSource> = new Set([
+  'livenation',
+  'detail-page',
+]);
+
 /**
- * The probe's whole budget: every paced wait it takes at the resolved delay
- * plus a full second of jitter, with PROBE_TIMEOUT_MS on top for the requests
- * themselves. Sized from the delay because a pacing wait is never cut short
- * (it breaches instead), so a fixed 15 s would fail any venue whose site asks
- * for a long Crawl-delay. detail-page paces the listing and one detail page;
- * every other adapter paces one listing request.
+ * The probe's whole budget, sized from the delay because a pacing wait is
+ * never cut short (it breaches instead), so a fixed 15 s would fail any venue
+ * whose site asks for a long Crawl-delay:
+ *
+ *   wait      = max(delay, MIN_CRAWL_DELAY_MS) + 1000   (a full second of jitter)
+ *   perPaced  = wait + (follows redirects ? wait × MAX_PROBE_REDIRECT_HOPS : 0)
+ *   budget    = pacedRequests × perPaced + PROBE_TIMEOUT_MS
+ *
+ * Each paced request waits once before it goes out, and each redirect hop it
+ * follows waits again before the hop is requested; those hop waits run inside
+ * the request's budget too, so every hop the cap allows is paid for.
+ * PROBE_TIMEOUT_MS on top is the requests' own network time.
  */
 function probeBudgetMs(source: PlatformSource, crawlDelayMs: number): number {
-  const pacedWaits = source === 'detail-page' ? 2 : 1;
-  return (crawlDelayMs + 1_000) * pacedWaits + PROBE_TIMEOUT_MS;
+  const waitMs = Math.max(crawlDelayMs, MIN_CRAWL_DELAY_MS) + 1_000;
+  const pacedRequests = PROBE_PACED_REQUESTS[source];
+  const hopWaitsMs = PROBE_FOLLOWS_REDIRECTS.has(source)
+    ? waitMs * MAX_PROBE_REDIRECT_HOPS
+    : 0;
+  return pacedRequests * (waitMs + hopWaitsMs) + PROBE_TIMEOUT_MS;
 }
 
 const probePlatformSchema = z.object({

@@ -35,10 +35,21 @@ export interface FetchDeadline {
   /**
    * Issues one request against the budget. `stage` names the request for the
    * breach message (e.g. `sitemap`, `page-3`).
+   *
+   * `timeoutMs` bounds one network request: the per-request cap, or the
+   * remaining budget when that is shorter. `budget` aborts when the overall
+   * budget runs out, and is absent when there is none. A request that
+   * follows redirects, sleeping a pacing wait before each hop, hands
+   * `timeoutMs` to each hop on its own and `budget` to the whole chain: the
+   * hop sleeps then count against the budget, never against a hop's
+   * network allowance.
    */
   run<TResult>(
     stage: string,
-    request: (timeoutMs: number | undefined) => Promise<TResult>,
+    request: (
+      timeoutMs: number | undefined,
+      budget: AbortSignal | undefined,
+    ) => Promise<TResult>,
   ): Promise<TResult>;
 
   /**
@@ -133,9 +144,13 @@ export const createDeadline = ({
       if (spentBefore) throw spentBefore;
 
       const { timeoutMs, budgetBound } = nextTimeout();
+      const budget =
+        overallTimeoutMs === undefined
+          ? undefined
+          : AbortSignal.timeout(Math.max(0, overallTimeoutMs - elapsed()));
 
       try {
-        return await request(timeoutMs);
+        return await request(timeoutMs, budget);
       } catch (err) {
         // An abort fired by the budget-derived signal surfaces as a generic
         // TimeoutError. Relabel only aborts — a real HTTP failure that lands
@@ -147,8 +162,11 @@ export const createDeadline = ({
         // re-read then declined the relabel and let the raw TimeoutError
         // escape (#1263). If the budget is what capped this request, an abort
         // IS the breach by construction — there is nothing to re-check.
+        // Likewise when `budget` itself has fired: a redirect chain can run
+        // the budget out in a hop's pacing wait while each hop's own timeout
+        // is the per-request cap.
         if (
-          budgetBound &&
+          (budgetBound || budget?.aborted === true) &&
           overallTimeoutMs !== undefined &&
           err instanceof Error &&
           ABORT_ERROR_NAMES.has(err.name)

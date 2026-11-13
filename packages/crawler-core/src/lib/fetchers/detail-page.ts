@@ -86,9 +86,11 @@ async function fetchText(
   url: string,
   crawlDelayMs: number,
   timeoutMs?: number,
+  budget?: AbortSignal,
   fetchLog?: FetchLog,
 ): Promise<string> {
-  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs, fetchLog)).html;
+  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs, budget, fetchLog))
+    .html;
 }
 
 // Like fetchText, but also returns the URL the body actually came from after
@@ -100,6 +102,7 @@ async function fetchTextLanded(
   url: string,
   crawlDelayMs: number,
   timeoutMs?: number,
+  budget?: AbortSignal,
   fetchLog?: FetchLog,
 ): Promise<{ html: string; landedUrl: string }> {
   const origin = new URL(url).origin;
@@ -108,13 +111,13 @@ async function fetchTextLanded(
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
       crawlDelayMs,
-      // One signal for the whole chain, pacing waits included, so a hop
-      // can't carry the request past the deadline. A hung connection must
-      // not pin the caller either — the admin probe endpoint holds an API
-      // worker slot while this resolves.
-      ...(timeoutMs !== undefined
-        ? { signal: AbortSignal.timeout(timeoutMs) }
-        : {}),
+      // `timeoutMs` bounds each hop's network time on its own, so a hung
+      // connection can't pin the caller (the admin probe holds an API worker
+      // slot while this resolves). A hop's pacing wait is not network time:
+      // it counts against `budget`, the deadline's signal for the whole
+      // chain, and never against the per-request cap.
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      ...(budget !== undefined ? { signal: budget } : {}),
       onRedirect: (_from, to) => {
         if (new URL(to).origin !== origin) {
           throw new DetailPageFetchError(
@@ -313,10 +316,22 @@ async function detailPageFetch(
   // it is what keeps the probe's one detail page off a nav link.
   let sitemapUrls = new Set<string>();
   if (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT)) {
+    // The sitemap is a request to the venue's own domain like the listing
+    // and detail pages after it, so it is paced too. crawl.ts (and the
+    // probe) read robots.txt from this origin just before dispatching here.
+    // Outside the try: a wait that can't fit the budget is a breach, never
+    // a missing sitemap.
+    await deadline.wait(jitter(opts.crawlDelayMs));
     try {
       sitemapUrls = parseSitemapUrls(
-        await deadline.run('sitemap', (timeoutMs) =>
-          fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs, opts.fetchLog),
+        await deadline.run('sitemap', (timeoutMs, budget) =>
+          fetchText(
+            sitemapUrl,
+            opts.crawlDelayMs,
+            timeoutMs,
+            budget,
+            opts.fetchLog,
+          ),
         ),
         listingUrl,
       );
@@ -342,8 +357,8 @@ async function detailPageFetch(
   }
 
   await deadline.wait(jitter(opts.crawlDelayMs));
-  const listingHtml = await deadline.run('listing', (timeoutMs) =>
-    fetchText(listingUrl, opts.crawlDelayMs, timeoutMs, opts.fetchLog),
+  const listingHtml = await deadline.run('listing', (timeoutMs, budget) =>
+    fetchText(listingUrl, opts.crawlDelayMs, timeoutMs, budget, opts.fetchLog),
   );
   const candidates = extractCandidateUrls(listingHtml, listingUrl);
   if (candidates.length === 0) {
@@ -421,11 +436,12 @@ async function detailPageFetch(
     try {
       ({ html, landedUrl } = await deadline.run(
         `detail ${detailUrl}`,
-        (timeoutMs) =>
+        (timeoutMs, budget) =>
           fetchTextLanded(
             detailUrl,
             opts.crawlDelayMs,
             timeoutMs,
+            budget,
             opts.fetchLog,
           ),
       ));

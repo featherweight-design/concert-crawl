@@ -388,11 +388,33 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     expect(opts.budgetFollowsCrawlDelay).toBe(true);
   });
 
-  it('budgets two paced waits for the detail-page adapter', async () => {
+  it('budgets three paced waits for the detail-page adapter', async () => {
     crawlDelayMock.mockResolvedValue(15_000);
     const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'detail-page');
-    // The listing and its one detail page are each paced.
-    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(2 * 15_999 + 15_000);
+    // The sitemap, the listing and its one detail page are each paced.
+    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(3 * 15_999 + 15_000);
+  });
+
+  it('fits a detail-page probe whose every request redirects once at a 3 s delay', async () => {
+    const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'detail-page');
+    // Three paced requests, each waiting before it goes out and again before
+    // its one redirect hop, every wait at its longest (3 s + 999ms), with
+    // the full request allowance still left after them.
+    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(
+      3 * (3_999 + 3_999) + 15_000,
+    );
+  });
+
+  it('budgets a hop wait for every redirect the crawler will follow', async () => {
+    // Read from crawler-core rather than restated, so the route's copy of
+    // the cap can't drift from the one fetchFollowingRobots enforces.
+    const { MAX_REDIRECTS } =
+      await import('@concert-crawl/crawler-core/robots-fetch');
+    const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'livenation');
+    // The sitemap and one month, each with a wait per hop the cap allows.
+    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(
+      2 * 3_999 * (1 + MAX_REDIRECTS) + 15_000,
+    );
   });
 
   it('does not fetch when the site asks for a Crawl-delay over the cap', async () => {

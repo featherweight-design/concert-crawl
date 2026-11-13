@@ -117,6 +117,7 @@ async function fetchText(
   url: string,
   crawlDelayMs: number,
   timeoutMs?: number,
+  budget?: AbortSignal,
   landed?: string[],
   fetchLog?: FetchLog,
 ): Promise<string> {
@@ -125,13 +126,13 @@ async function fetchText(
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
       crawlDelayMs,
-      // One signal for the whole redirect chain, pacing waits included, so a
-      // hop can't carry the request past the deadline's budget. A hung
-      // connection must not pin the caller either — the admin probe endpoint
-      // holds an API worker slot while this resolves.
-      ...(timeoutMs !== undefined
-        ? { signal: AbortSignal.timeout(timeoutMs) }
-        : {}),
+      // `timeoutMs` bounds each hop's network time on its own, so a hung
+      // connection can't pin the caller (the admin probe holds an API worker
+      // slot while this resolves). A hop's pacing wait is not network time:
+      // it counts against `budget`, the deadline's signal for the whole
+      // chain, and never against the per-request cap.
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      ...(budget !== undefined ? { signal: budget } : {}),
     });
   } catch (err) {
     // A request that threw before any response (a timeout, a reset) is the
@@ -449,12 +450,17 @@ async function liveNationFetch(
     );
   }
 
+  // The sitemap is a request to the venue's own domain like every month page
+  // after it, so it is paced too. crawl.ts (and the probe) read robots.txt
+  // from this origin just before dispatching here.
+  await deadline.wait(jitter(opts.crawlDelayMs));
   const allCalendarUrls = parseCalendarUrls(
-    await deadline.run('sitemap', (timeoutMs) =>
+    await deadline.run('sitemap', (timeoutMs, budget) =>
       fetchText(
         sitemapUrl,
         opts.crawlDelayMs,
         timeoutMs,
+        budget,
         readUrls,
         opts.fetchLog,
       ),
@@ -512,14 +518,17 @@ async function liveNationFetch(
     // Every month page is a request to the venue's own domain, so the
     // venue's configured per-domain delay applies to each of them.
     await deadline.wait(jitter(opts.crawlDelayMs));
-    const html = await deadline.run(`calendar ${calendarUrl}`, (timeoutMs) =>
-      fetchText(
-        calendarUrl,
-        opts.crawlDelayMs,
-        timeoutMs,
-        readUrls,
-        opts.fetchLog,
-      ),
+    const html = await deadline.run(
+      `calendar ${calendarUrl}`,
+      (timeoutMs, budget) =>
+        fetchText(
+          calendarUrl,
+          opts.crawlDelayMs,
+          timeoutMs,
+          budget,
+          readUrls,
+          opts.fetchLog,
+        ),
     );
     const records = extractEventRecords(reassembleFlightPayload(html));
     rawRecordCount += records.length;
