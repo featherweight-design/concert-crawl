@@ -302,7 +302,8 @@ describe('NeedsYouClient', () => {
     fireEvent.click(
       within(sheet).getByRole('checkbox', { name: 'Approve Two' }),
     );
-    fireEvent.click(within(sheet).getByRole('button', { name: 'Approve 1' }));
+    // The footer sits beside the list box, not inside it.
+    fireEvent.click(screen.getByRole('button', { name: 'Approve 1' }));
     await waitFor(() =>
       expect(calls.find((call) => call.url.endsWith('/answer'))?.body).toEqual({
         submissionIds: ['s1'],
