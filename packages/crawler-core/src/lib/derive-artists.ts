@@ -6,6 +6,25 @@ import {
   rulingOf,
   type JoinedEvidence,
 } from './joined-names.js';
+import { demoteActsAfterWith, hasWithJoiner } from './with-billing.js';
+
+/**
+ * The venue said "X with Y": Y supports, whatever a source or a model listed
+ * as co-headliners. Reads the stored title first and the verbatim `rawTitle`
+ * when the title lost the joiner. Exported so the crawl's verdict-reuse branch
+ * applies the same rule to a bill it did not re-derive.
+ */
+export function withBillingApplied(
+  event: { title: string; rawTitle?: string | undefined },
+  headliners: string[],
+  supportingArtists: string[],
+): { headliners: string[]; supportingArtists: string[] } {
+  const title =
+    !hasWithJoiner(event.title) && event.rawTitle !== undefined
+      ? event.rawTitle
+      : event.title;
+  return demoteActsAfterWith(title, headliners, supportingArtists);
+}
 
 export interface DerivedArtists {
   /**
@@ -299,6 +318,33 @@ function isFlattenedBilling(observed: string[]): boolean {
   return observed.length === 1 && only !== undefined && joinsSeveralNames(only);
 }
 
+/**
+ * True when a stored bill is the lone flattened name itself ("Galdive &
+ * rum.gold" stored whole for an observation of exactly that). Such a bill is
+ * not a verdict the crawl may reuse: it is what step 1 stored before flattened
+ * names were escalated (68bc15f2b), or the fallback an outage or a no-AI venue
+ * leaves, and reusing it would keep the escalation from ever running for a row
+ * that already existed. The cost: a joined name the adjudicator rules one act
+ * ("Iron & Wine") is asked again on each crawl, one Haiku call per such show.
+ */
+export function isUnruledFlattening(
+  observedPerformers: string[] | undefined,
+  storedHeadliners: readonly string[] | null,
+): boolean {
+  const observed = (observedPerformers ?? []).filter(
+    (name) => name.trim().length > 0,
+  );
+  const [only] = observed;
+  const [stored, ...more] = storedHeadliners ?? [];
+  return (
+    isFlattenedBilling(observed) &&
+    only !== undefined &&
+    stored !== undefined &&
+    more.length === 0 &&
+    nameKey(stored) === nameKey(only)
+  );
+}
+
 export function isSuspiciousObservation(
   observed: string,
   title: string,
@@ -377,6 +423,9 @@ export function mergeObservedSupporting(
 
 export async function deriveArtists(
   event: Pick<NormalizedEvent, 'title' | 'description'> & {
+    // The venue's verbatim headline, read only for its "with" joiner when the
+    // cleaned title lost it. Optional: the artist repair has no copy of it.
+    rawTitle?: string;
     // Typed optional even though `NormalizedEvent` declares it required: the
     // same hazard `rawTitle` has in crawl.ts. A path that forgets to report
     // observations must escalate, not throw and take the whole run to
@@ -434,11 +483,14 @@ export async function deriveArtists(
   const observedBill = (): DerivedArtists => {
     const tidy = tidyBill(observed, nonEmpty(event.observedSupportingArtists));
     return {
-      // A source that named only generic words ("Friends", "TBA") has still
-      // named somebody; emptying a concert's bill here would store nobody, so the
-      // observed headliners stand as they always did.
-      headliners: tidy.headliners.length > 0 ? tidy.headliners : observed,
-      supportingArtists: tidy.supportingArtists,
+      ...withBillingApplied(
+        event,
+        // A source that named only generic words ("Friends", "TBA") has still
+        // named somebody; emptying a concert's bill here would store nobody, so
+        // the observed headliners stand as they always did.
+        tidy.headliners.length > 0 ? tidy.headliners : observed,
+        tidy.supportingArtists,
+      ),
       isConcert: true,
       adjudicated: false,
     };
@@ -531,15 +583,16 @@ export async function deriveArtists(
         evidence,
       );
     }
-    return {
-      ...tidyBill(
+    const tidy = tidyBill(
+      headliners,
+      mergeObservedSupporting(
         headliners,
-        mergeObservedSupporting(
-          headliners,
-          verdict.supportingArtists,
-          nonEmpty(event.observedSupportingArtists),
-        ),
+        verdict.supportingArtists,
+        nonEmpty(event.observedSupportingArtists),
       ),
+    );
+    return {
+      ...withBillingApplied(event, tidy.headliners, tidy.supportingArtists),
       isConcert: verdict.isConcert,
       adjudicated: true,
     };
