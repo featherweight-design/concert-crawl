@@ -49,6 +49,7 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
         patchSalt={crew.patchSalt}
         size={CREW_ROW.patch}
         scale="tile"
+        ringed
       />
       <span
         style={{
@@ -66,9 +67,21 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
             fontSize: wide ? 17 : 16,
             letterSpacing: '-0.02em',
             color: 'var(--fg)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            // On a phone the avatar stack takes the room, so the name wraps
+            // (two lines at most) instead of cutting to "The Usual Suspe…".
+            ...(wide
+              ? {
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }
+              : {
+                  display: '-webkit-box',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 2,
+                  overflow: 'hidden',
+                  lineHeight: 1.2,
+                }),
           }}
         >
           {crew.name}

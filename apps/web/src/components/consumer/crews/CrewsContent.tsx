@@ -131,7 +131,7 @@ export const CrewsContent = ({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 pb-10 pt-5">
+    <div className="mx-auto flex w-full max-w-[792px] flex-col gap-5 px-4 pb-10 pt-5">
       {/* Mounted for the life of the page and empty until something happens:
           a live region populated at mount time is not announced. */}
       <span aria-live="polite" className="sr-only">
