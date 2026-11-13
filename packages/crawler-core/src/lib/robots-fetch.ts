@@ -61,6 +61,46 @@ export const raceSignal = <TResult>(
   });
 };
 
+/**
+ * The overall budget a redirect chain runs inside, handed over by the
+ * caller's deadline (see `FetchDeadline.run`).
+ */
+export interface ChainBudget {
+  /** Aborts when the overall budget runs out. */
+  signal: AbortSignal;
+  /** The budget left right now, in ms; never negative. */
+  remainingMs(): number;
+  /**
+   * A pacing wait against the budget. It is never cut short: when the
+   * remaining budget can't hold the whole wait, it throws up front (a
+   * deadline breach) and nothing is requested.
+   */
+  wait(delayMs: number): Promise<void>;
+}
+
+/**
+ * The signal one request (a hop, or a hop's robots.txt read) runs under: the
+ * budget's own signal, plus the per-request cap when that ends first. Read
+ * from the live remaining budget, so a hop late in a chain is never handed a
+ * timeout computed when the chain started. When the remaining budget is the
+ * shorter of the two, the budget's signal alone ends the request at that
+ * moment, so an abort there is always read as the budget's.
+ */
+export const hopSignal = (
+  timeoutMs: number | undefined,
+  budget: ChainBudget | undefined,
+): AbortSignal | undefined => {
+  const capBinds =
+    timeoutMs !== undefined &&
+    (budget === undefined || timeoutMs < budget.remainingMs());
+  const signals = [
+    ...(budget ? [budget.signal] : []),
+    ...(capBinds ? [AbortSignal.timeout(timeoutMs)] : []),
+  ];
+  if (signals.length === 0) return undefined;
+  return signals.length === 1 ? signals[0] : AbortSignal.any(signals);
+};
+
 /** robots.txt disallows a URL a redirect or navigation pointed us to. */
 export class RobotsDisallowedError extends Error {
   constructor(
@@ -79,12 +119,17 @@ export class RobotsDisallowedError extends Error {
  * unreachable or asks for more than the cap, and `RobotsDisallowedError`
  * when it disallows the target. An aborted `signal` ends the robots.txt
  * lookups and the wait early with its reason.
+ *
+ * `wait`, when given, takes the pacing wait in place of a plain sleep: a
+ * deadline's wait, which throws up front when the budget can't hold the
+ * whole wait rather than sleeping into it and failing at the end.
  */
 export async function clearRedirect(
   from: string,
   to: string,
   floorMs: number,
   signal?: AbortSignal,
+  wait?: (delayMs: number) => Promise<void>,
 ): Promise<void> {
   signal?.throwIfAborted();
   if (!(await raceSignal(isAllowedOrSkip(to, CRAWLER_USER_AGENT), signal))) {
@@ -105,7 +150,13 @@ export async function clearRedirect(
     );
   }
   // jitter() floors every wait at 3 s, so there is always a wait to take.
-  await sleep(jitter(delayMs), signal);
+  if (wait) {
+    // `signal` is not consulted here: it may carry a per-request cap, which
+    // bounds network time and never a pacing wait. `wait` checks the budget.
+    await wait(jitter(delayMs));
+  } else {
+    await sleep(jitter(delayMs), signal);
+  }
 }
 
 export interface RobotsFetchResult {
@@ -118,8 +169,12 @@ export interface RobotsFetchResult {
  * its pacing before we request it (see `clearRedirect`). The caller has
  * already checked and paced the starting URL. `timeoutMs` applies to each
  * request on its own, so a hop's wait never eats into the next one's budget.
- * `signal` instead bounds the whole chain, waits included: pass it when the
- * caller has one budget for the request however many hops it takes.
+ * `budget` instead bounds the whole chain, waits included: pass it when the
+ * caller has one budget for the request however many hops it takes. Each
+ * hop's request and its robots.txt reads then run under the shorter of
+ * `timeoutMs` and the budget left at that moment, and each hop's pacing
+ * wait goes through `budget.wait`, which breaches up front when the budget
+ * can't hold it.
  */
 export async function fetchFollowingRobots(
   url: string,
@@ -127,26 +182,22 @@ export async function fetchFollowingRobots(
     headers?: Record<string, string>;
     crawlDelayMs: number;
     timeoutMs?: number;
-    signal?: AbortSignal;
+    budget?: ChainBudget;
     /** The most hops to follow; defaults to MAX_REDIRECTS. */
     maxRedirects?: number;
     /** Runs before each hop is cleared; throw to refuse the redirect. */
     onRedirect?: (from: string, to: string) => void;
   },
 ): Promise<RobotsFetchResult> {
+  const { budget, timeoutMs } = options;
   let currentUrl = url;
   for (let hop = 0; ; hop++) {
-    options.signal?.throwIfAborted();
-    const signals = [
-      ...(options.signal ? [options.signal] : []),
-      ...(options.timeoutMs === undefined
-        ? []
-        : [AbortSignal.timeout(options.timeoutMs)]),
-    ];
+    budget?.signal.throwIfAborted();
+    const signal = hopSignal(timeoutMs, budget);
     const response = await fetch(currentUrl, {
       headers: { 'User-Agent': CRAWLER_USER_AGENT, ...options.headers },
       redirect: 'manual',
-      ...(signals.length === 0 ? {} : { signal: AbortSignal.any(signals) }),
+      ...(signal === undefined ? {} : { signal }),
     });
     const location = response.headers.get('location');
     if (response.status < 300 || response.status >= 400 || !location) {
@@ -160,7 +211,21 @@ export async function fetchFollowingRobots(
     }
     const next = new URL(location, currentUrl).toString();
     options.onRedirect?.(currentUrl, next);
-    await clearRedirect(currentUrl, next, options.crawlDelayMs, options.signal);
+    // With a budget, the hop's robots.txt reads count against it like the
+    // hop itself (the same live signal, read now rather than at the chain's
+    // start) and its pacing wait is the budget's own. Without one, the wait
+    // is a plain sleep that no per-request cap may cut short.
+    if (budget) {
+      await clearRedirect(
+        currentUrl,
+        next,
+        options.crawlDelayMs,
+        hopSignal(timeoutMs, budget),
+        budget.wait,
+      );
+    } else {
+      await clearRedirect(currentUrl, next, options.crawlDelayMs);
+    }
     currentUrl = next;
   }
 }

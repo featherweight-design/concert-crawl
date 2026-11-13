@@ -9,7 +9,9 @@ import {
   extractEventRecords,
   parseCalendarUrls,
   pickProbeMonth,
+  LIVENATION_PROBE_REQUESTS,
 } from './livenation.js';
+import { FetchLog } from '../fetch-log.js';
 import type { Venue } from '@concert-crawl/db';
 import { PlatformFetchDeadlineError } from './deadline.js';
 import { CrawlSkipError } from '../robots.js';
@@ -613,6 +615,56 @@ describe('liveNationFetcher.fetch', () => {
     await vi.advanceTimersByTimeAsync(200_000);
     await settled;
     expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(true);
+  });
+
+  it("logs a budget that runs out in a hop's pacing wait as no failed request", async () => {
+    // The hop's 20 s wait can't fit the 200ms budget, so it breaches before
+    // the hop goes out. That is the deadline's breach, not a failed page:
+    // the fetch log keeps only the pages that really answered.
+    const origin = 'https://redirect-budget-log.example.com';
+    const target = 'https://paced-log-host.example.com/calendar';
+    mockCalendarRedirect(origin, target, {
+      otherRobots: 'User-agent: *\nAllow: /\nCrawl-delay: 20\n',
+    });
+    vi.mocked(jitter).mockImplementation((ms) => (ms > 0 ? realJitter(ms) : 0));
+    const fetchLog = new FetchLog();
+    await expect(
+      liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 200,
+        fetchLog,
+      }),
+    ).rejects.toThrow(PlatformFetchDeadlineError);
+    expect(fetchLog.entries.length).toBeGreaterThan(0);
+    expect(
+      fetchLog.entries.filter((entry) => entry.httpStatus === null),
+    ).toEqual([]);
+  });
+
+  it('makes exactly the requests LIVENATION_PROBE_REQUESTS declares when firstPageOnly is set', async () => {
+    // Pins the profile the admin probe sizes its budget from to what a
+    // firstPageOnly run really does: paced requests, each followed through
+    // a redirect hop by hop.
+    vi.setSystemTime(new Date('2026-11-13T12:00:00-07:00'));
+    const origin = 'https://probe-profile.example.com';
+    const target = `${origin}/moved/calendar`;
+    const fetchMock = mockCalendarRedirect(origin, target);
+    vi.mocked(jitter).mockClear();
+    await liveNationFetcher.fetch(
+      makeVenue({ websiteUrl: `${origin}/shows` }),
+      { crawlDelayMs: 0, firstPageOnly: true },
+    );
+    expect(jitter).toHaveBeenCalledTimes(
+      // One wait per paced request, and one more per redirect hop: here the
+      // month page redirects once.
+      LIVENATION_PROBE_REQUESTS.paced + 1,
+    );
+    expect(LIVENATION_PROBE_REQUESTS.followsRedirects).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(true);
+    const pageRequests = fetchMock.mock.calls
+      .map(([url]) => String(url))
+      .filter((url) => !url.endsWith('/robots.txt') && url !== target);
+    expect(pageRequests).toHaveLength(LIVENATION_PROBE_REQUESTS.paced);
   });
 
   it("stops waiting on a redirect host's slow robots.txt when the budget runs out", async () => {

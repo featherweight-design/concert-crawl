@@ -45,6 +45,11 @@
       "types": "./dist/lib/fetchers/jitter.d.ts",
       "import": "./dist/lib/fetchers/jitter.js",
       "default": "./dist/lib/fetchers/jitter.js"
+    },
+    "./deadline": {
+      "types": "./dist/lib/fetchers/deadline.d.ts",
+      "import": "./dist/lib/fetchers/deadline.js",
+      "default": "./dist/lib/fetchers/deadline.js"
     }
   },
   "scripts": {

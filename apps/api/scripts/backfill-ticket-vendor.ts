@@ -16,7 +16,12 @@ async function sleep(ms: number): Promise<void> {
 }
 
 const rows = await db
-  .select({ id: venues.id, name: venues.name, websiteUrl: venues.websiteUrl })
+  .select({
+    id: venues.id,
+    name: venues.name,
+    websiteUrl: venues.websiteUrl,
+    crawlDelayMs: venues.crawlDelayMs,
+  })
   .from(venues)
   .where(isNull(venues.ticketVendor));
 
@@ -24,7 +29,8 @@ console.log(`Backfilling ${rows.length} venue(s)...`);
 
 for (const row of rows) {
   process.stdout.write(`  ${row.name} (${row.websiteUrl}) → `);
-  const vendor = await detectTicketVendor(row.websiteUrl);
+  // Paced at the venue's stored delay, as the crawl paces it.
+  const vendor = await detectTicketVendor(row.websiteUrl, row.crawlDelayMs);
   await db
     .update(venues)
     .set({ ticketVendor: vendor })

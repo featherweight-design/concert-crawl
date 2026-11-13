@@ -94,6 +94,22 @@ export interface PlatformFetchOptions {
   fetchLog?: FetchLog;
 }
 
+/**
+ * What one `firstPageOnly` fetch (the admin probe) asks of a venue, so the
+ * probe can size its budget from the adapter rather than a hand-kept copy.
+ * Each adapter declares its own next to the code that makes the requests,
+ * and each adapter's tests pin it to what a `firstPageOnly` run really does.
+ */
+export interface ProbeRequests {
+  /** Requests that each take a pacing wait before they go out. */
+  readonly paced: number;
+  /**
+   * Whether each of those requests follows redirects hop by hop, taking a
+   * pacing wait and a request of its own per hop (up to `maxRedirects`).
+   */
+  readonly followsRedirects: boolean;
+}
+
 export interface PlatformFetcher {
   /**
    * Identifies the fetcher for logging + the crawl_runs
@@ -132,3 +148,4 @@ export { detailPageFetcher, CalendarNotFoundError } from './detail-page.js';
 export { liveNationFetcher } from './livenation.js';
 export { venuePilotFetcher } from './venuepilot.js';
 export { dispatch } from './dispatch.js';
+export { PROBE_REQUESTS } from './probe-requests.js';

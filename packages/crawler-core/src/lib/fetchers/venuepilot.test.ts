@@ -6,6 +6,7 @@ import { CrawlFetchError } from '../fetcher.js';
 import * as robots from '../robots.js';
 import { PlatformFetchDeadlineError } from './deadline.js';
 import {
+  VENUEPILOT_PROBE_REQUESTS,
   venuePilotFetcher,
   VenuePilotFetchError,
   VenuePilotSchemaError,
@@ -750,6 +751,9 @@ describe('venuePilotFetcher.fetch', () => {
       firstPageOnly: true,
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    // The profile the admin probe sizes its budget from matches that run.
+    expect(fetchSpy).toHaveBeenCalledTimes(VENUEPILOT_PROBE_REQUESTS.paced);
+    expect(VENUEPILOT_PROBE_REQUESTS.followsRedirects).toBe(false);
     const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
     expect(body.variables.args.page).toBe(1);
     expect(result.events.map((event) => event.title)).toEqual(['Show 1']);

@@ -35,8 +35,12 @@ import {
   dispatch,
   AegSchemaError,
   PlatformFetchDeadlineError,
-  type PlatformSource,
 } from '@concert-crawl/crawler-core/fetchers';
+import {
+  MAX_PROBE_REDIRECT_HOPS,
+  PROBE_TIMEOUT_MS,
+  probeBudgetMs,
+} from '../../lib/probe-budget.js';
 import {
   checkRobots,
   getCrawlDelayMs,
@@ -1018,66 +1022,6 @@ venuesAdminRouter.patch(
     return ctx.json({ success: true, data: updated });
   },
 );
-
-// A hung platform CDN connection must not pin an API worker slot — the
-// probe aborts and reports fetch_error after this window. It caps each
-// request, and is the requests' share of the whole-probe budget below: even
-// with `firstPageOnly` an adapter makes more than one request (Live Nation's
-// sitemap and calendar page), so a per-request value alone would not bound
-// the probe (#1184).
-const PROBE_TIMEOUT_MS = 15_000;
-
-// The most redirect hops one probe request may follow, handed to the adapter
-// as `maxRedirects`; a 4th redirect fails the probe as a fetch_error. The
-// crawl keeps fetch's own 20. Every hop costs a full pacing wait, so at 20 a
-// detail-page probe's ceiling would be about 267 s, far past any web or
-// server-action timeout. Three is enough for http→https→www→path.
-const MAX_PROBE_REDIRECT_HOPS = 3;
-
-// Paced requests each adapter makes with `firstPageOnly`. Live Nation reads
-// the sitemap and one month; detail-page reads the sitemap, the listing and
-// one detail page; AEG and VenuePilot read one listing each.
-const PROBE_PACED_REQUESTS: Record<PlatformSource, number> = {
-  aeg: 1,
-  venuepilot: 1,
-  livenation: 2,
-  'detail-page': 3,
-};
-
-// The adapters that follow redirects hop by hop, each hop after a pacing
-// wait of its own. AEG and VenuePilot never follow one.
-const PROBE_FOLLOWS_REDIRECTS: ReadonlySet<PlatformSource> = new Set([
-  'livenation',
-  'detail-page',
-]);
-
-/**
- * The probe's whole budget, sized from the delay because a pacing wait is
- * never cut short (it breaches instead), so a fixed 15 s would fail any venue
- * whose site asks for a long Crawl-delay:
- *
- *   wait      = max(delay, MIN_CRAWL_DELAY_MS) + 1000   (a full second of jitter)
- *   perPaced  = wait + (follows redirects ? wait × MAX_PROBE_REDIRECT_HOPS : 0)
- *   budget    = pacedRequests × perPaced + PROBE_TIMEOUT_MS
- *
- * Each paced request waits once before it goes out, and each redirect hop it
- * follows waits again before the hop is requested; those hop waits run inside
- * the request's budget too, so every hop the cap allows is paid for.
- * PROBE_TIMEOUT_MS on top is the requests' own network time.
- *
- * Worst case at the 3 s floor (wait = 4 s), every request redirecting the
- * full MAX_PROBE_REDIRECT_HOPS (3) times: AEG and VenuePilot 19 s, Live
- * Nation 2 × 4 × 4 + 15 = 47 s, detail-page 3 × 4 × 4 + 15 = 63 s. A longer
- * Crawl-delay scales the waits with it.
- */
-function probeBudgetMs(source: PlatformSource, crawlDelayMs: number): number {
-  const waitMs = Math.max(crawlDelayMs, MIN_CRAWL_DELAY_MS) + 1_000;
-  const pacedRequests = PROBE_PACED_REQUESTS[source];
-  const hopWaitsMs = PROBE_FOLLOWS_REDIRECTS.has(source)
-    ? waitMs * MAX_PROBE_REDIRECT_HOPS
-    : 0;
-  return pacedRequests * (waitMs + hopWaitsMs) + PROBE_TIMEOUT_MS;
-}
 
 const probePlatformSchema = z.object({
   platform: z.enum(VENUE_PLATFORMS).nullable().optional(),

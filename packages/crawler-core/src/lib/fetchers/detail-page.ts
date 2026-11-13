@@ -28,16 +28,23 @@ import type { FetchLog } from '../fetch-log.js';
 import { extractJsonLd } from '../extractors/json-ld.js';
 import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
+  type ChainBudget,
   fetchFollowingRobots,
   RobotsDisallowedError,
   type RobotsFetchResult,
 } from '../robots-fetch.js';
 import { createDeadline } from './deadline.js';
 import { jitter } from './jitter.js';
+import {
+  isBudgetBreach,
+  type Pacing,
+  pacedChainOptions,
+} from './paced-fetch.js';
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
+  ProbeRequests,
 } from './index.js';
 
 const logger = createLogger('detail-page-fetcher');
@@ -82,13 +89,11 @@ export class DetailPageFetchError extends Error {
   }
 }
 
-type Pacing = Pick<PlatformFetchOptions, 'crawlDelayMs' | 'maxRedirects'>;
-
 async function fetchText(
   url: string,
   pacing: Pacing,
   timeoutMs?: number,
-  budget?: AbortSignal,
+  budget?: ChainBudget,
   fetchLog?: FetchLog,
 ): Promise<string> {
   return (await fetchTextLanded(url, pacing, timeoutMs, budget, fetchLog)).html;
@@ -101,25 +106,16 @@ async function fetchText(
 // before we request it, so no intermediate page is fetched unchecked.
 async function fetchTextLanded(
   url: string,
-  { crawlDelayMs, maxRedirects }: Pacing,
+  pacing: Pacing,
   timeoutMs?: number,
-  budget?: AbortSignal,
+  budget?: ChainBudget,
   fetchLog?: FetchLog,
 ): Promise<{ html: string; landedUrl: string }> {
   const origin = new URL(url).origin;
   let fetched: RobotsFetchResult;
   try {
     fetched = await fetchFollowingRobots(url, {
-      headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
-      crawlDelayMs,
-      ...(maxRedirects !== undefined ? { maxRedirects } : {}),
-      // `timeoutMs` bounds each hop's network time on its own, so a hung
-      // connection can't pin the caller (the admin probe holds an API worker
-      // slot while this resolves). A hop's pacing wait is not network time:
-      // it counts against `budget`, the deadline's signal for the whole
-      // chain, and never against the per-request cap.
-      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-      ...(budget !== undefined ? { signal: budget } : {}),
+      ...pacedChainOptions(pacing, timeoutMs, budget),
       onRedirect: (_from, to) => {
         if (new URL(to).origin !== origin) {
           throw new DetailPageFetchError(
@@ -133,11 +129,14 @@ async function fetchTextLanded(
   } catch (err) {
     // A request that threw before any response (a timeout, a reset) is the
     // page that explains the run. One robots.txt or our own origin rule
-    // declined was never requested, so it is not a failed page.
+    // declined was never requested, so it is not a failed page, and a budget
+    // that ran out (in a hop's pacing wait, say) is the deadline breach
+    // `deadline.run` reports, not a failed page either.
     if (
       !(err instanceof RobotsDisallowedError) &&
       !(err instanceof CrawlSkipError) &&
-      !(err instanceof DetailPageFetchError)
+      !(err instanceof DetailPageFetchError) &&
+      !isBudgetBreach(err, budget)
     ) {
       fetchLog?.record({ url, mode: 'http' });
     }
@@ -508,6 +507,15 @@ async function detailPageFetch(
     },
   };
 }
+
+/**
+ * A probe reads the sitemap, the listing and at most one detail page, each
+ * paced, and any of them can follow redirects hop by hop.
+ */
+export const DETAIL_PAGE_PROBE_REQUESTS: ProbeRequests = {
+  paced: 3,
+  followsRedirects: true,
+};
 
 export const detailPageFetcher: PlatformFetcher = {
   source: 'detail-page',

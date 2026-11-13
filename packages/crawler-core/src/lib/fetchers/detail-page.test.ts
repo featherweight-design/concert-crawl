@@ -10,8 +10,10 @@ import {
   normalizeCandidateUrl,
   parseSitemapUrls,
   MAX_DETAIL_PAGES,
+  DETAIL_PAGE_PROBE_REQUESTS,
 } from './detail-page.js';
 import { dispatch } from './dispatch.js';
+import { FetchLog } from '../fetch-log.js';
 import { PlatformFetchDeadlineError } from './deadline.js';
 import type { Venue } from '@concert-crawl/db';
 import { jitter } from './jitter.js';
@@ -410,6 +412,84 @@ describe('detailPageFetcher.fetch', () => {
     expect(result.events).toHaveLength(1);
     expect(result.events[0]!.title).toBe('Hip-Hop Summit Denver');
     expect(result.meta?.truncatedCount).toBe(0);
+  });
+
+  it('makes exactly the requests DETAIL_PAGE_PROBE_REQUESTS declares when firstPageOnly is set', async () => {
+    // Pins the profile the admin probe sizes its budget from to what a
+    // firstPageOnly run really does: paced requests, each followed through
+    // a redirect hop by hop (here the detail page redirects once).
+    vi.mocked(jitter).mockClear();
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/e/one">1</a><a href="/e/two">2</a>`,
+      sitemap: '',
+      detail: (url) =>
+        url.includes('/e/')
+          ? {
+              ok: true,
+              status: 200,
+              body: '',
+              redirectTo: url.replace('/e/', '/events/'),
+            }
+          : { ok: true, status: 200, body: DETAIL_HTML },
+    });
+    await detailPageFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+    const hops = pageRequests(fetchMock).filter((url) =>
+      url.includes('/events/'),
+    );
+    expect(hops).toEqual([`${ORIGIN}/events/one`]);
+    expect(pageRequests(fetchMock)).toHaveLength(
+      DETAIL_PAGE_PROBE_REQUESTS.paced + hops.length,
+    );
+    expect(DETAIL_PAGE_PROBE_REQUESTS.followsRedirects).toBe(true);
+    // One wait per paced request, and one more per redirect hop.
+    expect(jitter).toHaveBeenCalledTimes(
+      DETAIL_PAGE_PROBE_REQUESTS.paced + hops.length,
+    );
+  });
+
+  it("logs a budget that runs out in a hop's pacing wait as no failed request", async () => {
+    // The detail page redirects, and the hop's wait (3 s at least, on the
+    // real jitter) can't fit what is left of a 2 s budget: the deadline
+    // breaches before the hop goes out. That is not a failed page, so the
+    // fetch log keeps only the pages that really answered.
+    vi.useFakeTimers();
+    vi.mocked(jitter).mockImplementation((ms) => (ms > 0 ? realJitter(ms) : 0));
+    try {
+      mockSiteFetch({
+        listing: '<a href="/e/one">1</a>',
+        sitemap: '',
+        detail: (url) =>
+          url.includes('/e/')
+            ? {
+                ok: true,
+                status: 200,
+                body: '',
+                redirectTo: url.replace('/e/', '/events/'),
+              }
+            : { ok: true, status: 200, body: DETAIL_HTML },
+      });
+      const fetchLog = new FetchLog();
+      // crawlDelayMs 0 keeps the adapter's own paces stubbed; the hop's
+      // floor resolves to 3 s, which goes through the real jitter.
+      await expect(
+        detailPageFetcher.fetch(makeVenue(), {
+          crawlDelayMs: 0,
+          overallTimeoutMs: 2_000,
+          firstPageOnly: true,
+          fetchLog,
+        }),
+      ).rejects.toThrow(PlatformFetchDeadlineError);
+      expect(fetchLog.entries.length).toBeGreaterThan(0);
+      expect(
+        fetchLog.entries.filter((entry) => entry.httpStatus === null),
+      ).toEqual([]);
+    } finally {
+      vi.mocked(jitter).mockImplementation(() => 0);
+      vi.useRealTimers();
+    }
   });
 
   it('skips a nav link for the event link further down when there is no sitemap', async () => {

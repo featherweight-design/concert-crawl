@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import {
+  AEG_PROBE_REQUESTS,
   aegFetcher,
   AegFetchError,
   AegSchemaError,
@@ -163,6 +164,9 @@ describe('aegFetcher.fetch', () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(result.events.length).toBeGreaterThan(0);
     expect(result.events).toEqual(full.events);
+    // The profile the admin probe sizes its budget from matches that run.
+    expect(fetchSpy).toHaveBeenCalledTimes(AEG_PROBE_REQUESTS.paced);
+    expect(AEG_PROBE_REQUESTS.followsRedirects).toBe(false);
   });
 
   it('throws and issues no blob request when robots.txt disallows the blob', async () => {
