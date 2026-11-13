@@ -32,12 +32,12 @@ const ourArtistKnows = async (name: string): Promise<boolean> => {
     .where(
       and(
         eq(artists.canonicalName, canonical),
-        sql`lower(${artists.name}) = ${name.trim().toLowerCase()}`,
+        sql`lower(${artists.name}) = lower(${name.trim()})`,
         eq(artists.matchStatus, 'matched'),
         isNotNull(artists.spotifyArtistId),
         isNull(artists.autoMatchedAt),
         eq(artists.hidden, false),
-        sql`exists (select 1 from ${events} where ${events.canonicalArtist} = ${canonical})`,
+        sql`exists (select 1 from ${events} where lower(${events.artist}) = lower(${name.trim()}))`,
       ),
     )
     .limit(1);

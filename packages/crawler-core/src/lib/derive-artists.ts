@@ -202,15 +202,17 @@ async function applyJoinedRulings(
     else unresolved.push(name);
   }
   // One list, no repeats: the model sometimes lists "A & B" beside "A" and "B".
-  // A joined name whose parts are all already listed on their own is the same
-  // bill said twice, and the separate entries stand.
-  const keys = new Set(out.map(nameKey));
+  // Where the evidence ruled the joined name one act, its parts listed on
+  // their own are the same bill said twice, and the ruling stands.
+  const wholeParts = new Set(
+    out
+      .filter((name) => joinsNames(name))
+      .flatMap(partsOf)
+      .map(nameKey),
+  );
   const seen = new Set<string>();
   const unique = out.filter((name) => {
-    const parts = partsOf(name);
-    if (parts.length > 0 && parts.every((part) => keys.has(nameKey(part)))) {
-      return false;
-    }
+    if (!joinsNames(name) && wholeParts.has(nameKey(name))) return false;
     const key = nameKey(name);
     if (seen.has(key)) return false;
     seen.add(key);
