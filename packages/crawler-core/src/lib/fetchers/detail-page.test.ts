@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import {
+  CalendarNotFoundError,
   detailPageFetcher,
   DetailPageFetchError,
   extractCandidateUrls,
@@ -352,6 +353,34 @@ describe('detailPageFetcher.fetch', () => {
     expect(event.description).toContain('Colorado’s premier');
     expect(event.description).not.toContain('&rsquo;');
     expect(event.description).not.toContain('&nbsp;');
+  });
+
+  it('requests only the listing when firstPageOnly is set', async () => {
+    // The admin probe sets this. The listing is the first page; the sitemap
+    // only filters detail pages, and the probe follows none of them.
+    const fetchMock = mockSiteFetch();
+    const result = await detailPageFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+
+    expect(pageRequests(fetchMock)).toEqual([LISTING_URL]);
+    expect(result.sourceUrl).toBe(LISTING_URL);
+    // The listing carries no event data of its own: its events live on the
+    // detail pages, so the probe reports the links it found instead.
+    expect(result.events).toEqual([]);
+    expect(result.meta?.candidateCount).toBeGreaterThan(0);
+  });
+
+  it('still fails a first-page-only fetch whose listing has no links', async () => {
+    const fetchMock = mockSiteFetch({ listing: '<p>Nothing here</p>' });
+    await expect(
+      detailPageFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        firstPageOnly: true,
+      }),
+    ).rejects.toBeInstanceOf(CalendarNotFoundError);
+    expect(pageRequests(fetchMock)).toEqual([LISTING_URL]);
   });
 
   it('never requests a cross-origin URL', async () => {

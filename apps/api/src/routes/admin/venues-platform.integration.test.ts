@@ -472,15 +472,17 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
       'https://aegwebprod.blob.core.windows.net/json/events/89',
     );
 
-    // Dry-run: fetch called with zero crawl delay, saved config as candidate
+    // Dry-run: paced at the 3 s floor like a crawl, stopped after the first
+    // listing response, saved config as candidate.
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({ platform: 'aeg', platformVenueId: '89' }),
       {
-        crawlDelayMs: 0,
+        crawlDelayMs: 3_000,
         perRequestTimeoutMs: 15_000,
         // The probe's budget is a ceiling on the whole fetch, not on each
         // of an adapter's sequential requests (#1184).
         overallTimeoutMs: 15_000,
+        firstPageOnly: true,
       },
     );
     expect(dispatchMock).toHaveBeenCalledWith(

@@ -221,6 +221,33 @@ describe('liveNationFetcher.fetch', () => {
     expect(result.meta?.calendarMonthsFetched).toBe(12);
   });
 
+  it('reads the sitemap and only the first month when firstPageOnly is set', async () => {
+    // The admin probe sets this: one listing request proves the site answers,
+    // and walking all 12 months would hit the venue a dozen times per probe.
+    const fetchMock = mockSiteFetch();
+    const result = await liveNationFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+    const firstMonth = parseCalendarUrls(
+      SITEMAP_XML,
+      'https://www.fillmoredenver.com',
+    )[0];
+    const pageUrls = fetchMock.mock.calls
+      .map(([url]) => String(url))
+      .filter((url) => !url.endsWith('/robots.txt'));
+    // 1 sitemap + 1 month, never the other 11.
+    expect(pageUrls).toEqual([
+      'https://www.fillmoredenver.com/sitemap.xml',
+      firstMonth,
+    ]);
+    expect(result.meta?.calendarMonthsFetched).toBe(1);
+    expect(result.events.length).toBeGreaterThan(0);
+    for (const event of result.events) {
+      expect(event.sourceUrl).toBe(firstMonth);
+    }
+  });
+
   it('abandons the run when the 13 requests overrun the overall budget', async () => {
     // The admin probe's budget is a wall-clock ceiling, and this adapter is
     // the reason it has to be: 13 sequential requests against a per-request

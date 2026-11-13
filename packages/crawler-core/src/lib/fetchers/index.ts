@@ -65,6 +65,15 @@ export interface PlatformFetchOptions {
    * stretching it. Either way the delay itself is never shortened.
    */
   budgetFollowsCrawlDelay?: boolean;
+  /**
+   * Stop after the first listing response. The admin probe sets this: it
+   * only has to prove the platform answers, so it makes one listing request
+   * and never paginates or follows detail pages. That keeps it inside its
+   * fixed budget and stops a probe from hitting the venue repeatedly. A
+   * robots.txt or sitemap read the first page depends on still happens.
+   * The crawl never sets it.
+   */
+  firstPageOnly?: boolean;
   /** Collects a record of each page this fetch requests. */
   fetchLog?: FetchLog;
 }

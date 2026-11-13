@@ -430,8 +430,10 @@ async function venuePilotFetch(
   let totalCount = 0;
   let totalPages = 1;
   let pagesFetched = 0;
+  // The probe reads page 1 only: it proves the account answers, no more.
+  const pageCap = opts.firstPageOnly ? 1 : MAX_PAGES;
 
-  for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
+  for (let page = 1; page <= Math.min(totalPages, pageCap); page += 1) {
     await deadline.wait(jitter(crawlDelayMs));
     const paginated = await deadline.run(`page-${page}`, (timeoutMs) =>
       fetchPage(accountId, startDate, page, timeoutMs, opts.fetchLog),
@@ -448,7 +450,8 @@ async function venuePilotFetch(
   // totalPages > MAX_PAGES means we stopped short of the full set — surface it
   // in meta (which is logged) so operators can alert on partial fetches rather
   // than silently serving truncated data.
-  const truncated = totalPages > MAX_PAGES;
+  // A first-page-only fetch stops short on purpose, so it is not truncation.
+  const truncated = !opts.firstPageOnly && totalPages > MAX_PAGES;
   if (truncated) {
     logger.warn(
       { venueId: venue.id, totalPages, pagesFetched, cap: MAX_PAGES },

@@ -138,6 +138,25 @@ describe('aegFetcher.fetch', () => {
     expect(result.sourceUrl).toBe(calledUrl);
   });
 
+  it('makes the single blob request and returns its events when firstPageOnly is set', async () => {
+    // The blob is AEG's only listing request, so the probe's first-page cut
+    // changes nothing here: still exactly one request, still every event.
+    recordSleepDelays();
+    mockFetchOk(BLUEBIRD_FIXTURE);
+
+    const full = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 });
+    fetchSpy.mockClear();
+    mockFetchOk(BLUEBIRD_FIXTURE);
+    const result = await aegFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(result.events.length).toBeGreaterThan(0);
+    expect(result.events).toEqual(full.events);
+  });
+
   it('throws and issues no blob request when robots.txt disallows the blob', async () => {
     isAllowedSpy.mockResolvedValue(false);
     mockFetchOk(BLUEBIRD_FIXTURE);
