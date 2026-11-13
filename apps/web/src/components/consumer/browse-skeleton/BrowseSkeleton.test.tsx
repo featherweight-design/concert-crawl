@@ -130,11 +130,12 @@ describe('BrowseSkeleton', () => {
   it('draws the desktop segmented bar at rest, as load_browse_d does', () => {
     render(<BrowseSkeleton />);
     const bar = screen.getByTestId('filter-bar-preview-bar');
-    // Phone gets the chip row, sm and up the bar: never both on screen.
+    // Under 1024 the chip row, lg and up the bar: never both on screen
+    // (addendum-3 rule 1).
     expect(bar.className).toContain('hidden');
-    expect(bar.className).toContain('sm:flex');
+    expect(bar.className).toContain('lg:flex');
     expect(screen.getByTestId('filter-bar-preview-chips').className).toContain(
-      'sm:hidden',
+      'lg:hidden',
     );
     expect(within(bar).getByText(FOLLOWING_COPY.chip)).toBeTruthy();
     expect(within(bar).getByText(copy.segment.followOff)).toBeTruthy();

@@ -109,7 +109,9 @@ const PHONE_CHIP_FILL = 'var(--surface-2)';
 const PHONE_PILL_HEIGHT = 38;
 
 /** Tailwind's `sm`: from here up the segmented bar replaces the chip row. */
-const DESKTOP_QUERY = '(min-width: 640px)';
+// Addendum-3 rule 1 (header-640, header-900): the segmented bar needs 1024 to
+// fit; under it the phone chips row stands in.
+const DESKTOP_QUERY = '(min-width: 1024px)';
 
 /** Where and Vibe lists written but not yet back from the server. */
 type PendingLists = Partial<Record<FilterKey, readonly string[]>>;
@@ -321,11 +323,11 @@ export function FilterBar({
   const filtersButtonRef = useRef<HTMLButtonElement>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   // Never decides what the first paint draws: the phone row and the segmented
-  // bar both render and CSS (`sm:`) shows one. It picks only whether a
+  // bar both render and CSS (`lg:`) shows one. It picks only whether a
   // segment's popover shows, and the taste chip's one home. The server
   // guesses the phone.
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
-  // The phone sheet is `sm:hidden`: a phone turned past 640px would hide it
+  // The phone sheet is `lg:hidden`: a phone turned past 1024px would hide it
   // while its focus trap and Escape stayed live, so crossing to desktop
   // closes it and drops its draft.
   useEffect(() => {
@@ -693,7 +695,7 @@ export function FilterBar({
                 <span className="inline-flex">
                   <Icon size={15} />
                 </span>
-                <span className="sr-only sm:not-sr-only">{label}</span>
+                <span className="sr-only lg:not-sr-only">{label}</span>
               </button>
             );
           })}
@@ -715,7 +717,7 @@ export function FilterBar({
           sm up the segmented bar below replaces the lot. */}
       <div
         data-testid="phone-filter-row"
-        className="flex flex-col gap-2.5 sm:hidden"
+        className="flex flex-col gap-2.5 lg:hidden"
       >
         <div className="flex flex-wrap items-center gap-2">
           <FiltersButton

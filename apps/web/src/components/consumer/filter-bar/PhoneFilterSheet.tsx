@@ -604,7 +604,7 @@ export function PhoneFilterSheet({
   const zone = drag.zoneProps;
 
   return createPortal(
-    <div className="fixed inset-0 z-[90] sm:hidden">
+    <div className="fixed inset-0 z-[90] lg:hidden">
       <button
         type="button"
         className="absolute inset-0"

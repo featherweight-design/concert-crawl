@@ -414,7 +414,7 @@ describe('FilterBar phone sheet', () => {
   });
 
   it('closes, draft dropped, once the width crosses to desktop', () => {
-    // A phone turned to landscape past 640px hides the `sm:hidden` sheet; it
+    // A phone turned to landscape past 1024px hides the `lg:hidden` sheet; it
     // must not leave its focus trap and Escape listener live behind the bar.
     let wide = false;
     const listeners = new Set<() => void>();

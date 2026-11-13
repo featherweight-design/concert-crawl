@@ -254,8 +254,8 @@ export const segmentValueStyle = (muted: boolean): CSSProperties => ({
   color: muted ? 'var(--fg-subtle)' : 'var(--fg)',
 });
 
-/** The desktop bar and the count line under it, from sm up. */
-export const SEGMENT_BLOCK_CLASS = 'hidden flex-col gap-2.5 sm:flex';
+/** The desktop bar and the count line under it, from lg (1024) up. */
+export const SEGMENT_BLOCK_CLASS = 'hidden flex-col gap-2.5 lg:flex';
 
 /** The segmented bar itself (`bp-f-filt_d`, `bp-f-filt_active_d`). */
 export const SEGMENT_BAR_CLASS =
@@ -363,7 +363,7 @@ export const FilterBarPreview = ({
             <span className="inline-flex">
               <Icon size={15} />
             </span>
-            <span className="hidden sm:inline">{label}</span>
+            <span className="hidden lg:inline">{label}</span>
           </span>
         ))}
       </span>
@@ -371,7 +371,7 @@ export const FilterBarPreview = ({
     {/* `bp-f-filt_m_rest`: the Filters pill and, when known, My artists. */}
     <div
       data-testid="filter-bar-preview-chips"
-      className="flex items-center gap-2 sm:hidden"
+      className="flex items-center gap-2 lg:hidden"
     >
       <span
         className={PHONE_PILL_CLASS}
