@@ -82,7 +82,9 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
       }),
     overviewFetch(
       'runs',
-      `/v1/admin/crawl/runs?${venueQuery}&limit=${LAST_RUNS}`,
+      // Headroom: `runBars` drops in-progress rows, so a run still going
+      // would otherwise leave the 14 slots one short.
+      `/v1/admin/crawl/runs?${venueQuery}&limit=${LAST_RUNS + 4}`,
       parseOverviewRuns,
     ),
     overviewFetch(

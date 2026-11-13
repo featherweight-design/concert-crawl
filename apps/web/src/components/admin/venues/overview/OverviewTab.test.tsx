@@ -16,7 +16,15 @@ import type {
 } from '@concert-crawl/types';
 
 const mockDelete = vi.fn();
+const { MockApiError } = vi.hoisted(() => ({
+  MockApiError: class MockApiError extends Error {
+    constructor(public status: number) {
+      super(`HTTP ${status}`);
+    }
+  },
+}));
 vi.mock('@/lib/api', () => ({
+  ApiError: MockApiError,
   apiClient: {
     delete: (...args: unknown[]) => mockDelete(...args),
   },
@@ -487,6 +495,30 @@ describe('OverviewTab — In Needs you', () => {
     await waitFor(() => expect(mockDelete).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
     errorSpy.mockRestore();
+  });
+
+  it('a 404 (already back on elsewhere) refreshes instead of failing', async () => {
+    mockDelete.mockRejectedValueOnce(new MockApiError(404));
+    render(
+      <OverviewTab
+        venue={buildVenue()}
+        data={{ ...DATA, snoozes: [snooze] }}
+        recrawl={recrawl()}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: COPY.needsYou.turnBackOnLabel(
+          COPY.needsYou.kinds['show-dropped'],
+        ),
+      }),
+    );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(
+      screen.queryByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeNull();
   });
 
   it('shows Couldn’t load in this card only when Needs you failed', () => {
