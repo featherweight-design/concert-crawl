@@ -31,7 +31,11 @@ interface FilterSegmentProps {
   active: boolean;
   open: boolean;
   clearLabel: string;
-  testId?: string;
+  /**
+   * The opener's testid. Spelled `data-testid` at the call site so the e2e
+   * testid guard (`testid-contract.test.ts`) can read the literal there.
+   */
+  'data-testid'?: string;
   anchorRef: Ref<HTMLDivElement>;
   openerRef: Ref<HTMLButtonElement>;
   onToggle: () => void;
@@ -46,7 +50,7 @@ export const FilterSegment = ({
   active,
   open,
   clearLabel,
-  testId,
+  'data-testid': testId,
   anchorRef,
   openerRef,
   onToggle,

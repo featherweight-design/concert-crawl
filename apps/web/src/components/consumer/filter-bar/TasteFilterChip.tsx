@@ -19,7 +19,6 @@ import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { TasteUpsellSheet } from './TasteUpsellSheet';
-import { ChipDivider } from './ChipDivider';
 
 const COPY = SPOTIFY_COPY.tasteFilter;
 
@@ -49,12 +48,18 @@ interface TasteFilterChipProps {
   // Server-resolved SCA-region boolean, forwarded to the tier picker's
   // checkout legal block (monetization spec §1.7).
   scaRegion: boolean;
+  /**
+   * The chip's height. 36 by default; the phone row passes 38 so it lines up
+   * with the Filters and My artists pills (B+ B6b; no board draws the chip).
+   */
+  height?: number;
 }
 
 export const TasteFilterChip = ({
   active,
   onToggle,
   scaRegion,
+  height = 36,
 }: TasteFilterChipProps) => {
   const { isLoading, surface } = useEntitlement('spotify-sync');
   const { data: planState } = usePlanState();
@@ -88,8 +93,10 @@ export const TasteFilterChip = ({
           onClick={() => onToggle(!active)}
           aria-pressed={active}
           aria-label={COPY.chipAria}
-          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          data-testid="taste-chip"
+          className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           style={{
+            height,
             padding: '0 12px 0 8px',
             fontFamily: 'Inter, system-ui',
             fontWeight: 700,
@@ -107,7 +114,6 @@ export const TasteFilterChip = ({
             </span>
           )}
         </button>
-        <ChipDivider />
       </>
     );
   }
@@ -129,8 +135,10 @@ export const TasteFilterChip = ({
         type="button"
         onClick={onLockedTap}
         aria-label={COPY.chipLockedAria}
-        className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        data-testid="taste-chip"
+        className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         style={{
+          height,
           padding: '0 11px 0 9px',
           fontFamily: 'Inter, system-ui',
           fontWeight: 700,
@@ -144,7 +152,6 @@ export const TasteFilterChip = ({
         <span style={{ whiteSpace: 'nowrap' }}>{COPY.chip}</span>
         <LockGlyph />
       </button>
-      <ChipDivider />
       <TasteUpsellSheet
         open={upsellOpen}
         onClose={() => setUpsellOpen(false)}

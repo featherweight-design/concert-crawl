@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-// The desktop segmented filter bar (B+ B6a): from 640px up the chip row gives
+// The desktop segmented filter bar (B+ B6a): from 640px up the phone row gives
 // way to one bar of segments, a count line under it, and restyled popovers.
-// jsdom has no layout or CSS, so the chip row and the bar both render here
+// jsdom has no layout or CSS, so the phone row and the bar both render here
 // (the page shows one per width). Which overlay a tap opens is driven by
 // mocking matchMedia.
 
@@ -53,7 +53,6 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
 }));
 
 import { FilterBar } from './FilterBar';
-import { VIBE_ORDER, getFilterOptions } from './filter-defs';
 import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
@@ -185,9 +184,11 @@ describe('FilterBar desktop segmented bar', () => {
   it('the My artists switch reads its count and drives filterFollowing', () => {
     searchParams.current = new URLSearchParams('filterFollowing=1');
     renderBar();
-    const toggle = screen.getByRole('switch', {
-      name: FOLLOWING_COPY.chipAria,
-    });
+    // The phone pill is a switch too (CSS hides it from sm up).
+    const toggle = within(screen.getByTestId('filter-segment-bar')).getByRole(
+      'switch',
+      { name: FOLLOWING_COPY.chipAria },
+    );
     expect(toggle.getAttribute('aria-checked')).toBe('true');
     expect(toggle.textContent).toContain(copy.segment.followedCount(12));
     fireEvent.click(toggle);
@@ -295,7 +296,7 @@ describe('FilterBar desktop segmented bar', () => {
     },
   );
 
-  it('offers no clear control beyond Clear all, the mobile ✕ and the segment ✕', () => {
+  it("offers no clear control beyond Clear all, the phone chip's ✕ and the segment ✕", () => {
     searchParams.current = new URLSearchParams('filterVibe=indie');
     renderBar();
     // Every button whose name or text mentions clearing. The old desktop
@@ -311,7 +312,7 @@ describe('FilterBar desktop segmented bar', () => {
     expect(clearNames).toEqual(
       [
         copy.clearAll,
-        copy.clearAllFiltersAriaLabel,
+        copy.segment.clearAria('Indie'),
         copy.segment.clearAria(copy.vibeLabel),
       ].sort(),
     );
@@ -324,30 +325,6 @@ describe('FilterBar desktop segmented bar', () => {
     expect(
       chips[0]?.closest('[data-segment]')?.getAttribute('data-segment'),
     ).toBe(copy.whereLabel);
-  });
-
-  it('names the dimension on every phone chip, set or not', () => {
-    // The phone chip shows only its value, so without a hidden label a set
-    // chip read "Red Rocks" with no dimension, and at rest only "Any vibe".
-    searchParams.current = new URLSearchParams('filterVibe=electronic');
-    renderBar();
-    const bar = screen.getByTestId('filter-segment-bar');
-    const phoneChips = screen
-      .getAllByRole('button', { expanded: false })
-      .filter(
-        (button) =>
-          button.getAttribute('aria-haspopup') === 'dialog' &&
-          !bar.contains(button),
-      );
-    const names = phoneChips.map(
-      (button) => button.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-    );
-    expect(names.some((name) => name.startsWith(`${copy.vibeLabel} `))).toBe(
-      true,
-    );
-    expect(names.some((name) => name.startsWith(`${copy.whereLabel} `))).toBe(
-      true,
-    );
   });
 
   it('Where searches venues by name and toggles a pick without closing', () => {
@@ -596,12 +573,17 @@ describe('FilterBar desktop segmented bar', () => {
     renderBar();
     const who = screen.getByTestId('filter-segment-who');
     expect(who.textContent).toContain(CREWS_COPY.lens.pickerNone);
-    // The heading's pill is mobile only from here up.
-    const pillSlot = screen.getByTestId('crew-lens-pill-slot');
-    expect(pillSlot.classList.contains('sm:hidden')).toBe(true);
-    expect(pillSlot.querySelector('button')).not.toBeNull();
+    // The lens lives only here and in the phone sheet's Who (B6b): the
+    // heading carries no crew pill at any width.
+    expect(screen.queryByTestId('crew-lens-pill-slot')).toBeNull();
+    expect(
+      within(screen.getByTestId('filter-segment-bar')).getByTestId(
+        'filter-segment-who',
+      ),
+    ).toBe(who);
 
     fireEvent.click(who);
+    expect(who).toHaveAttribute('aria-expanded', 'true');
     const dialog = screen.getByRole('dialog', {
       name: `${copy.popover.whoTitle} filter`,
     });
@@ -959,14 +941,8 @@ describe('FilterBar multi-select Where and Vibe', () => {
       'filterWhere=bluebird-theater&filterWhere=ogden-theatre&filterVibe=electronic&filterVibe=indie',
     );
     renderBar();
-    const bar = screen.getByTestId('filter-segment-bar');
-    const phoneChipText = screen
+    const phoneChipText = within(screen.getByTestId('phone-filter-chips'))
       .getAllByRole('button')
-      .filter(
-        (button) =>
-          button.getAttribute('aria-haspopup') === 'dialog' &&
-          !bar.contains(button),
-      )
       .map((button) => button.textContent ?? '');
     expect(
       phoneChipText.some((text) => text.includes(copy.venueCount(2))),
@@ -1044,84 +1020,5 @@ describe('FilterBar multi-select Where and Vibe', () => {
     renderBar();
     expect(screen.getByTestId('venue-chip').textContent).toContain('Ogden');
     expect(screen.getByTestId('venue-chip').textContent).not.toContain('+');
-  });
-});
-
-describe('FilterBar phone sheet, multi-select', () => {
-  beforeEach(() => {
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
-    });
-  });
-
-  it('the Where sheet toggles checkboxes and stays open', () => {
-    searchParams.current = new URLSearchParams('filterWhere=bluebird-theater');
-    renderBar();
-    fireEvent.click(screen.getByTestId('venue-chip'));
-    const sheet = screen.getByRole('dialog', { name: /filter$/ });
-    expect(
-      within(sheet)
-        .getByRole('checkbox', { name: 'Bluebird Theater' })
-        .getAttribute('aria-checked'),
-    ).toBe('true');
-    fireEvent.click(
-      within(sheet).getByRole('checkbox', { name: 'Ogden Theatre' }),
-    );
-    expect(lastQuery().getAll('filterWhere')).toEqual([
-      'bluebird-theater',
-      'ogden-theatre',
-    ]);
-    expect(screen.getByRole('dialog', { name: /filter$/ })).toBeTruthy();
-  });
-
-  it('the Vibe sheet lists all 16 buckets in the board order, shows or not', () => {
-    // The page only has shows in two genres; the sheet still lists every
-    // bucket, as `bp-vibe-vibe_sheet_m` and the desktop popover do.
-    renderBar({ genres: ['indie', 'electronic'] });
-    const vibeChip = screen
-      .getAllByRole('button', { expanded: false })
-      .find(
-        (button) =>
-          button.getAttribute('aria-haspopup') === 'dialog' &&
-          button.textContent?.startsWith(`${copy.vibeLabel} `),
-      );
-    if (!vibeChip) throw new Error('no phone Vibe chip');
-    fireEvent.click(vibeChip);
-    const sheet = screen.getByRole('dialog', { name: /filter$/ });
-    const rows = within(sheet)
-      .getAllByRole('checkbox')
-      .map((box) => box.textContent);
-    expect(rows).toEqual(
-      getFilterOptions('vibe', [], [...VIBE_ORDER]).map(
-        (option) => option.label,
-      ),
-    );
-    expect(rows).toHaveLength(16);
-  });
-
-  it('two quick sheet ticks both survive', () => {
-    renderBar();
-    fireEvent.click(screen.getByTestId('venue-chip'));
-    const sheet = screen.getByRole('dialog', { name: /filter$/ });
-    fireEvent.click(
-      within(sheet).getByRole('checkbox', { name: 'Ogden Theatre' }),
-    );
-    fireEvent.click(
-      within(sheet).getByRole('checkbox', { name: 'Globe Hall' }),
-    );
-    expect(lastQuery().getAll('filterWhere')).toEqual([
-      'ogden-theatre',
-      'globe-hall',
-    ]);
   });
 });

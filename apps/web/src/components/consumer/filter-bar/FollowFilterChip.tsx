@@ -3,8 +3,8 @@
 // "My artists" browse scope chip (native following, PR 4). Four states:
 //
 //   off     entitled, has follows, scope not applied
-//   on      entitled, scope applied — --signal fill, count suffix, ✕ to clear
-//   locked  not entitled — dashed border + lock glyph, tap opens the picker
+//   on      entitled, scope applied — the switch on; tap again to clear
+//   locked  not entitled — dashed border + locked switch, tap opens the picker
 //   absent  entitled with zero follows — renders nothing at all
 //
 // ⚠️ Precedence is ENTITLEMENT FIRST, THEN COUNT (Gate 1, decision D1). A free
@@ -26,12 +26,11 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { ChipDivider, SegmentDivider } from './ChipDivider';
+import { SegmentDivider } from './ChipDivider';
 import {
-  FOLLOW_CHIP_CLASS,
-  LockGlyph,
+  PHONE_PILL_CLASS,
   SwitchTrack,
-  followChipStyle,
+  phonePillStyle,
   segmentEyebrowStyle as eyebrowStyle,
   segmentValueStyle as valueStyle,
 } from './chrome';
@@ -55,7 +54,7 @@ interface FollowFilterChipProps {
   // checkout legal block (monetization spec §1.7).
   scaRegion: boolean;
   /**
-   * `chip` is the mobile chip row's pill. `segment` is the desktop bar's first
+   * `chip` is the phone row's switch pill (B+ B6b). `segment` is the desktop bar's first
    * segment (B+ B6a): a switch with a MY ARTISTS eyebrow over its state. Both
    * read the same entitlement and drive the same param.
    */
@@ -106,15 +105,6 @@ export const FollowFilterChip = ({
     // the chip mid-scope would strand the viewer on an unclearable empty list.
     if (followCount === 0 && !active) return null;
 
-    // An unknown count drops the number rather than printing zero. `null` means
-    // the SSR seed failed, and "My artists · 0" would tell a viewer who follows
-    // fifty artists that they follow none — the exact claim the null-vs-zero
-    // split upstream exists to prevent.
-    const label =
-      active && followCount !== null
-        ? FOLLOWING_COPY.chipActive(followCount)
-        : FOLLOWING_COPY.chip;
-
     if (isSegment) {
       const value = !active
         ? SEGMENT_COPY.followOff
@@ -145,28 +135,23 @@ export const FollowFilterChip = ({
       );
     }
 
+    // The phone pill (`bp-f-filt_m_rest`): the switch and "My artists", no
+    // count. The board draws it off only; on, it takes the Filters pill's
+    // active edge and tint.
     return (
-      <>
-        <button
-          type="button"
-          onClick={() => onToggle(!active)}
-          aria-pressed={active}
-          aria-label={
-            active ? FOLLOWING_COPY.chipActiveAria : FOLLOWING_COPY.chipAria
-          }
-          data-testid="follow-scope-chip"
-          className={`${FOLLOW_CHIP_CLASS} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal`}
-          style={followChipStyle(active)}
-        >
-          <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
-          {active && (
-            <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
-              ✕
-            </span>
-          )}
-        </button>
-        <ChipDivider />
-      </>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={active}
+        aria-label={FOLLOWING_COPY.chipAria}
+        onClick={() => onToggle(!active)}
+        data-testid="follow-scope-chip"
+        className={`${PHONE_PILL_CLASS} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal`}
+        style={phonePillStyle(active, 'follow')}
+      >
+        <SwitchTrack on={active} locked={false} />
+        {FOLLOWING_COPY.chip}
+      </button>
     );
   }
 
@@ -230,21 +215,13 @@ export const FollowFilterChip = ({
         aria-label={FOLLOWING_COPY.chipAria}
         aria-describedby={gateId}
         data-testid="follow-scope-chip"
-        className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-        style={{
-          fontFamily: 'Inter, system-ui',
-          fontWeight: 700,
-          fontSize: 12,
-          background: 'transparent',
-          border: '1px dashed var(--border-strong)',
-          color: 'var(--fg-subtle)',
-        }}
+        className={`${PHONE_PILL_CLASS} cursor-pointer border-dashed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal`}
+        style={{ ...phonePillStyle(false, 'follow'), color: 'var(--fg-muted)' }}
       >
-        <span style={{ whiteSpace: 'nowrap' }}>{FOLLOWING_COPY.chip}</span>
-        <LockGlyph />
+        <SwitchTrack on={false} locked />
+        {FOLLOWING_COPY.chip}
       </button>
       {gate}
-      <ChipDivider />
       {picker}
     </>
   );

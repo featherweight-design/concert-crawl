@@ -38,6 +38,8 @@ const rowStyle = (checked: boolean, color: string): CSSProperties => ({
 interface VibeOptionGridProps {
   selected: readonly string[];
   onToggle: (genre: string) => void;
+  /** Two in the desktop popover; one on the phone (`bp-vibe-vibe_sheet_m`). */
+  columns?: 1 | 2;
 }
 
 /**
@@ -45,10 +47,16 @@ interface VibeOptionGridProps {
  * draws them all, and no board hides a bucket without shows. Picking an empty
  * one simply returns no shows.
  */
-export const VibeOptionGrid = ({ selected, onToggle }: VibeOptionGridProps) => {
+export const VibeOptionGrid = ({
+  selected,
+  onToggle,
+  columns = 2,
+}: VibeOptionGridProps) => {
   const options = getFilterOptions('vibe', [], [...VIBE_ORDER]);
   return (
-    <div className="grid grid-cols-2 gap-x-2.5 gap-y-1">
+    <div
+      className={`grid ${columns === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-x-2.5 gap-y-1`}
+    >
       {options.map((option) => {
         const checked = selected.includes(option.value);
         const color = genreColor(option.value) ?? 'var(--signal)';

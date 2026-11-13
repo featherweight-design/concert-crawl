@@ -2,8 +2,8 @@ import { Fragment, type CSSProperties } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
-import { ChipDivider, SegmentDivider } from './ChipDivider';
-import { FILTER_DEFS, FILTER_ORDER } from './filter-defs';
+import { SegmentDivider } from './ChipDivider';
+import { FILTER_DEFS } from './filter-defs';
 
 // The FilterBar's look, shared by the live bar and Browse's first-load
 // fallback (`BrowseSkeleton`), so the fallback draws the same chrome the page
@@ -137,40 +137,36 @@ export const VIEW_SEGMENTS = [
   { key: 'cal', label: copy.viewCal, Icon: IconCal },
 ] as const;
 
-export const CHIP_ROW_CLASS =
-  'flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-none';
-export const CHIP_ROW_STYLE: CSSProperties = {
-  maskImage: 'linear-gradient(to right, black 85%, transparent)',
-};
+/** The Filters button's sliders (`browse-320.html`: 15px, 1.6 stroke). */
+export const IconSliders = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <path d="M2 4h7M12 4h2M2 12h2M7 12h7" />
+      <circle cx="10.5" cy="4" r="1.6" />
+      <circle cx="5.5" cy="12" r="1.6" />
+    </g>
+  </svg>
+);
 
 /**
- * A dimension chip (When, Where, Price, Vibe). An active chip is neutral: the
- * `s2` fill and a `border-strong` hairline (`browse-active-320`), never a
- * solid colour, because a filled coloured chip means a status or a price
- * (B+ rule 2).
+ * The phone row's two pills, Filters and My artists (`bp-f-filt_m_rest`,
+ * `browse-320.html`): 38px, fully round, 13.5px bold. Filters pads 13px and
+ * rests on the elevated fill; My artists pads 12px on no fill. Either one, once
+ * on, takes a signal edge over an 8% signal tint (`browse-active-320.html`).
  */
-export const FILTER_CHIP_CLASS =
-  'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3';
-export const filterChipStyle = (active: boolean): CSSProperties => ({
-  fontFamily: 'Inter, system-ui',
-  fontWeight: active ? 700 : 600,
-  fontSize: 12.5,
-  letterSpacing: '-0.005em',
-  color: 'var(--fg)',
-  borderColor: active ? 'var(--border-strong)' : 'var(--border)',
-  background: active ? 'var(--surface-2)' : 'var(--surface-1)',
-});
-
-/** The "My artists" scope chip, in its usable state. */
-export const FOLLOW_CHIP_CLASS =
-  'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3';
-export const followChipStyle = (active: boolean): CSSProperties => ({
-  fontFamily: 'Inter, system-ui',
-  fontWeight: 700,
-  fontSize: 12,
-  background: active ? 'var(--signal)' : 'transparent',
+export const PHONE_PILL_CLASS =
+  'inline-flex h-[38px] shrink-0 items-center gap-2 rounded-full border text-[13.5px] font-bold whitespace-nowrap text-fg transition-colors duration-[var(--motion-fast)] ease-[var(--motion-ease)]';
+export const phonePillStyle = (
+  active: boolean,
+  rest: 'filters' | 'follow',
+): CSSProperties => ({
+  paddingInline: rest === 'filters' ? 13 : 12,
   borderColor: active ? 'var(--signal)' : 'var(--border-strong)',
-  color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
+  background: active
+    ? 'color-mix(in oklab, var(--signal) 8%, transparent)'
+    : rest === 'filters'
+      ? 'var(--bg-elevated)'
+      : 'transparent',
 });
 
 export const LockGlyph = () => (
@@ -372,31 +368,27 @@ export const FilterBarPreview = ({
         ))}
       </span>
     </div>
+    {/* `bp-f-filt_m_rest`: the Filters pill and, when known, My artists. */}
     <div
       data-testid="filter-bar-preview-chips"
-      className={`${CHIP_ROW_CLASS} sm:hidden`}
-      style={CHIP_ROW_STYLE}
+      className="flex items-center gap-2 sm:hidden"
     >
+      <span
+        className={PHONE_PILL_CLASS}
+        style={phonePillStyle(false, 'filters')}
+      >
+        <IconSliders />
+        {copy.phone.filters}
+      </span>
       {showFollowChip && (
-        <>
-          <span className={FOLLOW_CHIP_CLASS} style={followChipStyle(false)}>
-            <span style={{ whiteSpace: 'nowrap' }}>{FOLLOWING_COPY.chip}</span>
-          </span>
-          <ChipDivider />
-        </>
-      )}
-      {FILTER_ORDER.map((key) => (
         <span
-          key={key}
-          className={FILTER_CHIP_CLASS}
-          style={filterChipStyle(false)}
+          className={PHONE_PILL_CLASS}
+          style={phonePillStyle(false, 'follow')}
         >
-          <span style={{ whiteSpace: 'nowrap' }}>
-            {FILTER_DEFS[key].placeholder}
-          </span>
-          <IconChevDown size={11} />
+          <SwitchTrack on={false} locked={false} />
+          {FOLLOWING_COPY.chip}
         </span>
-      ))}
+      )}
     </div>
     {/* `bp-s-load_browse_d`: the segmented bar at rest, every segment the
         board draws (My artists off, Who, When, Where, Price, Vibe), and

@@ -16,9 +16,6 @@ export const FOLLOWING_COPY = {
   // something you explicitly did, and the row it sits in already has a taste
   // chip that would otherwise read as its twin.
   chip: 'My artists',
-  // The count rides the label only while the scope is on, so the resting chip
-  // never advertises a number the user has to parse before deciding.
-  chipActive: (count: number) => `My artists · ${count}`,
   // Deliberately parallel to the taste chip's aria, which is the same sentence
   // plus "on Spotify". The two chips sit in one row, so the only thing a
   // screen reader should hear between them is the source.
@@ -27,7 +24,6 @@ export const FOLLOWING_COPY = {
   // label is identical when locked (the #794 identical-pixels rule), and a
   // second key holding the same sentence is just somewhere for drift to hide.
   chipAria: 'Filter to artists you follow',
-  chipActiveAria: 'Filtered to artists you follow. Activate to clear.',
   // Referenced by aria-describedby, never rendered visibly. Because the locked
   // label says nothing about the gate, this sentence is the only place it is
   // told at all.

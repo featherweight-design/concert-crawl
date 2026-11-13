@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.68.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'changed',
+        text: 'Browse on your phone has one Filters button. Pick when, where, price and vibe in one sheet, see how many shows match, then show them.',
+      },
+    ],
+  },
+  {
     version: 'v0.67.0-beta',
     date: 'Nov 12, 2026',
     headline: null,
