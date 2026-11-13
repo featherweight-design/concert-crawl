@@ -227,7 +227,23 @@ describe('VenueDetailsClient — tabs', () => {
       venueId: 'venue-1',
       runs: null,
       initialRun: 'run-7',
+      active: true,
     });
+  });
+
+  it('tells the Runs tab when another tab takes over, so its run detail closes', () => {
+    render(
+      <VenueDetailsClient
+        venue={venue}
+        initialTab="runs"
+        runs={{ runs: null, initialRun: 'run-7' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: TABS.details }));
+    expect(mockRunsTab).toHaveBeenLastCalledWith(
+      expect.objectContaining({ active: false }),
+    );
+    expect(window.location.search).toBe('?tab=details');
   });
 
   it('keeps an unsaved edit, and the save bar, across a tab switch', () => {

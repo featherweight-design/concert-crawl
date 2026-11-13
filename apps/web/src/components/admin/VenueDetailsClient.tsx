@@ -1066,6 +1066,7 @@ export function VenueDetailsClient({
           venueId={venue.id}
           runs={runs.runs}
           initialRun={runs.initialRun}
+          active={tab === 'runs'}
         />
       </VenueTabPanel>
 

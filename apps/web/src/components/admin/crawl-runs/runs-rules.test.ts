@@ -3,17 +3,24 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { shortTime } from '@/components/admin/venues/overview/overview-rules';
 import type { RunRow } from './run-data';
 import {
+  INSPECT_READY,
   RUNS_CAP,
   RUNS_STEP,
   filterRuns,
+  firstFailedPage,
   hasMore,
+  isFailedPage,
   isNotOk,
   lastFullRuns,
   mergeRuns,
   nextLimit,
+  pageLine,
+  pageSize,
   runCost,
   runDuration,
   runLine,
+  runSummary,
+  shortUrl,
 } from './runs-rules';
 
 const RUN = ADMIN_COPY.venuesList.latestRun;
@@ -139,12 +146,20 @@ describe('the last full run', () => {
   it('finds the next older OK run for each run, in one map', () => {
     const map = lastFullRuns(RUNS);
     expect(map.get('nov-11')).toEqual({
+      id: 'nov-10',
       at: '2026-11-10T10:01:00.000Z',
       eventsFound: 106,
     });
     expect(map.get('nov-10')?.at).toBe('2026-11-07T10:01:00.000Z');
     expect(map.get('nov-9')?.at).toBe('2026-11-07T10:01:00.000Z');
     expect(map.get('nov-8')?.at).toBe('2026-11-07T10:01:00.000Z');
+  });
+
+  it('carries the run id Compare opens: the previous success, older than this run', () => {
+    const map = lastFullRuns(RUNS);
+    expect(map.get('nov-11')?.id).toBe('nov-10');
+    expect(map.get('nov-10')?.id).toBe('nov-7');
+    expect(map.get('nov-9')?.id).toBe('nov-7');
   });
 
   it('has none for the oldest loaded run, or a run not in the list', () => {
@@ -217,5 +232,85 @@ describe('runLine', () => {
 describe('shortTime', () => {
   it('reads Mountain Time with a plain space', () => {
     expect(shortTime('2026-11-11T10:02:00.000Z')).toBe('3:02 AM');
+  });
+});
+
+describe('Inspect gate', () => {
+  it('stays hidden until Inspect lands (3b part 5)', () => {
+    expect(INSPECT_READY).toBe(false);
+  });
+});
+
+describe('runSummary', () => {
+  it('adds a sentence only where it says more (Unchanged)', () => {
+    expect(runSummary(row(), null)).toEqual({
+      title: '106 shows · 2 new',
+      body: null,
+    });
+    const unchanged = runSummary(RUNS[0]!, {
+      at: '2026-11-10T10:01:00.000Z',
+      eventsFound: 106,
+    });
+    expect(unchanged.title).toBe('Page unchanged since Nov 10');
+    expect(unchanged.body).toContain('Nov 10');
+  });
+});
+
+describe('pages', () => {
+  const first = 'https://www.ballarena.com/events';
+
+  it('shortens URLs as the board does', () => {
+    expect(shortUrl(first, first)).toBe('ballarena.com/events');
+    expect(shortUrl('https://www.ballarena.com/events?page=2', first)).toBe(
+      '…/events?page=2',
+    );
+    expect(shortUrl('https://tickets.example.com/x', first)).toBe(
+      'tickets.example.com/x',
+    );
+    expect(shortUrl('https://ballarena.com/', first)).toBe('ballarena.com');
+    expect(shortUrl('not a url', first)).toBe('not a url');
+  });
+
+  it('reads sizes in B, KB and MB', () => {
+    expect(pageSize(512)).toBe('512 B');
+    expect(pageSize(640 * 1024)).toBe('640 KB');
+    expect(pageSize(Math.round(1.9 * 1024 * 1024))).toBe('1.9 MB');
+  });
+
+  it('reads status and size; no time is stored', () => {
+    expect(pageLine({ httpStatus: 200, bytes: 2_000_000 })).toBe(
+      '200 · 1.9 MB',
+    );
+    expect(pageLine({ httpStatus: 503, bytes: null })).toBe('503');
+    expect(pageLine({ httpStatus: null, bytes: null })).toBe(
+      ADMIN_COPY.runDetail.noResponse,
+    );
+  });
+
+  it('fails only an error status or no response; 2xx and 3xx pass', () => {
+    expect(isFailedPage({ httpStatus: null })).toBe(true);
+    expect(isFailedPage({ httpStatus: 404 })).toBe(true);
+    expect(isFailedPage({ httpStatus: 503 })).toBe(true);
+    expect(isFailedPage({ httpStatus: 200 })).toBe(false);
+    expect(isFailedPage({ httpStatus: 204 })).toBe(false);
+    expect(isFailedPage({ httpStatus: 301 })).toBe(false);
+    expect(isFailedPage({ httpStatus: 304 })).toBe(false);
+  });
+
+  it('marks the first page that failed or never answered', () => {
+    expect(
+      firstFailedPage([
+        { httpStatus: 200 },
+        { httpStatus: 304 },
+        { httpStatus: 404 },
+        { httpStatus: null },
+      ]),
+    ).toBe(2);
+    expect(firstFailedPage([{ httpStatus: 200 }, { httpStatus: null }])).toBe(
+      1,
+    );
+    expect(firstFailedPage([{ httpStatus: 200 }, { httpStatus: 301 }])).toBe(
+      -1,
+    );
   });
 });

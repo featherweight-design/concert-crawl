@@ -49,6 +49,7 @@ import type { RunRow } from '@/components/admin/crawl-runs/run-data';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const COPY = ADMIN_COPY.venueRuns;
+const DETAIL = ADMIN_COPY.runDetail;
 const RUN = ADMIN_COPY.venuesList.latestRun;
 
 const VENUE = 'venue-1';
@@ -122,8 +123,13 @@ const renderTab = (
       venueId={VENUE}
       runs={runs === null ? null : { rows: runs, returned }}
       initialRun={initialRun}
+      active
     />,
   );
+
+/** The run detail has loaded its (empty) pages, so nothing settles late. */
+const pagesSettled = () =>
+  waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());
 
 // jsdom has no scrollIntoView.
 const scrollIntoView = vi.fn();
@@ -132,6 +138,8 @@ describe('RunsTab', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub(false));
     mockGet.mockReset();
+    // The run detail's pages, when a test opens one.
+    mockGet.mockResolvedValue([]);
     mockRefresh.mockReset();
     scrollIntoView.mockReset();
     Element.prototype.scrollIntoView = scrollIntoView;
@@ -299,6 +307,7 @@ describe('RunsTab', () => {
         venueId={VENUE}
         runs={{ rows: fresh, returned: 20 }}
         initialRun={null}
+        active
       />,
     );
     answer(manyRuns(40));
@@ -321,6 +330,7 @@ describe('RunsTab', () => {
         venueId={VENUE}
         runs={{ rows: fresh, returned: 20 }}
         initialRun={null}
+        active
       />,
     );
     expect(rows()).toHaveLength(33);
@@ -340,13 +350,13 @@ describe('RunsTab', () => {
         venueId="venue-2"
         runs={{ rows: [ok], returned: 1 }}
         initialRun={null}
+        active
       />,
     );
     expect(rows()).toHaveLength(1);
   });
 
-  // The run detail panel lands in 4b; until then a row only highlights.
-  it('selecting a row highlights it and puts ?run= in the URL', () => {
+  it('selecting a row highlights it, opens its detail and puts ?run= in the URL', async () => {
     const replaceState = vi.spyOn(window.history, 'replaceState');
     renderTab();
     fireEvent.click(rows()[1]!);
@@ -359,27 +369,83 @@ describe('RunsTab', () => {
       '/admin/venues/venue-1?tab=runs&run=run-ok',
     );
     expect(window.location.search).toBe('?tab=runs&run=run-ok');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading').textContent).toBe(
+      '106 shows · 2 new',
+    );
+    expect(mockGet).toHaveBeenCalledWith(
+      '/v1/admin/crawl/runs/run-ok/pages',
+      'test-token',
+    );
+    await pagesSettled();
   });
 
-  it('selecting another row moves the highlight', () => {
+  it('the detail of an Unchanged run names the last full run from the list', async () => {
+    renderTab();
+    fireEvent.click(rows()[0]!);
+    expect(
+      within(screen.getByRole('dialog')).getByRole('heading').textContent,
+    ).toBe('Page unchanged since Nov 10');
+    await pagesSettled();
+  });
+
+  it('selecting another row moves the highlight and the detail', async () => {
     renderTab();
     fireEvent.click(rows()[1]!);
+    await pagesSettled();
     fireEvent.click(rows()[2]!);
     expect(rows()[1]!.getAttribute('aria-current')).toBeNull();
     expect(rows()[2]!.getAttribute('aria-current')).toBe('true');
     expect(window.location.search).toBe('?tab=runs&run=run-failed');
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(
+      within(screen.getByRole('dialog')).getByRole('heading').textContent,
+    ).toBe('Failed: timed out');
+    await pagesSettled();
   });
 
-  it('selecting the highlighted row again clears it and ?run=', () => {
+  it('selecting the highlighted row again clears it, the detail and ?run=', async () => {
     renderTab();
     fireEvent.click(rows()[1]!);
+    await pagesSettled();
     fireEvent.click(rows()[1]!);
+    expect(rows()[1]!.getAttribute('aria-current')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(window.location.search).toBe('?tab=runs');
+  });
+
+  it('closing the detail clears the selection and ?run=', async () => {
+    renderTab();
+    fireEvent.click(rows()[1]!);
+    await pagesSettled();
+    fireEvent.click(
+      screen.getByRole('button', { name: ADMIN_COPY.panel.close }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(rows()[1]!.getAttribute('aria-current')).toBeNull();
     expect(window.location.search).toBe('?tab=runs');
   });
 
-  it('?run= on load highlights that run and scrolls it into view', () => {
+  it('leaving the Runs tab closes the detail and clears the selection', async () => {
+    const { rerender } = renderTab();
+    fireEvent.click(rows()[1]!);
+    await pagesSettled();
+    const props = {
+      venueId: VENUE,
+      runs: { rows: [unchanged, ok, failed], returned: 3 },
+      initialRun: null,
+    };
+    rerender(<RunsTab {...props} active={false} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // Coming back finds nothing selected.
+    rerender(<RunsTab {...props} active />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      rows().filter((row) => row.getAttribute('aria-current') !== null),
+    ).toHaveLength(0);
+  });
+
+  it('?run= on load opens that run, highlights it and scrolls it into view', async () => {
     window.history.replaceState(
       null,
       '',
@@ -390,6 +456,18 @@ describe('RunsTab', () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(scrollIntoView.mock.contexts[0]).toBe(rows()[2]);
     expect(window.location.search).toBe('?tab=runs&run=run-failed');
+    expect(
+      within(screen.getByRole('dialog')).getByRole('heading').textContent,
+    ).toBe('Failed: timed out');
+    await pagesSettled();
+  });
+
+  it('opens the detail as a bottom sheet on the phone', async () => {
+    vi.stubGlobal('matchMedia', matchMediaStub(true));
+    renderTab();
+    fireEvent.click(rows()[1]!);
+    expect(screen.getByTestId('admin-sheet')).toBeTruthy();
+    await pagesSettled();
   });
 
   it('a ?run= not in the loaded list highlights nothing and leaves the URL', () => {
