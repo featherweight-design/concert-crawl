@@ -247,11 +247,21 @@ describe('Needs you sources and ranking', () => {
       slug: 'blocked-pages-hall',
       blockedAt: new Date(Date.now() - 3 * 24 * HOUR_MS),
     });
+    // Two OK runs before the block, then the 403 run (the newest).
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      createdAt: new Date(Date.now() - 5 * 24 * HOUR_MS),
+    });
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      createdAt: new Date(Date.now() - 4 * 24 * HOUR_MS),
+    });
     const run = await seedCrawlRun(venue.id, {
       status: 'failed',
       reason: 'blocked_http',
       httpStatusCode: 403,
       robotsTxtBlocked: 'no',
+      createdAt: new Date(Date.now() - 3 * 24 * HOUR_MS),
     });
     await testDb.insert(crawlRunPages).values([
       { crawlRunId: run.id, url: 'https://example.com/a', fetchMode: 'http' },
@@ -263,6 +273,8 @@ describe('Needs you sources and ranking', () => {
       kind: 'venue-blocked',
       pagesThisRun: 2,
       robots: 'no',
+      // "Before this: 2 OK runs in a row", the same count the failing kind has.
+      okStreakBefore: 2,
       venueLive: true,
       pausedAt: null,
       showCount: 0,

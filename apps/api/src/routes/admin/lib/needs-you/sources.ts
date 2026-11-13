@@ -464,16 +464,16 @@ const venueFaultItems: Adapter = async ({ now }) => {
   const hardFaults = faults.filter(
     (fault) => fault.condition === 'failed' || fault.condition === 'blocked',
   );
-  const failingVenueIds = hardFaults
-    .filter((fault) => fault.condition === 'failed')
-    .map((fault) => fault.venueId);
+  // Both kinds read the OK streak: "Before this: 62 OK runs in a row" is drawn
+  // on the blocked panel, the failing one carries it too.
+  const faultVenueIds = hardFaults.map((fault) => fault.venueId);
   const blockedRunIds = hardFaults.flatMap((fault) =>
     fault.condition === 'blocked' && fault.crawlRunId !== null
       ? [fault.crawlRunId]
       : [],
   );
   const [okStreaks, blockedRunExtras] = await Promise.all([
-    okStreakBeforeFailure(failingVenueIds),
+    okStreakBeforeFailure(faultVenueIds),
     blockedRunDetails(blockedRunIds),
   ]);
 
@@ -536,6 +536,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
           fault.evidence.status === null
             ? null
             : `HTTP ${fault.evidence.status}`,
+        okStreakBefore: okStreaks.get(fault.venueId) ?? null,
         pagesThisRun:
           fault.crawlRunId === null
             ? null
