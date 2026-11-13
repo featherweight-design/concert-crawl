@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildReviewTabs } from './build-review-tabs';
 import { computePendingCount } from '@/lib/admin/review-pending';
-import { REVIEW_TAB_KEYS } from '@/lib/admin/review-tabs';
+import { RETIRED_REVIEW_TABS, REVIEW_TAB_KEYS } from '@/lib/admin/review-tabs';
 import { type ReviewCounts } from '@/lib/queries/use-admin-review';
 
 const counts: ReviewCounts = {
@@ -18,6 +18,13 @@ describe('buildReviewTabs', () => {
     expect(buildReviewTabs(counts).map((tab) => tab.key)).toEqual([
       ...REVIEW_TAB_KEYS,
     ]);
+  });
+
+  it('renders no tab for a retired key', () => {
+    const rendered = buildReviewTabs(counts).map((tab) => tab.key);
+    for (const key of RETIRED_REVIEW_TABS) {
+      expect(rendered).not.toContain(key);
+    }
   });
 
   it('puts the pending-submissions count on the submissions tab', () => {
@@ -65,7 +72,7 @@ describe('buildReviewTabs', () => {
     const shown = buildReviewTabs(counts)
       .map((tab) => tab.count ?? 0)
       .reduce((sum, count) => sum + count, 0);
-    // Pills are a subset of the badge (Missing and All events show none), so
+    // Pills are a subset of the badge (Prices and All events show none), so
     // the pills must never exceed it — that would mean a double-count.
     expect(shown).toBeLessThanOrEqual(badge);
   });

@@ -15,8 +15,7 @@
  * These routes reference stable staging data seeded by `pnpm db:seed:staging`:
  * event-detail is a hardcoded UUID and venue-detail a slug, both from the
  * prod→staging public-data sync (stable because the sync upserts by natural
- * key); admin-contests is a hardcoded UUID from the synthetic seeder, which is
- * deterministic from FIXTURE_SEED. artist-detail is the one exception — the
+ * key). artist-detail is the one exception — the
  * staging seeder does not populate `artists`, so it needs the separate backfill
  * noted on its entry. If an id or slug 404s, the sweep records a
  * load error (spec: "route fails to load → recorded as a sweep error in the
@@ -130,8 +129,8 @@ const manifest: AuditManifest = validateManifest([
     ],
   },
   {
-    id: 'admin-contests',
-    path: '/admin/review/contests/36ee6949-8d3f-2988-d3b8-b89c4205406b',
+    id: 'admin-needs-you',
+    path: '/admin/needs-you',
     tags: ['admin'],
     auth: 'admin',
   },

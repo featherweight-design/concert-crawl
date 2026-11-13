@@ -1,20 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { useState } from 'react';
 import {
-  ConfidenceBar,
   AdminButton,
   Pagination,
   StatusBadge,
 } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { MissingTabContent } from './_tabs/MissingTabContent';
 import {
   AllEventsTabContent,
   type AllEventsApi,
 } from './_tabs/AllEventsTabContent';
-import { ContestsTabContent } from './_tabs/ContestsTabContent';
 import {
   SubmissionsTabContent,
   type SubmissionsTabContentProps,
@@ -22,26 +18,7 @@ import {
 import { type ReviewTabKey } from '@/lib/admin/review-tabs';
 import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters';
 import { type AllEvent } from './all/types';
-import { type MissingRowEvent } from './missing/MissingRow';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
-
-interface EventFlag {
-  id: string;
-  title: string;
-  artist: string | null;
-  date: string;
-  doorsTime: string | null;
-  showTime: string | null;
-  ticketPriceMin: string | null;
-  ticketPriceMax: string | null;
-  confidenceScore: number | null;
-  extractionStrategy: string | null;
-  sourceUrl: string | null;
-  genre: string[] | null;
-  createdAt: string;
-  venueId: string;
-  venueName: string | null;
-}
 
 interface PriceEvent {
   eventId: string;
@@ -58,10 +35,7 @@ interface PriceEvent {
 }
 
 interface AdminReviewMobileProps {
-  events: EventFlag[];
   priceEvents: PriceEvent[];
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
   onAddPrice?: (
     eventId: string,
     priceMin: string,
@@ -70,10 +44,7 @@ interface AdminReviewMobileProps {
     howFound: string,
   ) => Promise<void>;
   initialTab?: ReviewTabKey;
-  contestCount?: number;
-  // Server counts, not page lengths. `events` holds a single paginated page,
-  // so its length understates the queue as soon as the queue exceeds one page.
-  eventFlagsCount?: number;
+  // Server count, not a page length.
   submissionsCount?: number;
   initialSubmissions?: SubmissionsTabContentProps['initialSubmissions'];
   initialSubmissionsTotal?: SubmissionsTabContentProps['initialTotal'];
@@ -90,18 +61,6 @@ interface AdminReviewMobileProps {
   onTogglePriceFilter: () => void;
   onPriceEventsPageChange: (next: number) => void;
   onPriceEventsPageSizeChange: (next: number) => void;
-  missingEvents: MissingRowEvent[];
-  missingLoading?: boolean;
-  missingPage?: number;
-  missingPageSize?: number;
-  missingTotal?: number;
-  onMissingPageChange?: (next: number) => void;
-  onMissingPageSizeChange?: (next: number) => void;
-  onMarkMissingPostponed: (id: string) => Promise<void>;
-  onMarkMissingCancelled: (id: string) => Promise<void>;
-  onDismissMissing: (id: string) => Promise<void>;
-  onConfirmMissingMove: (event: MissingRowEvent) => Promise<void>;
-  onEnterMissingTab?: () => void;
   onAllEventsRowClick?: (id: string) => void;
   allEventsFilters?: AllEventsFilters;
   onAllEventsFiltersChange?: (next: AllEventsFilters) => void;
@@ -113,192 +72,6 @@ interface AdminReviewMobileProps {
   allEventsApi?: AllEventsApi;
   onAllEventsEdit?: (event: AllEvent) => void;
   onAllEventsViewDetail?: (event: AllEvent) => void;
-}
-
-function getEventFlagChips(
-  ev: EventFlag,
-): { label: string; kind: 'warning' | 'signal' | 'neutral' }[] {
-  const chips: { label: string; kind: 'warning' | 'signal' | 'neutral' }[] = [];
-  if (!ev.title) chips.push({ label: 'title missing', kind: 'warning' });
-  if (!ev.artist) chips.push({ label: 'artist missing', kind: 'warning' });
-  if (ev.confidenceScore !== null && ev.confidenceScore < 0.5) {
-    chips.push({ label: 'low confidence', kind: 'warning' });
-  }
-  if (ev.extractionStrategy === 'llm') {
-    chips.push({ label: 'llm source', kind: 'signal' });
-  }
-  if (!ev.ticketPriceMin) chips.push({ label: 'no price', kind: 'neutral' });
-  return chips;
-}
-
-function EventFlagCard({
-  event,
-  onApprove,
-  onReject,
-}: {
-  event: EventFlag;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-}) {
-  const [reasonOpen, setReasonOpen] = useState(false);
-  const chips = getEventFlagChips(event);
-
-  return (
-    <div
-      style={{
-        padding: '12px 14px',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--bg-elevated)',
-      }}
-    >
-      {/* Title + venue/date */}
-      <div
-        style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: 14,
-          fontWeight: 700,
-          color: 'var(--fg)',
-          letterSpacing: '-0.01em',
-          lineHeight: 1.35,
-          marginBottom: 2,
-        }}
-      >
-        {event.title}
-      </div>
-      <div
-        style={{
-          fontFamily: "'Inter', sans-serif",
-          fontSize: 12,
-          color: 'var(--fg-muted)',
-          marginBottom: 10,
-        }}
-      >
-        {event.venueName ?? event.venueId} ·{' '}
-        {new Date(event.date + 'T12:00:00').toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        })}
-        {event.showTime
-          ? ` ${new Date(`1970-01-01T${event.showTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-          : ''}
-      </div>
-
-      {/* Confidence bar */}
-      <div style={{ marginBottom: 10 }}>
-        <ConfidenceBar score={event.confidenceScore ?? 0} />
-      </div>
-
-      {/* Flag chips */}
-      {chips.length > 0 && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 6,
-            marginBottom: 10,
-          }}
-        >
-          {chips.map((chip) => (
-            <StatusBadge key={chip.label} kind={chip.kind} variant="outline">
-              {chip.label}
-            </StatusBadge>
-          ))}
-          {event.genre?.map((tag) => (
-            <StatusBadge key={tag} kind="neutral" variant="outline">
-              {tag}
-            </StatusBadge>
-          ))}
-        </div>
-      )}
-
-      {/* LLM reasoning disclosure */}
-      <div style={{ marginBottom: 12 }}>
-        <button
-          type="button"
-          onClick={() => setReasonOpen((prev) => !prev)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 12,
-            fontWeight: 600,
-            color: 'var(--accent)',
-          }}
-        >
-          <span style={{ fontSize: 10 }}>{reasonOpen ? '▼' : '▶'}</span>
-          {ADMIN_COPY.review.adminReviewMobile.llmReasoning}
-        </button>
-        {reasonOpen && (
-          <div
-            style={{
-              marginTop: 8,
-              padding: '10px 12px',
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11,
-              color: 'var(--fg-muted)',
-              lineHeight: 1.6,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-            }}
-          >
-            <div>
-              <span style={{ color: 'var(--fg-subtle)', fontWeight: 700 }}>
-                {ADMIN_COPY.review.adminReviewMobile.llmDetailsStrategy}{' '}
-              </span>
-              {event.extractionStrategy ?? '—'}
-            </div>
-            <div>
-              <span style={{ color: 'var(--fg-subtle)', fontWeight: 700 }}>
-                {ADMIN_COPY.review.adminReviewMobile.llmDetailsConfidence}{' '}
-              </span>
-              {event.confidenceScore !== null
-                ? `${Math.round(event.confidenceScore * 100)}%`
-                : '—'}
-            </div>
-            {event.sourceUrl && (
-              <div>
-                <span style={{ color: 'var(--fg-subtle)', fontWeight: 700 }}>
-                  {ADMIN_COPY.review.adminReviewMobile.llmDetailsSource}{' '}
-                </span>
-                <span style={{ wordBreak: 'break-all' }}>
-                  {event.sourceUrl}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <AdminButton
-          variant="ghost"
-          size="sm"
-          fullWidth
-          onClick={() => onReject(event.id)}
-        >
-          {ADMIN_COPY.review.adminReviewMobile.rejectEvent}
-        </AdminButton>
-        <AdminButton
-          variant="success"
-          size="sm"
-          fullWidth
-          onClick={() => onApprove(event.id)}
-        >
-          {ADMIN_COPY.review.adminReviewMobile.approveEvent}
-        </AdminButton>
-      </div>
-    </div>
-  );
 }
 
 function NeedsPriceRow({
@@ -586,14 +359,9 @@ function NeedsPriceRow({
 }
 
 export function AdminReviewMobile({
-  events,
   priceEvents,
-  onApprove,
-  onReject,
   onAddPrice,
-  initialTab = 'event-flags',
-  contestCount = 0,
-  eventFlagsCount = 0,
+  initialTab = 'prices',
   submissionsCount = 0,
   initialSubmissions = [],
   initialSubmissionsTotal = 0,
@@ -605,18 +373,6 @@ export function AdminReviewMobile({
   onTogglePriceFilter,
   onPriceEventsPageChange,
   onPriceEventsPageSizeChange,
-  missingEvents,
-  missingLoading = false,
-  missingPage,
-  missingPageSize,
-  missingTotal,
-  onMissingPageChange,
-  onMissingPageSizeChange,
-  onMarkMissingPostponed,
-  onMarkMissingCancelled,
-  onDismissMissing,
-  onConfirmMissingMove,
-  onEnterMissingTab,
   onAllEventsRowClick,
   allEventsFilters,
   onAllEventsFiltersChange,
@@ -628,18 +384,8 @@ export function AdminReviewMobile({
 }: AdminReviewMobileProps) {
   const [activeTab, setActiveTab] = useState<ReviewTabKey>(initialTab);
 
-  // If the mobile surface mounts already on the Missing tab (deep-link via
-  // ?tab=missing), trigger the lazy fetch — the tab-click handler only
-  // fires on subsequent user clicks.
-  useEffect(() => {
-    if (initialTab === 'missing' && onEnterMissingTab) onEnterMissingTab();
-    // initialTab + onEnterMissingTab are stable for the lifetime of this mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const onTabChange = (key: ReviewTabKey) => {
     setActiveTab(key);
-    if (key === 'missing' && onEnterMissingTab) onEnterMissingTab();
   };
 
   const noopRowClick = (_id: string): void => undefined;
@@ -663,11 +409,6 @@ export function AdminReviewMobile({
 
   const tabOptions = [
     {
-      key: 'event-flags',
-      label: ADMIN_COPY.review.adminReviewMobile.tabEventFlags,
-      count: eventFlagsCount,
-    },
-    {
       key: 'prices',
       label: ADMIN_COPY.review.tabs.prices,
       count: 0,
@@ -677,17 +418,7 @@ export function AdminReviewMobile({
       label: ADMIN_COPY.review.tabs.submissions,
       count: submissionsCount,
     },
-    {
-      key: 'missing',
-      label: ADMIN_COPY.review.tabs.missing,
-      count: 0,
-    },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents, count: 0 },
-    {
-      key: 'contests',
-      label: ADMIN_COPY.review.tabs.contests,
-      count: contestCount,
-    },
   ] as const;
 
   const cardStyle: React.CSSProperties = {
@@ -707,10 +438,9 @@ export function AdminReviewMobile({
       }}
     >
       {/*
-        Tab switcher — a native <select> rather than a pill row. Six tabs
-        can't fit one 320px row without clipping the last tab,
-        and wrapping to a second row eats scarce mobile vertical space. Mirrors
-        the below-`sm` fallback in ReviewTabs (the desktop surface). #1028
+        Tab switcher — a native <select> rather than a pill row. Keeps
+        the mobile shell one control tall and mirrors the below-`sm` fallback
+        in ReviewTabs (the desktop surface). #1028
       */}
       <select
         aria-label={ADMIN_COPY.review.tabs.ariaLabel}
@@ -738,84 +468,6 @@ export function AdminReviewMobile({
           </option>
         ))}
       </select>
-
-      {/* Event flags tab — fills remaining height, scrolls internally */}
-      {activeTab === 'event-flags' && (
-        <div
-          style={{
-            ...cardStyle,
-            flex: 1,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {events.length === 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 16,
-                  padding: '48px 32px',
-                  textAlign: 'center',
-                  height: '100%',
-                }}
-              >
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    background:
-                      'color-mix(in oklab, var(--success) 16%, transparent)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={24} color="var(--success)" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 17,
-                      fontWeight: 700,
-                      color: 'var(--fg)',
-                      marginBottom: 8,
-                    }}
-                  >
-                    {ADMIN_COPY.review.adminReviewMobile.queueClearHeading}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 14,
-                      color: 'var(--fg-muted)',
-                      lineHeight: 1.5,
-                      maxWidth: 260,
-                    }}
-                  >
-                    {ADMIN_COPY.review.adminReviewMobile.queueClearBody}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              events.map((ev) => (
-                <EventFlagCard
-                  key={ev.id}
-                  event={ev}
-                  onApprove={onApprove}
-                  onReject={onReject}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Price coverage tab — the needs-price table fills the available height */}
       {activeTab === 'prices' && (
@@ -915,36 +567,6 @@ export function AdminReviewMobile({
         </div>
       )}
 
-      {/* Missing tab — fills remaining height, scrolls internally. Routes
-          through the same MissingTabContent orchestrator the desktop uses
-          (with isDesktop={false}) so pending-action disable + optimistic
-          remove behaviour is identical across surfaces. */}
-      {activeTab === 'missing' && (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <MissingTabContent
-            events={missingEvents}
-            isDesktop={false}
-            nowIso={new Date().toISOString()}
-            loading={missingLoading}
-            {...(missingPage !== undefined ? { page: missingPage } : {})}
-            {...(missingPageSize !== undefined
-              ? { pageSize: missingPageSize }
-              : {})}
-            {...(missingTotal !== undefined ? { total: missingTotal } : {})}
-            {...(onMissingPageChange
-              ? { onPageChange: onMissingPageChange }
-              : {})}
-            {...(onMissingPageSizeChange
-              ? { onPageSizeChange: onMissingPageSizeChange }
-              : {})}
-            onMarkPostponed={onMarkMissingPostponed}
-            onMarkCancelled={onMarkMissingCancelled}
-            onDismiss={onDismissMissing}
-            onConfirmMove={onConfirmMissingMove}
-          />
-        </div>
-      )}
-
       {activeTab === 'all-events' && (
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           <AllEventsTabContent
@@ -964,12 +586,6 @@ export function AdminReviewMobile({
               ? { onViewDetail: onAllEventsViewDetail }
               : {})}
           />
-        </div>
-      )}
-
-      {activeTab === 'contests' && (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <ContestsTabContent />
         </div>
       )}
     </div>
