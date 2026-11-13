@@ -1,3 +1,13 @@
+## [1.407.1](https://github.com/featherweight-design/concert-crawl/compare/v1.407.0...v1.407.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** build the No longer listed and cancelled event hero to the boards ([7b5a2b1](https://github.com/featherweight-design/concert-crawl/commit/7b5a2b1416d279cf72ae30911b6170cbe099986b))
+* **web:** clear NLL hero chip, no stranded support separator, phone hero ends under the title ([11ed4f6](https://github.com/featherweight-design/concert-crawl/commit/11ed4f6dc68c0ceb6a94e7cb8d48b253503a5073))
+* **web:** keep each support-line name whole on the event stage ([980d87a](https://github.com/featherweight-design/concert-crawl/commit/980d87a39b9328706ccc8edf04a6ed194797bde8))
+* **web:** keep support-line names whole with inline-blocks, hide hero chip ([c9143b9](https://github.com/featherweight-design/concert-crawl/commit/c9143b96213c48cdcef3813812817d90cebab85d))
+
 # [1.407.0](https://github.com/featherweight-design/concert-crawl/compare/v1.406.0...v1.407.0) (2026-11-13)
 
 
