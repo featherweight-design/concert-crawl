@@ -1,0 +1,75 @@
+{
+  "feature": "Crews fidelity · invite sheet, options, Start a crew, rows, widths, Been there",
+  "note": "Boards: design/design_handoff_bplus_redesign/screens/07-more-screens/ more-r3-crew_invite(_m), crew_options(_m), crew_start(_m), crews(_m), crew_been_m, crew_home. The Start a crew cell runs first and makes a crew, so the later cells have one to open; each width makes another. The invite cell mints a link, a local write.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "crews-start",
+      "label": "Start a crew sheet, name typed",
+      "steps": [
+        { "goto": "/crews", "wait": "button:has-text(\"Start a crew\")" },
+        { "clickRole": "button", "name": "^Start a crew" },
+        { "waitDialog": "^Start a crew$" },
+        {
+          "fill": ".crew-name-input",
+          "text": "Thursdays",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "crews-make",
+      "label": "Make the crew, land on its home",
+      "steps": [
+        { "goto": "/crews", "wait": "button:has-text(\"Start a crew\")" },
+        { "clickRole": "button", "name": "^Start a crew" },
+        { "waitDialog": "^Start a crew$" },
+        { "fill": ".crew-name-input", "text": "Thursdays" },
+        { "clickRole": "button", "name": "^Make the crew$" },
+        { "wait": "[role=tab], [role=tablist]", "settle": 2500 }
+      ]
+    },
+    {
+      "id": "crews-list",
+      "label": "Crews list with a crew row",
+      "steps": [
+        { "goto": "/crews", "wait": "a[href^=\"/crews/\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crews-options",
+      "label": "Crew options",
+      "steps": [
+        { "goto": "/crews", "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"]" },
+        { "clickRole": "button", "name": "^Crew options$" },
+        { "waitDialog": "^Crew options$", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crews-invite",
+      "label": "Invite sheet",
+      "steps": [
+        { "goto": "/crews", "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"]" },
+        { "clickRole": "button", "name": "^Invite people$" },
+        { "waitDialog": "^Invite people$" },
+        { "wait": "[data-testid=\"invite-expiry-bar\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "crews-been-there",
+      "label": "Crew home, Been there empty",
+      "steps": [
+        { "goto": "/crews", "wait": "a[href^=\"/crews/\"]" },
+        { "click": "a[href^=\"/crews/\"]" },
+        { "clickRole": "tab", "name": "^Been there" },
+        { "wait": "[data-testid=\"empty-state-stubs\"]", "settle": 600 }
+      ]
+    }
+  ]
+}
