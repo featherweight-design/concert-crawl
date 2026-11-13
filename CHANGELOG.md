@@ -1,3 +1,17 @@
+# [1.404.0](https://github.com/featherweight-design/concert-crawl/compare/v1.403.0...v1.404.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** claim the show inside the add transaction, share the Denver date ([957feed](https://github.com/featherweight-design/concert-crawl/commit/957feed10902759b5d37ca5499a32a7d26b0b6b9))
+* **api:** name the tab count columns ([eb1dea6](https://github.com/featherweight-design/concert-crawl/commit/eb1dea65afa41119a9f71fc1903d22af4f24c759))
+* **api:** read the Watching count as a number ([416164c](https://github.com/featherweight-design/concert-crawl/commit/416164cdd269fe73bad45e69a59976a0ba47f9fb))
+
+
+### Features
+
+* **api:** missing-price tab order, next cursor, tab counts, no overwrite ([cfe10a2](https://github.com/featherweight-design/concert-crawl/commit/cfe10a2792534b9fac474808fc6fa3d48a6f0878))
+
 # [1.403.0](https://github.com/featherweight-design/concert-crawl/compare/v1.402.0...v1.403.0) (2026-11-13)
 
 
