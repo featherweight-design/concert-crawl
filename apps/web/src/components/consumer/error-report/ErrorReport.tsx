@@ -57,7 +57,9 @@ export const ErrorReport = ({
   if (isSignedIn !== true) return null;
 
   if (variant === 'card') {
-    return <ErrorTellUsCard errorId={error.digest ?? sentryEventId} />;
+    return (
+      <ErrorTellUsCard digest={error.digest} sentryEventId={sentryEventId} />
+    );
   }
 
   return (

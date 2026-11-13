@@ -19,7 +19,9 @@ const isPending = (value: unknown): value is PendingReport => {
     typeof record['note'] === 'string' &&
     typeof record['page'] === 'string' &&
     typeof record['savedAt'] === 'number' &&
-    (record['errorId'] === undefined || typeof record['errorId'] === 'string')
+    (record['digest'] === undefined || typeof record['digest'] === 'string') &&
+    (record['sentryEventId'] === undefined ||
+      typeof record['sentryEventId'] === 'string')
   );
 };
 

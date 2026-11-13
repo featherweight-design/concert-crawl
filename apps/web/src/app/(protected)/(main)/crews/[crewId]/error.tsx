@@ -32,7 +32,7 @@ export default function CrewError({
       onRetry={retry}
       onSignOut={() => void signOut(() => router.push('/'))}
     >
-      <ErrorReport error={error} />
+      <ErrorReport error={error} variant="card" />
     </StandaloneError>
   );
 }

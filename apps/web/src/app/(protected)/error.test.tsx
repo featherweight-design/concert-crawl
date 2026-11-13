@@ -24,7 +24,7 @@ vi.mock('@clerk/nextjs', () => ({
   useClerk: () => ({ signOut: vi.fn() }),
 }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
   usePathname: () => '/crews',
 }));
 
@@ -33,22 +33,11 @@ const fetchMock = vi.fn(async (_url: string, _init: { body: string }) => ({
 }));
 
 beforeEach(() => {
-  // ModalShell picks sheet or dialog by viewport.
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    })),
-  });
   captureException.mockClear();
   sentryEnabled.current = true;
   fetchMock.mockClear();
   auth.isSignedIn = true;
+  localStorage.clear();
   vi.stubGlobal('fetch', fetchMock);
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -59,7 +48,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const COPY = CONSUMER_COPY.errorReport;
+const CARD = CONSUMER_COPY.errorReport.card;
+
+const sendWith = (chip: string, note?: string) => {
+  fireEvent.click(screen.getByRole('radio', { name: chip }));
+  if (note !== undefined) {
+    fireEvent.change(screen.getByLabelText(CARD.noteLabel), {
+      target: { value: note },
+    });
+  }
+  fireEvent.click(screen.getByRole('button', { name: `${CARD.send} →` }));
+};
 
 describe('ProtectedError', () => {
   it('reports a browser throw to Sentry once, however often it mounts', () => {
@@ -78,74 +77,55 @@ describe('ProtectedError', () => {
     expect(captureException).not.toHaveBeenCalled();
   });
 
-  it('hides the report link from a signed-out visitor', () => {
+  it('hides the Tell us card from a signed-out visitor', () => {
     auth.isSignedIn = false;
     render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    expect(screen.queryByText(CONSUMER_COPY.error.reportLink)).toBeNull();
+    expect(screen.queryByTestId('error-tell-us-card')).toBeNull();
   });
 
-  it('files the report with the error id and the reporter words', async () => {
+  it('files the report with the chip, the note and the browser throw’s event id', async () => {
     render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-
-    const [what, doing] = screen.getAllByRole('textbox');
-    fireEvent.change(what!, { target: { value: 'Blank page' } });
-    fireEvent.change(doing!, { target: { value: 'Opening crews' } });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    sendWith('Opening a show', 'Blank page');
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const init = fetchMock.mock.calls[0]?.[1];
     expect(JSON.parse(init?.body ?? '{}')).toMatchObject({
       category: 'bug',
-      message: 'Blank page',
+      message: 'Opening a show. Blank page',
       pageUrl: '/crews',
       metadata: {
         source: 'error',
-        doing: 'Opening crews',
+        doing: 'Opening a show',
         sentryEventId: 'evt123',
       },
     });
-    await waitFor(() =>
-      expect(screen.getAllByText(COPY.sentTitle).length).toBeGreaterThan(0),
-    );
+    expect(
+      await screen.findByRole('heading', { name: CARD.sentHeading }),
+    ).toBeTruthy();
+  });
+
+  it('one tap is a complete report: the chip alone, no note', async () => {
+    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
+    sendWith('Searching');
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(
+      JSON.parse(fetchMock.mock.calls[0]?.[1]?.body ?? '{}'),
+    ).toMatchObject({ message: 'Searching', metadata: { doing: 'Searching' } });
   });
 
   it('records no event id when Sentry is off, so none points nowhere', async () => {
     sentryEnabled.current = false;
     render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    sendWith('Searching');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[1]?.body).not.toContain('sentryEventId');
-  });
-
-  it('opens a fresh form after one report was sent', async () => {
-    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
-    await waitFor(() =>
-      expect(screen.getAllByText(COPY.sentTitle).length).toBeGreaterThan(0),
-    );
-    fireEvent.click(screen.getAllByText(COPY.close)[0]!);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    expect(screen.queryByText(COPY.sentTitle)).toBeNull();
-    expect(screen.getAllByRole('textbox')[0]).toHaveProperty('value', '');
   });
 
   it('carries a server throw by its digest, and an id of another shape not at all', async () => {
     const error = Object.assign(new Error('server'), { digest: '4242' });
     render(<ProtectedError error={error} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    sendWith('Searching');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(
       JSON.parse(fetchMock.mock.calls[0]?.[1]?.body ?? '{}'),
@@ -157,11 +137,7 @@ describe('ProtectedError', () => {
     fetchMock.mockClear();
     const odd = Object.assign(new Error('lib'), { digest: 'NEXT:REDIRECT;x' });
     render(<ProtectedError error={odd} reset={vi.fn()} />);
-    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
-    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
-      target: { value: 'Blank' },
-    });
-    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    sendWith('Searching');
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(fetchMock.mock.calls[0]?.[1]?.body).not.toContain('digest');
   });
