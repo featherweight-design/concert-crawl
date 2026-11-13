@@ -34,18 +34,19 @@ export const shortDate = (date: string): string => {
     .replace(',', '');
 };
 
-// Host fragment to the ticket vendors the price form already knows (#1193).
+// Ticket vendors the price form already knows (#1193), by their domain. A host
+// matches the domain itself or any subdomain of it, never a look-alike.
 const VENDOR_HOSTS: readonly (readonly [string, Vendor])[] = [
   ['axs.com', 'AXS'],
-  ['ticketmaster.', 'Ticketmaster'],
-  ['seatgeek.', 'SeatGeek'],
+  ['ticketmaster.com', 'Ticketmaster'],
+  ['seatgeek.com', 'SeatGeek'],
   ['dice.fm', 'DICE'],
-  ['eventbrite.', 'Eventbrite'],
+  ['eventbrite.com', 'Eventbrite'],
   ['etix.com', 'Etix'],
-  ['stubhub.', 'StubHub'],
-  ['vividseats.', 'VividSeats'],
-  ['viagogo.', 'Viagogo'],
-  ['ticketnetwork.', 'TicketNetwork'],
+  ['stubhub.com', 'StubHub'],
+  ['vividseats.com', 'VividSeats'],
+  ['viagogo.com', 'Viagogo'],
+  ['ticketnetwork.com', 'TicketNetwork'],
 ];
 
 /** A web address typed without its scheme still counts as an address. */
@@ -68,7 +69,9 @@ export const vendorOfUrl = (text: string): Vendor => {
   const url = asHttpUrl(text);
   if (url === null) return 'Other';
   const host = new URL(url).hostname.toLowerCase();
-  const found = VENDOR_HOSTS.find(([fragment]) => host.includes(fragment));
+  const found = VENDOR_HOSTS.find(
+    ([domain]) => host === domain || host.endsWith(`.${domain}`),
+  );
   return found ? found[1] : 'Other';
 };
 

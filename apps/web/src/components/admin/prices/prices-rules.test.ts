@@ -30,6 +30,12 @@ describe('vendorOfUrl', () => {
     expect(vendorOfUrl('https://www.etix.com/ticket/p/1')).toBe('Etix');
   });
 
+  it('does not match a look-alike host', () => {
+    expect(vendorOfUrl('https://notaxs.com/e/1')).toBe('Other');
+    expect(vendorOfUrl('https://axs.com.evil.example/e/1')).toBe('Other');
+    expect(vendorOfUrl('https://ndice.fm/x')).toBe('Other');
+  });
+
   it('falls back to Other for an unknown host or no address', () => {
     expect(vendorOfUrl('https://example.org/tickets')).toBe('Other');
     expect(vendorOfUrl('not a url')).toBe('Other');
