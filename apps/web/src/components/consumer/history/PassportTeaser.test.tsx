@@ -5,6 +5,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
 import {
+  denverYear,
   PassportTeaser,
   TEASER_SHELL_STYLE,
   TEASER_STAMP_GROUND,
@@ -61,11 +62,15 @@ describe('PassportTeaser', () => {
   it('draws the eyebrow with the year, the title and the link as the board does', () => {
     render(<PassportTeaser stats={STATS} shows={SHOWS} />);
 
-    expect(
-      screen.getByText(COPY.eyebrow(new Date().getFullYear())),
-    ).toBeInTheDocument();
+    expect(screen.getByText(COPY.eyebrow(denverYear()))).toBeInTheDocument();
     expect(COPY.headline).toBe('Your Passport');
     expect(screen.getByText('Open it →')).toBeInTheDocument();
+  });
+
+  // 00:30 UTC on New Year's Day is still New Year's Eve in Denver.
+  it('reads the year in Mountain Time', () => {
+    expect(denverYear(new Date('2027-01-01T00:30:00Z'))).toBe(2026);
+    expect(denverYear(new Date('2027-01-01T08:00:00Z'))).toBe(2027);
   });
 
   it('drops the genre segment when there is no top genre', () => {
