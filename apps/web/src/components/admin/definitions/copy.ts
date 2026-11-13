@@ -823,8 +823,11 @@ export const ADMIN_COPY = {
     noPages: 'No pages were kept for this run.',
     // "200 · 1.9 MB"
     pageLine: (parts: readonly string[]) => parts.join(' · '),
-    // A request that never got an HTTP status.
-    noResponse: 'No response',
+    // A page stored without an HTTP status (a platform or API read): neutral,
+    // not a failure.
+    noStatus: '—',
+    // After a page's URL when it redirected: "→ …/events/2026".
+    redirectedTo: (url: string) => `→ ${url}`,
     firstFailure: 'First failure',
     bytes: (count: number) => `${count.toLocaleString('en-US')} B`,
     kilobytes: (count: number) => `${count.toLocaleString('en-US')} KB`,

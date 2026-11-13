@@ -160,22 +160,31 @@ const hostOf = (url: string): string | null => {
   }
 };
 
-const restOf = (url: string): string => {
+/** The path and query, "/" for the root: "/events?page=2". */
+const pathOf = (url: string): string => {
   const parsed = new URL(url);
-  const path = parsed.pathname === '/' ? '' : parsed.pathname;
-  return `${path}${parsed.search}`;
+  return `${parsed.pathname}${parsed.search}`;
+};
+
+/** The path and query after the host, "" for a bare root. */
+const restOf = (url: string): string => {
+  const path = pathOf(url);
+  return path === '/' ? '' : path;
 };
 
 /**
  * A page's URL as the board shortens it: "ballarena.com/events" for the
- * first, "…/events?page=2" for a later page on the same host. A URL that
- * won't parse reads as itself.
+ * first (`firstUrl` null), "…/events?page=2" for a later page on the same
+ * host. A later page whose remainder is empty or that repeats the first URL
+ * (a retry) reads as its path, "/" or "/events", so it stays distinct. A URL
+ * that won't parse reads as itself.
  */
-export const shortUrl = (url: string, firstUrl: string): string => {
+export const shortUrl = (url: string, firstUrl: string | null): string => {
   const host = hostOf(url);
   if (host === null) return url;
   const rest = restOf(url);
-  if (url !== firstUrl && host === hostOf(firstUrl) && rest !== '') {
+  if (firstUrl !== null && host === hostOf(firstUrl)) {
+    if (rest === '' || url === firstUrl) return pathOf(url);
     return `…${rest}`;
   }
   return `${host}${rest}`;
@@ -184,19 +193,24 @@ export const shortUrl = (url: string, firstUrl: string): string => {
 const KB = 1024;
 const MB = KB * 1024;
 
-/** "1.9 MB", "640 KB", "512 B". */
+/**
+ * "1.9 MB", "640 KB", "512 B". Rounded first, then the unit chosen, so a
+ * size that rounds to 1,024 KB reads "1.0 MB".
+ */
 export const pageSize = (bytes: number): string => {
-  if (bytes >= MB) return DETAIL.megabytes((bytes / MB).toFixed(1));
-  if (bytes >= KB) return DETAIL.kilobytes(Math.round(bytes / KB));
+  const kilobytes = Math.round(bytes / KB);
+  if (kilobytes >= KB) return DETAIL.megabytes((bytes / MB).toFixed(1));
+  if (bytes >= KB) return DETAIL.kilobytes(kilobytes);
   return DETAIL.bytes(bytes);
 };
 
 /**
- * A page that failed: an error status (4xx, 5xx) or no response at all.
- * 2xx and 3xx (a redirect, a 304 Not Modified) are not failures.
+ * A page that failed: an error status (4xx, 5xx). 2xx and 3xx (a redirect, a
+ * 304 Not Modified) are not failures, nor is a page stored without a status
+ * (a platform or API read).
  */
 export const isFailedPage = (page: Pick<RunPage, 'httpStatus'>): boolean =>
-  page.httpStatus === null || page.httpStatus >= 400;
+  page.httpStatus !== null && page.httpStatus >= 400;
 
 /** The first failed page, the one the list marks; -1 when none failed. */
 export const firstFailedPage = (
@@ -204,11 +218,11 @@ export const firstFailedPage = (
 ): number => pages.findIndex(isFailedPage);
 
 /**
- * "200 · 1.9 MB". No per-page time is stored, so the board's third part is
- * left off.
+ * "200 · 1.9 MB", or "— · 1.9 MB" without a status. No per-page time is
+ * stored, so the board's third part is left off.
  */
 export const pageLine = (page: Pick<RunPage, 'httpStatus' | 'bytes'>): string =>
   DETAIL.pageLine([
-    page.httpStatus === null ? DETAIL.noResponse : String(page.httpStatus),
+    page.httpStatus === null ? DETAIL.noStatus : String(page.httpStatus),
     ...(page.bytes === null ? [] : [pageSize(page.bytes)]),
   ]);

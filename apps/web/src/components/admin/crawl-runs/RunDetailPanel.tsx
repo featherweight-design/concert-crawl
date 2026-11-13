@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
 import { ExternalLink } from 'lucide-react';
@@ -15,8 +15,8 @@ import {
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { apiClient } from '@/lib/api';
 import {
+  runWhen,
   shortDate,
-  shortTime,
 } from '@/components/admin/venues/overview/overview-rules';
 import { RunChip } from './RunChip';
 import { parseRunPages, type RunPage, type RunRow } from './run-data';
@@ -45,10 +45,15 @@ type PagesState =
 /**
  * A run's pages, fetched when the detail opens. The result is keyed by run
  * and attempt, so a stale answer never shows under another run and loading
- * is derived rather than set.
+ * is derived rather than set. `getToken` sits in a ref: Clerk may hand over
+ * a new function on any render, and that must not fetch the pages again.
  */
 const useRunPages = (runId: string) => {
   const { getToken } = useAuth();
+  const tokenRef = useRef(getToken);
+  useEffect(() => {
+    tokenRef.current = getToken;
+  });
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<PagesState | null>(null);
   const key = `${runId}:${attempt}`;
@@ -56,7 +61,7 @@ const useRunPages = (runId: string) => {
     let live = true;
     const load = async () => {
       try {
-        const token = await getToken();
+        const token = await tokenRef.current();
         if (!token) throw new Error('No session token');
         const raw = await apiClient.get<unknown>(
           `/v1/admin/crawl/runs/${encodeURIComponent(runId)}/pages`,
@@ -74,7 +79,7 @@ const useRunPages = (runId: string) => {
     return () => {
       live = false;
     };
-  }, [runId, key, getToken]);
+  }, [runId, key]);
   return {
     state: state?.key === key ? state : null,
     retry: () => setAttempt((count) => count + 1),
@@ -82,40 +87,38 @@ const useRunPages = (runId: string) => {
 };
 
 /**
- * A page's URL as the board shortens it. The full URL is never a hover
- * tooltip (no `title=`, house rule): the short form opens to show it, as a
- * link to the page.
+ * A page's URL as the board shortens it, as a link to the full URL, which is
+ * also its accessible name. Never a hover tooltip (no `title=`, house rule).
+ * A redirect shows where it landed after it: "→ …/events/2026". `firstUrl` is
+ * null for the first page.
  */
-const PageUrl = ({ url, firstUrl }: { url: string; firstUrl: string }) => {
-  const short = shortUrl(url, firstUrl);
-  const text: CSSProperties = {
-    color: 'var(--fg-muted)',
-    minWidth: 0,
-    overflowWrap: 'anywhere',
-  };
-  if (short === url) {
-    return (
-      <SafeExternalLink href={url} style={text}>
-        {url}
-      </SafeExternalLink>
-    );
-  }
+const PageUrl = ({
+  page,
+  firstUrl,
+}: {
+  page: RunPage;
+  firstUrl: string | null;
+}) => {
+  const { url, finalUrl } = page;
+  const redirected = finalUrl !== null && finalUrl !== url;
   return (
-    <details data-testid="run-page-url" style={text}>
-      <summary style={{ cursor: 'pointer' }}>{short}</summary>
-      <SafeExternalLink
-        href={url}
-        style={{
-          display: 'block',
-          marginTop: 4,
-          fontSize: 12,
-          color: 'var(--fg)',
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {url}
+    <span
+      data-testid="run-page-url"
+      style={{
+        color: 'var(--fg-muted)',
+        minWidth: 0,
+        overflowWrap: 'anywhere',
+      }}
+    >
+      <SafeExternalLink href={url} ariaLabel={url} style={{ color: 'inherit' }}>
+        {shortUrl(url, firstUrl)}
       </SafeExternalLink>
-    </details>
+      {redirected && (
+        <span data-testid="run-page-redirect" style={{ marginLeft: 6 }}>
+          {COPY.redirectedTo(shortUrl(finalUrl, url))}
+        </span>
+      )}
+    </span>
   );
 };
 
@@ -164,7 +167,7 @@ const Pages = ({ runId }: { runId: string }) => {
             borderTop: '1px solid var(--border)',
           }}
         >
-          <PageUrl url={page.url} firstUrl={firstUrl} />
+          <PageUrl page={page} firstUrl={index === 0 ? null : firstUrl} />
           <span
             style={{
               display: 'inline-flex',
@@ -283,8 +286,7 @@ export const RunDetailPanel = ({
 }) => {
   const summary = runSummary(run, lastFullRun);
   const meta = COPY.meta([
-    shortDate(run.createdAt),
-    shortTime(run.createdAt),
+    runWhen(run.createdAt),
     ...(run.durationMs === null ? [] : [runDuration(run.durationMs)]),
     runCost(run.llmCostUsd),
   ]);

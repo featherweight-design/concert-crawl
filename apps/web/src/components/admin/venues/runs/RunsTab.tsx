@@ -35,7 +35,11 @@ import {
   type RunFilter,
 } from '@/components/admin/crawl-runs/runs-rules';
 import { apiClient } from '@/lib/api';
-import { venueRunHref, venueTabHref } from '@/lib/admin/venue-tabs';
+import {
+  parseVenueRun,
+  venueRunHref,
+  venueTabHref,
+} from '@/lib/admin/venue-tabs';
 
 const COPY = ADMIN_COPY.venueRuns;
 
@@ -60,7 +64,8 @@ const replaceUrl = (href: string) =>
  * run) does the same for that row and scrolls it into view; a `?run=` not
  * among the loaded rows is dropped from the URL. Leaving the tab closes the
  * detail: the panel stays mounted, only hidden, and a dialog must not stay
- * open behind another tab.
+ * open behind another tab. Coming back reads `?run=` from the URL again, so
+ * Overview's Open run reopens a run even when `initialRun` hasn't changed.
  *
  * The first page comes from the server; Load more re-asks the API with a
  * bigger `limit` (there is no cursor), up to its cap of 100.
@@ -144,6 +149,24 @@ export const RunsTab = ({
     const inUrl = new URLSearchParams(window.location.search).get('run');
     if (inUrl === initialRun) replaceUrl(venueTabHref(venueId, 'runs'));
   }, [initialRun, runs, venueId]);
+
+  // Back on the Runs tab: the detail closed when it left, and `initialRun`
+  // may not have changed (Open run on the same run twice), so the URL is
+  // read again. A loaded run opens; any other `?run=` leaves the URL.
+  const wasActive = useRef(active);
+  useEffect(() => {
+    const cameBack = active && !wasActive.current;
+    wasActive.current = active;
+    if (!cameBack) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('run')) return;
+    const runId = knownRun(parseVenueRun(params.get('run')), rows);
+    if (runId === null) {
+      replaceUrl(venueTabHref(venueId, 'runs'));
+      return;
+    }
+    setSelectedId(runId);
+  }, [active, rows, venueId]);
 
   // `?run=` on load scrolls its row into view.
   useEffect(() => {

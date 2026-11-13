@@ -13,6 +13,11 @@ interface SafeExternalLinkProps {
    * role and so is skipped by most screen readers when labelled via ARIA.
    */
   label?: string;
+  /**
+   * Replaces the link's accessible name, on the `<a>` only (a degraded
+   * `<span>` has no role to name). For a link whose text is a shortened form.
+   */
+  ariaLabel?: string;
 }
 
 /**
@@ -35,6 +40,7 @@ export const SafeExternalLink = ({
   style,
   title,
   label,
+  ariaLabel,
 }: SafeExternalLinkProps) => {
   const body = (
     <>
@@ -56,6 +62,7 @@ export const SafeExternalLink = ({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label={ariaLabel}
       className={className}
       style={style}
       title={title}
