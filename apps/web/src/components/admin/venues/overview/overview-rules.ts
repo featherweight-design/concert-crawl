@@ -19,7 +19,11 @@ export const LAST_RUNS = 14;
 export const shortDate = (iso: string): string =>
   formatISODate(iso, DENVER_TIME_ZONE, { month: 'short', day: 'numeric' });
 
-/** "Nov 11 · 3:02 AM", Mountain Time (`04/venue-overview`). */
+/**
+ * "Nov 11 · 3:02 AM", Mountain Time (`04/venue-overview`). Newer ICU builds
+ * put a narrow no-break space (U+202F) before AM/PM; it is folded to a plain
+ * space so the line reads the same on every Node and browser.
+ */
 export const runWhen = (iso: string): string =>
   COPY.latestRun.when(
     shortDate(iso),
@@ -27,7 +31,7 @@ export const runWhen = (iso: string): string =>
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
-    }),
+    }).replace(/ /g, ' '),
   );
 
 /** The run the Latest run card reads: the venue's, or the list's newest. */
