@@ -205,6 +205,10 @@ export const REPORTING_COPY = {
       "New date not announced yet. Keep it in Watching and we'll tell you when it lands.",
     soldOutBody:
       "Official waitlist may open closer to the date. We'll watch it.",
+    // The public page has no Watching action to point at, so the two bodies
+    // that promise to follow the show drop that clause there.
+    postponedBodyReadOnly: 'New date not announced yet.',
+    soldOutBodyReadOnly: 'Official waitlist may open closer to the date.',
   },
 
   // ── PendingSoldOutCard ───────────────────────────────────────────

@@ -448,6 +448,17 @@ describe('PublicEventDetail status card (B+ addendum 3)', () => {
     );
     expect(screen.getByText(/^Confirmed by Concert Crawl · /)).toBeDefined();
   });
+
+  it('points at no Watching action the public page does not have', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ status: 'postponed', statusReport: null })}
+        related={[]}
+      />,
+    );
+    expect(screen.getByText('New date not announced yet.')).toBeDefined();
+    expect(screen.queryByText(/Keep it in Watching/)).toBeNull();
+  });
 });
 
 describe('PublicEventDetail status card privacy', () => {
