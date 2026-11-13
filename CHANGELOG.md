@@ -1,3 +1,18 @@
+# [1.400.0](https://github.com/featherweight-design/concert-crawl/compare/v1.399.0...v1.400.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **ci:** one secret name per environment, per-target concurrency for the cleanup ([aa001ea](https://github.com/featherweight-design/concert-crawl/commit/aa001ea91a17ff77dcbfdb9cf0033eec8cfdeb03))
+* **crawler:** a morning time the page shows only as PM moves to the evening ([a1d228e](https://github.com/featherweight-design/concert-crawl/commit/a1d228e5c6de65ceab511b5527545512ea1dd162))
+* **crawler:** correct a twelve-hour time misread in place on the same show page ([4d154e7](https://github.com/featherweight-design/concert-crawl/commit/4d154e7d8c5d5d870c08fc4c83ed6878c270318d))
+* **crawler:** scope the morning-time guard to the event's own text, join readings within one crawl ([12622ca](https://github.com/featherweight-design/concert-crawl/commit/12622ca2d09d413398bc891fa37a4295bed235b8))
+
+
+### Features
+
+* **ci:** let the duplicate-night cleanup target staging ([fa3ae96](https://github.com/featherweight-design/concert-crawl/commit/fa3ae96b193bc27cf3f4af85f2a69fd952169b33))
+
 # [1.399.0](https://github.com/featherweight-design/concert-crawl/compare/v1.398.0...v1.399.0) (2026-11-13)
 
 
