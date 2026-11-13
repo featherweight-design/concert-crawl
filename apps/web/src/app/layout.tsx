@@ -140,6 +140,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Without `cover` the browser reports every `env(safe-area-inset-*)` as 0,
+  // so the BottomNav's inset padding never applied: in an edge-to-edge
+  // Android browser or installed PWA the tab buttons sat under the gesture bar.
+  // `cover` makes the browser hand the real inset to the page, which the nav
+  // and the (main) shell's bottom padding then clear.
+  viewportFit: 'cover',
   themeColor: BRAND_PAPER,
 };
 
@@ -159,7 +165,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           {/* Blocking script: runs before paint to apply saved/system theme */}
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
-        <body className="min-h-screen bg-bg text-fg font-sans antialiased">
+        <body className="min-h-dvh bg-bg text-fg font-sans antialiased">
           <ServiceWorkerRegistration />
           <QueryProvider>
             <PostHogProvider>
