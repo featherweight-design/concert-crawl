@@ -22,7 +22,7 @@ import {
   type ResolvedCheck,
 } from './checks-api';
 import { decidedWhen, filedWhen, shortDay } from './checks-rules';
-import { priceRange } from './submitted-rules';
+import { dollars, priceRange } from './submitted-rules';
 
 const COPY = ADMIN_COPY.pricesChecks;
 const PAGE = 50;
@@ -306,18 +306,25 @@ export const PriceChecksTab = () => {
                       </div>
                       <div
                         style={{
+                          display: 'flex',
                           fontSize: 12.5,
                           color: 'var(--fg-muted)',
                           marginTop: 3,
                         }}
                       >
-                        {[
-                          check.venueName,
-                          shortDay(check.date, true),
-                          COPY.watching(check.watching),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
+                        <span
+                          style={{
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {check.venueName}
+                        </span>
+                        <span style={{ flex: 'none', whiteSpace: 'nowrap' }}>
+                          {` · ${shortDay(check.date, true)} · ${COPY.watching(check.watching)}`}
+                        </span>
                       </div>
                     </div>
                     <div
@@ -510,10 +517,10 @@ export const PriceChecksTab = () => {
                   >
                     {row.answer === 'used'
                       ? COPY.resolved.used(
-                          row.price === null ? '' : priceRange(row.price, null),
+                          row.price === null ? '' : dollars(row.price),
                         )
                       : COPY.resolved.kept(
-                          row.price === null ? '' : priceRange(row.price, null),
+                          row.price === null ? '' : dollars(row.price),
                         )}
                   </span>
                 </div>
