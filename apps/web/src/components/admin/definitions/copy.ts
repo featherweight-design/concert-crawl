@@ -2536,6 +2536,45 @@ export const ADMIN_COPY = {
       soldOutFailed: "Published the price, but couldn't mark the show sold out",
     },
   },
+  // 4d Prices, the Price checks tab (boards 06 prices-price-checks,
+  // price-checks-mobile, prices-no-checks; addendum-3 price-checks-resolved-d).
+  pricesChecks: {
+    viewsLabel: 'Price checks',
+    views: { open: 'Open', resolved: 'Resolved' },
+    listLabel: 'Open Price checks',
+    resolvedLabel: 'Resolved Price checks',
+    kicker: 'Price check',
+    listedNow: 'Listed now',
+    priceCheck: 'Price check',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    noHandle: 'a fan',
+    use: (price: string) => `Use ${price}`,
+    keep: (price: string) => `Keep ${price}`,
+    // The audit reason the resolve API requires; the board draws no reason field.
+    reason: 'Decided from Prices, Price checks.',
+    resolveFailed: "Couldn't save that answer",
+    alreadyDecided: 'Someone already decided that Price check.',
+    footnote:
+      'The same items are in Needs you; this tab is the full list, including resolved ones with who decided and when. Both fans hear back in Submitted prices.',
+    empty: {
+      title: 'No open Price checks',
+      body: 'When a fan disagrees with a price, it lands here and in Needs you.',
+    },
+    resolved: {
+      columns: { show: 'Show', answer: 'Answer', decided: 'Decided' },
+      used: (price: string) => `Used ${price}`,
+      kept: (price: string) => `Kept ${price}`,
+      showing: (shown: number, total: number) => `Showing ${shown} of ${total}`,
+      loadMore: 'Load more',
+      loadingMore: 'Loading…',
+      loadMoreFailed: "Couldn't load more Price checks.",
+      empty: {
+        title: 'Nothing resolved yet',
+        body: 'Decided Price checks appear here.',
+      },
+    },
+  },
   needsYou: {
     title: 'Needs you',
     summary: (decisions: number, handledToday: number) =>
