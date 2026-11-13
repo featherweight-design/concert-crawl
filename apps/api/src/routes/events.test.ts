@@ -54,6 +54,7 @@ vi.mock('drizzle-orm/pg-core', async (importOriginal) => ({
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
+  eventRedirects: { sourceId: 'sourceId', targetId: 'targetId' },
   events: {
     id: 'id',
     status: 'status',
@@ -310,6 +311,8 @@ describe('GET /v1/events/:id', () => {
 
   it('returns 404 for a valid UUID that matches no event', async () => {
     mockDb.where.mockResolvedValueOnce([]);
+    // The merged-event redirect lookup that follows a miss finds nothing.
+    mockDb.limit.mockResolvedValueOnce([]);
 
     const res = await createApp().request(
       '/v1/events/00000000-0000-0000-0000-000000000000',
