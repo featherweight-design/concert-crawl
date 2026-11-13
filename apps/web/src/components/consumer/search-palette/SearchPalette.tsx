@@ -490,7 +490,9 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           // the border box behind a transparent border.
           border: '1.5px solid transparent',
           background:
-            'linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+            // surface-2 (#171D3A on Electric): the board's lifted navy, #181d3b
+            // sampled from more-r3-palette_typed, not the darker bg-elevated.
+            'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
           // The colored light behind the palette: one of the two glows README
           // rule 1 grants outside the page's ambient one.
           boxShadow:
