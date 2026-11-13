@@ -1,3 +1,26 @@
+# [1.411.0](https://github.com/featherweight-design/concert-crawl/compare/v1.410.0...v1.411.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** frame the spotlight as the board does ([4d57347](https://github.com/featherweight-design/concert-crawl/commit/4d5734739b5382a72b71a64fc6f3ba540f34fbfd))
+* **web:** keep spotlight footer labels on one line ([f73dc33](https://github.com/featherweight-design/concert-crawl/commit/f73dc33a296249fe0873d765f96be531115c15f1))
+* **web:** keep the Review price crumb a section root, test the prices page prop ([7b9f8cc](https://github.com/featherweight-design/concert-crawl/commit/7b9f8cc42313bb6731525fe007dd4713a3c019c5))
+* **web:** keep the share sheet out of the way of Full screen ([3f99480](https://github.com/featherweight-design/concert-crawl/commit/3f99480e0067989551c4090d34d5789f3a245d5f))
+* **web:** spotlight drag-close and hero name map ([9a3b659](https://github.com/featherweight-design/concert-crawl/commit/9a3b659847691ab1479a79be02bac1db34f91be0))
+* **web:** the docked needs you panel stays in view as the list scrolls ([df7f185](https://github.com/featherweight-design/concert-crawl/commit/df7f18551b78c41d7b5482aae08191df8e22e189))
+* **web:** the phone filters button counts a drafted crew lens under the other filters ([bd92f20](https://github.com/featherweight-design/concert-crawl/commit/bd92f206c9db6e43c2f1369c92da61c98b800bff))
+* **web:** the venue panel's answers read in the board's order ([842c15a](https://github.com/featherweight-design/concert-crawl/commit/842c15adaeda988963aea1d9ae9dd34b01b8ee15))
+
+
+### Features
+
+* **web:** fix review findings, add the Prices contact-sheet inventory ([ee9d2f9](https://github.com/featherweight-design/concert-crawl/commit/ee9d2f9e63b6d5b8a2f8c426a1c76bdb0b07bc46))
+* **web:** full-screen QR and the invite link preview card ([be5ba28](https://github.com/featherweight-design/concert-crawl/commit/be5ba2867f5718019872da804e3e350ce1baef5b))
+* **web:** needs you evidence panels for show dropped, show moved and venue faults ([428ac6d](https://github.com/featherweight-design/concert-crawl/commit/428ac6d37a4e1865b8295ba40755988b1936df28))
+* **web:** prices page shell, Missing a price tab and add-a-price panel ([a5a992f](https://github.com/featherweight-design/concert-crawl/commit/a5a992faffd0fbd59f5c6e572f5f4113782e0c7b))
+* **web:** venue icon tiles and a load-more row on the Missing tab ([272ae56](https://github.com/featherweight-design/concert-crawl/commit/272ae56aad03d88dab36712e3ad43b7759bcc858))
+
 # [1.410.0](https://github.com/featherweight-design/concert-crawl/compare/v1.409.0...v1.410.0) (2026-11-13)
 
 
