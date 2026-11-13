@@ -208,7 +208,9 @@ export const LlmBudgetControl = ({
                   borderRadius: 999,
                   color: on ? 'var(--fg)' : 'var(--fg-muted)',
                   background: 'transparent',
-                  border: `1px solid ${on ? 'var(--signal)' : 'var(--border-strong)'}`,
+                  // The board rings the chosen pill in the accent (pink on
+                  // Electric), not the signal the toggle and eyebrow use.
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-strong)'}`,
                 }}
               >
                 {copy.warnOption(percent)}
