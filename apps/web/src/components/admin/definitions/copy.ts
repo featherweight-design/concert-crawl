@@ -940,6 +940,8 @@ export const ADMIN_COPY = {
     keptFor: 'Fetched pages are kept for 14 days.',
     loading: 'Loading the page we fetched…',
     noText: 'This page has no text.',
+    // The Page tab when the defused copy can't be shown safely.
+    pageUnsafe: 'This page can’t be shown safely. Use the HTML or Text tab.',
     gone: {
       title: 'This run’s pages are gone',
       notKeptTitle: 'This page wasn’t kept',

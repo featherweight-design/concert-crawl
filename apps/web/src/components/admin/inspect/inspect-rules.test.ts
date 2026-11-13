@@ -190,13 +190,49 @@ describe('withCsp', () => {
   });
 });
 
+/** A srcdoc that must have been produced (not failed closed). */
+const srcDocOf = (html: string): string => {
+  const out = pageSrcDoc(html);
+  expect(out).not.toBeNull();
+  return out ?? '';
+};
+
+const SMIL = ['animate', 'set', 'animateMotion', 'animateTransform', 'discard'];
+
+/**
+ * The frame's safety, checked independently of the code under test: the CSP
+ * meta first, and nothing that runs, navigates, hints a connection or sets
+ * an attribute back anywhere in the parsed srcdoc.
+ */
+const expectSafe = (srcDoc: string) => {
+  expectCspFirst(srcDoc);
+  const doc = parsed(srcDoc);
+  const all = Array.from(doc.querySelectorAll('*'));
+  const names = all.map((node) => node.localName.toLowerCase());
+  for (const name of ['script', 'base', 'link', ...SMIL]) {
+    expect(names).not.toContain(name.toLowerCase());
+  }
+  for (const node of all) {
+    if (node.localName.toLowerCase() === 'meta') {
+      expect(
+        (node.getAttribute('http-equiv') ?? '').trim().toLowerCase(),
+      ).not.toBe('refresh');
+    }
+    for (const attr of Array.from(node.attributes)) {
+      const local = attr.localName.toLowerCase();
+      expect(['href', 'action', 'formaction']).not.toContain(local);
+      expect(local.startsWith('on')).toBe(false);
+    }
+  }
+};
+
 describe('pageSrcDoc', () => {
   afterEach(() => {
     Reflect.deleteProperty(window, '__inspectRan');
   });
 
   it('keeps the page’s text and inline styles, with the CSP meta first', () => {
-    const out = pageSrcDoc(
+    const out = srcDocOf(
       '<html><head><style>p{color:red}</style></head><body><p style="margin:0">Tate McRae</p></body></html>',
     );
     expect(out.startsWith('<!doctype html><meta ')).toBe(true);
@@ -208,18 +244,23 @@ describe('pageSrcDoc', () => {
   });
 
   it('takes away every way to navigate the frame', () => {
-    const out = pageSrcDoc(
+    const out = srcDocOf(
       '<html><head><base href="https://venue.test/"><meta http-equiv="Refresh" content="0; url=https://venue.test/"><meta charset="utf-8"></head>' +
         '<body><a href="https://venue.test/events">Events</a>' +
         '<map name="m"><area href="https://venue.test/a" alt="a"></map>' +
         '<form action="https://venue.test/go"><button formaction="https://venue.test/b">Go</button></form>' +
-        '<svg><a href="https://venue.test/s"><text>s</text></a></svg></body></html>',
+        '<svg><a href="https://venue.test/s"><text>s</text></a>' +
+        '<a xlink:href="https://venue.test/x"><text>x</text></a></svg></body></html>',
     );
     const doc = parsed(out);
-    expectCspFirst(out);
-    expect(doc.querySelectorAll('a')).toHaveLength(2);
+    expectSafe(out);
+    expect(doc.querySelectorAll('a')).toHaveLength(3);
     doc.querySelectorAll('a, area').forEach((node) => {
       expect(node.hasAttribute('href')).toBe(false);
+      expect(node.hasAttributeNS('http://www.w3.org/1999/xlink', 'href')).toBe(
+        false,
+      );
+      expect(node.hasAttribute('xlink:href')).toBe(false);
     });
     expect(doc.querySelector('base')).toBeNull();
     expect(doc.querySelector('meta[http-equiv="Refresh"]')).toBeNull();
@@ -230,7 +271,7 @@ describe('pageSrcDoc', () => {
   });
 
   it('leaves no script, handler or embedded document to run', () => {
-    const out = pageSrcDoc(
+    const out = srcDocOf(
       '<html><head><script src="https://venue.test/a.js"></script></head>' +
         '<body onload="alert(3)"><p>Show</p><script>alert(1)</script>' +
         '<img src=x onerror="alert(2)"><noscript><p>No JS</p></noscript>' +
@@ -254,7 +295,65 @@ describe('pageSrcDoc', () => {
 
   it('puts the meta first whatever came before the page’s own doctype', () => {
     for (const lead of [' ', '\u000B', ' ', '<!-- c -->', 'text']) {
-      expectCspFirst(pageSrcDoc(`${lead}<!doctype html><p>x</p>`));
+      expectCspFirst(srcDocOf(`${lead}<!doctype html><p>x</p>`));
+    }
+  });
+
+  it('SVG animation can’t set an href back', () => {
+    for (const html of [
+      '<svg><a><set attributeName="href" to="https://venue.test/live"/><text>s</text></a></svg>',
+      '<svg><a><animate attributeName="href" values="https://venue.test/live"/><text>s</text></a></svg>',
+      '<svg><a><animateMotion dur="1s"/><animateTransform attributeName="transform"/><discard/></a></svg>',
+    ]) {
+      const out = srcDocOf(html);
+      expectSafe(out);
+      expect(out).not.toContain('venue.test');
+      expect(out.toLowerCase()).not.toMatch(
+        /<(animate|set|animatemotion|animatetransform|discard)\b/,
+      );
+    }
+  });
+
+  it('removes every <link>, resource hints included', () => {
+    const out = srcDocOf(
+      '<html><head><link rel="dns-prefetch" href="//venue.test">' +
+        '<link rel="preconnect" href="https://venue.test">' +
+        '<link rel="stylesheet" href="https://venue.test/a.css"></head>' +
+        '<body><link rel="prefetch" href="https://venue.test/b"><p>x</p></body></html>',
+    );
+    expectSafe(out);
+    expect(parsed(out).querySelector('link')).toBeNull();
+    expect(out).not.toContain('venue.test');
+  });
+
+  it('known mutation-XSS shapes come out safe or not at all', () => {
+    for (const html of [
+      '<form><math><mtext></form><form><mglyph><style></math><meta http-equiv="refresh" content="0;url=https://venue.test/live">',
+      '<form><math><mtext></form><form><mglyph><style></math><a href="https://venue.test/live">x</a>',
+      '<svg><style><a href=x>',
+      '<svg><style><a href="https://venue.test/live">x</a></style></svg>',
+      '<svg></p><style><a id="</style><a href=https://venue.test/live>x">',
+      '<math><mtext><table><mglyph><style><!--</style><a href="https://venue.test/live">x',
+      '<noscript><p title="</noscript><a href=https://venue.test/live>x">',
+    ]) {
+      const out = pageSrcDoc(html);
+      if (out !== null) expectSafe(out);
+    }
+  });
+
+  it('is a standards document whether or not the page had a doctype', () => {
+    // A srcdoc document is never quirks (the HTML parser exempts it), so a
+    // doctype always leads: the checks then parse what the frame parses.
+    for (const html of [
+      '<!DOCTYPE html><p>x</p>',
+      '\n<!doctype html><p>x</p>',
+      '<p>x</p>',
+      'text<!doctype html><p>x</p>',
+    ]) {
+      const out = srcDocOf(html);
+      expect(out.startsWith('<!doctype html><meta ')).toBe(true);
+      expect(parsed(out).compatMode).toBe('CSS1Compat');
+      expectCspFirst(out);
     }
   });
 });
