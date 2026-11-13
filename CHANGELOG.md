@@ -1,3 +1,23 @@
+# [1.381.0](https://github.com/featherweight-design/concert-crawl/compare/v1.380.0...v1.381.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** fold a second listing of one night into the existing row ([3946b38](https://github.com/featherweight-design/concert-crawl/commit/3946b384200bfc6fac9744d5102a1a66ce338a13))
+* **crawler:** rekey the stored map safely and rehash after night alignment ([b89b86d](https://github.com/featherweight-design/concert-crawl/commit/b89b86dc14a43f94f0db8ae0da6e39bfe22d070b))
+* **web:** browse to the B+ boards (fidelity audit) ([5922815](https://github.com/featherweight-design/concert-crawl/commit/5922815b1b626ffc3ea589b2e4aea7310389ec16)), closes [#113](https://github.com/featherweight-design/concert-crawl/issues/113)
+* **web:** draw the error mark's sagging trail and rose tile from the board ([a78450e](https://github.com/featherweight-design/concert-crawl/commit/a78450e28ed456ade98ad83a41f173b62e5ff27f))
+* **web:** draw the global 404 inside the app chrome ([2b39cfa](https://github.com/featherweight-design/concert-crawl/commit/2b39cfa51125963cea6b5932047c99dec66c9afa))
+* **web:** every error boundary retries through useErrorBoundaryRetry, global-error included ([e243720](https://github.com/featherweight-design/concert-crawl/commit/e243720dee82177edbe3935017716ac0cad44f79))
+* **web:** gate the follow shelf skeleton on the page's shelf slot and match ShelfHead's line boxes ([3faefc1](https://github.com/featherweight-design/concert-crawl/commit/3faefc110090b37b7e22a15db7da2fbcfb0892e5))
+* **web:** harden global-error's theme script, tidy the error page tests ([3cc102f](https://github.com/featherweight-design/concert-crawl/commit/3cc102fc511ad52c3ed50f617c437557ea6d0928))
+* **web:** related event rows get the watch eye and the ringed 56px thumb ([8f24d4f](https://github.com/featherweight-design/concert-crawl/commit/8f24d4f0cb99b9975e1f79db2b3f93d1bd9c7ef3))
+
+
+### Features
+
+* **web:** the standalone error page, used by global-error and the route boundaries ([079073c](https://github.com/featherweight-design/concert-crawl/commit/079073c050d05a498b20f862c88c3d927b82fbe7))
+
 # [1.380.0](https://github.com/featherweight-design/concert-crawl/compare/v1.379.0...v1.380.0) (2026-11-13)
 
 
