@@ -74,10 +74,10 @@ export const nextShowDateExpr = (withinDays?: number): SQL<string | null> =>
  * The venue of the soonest show `nextShowDateExpr` dates, from the same
  * fragment. Ties on the day break on show time, then id, as the fan lists do.
  */
-export const nextShowVenueExpr = (): SQL<string | null> =>
+export const nextShowVenueExpr = (withinDays?: number): SQL<string | null> =>
   sql<
     string | null
-  >`(SELECT ${venues.name} ${upcomingShowsFrom(undefined)} ORDER BY ${eventsColumn('date')}, ${eventsColumn('show_time')} NULLS LAST, ${eventsColumn('id')} LIMIT 1)`;
+  >`(SELECT ${venues.name} ${upcomingShowsFrom(withinDays)} ORDER BY ${eventsColumn('date')}, ${eventsColumn('show_time')} NULLS LAST, ${eventsColumn('id')} LIMIT 1)`;
 
 // Written out qualified: inside a subquery drizzle renders a bare column name,
 // and `id` exists on both `events` and the joined `venues`.

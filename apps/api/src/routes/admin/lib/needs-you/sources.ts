@@ -32,6 +32,7 @@ import {
   type SpotifyCandidateSnapshot,
 } from '@concert-crawl/db';
 import { AUTO_APPROVE_THRESHOLD } from '@concert-crawl/crawler-core';
+import { canonicalizeArtist } from '@concert-crawl/types';
 import type {
   NeedsYouAnswerOption,
   NeedsYouArtistCandidate,
@@ -581,10 +582,9 @@ const openReportReasons = async (
       ),
     );
   for (const row of rows) {
-    reasons.set(row.artistId, [
-      ...(reasons.get(row.artistId) ?? []),
-      row.reason,
-    ]);
+    const seen = reasons.get(row.artistId);
+    if (!seen) reasons.set(row.artistId, [row.reason]);
+    else if (!seen.includes(row.reason)) seen.push(row.reason);
   }
   return reasons;
 };
@@ -604,7 +604,9 @@ const spotifyIdsWithShows = async (
     .where(
       and(
         inArray(artists.spotifyArtistId, unique),
-        sql`exists (select 1 from ${events} where ${events.canonicalArtist} = ${artists.canonicalName})`,
+        // Any show we list for them, past or coming: a fan-visible event under
+        // the artist's own name (the headliner, as the lists key it).
+        sql`exists (select 1 from ${events} where ${events.canonicalArtist} = ${artists.canonicalName} and ${events.hiddenFromConsumer} = false)`,
       ),
     );
   return new Set(
@@ -629,7 +631,9 @@ const artistCandidates = (
       genres: cand.genres,
       spotifyUrl: cand.spotifyUrl,
       current: cand.id === row.spotifyArtistId,
-      exact: cand.name.trim().toLowerCase() === row.canonicalName,
+      // The same normaliser that made the artist's canonical name, so a
+      // name with a diacritic or an ampersand still counts as the same act.
+      exact: canonicalizeArtist(cand.name) === row.canonicalName,
       playsDenver: withShows.has(cand.id),
     }))
     .sort((left, right) => Number(right.exact) - Number(left.exact))
@@ -653,7 +657,7 @@ const artistItems: Adapter = async () => {
       confirmable: sql<boolean>`(${artists.autoMatchedAt} is not null and ${artists.spotifyArtistId} is not null)`,
       reportCount: openReports,
       nextShow: nextShowDateExpr(ARTIST_HORIZON_DAYS),
-      nextShowVenue: nextShowVenueExpr(),
+      nextShowVenue: nextShowVenueExpr(ARTIST_HORIZON_DAYS),
       canonicalName: artists.canonicalName,
       spotifyArtistId: artists.spotifyArtistId,
       photoUrl: artists.photoUrl,
@@ -712,6 +716,13 @@ const artistItems: Adapter = async () => {
 // Low-confidence events
 // ---------------------------------------------------------------------------
 
+/** A numeric column (a string off the driver) as a number, null if it isn't one. */
+const finiteOrNull = (value: string | number | null): number | null => {
+  if (value === null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const lowConfidenceItems: Adapter = async ({ now }) => {
   const today = denverDate(now);
   const rows = await db
@@ -756,7 +767,7 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
     eventId: row.id,
     artist: row.artist,
     description: row.description,
-    confidence: row.confidence === null ? null : Number(row.confidence),
+    confidence: finiteOrNull(row.confidence),
     autoApproveBar: AUTO_APPROVE_THRESHOLD,
     evidence: [
       ...line('Show date', row.date),
@@ -792,7 +803,14 @@ const checkerCounts = async (
       approved: sql<number>`count(*) filter (where ${priceSubmissions.status} in ('corroborated', 'verified'))::int`,
     })
     .from(priceSubmissions)
-    .where(inArray(priceSubmissions.userId, unique))
+    // Their track record: the prices they submitted, not the price checks
+    // (which carry a disputed id), so the item in question is not counted.
+    .where(
+      and(
+        inArray(priceSubmissions.userId, unique),
+        isNull(priceSubmissions.disputedSubmissionId),
+      ),
+    )
     .groupBy(priceSubmissions.userId);
   for (const row of rows) {
     if (row.userId)
@@ -945,11 +963,20 @@ const priceBatchItems: Adapter = async ({ now }) => {
 // Bugs
 // ---------------------------------------------------------------------------
 
-/** The screenshot a reporter attached (`metadata.screenshot`), if it is text. */
+const MAX_SCREENSHOT_CHARS = 200_000;
+
+/** The screenshot a reporter attached (`metadata.screenshot`), if it is usable. */
 const screenshotOf = (metadata: unknown): string | null => {
   if (typeof metadata !== 'object' || metadata === null) return null;
   const shot = Reflect.get(metadata, 'screenshot');
-  return typeof shot === 'string' && shot !== '' ? shot : null;
+  // Reporter-controlled: only an inline image under a size cap goes into the
+  // queue (every unread bug rides in every list and count response), and never
+  // a URL the admin's browser would be sent to fetch.
+  return typeof shot === 'string' &&
+    shot.startsWith('data:image/') &&
+    shot.length <= MAX_SCREENSHOT_CHARS
+    ? shot
+    : null;
 };
 
 const bugItems: Adapter = async () => {
