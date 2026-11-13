@@ -57,6 +57,31 @@ describe('buildUpdateVenueBody — API integration fields', () => {
     expect(body.apiAccountId).toBeNull();
   });
 
+  // One tab's save sends only that tab's keys (3b part 6): a missing key never
+  // turns into a null that would clear the column.
+  it('leaves every field out when its key is missing', () => {
+    const body = buildUpdateVenueBody(
+      formDataFrom({ websiteUrl: ' https://gothic.example/events ' }),
+    );
+    expect(
+      Object.entries(body).filter(([, value]) => value !== undefined),
+    ).toEqual([['websiteUrl', 'https://gothic.example/events']]);
+  });
+
+  it('still clears a present, empty field to null', () => {
+    const body = buildUpdateVenueBody(
+      formDataFrom({ address: ' ', ticketVendor: '', extractionStrategy: '' }),
+    );
+    expect(body.address).toBeNull();
+    expect(body.ticketVendor).toBeNull();
+    expect(body.extractionStrategy).toBeNull();
+  });
+
+  it('never sends the request delay, which the crawl rules fix', () => {
+    const body = buildUpdateVenueBody(formDataFrom({ crawlDelayMs: '1000' }));
+    expect(body).not.toHaveProperty('crawlDelayMs');
+  });
+
   it('nulls the account ID when provider is set but the field is whitespace', () => {
     const body = buildUpdateVenueBody(
       formDataFrom({ apiProvider: 'venuepilot', apiAccountId: '   ' }),

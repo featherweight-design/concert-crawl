@@ -269,6 +269,7 @@ interface VDInputProps {
   defaultValue?: string | number;
   placeholder?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   hasError?: boolean;
   min?: number;
   max?: number;
@@ -287,6 +288,7 @@ function VDInput({
   defaultValue,
   placeholder,
   disabled,
+  readOnly,
   hasError,
   min,
   max,
@@ -318,6 +320,7 @@ function VDInput({
       defaultValue={defaultValue}
       placeholder={placeholder}
       disabled={disabled}
+      readOnly={readOnly}
       aria-invalid={hasError || undefined}
       aria-describedby={hasError ? `${id}-error` : undefined}
       min={min}
@@ -343,8 +346,8 @@ function VDInput({
         fontFamily: "'Inter', sans-serif",
         outline: 'none',
         boxSizing: 'border-box' as const,
-        opacity: disabled ? 0.66 : 1,
-        cursor: disabled ? 'not-allowed' : 'text',
+        opacity: disabled || readOnly ? 0.66 : 1,
+        cursor: disabled ? 'not-allowed' : readOnly ? 'default' : 'text',
         boxShadow: ring,
         transition: 'border-color .12s, box-shadow .12s',
         ...style,
@@ -663,7 +666,6 @@ export function VenueDetailsClient({
   const websiteUrlRef = useRef<HTMLInputElement>(null);
   const cityRef = useRef<HTMLInputElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
-  const crawlDelayRef = useRef<HTMLInputElement>(null);
 
   // Controlled state
   const [nameVal, setNameVal] = useState(venue.name);
@@ -672,11 +674,6 @@ export function VenueDetailsClient({
   const [cityVal, setCityVal] = useState(venue.city);
   const [addressVal, setAddressVal] = useState(venue.address ?? '');
   const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil);
-  // A legacy row stored below the floor (the form once accepted 1 s) starts
-  // at the floor, so saving any other field sends a value the API accepts
-  // and corrects the row, instead of refusing the whole save.
-  const initialCrawlDelay = Math.max(venue.crawlDelayMs, MIN_CRAWL_DELAY_MS);
-  const [crawlDelayVal, setCrawlDelayVal] = useState(initialCrawlDelay);
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
     venue.crawlWaitForSelector ?? '',
   );
@@ -722,11 +719,6 @@ export function VenueDetailsClient({
     ...(cityVal !== venue.city ? ['City'] : []),
     ...(addressVal !== (venue.address ?? '') ? ['Address'] : []),
     ...(waitUntilVal !== venue.crawlWaitUntil ? ['Wait until'] : []),
-    // Against the STORED value: a legacy row under the floor opens at 3000,
-    // so it reads as changed from the start and every save names the fix.
-    ...(crawlDelayVal !== venue.crawlDelayMs
-      ? [ADMIN_COPY.venueDetailsClient.fields.requestDelay.label]
-      : []),
     ...((waitForSelectorVal || null) !== venue.crawlWaitForSelector
       ? ['Selector']
       : []),
@@ -898,7 +890,6 @@ export function VenueDetailsClient({
     setCityVal(venue.city);
     setAddressVal(venue.address ?? '');
     setWaitUntilVal(venue.crawlWaitUntil);
-    setCrawlDelayVal(initialCrawlDelay);
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '');
     setTicketVendorVal(venue.ticketVendor ?? null);
     setPriceUrlVal(venue.priceUrl ?? '');
@@ -922,8 +913,6 @@ export function VenueDetailsClient({
     if (websiteUrlRef.current) websiteUrlRef.current.value = venue.websiteUrl;
     if (cityRef.current) cityRef.current.value = venue.city;
     if (addressRef.current) addressRef.current.value = venue.address ?? '';
-    if (crawlDelayRef.current)
-      crawlDelayRef.current.value = String(initialCrawlDelay);
   }
 
   async function handleSave() {
@@ -954,7 +943,8 @@ export function VenueDetailsClient({
     formData.set('city', cityVal.trim() || 'Denver');
     formData.set('address', addressVal.trim());
     formData.set('crawlWaitUntil', waitUntilVal);
-    formData.set('crawlDelayMs', String(crawlDelayVal));
+    // The request delay is never sent: the crawl rules fix it and the API
+    // refuses it (3b ruling d).
     // `active` is left out on purpose: Pause and Activate own it. Resending the
     // value this page loaded with would let a stale tab reactivate a venue
     // paused or removed since.
@@ -2164,7 +2154,8 @@ export function VenueDetailsClient({
                 </VDSelect>
               </VDField>
 
-              {/* Request delay */}
+              {/* Request delay: read-only, fixed by the crawl rules (3b
+                  ruling d). Shows the stored value; the save never sends it. */}
               <VDField
                 label={ADMIN_COPY.venueDetailsClient.fields.requestDelay.label}
                 htmlFor="edit-venue-crawl-delay"
@@ -2174,20 +2165,8 @@ export function VenueDetailsClient({
                   <VDInput
                     id="edit-venue-crawl-delay"
                     type="number"
-                    inputRef={crawlDelayRef}
-                    defaultValue={initialCrawlDelay}
-                    disabled={isDisabled}
-                    min={MIN_CRAWL_DELAY_MS}
-                    max={30000}
-                    step={500}
-                    onChange={(evt) => {
-                      const parsed = Number(evt.target.value);
-                      setCrawlDelayVal(
-                        Number.isFinite(parsed) && Number.isInteger(parsed)
-                          ? parsed
-                          : NaN,
-                      );
-                    }}
+                    value={venue.crawlDelayMs}
+                    readOnly
                     style={{
                       borderTopRightRadius: 0,
                       borderBottomRightRadius: 0,

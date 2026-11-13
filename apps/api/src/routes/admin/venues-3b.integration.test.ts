@@ -326,4 +326,96 @@ describe('admin venues API, redesign 3b', () => {
       ]);
     });
   });
+
+  // 3b part 6a: the crawl rules are shown, never edited (ruling d), so a
+  // PATCH naming one is refused outright.
+  describe('PATCH and the crawl rules', () => {
+    const seedSourceVenue = () =>
+      seedVenue({
+        name: 'Gothic',
+        slug: 'gothic',
+        crawlDelayMs: 5000,
+        robotsTxtAllowed: false,
+        robotsTxtCheckedAt: new Date('2026-11-11T10:00:00Z'),
+      });
+
+    it.each([
+      [{ crawlDelayMs: 1000 }],
+      [{ crawlDelayMs: 3000 }],
+      [{ crawlDelayMs: 30000 }],
+      [{ robotsTxtAllowed: true }],
+      [{ robotsTxtAllowed: null }],
+      [{ robotsTxtCheckedAt: null }],
+      [{ userAgent: 'ConcertCrawl/2.0' }],
+      // Riding along with a valid Source save does not get it through.
+      [{ websiteUrl: 'https://gothic.example/new', crawlDelayMs: 1000 }],
+      [{ websiteUrl: 'https://gothic.example/new', robotsTxtAllowed: true }],
+    ])(
+      'refuses %j with a 400, writes nothing and audits nothing',
+      async (body) => {
+        const venue = await seedSourceVenue();
+        const res = await json('PATCH', `venues/${venue.id}`, body);
+        expect(res.status).toBe(400);
+        const resBody: { error: { issues: Array<{ message: string }> } } =
+          await res.json();
+        expect(resBody.error.issues[0]?.message).toMatch(
+          /^Fixed by the crawl rules/,
+        );
+
+        const row = await venueRow(venue.id);
+        expect(row?.crawlDelayMs).toBe(5000);
+        expect(row?.robotsTxtAllowed).toBe(false);
+        expect(row?.robotsTxtCheckedAt?.toISOString()).toBe(
+          '2026-11-11T10:00:00.000Z',
+        );
+        expect(row?.websiteUrl).toBe(venue.websiteUrl);
+        expect(row?.updatedAt.toISOString()).toBe(
+          venue.updatedAt.toISOString(),
+        );
+        expect(await testDb.select().from(auditLog)).toHaveLength(0);
+      },
+    );
+
+    it.each(['javascript:alert(1)', 'ftp://gothic.example/events'])(
+      'refuses a calendar page of %s',
+      async (websiteUrl) => {
+        const venue = await seedSourceVenue();
+        const res = await json('PATCH', `venues/${venue.id}`, { websiteUrl });
+        expect(res.status).toBe(400);
+        expect((await venueRow(venue.id))?.websiteUrl).toBe(venue.websiteUrl);
+      },
+    );
+
+    it('saves a valid change, leaves the crawl rules alone and audits it', async () => {
+      const venue = await seedSourceVenue();
+      const res = await json('PATCH', `venues/${venue.id}`, {
+        websiteUrl: 'https://gothic.example/calendar',
+        extractionStrategy: 'structured_data',
+        apiProvider: null,
+        apiAccountId: null,
+        platform: null,
+        platformVenueId: null,
+        crawlMode: 'http',
+        crawlWaitUntil: 'load',
+        crawlWaitForSelector: null,
+      });
+      expect(res.status).toBe(200);
+
+      const row = await venueRow(venue.id);
+      expect(row?.websiteUrl).toBe('https://gothic.example/calendar');
+      expect(row?.extractionStrategy).toBe('structured_data');
+      expect(row?.crawlMode).toBe('http');
+      expect(row?.crawlWaitUntil).toBe('load');
+      expect(row?.crawlDelayMs).toBe(5000);
+      expect(row?.robotsTxtAllowed).toBe(false);
+
+      const audits = await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'venue.update'));
+      expect(audits).toHaveLength(1);
+      expect(audits[0]?.targetId).toBe(venue.id);
+      expect(audits[0]?.actorId).toBe('admin_1');
+    });
+  });
 });
