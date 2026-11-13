@@ -1,12 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
 import { Check, Pause, RefreshCw, type LucideIcon } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, StatusBadge } from '@/components/admin/primitives';
 import type { StatusKind } from '@/components/admin/primitives';
 import { leadFirst } from '../needs-you-rules';
-import type { NeedsYouAnswer, QueueRow } from '../needs-you-api';
+import type { AnswerParams, NeedsYouAnswer, QueueRow } from '../needs-you-api';
 
 const MONO: CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
@@ -131,6 +132,59 @@ const iconProps = (slug: string): { icon?: LucideIcon } => {
 };
 
 /**
+ * A drawn button that goes somewhere instead of answering: an internal page
+ * (Edit, then list) or an outside one in a new tab (Open ticket page).
+ */
+export const LinkButton = ({
+  href,
+  testId,
+  icon,
+  external = false,
+  children,
+}: {
+  href: string;
+  testId: string;
+  icon: ReactNode;
+  external?: boolean;
+  children: ReactNode;
+}) => {
+  const style: CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 36,
+    flex: '1 1 auto',
+    whiteSpace: 'nowrap',
+    padding: '0 12px',
+    borderRadius: 12,
+    border: '1px solid var(--border-strong)',
+    background: 'var(--bg-elevated)',
+    color: 'var(--fg)',
+    fontSize: 13,
+    fontWeight: 600,
+    textDecoration: 'none',
+  };
+  return external ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid={testId}
+      style={style}
+    >
+      {icon}
+      {children}
+    </a>
+  ) : (
+    <Link href={href} data-testid={testId} style={style}>
+      {icon}
+      {children}
+    </Link>
+  );
+};
+
+/**
  * YOUR ANSWER: the suggested answer full width in the lead style, the rest in
  * a row under it, then the drawn note. Every button goes through the card's
  * own `onAnswer`.
@@ -140,6 +194,10 @@ export const AnswerButtons = ({
   busy,
   note,
   extra,
+  extraLast = false,
+  hide,
+  labelOf,
+  paramsOf,
   onAnswer,
 }: {
   row: QueueRow;
@@ -147,9 +205,19 @@ export const AnswerButtons = ({
   note: string | null;
   /** A drawn button that is a link, not an answer (e.g. Check source). */
   extra?: ReactNode;
-  onAnswer: (answer: NeedsYouAnswer) => void;
+  /** Put `extra` after every answer, not after the lead. */
+  extraLast?: boolean;
+  /** Answers a drawn link stands in for (e.g. Edit, then list). */
+  hide?: string[] | undefined;
+  /** The label a board draws for an answer, when it differs from the API's. */
+  labelOf?: (answer: NeedsYouAnswer) => string;
+  /** The fields an answer carries from the panel (a picked artist). */
+  paramsOf?: (answer: NeedsYouAnswer) => AnswerParams | undefined;
+  onAnswer: (answer: NeedsYouAnswer, params?: AnswerParams) => void;
 }) => {
-  const [lead, ...rest] = leadFirst(row);
+  const [lead, ...rest] = leadFirst({
+    answers: row.answers.filter((answer) => !hide?.includes(answer.slug)),
+  });
   const button = (answer: NeedsYouAnswer, wide: boolean) => (
     <AdminButton
       key={answer.slug}
@@ -158,14 +226,14 @@ export const AnswerButtons = ({
       data-testid="needs-you-answer"
       data-slug={answer.slug}
       {...iconProps(answer.slug)}
-      onClick={() => onAnswer(answer)}
+      onClick={() => onAnswer(answer, paramsOf?.(answer))}
       style={
         wide
           ? { width: '100%', minHeight: 40, minWidth: 0 }
           : { flex: '1 1 auto', minHeight: 36, whiteSpace: 'nowrap' }
       }
     >
-      {answer.label}
+      {labelOf ? labelOf(answer) : answer.label}
     </AdminButton>
   );
   const others = lead && !lead.suggested ? [lead, ...rest] : rest;
@@ -180,13 +248,14 @@ export const AnswerButtons = ({
         >
           {/* The board's order: the lead, then Check source, then the rest.
               With no lead drawn full width, the first answer stands in. */}
-          {lead?.suggested && extra}
+          {!extraLast && lead?.suggested && extra}
           {others.map((answer, index) => (
             <Fragment key={answer.slug}>
               {button(answer, false)}
-              {!lead?.suggested && index === 0 && extra}
+              {!extraLast && !lead?.suggested && index === 0 && extra}
             </Fragment>
           ))}
+          {extraLast && extra}
         </div>
         {note && (
           <p

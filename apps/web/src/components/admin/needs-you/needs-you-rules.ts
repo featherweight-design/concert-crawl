@@ -5,7 +5,7 @@
 import type { NeedsYouCount, NeedsYouKind } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { Kind } from '@/components/admin/primitives/KindLabel';
-import type { QueueRow } from './needs-you-api';
+import type { AnswerParams, QueueRow } from './needs-you-api';
 
 const COPY = ADMIN_COPY.needsYou;
 
@@ -229,6 +229,16 @@ export const NAVIGATION_SLUGS: ReadonlySet<string> = new Set([
   'review',
 ]);
 
+/**
+ * The fields an answer always carries. A price check's two answers take a
+ * reason the boards do not draw a field for, so the queue records where the
+ * call was made; every other answer takes none by default.
+ */
+export const defaultParams = (slug: string): AnswerParams | undefined =>
+  slug === 'use_checked_price' || slug === 'keep_listed_price'
+    ? { reason: COPY.priceCheckReason }
+    : undefined;
+
 const SNOOZE_HOUR = 8;
 
 /**
@@ -347,7 +357,7 @@ export const whenChipOf = (
 };
 
 /** "tomorrow", "in 3 days" or "Sat Nov 28": how the sentence says the date. */
-const whenWord = (fanDate: string, today: string): string => {
+export const whenWord = (fanDate: string, today: string): string => {
   const days = daysUntil(fanDate, today) ?? 0;
   if (days <= 0) return COPY.when.today.toLowerCase();
   if (days === 1) return COPY.when.tomorrow.toLowerCase();
@@ -424,8 +434,93 @@ export const statusPhrase = (status: string): string =>
   STATUS_NAMES[status] ?? `HTTP ${status}`;
 
 /** The panel's title, as the board draws it for each of the four kinds. */
+/** "$29", "$45.50": a price from the API's numeric string, or null. */
+export const priceText = (value: string | null): string | null => {
+  const amount = Number(value);
+  if (value === null || !Number.isFinite(amount)) return null;
+  return Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`;
+};
+
+/** "$29–$64", "$44", or "$45+" for a price with no top end. */
+export const priceRangeOf = (
+  min: string | null,
+  max: string | null,
+): string | null => {
+  const low = priceText(min);
+  if (low === null) return null;
+  const high = priceText(max);
+  if (high === null) return `${low}+`;
+  return high === low ? low : `${low}–${high}`;
+};
+
+/** A ticket tier as the board writes it: "GA", "VIP". */
+export const tierWord = (tier: string | null): string | null =>
+  tier ? tier.replace(/_/g, ' ').toUpperCase() : null;
+
+/** "Sep 18" for a submission instant, in Mountain Time. */
+export const priceDay = (iso: string | null): string | null =>
+  iso ? mountainDay(iso) : null;
+
+/** "Today, 9:14 AM" for an instant on `today`, else "Nov 12, 9:14 AM". */
+export const todayStamp = (
+  iso: string | null,
+  today: string,
+): string | null => {
+  if (!iso) return null;
+  const stamp = mountainStamp(iso);
+  if (!stamp) return null;
+  const day = mountainDay(iso);
+  const sameDay = day !== null && day === mountainDay(`${today}T18:00:00Z`);
+  return sameDay
+    ? stamp.replace(`${day},`, `${PANEL.priceCheck.today},`)
+    : stamp;
+};
+
+/** Minutes since `iso`, or null when it does not parse. */
+export const minutesSince = (
+  iso: string | null,
+  nowMs: number,
+): number | null => {
+  const then = iso ? Date.parse(iso) : Number.NaN;
+  return Number.isFinite(then)
+    ? Math.max(0, Math.round((nowMs - then) / 60000))
+    : null;
+};
+
+/** A path from a page URL ("/events/abc"), or what was sent when it is not one. */
+export const pagePathOf = (pageUrl: string): string => {
+  try {
+    const url = new URL(pageUrl);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return pageUrl;
+  }
+};
+
 export const panelTitleOf = (row: QueueRow): string => {
   switch (row.kind) {
+    case 'artist': {
+      const reasons = row.artistFacts?.reportReasons ?? [];
+      return row.reportCount &&
+        reasons.length === 1 &&
+        reasons[0] === 'wrong_photo'
+        ? PANEL.artist.title(row.reportCount, row.title)
+        : row.title;
+    }
+    case 'event-low-confidence':
+      return PANEL.event.title(row.title);
+    case 'price-check': {
+      const facts = row.priceFacts;
+      const price = facts
+        ? priceRangeOf(facts.checked, facts.checkedMax)
+        : null;
+      if (!facts || price === null) return row.title;
+      return facts.checkedMax === null
+        ? PANEL.priceCheck.titleStarts(row.title, tierWord(facts.tier), price)
+        : PANEL.priceCheck.titleIs(row.title, tierWord(facts.tier), price);
+    }
+    case 'bug':
+      return `“${row.title}”`;
     case 'show-dropped':
       return PANEL.showDropped.title(answeredName(row.title), row.venueName);
     case 'show-moved':

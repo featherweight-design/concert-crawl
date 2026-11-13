@@ -19,6 +19,7 @@ import { EvidenceSlot } from './EvidenceSlot';
 import { QueueItem } from './QueueItem';
 import {
   needsYouApi,
+  type AnswerParams,
   type NeedsYouAnswer,
   type QueueRow,
 } from './needs-you-api';
@@ -27,6 +28,7 @@ import {
   NAVIGATION_SLUGS,
   answeredName,
   countAfterRemoval,
+  defaultParams,
   filterCount,
   inFilter,
   mountainToday,
@@ -65,6 +67,7 @@ interface Answered {
 interface Pending {
   row: QueueRow;
   answer: NeedsYouAnswer;
+  params: AnswerParams | undefined;
 }
 
 /**
@@ -139,11 +142,18 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     if (selected === row.key) select(null);
   };
 
-  const runAnswer = async (row: QueueRow, answer: NeedsYouAnswer) => {
+  const runAnswer = async (
+    row: QueueRow,
+    answer: NeedsYouAnswer,
+    params?: AnswerParams,
+  ) => {
     setBusyKey(row.key);
     setFailure(null);
     try {
-      const result = await api.answer(row.key, answer.slug);
+      const result = await api.answer(row.key, answer.slug, {
+        ...defaultParams(answer.slug),
+        ...params,
+      });
       settle(
         row,
         {
@@ -156,19 +166,23 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       setFailure({
         title: COPY.answerFailed.title,
         saved: COPY.answerFailed.saved,
-        retry: () => void runAnswer(row, answer),
+        retry: () => void runAnswer(row, answer, params),
       });
     } finally {
       setBusyKey(null);
     }
   };
 
-  const onAnswer = (row: QueueRow, answer: NeedsYouAnswer) => {
+  const onAnswer = (
+    row: QueueRow,
+    answer: NeedsYouAnswer,
+    params?: AnswerParams,
+  ) => {
     // An answer that only navigates opens the item (the API refuses it).
     if (NAVIGATION_SLUGS.has(answer.slug)) return select(row.key);
     // An answer that tells fans asks first and cannot be taken back.
-    if (answer.notifiesFans) return setPending({ row, answer });
-    void runAnswer(row, answer);
+    if (answer.notifiesFans) return setPending({ row, answer, params });
+    void runAnswer(row, answer, params);
   };
 
   const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
@@ -361,7 +375,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           ranksFirst={rows[0]?.key === selectedRow.key}
           busy={busyKey === selectedRow.key}
           onClose={() => select(null)}
-          onAnswer={(answer) => onAnswer(selectedRow, answer)}
+          onAnswer={(answer, params) => onAnswer(selectedRow, answer, params)}
         />
       )}
 
@@ -372,9 +386,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           body={COPY.confirmNotify.body}
           confirmLabel={pending.answer.label}
           onConfirm={() => {
-            const { row, answer } = pending;
+            const { row, answer, params } = pending;
             setPending(null);
-            void runAnswer(row, answer);
+            void runAnswer(row, answer, params);
           }}
           onCancel={() => setPending(null)}
         />

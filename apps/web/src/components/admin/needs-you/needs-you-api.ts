@@ -29,6 +29,63 @@ export interface EvidenceLine {
   value: string;
 }
 
+/** The extra fields an answer carries next to its slug. */
+export type AnswerParams = Record<string, string>;
+
+/** One stored Spotify candidate for an artist match question. */
+export interface ArtistCandidate {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  genres: string[];
+  current: boolean;
+  exact: boolean;
+  playsDenver: boolean;
+}
+
+/** What an artist item adds to the card's fields. */
+export interface ArtistFacts {
+  nextShowVenue: string | null;
+  spotifyArtistId: string | null;
+  photoUrl: string | null;
+  reportReasons: string[];
+  candidates: ArtistCandidate[];
+}
+
+/** What a low-confidence event item adds. */
+export interface EventFacts {
+  eventId: string | null;
+  artist: string | null;
+  description: string | null;
+  confidence: number | null;
+  autoApproveBar: number | null;
+}
+
+/** What a price check item adds (prices are the API's numeric strings). */
+export interface PriceFacts {
+  listed: string | null;
+  listedMax: string | null;
+  checked: string | null;
+  checkedMax: string | null;
+  tier: string | null;
+  listedAt: string | null;
+  checkedAt: string | null;
+  checkedFans: number | null;
+  listedFans: number | null;
+  ticketUrl: string | null;
+  checkerSubmissions: number | null;
+  checkerApproved: number | null;
+}
+
+/** What a bug item adds. */
+export interface BugFacts {
+  message: string | null;
+  createdAt: string | null;
+  handle: string | null;
+  screenshot: string | null;
+  issueUrl: string | null;
+}
+
 /** One crawl run a venue item lists (newest first). `status` is the run's own word. */
 export interface RunLine {
   at: string;
@@ -83,6 +140,14 @@ export interface QueueRow {
   robots: string | null;
   /** A dropped show's venue: its other upcoming shows the last run still saw. */
   otherShowsCrawledFine: number | null;
+  /** An artist item's match facts; null on other kinds. */
+  artistFacts: ArtistFacts | null;
+  /** A low-confidence event item's facts; null on other kinds. */
+  eventFacts: EventFacts | null;
+  /** A price check item's facts; null on other kinds. */
+  priceFacts: PriceFacts | null;
+  /** A bug item's facts; null on other kinds. */
+  bugFacts: BugFacts | null;
 }
 
 // Every kind the API serves. A `Record` so a kind added to the type fails to
@@ -154,6 +219,79 @@ const moveToFrom = (value: unknown): MoveTo | null =>
       }
     : null;
 
+const textOf = (value: unknown): string | null =>
+  isText(value) ? value : null;
+
+const numberOf = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+const candidateFrom = (value: unknown): ArtistCandidate[] =>
+  isRecord(value) && isText(value['id']) && isText(value['name'])
+    ? [
+        {
+          id: value['id'],
+          name: value['name'],
+          imageUrl: textOf(value['imageUrl']),
+          genres: Array.isArray(value['genres'])
+            ? value['genres'].filter(isText)
+            : [],
+          current: value['current'] === true,
+          exact: value['exact'] === true,
+          playsDenver: value['playsDenver'] === true,
+        },
+      ]
+    : [];
+
+const artistFactsFrom = (value: Record<string, unknown>): ArtistFacts => ({
+  nextShowVenue: textOf(value['nextShowVenue']),
+  spotifyArtistId: textOf(value['spotifyArtistId']),
+  photoUrl: textOf(value['photoUrl']),
+  reportReasons: Array.isArray(value['reportReasons'])
+    ? value['reportReasons'].filter(isText)
+    : [],
+  candidates: Array.isArray(value['candidates'])
+    ? value['candidates'].flatMap(candidateFrom)
+    : [],
+});
+
+const eventFactsFrom = (value: Record<string, unknown>): EventFacts => ({
+  eventId: textOf(value['eventId']),
+  artist: textOf(value['artist']),
+  description: textOf(value['description']),
+  confidence: numberOf(value['confidence']),
+  autoApproveBar: numberOf(value['autoApproveBar']),
+});
+
+const priceFactsFrom = (value: Record<string, unknown>): PriceFacts => ({
+  listed: textOf(value['listedPrice']),
+  listedMax: textOf(value['listedMax']),
+  checked: textOf(value['checkedPrice']),
+  checkedMax: textOf(value['checkedMax']),
+  tier: textOf(value['tier']),
+  listedAt: textOf(value['listedAt']),
+  checkedAt: textOf(value['checkedAt']),
+  checkedFans: numberOf(value['checkedFans']),
+  // The listed price's backing fans come as an evidence line.
+  listedFans: numberOf(
+    Number(
+      evidenceFrom(value['evidence']).find(
+        (line) => line.label === 'Fans backing the listed price',
+      )?.value,
+    ),
+  ),
+  ticketUrl: textOf(value['ticketUrl']),
+  checkerSubmissions: numberOf(value['checkerSubmissions']),
+  checkerApproved: numberOf(value['checkerApproved']),
+});
+
+const bugFactsFrom = (value: Record<string, unknown>): BugFacts => ({
+  message: textOf(value['message']),
+  createdAt: textOf(value['createdAt']),
+  handle: textOf(value['handle']),
+  screenshot: textOf(value['screenshot']),
+  issueUrl: textOf(value['issueUrl']),
+});
+
 const rowFrom = (value: unknown): QueueRow | null => {
   if (
     !isRecord(value) ||
@@ -195,6 +333,11 @@ const rowFrom = (value: unknown): QueueRow | null => {
     otherShowsCrawledFine: isCount(value['otherShowsCrawledFine'])
       ? value['otherShowsCrawledFine']
       : null,
+    artistFacts: value['kind'] === 'artist' ? artistFactsFrom(value) : null,
+    eventFacts:
+      value['kind'] === 'event-low-confidence' ? eventFactsFrom(value) : null,
+    priceFacts: value['kind'] === 'price-check' ? priceFactsFrom(value) : null,
+    bugFacts: value['kind'] === 'bug' ? bugFactsFrom(value) : null,
   };
 };
 
@@ -244,11 +387,16 @@ export const needsYouApi = (getToken: GetToken) => ({
     return count;
   },
   /** One answer. `auditId` is what Undo points at; null when it can't be undone. */
-  answer: async (key: string, slug: string): Promise<AnswerResult> => {
+  /** `params` are the answer's own fields (a picked artist, a reason). */
+  answer: async (
+    key: string,
+    slug: string,
+    params?: AnswerParams,
+  ): Promise<AnswerResult> => {
     const data = await call(
       getToken,
       `/v1/admin/needs-you/items/${encodeURIComponent(key)}/answer`,
-      { method: 'POST', body: { answer: slug } },
+      { method: 'POST', body: { ...params, answer: slug } },
     );
     if (!isRecord(data)) throw new Error('needs-you answer');
     const auditId = isText(data['auditId']) ? data['auditId'] : null;
