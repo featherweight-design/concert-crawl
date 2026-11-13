@@ -1368,7 +1368,7 @@ export const CONSUMER_COPY = {
         "Your handle and profile will be gone. Price submissions you made will stay (they're part of the public record), but your name will be removed from them. Other fans' confirmations belong to them and will persist.",
       deleteConfirmPlaceholder: 'Type DELETE to enable',
       deleteButtonArmed: 'Delete my account permanently',
-      deleteButtonDisabled: 'Delete my account',
+      deleteButtonDisabled: 'Delete permanently',
 
       // ── DeleteAccountSheet — shared by the mobile sheet and the
       // desktop dialog, which render the same words in two branches.
