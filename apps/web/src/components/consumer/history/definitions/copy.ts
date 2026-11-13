@@ -105,7 +105,9 @@ export const HISTORY_COPY = {
   },
 
   passport: {
-    headline: 'Your stamp book.',
+    // Verbatim from addendum-2 concerts-round-stamps: eyebrow, title and link.
+    eyebrow: (year: number) => `PASSPORT · ${year}`,
+    headline: 'Your Passport',
     // No genre, no third segment: HistoryHeader drops its genre tile the same
     // way, and a bare dash beside real stats reads as a rendering bug.
     summary: (nights: number, venues: number, topGenre: string | null) =>
@@ -114,7 +116,7 @@ export const HISTORY_COPY = {
         `${venues} ${venues === 1 ? 'venue' : 'venues'}`,
         ...(topGenre === null ? [] : [topGenre]),
       ].join(' · '),
-    link: 'See your Passport →',
+    link: 'Open it →',
   },
 
   // The rail entry that opens the Add sheet (edit-concerts COPY.md "Add row").

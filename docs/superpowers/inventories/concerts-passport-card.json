@@ -1,0 +1,22 @@
+{
+  "feature": "Concerts · Passport teaser card and the phone stats row",
+  "note": "Boards: design/design_handoff_bplus_redesign/addendum-2/screens/03-stamps/concerts-round-stamps-m and -d, and addendum-3 04-edit-your-concerts/menu-hit-target-m. Needs a signed-in user with past nights (the local audit user has them).",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "concerts-card",
+      "label": "Concerts: stats row and the Passport teaser",
+      "steps": [
+        {
+          "goto": "/history",
+          "wait": "[data-testid=\"passport-teaser-body\"]",
+          "settle": 1200
+        }
+      ]
+    }
+  ]
+}

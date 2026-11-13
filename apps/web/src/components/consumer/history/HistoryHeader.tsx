@@ -47,7 +47,9 @@ const StatTile = ({
       {label}
     </dt>
     <dd
-      className="truncate"
+      // A long venue wraps onto a second line in its third on a phone, as the
+      // boards draw "Mission Ballroom", rather than cutting to "Larim…".
+      className="truncate max-sm:whitespace-normal"
       style={{
         fontFamily: 'var(--font-ui)',
         fontSize: 28,
@@ -177,8 +179,10 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
         </p>
       </div>
 
-      {/* Wraps instead of scrolling at 320px — six tiles never fit one row. */}
-      <dl className="m-0 flex flex-wrap items-center gap-x-5 gap-y-4">
+      {/* A phone sets the tiles in equal thirds, three to a row, as the boards
+          do; from `sm` they flow at their natural width. Either way it wraps
+          instead of scrolling at 320px: six tiles never fit one row. */}
+      <dl className="m-0 grid grid-cols-3 items-start gap-x-4 gap-y-4 sm:flex sm:flex-wrap sm:items-center sm:gap-x-5">
         {tiles.map((tile) => (
           <StatTile
             key={tile.key}

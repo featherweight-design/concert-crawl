@@ -54,8 +54,31 @@ const TeaserBody = ({
       >
         <span
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9.5,
+            fontWeight: 700,
+            letterSpacing: '0.14em',
+            color: 'var(--signal)',
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 5,
+              background: 'var(--signal)',
+            }}
+          />
+          {COPY.eyebrow(new Date().getFullYear())}
+        </span>
+        <span
+          style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 15.5,
+            fontSize: 17,
             fontWeight: 800,
             letterSpacing: '-0.015em',
             color: 'var(--fg)',

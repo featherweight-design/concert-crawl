@@ -57,6 +57,17 @@ describe('PassportTeaser', () => {
     expect(screen.getByText(COPY.summary(4, 2, 'indie'))).toBeInTheDocument();
   });
 
+  // addendum-2 concerts-round-stamps: "PASSPORT · 2026", "Your Passport", "Open it →".
+  it('draws the eyebrow with the year, the title and the link as the board does', () => {
+    render(<PassportTeaser stats={STATS} shows={SHOWS} />);
+
+    expect(
+      screen.getByText(COPY.eyebrow(new Date().getFullYear())),
+    ).toBeInTheDocument();
+    expect(COPY.headline).toBe('Your Passport');
+    expect(screen.getByText('Open it →')).toBeInTheDocument();
+  });
+
   it('drops the genre segment when there is no top genre', () => {
     render(
       <PassportTeaser stats={{ ...STATS, topGenre: null }} shows={SHOWS} />,
