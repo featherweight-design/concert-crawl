@@ -684,7 +684,7 @@ export function PhoneFilterSheet({
             style={{
               color: 'var(--fg-on-accent)',
               background:
-                'linear-gradient(90deg, var(--signal), var(--accent))',
+                'linear-gradient(90deg, var(--signal), var(--cta-end))',
               boxShadow:
                 '0 6px 18px color-mix(in oklab, var(--signal) 25%, transparent)',
             }}
