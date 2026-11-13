@@ -69,13 +69,15 @@ const eventsQuerySchema = z.object({
 });
 
 /** Fans Watching a show (a correlated count, built per request). */
-const watchingCountOf = (): SQL<number> =>
+// `mapWith(Number)`: Postgres returns a count as bigint text, and the cursor
+// compares this value as a number.
+const watchingCountOf = () =>
   sql<number>`(${db
     .select({ total: count() })
     .from(userEvents)
     .where(
       and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),
-    )})`;
+    )})`.mapWith(Number);
 
 /**
  * The Missing a price list: soonest show first, then the one most fans are
