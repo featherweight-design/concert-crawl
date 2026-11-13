@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth, requireAdminUser } from '@/lib/auth';
 import { apiClient } from '@/lib/api';
 import { ReviewPageClient } from '@/components/admin/review/ReviewPageClient';
+import { fetchNeedsYouDecisions } from '@/components/admin/shell/needs-you-count';
 import { type ReviewCounts } from '@/lib/queries/use-admin-review';
 import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions';
 import { FETCH_PAGE_SIZE } from '@/lib/queries/admin-price-submissions.constants';
@@ -50,7 +51,7 @@ export default async function ReviewPage({
   // one is only a first paint, and the client query that owns the surface
   // refetches on mount regardless. A silent fallback is indistinguishable
   // from genuinely empty data, so each logs before degrading.
-  const [submissions, counts] = await Promise.all([
+  const [submissions, counts, decisions] = await Promise.all([
     // The Submissions tab walks the full set client-side; this first page is
     // only what it paints before that resolves. Shares FETCH_PAGE_SIZE with
     // the walker so the seed and its offset steps can't drift.
@@ -69,6 +70,12 @@ export default async function ReviewPage({
         console.error('admin review: counts SSR seed failed', err);
         return { eventFlags: 0, prices: 0, missing: 0, priceContests: 0 };
       }),
+    // The one Needs you number, the same source as the sidebar badge. A
+    // failure hides the pending pill rather than showing a wrong number.
+    fetchNeedsYouDecisions(token).catch((err: unknown): number => {
+      console.error('admin review: needs-you count failed', err);
+      return 0;
+    }),
   ]);
 
   return (
@@ -76,6 +83,7 @@ export default async function ReviewPage({
       initialSubmissions={submissions.rows}
       initialSubmissionsTotal={submissions.total}
       initialCounts={counts}
+      decisions={decisions}
     />
   );
 }

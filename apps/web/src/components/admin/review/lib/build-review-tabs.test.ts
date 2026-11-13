@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildReviewTabs } from './build-review-tabs';
-import { computePendingCount } from '@/lib/admin/review-pending';
 import { RETIRED_REVIEW_TABS, REVIEW_TAB_KEYS } from '@/lib/admin/review-tabs';
 import { type ReviewCounts } from '@/lib/queries/use-admin-review';
 
@@ -65,15 +64,5 @@ describe('buildReviewTabs', () => {
       );
       expect(moved.length).toBeLessThanOrEqual(1);
     }
-  });
-
-  it('keeps every pill total within the badge sum', () => {
-    const badge = computePendingCount(counts);
-    const shown = buildReviewTabs(counts)
-      .map((tab) => tab.count ?? 0)
-      .reduce((sum, count) => sum + count, 0);
-    // Pills are a subset of the badge (Prices and All events show none), so
-    // the pills must never exceed it — that would mean a double-count.
-    expect(shown).toBeLessThanOrEqual(badge);
   });
 });
