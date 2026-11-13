@@ -1,3 +1,16 @@
+# [1.396.0](https://github.com/featherweight-design/concert-crawl/compare/v1.395.0...v1.396.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** read crawl run columns lazily so db mocks import ([166c208](https://github.com/featherweight-design/concert-crawl/commit/166c20822a010d7bd89d18edc038a1f22278003f))
+
+
+### Features
+
+* **api:** address 3b API review (snooze delete by id, pin pair, audit) ([36064bf](https://github.com/featherweight-design/concert-crawl/commit/36064bf559502295bb6bd3550fcbbe990eb6c77d))
+* **api:** venue detail counts, latest run, Needs you by venue, contact fields (3b API) ([5110f02](https://github.com/featherweight-design/concert-crawl/commit/5110f024ecf8b2185aed0baaed155e04331754ab))
+
 # [1.395.0](https://github.com/featherweight-design/concert-crawl/compare/v1.394.0...v1.395.0) (2026-11-13)
 
 
