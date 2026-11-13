@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Trash2 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 
 const setPhone = (matches: boolean) => {
@@ -86,5 +87,19 @@ describe('ConfirmDialog', () => {
     expect(
       screen.getByRole('button', { name: 'Pause crawling' }),
     ).toBeDisabled();
+  });
+
+  it('confirmDisabled holds only the confirm, and draws its icon', () => {
+    const { onConfirm, onCancel } = renderDialog({
+      confirmDisabled: true,
+      confirmIcon: Trash2,
+    });
+    const confirm = screen.getByRole('button', { name: 'Pause crawling' });
+    expect(confirm).toBeDisabled();
+    expect(confirm.querySelector('svg')).not.toBeNull();
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

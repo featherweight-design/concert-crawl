@@ -24,6 +24,12 @@ const venueCount = (count: number): string =>
 const showCount = (count: number): string =>
   `${count.toLocaleString('en-US')} ${count === 1 ? 'show' : 'shows'}`;
 
+/** "235 upcoming shows", or "upcoming shows" when the count is unknown. */
+const upcomingCount = (count: number | null): string =>
+  count === null
+    ? 'upcoming shows'
+    : `${count.toLocaleString('en-US')} upcoming ${count === 1 ? 'show' : 'shows'}`;
+
 export const ADMIN_COPY = {
   // --- Health (plan row 1c; boards 03-health) ---
   health: {
@@ -3014,6 +3020,83 @@ export const ADMIN_COPY = {
     flag: 'FLAG',
     priceCheck: 'PRICE CHECK',
     inviteCode: 'INVITE CODE',
+  },
+  // The venue page's Hide, Take down and Delete confirms (`A3/03/hide-other-d`,
+  // `A3/03/take-down-d`, `04/delete-venue`) and the delete-refused line
+  // (`A3/03/delete-refused`), which the ⋯ menu (3a 4b part 2) also draws.
+  venueConfirms: {
+    // Rule 10 through `states.saveFailed`, shown inside the dialog.
+    failed: {
+      hide: (venue: string) => venue,
+      hideSaved: 'It is still on the site.',
+      takeDown: (venue: string) => venue,
+      takeDownSaved: 'Its shows and prices are as they were.',
+      delete: (venue: string) => venue,
+      deleteSaved: 'It is still here, hidden.',
+    },
+    // "Can't delete: it has 12 past shows and 3 people Watching them."
+    deleteRefused: (past: number, upcoming: number, watchers: number) => {
+      const shows =
+        upcoming > 0
+          ? showCount(past + upcoming)
+          : `${past.toLocaleString('en-US')} past ${past === 1 ? 'show' : 'shows'}`;
+      const people =
+        watchers === 0
+          ? ''
+          : ` and ${watchers.toLocaleString('en-US')} ${watchers === 1 ? 'person' : 'people'} Watching them`;
+      return `Can’t delete: it has ${shows}${people}. It stays hidden instead.`;
+    },
+    // The board's "including Watching lists" is cut: Watching
+    // (`routes/watching.ts`) doesn't filter hidden venues.
+    hide: {
+      title: (venue: string) => `Hide ${venue} from the site?`,
+      // Null counts (no `deleteBlockers` on the payload) drop the numbers.
+      body: (venue: string, shows: number | null, watchers: number | null) => {
+        const watching =
+          watchers === null || watchers === 0
+            ? ''
+            : ` ${watchers.toLocaleString('en-US')} ${watchers === 1 ? 'person is' : 'people are'} Watching one of its shows; they get no notice.`;
+        return `${venue} and its ${upcomingCount(shows)} come off the site and out of search.${watching} Crawling stops too.`;
+      },
+      why: 'Why',
+      reasons: {
+        venue_closed: 'Venue closed',
+        not_music_venue: 'Not a music venue',
+        other: 'Other',
+      },
+      noteLabel: 'What’s going on',
+      notePlaceholder: 'Renovation through March.',
+      foot: 'You can show it again from the ⋯ menu. Nothing is deleted. A venue that asked us to remove its data uses Take down instead.',
+      confirm: 'Hide venue',
+    },
+    // The board's "deleted for good" for the shows is false (POST /:id/remove
+    // keeps the event rows) and "won't add it again" has nothing enforcing
+    // it, so both are cut. The count is the upcoming one, as Hide's; prices go
+    // for past shows too.
+    takeDown: {
+      title: (venue: string) => `Take down ${venue}?`,
+      body: (venue: string, shows: number | null) =>
+        `${venue} and its ${upcomingCount(shows)} come off the site, and every price fans submitted for its shows is deleted for good. Nobody gets a notice, and crawling stops.`,
+      warn: 'This can’t be undone. For a closed venue, hide it instead.',
+      // Sent as the API's required reason, and kept in the audit log; the
+      // note, when given, follows it there.
+      reason: 'They asked us to remove their data',
+      auditReason: (note: string) =>
+        note === ''
+          ? 'They asked us to remove their data'
+          : `They asked us to remove their data: ${note}`,
+      noteLabel: 'Who asked, and how (optional)',
+      notePlaceholder: 'e.g. their booker emailed venues@ on Nov 2',
+      confirm: 'Take down',
+    },
+    // Offered only on a hidden venue with no shows.
+    remove: {
+      title: (venue: string) => `Delete ${venue}?`,
+      body: 'Only for a venue added by mistake. Deleting removes the venue and its run history. This can’t be undone.',
+      field: 'Type the venue’s name to confirm',
+      note: 'A venue with shows or Watchers can’t be deleted; hide it instead.',
+      confirm: 'Delete venue',
+    },
   },
   panel: { close: 'Close' },
   confirm: { cancel: 'Cancel' },

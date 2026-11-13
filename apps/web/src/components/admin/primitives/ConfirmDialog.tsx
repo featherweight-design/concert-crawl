@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from './AdminButton';
 import { AdminDialog } from './AdminDialog';
@@ -28,6 +29,10 @@ export interface ConfirmDialogProps {
   buttonSize?: 'default' | 'large';
   /** True while the action runs: both buttons disable and dismissing stops. */
   pending?: boolean;
+  /** Holds only the confirm, e.g. until the venue's name is typed. */
+  confirmDisabled?: boolean;
+  /** The drawn icon before the confirm label (Hide venue's eye). */
+  confirmIcon?: LucideIcon;
   eyebrow?: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -46,6 +51,8 @@ export const ConfirmDialog = ({
   confirmVariant,
   buttonSize = 'default',
   pending = false,
+  confirmDisabled = false,
+  confirmIcon,
   eyebrow = '',
   onConfirm,
   onCancel,
@@ -59,10 +66,11 @@ export const ConfirmDialog = ({
     <AdminButton
       type="button"
       variant={confirmVariant ?? (tone === 'danger' ? 'danger' : 'primary')}
-      disabled={pending}
+      {...(confirmIcon && { icon: confirmIcon })}
+      disabled={pending || confirmDisabled}
       onClick={onConfirm}
       fullWidth={isPhone}
-      style={large}
+      style={{ ...large, ...(confirmDisabled && { opacity: 0.45 }) }}
     >
       {confirmLabel}
     </AdminButton>

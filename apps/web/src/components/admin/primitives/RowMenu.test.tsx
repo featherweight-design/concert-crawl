@@ -61,6 +61,36 @@ describe('RowMenu', () => {
     ).toHaveFocus();
   });
 
+  it('draws a warning item in the warning colour, label and icon', () => {
+    render(
+      <RowMenu
+        label="More for Ball Arena"
+        items={[
+          {
+            key: 'hide',
+            icon: X,
+            label: 'Hide from site…',
+            hint: 'Removes the venue and its shows from the app.',
+            warning: true,
+            onSelect: vi.fn(),
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'More for Ball Arena' }),
+    );
+    const item = screen.getByRole('menuitem', { name: /Hide from site/ });
+    const [tile, text] = Array.from(item.querySelectorAll(':scope > span'));
+    const label = text?.querySelector('span');
+    expect(tile instanceof HTMLElement && tile.style.color).toBe(
+      'var(--warning)',
+    );
+    expect(label instanceof HTMLElement && label.style.color).toBe(
+      'var(--warning)',
+    );
+  });
+
   it('closes on Escape with focus back on ⋯', () => {
     renderMenu();
     fireEvent.keyDown(window, { key: 'Escape' });

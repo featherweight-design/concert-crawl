@@ -9,9 +9,14 @@ import type {
   Venue,
   VenueGuide,
   VenueGuideChip,
+  VenueHideReason,
   VenuePlatform,
 } from '@concert-crawl/types';
 import type { PauseOutcome } from '@/components/admin/venues/pause-rules';
+import {
+  deleteBlockersOf,
+  type DeleteVenueOutcome,
+} from '@/components/admin/venues/delete-rules';
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl';
 import { buildUpdateVenueBody } from './build-update-venue-body';
 
@@ -256,6 +261,46 @@ export async function deleteVenue(
   );
   revalidatePath('/admin/venues');
   return result;
+}
+
+// The venue page's Delete. A venue with shows or Watchers is refused with a
+// 409 and its counts, which come back as a value (a server action's thrown
+// message is redacted in production) so the page can say why. It wraps
+// `deleteVenue`, so there is one DELETE call. A 404 means the venue is already
+// gone (another tab, a double submit), which is what was asked.
+export async function tryDeleteVenue(id: string): Promise<DeleteVenueOutcome> {
+  try {
+    await deleteVenue(id);
+  } catch (err: unknown) {
+    if (!(err instanceof ApiError)) throw err;
+    if (err.status === 404) {
+      revalidatePath('/admin/venues');
+      return { ok: true };
+    }
+    console.warn('tryDeleteVenue: refused', { id, status: err.status });
+    return {
+      ok: false,
+      refused: err.status === 409 ? deleteBlockersOf(err.body) : null,
+    };
+  }
+  return { ok: true };
+}
+
+// Hide from site with the drawn Why (`A3/03/hide-other-d`). The API stores the
+// reason on the venue and writes the `venue.hide` audit row.
+export async function hideVenue(
+  id: string,
+  hideReason: VenueHideReason,
+  hideNote: string | null,
+): Promise<void> {
+  const token = await getToken();
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+    active: false,
+    hideReason,
+    ...(hideNote === null ? {} : { hideNote }),
+  });
+  revalidatePath('/admin/venues');
+  revalidatePath(`/admin/venues/${id}`);
 }
 
 export async function setVenueFeatured(
