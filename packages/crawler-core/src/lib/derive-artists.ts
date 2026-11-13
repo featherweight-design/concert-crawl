@@ -201,7 +201,22 @@ async function applyJoinedRulings(
     else if (ruling === 'whole') out.push(name);
     else unresolved.push(name);
   }
-  return { headliners: out, unresolved };
+  // One list, no repeats: the model sometimes lists "A & B" beside "A" and "B".
+  // A joined name whose parts are all already listed on their own is the same
+  // bill said twice, and the separate entries stand.
+  const keys = new Set(out.map(nameKey));
+  const seen = new Set<string>();
+  const unique = out.filter((name) => {
+    const parts = partsOf(name);
+    if (parts.length > 0 && parts.every((part) => keys.has(nameKey(part)))) {
+      return false;
+    }
+    const key = nameKey(name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return { headliners: unique, unresolved };
 }
 
 // "Tape B Presents: Hallow Rocks": a presenter is on the bill only when it is a
