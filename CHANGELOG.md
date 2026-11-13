@@ -1,3 +1,20 @@
+# [1.416.0](https://github.com/featherweight-design/concert-crawl/compare/v1.415.0...v1.416.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** always send priceMax on a price edit, reject leading zeros ([cd6fed8](https://github.com/featherweight-design/concert-crawl/commit/cd6fed8aa222e370e59ae99696ba206ae732d782))
+* **web:** batch sheet load no longer restarts on a new token fn ([fda6da0](https://github.com/featherweight-design/concert-crawl/commit/fda6da039686986a13c3c000b291fdc7690c8503))
+* **web:** batch sheet meta stays one line, focus opens at rest ([c285378](https://github.com/featherweight-design/concert-crawl/commit/c28537852520cf3c24be884d7ad70019eac7b63d))
+* **web:** batch sheet review fixes ([9d6e937](https://github.com/featherweight-design/concert-crawl/commit/9d6e93796c2c5a479acff0d7bd158952d94bf0b9))
+* **web:** batch sheet rows and footer as the board draws ([45fef15](https://github.com/featherweight-design/concert-crawl/commit/45fef153d283fda759546f744670a1bad50a551a))
+
+
+### Features
+
+* **api:** edit the price on a waiting or published submission ([f7407d1](https://github.com/featherweight-design/concert-crawl/commit/f7407d1dcfd66405b386f7af9c5191c6c661bd9a))
+* **web:** price batch sheet for Needs you (2c-2 B) ([db87899](https://github.com/featherweight-design/concert-crawl/commit/db878990025097a8d747d967ae27d1d4c482d8dc))
+
 # [1.415.0](https://github.com/featherweight-design/concert-crawl/compare/v1.414.1...v1.415.0) (2026-11-13)
 
 
