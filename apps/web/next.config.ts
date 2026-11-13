@@ -14,7 +14,9 @@ const config: NextConfig = {
   // TypeScript" is killed ("Out of Memory", then NEXT_NO_ROUTES_MANIFEST), which
   // failed every web build from 2026-11-13 07:06Z. CI already type-checks the
   // web workspace on every PR (`pnpm turbo run lint typecheck --filter=@concert-
-  // crawl/web`, the Checks job), so the build skips the second pass.
+  // crawl/web`, the Checks job), and main's branch protection (the merge queue)
+  // requires that job, so nothing reaches main, and so Vercel, untyped. The
+  // build skips only the second pass of a check that has already gated the code.
   typescript: { ignoreBuildErrors: true },
   env: {
     // Exact Clerk script versions, so the browser skips two uncacheable
