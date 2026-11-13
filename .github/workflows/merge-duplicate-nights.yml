@@ -1,0 +1,94 @@
+name: Merge duplicate nights
+
+# One-off cleanup of events stored twice for one night: runs
+# apps/crawler/scripts/merge-duplicate-nights.ts against PRODUCTION data.
+#
+# Safe by default. Dispatching it does a DRY RUN: nothing is written, and the
+# run's summary page lists every night it would merge (the row kept, the rows
+# folded in, what moves, what the survivor takes) and the artist pairs to review.
+# Writing needs the `apply` input set to true, a second deliberate dispatch
+# after the dry run's list has been read. `max_groups` caps an apply to a first
+# sample.
+#
+# Guards:
+# - Only main's copy of this workflow and its script may read the production
+#   secrets: a dispatch from any other branch is skipped.
+# - `environment: production` holds the job behind that environment's
+#   protection rules (required reviewers) before any secret is released.
+# - Each night merges in its own transaction (the admin merge's own core), so a
+#   failure skips that night and is listed, never half-applied.
+# - Dispatches never overlap: one cleanup at a time.
+#
+# What a merge does: every watch, going mark and attendance stamp, report, price
+# submission and price log on a folded row moves to the surviving row, the
+# survivor takes any time, links, image, description or price it lacked, the
+# folded row is deleted, and its id redirects to the survivor. Artists are never
+# merged here; doubled rows that name two artists are listed for the admin
+# artists queue.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write the merges. Leave off for a dry run (the default).'
+        type: boolean
+        default: false
+      max_groups:
+        description: 'Merge at most this many nights (a first sample). Blank means all.'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: merge-duplicate-nights
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    name: ${{ inputs.apply && 'Merge duplicate nights (APPLY)' || 'Merge duplicate nights (dry run)' }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the crawler's dependencies
+        run: pnpm exec turbo run build --filter=@concert-crawl/crawler^...
+
+      # Checked by name, never printed. GitHub masks secret values in logs.
+      - name: Verify configuration
+        env:
+          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+        run: |
+          if [ -z "$CRAWLER_DATABASE_URL" ]; then
+            echo "Missing production-environment secret: CRAWLER_DATABASE_URL"
+            exit 1
+          fi
+
+      - name: Merge duplicate nights (${{ inputs.apply && 'APPLY' || 'dry run' }})
+        env:
+          DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          APPLY: ${{ inputs.apply }}
+          MAX_GROUPS: ${{ inputs.max_groups }}
+        run: |
+          args=(--summary-file="$GITHUB_STEP_SUMMARY")
+          [ "$APPLY" = "true" ] && args+=(--apply)
+          [ -n "$MAX_GROUPS" ] && args+=(--max-groups="$MAX_GROUPS")
+          echo "merge-duplicate-nights ${args[*]/--summary-file=*/--summary-file=…}"
+          pnpm --filter @concert-crawl/crawler run merge-duplicate-nights -- "${args[@]}"
