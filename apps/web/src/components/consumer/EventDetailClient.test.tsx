@@ -687,6 +687,74 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getAllByText('VIP')).toHaveLength(2);
   });
 
+  // Regression: the "other tiers" row for a tier with a live headline took its
+  // kind from sourceCategory alone, so a legacy box office row (no category)
+  // fell to community. The vendor is now the fallback.
+  it('STATE #6 mixed-tier — a legacy box office headline tier with no category draws the box office dot', () => {
+    const headline = (
+      id: string,
+      priceMin: string,
+      vendor: TierHeadline['vendor'],
+      sourceCategory: TierHeadline['sourceCategory'],
+    ): TierHeadline => ({
+      submissionId: id,
+      priceMin,
+      priceMax: null,
+      vendor,
+      sourceCategory,
+      submitterHandle: 'ada',
+      observedAt: '2026-06-20T00:00:00Z',
+      approvedAt: '2026-06-20T00:00:00Z',
+      approvalKind: 'fan',
+      confirmsCount: 2,
+    });
+    const gaBlock = makeTierBlock({
+      tier: 'GA',
+      headline: headline('s-ga', '25', 'AXS', 'standard'),
+    });
+    const legacyBoxOfficeBlock = makeTierBlock({
+      tier: 'Reserved',
+      headline: headline('s-bal', '35', 'VenueBoxOffice', null),
+    });
+    const pendingOnlyBlock = makeTierBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p-vip',
+          priceMin: '80',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 1,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    });
+    const { container } = render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({
+          priceByTier: [gaBlock, legacyBoxOfficeBlock, pendingOnlyBlock],
+        })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    // The Reserved row's dot is box office gold; before the fix it was azure.
+    const reservedDot = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'div[style*="border-radius: 2.5px"]',
+      ),
+    ).find((dot) => dot.parentElement?.textContent?.includes('Reserved'));
+    expect(reservedDot).toBeDefined();
+    expect(reservedDot?.style.background).toContain('oklch(0.66 0.14 78)');
+  });
+
   // Regression: the "other tiers" row for a pending-only tier took its kind
   // from `vendor === 'VenueBoxOffice'` alone, so a pending resale price drew
   // the community dot instead of the resale one.

@@ -1227,12 +1227,12 @@ export function EventDetailPriceBlock({
       const alternateRows = otherBlocks.map((block) => {
         // Headline-bearing tier → render as alternate row (resolved tier).
         if (block.headline != null) {
-          const altKind: 'boxoffice' | 'resale' | 'community' =
-            block.headline.sourceCategory === 'boxoffice'
-              ? 'boxoffice'
-              : block.headline.sourceCategory === 'resale'
-                ? 'resale'
-                : 'community';
+          // sourceCategory first, the vendor as the legacy fallback: a row with
+          // no category used to fall straight to community, even a box office one.
+          const altKind = resolvePendingKind(
+            block.headline.vendor,
+            block.headline.sourceCategory,
+          );
           return {
             tier: block.tier,
             vendor: block.headline.vendor,
