@@ -1,3 +1,15 @@
+# [1.395.0](https://github.com/featherweight-design/concert-crawl/compare/v1.394.0...v1.395.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** re-check each night before merging, fill related columns from one row ([dcb40a3](https://github.com/featherweight-design/concert-crawl/commit/dcb40a3d467733cff7c68acb449bb8c84205c577))
+
+
+### Features
+
+* **crawler:** merge events stored twice for one night, dry by default ([031c95f](https://github.com/featherweight-design/concert-crawl/commit/031c95f1dd321bb76423dfc8ab94a73843852f0a))
+
 # [1.394.0](https://github.com/featherweight-design/concert-crawl/compare/v1.393.0...v1.394.0) (2026-11-13)
 
 
