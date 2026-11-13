@@ -9,6 +9,8 @@ export interface RowMenuItem {
   label: string;
   hint: string;
   danger?: boolean;
+  /** A reversible but loud item, drawn in warning (the venue's Hide from site…). */
+  warning?: boolean;
   /** A quieter item, drawn in the muted colour (Artists' Not an artist…). */
   muted?: boolean;
   /**
@@ -24,9 +26,19 @@ export interface RowMenuItem {
 const itemTone = (item: RowMenuItem): string =>
   item.danger
     ? 'var(--danger)'
+    : item.warning
+      ? 'var(--warning)'
+      : item.muted
+        ? 'var(--fg-muted)'
+        : 'var(--signal)';
+
+/** The label's ink: a coloured item says its colour, the rest read as text. */
+const labelTone = (item: RowMenuItem): string =>
+  item.danger || item.warning
+    ? itemTone(item)
     : item.muted
       ? 'var(--fg-muted)'
-      : 'var(--signal)';
+      : 'var(--fg)';
 
 /**
  * A row's ⋯ menu (`07/code-row-menu`, `11/artist-row-menu`): the drawn icon
@@ -256,11 +268,7 @@ export const RowMenu = ({
                         display: 'block',
                         fontSize: 13.5,
                         fontWeight: 600,
-                        color: item.danger
-                          ? 'var(--danger)'
-                          : item.muted
-                            ? 'var(--fg-muted)'
-                            : 'var(--fg)',
+                        color: labelTone(item),
                       }}
                     >
                       {item.label}

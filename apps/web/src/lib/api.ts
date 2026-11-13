@@ -39,6 +39,10 @@ export class ApiError extends Error {
   // route's browser-mode guard sends `field: 'crawlWaitForSelector'`), so a
   // form can mark that input instead of showing a generic error (#1344).
   // Last in the parameter list so no existing throw site changes.
+  //
+  // `body` is the whole error body, for a refusal that carries data beside its
+  // message (the venue delete guard's 409 sends `{pastShows, watchers}`).
+  // Unknown on purpose: the caller narrows it itself.
   constructor(
     public readonly status: number,
     message: string,
@@ -46,6 +50,7 @@ export class ApiError extends Error {
     public readonly zodIssues?: ZodIssue[],
     public readonly reason?: string,
     public readonly field?: string,
+    public readonly body?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -188,6 +193,7 @@ async function readResponse<T>(res: Response, timer: ApiTimer): Promise<T> {
       zodIssues,
       reasonField,
       fieldName,
+      body,
     );
   }
 
