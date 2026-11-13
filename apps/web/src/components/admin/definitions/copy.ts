@@ -2545,6 +2545,8 @@ export const ADMIN_COPY = {
     today: 'Today',
     yesterday: 'Yesterday',
     noHandle: 'a fan',
+    ticketPage: 'Ticket page',
+    watching: (count: number) => `${count} Watching`,
     takeAnswer: (price: string) => `Use ${price}`,
     keepAnswer: (price: string) => `Keep ${price}`,
     // The audit reason the resolve API requires; the board draws no reason field.

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { Tag } from 'lucide-react';
+import { ExternalLink, Tag } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -12,6 +12,7 @@ import {
   PageSkeleton,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { refusedStatus } from '../invite-codes/codes-api';
 import {
   checksApi,
@@ -269,7 +270,11 @@ export const PriceChecksTab = () => {
                           marginTop: 3,
                         }}
                       >
-                        {[check.venueName, shortDay(check.date, true)]
+                        {[
+                          check.venueName,
+                          shortDay(check.date, true),
+                          COPY.watching(check.watching),
+                        ]
                           .filter(Boolean)
                           .join(' · ')}
                       </div>
@@ -300,6 +305,30 @@ export const PriceChecksTab = () => {
                         justifyContent: isPhone ? 'stretch' : 'flex-end',
                       }}
                     >
+                      <SafeExternalLink
+                        href={check.ticketUrl}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          height: 28,
+                          padding: '0 10px',
+                          borderRadius: 9,
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          color: 'var(--fg)',
+                          background: 'var(--surface-2)',
+                          border: '1px solid var(--border-strong)',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        {isPhone ? null : (
+                          <ExternalLink size={14} strokeWidth={1.8} />
+                        )}
+                        {COPY.ticketPage}
+                      </SafeExternalLink>
                       <AdminButton
                         variant="primary"
                         size="sm"
