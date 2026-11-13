@@ -101,6 +101,7 @@ describe('useDraftLensCount', () => {
     expect(result.current).toEqual({ status: 'pending', count: 5 });
 
     await flush(DRAFT_COUNT_DEBOUNCE_MS);
+    await flush();
     expect(result.current).toEqual({ status: 'ready', count: 2 });
   });
 

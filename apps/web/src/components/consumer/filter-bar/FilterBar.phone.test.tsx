@@ -23,6 +23,12 @@ const { useFeatureFlag, useDraftShowCount } = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }));
 vi.mock('./useDraftShowCount', () => ({ useDraftShowCount }));
+// The lens count (a crew under other filters) has its own tests; here it asks
+// nothing, so a lens with no other filter still reads the crew's total.
+const { useDraftLensCount } = vi.hoisted(() => ({
+  useDraftLensCount: vi.fn(),
+}));
+vi.mock('./useDraftLensCount', () => ({ useDraftLensCount }));
 
 const searchParams = { current: new URLSearchParams() };
 const replace = vi.fn();
@@ -134,6 +140,8 @@ const openSheet = () => {
 beforeEach(() => {
   searchParams.current = new URLSearchParams();
   replace.mockClear();
+  useDraftLensCount.mockReset();
+  useDraftLensCount.mockReturnValue({ status: 'none' });
   useDraftShowCount.mockReset();
   useDraftShowCount.mockImplementation((query: string | null) =>
     query === null ? { status: 'none' } : { status: 'ready', count: 23 },
@@ -458,6 +466,34 @@ describe('FilterBar phone sheet', () => {
     expect(show).toHaveTextContent(copy.popover.vibeShow(crew.upcomingCount));
     fireEvent.click(show);
     expect(lastQuery().get('crew')).toBe(crew.id);
+  });
+
+  it("counts a drafted lens under the other filters, not the crew's total", () => {
+    searchParams.current = new URLSearchParams('filterWhere=black-box');
+    useDraftLensCount.mockReturnValue({ status: 'ready', count: 2 });
+    renderBar();
+    const sheet = openSheet();
+    fireEvent.click(within(sheet).getByRole('radio', { name: crew.name }));
+    // The lens is asked for with its filter query, and the button reads that
+    // number rather than the crew's upcoming total.
+    expect(useDraftLensCount).toHaveBeenLastCalledWith(
+      crew.id,
+      expect.stringContaining('venueSlug=black-box'),
+    );
+    expect(within(sheet).getByTestId('filter-sheet-show')).toHaveTextContent(
+      copy.popover.vibeShow(2),
+    );
+  });
+
+  it('shows the pending words while the lens count settles, never the crew total', () => {
+    searchParams.current = new URLSearchParams('filterWhere=black-box');
+    useDraftLensCount.mockReturnValue({ status: 'pending', count: null });
+    renderBar();
+    const sheet = openSheet();
+    fireEvent.click(within(sheet).getByRole('radio', { name: crew.name }));
+    expect(within(sheet).getByTestId('filter-sheet-show')).toHaveTextContent(
+      copy.showCountPending,
+    );
   });
 
   it('leaves Who out without crews and When out in Cal view, with no count', () => {
