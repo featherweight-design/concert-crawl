@@ -321,6 +321,47 @@ describe('crawlVenue — shows added by hand (admin 4a)', () => {
   });
 });
 
+describe('crawlVenue — a manual row keeps a typed ticket link (admin 4a)', () => {
+  it('a listing without a link never erases the one an admin typed', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(20);
+
+    mockExtraction([makeEvent('Typed Link', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    await db
+      .update(events)
+      .set({
+        manual: true,
+        ticketUrl: 'https://axs.example.org/typed',
+        ticketLinks: [
+          {
+            kind: 'primary',
+            vendor: null,
+            url: 'https://axs.example.org/typed',
+          },
+        ],
+      })
+      .where(eq(events.artist, 'Typed Link'));
+
+    mockExtraction(
+      [
+        makeEvent('Typed Link', date, {
+          title: 'Typed Link (Late)',
+          rawTitle: 'Typed Link (Late)',
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const after = await rowFor('Typed Link');
+    expect(after.ticketUrl).toBe('https://axs.example.org/typed');
+    expect(after.ticketLinks).toEqual([
+      { kind: 'primary', vendor: null, url: 'https://axs.example.org/typed' },
+    ]);
+  });
+});
+
 describe('crawlVenue — a lineup an admin saved (admin 4a)', () => {
   it('keeps the saved bill when a re-crawl reaches the upsert', async () => {
     const venue = await seedTestVenue();
@@ -465,5 +506,42 @@ describe('crawlVenue — a merged-away listing (admin 4a, READINESS A1)', () => 
     expect(after?.title).toBe(kept.title);
     expect(after?.ticketUrl).toBe('https://tickets.example.org/clipse');
     expect(after?.firstMissingAt).toBeNull();
+  });
+
+  it('inserts the listing again when the merge target has since been cancelled', async () => {
+    const venue = await seedTestVenue();
+    const date = futureDate(23);
+
+    mockExtraction([makeEvent('Relisted', date), makeEvent('Kept Row', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    const kept = await rowFor('Kept Row');
+    const gone = await rowFor('Relisted');
+    await mergeEventRows({
+      sourceId: gone.id,
+      targetId: kept.id,
+      actorId: 'user_admin',
+      suggestion: null,
+      notifyWatchers: false,
+    });
+    await db
+      .update(events)
+      .set({ status: 'cancelled' })
+      .where(eq(events.id, kept.id));
+
+    mockExtraction(
+      [
+        makeEvent('Relisted', date, {
+          title: 'Relisted!',
+          rawTitle: 'Relisted!',
+        }),
+      ],
+      `${HTML_BASE}<!-- 2 -->`,
+    );
+    await crawlVenue(venue.id, mockBrowser);
+
+    const relisted = await rowFor('Relisted');
+    expect(relisted.id).not.toBe(gone.id);
+    expect(relisted.status).toBe('upcoming');
+    expect((await rowFor('Kept Row')).status).toBe('cancelled');
   });
 });

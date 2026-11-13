@@ -17,9 +17,9 @@ export type EventArtistRole = (typeof EVENT_ARTIST_ROLES)[number];
 /**
  * An event's lineup as links to artists (admin 4a). During the expand phase
  * this is a PROJECTION of the four artist arrays on `events`, which stay the
- * source of truth: every write goes through `syncEventArtists`, which rebuilds
- * an event's rows from its arrays. A billed name with no `artists` row has no
- * row here. `position` follows the display order of `headliners` and
+ * source of truth. Nothing writes or reads it yet: admin 4a-2 adds
+ * `syncEventArtists`, which rebuilds an event's rows from its arrays, with its
+ * callers and a backfill. A billed name with no `artists` row has no row here. `position` follows the display order of `headliners` and
  * `supporting_artists` within each role.
  */
 export const eventArtists = pgTable(

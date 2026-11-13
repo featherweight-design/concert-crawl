@@ -1,6 +1,7 @@
 import type { Browser } from 'playwright';
 import {
   and,
+  asc,
   desc,
   eq,
   gte,
@@ -381,25 +382,6 @@ async function markEventsSeenForVenue(
         gte(events.date, DENVER_TODAY),
       ),
     );
-  // A merge target this venue's listings route to (see routeMergedListings)
-  // may sit at another venue; the unchanged page still lists it here.
-  await db
-    .update(events)
-    .set({ lastSeenAt: seenAt, firstMissingAt: null })
-    .where(
-      inArray(
-        events.id,
-        db
-          .select({ id: eventRedirects.targetId })
-          .from(eventRedirects)
-          .where(
-            and(
-              eq(eventRedirects.sourceVenueId, venueId),
-              gte(eventRedirects.sourceDate, DENVER_TODAY),
-            ),
-          ),
-      ),
-    );
 }
 
 /**
@@ -439,8 +421,11 @@ async function routeMergedListings<
         eq(eventRedirects.sourceVenueId, venueId),
         inArray(eventRedirects.sourceDate, dates),
       ),
-    );
+    )
+    .orderBy(asc(eventRedirects.createdAt));
   if (redirects.length === 0) return listings;
+  // Oldest first, so where two merges left one key the latest one wins,
+  // the same target on every crawl.
   const targetByKey = new Map<string, string>();
   for (const redirect of redirects) {
     if (redirect.canonicalArtist === null || redirect.date === null) continue;
@@ -458,21 +443,38 @@ async function routeMergedListings<
       remaining.push(listing);
       continue;
     }
-    const ticketLinks =
-      listing.ticketLinks === null
-        ? sql`NULL::jsonb`
-        : sql`${JSON.stringify(listing.ticketLinks)}::jsonb`;
-    await db
+    // A listing never erases a link. Where it has one, a manual target takes
+    // it and a crawled target (which has its own listing) only fills an
+    // empty one; the URL and the links derived from it move as a pair.
+    const takesLink = sql`(${events.manual} OR ${events.ticketUrl} IS NULL)`;
+    const ticket =
+      listing.ticketUrl === null
+        ? {}
+        : {
+            ticketUrl: sql`CASE WHEN ${takesLink} THEN ${listing.ticketUrl}::text ELSE ${events.ticketUrl} END`,
+            ticketLinks: sql`CASE WHEN ${takesLink} THEN ${JSON.stringify(listing.ticketLinks)}::jsonb ELSE ${events.ticketLinks} END`,
+          };
+    const page =
+      listing.eventUrl === null
+        ? {}
+        : {
+            eventUrl: sql`CASE WHEN ${events.manual} OR ${events.eventUrl} IS NULL THEN ${listing.eventUrl}::text ELSE ${events.eventUrl} END`,
+          };
+    // Only an upcoming target takes the listing. One an admin has cancelled
+    // since is left alone, and the listing is inserted as the crawl does for
+    // any relisted show.
+    const routed = await db
       .update(events)
       .set({
-        ticketUrl: sql`CASE WHEN ${events.manual} THEN ${listing.ticketUrl}::text ELSE COALESCE(${events.ticketUrl}, ${listing.ticketUrl}::text) END`,
-        ticketLinks: sql`CASE WHEN ${events.manual} THEN ${ticketLinks} ELSE COALESCE(${events.ticketLinks}, ${ticketLinks}) END`,
-        eventUrl: sql`CASE WHEN ${events.manual} THEN ${listing.eventUrl}::text ELSE COALESCE(${events.eventUrl}, ${listing.eventUrl}::text) END`,
+        ...ticket,
+        ...page,
         lastSeenAt: seenAt,
         firstMissingAt: null,
         updatedAt: new Date(),
       })
-      .where(eq(events.id, targetId));
+      .where(and(eq(events.id, targetId), eq(events.status, 'upcoming')))
+      .returning({ id: events.id });
+    if (routed.length === 0) remaining.push(listing);
   }
   return remaining;
 }
@@ -1130,6 +1132,8 @@ export async function crawlVenue(
         verified: events.verified,
         eventUrl: events.eventUrl,
         updatedAt: events.updatedAt,
+        manual: events.manual,
+        lineupEditedAt: events.lineupEditedAt,
       })
       .from(events)
       .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')));
@@ -1747,9 +1751,11 @@ export async function crawlVenue(
                       sql`excluded.doors_time`,
                     ),
                     showTime: sql`excluded.show_time`,
-                    ticketUrl: sql`excluded.ticket_url`,
-                    ticketLinks: sql`excluded.ticket_links`,
-                    eventUrl: sql`excluded.event_url`,
+                    // A listing with no link never erases one an admin typed
+                    // on a manual row; the URL and its links move as a pair.
+                    ticketUrl: sql`CASE WHEN ${events.manual} AND excluded.ticket_url IS NULL THEN ${events.ticketUrl} ELSE excluded.ticket_url END`,
+                    ticketLinks: sql`CASE WHEN ${events.manual} AND excluded.ticket_url IS NULL THEN ${events.ticketLinks} ELSE excluded.ticket_links END`,
+                    eventUrl: sql`CASE WHEN ${events.manual} AND excluded.event_url IS NULL THEN ${events.eventUrl} ELSE excluded.event_url END`,
                     description: listingOwned(
                       events.description,
                       sql`excluded.description`,
@@ -1835,15 +1841,23 @@ export async function crawlVenue(
       // other than the LLM emit no verdict at all, and treating "unclassified"
       // as "not a concert" would stop projecting most of the catalogue.
       const hiddenKeys = await hiddenEventKeys(venueId);
+      // Admin 4a: a manual row or a saved lineup keeps the admin's bill, so
+      // the listing's bill names no artist of that show and is not projected.
+      const billLockedKeys = new Set(
+        [...existingMap]
+          .filter(([, row]) => row.manual || row.lineupEditedAt !== null)
+          .map(([key]) => key),
+      );
       await projectArtists(
         eventsWithHashes
-          .filter(
-            (evt) =>
+          .filter((evt) => {
+            const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
+            return (
               evt.isConcert !== false &&
-              !hiddenKeys.has(
-                dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
-              ),
-          )
+              !hiddenKeys.has(key) &&
+              !billLockedKeys.has(key)
+            );
+          })
           .flatMap((evt) => [
             // Headliners, NOT `evt.artist`. `artist` is the event's display
             // string and the seed for `canonical_artist`, the live dedup key —
