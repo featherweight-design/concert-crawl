@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { CREW_MEMBER_CAP, type CrewInvite } from '@concert-crawl/types';
+import {
+  CREW_INVITE_TTL_DAYS,
+  CREW_MEMBER_CAP,
+  type CrewInvite,
+} from '@concert-crawl/types';
 
 import { ModalShell } from '@/components/consumer/modal-shell';
 import { CrewPatch } from '@/components/consumer/crew-patch';
@@ -28,6 +32,15 @@ const inviteUrl = (token: string): string => {
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
   return `${origin}/crew/join/${token}`;
 };
+
+// What the link box shows: the host and path in grey, the token in cyan. The
+// copied and shared link keeps its scheme.
+const shortLink = (): string => {
+  const host = typeof window === 'undefined' ? '' : window.location.host;
+  return `${host}/crew/join/`;
+};
+
+const GRADIENT = 'linear-gradient(90deg, var(--signal), var(--accent))';
 
 const ghost: React.CSSProperties = {
   minHeight: 44,
@@ -129,6 +142,21 @@ export const InviteSheet = ({
     }
   };
 
+  // The phone's own share sheet. Called straight from the tap, like the copy,
+  // so the user-activation grant is still live; a dismissed sheet rejects with
+  // AbortError, which is not a failure.
+  const onShare = () => {
+    if (invite === null || busy) return;
+    setFailed(false);
+    navigator
+      .share({ title: crewName, url: inviteUrl(invite.token) })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('InviteSheet: share failed', err);
+        if (openRef.current) setFailed(true);
+      });
+  };
+
   const onRevoke = async () => {
     if (invite === null || busy) return;
     setBusy(true);
@@ -166,6 +194,9 @@ export const InviteSheet = ({
     }
   };
 
+  // The phone's share sheet where there is one; desktop browsers without it
+  // keep Copy link alone rather than a button that does nothing.
+  const canShare = typeof navigator !== 'undefined' && 'share' in navigator;
   const left = CREW_MEMBER_CAP - memberCount;
   const atCap = left <= 0;
 
@@ -174,7 +205,8 @@ export const InviteSheet = ({
       open={open}
       onClose={onClose}
       ariaLabel={COPY.invite.title}
-      sheetHeight="tall"
+      sheetHeight="fit"
+      surface="crew"
       desktopWidth={540}
       header={
         <div className="flex items-center justify-end">
@@ -188,9 +220,10 @@ export const InviteSheet = ({
               background: 'none',
               border: 'none',
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              letterSpacing: '0.08em',
-              color: 'var(--fg-subtle)',
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--fg-muted)',
             }}
           >
             {COPY.a11y.close}
@@ -199,20 +232,22 @@ export const InviteSheet = ({
       }
     >
       <div className="flex flex-col gap-4 pb-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3.5">
           <CrewPatch
             crewId={crewId}
             patchSalt={patchSalt}
-            size={48}
+            size={56}
             scale="tile"
+            ringed
           />
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <span
               style={{
                 fontFamily: 'var(--font-ui)',
-                fontSize: 15,
+                fontSize: 20,
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
+                lineHeight: 1.15,
                 color: 'var(--fg)',
               }}
             >
@@ -221,10 +256,10 @@ export const InviteSheet = ({
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 9.5,
+                fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: '0.14em',
-                color: left <= 2 ? 'var(--warning)' : 'var(--fg-subtle)',
+                color: left <= 2 ? 'var(--warning)' : 'var(--signal)',
               }}
             >
               {atCap ? COPY.invite.seatsFull : COPY.invite.seatsLeft(left)}
@@ -255,20 +290,22 @@ export const InviteSheet = ({
               {COPY.invite.sub(crewName)}
             </p>
 
-            <div className="flex items-center gap-2">
+            {/* The link and its two actions sit in one dashed box: the host in
+                grey, the token in cyan, Copy link filled, Share… outlined. */}
+            <div
+              className="flex flex-col gap-3"
+              style={{
+                padding: 14,
+                borderRadius: 16,
+                border: `1.5px dashed color-mix(in srgb, var(--signal) ${copied ? 90 : 55}%, transparent)`,
+                background: 'color-mix(in srgb, var(--bg) 55%, transparent)',
+              }}
+            >
               <span
+                data-testid="invite-link"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flex: 1,
-                  minWidth: 0,
-                  minHeight: 48,
-                  padding: '0 6px 0 13px',
-                  borderRadius: 10,
-                  background: 'var(--surface-1)',
-                  border: `1px solid var(--${copied ? 'signal' : 'border-strong'})`,
                   fontFamily: 'var(--font-mono)',
-                  fontSize: 11.5,
+                  fontSize: 14,
                   color: 'var(--fg-muted)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -277,37 +314,112 @@ export const InviteSheet = ({
                   opacity: revoked ? 0.5 : 1,
                 }}
               >
-                {invite === null ? '' : inviteUrl(invite.token)}
+                {shortLink()}
+                <span style={{ color: 'var(--signal)' }}>
+                  {invite === null ? '' : invite.token}
+                </span>
               </span>
-              <button
-                type="button"
-                onClick={onCopy}
-                disabled={invite === null || revoked || busy}
-                className="cursor-pointer disabled:cursor-default"
-                style={{
-                  ...ghost,
-                  background: copied ? 'transparent' : 'var(--signal)',
-                  border: copied ? ghost.border : 'none',
-                  color: copied ? 'var(--signal)' : 'var(--fg-on-accent)',
-                }}
-              >
-                {copied ? COPY.invite.copied : COPY.invite.copy}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onCopy}
+                  disabled={invite === null || revoked || busy}
+                  className="cursor-pointer disabled:cursor-default"
+                  style={{
+                    ...ghost,
+                    flex: 1,
+                    minHeight: 48,
+                    fontSize: 15,
+                    background: copied ? 'transparent' : GRADIENT,
+                    border: copied ? ghost.border : 'none',
+                    color: copied ? 'var(--signal)' : 'var(--fg-on-accent)',
+                    boxShadow: copied
+                      ? 'none'
+                      : '0 6px 22px -8px color-mix(in srgb, var(--signal) 70%, transparent)',
+                  }}
+                >
+                  {copied ? COPY.invite.copied : COPY.invite.copy}
+                </button>
+                {canShare && (
+                  <button
+                    type="button"
+                    onClick={onShare}
+                    disabled={invite === null || revoked || busy}
+                    className="inline-flex cursor-pointer items-center justify-center gap-2 disabled:cursor-default"
+                    style={{ ...ghost, flex: 1, minHeight: 48, fontSize: 15 }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        cx="4"
+                        cy="8"
+                        r="2"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                      />
+                      <circle
+                        cx="12"
+                        cy="3.5"
+                        r="2"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                      />
+                      <circle
+                        cx="12"
+                        cy="12.5"
+                        r="2"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                      />
+                    </svg>
+                    {COPY.invite.share}
+                  </button>
+                )}
+              </div>
             </div>
 
             {invite !== null && !revoked && (
-              <div className="flex flex-col gap-1">
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9.5,
-                    fontWeight: 700,
-                    letterSpacing: '0.14em',
-                    color: 'var(--fg-subtle)',
-                  }}
-                >
-                  {COPY.invite.expiry(daysUntil(invite.expiresAt))}
-                </span>
+              <div className="flex flex-col gap-1.5">
+                {/* The bar is the link's remaining life: full when new, empty
+                    at expiry. */}
+                <div className="flex items-center gap-3">
+                  <div
+                    aria-hidden="true"
+                    className="h-1.5 flex-1 overflow-hidden rounded-full"
+                    style={{ background: 'var(--surface-2)' }}
+                  >
+                    <div
+                      data-testid="invite-expiry-bar"
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, (daysUntil(invite.expiresAt) / CREW_INVITE_TTL_DAYS) * 100)}%`,
+                        background: GRADIENT,
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: 'var(--fg-subtle)',
+                    }}
+                  >
+                    {COPY.invite.expiry(daysUntil(invite.expiresAt))}
+                  </span>
+                </div>
                 <span
                   style={{
                     fontFamily: 'var(--font-ui)',

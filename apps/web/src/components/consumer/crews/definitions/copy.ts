@@ -107,6 +107,8 @@ export const CREWS_COPY = {
       `Drop this in the group chat where you already talk about ${crew}.`,
     copy: 'Copy link',
     copied: 'Copied.',
+    // Opens the phone's own share sheet; verbatim from the invite board.
+    share: 'Share…',
     // Days are counted off the invite's own expiresAt, never a literal.
     expiry: (days: number) =>
       `Expires in ${days} ${plural(days, 'day', 'days')}`,
