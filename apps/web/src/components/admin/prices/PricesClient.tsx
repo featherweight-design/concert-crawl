@@ -20,6 +20,7 @@ import {
   MissingTab,
   type LoadMoreState,
 } from './MissingTab';
+import { SubmittedTab } from './SubmittedTab';
 import {
   pricesApi,
   type MissingRow,
@@ -377,16 +378,14 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
               />
             </>
           )
+        ) : tab === 'submitted' ? (
+          <SubmittedTab />
         ) : (
           <Link
-            href={
-              tab === 'submitted'
-                ? '/admin/review?tab=submissions'
-                : '/admin/review?tab=prices'
-            }
+            href="/admin/review?tab=prices"
             style={{ fontSize: 14, color: 'var(--signal)' }}
           >
-            {tab === 'submitted' ? COPY.interim.submitted : COPY.interim.checks}
+            {COPY.interim.checks}
           </Link>
         )}
       </div>
