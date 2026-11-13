@@ -1,6 +1,6 @@
 {
   "feature": "Admin 4d · Review price tabs retired",
-  "note": "Plan row 4d, UI PR 4. CONTACT_SHEET_ROLE=admin. No new surface: Review keeps its All events tab only (its mobile wrapper lost the tab select), and the price tabs redirect to /admin/prices. The redirects themselves are checked by hand (a goto that redirects fails the kit unless a row says so): /admin/review?tab=prices lands on /admin/prices, ?tab=submissions and ?section=submissions on /admin/prices?tab=submitted, /admin/prices/submissions likewise.",
+  "note": "Plan row 4d, UI PR 4. CONTACT_SHEET_ROLE=admin. No new surface: Review keeps its All events tab only (its mobile wrapper lost the tab select), and the price tabs redirect to /admin/prices. The four redirect rows land on the Prices page (a server redirect that streams, so the rows wait for the Prices page instead of checking the URL early): /admin/review?tab=prices to the Missing tab, ?tab=submissions, ?section=submissions and /admin/prices/submissions to the Submitted tab.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -8,13 +8,45 @@
   ],
   "rows": [
     {
+      "id": "redirect-coverage",
+      "label": "/admin/review?tab=prices lands on /admin/prices (Missing a price)",
+      "steps": [
+        { "goto": "/admin/review?tab=prices" },
+        { "wait": "[aria-label=\"Shows missing a price\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "redirect-submissions",
+      "label": "/admin/review?tab=submissions lands on the Submitted tab",
+      "steps": [
+        { "goto": "/admin/review?tab=submissions" },
+        { "wait": "[aria-label=\"Submitted prices\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "redirect-section",
+      "label": "/admin/review?section=submissions lands on the Submitted tab",
+      "steps": [
+        { "goto": "/admin/review?section=submissions" },
+        { "wait": "[aria-label=\"Submitted prices\"]", "settle": 600 }
+      ]
+    },
+    {
+      "id": "redirect-old-page",
+      "label": "/admin/prices/submissions lands on the Submitted tab",
+      "steps": [
+        { "goto": "/admin/prices/submissions" },
+        { "wait": "[aria-label=\"Submitted prices\"]", "settle": 600 }
+      ]
+    },
+    {
       "id": "review-all-events",
       "label": "/admin/review?tab=all-events",
       "steps": [
         {
           "goto": "/admin/review?tab=all-events",
           "wait": "main, [data-testid], h1",
-          "settle": 800
+          "settle": 5000
         }
       ]
     }
