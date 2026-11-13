@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import type { CrawlRun, VenueLatestRun } from '@concert-crawl/types';
+import {
+  FORMER_ADMIN_NAME,
+  type CrawlRun,
+  type CrawlStatus,
+  type VenueLatestRun,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   NEEDS_YOU_KIND_LABEL,
@@ -32,7 +37,9 @@ const latest = (over: Partial<VenueLatestRun> = {}): VenueLatestRun => ({
   ...over,
 });
 
-type BarRun = Pick<CrawlRun, 'id' | 'status' | 'reason' | 'createdAt'>;
+type BarRun = Pick<CrawlRun, 'id' | 'reason' | 'createdAt'> & {
+  status: CrawlStatus;
+};
 const run = (over: Partial<BarRun> = {}): BarRun => ({
   id: 'run',
   status: 'success',
@@ -143,12 +150,11 @@ describe('barKind', () => {
     ] as const) {
       expect(barKind({ status: 'skipped', reason })).toBe('paused');
     }
-    expect(barKind({ status: 'in_progress', reason: null })).toBeNull();
   });
 });
 
 describe('runBars', () => {
-  it('keeps the newest 14 settled runs, oldest first, each labelled', () => {
+  it('keeps the newest 14 runs, oldest first, each labelled', () => {
     const runs = Array.from({ length: 16 }, (_, index) =>
       run({
         id: `run-${index}`,
@@ -158,12 +164,10 @@ describe('runBars', () => {
         ).toISOString(),
       }),
     );
-    runs.splice(1, 0, run({ id: 'going', status: 'in_progress' }));
     const bars = runBars(runs);
     expect(bars).toHaveLength(14);
     expect(bars[13]?.id).toBe('run-0');
     expect(bars[0]?.id).toBe('run-13');
-    expect(bars.some((bar) => bar.id === 'going')).toBe(false);
     expect(bars[13]?.label).toBe('Nov 20: Shows found');
   });
 
@@ -227,6 +231,10 @@ describe('offSinceLine', () => {
       }),
     ).toBe('Off since Nov 3, by a former admin');
   });
+
+  it('matches the name the API gives a former admin', () => {
+    expect(FORMER_ADMIN_NAME).toBe('a former admin');
+  });
 });
 
 describe('the Overview’s boundary checks', () => {
@@ -253,10 +261,49 @@ describe('the Overview’s boundary checks', () => {
 
   it('refuses a body that isn’t the list', () => {
     expect(parseOverviewRuns({ data: [] })).toBeNull();
-    expect(
-      parseOverviewNeedsYou([{ key: 'k', kind: 'nope', title: 't' }]),
-    ).toBeNull();
+    expect(parseOverviewNeedsYou({ items: [] })).toBeNull();
     expect(parseOverviewSnoozes(null)).toBeNull();
+  });
+
+  it('drops a row this build can’t read, keeping the rest', () => {
+    const good = { key: 'k', kind: 'bug', title: 'Broken' };
+    expect(
+      parseOverviewNeedsYou([{ key: 'n', kind: 'nope', title: 't' }, good]),
+    ).toEqual([good]);
+    expect(
+      parseOverviewRuns([
+        {
+          id: 'going',
+          status: 'in_progress',
+          reason: null,
+          createdAt: '2026-11-11T10:02:00.000Z',
+        },
+        {
+          id: 'r',
+          status: 'success',
+          reason: null,
+          createdAt: '2026-11-11T10:02:00.000Z',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'r',
+        status: 'success',
+        reason: null,
+        createdAt: '2026-11-11T10:02:00.000Z',
+      },
+    ]);
+    expect(
+      parseOverviewSnoozes([
+        {
+          id: 's',
+          kind: 'something-new',
+          reason: null,
+          createdAt: '2026-11-03T18:00:00.000Z',
+          createdByName: 'hugh',
+        },
+      ]),
+    ).toEqual([]);
   });
 
   it('keeps Needs you items and snoozes', () => {

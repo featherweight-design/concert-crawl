@@ -1,9 +1,11 @@
-import type {
-  CrawlRun,
-  NeedsYouKind,
-  NeedsYouNotUsefulSnooze,
-  VenueLastFullRun,
-  VenueLatestRun,
+import {
+  FORMER_ADMIN_NAME,
+  type CrawlRun,
+  type CrawlStatus,
+  type NeedsYouKind,
+  type NeedsYouNotUsefulSnooze,
+  type VenueLastFullRun,
+  type VenueLatestRun,
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { Kind } from '@/components/admin/primitives';
@@ -113,14 +115,15 @@ export const BAR_KINDS = [
 ] as const;
 export type BarKind = (typeof BAR_KINDS)[number];
 
+/** A stored run: only settled runs are persisted, never `in_progress`. */
+type StoredRun = Pick<CrawlRun, 'reason'> & { status: CrawlStatus };
+
 /**
  * A run's bar. A low run draws as Shows found until What's normal lands.
  * Every skip that isn't Unchanged (paused, robots, an LLM refusal, or one
- * with no reason) is Paused or not crawled. Null for a run still going.
+ * with no reason) is Paused or not crawled.
  */
-export const barKind = (
-  run: Pick<CrawlRun, 'status' | 'reason'>,
-): BarKind | null => {
+export const barKind = (run: StoredRun): BarKind => {
   switch (run.status) {
     case 'success':
       return 'found';
@@ -130,8 +133,6 @@ export const barKind = (
       return 'failed';
     case 'skipped':
       return run.reason === 'page_unchanged' ? 'unchanged' : 'paused';
-    case 'in_progress':
-      return null;
   }
 };
 
@@ -142,28 +143,26 @@ export interface Bar {
 }
 
 /**
- * The newest 14 settled runs, oldest first, each with its "{date}: {kind}"
- * label. The API sends runs newest first.
+ * The newest 14 runs, oldest first, each with its "{date}: {kind}" label.
+ * The API sends runs newest first.
  */
 export const runBars = (
-  runs: readonly Pick<CrawlRun, 'id' | 'status' | 'reason' | 'createdAt'>[],
-): Bar[] => {
-  const bars: Bar[] = [];
-  for (const run of runs) {
-    const kind = barKind(run);
-    if (kind === null) continue;
-    bars.push({
-      id: run.id,
-      kind,
-      label: COPY.lastRuns.bar(
-        shortDate(run.createdAt),
-        COPY.lastRuns.kinds[kind],
-      ),
-    });
-    if (bars.length === LAST_RUNS) break;
-  }
-  return bars.reverse();
-};
+  runs: readonly (StoredRun & Pick<CrawlRun, 'id' | 'createdAt'>)[],
+): Bar[] =>
+  runs
+    .slice(0, LAST_RUNS)
+    .map((run) => {
+      const kind = barKind(run);
+      return {
+        id: run.id,
+        kind,
+        label: COPY.lastRuns.bar(
+          shortDate(run.createdAt),
+          COPY.lastRuns.kinds[kind],
+        ),
+      };
+    })
+    .reverse();
 
 /** The legend lists only the kinds drawn, in the legend board's order. */
 export const legendKinds = (bars: readonly Bar[]): BarKind[] =>
@@ -182,8 +181,12 @@ export const NEEDS_YOU_KIND_LABEL: Record<NeedsYouKind, Kind> = {
   bug: 'bug',
 };
 
-/** What the API names an admin who has no handle. */
-export const FORMER_ADMIN = 'a former admin';
+/**
+ * Whether Shows offers Open in Events. Flips when the 4b Events page reads
+ * `?venue=`: until then `/admin/events` redirects and drops the venue, so the
+ * link would lie.
+ */
+export const EVENTS_BY_VENUE_READY = false;
 
 /**
  * "Off since Nov 3, by @hugh · “It’s normal for this venue”"
@@ -196,7 +199,7 @@ export const offSinceLine = (
   >,
 ): string => {
   const by =
-    snooze.createdByName === FORMER_ADMIN
+    snooze.createdByName === FORMER_ADMIN_NAME
       ? snooze.createdByName
       : COPY.needsYou.handle(snooze.createdByName);
   const reason = snooze.reason?.trim() || null;

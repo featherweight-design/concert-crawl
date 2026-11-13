@@ -4,8 +4,9 @@
 
 import { inArray } from 'drizzle-orm';
 import { db, userProfiles } from '@concert-crawl/db';
+import { FORMER_ADMIN_NAME } from '@concert-crawl/types';
 
-export const FORMER_ADMIN = 'a former admin';
+export const FORMER_ADMIN = FORMER_ADMIN_NAME;
 
 /** Display names for admin user ids; an id with no handle reads as a former admin. */
 export const adminNamesOf = async (

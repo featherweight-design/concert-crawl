@@ -84,6 +84,15 @@ describe('useRecrawl', () => {
     expect(mockTrigger).toHaveBeenCalledWith('venue-1', 'test-token', true);
   });
 
+  it('passes force false on a plain Re-crawl', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(pending);
+    const { result } = renderHook(() => useRecrawl('venue-1', false));
+    act(() => result.current.start());
+    await tick(0);
+    expect(mockTrigger).toHaveBeenCalledWith('venue-1', 'test-token', false);
+  });
+
   it('Try again repeats a refused forced start as forced', async () => {
     mockTrigger.mockRejectedValueOnce(new Error('nope'));
     const { result } = renderHook(() => useRecrawl('venue-1', false));

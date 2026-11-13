@@ -1789,6 +1789,13 @@ export interface SpotifyTastePicksResponse {
  */
 export const TRIAGE_NO_SWEEP = '—';
 
+/**
+ * What the API names an admin who has no handle (an account that is gone has
+ * no profile row). Shared because the web matches it by value to leave it
+ * untagged ("by a former admin", never "by @a former admin").
+ */
+export const FORMER_ADMIN_NAME = 'a former admin';
+
 // Admin-wide settings (one row). `llmMonthlyBudgetUsd` is null when no budget
 // is set; `updatedAt` and `updatedBy` are null until the first save.
 export interface AdminSettings {

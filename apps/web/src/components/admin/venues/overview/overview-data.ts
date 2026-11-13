@@ -7,17 +7,18 @@ import type {
 
 /**
  * The boundary checks on the Overview's three fetches. Each keeps only the
- * fields the cards read; a response that doesn't hold to them takes the same
- * path as a failed fetch (the card's Couldn't load), never a wrong card.
+ * fields the cards read. A body that isn't a list takes the same path as a
+ * failed fetch (the card's Couldn't load), never a wrong card; a row this
+ * build can't read (a status or kind added since) is dropped on its own.
  */
 
+// Only settled runs are stored: `in_progress` is never persisted.
 const RUN_STATUSES = [
   'success',
   'failed',
   'partial',
   'skipped',
-  'in_progress',
-] as const satisfies readonly (CrawlStatus | 'in_progress')[];
+] as const satisfies readonly CrawlStatus[];
 
 const RUN_REASONS = [
   'page_unchanged',
@@ -46,49 +47,55 @@ const NEEDS_YOU_KINDS = [
 ] as const satisfies readonly NeedsYouKind[];
 
 /** `GET /v1/admin/crawl/runs?venueId=&limit=14`, newest first. */
-const runsSchema = z.array(
-  z.object({
-    id: z.string(),
-    status: z.enum(RUN_STATUSES),
-    // A reason this build doesn't know yet reads as none, not a failed card.
-    reason: z.enum(RUN_REASONS).nullable().catch(null),
-    createdAt: z.string(),
-  }),
-);
-export type OverviewRun = z.infer<typeof runsSchema>[number];
+const runSchema = z.object({
+  id: z.string(),
+  status: z.enum(RUN_STATUSES),
+  // A reason this build doesn't know yet reads as none, not a failed card.
+  reason: z.enum(RUN_REASONS).nullable().catch(null),
+  createdAt: z.string(),
+});
+export type OverviewRun = z.infer<typeof runSchema>;
 
 /** `GET /v1/admin/needs-you?venueId=`: this venue's open items. */
-const needsYouSchema = z.array(
-  z.object({
-    key: z.string(),
-    kind: z.enum(NEEDS_YOU_KINDS),
-    title: z.string(),
-  }),
-);
-export type OverviewNeedsYouItem = z.infer<typeof needsYouSchema>[number];
+const needsYouItemSchema = z.object({
+  key: z.string(),
+  kind: z.enum(NEEDS_YOU_KINDS),
+  title: z.string(),
+});
+export type OverviewNeedsYouItem = z.infer<typeof needsYouItemSchema>;
 
 /** `GET /v1/admin/needs-you/snoozes?venueId=`: its Not useful snoozes. */
-const snoozesSchema = z.array(
-  z.object({
-    id: z.string(),
-    kind: z.enum(NEEDS_YOU_KINDS),
-    reason: z.string().nullable(),
-    createdAt: z.string(),
-    createdByName: z.string(),
-  }),
-);
-export type OverviewSnooze = z.infer<typeof snoozesSchema>[number];
+const snoozeSchema = z.object({
+  id: z.string(),
+  kind: z.enum(NEEDS_YOU_KINDS),
+  reason: z.string().nullable(),
+  createdAt: z.string(),
+  createdByName: z.string(),
+});
+export type OverviewSnooze = z.infer<typeof snoozeSchema>;
 
-const parseWith =
-  <T>(schema: z.ZodType<T>) =>
-  (raw: unknown): T | null => {
-    const parsed = schema.safeParse(raw);
-    return parsed.success ? parsed.data : null;
+const rowsSchema = z.array(z.unknown());
+
+/**
+ * A list of rows: null when the body isn't a list; otherwise the rows that
+ * hold to `row`, so one row this build can't read never costs the card.
+ */
+const parseRows =
+  <T>(row: z.ZodType<T>) =>
+  (raw: unknown): T[] | null => {
+    const list = rowsSchema.safeParse(raw);
+    if (!list.success) return null;
+    const rows: T[] = [];
+    for (const item of list.data) {
+      const parsed = row.safeParse(item);
+      if (parsed.success) rows.push(parsed.data);
+    }
+    return rows;
   };
 
-export const parseOverviewRuns = parseWith(runsSchema);
-export const parseOverviewNeedsYou = parseWith(needsYouSchema);
-export const parseOverviewSnoozes = parseWith(snoozesSchema);
+export const parseOverviewRuns = parseRows(runSchema);
+export const parseOverviewNeedsYou = parseRows(needsYouItemSchema);
+export const parseOverviewSnoozes = parseRows(snoozeSchema);
 
 /** What the page fetched for the Overview; null where a fetch failed. */
 export interface OverviewData {
