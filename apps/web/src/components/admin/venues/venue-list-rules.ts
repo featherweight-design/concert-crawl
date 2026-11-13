@@ -1,5 +1,6 @@
 import type {
   NeedsYouItem,
+  Venue,
   VenueLatestRun,
   VenueWithEventCount,
 } from '@concert-crawl/types';
@@ -180,10 +181,11 @@ export const latestRunLine = (
   return venue.latestRun === null ? RUN.never : runLine(venue.latestRun, now);
 };
 
-/** "Paused: {reason}" (row 5); the Other reason shows its note. */
-export const crawlingLabel = (
-  venue: VenueWithEventCount,
-): string | undefined => {
+/**
+ * "Paused: {reason}" (row 5); the Other reason shows its note. The venue
+ * page's header chip says it the same way (one `VenueStatus` everywhere).
+ */
+export const crawlingLabel = (venue: Venue): string | undefined => {
   const chips = deriveVenueStatusChips(venue);
   if (chips.onSite === 'hidden' || chips.crawling !== 'paused') {
     return undefined;

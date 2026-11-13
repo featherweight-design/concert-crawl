@@ -46,14 +46,21 @@ vi.mock('./generate-field/GenerateField', () => ({
   GenerateField: () => null,
 }));
 
-vi.mock('./crawl-trigger-button/CrawlTriggerButton', () => ({
-  CrawlTriggerButton: () => null,
-}));
-
-// Reads triage over the network behind Clerk auth; these suites are about the
-// venue form, and there is no ClerkProvider around them.
-vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
-  VenueExpectedBadge: () => null,
+// The header (status chips, Re-crawl) has its own suite; here it only has to
+// be handed the venue and the Flagship button it carries for now.
+vi.mock('@/components/admin/venues/VenueHeader', () => ({
+  VenueHeader: ({
+    venue,
+    actions,
+  }: {
+    venue: { name: string };
+    actions?: ReactNode;
+  }) => (
+    <div data-testid="venue-header-stub">
+      {venue.name}
+      {actions}
+    </div>
+  ),
 }));
 
 import { VenueDetailsClient } from './VenueDetailsClient';
@@ -125,9 +132,12 @@ const buildVenue = (
   ...overrides,
 });
 
-const PILL = ADMIN_COPY.crawlPausedBadge.label;
+const ACTIONS = ADMIN_COPY.venueDetailsClient.actions;
 
-describe('VenueDetailsClient — crawl paused pill', () => {
+// The old paused pill became the header's crawling chip ("Paused"), which
+// `VenueHeader.test.tsx` covers. This checks the page hands the header the
+// venue and keeps the Flagship button until the ⋯ menu lands.
+describe('VenueDetailsClient — venue header', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
   });
@@ -136,17 +146,19 @@ describe('VenueDetailsClient — crawl paused pill', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows the pill in the header while crawling is paused', () => {
+  it('renders the header for a paused venue', () => {
     render(
       <VenueDetailsClient
         venue={buildVenue({ crawlPausedAt: '2026-11-10T18:00:00.000Z' })}
       />,
     );
-    expect(screen.getAllByText(PILL).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('venue-header-stub').textContent).toContain(
+      'Test Venue',
+    );
   });
 
-  it('shows no pill for a venue that is crawling', () => {
-    render(<VenueDetailsClient venue={buildVenue()} />);
-    expect(screen.queryByText(PILL)).toBeNull();
+  it('keeps the Flagship button in the header', () => {
+    render(<VenueDetailsClient venue={buildVenue({ featured: true })} />);
+    expect(screen.getByRole('button', { name: ACTIONS.flagship })).toBeTruthy();
   });
 });
