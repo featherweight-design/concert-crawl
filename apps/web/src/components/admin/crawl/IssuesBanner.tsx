@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { AlertCircle, ChevronRight } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { venueTabHref } from '@/lib/admin/venue-tabs';
 
 interface IssueVenue {
   venueId: string;
@@ -44,7 +45,9 @@ export function IssuesBanner({ blockedVenues }: Props) {
   function jumpToIssues() {
     const firstVenue = blockedVenues[0];
     if (!firstVenue) return;
-    router.push(`?venueId=${firstVenue.venueId}`);
+    // `/admin/crawl?venueId=` now redirects to the venue's Runs tab; go
+    // there directly.
+    router.push(venueTabHref(firstVenue.venueId, 'runs'));
   }
 
   const venueDescriptions = blockedVenues.map((venue) => {

@@ -70,6 +70,10 @@ vi.mock('@/components/admin/venues/useRecrawl', () => ({
 vi.mock('@/components/admin/venues/overview/OverviewTab', () => ({
   OverviewTab: () => null,
 }));
+// The Runs tab fetches behind Clerk auth; it has its own suite.
+vi.mock('@/components/admin/venues/runs/RunsTab', () => ({
+  RunsTab: () => null,
+}));
 
 // Reads triage over the network behind Clerk auth; these suites are about the
 // venue form, and there is no ClerkProvider around them.

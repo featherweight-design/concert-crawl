@@ -22,6 +22,19 @@ export const parseVenueTab = (raw: unknown): VenueTab => {
   return parsed.success ? parsed.data : 'overview';
 };
 
+/**
+ * `?run=` as the page reads it: a run id (a uuid) to open on the Runs tab.
+ * Anything else, or a repeated param, opens none rather than throwing.
+ */
+export const parseVenueRun = (raw: unknown): string | null => {
+  const parsed = z.uuid().safeParse(raw);
+  return parsed.success ? parsed.data : null;
+};
+
 /** The URL a tab switch replaces the current one with. */
 export const venueTabHref = (venueId: string, tab: VenueTab): string =>
   `/admin/venues/${venueId}?tab=${tab}`;
+
+/** `?tab=runs&run=<id>`: the Runs tab with one run highlighted. */
+export const venueRunHref = (venueId: string, runId: string): string =>
+  `${venueTabHref(venueId, 'runs')}&run=${encodeURIComponent(runId)}`;

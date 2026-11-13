@@ -16,7 +16,7 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { ApiError, apiClient } from '@/lib/api';
-import { venueTabHref } from '@/lib/admin/venue-tabs';
+import { venueRunHref, venueTabHref } from '@/lib/admin/venue-tabs';
 import type { Recrawl } from '../useRecrawl';
 import { headerLine, recrawlOff } from '../venue-header-rules';
 import type { OverviewData, OverviewSnooze } from './overview-data';
@@ -170,7 +170,7 @@ const LatestRunCard = ({
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <Link
-          href={`${venueTabHref(venue.id, 'runs')}&run=${encodeURIComponent(run.id)}`}
+          href={venueRunHref(venue.id, run.id)}
           style={{ ...linkButton('outline', phone), height: phone ? 32 : 30 }}
         >
           {COPY.latestRun.openRun}

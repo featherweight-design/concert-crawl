@@ -1,25 +1,20 @@
 // Where each triage row goes when you click it.
 //
-// Every target here already exists — no new route and no new query parameter
-// was added for this panel. The crawl page's inspector reads `?venueId=` and
-// `?tab=`, and `InspectorTab` is `'overview' | 'diagnostics' | 'history'`, so
-// `history` and `diagnostics` are the real tab values.
+// A run-scoped row opens the venue page's Runs tab (3b part 4). The crawl
+// page's old inspector (`/admin/crawl?venueId=&tab=`) now redirects there and
+// drops `tab`, and Diagnostics is dropped by ruling (A3 §3b row 8), so
+// `openDiagnostics` and `openHistory` land on the same tab: the newest run is
+// at the top, which for a currently-faulting venue is the run that produced
+// the fault.
 //
-// There is deliberately no `runId` parameter. The inspector's history tab
-// opens on the venue's most recent run, which for a currently-faulting venue
-// is the run that produced the fault. When `crawlRunId` is null there is no
-// run to open at all, so the row degrades to the venue's admin page rather
-// than to a crawl page that would show an empty inspector.
+// There is deliberately no `run` parameter. When `crawlRunId` is null there
+// is no run to look at, so the row degrades to the venue page's default tab.
 
+import { venueTabHref } from '@/lib/admin/venue-tabs';
 import { CONDITION_META } from '../definitions/meta';
 import type { TriageFault, TriageQueue } from '../definitions/types';
 
 const venuePath = (venueId: string): string => `/admin/venues/${venueId}`;
-
-const inspectorPath = (
-  venueId: string,
-  tab: 'history' | 'diagnostics',
-): string => `/admin/crawl?venueId=${encodeURIComponent(venueId)}&tab=${tab}`;
 
 /**
  * Resolves a fault row's destination. `crawlRunId` is not interpolated into
@@ -30,10 +25,7 @@ export const faultHref = (fault: TriageFault): string => {
   const { action } = CONDITION_META[fault.condition];
   if (action === 'openVenue') return venuePath(fault.venueId);
   if (fault.crawlRunId === null) return venuePath(fault.venueId);
-  return inspectorPath(
-    fault.venueId,
-    action === 'openDiagnostics' ? 'diagnostics' : 'history',
-  );
+  return venueTabHref(fault.venueId, 'runs');
 };
 
 export const queueHref = (queue: TriageQueue): string =>

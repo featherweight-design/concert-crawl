@@ -68,6 +68,12 @@ vi.mock('@/components/admin/venues/useRecrawl', () => ({
 vi.mock('@/components/admin/venues/overview/OverviewTab', () => ({
   OverviewTab: () => null,
 }));
+const mockRunsTab = vi.fn(({ venueId }: { venueId: string }) => (
+  <span data-testid="mock-runs-tab">{venueId}</span>
+));
+vi.mock('@/components/admin/venues/runs/RunsTab', () => ({
+  RunsTab: (props: { venueId: string }) => mockRunsTab(props),
+}));
 
 vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
   VenueExpectedBadge: () => null,
@@ -204,13 +210,24 @@ describe('VenueDetailsClient — tabs', () => {
     expect(window.location.search).toBe('?tab=runs');
     expect(mockReplace).not.toHaveBeenCalled();
     expect(panel('runs').hidden).toBe(false);
-    // By role, not test id: this suite's `next/link` mock forwards only
-    // `href` and `children`, so the real Link's `data-testid` never lands.
-    expect(
-      screen
-        .getByRole('link', { name: TABS.runsInterim.link })
-        .getAttribute('href'),
-    ).toBe('/admin/crawl?venueId=venue-1&tab=history');
+    // The Runs tab replaces the interim Crawl runs link.
+    expect(screen.getByTestId('mock-runs-tab').textContent).toBe('venue-1');
+    expect(screen.queryByRole('link', { name: 'Open Crawl runs' })).toBeNull();
+  });
+
+  it('hands the Runs tab its first page and the ?run= to open', () => {
+    render(
+      <VenueDetailsClient
+        venue={venue}
+        initialTab="runs"
+        runs={{ runs: null, initialRun: 'run-7' }}
+      />,
+    );
+    expect(mockRunsTab).toHaveBeenCalledWith({
+      venueId: 'venue-1',
+      runs: null,
+      initialRun: 'run-7',
+    });
   });
 
   it('keeps an unsaved edit, and the save bar, across a tab switch', () => {
