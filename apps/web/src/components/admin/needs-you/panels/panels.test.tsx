@@ -136,6 +136,21 @@ describe('VenuePanel', () => {
     expect(screen.getByRole('button', { name: 'Re-crawl now' })).toBeVisible();
   });
 
+  it('orders YOUR ANSWER as the board does: Re-crawl now, Check source, Keep paused', () => {
+    open(failing);
+    const recrawl = screen.getByRole('button', { name: 'Re-crawl now' });
+    const source = screen.getByTestId('check-source');
+    const paused = screen.getByRole('button', { name: 'Keep paused' });
+    expect(source).toHaveAttribute('href', '/admin/venues/v1?tab=source');
+    expect(
+      recrawl.compareDocumentPosition(source) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      source.compareDocumentPosition(paused) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('draws a blocked venue with its status chip', () => {
     open(
       row({
