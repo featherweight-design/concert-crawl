@@ -423,10 +423,22 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     tableName: 'events',
     disposition: 'none',
     userIdColumn: null,
+    otherUserIdColumns: ['created_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Public event catalogue. `created_by` is the admin who added a show by ' +
+      'hand, not a customer, and stays as the record of who acted — same ' +
+      'basis as feature_flags.updated_by.',
+  },
+  {
+    tableName: 'event_artists',
+    disposition: 'none',
+    userIdColumn: null,
     otherUserIdColumns: [],
     exportKey: null,
     exportColumns: null,
-    reason: 'Public event catalogue.',
+    reason: 'A public event lineup as links to artists; no person is named.',
   },
   {
     tableName: 'event_redirects',
