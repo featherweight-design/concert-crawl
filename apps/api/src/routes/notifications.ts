@@ -228,12 +228,22 @@ notificationsRouter.get(
       // Uncapped on purpose: the visible affordance is a dot, so this number
       // exists only for the aria-label. Announcing a capped "99" to someone
       // with 140 unread would be wrong. Any capping is a render-layer choice.
-      const [unread] = await db
-        .select({ value: count() })
+      // One grouped statement yields both the total and the per-category split
+      // the panel's tab dots read (raw category strings; the client maps them
+      // to tabs, so an unknown/legacy category still counts).
+      const unreadRows = await db
+        .select({ category: notifications.category, value: count() })
         .from(notifications)
         .where(
           and(inWindowForUser(userId, cutoff), isNull(notifications.readAt)),
-        );
+        )
+        .groupBy(notifications.category);
+      const unreadByCategory: Record<string, number> = {};
+      let unreadTotal = 0;
+      for (const row of unreadRows) {
+        unreadByCategory[row.category] = row.value;
+        unreadTotal += row.value;
+      }
 
       const [profile] = await db
         .select({ notificationsSeenAt: userProfiles.notificationsSeenAt })
@@ -244,7 +254,8 @@ notificationsRouter.get(
         success: true,
         data: {
           items,
-          unreadCount: unread?.value ?? 0,
+          unreadCount: unreadTotal,
+          unreadByCategory,
           hasMore,
           nextCursor,
           seenAt: profile?.notificationsSeenAt?.toISOString() ?? null,

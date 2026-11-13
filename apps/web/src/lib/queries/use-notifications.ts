@@ -105,6 +105,14 @@ export const unreadCountOf = (
 ): number => data?.pages[0]?.unreadCount ?? 0;
 
 /**
+ * Window-wide unread split by raw category, from the FIRST page; `undefined`
+ * when nothing is cached yet or an older API omitted it.
+ */
+export const unreadByCategoryOf = (
+  data: NotificationPagesRead | undefined,
+): Record<string, number> | undefined => data?.pages[0]?.unreadByCategory;
+
+/**
  * The panel's last-opened watermark.
  *
  * `null` means NOTHING HAS BEEN SEEN YET — the majority case at launch, since
@@ -181,6 +189,24 @@ export const stampRead = (
   const unreadCount =
     countAfter ?? Math.max(0, (data.pages[0]?.unreadCount ?? 0) - marked);
 
+  // The per-category split moves with the total so the tab dots drop in step
+  // with the header. Loaded-page decrements only; the settle refetch reconciles.
+  const baseSplit = data.pages[0]?.unreadByCategory;
+  let unreadByCategory: Record<string, number> | undefined;
+  if (baseSplit !== undefined) {
+    if (countAfter === 0) {
+      unreadByCategory = {};
+    } else {
+      unreadByCategory = { ...baseSplit };
+      for (const page of data.pages) {
+        for (const item of page.items.filter(willMark)) {
+          const left = (unreadByCategory[item.category] ?? 0) - 1;
+          unreadByCategory[item.category] = Math.max(0, left);
+        }
+      }
+    }
+  }
+
   return {
     ...data,
     pages: data.pages.map((page) => ({
@@ -189,6 +215,7 @@ export const stampRead = (
         willMark(item) ? { ...item, readAt } : item,
       ),
       unreadCount,
+      ...(unreadByCategory === undefined ? {} : { unreadByCategory }),
     })),
   };
 };

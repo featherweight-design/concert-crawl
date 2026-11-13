@@ -22,6 +22,7 @@ import {
   useNotificationMutations,
   flattenNotifications,
   unreadCountOf,
+  unreadByCategoryOf,
 } from '@/lib/queries/use-notifications';
 import { NotifBody, type NotifPanelState } from './NotifBody';
 import {
@@ -160,6 +161,7 @@ export const NotifMenuPanel = ({
       <NotifBody
         items={flattenNotifications(query.data)}
         unreadCount={unreadCountOf(query.data)}
+        unreadByCategory={unreadByCategoryOf(query.data)}
         state={panelStateOf(query.isPending, query.isError)}
         hasMore={query.hasNextPage}
         isLoadingMore={query.isFetchingNextPage}

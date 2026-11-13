@@ -76,6 +76,7 @@ const listBodySchema = z.object({
       }),
     ),
     unreadCount: z.number(),
+    unreadByCategory: z.record(z.string(), z.number()),
     hasMore: z.boolean(),
     nextCursor: z.string().nullable(),
     seenAt: z.string().nullable(),
@@ -362,6 +363,24 @@ describe('GET /v1/notifications', () => {
     const body = await getList();
     expect(body.data.items).toHaveLength(1);
     expect(body.data.items[0]?.category).toBe('watch.teleported');
+  });
+
+  it('splits the unread count by category, matching the total', async () => {
+    setAuth('user_owner');
+    await seedUserNotification('user_owner');
+    await seedUserNotification('user_owner');
+    await seedUserNotification('user_owner', CONTEST_RESOLVED);
+    await seedUserNotification('user_owner', {
+      ...ARTIST_NEW_SHOW,
+      readAt: new Date(),
+    });
+    await seedUserNotification('user_other', ARTIST_NEW_SHOW);
+    const body = await getList();
+    expect(body.data.unreadCount).toBe(3);
+    expect(body.data.unreadByCategory).toEqual({
+      'watch.pricedrop': 2,
+      'contest.resolved': 1,
+    });
   });
 
   it('returns the true uncapped unread count over the backfill window', async () => {
