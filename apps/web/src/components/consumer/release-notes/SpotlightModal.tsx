@@ -469,6 +469,7 @@ export function SpotlightModal({
               color: 'var(--fg-muted)',
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
             }}
           >
             {COPY.modal.dismissCta}
@@ -487,6 +488,7 @@ export function SpotlightModal({
                   'linear-gradient(135deg, var(--signal), var(--cta-end))',
                 color: 'var(--fg-on-accent)',
                 padding: '12px 20px',
+                whiteSpace: 'nowrap',
                 borderRadius: 999,
                 fontWeight: 800,
                 fontSize: 14,
@@ -529,6 +531,7 @@ export function SpotlightModal({
                   'linear-gradient(135deg, var(--signal), var(--cta-end))',
                 color: 'var(--fg-on-accent)',
                 padding: '12px 20px',
+                whiteSpace: 'nowrap',
                 borderRadius: 999,
                 fontWeight: 800,
                 fontSize: 14,
