@@ -55,6 +55,8 @@ export async function sweepStaleEvents(
           eq(events.status, 'upcoming'),
           isNotNull(events.firstMissingAt),
           lt(events.firstMissingAt, cutoff),
+          // Admin 4a: the crawl never removes a show added by hand.
+          eq(events.manual, false),
         ),
       )
       .returning({ id: events.id, firstMissingAt: events.firstMissingAt });
