@@ -3,9 +3,31 @@ import {
   countAfterRemoval,
   eightAmMountain,
   evidenceText,
+  metaTime,
   mountainDayAhead,
   snoozeDayLabel,
 } from './needs-you-rules';
+
+describe('metaTime', () => {
+  it('says a stored time the way the board does', () => {
+    expect(metaTime('20:00:00')).toBe('8 PM');
+    expect(metaTime('19:30:00')).toBe('7:30 PM');
+    expect(metaTime('11:00:00')).toBe('11 AM');
+  });
+
+  it('handles midnight and noon', () => {
+    expect(metaTime('00:00:00')).toBe('12 AM');
+    expect(metaTime('12:15:00')).toBe('12:15 PM');
+  });
+
+  it('leaves the time out when there is none or it does not parse', () => {
+    expect(metaTime(null)).toBeNull();
+    expect(metaTime(undefined)).toBeNull();
+    expect(metaTime('')).toBeNull();
+    expect(metaTime('TBA')).toBeNull();
+    expect(metaTime('25:00:00')).toBeNull();
+  });
+});
 
 describe('snooze times', () => {
   it('returns at 8 AM Mountain, with the offset that day has', () => {

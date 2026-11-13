@@ -124,9 +124,32 @@ export const metaDate = (fanDate: string): string =>
     .format(new Date(`${fanDate}T00:00:00Z`))
     .replace(',', '');
 
-/** The card's meta line: "Globe Hall · Thu Nov 12". */
+/**
+ * "8 PM" or "7:30 PM" from a stored `HH:MM:SS` show time (venue-local, so no
+ * zone to convert). Null for no time or one that does not parse.
+ */
+export const metaTime = (
+  showTime: string | null | undefined,
+): string | null => {
+  const match = /^(\d{2}):(\d{2})/.exec(showTime ?? '');
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = match[2];
+  if (hour > 23) return null;
+  const clock = hour % 12 === 0 ? 12 : hour % 12;
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  return minute === '00'
+    ? `${clock} ${suffix}`
+    : `${clock}:${minute} ${suffix}`;
+};
+
+/** The card's meta line: "Globe Hall · Thu Nov 12 · 8 PM". */
 export const metaOf = (row: QueueRow): string =>
-  [row.venueName, row.fanDate ? metaDate(row.fanDate) : null]
+  [
+    row.venueName,
+    row.fanDate ? metaDate(row.fanDate) : null,
+    metaTime(row.showTime),
+  ]
     .filter((part): part is string => part !== null)
     .join(' · ');
 
