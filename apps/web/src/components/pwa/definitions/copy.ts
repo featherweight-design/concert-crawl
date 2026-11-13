@@ -77,8 +77,8 @@ export const OFFLINE_COPY = {
   pillAria: "You're offline. Cached shows are still available.",
   fallback: {
     eyebrow: 'No signal',
-    title: "You're offline. Here's what you can still see.",
-    sub: "The shows you've already looked at are saved on your phone. Live prices and anything new will load when you're back.",
+    title: 'You’re offline. Here’s what you can still see.',
+    sub: 'The shows you’ve already looked at are saved on your phone. Live prices and anything new will load when you’re back.',
     retry: 'Try again',
     shortcutsLabel: 'Saved on your phone',
     // The chip in the page's header. Visible text, read like any other.
@@ -92,7 +92,7 @@ export const OFFLINE_COPY = {
     free: 'Free',
     empty: {
       title: 'Nothing cached yet.',
-      sub: "First visit, or a fresh phone? There's nothing saved to show offline yet. Hit retry once you've got signal and we'll start keeping the shows you browse.",
+      sub: 'First visit, or a fresh phone? There’s nothing saved to show offline yet. Hit retry once you’ve got signal and we’ll start keeping the shows you browse.',
       link: 'Try the home page',
     },
   },

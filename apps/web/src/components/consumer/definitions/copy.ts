@@ -1368,7 +1368,7 @@ export const CONSUMER_COPY = {
         "Your handle and profile will be gone. Price submissions you made will stay (they're part of the public record), but your name will be removed from them. Other fans' confirmations belong to them and will persist.",
       deleteConfirmPlaceholder: 'Type DELETE to enable',
       deleteButtonArmed: 'Delete my account permanently',
-      deleteButtonDisabled: 'Type DELETE to enable',
+      deleteButtonDisabled: 'Delete my account',
 
       // ── DeleteAccountSheet — shared by the mobile sheet and the
       // desktop dialog, which render the same words in two branches.
@@ -1533,7 +1533,7 @@ export const CONSUMER_COPY = {
 
     // ── SubmissionItem ────────────────────────────────────────────
     submissionConfirms: (confirms: number) =>
-      `${confirms} other ${confirms === 1 ? 'fan' : 'fans'} confirmed.`,
+      `${confirms} ${confirms === 1 ? 'fan' : 'fans'} confirmed`,
     // Why a closed row closed, beside its CLOSED pill (addendum-4 §6).
     submissionClosedReason: {
       stale: 'No second fan in time',
