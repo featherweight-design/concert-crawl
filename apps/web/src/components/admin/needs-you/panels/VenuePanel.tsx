@@ -83,6 +83,14 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
           },
         ]
       : []),
+    ...(row.okStreakBefore
+      ? [
+          {
+            label: PANEL.venue.beforeThis,
+            value: PANEL.venue.okRuns(row.okStreakBefore),
+          },
+        ]
+      : []),
   ];
   const who = (
     <Section label={PANEL.whoSeesIt}>
@@ -161,7 +169,8 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
                 justifyContent: 'center',
                 gap: 6,
                 minHeight: 36,
-                minWidth: 0,
+                flex: '1 1 auto',
+                whiteSpace: 'nowrap',
                 padding: '0 12px',
                 borderRadius: 12,
                 border: '1px solid var(--border-strong)',

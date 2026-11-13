@@ -159,7 +159,11 @@ export const AnswerButtons = ({
       data-slug={answer.slug}
       {...iconProps(answer.slug)}
       onClick={() => onAnswer(answer)}
-      style={{ width: '100%', minHeight: wide ? 40 : 36, minWidth: 0 }}
+      style={
+        wide
+          ? { width: '100%', minHeight: 40, minWidth: 0 }
+          : { flex: '1 1 auto', minHeight: 36, whiteSpace: 'nowrap' }
+      }
     >
       {answer.label}
     </AdminButton>
@@ -170,11 +174,9 @@ export const AnswerButtons = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {lead?.suggested && button(lead, true)}
         <div
-          style={{
-            display: 'grid',
-            gap: 8,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-          }}
+          // Labels stay on one line; a row that runs out of room wraps whole
+          // buttons to the next line, each growing to fill its row.
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
         >
           {/* The board's order: the lead, then Check source, then the rest.
               With no lead drawn full width, the first answer stands in. */}

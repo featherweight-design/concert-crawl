@@ -36,6 +36,7 @@ const row = (over: Partial<QueueRow>): QueueRow => ({
   venueLive: null,
   pausedAt: null,
   showCount: null,
+  okStreakBefore: null,
   pagesThisRun: null,
   robots: null,
   otherShowsCrawledFine: null,
@@ -183,6 +184,7 @@ describe('VenuePanel', () => {
         showCount: 27,
         pagesThisRun: 1,
         robots: 'no',
+        okStreakBefore: 62,
         lastRuns: [
           {
             at: '2026-11-11T10:02:00Z',
@@ -198,6 +200,8 @@ describe('VenuePanel', () => {
     expect(screen.getByText('Allows the crawler')).toBeInTheDocument();
     expect(screen.getByText('1 page every 3–5 s')).toBeInTheDocument();
     expect(screen.getByText('1 page')).toBeInTheDocument();
+    expect(screen.getByText('Before this')).toBeInTheDocument();
+    expect(screen.getByText('62 OK runs in a row')).toBeInTheDocument();
     expect(
       screen.getByText(
         /answered with 429 Too Many Requests on Nov 11 at 3:02 AM\./,

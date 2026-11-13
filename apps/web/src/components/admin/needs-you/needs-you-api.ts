@@ -75,6 +75,8 @@ export interface QueueRow {
   pausedAt: string | null;
   /** A venue item's upcoming shows, or null when the API did not say. */
   showCount: number | null;
+  /** OK runs in a row before the failure or the block, or null. */
+  okStreakBefore: number | null;
   /** A blocked venue's pages fetched by the latest run, or null. */
   pagesThisRun: number | null;
   /** A blocked venue's recorded robots.txt result (yes, no, unchecked), or null. */
@@ -185,6 +187,9 @@ const rowFrom = (value: unknown): QueueRow | null => {
     venueLive: isBoolean(value['venueLive']) ? value['venueLive'] : null,
     pausedAt: isText(value['pausedAt']) ? value['pausedAt'] : null,
     showCount: isCount(value['showCount']) ? value['showCount'] : null,
+    okStreakBefore: isCount(value['okStreakBefore'])
+      ? value['okStreakBefore']
+      : null,
     pagesThisRun: isCount(value['pagesThisRun']) ? value['pagesThisRun'] : null,
     robots: isText(value['robots']) ? value['robots'] : null,
     otherShowsCrawledFine: isCount(value['otherShowsCrawledFine'])
