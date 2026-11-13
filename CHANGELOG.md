@@ -1,3 +1,19 @@
+# [1.413.0](https://github.com/featherweight-design/concert-crawl/compare/v1.412.0...v1.413.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** budget panel pill ring and test setup ([d6a2f3c](https://github.com/featherweight-design/concert-crawl/commit/d6a2f3cca7d3474d0ea138bfbdc6b09e0782cd5f))
+* **web:** budget switch on-track is the B+ pair ([08aef9f](https://github.com/featherweight-design/concert-crawl/commit/08aef9f7b4c31be69f8b3c0dc03768a23b0bad93))
+* **web:** guard stale load-more, tone every phone state, refetch after reject without blocking ([5cddc36](https://github.com/featherweight-design/concert-crawl/commit/5cddc361b7fe2563744867245b58c970f42f8d19))
+
+
+### Features
+
+* **web:** budget panel opened from the Health cost tile ([6f99a1d](https://github.com/featherweight-design/concert-crawl/commit/6f99a1d1588d8f5fa5c49001173769c692f1ab77))
+* **web:** submitted prices tab, row menu and reject dialog components ([9acf470](https://github.com/featherweight-design/concert-crawl/commit/9acf470b8772fc0f1d3324d37c1acfcfdbaa36a1))
+* **web:** wire the submitted prices tab into the prices page ([2134602](https://github.com/featherweight-design/concert-crawl/commit/21346029716a40b2478f2eff72b7681df94cd2d8))
+
 # [1.412.0](https://github.com/featherweight-design/concert-crawl/compare/v1.411.0...v1.412.0) (2026-11-13)
 
 
