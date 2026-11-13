@@ -16,8 +16,18 @@ const SHORT_NAME_MAX_LENGTH = 18;
  * "First time at Roxy?". Strips a leading "The ", then falls back to the first
  * token only when the remaining name is long enough that the full string would
  * crowd the line.
+ *
+ * A short name an admin stored on the venue wins when it is set: it is the
+ * hand-picked answer, and this heuristic is only the fallback for venues
+ * without one (and for callers that only have the name).
  */
-export const venueShortName = (name: string): string => {
+export const venueShortName = (
+  name: string,
+  storedShortName?: string | null,
+): string => {
+  const stored = storedShortName?.trim() ?? '';
+  if (stored !== '') return stored;
+
   const trimmed = name.trim();
   const withoutArticle = trimmed.replace(/^the\s+/i, '');
   if (withoutArticle.length === 0) return trimmed;
