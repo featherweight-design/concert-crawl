@@ -1,0 +1,24 @@
+{
+  "feature": "Browse · the phone Filters sheet counts a drafted crew lens under the other filters",
+  "note": "Fix to #359 (found on the #303 check): with When, Where, Price or Vibe applied, drafting a crew lens in the sheet's Who showed the crew's total as 'Show N shows', not the shows that pass the filters. The cell opens the sheet over a Where + Vibe filter, picks the first crew, and shows the button once its count settles (it must not read the crew's total). Phone only: the sheet is the phone surface. Needs the audit user in at least one crew.",
+  "widths": [{ "label": "phone", "width": 390, "height": 844, "touch": true }],
+  "rows": [
+    {
+      "id": "lens-draft-count",
+      "label": "Filters sheet with a lens drafted under Where and Vibe",
+      "steps": [
+        {
+          "goto": "/events?filterWhere=bluebird-theater&filterVibe=rock",
+          "wait": "text=Filters",
+          "settle": 800
+        },
+        { "clickRole": "button", "name": "^Filters" },
+        { "wait": "[data-testid=\"phone-filter-sheet\"]" },
+        {
+          "click": "[data-testid=\"phone-filter-sheet\"] [role=\"radio\"] >> nth=1"
+        },
+        { "wait": "[data-testid=\"filter-sheet-show\"]", "settle": 1500 }
+      ]
+    }
+  ]
+}

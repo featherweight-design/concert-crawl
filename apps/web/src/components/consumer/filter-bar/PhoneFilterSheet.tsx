@@ -43,6 +43,8 @@ import {
   pickSingle,
   type FilterDraft,
 } from './phone-draft';
+import { crewLensFilterQuery } from '@/lib/crews';
+import { useDraftLensCount } from './useDraftLensCount';
 import { useDraftShowCount } from './useDraftShowCount';
 import { VenueOptionGrid } from './VenueOptionGrid';
 import { VibeOptionGrid } from './VibeOptionGrid';
@@ -374,17 +376,56 @@ export function PhoneFilterSheet({
     query !== null && query === initialQuery && appliedCount !== null;
   const draftCount = useDraftShowCount(applied ? null : query);
 
+  // A lens honours the other filters (When, Where, Price, Vibe), so the crew's
+  // own total is the number only while none is drafted. With one, the count is
+  // the crew's shows that pass it; the applied lens under the applied filters
+  // already has that number (the list's own).
+  const draftLensQuery =
+    draftCrew === null
+      ? ''
+      : crewLensFilterQuery(draftParams(new URLSearchParams(baseQuery), draft));
+  const lensAsApplied =
+    draftCrew !== null &&
+    draftCrew.id === initial.crew &&
+    lensCount !== null &&
+    draftLensQuery === crewLensFilterQuery(new URLSearchParams(initialQuery));
+  const lensCountNeeded =
+    draftCrew !== null && draftLensQuery !== '' && !lensAsApplied;
+  const draftLensCount = useDraftLensCount(
+    lensCountNeeded ? draftCrew.id : null,
+    draftLensQuery,
+  );
+
   // The button's words and whether its number is current. A count still on
   // its way never passes for the current one: the last number shows dimmed,
   // or with none yet the pending "… shows"; a failed count falls back to
   // "Apply filters", as Cal view (no count) does.
   let cta: { label: string; state: 'ready' | 'pending' | 'none' };
   if (draftCrew !== null) {
-    const crewCount =
-      draftCrew.id === initial.crew
-        ? (lensCount ?? draftCrew.upcomingCount)
-        : draftCrew.upcomingCount;
-    cta = { label: copy.popover.vibeShow(crewCount), state: 'ready' };
+    if (lensAsApplied) {
+      cta = { label: copy.popover.vibeShow(lensCount), state: 'ready' };
+    } else if (draftLensQuery === '') {
+      const crewCount =
+        draftCrew.id === initial.crew
+          ? (lensCount ?? draftCrew.upcomingCount)
+          : draftCrew.upcomingCount;
+      cta = { label: copy.popover.vibeShow(crewCount), state: 'ready' };
+    } else if (draftLensCount.status === 'ready') {
+      cta = {
+        label: copy.popover.vibeShow(draftLensCount.count),
+        state: 'ready',
+      };
+    } else if (draftLensCount.status === 'pending') {
+      cta = {
+        label:
+          draftLensCount.count === null
+            ? copy.showCountPending
+            : copy.popover.vibeShow(draftLensCount.count),
+        state: 'pending',
+      };
+    } else {
+      cta = { label: copy.phone.apply, state: 'none' };
+    }
   } else if (applied) {
     cta = { label: copy.popover.vibeShow(appliedCount), state: 'ready' };
   } else if (draftCount.status === 'ready') {
