@@ -350,7 +350,8 @@ describe('VenueHeader — Re-crawl states', () => {
     fireEvent.click(recrawlButton());
     await tick(0);
     expect(screen.getByRole('status').textContent).toBe(COPY.queued);
-    expect(mockTrigger).toHaveBeenCalledWith('venue-1', 'test-token');
+    // The header's Re-crawl is never forced.
+    expect(mockTrigger).toHaveBeenCalledWith('venue-1', 'test-token', false);
     await tick(POLL_INTERVAL_MS);
     expect(screen.getByRole('status').textContent).toBe(COPY.queued);
   });
@@ -618,6 +619,10 @@ describe('VenueHeader — Re-crawl states', () => {
     // The new venue can start its own crawl.
     fireEvent.click(recrawlButton());
     await tick(0);
-    expect(mockTrigger).toHaveBeenLastCalledWith('venue-2', 'test-token');
+    expect(mockTrigger).toHaveBeenLastCalledWith(
+      'venue-2',
+      'test-token',
+      false,
+    );
   });
 });
