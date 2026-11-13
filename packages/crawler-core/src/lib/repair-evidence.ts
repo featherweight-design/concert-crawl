@@ -23,7 +23,8 @@ export type SkipReason =
   | 'stored-bill-unknown'
   | 'would-drop-stored-headliner'
   | 'would-drop-stored-supporting'
-  | 'would-add-an-artist';
+  | 'would-add-an-artist'
+  | 'nothing-evidenced';
 
 export type BillVerdict =
   | { write: true; kind: 'split' | 'tribute' | 'dedupe' }
@@ -65,16 +66,19 @@ export function classifyBillChange(input: {
     );
   });
   const splitParts = new Set(splitNames.flatMap(partsOf).map(nameKey));
-  // A joined name kept whole on the new bill accounts for its parts' absence.
+  // A joined name the STORED bill already has, kept whole on the new bill,
+  // accounts for its parts being listed separately beside it.
   const keptWholeParts = new Set(
     next.headliners
-      .filter((name) => partsOf(name).length > 0)
+      .filter((name) => partsOf(name).length > 0 && storedH.has(nameKey(name)))
       .flatMap(partsOf)
       .map(nameKey),
   );
 
+  // A stored headliner that is only on the new bill as supporting was demoted,
+  // which is a change of billing the repair cannot evidence.
   for (const key of storedH) {
-    if (nextH.has(key) || nextS.has(key)) continue;
+    if (nextH.has(key)) continue;
     if (keptWholeParts.has(key)) continue;
     if (splitNames.some((name) => nameKey(name) === key)) continue;
     return { write: false, reason: 'would-drop-stored-headliner' };
@@ -88,8 +92,24 @@ export function classifyBillChange(input: {
     return { write: false, reason: 'would-add-an-artist' };
   }
   for (const key of nextS) {
-    if (storedS.has(key) || storedH.has(key) || splitParts.has(key)) continue;
+    if (storedS.has(key) || splitParts.has(key)) continue;
     return { write: false, reason: 'would-add-an-artist' };
   }
-  return { write: true, kind: splitNames.length > 0 ? 'split' : 'dedupe' };
+  if (splitNames.length > 0) return { write: true, kind: 'split' };
+  // Not a split: it is a dedupe only if something was actually removed. A
+  // respelling, a reorder or a role swap that every check above lets through is
+  // not an evidenced change.
+  const storedCount =
+    stored.headliners.length + (stored.supporting ?? []).length;
+  const nextCount = next.headliners.length + next.supporting.length;
+  // "Telly & Friends" -> "Telly" is the ladder's own identity rule (nameKey
+  // drops the company tail), the one respelling the repair does write.
+  const tailDropped = stored.headliners.some(
+    (name) =>
+      nameKey(name) !== name.trim().toLowerCase() &&
+      next.headliners.some((other) => nameKey(other) === nameKey(name)),
+  );
+  return nextCount < storedCount || tailDropped
+    ? { write: true, kind: 'dedupe' }
+    : { write: false, reason: 'nothing-evidenced' };
 }
