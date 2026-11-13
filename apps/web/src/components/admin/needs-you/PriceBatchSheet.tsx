@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
+import { Check } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, AdminSheet } from '@/components/admin/primitives';
 import { priceRange } from '@/components/admin/prices/submitted-rules';
@@ -106,11 +107,12 @@ export const PriceBatchSheet = ({
   };
 
   const footer = (
-    <>
+    // The board sets Approve and Cancel side by side, Approve taking the width.
+    <div style={{ display: 'flex', gap: 10 }}>
       <AdminButton
         type="button"
         variant="gradient"
-        fullWidth
+        style={{ flex: 1 }}
         disabled={busy || ticked.length === 0}
         onClick={() => void approve()}
       >
@@ -124,7 +126,7 @@ export const PriceBatchSheet = ({
       >
         {copy.cancel}
       </AdminButton>
-    </>
+    </div>
   );
 
   return (
@@ -184,14 +186,51 @@ export const PriceBatchSheet = ({
                       cursor: 'pointer',
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      disabled={busy}
-                      aria-label={copy.rowLabel(name)}
-                      onChange={() => toggle(entry.id)}
-                      style={{ width: 18, height: 18, flex: 'none' }}
-                    />
+                    {/* The board's tile: cyan with a dark check when ticked.
+                        The native box stays under it for the keyboard and
+                        screen readers. */}
+                    <span
+                      style={{
+                        position: 'relative',
+                        flex: 'none',
+                        width: 22,
+                        height: 22,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={busy}
+                        aria-label={copy.rowLabel(name)}
+                        onChange={() => toggle(entry.id)}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          margin: 0,
+                          opacity: 0,
+                          cursor: 'pointer',
+                        }}
+                      />
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 22,
+                          height: 22,
+                          borderRadius: 7,
+                          boxSizing: 'border-box',
+                          color: 'var(--bg)',
+                          background: on ? 'var(--signal)' : 'transparent',
+                          border: `1.5px solid ${on ? 'var(--signal)' : 'var(--border-strong)'}`,
+                        }}
+                      >
+                        {on && <Check size={14} strokeWidth={3} />}
+                      </span>
+                    </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span
                         style={{
@@ -215,10 +254,17 @@ export const PriceBatchSheet = ({
                           .join(' · ')}
                       </span>
                     </span>
-                    <span style={{ flex: 'none', textAlign: 'right' }}>
+                    {/* The board sets the price and the chip on one line. */}
+                    <span
+                      style={{
+                        flex: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
                       <span
                         style={{
-                          display: 'block',
                           fontSize: 14.5,
                           fontWeight: 700,
                           fontVariantNumeric: 'tabular-nums',
@@ -228,15 +274,15 @@ export const PriceBatchSheet = ({
                       </span>
                       <span
                         style={{
-                          display: 'inline-block',
-                          marginTop: 3,
-                          padding: '1px 8px',
+                          padding: '3px 11px',
                           borderRadius: 999,
-                          fontSize: 11.5,
+                          fontSize: 12.5,
                           fontWeight: 600,
                           color: 'var(--success)',
+                          border:
+                            '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
                           background:
-                            'color-mix(in srgb, var(--success) 14%, transparent)',
+                            'color-mix(in srgb, var(--success) 12%, transparent)',
                         }}
                       >
                         {copy.fans(entry.backedBy)}
