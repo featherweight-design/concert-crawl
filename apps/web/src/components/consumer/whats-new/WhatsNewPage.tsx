@@ -5,12 +5,13 @@
 // at /changelog, linked from here.
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { BackChip } from '@/components/consumer/back-chip/BackChip';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal';
-import type { FeatureCard } from '@/lib/definitions/releases';
+import { RELEASES, type FeatureCard } from '@/lib/definitions/releases';
+import { useReleaseReadState } from '@/components/consumer/release-notes/useReleaseReadState';
 
 import { FeatureCardArt } from './FeatureCardArt';
 
@@ -64,6 +65,12 @@ function Card({ card, first }: { card: FeatureCard; first: boolean }) {
 
 export function WhatsNewPage({ cards }: { cards: FeatureCard[] }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Opening the page from the menu footer is reading what's new: clear the
+  // footer's dot and the feature-drop pill, as the changelog does.
+  const { markSeen } = useReleaseReadState(RELEASES[0]?.version ?? '');
+  useEffect(() => {
+    markSeen();
+  }, [markSeen]);
 
   return (
     <>
@@ -111,7 +118,7 @@ export function WhatsNewPage({ cards }: { cards: FeatureCard[] }) {
 
         <div className="grid gap-4 lg:grid-cols-2">
           {cards.map((card, index) => (
-            <Card key={card.art} card={card} first={index === 0} />
+            <Card key={card.rank} card={card} first={index === 0} />
           ))}
         </div>
 

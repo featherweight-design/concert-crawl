@@ -229,6 +229,21 @@ describe('proxy — auth gate (#841)', () => {
     expect(auth.protect).not.toHaveBeenCalled();
   });
 
+  // The #794 negative case for /whats-new: it is an exact path, so a page
+  // beneath it is a known segment that stays behind sign-in.
+  it('does not make a path under /whats-new public', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false');
+    const { middlewareHandler } = await import('./proxy');
+
+    const auth = makeAuth(null);
+    await middlewareHandler(
+      auth,
+      new NextRequest('http://localhost/whats-new/secret'),
+    );
+
+    expect(auth.protect).toHaveBeenCalled();
+  });
+
   // A crawler has no session, so gating the two files that tell it what to do
   // redirected both to sign-in and made #1228's sitemap and robots.txt unreadable
   // in prod. They must resolve in either launch mode: what robots.txt says off

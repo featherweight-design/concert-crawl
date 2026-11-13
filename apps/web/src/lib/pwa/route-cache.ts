@@ -66,7 +66,7 @@ const ALWAYS_CACHEABLE_PAGES: readonly RegExp[] = [
   /^\/$/,
   /^\/legal(\/.*)?$/,
   /^\/changelog(\/.*)?$/,
-  /^\/whats-new(\/.*)?$/,
+  /^\/whats-new$/,
 ];
 
 const CACHEABLE_PAGES_ONCE_LAUNCHED: readonly RegExp[] = [
