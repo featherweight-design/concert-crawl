@@ -1,3 +1,16 @@
+# [1.386.0](https://github.com/featherweight-design/concert-crawl/compare/v1.385.0...v1.386.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** address [#317](https://github.com/featherweight-design/concert-crawl/issues/317) review on the going stub stamp ([f5d6775](https://github.com/featherweight-design/concert-crawl/commit/f5d67758ec0a2d22d32a46bdefa898f50d1ea167)), closes [#311](https://github.com/featherweight-design/concert-crawl/issues/311)
+* **web:** the You went stub wears the round venue stamp ([1482fe7](https://github.com/featherweight-design/concert-crawl/commit/1482fe7ca5dd880fcb933bf7d672938407dedb7c))
+
+
+### Features
+
+* **web:** stamp past shows from the artist page with a went pill ([ed035b9](https://github.com/featherweight-design/concert-crawl/commit/ed035b982b48f6ad0b2509579e3a3d2488ce22f0))
+
 # [1.385.0](https://github.com/featherweight-design/concert-crawl/compare/v1.384.0...v1.385.0) (2026-11-13)
 
 
