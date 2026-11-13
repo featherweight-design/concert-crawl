@@ -26,6 +26,15 @@ describe('updateVenueSchema', () => {
     expect(updateVenueSchema.safeParse({ crawlDelayMs: 500 }).success).toBe(
       false,
     );
+    // The crawl rules' 3-second floor: 1 s and 2.999 s were once accepted.
+    for (const below of [1000, 2999]) {
+      expect(updateVenueSchema.safeParse({ crawlDelayMs: below }).success).toBe(
+        false,
+      );
+    }
+    expect(updateVenueSchema.parse({ crawlDelayMs: 3000 })).toEqual({
+      crawlDelayMs: 3000,
+    });
     expect(updateVenueSchema.parse({ crawlDelayMs: 10000 })).toEqual({
       crawlDelayMs: 10000,
     });

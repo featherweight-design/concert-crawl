@@ -27,6 +27,10 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
   isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
+  // The real one floors every delay at 3 s (MIN_CRAWL_DELAY_MS); these tests
+  // fetch from stubs, so pacing would only slow the suite. The floor is pinned
+  // by robots.test.ts.
+  resolveCrawlDelayMs: vi.fn().mockReturnValue(0),
 }));
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
