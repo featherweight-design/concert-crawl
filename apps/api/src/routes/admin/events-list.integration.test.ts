@@ -23,6 +23,7 @@ import {
   clearTables,
   seedEvent,
   seedEventReport,
+  seedPriceRetrievalLog,
   seedPriceSubmission,
   seedUserEvent,
   seedVenue,
@@ -257,6 +258,63 @@ describe('GET /v1/admin/events/:id (Event edit fields)', () => {
       headers: HEADERS,
     });
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: Record<string, unknown> };
+    expect(body.data).toMatchObject({
+      priceRetrievedAt: null,
+    });
+  });
+
+  it('counts only standing prices: no counters, nothing stale, and the admin’s live price', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: dayOffset(5) });
+    const parent = await seedPriceSubmission(event.id, 'fan_1', {
+      status: 'corroborated',
+    });
+    // A Price check counter against the fan's price, and a stale price of
+    // the admin's own: neither is a Submitted price that stands.
+    await seedPriceSubmission(event.id, 'fan_2', {
+      disputedSubmissionId: parent.id,
+    });
+    await seedPriceSubmission(event.id, ADMIN_USER_ID, { status: 'stale' });
+    await seedPriceRetrievalLog(event.id, venue.id, {
+      attemptedAt: new Date('2026-11-10T15:00:00Z'),
+    });
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      headers: HEADERS,
+    });
+    const body = (await res.json()) as { data: Record<string, unknown> };
+    expect(body.data).toMatchObject({
+      submittedPriceCount: 1,
+      mySubmissionId: null,
+      priceRetrievedAt: '2026-11-10T15:00:00.000Z',
+    });
+  });
+
+  it('names an admin-hidden show apart from an unsure one', async () => {
+    const venue = await seedVenue();
+    await seedEvent(venue.id, {
+      artist: 'Hid By Admin',
+      date: dayOffset(2),
+      hiddenFromConsumer: true,
+    });
+    const body = await list('?hidden=true');
+    expect(body.data.rows[0]?.hiddenReason).toBe('admin');
+  });
+
+  it('keeps the earlier fields', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: dayOffset(4),
+      ticketUrl: 'https://tickets.example.com/x',
+    });
+    await seedUserEvent('fan_1', event.id, { status: 'watching' });
+    await seedPriceSubmission(event.id, 'fan_1');
+    const mine = await seedPriceSubmission(event.id, ADMIN_USER_ID);
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      headers: HEADERS,
+    });
     const body = (await res.json()) as { data: Record<string, unknown> };
     expect(body.data).toMatchObject({
       id: event.id,
