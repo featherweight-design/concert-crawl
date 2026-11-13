@@ -464,6 +464,12 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
       expect(slot.className).toContain('sm:flex');
       expect(slot.style.marginBottom).toBe('9px');
       expect(slot.textContent).toBe('No longer listed');
+      // Over the photo wash the chip steps up: a visible grey border (50%) and
+      // the muted text token, not the faint subtle one.
+      const chip = screen.getByTestId('nll-chip');
+      expect(chip.style.border).toContain('var(--fg-muted)');
+      expect(chip.style.border).toContain('50%');
+      expect(chip.style.color).toBe('var(--fg-muted)');
       // Announced once, by the card below, never by the hero chip too.
       expect(slot.getAttribute('aria-hidden')).toBe('true');
       expect(slot.closest('[role="status"]')).toBeNull();

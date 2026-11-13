@@ -164,7 +164,7 @@ export const EventTitleBlock = ({
           className="hidden sm:flex"
           style={{ marginBottom: 14 - ramp.gap }}
         >
-          <NoLongerListedChip />
+          <NoLongerListedChip overArt />
         </div>
       )}
 
