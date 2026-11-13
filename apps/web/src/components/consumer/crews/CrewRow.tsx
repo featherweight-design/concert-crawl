@@ -49,7 +49,6 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
         patchSalt={crew.patchSalt}
         size={CREW_ROW.patch}
         scale="tile"
-        ringed
       />
       <span
         style={{
