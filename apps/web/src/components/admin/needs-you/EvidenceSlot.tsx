@@ -33,8 +33,6 @@ export const EvidenceSlot = ({
   onAnswer,
 }: EvidenceSlotProps) => {
   const isPhone = useIsPhone();
-  // The lead answer: the one the API suggests, else the first drawn.
-  const lead = row.answers.find((answer) => answer.suggested) ?? row.answers[0];
   return (
     <SidePanel
       inline={!isPhone}
@@ -88,7 +86,7 @@ export const EvidenceSlot = ({
             {row.answers.map((answer) => (
               <AdminButton
                 key={answer.slug}
-                variant={answer === lead ? 'gradient' : 'outline'}
+                variant={answer.suggested ? 'gradient' : 'outline'}
                 disabled={busy}
                 data-testid="needs-you-answer"
                 data-slug={answer.slug}
