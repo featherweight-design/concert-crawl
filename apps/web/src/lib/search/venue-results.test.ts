@@ -8,7 +8,11 @@ vi.mock('@clerk/nextjs', () => ({
 }));
 vi.mock('./useAuthToken', () => ({ useAuthToken: () => vi.fn() }));
 
-import { deriveVenueResults, venueNameMatches } from './useSearch';
+import {
+  deriveVenueResults,
+  venueLeadsQuery,
+  venueNameMatches,
+} from './useSearch';
 
 const row = (
   id: string,
@@ -56,5 +60,45 @@ describe('venue results answer to the venue name', () => {
     expect(venueNameMatches('The Gothic Theatre', 'red')).toBe(false);
     expect(venueNameMatches('Fillmore Auditorium', 'red')).toBe(false);
     expect(venueNameMatches('Globe Hall', '')).toBe(false);
+  });
+
+  it('matches a run of words inside the name, the last by prefix', () => {
+    expect(venueNameMatches('The Black Box', 'black box')).toBe(true);
+    expect(venueNameMatches('The Black Box', 'black bo')).toBe(true);
+    expect(venueNameMatches('Red Rocks Amphitheatre', 'rocks amph')).toBe(true);
+    // Words out of order, or a gap between them, are not a run.
+    expect(venueNameMatches('Red Rocks Amphitheatre', 'rocks red')).toBe(false);
+    expect(venueNameMatches('Red Rocks Amphitheatre', 'red amph')).toBe(false);
+  });
+
+  it('folds accents and punctuation, and ignores an empty venue name', () => {
+    expect(venueNameMatches('Théâtre Rouge', 'theatre')).toBe(true);
+    expect(venueNameMatches('Ophelia’s Electric Soapbox', "ophelia's")).toBe(
+      true,
+    );
+    expect(venueNameMatches('', 'red')).toBe(false);
+  });
+});
+
+// The board orders Artists, Venues, Artist pages. Venues leads only when the
+// query names a venue from its start (or whole): "red rocks", not "rocks".
+describe('venueLeadsQuery (venueFirst)', () => {
+  it('leads for a query that starts the name or is the whole name', () => {
+    expect(venueLeadsQuery('Red Rocks Amphitheatre', 'red')).toBe(true);
+    expect(venueLeadsQuery('Red Rocks Amphitheatre', 'Red Rocks')).toBe(true);
+    expect(venueLeadsQuery('Bluebird Theater', 'bluebird theater')).toBe(true);
+    expect(
+      venueLeadsQuery('Bluebird Theater', 'bluebird theater tonight'),
+    ).toBe(true);
+  });
+
+  it('does not lead for a word in the middle of the name', () => {
+    expect(venueLeadsQuery('Red Rocks Amphitheatre', 'rocks')).toBe(false);
+    expect(venueLeadsQuery('The Black Box', 'box')).toBe(false);
+  });
+
+  it('does not lead for an empty query or name', () => {
+    expect(venueLeadsQuery('Red Rocks Amphitheatre', '  ')).toBe(false);
+    expect(venueLeadsQuery('', 'red')).toBe(false);
   });
 });

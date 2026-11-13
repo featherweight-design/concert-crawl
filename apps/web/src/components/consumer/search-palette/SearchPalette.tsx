@@ -143,16 +143,22 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
   // arrive (more-r3-palette_typed: the yellow edge and wash on row one), so
   // Enter opens it. The phone sheet has no resting highlight. Typing again
   // clears it above and it comes back with the next results; an arrow key or a
-  // hover moves it off row one and this leaves it alone.
+  // hover moves it off row one and this leaves it alone. Only SETTLED results
+  // count: the hook keeps the previous query's rows on screen for the debounce,
+  // and highlighting one of those would let Enter open a result for text that
+  // is no longer in the box.
   const typedResultCount =
     artistResults.length + artistPageResults.length + venueResults.length;
+  const settled = !search.isLoading;
   useEffect(() => {
-    if (!open || sheet || browsing || typedResultCount === 0) return;
+    if (!open || sheet || browsing || !settled || typedResultCount === 0) {
+      return;
+    }
     if (selectedIdxRef.current < 0) {
       selectedIdxRef.current = 0;
       setSelectedIdx(0);
     }
-  }, [open, sheet, browsing, typedResultCount, query]);
+  }, [open, sheet, browsing, settled, typedResultCount, query]);
 
   useEffect(() => {
     if (!open) return;
