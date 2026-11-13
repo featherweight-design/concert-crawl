@@ -29,7 +29,6 @@ const SVG_STYLE = {
   inset: 0,
   width: '100%',
   height: '100%',
-  display: 'block',
 } as const;
 
 const STAR_RADII = [0.6, 0.9, 1.2] as const;
@@ -156,7 +155,7 @@ export function VenueBackdrop({
   uid,
   wide = false,
 }: VenueBackdropProps) {
-  const phoneOnly = wide ? 'sm:hidden' : undefined;
+  const phoneOnly = wide ? 'block sm:hidden' : 'block';
   if (setting === 'outdoor') {
     const horizonId = `vn${uid}h`;
     return (

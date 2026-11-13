@@ -85,7 +85,7 @@ export default async function VenueProfilePage({
       <VenueHero slug={venue.slug} name={venue.name} />
 
       {/* Content */}
-      <div className="relative -mt-10 flex-1 pb-24 sm:pb-10">
+      <div className="relative -mt-10 flex-1 sm:-mt-[116px] pb-24 sm:pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
           {/* Phone (hero-m-redrocks.jpg): the tile with the type chip to its
               right, then the full-width title on the next line. Desktop
