@@ -31,7 +31,7 @@ export const HERO_BACKDROP_STYLE: CSSProperties = {
   bottom: -40,
   left: -40,
   filter: 'blur(36px) saturate(1.5)',
-  opacity: 0.45,
+  opacity: 0.3,
 };
 
 /**
@@ -39,4 +39,4 @@ export const HERO_BACKDROP_STYLE: CSSProperties = {
  * fade into the elevated fill so the text column reads.
  */
 export const heroWash = (genre: string): string =>
-  `radial-gradient(circle at 15% 30%, color-mix(in oklch, ${genre} 30%, transparent), transparent 55%), linear-gradient(90deg, color-mix(in oklch, var(--bg-elevated) 20%, transparent), color-mix(in oklch, var(--bg-elevated) 88%, transparent) 60%)`;
+  `radial-gradient(ellipse 80% 140% at 12% 50%, color-mix(in oklch, ${genre} 42%, transparent), transparent 75%), linear-gradient(90deg, transparent, color-mix(in oklch, var(--bg-elevated) 88%, transparent) 60%)`;
