@@ -1,3 +1,17 @@
+# [1.382.0](https://github.com/featherweight-design/concert-crawl/compare/v1.381.0...v1.382.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** hero title step is exact at 320 and grows from there ([c351d8d](https://github.com/featherweight-design/concert-crawl/commit/c351d8def4e9ebdeaf2cee81802aea492bcd06a4))
+* **web:** offline header spacing switches at 900, pill live region stays mounted ([e7b4d5d](https://github.com/featherweight-design/concert-crawl/commit/e7b4d5d4a0f41547af0b7a5402dabb262ba24342))
+
+
+### Features
+
+* **web:** event hero title steps down at 320 as the boards draw it ([766026d](https://github.com/featherweight-design/concert-crawl/commit/766026d80ca773108e76e5e721f846a006765045))
+* **web:** offline header at 640 to 1100 as the width boards draw it ([02d6503](https://github.com/featherweight-design/concert-crawl/commit/02d6503c225287a8f48ee84fddafd678ff5e6e72))
+
 # [1.381.0](https://github.com/featherweight-design/concert-crawl/compare/v1.380.0...v1.381.0) (2026-11-13)
 
 
