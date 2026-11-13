@@ -3,7 +3,7 @@
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { FEATURE_CARDS } from '@/lib/definitions/releases';
+import { FEATURE_CARDS, RELEASES } from '@/lib/definitions/releases';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
@@ -42,6 +42,24 @@ describe('WhatsNewPage', () => {
         ).toHaveAttribute('href', feature.cta.href);
       }
     }
+  });
+
+  it('draws 14 venue tiles, 8 of them on a phone, in the hero card', () => {
+    render(<WhatsNewPage cards={FEATURE_CARDS} />);
+    const tiles = screen.getByTestId('feature-art-venues').children;
+    expect(tiles).toHaveLength(14);
+    const phoneTiles = [...tiles].filter(
+      (tile) => !tile.className.includes('hidden'),
+    );
+    expect(phoneTiles).toHaveLength(8);
+  });
+
+  it('marks the latest release seen, as the changelog does', () => {
+    window.localStorage.removeItem('cc.lastSeenRelease');
+    render(<WhatsNewPage cards={FEATURE_CARDS} />);
+    expect(window.localStorage.getItem('cc.lastSeenRelease')).toBe(
+      RELEASES[0]?.version,
+    );
   });
 
   it('heads the page and links on to the full changelog', () => {

@@ -43,7 +43,7 @@ describe('UserMenuVersionFooter', () => {
     expect(screen.getByText('v0.5.0-beta')).toBeTruthy();
   });
 
-  it('shows What’s new text when not unread', () => {
+  it('keeps the What’s new text once read; only the dot goes', () => {
     localStorage.setItem('cc.lastSeenRelease', latestVersion);
     render(<UserMenuVersionFooter build={latestVersion} />);
     expect(screen.getByText('What’s new')).toBeTruthy();
