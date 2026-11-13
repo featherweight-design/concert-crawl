@@ -1,6 +1,7 @@
 import { SentryTierTag } from '@/components/auth/SentryTierTag';
 import { PendingErrorReportFlush } from '@/components/consumer/error-report/PendingErrorReportFlush';
 import { FeedbackEdgeTabGate } from '@/components/consumer/feedback';
+import { ScrollResetOnNavigate } from '@/components/consumer/scroll-reset/ScrollResetOnNavigate';
 import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush';
 import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate';
 import { FollowNudgeGate } from '@/components/consumer/following/nudge/FollowNudgeGate';
@@ -22,6 +23,11 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   return (
     <>
       {children}
+      {/* Mounted here, once, rather than in (main): /me, /me/edit,
+          /me/submissions and /search sit outside (main) and need it too.
+          Next skips its own scroll reset when the new page's top is still on
+          screen, so a part-scrolled page landed the next one part way down. */}
+      <ScrollResetOnNavigate />
       <FeedbackEdgeTabGate />
       <FeatureDropPillGate />
       <OnboardingThemeFlush />

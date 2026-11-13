@@ -55,7 +55,10 @@ describe('ScrollResetOnNavigate', () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
-  it('leaves Back and Forward to the browser restoration', () => {
+  // Only the component's half of Back/Forward: it does not scroll when a
+  // popstate landed on the new pathname. That the browser then restores the
+  // offset is a real-browser fact, pinned in apps/e2e scroll-position.spec.ts.
+  it('does not scroll when a popstate landed on the new pathname', () => {
     const view = render(<ScrollResetOnNavigate />);
     navigate(view, '/venues', { popstate: true });
     expect(scrollTo).not.toHaveBeenCalled();
