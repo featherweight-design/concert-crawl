@@ -39,6 +39,39 @@ describe('createDeadline', () => {
     expect(err.elapsedMs).toBeGreaterThanOrEqual(40);
   });
 
+  it('relabels an abort of the budget signal while the per-request cap is shorter', async () => {
+    // A redirect chain's hop wait can run the budget out while each hop's
+    // own timeout is the per-request cap, so `budgetBound` is false.
+    const deadline = createDeadline({
+      perRequestTimeoutMs: 10,
+      overallTimeoutMs: 40,
+    });
+
+    const err = await deadline
+      .run('page-1', async (timeoutMs, budget) => {
+        expect(timeoutMs).toBe(10);
+        if (!budget) throw new Error('no budget signal handed to the request');
+        await new Promise((resolve) =>
+          budget.addEventListener('abort', resolve, { once: true }),
+        );
+        throw budget.reason;
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(err).toBeInstanceOf(PlatformFetchDeadlineError);
+  });
+
+  it('hands no budget signal when no overall budget is set', async () => {
+    const deadline = createDeadline({ perRequestTimeoutMs: 5_000 });
+    let seen: AbortSignal | undefined = new AbortController().signal;
+
+    await deadline.run('page-1', async (_timeoutMs, budget) => {
+      seen = budget;
+    });
+
+    expect(seen).toBeUndefined();
+  });
+
   it('passes the per-request timeout through when no overall budget is set', async () => {
     const deadline = createDeadline({ perRequestTimeoutMs: 5_000 });
     const seen: (number | undefined)[] = [];

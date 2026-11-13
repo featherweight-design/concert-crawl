@@ -583,6 +583,33 @@ describe('venuePilotFetcher.fetch', () => {
     }
   });
 
+  it('issues its first request at least 3 s after the start', async () => {
+    // crawl.ts and the probe read the venue's robots.txt just before
+    // dispatching here, so the first request needs its own wait.
+    vi.mocked(jitter).mockImplementation(realJitter);
+    vi.useFakeTimers();
+    try {
+      const startedAt = Date.now();
+      let requestedAt: number | undefined;
+      fetchSpy.mockImplementationOnce(async () => {
+        requestedAt = Date.now();
+        return new Response(LEVITT_FIXTURE, {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      });
+      const run = venuePilotFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        firstPageOnly: true,
+      });
+      await vi.advanceTimersByTimeAsync(10_000);
+      await run;
+      expect(requestedAt! - startedAt).toBeGreaterThanOrEqual(3_000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps a fixed budget fixed when the endpoint's Crawl-delay is longer", async () => {
     vi.mocked(jitter).mockImplementation(realJitter);
     vi.useFakeTimers();

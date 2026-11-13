@@ -23,6 +23,25 @@ vi.mock('./jitter.js', () => ({ jitter: vi.fn(() => 0) }));
 const { jitter: realJitter } =
   await vi.importActual<typeof import('./jitter.js')>('./jitter.js');
 
+/**
+ * Put `AbortSignal.timeout` on the fake clock, so a request timeout and the
+ * pacing waits it might cut short run on the same clock. Node's own timer
+ * would never fire while fake time jumps ahead.
+ */
+function fakeClockTimeouts(): void {
+  vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms: number) => {
+    const controller = new AbortController();
+    setTimeout(
+      () =>
+        controller.abort(
+          new DOMException('The operation timed out.', 'TimeoutError'),
+        ),
+      ms,
+    );
+    return controller.signal;
+  });
+}
+
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '__fixtures__',
@@ -544,6 +563,56 @@ describe('liveNationFetcher.fetch', () => {
     ).rejects.toThrow(PlatformFetchDeadlineError);
     expect(Date.now() - startedAt).toBeLessThan(5_000);
     expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(false);
+  });
+
+  it('paces the sitemap read, its first request, at least 3 s after the start', async () => {
+    // crawl.ts and the probe read robots.txt from this origin just before
+    // dispatching here, so the first page request needs its own wait.
+    const origin = 'https://paced-sitemap.example.com';
+    vi.mocked(jitter).mockImplementation(realJitter);
+    const requestedAt: number[] = [];
+    const fetchMock = mockSiteFetch({ sitemap: sitemapFor(origin) });
+    const base = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation(async (url: string) => {
+      if (!url.endsWith('/robots.txt')) requestedAt.push(Date.now());
+      return base?.(url);
+    });
+    const startedAt = Date.now();
+    const run = liveNationFetcher.fetch(
+      makeVenue({ websiteUrl: `${origin}/shows` }),
+      { crawlDelayMs: 0, firstPageOnly: true },
+    );
+    await vi.advanceTimersByTimeAsync(20_000);
+    await run;
+    const pageUrls = fetchMock.mock.calls
+      .map(([url]) => String(url))
+      .filter((url) => !url.endsWith('/robots.txt'));
+    expect(pageUrls[0]).toBe(`${origin}/sitemap.xml`);
+    expect(requestedAt[0]! - startedAt).toBeGreaterThanOrEqual(3_000);
+  });
+
+  it("keeps a redirect hop's pacing wait out of the per-request timeout", async () => {
+    // A 25 s wait before the hop is longer than the 20 s per-request cap.
+    // The cap bounds each hop's network time only, so the hop goes out.
+    const origin = 'https://redirect-long-wait.example.com';
+    const target = `${origin}/moved/calendar`;
+    const fetchMock = mockCalendarRedirect(origin, target);
+    vi.mocked(jitter).mockImplementation(realJitter);
+    fakeClockTimeouts();
+    const run = liveNationFetcher.fetch(
+      makeVenue({ websiteUrl: `${origin}/shows` }),
+      {
+        crawlDelayMs: 25_000,
+        perRequestTimeoutMs: 20_000,
+        firstPageOnly: true,
+      },
+    );
+    const settled = expect(run).resolves.toMatchObject({
+      readUrls: expect.arrayContaining([target]),
+    });
+    await vi.advanceTimersByTimeAsync(200_000);
+    await settled;
+    expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(true);
   });
 
   it("stops waiting on a redirect host's slow robots.txt when the budget runs out", async () => {

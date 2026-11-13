@@ -18,8 +18,30 @@ import { jitter } from './jitter.js';
 
 // jitter() floors every wait at 3 s, so the real one would make each of the
 // dozens of page requests here sleep 3-4 s. The floor is pinned by
-// jitter.test.ts; tests here count the paced waits instead.
+// jitter.test.ts; tests here count the paced waits instead, except the few
+// that switch the real one back in to time a wait on the fake clock.
 vi.mock('./jitter.js', () => ({ jitter: vi.fn(() => 0) }));
+const { jitter: realJitter } =
+  await vi.importActual<typeof import('./jitter.js')>('./jitter.js');
+
+/**
+ * Put `AbortSignal.timeout` on the fake clock, so a request timeout and the
+ * pacing waits it might cut short run on the same clock. Node's own timer
+ * would never fire while fake time jumps ahead.
+ */
+function fakeClockTimeouts(): void {
+  vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms: number) => {
+    const controller = new AbortController();
+    setTimeout(
+      () =>
+        controller.abort(
+          new DOMException('The operation timed out.', 'TimeoutError'),
+        ),
+      ms,
+    );
+    return controller.signal;
+  });
+}
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -381,8 +403,9 @@ describe('detailPageFetcher.fetch', () => {
       LISTING_URL,
       `${ORIGIN}/e/one`,
     ]);
-    // Both paced requests go through jitter, which floors them at 3 s.
-    expect(jitter).toHaveBeenCalledTimes(2);
+    // The sitemap, listing and detail page are each paced through jitter,
+    // which floors them at 3 s.
+    expect(jitter).toHaveBeenCalledTimes(3);
     expect(result.sourceUrl).toBe(LISTING_URL);
     expect(result.events).toHaveLength(1);
     expect(result.events[0]!.title).toBe('Hip-Hop Summit Denver');
@@ -722,5 +745,73 @@ describe('detailPageFetcher.fetch', () => {
     // past the cap, which are pre-flight work we would throw away. (The
     // listing goes through isAllowedOrSkip, which this spy does not see.)
     expect(spy).toHaveBeenCalledTimes(MAX_DETAIL_PAGES + 1);
+  });
+
+  it('paces the sitemap read, its first request, at least 3 s after the start', async () => {
+    // crawl.ts and the probe read robots.txt from this origin just before
+    // dispatching here, so the first page request needs its own wait.
+    vi.useFakeTimers();
+    vi.mocked(jitter).mockImplementation(realJitter);
+    try {
+      const requestedAt: number[] = [];
+      const fetchMock = mockSiteFetch({
+        listing: '<a href="/e/one">1</a>',
+        sitemap: '',
+      });
+      const base = fetchMock.getMockImplementation();
+      fetchMock.mockImplementation(async (url: string) => {
+        if (!String(url).endsWith('/robots.txt')) requestedAt.push(Date.now());
+        return base?.(url);
+      });
+      const startedAt = Date.now();
+      const run = detailPageFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        firstPageOnly: true,
+      });
+      await vi.advanceTimersByTimeAsync(20_000);
+      await run;
+      expect(pageRequests(fetchMock)[0]).toBe(`${ORIGIN}/sitemap.xml`);
+      expect(requestedAt[0]! - startedAt).toBeGreaterThanOrEqual(3_000);
+    } finally {
+      vi.mocked(jitter).mockImplementation(() => 0);
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a redirect hop's pacing wait out of the per-request timeout", async () => {
+    // A 25 s wait before the hop is longer than the 20 s per-request cap.
+    // The cap bounds each hop's network time only, so the hop goes out.
+    vi.useFakeTimers();
+    vi.mocked(jitter).mockImplementation(realJitter);
+    fakeClockTimeouts();
+    try {
+      const fetchMock = mockSiteFetch({
+        listing: '<a href="/e/one">1</a>',
+        sitemap: '',
+        detail: (url) =>
+          url.includes('/e/')
+            ? {
+                ok: true,
+                status: 200,
+                body: '',
+                redirectTo: url.replace('/e/', '/events/'),
+              }
+            : { ok: true, status: 200, body: DETAIL_HTML },
+      });
+      const run = detailPageFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 25_000,
+        perRequestTimeoutMs: 20_000,
+        firstPageOnly: true,
+      });
+      const settled = expect(run).resolves.toMatchObject({
+        events: [expect.objectContaining({ title: 'Hip-Hop Summit Denver' })],
+      });
+      await vi.advanceTimersByTimeAsync(200_000);
+      await settled;
+      expect(pageRequests(fetchMock)).toContain(`${ORIGIN}/events/one`);
+    } finally {
+      vi.mocked(jitter).mockImplementation(() => 0);
+      vi.useRealTimers();
+    }
   });
 });

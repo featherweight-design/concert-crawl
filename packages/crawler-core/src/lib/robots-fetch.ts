@@ -8,8 +8,9 @@ import {
   resolveCrawlDelayMs,
 } from './robots.js';
 
-// The most redirect hops we follow, matching fetch's own limit.
-const MAX_REDIRECTS = 20;
+// The most redirect hops we follow, matching fetch's own limit. Exported so
+// the admin probe can budget a hop's pacing wait for each one.
+export const MAX_REDIRECTS = 20;
 
 // Rejects with the signal's reason if it aborts first, so a caller's budget
 // bounds the pacing wait as well as the requests around it.
