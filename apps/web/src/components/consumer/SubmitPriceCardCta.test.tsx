@@ -54,10 +54,12 @@ describe('SubmitPriceCardButton draws more-p-price_states', () => {
     expect(screen.getByTestId('submit-another-body')).toHaveStyle({
       fontSize: '12.5px',
     });
-    expect(screen.getByTestId('submit-another-cta')).toHaveStyle({
-      fontSize: '9.5px',
-      letterSpacing: '0.14em',
-      textTransform: 'uppercase',
-    });
+    // Inline style, not toHaveStyle: jsdom's computed style resolves an em
+    // letter-spacing to px (0.14em at 9.5px reads back as 1.33px), so a
+    // computed comparison against '0.14em' can never pass.
+    const cta = screen.getByTestId('submit-another-cta');
+    expect(cta.style.fontSize).toBe('9.5px');
+    expect(cta.style.letterSpacing).toBe('0.14em');
+    expect(cta.style.textTransform).toBe('uppercase');
   });
 });

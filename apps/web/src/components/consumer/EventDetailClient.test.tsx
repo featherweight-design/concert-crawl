@@ -473,12 +473,9 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getAllByText('Resale').length).toBeGreaterThan(0);
     // FaceValueCard variant='no-price' → "All we can see is resale."
     expect(screen.getByText('All we can see is resale.')).toBeDefined();
-    // Confirm the trust pill is in fact the coral resale pill (Q-resale path).
-    const resaleEls = screen.getAllByText('Resale');
-    const pill = resaleEls.find((el) =>
-      (el as HTMLElement).style.background.includes('oklch(0.65 0.2 25)'),
-    );
-    expect(pill).toBeDefined();
+    // Confirm the trust pill is the resale kind of the shared TrustPill
+    // (addendum 4 item 5 replaced the old oklch pill tokens).
+    expect(screen.getByTestId('trust-pill-resale').textContent).toBe('Resale');
   });
 
   // #1377 — the exact staging repro: a second user submits a cheaper GA price
@@ -683,8 +680,13 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     // Pending-only tier renders its price twice: the display-only TierAlternateRow
     // tell ("pending · 1/2") and the actionable pending card below it.
     expect(screen.getAllByText('$80')).toHaveLength(2);
-    // VIP shows up as alternate tier label, once per surface.
-    expect(screen.getAllByText('VIP')).toHaveLength(2);
+    // VIP shows once per surface: alone as the alternate row's tier label, and
+    // inside the pending card's one-line qualifier "VIP · seen on AXS"
+    // (price-states-age-trust), so it is not a separate text node there.
+    expect(screen.getAllByText('VIP')).toHaveLength(1);
+    expect(screen.getByTestId('pending-qualifier').textContent).toBe(
+      'VIP · seen on AXS',
+    );
   });
 
   // Regression: the "other tiers" row for a tier with a live headline took its
