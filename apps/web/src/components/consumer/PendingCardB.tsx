@@ -7,9 +7,9 @@ import {
   Eyebrow,
   LockGlyph,
   PendingDot,
-  PendingTrustPill,
   PRICE_EYEBROW,
   PRICE_HEADLINE_SIZE,
+  TrustPill,
 } from './glyphs';
 
 const copy = CONSUMER_COPY.pendingCardB;
@@ -22,20 +22,28 @@ const vendorDisplayName = (vendor: string): string =>
 const COMMUNITY_SIGNAL = 'var(--signal)'; // community tier: the theme's signal, not a fixed azure
 const GOLD = 'oklch(0.66 0.14 78)'; // box-office tier
 
-// ── AA text colours (WCAG 1.4.3, 4.5:1 for text under 18.66px bold) ──
-// Each one nudges its token toward --fg, which raises contrast on every theme
-// (dark text darkens on a light ground, light text lightens on a dark one).
-// Ratios computed on --surface-1, Light / Electric:
-// - --fg-subtle alone is 2.79 / 3.17; at 75% it is 4.71 / 5.02.
-const SUBTLE_TEXT = 'color-mix(in oklab, var(--fg-subtle) 75%, var(--fg))';
-// - --warning alone is 3.65 on Light (Withdraw, 13.5px bold); at 85%, 4.82.
-const WARNING_TEXT = 'color-mix(in oklab, var(--warning) 85%, var(--fg))';
-// - --signal on the 7% strip is 3.83 on Light; at 85%, 4.98 (Electric 11.1).
-const SIGNAL_TEXT = `color-mix(in oklab, ${COMMUNITY_SIGNAL} 85%, var(--fg))`;
-// - White --fg-on-accent on the Confirm gradient bottoms out at 4.45 on Light;
-//   both stops at 95% toward --fg lift the worst point to 4.86 (Electric 10.2).
+// ── Text colours ─────────────────────────────────────────────────
+// The board's tokens, through the --price-text-* set in globals.css: dark
+// themes draw them as they are, Light leans them toward --fg to pass WCAG AA
+// for their size (ratios in globals.css).
+const SUBTLE_TEXT = 'var(--price-text-subtle)';
+const WARNING_TEXT = 'var(--price-text-warning)';
+const SIGNAL_TEXT = 'var(--price-text-signal)';
+// price-states-age-trust: 135deg, signal into the B+ CTA end (accent 75% with
+// signal, in sRGB: #DE96DF on Electric). Worst-point contrast for the label:
+// Electric 8.93 (dark text), Light 4.57 (white text), both AA at 15px bold.
 const CONFIRM_GRADIENT =
-  'linear-gradient(135deg, color-mix(in oklab, var(--signal) 95%, var(--fg)), color-mix(in oklab, var(--cta-end) 95%, var(--fg)))';
+  'linear-gradient(135deg, var(--signal), var(--cta-end))';
+// "YOUR SUBMISSION": mono 9px, 0.14em, subtle, one line (price-states-age-trust).
+const YOUR_SUBMISSION_LABEL = {
+  flex: '0 0 auto',
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: '9px',
+  fontWeight: 500,
+  color: SUBTLE_TEXT,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+} as const;
 
 // ── Token shape ──────────────────────────────────────────────────
 interface PendingTokens {
@@ -54,11 +62,12 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
     return {
       color: COMMUNITY_SIGNAL,
       text: SIGNAL_TEXT,
-      bg: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 6%, var(--surface-1))`,
-      border: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 32%, var(--border))`,
-      // more-p-price_states samples the strip at #18243C: signal at ~7%.
+      // price-states-age-trust: a --surface-1 body, a 55% signal dashed edge,
+      // a 7% strip and a 40% dashed strip rule.
+      bg: 'var(--surface-1)',
+      border: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 55%, transparent)`,
       strip: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 7%, transparent)`,
-      stripBorder: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 26%, var(--border))`,
+      stripBorder: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 40%, transparent)`,
       pill: `color-mix(in oklab, ${COMMUNITY_SIGNAL} 16%, transparent)`,
     };
   }
@@ -204,7 +213,7 @@ export const PendingCardB = ({
   // ── Card background / border ─────────────────────────────────
   const cardStyle = isBox
     ? {
-        borderRadius: '12px',
+        borderRadius: '16px',
         overflow: 'hidden' as const,
         padding: 0,
         background: tok.bg,
@@ -213,7 +222,8 @@ export const PendingCardB = ({
         boxShadow: `inset 0 1px 0 color-mix(in oklab, ${GOLD} 40%, transparent)`,
       }
     : {
-        borderRadius: '12px',
+        // price-states-age-trust: radius 16.
+        borderRadius: '16px',
         overflow: 'hidden' as const,
         padding: 0,
         background: 'var(--surface-1)',
@@ -241,7 +251,7 @@ export const PendingCardB = ({
         }}
       >
         {/* Strip left group: the dots lead, then one mono line
-            "PENDING · 1 OF 2 CONFIRMED" (9.5px, 0.14em), as drawn */}
+            "PENDING · 1 OF 2 CONFIRMED" (9.5px, 0.12em, bold), as drawn */}
         <div
           data-testid="pending-strip-left"
           style={{
@@ -251,7 +261,7 @@ export const PendingCardB = ({
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: '9.5px',
             color: tok.text,
-            letterSpacing: '0.14em',
+            letterSpacing: '0.12em',
             textTransform: 'uppercase',
             fontWeight: 700,
           }}
@@ -340,6 +350,7 @@ export const PendingCardB = ({
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: '9.5px',
+              fontWeight: 500,
               color: 'var(--fg-muted)',
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
@@ -351,15 +362,16 @@ export const PendingCardB = ({
       </div>
 
       {/* ── Body ── */}
-      <div style={{ padding: '16px 16px 14px' }}>
-        {/* Top row (eyebrow row). The board holds it at the live card's
-            19px badge-row height, so TICKETS sits 24px under the strip. */}
+      <div style={{ padding: '14px 16px' }}>
+        {/* TICKETS line: the eyebrow left, the shared TrustPill right, on
+            every pending card, yours included (addendum 4 item 5). */}
         <div
+          data-testid="pending-tickets-line"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            minHeight: '19px',
+            gap: '8px',
           }}
         >
           <Eyebrow
@@ -369,13 +381,13 @@ export const PendingCardB = ({
           >
             {isBox ? copy.boxOfficeLabel : copy.ticketsLabel}
           </Eyebrow>
+          <TrustPill kind={kind} />
         </div>
 
-        {/* Headline row — the live card's scale (more-p-price_states draws
-            pending and live $44 at the same 34px) */}
+        {/* Headline row, 6px under the TICKETS line (price-states-age-trust) */}
         <div
           style={{
-            marginTop: '11px',
+            marginTop: '6px',
             display: 'flex',
             alignItems: 'baseline',
             gap: '10px',
@@ -389,8 +401,7 @@ export const PendingCardB = ({
               fontWeight: 900,
               fontSize: `${PRICE_HEADLINE_SIZE}px`,
               color: 'var(--fg)',
-              letterSpacing: '-0.025em',
-              lineHeight: 1,
+              letterSpacing: '-0.035em',
             }}
           >
             {ceiling != null && ceiling > floor
@@ -398,14 +409,14 @@ export const PendingCardB = ({
               : `$${floor}`}
           </span>
           {/* One mono-caps qualifier, "GA · SEEN ON TICKETMASTER", inline
-              after the price (more-p-price_states: 9.5px, 0.14em, muted). */}
+              after the price (price-states-age-trust: 10px, 0.1em, muted). */}
           <span
             data-testid="pending-qualifier"
             style={{
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '9.5px',
+              fontSize: '10px',
               color: 'var(--fg-muted)',
-              letterSpacing: '0.14em',
+              letterSpacing: '0.1em',
               textTransform: 'uppercase',
               fontWeight: 500,
             }}
@@ -427,19 +438,16 @@ export const PendingCardB = ({
               {copy.faceValueNoFees}
             </span>
           )}
-          <PendingTrustPill kind={kind} />
         </div>
 
-        {/* Attribution line: "Submitted by @hugh" / "Submitted by you", sans
-            12.5px, muted, no time (more-p-price_states). Price baseline to
-            its caps is 17px, as on the live card. */}
+        {/* Attribution line: "Submitted by @hugh" / "Submitted by you", Inter
+            13px, muted, no time, 4px under the price (price-states-age-trust). */}
         <div
           data-testid="pending-attribution"
           style={{
-            marginTop: '9px',
+            marginTop: '4px',
             fontFamily: 'Inter, system-ui',
-            fontSize: '12.5px',
-            lineHeight: 1.25,
+            fontSize: '13px',
             color: 'var(--fg-muted)',
           }}
         >
@@ -484,34 +492,36 @@ export const PendingCardB = ({
           </div>
         )}
 
-        {/* Footer. Someone else's price: two 40px buttons, no rule, 15px
-            under the attribution. Your own: a solid rule, then the label,
-            the wait line and Edit / Withdraw (more-p-price_states). */}
+        {/* Footer (price-states-age-trust), 14px under the attribution.
+            Someone else's price: two equal buttons, 8px apart, no rule. Your
+            own: a solid rule, then the label, the wait line and Edit /
+            Withdraw, 10px apart. */}
         <div
           data-testid="pending-footer"
           style={
             view === 'other'
               ? {
-                  marginTop: '15px',
+                  marginTop: '14px',
                   display: 'flex',
                   alignItems: 'stretch',
                   gap: '8px',
-                  // At 320 the pair (about 309px) outgrows the 250px row, so
-                  // the second item wraps under Confirm. "Saw a different
-                  // number?" then fills the row; the counter pointer link
+                  // Both buttons start from a 140px basis and share the row
+                  // equally (170px each in the board's 348px row). At 320 the
+                  // row is about 250px, under the pair's minimum (Saw's
+                  // nowrap label is about 166px), so the second wraps under
+                  // Confirm and each fills its row. The counter pointer link
                   // stays content-wide.
                   flexWrap: 'wrap',
                 }
               : {
-                  marginTop: '15px',
+                  marginTop: '14px',
                   paddingTop: '12px',
                   borderTop: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
-                  // 16px between items; at 320 the actions wrap to their own
+                  // 10px between items; at 320 the actions wrap to their own
                   // row rather than crush the wait line.
-                  columnGap: '16px',
-                  rowGap: '10px',
+                  gap: '10px',
                   flexWrap: 'wrap',
                 }
           }
@@ -531,24 +541,20 @@ export const PendingCardB = ({
                   all: 'unset',
                   boxSizing: 'border-box',
                   cursor: 'pointer',
-                  // Takes the row's spare width (the board's Confirm is 33px
-                  // wider than its label; the second button is content-wide).
-                  flex: '100 1 auto',
+                  flex: '1 1 140px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: '40px',
-                  padding: '0 16px',
-                  borderRadius: '10px',
-                  // Sampled left to right: signal into accent at about 65%,
-                  // with a signal glow under the pill; stops nudged for AA.
+                  gap: '8px',
+                  padding: '13px 16px',
+                  borderRadius: '12px',
                   background: CONFIRM_GRADIENT,
                   boxShadow:
-                    '0 6px 18px color-mix(in oklab, var(--signal) 22%, transparent)',
+                    '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
                   color: 'var(--fg-on-accent)',
                   fontFamily: 'Inter, system-ui',
                   fontWeight: 700,
-                  fontSize: '14px',
+                  fontSize: '15px',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -575,19 +581,13 @@ export const PendingCardB = ({
                     all: 'unset',
                     boxSizing: 'border-box',
                     cursor: 'pointer',
-                    // Grow weight 1 against Confirm's 100: on a shared row it
-                    // takes 1/101 of the spare width (under 1px at the board's
-                    // 342px row), and once wrapped onto its own row it is the
-                    // only item there, so it fills it.
-                    flex: '1 0 auto',
+                    flex: '1 1 140px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    height: '40px',
-                    padding: '0 12px',
-                    borderRadius: '10px',
+                    padding: '10px',
+                    borderRadius: '12px',
                     border: '1px solid var(--border-strong)',
-                    background: 'var(--surface-1)',
                     color: 'var(--fg)',
                     fontFamily: 'Inter, system-ui',
                     fontWeight: 700,
@@ -604,17 +604,7 @@ export const PendingCardB = ({
           {view === 'self-locked' && (
             <>
               {/* Undrawn view: its label follows the drawn submitter one */}
-              <span
-                style={{
-                  flex: '0 0 80px',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '9.5px',
-                  lineHeight: '12px',
-                  color: SUBTLE_TEXT,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
-              >
+              <span style={YOUR_SUBMISSION_LABEL}>
                 {copy.yourSubmissionLabel}
               </span>
               <span
@@ -641,38 +631,28 @@ export const PendingCardB = ({
 
           {view === 'submitter' && (
             <>
-              {/* 80px label column that wraps to two mono lines, as drawn */}
               <span
                 data-testid="pending-your-submission"
-                style={{
-                  flex: '0 0 80px',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '9.5px',
-                  lineHeight: '12px',
-                  color: SUBTLE_TEXT,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
+                style={YOUR_SUBMISSION_LABEL}
               >
                 {copy.yourSubmissionLabel}
               </span>
               <span
                 data-testid="pending-waiting"
                 style={{
-                  // At least 120px: at the board's 342px row the label, the
-                  // wait line and the actions share one line (330px); below
-                  // that the actions wrap.
+                  // At least 120px: in the board's 348px row the label (about
+                  // 100px), the wait line and the actions share one line
+                  // (about 337px); below that the actions wrap.
                   flex: '1 1 120px',
                   minWidth: '120px',
                   fontFamily: 'Inter, system-ui',
-                  fontSize: '13.5px',
-                  lineHeight: 1.2,
+                  fontSize: '13px',
                   color: 'var(--fg-muted)',
                 }}
               >
                 {copy.waitingOnFans(remaining)}
               </span>
-              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={onEdit}
@@ -682,7 +662,7 @@ export const PendingCardB = ({
                     cursor: 'pointer',
                     fontFamily: 'Inter, system-ui',
                     fontWeight: 700,
-                    fontSize: '13.5px',
+                    fontSize: '13px',
                     color: 'var(--fg)',
                   }}
                 >
@@ -697,7 +677,7 @@ export const PendingCardB = ({
                     cursor: 'pointer',
                     fontFamily: 'Inter, system-ui',
                     fontWeight: 700,
-                    fontSize: '13.5px',
+                    fontSize: '13px',
                     color: WARNING_TEXT,
                   }}
                 >

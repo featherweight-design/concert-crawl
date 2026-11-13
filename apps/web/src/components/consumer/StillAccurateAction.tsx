@@ -109,18 +109,19 @@ export const StillAccurateAction = ({
       onClick={() => void onClick()}
       disabled={saving}
       data-testid="still-accurate-action"
+      // Addendum 4 item 5: it joins the price-age line, 10px after the age,
+      // in Inter 12.5px bold signal (price-states-age-trust).
       style={{
         background: 'none',
         border: 'none',
         padding: 0,
+        marginLeft: 10,
         minHeight: 24,
         cursor: saving ? 'default' : 'pointer',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 9,
-        letterSpacing: '0.04em',
-        color: 'var(--fg-subtle)',
-        textDecoration: 'underline',
-        textUnderlineOffset: 2,
+        fontFamily: 'var(--font-ui)',
+        fontSize: 12.5,
+        fontWeight: 700,
+        color: 'var(--price-text-signal)',
         flexShrink: 0,
         whiteSpace: 'nowrap',
       }}

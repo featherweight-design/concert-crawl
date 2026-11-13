@@ -140,60 +140,63 @@ export const Eyebrow = ({
   </div>
 );
 
-// PendingTrustPill
-const AZURE = 'oklch(0.62 0.12 240)';
-const GOLD = 'oklch(0.66 0.14 78)';
-const CORAL = 'oklch(0.65 0.20 25)';
+// TrustPill — the one price trust pill, shared by the live and pending price
+// cards (addendum 4 item 5, price-states-age-trust). B+ styling: 19px tall,
+// 0 7px 0 8px, radius 6, the kind's colour as a 1px edge at 50% over an 8%
+// fill, mono 9.5px bold caps at 0.08em. Community is the theme's signal,
+// Resale its danger and Box office its warning gold, as the board draws them;
+// the text runs through the AA-safe --price-text-* tokens (globals.css).
+const TRUST_PILL = {
+  community: { tone: 'var(--signal)', text: 'var(--price-text-signal)' },
+  resale: { tone: 'var(--danger)', text: 'var(--price-text-danger)' },
+  boxoffice: { tone: 'var(--warning)', text: 'var(--price-text-warning)' },
+} as const;
 
-const pendingPillTokens = (kind: 'community' | 'boxoffice' | 'resale') => {
-  const color = kind === 'boxoffice' ? GOLD : kind === 'resale' ? CORAL : AZURE;
-  const pillPercent =
-    kind === 'boxoffice' ? '22%' : kind === 'resale' ? '18%' : '16%';
-  return {
-    color,
-    pill: `color-mix(in oklab, ${color} ${pillPercent}, transparent)`,
-  };
-};
-
-export const PendingTrustPill = ({
+export const TrustPill = ({
   kind,
 }: {
   kind: 'community' | 'boxoffice' | 'resale';
 }) => {
-  const tok = pendingPillTokens(kind);
+  const { tone, text } = TRUST_PILL[kind];
   const isBox = kind === 'boxoffice';
-  const isResale = kind === 'resale';
-  const label = isBox ? 'Box office' : isResale ? 'Resale' : 'Community';
-  const border = isBox
-    ? `1px solid color-mix(in oklab, ${GOLD} 60%, transparent)`
-    : isResale
-      ? `1px solid color-mix(in oklab, ${CORAL} 60%, transparent)`
-      : 'none';
+  const label =
+    kind === 'boxoffice'
+      ? 'Box office'
+      : kind === 'resale'
+        ? 'Resale'
+        : 'Community';
   return (
     <span
+      data-testid={`trust-pill-${kind}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '4px',
-        padding: '2px 6px',
-        borderRadius: '4px',
-        background: tok.pill,
-        color: tok.color,
-        border,
+        gap: '6px',
+        height: '19px',
+        boxSizing: 'border-box',
+        padding: '0 7px 0 8px',
+        borderRadius: '6px',
+        border: `1px solid color-mix(in oklab, ${tone} 50%, transparent)`,
+        background: `color-mix(in oklab, ${tone} 8%, transparent)`,
+        color: text,
         fontFamily: "'JetBrains Mono', monospace",
-        fontSize: '9px',
-        letterSpacing: '0.06em',
+        fontSize: '9.5px',
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
         fontWeight: 700,
         lineHeight: 1,
         whiteSpace: 'nowrap',
+        flexShrink: 0,
       }}
     >
-      {isBox && <StarGlyph size={8} />}
+      {isBox && <StarGlyph size={8} color={text} />}
       {label}
     </span>
   );
 };
+
+/** The pending cards' former name for the shared TrustPill. */
+export const PendingTrustPill = TrustPill;
 
 // TierMark
 // Property table §primitives lines 42-63. The boxoffice star intentionally uses

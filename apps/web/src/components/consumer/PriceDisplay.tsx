@@ -17,6 +17,7 @@ import { StillAccurateAction } from '@/components/consumer/StillAccurateAction';
 import {
   PRICE_EYEBROW,
   PRICE_HEADLINE_SIZE,
+  TrustPill,
 } from '@/components/consumer/glyphs';
 
 const copy = CONSUMER_COPY;
@@ -114,9 +115,13 @@ const GOLD = 'oklch(0.66 0.14 78)';
 // Community color token — consumed from CSS variable so it responds to theme.
 const COMMUNITY = 'var(--trust-community)';
 
-// Price baseline to the cap top of "Submitted by" is 17px on the board; with
-// the headline at line-height 1 and the line at 1.25, that is a 9px gap.
-const ATTRIBUTION_GAP = 9;
+// Addendum 4's price-states-age-trust (HTML, which wins over the JPG
+// measurements of more-p-price_states): "Submitted by" sits 4px under the
+// headline row, the price-age line 6px under that, and the fees link 10px
+// under the age.
+const ATTRIBUTION_GAP = 4;
+const AGE_GAP = 6;
+const FEES_GAP = 10;
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -305,60 +310,8 @@ export function TrustMark({
   );
 }
 
-// ── Corner trust badge (more-p-price_states) ─────────────────────
-// A live community or box office card's tier mark: an outlined mono-caps
-// badge at top right, 19px tall (4px 8px around 9.5px caps, 1px edge, radius
-// 5). Community wears the theme's signal, as the pending card does; box office
-// wears its gold and the star.
-const COMMUNITY_SIGNAL = 'var(--signal)';
-
-function CornerTrustBadge({ kind }: { kind: 'community' | 'boxoffice' }) {
-  const tint = kind === 'community' ? COMMUNITY_SIGNAL : GOLD;
-  return (
-    <span
-      data-testid={`price-${kind}-badge`}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        padding: '4px 8px',
-        borderRadius: 5,
-        background: `color-mix(in oklab, ${tint} 12%, transparent)`,
-        border: `1px solid color-mix(in oklab, ${tint} 50%, transparent)`,
-        color: tint,
-        fontFamily: 'var(--font-mono)',
-        fontSize: 9.5,
-        fontWeight: 700,
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-        flexShrink: 0,
-      }}
-    >
-      {kind === 'boxoffice' && (
-        <svg
-          width="8"
-          height="8"
-          viewBox="0 0 10 10"
-          style={{ flexShrink: 0 }}
-          aria-hidden
-        >
-          <path
-            d="M5 1l1.18 2.46L9 3.78l-2 1.92.55 2.8L5 7.2 2.45 8.5 3 5.7 1 3.78l2.82-.32L5 1z"
-            fill={tint}
-          />
-        </svg>
-      )}
-      {kind === 'community'
-        ? copy.priceDisplay.communityLabel
-        : copy.priceDisplay.boxOfficeTrustLabel}
-    </span>
-  );
-}
-
-// ── Submitter attribution (more-p-price_states) ──────────────────
-// "Submitted by @handle · N fans confirmed", sans 12.5px, muted, on both the
+// ── Submitter attribution (price-states-age-trust) ───────────────
+// "Submitted by @handle · N fans confirmed", Inter 13px, muted, on both the
 // community and the box office card. A submission with no handle reads
 // "Submitted by an anonymous fan"; the confirms clause only shows once a fan
 // other than the submitter has confirmed.
@@ -378,8 +331,7 @@ function SubmitterAttribution({
       data-testid="price-submitter-attribution"
       style={{
         fontFamily: 'var(--font-ui)',
-        fontSize: 12.5,
-        lineHeight: 1.25,
+        fontSize: 13,
         color: 'var(--fg-muted)',
       }}
     >
@@ -465,15 +417,12 @@ function VerifiedStamp({
   verification: NonNullable<PriceBlockPrice['verification']>;
   subject?: string | null;
 }) {
-  const stale =
-    Date.now() - new Date(verification.at).getTime() > 7 * 24 * 60 * 60 * 1000;
-  const rel = relTimeAgo(verification.at);
-  const color = stale ? 'var(--warning)' : 'var(--success)';
+  // No amber "could be stale" tone at any age: Hugh dropped the stale chip
+  // everywhere (2026-11-10; addendum 4 item 5).
+  const whenText = relTimeAgo(verification.at);
+  const color = 'var(--success)';
   const headWord = subject ? `${subject} verified` : 'Verified';
   const { by } = verification;
-  const whenText = stale
-    ? `${rel}${copy.priceStaleness.couldBeStaleSuffix}`
-    : rel;
 
   let head: React.ReactNode;
   if (by.kind === 'user' && by.handle) {
@@ -1246,27 +1195,9 @@ export function PriceDisplay({
     color: 'var(--fg-subtle)',
     letterSpacing: '0.04em',
   };
+  // The price age is no longer a footer item: it has its own line under the
+  // attribution (ageLine below).
   const footerItems: { key: string; node: React.ReactNode }[] = [];
-  if (effectiveObservedAt) {
-    // StillAccurateAction is gated on the stamp the way MultiTierLiveCard
-    // gates it: with no observation there is nothing to call stale, and
-    // mounting it regardless makes every surface rendering a price depend on
-    // the app router even where the affordance can never appear.
-    footerItems.push({
-      key: 'stamp',
-      node: (
-        <>
-          <StaleStamp observedAt={effectiveObservedAt} />
-          <StillAccurateAction
-            eventId={eventId}
-            submissionId={priceSubmissionId}
-            observedAt={effectiveObservedAt}
-            {...(onSighted ? { onSighted } : {})}
-          />
-        </>
-      ),
-    });
-  }
   // A sold-out community price names its submitter here. A live one does it in
   // SubmitterAttribution above, and box office uses BoxOfficeAttribution.
   if (isCommunity && soldOut && priceObj.submitter) {
@@ -1306,13 +1237,39 @@ export function PriceDisplay({
   }
   const hasFooter = footerItems.length > 0 || priceObj.verification != null;
 
+  // Addendum 4 item 5: the price age on its own line, under "Submitted by …"
+  // and above the fees link, plain subtle mono at every age. Past the stale
+  // threshold StillAccurateAction joins it. The action is gated on the stamp
+  // the way MultiTierLiveCard gates it: with no observation there is nothing
+  // to call stale, and mounting it regardless makes every surface rendering a
+  // price depend on the app router even where it can never appear.
+  const ageLine = effectiveObservedAt ? (
+    <div data-testid="price-age-line" style={{ marginTop: AGE_GAP }}>
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <StaleStamp observedAt={effectiveObservedAt} />
+        <StillAccurateAction
+          eventId={eventId}
+          submissionId={priceSubmissionId}
+          observedAt={effectiveObservedAt}
+          {...(onSighted ? { onSighted } : {})}
+        />
+      </span>
+    </div>
+  ) : null;
+
   return (
     <div
       style={{
         marginTop: 18,
-        // more-p-price_states, measured: 16px inside a 1px edge, radius 12.
+        // price-states-age-trust: 16px inside a 1px edge, radius 16.
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 16,
         ...cardEdge,
         position: 'relative',
       }}
@@ -1334,7 +1291,7 @@ export function PriceDisplay({
               // The board's live BOX OFFICE eyebrow is grey like TICKETS; the
               // gold lives on the badge. Sold out drops the badge and no board
               // draws that state, so its eyebrow keeps the gold it had.
-              color: soldOut && isBoxOffice ? GOLD : 'var(--fg-subtle)',
+              color: soldOut && isBoxOffice ? GOLD : 'var(--price-text-subtle)',
               letterSpacing: PRICE_EYEBROW.tracking,
               textTransform: 'uppercase',
             }}
@@ -1352,12 +1309,11 @@ export function PriceDisplay({
         {hasSpark && range14d && (
           <Sparkline values={range14d} flag={sparkFlag} dim={soldOut} />
         )}
-        {/* A live community or box office price wears its tier as an outlined
-            badge at top right, not inline after the number
-            (more-p-price_states). Neither draws a sparkline, so the corner is
-            free. */}
-        {!soldOut && (isCommunity || isBoxOffice) && (
-          <CornerTrustBadge kind={isCommunity ? 'community' : 'boxoffice'} />
+        {/* The shared TrustPill, top right on the TICKETS line, for a live
+            community, box office or resale price (addendum 4 item 5). None of
+            them draws a sparkline, so the corner is free. */}
+        {!soldOut && sourceKind !== 'primary' && (
+          <TrustPill kind={sourceKind} />
         )}
       </div>
 
@@ -1367,7 +1323,7 @@ export function PriceDisplay({
           display: 'flex',
           alignItems: 'baseline',
           gap: 10,
-          marginTop: 11,
+          marginTop: 8,
           flexWrap: 'wrap',
         }}
       >
@@ -1375,11 +1331,10 @@ export function PriceDisplay({
           style={{
             fontFamily: 'var(--font-ui)',
             fontWeight: 900,
-            // more-p-price_states: 25px cap height measured on every state.
+            // 34px, the board's headline on every price state.
             fontSize: PRICE_HEADLINE_SIZE,
-            lineHeight: 1,
             color: soldOut ? 'var(--fg-subtle)' : 'var(--fg)',
-            letterSpacing: '-0.025em',
+            letterSpacing: '-0.035em',
             textDecoration: soldOut ? 'line-through' : 'none',
             textDecorationColor: 'var(--fg-subtle)',
           }}
@@ -1388,16 +1343,16 @@ export function PriceDisplay({
         </span>
 
         {!soldOut && (
-          // more-p-price_states: "STARTING, ALL-IN" and "FACE VALUE · NO FEES"
-          // in mono caps, 9.5px, 0.14em, muted.
+          // price-states-age-trust: "STARTING, ALL-IN" and "FACE VALUE · NO
+          // FEES" in mono caps, 10px, 0.1em, muted.
           <span
             data-testid="price-qualifier"
             style={{
               fontFamily: 'var(--font-mono)',
               fontWeight: 500,
-              fontSize: 9.5,
+              fontSize: 10,
               color: 'var(--fg-muted)',
-              letterSpacing: '0.14em',
+              letterSpacing: '0.1em',
               textTransform: 'uppercase',
             }}
           >
@@ -1411,9 +1366,9 @@ export function PriceDisplay({
           </span>
         )}
 
-        {/* Trust mark — inline for primary and resale; community and box
-            office wear theirs top right */}
-        {!soldOut && !isCommunity && !isBoxOffice && (
+        {/* Trust mark — inline for a primary (vendor) price only; the other
+            kinds wear the TrustPill top right */}
+        {!soldOut && sourceKind === 'primary' && (
           <TrustMark kind={sourceKind} />
         )}
 
@@ -1528,6 +1483,9 @@ export function PriceDisplay({
       {/* Sold-out reporter attribution */}
       {soldOut && <SoldOutReporterAttribution price={priceObj} />}
 
+      {/* Price age, its own line (addendum 4 item 5) */}
+      {ageLine}
+
       {/* Fee breakdown + delta pill in a single flex row — mirrors design layout */}
       {!soldOut && !isBoxOffice && (
         <div
@@ -1535,7 +1493,7 @@ export function PriceDisplay({
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            marginTop: 6,
+            marginTop: FEES_GAP,
             flexWrap: 'wrap',
           }}
         >
