@@ -71,6 +71,7 @@ export default async function PassportPage() {
         city: profile.city,
         avatarColor: profile.avatarColor,
         year: passportYear(),
+        joined: profile.joined,
       }}
       today={localDateString(DENVER_TIME_ZONE)}
       locked={locked}
