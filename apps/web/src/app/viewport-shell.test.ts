@@ -63,7 +63,8 @@ describe('mobile viewport shell', () => {
     '../components/admin/primitives/SidePanel.tsx',
   ])('%s sizes to the dynamic viewport', (file) => {
     const source = readFileSync(resolve(__dirname, file), 'utf8');
-    expect(source).not.toMatch(/min-h-screen|\b100vh\b|\bh-screen\b/);
+    expect(source).not.toMatch(/min-h-screen|\bh-screen\b|\b100[sl]?vh\b/);
+    expect(source).toMatch(/min-h-dvh|\b100dvh\b/);
   });
 
   it('pads the phone shell for every live inset', () => {

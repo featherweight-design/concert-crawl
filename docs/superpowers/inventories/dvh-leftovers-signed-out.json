@@ -1,6 +1,6 @@
 {
   "feature": "Dynamic-viewport leftovers: the signed-out full-height pages",
-  "note": "Bug fix, no new drawing: min-h-screen and 100vh moved to dvh on pages the app shell does not wrap. Each row is photographed at every width to show no page is a toolbar taller than the screen. /sign-up has no row: while the beta is invite-gated a signed-out visit lands on /auth/code, so the sheet cannot reach it. Walked by hand, since they need an account, an admin role or an offline browser: the price-check page, the admin layout, SidePanel, OfflineFallback and StandaloneError.",
+  "note": "Bug fix, no new drawing: min-h-screen and 100vh moved to dvh on pages the app shell does not wrap. Each row is photographed at every width to show no page is a toolbar taller than the screen. /sign-up has no row: while the beta is invite-gated a signed-out visit lands on /auth/code, so the sheet cannot reach it. Not photographed, since they need an account, an admin role or an offline browser: the price-check page, the admin layout, SidePanel, OfflineFallback and StandaloneError.",
   "signedOut": true,
   "rows": [
     {
