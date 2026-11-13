@@ -11,6 +11,8 @@ import {
 import {
   chooseSurvivor,
   groupNights,
+  isMultiDayPass,
+  isTwelveHourMisread,
   mergeDuplicateNights,
   type NightRow,
 } from './merge-duplicate-nights.js';
@@ -150,6 +152,44 @@ describe('merge-duplicate-nights integration', () => {
     expect(rows[0]?.ticketUrl).toBe('https://tickets.example.com/beck');
   });
 
+  it('never folds a multi-day pass listing into a night, but folds the 12-hour misread', async () => {
+    const venue = await seedVenue();
+    await seedEvent(venue.id, {
+      title: 'Billy Strings',
+      artist: 'Billy Strings',
+      date: '2026-09-18',
+      showTime: '19:30',
+    });
+    await seedEvent(venue.id, {
+      title: 'Billy Strings 2-Day Ticket (9/18-9/19)',
+      artist: 'Billy Strings',
+      date: '2026-09-18',
+      ticketUrl: 'https://tickets.example.com/2day',
+    });
+    const evening = await seedEvent(venue.id, {
+      title: 'Beck: Ride Lonesome Tour',
+      artist: 'Beck',
+      date: '2026-10-01',
+      showTime: '19:30',
+    });
+    await seedEvent(venue.id, {
+      title: 'Beck: Ride Lonesome Tour',
+      artist: 'Beck',
+      date: '2026-10-01',
+      showTime: '07:30',
+    });
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.groups).toHaveLength(1);
+    const rows = await rowsOn(venue.id);
+    expect(rows).toHaveLength(3);
+    expect(rows.find((row) => row.id === evening.id)?.showTime).toBe(
+      '19:30:00',
+    );
+    expect(rows.filter((row) => row.title.startsWith('Billy'))).toHaveLength(2);
+  });
+
   it('leaves an early and a late show, and different dates, alone', async () => {
     const venue = await seedVenue();
     await seedEvent(venue.id, {
@@ -245,6 +285,51 @@ describe('chooseSurvivor and groupNights', () => {
     expect(
       chooseSurvivor([night('b', 'x', null), night('a', 'x', null)]).id,
     ).toBe('a');
+  });
+
+  it('reads a multi-day pass or ticket listing as a different product', () => {
+    for (const title of [
+      'Ghost Canyon (Weekend Passes)',
+      'Billy Strings 2-Day Ticket (9/18-9/19)',
+      'Festival 3 day pass',
+    ]) {
+      expect(isMultiDayPass(title)).toBe(true);
+    }
+    for (const title of [
+      'Billy Strings',
+      'Ghost Canyon Fest (Friday)',
+      'Rossi.',
+    ]) {
+      expect(isMultiDayPass(title)).toBe(false);
+    }
+  });
+
+  it('reads 19:30 and 07:30 as one show, and an early and a late show as two', () => {
+    expect(
+      isTwelveHourMisread(
+        night('a', 'beck', '19:30:00'),
+        night('b', 'beck', '07:30:00'),
+      ),
+    ).toBe(true);
+    expect(
+      isTwelveHourMisread(
+        night('a', 'beck', '21:00:00'),
+        night('b', 'beck', '18:00:00'),
+      ),
+    ).toBe(false);
+    expect(
+      isTwelveHourMisread(
+        night('a', 'beck', '22:00:00'),
+        night('b', 'beck', '10:00:00'),
+      ),
+    ).toBe(false);
+    const groups = groupNights([
+      night('a', 'beck', '07:30:00'),
+      night('b', 'beck', '19:30:00'),
+    ]);
+    expect(groups).toHaveLength(1);
+    // The evening row survives the morning misread.
+    expect(chooseSurvivor(groups[0] ?? []).id).toBe('b');
   });
 
   it("groups by the crawl's night rule", () => {
