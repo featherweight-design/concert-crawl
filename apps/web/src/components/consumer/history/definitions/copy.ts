@@ -117,6 +117,13 @@ export const HISTORY_COPY = {
     link: 'See your Passport →',
   },
 
+  // The rail entry that opens the Add sheet (edit-concerts COPY.md "Add row").
+  // `since` is data from `recordsStartLabel()`, never typed here.
+  addRow: {
+    title: 'Add a show you went to',
+    sub: (since: string) => `Stamp past nights, back to ${since}`,
+  },
+
   // The Add sheet (COPY.md "Add a show you went to"; addendum 3 item 33 for
   // `loadFailed`, `retry` and `clearSearch`). `since` and `SINCE` come from
   // `recordsStartLabel()` and `recordsStartShort()`.
