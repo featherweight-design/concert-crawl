@@ -8,7 +8,6 @@
 // quoting different prices.
 
 import { useEffect, useState } from 'react';
-import { stampDateParts } from '@/lib/passport/stamp';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { HistoryLocked } from '@/components/consumer/history/HistoryLocked';
@@ -24,6 +23,7 @@ import {
   upcomingQueue,
 } from '@/lib/passport/booklet';
 import { toAttendedShows } from '@/lib/passport/select-shows';
+import { stampDateParts } from '@/lib/passport/stamp';
 import { passportStats } from '@/lib/passport/stats';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useTheme } from '@/theme';
@@ -132,18 +132,17 @@ export const PassportContent = ({
     const openBook = next !== null;
     return (
       <Shell>
-        <div
-          data-passport-empty-layout="phone"
-          className={openBook ? 'hidden' : 'sm:hidden'}
-        >
-          <header className="mb-6">
-            <PageTitle />
-          </header>
-          <div className="flex flex-col gap-8">
-            <PassportEmpty />
-            <div className="mx-auto w-full max-w-[460px]">{upNext}</div>
+        {!openBook && (
+          <div data-passport-empty-layout="phone" className="sm:hidden">
+            <header className="mb-6">
+              <PageTitle />
+            </header>
+            <div className="flex flex-col gap-8">
+              <PassportEmpty />
+              <div className="mx-auto w-full max-w-[460px]">{upNext}</div>
+            </div>
           </div>
-        </div>
+        )}
         <div
           data-passport-empty-layout="desktop"
           className={`${openBook ? 'grid' : 'hidden sm:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
