@@ -83,6 +83,7 @@ vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
 // The player asks the provider which plate colour to hand Spotify.
 vi.mock('@/theme', () => ({
   useTheme: () => ({ theme: 'electric', setTheme: () => undefined }),
+  useThemeName: () => 'electric',
 }));
 
 vi.mock('@clerk/nextjs', () => ({
