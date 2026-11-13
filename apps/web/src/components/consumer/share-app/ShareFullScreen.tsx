@@ -110,7 +110,7 @@ export const ShareFullScreen = ({
           data-testid="share-fullscreen-qr"
           viewBox={`0 0 ${qr.size} ${qr.size}`}
           shapeRendering="crispEdges"
-          className="mt-9 block aspect-square h-auto w-[min(100%,calc(100dvh-340px))] min-w-[200px] max-w-[420px]"
+          className="mt-9 block aspect-square h-auto w-[min(100%,calc(100dvh-340px))] min-w-[160px] max-w-[420px]"
         >
           <rect width={qr.size} height={qr.size} fill={PAGE_PAPER} />
           <path d={qr.path} fill={PAGE_INK} />
