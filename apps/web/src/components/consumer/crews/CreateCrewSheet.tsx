@@ -139,13 +139,7 @@ export const CreateCrewSheet = ({
             background: 'color-mix(in srgb, var(--bg) 35%, transparent)',
           }}
         >
-          <CrewPatch
-            crewId={crewId}
-            patchSalt={0}
-            size={76}
-            scale="tile"
-            ringed
-          />
+          <CrewPatch crewId={crewId} patchSalt={0} size={76} scale="tile" />
           <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             <p
               style={{

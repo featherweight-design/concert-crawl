@@ -99,13 +99,7 @@ const OptionsHeader = ({
   patchSalt,
 }: Pick<CrewOptionsSheetProps, 'crewId' | 'crewName' | 'patchSalt'>) => (
   <div className="flex items-center gap-3.5 px-[18px] pb-3.5 pt-1.5">
-    <CrewPatch
-      crewId={crewId}
-      patchSalt={patchSalt}
-      size={38}
-      scale="tile"
-      ringed
-    />
+    <CrewPatch crewId={crewId} patchSalt={patchSalt} size={38} scale="tile" />
     <div className="flex min-w-0 flex-col gap-1">
       <span
         className="truncate"

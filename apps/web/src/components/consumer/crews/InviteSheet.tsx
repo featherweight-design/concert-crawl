@@ -238,7 +238,6 @@ export const InviteSheet = ({
             patchSalt={patchSalt}
             size={56}
             scale="tile"
-            ringed
           />
           <div className="flex min-w-0 flex-col gap-1.5">
             <span
