@@ -19,6 +19,7 @@ import {
   db,
   events,
   priceSubmissions,
+  userEvents,
   userProfiles,
   venues,
 } from '@concert-crawl/db';
@@ -121,6 +122,17 @@ contestsAdminRouter.get(
         eventTitle: events.title,
         venueName: venues.name,
         eventDate: events.date,
+        // The Price checks tab's Ticket page button and "N Watching".
+        ticketUrl: events.ticketUrl,
+        watching: sql<number>`(${db
+          .select({ total: count() })
+          .from(userEvents)
+          .where(
+            and(
+              eq(userEvents.eventId, events.id),
+              eq(userEvents.status, 'watching'),
+            ),
+          )})`.mapWith(Number),
         tier: parentAlias.tier,
         sourceCategory: parentAlias.sourceCategory,
         // Parent fields (the disputed corroborated submission)
@@ -220,6 +232,8 @@ contestsAdminRouter.get(
       eventTitle: row.eventTitle ?? '',
       venueName: row.venueName ?? '',
       eventDate: row.eventDate ?? '',
+      ticketUrl: row.ticketUrl ?? null,
+      watching: row.watching,
       tier: row.tier,
       sourceCategory: row.sourceCategory,
       parent: {

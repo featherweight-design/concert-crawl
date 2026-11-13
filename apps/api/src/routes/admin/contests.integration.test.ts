@@ -94,6 +94,49 @@ describe('GET /v1/admin/contests/prices', () => {
     expect(body.data.offset).toBe(0);
   });
 
+  it('carries the show ticket link and how many fans are Watching it', async () => {
+    setAdminAuth();
+    const venue = await seedVenue({
+      name: 'Watch Venue',
+      slug: 'contest-watch',
+    });
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-02',
+      title: 'Watched Show',
+      artist: 'Watched Artist',
+      ticketUrl: 'https://example.com/tickets/watched',
+    });
+    await seedUserEvent('contest-watcher-1', event.id, { status: 'watching' });
+    await seedUserEvent('contest-watcher-2', event.id, { status: 'watching' });
+    const parent = await seedPriceSubmission(event.id, 'contest-w-parent', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'disputed',
+    });
+    await seedPriceSubmission(event.id, 'contest-w-counter', {
+      tier: 'GA',
+      vendor: 'AXS',
+      sourceCategory: 'standard',
+      priceMin: '55',
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+
+    const res = await app.request('/v1/admin/contests/prices', {
+      headers: ADMIN_HEADERS,
+    });
+    const body = (await res.json()) as {
+      data: { items: Array<{ ticketUrl: string | null; watching: number }> };
+    };
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0]?.ticketUrl).toBe(
+      'https://example.com/tickets/watched',
+    );
+    expect(body.data.items[0]?.watching).toBe(2);
+  });
+
   it('lists open contests with full parent + counter shape', async () => {
     setAdminAuth();
     const venue = await seedVenue({
