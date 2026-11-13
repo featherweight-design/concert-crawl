@@ -1,3 +1,18 @@
+## [1.419.6](https://github.com/featherweight-design/concert-crawl/compare/v1.419.5...v1.419.6) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** address review on the with-billing guards ([c0ae396](https://github.com/featherweight-design/concert-crawl/commit/c0ae3963473528c0de961c4a95263436e61d289b))
+* **crawler:** keep a reused bill's missing headliners missing, test the flattened reuse gate ([b772cd2](https://github.com/featherweight-design/concert-crawl/commit/b772cd2580b0a327cce482ed461972ab1186af81))
+* **crawler:** keep the venue's "with" billing and its support acts ([463b489](https://github.com/featherweight-design/concert-crawl/commit/463b489ab17aeba8dbe72d107656c9d4cbb9331b))
+* **web:** address the [#413](https://github.com/featherweight-design/concert-crawl/issues/413) review ([4d8d17c](https://github.com/featherweight-design/concert-crawl/commit/4d8d17c5dcee3e7cdcb1a78f70fb390696e791eb))
+* **web:** size StandaloneError and SidePanel to the dynamic viewport ([e45c4e4](https://github.com/featherweight-design/concert-crawl/commit/e45c4e4bbe7daeff6030fa3cde779169db4f602d))
+* **web:** size the remaining full-height pages to the dynamic viewport ([55c39c3](https://github.com/featherweight-design/concert-crawl/commit/55c39c3de770090849fc1d1612f5c2de21b6be11)), closes [#410](https://github.com/featherweight-design/concert-crawl/issues/410)
+* **web:** the browse card rails scroll sideways only ([52f63c9](https://github.com/featherweight-design/concert-crawl/commit/52f63c9f6c92068fee7f5cd0921e8018fb104dd1))
+* **web:** the My shows tab row holds still across tabs ([fb766f3](https://github.com/featherweight-design/concert-crawl/commit/fb766f39114ef353400c18ef5db7b505678f5537))
+* **web:** the profile Edit button takes taps again ([51a3fa6](https://github.com/featherweight-design/concert-crawl/commit/51a3fa63ea5e296db3c2c3f273ff9043651d552f))
+
 ## [1.419.5](https://github.com/featherweight-design/concert-crawl/compare/v1.419.4...v1.419.5) (2026-11-13)
 
 
