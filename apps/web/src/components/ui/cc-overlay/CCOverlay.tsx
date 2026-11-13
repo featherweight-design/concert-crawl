@@ -9,6 +9,7 @@
 
 import { useRef, type ReactNode } from 'react';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { CCOverlayHost } from './CCOverlayHost';
 import { useAnchoredPosition } from './lib/use-anchored-position';
 import { OVERLAY_COPY } from './definitions/copy';
@@ -75,6 +76,8 @@ const Sheet = ({
   // stop. Popovers stay untrapped: they are not modal and hover-open panels
   // must not steal focus.
   useFocusTrap(dialogRef, true);
+  // The sheet is modal; the popover is not and leaves the page scrollable.
+  useBodyScrollLock(true);
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">

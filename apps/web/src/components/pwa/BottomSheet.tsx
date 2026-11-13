@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface BottomSheetProps {
   open: boolean;
@@ -75,6 +76,7 @@ export const BottomSheet = ({
   const previousFocus = useRef<Element | null>(null);
   const titleId = useId();
   const drag = useSheetDrag(onClose, open);
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (!open) return;

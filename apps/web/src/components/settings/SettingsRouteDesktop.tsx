@@ -24,6 +24,7 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
 import { CCMark } from '@/components/brand/cc-mark';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import type {
   UserProfileResponse,
   UserSubmissionItem,
@@ -130,6 +131,8 @@ export function SettingsRouteDesktop({
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [editOpen]);
+
+  useBodyScrollLock(editOpen);
 
   const isAnon = !profile.handle;
   // From the list itself, so the panel's counts agree with its filter chips.

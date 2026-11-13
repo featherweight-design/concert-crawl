@@ -26,6 +26,7 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ListboxRowsContext, resultOptionId } from '../search/ResultParts';
 import { PALETTE_SHEET_QUERY } from './definitions/constants';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 const LISTBOX_ID = 'search-palette-listbox';
 
@@ -116,6 +117,8 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
       search.clearQuery();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useBodyScrollLock(open);
 
   // Focus goes back to the control that opened the palette. Without it focus
   // falls to <body> and a keyboard user starts the page over from the top.

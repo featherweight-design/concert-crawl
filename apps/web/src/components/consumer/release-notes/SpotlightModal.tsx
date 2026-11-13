@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Release } from '@/lib/definitions/releases';
 import { SpotlightHero } from './SpotlightHero';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const COPY = CONSUMER_COPY.releaseNotes;
@@ -37,6 +38,8 @@ export function SpotlightModal({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, sp]);
+
+  useBodyScrollLock(Boolean(sp));
 
   // isMobile tracks viewport width — intentionally separate from heroScale so
   // the dialog layout never feeds back into the ResizeObserver measurement.
