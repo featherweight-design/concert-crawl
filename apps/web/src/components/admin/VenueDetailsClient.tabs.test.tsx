@@ -189,8 +189,12 @@ describe('VenueDetailsClient — tabs', () => {
     expect(window.location.search).toBe('?tab=runs');
     expect(mockReplace).not.toHaveBeenCalled();
     expect(panel('runs').hidden).toBe(false);
+    // By role, not test id: this suite's `next/link` mock forwards only
+    // `href` and `children`, so the real Link's `data-testid` never lands.
     expect(
-      screen.getByTestId('venue-runs-interim-link').getAttribute('href'),
+      screen
+        .getByRole('link', { name: TABS.runsInterim.link })
+        .getAttribute('href'),
     ).toBe('/admin/crawl?venueId=venue-1&tab=history');
   });
 
