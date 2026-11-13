@@ -172,6 +172,24 @@ describe('VenueDetailsClient — street address field', () => {
     expect(addressInput().value).toBe('');
   });
 
+  // The header's View on site opens our page, so the venue's own site must
+  // stay one click away for crawl debugging (orchestrator, 3a 4a).
+  it('links to the venue website beside the Source URL', () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ websiteUrl: 'https://venue.example/events' })}
+      />,
+    );
+
+    const link = screen.getByTestId('venue-source-url-open');
+    expect(link.getAttribute('href')).toBe('https://venue.example/events');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.getAttribute('aria-label')).toBe(
+      ADMIN_COPY.venueDetailsClient.fields.sourceUrl.openLabel,
+    );
+  });
+
   it('sends the edited address to updateVenue on save', async () => {
     render(<VenueDetailsClient venue={buildVenue({ address: null })} />);
 
