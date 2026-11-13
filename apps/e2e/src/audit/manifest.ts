@@ -237,8 +237,9 @@ const manifest: AuditManifest = validateManifest([
 
   // --- Additional admin routes --------------------------------------------
   {
-    // The Health page (admin 1c), which replaced the old dashboard and still
-    // hosts the triage panel (#1215) until Needs you takes it over.
+    // The Health page (admin 1c), which replaced the old dashboard. It no
+    // longer renders the triage panel (#1215): no board draws it, and Needs
+    // you plus the venue grid carry that information.
     id: 'admin-health',
     path: '/admin',
     tags: ['admin'],

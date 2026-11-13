@@ -29,7 +29,6 @@ const fixtures: Record<string, unknown> = {
     suppressed24h: 0,
   },
   '/v1/admin/needs-you/count': { decisions: 2 },
-  '/v1/admin/triage': { success: true, data: [] },
 };
 
 const answer = (failing: string[] = []) =>
@@ -69,9 +68,19 @@ describe('/admin Health page', () => {
     await expect(AdminHealthPage()).rejects.toThrow(/crawl\/status/);
   });
 
-  it('still renders when only the Needs you count and triage fail', async () => {
-    answer(['/v1/admin/needs-you/count', '/v1/admin/triage']);
+  it('still renders when only the Needs you count fails', async () => {
+    answer(['/v1/admin/needs-you/count']);
     const { default: AdminHealthPage } = await import('./page');
     await expect(AdminHealthPage()).resolves.not.toBeNull();
+  });
+
+  it('does not load the undrawn triage block', async () => {
+    answer();
+    const { default: AdminHealthPage } = await import('./page');
+    await AdminHealthPage();
+    expect(mockGet).not.toHaveBeenCalledWith(
+      '/v1/admin/triage',
+      expect.anything(),
+    );
   });
 });
