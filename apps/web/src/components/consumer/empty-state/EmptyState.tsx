@@ -89,17 +89,41 @@ function MedallionGlyph({ glyph }: { glyph: EmptyStateGlyph }) {
     // crew_been_m). Each is a notched ticket outline.
     const ticket =
       'M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5V9a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 15.5V13a2 2 0 0 0 0-4V6.5Z';
+    // crew_been_m draws them side by side and coloured (teal, gold, teal), each
+    // with a perforation and a mark, tilted a few degrees either way.
+    const stubs = [
+      { x: 0, angle: -6, color: 'var(--signal)', mark: 'star' },
+      { x: 30, angle: 4, color: 'var(--warning)', mark: 'arrow' },
+      { x: 60, angle: -5, color: 'var(--signal)', mark: 'star' },
+    ] as const;
     return (
-      <svg width={52} height={52} viewBox="0 0 28 28" fill="none" aria-hidden>
-        {[-14, 0, 14].map((angle) => (
-          <g key={angle} transform={`rotate(${angle} 14 14) translate(2 2)`}>
+      <svg width={96} height={34} viewBox="0 0 88 28" fill="none" aria-hidden>
+        {stubs.map((stub) => (
+          <g
+            key={stub.x}
+            transform={`translate(${stub.x} 0) rotate(${stub.angle} 14 14)`}
+            opacity={0.6}
+          >
             <path
               d={ticket}
-              stroke="var(--fg-muted)"
+              stroke={stub.color}
               strokeWidth={1.3}
               strokeLinejoin="round"
-              opacity={angle === 0 ? 1 : 0.6}
             />
+            <path
+              d="M12 6v14"
+              stroke={stub.color}
+              strokeWidth={1}
+              strokeDasharray="1.2 1.6"
+            />
+            {stub.mark === 'star' ? (
+              <path
+                d="M17 8.4l.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3z"
+                fill={stub.color}
+              />
+            ) : (
+              <path d="M17 14.2l-1.9-3.9h3.8z" fill={stub.color} />
+            )}
           </g>
         ))}
       </svg>
@@ -155,6 +179,9 @@ function EmptyStateCard({
   secondaryCta,
   className,
 }: EmptyStateCardProps) {
+  // Crew home's Been there draws loose stubs under a pink, dotted eyebrow
+  // rather than a medallion (crew_been_m).
+  const stubs = glyph === 'tickets';
   return (
     <div
       data-testid="empty-state-card"
@@ -168,31 +195,51 @@ function EmptyStateCard({
         color: 'var(--fg)',
       }}
     >
-      <div
-        data-testid="empty-state-medallion"
-        className="flex items-center justify-center rounded-full"
-        style={{
-          width: 96,
-          height: 96,
-          border: '1.5px dashed var(--border-strong)',
-          background:
-            'radial-gradient(circle, var(--surface-1), transparent 72%)',
-          marginBottom: 8,
-        }}
-      >
-        <MedallionGlyph glyph={glyph} />
-      </div>
+      {stubs ? (
+        <div data-testid="empty-state-stubs" style={{ marginBottom: 4 }}>
+          <MedallionGlyph glyph={glyph} />
+        </div>
+      ) : (
+        <div
+          data-testid="empty-state-medallion"
+          className="flex items-center justify-center rounded-full"
+          style={{
+            width: 96,
+            height: 96,
+            border: '1.5px dashed var(--border-strong)',
+            background:
+              'radial-gradient(circle, var(--surface-1), transparent 72%)',
+            marginBottom: 8,
+          }}
+        >
+          <MedallionGlyph glyph={glyph} />
+        </div>
+      )}
       {eyebrow !== undefined && (
         <div
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 9,
             fontFamily: 'var(--font-mono)',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.2em',
             textTransform: 'uppercase',
-            color: 'var(--fg-muted)',
+            color: stubs ? 'var(--accent)' : 'var(--fg-muted)',
           }}
         >
+          {stubs && (
+            <span
+              aria-hidden="true"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 6,
+                background: 'var(--accent)',
+              }}
+            />
+          )}
           {eyebrow}
         </div>
       )}

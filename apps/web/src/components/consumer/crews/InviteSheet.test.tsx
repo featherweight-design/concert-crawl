@@ -64,6 +64,46 @@ const mount = (open: boolean) =>
     />,
   );
 
+describe('InviteSheet link block', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'share');
+  });
+
+  it('shows the short link with the token apart, and the expiry as a bar', async () => {
+    mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
+    const shown = screen.getByTestId('invite-link');
+    expect(shown).toHaveTextContent(
+      `${window.location.host}/crew/join/tok-abc`,
+    );
+    expect(shown).not.toHaveTextContent('http');
+    // 6 of the link's 7 days left.
+    expect(screen.getByTestId('invite-expiry-bar').style.width).toMatch(
+      /^85\.7/,
+    );
+  });
+
+  it('offers Share… only where the browser can share, and shares the full link', async () => {
+    mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
+    expect(screen.queryByRole('button', { name: COPY.share })).toBeNull();
+    cleanup();
+
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', {
+      value: share,
+      configurable: true,
+    });
+    mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
+    fireEvent.click(screen.getByRole('button', { name: COPY.share }));
+    expect(share).toHaveBeenCalledWith({
+      title: 'Thursdays',
+      url: `${window.location.origin}/crew/join/tok-abc`,
+    });
+  });
+});
+
 describe('InviteSheet (#1226)', () => {
   // A revoke that is still in flight when the sheet is dismissed used to leave
   // `busy` true, so every button on the next open was disabled with nothing

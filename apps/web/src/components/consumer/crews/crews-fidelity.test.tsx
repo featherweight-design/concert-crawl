@@ -44,7 +44,9 @@ describe('Crews B14 fidelity', () => {
     );
   });
 
-  it('draws the three-ticket medallion in the card empty state', () => {
+  // crew_been_m: three loose stubs (teal, gold, teal), no circle, and a pink
+  // dotted eyebrow.
+  it('draws three coloured stubs with no medallion in the card empty state', () => {
     render(
       <EmptyState
         layout="card"
@@ -54,8 +56,16 @@ describe('Crews B14 fidelity', () => {
         body="Nights you go to together show up here."
       />,
     );
-    const medallion = screen.getByTestId('empty-state-medallion');
-    // Three fanned tickets, one path each.
-    expect(medallion.querySelectorAll('svg path')).toHaveLength(3);
+    expect(screen.queryByTestId('empty-state-medallion')).toBeNull();
+    const stubs = screen.getByTestId('empty-state-stubs');
+    expect(stubs.querySelectorAll('svg > g')).toHaveLength(3);
+    const colours = Array.from(
+      stubs.querySelectorAll('svg > g > path:first-child'),
+    ).map((path) => path.getAttribute('stroke'));
+    expect(colours).toEqual([
+      'var(--signal)',
+      'var(--warning)',
+      'var(--signal)',
+    ]);
   });
 });

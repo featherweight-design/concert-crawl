@@ -198,7 +198,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
+    <div className="mx-auto flex w-full max-w-[792px] flex-col gap-5 px-4 pb-10 pt-5">
       <CrewHero
         crewId={crew.id}
         name={name}

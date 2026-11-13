@@ -75,7 +75,8 @@ export const CreateCrewSheet = ({
       ariaLabel={COPY.title}
       // "short" is 62% of the viewport, which on a 320×568 phone put "Make the
       // crew" below the fold with no internal scroll to reach it.
-      sheetHeight="tall"
+      sheetHeight="fit"
+      surface="crew"
       desktopWidth={520}
       header={
         <div className="flex items-center justify-end">
@@ -89,10 +90,10 @@ export const CreateCrewSheet = ({
               background: 'none',
               border: 'none',
               fontFamily: 'var(--font-mono)',
-              fontSize: 9,
+              fontSize: 11,
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'var(--fg-subtle)',
+              letterSpacing: '0.14em',
+              color: 'var(--fg-muted)',
             }}
           >
             {COPY.close}
@@ -106,9 +107,10 @@ export const CreateCrewSheet = ({
             style={{
               margin: 0,
               fontFamily: 'var(--font-ui)',
-              fontSize: 19,
+              fontSize: 30,
               fontWeight: 800,
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
               color: 'var(--fg)',
             }}
           >
@@ -127,16 +129,31 @@ export const CreateCrewSheet = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3.5">
-          <CrewPatch crewId={crewId} patchSalt={0} size={64} scale="tile" />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+        {/* The patch, its note, New patch and the help line share one card. */}
+        <div
+          className="flex items-center gap-4"
+          style={{
+            padding: 16,
+            borderRadius: 18,
+            border: '1px solid var(--border)',
+            background: 'color-mix(in srgb, var(--bg) 35%, transparent)',
+          }}
+        >
+          <CrewPatch
+            crewId={crewId}
+            patchSalt={0}
+            size={76}
+            scale="tile"
+            ringed
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
             <p
               style={{
                 margin: 0,
                 fontFamily: 'var(--font-ui)',
-                fontSize: 12.5,
-                lineHeight: 1.45,
-                color: 'var(--fg-muted)',
+                fontSize: 15,
+                lineHeight: 1.4,
+                color: 'var(--fg)',
               }}
             >
               {COPY.artNote}
@@ -145,36 +162,48 @@ export const CreateCrewSheet = ({
               type="button"
               onClick={() => setCrewId(mintCrewId())}
               aria-label={CREWS_COPY.a11y.reroll}
-              className="w-fit cursor-pointer"
+              className="inline-flex w-fit cursor-pointer items-center gap-2"
               style={{
-                minHeight: 32,
-                padding: '0 12px',
+                minHeight: 38,
+                padding: '0 16px',
                 borderRadius: 999,
                 background: 'transparent',
                 border: '1px solid var(--border-strong)',
                 color: 'var(--fg)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
+                fontFamily: 'var(--font-ui)',
+                fontSize: 15,
                 fontWeight: 700,
-                letterSpacing: '0.06em',
               }}
             >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M13 8a5 5 0 1 1-1.8-3.8" />
+                <path d="M13 2.5v3h-3" />
+              </svg>
               {COPY.reroll}
             </button>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: 'var(--font-ui)',
+                fontSize: 13,
+                lineHeight: 1.45,
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              {COPY.rerollHelp}
+            </p>
           </div>
         </div>
-
-        <p
-          style={{
-            margin: 0,
-            fontFamily: 'var(--font-ui)',
-            fontSize: 12,
-            lineHeight: 1.45,
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          {COPY.rerollHelp}
-        </p>
 
         <div className="flex flex-col gap-1.5">
           <label
@@ -244,12 +273,17 @@ export const CreateCrewSheet = ({
           disabled={!canSubmit}
           className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg disabled:cursor-default"
           style={{
-            background: canSubmit ? 'var(--signal)' : 'var(--surface-2)',
+            background: canSubmit
+              ? 'linear-gradient(90deg, var(--signal), var(--accent))'
+              : 'var(--surface-2)',
+            boxShadow: canSubmit
+              ? '0 8px 26px -10px color-mix(in srgb, var(--signal) 70%, transparent)'
+              : 'none',
             color: canSubmit ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',
             border: 'none',
             fontFamily: 'var(--font-ui)',
-            fontSize: 13.5,
-            fontWeight: 700,
+            fontSize: 17,
+            fontWeight: 800,
           }}
         >
           {saving ? COPY.submitting : COPY.submit}

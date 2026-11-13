@@ -253,7 +253,8 @@ export const CREWS_COPY = {
     noUpcomingBody: 'Not one of you has said yes to anything yet. Bold.',
     noUpcomingRail: '0 shows',
 
-    noPastEyebrow: 'CLEAN SLATE',
+    // Verbatim from crew_been_m. The tab is only this empty at zero nights.
+    noPastEyebrow: 'CLEAN SLATE · 0 NIGHTS',
     noPastTitle: 'No history yet.',
     noPastBody: 'Go to a show together and it lands here. Two of you, minimum.',
 
