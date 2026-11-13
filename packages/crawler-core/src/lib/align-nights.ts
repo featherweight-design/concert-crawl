@@ -1,4 +1,9 @@
-import { sameNight, showTimeKey, type NightRow } from '@concert-crawl/types';
+import {
+  isTwelveHourMisread,
+  sameNight,
+  showTimeKey,
+  type NightRow,
+} from '@concert-crawl/types';
 
 // A venue's listings can carry one night twice (its own page and a ticketing
 // page, an untimed copy of a timed show, "Rossi" and "Rossi."). The unique
@@ -10,23 +15,48 @@ import { sameNight, showTimeKey, type NightRow } from '@concert-crawl/types';
 // Nothing here writes: the one thing the caller must do is stamp a time onto a
 // stored untimed row that a timed listing has just supplied (`promotions`).
 
-export interface ExistingNight extends NightRow {
+/** A night with the show's own page URL, when the listing carries one. */
+export interface UrlNightRow extends NightRow {
+  eventUrl?: string | null | undefined;
+}
+
+export interface ExistingNight extends UrlNightRow {
   id: string;
 }
 
 export interface NightPromotion {
   id: string;
-  /** `HH:MM:SS` the untimed stored row now gets. */
+  /** `HH:MM:SS` the stored row now gets (a time it lacked, or the evening time). */
   showTime: string;
 }
 
-interface Slot extends NightRow {
+interface Slot extends UrlNightRow {
   id: string | null;
 }
 
 const isTimed = (row: NightRow): boolean => showTimeKey(row.showTime) !== '';
 
-export function alignToNights<T extends NightRow>(
+/**
+ * A listing whose time is the morning-or-evening misread of a stored row's
+ * (07:30 against 19:30) on the SAME show page: one show, corrected in place
+ * rather than inserted as a twin. The page URL is the evidence that it is one
+ * show, so a missing URL never matches.
+ */
+const misreadOnSamePage = (
+  slot: UrlNightRow,
+  listing: UrlNightRow,
+): boolean => {
+  const slotUrl = slot.eventUrl?.trim();
+  const listingUrl = listing.eventUrl?.trim();
+  return (
+    slotUrl !== undefined &&
+    slotUrl !== '' &&
+    slotUrl === listingUrl &&
+    isTwelveHourMisread(slot, listing)
+  );
+};
+
+export function alignToNights<T extends UrlNightRow>(
   incoming: readonly T[],
   existing: readonly ExistingNight[],
 ): { aligned: T[]; promotions: NightPromotion[] } {
@@ -59,7 +89,9 @@ export function alignToNights<T extends NightRow>(
   for (const index of order) {
     const listing = incoming[index] as T;
     const daySlots = slotsOn(listing.date);
-    const matches = daySlots.filter((slot) => sameNight(slot, listing));
+    const matches = daySlots.filter(
+      (slot) => sameNight(slot, listing) || misreadOnSamePage(slot, listing),
+    );
     const exact = matches.some(
       (slot) =>
         slot.canonicalArtist === listing.canonicalArtist &&
@@ -78,12 +110,38 @@ export function alignToNights<T extends NightRow>(
         canonicalArtist: listing.canonicalArtist,
         date: listing.date,
         showTime: listing.showTime,
+        eventUrl: listing.eventUrl,
       });
       continue;
     }
 
     const target = matches.find(isTimed) ?? matches[0];
     if (!target) continue;
+    // The same show page at a time twelve hours off: the evening time is the
+    // true one, whichever side holds it. A stored morning row is corrected in
+    // place (a promotion); a stored evening row simply keeps its time.
+    if (
+      isTimed(target) &&
+      isTimed(listing) &&
+      showTimeKey(target.showTime) !== showTimeKey(listing.showTime)
+    ) {
+      const evening = [
+        showTimeKey(target.showTime),
+        showTimeKey(listing.showTime),
+      ]
+        .sort()
+        .at(-1) as string;
+      if (target.id !== null && showTimeKey(target.showTime) !== evening) {
+        promotions.set(target.id, { id: target.id, showTime: evening });
+      }
+      target.showTime = evening;
+      aligned[index] = {
+        ...listing,
+        canonicalArtist: target.canonicalArtist,
+        showTime: evening,
+      };
+      continue;
+    }
     if (!isTimed(target) && isTimed(listing) && target.id !== null) {
       target.showTime = showTimeKey(listing.showTime);
       promotions.set(target.id, {

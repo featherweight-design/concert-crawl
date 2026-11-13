@@ -671,6 +671,48 @@ describe('crawlVenue — canonical-artist + show_time upsert key (#1053)', () =>
     expect(rows[0]!.showTime).toBe('19:00:00');
   });
 
+  // The Beck case: the model once read "7:30 PM" as 07:30, and a later crawl got
+  // it right. The corrected time must update the stored row, not insert a twin
+  // (the dedup key includes the time).
+  it('corrects a stored morning misread in place when the same show page now says evening', async () => {
+    const venue = await seedTestVenue();
+    const showDate = futureDate(14);
+    const eventUrl = 'https://example.com/events/beck-ride-lonesome-tour-1/';
+    const crawl = async (showTime: string, html: string) => {
+      mockFetchPage.mockResolvedValue({
+        html,
+        httpStatus: 200,
+        finalUrl: venue.url,
+      });
+      mockExtractWithLlm.mockResolvedValue({
+        events: [
+          {
+            title: 'Beck: Ride Lonesome Tour',
+            rawTitle: 'Beck: Ride Lonesome Tour',
+            artist: 'Beck',
+            date: showDate,
+            showTime,
+            eventUrl,
+            confidence: 0.9,
+            sourceUrl: venue.url,
+          },
+        ],
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+      expect((await crawlVenue(venue.id, mockBrowser)).status).toBe('success');
+    };
+
+    await crawl('07:30', HTML_BASE);
+    await crawl('19:30', HTML_BASE_V2);
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.showTime).toBe('19:30:00');
+  });
+
   it('keeps "Rossi" and "Rossi." on one night as one row', async () => {
     const venue = await seedTestVenue();
     const showDate = futureDate(14);

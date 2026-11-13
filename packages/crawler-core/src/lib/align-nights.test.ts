@@ -15,6 +15,50 @@ const stored = (
   ...listing(canonicalArtist, showTime),
 });
 
+describe('alignToNights: a time misread on the same show page', () => {
+  const page =
+    'https://www.redrocksonline.com/events/beck-ride-lonesome-tour-1407922/';
+  const withUrl = <T extends object>(row: T, eventUrl: string | null) => ({
+    ...row,
+    eventUrl,
+  });
+
+  it('corrects a stored 07:30 in place when the same page now says 19:30', () => {
+    const { aligned, promotions } = alignToNights(
+      [withUrl(listing('beck', '19:30:00'), page)],
+      [withUrl(stored('a', 'beck', '07:30:00'), page)],
+    );
+    expect(promotions).toEqual([{ id: 'a', showTime: '19:30:00' }]);
+    expect(aligned[0]).toMatchObject({
+      canonicalArtist: 'beck',
+      showTime: '19:30:00',
+    });
+  });
+
+  it('keeps a stored 19:30 when a later listing says 07:30 on the same page', () => {
+    const { aligned, promotions } = alignToNights(
+      [withUrl(listing('beck', '07:30:00'), page)],
+      [withUrl(stored('a', 'beck', '19:30:00'), page)],
+    );
+    expect(promotions).toEqual([]);
+    expect(aligned[0]?.showTime).toBe('19:30:00');
+  });
+
+  it('needs the same page URL: without one, or on another page, two times stay two nights', () => {
+    for (const eventUrl of [
+      null,
+      'https://www.redrocksonline.com/events/other/',
+    ]) {
+      const { aligned, promotions } = alignToNights(
+        [withUrl(listing('beck', '19:30:00'), eventUrl)],
+        [withUrl(stored('a', 'beck', '07:30:00'), page)],
+      );
+      expect(promotions).toEqual([]);
+      expect(aligned[0]?.showTime).toBe('19:30:00');
+    }
+  });
+});
+
 describe('alignToNights', () => {
   it('leaves an exact match and a new night alone', () => {
     const { aligned, promotions } = alignToNights(
