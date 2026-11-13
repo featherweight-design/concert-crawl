@@ -2453,7 +2453,6 @@ export const ADMIN_COPY = {
       checks: 'Checks',
     },
     interim: {
-      submitted: 'Open Submitted prices',
       checks: 'Open Price checks',
     },
     missing: {

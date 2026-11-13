@@ -1,0 +1,34 @@
+{
+  "feature": "Admin 4d · Submitted prices tab, row menu, reject",
+  "note": "Plan row 4d, UI PR 2. CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/prices-submitted-prices, prices-row-menu, reject-a-submitted-price, submitted-prices-mobile. By hand: the reject dialog (needs a price waiting for you on the scratch branch, and Reject writes) and the empty state (needs a search with no match).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "submitted",
+      "label": "/admin/prices?tab=submitted",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "row-menu",
+      "label": "Row menu open (desktop only; the phone draws none)",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]"
+        },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "wait": "[role=\"menu\"]", "settle": 300 }
+      ]
+    }
+  ]
+}
