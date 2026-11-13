@@ -1533,7 +1533,12 @@ describe('Missing a price tab', () => {
     return { soonQuiet, laterBusy, laterQuiet, priced };
   };
 
-  type MissingRow = { eventId: string; eventTitle: string; watching: number };
+  type MissingRow = {
+    eventId: string;
+    eventTitle: string;
+    venueSlug: string;
+    watching: number;
+  };
   const getJson = async <T>(path: string): Promise<T> => {
     const res = await app.request(`/v1/admin/prices${path}`, {
       headers: ADMIN_HEADERS,
@@ -1555,6 +1560,9 @@ describe('Missing a price tab', () => {
       'Later Quiet',
     ]);
     expect(data.rows.map((row) => row.watching)).toEqual([1, 2, 0]);
+    expect(data.rows.every((row) => row.venueSlug === 'missing-hall')).toBe(
+      true,
+    );
   });
 
   it('walks the same order with /missing/next and ends with null', async () => {
