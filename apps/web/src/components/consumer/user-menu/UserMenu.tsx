@@ -8,6 +8,7 @@ import {
   createContext,
   useContext,
 } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { ArrowDownLeft, CornerUpRight, Eye, Tag, Users } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -544,7 +545,27 @@ export function UserMenu() {
       </button>
 
       {open && !isMobile && bodyProps !== null && (
-        <UserMenuPopover {...bodyProps} />
+        <>
+          {/* bp-account dims the page behind the popover. The popover lives in
+              the sticky header's stacking context (z-40), so the dim sits just
+              under it (z-30): the page dims, the header and the popover stay
+              lit. Portalled so no ancestor can clip it; a click on it lands on
+              the document, where the click-outside handler closes. */}
+          {createPortal(
+            <div
+              aria-hidden
+              data-testid="account-menu-scrim"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 30,
+                background: 'var(--scrim)',
+              }}
+            />,
+            document.body,
+          )}
+          <UserMenuPopover {...bodyProps} />
+        </>
       )}
     </div>
   );
@@ -962,9 +983,10 @@ function UserMenuPopover(props: MenuBodyProps) {
     <div
       ref={props.surfaceRef}
       role="dialog"
-      // No aria-modal: the desktop popover has no scrim and leaves the rest of
-      // the page interactive, so claiming modality would misdescribe it. Only
-      // the mobile sheet, which does render a scrim, is genuinely modal.
+      // No aria-modal: the dim behind the desktop popover is visual only (a
+      // click on it closes the menu), and the page stays reachable by keyboard
+      // and screen reader, so claiming modality would misdescribe it. Only the
+      // mobile sheet is genuinely modal.
       aria-label={shellLabelOf(props)}
       tabIndex={-1}
       style={{
