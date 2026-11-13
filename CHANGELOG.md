@@ -1,3 +1,16 @@
+# [1.394.0](https://github.com/featherweight-design/concert-crawl/compare/v1.393.0...v1.394.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** chrome around the offline page ([f0d61dc](https://github.com/featherweight-design/concert-crawl/commit/f0d61dc60c518ab3e53a6bd69a14e821a0bd362f))
+* **web:** venue menu review fixes, status toggle through the Hide confirm (3a 4b part 2) ([d8c1a0b](https://github.com/featherweight-design/concert-crawl/commit/d8c1a0b09891b585759a9953639f091c95fd040d))
+
+
+### Features
+
+* **web:** venue page ⋯ menu wired to the confirms, danger zone removed (3a 4b part 2) ([66ebe67](https://github.com/featherweight-design/concert-crawl/commit/66ebe6763d86c7b4a022a120c570be88abc389d0))
+
 # [1.393.0](https://github.com/featherweight-design/concert-crawl/compare/v1.392.2...v1.393.0) (2026-11-13)
 
 
