@@ -10,8 +10,11 @@ import { PhoneUserMenu } from './AdminUserMenu';
 import type { AdminShellUser } from './AdminAvatar';
 
 const useCrumbs = (): Crumb[] => {
-  const { pageTitle } = usePageTitle();
+  const { pageTitle, pageTrail } = usePageTitle();
   const crumbs = buildBreadcrumbs(usePathname(), useSearchParams());
+  if (pageTrail && pageTrail.length > 0 && crumbs.length > 1) {
+    return [...crumbs.slice(0, 1), ...pageTrail];
+  }
   if (pageTitle && crumbs.length > 1) {
     return [...crumbs.slice(0, -1), { label: pageTitle }];
   }
@@ -46,7 +49,8 @@ export const AdminTopbar = () => {
       >
         {crumbs.map((crumb, index) => (
           <span
-            key={crumb.label}
+            // A trail can repeat a label (a venue named "Runs").
+            key={`${index}:${crumb.label}`}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             {index > 0 && (

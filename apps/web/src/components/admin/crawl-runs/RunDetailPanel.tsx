@@ -21,7 +21,7 @@ import {
 import { RunChip } from './RunChip';
 import { parseRunPages, type RunPage, type RunRow } from './run-data';
 import {
-  INSPECT_READY,
+  defaultInspectPage,
   firstFailedPage,
   inspectHref,
   isFailedPage,
@@ -122,8 +122,17 @@ const PageUrl = ({
   );
 };
 
-const Pages = ({ runId }: { runId: string }) => {
-  const { state, retry } = useRunPages(runId);
+const Pages = ({
+  venueId,
+  runId,
+  state,
+  retry,
+}: {
+  venueId: string;
+  runId: string;
+  state: PagesState | null;
+  retry: () => void;
+}) => {
   if (state === null) {
     return (
       <div
@@ -184,6 +193,14 @@ const Pages = ({ runId }: { runId: string }) => {
               <StatusBadge kind="danger">{COPY.firstFailure}</StatusBadge>
             )}
             {pageLine(page)}
+            <Link
+              href={inspectHref(venueId, runId, { page: page.id })}
+              aria-label={COPY.inspectRowLabel(page.url)}
+              data-testid="run-page-inspect"
+              style={{ color: 'var(--fg)', fontWeight: 600 }}
+            >
+              {COPY.inspectRow}
+            </Link>
           </span>
         </li>
       ))}
@@ -218,23 +235,29 @@ const actionLink = (primary: boolean, phone: boolean): CSSProperties => ({
 });
 
 /**
- * Inspect page and Compare with {date}. Hidden until Inspect lands (3b part 5,
- * `INSPECT_READY`): the route would 404 before then. Compare's target is the
- * run's last full run, from the list's one `lastFullRuns` map.
+ * Inspect page and Compare with {date}. Inspect opens on the first failed
+ * page, else the first, once the pages are in; before then (or when they
+ * couldn't load) the route picks the same default itself. A run whose pages
+ * loaded and are none has nothing to inspect, so neither shows. Compare's
+ * target is the run's last full run, from the list's one `lastFullRuns` map,
+ * on the same page by URL, and shows only with one.
  */
 const Actions = ({
   venueId,
   run,
+  pages,
   compare,
   phone,
 }: {
   venueId: string;
   run: RunRow;
+  /** The loaded pages; null while loading or when they couldn't load. */
+  pages: readonly RunPage[] | null;
   compare: LastFullRun | null;
   phone: boolean;
 }) => {
-  // PR 5 (Inspect) flips INSPECT_READY.
-  if (!INSPECT_READY) return null;
+  if (pages !== null && pages.length === 0) return null;
+  const target = pages === null ? null : defaultInspectPage(pages);
   return (
     <div
       style={{
@@ -244,13 +267,16 @@ const Actions = ({
         gap: 8,
       }}
     >
-      <Link href={inspectHref(venueId, run.id)} style={actionLink(true, phone)}>
+      <Link
+        href={inspectHref(venueId, run.id, { page: target?.id })}
+        style={actionLink(true, phone)}
+      >
         {!phone && <ExternalLink size={14} aria-hidden />}
         {COPY.inspect}
       </Link>
       {compare !== null && (
         <Link
-          href={inspectHref(venueId, compare.id)}
+          href={inspectHref(venueId, compare.id, { url: target?.url })}
           style={actionLink(false, phone)}
         >
           {COPY.compare(shortDate(compare.at))}
@@ -284,6 +310,7 @@ export const RunDetailPanel = ({
   phone: boolean;
   onClose: () => void;
 }) => {
+  const { state: pagesState, retry } = useRunPages(run.id);
   const summary = runSummary(run, lastFullRun);
   const meta = COPY.meta([
     runWhen(run.createdAt),
@@ -304,11 +331,17 @@ export const RunDetailPanel = ({
         <div style={{ marginBottom: 8 }}>
           <MonoLabel>{COPY.pages}</MonoLabel>
         </div>
-        <Pages runId={run.id} />
+        <Pages
+          venueId={venueId}
+          runId={run.id}
+          state={pagesState}
+          retry={retry}
+        />
       </div>
       <Actions
         venueId={venueId}
         run={run}
+        pages={pagesState?.kind === 'loaded' ? pagesState.pages : null}
         compare={lastFullRun}
         phone={phone}
       />

@@ -769,7 +769,6 @@ export const ADMIN_COPY = {
     },
     shows: {
       title: 'Shows',
-      openInEvents: 'Open in Events',
       upcoming: 'Upcoming shows on the site',
       lastFullRun: 'Found in the last full run',
       lastFullRunValue: (shows: number, date: string) =>
@@ -876,7 +875,51 @@ export const ADMIN_COPY = {
     kilobytes: (count: number) => `${count.toLocaleString('en-US')} KB`,
     megabytes: (count: string) => `${count} MB`,
     inspect: 'Inspect page',
+    // On each PAGES row, beside its URL: inspect that page.
+    inspectRow: 'Inspect',
+    inspectRowLabel: (url: string) => `Inspect ${url}`,
     compare: (date: string) => `Compare with ${date}`,
+  },
+
+  // Inspect a fetched page (3b part 5): `04/inspect-a-fetched-page`, `G2/*`.
+  inspect: {
+    // The breadcrumb: Venues / {Venue} / Runs / Inspect.
+    runsCrumb: 'Runs',
+    crumb: 'Inspect',
+    // "Inspect · ballarena.com/events"
+    title: (page: string) => `Inspect · ${page}`,
+    // The phone's back link: "Ball Arena · Runs".
+    back: (venue: string) => `${venue} · Runs`,
+    // "Ball Arena · run of Nov 9, 3:02 AM · 200 · 1.9 MB"
+    meta: (parts: readonly string[]) => parts.join(' · '),
+    runOf: (date: string, time: string) => `run of ${date}, ${time}`,
+    // The phone line leads with it: "Run of Nov 9, 3:02 AM · 200 · 1.9 MB".
+    runOfLead: (date: string, time: string) => `Run of ${date}, ${time}`,
+    openLive: 'Open the live page',
+    openLiveHint: (page: string) => `${page}, in your browser`,
+    compareHint: 'The last full run, in the same view',
+    menuLabel: 'Inspect actions',
+    fetched: 'What we fetched',
+    tabsLabel: 'Show the page as',
+    tabs: { text: 'Text', html: 'HTML' },
+    stoppedHere: (page: number) => `Stopped here: page ${page} never loaded`,
+    keptFor: 'Fetched pages are kept for 14 days.',
+    loading: 'Loading the page we fetched…',
+    noText: 'This page has no text.',
+    gone: {
+      title: 'This run’s pages are gone',
+      notKeptTitle: 'This page wasn’t kept',
+      expired:
+        'We keep fetched pages for 14 days, and this run is older. Its counts and reason are still on the Runs tab.',
+      tooLarge: 'This page was too large to keep.',
+      notStored: 'We didn’t keep this page’s HTML.',
+      latestRun: 'Inspect the latest run',
+    },
+    couldntLoad: {
+      title: 'Couldn’t load this page',
+      body: 'Our copy of the page didn’t open. The run itself is fine, and nothing was changed.',
+      tryAgain: 'Try again',
+    },
   },
 
   robotsAudit: {
