@@ -68,6 +68,12 @@ vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-vercel-ip-country': 'US' }),
 }));
 
+// The page server-renders the past list; the pill's mutation needs a query
+// client these page-shape tests do not mount.
+vi.mock('@/components/consumer/went-pill/WentPill', () => ({
+  WentPill: () => <button data-testid="went-stub" type="button" />,
+}));
+
 vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
   WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
 }));
