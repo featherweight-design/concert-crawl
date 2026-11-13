@@ -319,7 +319,7 @@ const PreviewSegment = ({
  * The FilterBar at rest, inert: the heading, the List/Cal toggle on List, and
  * the chip row with every filter at its placeholder. Browse's route fallback
  * draws it while the page loads, so the chrome is already in place (B+ rule 9,
- * `load_browse_m`/`load_browse_d`). From sm up it draws the segmented bar at
+ * `load_browse_m`/`load_browse_d`). From lg up it draws the segmented bar at
  * rest and the count line under it, the same block heights the live bar
  * takes, so nothing below moves when the page lands. Nothing here is a
  * control: the copies are spans, hidden from assistive tech and out of the
