@@ -298,8 +298,13 @@ async function detailPageFetch(
   // own links keeps discovery scoped to what the venue is currently
   // advertising while guaranteeing we only ever request pages the site
   // itself publishes as crawlable.
+  // The probe skips it: the sitemap only filters detail pages, and the probe
+  // never fetches any.
   let sitemapUrls = new Set<string>();
-  if (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT)) {
+  if (
+    !opts.firstPageOnly &&
+    (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT))
+  ) {
     try {
       sitemapUrls = parseSitemapUrls(
         await deadline.run('sitemap', (timeoutMs) =>
@@ -338,6 +343,21 @@ async function detailPageFetch(
       listingUrl,
       `Detail-page listing ${listingUrl} contained no same-origin links to follow`,
     );
+  }
+
+  // The probe stops at the listing. Its events live one hop away on the
+  // detail pages, so it reports none; a listing with links to follow is the
+  // proof the platform answers.
+  if (opts.firstPageOnly) {
+    return {
+      events: [],
+      sourceUrl: listingUrl,
+      meta: {
+        fetchLatencyMs: Date.now() - startedAt,
+        candidateCount: candidates.length,
+        firstPageOnly: true,
+      },
+    };
   }
 
   const inSitemap = candidates.filter((url) => sitemapUrls.has(url));

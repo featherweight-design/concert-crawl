@@ -475,7 +475,13 @@ async function liveNationFetch(
   let schemaRejectCount = 0;
   let otherVenueCount = 0;
 
-  for (const calendarUrl of calendarUrls) {
+  // The probe reads the first allowed month only. The sitemap read above is
+  // what names that month, so it stays.
+  const monthsToFetch = opts.firstPageOnly
+    ? calendarUrls.slice(0, 1)
+    : calendarUrls;
+
+  for (const calendarUrl of monthsToFetch) {
     // Every month page is a request to the venue's own domain, so the
     // venue's configured per-domain delay applies to each of them.
     await deadline.wait(jitter(opts.crawlDelayMs));
@@ -534,7 +540,7 @@ async function liveNationFetch(
     readUrls,
     meta: {
       fetchLatencyMs: Date.now() - startedAt,
-      calendarMonthsFetched: calendarUrls.length,
+      calendarMonthsFetched: monthsToFetch.length,
       robotsSkippedCount,
       rawRecordCount,
       uniqueEventCount: byEventId.size,

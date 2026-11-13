@@ -685,6 +685,41 @@ describe('venuePilotFetcher.fetch', () => {
     expect(result.meta?.pagesFetched).toBe(2);
   });
 
+  it('requests page 1 only when firstPageOnly is set', async () => {
+    // The admin probe sets this: page 1 proves the account answers, and
+    // paginating would hit VenuePilot again for nothing.
+    const pageEvent = (id: number) => ({
+      id,
+      name: `Show ${id}`,
+      date: '2026-08-07',
+      doorTime: '18:00:00',
+      startTime: '19:00:00',
+      description: '',
+      ticketsUrl: '',
+      status: 'BUY TICKETS',
+      announceArtists: [{ name: `A${id}` }],
+      announceImages: [],
+    });
+    fetchSpy.mockImplementation(
+      async () =>
+        new Response(
+          graphqlBody([pageEvent(1)], { totalPages: 3, currentPage: 1 }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+    );
+    const result = await venuePilotFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+      firstPageOnly: true,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+    expect(body.variables.args.page).toBe(1);
+    expect(result.events.map((event) => event.title)).toEqual(['Show 1']);
+    expect(result.meta?.pagesFetched).toBe(1);
+    // Stopping on purpose is not the MAX_PAGES truncation operators alert on.
+    expect(result.meta?.truncated).toBe(false);
+  });
+
   it('caps pagination at MAX_PAGES against a runaway totalPages', async () => {
     fetchSpy.mockImplementation(
       async () =>

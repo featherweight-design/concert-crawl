@@ -36,7 +36,10 @@ import {
   AegSchemaError,
   PlatformFetchDeadlineError,
 } from '@concert-crawl/crawler-core/fetchers';
-import { checkRobots } from '@concert-crawl/crawler-core/robots';
+import {
+  checkRobots,
+  MIN_CRAWL_DELAY_MS,
+} from '@concert-crawl/crawler-core/robots';
 import {
   CRAWLER_USER_AGENT,
   VENUE_PLATFORMS,
@@ -1008,9 +1011,9 @@ venuesAdminRouter.patch(
 
 // A hung platform CDN connection must not pin an API worker slot — the
 // probe aborts and reports fetch_error after this window. This is the
-// whole-probe ceiling, not a per-request one: the Live Nation adapter
-// reads a sitemap plus a calendar page per rolling month, so a per-request
-// value alone would let one probe run for minutes (#1184).
+// whole-probe ceiling, not a per-request one: even with `firstPageOnly`,
+// the Live Nation adapter reads a sitemap and then a calendar page, each
+// paced, so a per-request value alone would not bound the probe (#1184).
 const PROBE_TIMEOUT_MS = 15_000;
 
 const probePlatformSchema = z.object({
@@ -1083,10 +1086,14 @@ venuesAdminRouter.post(
       }
       const startedAt = Date.now();
       try {
+        // Paced like a crawl, and stopped after the first listing response:
+        // the probe only proves the platform answers, so it never paginates
+        // or follows detail pages, and can't hit the venue more than once.
         const result = await fetcher.fetch(candidate, {
-          crawlDelayMs: 0,
+          crawlDelayMs: MIN_CRAWL_DELAY_MS,
           perRequestTimeoutMs: PROBE_TIMEOUT_MS,
           overallTimeoutMs: PROBE_TIMEOUT_MS,
+          firstPageOnly: true,
         });
         return {
           ok: true,

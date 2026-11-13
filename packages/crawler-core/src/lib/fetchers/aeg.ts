@@ -435,7 +435,8 @@ async function aegFetch(
 
 export const aegFetcher: PlatformFetcher = {
   source: 'aeg',
-  // One events blob per venue, no pagination.
+  // One events blob per venue, no pagination, so `firstPageOnly` already
+  // holds: the blob is the first and only listing request.
   maxRequests: 1,
   canHandle(venue) {
     return Boolean(
