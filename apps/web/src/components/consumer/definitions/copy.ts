@@ -1956,6 +1956,10 @@ export const CONSUMER_COPY = {
     // The card is the page. This line only says what it is made of, because a
     // subtitle that re-describes the card the reader is looking at is noise.
     pageSubtitle: 'Every night you marked yourself going to, stamped.',
+    // Upcoming shows and no stamps yet (addendum 4 item 8, `passport-next-d`
+    // and `passport-next-m`). The board's draft wording; `date` is "Feb 22".
+    firstStampSubtitle: (date: string) =>
+      `Your first stamp lands after ${date}.`,
     // No "Copy link" — a passport has no public page to link to, and offering
     // one would imply the card is shareable by URL when it is deliberately not.
     shareLabel: 'Share…',

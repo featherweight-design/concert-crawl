@@ -8,6 +8,7 @@
 // quoting different prices.
 
 import { useEffect, useState } from 'react';
+import { stampDateParts } from '@/lib/passport/stamp';
 import type { HistoryShow } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { HistoryLocked } from '@/components/consumer/history/HistoryLocked';
@@ -116,9 +117,25 @@ export const PassportContent = ({
     const emptyStats = passportStats([]);
     const emptyPages = bookletPages([], queue[0] ?? null);
     const emptyVenues = collectedVenues(activeVenues, []);
+    // Upcoming shows and no stamps (addendum 4 item 8): the open booklet at
+    // both widths, its first page holding the dashed NEXT stamp, with a
+    // subtitle that names the date. With nothing ahead either, a phone keeps
+    // the approved empty card.
+    const next = queue[0] ?? null;
+    const nextParts = next === null ? null : stampDateParts(next.date);
+    const subtitle =
+      nextParts === null
+        ? COPY.pageSubtitle
+        : COPY.firstStampSubtitle(
+            `${nextParts.month.charAt(0)}${nextParts.month.slice(1).toLowerCase()} ${nextParts.day}`,
+          );
+    const openBook = next !== null;
     return (
       <Shell>
-        <div data-passport-empty-layout="phone" className="sm:hidden">
+        <div
+          data-passport-empty-layout="phone"
+          className={openBook ? 'hidden' : 'sm:hidden'}
+        >
           <header className="mb-6">
             <PageTitle />
           </header>
@@ -129,14 +146,16 @@ export const PassportContent = ({
         </div>
         <div
           data-passport-empty-layout="desktop"
-          className="hidden grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] sm:grid lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']"
+          className={`${openBook ? 'grid' : 'hidden sm:grid'} grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_head'_'book_side']`}
         >
           <header className="flex flex-col gap-2 [grid-area:head]">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle">
+            <p
+              className={`font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle ${openBook ? 'hidden sm:block' : ''}`}
+            >
               {COPY.breadcrumb}
             </p>
             <PageTitle />
-            <p className="text-[15px] text-fg-muted">{COPY.pageSubtitle}</p>
+            <p className="text-sm text-fg-muted sm:text-[15px]">{subtitle}</p>
           </header>
           <div className="min-w-0 [grid-area:book]">
             <PassportBooklet
@@ -166,7 +185,7 @@ export const PassportContent = ({
 
   return (
     <Shell>
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-[30px] gap-y-6 [grid-template-areas:'head'_'book'_'actions'_'side'] lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:[grid-template-areas:'head_actions'_'book_side']">
         <header className="flex flex-col gap-2 [grid-area:head]">
           <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle sm:block">
             {COPY.breadcrumb}

@@ -1,0 +1,22 @@
+{
+  "feature": "Passport · the booklet column and the Up next stub; the open book with a show ahead",
+  "note": "Boards: design/design_handoff_bplus_redesign/addendum-4/screens/08-passport/passport-next-d and passport-next-m (the open book with a show ahead and no stamps, subtitle \"Your first stamp lands after <date>.\") and addendum-2 04-passport-order/passport-d (the booklet and Up next widths). The filled cell runs against the local audit user, who has past nights. The open book with a show ahead needs a signed-in user with upcoming shows and no past nights, which the local audit user is not, so it is hand-walked; the unit tests in PassportContent.test.tsx cover the layout switch.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "passport-filled",
+      "label": "Passport with stamps: booklet column and Up next",
+      "steps": [
+        {
+          "goto": "/passport",
+          "wait": "[data-testid=\"passport-booklet\"]",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}

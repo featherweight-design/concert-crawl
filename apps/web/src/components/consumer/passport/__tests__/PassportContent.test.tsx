@@ -314,6 +314,37 @@ describe('PassportContent', () => {
     expect(spread!.querySelectorAll('[data-booklet-empty]')).toHaveLength(3);
   });
 
+  // Addendum 4 item 8, `passport-next-d` and `passport-next-m`: with a show
+  // ahead and no stamps the open book shows at every width (the phone's empty
+  // card is for a reader with nothing ahead either), and the subtitle names
+  // the date of the first stamp.
+  it('shows the open book at every width, with the first-stamp subtitle, when a show is ahead', () => {
+    renderContent({
+      past: [],
+      upcoming: [row('up', '2026-11-21', { artist: 'Marian Hill' })],
+    });
+    const desktop = document.querySelector(
+      '[data-passport-empty-layout="desktop"]',
+    );
+    expect(desktop?.className).not.toContain('hidden grid');
+    expect(desktop?.className.split(' ')).toContain('grid');
+    expect(desktop?.className.split(' ')).not.toContain('hidden');
+    expect(
+      document.querySelector('[data-passport-empty-layout="phone"]')?.className,
+    ).toBe('hidden');
+    expect(desktop).toHaveTextContent(COPY.firstStampSubtitle('Nov 21'));
+    expect(
+      screen.queryByRole('button', { name: COPY.shareLabel }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps the phone empty card when nothing is ahead either', () => {
+    renderContent({ past: [], upcoming: [] });
+    expect(
+      document.querySelector('[data-passport-empty-layout="phone"]')?.className,
+    ).toBe('sm:hidden');
+  });
+
   // A resolving plan must not flash the lock screen at a Supporter.
   it('does not lock while the entitlement is still resolving', () => {
     entitlement.value = { isLoading: true, active: false };
