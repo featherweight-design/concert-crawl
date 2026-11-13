@@ -211,16 +211,10 @@ export function SettingsRouteDesktop({
   );
 
   return (
-    <div
-      className="flex min-h-screen flex-col"
-      // The board's ambient glow: purple from the top-left, teal from the
-      // bottom-right, held to the viewport corners (more-s-d_profile).
-      style={{
-        backgroundImage:
-          'radial-gradient(60% 50% at 0% 0%, color-mix(in oklch, var(--cta-end) 14%, transparent), transparent 70%), radial-gradient(50% 45% at 100% 100%, color-mix(in oklch, var(--signal) 10%, transparent), transparent 70%)',
-        backgroundAttachment: 'fixed',
-      }}
-    >
+    // `page-ambient`: the one soft glow per screen (more-s-d_profile), the same
+    // fixed layer Browse and the other pages use. Electric only until Design
+    // supplies the other themes' values.
+    <div className="page-ambient flex min-h-screen flex-col">
       {/* Topbar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-elevated px-6">
         {/* more-s-d_profile: a bordered "[mark] concertcrawl. | BROWSE" pill
