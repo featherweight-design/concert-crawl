@@ -352,8 +352,9 @@ describe('RunsTab', () => {
     fireEvent.click(rows()[1]!);
     expect(rows()[1]!.getAttribute('aria-current')).toBe('true');
     expect(rows()[0]!.getAttribute('aria-current')).toBeNull();
+    // jsdom's history state is null; `expect.anything()` never matches null.
     expect(replaceState).toHaveBeenLastCalledWith(
-      expect.anything(),
+      null,
       '',
       '/admin/venues/venue-1?tab=runs&run=run-ok',
     );
