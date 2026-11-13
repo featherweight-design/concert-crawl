@@ -186,6 +186,7 @@ export const ShelfCard = ({
         <FollowDateLine
           dateLine={artist.dateLine}
           fallback={FOLLOWING_COPY.cardNoDate}
+          layout="columns"
           style={{
             fontFamily: 'var(--font-mono)',
             fontSize: '10px',
