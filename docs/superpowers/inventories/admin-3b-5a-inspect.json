@@ -15,9 +15,10 @@
       "steps": [
         {
           "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097/inspect/51d6b92c-da21-4b54-b48f-e1ad253cd273",
-          "wait": "main"
+          "wait": "[data-testid=\"inspect-line\"]"
         },
-        { "settle": 3500 }
+        { "wait": "text=keep this page" },
+        { "settle": 2500 }
       ]
     },
     {
