@@ -568,8 +568,7 @@ describe('a cover or tribute night', () => {
     const result = await deriveArtists(
       {
         ...base,
-        title:
-          "Michael Shannon & Jason Narducy and Friends play R.E.M.'s Document",
+        title: 'Michael Shannon & Jason Narducy and Friends, one night only',
         observedPerformers: ['Michael Shannon', 'Jason Narducy'],
       },
       async () => ({
