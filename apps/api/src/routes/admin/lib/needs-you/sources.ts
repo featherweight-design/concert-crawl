@@ -355,6 +355,9 @@ const artistItems: Adapter = async () => {
       id: artists.id,
       name: artists.name,
       matchStatus: artists.matchStatus,
+      // "Keep this match" confirms an unconfirmed auto-match or dismisses open
+      // reports; with neither, the API refuses it (422), so it is not offered.
+      confirmable: sql<boolean>`(${artists.autoMatchedAt} is not null and ${artists.spotifyArtistId} is not null)`,
       reportCount: openReports,
       nextShow: nextShowDateExpr(ARTIST_HORIZON_DAYS),
     })
@@ -389,7 +392,9 @@ const artistItems: Adapter = async () => {
     ],
     answers: [
       answer('pick_the_right_artist', 'Pick the right artist'),
-      answer('keep_this_match', 'Keep this match', { undoable: true }),
+      ...(row.confirmable || row.reportCount > 0
+        ? [answer('keep_this_match', 'Keep this match', { undoable: true })]
+        : []),
       answer('no_photo', 'No photo'),
     ],
   }));

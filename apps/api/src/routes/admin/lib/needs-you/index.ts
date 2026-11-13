@@ -1,4 +1,5 @@
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, eq, gte, notExists, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { auditLog, db } from '@concert-crawl/db';
 import type {
   NeedsYouCount,
@@ -28,14 +29,29 @@ export const listNeedsYou = async ({
   return rankNeedsYou(filterSnoozed(items, snoozes));
 };
 
-/** Answers recorded since midnight Mountain Time. */
+/**
+ * Answers recorded since midnight Mountain Time, net of undos: an answer that
+ * has an undo row no longer counts as handled.
+ */
 const handledSince = async (now: Date): Promise<number> => {
+  const undone = alias(auditLog, 'undone');
   const [row] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(auditLog)
     .where(
       and(
         eq(auditLog.action, NEEDS_YOU_ANSWER_ACTION),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(undone)
+            .where(
+              and(
+                eq(undone.action, NEEDS_YOU_UNDO_ACTION),
+                sql`${undone.metadata}->>'answerAuditId' = ${auditLog.id}::text`,
+              ),
+            ),
+        ),
         gte(
           auditLog.createdAt,
           sql`(date_trunc('day', ${now.toISOString()}::timestamptz AT TIME ZONE ${MT_TIME_ZONE}) AT TIME ZONE ${MT_TIME_ZONE})`,

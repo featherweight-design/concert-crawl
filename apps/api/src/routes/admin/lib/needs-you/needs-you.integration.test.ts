@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { adminQueueSnoozes, feedback } from '@concert-crawl/db';
+import { adminQueueSnoozes, auditLog, feedback } from '@concert-crawl/db';
 import {
   clearTables,
   seedArtist,
@@ -10,7 +10,12 @@ import {
   seedVenue,
 } from '../../../../test/helpers/seed.js';
 import { testDb } from '../../../../test/helpers/db.js';
-import { countNeedsYou, listNeedsYou } from './index.js';
+import {
+  NEEDS_YOU_ANSWER_ACTION,
+  NEEDS_YOU_UNDO_ACTION,
+  countNeedsYou,
+  listNeedsYou,
+} from './index.js';
 import { addDays, denverDate } from './keys.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -278,5 +283,52 @@ describe('Needs you sources and ranking', () => {
     const count = await countNeedsYou(at);
     expect(count.decisions).toBe((await listNeedsYou({ now: at })).length);
     expect(count.byKind['event-low-confidence']).toBe(1);
+  });
+
+  it('offers "Keep this match" only where the API would accept it', async () => {
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const bare = await seedArtist({
+      name: 'Bare Act',
+      matchStatus: 'ambiguous',
+    });
+    const confirmable = await seedArtist({
+      name: 'Auto Act',
+      matchStatus: 'ambiguous',
+      autoMatchedAt: new Date(),
+      spotifyArtistId: 'spotify-auto-act',
+    });
+    for (const artist of [bare, confirmable]) {
+      await seedEvent(venue.id, { artist: artist.name, date: inDays(10) });
+    }
+
+    const items = await listNeedsYou({ kind: 'artist', now: now() });
+    const slugsOf = (artistId: string) =>
+      items
+        .find((item) => item.kind === 'artist' && item.artistId === artistId)
+        ?.answers.map((offered) => offered.slug);
+    expect(slugsOf(bare.id)).toEqual(['pick_the_right_artist', 'no_photo']);
+    expect(slugsOf(confirmable.id)).toEqual([
+      'pick_the_right_artist',
+      'keep_this_match',
+      'no_photo',
+    ]);
+  });
+
+  it('counts an answer as handled today only until it is undone', async () => {
+    await testDb
+      .insert(auditLog)
+      .values({ actorId: 'admin-1', action: NEEDS_YOU_ANSWER_ACTION });
+    const undone = await testDb
+      .insert(auditLog)
+      .values({ actorId: 'admin-1', action: NEEDS_YOU_ANSWER_ACTION })
+      .returning({ id: auditLog.id });
+    expect((await countNeedsYou(now())).handledToday).toBe(2);
+
+    await testDb.insert(auditLog).values({
+      actorId: 'admin-1',
+      action: NEEDS_YOU_UNDO_ACTION,
+      metadata: { answerAuditId: undone[0]?.id },
+    });
+    expect((await countNeedsYou(now())).handledToday).toBe(1);
   });
 });
