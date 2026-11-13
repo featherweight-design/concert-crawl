@@ -264,8 +264,12 @@ const latestRunOf = (
         errorMessage: run.errorMessage,
       };
 
-/** The columns `latestRunOf` reads, shared by the list and the detail. */
-const latestRunColumns = {
+/**
+ * The columns `latestRunOf` reads, shared by the list and the detail. A
+ * function, not a constant, so importing this module never reads `crawlRuns`:
+ * unit tests that mock `@concert-crawl/db` without it import the route tree.
+ */
+const latestRunColumns = () => ({
   id: crawlRuns.id,
   venueId: crawlRuns.venueId,
   status: crawlRuns.status,
@@ -274,7 +278,7 @@ const latestRunColumns = {
   eventsFound: crawlRuns.eventsFound,
   eventsInserted: crawlRuns.eventsInserted,
   errorMessage: sql<string | null>`left(${crawlRuns.errorMessage}, 300)`,
-};
+});
 
 export const venuesAdminRouter = new Hono<AdminVariables>();
 
@@ -314,7 +318,7 @@ venuesAdminRouter.get('/', async (ctx) => {
   // reads as Active with full health everywhere else, so the list carries the
   // real outcome of its most recent run.
   const latestRuns = await db
-    .selectDistinctOn([crawlRuns.venueId], latestRunColumns)
+    .selectDistinctOn([crawlRuns.venueId], latestRunColumns())
     .from(crawlRuns)
     .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt));
 
@@ -418,7 +422,7 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   const [recentRuns, [eventsCountResult], shows, pastAndWatchers, adminNames] =
     await Promise.all([
       db
-        .select({ ...latestRunColumns, durationMs: crawlRuns.durationMs })
+        .select({ ...latestRunColumns(), durationMs: crawlRuns.durationMs })
         .from(crawlRuns)
         .where(
           and(
@@ -511,7 +515,7 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   if (latestRun === undefined || lastFull === undefined) {
     const succeeded = sql`(${crawlRuns.status} = 'success')`;
     const older = await db
-      .selectDistinctOn([succeeded], latestRunColumns)
+      .selectDistinctOn([succeeded], latestRunColumns())
       .from(crawlRuns)
       .where(eq(crawlRuns.venueId, id))
       .orderBy(succeeded, desc(crawlRuns.createdAt));
