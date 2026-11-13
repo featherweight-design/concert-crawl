@@ -32,12 +32,14 @@ describe('FeedbackEdgeTab', () => {
     expect(anchor.className).toContain('z-[35]');
   });
 
-  it('carries the phone tuck and the focus-within and active slide-out classes', () => {
+  // Regression: under 1280 the tab was half tucked off-screen and slid out on
+  // focus, and focus returning from the modal latched it out, so it read as
+  // clipped until the first tap. It sits flush at every width, as drawn.
+  it('sits flush at every width, with no tuck or slide-out', () => {
     render(<FeedbackEdgeTab />);
     const anchor = screen.getByTestId('feedback-edge-tab-anchor');
-    expect(anchor.className).toContain('max-xl:translate-x-3');
-    expect(anchor.className).toContain('max-xl:focus-within:translate-x-0');
-    expect(anchor.className).toContain('max-xl:active:translate-x-0');
+    expect(anchor.className).not.toMatch(/translate-x/);
+    expect(anchor.className).not.toContain('focus-within');
   });
 
   it('has no transparent hit slop, so it never steals a tap meant for content, and a focus-visible ring class', () => {
