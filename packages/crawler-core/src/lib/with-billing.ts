@@ -17,31 +17,46 @@
  * "X & Y" co-headline has no with-style joiner and is never touched.
  */
 
+import { normalizeArtistName } from '@concert-crawl/types';
+
 // A with-style joiner between two acts. "with" and "featuring" need a space
 // after them ("without" is not a joiner); "w/", "feat." and "ft." may run
 // straight into the next name. "special guest(s)" is the same billing.
 const WITH_JOINER =
-  /\s+(?:with(?:\s+special\s+guests?)?\s+|w\/\s*|featuring\s+|feat\.?\s+|feat\.|ft\.\s*|special\s+guests?\s+)/i;
-const WITH_JOINER_GLOBAL = new RegExp(WITH_JOINER.source, 'gi');
+  /\s+(?:with(?:\s+special\s+guests?)?\s+|w\/\s*|featuring\s+|feat\.?\s+|feat\.|ft\.\s*|special\s+guests?\s+)/gi;
 
 // What the model writes in place of the venue's joiner.
-const SUBSTITUTE_JOINER = /^(?:\s*&\s*|\s*,\s*|\s+\+\s+|\s+and\s+|\s+\/\s+)/i;
+const SUBSTITUTE_JOINER = /\s*&\s*|\s*,\s*|\s+\+\s+|\s+and\s+|\s+\/\s+/gi;
 
-// Compare words without case or punctuation: "J.I.D." on the page is "J.I.D"
-// in the cleaned title.
+// Compare words the way artist names are compared everywhere else (case and
+// diacritics folded by the shared normalizer), and without punctuation:
+// "J.I.D." on the page is "J.I.D" in the cleaned title.
 const fold = (text: string): string =>
-  text
-    .toLowerCase()
+  normalizeArtistName(text)
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim();
 
 const lastWord = (text: string): string => fold(text).split(' ').pop() ?? '';
 const firstWord = (text: string): string => fold(text).split(' ')[0] ?? '';
 
+// Every with-style joiner in a title, as the text either side of it.
+const withSplits = (title: string): { front: string; back: string }[] =>
+  [...title.matchAll(WITH_JOINER)].map((match) => ({
+    front: title.slice(0, match.index),
+    back: title.slice(match.index + match[0].length),
+  }));
+
 /** True when a title bills acts with "with", "w/", "featuring" and the like. */
 export function hasWithJoiner(title: string): boolean {
-  return WITH_JOINER.test(title);
+  return withSplits(title).length > 0;
 }
+
+// The model may have recased the whole title: write the joiner in the case of
+// the words before it, so neither "Clipse WITH J.I.D" nor "CLIPSE with J.I.D".
+const inCaseOf = (head: string, joiner: string): string =>
+  head === head.toUpperCase() && head !== head.toLowerCase()
+    ? joiner.toUpperCase()
+    : joiner.toLowerCase();
 
 /**
  * The cleaned title with every with-style joiner the venue printed (in
@@ -51,28 +66,23 @@ export function hasWithJoiner(title: string): boolean {
  */
 export function keepWithJoiner(title: string, rawTitle: string): string {
   let result = title;
-  for (const match of rawTitle.matchAll(WITH_JOINER_GLOBAL)) {
-    const before = lastWord(rawTitle.slice(0, match.index));
-    const after = firstWord(rawTitle.slice(match.index + match[0].length));
+  for (const { front, back } of withSplits(rawTitle)) {
+    const before = lastWord(front);
+    const after = firstWord(back);
     if (before === '' || after === '') continue;
-    const joiner = match[0].trim();
-    // Each candidate substitute in the cleaned title, checked against the two
-    // words the venue's joiner sat between.
-    for (let i = 1; i < result.length; i += 1) {
-      const substitute = SUBSTITUTE_JOINER.exec(result.slice(i));
-      if (substitute === null) continue;
-      const head = result.slice(0, i);
-      const tail = result.slice(i + substitute[0].length);
-      if (lastWord(head) !== before || firstWord(tail) !== after) continue;
-      // The model may have recased the whole title; follow its case for a
-      // word joiner so "Clipse & J.I.D" does not become "Clipse WITH J.I.D".
-      const written =
-        /^[a-z\s]+$/i.test(joiner) && head !== head.toUpperCase()
-          ? joiner.toLowerCase()
-          : joiner;
-      result = `${head.trimEnd()} ${written} ${tail.trimStart()}`;
-      break;
-    }
+    const joiner = rawTitle
+      .slice(front.length, rawTitle.length - back.length)
+      .trim();
+    // The substitute in the cleaned title that sits between the same two words.
+    const substitute = [...result.matchAll(SUBSTITUTE_JOINER)].find(
+      (match) =>
+        lastWord(result.slice(0, match.index)) === before &&
+        firstWord(result.slice(match.index + match[0].length)) === after,
+    );
+    if (substitute === undefined) continue;
+    const head = result.slice(0, substitute.index).trimEnd();
+    const tail = result.slice(substitute.index + substitute[0].length);
+    result = `${head} ${inCaseOf(head, joiner)} ${tail.trimStart()}`;
   }
   return result;
 }
@@ -83,24 +93,22 @@ const appearsIn = (name: string, text: string): boolean => {
 };
 
 /**
- * Moves every headliner the title bills after its first with-style joiner into
+ * Moves every headliner the title bills after a with-style joiner into
  * supporting, in billing order and ahead of the openers already listed.
  *
- * Only when the first headliner sits BEFORE the joiner: "An Evening with X &
- * Y" puts the whole bill after "with", and there the joiner introduces the
- * headliners rather than their support. A name that also appears before the
- * joiner stays a headliner. The first headliner is never moved, so a bill
- * always keeps one. A bill with nothing to move comes back as it was given.
+ * The joiner that counts is the first one with the lead headliner wholly
+ * before it: "Sleeping With Sirens with Memphis May Fire" splits at the
+ * second "with", since the first sits inside the lead's own name. With no
+ * such joiner ("An Evening with X & Y", where "with" introduces the
+ * headliners) nothing moves. A name that also appears before the joiner stays
+ * a headliner. The first headliner is never moved, so a bill always keeps one.
+ * A bill with nothing to move comes back as it was given.
  */
 export function demoteActsAfterWith(
   title: string,
   headliners: string[],
   supportingArtists: string[],
 ): { headliners: string[]; supportingArtists: string[] } {
-  const match = WITH_JOINER.exec(title);
-  if (match === null) return { headliners, supportingArtists };
-  const front = title.slice(0, match.index);
-  const back = title.slice(match.index + match[0].length);
   // A lone flattened name ("Clipse & J.I.D") is never split here: splitting a
   // string on punctuation is the adjudicator's call (CO_BILLING_JOINERS), and
   // its split headliners pass through this function afterwards.
@@ -108,14 +116,18 @@ export function demoteActsAfterWith(
   if (lead === undefined || rest.length === 0) {
     return { headliners, supportingArtists };
   }
-  if (!appearsIn(lead, front) || appearsIn(lead, back)) {
-    return { headliners, supportingArtists };
-  }
+  const split = withSplits(title).find(
+    ({ front, back }) => appearsIn(lead, front) && !appearsIn(lead, back),
+  );
+  if (split === undefined) return { headliners, supportingArtists };
   const kept = [lead];
   const demoted: string[] = [];
   for (const name of rest) {
-    if (appearsIn(name, back) && !appearsIn(name, front)) demoted.push(name);
-    else kept.push(name);
+    if (appearsIn(name, split.back) && !appearsIn(name, split.front)) {
+      demoted.push(name);
+    } else {
+      kept.push(name);
+    }
   }
   if (demoted.length === 0) return { headliners, supportingArtists };
   const demotedKeys = new Set(demoted.map(fold));

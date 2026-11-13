@@ -1374,4 +1374,26 @@ describe('extractWithLlm — the venue\'s "with" survives the cleaned title', ()
 
     expect(result.events[0]?.title).toBe('Desert Dwellers & Great Dane');
   });
+
+  // `artist` feeds canonical_artist, the dedup key. canonicalizeArtist splits
+  // on " with " but not on ",", so a fallback artist built from the restored
+  // title would move the key of a row stored earlier as "Clipse, J.I.D".
+  it('keeps the fallback artist on the title as the model cleaned it', async () => {
+    mockCreate.mockResolvedValue(
+      makeAnthropicResponse([
+        {
+          title: 'Clipse, J.I.D',
+          rawTitle: 'Clipse with J.I.D.',
+          artist: null,
+          date: '2026-09-03',
+          confidence: 0.9,
+        },
+      ]),
+    );
+
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+
+    expect(result.events[0]?.title).toBe('Clipse with J.I.D');
+    expect(result.events[0]?.artist).toBe('Clipse, J.I.D');
+  });
 });

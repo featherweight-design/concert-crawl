@@ -529,10 +529,8 @@ export async function extractWithLlm(
     // And the venue's own "with" / "w/" / "featuring" survives: the model has
     // rewritten "Clipse with J.I.D." as "Clipse & J.I.D", which displays a
     // co-headline the venue never printed (see with-billing.ts).
-    const title = keepWithJoiner(
-      stripDuplicatedTrailingWord(evt.title, evt.rawTitle),
-      evt.rawTitle,
-    );
+    const cleanedTitle = stripDuplicatedTrailingWord(evt.title, evt.rawTitle);
+    const title = keepWithJoiner(cleanedTitle, evt.rawTitle);
     // Normalize opener names through the shared helper: trim each, drop
     // blank/whitespace-only entries so they never render as empty opener
     // chips, and drop any opener that repeats the headliner (case-insensitive).
@@ -546,7 +544,12 @@ export async function extractWithLlm(
     // the title survives only as the display string.
     const observed = evt.artist?.trim();
     const namedSomebody = observed !== undefined && observed !== '';
-    const artist = namedSomebody ? observed : title;
+    // The fallback is the title as the model cleaned it, BEFORE the joiner is
+    // restored. `artist` feeds canonical_artist, the dedup key, and
+    // canonicalizeArtist splits on " with " but not on "," or " / ": restoring
+    // first would move the key of an existing row stored as "X, Y" and insert
+    // the same show twice.
+    const artist = namedSomebody ? observed : cleanedTitle;
     // Trim, drop blanks, and drop case-insensitive repeats, then put the
     // resolved artist first — `artist` may itself be a fallback to the cleaned
     // title when the model returned null, in which case the model's own list
