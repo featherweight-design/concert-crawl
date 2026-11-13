@@ -27,7 +27,10 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { ShelfCard } from './ShelfCard';
 import { FOLLOWING_COPY } from './definitions/copy';
-import { SHELF_RAIL_GAP_CLASS } from '@/components/consumer/definitions/constants';
+import {
+  SHELF_RAIL_GAP_CLASS,
+  SHELF_RAIL_SCROLL_CLASS,
+} from '@/components/consumer/definitions/constants';
 import { SHELF_VISIBLE_CARDS } from './definitions/constants';
 import type { ShelfArtist, ShelfMode } from './definitions/types';
 import { readSessionSeed, shuffleWithSeed } from './lib/shuffle';
@@ -215,7 +218,7 @@ export const FollowShelf = ({
           width, with no end card (addendum 2, item 20). */}
       <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:-mx-3 sm:max-w-[calc(100%+1.5rem)]">
         <ul
-          className={`flex list-none overflow-x-auto px-4 py-3 sm:px-3 ${SHELF_RAIL_GAP_CLASS}`}
+          className={`flex list-none px-4 py-3 sm:px-3 ${SHELF_RAIL_SCROLL_CLASS} ${SHELF_RAIL_GAP_CLASS}`}
         >
           {visible.map((artist) => (
             <ShelfCard

@@ -29,6 +29,7 @@ import {
   SHELF_CARD_ART_SCALE,
   SHELF_CARD_BOX_CLASS,
   SHELF_RAIL_GAP_CLASS,
+  SHELF_RAIL_SCROLL_CLASS,
 } from '@/components/consumer/definitions/constants';
 import {
   formatPrice,
@@ -404,7 +405,7 @@ export const DiscoveryShelf = ({
                 the rail keeps scrolling at every width. */}
             <ul
               aria-label={COPY.listAria}
-              className={`flex list-none overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0 ${SHELF_RAIL_GAP_CLASS}`}
+              className={`flex list-none px-4 pb-1 pt-0.5 sm:px-0 ${SHELF_RAIL_SCROLL_CLASS} ${SHELF_RAIL_GAP_CLASS}`}
             >
               {data.picks.map((pick) => (
                 <TastePickCard key={pick.eventId} pick={pick} />

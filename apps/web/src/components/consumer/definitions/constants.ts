@@ -34,6 +34,16 @@ export const SHELF_CARD_BOX_CLASS =
 export const SHELF_RAIL_GAP_CLASS = 'gap-[11px] sm:gap-[15px]';
 
 /**
+ * The card rails scroll sideways and only sideways. `overflow-x: auto` alone
+ * computes `overflow-y` to `auto` as well (CSS never lets one axis stay
+ * `visible` beside a scrolling one), so any fraction of a pixel of vertical
+ * overflow, a rounded card height or the scrollbar's own track, drew a second,
+ * vertical scrollbar on the row. The vertical axis is pinned to `hidden`; the
+ * rails' own padding already leaves room for the cards' glow.
+ */
+export const SHELF_RAIL_SCROLL_CLASS = 'overflow-x-auto overflow-y-hidden';
+
+/**
  * The identity mark's detail density for both cards' art. Each card's art is a
  * fill region whose smallest side, at the smallest box, is the card width (the
  * art is taller than it is wide in both cards), so the scale is what the slot
