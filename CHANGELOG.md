@@ -1,3 +1,10 @@
+## [1.414.1](https://github.com/featherweight-design/concert-crawl/compare/v1.414.0...v1.414.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** skip next build's own type-check to fit the 8 GB build ([8be8a7b](https://github.com/featherweight-design/concert-crawl/commit/8be8a7bd9a27b59baf8e7e643e9720440d8c2ad4))
+
 # [1.414.0](https://github.com/featherweight-design/concert-crawl/compare/v1.413.0...v1.414.0) (2026-11-13)
 
 
