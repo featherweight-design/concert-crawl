@@ -21,8 +21,10 @@
  *
  * This script is CREATE-ONLY by default (#1337). Onboarding a new venue is
  * the seed's job; ongoing edits belong to the admin UI, which is where the
- * crawl tuning (`crawlMode`, `crawlWaitForSelector`, `crawlDelayMs`,
- * `crawlWaitUntil`) and `about` copy are actually maintained. A prod dry-run
+ * crawl tuning (`crawlMode`, `crawlWaitForSelector`, `crawlWaitUntil`) and
+ * `about` copy are actually maintained. `crawlDelayMs` is fixed by the crawl
+ * rules and not editable in the UI or the API; the seed and `--only` here are
+ * its only writers, and the crawler floors it at 3 s regardless. A prod dry-run
  * on 2026-08-02 showed a blanket update would have nulled the AXS wait
  * selectors on six working venues and reverted two hand-set crawl modes.
  * Drift is still reported so an operator can see it — it just is not written.
