@@ -174,7 +174,17 @@ export const SidePanel = (props: SidePanelProps) => {
     <aside
       aria-labelledby={titleId}
       data-testid="side-panel"
-      style={{ ...panelStyle(props.width ?? 460), alignSelf: 'stretch' }}
+      style={{
+        ...panelStyle(props.width ?? 460),
+        // Docked beside a long list: it stays in view however far down the
+        // selected card is (the page scrolls under the 56px topbar), and
+        // scrolls on its own when taller than the screen.
+        position: 'sticky',
+        top: 0,
+        alignSelf: 'flex-start',
+        maxHeight: 'calc(100vh - 56px)',
+        overflowY: 'auto',
+      }}
     >
       <PanelBody {...props} titleId={titleId} />
     </aside>
