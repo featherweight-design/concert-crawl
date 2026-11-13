@@ -15,7 +15,8 @@ interface PastShowsProps {
 }
 
 /**
- * Deliberately modest: no price, no link out, no artwork, and no setlist. Each
+ * Deliberately modest: no price, no link out, no photo (a date tile and the
+ * venue's icon tile are all the art), and no setlist. Each
  * row ends in the "I went" pill, the one place a past night is stamped from here.
  * `events.setlist` exists but has never carried real data, and setlists were
  * dropped with #1170 (no setlist.fm license), so this block only claims what
