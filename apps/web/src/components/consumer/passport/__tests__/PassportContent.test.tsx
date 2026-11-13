@@ -334,7 +334,14 @@ describe('PassportContent', () => {
       document.querySelector('[data-passport-empty-layout="phone"]'),
     ).toBeNull();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(desktop!.querySelector('[data-booklet-next="up"]')).not.toBeNull();
+    const ghost = desktop!.querySelector<HTMLElement>(
+      '[data-booklet-next="up"]',
+    );
+    expect(ghost).not.toBeNull();
+    // Not stamped yet, so not tilted.
+    expect(ghost!.style.transform).toBe('');
+    // The "No stamps yet" block is for a reader with nothing ahead.
+    expect(desktop!.querySelector('[data-passport-empty="block"]')).toBeNull();
     expect(desktop).toHaveTextContent(COPY.firstStampSubtitle('Nov 21'));
     expect(
       screen.queryByRole('button', { name: COPY.shareLabel }),

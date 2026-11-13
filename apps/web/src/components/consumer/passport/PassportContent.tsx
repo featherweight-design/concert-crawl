@@ -165,7 +165,9 @@ export const PassportContent = ({
             />
           </div>
           <div className="flex min-w-0 flex-col gap-7 [grid-area:side]">
-            <PassportEmpty variant="block" />
+            {/* With a show ahead the open book and Up next say it all; the
+                "No stamps yet" block is for a reader with nothing ahead. */}
+            {!openBook && <PassportEmpty variant="block" />}
             {upNext}
             <VenuesCollected
               venues={emptyVenues.venues}

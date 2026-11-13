@@ -1,6 +1,6 @@
 {
   "feature": "Passport · the booklet column and the Up next stub; the open book with a show ahead",
-  "note": "Boards: design/design_handoff_bplus_redesign/addendum-4/screens/08-passport/passport-next-d and passport-next-m (the open book with a show ahead and no stamps, subtitle \"Your first stamp lands after <date>.\") and addendum-2 04-passport-order/passport-d (the booklet and Up next widths). The filled cell runs against the local audit user, who has past nights. The open book with a show ahead needs a signed-in user with upcoming shows and no past nights, which the local audit user is not, so it is hand-walked; the unit tests in PassportContent.test.tsx cover the layout switch.",
+  "note": "Boards: design/design_handoff_bplus_redesign/addendum-4/screens/08-passport/passport-next-d and passport-next-m (the open book with a show ahead and no stamps, subtitle \"Your first stamp lands after <date>.\") and addendum-2 04-passport-order/passport-d (the booklet and Up next widths). The open-book row needs a user with upcoming shows and no past nights: on the scratch branch, back up and clear that user's past attending_at, run the row, then restore (the backup table is cf_backup_attendance). The kit can only sign in as one user.",
   "widths": [
     { "label": "floor", "width": 320, "height": 700, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -8,12 +8,12 @@
   ],
   "rows": [
     {
-      "id": "passport-filled",
-      "label": "Passport with stamps: booklet column and Up next",
+      "id": "passport-open-book",
+      "label": "Passport with a show ahead and no stamps: the open book",
       "steps": [
         {
           "goto": "/passport",
-          "wait": "[data-testid=\"passport-booklet\"]",
+          "wait": "[data-passport-empty-layout=\"desktop\"]",
           "settle": 1500
         }
       ]
