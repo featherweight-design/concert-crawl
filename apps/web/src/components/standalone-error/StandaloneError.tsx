@@ -204,6 +204,12 @@ const SECONDARY_STYLE: CSSProperties = {
  * `!important` on the desktop button rules only: the phone styles are inline.
  */
 const LAYOUT_CSS = `
+/* Addendum-4 section 3, the same definition as globals.css: this page cannot
+   rely on it, because global-error replaces the root layout and never loads it.
+   Derived from the theme's own --accent, which the page's theme script sets. */
+[data-testid='standalone-error'] {
+  --cta-end: color-mix(in srgb, var(--accent) 75%, var(--signal));
+}
 .cc-se-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -338,9 +344,7 @@ export const StandaloneError = ({
             style={{
               border: 'none',
               background:
-                // `--cta-end` comes from globals.css, which `global-error` (it
-                // replaces the root layout) never loads: fall back to the accent.
-                'linear-gradient(90deg, var(--signal), var(--cta-end, var(--accent)))',
+                'linear-gradient(90deg, var(--signal), var(--cta-end))',
               boxShadow:
                 '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
               color: 'var(--fg-on-accent)',
