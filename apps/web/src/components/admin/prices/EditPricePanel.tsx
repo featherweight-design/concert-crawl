@@ -72,7 +72,8 @@ export const EditPricePanel = ({
 
   const save = async () => {
     const min = free ? '0.00' : parseDollars(lowest);
-    if (min === null) {
+    // A zero lowest is "It's free", as the Add sheet reads it.
+    if (min === null || (!free && Number(min) === 0)) {
       setError(ADD.needsPrice);
       return;
     }
@@ -83,6 +84,16 @@ export const EditPricePanel = ({
       (max === null || Number(max) < Number(min))
     ) {
       setError(ADD.needsHighest);
+      return;
+    }
+    // Nothing changed: close without a write (and without an audit row).
+    if (
+      Number(min) === Number(row.priceMin) &&
+      (max === null
+        ? row.priceMax === null
+        : row.priceMax !== null && Number(max) === Number(row.priceMax))
+    ) {
+      onClose();
       return;
     }
     setError(null);
@@ -109,6 +120,9 @@ export const EditPricePanel = ({
             disabled={free || busy}
             value={free ? '' : lowest}
             onChange={(event) => setLowest(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !busy) void save();
+            }}
             style={inputStyle}
           />
         </div>
@@ -123,6 +137,9 @@ export const EditPricePanel = ({
             disabled={free || busy}
             value={free ? '' : highest}
             onChange={(event) => setHighest(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !busy) void save();
+            }}
             style={inputStyle}
           />
         </div>

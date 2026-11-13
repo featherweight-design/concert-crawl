@@ -261,7 +261,8 @@ export const SubmittedTab = () => {
     try {
       await api.editPrice(row.id, priceMin, priceMax);
     } catch (err) {
-      return refusedStatus(err) === 409
+      const status = refusedStatus(err);
+      return status === 409 || status === 404
         ? ADMIN_COPY.pricesSubmitted.edit.notEditable
         : ADMIN_COPY.pricesSubmitted.edit.saveFailed;
     }
