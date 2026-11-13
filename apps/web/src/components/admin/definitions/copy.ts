@@ -2185,8 +2185,7 @@ export const ADMIN_COPY = {
     reviewPageClient: {
       eyebrow: 'operations · moderation',
       title: 'Review',
-      subtitle:
-        'Most events auto-approve. This page is where flags and community price submissions land for triage.',
+      subtitle: 'Most events auto-approve. Flagged ones land here for triage.',
       mobileTitle: 'Review',
       mobileSubtitle: (decisions: number) =>
         `${decisions} decision${decisions !== 1 ? 's' : ''} waiting.`,
