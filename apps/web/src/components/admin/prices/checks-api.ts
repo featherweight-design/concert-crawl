@@ -31,6 +31,9 @@ export interface OpenCheck {
   venueName: string;
   /** `YYYY-MM-DD`, Mountain Time. */
   date: string;
+  ticketUrl: string | null;
+  /** Fans Watching the show. */
+  watching: number;
   listed: CheckSide;
   check: CheckSide;
 }
@@ -75,7 +78,9 @@ const openFrom = (value: unknown): OpenCheck | null => {
     !isText(value['eventId']) ||
     !isText(value['eventTitle']) ||
     !isText(value['venueName']) ||
-    !isText(value['eventDate'])
+    !isText(value['eventDate']) ||
+    !isTextOrNull(value['ticketUrl']) ||
+    !isCount(value['watching'])
   ) {
     return null;
   }
@@ -88,6 +93,8 @@ const openFrom = (value: unknown): OpenCheck | null => {
     title: value['eventTitle'],
     venueName: value['venueName'],
     date: value['eventDate'],
+    ticketUrl: value['ticketUrl'],
+    watching: value['watching'],
     listed,
     check,
   };
