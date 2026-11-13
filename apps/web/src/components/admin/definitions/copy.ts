@@ -3761,6 +3761,10 @@ export const ADMIN_COPY = {
         label: 'This fan’s other prices',
         hint: (handle: string) => `Filter to @${handle}`,
       },
+      editPrice: {
+        label: 'Edit price',
+        hint: 'Same sheet as Add a price',
+      },
       reject: { label: 'Reject…', hint: 'Unpublish it and tell the fan why' },
     },
     reject: {
@@ -3782,6 +3786,12 @@ export const ADMIN_COPY = {
       confirm: 'Reject price',
       failed: "Couldn't reject that price",
       notWaiting: 'That price is no longer waiting for you.',
+    },
+    edit: {
+      sheetTitle: 'Edit price',
+      save: 'Save price',
+      saveFailed: "Couldn't save that price",
+      notEditable: 'That price can no longer be edited.',
     },
   },
 

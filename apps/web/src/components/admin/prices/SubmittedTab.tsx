@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Calendar, ExternalLink, Search, Users, X } from 'lucide-react';
+import { Calendar, ExternalLink, Search, Tag, Users, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -17,6 +17,7 @@ import {
 } from '@/components/admin/primitives';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { refusedStatus } from '../invite-codes/codes-api';
+import { EditPricePanel } from './EditPricePanel';
 import { RejectPriceDialog } from './RejectPriceDialog';
 import {
   submittedApi,
@@ -172,6 +173,7 @@ export const SubmittedTab = () => {
   const [failed, setFailed] = useState(false);
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [rejecting, setRejecting] = useState<SubmittedRow | null>(null);
+  const [editing, setEditing] = useState<SubmittedRow | null>(null);
 
   // The chips and the search are desktop-only: a phone width clears them rather
   // than leaving a hidden filter on the list.
@@ -251,6 +253,23 @@ export const SubmittedTab = () => {
     return null;
   };
 
+  const edit = async (
+    row: SubmittedRow,
+    priceMin: string,
+    priceMax: string | null,
+  ): Promise<string | null> => {
+    try {
+      await api.editPrice(row.id, priceMin, priceMax);
+    } catch (err) {
+      return refusedStatus(err) === 409
+        ? ADMIN_COPY.pricesSubmitted.edit.notEditable
+        : ADMIN_COPY.pricesSubmitted.edit.saveFailed;
+    }
+    setEditing(null);
+    void load();
+    return null;
+  };
+
   const menuItems = (row: SubmittedRow): RowMenuItem[] => {
     const items: RowMenuItem[] = [
       {
@@ -284,6 +303,17 @@ export const SubmittedTab = () => {
           setFilter('all');
           setTyped(`@${handle}`);
         },
+      });
+    }
+    // A price in a Price check is decided on that tab, and a rejected or stale
+    // one is history: only a waiting or published price can be edited.
+    if (row.state === 'waiting' || row.state === 'published') {
+      items.push({
+        key: 'edit',
+        icon: Tag,
+        label: COPY.menu.editPrice.label,
+        hint: COPY.menu.editPrice.hint,
+        onSelect: () => setEditing(row),
       });
     }
     if (row.state === 'waiting') {
@@ -609,6 +639,15 @@ export const SubmittedTab = () => {
             )}
           </div>
         </div>
+      )}
+
+      {editing && (
+        <EditPricePanel
+          key={editing.id}
+          row={editing}
+          onClose={() => setEditing(null)}
+          onSave={(priceMin, priceMax) => edit(editing, priceMin, priceMax)}
+        />
       )}
 
       {rejecting && (
