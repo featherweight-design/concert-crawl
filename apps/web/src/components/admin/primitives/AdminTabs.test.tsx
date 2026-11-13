@@ -114,4 +114,9 @@ describe('AdminTabs', () => {
     expect(screen.getByTestId('tabs').style.overflowX).toBe('');
     expect(tab('One').style.flex).toContain('1');
   });
+
+  it('segments keep side padding, so a shrink-to-fit strip never runs labels together', () => {
+    render(<Harness variant="segments" />);
+    expect(tab('One').style.padding).toBe('0px 12px');
+  });
 });
