@@ -1,0 +1,49 @@
+{
+  "feature": "Admin 3b PR 5a · Inspect a fetched page (Text and HTML)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 04-venues/inspect-a-fetched-page, phone-addendum gap-2 inspect-fetched, inspect-menu, inspect-pages-gone, inspect-loading. Read-only. The scratch branch stores no page bodies (CRAWL_PAGE_BODIES off, as in prod), so a stored-page view shows the not-stored state; the Text and HTML tabs are pinned by tests.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/3b-5a-contact-sheet",
+  "widths": [
+    { "label": "320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "640", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "not-stored",
+      "label": "Inspect a page whose HTML wasn't kept (Sheet Paused Venue, failed run, its 404 page by default)",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097/inspect/51d6b92c-da21-4b54-b48f-e1ad253cd273",
+          "wait": "main"
+        },
+        { "settle": 3500 }
+      ]
+    },
+    {
+      "id": "no-pages",
+      "label": "Inspect a run that kept no pages (Bluebird, newest run)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
+          "wait": "[data-testid=\"run-row\"]"
+        },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"run-row\"] >> nth=0" },
+        { "wait": "[data-testid=\"run-detail\"]" },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "panel-inspect-links",
+      "label": "Run detail with per-page Inspect links (Sheet Paused Venue, failed run)",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097?tab=runs&run=51d6b92c-da21-4b54-b48f-e1ad253cd273",
+          "wait": "[data-testid=\"run-detail\"]"
+        },
+        { "settle": 3000 }
+      ]
+    }
+  ]
+}
