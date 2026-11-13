@@ -151,10 +151,13 @@ export function InviteLanding({
       >
         <div className="flex flex-col gap-4 md:col-start-1 md:row-start-1">
           <h1
+            // Sized to the boards (xcheck row 38): inv-mob sets the headline at
+            // about 11.3vw (44px at 390, so 36px at 320); inv-desk at about
+            // 5.55vw, 80px at its 1440 frame, which is the cap.
+            className="[font-size:clamp(36px,11.3vw,60px)] md:[font-size:clamp(52px,5.55vw,80px)]"
             style={{
               margin: 0,
               fontWeight: 900,
-              fontSize: 'clamp(40px, 11vw, 96px)',
               letterSpacing: '-0.045em',
               lineHeight: 0.92,
             }}
