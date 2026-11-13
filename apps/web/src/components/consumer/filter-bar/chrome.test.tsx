@@ -8,7 +8,7 @@ import {
   HEADING_ACCENT_STYLE,
   HEADING_EYEBROW_STYLE,
   HeadingTitleText,
-  filterChipStyle,
+  phonePillStyle,
 } from './chrome';
 
 const title = CONSUMER_COPY.filterBar.headingTitle;
@@ -59,20 +59,28 @@ describe('HeadingTitleText', () => {
   });
 });
 
-// `browse-active-320`: an active chip is #171D3A (s2) with a #2C3661
-// (border-strong) hairline. A solid colour chip means a status or a price.
-describe('filterChipStyle', () => {
-  it('draws an active chip neutral, never a signal fill', () => {
-    const style = filterChipStyle(true);
-    expect(style.background).toBe('var(--surface-2)');
+// `browse-active-320` and `bp-f-filt_m_rest`: a pill at rest sits on the
+// elevated fill (Filters) or none (My artists); once on it takes a signal edge
+// over an 8% tint, never a solid signal fill.
+describe('phonePillStyle', () => {
+  it('rests Filters on the elevated fill with the strong border', () => {
+    const style = phonePillStyle(false, 'filters');
+    expect(style.background).toBe('var(--bg-elevated)');
     expect(style.borderColor).toBe('var(--border-strong)');
-    expect(style.color).toBe('var(--fg)');
-    expect(JSON.stringify(style)).not.toContain('--signal');
+    expect(style.paddingInline).toBe(13);
   });
 
-  it('leaves the resting chip on surface-1 with the plain border', () => {
-    const style = filterChipStyle(false);
-    expect(style.background).toBe('var(--surface-1)');
-    expect(style.borderColor).toBe('var(--border)');
+  it('rests My artists on no fill', () => {
+    const style = phonePillStyle(false, 'follow');
+    expect(style.background).toBe('transparent');
+    expect(style.paddingInline).toBe(12);
+  });
+
+  it('takes a signal edge over a tint once on, never a solid fill', () => {
+    const style = phonePillStyle(true, 'filters');
+    expect(style.borderColor).toBe('var(--signal)');
+    expect(style.background).toBe(
+      'color-mix(in oklab, var(--signal) 8%, transparent)',
+    );
   });
 });

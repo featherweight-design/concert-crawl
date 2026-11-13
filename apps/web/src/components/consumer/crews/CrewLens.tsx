@@ -5,7 +5,7 @@
 // filter bar's Who (the desktop segment's popover, and the phone Filters
 // sheet's Who section since B+ B6b), not from a pill of its own.
 
-import { useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Users } from 'lucide-react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { CrewSummary } from '@concert-crawl/types';
