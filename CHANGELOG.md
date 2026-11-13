@@ -1,3 +1,16 @@
+# [1.397.0](https://github.com/featherweight-design/concert-crawl/compare/v1.396.0...v1.397.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** trap and return focus in the crew options popover, share the crew surface styles ([740d3ad](https://github.com/featherweight-design/concert-crawl/commit/740d3adc83a61fbe7ee62b7678b134831ec139a3))
+
+
+### Features
+
+* **web:** draw Start a crew, the crew rows, widths and Been there as the boards do ([2f495fe](https://github.com/featherweight-design/concert-crawl/commit/2f495fe76df95ea614e237d3dfa81bc0fbf7c802))
+* **web:** draw the crew invite link block and crew options as the boards do ([ed62b0d](https://github.com/featherweight-design/concert-crawl/commit/ed62b0dbed958ed9613dce2998623073ca407bd6))
+
 # [1.396.0](https://github.com/featherweight-design/concert-crawl/compare/v1.395.0...v1.396.0) (2026-11-13)
 
 
