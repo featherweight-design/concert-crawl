@@ -1,3 +1,11 @@
+# [1.410.0](https://github.com/featherweight-design/concert-crawl/compare/v1.409.0...v1.410.0) (2026-11-13)
+
+
+### Features
+
+* **web:** draw the Where popover venue tiles as the board does ([39bb595](https://github.com/featherweight-design/concert-crawl/commit/39bb5953820ce6094b2ecfbb3ed8dc374d520b01))
+* **web:** neon tiles on the phone Where list too ([d9ca77d](https://github.com/featherweight-design/concert-crawl/commit/d9ca77d390440c74c2fe1feda098ad4f26fb50ae))
+
 # [1.409.0](https://github.com/featherweight-design/concert-crawl/compare/v1.408.0...v1.409.0) (2026-11-13)
 
 
