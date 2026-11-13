@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   adminQueueSnoozes,
+  artistReports,
   auditLog,
   crawlRunPages,
   feedback,
 } from '@concert-crawl/db';
+import { AUTO_APPROVE_THRESHOLD } from '@concert-crawl/crawler-core';
 import {
   clearTables,
   seedArtist,
@@ -523,5 +525,139 @@ describe('Needs you sources and ranking', () => {
       metadata: { answerAuditId: undone[0]?.id },
     });
     expect((await countNeedsYou(now())).handledToday).toBe(1);
+  });
+
+  it('gives an artist item its candidates, venue, photo and report reasons', async () => {
+    const venue = await seedVenue({ name: 'Lost Lake', slug: 'lost-lake' });
+    const artist = await seedArtist({
+      name: 'Cashmere',
+      matchStatus: 'ambiguous',
+      spotifyArtistId: 'sp-current',
+      photoUrl: 'https://img.example.com/current.jpg',
+      spotifyCandidates: [
+        {
+          id: 'sp-cat',
+          name: 'Cashmere Cat',
+          imageUrl: null,
+          genres: ['electronic'],
+          spotifyUrl: null,
+        },
+        {
+          id: 'sp-current',
+          name: 'Cashmere',
+          imageUrl: 'https://img.example.com/current.jpg',
+          genres: null,
+          spotifyUrl: null,
+        },
+      ],
+    });
+    await seedEvent(venue.id, { artist: artist.name, date: inDays(4) });
+    await testDb.insert(artistReports).values({
+      artistId: artist.id,
+      reporterId: 'fan-1',
+      reason: 'wrong_photo',
+    });
+
+    const [item] = await listNeedsYou({ kind: 'artist', now: now() });
+    expect(item).toMatchObject({
+      kind: 'artist',
+      nextShowVenue: 'Lost Lake',
+      spotifyArtistId: 'sp-current',
+      photoUrl: 'https://img.example.com/current.jpg',
+      reportReasons: ['wrong_photo'],
+    });
+    // The artist's own name first, then the stored order; the current match
+    // is marked, and a candidate we hold shows for plays Denver.
+    const candidates = item?.kind === 'artist' ? item.candidates : undefined;
+    expect(
+      candidates?.map((cand) => [cand.id, cand.exact, cand.current]),
+    ).toEqual([
+      ['sp-current', true, true],
+      ['sp-cat', false, false],
+    ]);
+    expect(candidates?.[0]?.playsDenver).toBe(true);
+    expect(candidates?.[1]?.playsDenver).toBe(false);
+  });
+
+  it('gives a low-confidence item its headliner, description and the real bar', async () => {
+    const venue = await seedVenue({ name: 'Cervantes', slug: 'cervantes' });
+    const event = await seedEvent(venue.id, {
+      artist: 'Michael Smoak',
+      date: inDays(11),
+      verified: false,
+      description: 'An evening of conversation.',
+      confidenceScore: '0.60',
+    });
+    const items = await listNeedsYou({
+      kind: 'event-low-confidence',
+      now: now(),
+    });
+    expect(items.find((item) => item.key === lowKey(event.id))).toMatchObject({
+      artist: 'Michael Smoak',
+      description: 'An evening of conversation.',
+      confidence: 0.6,
+      autoApproveBar: AUTO_APPROVE_THRESHOLD,
+    });
+  });
+
+  it('gives a price check both ends, the dates, the fans and the checker counts', async () => {
+    const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' });
+    const event = await seedEvent(venue.id, {
+      artist: 'Clipse',
+      date: inDays(1),
+      ticketUrl: 'https://tickets.example.com/clipse',
+    });
+    const listed = await seedPriceSubmission(event.id, 'user-listed', {
+      priceMin: '29.00',
+      priceMax: '64.00',
+      status: 'corroborated',
+    });
+    await seedPriceSubmission(event.id, 'user-checker', {
+      priceMin: '45.00',
+      priceMax: null,
+      tier: 'ga',
+      corroborationCount: 1,
+      disputedSubmissionId: listed.id,
+    });
+    await seedPriceSubmission(event.id, 'user-checker', {
+      priceMin: '40.00',
+      status: 'corroborated',
+    });
+
+    const items = await listNeedsYou({ kind: 'price-check', now: now() });
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      listedMax: '64.00',
+      checkedMax: null,
+      tier: 'ga',
+      checkedFans: 1,
+      ticketUrl: 'https://tickets.example.com/clipse',
+      checkerSubmissions: 2,
+      checkerApproved: 1,
+    });
+    expect(items[0]).toHaveProperty('listedAt');
+    expect(items[0]).toHaveProperty('checkedAt');
+  });
+
+  it('gives a bug the full message, the reporter, the issue and the screenshot', async () => {
+    await seedUserProfile('reporter-1', { handle: 'pierresauce' });
+    const message = `${'A long bug report. '.repeat(8)}Free shows have no price.`;
+    await testDb.insert(feedback).values({
+      userId: 'reporter-1',
+      pageUrl: 'https://concertcrawl.app/events/x',
+      category: 'bug',
+      message,
+      metadata: { screenshot: 'data:image/png;base64,AAAA' },
+      issueUrl: 'https://github.com/example/repo/issues/1',
+    });
+    const [item] = await listNeedsYou({ kind: 'bug', now: now() });
+    expect(item).toMatchObject({
+      kind: 'bug',
+      message,
+      handle: 'pierresauce',
+      screenshot: 'data:image/png;base64,AAAA',
+      issueUrl: 'https://github.com/example/repo/issues/1',
+    });
+    expect(item?.title.length).toBeLessThanOrEqual(80);
   });
 });

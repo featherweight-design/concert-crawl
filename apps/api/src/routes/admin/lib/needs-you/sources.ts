@@ -27,10 +27,14 @@ import {
   feedback,
   priceSubmissions,
   userEvents,
+  userProfiles,
   venues,
+  type SpotifyCandidateSnapshot,
 } from '@concert-crawl/db';
+import { AUTO_APPROVE_THRESHOLD } from '@concert-crawl/crawler-core';
 import type {
   NeedsYouAnswerOption,
+  NeedsYouArtistCandidate,
   NeedsYouEvidenceLine,
   NeedsYouItem,
   NeedsYouKind,
@@ -39,6 +43,7 @@ import type {
 import {
   hasUpcomingShowExpr,
   nextShowDateExpr,
+  nextShowVenueExpr,
 } from '../../../../lib/artist-upcoming.js';
 import {
   EXHAUSTIBLE_STATUSES,
@@ -558,6 +563,78 @@ const venueFaultItems: Adapter = async ({ now }) => {
 // Artists
 // ---------------------------------------------------------------------------
 
+const MAX_CANDIDATES = 5;
+
+/** The reasons on each artist's open reports, in one query. */
+const openReportReasons = async (
+  artistIds: string[],
+): Promise<Map<string, string[]>> => {
+  const reasons = new Map<string, string[]>();
+  if (artistIds.length === 0) return reasons;
+  const rows = await db
+    .select({ artistId: artistReports.artistId, reason: artistReports.reason })
+    .from(artistReports)
+    .where(
+      and(
+        inArray(artistReports.artistId, artistIds),
+        eq(artistReports.status, 'open'),
+      ),
+    );
+  for (const row of rows) {
+    reasons.set(row.artistId, [
+      ...(reasons.get(row.artistId) ?? []),
+      row.reason,
+    ]);
+  }
+  return reasons;
+};
+
+/**
+ * Which of these Spotify ids belong to an artist we have shows for (an event
+ * under that artist's name), in one query: "Plays Denver" is our own events.
+ */
+const spotifyIdsWithShows = async (
+  spotifyIds: string[],
+): Promise<Set<string>> => {
+  const unique = [...new Set(spotifyIds)];
+  if (unique.length === 0) return new Set();
+  const rows = await db
+    .select({ spotifyArtistId: artists.spotifyArtistId })
+    .from(artists)
+    .where(
+      and(
+        inArray(artists.spotifyArtistId, unique),
+        sql`exists (select 1 from ${events} where ${events.canonicalArtist} = ${artists.canonicalName})`,
+      ),
+    );
+  return new Set(
+    rows.flatMap((row) => (row.spotifyArtistId ? [row.spotifyArtistId] : [])),
+  );
+};
+
+/** The stored candidates, the artist's own name first, then the stored order. */
+const artistCandidates = (
+  row: {
+    canonicalName: string;
+    spotifyArtistId: string | null;
+    candidates: SpotifyCandidateSnapshot[] | null;
+  },
+  withShows: Set<string>,
+): NeedsYouArtistCandidate[] =>
+  (row.candidates ?? [])
+    .map((cand): NeedsYouArtistCandidate => ({
+      id: cand.id,
+      name: cand.name,
+      imageUrl: cand.imageUrl,
+      genres: cand.genres,
+      spotifyUrl: cand.spotifyUrl,
+      current: cand.id === row.spotifyArtistId,
+      exact: cand.name.trim().toLowerCase() === row.canonicalName,
+      playsDenver: withShows.has(cand.id),
+    }))
+    .sort((left, right) => Number(right.exact) - Number(left.exact))
+    .slice(0, MAX_CANDIDATES);
+
 const artistItems: Adapter = async () => {
   const openReports = sql<number>`(
     select count(*)::int from ${artistReports}
@@ -576,6 +653,11 @@ const artistItems: Adapter = async () => {
       confirmable: sql<boolean>`(${artists.autoMatchedAt} is not null and ${artists.spotifyArtistId} is not null)`,
       reportCount: openReports,
       nextShow: nextShowDateExpr(ARTIST_HORIZON_DAYS),
+      nextShowVenue: nextShowVenueExpr(),
+      canonicalName: artists.canonicalName,
+      spotifyArtistId: artists.spotifyArtistId,
+      photoUrl: artists.photoUrl,
+      candidates: artists.spotifyCandidates,
     })
     .from(artists)
     .where(
@@ -590,6 +672,11 @@ const artistItems: Adapter = async () => {
       ),
     );
 
+  const reasons = await openReportReasons(rows.map((row) => row.id));
+  const denver = await spotifyIdsWithShows(
+    rows.flatMap((row) => (row.candidates ?? []).map((cand) => cand.id)),
+  );
+
   return rows.map((row): NeedsYouItem => ({
     key: `artist:${row.id}:${row.matchStatus}`,
     kind: 'artist',
@@ -601,6 +688,11 @@ const artistItems: Adapter = async () => {
     artistId: row.id,
     matchStatus: row.matchStatus,
     reportCount: row.reportCount,
+    nextShowVenue: row.nextShowVenue,
+    spotifyArtistId: row.spotifyArtistId,
+    photoUrl: row.photoUrl,
+    reportReasons: reasons.get(row.id) ?? [],
+    candidates: artistCandidates(row, denver),
     evidence: [
       ...line('Match status', row.matchStatus),
       ...line('Open reports', row.reportCount > 0 ? row.reportCount : null),
@@ -632,6 +724,8 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
       venueName: venues.name,
       confidence: events.confidenceScore,
       strategy: events.extractionStrategy,
+      artist: events.artist,
+      description: events.description,
     })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
@@ -660,6 +754,10 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
     showTime: row.showTime,
     watchers: watchers.get(row.id) ?? 0,
     eventId: row.id,
+    artist: row.artist,
+    description: row.description,
+    confidence: row.confidence === null ? null : Number(row.confidence),
+    autoApproveBar: AUTO_APPROVE_THRESHOLD,
     evidence: [
       ...line('Show date', row.date),
       ...line('Confidence', row.confidence),
@@ -677,6 +775,32 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
 // Price checks (contests) and the price batch
 // ---------------------------------------------------------------------------
 
+/**
+ * How many prices each checking fan has submitted, and how many of those are
+ * approved (corroborated or verified), in one grouped query.
+ */
+const checkerCounts = async (
+  userIds: string[],
+): Promise<Map<string, { all: number; approved: number }>> => {
+  const counts = new Map<string, { all: number; approved: number }>();
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) return counts;
+  const rows = await db
+    .select({
+      userId: priceSubmissions.userId,
+      all: sql<number>`count(*)::int`,
+      approved: sql<number>`count(*) filter (where ${priceSubmissions.status} in ('corroborated', 'verified'))::int`,
+    })
+    .from(priceSubmissions)
+    .where(inArray(priceSubmissions.userId, unique))
+    .groupBy(priceSubmissions.userId);
+  for (const row of rows) {
+    if (row.userId)
+      counts.set(row.userId, { all: row.all, approved: row.approved });
+  }
+  return counts;
+};
+
 const priceCheckItems: Adapter = async ({ now }) => {
   const today = denverDate(now);
   const parent = alias(priceSubmissions, 'parent');
@@ -690,7 +814,15 @@ const priceCheckItems: Adapter = async ({ now }) => {
       venueId: venues.id,
       venueName: venues.name,
       listedMin: parent.priceMin,
+      listedMax: parent.priceMax,
       checkedMin: priceSubmissions.priceMin,
+      checkedMax: priceSubmissions.priceMax,
+      tier: priceSubmissions.tier,
+      listedAt: parent.createdAt,
+      checkedAt: priceSubmissions.createdAt,
+      checkedFans: priceSubmissions.corroborationCount,
+      checkerId: priceSubmissions.userId,
+      ticketUrl: events.ticketUrl,
       fans: parent.corroborationCount,
     })
     .from(priceSubmissions)
@@ -710,6 +842,9 @@ const priceCheckItems: Adapter = async ({ now }) => {
       ),
     );
   const watchers = await watcherCounts(rows.map((row) => row.eventId));
+  const checkers = await checkerCounts(
+    rows.flatMap((row) => row.checkerId ?? []),
+  );
 
   return rows.map((row): NeedsYouItem => ({
     key: `price-check:${row.contestId}:${row.counterId}`,
@@ -722,6 +857,15 @@ const priceCheckItems: Adapter = async ({ now }) => {
     contestId: row.contestId,
     listedPrice: row.listedMin,
     checkedPrice: row.checkedMin,
+    listedMax: row.listedMax,
+    checkedMax: row.checkedMax,
+    tier: row.tier,
+    listedAt: row.listedAt.toISOString(),
+    checkedAt: row.checkedAt.toISOString(),
+    checkedFans: row.checkedFans,
+    ticketUrl: row.ticketUrl,
+    checkerSubmissions: checkers.get(row.checkerId ?? '')?.all ?? 0,
+    checkerApproved: checkers.get(row.checkerId ?? '')?.approved ?? 0,
     evidence: [
       ...line('Show date', row.eventDate),
       ...line('Listed price', row.listedMin),
@@ -801,6 +945,13 @@ const priceBatchItems: Adapter = async ({ now }) => {
 // Bugs
 // ---------------------------------------------------------------------------
 
+/** The screenshot a reporter attached (`metadata.screenshot`), if it is text. */
+const screenshotOf = (metadata: unknown): string | null => {
+  if (typeof metadata !== 'object' || metadata === null) return null;
+  const shot = Reflect.get(metadata, 'screenshot');
+  return typeof shot === 'string' && shot !== '' ? shot : null;
+};
+
 const bugItems: Adapter = async () => {
   const rows = await db
     .select({
@@ -808,8 +959,12 @@ const bugItems: Adapter = async () => {
       message: feedback.message,
       pageUrl: feedback.pageUrl,
       createdAt: feedback.createdAt,
+      metadata: feedback.metadata,
+      issueUrl: feedback.issueUrl,
+      handle: userProfiles.handle,
     })
     .from(feedback)
+    .leftJoin(userProfiles, eq(userProfiles.userId, feedback.userId))
     .where(and(eq(feedback.category, 'bug'), eq(feedback.status, 'unread')));
 
   return rows.map((row): NeedsYouItem => ({
@@ -822,6 +977,11 @@ const bugItems: Adapter = async () => {
     fanDate: null,
     watchers: 0,
     feedbackId: row.id,
+    message: row.message,
+    createdAt: row.createdAt.toISOString(),
+    handle: row.handle,
+    screenshot: screenshotOf(row.metadata),
+    issueUrl: row.issueUrl,
     evidence: [
       ...line('Page', row.pageUrl),
       ...line('Reported', row.createdAt.toISOString().slice(0, 10)),

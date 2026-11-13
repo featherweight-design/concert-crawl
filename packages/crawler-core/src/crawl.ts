@@ -75,7 +75,8 @@ import { deriveTicketLinks } from './lib/ticket-links/index.js';
 import { isListingPageUrl } from './lib/listing-url.js';
 import type { NormalizedEvent, TokenUsage } from './types.js';
 
-const AUTO_APPROVE_THRESHOLD = 0.7;
+/** The confidence an extracted event needs to be listed without an admin. */
+export const AUTO_APPROVE_THRESHOLD = 0.7;
 
 // Ceiling on any single platform HTTP request (#1199). Without this the
 // adapters omit the AbortSignal entirely, so a hung connection on the
