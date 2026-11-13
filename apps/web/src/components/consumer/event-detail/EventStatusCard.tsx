@@ -96,8 +96,12 @@ export const EventStatusCard = ({
             live === 'cancelled'
               ? copy.cancelledBody[cancelledRefund]
               : live === 'postponed'
-                ? copy.postponedBody
-                : copy.soldOutBody
+                ? readOnly
+                  ? copy.postponedBodyReadOnly
+                  : copy.postponedBody
+                : readOnly
+                  ? copy.soldOutBodyReadOnly
+                  : copy.soldOutBody
           }
         />
       )}
