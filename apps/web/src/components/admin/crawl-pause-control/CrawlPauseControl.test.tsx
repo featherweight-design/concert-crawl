@@ -49,7 +49,7 @@ describe('CrawlPauseControl', () => {
       removeEventListener: vi.fn(),
     });
     mockPauseCrawling.mockResolvedValue({ ok: true });
-    mockResumeCrawling.mockResolvedValue(undefined);
+    mockResumeCrawling.mockResolvedValue({ ok: true });
   });
   afterEach(() => {
     cleanup();

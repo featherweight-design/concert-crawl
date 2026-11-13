@@ -460,6 +460,35 @@ describe('VenueHeader — Re-crawl states', () => {
     expect(mockFetchTrigger).not.toHaveBeenCalled();
   });
 
+  // A page loaded before the venue was taken down still offers Re-crawl. The
+  // API refuses it (409 venue_removed), and its reason is what the toast says.
+  it('shows the removed-venue refusal on a stale page', async () => {
+    const refusal =
+      'This venue asked us to remove its data, so it stays off the site.';
+    mockTrigger.mockRejectedValue(
+      new ApiError(
+        409,
+        refusal,
+        'venue_removed',
+        undefined,
+        undefined,
+        undefined,
+        {
+          success: false,
+          error: refusal,
+          code: 'venue_removed',
+        },
+      ),
+    );
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(0);
+    expect(screen.getByTestId('save-failed').textContent).toContain(
+      FAILED.body(refusal),
+    );
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it('falls back to the generic line when the refusal has no API reason', async () => {
     mockTrigger.mockRejectedValue(new TypeError('Failed to fetch'));
     render(<VenueHeader venue={buildVenue()} />);

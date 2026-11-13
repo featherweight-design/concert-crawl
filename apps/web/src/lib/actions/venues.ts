@@ -28,6 +28,33 @@ async function getToken(): Promise<string> {
   return token;
 }
 
+// What Show on site and Resume crawling come back with. A venue removed at its
+// own request is refused by the API (409, code `venue_removed`): that refusal
+// comes back as a value carrying the API's message, because a server action's
+// thrown message is redacted in production. Anything else still throws.
+export type VenueChangeOutcome = { ok: true } | { ok: false; error: string };
+
+// The API's refusal of a removed venue (`venueRemovedBody` in the API's
+// venue-hide.ts), read from the error body itself.
+const isVenueRemovedRefusal = (err: unknown): err is ApiError =>
+  err instanceof ApiError &&
+  err.status === 409 &&
+  typeof err.body === 'object' &&
+  err.body !== null &&
+  'code' in err.body &&
+  err.body.code === 'venue_removed';
+
+/** Returns a removed venue's refusal as a value; rethrows anything else. */
+const venueRemovedOutcome = (
+  err: unknown,
+  action: string,
+  id: string,
+): VenueChangeOutcome => {
+  if (!isVenueRemovedRefusal(err)) throw err;
+  console.warn(`${action}: venue removed`, { id });
+  return { ok: false, error: err.message };
+};
+
 async function getCurrentUserName(): Promise<string | null> {
   const user = await currentUser();
   if (!user) return null;
@@ -117,6 +144,12 @@ export async function updateVenue(
     revalidatePath(`/admin/venues/${id}`);
     return { success: true };
   } catch (err: unknown) {
+    // A removed venue's crawl fields can't change (409 venue_removed). It is
+    // not a slug clash, so it goes to the page's banner, not the slug input.
+    if (isVenueRemovedRefusal(err)) {
+      console.warn('updateVenue: venue removed', { id });
+      return { success: false, error: err.message };
+    }
     if (err instanceof ApiError && err.status === 409) {
       console.warn('updateVenue: slug conflict', { id });
       return { success: false, error: 'Slug already in use', field: 'slug' };
@@ -220,11 +253,16 @@ export async function recrawlVenue(
   }
 }
 
-export async function resumeCrawling(id: string): Promise<void> {
+export async function resumeCrawling(id: string): Promise<VenueChangeOutcome> {
   const token = await getToken();
-  await apiClient.delete<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token);
+  try {
+    await apiClient.delete<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token);
+  } catch (err: unknown) {
+    return venueRemovedOutcome(err, 'resumeCrawling', id);
+  }
   revalidatePath('/admin/venues');
   revalidatePath(`/admin/venues/${id}`);
+  return { ok: true };
 }
 
 export interface VenueRemovalResult {
@@ -316,12 +354,17 @@ export async function setVenueFeatured(
   revalidatePath(`/admin/venues/${id}`);
 }
 
-export async function activateVenue(id: string): Promise<void> {
+export async function activateVenue(id: string): Promise<VenueChangeOutcome> {
   const token = await getToken();
-  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-    active: true,
-  });
+  try {
+    await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+      active: true,
+    });
+  } catch (err: unknown) {
+    return venueRemovedOutcome(err, 'activateVenue', id);
+  }
   revalidatePath('/admin/venues');
+  return { ok: true };
 }
 
 export async function verifyVenue(id: string): Promise<void> {

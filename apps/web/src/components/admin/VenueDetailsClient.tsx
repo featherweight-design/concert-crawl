@@ -872,8 +872,12 @@ export function VenueDetailsClient({
       return;
     }
     if (venue.active || removed) return;
+    setSaveError(null);
     startTransition(async () => {
-      await activateVenue(venue.id);
+      // A page loaded before the venue was removed still offers Active; the
+      // API refuses it (409 venue_removed) and its reason goes to the banner.
+      const outcome = await activateVenue(venue.id);
+      if (!outcome.ok) setSaveError(outcome.error);
       router.refresh();
     });
   }

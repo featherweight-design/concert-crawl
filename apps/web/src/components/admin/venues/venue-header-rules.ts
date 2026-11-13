@@ -30,6 +30,9 @@ export type RecrawlOff = keyof typeof COPY.recrawlOff;
  * (409).
  */
 export const recrawlOff = (venue: HeaderVenue): RecrawlOff | null => {
+  // Taken down is never crawled again, so it never says "Show it on the site":
+  // the API refuses Show on it too (409 venue_removed).
+  if ((venue.removedAt ?? null) !== null) return 'removed';
   if (offSite(venue)) return 'hidden';
   if (!venue.verified) return 'unverified';
   if (venue.robotsTxtAllowed === false) return 'robots';

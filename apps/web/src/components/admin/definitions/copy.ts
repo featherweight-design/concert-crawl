@@ -603,6 +603,8 @@ export const ADMIN_COPY = {
       paused: 'Resume crawling to re-crawl',
       robots: 'robots.txt disallows the page we crawl. We never override it.',
       hidden: 'Show it on the site to re-crawl',
+      // A taken-down venue: Show is refused too, so it can't point there.
+      removed: 'Taken down at their request, so it isn’t crawled',
       unverified: 'Verify the venue to re-crawl',
     },
     // Rule 10 through `states.saveFailed`: "Couldn't change crawling for Ball
@@ -1129,7 +1131,7 @@ export const ADMIN_COPY = {
           "For a venue that asked us to take its data down. Takes its shows off the site, stops crawls and deletes every price for its shows, users' submitted prices included. Shows stay in users' lists.",
         trigger: 'Remove data',
         removedNote:
-          'Removed: off the site, crawling paused, prices deleted. To undo the first two, activate the venue and resume crawling.',
+          'Removed at their request: off the site, not crawled, prices deleted. Restoring it needs a separate approval.',
         dialog: {
           eyebrow: 'Removal request',
           heading: (venueName: string) => `Remove ${venueName}'s data?`,
