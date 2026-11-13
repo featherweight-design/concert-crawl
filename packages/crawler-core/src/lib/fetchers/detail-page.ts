@@ -82,15 +82,16 @@ export class DetailPageFetchError extends Error {
   }
 }
 
+type Pacing = Pick<PlatformFetchOptions, 'crawlDelayMs' | 'maxRedirects'>;
+
 async function fetchText(
   url: string,
-  crawlDelayMs: number,
+  pacing: Pacing,
   timeoutMs?: number,
   budget?: AbortSignal,
   fetchLog?: FetchLog,
 ): Promise<string> {
-  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs, budget, fetchLog))
-    .html;
+  return (await fetchTextLanded(url, pacing, timeoutMs, budget, fetchLog)).html;
 }
 
 // Like fetchText, but also returns the URL the body actually came from after
@@ -100,7 +101,7 @@ async function fetchText(
 // before we request it, so no intermediate page is fetched unchecked.
 async function fetchTextLanded(
   url: string,
-  crawlDelayMs: number,
+  { crawlDelayMs, maxRedirects }: Pacing,
   timeoutMs?: number,
   budget?: AbortSignal,
   fetchLog?: FetchLog,
@@ -111,6 +112,7 @@ async function fetchTextLanded(
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
       crawlDelayMs,
+      ...(maxRedirects !== undefined ? { maxRedirects } : {}),
       // `timeoutMs` bounds each hop's network time on its own, so a hung
       // connection can't pin the caller (the admin probe holds an API worker
       // slot while this resolves). A hop's pacing wait is not network time:
@@ -325,13 +327,7 @@ async function detailPageFetch(
     try {
       sitemapUrls = parseSitemapUrls(
         await deadline.run('sitemap', (timeoutMs, budget) =>
-          fetchText(
-            sitemapUrl,
-            opts.crawlDelayMs,
-            timeoutMs,
-            budget,
-            opts.fetchLog,
-          ),
+          fetchText(sitemapUrl, opts, timeoutMs, budget, opts.fetchLog),
         ),
         listingUrl,
       );
@@ -358,7 +354,7 @@ async function detailPageFetch(
 
   await deadline.wait(jitter(opts.crawlDelayMs));
   const listingHtml = await deadline.run('listing', (timeoutMs, budget) =>
-    fetchText(listingUrl, opts.crawlDelayMs, timeoutMs, budget, opts.fetchLog),
+    fetchText(listingUrl, opts, timeoutMs, budget, opts.fetchLog),
   );
   const candidates = extractCandidateUrls(listingHtml, listingUrl);
   if (candidates.length === 0) {
@@ -437,13 +433,7 @@ async function detailPageFetch(
       ({ html, landedUrl } = await deadline.run(
         `detail ${detailUrl}`,
         (timeoutMs, budget) =>
-          fetchTextLanded(
-            detailUrl,
-            opts.crawlDelayMs,
-            timeoutMs,
-            budget,
-            opts.fetchLog,
-          ),
+          fetchTextLanded(detailUrl, opts, timeoutMs, budget, opts.fetchLog),
       ));
     } catch (err) {
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {

@@ -80,6 +80,16 @@ export interface PlatformFetchOptions {
    * robots.txt reads happen as usual and every request is paced.
    */
   firstPageOnly?: boolean;
+  /**
+   * The most redirect hops one request may follow before it fails with
+   * "Too many redirects". Each hop waits a full pacing wait first, so the
+   * cap bounds how long a redirect chain can hold the caller. Defaults to
+   * `fetchFollowingRobots`'s MAX_REDIRECTS (fetch's own 20); the admin probe
+   * sets a much lower one so its budget stays short. Only the adapters that
+   * follow redirects read it (Live Nation and detail-page); AEG and
+   * VenuePilot never follow one.
+   */
+  maxRedirects?: number;
   /** Collects a record of each page this fetch requests. */
   fetchLog?: FetchLog;
 }

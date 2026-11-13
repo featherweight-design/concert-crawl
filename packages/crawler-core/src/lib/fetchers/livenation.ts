@@ -115,7 +115,10 @@ const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled']);
 // onto `landed`, since provenance for the AI gate is the landing.
 async function fetchText(
   url: string,
-  crawlDelayMs: number,
+  {
+    crawlDelayMs,
+    maxRedirects,
+  }: Pick<PlatformFetchOptions, 'crawlDelayMs' | 'maxRedirects'>,
   timeoutMs?: number,
   budget?: AbortSignal,
   landed?: string[],
@@ -126,6 +129,7 @@ async function fetchText(
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
       crawlDelayMs,
+      ...(maxRedirects !== undefined ? { maxRedirects } : {}),
       // `timeoutMs` bounds each hop's network time on its own, so a hung
       // connection can't pin the caller (the admin probe holds an API worker
       // slot while this resolves). A hop's pacing wait is not network time:
@@ -456,14 +460,7 @@ async function liveNationFetch(
   await deadline.wait(jitter(opts.crawlDelayMs));
   const allCalendarUrls = parseCalendarUrls(
     await deadline.run('sitemap', (timeoutMs, budget) =>
-      fetchText(
-        sitemapUrl,
-        opts.crawlDelayMs,
-        timeoutMs,
-        budget,
-        readUrls,
-        opts.fetchLog,
-      ),
+      fetchText(sitemapUrl, opts, timeoutMs, budget, readUrls, opts.fetchLog),
     ),
     origin,
   );
@@ -523,7 +520,7 @@ async function liveNationFetch(
       (timeoutMs, budget) =>
         fetchText(
           calendarUrl,
-          opts.crawlDelayMs,
+          opts,
           timeoutMs,
           budget,
           readUrls,

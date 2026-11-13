@@ -38,7 +38,16 @@ vi.mock('@concert-crawl/crawler-core/fetchers', async (importOriginal) => ({
   dispatch: dispatchMock,
 }));
 
-import { AegSchemaError } from '@concert-crawl/crawler-core/fetchers';
+// No real pacing waits: the one test that runs a real adapter would otherwise
+// sleep 3-4 s before every request. The floor is pinned in crawler-core.
+vi.mock('@concert-crawl/crawler-core/jitter', () => ({
+  jitter: vi.fn(() => 0),
+}));
+
+import {
+  AegSchemaError,
+  detailPageFetcher,
+} from '@concert-crawl/crawler-core/fetchers';
 import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -405,16 +414,75 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     );
   });
 
-  it('budgets a hop wait for every redirect the crawler will follow', async () => {
-    // Read from crawler-core rather than restated, so the route's copy of
-    // the cap can't drift from the one fetchFollowingRobots enforces.
-    const { MAX_REDIRECTS } =
-      await import('@concert-crawl/crawler-core/robots-fetch');
-    const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'livenation');
-    // The sitemap and one month, each with a wait per hop the cap allows.
-    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(
-      2 * 3_999 * (1 + MAX_REDIRECTS) + 15_000,
-    );
+  it('caps probe redirects at 3 and sizes the budget from that same cap', async () => {
+    const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'detail-page');
+    expect(opts.maxRedirects).toBe(3);
+    // Three paced requests, each a 4 s wait (3 s + a full second of jitter)
+    // plus a 4 s wait for each of its 3 allowed hops, then the 15 s request
+    // allowance: 3 × 4 × 4 + 15 = 63 s.
+    expect(opts.overallTimeoutMs).toBe(3 * 4_000 * (1 + 3) + 15_000);
+  });
+
+  it('fails a probe on its 4th redirect as a fetch_error, without hanging', async () => {
+    setAuth('admin');
+    const origin = 'https://redirect-loop.example.com';
+    // A detail page that redirects forever, one step deeper each time.
+    const fetchMock = vi.fn(async (input: string) => {
+      const url = String(input);
+      const ok = (body: string) => ({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: async () => body,
+      });
+      if (url.endsWith('/robots.txt')) return ok('User-agent: *\nAllow: /\n');
+      if (url.endsWith('/sitemap.xml'))
+        return { ...ok(''), ok: false, status: 404 };
+      if (url === `${origin}/` || url === origin)
+        return ok('<a href="/e/one">One</a>');
+      return {
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: `${url}/next` }),
+        body: null,
+        text: async () => '',
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      dispatchMock.mockReturnValue(detailPageFetcher);
+      const venue = await seedVenue({
+        platform: 'detail-page',
+        platformVenueId: null,
+        websiteUrl: `${origin}/`,
+      });
+      const startedAt = Date.now();
+      const res = await app.request(
+        `/v1/admin/venues/${venue.id}/probe-platform`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
+      expect(Date.now() - startedAt).toBeLessThan(5_000);
+      expect(res.status).toBe(200);
+      const body: unknown = await res.json();
+      expect(body).toMatchObject({
+        data: {
+          ok: false,
+          reason: 'fetch_error',
+          error: expect.stringMatching(/Too many redirects/),
+        },
+      });
+      // The detail page and its 3 allowed hops; the 4th target never goes out.
+      const detailRequests = fetchMock.mock.calls
+        .map(([url]) => String(url))
+        .filter((url) => url.includes('/e/one'));
+      expect(detailRequests).toHaveLength(4);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('does not fetch when the site asks for a Crawl-delay over the cap', async () => {
