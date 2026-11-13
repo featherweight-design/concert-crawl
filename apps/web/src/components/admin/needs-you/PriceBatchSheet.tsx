@@ -50,6 +50,10 @@ export const PriceBatchSheet = ({
   onClose,
 }: PriceBatchSheetProps) => {
   const { getToken } = useAuth();
+  // Read through a ref: a `getToken` that changes identity on a render must not
+  // restart the load (and, through it, the render) in a loop.
+  const tokenRef = useRef(getToken);
+  tokenRef.current = getToken;
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -70,7 +74,7 @@ export const PriceBatchSheet = ({
   const read = useCallback(async () => {
     setLoad({ kind: 'loading' });
     try {
-      const api = submittedApi(getToken);
+      const api = submittedApi(() => tokenRef.current());
       const found: SubmittedRow[] = [];
       for (let offset = 0; ; offset += PAGE) {
         const page = await api.list('waiting', '', offset, PAGE);
@@ -86,7 +90,7 @@ export const PriceBatchSheet = ({
     } catch {
       setLoad({ kind: 'failed' });
     }
-  }, [getToken, wanted]);
+  }, [wanted]);
 
   useEffect(() => {
     void read();
