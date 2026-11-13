@@ -45,6 +45,7 @@ import {
   type Adjudicator,
 } from './lib/derive-artists.js';
 import type { JoinedEvidence } from './lib/joined-names.js';
+import { classifyBillChange, type SkipReason } from './lib/repair-evidence.js';
 import { isAiUseAllowed } from './lib/robots.js';
 import { endpointUrl as aegEndpointUrl } from './lib/fetchers/aeg.js';
 import { ENDPOINT as VENUEPILOT_ENDPOINT } from './lib/fetchers/venuepilot.js';
@@ -88,7 +89,24 @@ export type RederiveStrategy =
    * A joined name ("A & B") the evidence could not settle as one act or two.
    * The row is left exactly as it was; the name is listed for an admin.
    */
-  | 'joined-unresolved';
+  | 'joined-unresolved'
+  /**
+   * The ladder's bill differs from the stored one in a way nothing stored
+   * evidences: it would drop a stored act, add an artist, or the row has no
+   * stored bill to compare with. Left exactly as it was and listed with the
+   * reason and the derived guess (see lib/repair-evidence.ts).
+   */
+  | 'not-evidenced';
+
+/** A row whose derived bill was not written, with why. */
+export interface NotWritten {
+  eventId: string;
+  title: string;
+  reason: SkipReason;
+  before: { headliners: string[]; supportingArtists: string[] };
+  /** What the ladder would have written; a guess for a human to read. */
+  guess: { headliners: string[]; supportingArtists: string[] };
+}
 
 export interface RederiveChange {
   eventId: string;
@@ -125,6 +143,8 @@ export interface RederiveEventArtistsResult {
   sample: RederiveChange[];
   /** Joined names left unwritten for lack of evidence, with the model's guess. */
   unresolvedJoined: UnresolvedJoined[];
+  /** Derived bills not written because nothing stored evidences them. */
+  notWritten: NotWritten[];
 }
 
 export interface UnresolvedJoined {
@@ -257,9 +277,11 @@ export async function rederiveEventArtists(
     'tribute-or-cover': 0,
     'non-concert-left': 0,
     'joined-unresolved': 0,
+    'not-evidenced': 0,
   };
   const sample: RederiveChange[] = [];
   const unresolvedJoined: UnresolvedJoined[] = [];
+  const notWritten: NotWritten[] = [];
   let scanned = 0;
   let derived = 0;
   let updated = 0;
@@ -405,14 +427,12 @@ export async function rederiveEventArtists(
       // and search predicate reads as no act, where NULL falls back to the
       // title). The title stays and the row stays visible; a real artist
       // attached by an earlier live extraction is cleared.
-      derived += 1;
       const strategy: RederiveStrategy =
         result.coversOtherArtists === true
           ? 'tribute-or-cover'
           : result.adjudicated
             ? 'adjudicated'
             : 'observed';
-      strategies[strategy] += 1;
 
       // A verdict of "not a concert" hides the row, matching what the crawler's
       // INSERT path does with the same signal. Only ever set to `true`: an
@@ -422,7 +442,6 @@ export async function rederiveEventArtists(
         result.coversOtherArtists !== true &&
         result.isConcert === false &&
         !row.hiddenFromConsumer;
-      if (hides) hidden += 1;
 
       const canonicalHeadliners = canonicalizeSupporting(result.headliners);
       const canonicalSupporting = canonicalizeSupporting(
@@ -440,6 +459,46 @@ export async function rederiveEventArtists(
         sameBill(row.canonicalHeadliners, canonicalHeadliners) &&
         sameBill(row.supportingArtists, result.supportingArtists) &&
         sameBill(row.canonicalSupporting, canonicalSupporting);
+
+      // Only what the stored row evidences is written (lib/repair-evidence.ts):
+      // a bill that would drop a stored act, add an artist, or has nothing
+      // stored to compare with is left as it was and listed for a human.
+      // A hide only happens when `hideNonConcerts` was asked for, which is its
+      // own deliberate switch (off by default); the bill rule governs the rest.
+      if (!unchanged && !hides) {
+        const verdict = classifyBillChange({
+          stored: {
+            headliners: row.headliners,
+            supporting: row.supportingArtists,
+          },
+          next: {
+            headliners: result.headliners,
+            supporting: result.supportingArtists,
+          },
+          tribute: result.coversOtherArtists === true,
+        });
+        if (!verdict.write) {
+          strategies['not-evidenced'] += 1;
+          notWritten.push({
+            eventId: row.id,
+            title: row.title,
+            reason: verdict.reason,
+            before: {
+              headliners: row.headliners ?? [],
+              supportingArtists: row.supportingArtists ?? [],
+            },
+            guess: {
+              headliners: result.headliners,
+              supportingArtists: result.supportingArtists,
+            },
+          });
+          continue;
+        }
+      }
+
+      derived += 1;
+      strategies[strategy] += 1;
+      if (hides) hidden += 1;
       if (unchanged) continue;
 
       if (sample.length < (options.sampleSize ?? SAMPLE_SIZE)) {
@@ -489,5 +548,6 @@ export async function rederiveEventArtists(
     strategies,
     sample,
     unresolvedJoined,
+    notWritten,
   };
 }

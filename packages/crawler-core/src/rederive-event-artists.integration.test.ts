@@ -98,6 +98,9 @@ describe('rederive-event-artists integration', () => {
       canonicalTitle: 'sigur ros with julianna barwick',
       date: '2026-09-01',
       supportingArtists: ['Julianna Barwick'],
+      headliners: ['Sigur Rós'],
+      canonicalHeadliners: ['sigur ros'],
+      canonicalSupporting: ['julianna barwick'],
     });
 
     const adjudicate = stubAdjudicator();
@@ -180,6 +183,8 @@ describe('rederive-event-artists integration', () => {
       canonicalArtist: 'clipse & j.i.d',
       canonicalTitle: 'clipse & j.i.d',
       date: '2026-11-12',
+      headliners: ['Clipse & J.I.D'],
+      canonicalHeadliners: ['clipse & j.i.d'],
     });
     const adjudicate: Adjudicator = vi.fn(async () => ({
       isConcert: true,
@@ -195,7 +200,7 @@ describe('rederive-event-artists integration', () => {
       // The verdict's generic word and doubled act are cleaned before the list.
       headliners: ['Clipse', 'J.I.D'],
       supportingArtists: [],
-      before: { headliners: [], supportingArtists: [] },
+      before: { headliners: ['Clipse & J.I.D'], supportingArtists: [] },
     });
   });
 
@@ -207,7 +212,10 @@ describe('rederive-event-artists integration', () => {
       canonicalArtist: 'clipse',
       canonicalTitle: 'clipse',
       date: '2026-11-12',
+      headliners: ['Clipse & J.I.D'],
       canonicalHeadliners: ['clipse'],
+      supportingArtists: ['Samara Cyn'],
+      canonicalSupporting: ['samara cyn'],
     });
     const galdive = await seedEvent(venue.id, {
       title: 'Galdive & rum.gold',
@@ -215,6 +223,7 @@ describe('rederive-event-artists integration', () => {
       canonicalArtist: 'galdive',
       canonicalTitle: 'galdive',
       date: '2027-02-12',
+      headliners: ['Galdive & rum.gold'],
       canonicalHeadliners: ['galdive'],
     });
     const adjudicate: Adjudicator = vi.fn(async ({ title }) =>
@@ -385,11 +394,13 @@ describe('rederive-event-artists integration', () => {
   it('leaves artist and canonical_artist byte-identical', async () => {
     const venue = await seedVenue();
     const performer = await seedEvent(venue.id, {
-      title: 'Jazz Series presents Kokoroko',
-      artist: 'Jazz Series presents Kokoroko',
-      canonicalArtist: 'jazz series presents kokoroko',
-      canonicalTitle: 'jazz series presents kokoroko',
+      title: 'Tribute to Kokoroko',
+      artist: 'Kokoroko',
+      canonicalArtist: 'kokoroko',
+      canonicalTitle: 'tribute to kokoroko',
       date: '2026-09-03',
+      headliners: ['Kokoroko'],
+      canonicalHeadliners: ['kokoroko'],
     });
     const observed = await seedEvent(venue.id, {
       title: 'AC/DC — Power Up Tour',
@@ -423,8 +434,79 @@ describe('rederive-event-artists integration', () => {
     expect(after.map((row) => row.canonicalTitle)).toEqual(
       before.map((row) => row.canonicalTitle),
     );
-    // And the point of the pass: the title-shaped row now bills the real act.
-    expect(after[0]?.headliners).toEqual(['Kokoroko']);
+    // And the one row that is written is the tribute night: its bill is cleared.
+    expect(after[0]?.headliners).toEqual([]);
+  });
+
+  // The repair writes only what the stored row evidences (lib/repair-evidence.ts).
+  // Each of these is a bill the ladder derives and the pass refuses to write.
+  describe('leaves a derived bill unwritten, and lists why, when nothing stored evidences it', () => {
+    const adjudicateWith = (
+      headliners: string[],
+      supportingArtists: string[] = [],
+    ): Adjudicator =>
+      vi.fn(async () => ({ isConcert: true, headliners, supportingArtists }));
+
+    it('never adds a recurring series (or any artist) to a bill that stored none', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, {
+        title: 'BASS BINGO – Special Edition!',
+        artist: 'BASS BINGO',
+        canonicalArtist: 'bass bingo',
+        canonicalTitle: 'bass bingo special edition',
+        date: '2026-12-01',
+        headliners: [],
+        canonicalHeadliners: [],
+      });
+      const result = await run(adjudicateWith([]), false);
+      const after = await readEvent(event.id);
+      expect(after.headliners).toEqual([]);
+      expect(result.updated).toBe(0);
+      expect(result.notWritten).toMatchObject([
+        {
+          eventId: event.id,
+          reason: 'would-add-an-artist',
+          guess: { headliners: ['BASS BINGO'] },
+        },
+      ]);
+    });
+
+    it('never drops a stored co-headliner', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, {
+        title: 'Def Leppard and Goo Goo Dolls',
+        artist: 'Def Leppard',
+        canonicalArtist: 'def leppard',
+        canonicalTitle: 'def leppard and goo goo dolls',
+        date: '2026-12-02',
+        headliners: ['Def Leppard', 'Goo Goo Dolls'],
+        canonicalHeadliners: ['def leppard', 'goo goo dolls'],
+      });
+      const result = await run(adjudicateWith(['Def Leppard']), false);
+      expect((await readEvent(event.id)).headliners).toEqual([
+        'Def Leppard',
+        'Goo Goo Dolls',
+      ]);
+      expect(result.notWritten.map((item) => item.reason)).toEqual([
+        'would-drop-stored-headliner',
+      ]);
+    });
+
+    it('leaves a row with no stored bill to the nightly crawl', async () => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, {
+        title: 'Sub.mission presents: The Widdler',
+        artist: 'Sub.mission presents: The Widdler',
+        canonicalArtist: 'sub.mission presents: the widdler',
+        canonicalTitle: 'sub mission presents the widdler',
+        date: '2026-12-03',
+      });
+      const result = await run(adjudicateWith(['The Widdler']), false);
+      expect((await readEvent(event.id)).canonicalHeadliners).toBeNull();
+      expect(result.notWritten.map((item) => item.reason)).toEqual([
+        'stored-bill-unknown',
+      ]);
+    });
   });
 
   it('writes nothing on a dry run', async () => {

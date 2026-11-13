@@ -74,7 +74,7 @@ const GENERIC_TOKENS = new Set([
 
 // "Telly & Friends" is the act Telly with company; the key drops that tail so
 // the two spellings are one act. The name as written is never changed by this.
-const nameKey = (name: string): string =>
+export const nameKey = (name: string): string =>
   name
     .trim()
     .replace(/\s*\([^)]*\)\s*$/, '')
