@@ -311,7 +311,7 @@ export const PricesSubmissionsClient = ({
 
   const backLink = (
     <Link
-      href="/admin/review"
+      href="/admin/review?tab=submissions"
       style={{
         display: 'inline-flex',
         alignItems: 'center',

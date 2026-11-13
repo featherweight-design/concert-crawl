@@ -48,11 +48,11 @@
     },
     {
       "id": "review",
-      "label": "/admin/review (interim Needs you; its phone layout has no h1, so it waits on the page title text)",
+      "label": "/admin/review (redirects to Needs you; waits on its queue)",
       "steps": [
         {
           "goto": "/admin/review",
-          "wait": "[data-testid=\"admin-shell\"] main >> text=\"Review\""
+          "wait": "[data-testid=\"needs-you-queue\"]"
         }
       ]
     },

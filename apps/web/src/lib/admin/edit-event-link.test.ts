@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { editEventHref, reviewHrefFromParam } from './edit-event-link';
-import { REVIEW_TAB_KEYS } from './review-tabs';
+import { RETIRED_REVIEW_TABS, REVIEW_TAB_KEYS } from './review-tabs';
 
 describe('editEventHref', () => {
   it('omits ?from when no originating tab is given', () => {
@@ -22,9 +22,15 @@ describe('editEventHref', () => {
 });
 
 describe('reviewHrefFromParam', () => {
-  it('falls back to plain Review for unknown, null, or absent values', () => {
-    expect(reviewHrefFromParam('nonsense')).toBe('/admin/review');
-    expect(reviewHrefFromParam(null)).toBe('/admin/review');
-    expect(reviewHrefFromParam(undefined)).toBe('/admin/review');
+  it('falls back to Needs you for unknown, null, or absent values', () => {
+    expect(reviewHrefFromParam('nonsense')).toBe('/admin/needs-you');
+    expect(reviewHrefFromParam(null)).toBe('/admin/needs-you');
+    expect(reviewHrefFromParam(undefined)).toBe('/admin/needs-you');
+  });
+
+  it('sends every retired tab to Needs you', () => {
+    for (const key of RETIRED_REVIEW_TABS) {
+      expect(reviewHrefFromParam(key)).toBe('/admin/needs-you');
+    }
   });
 });

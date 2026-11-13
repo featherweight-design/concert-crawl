@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { apiClient, ApiError } from '@/lib/api';
@@ -10,10 +10,7 @@ import {
   reviewQueryKeys,
   useInvalidateReviewQueries,
   useReviewCounts,
-  useReviewEventFlags,
-  useReviewMissingEvents,
   useReviewPriceEvents,
-  type EventFlag,
   type PriceEvent,
   type ReviewCounts,
 } from '@/lib/queries/use-admin-review';
@@ -21,7 +18,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions';
 import { AdminReviewMobile } from './AdminReviewMobile';
 import { ReviewTabs } from './ReviewTabs';
-import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import {
   isReviewTabKey,
@@ -33,7 +29,6 @@ import { computePendingCount } from '@/lib/admin/review-pending';
 import { PricesTabContent } from './_tabs/PricesTabContent';
 import { SubmissionsTabContent } from './_tabs/SubmissionsTabContent';
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent';
-import { ContestsTabContent } from './_tabs/ContestsTabContent';
 import {
   EMPTY_PAGINATION,
   parseFiltersFromParams,
@@ -43,18 +38,14 @@ import {
   type PaginationState,
 } from './all/filters';
 import { type AllEvent } from './all/types';
-import { MissingTabContent } from './_tabs/MissingTabContent';
-import { type MissingRowEvent } from './missing/MissingRow';
 
 interface ReviewPageClientProps {
-  initialEvents: EventFlag[];
   initialSubmissions: PriceSubmissionHistoryRow[];
   initialSubmissionsTotal: number;
   initialCounts: ReviewCounts;
 }
 
 export const ReviewPageClient = ({
-  initialEvents,
   initialSubmissions,
   initialSubmissionsTotal,
   initialCounts,
@@ -110,70 +101,12 @@ export const ReviewPageClient = ({
   const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing');
   const [error, setError] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(true);
-  // Pending-remove IDs let mutations feel instant without touching the cached
-  // page arrays. Mutating the cache (filter() on each page) was shrinking
-  // page lengths, which `getNextPageParam` then summed for the next offset —
-  // pagination would silently re-fetch earlier rows. Filter at render time
-  // instead; invalidate the cache; clear the pending id on settle.
-  const [pendingRemoveFlagIds, setPendingRemoveFlagIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [pendingRemoveMissingIds, setPendingRemoveMissingIds] = useState<
-    Set<string>
-  >(new Set());
-
-  // Each data-bearing tab is its own paginated useQuery, keyed by
-  // (filterQuery, page, pageSize). Page-replacement model: changing page
-  // refetches just that page. SSR's `initialEvents` becomes the first-paint
-  // fallback before the client query lands.
-  //
-  // Desktop gates each query to the active tab so paging in one tab doesn't
-  // refetch its neighbours in the background. Mobile renders all surfaces
-  // through a single shell (AdminReviewMobile owns the visible tab), so
-  // queries stay enabled there.
-  //
-  // Event Flags is server-paginated like the other tabs (#694): the desktop
-  // split-list renders one server page and drives the footer pager off
-  // `eventFlagsTotal`. Tab pill count still comes from /admin/review/counts.
-  const eventFlagsQuery = useReviewEventFlags(
-    pagination,
-    !isDesktop || activeTab === 'event-flags',
-  );
-  const events = useMemo<EventFlag[]>(() => {
-    const all = eventFlagsQuery.data?.rows ?? initialEvents;
-    return pendingRemoveFlagIds.size === 0
-      ? all
-      : all.filter((event) => !pendingRemoveFlagIds.has(event.id));
-  }, [eventFlagsQuery.data, initialEvents, pendingRemoveFlagIds]);
-  // Before the paged query resolves, fall back to the SSR pending count (not
-  // the single-page `events.length`, which would undercount and hide the pager
-  // / show a wrong badge on first paint). The query `total` is authoritative
-  // once loaded.
-  const eventFlagsTotal =
-    eventFlagsQuery.data?.total ?? initialCounts.eventFlags;
-
-  // Missing: gated by tab activation so we don't fetch until the admin
-  // looks. The mobile shell also nudges the gate via onEnterMissingTab.
-  const [missingActivated, setMissingActivated] = useState(
-    activeTab === 'missing',
-  );
-  useEffect(() => {
-    if (activeTab === 'missing') setMissingActivated(true);
-  }, [activeTab]);
-  const missingQuery = useReviewMissingEvents(missingActivated, pagination);
-  const missingTotal = missingQuery.data?.total ?? 0;
-  const missingEvents = useMemo<MissingRowEvent[]>(() => {
-    const all = missingQuery.data?.rows ?? [];
-    return pendingRemoveMissingIds.size === 0
-      ? all
-      : all.filter((event) => !pendingRemoveMissingIds.has(event.id));
-  }, [missingQuery.data, pendingRemoveMissingIds]);
-  const missingLoading = missingActivated && !missingQuery.isFetched;
 
   // Price coverage: keyed by both the filter toggle and the current page so
   // flipping the toggle resets to page 1 cleanly (handled in togglePriceFilter).
-  // Same gate as event flags — desktop only fetches when the prices tab is
-  // active.
+  // Desktop only fetches when the prices tab is active; mobile renders every
+  // surface through a single shell (AdminReviewMobile owns the visible tab),
+  // so the query stays enabled there.
   const priceEventsQuery = useReviewPriceEvents(
     priceFilter,
     pagination,
@@ -196,158 +129,10 @@ export const ReviewPageClient = ({
     onPaginationChange({ page: 1, pageSize: pagination.pageSize });
   }, [onPaginationChange, pagination.pageSize]);
 
-  // Mark/unmark helpers for the render-time pending-remove filters. The
-  // mutation flow is: addPending → fire request → on settle, remove pending.
-  // Invalidation runs in parallel so the cache refetches without the row.
-  const addPendingFlag = useCallback((id: string) => {
-    setPendingRemoveFlagIds((prev) => new Set(prev).add(id));
-  }, []);
-  const clearPendingFlag = useCallback((id: string) => {
-    setPendingRemoveFlagIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-  const addPendingMissing = useCallback((id: string) => {
-    setPendingRemoveMissingIds((prev) => new Set(prev).add(id));
-  }, []);
-  const clearPendingMissing = useCallback((id: string) => {
-    setPendingRemoveMissingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-
-  const patchMissingEvent = useCallback(
-    async (id: string, body: Record<string, unknown>): Promise<void> => {
-      setError(null);
-      addPendingMissing(id);
-      try {
-        const token = await getToken();
-        if (!token) return;
-        await apiClient.patch(`/v1/admin/events/${id}`, token, body);
-        await invalidate.missing();
-        void invalidate.counts();
-        router.refresh();
-      } catch (patchErr) {
-        const message =
-          patchErr instanceof ApiError
-            ? patchErr.message
-            : 'Failed to update event.';
-        console.error('patchMissingEvent error:', patchErr);
-        setError(message);
-      } finally {
-        clearPendingMissing(id);
-      }
-    },
-    [addPendingMissing, clearPendingMissing, getToken, invalidate, router],
-  );
-
-  const markMissingPostponed = useCallback(
-    (id: string) => patchMissingEvent(id, { status: 'postponed' }),
-    [patchMissingEvent],
-  );
-  const markMissingCancelled = useCallback(
-    (id: string) => patchMissingEvent(id, { status: 'cancelled' }),
-    [patchMissingEvent],
-  );
-  const dismissMissing = useCallback(
-    (id: string) => patchMissingEvent(id, { firstMissingAt: null }),
-    [patchMissingEvent],
-  );
-
-  // Confirm a suggested relocation: fold the missing row into the replacement
-  // and tell its watchers. `notifyWatchers` is what separates this from an
-  // ordinary de-duplication merge, which must stay silent. `suggestion` is
-  // provenance for the audit row — the API derives the notification copy from
-  // the two rows rather than from this claim.
-  const confirmMissingMove = useCallback(
-    async (event: MissingRowEvent): Promise<void> => {
-      const candidate = event.movedCandidate;
-      if (!candidate) return;
-      setError(null);
-      addPendingMissing(event.id);
-      try {
-        const token = await getToken();
-        if (!token) return;
-        await apiClient.post(`/v1/admin/events/${event.id}/merge`, token, {
-          targetId: candidate.id,
-          notifyWatchers: true,
-          suggestion: { reason: candidate.reason },
-        });
-        await invalidate.missing();
-        void invalidate.counts();
-        router.refresh();
-      } catch (mergeErr) {
-        const message =
-          mergeErr instanceof ApiError
-            ? mergeErr.message
-            : 'Failed to merge the moved event.';
-        console.error('confirmMissingMove error:', mergeErr);
-        setError(message);
-      } finally {
-        clearPendingMissing(event.id);
-      }
-    },
-    [addPendingMissing, clearPendingMissing, getToken, invalidate, router],
-  );
-
-  // (Auto-fetch-when-low effect removed — the old infinite query needed it to
-  // keep the visible queue from emptying mid-scroll. With true pagination the
-  // admin advances pages explicitly via <Pagination/> on each tab.)
-
-  // Tab-pill counts. SSR seeds initial values so all three numbers paint on
-  // first render; subsequent mutations call `invalidate.counts()` to refresh.
+  // Tab-pill counts. SSR seeds initial values so the numbers paint on first
+  // render; subsequent mutations call `invalidate.counts()` to refresh.
   const countsQuery = useReviewCounts(initialCounts);
   const counts = countsQuery.data ?? initialCounts;
-
-  const approveEvent = useCallback(
-    async (id: string) => {
-      setError(null);
-      addPendingFlag(id);
-      try {
-        const token = await getToken();
-        if (!token) return;
-        await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {});
-        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()]);
-        void invalidate.counts();
-        router.refresh();
-      } catch (err) {
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to approve event.';
-        console.error('approveEvent error:', err);
-        setError(message);
-      } finally {
-        clearPendingFlag(id);
-      }
-    },
-    [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
-  );
-
-  const rejectEvent = useCallback(
-    async (id: string) => {
-      setError(null);
-      addPendingFlag(id);
-      try {
-        const token = await getToken();
-        if (!token) return;
-        await apiClient.delete(`/v1/admin/events/${id}`, token);
-        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()]);
-        void invalidate.counts();
-        router.refresh();
-      } catch (err) {
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to reject event.';
-        console.error('rejectEvent error:', err);
-        setError(message);
-      } finally {
-        clearPendingFlag(id);
-      }
-    },
-    [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
-  );
 
   const addPrice = useCallback(
     async (
@@ -606,14 +391,9 @@ export const ReviewPageClient = ({
           }}
         >
           <AdminReviewMobile
-            events={events}
             priceEvents={priceEvents}
-            onApprove={approveEvent}
-            onReject={rejectEvent}
             onAddPrice={addPrice}
             initialTab={activeTab}
-            contestCount={counts.priceContests}
-            eventFlagsCount={counts.eventFlags}
             submissionsCount={counts.prices}
             initialSubmissions={initialSubmissions}
             initialSubmissionsTotal={initialSubmissionsTotal}
@@ -629,22 +409,6 @@ export const ReviewPageClient = ({
             onPriceEventsPageSizeChange={(next) =>
               onPaginationChange({ page: 1, pageSize: next })
             }
-            missingEvents={missingEvents}
-            missingLoading={missingLoading}
-            missingPage={pagination.page}
-            missingPageSize={pagination.pageSize}
-            missingTotal={missingTotal}
-            onMissingPageChange={(next) =>
-              onPaginationChange({ page: next, pageSize: pagination.pageSize })
-            }
-            onMissingPageSizeChange={(next) =>
-              onPaginationChange({ page: 1, pageSize: next })
-            }
-            onMarkMissingPostponed={markMissingPostponed}
-            onMarkMissingCancelled={markMissingCancelled}
-            onDismissMissing={dismissMissing}
-            onConfirmMissingMove={confirmMissingMove}
-            onEnterMissingTab={() => setMissingActivated(true)}
             onAllEventsRowClick={(id) =>
               router.push(editEventHref(id, activeTab))
             }
@@ -685,24 +449,6 @@ export const ReviewPageClient = ({
         aria-label={ADMIN_COPY.review.tabs.ariaLabel}
       />
 
-      {activeTab === 'event-flags' && (
-        <EventFlagsTabContent
-          events={events}
-          page={pagination.page}
-          pageSize={pagination.pageSize}
-          total={eventFlagsTotal}
-          onPageChange={(next) =>
-            onPaginationChange({ page: next, pageSize: pagination.pageSize })
-          }
-          onPageSizeChange={(next) =>
-            onPaginationChange({ page: 1, pageSize: next })
-          }
-          onApprove={approveEvent}
-          onReject={rejectEvent}
-          onEdit={(id) => router.push(editEventHref(id, activeTab))}
-        />
-      )}
-
       {activeTab === 'prices' && (
         <PricesTabContent
           priceEvents={priceEvents}
@@ -729,28 +475,6 @@ export const ReviewPageClient = ({
         />
       )}
 
-      {activeTab === 'missing' && (
-        <MissingTabContent
-          events={missingEvents}
-          isDesktop
-          nowIso={new Date().toISOString()}
-          loading={missingLoading}
-          page={pagination.page}
-          pageSize={pagination.pageSize}
-          total={missingTotal}
-          onPageChange={(next) =>
-            onPaginationChange({ page: next, pageSize: pagination.pageSize })
-          }
-          onPageSizeChange={(next) =>
-            onPaginationChange({ page: 1, pageSize: next })
-          }
-          onMarkPostponed={markMissingPostponed}
-          onMarkCancelled={markMissingCancelled}
-          onDismiss={dismissMissing}
-          onConfirmMove={confirmMissingMove}
-        />
-      )}
-
       {activeTab === 'all-events' && (
         <AllEventsTabContent
           isDesktop
@@ -773,8 +497,6 @@ export const ReviewPageClient = ({
           onPaginationChange={onPaginationChange}
         />
       )}
-
-      {activeTab === 'contests' && <ContestsTabContent />}
     </div>
   );
 };

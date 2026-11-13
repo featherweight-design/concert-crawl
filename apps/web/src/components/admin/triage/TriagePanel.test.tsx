@@ -535,7 +535,7 @@ describe('TriagePanel — queues', () => {
     ).toBeTruthy();
     expect(
       screen.getAllByRole('link').map((link) => link.getAttribute('href')),
-    ).toEqual(['/admin/review', '/admin/review?tab=submissions']);
+    ).toEqual(['/admin/needs-you', '/admin/review?tab=submissions']);
   });
 
   it('reassures that faults are clear when only queues remain', () => {
