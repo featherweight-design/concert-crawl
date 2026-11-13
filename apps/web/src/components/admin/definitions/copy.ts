@@ -929,6 +929,7 @@ export const ADMIN_COPY = {
       sourceUrl: {
         label: 'Source URL',
         hint: 'The events page we crawl on the configured schedule.',
+        openLabel: 'Open the venue’s events page',
       },
       city: 'City',
       address: {

@@ -1138,15 +1138,42 @@ export function VenueDetailsClient({
               labelRight={<RobotsHint allowed={venue.robotsTxtAllowed} />}
               hint={ADMIN_COPY.venueDetailsClient.fields.sourceUrl.hint}
             >
-              <VDInput
-                id="edit-venue-url"
-                type="url"
-                inputRef={websiteUrlRef}
-                defaultValue={venue.websiteUrl}
-                disabled={isDisabled}
-                onChange={(evt) => setUrlVal(evt.target.value)}
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              />
+              {/* The header's View on site opens our page (3a 4a), so the
+                  venue's own site stays reachable here until 3b's Source tab
+                  owns it. */}
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <VDInput
+                  id="edit-venue-url"
+                  type="url"
+                  inputRef={websiteUrlRef}
+                  defaultValue={venue.websiteUrl}
+                  disabled={isDisabled}
+                  onChange={(evt) => setUrlVal(evt.target.value)}
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    flex: 1,
+                  }}
+                />
+                {isSafeHttpUrl(urlVal) && (
+                  <a
+                    href={urlVal}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={
+                      ADMIN_COPY.venueDetailsClient.fields.sourceUrl.openLabel
+                    }
+                    data-testid="venue-source-url-open"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'var(--fg-muted)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
             </VDField>
 
             {/* Street address */}
