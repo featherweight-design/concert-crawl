@@ -12,7 +12,14 @@ export type HeaderVenue = Pick<
   | 'crawlPausedAt'
   | 'neighborhood'
   | 'slug'
-> & { deleteBlockers?: VenueWithCrawlHealth['deleteBlockers'] };
+> & {
+  deleteBlockers?: VenueWithCrawlHealth['deleteBlockers'];
+  removedAt?: VenueWithCrawlHealth['removedAt'];
+};
+
+/** Off the site: hidden, or taken down (`removedAt`) whatever `active` says. */
+const offSite = (venue: HeaderVenue): boolean =>
+  !venue.active || (venue.removedAt ?? null) !== null;
 
 /** Why Re-crawl is off, or null when it can run (`A3/03/re-crawl-states`). */
 export type RecrawlOff = keyof typeof COPY.recrawlOff;
@@ -23,7 +30,7 @@ export type RecrawlOff = keyof typeof COPY.recrawlOff;
  * (409).
  */
 export const recrawlOff = (venue: HeaderVenue): RecrawlOff | null => {
-  if (!venue.active) return 'hidden';
+  if (offSite(venue)) return 'hidden';
   if (!venue.verified) return 'unverified';
   if (venue.robotsTxtAllowed === false) return 'robots';
   // Paused and auto-paused alike (orchestrator ruling): resume first.
@@ -37,7 +44,7 @@ export const recrawlOff = (venue: HeaderVenue): RecrawlOff | null => {
  * makes sense of a page we publish. Null when there is no page to open.
  */
 export const viewOnSiteHref = (venue: HeaderVenue): string | null =>
-  venue.active ? `/venues/${encodeURIComponent(venue.slug)}` : null;
+  offSite(venue) ? null : `/venues/${encodeURIComponent(venue.slug)}`;
 
 /**
  * The line beside the chips: "Central Platte Valley · 235 upcoming", or why

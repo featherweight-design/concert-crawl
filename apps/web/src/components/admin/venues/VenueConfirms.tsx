@@ -1,7 +1,5 @@
 'use client';
 
-// Inert until 3a 4b part 2 wires the ⋯ menu.
-
 import {
   useId,
   useRef,
@@ -424,7 +422,7 @@ export const DeleteConfirm = ({
   onDone,
   onRefused,
 }: Omit<ConfirmProps, 'onDone'> & {
-  /** Gets the shows kept, unlinked, for the caller's detached banner. */
+  /** Gets the shows kept, unlinked (`eventsDetached`); the menu doesn't show it. */
   onDone: (eventsDetached: number) => void;
   onRefused: (blockers: VenueDeleteBlockers) => void;
 }) => {

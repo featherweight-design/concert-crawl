@@ -625,6 +625,8 @@ export const ADMIN_COPY = {
     menu: {
       pause: 'Pause crawling…',
       pauseHint: 'Shows stay listed. Pick a reason.',
+      // A hidden venue's shows are already off the site.
+      pauseHintHidden: 'Stops crawling. Pick a reason.',
       resume: 'Resume crawling',
       makeFlagship: 'Make flagship',
       makeFlagshipHint: 'Shows it first on Venues.',
@@ -920,6 +922,8 @@ export const ADMIN_COPY = {
       status: {
         label: 'Status',
         ariaLabel: 'Venue status',
+        // Why Active is off on a taken-down venue (`removedAt`).
+        takenDown: 'Taken down at their request.',
         active: 'Active',
         paused: 'Paused',
         blocked: 'Blocked',
@@ -3213,6 +3217,7 @@ export const ADMIN_COPY = {
       title: (what: string) => `Couldn't change ${what}`,
       body: (saved: string) => `${saved} Nothing changed.`,
       tryAgain: 'Try again',
+      dismiss: 'Dismiss',
     },
     notFound: {
       title: "That page isn't here",

@@ -15,6 +15,8 @@ type SaveFailedToastProps = {
   saved: string;
   onRetry: () => void;
   retrying?: boolean;
+  /** Adds a Dismiss beside Try again, as the venue header's notices have. */
+  onDismiss?: () => void;
 } & (
   | {
       /** The thing that didn't change, e.g. "Crews". */
@@ -34,6 +36,7 @@ export const SaveFailedToast = ({
   saved,
   onRetry,
   retrying = false,
+  onDismiss,
 }: SaveFailedToastProps) => (
   <div
     role="alert"
@@ -81,5 +84,15 @@ export const SaveFailedToast = ({
     >
       {copy.tryAgain}
     </AdminButton>
+    {onDismiss && (
+      <AdminButton
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onDismiss}
+      >
+        {copy.dismiss}
+      </AdminButton>
+    )}
   </div>
 );

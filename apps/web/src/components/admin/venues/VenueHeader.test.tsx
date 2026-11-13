@@ -217,6 +217,41 @@ describe('VenueHeader — ⋯ menu failures', () => {
     expect(mockFeatured).toHaveBeenCalledTimes(2);
     expect(screen.queryByTestId('save-failed')).toBeNull();
   });
+
+  it('Dismiss closes the toast without trying again', async () => {
+    mockFeatured.mockRejectedValueOnce(new Error('boom'));
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menuLabel('Ball Arena') }),
+    );
+    fireEvent.click(screen.getByTestId('venue-menu-flagship'));
+    await screen.findByTestId('save-failed');
+    fireEvent.click(screen.getByRole('button', { name: FAILED.dismiss }));
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+    expect(mockFeatured).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds Try again while another menu change runs', async () => {
+    let finish: () => void = () => undefined;
+    mockFeatured.mockRejectedValueOnce(new Error('boom'));
+    render(<VenueHeader venue={buildVenue()} />);
+    const menu = () =>
+      screen.getByRole('button', { name: COPY.menuLabel('Ball Arena') });
+    fireEvent.click(menu());
+    fireEvent.click(screen.getByTestId('venue-menu-flagship'));
+    await screen.findByTestId('save-failed');
+    mockFeatured.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (finish = resolve)),
+    );
+    fireEvent.click(menu());
+    fireEvent.click(screen.getByTestId('venue-menu-flagship'));
+    const tryAgain = screen.getByRole('button', { name: FAILED.tryAgain });
+    expect(tryAgain.hasAttribute('disabled')).toBe(true);
+    await act(async () => {
+      finish();
+    });
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+  });
 });
 
 describe('VenueHeader — Re-crawl off', () => {

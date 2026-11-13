@@ -78,6 +78,23 @@ describe('viewOnSiteHref', () => {
   it('has no page for a hidden venue', () => {
     expect(viewOnSiteHref(venue({ active: false }))).toBeNull();
   });
+
+  it('has no page for a taken-down venue, even with `active` set', () => {
+    expect(
+      viewOnSiteHref(venue({ removedAt: '2026-11-02T18:00:00Z' })),
+    ).toBeNull();
+  });
+});
+
+describe('recrawlOff — taken down', () => {
+  it('treats a taken-down venue as hidden, even with `active` set', () => {
+    expect(recrawlOff(venue({ removedAt: '2026-11-02T18:00:00Z' }))).toBe(
+      'hidden',
+    );
+    expect(
+      recrawlOff(venue({ active: false, removedAt: '2026-11-02T18:00:00Z' })),
+    ).toBe('hidden');
+  });
 });
 
 describe('headerLine', () => {
