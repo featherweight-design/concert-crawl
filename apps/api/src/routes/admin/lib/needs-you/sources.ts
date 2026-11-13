@@ -19,6 +19,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import {
   artistReports,
   artists,
+  crawlRunPages,
   crawlRuns,
   db,
   events,
@@ -135,6 +136,14 @@ const missingItems: Adapter = async ({ now }) => {
       .orderBy(asc(events.date)),
   );
   const watchers = await watcherCounts(rows.map((row) => row.id));
+  const crawledFine = await otherShowsCrawledFineByVenue(
+    [
+      ...new Set(
+        rows.flatMap((row) => (row.venueId === null ? [] : [row.venueId])),
+      ),
+    ],
+    today,
+  );
 
   return rows.map((row): NeedsYouItem => {
     const common = {
@@ -190,6 +199,8 @@ const missingItems: Adapter = async ({ now }) => {
       eventId: row.id,
       classification: row.classification,
       lastSeenAt: row.lastSeenAt?.toISOString() ?? null,
+      otherShowsCrawledFine:
+        row.venueId === null ? null : (crawledFine.get(row.venueId) ?? null),
       evidence: [...evidence, ...line('Looks like', row.classification)],
       answers: [
         answer('still_on', 'Still on', {
@@ -208,6 +219,156 @@ const missingItems: Adapter = async ({ now }) => {
 // Venues: failing and blocked
 // ---------------------------------------------------------------------------
 
+// How many runs per venue the okStreakBefore scan reads, so the streak tops
+// out at this number.
+export const OK_STREAK_SCAN_RUNS = 100;
+
+/**
+ * Per failing venue: successful runs in a row immediately before the current
+ * failure streak. Skipped runs carry no reading and are ignored, as in
+ * triage's streakStart. One windowed query for all venues. A venue whose last
+ * 100 runs are all failures maps to 0.
+ */
+const okStreakBeforeFailure = async (
+  venueIds: string[],
+): Promise<Map<string, number>> => {
+  const result = new Map<string, number>();
+  if (venueIds.length === 0) return result;
+  const ranked = db
+    .select({
+      venueId: crawlRuns.venueId,
+      status: crawlRuns.status,
+      createdAt: crawlRuns.createdAt,
+      rn: sql<number>`row_number() over (partition by ${crawlRuns.venueId} order by ${crawlRuns.createdAt} desc)`.as(
+        'rn',
+      ),
+    })
+    .from(crawlRuns)
+    .where(inArray(crawlRuns.venueId, venueIds))
+    .as('ranked');
+  const rows = await db
+    .select({ venueId: ranked.venueId, status: ranked.status })
+    .from(ranked)
+    .where(lte(ranked.rn, OK_STREAK_SCAN_RUNS))
+    .orderBy(asc(ranked.venueId), asc(ranked.rn));
+
+  const phase = new Map<string, 'failing' | 'ok' | 'done'>();
+  for (const row of rows) {
+    if (row.status === 'skipped') continue;
+    const current = phase.get(row.venueId) ?? 'failing';
+    if (current === 'done') continue;
+    if (current === 'failing') {
+      if (row.status === 'failed') continue;
+      // First non-failure run: it either starts the OK streak or ends it.
+      phase.set(row.venueId, row.status === 'success' ? 'ok' : 'done');
+      if (row.status === 'success') result.set(row.venueId, 1);
+      else result.set(row.venueId, 0);
+      continue;
+    }
+    if (row.status === 'success') {
+      result.set(row.venueId, (result.get(row.venueId) ?? 0) + 1);
+    } else {
+      phase.set(row.venueId, 'done');
+    }
+  }
+  for (const id of venueIds) if (!result.has(id)) result.set(id, 0);
+  return result;
+};
+
+/**
+ * Per run id: pages fetched (crawl_run_pages rows; absent when none were
+ * recorded) and the run's robots.txt result (crawl_runs.robots_txt_blocked).
+ */
+const blockedRunDetails = async (
+  runIds: string[],
+): Promise<Map<string, { pages: number | null; robots: string | null }>> => {
+  const result = new Map<
+    string,
+    { pages: number | null; robots: string | null }
+  >();
+  if (runIds.length === 0) return result;
+  const [runRows, pageRows] = await Promise.all([
+    db
+      .select({ id: crawlRuns.id, robots: crawlRuns.robotsTxtBlocked })
+      .from(crawlRuns)
+      .where(inArray(crawlRuns.id, runIds)),
+    db
+      .select({
+        runId: crawlRunPages.crawlRunId,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(crawlRunPages)
+      .where(inArray(crawlRunPages.crawlRunId, runIds))
+      .groupBy(crawlRunPages.crawlRunId),
+  ]);
+  const pages = new Map(pageRows.map((row) => [row.runId, row.total] as const));
+  for (const row of runRows) {
+    result.set(row.id, {
+      pages: pages.get(row.id) ?? null,
+      robots: row.robots,
+    });
+  }
+  return result;
+};
+
+/**
+ * Per venue: other upcoming shows the venue's latest successful run still saw.
+ * Run start is not stored, so it is approximated as created_at minus
+ * duration_ms (a run row is written when the run ends; last_seen_at is bumped
+ * during it). Venues with no successful run are absent.
+ */
+const otherShowsCrawledFineByVenue = async (
+  venueIds: string[],
+  today: string,
+): Promise<Map<string, number>> => {
+  const result = new Map<string, number>();
+  if (venueIds.length === 0) return result;
+  const latest = await db
+    .selectDistinctOn([crawlRuns.venueId], {
+      venueId: crawlRuns.venueId,
+      createdAt: crawlRuns.createdAt,
+      durationMs: crawlRuns.durationMs,
+    })
+    .from(crawlRuns)
+    .where(
+      and(
+        inArray(crawlRuns.venueId, venueIds),
+        eq(crawlRuns.status, 'success'),
+      ),
+    )
+    .orderBy(asc(crawlRuns.venueId), sql`${crawlRuns.createdAt} desc`);
+  if (latest.length === 0) return result;
+  const counts = await db
+    .select({ venueId: events.venueId, total: sql<number>`count(*)::int` })
+    .from(events)
+    .where(
+      and(
+        eq(events.status, 'upcoming'),
+        gte(events.date, today),
+        isNull(events.firstMissingAt),
+        eq(events.hiddenFromConsumer, false),
+        or(
+          ...latest.map((run) =>
+            and(
+              eq(events.venueId, run.venueId),
+              gte(
+                events.lastSeenAt,
+                new Date(run.createdAt.getTime() - (run.durationMs ?? 0)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
+    .groupBy(events.venueId);
+  for (const row of counts) {
+    if (row.venueId !== null) result.set(row.venueId, row.total);
+  }
+  for (const run of latest)
+    if (!result.has(run.venueId)) result.set(run.venueId, 0);
+  return result;
+};
+
 const venueFaultItems: Adapter = async ({ now }) => {
   const today = denverDate(now);
 
@@ -220,6 +381,8 @@ const venueFaultItems: Adapter = async ({ now }) => {
         consecutiveFailures: venues.consecutiveFailures,
         lastUrlCoverageAlertAt: venues.lastUrlCoverageAlertAt,
         lastUrlCoverageOkAt: venues.lastUrlCoverageOkAt,
+        active: venues.active,
+        crawlPausedAt: venues.crawlPausedAt,
       })
       .from(venues)
       // A removed venue is never crawled again, so a fault on it is nothing
@@ -248,6 +411,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
       .select({
         venueId: events.venueId,
         soonest: sql<string>`min(${events.date})`,
+        total: sql<number>`count(*)::int`,
       })
       .from(events)
       .where(
@@ -272,9 +436,33 @@ const venueFaultItems: Adapter = async ({ now }) => {
     ),
   );
 
+  const showCountByVenue = new Map(
+    nextShows.flatMap((row) =>
+      row.venueId === null ? [] : [[row.venueId, row.total] as const],
+    ),
+  );
+  const venueById = new Map(venueRows.map((row) => [row.id, row] as const));
+
+  const hardFaults = faults.filter(
+    (fault) => fault.condition === 'failed' || fault.condition === 'blocked',
+  );
+  const failingVenueIds = hardFaults
+    .filter((fault) => fault.condition === 'failed')
+    .map((fault) => fault.venueId);
+  const blockedRunIds = hardFaults.flatMap((fault) =>
+    fault.condition === 'blocked' && fault.crawlRunId !== null
+      ? [fault.crawlRunId]
+      : [],
+  );
+  const [okStreaks, blockedRunExtras] = await Promise.all([
+    okStreakBeforeFailure(failingVenueIds),
+    blockedRunDetails(blockedRunIds),
+  ]);
+
   const items: NeedsYouItem[] = [];
   for (const fault of faults) {
     if (fault.condition !== 'failed' && fault.condition !== 'blocked') continue;
+    const venueRow = venueById.get(fault.venueId);
     const lastRuns = runs
       .filter((run) => run.venueId === fault.venueId)
       .sort(
@@ -285,6 +473,8 @@ const venueFaultItems: Adapter = async ({ now }) => {
         at: run.createdAt.toISOString(),
         status: run.status,
         errorMessage: run.errorMessage,
+        eventsFound: run.eventsFound,
+        httpStatus: run.httpStatusCode,
       }));
     // The key is the venue and the kind of fault, with no timestamp. The
     // "since" of a streak is read from a 30-run window and slides forward as
@@ -295,6 +485,9 @@ const venueFaultItems: Adapter = async ({ now }) => {
       fanDate: soonestByVenue.get(fault.venueId) ?? null,
       watchers: 0,
       lastRuns,
+      venueLive: venueRow?.active ?? false,
+      pausedAt: venueRow?.crawlPausedAt?.toISOString() ?? null,
+      showCount: showCountByVenue.get(fault.venueId) ?? 0,
     };
 
     if (fault.condition === 'failed') {
@@ -304,6 +497,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
         kind: 'venue-failing',
         title: `${fault.venue} crawl is failing`,
         cause: fault.evidence.errorClass,
+        okStreakBefore: okStreaks.get(fault.venueId) ?? null,
         evidence: [
           ...line('Consecutive failures', fault.evidence.failures),
           ...line('Failing for', fault.dur),
@@ -324,6 +518,14 @@ const venueFaultItems: Adapter = async ({ now }) => {
           fault.evidence.status === null
             ? null
             : `HTTP ${fault.evidence.status}`,
+        pagesThisRun:
+          fault.crawlRunId === null
+            ? null
+            : (blockedRunExtras.get(fault.crawlRunId)?.pages ?? null),
+        robots:
+          fault.crawlRunId === null
+            ? null
+            : (blockedRunExtras.get(fault.crawlRunId)?.robots ?? null),
         evidence: [
           ...line('Blocked for', fault.dur),
           ...line('HTTP status', fault.evidence.status),
