@@ -29,7 +29,7 @@ const pick = (chip: string) =>
 
 describe('ErrorTellUsCard', () => {
   it('opens as the prompt: six chips as a radio group, nothing attached yet', () => {
-    render(<ErrorTellUsCard errorId="2849204133" />);
+    render(<ErrorTellUsCard digest="2849204133" />);
 
     expect(screen.getByRole('heading', { name: copy.heading })).toBeTruthy();
     expect(screen.getByText(copy.sub)).toBeTruthy();
@@ -39,7 +39,7 @@ describe('ErrorTellUsCard', () => {
   });
 
   it('one tap opens the form with that chip selected and lists what is attached', () => {
-    render(<ErrorTellUsCard errorId="2849204133" />);
+    render(<ErrorTellUsCard digest="2849204133" />);
     pick('Opening a show');
 
     expect(
@@ -69,7 +69,7 @@ describe('ErrorTellUsCard', () => {
 
   it('sends the chip and the optional note, then shows Loud and clear', async () => {
     sendErrorReport.mockResolvedValue(undefined);
-    render(<ErrorTellUsCard errorId="2849204133" />);
+    render(<ErrorTellUsCard digest="2849204133" />);
     pick('Opening a show');
     fireEvent.change(screen.getByLabelText(copy.noteLabel), {
       target: { value: 'Tapped Get tickets.' },
@@ -84,7 +84,8 @@ describe('ErrorTellUsCard', () => {
       {
         doing: 'Opening a show',
         note: 'Tapped Get tickets.',
-        errorId: '2849204133',
+        digest: '2849204133',
+        sentryEventId: undefined,
         page: '/venues/bluebird-theater',
       },
       expect.any(String),
@@ -94,7 +95,7 @@ describe('ErrorTellUsCard', () => {
 
   it('a failed send says Signal lost, keeps the report on the device, and Send again retries', async () => {
     sendErrorReport.mockRejectedValueOnce(new Error('503'));
-    render(<ErrorTellUsCard errorId="2849204133" />);
+    render(<ErrorTellUsCard digest="2849204133" />);
     pick('Searching');
     fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 

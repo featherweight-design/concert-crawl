@@ -19,8 +19,10 @@ const NOTE_MAX = 900;
 type CardState = 'prompt' | 'form' | 'sending' | 'sent' | 'failed';
 
 interface ErrorTellUsCardProps {
-  /** The id shown in the chip and sent with the report. */
-  errorId?: string | undefined;
+  /** The server's digest for a server-side throw. */
+  digest?: string | undefined;
+  /** The browser's Sentry event for a client-side throw. */
+  sentryEventId?: string | undefined;
 }
 
 // "Safari on iPhone" reads "iPhone · Safari" on the board.
@@ -81,7 +83,10 @@ const QUIET_BUTTON: CSSProperties = {
  * "Tell us what happened" form used. A failed send is kept on the device and
  * sent the next time the app opens.
  */
-export const ErrorTellUsCard = ({ errorId }: ErrorTellUsCardProps) => {
+export const ErrorTellUsCard = ({
+  digest,
+  sentryEventId,
+}: ErrorTellUsCardProps) => {
   const { getToken } = useAuth();
   const pathname = usePathname() ?? '';
   const [state, setState] = useState<CardState>('prompt');
@@ -91,7 +96,9 @@ export const ErrorTellUsCard = ({ errorId }: ErrorTellUsCardProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const page = reportPage(pathname);
-  const shownId = isReportableId(errorId) ? errorId : undefined;
+  // The chip shows whichever id the failure has: a server throw's digest, or
+  // the browser throw's Sentry event. An id of another shape is left off.
+  const shownId = [digest, sentryEventId].find(isReportableId);
 
   useEffect(() => {
     setDevice(deviceSummary(navigator.userAgent));
@@ -104,7 +111,7 @@ export const ErrorTellUsCard = ({ errorId }: ErrorTellUsCardProps) => {
 
   const send = async () => {
     if (doing === null || state === 'sending') return;
-    const draft = { doing, note, errorId: shownId, page };
+    const draft = { doing, note, digest, sentryEventId, page };
     setState('sending');
     try {
       const token = await getToken();

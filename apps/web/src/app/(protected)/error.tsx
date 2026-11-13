@@ -27,7 +27,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
       onRetry={retry}
       onSignOut={() => void signOut(() => router.push('/'))}
     >
-      <ErrorReport error={error} />
+      <ErrorReport error={error} variant="card" />
     </StandaloneError>
   );
 }

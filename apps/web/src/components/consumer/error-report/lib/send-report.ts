@@ -12,8 +12,10 @@ export interface ErrorReportDraft {
   doing: string;
   /** Optional words from the reporter. */
   note: string;
-  /** The error's own id: a server digest or a browser Sentry event id. */
-  errorId?: string | undefined;
+  /** The server's digest for a server-side throw. */
+  digest?: string | undefined;
+  /** The browser's Sentry event for a client-side throw. */
+  sentryEventId?: string | undefined;
   /** Path only (no query or hash), as `reportPage` returns it. */
   page: string;
 }
@@ -48,7 +50,12 @@ export const sendErrorReport = async (
         build: APP_VERSION,
         device: deviceSummary(userAgent),
         doing,
-        ...(isReportableId(draft.errorId) ? { errorId: draft.errorId } : {}),
+        // The same keys the older "Tell us what happened" form sent, which the
+        // admin feedback list already reads.
+        ...(isReportableId(draft.digest) ? { digest: draft.digest } : {}),
+        ...(isReportableId(draft.sentryEventId)
+          ? { sentryEventId: draft.sentryEventId }
+          : {}),
       },
     }),
   });

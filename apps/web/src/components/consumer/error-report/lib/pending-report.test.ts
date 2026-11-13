@@ -14,7 +14,7 @@ vi.mock('./send-report', () => ({ sendErrorReport }));
 const draft = {
   doing: 'Opening a show',
   note: 'It went blank.',
-  errorId: '2849204133',
+  digest: '2849204133',
   page: '/venues/bluebird-theater',
 };
 

@@ -36,6 +36,11 @@ describe('CrewError', () => {
       }),
     });
     render(<CrewError error={new Error('x')} reset={vi.fn()} />);
-    expect(screen.getByText(CONSUMER_COPY.error.reportLink)).toBeTruthy();
+    expect(screen.getByTestId('error-tell-us-card')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: CONSUMER_COPY.errorReport.card.heading,
+      }),
+    ).toBeTruthy();
   });
 });
