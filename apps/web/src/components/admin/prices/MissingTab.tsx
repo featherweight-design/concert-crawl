@@ -4,16 +4,19 @@ import type { CSSProperties } from 'react';
 import { ExternalLink, Tag } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
+  AdminButton,
   EmptyState,
-  Pagination,
   useIsPhone,
 } from '@/components/admin/primitives';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
+import { VenueTile } from '@/components/consumer/venue-glyph';
 import type { MissingRow } from './prices-api';
 import { dateTile } from './prices-rules';
 
 const COPY = ADMIN_COPY.pricesPage.missing;
 export const MISSING_PAGE_SIZE = 50;
+/** The most the API serves in one call. */
+export const MISSING_MAX_PER_CALL = 100;
 
 const MONO: CSSProperties = { fontFamily: "'JetBrains Mono', monospace" };
 
@@ -105,14 +108,16 @@ const AddingPill = () => (
   </span>
 );
 
+export type LoadMoreState = 'idle' | 'loading' | 'failed';
+
 interface MissingTabProps {
   rows: MissingRow[];
   total: number;
-  page: number;
   /** The show whose panel is open, or null. */
   adding: string | null;
+  loadState: LoadMoreState;
   onAdd: (row: MissingRow) => void;
-  onPage: (page: number) => void;
+  onLoadMore: () => void;
 }
 
 /**
@@ -123,10 +128,10 @@ interface MissingTabProps {
 export const MissingTab = ({
   rows,
   total,
-  page,
   adding,
+  loadState,
   onAdd,
-  onPage,
+  onLoadMore,
 }: MissingTabProps) => {
   const isPhone = useIsPhone();
 
@@ -192,10 +197,25 @@ export const MissingTab = ({
                 >
                   {row.title}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
-                  {[row.venueName, COPY.watching(row.watching)]
-                    .filter(Boolean)
-                    .join(' · ')}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 12.5,
+                    color: 'var(--fg-muted)',
+                  }}
+                >
+                  <VenueTile
+                    slug={row.venueSlug}
+                    name={row.venueName ?? ''}
+                    size={18}
+                  />
+                  <span>
+                    {[row.venueName, COPY.watching(row.watching)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <SafeExternalLink
@@ -232,14 +252,28 @@ export const MissingTab = ({
                   style={{
                     flex: 1,
                     minWidth: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
                     fontSize: 12.5,
                     color: 'var(--fg-muted)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
                   }}
                 >
-                  {row.venueName}
+                  <VenueTile
+                    slug={row.venueSlug}
+                    name={row.venueName ?? ''}
+                    size={22}
+                  />
+                  <span
+                    style={{
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {row.venueName}
+                  </span>
                 </div>
                 <div
                   style={{
@@ -290,14 +324,41 @@ export const MissingTab = ({
     </ul>
   );
 
+  // "209 more" and a Load more button, as the board's footer row.
+  const remaining = total - rows.length;
   const pager =
-    total > MISSING_PAGE_SIZE ? (
-      <Pagination
-        page={page}
-        pageSize={MISSING_PAGE_SIZE}
-        total={total}
-        onPageChange={onPage}
-      />
+    remaining > 0 ? (
+      <div
+        data-testid="missing-load-more"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: isPhone ? '12px 0' : '12px 18px',
+          borderTop: isPhone ? 'none' : '1px solid var(--border)',
+          fontSize: 12.5,
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        <span>{COPY.moreRows(remaining)}</span>
+        <span style={{ flex: 1 }} />
+        {loadState === 'failed' && (
+          <span role="alert" style={{ color: 'var(--danger)' }}>
+            {COPY.loadMoreFailed}
+          </span>
+        )}
+        <AdminButton
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-disabled={loadState === 'loading' || undefined}
+          onClick={() => {
+            if (loadState !== 'loading') onLoadMore();
+          }}
+        >
+          {loadState === 'loading' ? COPY.loadingMore : COPY.loadMore}
+        </AdminButton>
+      </div>
     ) : null;
 
   if (isPhone) {

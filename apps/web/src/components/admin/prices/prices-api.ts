@@ -18,6 +18,8 @@ export interface MissingRow {
   eventId: string;
   title: string;
   venueName: string | null;
+  /** Picks the venue's icon tile. */
+  venueSlug: string;
   /** `YYYY-MM-DD`, Mountain Time. */
   date: string;
   ticketUrl: string | null;
@@ -47,6 +49,7 @@ const missingRowFrom = (value: unknown): MissingRow | null => {
     !isText(value['eventTitle']) ||
     !isText(value['date']) ||
     !isTextOrNull(value['venueName']) ||
+    !isText(value['venueSlug']) ||
     !isTextOrNull(value['ticketUrl'])
   ) {
     return null;
@@ -56,6 +59,7 @@ const missingRowFrom = (value: unknown): MissingRow | null => {
     eventId: value['eventId'],
     title: value['eventTitle'],
     venueName: value['venueName'],
+    venueSlug: value['venueSlug'],
     date: value['date'],
     ticketUrl: value['ticketUrl'],
     watching,

@@ -2383,6 +2383,10 @@ export const ADMIN_COPY = {
       ticketPage: 'Ticket page',
       addPrice: 'Add price',
       adding: 'Adding…',
+      moreRows: (count: number) => `${count.toLocaleString('en-US')} more`,
+      loadMore: 'Load more',
+      loadingMore: 'Loading…',
+      loadMoreFailed: "Couldn't load more shows.",
       empty: {
         title: 'Every show has a price',
         body: 'New shows without one appear here, soonest first.',
