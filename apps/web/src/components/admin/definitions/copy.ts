@@ -2340,6 +2340,77 @@ export const ADMIN_COPY = {
   // 5b, boards 07/invite-codes* and addendum-3 12/code-taken-d.
   // Admin 2b: the Needs you queue. Boards: 02/needs-you-desktop, needs-you-mobile,
   // all-clear, couldnt-load; addendum-3 01/filter-empty-d.
+  // 4d Prices (boards 06 prices-*, add-a-price-mobile). Strings are the boards'.
+  pricesPage: {
+    title: 'Prices',
+    subtitle: 'Submitted prices, Price checks, and shows still missing one',
+    approve: {
+      label: 'Approve every price myself',
+      helper:
+        'On while fewer than 50 people submit prices. Turn it off and prices a second fan confirms publish on their own; only Price checks and outliers reach Needs you.',
+      people: (count: number) =>
+        `${count} ${count === 1 ? 'person' : 'people'} submitting`,
+      // The phone draws no switch, only this line under the title.
+      phoneOn: 'Approving every price yourself',
+      phoneOff: 'Prices a second fan confirms publish on their own',
+      saveFailed: "Couldn't save that setting",
+    },
+    tabsLabel: 'Prices',
+    tabs: {
+      missing: 'Missing a price',
+      submitted: 'Submitted prices',
+      checks: 'Price checks',
+    },
+    phoneTabs: {
+      missing: 'Missing',
+      submitted: 'Submitted',
+      checks: 'Checks',
+    },
+    interim: {
+      submitted: 'Open Submitted prices',
+      checks: 'Open Price checks',
+    },
+    missing: {
+      hint: 'A backlog, not a queue: no badge. Soonest and most-Watched first, with the ticket page one tap away.',
+      listLabel: 'Shows missing a price',
+      columns: {
+        date: 'Date',
+        show: 'Show',
+        venue: 'Venue',
+        watching: 'Watching',
+      },
+      watching: (count: number) => `${count} Watching`,
+      ticketPage: 'Ticket page',
+      addPrice: 'Add price',
+      adding: 'Adding…',
+      empty: {
+        title: 'Every show has a price',
+        body: 'New shows without one appear here, soonest first.',
+      },
+    },
+    add: {
+      eyebrow: 'Price',
+      sheetTitle: 'Add a price',
+      openTicketPage: 'Open ticket page',
+      lowest: 'Lowest',
+      highest: 'Highest',
+      highestOptional: 'Highest (optional)',
+      free: "It's free",
+      soldOut: 'Sold out',
+      source: 'Where you saw it',
+      sourcePlaceholder: 'axs.com/events/…',
+      note: 'Publishes now, as your submission. Then the next show without a price opens here, so you can work down the list.',
+      publishAndNext: 'Publish and next',
+      publish: 'Publish',
+      nothingLeft: 'That was the last show without a price.',
+      needsPrice: 'Enter the lowest price, for example $50.',
+      needsHighest: 'Enter a highest price that is at least the lowest.',
+      needsSource: 'Enter a web address, or leave it empty.',
+      alreadyPriced: 'That show already has a price.',
+      saveFailed: "Couldn't save that price",
+      soldOutFailed: "Published the price, but couldn't mark the show sold out",
+    },
+  },
   needsYou: {
     title: 'Needs you',
     summary: (decisions: number, handledToday: number) =>
