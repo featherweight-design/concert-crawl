@@ -142,7 +142,15 @@ describe('costTile', () => {
 });
 
 describe('artistsTile', () => {
-  const base = { matched: 1800, auto_matched: 42, unmatched: 5, ambiguous: 4 };
+  const base = {
+    matched: 1800,
+    auto_matched: 42,
+    unmatched: 5,
+    ambiguous: 4,
+    to_check_later: 14,
+    to_check_none: 0,
+    no_match: 177,
+  };
 
   it('reads To check and its soon chip from the counts', () => {
     expect(artistsTile({ ...base, to_check: 23, to_check_soon: 9 })).toEqual({

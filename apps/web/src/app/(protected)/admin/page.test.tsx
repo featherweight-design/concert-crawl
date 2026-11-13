@@ -21,7 +21,11 @@ const fixtures: Record<string, unknown> = {
     auto_matched: 0,
     to_check: 0,
     to_check_soon: 0,
+    to_check_later: 0,
+    to_check_none: 0,
+    no_match: 0,
   },
+  '/v1/admin/audit-log': [],
   '/v1/admin/notifications/delivery': {
     lastSentAt: null,
     sent24h: 0,
@@ -70,6 +74,24 @@ describe('/admin Health page', () => {
 
   it('still renders when only the Needs you count fails', async () => {
     answer(['/v1/admin/needs-you/count']);
+    const { default: AdminHealthPage } = await import('./page');
+    await expect(AdminHealthPage()).resolves.not.toBeNull();
+  });
+
+  it('reads the system audit rows since last night, a full page at most', async () => {
+    answer();
+    const { default: AdminHealthPage } = await import('./page');
+    await AdminHealthPage();
+    // Nov 12 10:00 MT is after the crawl, so last night's window starts at
+    // Nov 12 00:00 MT = 07:00Z.
+    expect(mockGet).toHaveBeenCalledWith(
+      '/v1/admin/audit-log?actor=system&since=2026-11-12T07%3A00%3A00.000Z&limit=100',
+      'token',
+    );
+  });
+
+  it('still renders when only Done for you fails to load', async () => {
+    answer(['/v1/admin/audit-log']);
     const { default: AdminHealthPage } = await import('./page');
     await expect(AdminHealthPage()).resolves.not.toBeNull();
   });
