@@ -35,10 +35,7 @@ const inviteUrl = (token: string): string => {
 
 // What the link box shows: the host and path in grey, the token in cyan. The
 // copied and shared link keeps its scheme.
-const shortLink = (): string => {
-  const host = typeof window === 'undefined' ? '' : window.location.host;
-  return `${host}/crew/join/`;
-};
+const shortLink = (): string => inviteUrl('').replace(/^https?:\/\//, '');
 
 const GRADIENT = 'linear-gradient(90deg, var(--signal), var(--accent))';
 

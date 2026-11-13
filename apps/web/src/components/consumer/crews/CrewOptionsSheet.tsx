@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import { CrewPatch } from '@/components/consumer/crew-patch';
 import { ModalShell } from '@/components/consumer/modal-shell';
+import {
+  CREW_DIALOG_GLOW,
+  CREW_EDGE_BACKGROUND,
+} from '@/components/consumer/modal-shell/crew-surface';
 import { CCOverlayHost } from '@/components/ui/cc-overlay/CCOverlayHost';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useAnchoredPosition } from '@/components/ui/cc-overlay/lib/use-anchored-position';
 import { CREWS_COPY } from './definitions/copy';
 
@@ -189,8 +194,9 @@ export const CrewOptionsSheet = (props: CrewOptionsSheetProps) => {
     </div>
   );
 
+  // Mounted only while open: the position hook listens to scroll and resize.
   if (wide) {
-    return <OptionsPopover {...props}>{list}</OptionsPopover>;
+    return open ? <OptionsPopover {...props}>{list}</OptionsPopover> : null;
   }
 
   return (
@@ -258,9 +264,15 @@ const OptionsPopover = ({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  // Tab cycles inside the panel, as it does in the sheet this replaces.
+  useFocusTrap(panelRef, open && position !== null);
+
+  // Closing hands focus back to the button that opened it. A row that opens
+  // another sheet is then that sheet's trigger, so it restores here in turn.
   useEffect(() => {
-    if (open && position !== null) panelRef.current?.focus();
-  }, [open, position === null]); // eslint-disable-line react-hooks/exhaustive-deps -- focus once when the panel first has a position
+    if (!open) return;
+    return () => anchor?.focus();
+  }, [open, anchor]);
 
   if (!open || position === null) return null;
 
@@ -285,10 +297,8 @@ const OptionsPopover = ({
           overflowY: 'auto',
           borderRadius: 16,
           border: '1.5px solid transparent',
-          background:
-            'linear-gradient(color-mix(in srgb, var(--bg-elevated), white 6%), color-mix(in srgb, var(--bg-elevated), white 6%)) padding-box, linear-gradient(90deg, var(--signal), var(--accent)) top / 100% 2px no-repeat border-box, var(--border-strong) border-box',
-          boxShadow:
-            '0 24px 60px rgba(0,0,0,0.5), 0 0 48px -14px color-mix(in srgb, var(--signal) 30%, transparent)',
+          background: CREW_EDGE_BACKGROUND,
+          boxShadow: `0 24px 60px rgba(0,0,0,0.5), ${CREW_DIALOG_GLOW}`,
         }}
       >
         <div className="pt-3">
