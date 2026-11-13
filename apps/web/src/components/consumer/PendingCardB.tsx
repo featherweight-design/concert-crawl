@@ -532,7 +532,7 @@ export const PendingCardB = ({
                   // The Confirm price pill is the signal-to-accent gradient
                   // with a soft glow, as drawn (more-p-price_states).
                   background:
-                    'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
+                    'linear-gradient(135deg, var(--signal), var(--cta-end))',
                   boxShadow:
                     '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
                   color: 'var(--fg-on-accent)',

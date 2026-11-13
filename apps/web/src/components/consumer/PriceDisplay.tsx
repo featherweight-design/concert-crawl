@@ -1038,8 +1038,7 @@ function CommunityHandoffCard({
           width: '100%',
           borderRadius: 9,
           // Submit a price: the signal-to-accent gradient with a soft glow.
-          background:
-            'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
+          background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
           boxShadow:
             '0 8px 24px color-mix(in oklab, var(--signal) 22%, transparent)',
           color: 'var(--fg-on-accent)',

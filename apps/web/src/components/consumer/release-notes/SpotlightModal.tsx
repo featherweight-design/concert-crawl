@@ -510,7 +510,7 @@ export function SpotlightModal({
                 // The gradient pill with the signal glow, as drawn
                 // (more-r3-feature_modal, notif-tab-failed-m).
                 background:
-                  'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
+                  'linear-gradient(135deg, var(--signal), var(--cta-end))',
                 color: 'var(--fg-on-accent)',
                 padding: '12px 20px',
                 borderRadius: 999,
@@ -551,7 +551,7 @@ export function SpotlightModal({
                 // The gradient pill with the signal glow, as drawn
                 // (more-r3-feature_modal, notif-tab-failed-m).
                 background:
-                  'linear-gradient(135deg, var(--signal), color-mix(in oklab, var(--accent) 80%, var(--signal)))',
+                  'linear-gradient(135deg, var(--signal), var(--cta-end))',
                 color: 'var(--fg-on-accent)',
                 padding: '12px 20px',
                 borderRadius: 999,
