@@ -8,6 +8,7 @@ import {
 } from '@/components/admin/primitives';
 import {
   cardAnswers,
+  cardLabelOf,
   impactOf,
   isUrgent,
   kindLabelOf,
@@ -159,7 +160,7 @@ export const QueueItem = ({
                 : undefined
             }
           >
-            {answer.label}
+            {cardLabelOf(row, answer)}
           </AdminButton>
         ))}
         {links.map((answer) => (
