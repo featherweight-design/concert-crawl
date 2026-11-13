@@ -108,10 +108,9 @@ const PHONE_CHIP_FILL = 'var(--surface-2)';
 /** The phone row's pills (`PHONE_PILL_CLASS`), which the taste chip matches. */
 const PHONE_PILL_HEIGHT = 38;
 
-/** Tailwind's `sm`: from here up the segmented bar replaces the chip row. */
 // Addendum-3 rule 1 (header-640, header-900): the segmented bar needs 1024 to
 // fit; under it the phone chips row stands in.
-const DESKTOP_QUERY = '(min-width: 1024px)';
+export const DESKTOP_QUERY = '(min-width: 1024px)';
 
 /** Where and Vibe lists written but not yet back from the server. */
 type PendingLists = Partial<Record<FilterKey, readonly string[]>>;
@@ -658,7 +657,7 @@ export function FilterBar({
         </div>
 
         {/* The crew lens lives in the Filters sheet's Who on the phone and in
-            the bar's Who segment from sm up, so the heading holds only the
+            the bar's Who segment from lg up, so the heading holds only the
             title and this toggle: at 320 the full "What's on?" fits. */}
         {/* List / Cal toggle (B+ `bp-browse`): an icon segmented control. */}
         <div className={VIEW_TOGGLE_CLASS} style={VIEW_TOGGLE_STYLE}>
@@ -690,7 +689,7 @@ export function FilterBar({
                 style={viewSegmentStyle(active)}
                 aria-pressed={active}
               >
-                {/* B+: icons only on the phone, icon and label from sm up. The
+                {/* B+: icons only on the phone, icon and label from lg up. The
                     label stays in the accessible name at every width. */}
                 <span className="inline-flex">
                   <Icon size={15} />
@@ -714,7 +713,7 @@ export function FilterBar({
       {/* Phone filters (B+ B6b): the Filters pill opens one sheet for Who,
           When, Where, Price and Vibe; My artists stays a switch beside it;
           each active filter shows under them as a chip that removes it. From
-          sm up the segmented bar below replaces the lot. */}
+          lg up the segmented bar below replaces the lot. */}
       <div
         data-testid="phone-filter-row"
         className="flex flex-col gap-2.5 lg:hidden"

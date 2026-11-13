@@ -36,15 +36,18 @@ const SHEET_QUERY = '(max-width: 639px)';
 // Not `useMediaQuery`: that one calls `window.matchMedia` outright, and a sheet
 // rendered where there is none (a jsdom test of a surface that merely contains a
 // sheet) must stay a plain sheet rather than throw.
-export const useOnPhone = (): boolean => {
-  const subscribe = useCallback((onChange: () => void) => {
-    const mql = window.matchMedia?.(SHEET_QUERY);
-    mql?.addEventListener?.('change', onChange);
-    return () => mql?.removeEventListener?.('change', onChange);
-  }, []);
+export const useOnPhone = (query: string = SHEET_QUERY): boolean => {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const mql = window.matchMedia?.(query);
+      mql?.addEventListener?.('change', onChange);
+      return () => mql?.removeEventListener?.('change', onChange);
+    },
+    [query],
+  );
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia?.(SHEET_QUERY).matches ?? false,
+    () => window.matchMedia?.(query).matches ?? false,
     () => false,
   );
 };
@@ -67,7 +70,8 @@ interface SheetDrag {
     onPointerCancel: (event: ReactPointerEvent<HTMLElement>) => void;
     /**
      * The zone is small and not a scroller, so on a phone the finger is ours
-     * there. From sm up the sheet is a modal and the zone is left alone.
+     * there. Past the sheet's phone range it is a modal and the zone is left
+     * alone.
      */
     style: CSSProperties;
   };
@@ -88,9 +92,16 @@ export type SheetDragZone = SheetDrag['zoneProps'];
  *
  * Pass `open` when the surface stays mounted while closed, so a close in the
  * middle of a drag or a settle never leaves the sheet pushed down on reopen.
+ *
+ * `phoneQuery` is the width range where the sheet is a bottom sheet. It is
+ * under 640px unless a sheet stays one longer (the filters sheet, to 1023px).
  */
-export function useSheetDrag(onDismiss: () => void, open = true): SheetDrag {
-  const onPhone = useOnPhone();
+export function useSheetDrag(
+  onDismiss: () => void,
+  open = true,
+  phoneQuery: string = SHEET_QUERY,
+): SheetDrag {
+  const onPhone = useOnPhone(phoneQuery);
   const [offset, setOffset] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
   const active = useRef<ActiveDrag | null>(null);

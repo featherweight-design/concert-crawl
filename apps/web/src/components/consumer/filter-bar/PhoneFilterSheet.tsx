@@ -297,7 +297,8 @@ export function PhoneFilterSheet({
   // Escape closes the sheet from the main view only; inside a full list it
   // steps back, as the back link does (below). The scrim always closes.
   useModalDialog(dialogRef, true, onClose, view === 'main');
-  const drag = useSheetDrag(onClose, true);
+  // A bottom sheet to 1023 here, not just under 640 (addendum-3 rule 1).
+  const drag = useSheetDrag(onClose, true, '(max-width: 1023px)');
   const [tiles, setTiles] = useState(() =>
     orderTiles(venues, initial.values.where),
   );

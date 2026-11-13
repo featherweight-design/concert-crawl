@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-// The desktop segmented filter bar (B+ B6a): from 640px up the phone row gives
+// The desktop segmented filter bar (B+ B6a): from 1024px up the phone row gives
 // way to one bar of segments, a count line under it, and restyled popovers.
 // jsdom has no layout or CSS, so the phone row and the bar both render here
 // (the page shows one per width). Which overlay a tap opens is driven by
@@ -52,7 +52,7 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
     open ? <div data-testid="tier-picker" /> : null,
 }));
 
-import { FilterBar } from './FilterBar';
+import { FilterBar, DESKTOP_QUERY } from './FilterBar';
 import { CREWS_COPY } from '@/components/consumer/crews/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
@@ -145,6 +145,12 @@ const renderBar = (
       {...overrides}
     />,
   );
+
+describe('FilterBar desktop switch', () => {
+  it('goes desktop at 1024, where the filter bar fits (addendum-3 rule 1)', () => {
+    expect(DESKTOP_QUERY).toBe('(min-width: 1024px)');
+  });
+});
 
 describe('FilterBar desktop segmented bar', () => {
   it('orders the segments My artists, Who, When, Where, Price, Vibe', () => {
