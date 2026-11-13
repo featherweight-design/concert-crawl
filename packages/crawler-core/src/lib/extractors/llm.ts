@@ -276,6 +276,11 @@ ${IS_CONCERT_RULES}
 
 ${REVIEW_NEEDED_RULES}`;
 
+// One wording for both clock fields: a PM time written as a morning hour was
+// stored at 07:30 for a 7:30 PM show.
+const CLOCK_TIME_DESCRIPTION =
+  '24-hour HH:MM:SS or null. A PM time is 12:00:00 or later (7:30 PM is 19:30:00); a morning time stays under 12:00:00.';
+
 const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   name: 'save_events',
   description:
@@ -319,13 +324,11 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
             doorsTime: {
               type: ['string', 'null'],
-              description:
-                '24-hour HH:MM:SS or null. 7:30 PM is 19:30:00, never 07:30:00; a PM time is always 12:00:00 or later.',
+              description: CLOCK_TIME_DESCRIPTION,
             },
             showTime: {
               type: ['string', 'null'],
-              description:
-                '24-hour HH:MM:SS or null. 7:30 PM is 19:30:00, never 07:30:00; a PM time is always 12:00:00 or later.',
+              description: CLOCK_TIME_DESCRIPTION,
             },
             ticketUrl: {
               type: ['string', 'null'],
@@ -588,11 +591,15 @@ export async function extractWithLlm(
       // morning-time-guard.ts.
       ...(evt.doorsTime != null &&
         evt.doorsTime !== '' && {
-          doorsTime: correctMorningTime(evt.doorsTime, cleanedHtml),
+          doorsTime: correctMorningTime(
+            evt.doorsTime,
+            cleanedHtml,
+            evt.rawTitle,
+          ),
         }),
       ...(evt.showTime != null &&
         evt.showTime !== '' && {
-          showTime: correctMorningTime(evt.showTime, cleanedHtml),
+          showTime: correctMorningTime(evt.showTime, cleanedHtml, evt.rawTitle),
         }),
       ...(ticketUrl != null && { ticketUrl }),
       ...(eventUrl != null && { eventUrl }),
