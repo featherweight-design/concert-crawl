@@ -152,6 +152,9 @@ describe('FollowShelf', () => {
     expect(cards).toHaveLength(10);
     const rail = cards[0]?.parentElement;
     expect(rail?.className).toContain('overflow-x-auto');
+    // Sideways only: overflow-x alone makes overflow-y auto too, which drew a
+    // vertical scrollbar on the row.
+    expect(rail?.className).toContain('overflow-y-hidden');
     expect(rail?.className).not.toContain('nth-child');
   });
 

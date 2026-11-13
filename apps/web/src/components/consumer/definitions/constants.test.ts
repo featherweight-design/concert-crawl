@@ -5,6 +5,7 @@ import {
   SHELF_CARD_BOX_CLASS,
   SHELF_CARD_PHONE,
   SHELF_CARD_WIDE,
+  SHELF_RAIL_SCROLL_CLASS,
 } from './constants';
 
 // The box has to be a literal class string for Tailwind's scanner, so these
@@ -28,5 +29,12 @@ describe('browse shelf card box', () => {
   it('derives the art scale from the smallest box width', () => {
     expect(SHELF_CARD_ART_SCALE).toBe(slotScaleFor(SHELF_CARD_PHONE.width));
     expect(SHELF_CARD_ART_SCALE).toBe('hero');
+  });
+});
+
+describe('browse shelf rail scroll', () => {
+  it('scrolls sideways and pins the vertical axis', () => {
+    expect(SHELF_RAIL_SCROLL_CLASS).toContain('overflow-x-auto');
+    expect(SHELF_RAIL_SCROLL_CLASS).toContain('overflow-y-hidden');
   });
 });
