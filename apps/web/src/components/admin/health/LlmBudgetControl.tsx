@@ -8,6 +8,7 @@ import {
   type AdminSettings,
 } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
+import { SIGNAL_TO_ACCENT } from '@/components/settings/definitions/styles';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -262,7 +263,8 @@ export const LlmBudgetControl = ({
             borderRadius: 999,
             border: 'none',
             padding: 0,
-            background: fallback ? 'var(--signal)' : 'var(--border-strong)',
+            // The B+ on-switch: the blue-to-pink pair, as the board's track.
+            background: fallback ? SIGNAL_TO_ACCENT : 'var(--border-strong)',
           }}
         >
           <span

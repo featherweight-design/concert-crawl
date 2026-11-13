@@ -94,6 +94,21 @@ describe('<LlmBudgetControl />', () => {
     expect(screen.getByText('$17.85')).toBeInTheDocument();
   });
 
+  it('draws the on switch in the B+ blue-to-pink pair and reads the board line', () => {
+    mount();
+    open();
+    const toggle = screen.getByRole('switch');
+    expect(toggle.style.background).not.toContain('gradient');
+    fireEvent.click(toggle);
+    expect(toggle.style.background).toContain('linear-gradient');
+    expect(toggle.style.background).toContain('var(--accent)');
+    expect(
+      screen.getByText(
+        'Keep crawling with HTML and JSON-LD only, and tell me. Never stops a crawl.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('saves only what changed, closes, and refreshes the page data', async () => {
     mockPatch.mockResolvedValue({});
     mount();
