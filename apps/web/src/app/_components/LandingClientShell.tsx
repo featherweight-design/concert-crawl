@@ -207,11 +207,14 @@ export default function LandingClientShell({
         <div className="md:col-start-1 md:row-start-1">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h1
+              // Sized to the boards: inv-mob sets the 2-line headline at about
+              // 11.3vw (44px at 390); inv-desk sets the 3-line one at about
+              // 5.55vw (80px at 1440), which at 10vw read 15% too large.
+              className="[font-size:clamp(36px,11.3vw,60px)] md:[font-size:clamp(52px,5.55vw,84px)]"
               style={{
                 margin: 0,
                 fontFamily: 'Inter, system-ui',
                 fontWeight: 900,
-                fontSize: 'clamp(36px, 10vw, 84px)',
                 letterSpacing: '-0.035em',
                 lineHeight: 0.95,
               }}
