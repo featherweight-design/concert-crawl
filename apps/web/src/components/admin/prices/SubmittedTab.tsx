@@ -173,6 +173,15 @@ export const SubmittedTab = () => {
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [rejecting, setRejecting] = useState<SubmittedRow | null>(null);
 
+  // The chips and the search are desktop-only: a phone width clears them rather
+  // than leaving a hidden filter on the list.
+  useEffect(() => {
+    if (isPhone) {
+      setFilter('all');
+      setTyped('');
+    }
+  }, [isPhone]);
+
   // The search waits for a pause in typing.
   useEffect(() => {
     const timer = setTimeout(() => setSearch(typed.trim()), 300);

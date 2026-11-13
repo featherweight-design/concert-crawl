@@ -24,6 +24,8 @@ import { priceRange } from './submitted-rules';
 
 const COPY = ADMIN_COPY.pricesChecks;
 const PAGE = 50;
+/** Open checks are few; one call takes up to the API's most. */
+const OPEN_PAGE = 100;
 
 type View = 'open' | 'resolved';
 
@@ -106,11 +108,12 @@ export const PriceChecksTab = () => {
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
 
   const latest = useRef(0);
+  const everLoaded = useRef(false);
   const load = useCallback(async () => {
     const mine = ++latest.current;
     try {
       const [openPage, resolvedPage] = await Promise.all([
-        api.open(0, PAGE),
+        api.open(0, OPEN_PAGE),
         api.resolved(0, PAGE),
       ]);
       if (mine !== latest.current) return;
@@ -120,8 +123,11 @@ export const PriceChecksTab = () => {
       setResolvedTotal(resolvedPage.total);
       setFailed(false);
       setLoaded(true);
+      everLoaded.current = true;
     } catch {
-      if (mine === latest.current) setFailed(true);
+      // A refresh that fails after a decision keeps what is on screen: the
+      // answer was saved, and a "Couldn't load" page would hide that.
+      if (mine === latest.current && !everLoaded.current) setFailed(true);
     }
   }, [api]);
 
@@ -150,9 +156,12 @@ export const PriceChecksTab = () => {
   };
 
   const loadMoreResolved = async () => {
+    // A reload while this runs makes its answer stale.
+    const mine = latest.current;
     setMore('loading');
     try {
       const page = await api.resolved(resolved.length, PAGE);
+      if (mine !== latest.current) return;
       const seen = new Set(resolved.map((row) => row.id));
       setResolved([
         ...resolved,
@@ -161,7 +170,7 @@ export const PriceChecksTab = () => {
       setResolvedTotal(page.total);
       setMore('idle');
     } catch {
-      setMore('failed');
+      if (mine === latest.current) setMore('failed');
     }
   };
 

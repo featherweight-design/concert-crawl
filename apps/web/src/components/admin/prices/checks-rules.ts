@@ -1,7 +1,11 @@
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 const mountainDay = (instant: Date): string =>
   instant.toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+
+/** The calendar day before a `YYYY-MM-DD` day (not "24 hours ago": DST). */
+const dayBefore = (day: string): string =>
+  new Date(Date.parse(`${day}T12:00:00Z`) - 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 
 /** "Sep 18" for a `YYYY-MM-DD` date, "Thu Nov 12" with `weekday`. */
 export const shortDay = (date: string, weekday = false): string => {
@@ -31,7 +35,7 @@ export const filedWhen = (
   if (Number.isNaN(at.getTime())) return '';
   const day = mountainDay(at);
   if (day === mountainDay(now)) return words.today;
-  if (day === mountainDay(new Date(now.getTime() - DAY_MS))) {
+  if (day === dayBefore(mountainDay(now))) {
     return words.yesterday;
   }
   return shortDay(day);
@@ -43,8 +47,7 @@ export const decidedWhen = (iso: string, now: Date = new Date()): string => {
   if (Number.isNaN(at.getTime())) return '';
   const day = mountainDay(at);
   const recent =
-    day === mountainDay(now) ||
-    day === mountainDay(new Date(now.getTime() - DAY_MS));
+    day === mountainDay(now) || day === dayBefore(mountainDay(now));
   const date = shortDay(day);
   if (!recent) return date;
   const time = at.toLocaleTimeString('en-US', {
