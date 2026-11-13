@@ -463,8 +463,14 @@ export const CONSUMER_COPY = {
     },
 
     modal: {
-      closeAriaLabel: 'Close',
       featureDropPrefix: 'Feature drop · ',
+      newFeaturePrefix: 'New · ',
+      // Names for the spotlight hero keys. A hero with no name here keeps the
+      // "Feature drop · <version>" eyebrow.
+      heroFeatureNames: {
+        spotify: 'Spotify',
+        price: 'Submitted prices',
+      } as Record<string, string>,
       walkthroughLabel: 'How it works',
       stepSeparator: ' / ',
       prevButton: '← Back',

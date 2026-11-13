@@ -36,24 +36,80 @@ describe('SpotlightModal', () => {
     expect(screen.getByText('Community-sourced ticket prices.')).toBeTruthy();
   });
 
-  it('calls onClose when close button is clicked', () => {
+  it('draws no close button over the art; Maybe later, Escape and the backdrop close it', () => {
     const onClose = vi.fn();
-    render(<SpotlightModal release={RELEASE} onClose={onClose} />);
-    fireEvent.click(screen.getByLabelText('Close'));
-    expect(onClose).toHaveBeenCalledOnce();
+    const { container } = render(
+      <SpotlightModal release={RELEASE} onClose={onClose} />,
+    );
+    // more-r3-feature_modal draws no ×. The hero's stats, chips and artist
+    // tags fill every corner of the stage, so nothing is laid over it.
+    expect(screen.queryByLabelText('Close')).toBeNull();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    // The backdrop is the dialog's parent; a tap on the dialog itself is not.
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(dialog);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    const backdrop = container.firstElementChild;
+    if (!(backdrop instanceof HTMLElement)) throw new Error('no backdrop');
+    fireEvent.click(backdrop);
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps the eyebrow and the close button off the hero art', () => {
+  it('puts the eyebrow in the body above the title, off the hero art', () => {
     render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
-    // The hero's stats, chips and artist tags fill every corner of the stage,
-    // so the close button and the FEATURE DROP eyebrow share a strip above it
-    // rather than floating over it (they landed on chips at 390 and 1300).
-    const close = screen.getByLabelText('Close');
     const eyebrow = screen.getByText(/v0\.5\.0-beta/);
     const hero = screen.getByTestId('spotlight-hero');
-    expect(hero.contains(close)).toBe(false);
+    const title = screen.getByRole('heading', { level: 2 });
     expect(hero.contains(eyebrow)).toBe(false);
-    expect(close.parentElement?.contains(eyebrow)).toBe(true);
+    // Document order: hero, then the eyebrow, then the title.
+    expect(
+      hero.compareDocumentPosition(eyebrow) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      eyebrow.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('names the feature in the eyebrow when the hero has a name, else keeps the version', () => {
+    const named: Release = {
+      ...RELEASE,
+      spotlight: { ...RELEASE.spotlight!, hero: 'price' },
+    };
+    render(<SpotlightModal release={named} onClose={vi.fn()} />);
+    expect(screen.getByText('New · Submitted prices')).toBeTruthy();
+    expect(screen.queryByText(/v0\.5\.0-beta/)).toBeNull();
+  });
+
+  it('draws a 520-wide card on a wide screen and a rounded-top sheet on a phone', () => {
+    const original = window.innerWidth;
+    try {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: 1300,
+      });
+      const { unmount } = render(
+        <SpotlightModal release={RELEASE} onClose={vi.fn()} />,
+      );
+      expect(screen.getByRole('dialog').style.width).toBe('520px');
+      unmount();
+
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: 390,
+      });
+      render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
+      const sheet = screen.getByRole('dialog');
+      expect(sheet.style.borderRadius).toBe('22px 22px 0 0');
+      expect(sheet.style.maxHeight).toBe('92svh');
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: original,
+      });
+    }
   });
 
   it('calls onClose when "Maybe later" is clicked', () => {

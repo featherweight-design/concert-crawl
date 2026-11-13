@@ -19,6 +19,7 @@ export function SpotlightModal({
   onCTA,
 }: SpotlightModalProps) {
   const sp = release.spotlight;
+  const featureName = sp ? COPY.modal.heroFeatureNames[sp.hero] : undefined;
   const [step, setStep] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
   const [heroScale, setHeroScale] = useState(1);
@@ -72,10 +73,16 @@ export function SpotlightModal({
         background: 'var(--scrim)',
         backdropFilter: 'blur(6px)',
         display: 'flex',
-        alignItems: 'center',
+        // A phone gets a sheet from the bottom with rounded top corners; a wide
+        // screen a centred card.
+        alignItems: isMobile ? 'flex-end' : 'center',
         justifyContent: 'center',
         padding: isMobile ? 0 : 32,
         zIndex: 200,
+      }}
+      // A tap on the backdrop closes it, like Escape and Maybe later.
+      onClick={(ev) => {
+        if (ev.target === ev.currentTarget) onClose();
       }}
     >
       <div
@@ -89,12 +96,17 @@ export function SpotlightModal({
         className="sheet-edge"
         style={{
           ['--sheet-bg' as string]: 'var(--bg-elevated)',
-          width: isMobile ? '100%' : 580,
+          // 520 wide as drawn; the 580x300 stage scales to it.
+          width: isMobile ? '100%' : 520,
           maxWidth: '100%',
-          height: isMobile ? '100%' : 'auto',
-          maxHeight: isMobile ? '100%' : '90vh',
-          borderRadius: isMobile ? 0 : 20,
-          boxShadow: isMobile ? 'none' : '0 32px 80px rgba(0,0,0,0.55)',
+          height: 'auto',
+          // `svh`, not `vh`: a sheet pinned to the bottom must not sit behind
+          // the URL bar.
+          maxHeight: isMobile ? '92svh' : '90vh',
+          borderRadius: isMobile ? '22px 22px 0 0' : 20,
+          boxShadow: isMobile
+            ? '0 -16px 48px rgba(0,0,0,0.45)'
+            : '0 32px 80px rgba(0,0,0,0.55)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -102,82 +114,6 @@ export function SpotlightModal({
           color: 'var(--fg)',
         }}
       >
-        {/* Header strip: the eyebrow and the close button live here, on the
-            sheet, not over the art. The hero's own stats, chips and artist
-            tags sit in every corner of the stage, so anything laid over it
-            will land on one of them. */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexShrink: 0,
-            padding: isMobile ? '10px 14px 10px 22px' : '10px 14px 10px 30px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              aria-hidden
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 6,
-                background: 'var(--accent)',
-                boxShadow: '0 0 6px var(--accent)',
-                animation: 'rnPulse 1.4s ease-in-out infinite',
-              }}
-            />
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--accent)',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {COPY.modal.featureDropPrefix}
-              {release.version}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={COPY.modal.closeAriaLabel}
-            style={{
-              all: 'unset',
-              cursor: 'pointer',
-              flexShrink: 0,
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border-strong)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--fg)',
-            }}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M3 3l6 6M9 3l-6 6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
-
         {/* hero — 580×300 Showtime stage per SHOWTIME_HANDOFF.md §2. Its box
             is as tall as the scaled stage, so a narrow sheet has no blank band
             under the art. */}
@@ -224,6 +160,43 @@ export function SpotlightModal({
             padding: isMobile ? '22px 22px 18px' : '26px 30px 22px',
           }}
         >
+          {/* more-r3-feature_modal: the eyebrow sits in the body above the
+              title, not over the art, so it can never land on a hero's corner
+              content. */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 6,
+                background: 'var(--accent)',
+                boxShadow: '0 0 6px var(--accent)',
+                animation: 'rnPulse 1.4s ease-in-out infinite',
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 700,
+                color: 'var(--accent)',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {featureName
+                ? `${COPY.modal.newFeaturePrefix}${featureName}`
+                : `${COPY.modal.featureDropPrefix}${release.version}`}
+            </span>
+          </div>
           <h2
             id="spotlight-modal-title"
             style={{
@@ -304,21 +277,22 @@ export function SpotlightModal({
                   animation: 'rnFadeUp 360ms ease both',
                 }}
               >
+                {/* more-r3-feature_modal: a plain gradient numeral, no circle. */}
                 <div
+                  aria-hidden
                   style={{
                     flexShrink: 0,
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    background: 'var(--surface-3)',
-                    border: '1px solid var(--signal)',
-                    color: 'var(--signal)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 14,
-                    fontWeight: 800,
+                    width: 20,
+                    fontSize: 24,
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    letterSpacing: '-0.02em',
+                    background:
+                      'linear-gradient(135deg, var(--signal), var(--cta-end))',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    color: 'transparent',
                   }}
                 >
                   {step + 1}
@@ -525,17 +499,18 @@ export function SpotlightModal({
               }}
             >
               {sp.cta}
+              {/* The drawn arrow glyph (→), not a chevron. */}
               <svg
-                width="11"
-                height="11"
-                viewBox="0 0 12 12"
+                width="14"
+                height="12"
+                viewBox="0 0 14 12"
                 fill="none"
                 aria-hidden
               >
                 <path
-                  d="M4 3l4 3-4 3"
+                  d="M1.5 6h10.5M8 2l4 4-4 4"
                   stroke="currentColor"
-                  strokeWidth="1.6"
+                  strokeWidth="1.8"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
