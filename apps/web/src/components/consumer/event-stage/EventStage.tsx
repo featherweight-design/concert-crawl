@@ -285,9 +285,10 @@ export type EventStageProps = {
   status?: EventStatus;
   /**
    * The venue whose stamp colours a past night's hero on a phone
-   * (event_unmarked_m, event_stamped_m): a greyscale photo, the venue's ring
-   * and glow, and venue-coloured rays. From `sm` up the hero keeps its colour
-   * and genre ring, as event-past-d draws it. Omit for a night that is not past.
+   * (event_unmarked_m, event_stamped_m): the venue's ring and glow, and
+   * venue-coloured rays. The photo keeps its colour at every width, as
+   * event-past-d draws it; from `sm` up the ring is the genre ring. Omit for a
+   * night that is not past.
    */
   pastVenueSlug?: string;
   children: ReactNode;
@@ -356,7 +357,6 @@ export const EventStage = ({
             ratio="4 / 5"
             radius={STAGE_CARD_RADIUS}
             scale="hero"
-            {...(venueRing ? { className: 'max-sm:grayscale' } : {})}
           />
         </div>
       }

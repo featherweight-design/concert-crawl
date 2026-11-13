@@ -97,9 +97,10 @@ describe('<EventStage />', () => {
     expect(screen.getByTestId('stage-card').style.filter).toBe('');
   });
 
-  // event_unmarked_m / event_stamped_m: a past night's phone hero is greyscale
-  // with the venue's ring and rays; event-past-d keeps the colour at sm and up.
-  it("draws a past night's phone hero in its venue's ring, greyscale, with its rays", () => {
+  // event_unmarked_m / event_stamped_m: a past night's phone hero wears the
+  // venue's ring and rays; no board greys the photo, and event-past-d keeps the
+  // colour, so the photo stays in colour at every width.
+  it("draws a past night's phone hero in its venue's ring, in colour, with its rays", () => {
     render(
       <EventStage
         name="Culture Wars"
@@ -118,7 +119,7 @@ describe('<EventStage />', () => {
       'max-sm:[--stage-shadow:var(--past-shadow)]',
     );
     expect(card.style.getPropertyValue('--past-shadow')).toContain('0 0 0 2px');
-    expect(card.innerHTML).toContain('max-sm:grayscale');
+    expect(card.innerHTML).not.toContain('grayscale');
     // The genre ring is still the default from `sm` up.
     // (Not an inline `--stage-shadow`, which would beat the phone override.)
     expect(card.style.getPropertyValue('--genre-shadow')).toContain(
