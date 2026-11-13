@@ -34,8 +34,11 @@ interface PendingTokens {
   border: string;
 }
 
-const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
-  if (kind === 'community') {
+// A resale submission takes the community tokens; only its pill says Resale.
+const pendingTokens = (
+  kind: 'community' | 'boxoffice' | 'resale',
+): PendingTokens => {
+  if (kind !== 'boxoffice') {
     return {
       color: AZURE,
       bg: `color-mix(in oklab, ${AZURE} 6%, var(--surface-1))`,
@@ -70,7 +73,7 @@ export interface CorroborationSheetProps {
     ceiling?: number;
     tier: string;
     vendor: string;
-    kind: 'community' | 'boxoffice';
+    kind: 'community' | 'boxoffice' | 'resale';
     submitter: { handle: string; url: string } | null;
     submittedAt: string;
     confirms: number;
@@ -92,7 +95,7 @@ interface SubmissionDetailCardProps {
   ceiling?: number;
   tier: string;
   vendor: string;
-  kind: 'community' | 'boxoffice';
+  kind: 'community' | 'boxoffice' | 'resale';
   submitter: { handle: string; url: string } | null;
   submittedAt: string;
   note?: string | null | undefined;

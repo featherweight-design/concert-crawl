@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 
 import { CorroborationSheet } from './CorroborationSheet';
 
@@ -90,5 +90,26 @@ describe('CorroborationSheet signed-out gate (#1247)', () => {
     expect(
       screen.getByRole('radiogroup', { name: /verification method/i }),
     ).toBeInTheDocument();
+  });
+});
+
+// Regression: a resale submission reached the sheet as community and showed
+// the Community pill (addendum 4 item 5, the shared TrustPill).
+describe('CorroborationSheet trust pill', () => {
+  beforeEach(cleanup);
+
+  it('shows the Resale pill for a resale submission', () => {
+    render(
+      <CorroborationSheet
+        submission={{ ...submission, vendor: 'StubHub', kind: 'resale' }}
+        open
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        onSubmitUpdate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('trust-pill-resale')).toBeInTheDocument();
+    expect(screen.queryByTestId('trust-pill-community')).toBeNull();
   });
 });

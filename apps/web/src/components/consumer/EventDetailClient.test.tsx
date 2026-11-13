@@ -63,8 +63,16 @@ let latestModalOnSuccess: ((results: ModalSuccessRow[]) => void) | null = null;
 // detect open=true purely from the rendered DOM without dragging in the
 // real sheet's tree.
 vi.mock('@/components/consumer/CorroborationSheet', () => ({
-  CorroborationSheet: (props: { open: boolean }) =>
-    props.open ? <div data-testid="corroboration-sheet-open" /> : null,
+  CorroborationSheet: (props: {
+    open: boolean;
+    submission: { kind: string };
+  }) =>
+    props.open ? (
+      <div
+        data-testid="corroboration-sheet-open"
+        data-kind={props.submission.kind}
+      />
+    ) : null,
 }));
 vi.mock('@/components/consumer/submit-price/SubmitPriceModal', () => ({
   SubmitPriceModal: (props: {
@@ -964,6 +972,77 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     });
     // onConfirm wired to setActiveCorroborationId → sheet now mounted.
     expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined();
+  });
+
+  // Regression: the corroboration sheet's kind was `vendor === 'VenueBoxOffice'`
+  // alone, so confirming a pending resale price opened the sheet as community
+  // and it showed no Resale pill. Both sheet mounts are covered.
+  it('opens the corroboration sheet as resale for a pending resale tier price', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p-ga-resale',
+          priceMin: '44',
+          priceMax: null,
+          vendor: 'StubHub',
+          howFound: 'saw_listing',
+          sourceCategory: 'resale',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    });
+    render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({ priceByTier: [ga] })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    act(() => {
+      fireEvent.click(screen.getByText('Confirm price'));
+    });
+    expect(
+      screen.getByTestId('corroboration-sheet-open').getAttribute('data-kind'),
+    ).toBe('resale');
+  });
+
+  it('opens the corroboration sheet as resale for a pending resale legacy price', () => {
+    const event = buildBaseEvent({
+      priceByTier: null,
+      pendingSubmissions: [
+        {
+          id: 'p-legacy-resale',
+          priceMin: '44',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'StubHub',
+          howFound: 'saw_listing',
+          sourceCategory: 'resale',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    act(() => {
+      fireEvent.click(screen.getByText('Confirm price'));
+    });
+    expect(
+      screen.getByTestId('corroboration-sheet-open').getAttribute('data-kind'),
+    ).toBe('resale');
   });
 
   it('STATE #7 all-tiers-pending: clicking Withdraw on the submitter card DELETEs the submission + refreshes router', async () => {
