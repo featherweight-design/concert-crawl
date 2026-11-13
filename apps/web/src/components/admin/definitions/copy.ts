@@ -842,6 +842,146 @@ export const ADMIN_COPY = {
     },
   },
 
+  // The venue page's Source tab (3b part 6). 6b-i adds it for the inert
+  // source rules; 6b-ii mounts the tab that reads the rest.
+  venueSource: {
+    read: {
+      title: 'How we read it',
+      modes: {
+        page: {
+          label: 'Read the venue’s calendar page',
+          sub: 'HTML first, then JSON-LD, then Haiku if needed. Works for most venues.',
+        },
+        feed: {
+          label: 'Ticketing feed',
+          // The real feeds only (A3 §3b row 1), not the board's sample list.
+          sub: 'VenuePilot, AEG or Live Nation. Fastest, no LLM cost.',
+          // Desktop shows a venue's feed read-only, seller and ID, in place
+          // of the held feed fields (#175).
+          subNamed: (seller: string, id: string) =>
+            id === ''
+              ? `From ${seller}. Fastest, no LLM cost.`
+              : `From ${seller}, venue ID ${id}. Fastest, no LLM cost.`,
+        },
+      },
+      // A stored `manual` reads as the calendar page: the crawler doesn't
+      // honour it yet, and Don't crawl is out of 6b.
+      manualNote: 'Set to manual entry. The crawler doesn’t skip it yet.',
+      calendarPage: {
+        label: 'Calendar page',
+        hint: 'We start here and follow its own “next page” links.',
+        invalid: 'Use a link that starts with http:// or https://.',
+        open: 'Open the calendar page',
+      },
+      seller: {
+        label: 'Seller',
+        names: {
+          venuepilot: 'VenuePilot',
+          aeg: 'AEG',
+          livenation: 'Live Nation',
+        },
+        required: 'Pick a seller.',
+      },
+      feedId: {
+        label: (venue: string, seller: string) =>
+          `${venue}’s venue ID on ${seller}`,
+        hints: {
+          venuepilot:
+            'From the VenuePilot calendar widget on the venue’s site.',
+          aeg: 'The events.json shard number in the calendar page’s source.',
+          livenation:
+            'The discovery_id on any event in the venue’s calendar data.',
+        },
+        required: (seller: string) => `${seller} needs the venue ID.`,
+      },
+      // No board: kept under the feed ID until 3c's Test it now replaces it.
+      probe: {
+        button: 'Probe platform fetch',
+        buttonPending: 'Probing…',
+        okPrefix: 'Probe OK:',
+        okEvents: 'events found in',
+        failedPrefix: 'Probe failed:',
+        reasons: {
+          missingConfig: 'missing config (set a platform and venue ID first)',
+          fetchError: 'fetch error',
+          schemaError: 'platform response did not match expected schema',
+        },
+        requestFailed: 'Probe request failed',
+      },
+    },
+    advanced: {
+      label: 'Advanced',
+      // The board's line names Save debug HTML, which is held (Hugh, row 13).
+      collapsedLine: 'Page loading, wait-for selector, reader. Rarely needed.',
+      pageLoading: {
+        label: 'Page loading',
+        auto: 'Automatic',
+        http: 'Plain fetch',
+        browser: 'Full browser',
+        hint: 'Full browser runs the page’s scripts. Slower; only for calendars that draw themselves.',
+      },
+      waitUntil: {
+        label: 'Wait until',
+        networkidle: 'Network quiet',
+        load: 'Loaded',
+        domcontentloaded: 'HTML ready',
+      },
+      waitFor: {
+        label: 'Wait for',
+        hint: 'Optional. We read the page once this appears.',
+        placeholder: '.event-list',
+      },
+      reader: {
+        label: 'Reader',
+        auto: 'Automatic',
+        structured_data: 'JSON-LD only',
+        llm: 'Haiku only',
+        'detail-page': 'Detail pages',
+        hint: 'Automatic tries JSON-LD, then Haiku.',
+      },
+      // The hint under the reader while Detail pages is picked.
+      detailPage: 'Reads each show’s own page, from the calendar’s links.',
+    },
+    robots: {
+      title: 'robots.txt',
+      calendarPage: 'Calendar page',
+      allowed: 'Allowed',
+      disallowed: 'Disallowed',
+      unchecked: 'Not checked',
+      lastChecked: 'Last checked',
+      never: 'Never',
+      userAgent: 'Our user agent',
+      footnote:
+        'Checked before every run. A disallow pauses crawling and lands in Needs you; we never override it.',
+      disallowedFootnote:
+        'Crawling paused before the run. We never override a disallow; shows already listed stay listed.',
+    },
+    rules: {
+      title: 'Fixed by the crawl rules',
+      pace: 'Pace',
+      paceValue: (seconds: string) =>
+        `${seconds} s minimum between requests, plus jitter`,
+      schedule: 'Schedule',
+      scheduleValue: 'Daily, 3 AM MT',
+      autoPause: 'Auto-pause',
+      autoPauseValue: 'After 3 failures in a row',
+      footnote: 'Shown, not editable.',
+    },
+    saveBar: {
+      unsaved: (card: string) => `Unsaved: ${card}`,
+      discard: 'Discard',
+      save: 'Save source',
+      saving: 'Saving…',
+    },
+    failed: {
+      title: 'Couldn’t save the source',
+      saved: {
+        page: 'Still reading the calendar page.',
+        feed: (seller: string) => `Still reading the ${seller} feed.`,
+      },
+    },
+  },
+
   // The venue page's Runs tab (3b part 4, `04/venue-runs`, `04/venue-runs-
   // mobile`). Outcome words come from `venuesList.latestRun`.
   venueRuns: {
