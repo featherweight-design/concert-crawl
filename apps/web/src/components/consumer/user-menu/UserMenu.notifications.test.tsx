@@ -939,3 +939,31 @@ describe('#737 panel — the sheet is not the popover', () => {
     ).toBeNull();
   });
 });
+
+describe('the desktop account menu dims the page (bp-account)', () => {
+  const scrim = (): HTMLElement | null =>
+    document.body.querySelector('[data-testid="account-menu-scrim"]');
+
+  it('draws a dim behind the open popover and removes it on close', async () => {
+    signIn();
+    setViewport(false);
+    await renderChrome();
+    expect(scrim()).toBeNull();
+
+    await click(desktopTrigger());
+    expect(scrim()).not.toBeNull();
+    // The dim is visual only: the page stays reachable, so no aria-modal.
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-modal');
+
+    await click(desktopTrigger());
+    expect(scrim()).toBeNull();
+  });
+
+  it('leaves the phone sheet to its own scrim', async () => {
+    signIn();
+    setViewport(true);
+    await renderChrome();
+    await click(navTrigger());
+    expect(scrim()).toBeNull();
+  });
+});
