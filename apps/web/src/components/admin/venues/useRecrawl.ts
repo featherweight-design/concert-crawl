@@ -210,8 +210,12 @@ export const useRecrawl = (venueId: string, off: boolean) => {
   return {
     state,
     reason,
-    /** `force` re-reads an unchanged page (Overview's Re-crawl anyway). */
-    start: (force = false) => void start(force),
+    /**
+     * `force` re-reads an unchanged page (Overview's Re-crawl anyway). Typed
+     * `true` only, so `onClick={recrawl.start}` (an event as `force`) can't
+     * compile into a forced crawl.
+     */
+    start: (force?: true) => void start(force === true),
     /** Try again: repeats the refused start, forced or not. */
     retry: () => void start(lastForce.current),
     dismiss,

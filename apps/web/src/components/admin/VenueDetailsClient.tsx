@@ -1292,27 +1292,19 @@ export function VenueDetailsClient({
               />
             </VDField>
 
-            {/* City (Live and Hidden are the header's chip and ⋯ menu) */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: 12,
-              }}
+            {/* City, full width (Live and Hidden are the header's chip and ⋯ menu) */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.city}
+              htmlFor="edit-venue-city"
             >
-              <VDField
-                label={ADMIN_COPY.venueDetailsClient.fields.city}
-                htmlFor="edit-venue-city"
-              >
-                <VDInput
-                  id="edit-venue-city"
-                  inputRef={cityRef}
-                  defaultValue={venue.city}
-                  disabled={isDisabled}
-                  onChange={(evt) => setCityVal(evt.target.value)}
-                />
-              </VDField>
-            </div>
+              <VDInput
+                id="edit-venue-city"
+                inputRef={cityRef}
+                defaultValue={venue.city}
+                disabled={isDisabled}
+                onChange={(evt) => setCityVal(evt.target.value)}
+              />
+            </VDField>
           </div>
         </VDSection>
 

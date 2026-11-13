@@ -16,10 +16,10 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { navItem } from '@/components/admin/shell/nav';
-import { apiClient } from '@/lib/api';
+import { ApiError, apiClient } from '@/lib/api';
 import { venueTabHref } from '@/lib/admin/venue-tabs';
 import type { Recrawl } from '../useRecrawl';
-import { recrawlOff } from '../venue-header-rules';
+import { headerLine, recrawlOff } from '../venue-header-rules';
 import type { OverviewData, OverviewSnooze } from './overview-data';
 import {
   LAST_RUNS,
@@ -184,7 +184,10 @@ const LatestRunCard = ({
             disabled={off !== null || busy}
             // The header's line says why it is off.
             aria-describedby={
-              off !== null ? `venue-header-line-${venue.id}` : undefined
+              // Only while the header draws that line (`VenueHeader`).
+              off !== null && headerLine(venue, phone) !== ''
+                ? `venue-header-line-${venue.id}`
+                : undefined
             }
             onClick={() => recrawl.start(true)}
             style={{
@@ -464,6 +467,11 @@ const NeedsYouCard = ({
       );
       router.refresh();
     } catch (err: unknown) {
+      // Already back on (turned on elsewhere): the row is stale, not stuck.
+      if (err instanceof ApiError && err.status === 404) {
+        router.refresh();
+        return;
+      }
       console.error('Overview: turn back on failed', { id: snooze.id, err });
       setFailed(snooze);
     } finally {
