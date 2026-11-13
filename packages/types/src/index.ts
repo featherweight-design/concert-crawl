@@ -1895,6 +1895,8 @@ export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'show-dropped';
       eventId: string;
+      /** The show's start time as the crawl has it (`HH:MM:SS`), or null. */
+      showTime: string | null;
       classification: MissingClassification;
       lastSeenAt: string | null;
       evidence: NeedsYouEvidenceLine[];
@@ -1902,6 +1904,7 @@ export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'show-moved';
       eventId: string;
+      showTime: string | null;
       moveTo: { eventId: string; title: string; venueName: string | null };
       evidence: NeedsYouEvidenceLine[];
     })
@@ -1925,6 +1928,7 @@ export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'event-low-confidence';
       eventId: string;
+      showTime: string | null;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {

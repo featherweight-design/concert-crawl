@@ -112,6 +112,29 @@ describe('Needs you sources and ranking', () => {
     ]);
   });
 
+  it('carries the show time on show and event items, null when unknown', async () => {
+    const venue = await seedVenue({ name: 'Time Hall', slug: 'time-hall' });
+    const timed = await seedEvent(venue.id, {
+      artist: 'Timed Act',
+      date: inDays(5),
+      showTime: '20:00:00',
+      verified: false,
+    });
+    const untimed = await seedEvent(venue.id, {
+      artist: 'Untimed Act',
+      date: inDays(6),
+      verified: false,
+    });
+    const items = await listNeedsYou({
+      kind: 'event-low-confidence',
+      now: now(),
+    });
+    const timeOf = (eventId: string) =>
+      items.find((item) => item.key === lowKey(eventId));
+    expect(timeOf(timed.id)).toMatchObject({ showTime: '20:00:00' });
+    expect(timeOf(untimed.id)).toMatchObject({ showTime: null });
+  });
+
   it('keeps a venue fault snoozed under one stable key', async () => {
     const venue = await seedVenue({
       name: 'Blocked Hall',
