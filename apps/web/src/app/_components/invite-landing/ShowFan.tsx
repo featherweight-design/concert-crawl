@@ -16,10 +16,9 @@ type Slot = 'left' | 'centre' | 'right';
 // fraction of the card width), its drop and its tilt. The side cards sit behind
 // and lower than the centre one. invite-320 draws fixed 165x216 cards, side
 // centres at about 0.65 of the width and tops at 18px (left) and 21px (right):
-// 0.109 and 0.127 of 165. Below 390px the card scales with the viewport
-// (--fan-card-w: 38vw) so the 9deg side boxes (0.598 of the width from their
-// centre, 1.248 with the offset) fit: 320 gives 122px (needs <= 128) and 375
-// gives 142 (needs <= 150).
+// 0.109 and 0.127 of 165. The cards keep that size at 320 too; the board lets
+// the side ones run off the screen edge (the fan clips them), and a smaller
+// card would crowd the TONIGHT pill under the eye button.
 const SLOT_POSE: Record<
   Slot,
   { side: number; dy: number; rotate: number; z: number }
@@ -227,10 +226,14 @@ export function ShowFan({ shows }: { shows: InviteShow[] }) {
 
   return (
     <div
-      className="[--fan-card-w:38vw] [--fan-dx:0.65] min-[390px]:[--fan-card-w:165px] md:[--fan-card-w:250px]"
+      className="[--fan-card-w:165px] [--fan-dx:0.65] md:[--fan-card-w:250px]"
       style={{
         position: 'relative',
         width: '100%',
+        // invite-320 draws the 165px cards at every phone width and lets the
+        // side ones run off the screen edge. `clip`, not `hidden`, so the
+        // fan makes no scroll container and the tilted tops are not cut.
+        overflowX: 'clip',
         // The board's 259px box for 216px cards: 1.57 of the width.
         height: 'calc(var(--fan-card-w) * 1.57)',
       }}
