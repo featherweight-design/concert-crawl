@@ -242,6 +242,33 @@ describe('merge-duplicate-nights integration', () => {
     expect(await db.select().from(artists)).toHaveLength(2);
   });
 
+  it('sets the evening time on the survivor even when the morning row was the watched one', async () => {
+    const venue = await seedVenue();
+    const morning = await seedEvent(venue.id, {
+      title: 'Beck',
+      artist: 'Beck',
+      date: '2026-10-01',
+      showTime: '07:30',
+    });
+    await seedEvent(venue.id, {
+      title: 'Beck',
+      artist: 'Beck',
+      date: '2026-10-01',
+      showTime: '19:30',
+    });
+    await db
+      .insert(userEvents)
+      .values({ userId: 'user-a', eventId: morning.id, status: 'watching' });
+
+    const result = await mergeDuplicateNights({ dryRun: false });
+
+    expect(result.merged).toBe(1);
+    const rows = await rowsOn(venue.id);
+    expect(rows.map((row) => [row.id, row.showTime])).toEqual([
+      [morning.id, '19:30:00'],
+    ]);
+  });
+
   it('merges at most max-groups nights and reports the rest as not reached', async () => {
     const venue = await seedVenue();
     for (const date of ['2026-12-16', '2026-12-17']) {
@@ -285,6 +312,40 @@ describe('chooseSurvivor and groupNights', () => {
     expect(
       chooseSurvivor([night('b', 'x', null), night('a', 'x', null)]).id,
     ).toBe('a');
+  });
+
+  it('does not read a midnight placeholder, or a seconds difference, as a misread', () => {
+    expect(
+      isTwelveHourMisread(
+        night('a', 'x', '00:00:00'),
+        night('b', 'x', '12:00:00'),
+      ),
+    ).toBe(false);
+    expect(
+      isTwelveHourMisread(
+        night('a', 'x', '07:30:00'),
+        night('b', 'x', '19:30:45'),
+      ),
+    ).toBe(false);
+  });
+
+  it('joins a chain of misreads whatever the order of the rows', () => {
+    const rows = [
+      night('a', 'beck', '07:30:00'),
+      night('b', 'beck', '19:30:00'),
+      night('c', 'beck', '08:30:00'),
+    ];
+    for (const order of [
+      rows,
+      [...rows].reverse(),
+      [rows[1]!, rows[0]!, rows[2]!],
+    ]) {
+      const groups = groupNights(order);
+      // 07:30 and 19:30 are one show; 08:30 has no twelve-hour partner.
+      expect(groups.map((group) => group.map((row) => row.id).sort())).toEqual([
+        ['a', 'b'],
+      ]);
+    }
   });
 
   it('reads a multi-day pass or ticket listing as a different product', () => {

@@ -83,6 +83,8 @@ export interface NightGroupPlan {
   losers: NightRow[];
   /** The first column of each group the survivor will take from a folded row. */
   fills: FillField[];
+  /** The evening time the survivor is set to when it holds the morning misread. */
+  setShowTime?: string;
   /** Filled in by an apply run. */
   outcome?: 'merged' | 'failed' | 'skipped';
   error?: string;
@@ -126,34 +128,39 @@ const MULTI_DAY_PASS =
 export const isMultiDayPass = (title: string): boolean =>
   MULTI_DAY_PASS.test(title);
 
-const minutesOf = (showTime: string | null | undefined): number | null => {
+/** Seconds past midnight, or null for an untimed row. */
+const secondsOf = (showTime: string | null | undefined): number | null => {
   const key = showTimeKey(showTime);
   if (key === '') return null;
-  const [hours, minutes] = key.split(':');
-  return Number(hours) * 60 + Number(minutes);
+  const [hours, minutes, seconds] = key.split(':');
+  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
 };
+const HOUR = 3600;
 
 /**
  * The same night stored with a morning-and-evening misread of one show time
  * (19:30 and 07:30): one artist, one date, both timed, exactly twelve hours
- * apart, the earlier before 10:00. Venues do not run a 7:30 morning concert, so
- * the pair is one show. Only this cleanup applies it; the crawl's own match
- * keeps two different times apart.
+ * apart to the second, the earlier from 01:00 to before 10:00. Venues do not run
+ * a 7:30 morning concert, so the pair is one show; 00:00 is excluded because it
+ * is the usual "no time given" placeholder, not a morning show. Only this
+ * cleanup applies it; the crawl's own match keeps two different times apart.
  */
 export const isTwelveHourMisread = (
   left: Pick<NightRow, 'canonicalArtist' | 'date' | 'showTime'>,
   right: Pick<NightRow, 'canonicalArtist' | 'date' | 'showTime'>,
 ): boolean => {
-  const first = minutesOf(left.showTime);
-  const second = minutesOf(right.showTime);
+  const first = secondsOf(left.showTime);
+  const second = secondsOf(right.showTime);
   if (first === null || second === null) return false;
   const key = nightArtistKey(left.canonicalArtist);
+  const earlier = Math.min(first, second);
   return (
     left.date === right.date &&
     key !== '' &&
     key === nightArtistKey(right.canonicalArtist) &&
-    Math.abs(first - second) === 720 &&
-    Math.min(first, second) < 600
+    Math.abs(first - second) === 12 * HOUR &&
+    earlier >= HOUR &&
+    earlier < 10 * HOUR
   );
 };
 
@@ -173,7 +180,7 @@ export const chooseSurvivor = (rows: readonly NightRow[]): NightRow => {
       right.refs - left.refs ||
       Number(showTimeKey(right.showTime) !== '') -
         Number(showTimeKey(left.showTime) !== '') ||
-      (minutesOf(right.showTime) ?? 0) - (minutesOf(left.showTime) ?? 0) ||
+      (secondsOf(right.showTime) ?? 0) - (secondsOf(left.showTime) ?? 0) ||
       left.id.localeCompare(right.id),
   );
   return sorted[0] as NightRow;
@@ -187,15 +194,29 @@ export const groupNights = (rows: readonly NightRow[]): NightRow[][] => {
     const key = `${alignedRow.canonicalArtist}|${showTimeKey(alignedRow.showTime)}`;
     byKey.set(key, [...(byKey.get(key) ?? []), rows[index] as NightRow]);
   });
-  // Then join groups that are one show misread by twelve hours.
+  // Then join groups that are one show misread by twelve hours, until nothing
+  // more joins, so the result does not depend on the order of the rows.
   const groups = [...byKey.values()];
-  for (let first = 0; first < groups.length; first += 1) {
-    for (let second = groups.length - 1; second > first; second -= 1) {
-      const left = groups[first] as NightRow[];
-      const right = groups[second] as NightRow[];
-      if (left.some((a) => right.some((b) => isTwelveHourMisread(a, b)))) {
-        groups[first] = [...left, ...right];
-        groups.splice(second, 1);
+  let joined = true;
+  while (joined) {
+    joined = false;
+    for (let first = 0; first < groups.length && !joined; first += 1) {
+      for (
+        let second = first + 1;
+        second < groups.length && !joined;
+        second += 1
+      ) {
+        const left = groups[first] as NightRow[];
+        const right = groups[second] as NightRow[];
+        if (
+          left.some((leftRow) =>
+            right.some((rightRow) => isTwelveHourMisread(leftRow, rightRow)),
+          )
+        ) {
+          groups[first] = [...left, ...right];
+          groups.splice(second, 1);
+          joined = true;
+        }
       }
     }
   }
@@ -298,12 +319,27 @@ export async function mergeDuplicateNights(
       nightRows.filter((row) => !isMultiDayPass(row.title)),
     )) {
       const survivor = chooseSurvivor(group);
+      // A morning-and-evening misread leaves ONE true time, the evening one,
+      // even when the morning row was the one people pointed at.
+      const evening = group
+        .map((row) => showTimeKey(row.showTime))
+        .filter((time) => time !== '')
+        .sort()
+        .at(-1);
+      const misread = group.some((first) =>
+        group.some((second) => isTwelveHourMisread(first, second)),
+      );
       plans.push({
         venueId,
         date: survivor.date,
         survivor,
         losers: group.filter((row) => row.id !== survivor.id),
         fills: [],
+        ...(misread &&
+        evening !== undefined &&
+        evening !== showTimeKey(survivor.showTime)
+          ? { setShowTime: evening }
+          : {}),
       });
     }
   }
@@ -382,20 +418,25 @@ export async function mergeDuplicateNights(
         ...plan.losers.map((loser) => loser.id),
       ]);
       const survivor = live.get(plan.survivor.id);
+      const survivorUsable =
+        survivor !== undefined &&
+        survivor.status === 'upcoming' &&
+        !isMultiDayPass(survivor.title);
       const losers = plan.losers
         .map((loser) => live.get(loser.id))
         .filter(
           (row): row is EventRow =>
             row !== undefined &&
             survivor !== undefined &&
+            survivorUsable &&
             row.status === 'upcoming' &&
             !isMultiDayPass(row.title) &&
-            !isMultiDayPass(survivor.title) &&
             stillOneNight(row, survivor),
         );
-      if (!survivor || survivor.status !== 'upcoming' || losers.length === 0) {
+      if (!survivor || !survivorUsable || losers.length === 0) {
         plan.outcome = 'skipped';
-        plan.error = 'changed since it was planned';
+        plan.error =
+          'no longer the same night, a different status, or now titled as a pass, since it was planned';
         result.skipped += 1;
         continue;
       }
@@ -422,9 +463,16 @@ export async function mergeDuplicateNights(
           .select()
           .from(events)
           .where(eq(events.id, survivor.id));
-        const { fields, values } = current
+        const filled = current
           ? fillsFrom(current, losers)
           : { fields: [], values: {} };
+        const fields = [...filled.fields];
+        const values: Partial<EventRow> = { ...filled.values };
+        // The folded rows are gone, so the evening time cannot collide with one.
+        if (plan.setShowTime !== undefined && current) {
+          values.showTime = plan.setShowTime;
+          fields.push('showTime');
+        }
         unwritten = values;
         if (fields.length > 0) {
           await db
