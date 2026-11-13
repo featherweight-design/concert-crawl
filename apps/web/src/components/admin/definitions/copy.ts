@@ -830,6 +830,7 @@ export const ADMIN_COPY = {
         label: 'Short name',
         placeholder: 'e.g. Bluebird',
         hint: 'Narrow tiles show this instead of the full name. Optional, up to 20 characters.',
+        tooLong: 'Keep it to 20 characters.',
       },
       slug: {
         label: 'Slug',

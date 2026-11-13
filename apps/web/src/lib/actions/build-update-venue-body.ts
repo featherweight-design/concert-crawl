@@ -110,14 +110,10 @@ export function buildUpdateVenueBody(
       : null;
 
   // Absent means unchanged, so a caller that never shows the field can't clear
-  // it. Empty or whitespace-only clears it.
+  // it. An empty string is sent as is: the API's schema turns it into null.
   const shortNameRaw = formData.get('shortName');
   const shortName =
-    shortNameRaw === null
-      ? undefined
-      : String(shortNameRaw).trim() === ''
-        ? null
-        : String(shortNameRaw).trim();
+    shortNameRaw === null ? undefined : String(shortNameRaw).trim();
 
   const featuredRaw = formData.get('featured');
   const featured = featuredRaw !== null ? featuredRaw === 'true' : undefined;

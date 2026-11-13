@@ -170,15 +170,48 @@ describe('VenueDetailsClient short name field', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders prefilled from the venue, capped at the shared maximum', () => {
+  it('renders prefilled from the venue', () => {
     render(
       <VenueDetailsClient venue={buildVenue({ shortName: 'Cervantes' })} />,
     );
 
     expect(shortNameInput().value).toBe('Cervantes');
-    expect(shortNameInput().maxLength).toBe(VENUE_SHORT_NAME_MAX);
     expect(shortNameInput().placeholder).toBe(SHORT_NAME_COPY.placeholder);
     expect(screen.getByText(SHORT_NAME_COPY.label)).toBeTruthy();
+  });
+
+  it('is not dirty when only whitespace changed', () => {
+    render(
+      <VenueDetailsClient venue={buildVenue({ shortName: 'Cervantes' })} />,
+    );
+
+    fireEvent.change(shortNameInput(), { target: { value: '  Cervantes ' } });
+
+    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
+  });
+
+  it('keeps every character of a full-length name pasted with a leading space', async () => {
+    const full = 'x'.repeat(VENUE_SHORT_NAME_MAX);
+    render(<VenueDetailsClient venue={buildVenue()} />);
+
+    fireEvent.change(shortNameInput(), { target: { value: ` ${full}` } });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
+
+    const formData = await savedFormData();
+    expect(formData.get('shortName')).toBe(full);
+  });
+
+  it('blocks a save over the cap after trimming, with the error on the field', () => {
+    render(<VenueDetailsClient venue={buildVenue()} />);
+
+    fireEvent.change(shortNameInput(), {
+      target: { value: 'y'.repeat(VENUE_SHORT_NAME_MAX + 1) },
+    });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
+
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    expect(screen.getByText(SHORT_NAME_COPY.tooLong)).toBeTruthy();
+    expect(shortNameInput().getAttribute('aria-invalid')).toBe('true');
   });
 
   it('saves a trimmed short name', async () => {

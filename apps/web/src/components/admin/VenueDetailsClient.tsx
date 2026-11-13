@@ -291,7 +291,6 @@ interface VDInputProps {
   min?: number;
   max?: number;
   step?: number;
-  maxLength?: number;
   list?: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
@@ -310,7 +309,6 @@ function VDInput({
   min,
   max,
   step,
-  maxLength,
   list,
   inputRef,
   onChange,
@@ -343,7 +341,6 @@ function VDInput({
       min={min}
       max={max}
       step={step}
-      maxLength={maxLength}
       list={list}
       onChange={onChange}
       onFocus={() => setFocused(true)}
@@ -593,7 +590,7 @@ export function VenueDetailsClient({
   const [slugFocused, setSlugFocused] = useState(false);
   const dirtyFields: string[] = [
     ...(nameVal !== venue.name ? ['Name'] : []),
-    ...(shortNameVal !== (venue.shortName ?? '') ? ['Short name'] : []),
+    ...(shortNameVal.trim() !== (venue.shortName ?? '') ? ['Short name'] : []),
     ...(slugVal !== venue.slug ? ['Slug'] : []),
     ...(urlVal !== venue.websiteUrl ? ['URL'] : []),
     ...(cityVal !== venue.city ? ['City'] : []),
@@ -644,6 +641,7 @@ export function VenueDetailsClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     slug?: string | undefined;
+    shortName?: string | undefined;
     platformVenueId?: string | undefined;
     apiAccountId?: string | undefined;
     crawlWaitForSelector?: string | undefined;
@@ -814,6 +812,15 @@ export function VenueDetailsClient({
         platformVenueId:
           ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
             .requiredError,
+      });
+      setSaveState('error');
+      return;
+    }
+
+    // Mirrors the API's cap, counted after the trim the API applies.
+    if (shortNameVal.trim().length > VENUE_SHORT_NAME_MAX) {
+      setFieldErrors({
+        shortName: ADMIN_COPY.venueDetailsClient.fields.shortName.tooLong,
       });
       setSaveState('error');
       return;
@@ -1288,16 +1295,25 @@ export function VenueDetailsClient({
               label={ADMIN_COPY.venueDetailsClient.fields.shortName.label}
               htmlFor="edit-venue-short-name"
               hint={ADMIN_COPY.venueDetailsClient.fields.shortName.hint}
+              {...(fieldErrors.shortName
+                ? { error: fieldErrors.shortName }
+                : {})}
             >
               <VDInput
                 id="edit-venue-short-name"
                 value={shortNameVal}
-                maxLength={VENUE_SHORT_NAME_MAX}
                 placeholder={
                   ADMIN_COPY.venueDetailsClient.fields.shortName.placeholder
                 }
                 disabled={isDisabled}
-                onChange={(evt) => setShortNameVal(evt.target.value)}
+                hasError={Boolean(fieldErrors.shortName)}
+                // No maxLength: the browser counts it before the trim, so a
+                // pasted " Bluebird…" would lose a real character to the space.
+                // The save checks the trimmed length instead, as the API does.
+                onChange={(evt) => {
+                  setShortNameVal(evt.target.value);
+                  setFieldErrors((prev) => ({ ...prev, shortName: undefined }));
+                }}
               />
             </VDField>
 

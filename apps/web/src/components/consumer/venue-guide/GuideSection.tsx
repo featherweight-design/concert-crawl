@@ -18,6 +18,8 @@ const copy = CONSUMER_COPY.venueGuide;
 
 interface GuideSectionProps {
   venueName: string;
+  /** The venue's stored short name; wins over the name heuristic when set. */
+  storedShortName?: string | null;
   guide: VenueGuide | null;
   /**
    * The callout sits directly above and already reads as the guide's opener,
@@ -33,13 +35,14 @@ interface GuideSectionProps {
 
 export const GuideSection = ({
   venueName,
+  storedShortName = null,
   guide,
   followsCallout = false,
   mode = 'first_timer',
 }: GuideSectionProps) => {
   if (guide === null) return null;
 
-  const shortName = venueShortName(venueName);
+  const shortName = venueShortName(venueName, storedShortName);
   const insiderTip = (guide.insiderTip ?? '').trim();
 
   // Accessibility always leads the chip list — authored or honestly placeheld.

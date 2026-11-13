@@ -27,6 +27,23 @@ describe('venueShortName', () => {
   it('returns the trimmed original when the name is only an article', () => {
     expect(venueShortName('The')).toBe('The');
   });
+
+  it("prefers the venue's stored short name, trimmed", () => {
+    expect(
+      venueShortName("Cervantes' Masterpiece Ballroom", "  Cervantes'  "),
+    ).toBe("Cervantes'");
+    expect(venueShortName('Larimer Lounge', 'Larimer Lounge')).toBe(
+      'Larimer Lounge',
+    );
+  });
+
+  it('falls back to the heuristic when no short name is stored', () => {
+    expect(venueShortName('The Roxy', null)).toBe('Roxy');
+    expect(venueShortName('The Roxy', '   ')).toBe('Roxy');
+    expect(venueShortName('Mission Ballroom Amphitheatre', undefined)).toBe(
+      'Mission',
+    );
+  });
 });
 
 describe('unauthoredChipKeys', () => {
