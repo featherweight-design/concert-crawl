@@ -1,3 +1,19 @@
+# [1.408.0](https://github.com/featherweight-design/concert-crawl/compare/v1.407.1...v1.408.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** needs you venue evidence follows triage's readings, one query for other shows ([2765157](https://github.com/featherweight-design/concert-crawl/commit/2765157f256090054aa2a3b3e1da31be350dae8e))
+* **web:** share sheet fill, bottom inset and 320 fit as the boards draw them ([0dcefa0](https://github.com/featherweight-design/concert-crawl/commit/0dcefa0825aca31db99e5caadf91e70b433608ba))
+* **web:** share sheet presses keep their size, 20px inset, bare close ([efbb79c](https://github.com/featherweight-design/concert-crawl/commit/efbb79c6b771491e999ea2e8f470ec3fc52798a0))
+
+
+### Features
+
+* **api:** needs you venue and dropped-show items carry the evidence the panels draw ([4673d4c](https://github.com/featherweight-design/concert-crawl/commit/4673d4c7b5f06c67934778b69c5a8a7d64c59338))
+* **web:** share Concert Crawl from the account menu ([09c719d](https://github.com/featherweight-design/concert-crawl/commit/09c719dd08a524dc86a2a4342284dbfff83e8b7f))
+* **web:** share dialog draws the gradient top edge from sm ([cf67b28](https://github.com/featherweight-design/concert-crawl/commit/cf67b28ea29423193f219275f1e2d14a4c99032d))
+
 ## [1.407.1](https://github.com/featherweight-design/concert-crawl/compare/v1.407.0...v1.407.1) (2026-11-13)
 
 
