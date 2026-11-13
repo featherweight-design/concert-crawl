@@ -964,6 +964,9 @@ const priceBatchItems: Adapter = async ({ now }) => {
 // ---------------------------------------------------------------------------
 
 const MAX_SCREENSHOT_CHARS = 200_000;
+// Raster images only, as base64: never svg+xml (it can carry script) or text.
+const SCREENSHOT_DATA_URI =
+  /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 
 /** The screenshot a reporter attached (`metadata.screenshot`), if it is usable. */
 const screenshotOf = (metadata: unknown): string | null => {
@@ -973,7 +976,7 @@ const screenshotOf = (metadata: unknown): string | null => {
   // queue (every unread bug rides in every list and count response), and never
   // a URL the admin's browser would be sent to fetch.
   return typeof shot === 'string' &&
-    shot.startsWith('data:image/') &&
+    SCREENSHOT_DATA_URI.test(shot) &&
     shot.length <= MAX_SCREENSHOT_CHARS
     ? shot
     : null;
