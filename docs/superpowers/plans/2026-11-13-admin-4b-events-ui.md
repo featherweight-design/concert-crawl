@@ -55,13 +55,18 @@
 
 1. **Moved (4b#1, Hugh):** the status pill, chip, "Moved to …" line and status-filter row have no data and no picker. 4b ships every other status. The Moved pill and the filter's Moved row wait for Hugh. That is a gap in the drawn set, not a drift: it is recorded in each PR's Design review as "held: Hugh 4b#1".
 2. **Refund info on Mark cancelled (4b#7, Hugh):** there is no column, and the fan-page change would be in scope. The Mark cancelled dialog and sheet PR (4b-5) waits for this ruling, so the dialog never ships without its drawn field.
-3. **Undrawn details, resolved from the nearest drawn pattern (🔸 rows in Design review):**
-   - the filter chip label once one is chosen (the chip shows the venue name or "N statuses", following `06/status-filter`'s count style);
-   - the edit page's couldn't load and save failed (`CouldntLoad`, `SaveFailedToast` with snap-back, rule 10);
-   - Add a show validation and save failed (the same toast; inline field errors follow 4d's `AddPricePanel`);
-   - the venue and date pickers (the 3a venue picker; native date and time inputs, as in 4d);
-   - a past row has no ⋯, so the row itself opens the edit view;
-   - the "Listed again" control (a ghost button beside the read-only text, following the Price card's "Submitted prices" button).
+3. **Undrawn details.** Hugh's standing rule is never to drift from the boards: a gap goes to Design. A state is reused only where a shared admin primitive already renders that exact state on a drawn board.
+   - ✅ **Couldn't load** (the Events list, Event edit, the Merge pick list): `CouldntLoad`, per `02-needs-you/couldnt-load` ("Same pattern on every page").
+   - ✅ **Save failed** (Event edit Save, Add show, the Hide, Delete and Postponed dialogs): `SaveFailedToast` with snap-back, per `07-people-flags-operations/save-failed` ("Any control on these pages: it snaps back and says what is really saved").
+   - These are **Design gaps**, not built until Design draws them. The orchestrator takes the batch to Hugh.
+     - gap: the Any venue and Any status chip labels once a venue or status is chosen;
+     - gap: the venue picker's open state, on Event edit and Add a show;
+     - gap: the date and time pickers, on Event edit and Add a show;
+     - gap: how a Past row, which has no ⋯, opens its edit view;
+     - gap: the "Listed again" control beside the read-only No longer listed status (4b#5 names it but nothing draws it);
+     - gap: Add a show's field validation errors (for example, a missing venue or date).
+
+     Where a gap sits inside a PR, the PR builds everything else on its boards and leaves that piece out, recorded in its Design review as "gap: held for Design".
 
 ## API contract 4b needs (4a-3, split into two risky PRs)
 
