@@ -94,7 +94,7 @@ export const NAV: NavItem[] = [
   {
     key: 'prices',
     label: navCopy.prices,
-    href: '/admin/review?tab=prices',
+    href: '/admin/prices',
     icon: Tag,
     group: 'manage',
   },
