@@ -54,9 +54,10 @@ export const MenuNotifRow = ({
       <span
         aria-hidden="true"
         style={{
-          width: 22,
-          height: 22,
-          borderRadius: 6,
+          // 30px like the menu's other icon tiles (bp-m-account_m), not 22.
+          width: 30,
+          height: 30,
+          borderRadius: 9,
           background: 'var(--surface-2)',
           display: 'inline-flex',
           alignItems: 'center',
@@ -66,7 +67,7 @@ export const MenuNotifRow = ({
           flexShrink: 0,
         }}
       >
-        <NotifGlyph name="bell" size={11} />
+        <NotifGlyph name="bell" size={15} />
       </span>
       <span
         style={{

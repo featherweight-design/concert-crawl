@@ -151,7 +151,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
             data-testid="header-search-desktop"
-            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center gap-2.5 rounded-[10px] border border-border bg-[color-mix(in_oklch,var(--bg-elevated)_70%,transparent)] px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
+            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center gap-2.5 rounded-[10px] border border-border bg-[color-mix(in_oklch,var(--bg-elevated)_70%,transparent)] px-3 text-fg-subtle lg:w-[280px] lg:gap-4 lg:justify-start"
           >
             <Search size={14} strokeWidth={1.5} className="shrink-0" />
             <span className="hidden flex-1 text-[13px] lg:block">
