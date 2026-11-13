@@ -16,6 +16,7 @@ import {
 import { AllClear } from './AllClear';
 import { AnsweredRow } from './AnsweredRow';
 import { EvidenceSlot } from './EvidenceSlot';
+import { PriceBatchSheet } from './PriceBatchSheet';
 import { QueueItem } from './QueueItem';
 import {
   needsYouApi,
@@ -91,6 +92,8 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [undoing, setUndoing] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
+  // The price batch whose sheet is open (phone only: `a-batch-of-prices`).
+  const [batchKey, setBatchKey] = useState<string | null>(null);
   const [failure, setFailure] = useState<{
     title: string;
     /** What is still true, as the toast says it. */
@@ -178,11 +181,34 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     answer: NeedsYouAnswer,
     params?: AnswerParams,
   ) => {
+    // Review on a price batch opens its sheet on the phone; the desktop keeps
+    // the board's own answer (the sheet is drawn for the phone only).
+    if (answer.slug === 'review' && row.kind === 'price-batch' && isPhone)
+      return setBatchKey(row.key);
     // An answer that only navigates opens the item (the API refuses it).
     if (NAVIGATION_SLUGS.has(answer.slug)) return select(row.key);
     // An answer that tells fans asks first and cannot be taken back.
     if (answer.notifiesFans) return setPending({ row, answer, params });
     void runAnswer(row, answer, params);
+  };
+
+  /**
+   * Approve the ticked prices of a batch. A failure rejects, so the sheet stays
+   * open with its own "nothing changed" line; a success settles the card.
+   */
+  const approveBatch = async (row: QueueRow, submissionIds: string[]) => {
+    const answer = row.answers.find((one) => one.slug === 'approve_all');
+    if (!answer) throw new Error('approve_all is not offered');
+    const result = await api.answer(row.key, answer.slug, { submissionIds });
+    setBatchKey(null);
+    settle(
+      row,
+      {
+        line: COPY.answered(answeredName(row.title), answer.label),
+        auditId: result.undoable ? result.auditId : null,
+      },
+      true,
+    );
   };
 
   const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
@@ -244,6 +270,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const today = mountainToday(new Date());
   const visible = rows.filter((row) => inFilter(row, filter));
   const selectedRow = rows.find((row) => row.key === selected) ?? null;
+  const batchRow = rows.find((row) => row.key === batchKey) ?? null;
   const allClear = rows.length === 0 && count.decisions === 0;
 
   return (
@@ -376,6 +403,14 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           busy={busyKey === selectedRow.key}
           onClose={() => select(null)}
           onAnswer={(answer, params) => onAnswer(selectedRow, answer, params)}
+        />
+      )}
+
+      {batchRow && (
+        <PriceBatchSheet
+          row={{ key: batchRow.key, submissionIds: batchRow.submissionIds }}
+          onApprove={(ids) => approveBatch(batchRow, ids)}
+          onClose={() => setBatchKey(null)}
         />
       )}
 

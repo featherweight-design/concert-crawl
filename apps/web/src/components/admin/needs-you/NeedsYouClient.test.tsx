@@ -9,11 +9,25 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import type { SubmittedRow } from '@/components/admin/prices/submitted-api';
 import { NeedsYouClient } from './NeedsYouClient';
 
-const { getTokenMock, replaceMock } = vi.hoisted(() => ({
+const { getTokenMock, replaceMock, mockList } = vi.hoisted(() => ({
   getTokenMock: async () => 'token',
   replaceMock: vi.fn(),
+  mockList:
+    vi.fn<
+      (
+        filter: string,
+        search: string,
+        offset: number,
+        limit: number,
+      ) => Promise<{ rows: SubmittedRow[]; total: number }>
+    >(),
+}));
+
+vi.mock('@/components/admin/prices/submitted-api', () => ({
+  submittedApi: () => ({ list: mockList }),
 }));
 
 vi.mock('@clerk/nextjs', () => ({
@@ -219,6 +233,85 @@ describe('NeedsYouClient', () => {
     expect(snooze?.body).toMatchObject({
       until: expect.stringMatching(/T08:00:00-0[67]:00$/),
     });
+  });
+
+  it('opens the price batch sheet on the phone and approves exactly the ticked ids', async () => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const batch = item({
+      key: 'price-batch:b1',
+      kind: 'price-batch',
+      title: '2 new prices',
+      venueId: null,
+      venueName: null,
+      fanDate: null,
+      watchers: 0,
+      submissionIds: ['s1', 's2'],
+      answers: [
+        answer({ slug: 'approve_all', label: 'Approve all', suggested: true }),
+        answer({ slug: 'review', label: 'Review', undoable: false }),
+      ],
+      evidence: [],
+    });
+    const submission = (id: string, title: string): SubmittedRow => ({
+      id,
+      eventId: `e-${id}`,
+      title,
+      venueName: 'Globe Hall',
+      date: '2099-01-01',
+      priceMin: '30',
+      priceMax: null,
+      handle: 'fan',
+      backedBy: 2,
+      state: 'waiting',
+      ticketUrl: null,
+    });
+    mockList.mockResolvedValue({
+      rows: [submission('s1', 'One'), submission('s2', 'Two')],
+      total: 2,
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+        calls.push({
+          url,
+          method: init?.method ?? 'GET',
+          body: init?.body ? JSON.parse(init.body) : undefined,
+        });
+        if (url.endsWith('/needs-you/count')) return json(COUNT);
+        if (url.endsWith('/answer'))
+          return json({
+            key: 'price-batch:b1',
+            slug: 'approve_all',
+            auditId: 'audit-9',
+            undoable: true,
+          });
+        return json([batch]);
+      }),
+    );
+    render(<NeedsYouClient item={null} />);
+    const card = (await screen.findAllByTestId('needs-you-item'))[0];
+    fireEvent.click(
+      within(card as HTMLElement).getByRole('button', { name: 'Review' }),
+    );
+    const sheet = await screen.findByTestId('price-batch-sheet');
+    await within(sheet).findByText('One');
+    fireEvent.click(
+      within(sheet).getByRole('checkbox', { name: 'Approve Two' }),
+    );
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Approve 1' }));
+    await waitFor(() =>
+      expect(calls.find((call) => call.url.endsWith('/answer'))?.body).toEqual({
+        submissionIds: ['s1'],
+        answer: 'approve_all',
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('price-batch-sheet')).toBeNull(),
+    );
   });
 
   it('says All clear when the queue is empty', async () => {
