@@ -1,7 +1,7 @@
 import { isAccountWideErrorClass } from '@concert-crawl/crawler-core/crawl-error-class';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { validationHook } from '../../lib/validator.js';
+import { validationHook, zodIssuesResponse } from '../../lib/validator.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import { venueSlug } from '../../lib/venue-slug-schema.js';
@@ -168,35 +168,34 @@ const FIXED_BY_CRAWL_RULES =
   'Fixed by the crawl rules: robots.txt, the request delay and the user agent cannot be changed';
 
 /** The crawl-rule keys a PATCH may name, as the schema parses them. */
-interface SentCrawlRules {
-  crawlDelayMs?: number | undefined;
-  robotsTxtAllowed?: boolean | null | undefined;
-  robotsTxtCheckedAt?: string | null | undefined;
-  userAgent?: string | undefined;
-}
+type SentCrawlRules = Pick<
+  z.infer<typeof updateVenueSchema>,
+  'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt' | 'userAgent'
+>;
 
 /** The stored crawl rules a sent key is compared with. */
-interface StoredCrawlRules {
-  crawlDelayMs: number;
-  robotsTxtAllowed: boolean | null;
-  robotsTxtCheckedAt: Date | null;
-}
+type StoredCrawlRules = Pick<
+  typeof venues.$inferSelect,
+  'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt'
+>;
 
 // TODO(2026-11-13, #404): drop this tolerance one release after #404 ships; refuse these keys outright again.
 //
 // Expand/contract tolerance: the deployed web can lag the API, and the old web
-// sends the stored `crawlDelayMs` on every venue save. A crawl-rule key equal
-// to the stored value (the user agent to `CRAWLER_USER_AGENT`) is tolerated
-// and stripped by the PATCH handler; the first one that differs is returned
-// here, and the handler refuses the whole request with it. Instants are
-// compared as instants, never as strings.
+// sends `crawlDelayMs` on every venue save: the stored value, raised to the
+// 3 s floor for a legacy row stored under it (#397). A crawl-rule key equal to
+// the stored value (the delay also to its floored value, the user agent to
+// `CRAWLER_USER_AGENT`) is tolerated and stripped by the PATCH handler; the
+// first one that differs is returned here, and the handler refuses the whole
+// request with it. Instants are compared as instants, never as strings.
 export const changedCrawlRule = (
   sent: SentCrawlRules,
   stored: StoredCrawlRules,
 ): keyof SentCrawlRules | null => {
   if (
     sent.crawlDelayMs !== undefined &&
-    sent.crawlDelayMs !== stored.crawlDelayMs
+    sent.crawlDelayMs !== stored.crawlDelayMs &&
+    sent.crawlDelayMs !== Math.max(stored.crawlDelayMs, MIN_CRAWL_DELAY_MS)
   ) {
     return 'crawlDelayMs';
   }
@@ -735,41 +734,30 @@ venuesAdminRouter.patch(
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
-    // TODO(2026-11-13, #404): drop this tolerance one release after #404 ships; refuse these keys outright again.
-    const changedRule = changedCrawlRule(
-      { crawlDelayMs, robotsTxtAllowed, robotsTxtCheckedAt, userAgent },
-      existing,
-    );
-    if (changedRule !== null) {
-      return ctx.json(
-        {
-          success: false,
-          error: {
-            issues: [
-              {
-                code: 'custom',
-                path: [changedRule],
-                message: FIXED_BY_CRAWL_RULES,
-              },
-            ],
-            name: 'ZodError',
-          },
-        },
-        400,
-      );
-    }
-
     // A removed venue asked us to remove its data: Show never brings it back,
     // and nothing here re-points or re-arms its crawl. Its display fields
     // (name, address, about...) can still be edited, and a full-form save that
     // sends its crawl fields unchanged still goes through. Restoring a removed
     // venue needs a deliberate, separately approved path, not this one.
+    // Checked before the crawl rules, so a removed venue always answers with
+    // its removal, whatever else the body carries.
     const reconfiguresCrawl = CRAWL_CONFIG_FIELDS.some(
       (key) => body[key] !== undefined && body[key] !== existing[key],
     );
     const refusedIfRemoved = body.active === true || reconfiguresCrawl;
     if (refusedIfRemoved && existing.removedAt !== null) {
       return ctx.json(venueRemovedBody, 409);
+    }
+
+    // TODO(2026-11-13, #404): drop this tolerance one release after #404 ships; refuse these keys outright again.
+    const changedRule = changedCrawlRule(
+      { crawlDelayMs, robotsTxtAllowed, robotsTxtCheckedAt, userAgent },
+      existing,
+    );
+    if (changedRule !== null) {
+      return zodIssuesResponse(ctx, [
+        { code: 'custom', path: [changedRule], message: FIXED_BY_CRAWL_RULES },
+      ]);
     }
 
     if (
