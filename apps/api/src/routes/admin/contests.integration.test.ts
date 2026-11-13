@@ -19,6 +19,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import {
+  auditLog,
   events,
   notifications,
   priceSubmissions,
@@ -614,6 +615,146 @@ describe('admin contests with several pending updates on one price', () => {
     const kindById = new Map(rows.map((row) => [row.id, row.kind]));
     expect(kindById.get(confirmed.id)).toBe('defer');
     expect(kindById.get(first.id)).toBeNull();
+  });
+});
+
+describe('GET /v1/admin/contests/prices/resolved', () => {
+  beforeEach(async () => {
+    clearAuth();
+    await clearTables();
+  });
+
+  const seedResolveAudit = async (
+    eventId: string,
+    actorId: string,
+    resolution: 'parent_wins' | 'challenger_wins',
+    createdAt: Date,
+  ) => {
+    await testDb.insert(auditLog).values({
+      actorId,
+      action: 'contest.resolve',
+      targetId: '00000000-0000-0000-0000-000000000001',
+      createdAt,
+      metadata: {
+        resolution,
+        eventId,
+        parentAfter: { status: 'corroborated', priceMin: '40.00' },
+        challengerAfter: { status: 'archived', priceMin: '55.00' },
+      },
+    });
+  };
+
+  it('requires admin auth', async () => {
+    const res = await app.request('/v1/admin/contests/prices/resolved');
+    expect([401, 403]).toContain(res.status);
+  });
+
+  it('lists resolved checks newest first with answer, decider handle and date', async () => {
+    setAdminAuth();
+    const venue = await seedVenue({
+      name: 'Resolved Hall',
+      slug: 'resolved-hall',
+    });
+    const kept = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      title: 'Kept Show',
+      artist: 'Kept Artist',
+    });
+    const used = await seedEvent(venue.id, {
+      date: '2027-06-02',
+      title: 'Used Show',
+      artist: 'Used Artist',
+    });
+    await seedUserProfile('admin_contest_test', { handle: 'hugh' });
+    await seedResolveAudit(
+      kept.id,
+      'admin_contest_test',
+      'parent_wins',
+      new Date('2026-11-01T12:00:00Z'),
+    );
+    await seedResolveAudit(
+      used.id,
+      'admin_unknown',
+      'challenger_wins',
+      new Date('2026-11-02T12:00:00Z'),
+    );
+    // Not a resolve: must not appear.
+    await testDb.insert(auditLog).values({
+      actorId: 'admin_contest_test',
+      action: 'contest.defer',
+      metadata: {},
+    });
+
+    const res = await app.request('/v1/admin/contests/prices/resolved', {
+      headers: ADMIN_HEADERS,
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        total: number;
+        items: Array<{
+          eventTitle: string;
+          venueName: string;
+          answer: string;
+          price: string;
+          decidedBy: string | null;
+        }>;
+      };
+    };
+    expect(body.data.total).toBe(2);
+    expect(body.data.items.map((item) => item.eventTitle)).toEqual([
+      'Used Show',
+      'Kept Show',
+    ]);
+    expect(body.data.items[0]).toMatchObject({
+      venueName: 'Resolved Hall',
+      answer: 'used',
+      price: '55.00',
+      decidedBy: null,
+    });
+    expect(body.data.items[1]).toMatchObject({
+      answer: 'kept',
+      price: '40.00',
+      decidedBy: 'hugh',
+    });
+  });
+
+  it('pages with limit and offset and reports the full total', async () => {
+    setAdminAuth();
+    const venue = await seedVenue({ name: 'Page Hall', slug: 'page-hall' });
+    for (let day = 1; day <= 3; day += 1) {
+      const event = await seedEvent(venue.id, {
+        date: `2027-07-0${day}`,
+        title: `Page Show ${day}`,
+        artist: `Page Artist ${day}`,
+      });
+      await seedResolveAudit(
+        event.id,
+        'admin_contest_test',
+        'parent_wins',
+        new Date(`2026-11-0${day}T12:00:00Z`),
+      );
+    }
+    const res = await app.request(
+      '/v1/admin/contests/prices/resolved?limit=1&offset=1',
+      { headers: ADMIN_HEADERS },
+    );
+    const body = (await res.json()) as {
+      data: { total: number; items: Array<{ eventTitle: string }> };
+    };
+    expect(body.data.total).toBe(3);
+    expect(body.data.items.map((item) => item.eventTitle)).toEqual([
+      'Page Show 2',
+    ]);
+  });
+
+  it('422s a bad limit', async () => {
+    setAdminAuth();
+    const res = await app.request(
+      '/v1/admin/contests/prices/resolved?limit=0',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(422);
   });
 });
 
