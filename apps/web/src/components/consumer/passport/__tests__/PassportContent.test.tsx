@@ -326,12 +326,15 @@ describe('PassportContent', () => {
     const desktop = document.querySelector(
       '[data-passport-empty-layout="desktop"]',
     );
-    expect(desktop?.className).not.toContain('hidden grid');
+    // One layout for every width: no phone card, and the book is not gated
+    // behind `sm`.
     expect(desktop?.className.split(' ')).toContain('grid');
     expect(desktop?.className.split(' ')).not.toContain('hidden');
     expect(
-      document.querySelector('[data-passport-empty-layout="phone"]')?.className,
-    ).toBe('hidden');
+      document.querySelector('[data-passport-empty-layout="phone"]'),
+    ).toBeNull();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(desktop!.querySelector('[data-booklet-next="up"]')).not.toBeNull();
     expect(desktop).toHaveTextContent(COPY.firstStampSubtitle('Nov 21'));
     expect(
       screen.queryByRole('button', { name: COPY.shareLabel }),
