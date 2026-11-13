@@ -1536,9 +1536,9 @@ export const CONSUMER_COPY = {
   // StaleStamp + relTimeAgo — shown wherever a price carries an observation
   // timestamp, so every surface words staleness identically.
   priceStaleness: {
+    // Plain at every age: the "could be stale" wording went with the stale
+    // chip (Hugh, 2026-11-10; addendum 4 item 5).
     asOf: (relTime: string) => `as of ${relTime}`,
-    asOfStale: (relTime: string) => `as of ${relTime}, could be stale`,
-    couldBeStaleSuffix: ', could be stale',
     justNow: 'just now',
     daysSuffix: 'd ago',
     hoursSuffix: 'h ago',

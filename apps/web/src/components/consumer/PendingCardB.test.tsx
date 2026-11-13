@@ -71,6 +71,7 @@ describe('PendingCardB', () => {
       const headline = screen.getByTestId('pending-price-headline');
       expect(headline.style.fontSize).toBe('34px');
       expect(headline.style.fontWeight).toBe('900');
+      expect(headline.style.letterSpacing).toBe('-0.035em');
     });
 
     it('sets the TICKETS eyebrow at 9.5px, 0.14em', () => {
@@ -166,7 +167,7 @@ describe('PendingCardB', () => {
     it('box-office shows "Box office" eyebrow and "face value · no fees" line', () => {
       render(<PendingCardB {...buildProps({ kind: 'boxoffice' })} />);
       // Two 'Box office' renderings on the box-office tier — the Eyebrow at the
-      // top of the body and the PendingTrustPill on the headline row. The
+      // top of the body and the TrustPill on the TICKETS line. The
       // community variant (separate test above) asserts neither appears, so
       // requiring ≥ 2 here catches removal of either element.
       expect(screen.getAllByText('Box office').length).toBeGreaterThanOrEqual(
@@ -215,13 +216,13 @@ describe('PendingCardB', () => {
       expect(screen.queryByRole('link', { name: '@friend' })).toBeNull();
     });
 
-    it('keeps an anonymous submitter upright in a 12.5px line: nothing is italic', () => {
+    it('keeps an anonymous submitter upright in a 13px line: nothing is italic', () => {
       render(
         <PendingCardB {...buildProps({ view: 'other', submitter: null })} />,
       );
       const line = screen.getByTestId('pending-attribution');
       expect(line.textContent).toBe('Submitted by an anonymous fan');
-      expect(line.style.fontSize).toBe('12.5px');
+      expect(line.style.fontSize).toBe('13px');
       // Covers the line and every descendant, so a restored italic span fails.
       expect(line.getAttribute('style') ?? '').not.toMatch(/italic/);
       expect(line.querySelector('[style*="italic"]')).toBeNull();
@@ -389,7 +390,7 @@ describe('PendingCardB', () => {
     });
   });
 
-  describe('board layout (more-p-price_states)', () => {
+  describe('board layout (price-states-age-trust)', () => {
     it('leads the strip with the dots, then one PENDING line', () => {
       render(<PendingCardB {...buildProps({ confirms: 1, needed: 2 })} />);
       const left = screen.getByTestId('pending-strip-left');
@@ -397,7 +398,7 @@ describe('PendingCardB', () => {
         screen.getByTestId('pending-strip-dots'),
       );
       expect(left.textContent).toBe('Pending · 1 of 2 confirmed');
-      expect(left.style.letterSpacing).toBe('0.14em');
+      expect(left.style.letterSpacing).toBe('0.12em');
       expect(
         screen.getByTestId('pending-strip-dots').querySelectorAll('svg'),
       ).toHaveLength(2);
@@ -406,23 +407,54 @@ describe('PendingCardB', () => {
       ).toBe('0.14em');
     });
 
-    it('puts tier and vendor in one mono qualifier after the price', () => {
+    it('puts tier and vendor in one 10px mono qualifier after the price', () => {
       render(<PendingCardB {...buildProps({ tier: 'GA', vendor: 'AXS' })} />);
       const qualifier = screen.getByTestId('pending-qualifier');
       expect(qualifier.textContent).toBe('GA · seen on AXS');
       expect(qualifier.style.textTransform).toBe('uppercase');
-      expect(qualifier.style.letterSpacing).toBe('0.14em');
+      expect(qualifier.style.letterSpacing).toBe('0.1em');
+      expect(qualifier.style.fontSize).toBe('10px');
+      // The trust pill left the headline row for the TICKETS line.
+      expect(
+        qualifier.parentElement?.querySelector('[data-testid^="trust-pill-"]'),
+      ).toBeNull();
     });
 
-    it('draws Confirm first and full-width, then the outlined second button', () => {
+    it('draws Confirm first, then the outlined second button, as an equal pair', () => {
       render(<PendingCardB {...buildProps({ view: 'other' })} />);
       const footer = screen.getByTestId('pending-footer');
       const buttons = footer.querySelectorAll('button');
       expect(buttons[0]).toBe(screen.getByTestId('pending-confirm'));
       expect(buttons[1]).toBe(screen.getByTestId('pending-saw-different'));
-      expect(buttons[0]?.style.height).toBe('40px');
-      expect(buttons[1]?.style.height).toBe('40px');
+      expect(buttons[0]?.style.padding).toBe('13px 16px');
+      expect(buttons[0]?.style.fontSize).toBe('15px');
+      expect(buttons[0]?.style.borderRadius).toBe('12px');
+      expect(buttons[1]?.style.padding).toBe('10px');
+      expect(buttons[1]?.style.borderRadius).toBe('12px');
+      expect(buttons[0]?.style.flex).toBe(buttons[1]?.style.flex);
       expect(footer.style.borderTop).toBe('');
+      expect(footer.style.marginTop).toBe('14px');
+    });
+
+    it('puts the TrustPill on the TICKETS line of every pending card, yours included', () => {
+      for (const view of ['other', 'submitter', 'self-locked'] as const) {
+        render(<PendingCardB {...buildProps({ view })} />);
+        const line = screen.getByTestId('pending-tickets-line');
+        expect(line.textContent?.startsWith('Tickets')).toBe(true);
+        expect(
+          line.querySelector('[data-testid="trust-pill-community"]'),
+        ).not.toBeNull();
+        cleanup();
+      }
+    });
+
+    it('puts the Box office TrustPill on a box office pending card', () => {
+      render(<PendingCardB {...buildProps({ kind: 'boxoffice' })} />);
+      expect(
+        screen
+          .getByTestId('pending-tickets-line')
+          .querySelector('[data-testid="trust-pill-boxoffice"]'),
+      ).not.toBeNull();
     });
 
     it('gives your submission a waiting line between the label and actions', () => {
@@ -436,20 +468,16 @@ describe('PendingCardB', () => {
       );
     });
 
-    it('sets the strip, qualifier and labels at the measured 9.5px', () => {
+    it('sets the strip, label and wait line at the board sizes', () => {
       render(<PendingCardB {...buildProps({ view: 'submitter' })} />);
       expect(screen.getByTestId('pending-strip-left').style.fontSize).toBe(
         '9.5px',
       );
-      expect(screen.getByTestId('pending-qualifier').style.fontSize).toBe(
-        '9.5px',
-      );
-      expect(screen.getByTestId('pending-your-submission').style.fontSize).toBe(
-        '9.5px',
-      );
-      expect(screen.getByTestId('pending-waiting').style.fontSize).toBe(
-        '13.5px',
-      );
+      const label = screen.getByTestId('pending-your-submission');
+      expect(label.style.fontSize).toBe('9px');
+      expect(label.style.letterSpacing).toBe('0.14em');
+      expect(screen.getByTestId('pending-waiting').style.fontSize).toBe('13px');
+      expect(screen.getByTestId('pending-footer').style.marginTop).toBe('14px');
     });
   });
 

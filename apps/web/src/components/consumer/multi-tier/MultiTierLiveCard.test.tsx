@@ -56,12 +56,9 @@ describe('MultiTierLiveCard', () => {
         alternates={[]}
       />,
     );
-    // PendingTrustPill renders "Resale" when kind=resale
-    const pill = screen.getByText('Resale');
-    expect(pill).toBeDefined();
-    // Coral pill background — JSDOM normalizes 0.20 → 0.2.
-    const pillEl = pill as HTMLElement;
-    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)');
+    // The shared B+ TrustPill (addendum 4 item 5) in its resale kind.
+    const pill = screen.getByTestId('trust-pill-resale');
+    expect(pill.textContent).toBe('Resale');
   });
 
   it('appends "· N reports" to the meta line when reports > 1 (§8 state #19)', () => {
@@ -159,12 +156,15 @@ describe('MultiTierLiveCard staleness marker', () => {
       />,
     );
 
-  it('warns when the headline price is older than a day', () => {
+  // Addendum 4 item 5: the stale tone is gone (Hugh, 2026-11-10). An old
+  // price states its age as plainly as a fresh one.
+  it('states an old price plainly, with no stale warning', () => {
     const eightDaysAgo = new Date(
       Date.now() - 8 * 24 * 60 * 60 * 1000,
     ).toISOString();
     renderAt(eightDaysAgo);
-    expect(screen.getByText('as of 8d ago, could be stale')).toBeDefined();
+    expect(screen.getByText('as of 8d ago')).toBeDefined();
+    expect(screen.queryByText(/could be stale/)).toBeNull();
   });
 
   it('states the age without the warning when the price is fresh', () => {

@@ -55,9 +55,8 @@ describe('MixedTierCard', () => {
         alternates={[]}
       />,
     );
-    const pill = screen.getByText('Resale');
-    expect(pill).toBeDefined();
-    const pillEl = pill as HTMLElement;
-    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)');
+    // The shared B+ TrustPill (addendum 4 item 5) in its resale kind.
+    const pill = screen.getByTestId('trust-pill-resale');
+    expect(pill.textContent).toBe('Resale');
   });
 });
