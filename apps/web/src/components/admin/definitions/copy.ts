@@ -855,9 +855,21 @@ export const ADMIN_COPY = {
       subtitle:
         'Identity, ticketing, crawl config, editorial fields. LLM-assisted fields are always admin-reviewed before they save.',
     },
+    // 3b part 1: the venue page's tab strip, in strip order.
+    tabs: {
+      label: 'Venue sections',
+      overview: 'Overview',
+      runs: 'Runs',
+      source: 'Source',
+      details: 'Details',
+      guide: 'Guide',
+      // Until 3b part 2 draws this venue's runs here.
+      runsInterim: {
+        body: 'For now, this venue’s runs are on the Crawl runs page.',
+        link: 'Open Crawl runs',
+      },
+    },
     actions: {
-      backToVenues: 'Back to venues',
-      crawlHistory: 'Crawl history',
       viewOnSite: 'View on site',
       makeFlagship: 'Make flagship',
       flagship: 'Flagship',

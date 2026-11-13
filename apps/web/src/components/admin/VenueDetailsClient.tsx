@@ -20,10 +20,17 @@ import {
 } from '@/lib/actions/venues';
 import {
   AdminButton,
+  AdminTabs,
   MonoLabel,
   StatusBadge,
   SectionHead,
+  useIsPhone,
 } from '@/components/admin/primitives';
+import {
+  VENUE_TABS,
+  venueTabHref,
+  type VenueTab,
+} from '@/lib/admin/venue-tabs';
 import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
 import { VenueHeader } from '@/components/admin/venues/VenueHeader';
 import { HideConfirm } from '@/components/admin/venues/VenueConfirms';
@@ -49,7 +56,6 @@ import {
   AlertCircle,
   Check,
   Loader2,
-  ChevronRight,
   Sparkles,
 } from 'lucide-react';
 
@@ -483,6 +489,55 @@ interface Props {
   /** True when that fetch failed — authoring is disabled so an empty fallback
       draft can't be saved over real chips. */
   guideLoadFailed?: boolean;
+  /** The tab `?tab=` opened on (3b); Overview when absent. */
+  initialTab?: VenueTab;
+}
+
+const TAB_COPY = ADMIN_COPY.venueDetailsClient.tabs;
+const VENUE_TAB_LABEL: Record<VenueTab, string> = {
+  overview: TAB_COPY.overview,
+  runs: TAB_COPY.runs,
+  source: TAB_COPY.source,
+  details: TAB_COPY.details,
+  guide: TAB_COPY.guide,
+};
+const VENUE_TAB_ITEMS = VENUE_TABS.map((key) => ({
+  key,
+  label: VENUE_TAB_LABEL[key],
+}));
+const venueTabId = (key: VenueTab) => `venue-tab-${key}`;
+const venuePanelId = (key: VenueTab) => `venue-panel-${key}`;
+
+/**
+ * One tab's panel. Every panel stays mounted, only hidden, so the one form
+ * and save bar keep an unsaved edit across a tab switch (3b part 1).
+ */
+function VenueTabPanel({
+  tab,
+  active,
+  children,
+}: {
+  tab: VenueTab;
+  active: VenueTab;
+  children: React.ReactNode;
+}) {
+  const on = tab === active;
+  return (
+    <div
+      id={venuePanelId(tab)}
+      role="tabpanel"
+      aria-labelledby={venueTabId(tab)}
+      hidden={!on}
+      tabIndex={0}
+      data-testid={`venue-panel-${tab}`}
+      // An inline display would beat `hidden`, so a hidden panel sets none.
+      style={
+        on ? { display: 'flex', flexDirection: 'column', gap: 16 } : undefined
+      }
+    >
+      {children}
+    </div>
+  );
 }
 
 const EMPTY_GUIDE: VenueGuide = {
@@ -495,8 +550,23 @@ export function VenueDetailsClient({
   venue,
   guide = EMPTY_GUIDE,
   guideLoadFailed = false,
+  initialTab = 'overview',
 }: Props) {
   const router = useRouter();
+  const isPhone = useIsPhone();
+  const [tab, setTab] = useState<VenueTab>(initialTab);
+  // A navigation to another `?tab=` re-renders the page with a new initial
+  // tab; follow it (adjusting state during render, not in an effect).
+  const [tabFromUrl, setTabFromUrl] = useState<VenueTab>(initialTab);
+  if (tabFromUrl !== initialTab) {
+    setTabFromUrl(initialTab);
+    setTab(initialTab);
+  }
+  const changeTab = (next: VenueTab) => {
+    if (next === tab) return;
+    setTab(next);
+    router.replace(venueTabHref(venue.id, next), { scroll: false });
+  };
   const [isPending, startTransition] = useTransition();
   const [hideOpen, setHideOpen] = useState(false);
   const { setPageTitle } = usePageTitle();
@@ -905,30 +975,20 @@ export function VenueDetailsClient({
         eyebrow={ADMIN_COPY.venueDetailsClient.header.eyebrow}
         title={ADMIN_COPY.venueDetailsClient.header.title}
         subtitle={ADMIN_COPY.venueDetailsClient.header.subtitle}
-        actions={
-          <>
-            <Link href="/admin/venues" style={{ textDecoration: 'none' }}>
-              <AdminButton variant="ghost" size="sm" iconRight={ChevronRight}>
-                {ADMIN_COPY.venueDetailsClient.actions.backToVenues}
-              </AdminButton>
-            </Link>
-            <Link
-              href={`/admin/crawl?venueId=${venue.id}&tab=history`}
-              style={{ textDecoration: 'none' }}
-            >
-              <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                {ADMIN_COPY.venueDetailsClient.actions.crawlHistory}
-              </AdminButton>
-            </Link>
-          </>
-        }
       />
 
       <VenueHeader venue={venue} />
-      {/* Last crawl, 7-day health, strategy and failures from the old header
-          card, so none of it disappears before 3a part 5's Overview tab
-          moves them there. */}
-      <VenueSummaryLine venue={venue} />
+
+      <AdminTabs
+        tabs={VENUE_TAB_ITEMS}
+        value={tab}
+        onChange={changeTab}
+        label={TAB_COPY.label}
+        tabId={venueTabId}
+        panelId={venuePanelId}
+        phone={isPhone}
+        testId="venue-tabs"
+      />
 
       {/* Error banner */}
       {saveError && (
@@ -951,8 +1011,36 @@ export function VenueDetailsClient({
         </div>
       )}
 
-      {/* Main content */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <VenueTabPanel tab="overview" active={tab}>
+        {/* Last crawl, 7-day health, strategy and failures from the old header
+            card, until 3a part 5 draws the Overview cards. */}
+        <VenueSummaryLine venue={venue} />
+      </VenueTabPanel>
+
+      <VenueTabPanel tab="runs" active={tab}>
+        {/* Interim: the runs list lands in 3b part 2. */}
+        <p
+          style={{
+            margin: 0,
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+            lineHeight: 1.5,
+          }}
+        >
+          {TAB_COPY.runsInterim.body}
+        </p>
+        <Link
+          href={`/admin/crawl?venueId=${venue.id}&tab=history`}
+          data-testid="venue-runs-interim-link"
+          style={{ textDecoration: 'none', alignSelf: 'flex-start' }}
+        >
+          <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+            {TAB_COPY.runsInterim.link}
+          </AdminButton>
+        </Link>
+      </VenueTabPanel>
+
+      <VenueTabPanel tab="details" active={tab}>
         {/* 01 · identity */}
         <VDSection
           eyebrow={ADMIN_COPY.venueDetailsClient.sections.identity.eyebrow}
@@ -1420,6 +1508,424 @@ export function VenueDetailsClient({
           </div>
         </VDSection>
 
+        {/* 04 · editorial */}
+        <VDSection
+          eyebrow={ADMIN_COPY.venueDetailsClient.sections.editorial.eyebrow}
+          title={ADMIN_COPY.venueDetailsClient.sections.editorial.title}
+          subtitle={
+            <>
+              {ADMIN_COPY.venueDetailsClient.sections.editorial.subtitle}{' '}
+              <strong style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                {ADMIN_COPY.venueDetailsClient.sections.editorial.llmNote}
+              </strong>{' '}
+              {ADMIN_COPY.venueDetailsClient.sections.editorial.llmSuffix}
+            </>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* About */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.about.label}
+              htmlFor="edit-venue-about"
+              description={
+                ADMIN_COPY.venueDetailsClient.fields.about.description
+              }
+              labelRight={
+                generateState === 'idle' || generateState === 'accepted' ? (
+                  <button
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => void handleGenerateAbout()}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border:
+                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
+                      background:
+                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      opacity: isDisabled ? 0.66 : 1,
+                    }}
+                  >
+                    <Sparkles size={11} />
+                    {ADMIN_COPY.venueDetailsClient.fields.about.generate}
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 10,
+                        opacity: 0.75,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {ADMIN_COPY.venueDetailsClient.fields.about.generateCost}
+                    </span>
+                  </button>
+                ) : null
+              }
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <textarea
+                  id="edit-venue-about"
+                  value={aboutVal}
+                  placeholder={
+                    ADMIN_COPY.venueDetailsClient.fields.about.placeholder
+                  }
+                  disabled={
+                    isDisabled ||
+                    generateState === 'loading' ||
+                    generateState === 'review'
+                  }
+                  rows={5}
+                  onChange={(evt) => setAboutVal(evt.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-strong)',
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--fg)',
+                    fontSize: 13,
+                    fontFamily: "'Inter', sans-serif",
+                    outline: 'none',
+                    boxSizing: 'border-box' as const,
+                    resize: 'vertical' as const,
+                    lineHeight: 1.5,
+                    opacity: isDisabled ? 0.66 : 1,
+                    cursor: isDisabled ? 'not-allowed' : 'text',
+                    transition: 'border-color .12s',
+                  }}
+                />
+                {generateState !== 'idle' && (
+                  <GenerateField
+                    state={generateState}
+                    {...(generateResult ? { result: generateResult } : {})}
+                    {...(generateError ? { errorMessage: generateError } : {})}
+                    onGenerate={() => void handleGenerateAbout()}
+                    onRegenerate={() => void handleGenerateAbout()}
+                    onCancel={handleGenerateDiscard}
+                    onAccept={handleGenerateAccept}
+                    onDiscard={handleGenerateDiscard}
+                  />
+                )}
+              </div>
+            </VDField>
+
+            {/* Capacity */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.capacity.label}
+              htmlFor="edit-venue-capacity"
+              description={
+                ADMIN_COPY.venueDetailsClient.fields.capacity.description
+              }
+            >
+              <VDInput
+                id="edit-venue-capacity"
+                type="number"
+                value={capacityVal}
+                placeholder={
+                  ADMIN_COPY.venueDetailsClient.fields.capacity.placeholder
+                }
+                disabled={isDisabled}
+                min={1}
+                onChange={(evt) => {
+                  setCapacityVal(evt.target.value);
+                  setCapacityGenerated(false);
+                }}
+              />
+              {capacityGenerated && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginTop: 4,
+                    padding: '3px 8px',
+                    borderRadius: 20,
+                    border:
+                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                    background:
+                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--success)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      background: 'var(--success)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  {ADMIN_COPY.venueDetailsClient.fields.capacity.generatedBadge}
+                </span>
+              )}
+            </VDField>
+
+            {/* Neighborhood */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.neighborhood.label}
+              htmlFor="edit-venue-neighborhood"
+              description={
+                ADMIN_COPY.venueDetailsClient.fields.neighborhood.description
+              }
+            >
+              <VDInput
+                id="edit-venue-neighborhood"
+                value={neighborhoodVal}
+                placeholder={
+                  ADMIN_COPY.venueDetailsClient.fields.neighborhood.placeholder
+                }
+                disabled={isDisabled}
+                onChange={(evt) => {
+                  setNeighborhoodVal(evt.target.value);
+                  setNeighborhoodGenerated(false);
+                }}
+              />
+              {neighborhoodGenerated && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginTop: 4,
+                    padding: '3px 8px',
+                    borderRadius: 20,
+                    border:
+                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
+                    background:
+                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: 'var(--success)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: '50%',
+                      background: 'var(--success)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  {
+                    ADMIN_COPY.venueDetailsClient.fields.neighborhood
+                      .generatedBadge
+                  }
+                </span>
+              )}
+            </VDField>
+          </div>
+        </VDSection>
+
+        {/* 05 · identity art */}
+        <VDSection
+          eyebrow={ADMIN_COPY.venueDetailsClient.sections.identityArt.eyebrow}
+          title={ADMIN_COPY.venueDetailsClient.sections.identityArt.title}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Description */}
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                lineHeight: 1.55,
+              }}
+            >
+              {ADMIN_COPY.venueDetailsClient.sections.identityArt.description}{' '}
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 12,
+                  color: 'var(--accent)',
+                }}
+              >
+                (venue · {venue.name})
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+              {/* Preview tile */}
+              <div
+                style={{
+                  position: 'relative',
+                  width: 96,
+                  height: 96,
+                  flexShrink: 0,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                <IdentityArt
+                  name={artSeedStr}
+                  kind={artNamespace}
+                  scale="tile"
+                  grain={0.08}
+                  width={96}
+                  height={96}
+                />
+                {/* Monogram chip, drawn here rather than by IdentityArt:
+                    #1525 retired the chip internal to IdentityArt. This
+                    preview mirrors the venues index, which keeps its own
+                    overlay — venue imagery is a separate handoff. */}
+                {(() => {
+                  const identity = identityFor(artSeedStr, artNamespace);
+                  const dark = ia_isDark(identity.palette.bg);
+                  const initials = ia_getInitials(artSeedStr, 2);
+                  return (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 6,
+                        bottom: 6,
+                        padding: '2px 6px',
+                        borderRadius: 5,
+                        background: dark
+                          ? 'rgba(0,0,0,0.55)'
+                          : 'rgba(255,255,255,0.78)',
+                        backdropFilter: 'blur(4px)',
+                        fontFamily: 'var(--font-ui)',
+                        fontWeight: 900,
+                        fontSize: 10,
+                        letterSpacing: '0.04em',
+                        color: dark ? '#F1E6D5' : '#191418',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {initials}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Controls — 2-column grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: 12,
+                  flex: 1,
+                }}
+              >
+                <VDField
+                  label={ADMIN_COPY.venueDetailsClient.fields.namespace.label}
+                  htmlFor="edit-venue-art-namespace"
+                  hint={ADMIN_COPY.venueDetailsClient.fields.namespace.hint}
+                >
+                  <div style={{ alignSelf: 'flex-start' }}>
+                    <VDSegToggle
+                      options={[
+                        {
+                          value: 'venue',
+                          label:
+                            ADMIN_COPY.venueDetailsClient.fields.namespace
+                              .venue,
+                        },
+                        {
+                          value: 'artist',
+                          label:
+                            ADMIN_COPY.venueDetailsClient.fields.namespace
+                              .artist,
+                        },
+                      ]}
+                      value={artNamespace}
+                      onChange={(val) =>
+                        setArtNamespace(val as 'venue' | 'artist')
+                      }
+                    />
+                  </div>
+                </VDField>
+
+                <VDField
+                  label={ADMIN_COPY.venueDetailsClient.fields.seed.label}
+                  htmlFor="edit-venue-art-seed"
+                  hint={
+                    artSeedNum === 0
+                      ? ADMIN_COPY.venueDetailsClient.fields.seed.lockedHint
+                      : `${ADMIN_COPY.venueDetailsClient.fields.seed.bumpedHint} ${artSeedNum}`
+                  }
+                >
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <VDInput
+                      id="edit-venue-art-seed"
+                      value={artSeedNum === 0 ? '' : String(artSeedNum)}
+                      placeholder="0"
+                      disabled
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setArtSeedNum((prev) => prev + 1)}
+                      style={{
+                        flexShrink: 0,
+                        height: 36,
+                        padding: '0 14px',
+                        border: '1px solid var(--border-strong)',
+                        borderRadius: 8,
+                        background: 'var(--surface-1)',
+                        color: 'var(--fg-muted)',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {ADMIN_COPY.venueDetailsClient.fields.seed.rollButton}
+                    </button>
+                  </div>
+                </VDField>
+              </div>
+            </div>
+
+            {/* Phase 8 warning banner */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 14px',
+                borderRadius: 8,
+                border:
+                  '1px solid color-mix(in oklab, var(--warning) 32%, transparent)',
+                background:
+                  'color-mix(in oklab, var(--warning) 8%, var(--bg-elevated))',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--warning)',
+                lineHeight: 1.45,
+              }}
+            >
+              <span style={{ fontWeight: 700, flexShrink: 0 }}>
+                {ADMIN_COPY.venueDetailsClient.sections.identityArt.phase8Label}
+              </span>
+              <span>
+                {
+                  ADMIN_COPY.venueDetailsClient.sections.identityArt
+                    .phase8Warning
+                }
+              </span>
+            </div>
+          </div>
+        </VDSection>
+      </VenueTabPanel>
+
+      <VenueTabPanel tab="source" active={tab}>
         {/* 03 · crawl config */}
         <VDSection
           eyebrow={ADMIN_COPY.venueDetailsClient.sections.crawlConfig.eyebrow}
@@ -2084,7 +2590,9 @@ export function VenueDetailsClient({
             </div>
           </div>
         </VDSection>
+      </VenueTabPanel>
 
+      <VenueTabPanel tab="guide" active={tab}>
         {/* #764 first-timer guide — its own resource with its own publish
             gate, so it renders as a standalone block rather than a VDSection. */}
         <VenueGuideBlock
@@ -2093,425 +2601,9 @@ export function VenueDetailsClient({
           initialGuide={guide}
           loadFailed={guideLoadFailed}
         />
+      </VenueTabPanel>
 
-        {/* 04 · editorial */}
-        <VDSection
-          eyebrow={ADMIN_COPY.venueDetailsClient.sections.editorial.eyebrow}
-          title={ADMIN_COPY.venueDetailsClient.sections.editorial.title}
-          subtitle={
-            <>
-              {ADMIN_COPY.venueDetailsClient.sections.editorial.subtitle}{' '}
-              <strong style={{ color: 'var(--accent)', fontWeight: 700 }}>
-                {ADMIN_COPY.venueDetailsClient.sections.editorial.llmNote}
-              </strong>{' '}
-              {ADMIN_COPY.venueDetailsClient.sections.editorial.llmSuffix}
-            </>
-          }
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* About */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.about.label}
-              htmlFor="edit-venue-about"
-              description={
-                ADMIN_COPY.venueDetailsClient.fields.about.description
-              }
-              labelRight={
-                generateState === 'idle' || generateState === 'accepted' ? (
-                  <button
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => void handleGenerateAbout()}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      padding: '4px 10px',
-                      borderRadius: 6,
-                      border:
-                        '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
-                      background:
-                        'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: 'var(--accent)',
-                      opacity: isDisabled ? 0.66 : 1,
-                    }}
-                  >
-                    <Sparkles size={11} />
-                    {ADMIN_COPY.venueDetailsClient.fields.about.generate}
-                    <span
-                      style={{
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 10,
-                        opacity: 0.75,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {ADMIN_COPY.venueDetailsClient.fields.about.generateCost}
-                    </span>
-                  </button>
-                ) : null
-              }
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <textarea
-                  id="edit-venue-about"
-                  value={aboutVal}
-                  placeholder={
-                    ADMIN_COPY.venueDetailsClient.fields.about.placeholder
-                  }
-                  disabled={
-                    isDisabled ||
-                    generateState === 'loading' ||
-                    generateState === 'review'
-                  }
-                  rows={5}
-                  onChange={(evt) => setAboutVal(evt.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-strong)',
-                    background: 'var(--bg-elevated)',
-                    color: 'var(--fg)',
-                    fontSize: 13,
-                    fontFamily: "'Inter', sans-serif",
-                    outline: 'none',
-                    boxSizing: 'border-box' as const,
-                    resize: 'vertical' as const,
-                    lineHeight: 1.5,
-                    opacity: isDisabled ? 0.66 : 1,
-                    cursor: isDisabled ? 'not-allowed' : 'text',
-                    transition: 'border-color .12s',
-                  }}
-                />
-                {generateState !== 'idle' && (
-                  <GenerateField
-                    state={generateState}
-                    {...(generateResult ? { result: generateResult } : {})}
-                    {...(generateError ? { errorMessage: generateError } : {})}
-                    onGenerate={() => void handleGenerateAbout()}
-                    onRegenerate={() => void handleGenerateAbout()}
-                    onCancel={handleGenerateDiscard}
-                    onAccept={handleGenerateAccept}
-                    onDiscard={handleGenerateDiscard}
-                  />
-                )}
-              </div>
-            </VDField>
-
-            {/* Capacity */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.capacity.label}
-              htmlFor="edit-venue-capacity"
-              description={
-                ADMIN_COPY.venueDetailsClient.fields.capacity.description
-              }
-            >
-              <VDInput
-                id="edit-venue-capacity"
-                type="number"
-                value={capacityVal}
-                placeholder={
-                  ADMIN_COPY.venueDetailsClient.fields.capacity.placeholder
-                }
-                disabled={isDisabled}
-                min={1}
-                onChange={(evt) => {
-                  setCapacityVal(evt.target.value);
-                  setCapacityGenerated(false);
-                }}
-              />
-              {capacityGenerated && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    marginTop: 4,
-                    padding: '3px 8px',
-                    borderRadius: 20,
-                    border:
-                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                    background:
-                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: 'var(--success)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      background: 'var(--success)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  {ADMIN_COPY.venueDetailsClient.fields.capacity.generatedBadge}
-                </span>
-              )}
-            </VDField>
-
-            {/* Neighborhood */}
-            <VDField
-              label={ADMIN_COPY.venueDetailsClient.fields.neighborhood.label}
-              htmlFor="edit-venue-neighborhood"
-              description={
-                ADMIN_COPY.venueDetailsClient.fields.neighborhood.description
-              }
-            >
-              <VDInput
-                id="edit-venue-neighborhood"
-                value={neighborhoodVal}
-                placeholder={
-                  ADMIN_COPY.venueDetailsClient.fields.neighborhood.placeholder
-                }
-                disabled={isDisabled}
-                onChange={(evt) => {
-                  setNeighborhoodVal(evt.target.value);
-                  setNeighborhoodGenerated(false);
-                }}
-              />
-              {neighborhoodGenerated && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    marginTop: 4,
-                    padding: '3px 8px',
-                    borderRadius: 20,
-                    border:
-                      '1px solid color-mix(in oklab, var(--success) 38%, transparent)',
-                    background:
-                      'color-mix(in oklab, var(--success) 5%, var(--bg-elevated))',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: 'var(--success)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 5,
-                      height: 5,
-                      borderRadius: '50%',
-                      background: 'var(--success)',
-                      flexShrink: 0,
-                    }}
-                  />
-                  {
-                    ADMIN_COPY.venueDetailsClient.fields.neighborhood
-                      .generatedBadge
-                  }
-                </span>
-              )}
-            </VDField>
-          </div>
-        </VDSection>
-
-        {/* 05 · identity art */}
-        <VDSection
-          eyebrow={ADMIN_COPY.venueDetailsClient.sections.identityArt.eyebrow}
-          title={ADMIN_COPY.venueDetailsClient.sections.identityArt.title}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Description */}
-            <div
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 13,
-                color: 'var(--fg-muted)',
-                lineHeight: 1.55,
-              }}
-            >
-              {ADMIN_COPY.venueDetailsClient.sections.identityArt.description}{' '}
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 12,
-                  color: 'var(--accent)',
-                }}
-              >
-                (venue · {venue.name})
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-              {/* Preview tile */}
-              <div
-                style={{
-                  position: 'relative',
-                  width: 96,
-                  height: 96,
-                  flexShrink: 0,
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <IdentityArt
-                  name={artSeedStr}
-                  kind={artNamespace}
-                  scale="tile"
-                  grain={0.08}
-                  width={96}
-                  height={96}
-                />
-                {/* Monogram chip, drawn here rather than by IdentityArt:
-                    #1525 retired the chip internal to IdentityArt. This
-                    preview mirrors the venues index, which keeps its own
-                    overlay — venue imagery is a separate handoff. */}
-                {(() => {
-                  const identity = identityFor(artSeedStr, artNamespace);
-                  const dark = ia_isDark(identity.palette.bg);
-                  const initials = ia_getInitials(artSeedStr, 2);
-                  return (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 6,
-                        bottom: 6,
-                        padding: '2px 6px',
-                        borderRadius: 5,
-                        background: dark
-                          ? 'rgba(0,0,0,0.55)'
-                          : 'rgba(255,255,255,0.78)',
-                        backdropFilter: 'blur(4px)',
-                        fontFamily: 'var(--font-ui)',
-                        fontWeight: 900,
-                        fontSize: 10,
-                        letterSpacing: '0.04em',
-                        color: dark ? '#F1E6D5' : '#191418',
-                        lineHeight: 1,
-                      }}
-                    >
-                      {initials}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Controls — 2-column grid */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                  gap: 12,
-                  flex: 1,
-                }}
-              >
-                <VDField
-                  label={ADMIN_COPY.venueDetailsClient.fields.namespace.label}
-                  htmlFor="edit-venue-art-namespace"
-                  hint={ADMIN_COPY.venueDetailsClient.fields.namespace.hint}
-                >
-                  <div style={{ alignSelf: 'flex-start' }}>
-                    <VDSegToggle
-                      options={[
-                        {
-                          value: 'venue',
-                          label:
-                            ADMIN_COPY.venueDetailsClient.fields.namespace
-                              .venue,
-                        },
-                        {
-                          value: 'artist',
-                          label:
-                            ADMIN_COPY.venueDetailsClient.fields.namespace
-                              .artist,
-                        },
-                      ]}
-                      value={artNamespace}
-                      onChange={(val) =>
-                        setArtNamespace(val as 'venue' | 'artist')
-                      }
-                    />
-                  </div>
-                </VDField>
-
-                <VDField
-                  label={ADMIN_COPY.venueDetailsClient.fields.seed.label}
-                  htmlFor="edit-venue-art-seed"
-                  hint={
-                    artSeedNum === 0
-                      ? ADMIN_COPY.venueDetailsClient.fields.seed.lockedHint
-                      : `${ADMIN_COPY.venueDetailsClient.fields.seed.bumpedHint} ${artSeedNum}`
-                  }
-                >
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <VDInput
-                      id="edit-venue-art-seed"
-                      value={artSeedNum === 0 ? '' : String(artSeedNum)}
-                      placeholder="0"
-                      disabled
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setArtSeedNum((prev) => prev + 1)}
-                      style={{
-                        flexShrink: 0,
-                        height: 36,
-                        padding: '0 14px',
-                        border: '1px solid var(--border-strong)',
-                        borderRadius: 8,
-                        background: 'var(--surface-1)',
-                        color: 'var(--fg-muted)',
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {ADMIN_COPY.venueDetailsClient.fields.seed.rollButton}
-                    </button>
-                  </div>
-                </VDField>
-              </div>
-            </div>
-
-            {/* Phase 8 warning banner */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 14px',
-                borderRadius: 8,
-                border:
-                  '1px solid color-mix(in oklab, var(--warning) 32%, transparent)',
-                background:
-                  'color-mix(in oklab, var(--warning) 8%, var(--bg-elevated))',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
-                color: 'var(--warning)',
-                lineHeight: 1.45,
-              }}
-            >
-              <span style={{ fontWeight: 700, flexShrink: 0 }}>
-                {ADMIN_COPY.venueDetailsClient.sections.identityArt.phase8Label}
-              </span>
-              <span>
-                {
-                  ADMIN_COPY.venueDetailsClient.sections.identityArt
-                    .phase8Warning
-                }
-              </span>
-            </div>
-          </div>
-        </VDSection>
-
-        {/* The old danger zone's controls live in the header's ⋯ now. */}
-      </div>
+      {/* The old danger zone's controls live in the header's ⋯ now. */}
 
       {/* Sticky save bar */}
       {isDirty && (

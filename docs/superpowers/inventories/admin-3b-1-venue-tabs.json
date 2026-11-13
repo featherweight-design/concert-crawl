@@ -1,0 +1,72 @@
+{
+  "feature": "Admin 3b part 1: venue page tab shell",
+  "note": "Read-only. Boards: design/design_handoff_admin_redesign, the tab strip on every 04/venue-* and phone-addendum gap-4-venue-source board, and 07/loading-venue-page (the route skeleton, walked by hand on a throttled load). Admin role (CONTACT_SHEET_ROLE=admin). Scratch Neon row: Bluebird Theater. Panels carry today's sections unchanged (Overview the summary line, Runs a link to Crawl, Source the crawl config, Details identity, ticketing, editorial and identity art, Guide the guide block); only the shell is under review. Walked by hand: an unsaved edit surviving a tab switch, and the arrow, Home and End keys.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "tablet", "width": 640, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "tab-overview",
+      "label": "Overview: the interim summary line",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=overview",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-panel-overview\"]:not([hidden])"
+        },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "tab-runs",
+      "label": "Runs: the interim link to Crawl",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-panel-runs\"]:not([hidden])"
+        },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "tab-source",
+      "label": "Source: the crawl config section",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=source",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-panel-source\"]:not([hidden])"
+        },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "tab-details",
+      "label": "Details: identity, ticketing, editorial, identity art",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-panel-details\"]:not([hidden])"
+        },
+        { "settle": 2000 }
+      ]
+    },
+    {
+      "id": "tab-guide",
+      "label": "Guide: the first-timer guide block",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=guide",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-panel-guide\"]:not([hidden])"
+        },
+        { "settle": 2000 }
+      ]
+    }
+  ]
+}
