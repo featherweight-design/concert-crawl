@@ -164,11 +164,13 @@ export const MORE_HREF = '/admin/more';
 
 const REVIEW_TAB_TO_KEY: Record<string, NavKey> = {
   'all-events': 'events',
+  prices: 'prices',
+  submissions: 'prices',
 };
 
 /**
- * Review's tabs are split across Needs you and Events until 4b moves the
- * last one. The event editor carries `?from=<review tab>`, so it
+ * Review's tabs are split across Needs you, Events and Prices until 2b, 4b
+ * and 4d move them. The event editor carries `?from=<review tab>`, so it
  * follows the tab it was opened from and defaults to Events.
  */
 const keyForReviewTab = (tab: string | null, fallback: NavKey): NavKey => {
