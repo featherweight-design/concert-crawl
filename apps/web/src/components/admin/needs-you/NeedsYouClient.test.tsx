@@ -1,0 +1,251 @@
+// @vitest-environment jsdom
+import '@testing-library/jest-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { NeedsYouClient } from './NeedsYouClient';
+
+const { getTokenMock, replaceMock } = vi.hoisted(() => ({
+  getTokenMock: async () => 'token',
+  replaceMock: vi.fn(),
+}));
+
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: getTokenMock }),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: replaceMock }),
+}));
+
+const answer = (over: Record<string, unknown>) => ({
+  slug: 'still_on',
+  label: 'Still on',
+  notifiesFans: false,
+  undoable: true,
+  suggested: false,
+  ...over,
+});
+
+const item = (over: Record<string, unknown>) => ({
+  key: 'show-dropped:e1',
+  kind: 'show-dropped',
+  title: 'Olive Jones w/ Zoe Stroupe',
+  venueId: 'v1',
+  venueName: 'Globe Hall',
+  fanDate: '2099-01-01',
+  watchers: 12,
+  answers: [
+    answer({
+      slug: 'postponed',
+      label: 'Postponed',
+      notifiesFans: true,
+      undoable: false,
+    }),
+    answer({
+      slug: 'cancelled',
+      label: 'Cancelled',
+      notifiesFans: true,
+      undoable: false,
+    }),
+    answer({}),
+  ],
+  evidence: [{ label: 'Last seen', value: 'Nov 7' }],
+  ...over,
+});
+
+const ITEMS = [
+  item({}),
+  item({
+    key: 'bug:f1',
+    kind: 'bug',
+    title: 'The map will not load',
+    venueId: null,
+    venueName: null,
+    fanDate: null,
+    watchers: 0,
+    answers: [answer({ slug: 'dismiss', label: 'Dismiss' })],
+    evidence: [],
+  }),
+];
+
+const COUNT = {
+  decisions: 2,
+  handledToday: 6,
+  byKind: {
+    'show-dropped': 1,
+    'show-moved': 0,
+    'venue-failing': 0,
+    'venue-blocked': 0,
+    artist: 0,
+    'event-low-confidence': 0,
+    'price-check': 0,
+    'price-batch': 0,
+    bug: 1,
+  },
+};
+
+const json = (data: unknown) =>
+  new Response(JSON.stringify({ success: true, data }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+let calls: { url: string; method: string; body: unknown }[] = [];
+
+beforeEach(() => {
+  calls = [];
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+      calls.push({
+        url,
+        method: init?.method ?? 'GET',
+        body: init?.body ? JSON.parse(init.body) : undefined,
+      });
+      if (url.endsWith('/needs-you/count')) return json(COUNT);
+      if (url.endsWith('/answer')) {
+        // As the API answers: a quiet answer can be undone, a notifying one can't.
+        const quiet = init?.body?.includes('still_on') === true;
+        return json({
+          key: 'show-dropped:e1',
+          slug: 'still_on',
+          auditId: 'audit-1',
+          undoable: quiet,
+        });
+      }
+      if (url.endsWith('/undo')) return json({ ok: true });
+      if (url.endsWith('/snooze')) return json({ ok: true });
+      return json(ITEMS);
+    }),
+  );
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe('NeedsYouClient', () => {
+  it('counts each pill from the server counts and the summary line', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    expect(
+      screen.getByText(
+        /2 decisions\. Soonest for fans first\. 6 handled today\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tab', { name: /^Shows/ })).getByText('1'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tab', { name: /^Bugs/ })).getByText('1'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tab', { name: /^Venues/ })).getByText('0'),
+    ).toBeInTheDocument();
+  });
+
+  it('filters the list by kind', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    fireEvent.click(screen.getByRole('tab', { name: /^Bugs/ }));
+    expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
+    expect(screen.getByText('The map will not load')).toBeInTheDocument();
+  });
+
+  it('answers a quiet answer, leaves an Undo line, and Undo takes it back', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: 'Still on' }));
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(line).toHaveTextContent('Olive Jones marked Still on.');
+    expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
+    expect(calls.find((call) => call.url.endsWith('/answer'))?.body).toEqual({
+      answer: 'still_on',
+    });
+
+    fireEvent.click(within(line).getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(
+        calls.some((call) => call.url.endsWith('/answers/audit-1/undo')),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('needs-you-answered')).toBeNull(),
+    );
+  });
+
+  it('asks before an answer that tells fans, and leaves no Undo', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: 'Postponed' }));
+    expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(false);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Postponed?');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Postponed' }));
+    await waitFor(() =>
+      expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(true),
+    );
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(within(line).queryByRole('button', { name: 'Undo' })).toBeNull();
+  });
+
+  it('snoozing a card takes it off the list without an Undo', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByTestId('snooze-trigger'));
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: /Snooze 1 day/ }),
+    );
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(line).toHaveTextContent('Olive Jones snoozed.');
+    expect(within(line).queryByRole('button', { name: 'Undo' })).toBeNull();
+    expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
+    const snooze = calls.find((call) => call.url.endsWith('/snooze'));
+    expect(snooze?.body).toMatchObject({
+      until: expect.stringMatching(/T08:00:00-0[67]:00$/),
+    });
+  });
+
+  it('says All clear when the queue is empty', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('/needs-you/count')
+          ? json({
+              ...COUNT,
+              decisions: 0,
+              byKind: { ...COUNT.byKind, 'show-dropped': 0, bug: 0 },
+            })
+          : json([]),
+      ),
+    );
+    render(<NeedsYouClient item={null} />);
+    expect(
+      await screen.findByTestId('needs-you-all-clear'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Couldn’t load with Try again when the list fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    );
+    render(<NeedsYouClient item={null} />);
+    expect(await screen.findByTestId('couldnt-load')).toBeInTheDocument();
+  });
+});
