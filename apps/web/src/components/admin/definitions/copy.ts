@@ -3585,6 +3585,81 @@ export const ADMIN_COPY = {
   // The acknowledge control in the crawl inspector. Every string here has to
   // carry the same idea: this is not a dismiss. The figure is pinned, and the
   // fault comes back the moment it moves.
+  // 4d Prices, the Submitted prices tab (boards 06 prices-submitted-prices,
+  // prices-row-menu, reject-a-submitted-price, submitted-prices-mobile).
+  pricesSubmitted: {
+    filtersLabel: 'Filter submitted prices',
+    filters: {
+      all: 'All',
+      waiting: 'Waiting for you',
+      published: 'Published',
+      'price-check': 'Price check',
+    },
+    search: 'Search shows or people',
+    listLabel: 'Submitted prices',
+    columns: {
+      show: 'Show',
+      price: 'Price',
+      from: 'From',
+      backedBy: 'Backed by',
+      state: 'State',
+    },
+    noHandle: 'A fan',
+    fans: (count: number) => `${count} ${count === 1 ? 'fan' : 'fans'}`,
+    priceCheck: 'Price check',
+    // The state as plain text on a desktop; the phone draws pills.
+    states: {
+      waiting: 'Waiting for you',
+      published: 'Published',
+      'price-check': 'In Needs you',
+      'not-used': 'Not used',
+      stale: 'Stale',
+    },
+    phoneStates: {
+      waiting: 'Waiting for you',
+      published: 'Live',
+      'price-check': 'Price check',
+      'not-used': 'Not used',
+      stale: 'Stale',
+    },
+    empty: { title: 'No submitted prices', body: 'Nothing matches that.' },
+    loadMore: 'Load more',
+    loadingMore: 'Loading…',
+    loadMoreFailed: "Couldn't load more prices.",
+    showing: (shown: number, total: number) => `Showing ${shown} of ${total}`,
+    menu: {
+      label: 'Price actions',
+      openShow: {
+        label: 'Open the show',
+        hint: 'Event edit, with this price in context',
+      },
+      openTicket: { label: 'Open ticket page', hint: 'Where the fan saw it' },
+      otherPrices: {
+        label: 'This fan’s other prices',
+        hint: (handle: string) => `Filter to @${handle}`,
+      },
+      reject: { label: 'Reject…', hint: 'Unpublish it and tell the fan why' },
+    },
+    reject: {
+      eyebrow: 'Reject price',
+      title: (price: string, show: string) => `Reject ${price} for ${show}?`,
+      body: (handle: string | null) =>
+        `The price comes off the show, and ${handle === null ? 'the fan' : `@${handle}`} sees it as Not used in Submitted prices, with your reason.`,
+      reasonLabel: 'Reason',
+      reasons: {
+        'wrong-show': 'Wrong show',
+        'wrong-amount': 'Wrong amount',
+        resale: 'Resale price',
+        'fees-included': 'Fees included',
+        other: 'Other',
+      },
+      noteLabel: 'Note to the fan (optional)',
+      cancel: 'Cancel',
+      confirm: 'Reject price',
+      failed: "Couldn't reject that price",
+      notWaiting: 'That price is no longer waiting for you.',
+    },
+  },
   faultAcknowledge: {
     title: 'Is this expected?',
     body: 'Pin the figure you judged expected. The fault stops showing, and comes straight back if that figure moves.',
