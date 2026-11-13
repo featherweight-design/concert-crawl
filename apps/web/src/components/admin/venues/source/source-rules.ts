@@ -7,8 +7,11 @@ const COPY = ADMIN_COPY.venueSource;
 /**
  * The columns the Source tab reads and writes (3b part 6). Nothing else: the
  * request delay and the robots.txt columns are the crawl rules, shown and
- * never sent, and `debug_capture_html` is held (Hugh, row 13).
+ * never sent, and `debug_capture_html` is held (Hugh, row 13). The type
+ * refuses a crawl-rule column at compile time.
  */
+type CrawlRuleColumn =
+  'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt';
 export const SOURCE_COLUMNS = [
   'websiteUrl',
   'extractionStrategy',
@@ -19,7 +22,7 @@ export const SOURCE_COLUMNS = [
   'crawlMode',
   'crawlWaitUntil',
   'crawlWaitForSelector',
-] as const;
+] as const satisfies ReadonlyArray<Exclude<keyof Venue, CrawlRuleColumn>>;
 export type SourceColumn = (typeof SOURCE_COLUMNS)[number];
 export type SourceColumns = Pick<Venue, SourceColumn>;
 
@@ -241,6 +244,17 @@ export const changedColumns = (
   return SOURCE_COLUMNS.filter((key) => changed.has(key));
 };
 
+/**
+ * The columns a draft changes, against the pristine baseline. Dirty and the
+ * save both call this, never `changedColumns` on the raw row, so an old row's
+ * leftovers are never sent as a clear the admin didn't make.
+ */
+export const dirtyColumns = (
+  draft: SourceDraft,
+  saved: SourceColumns,
+): SourceColumn[] =>
+  changedColumns(columnsOf(draft, saved), pristineColumns(saved));
+
 /** The update action's FormData for those columns; empty means null. */
 export const sourceFormData = (
   next: SourceColumns,
@@ -258,7 +272,11 @@ export type SourceErrors = Partial<Record<SourceField, string>>;
 export const sellerName = (seller: FeedSeller): string =>
   COPY.read.seller.names[seller];
 
-/** Checked before any request, mirroring the API's rules. */
+/**
+ * Checked before any request: the calendar page and the feed fields. The
+ * API's browser-mode selector check is not mirrored; its 400 lands on Wait for
+ * through `sourceFieldOf`.
+ */
 export const validateSource = (draft: SourceDraft): SourceErrors => {
   if (draft.mode === 'page' && !isSafeHttpUrl(draft.websiteUrl.trim())) {
     return { websiteUrl: COPY.read.calendarPage.invalid };
@@ -284,7 +302,8 @@ export const sourceFieldOf = (
 
 /** "3 s minimum between requests, plus jitter": the stored delay, never below 3 s. */
 export const paceLine = (crawlDelayMs: number): string => {
-  const seconds = Math.max(3000, crawlDelayMs) / 1000;
+  // Rounded to a tenth first, so 3999 reads "4", never "4.0".
+  const seconds = Math.round(Math.max(3000, crawlDelayMs) / 100) / 10;
   return COPY.rules.paceValue(
     Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1),
   );
