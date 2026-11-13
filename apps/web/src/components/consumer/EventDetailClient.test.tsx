@@ -687,6 +687,69 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getAllByText('VIP')).toHaveLength(2);
   });
 
+  // Regression: the "other tiers" row for a pending-only tier took its kind
+  // from `vendor === 'VenueBoxOffice'` alone, so a pending resale price drew
+  // the community dot instead of the resale one.
+  it('STATE #6 mixed-tier — a pending-only resale tier draws the resale dot in its other-tiers row', () => {
+    const headlineBlock = makeTierBlock({
+      tier: 'GA',
+      headline: {
+        submissionId: 's1',
+        priceMin: '25',
+        priceMax: null,
+        vendor: 'VenueBoxOffice',
+        sourceCategory: 'boxoffice',
+        submitterHandle: 'ada',
+        observedAt: '2026-06-20T00:00:00Z',
+        approvedAt: '2026-06-20T00:00:00Z',
+        approvalKind: 'fan',
+        confirmsCount: 2,
+      },
+    });
+    const pendingResaleBlock = makeTierBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p-vip-resale',
+          priceMin: '80',
+          priceMax: null,
+          vendor: 'StubHub',
+          howFound: 'saw_listing',
+          sourceCategory: 'resale',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 1,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    });
+    const { container } = render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({
+          priceByTier: [headlineBlock, pendingResaleBlock],
+        })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    );
+    // TierAlternateRow's kind dot: resale is coral (JSDOM writes 0.20 as 0.2),
+    // community would be azure.
+    const dots = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'div[style*="border-radius: 2.5px"]',
+      ),
+    );
+    expect(
+      dots.some((dot) => dot.style.background.includes('oklch(0.65 0.2 25)')),
+    ).toBe(true);
+    expect(
+      dots.some((dot) => dot.style.background.includes('oklch(0.62 0.12 240)')),
+    ).toBe(false);
+  });
+
   it('STATE #7 all-tiers-pending — every tier is pending-only routes through PendingStack', () => {
     const ga = makeTierBlock({
       tier: 'GA',
