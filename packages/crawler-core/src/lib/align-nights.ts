@@ -40,13 +40,26 @@ export function alignToNights<T extends NightRow>(
           Number(isTimed(incoming[left] as T)) || left - right,
     );
 
-  const slots: Slot[] = existing.map((row) => ({ ...row }));
+  // By date, so a listing only compares against its own day. Stored rows go in
+  // by id, so which of several fitting rows wins never depends on read order.
+  const byDate = new Map<string, Slot[]>();
+  const slotsOn = (date: string): Slot[] => {
+    const found = byDate.get(date);
+    if (found) return found;
+    const fresh: Slot[] = [];
+    byDate.set(date, fresh);
+    return fresh;
+  };
+  for (const row of [...existing].sort((a, b) => a.id.localeCompare(b.id))) {
+    slotsOn(row.date).push({ ...row });
+  }
   const promotions = new Map<string, NightPromotion>();
   const aligned = incoming.slice();
 
   for (const index of order) {
     const listing = incoming[index] as T;
-    const matches = slots.filter((slot) => sameNight(slot, listing));
+    const daySlots = slotsOn(listing.date);
+    const matches = daySlots.filter((slot) => sameNight(slot, listing));
     const exact = matches.some(
       (slot) =>
         slot.canonicalArtist === listing.canonicalArtist &&
@@ -60,7 +73,7 @@ export function alignToNights<T extends NightRow>(
       matches.filter(isTimed).map((slot) => showTimeKey(slot.showTime)),
     );
     if (matches.length === 0 || (!isTimed(listing) && timedTimes.size > 1)) {
-      slots.push({
+      daySlots.push({
         id: null,
         canonicalArtist: listing.canonicalArtist,
         date: listing.date,
