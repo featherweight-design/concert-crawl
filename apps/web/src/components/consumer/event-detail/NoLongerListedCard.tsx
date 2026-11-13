@@ -14,7 +14,16 @@ const MUTED = 'var(--fg-subtle)';
  * The NO LONGER LISTED chip, as drawn in the card and, from `sm` up, above the
  * title in the hero (event-nll-d). One chip so the two never drift apart.
  */
-export const NoLongerListedChip = () => (
+export const NoLongerListedChip = ({
+  overArt = false,
+}: {
+  /**
+   * In the hero the chip sits on the photo wash, where `--fg-subtle` and an 8%
+   * fill all but vanish. There it steps up to `--fg-muted` and a surface fill
+   * (event-nll-d draws a clear grey chip).
+   */
+  overArt?: boolean;
+}) => (
   <span
     data-testid="nll-chip"
     style={{
@@ -23,15 +32,16 @@ export const NoLongerListedChip = () => (
       height: 19,
       padding: '0 7px 0 8px',
       borderRadius: 6,
-      border:
-        '1px solid color-mix(in oklab, var(--fg-subtle) 50%, transparent)',
-      background: 'color-mix(in oklab, var(--fg-subtle) 8%, transparent)',
+      border: `1px solid color-mix(in oklab, ${overArt ? 'var(--fg-muted)' : 'var(--fg-subtle)'} 50%, transparent)`,
+      background: overArt
+        ? 'color-mix(in oklab, var(--surface-1) 75%, transparent)'
+        : 'color-mix(in oklab, var(--fg-subtle) 8%, transparent)',
       fontFamily: 'var(--font-mono)',
       fontSize: 9.5,
       fontWeight: 700,
       letterSpacing: '0.08em',
       textTransform: 'uppercase',
-      color: MUTED,
+      color: overArt ? 'var(--fg-muted)' : MUTED,
       lineHeight: 1,
     }}
   >

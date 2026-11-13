@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
@@ -55,6 +57,36 @@ export const SupportingLine = ({
   slugs = null,
   linkArtists = false,
 }: SupportingLineProps): React.JSX.Element | null => {
+  const runRef = useRef<HTMLSpanElement>(null);
+  const overArtLine = surface === 'detail';
+  // A wrapped detail bill breaks after a "·", which would strand it at the end
+  // of the line. Each separator whose unit ends its line is hidden (kept in
+  // layout, so hiding it never moves a break); re-run on resize and once fonts
+  // have loaded.
+  useEffect(() => {
+    const run = runRef.current;
+    if (!overArtLine || run === null) return undefined;
+    const sync = () => {
+      const units = Array.from(
+        run.querySelectorAll<HTMLElement>('[data-testid="support-name"]'),
+      );
+      units.forEach((unit, index) => {
+        const sepNode = unit.querySelector<HTMLElement>(
+          '[data-testid="support-sep"]',
+        );
+        if (sepNode === null) return;
+        const next = units[index + 1];
+        const endsLine = next !== undefined && next.offsetTop > unit.offsetTop;
+        sepNode.style.visibility = endsLine ? 'hidden' : 'visible';
+      });
+    };
+    sync();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
+    observer?.observe(run);
+    void document.fonts?.ready.then(sync);
+    return () => observer?.disconnect();
+  }, [overArtLine, artists]);
   if (artists.length === 0) return null;
   const base = RAMP[surface];
   const ramp = surface === 'card' && narrow ? { lead: 11, name: 11 } : base;
@@ -109,6 +141,7 @@ export const SupportingLine = ({
   const sepEl = (
     <span
       aria-hidden="true"
+      data-testid="support-sep"
       className={`px-1.5 font-normal ${quietColor}`}
       style={{ fontSize: ramp.name }}
     >
@@ -154,6 +187,7 @@ export const SupportingLine = ({
     >
       {!overArt && leadEl}
       <span
+        ref={runRef}
         className={`min-w-0 ${runClass}`}
         {...(hideRunFromAt ? { 'aria-hidden': true } : {})}
       >

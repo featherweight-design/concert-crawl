@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SupportingLine } from './SupportingLine';
 
 describe('SupportingLine', () => {
@@ -92,6 +92,30 @@ describe('SupportingLine', () => {
         true,
       );
     });
+  });
+
+  // A "·" that would end a wrapped line is hidden (kept in layout); one that
+  // sits mid-line stays visible.
+  it('hides the separator of a unit that ends its wrapped line', () => {
+    const top = vi
+      .spyOn(HTMLElement.prototype, 'offsetTop', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        // Second name wraps onto a new line; the third stays with it.
+        return this.textContent?.startsWith('Izzy') ||
+          this.textContent?.startsWith('Kavari')
+          ? 20
+          : 0;
+      });
+    render(
+      <SupportingLine
+        artists={['Frost Children', 'Kavari', 'Izzy Camina']}
+        surface="detail"
+      />,
+    );
+    const seps = screen.getAllByTestId('support-sep');
+    expect(seps[0]?.style.visibility).toBe('hidden');
+    expect(seps[1]?.style.visibility).toBe('visible');
+    top.mockRestore();
   });
 
   // max-width 100% on the block: a single name wider than the line wraps

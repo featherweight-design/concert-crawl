@@ -59,6 +59,35 @@ const renderStage = (
   );
 
 describe('<EventStage />', () => {
+  it('puts the below-hero content under a compact phone hero (event-nll-m)', () => {
+    render(
+      <EventStage
+        name="The Grouch"
+        status="cancelled"
+        delistedAt="2026-11-04T10:00:00.000Z"
+        leadGenre="hip-hop"
+        countdown={null}
+        surface="event"
+        artworkUrl={null}
+        photoUrl={null}
+        belowHero={<p>Thu Dec 17</p>}
+      >
+        <h1>The Grouch</h1>
+      </EventStage>,
+    );
+    const below = screen.getByTestId('stage-below');
+    expect(below.className).toContain('sm:hidden');
+    expect(below.textContent).toBe('Thu Dec 17');
+    expect(screen.getByTestId('hero-band').className).toContain('pb-1.5');
+    expect(screen.getByTestId('hero-band').contains(below)).toBe(false);
+  });
+
+  it('renders no below-hero block or compact foot without the prop', () => {
+    renderStage();
+    expect(screen.queryByTestId('stage-below')).toBeNull();
+    expect(screen.getByTestId('hero-band').className).toContain('pb-7');
+  });
+
   it('keeps the hero-band test id the acceptance inventory waits on', () => {
     renderStage();
     expect(screen.getByTestId('hero-band')).toBeDefined();

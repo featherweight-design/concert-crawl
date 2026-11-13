@@ -48,6 +48,7 @@ import {
 } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { EventTitleBlock } from '@/components/consumer/event-title-block';
+import { isDelisted } from '@/components/consumer/event-row/lib/row-status';
 import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight';
 import { localDateString } from '@/lib/time';
 import {
@@ -272,6 +273,24 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
     </>
   );
 
+  // event-nll-m: a No longer listed phone hero ends under the title; the genre
+  // chips and the date line sit below it, above the dashed card.
+  const delistedStage = isDelisted(event.status, event.delistedAt);
+  const stageMetaEl = (
+    <EventStageMeta
+      date={event.date}
+      timezone={event.venue.timezone}
+      venueName={event.venue.name}
+      status={event.status}
+    />
+  );
+  const stageChips = (
+    <GenreChips
+      genres={event.genre}
+      className={`mt-3 justify-center sm:justify-start ${delistedStage ? 'max-sm:hidden' : ''}`}
+    />
+  );
+
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
     // horizontally: the full-bleed hero plus data-dependent status/price cards
@@ -303,6 +322,16 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
         actions={
           <ShareButton event={event} handle={shareHandle} authed inline />
         }
+        {...(delistedStage
+          ? {
+              belowHero: (
+                <>
+                  <GenreChips genres={event.genre} className="justify-center" />
+                  {stageMetaEl}
+                </>
+              ),
+            }
+          : {})}
       >
         <EventTitleBlock
           headliner={event.artist}
@@ -319,19 +348,13 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           linkArtists
           headSize="var(--stage-head)"
           centered
-          beforePill={
-            <GenreChips
-              genres={event.genre}
-              className="mt-3 justify-center sm:justify-start"
-            />
-          }
+          beforePill={stageChips}
         />
-        <EventStageMeta
-          date={event.date}
-          timezone={event.venue.timezone}
-          venueName={event.venue.name}
-          status={event.status}
-        />
+        {delistedStage ? (
+          <div className="max-sm:hidden">{stageMetaEl}</div>
+        ) : (
+          stageMetaEl
+        )}
       </EventStage>
 
       <div className="flex-1">

@@ -161,6 +161,11 @@ export type StageShellProps = {
   children: ReactNode;
   back?: ReactNode;
   actions?: ReactNode;
+  /**
+   * A phone hero that ends under the title (event-nll-m): a smaller card and a
+   * tighter foot. The genre chips and the date line then sit below the band.
+   */
+  compactPhone?: boolean;
 };
 
 /**
@@ -175,10 +180,11 @@ export const StageShell = ({
   back,
   actions,
   titleStep,
+  compactPhone = false,
 }: StageShellProps) => (
   <div
     data-testid="hero-band"
-    className="relative isolate overflow-hidden px-4 pb-7 pt-4 sm:px-8 sm:pb-11 sm:pt-[84px]"
+    className={`relative isolate overflow-hidden px-4 pt-4 sm:px-8 sm:pb-11 sm:pt-[84px] ${compactPhone ? 'pb-1.5' : 'pb-7'}`}
   >
     {backdrop}
     {(back || actions) && (
@@ -188,7 +194,11 @@ export const StageShell = ({
       </div>
     )}
     <div className="relative mx-auto flex max-w-[900px] flex-col items-center sm:flex-row sm:items-end sm:gap-10">
-      <div className="mt-5 w-[180px] shrink-0 sm:mt-0 sm:w-[244px]">{card}</div>
+      <div
+        className={`mt-5 shrink-0 sm:mt-0 sm:w-[244px] ${compactPhone ? 'w-[154px]' : 'w-[180px]'}`}
+      >
+        {card}
+      </div>
       {/* The headline steps at the breakpoint through one custom property,
             so the title block reads a single size token instead of knowing
             about breakpoints. */}
@@ -301,6 +311,12 @@ export type EventStageProps = {
   children: ReactNode;
   back?: ReactNode;
   actions?: ReactNode;
+  /**
+   * Shown under the hero on a phone only. Its presence also gives the phone
+   * hero the compact geometry of event-nll-m, which ends under the title. The
+   * caller hides the same content inside the hero below `sm`.
+   */
+  belowHero?: ReactNode;
 } & EventSlotSource;
 
 export const EventStage = ({
@@ -313,6 +329,7 @@ export const EventStage = ({
   children,
   back,
   actions,
+  belowHero,
   ...source
 }: EventStageProps) => {
   const ring = genreColor(leadGenre) ?? NEUTRAL_GENRE_COLOR;
@@ -320,56 +337,67 @@ export const EventStage = ({
   const venueRing =
     pastVenueSlug === undefined ? null : stampColorsFor(pastVenueSlug).ring;
   return (
-    <StageShell
-      backdrop={
-        <StageBackdrop
-          art={{ name, ...source }}
-          desaturated={desaturated}
-          {...(venueRing ? { rayColor: venueRing } : {})}
-        />
-      }
-      back={back}
-      actions={actions}
-      titleStep={titleStepPx(name)}
-      eyebrow={countdown ? <StageCountdown label={countdown} /> : null}
-      card={
-        <div
-          data-testid="stage-card"
-          className={
-            venueRing
-              ? '[--stage-shadow:var(--genre-shadow)] max-sm:[--stage-shadow:var(--past-shadow)]'
-              : undefined
-          }
-          style={
-            {
-              borderRadius: STAGE_CARD_RADIUS,
-              transform: `rotate(${STAGE_CARD_TILT}deg)`,
-              // A past night swaps its genre ring for the venue's below `sm`,
-              // through two custom properties; every other card keeps the
-              // inline ring.
-              ...(venueRing
-                ? {
-                    '--genre-shadow': stageRing(ring),
-                    '--past-shadow': stageRing(venueRing),
-                    boxShadow: 'var(--stage-shadow)',
-                  }
-                : { boxShadow: stageRing(ring) }),
-              filter: desaturated ? STAGE_DESATURATE : undefined,
-            } as CSSProperties
-          }
-        >
-          <Panel
-            {...source}
-            name={name}
-            size="100%"
-            ratio="4 / 5"
-            radius={STAGE_CARD_RADIUS}
-            scale="hero"
+    <>
+      <StageShell
+        compactPhone={belowHero !== undefined}
+        backdrop={
+          <StageBackdrop
+            art={{ name, ...source }}
+            desaturated={desaturated}
+            {...(venueRing ? { rayColor: venueRing } : {})}
           />
+        }
+        back={back}
+        actions={actions}
+        titleStep={titleStepPx(name)}
+        eyebrow={countdown ? <StageCountdown label={countdown} /> : null}
+        card={
+          <div
+            data-testid="stage-card"
+            className={
+              venueRing
+                ? '[--stage-shadow:var(--genre-shadow)] max-sm:[--stage-shadow:var(--past-shadow)]'
+                : undefined
+            }
+            style={
+              {
+                borderRadius: STAGE_CARD_RADIUS,
+                transform: `rotate(${STAGE_CARD_TILT}deg)`,
+                // A past night swaps its genre ring for the venue's below `sm`,
+                // through two custom properties; every other card keeps the
+                // inline ring.
+                ...(venueRing
+                  ? {
+                      '--genre-shadow': stageRing(ring),
+                      '--past-shadow': stageRing(venueRing),
+                      boxShadow: 'var(--stage-shadow)',
+                    }
+                  : { boxShadow: stageRing(ring) }),
+                filter: desaturated ? STAGE_DESATURATE : undefined,
+              } as CSSProperties
+            }
+          >
+            <Panel
+              {...source}
+              name={name}
+              size="100%"
+              ratio="4 / 5"
+              radius={STAGE_CARD_RADIUS}
+              scale="hero"
+            />
+          </div>
+        }
+      >
+        {children}
+      </StageShell>
+      {belowHero !== undefined && (
+        <div
+          data-testid="stage-below"
+          className="flex flex-col items-center px-4 pt-3 text-center sm:hidden"
+        >
+          {belowHero}
         </div>
-      }
-    >
-      {children}
-    </StageShell>
+      )}
+    </>
   );
 };
