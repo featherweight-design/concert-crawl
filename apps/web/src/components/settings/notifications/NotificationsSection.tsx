@@ -358,8 +358,10 @@ export const NotificationsSection = ({
 
       {isDenied ? (
         <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+          {/* items-start: beside a two-line title a centred pill reads as a
+              stray label; at the first line it reads as the title's tag. */}
+          <div className="flex items-start gap-2">
+            <span className="mt-px shrink-0 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted">
               {NOTIFICATIONS_COPY.denied.badge}
             </span>
             <span className={ROW_LABEL}>{NOTIFICATIONS_COPY.denied.title}</span>
