@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Inbox } from 'lucide-react';
-import type { AdminEmailDelivery } from '@concert-crawl/types';
+import type { AdminEmailDelivery, AdminSettings } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { SectionHead, StatusBadge } from '@/components/admin/primitives';
+import { LlmBudgetControl } from './LlmBudgetControl';
 import {
   crawlTileState,
   formatMonth,
@@ -178,6 +179,9 @@ export interface HealthTilesProps {
     paceUsd: number;
     state: CostTileState;
   };
+  /** The settings the cost tile's budget panel edits, and last month's spend. */
+  settings: AdminSettings;
+  lastMonthUsd: number | null;
   delivery: AdminEmailDelivery;
 }
 
@@ -185,6 +189,8 @@ export const HealthTiles = ({
   crawl,
   artists,
   cost,
+  settings,
+  lastMonthUsd,
   delivery,
 }: HealthTilesProps) => {
   const crawlState = crawlTileState(crawl);
@@ -263,38 +269,50 @@ export const HealthTiles = ({
         }
         // GAP G3: every drawn Artists pill is a Spotify sync state, ruled out.
       />
-      <Tile
-        testId={`health-tile-cost-${cost.state}`}
-        label={
-          <Dual
-            desk={copy.tiles.cost.label(month)}
-            phone={copy.tiles.cost.labelPhone(month)}
-          />
-        }
-        value={formatUsd(cost.mtdUsd)}
-        detail={
-          cost.state === 'over' ? (
-            copy.tiles.cost.over(budget)
-          ) : cost.state === 'noBudget' ? (
+      <LlmBudgetControl
+        settings={settings}
+        spentUsd={cost.mtdUsd}
+        paceUsd={cost.paceUsd}
+        lastMonthUsd={lastMonthUsd}
+      >
+        <Tile
+          testId={`health-tile-cost-${cost.state}`}
+          label={
             <Dual
-              desk={copy.tiles.cost.noBudget(pace)}
-              phone={copy.tiles.cost.noBudgetPhone(pace)}
+              desk={copy.tiles.cost.label(month)}
+              phone={copy.tiles.cost.labelPhone(month)}
             />
-          ) : (
-            <Dual
-              desk={copy.tiles.cost.ofBudget(budget, pace)}
-              phone={copy.tiles.cost.ofBudgetPhone(budget, pace)}
-            />
-          )
-        }
-        pill={
-          costPill && (
-            <StatusBadge kind={costPill.kind} dot>
-              <Dual desk={costPill.desk} phone={costPill.phone} />
-            </StatusBadge>
-          )
-        }
-      />
+          }
+          value={formatUsd(cost.mtdUsd)}
+          detail={
+            cost.state === 'over' ? (
+              copy.tiles.cost.over(budget)
+            ) : cost.state === 'noBudget' ? (
+              <Dual
+                desk={copy.tiles.cost.noBudget(pace)}
+                phone={copy.tiles.cost.noBudgetPhone(pace)}
+              />
+            ) : (
+              <Dual
+                desk={copy.tiles.cost.ofBudget(budget, pace)}
+                phone={copy.tiles.cost.ofBudgetPhone(budget, pace)}
+              />
+            )
+          }
+          pill={
+            costPill ? (
+              <StatusBadge kind={costPill.kind} dot>
+                <Dual desk={costPill.desk} phone={costPill.phone} />
+              </StatusBadge>
+            ) : (
+              // No budget: the pill points at the panel that sets one.
+              <StatusBadge kind="neutral">
+                {copy.tiles.cost.setBudget}
+              </StatusBadge>
+            )
+          }
+        />
+      </LlmBudgetControl>
       <Tile
         testId="health-tile-site"
         label={

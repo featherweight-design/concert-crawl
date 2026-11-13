@@ -173,6 +173,18 @@ export const monthToDate = (now: Date): MonthToDate => {
   };
 };
 
+/** The month before, as a whole month (its "day of month" is its last day). */
+export const previousMonth = (month: MonthToDate): MonthToDate => {
+  const year = month.month === 1 ? month.year - 1 : month.year;
+  const number = month.month === 1 ? 12 : month.month - 1;
+  const daysInMonth = new Date(Date.UTC(year, number, 0)).getUTCDate();
+  return { year, month: number, dayOfMonth: daysInMonth, daysInMonth };
+};
+
+/** What the days of `month` add up to, a day with no spend counting as $0. */
+export const monthTotal = (days: DailyCost[], month: MonthToDate): number =>
+  monthSeries(days, month).reduce((sum, day) => sum + (day.costUsd ?? 0), 0);
+
 /** `noBudget` is gap G5: no budget set, so no pill and no budget line. */
 export type CostTileState = 'under' | 'willGoOver' | 'over' | 'noBudget';
 

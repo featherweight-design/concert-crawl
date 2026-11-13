@@ -1,12 +1,18 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import {
   HealthHeader,
   HealthTiles,
   type HealthTilesProps,
 } from './HealthTiles';
+
+// The cost tile opens the budget panel, which reads the router and a session.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: async () => 'token' }),
+}));
 
 afterEach(cleanup);
 
@@ -27,6 +33,15 @@ const props: HealthTilesProps = {
     paceUsd: 10.3,
     state: 'under',
   },
+  settings: {
+    llmMonthlyBudgetUsd: 15,
+    llmBudgetWarnAtPercent: 75,
+    llmBudgetFallbackToStructured: false,
+    approvePricesMyself: false,
+    updatedAt: null,
+    updatedBy: null,
+  },
+  lastMonthUsd: 17.85,
   delivery: {
     lastSentAt: '2026-11-12T15:02:00Z',
     sent: 12,
@@ -72,7 +87,7 @@ describe('HealthTiles', () => {
     },
   );
 
-  it('has no pill or budget line when no budget is set (G5)', () => {
+  it('has no budget line when no budget is set (G5), and its pill points at the panel', () => {
     render(
       <HealthTiles
         {...props}
@@ -81,7 +96,17 @@ describe('HealthTiles', () => {
     );
     const tile = screen.getByTestId('health-tile-cost-noBudget');
     expect(tile).toHaveTextContent('On pace for $10.30');
-    expect(tile).not.toHaveTextContent('budget');
+    expect(tile).not.toHaveTextContent('of $');
+    expect(within(tile).getByText('Set a budget')).toBeInTheDocument();
+  });
+
+  it('makes the cost tile the way into the budget panel', () => {
+    render(<HealthTiles {...props} />);
+    const trigger = screen.getByTestId('llm-budget-trigger');
+    expect(trigger).toHaveAttribute('role', 'button');
+    expect(trigger).toContainElement(
+      screen.getByTestId('health-tile-cost-under'),
+    );
   });
 
   it('shows email delivery on the site tile, with no pill (G4)', () => {

@@ -28,7 +28,9 @@ import {
   groupVenues,
   lastNightWindow,
   monthSeries,
+  monthTotal,
   monthToDate,
+  previousMonth,
   summarizeCrawl,
   type ArtistCounts,
   type HealthStatusRow,
@@ -50,6 +52,8 @@ export default async function AdminHealthPage() {
 
   const now = new Date();
   const month = monthToDate(now);
+  const lastMonth = previousMonth(month);
+  const costWindowDays = month.dayOfMonth + lastMonth.daysInMonth;
   // Names the endpoint, so error.tsx and Sentry say which load broke the page.
   const load = <T,>(path: string) =>
     apiClient.get<T>(path, token).catch((err: unknown) => {
@@ -62,8 +66,9 @@ export default async function AdminHealthPage() {
     await Promise.all([
       load<HealthStatusRow[]>('/v1/admin/crawl/status'),
       load<Venue[]>('/v1/admin/venues'),
-      // The month to date: the window ends today (MT), so N days is the 1st on.
-      load<AdminDailyCosts>(`/v1/admin/costs/daily?days=${month.dayOfMonth}`),
+      // The window ends today (MT), so this many days reaches back to the 1st
+      // of last month: this month to date, and last month whole for the panel.
+      load<AdminDailyCosts>(`/v1/admin/costs/daily?days=${costWindowDays}`),
       load<AdminSettings>('/v1/admin/settings'),
       load<ArtistCounts>('/v1/admin/artists/counts'),
       load<AdminEmailDelivery>('/v1/admin/notifications/delivery'),
@@ -104,6 +109,8 @@ export default async function AdminHealthPage() {
           budgetUsd,
           ...costTile(mtdUsd, budgetUsd, month),
         }}
+        settings={settings}
+        lastMonthUsd={monthTotal(costs.days, lastMonth)}
         delivery={delivery}
       />
       <div className="health-columns">

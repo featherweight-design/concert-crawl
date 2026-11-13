@@ -56,12 +56,13 @@ describe('/admin Health page', () => {
     mockGet.mockReset();
   });
 
-  it('asks for the month to date in Mountain Time', async () => {
+  it('asks for the month to date and all of last month, in Mountain Time', async () => {
     answer();
     const { default: AdminHealthPage } = await import('./page');
     await AdminHealthPage();
+    // 12 days of November plus October's 31.
     expect(mockGet).toHaveBeenCalledWith(
-      '/v1/admin/costs/daily?days=12',
+      '/v1/admin/costs/daily?days=43',
       'token',
     );
   });

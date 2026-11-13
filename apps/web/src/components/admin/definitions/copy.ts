@@ -99,6 +99,8 @@ export const ADMIN_COPY = {
           `Over the ${budget} budget. Haiku still runs.`,
         noBudget: (pace: string) => `On pace for ${pace}`,
         noBudgetPhone: (pace: string) => `Pace ${pace}`,
+        // The pill on a tile with no budget: it points at the panel.
+        setBudget: 'Set a budget',
         under: 'Under budget',
         underPhone: 'Under',
         willGoOver: 'Will go over',
@@ -176,6 +178,36 @@ export const ADMIN_COPY = {
       sending: 'Sending',
       failed: (count: number) => `${count} failed`,
       quiet: 'Quiet',
+    },
+    // The LLM budget panel (`03/llm-budget-panel`), opened from the cost tile.
+    budget: {
+      eyebrow: 'LLM budget',
+      title: 'Monthly LLM budget',
+      body: 'Haiku only runs when HTML and JSON-LD find nothing. This sets what Health compares against.',
+      amountLabel: 'Budget per month',
+      amountHint: 'Leave empty for no budget.',
+      amountInvalid: (max: string) =>
+        `Enter an amount above $0 and up to ${max}, or leave it empty.`,
+      warnLabel: 'Warn me at',
+      warnOption: (percent: number) => `${percent}%`,
+      runsOutLabel: 'If it runs out',
+      // On: stop Haiku at the budget. Off, the default: keep running and warn.
+      runsOutOn:
+        'Keep crawling with HTML and JSON-LD only, and tell me. Never stops a crawl.',
+      runsOutOff: 'Haiku keeps running past the budget, and I get a warning.',
+      soFar: 'This month so far',
+      soFarValue: (spent: string, pace: string) =>
+        `${spent} · on pace for ${pace}`,
+      lastMonth: 'Last month',
+      save: 'Save',
+      saving: 'Saving…',
+      cancel: 'Cancel',
+      // Rule 10, through `states.saveFailed`: "Couldn't change the LLM budget".
+      failedWhat: 'the LLM budget',
+      stillSaved: (budget: string | null) =>
+        budget === null
+          ? 'No budget is set.'
+          : `The budget is still ${budget}.`,
     },
   },
 
