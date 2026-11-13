@@ -1,3 +1,19 @@
+# [1.405.0](https://github.com/featherweight-design/concert-crawl/compare/v1.404.0...v1.405.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** bound the undo scan to today, cross-reference the offer rule ([41a2ca2](https://github.com/featherweight-design/concert-crawl/commit/41a2ca2602f59682e7cbfe05e438c4adb0801dc6))
+* **api:** cover show-dropped showTime, state the time is venue-local ([3dc5dd5](https://github.com/featherweight-design/concert-crawl/commit/3dc5dd5a29ba459eb6ab9b798f979d17909a0c2d))
+* **api:** needs you offers only answers the item can take, handled today nets out undos ([ae7f995](https://github.com/featherweight-design/concert-crawl/commit/ae7f995cb164b2edfa9219ff0eea0a1d692eba0d))
+
+
+### Features
+
+* **api:** carry the show time on Needs you show and event items ([c308ab0](https://github.com/featherweight-design/concert-crawl/commit/c308ab049bf85fd8f0c239fa6810372be9bee663))
+* **web:** needs you snooze and the answered line with undo ([a0ac66b](https://github.com/featherweight-design/concert-crawl/commit/a0ac66b9677db9493b594cbe8dd776748a7380d9))
+* **web:** venue runs tab list, crawl redirect (3b part 4a) ([da9228c](https://github.com/featherweight-design/concert-crawl/commit/da9228c8f3dfe2cc5fc34119bd296be11eff9e73))
+
 # [1.404.0](https://github.com/featherweight-design/concert-crawl/compare/v1.403.0...v1.404.0) (2026-11-13)
 
 
