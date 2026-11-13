@@ -13,6 +13,7 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { refusedStatus } from '../invite-codes/codes-api';
 import {
   checksApi,
@@ -131,7 +132,7 @@ export const PriceChecksTab = () => {
   const [resolvedTotal, setResolvedTotal] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
 
@@ -164,7 +165,7 @@ export const PriceChecksTab = () => {
   }, [load]);
 
   const decide = async (check: OpenCheck, answer: 'use' | 'keep') => {
-    setBusyId(check.contestId);
+    setBusyIds((current) => new Set(current).add(check.contestId));
     setErrors((current) =>
       Object.fromEntries(
         Object.entries(current).filter(([id]) => id !== check.contestId),
@@ -172,7 +173,13 @@ export const PriceChecksTab = () => {
     );
     try {
       await api.resolve(check, answer, COPY.reason);
-      await load();
+      // Decided: take the card off at once, then refresh in the background (a
+      // failed refresh keeps the screen, and the card must not linger).
+      setOpen((current) =>
+        current.filter((entry) => entry.contestId !== check.contestId),
+      );
+      setOpenTotal((total) => Math.max(0, total - 1));
+      void load();
     } catch (err) {
       setErrors((current) => ({
         ...current,
@@ -180,7 +187,11 @@ export const PriceChecksTab = () => {
           refusedStatus(err) === 409 ? COPY.alreadyDecided : COPY.resolveFailed,
       }));
     }
-    setBusyId(null);
+    setBusyIds((current) => {
+      const next = new Set(current);
+      next.delete(check.contestId);
+      return next;
+    });
   };
 
   const loadMoreResolved = async () => {
@@ -189,7 +200,10 @@ export const PriceChecksTab = () => {
     setMore('loading');
     try {
       const page = await api.resolved(resolved.length, PAGE);
-      if (mine !== latest.current) return;
+      if (mine !== latest.current) {
+        setMore('idle');
+        return;
+      }
       const seen = new Set(resolved.map((row) => row.id));
       setResolved([
         ...resolved,
@@ -198,7 +212,7 @@ export const PriceChecksTab = () => {
       setResolvedTotal(page.total);
       setMore('idle');
     } catch {
-      if (mine === latest.current) setMore('failed');
+      setMore(mine === latest.current ? 'failed' : 'idle');
     }
   };
 
@@ -255,7 +269,7 @@ export const PriceChecksTab = () => {
               }}
             >
               {open.map((check) => {
-                const busy = busyId === check.contestId;
+                const busy = busyIds.has(check.contestId);
                 const listed = priceRange(
                   check.listed.priceMin,
                   check.listed.priceMax,
@@ -332,30 +346,32 @@ export const PriceChecksTab = () => {
                         justifyContent: isPhone ? 'stretch' : 'flex-end',
                       }}
                     >
-                      <SafeExternalLink
-                        href={check.ticketUrl}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 6,
-                          height: 28,
-                          padding: '0 10px',
-                          borderRadius: 9,
-                          fontSize: 12.5,
-                          fontWeight: 600,
-                          whiteSpace: 'nowrap',
-                          color: 'var(--fg)',
-                          background: 'var(--surface-2)',
-                          border: '1px solid var(--border-strong)',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        {isPhone ? null : (
-                          <ExternalLink size={14} strokeWidth={1.8} />
-                        )}
-                        {COPY.ticketPage}
-                      </SafeExternalLink>
+                      {isSafeHttpUrl(check.ticketUrl) && (
+                        <SafeExternalLink
+                          href={check.ticketUrl}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            height: 28,
+                            padding: '0 10px',
+                            borderRadius: 9,
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            color: 'var(--fg)',
+                            background: 'var(--surface-2)',
+                            border: '1px solid var(--border-strong)',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          {isPhone ? null : (
+                            <ExternalLink size={14} strokeWidth={1.8} />
+                          )}
+                          {COPY.ticketPage}
+                        </SafeExternalLink>
+                      )}
                       <button
                         type="button"
                         disabled={busy}
