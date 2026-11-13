@@ -24,7 +24,8 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
-import { adminQueueSnoozes, feedback } from '@concert-crawl/db';
+import { adminQueueSnoozes, auditLog, feedback } from '@concert-crawl/db';
+import { eq } from 'drizzle-orm';
 import type {
   NeedsYouCount,
   NeedsYouItem,
@@ -57,13 +58,16 @@ const list = async (query = ''): Promise<ListBody> => {
   return res.json();
 };
 
-const snoozes = async (venueId: string, extra = ''): Promise<SnoozesBody> => {
+const snoozes = async (venueId: string): Promise<SnoozesBody> => {
   const res = await app.request(
-    `/v1/admin/needs-you/snoozes?venueId=${venueId}${extra}`,
+    `/v1/admin/needs-you/snoozes?venueId=${venueId}`,
   );
   expect(res.status).toBe(200);
   return res.json();
 };
+
+const unsnoozeById = (id: string): Promise<Response> =>
+  app.request(`/v1/admin/needs-you/snoozes/${id}`, { method: 'DELETE' });
 
 const itemUrl = (key: string): string =>
   `/v1/admin/needs-you/items/${encodeURIComponent(key)}/snooze`;
@@ -136,13 +140,16 @@ describe('admin needs-you, by venue (3b)', () => {
       '/v1/admin/needs-you?venueId=not-a-uuid',
       '/v1/admin/needs-you/snoozes?venueId=not-a-uuid',
       '/v1/admin/needs-you/snoozes',
-      `/v1/admin/needs-you/snoozes?venueId=${UNKNOWN_VENUE}&notUseful=false`,
     ]) {
       expect((await app.request(path)).status).toBe(400);
     }
+    const res = await app.request('/v1/admin/needs-you/snoozes/not-a-uuid', {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(400);
   });
 
-  it('lists the venue’s Not useful entries with the handle, reason and a key to turn it back on', async () => {
+  it('lists the venue’s Not useful entries with the handle and reason, and turns one back on by id', async () => {
     setAuth('admin', 'admin-hugh');
     await seedUserProfile('admin-hugh', { handle: 'hugh' });
     const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
@@ -163,7 +170,7 @@ describe('admin needs-you, by venue (3b)', () => {
       createdBy: 'admin-hugh',
     });
 
-    const body = await snoozes(levitt.id, '&notUseful=true');
+    const body = await snoozes(levitt.id);
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
     const [entry] = body.data;
@@ -173,20 +180,78 @@ describe('admin needs-you, by venue (3b)', () => {
       reason: 'Always wrong',
       createdByName: 'hugh',
     });
+    expect(entry).not.toHaveProperty('itemKey');
     expect(typeof entry?.createdAt).toBe('string');
-    // Muted item is hidden from the queue but its key is offered.
-    expect([lowKey(muted.id), lowKey(timed.id)]).toContain(entry?.itemKey);
 
-    // Turn back on through the existing DELETE clears the entry.
-    const key = entry?.itemKey ?? '';
-    expect((await app.request(itemUrl(key), { method: 'DELETE' })).status).toBe(
-      200,
-    );
+    // Turn back on by id deletes only that row: the other venue's Not useful
+    // and this venue's timed snooze stay.
+    const id = entry?.id ?? '';
+    const res = await unsnoozeById(id);
+    expect(res.status).toBe(200);
+    const deleted: { success: boolean; data: { id: string } } =
+      await res.json();
+    expect(deleted.data).toEqual({ id });
     expect((await snoozes(levitt.id)).data).toEqual([]);
     expect((await snoozes(gothic.id)).data).toHaveLength(1);
+    const left = await testDb.select().from(adminQueueSnoozes);
+    expect(left).toHaveLength(2);
+    expect(left.map((row) => row.itemKey)).toContain(lowKey(timed.id));
+
+    // The muted item is back in the queue; the timed one is still snoozed.
+    const keys = (await list(`?venueId=${levitt.id}`)).data.map(
+      (item) => item.key,
+    );
+    expect(keys).toEqual([lowKey(muted.id)]);
+
+    // Audited like the per-item unsnooze.
+    const audits = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'needs_you.unsnooze'));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      targetId: id,
+      actorId: 'admin-hugh',
+      metadata: {
+        notUseful: true,
+        kind: 'event-low-confidence',
+        venueId: levitt.id,
+      },
+    });
   });
 
-  it('names a former admin and gives no key when nothing of that kind is waiting', async () => {
+  it('DELETE /snoozes/:id 404s for a missing row and never removes a timed snooze', async () => {
+    setAuth('admin');
+    const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+    const timed = await seedLowConfidence(levitt.id, 'Timed', inDays(7));
+    const [row] = await testDb
+      .insert(adminQueueSnoozes)
+      .values({
+        itemKey: lowKey(timed.id),
+        kind: 'event-low-confidence',
+        until: new Date(Date.now() + 3_600_000),
+        createdBy: 'test-admin-1',
+      })
+      .returning();
+
+    expect((await unsnoozeById(UNKNOWN_VENUE)).status).toBe(404);
+    expect((await unsnoozeById(row?.id ?? '')).status).toBe(404);
+    expect(await testDb.select().from(adminQueueSnoozes)).toHaveLength(1);
+    const audits = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'needs_you.unsnooze'));
+    expect(audits).toEqual([]);
+  });
+
+  it('requires an admin to turn a Not useful back on', async () => {
+    setAuth('user');
+    expect((await unsnoozeById(UNKNOWN_VENUE)).status).toBe(403);
+    authState.current = null;
+    expect((await unsnoozeById(UNKNOWN_VENUE)).status).toBe(401);
+  });
+
+  it('names a former admin when the admin has no handle', async () => {
     setAuth('admin', 'admin-gone');
     const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     await testDb.insert(adminQueueSnoozes).values({
@@ -201,7 +266,6 @@ describe('admin needs-you, by venue (3b)', () => {
       kind: 'venue-failing',
       createdByName: 'a former admin',
       reason: null,
-      itemKey: null,
     });
   });
 

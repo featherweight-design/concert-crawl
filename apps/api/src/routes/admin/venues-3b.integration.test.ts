@@ -230,11 +230,15 @@ describe('admin venues API, redesign 3b', () => {
     });
 
     it.each([
-      [{ lat: 90.1 }],
-      [{ lat: -91 }],
-      [{ lng: 180.5 }],
-      [{ lng: -181 }],
-      [{ lat: '39.6' }],
+      [{ lat: 90.1, lng: 0 }],
+      [{ lat: -91, lng: 0 }],
+      [{ lat: 0, lng: 180.5 }],
+      [{ lat: 0, lng: -181 }],
+      [{ lat: '39.6', lng: 0 }],
+      // Half a pin, on a venue with none.
+      [{ lat: 39.6 }],
+      [{ lng: -104.9 }],
+      [{ lat: 39.6, lng: null }],
       [{ contactEmail: 'not-an-email' }],
       [{ contactEmail: `${'a'.repeat(250)}@x.co` }],
     ])('rejects %j with a 400 and changes nothing', async (body) => {
@@ -256,6 +260,70 @@ describe('admin venues API, redesign 3b', () => {
       const row = await venueRow(venue.id);
       expect(row?.lat).toBe(-90);
       expect(row?.lng).toBe(180);
+    });
+
+    it('checks the pin as a pair against the saved row', async () => {
+      const venue = await seedVenue({
+        name: 'Gothic',
+        slug: 'gothic',
+        lat: 39.6,
+        lng: -104.9,
+      });
+      // Moving one half of a saved pin keeps a whole pin.
+      expect(
+        (await json('PATCH', `venues/${venue.id}`, { lat: 39.7 })).status,
+      ).toBe(200);
+      // Clearing one half would leave half a pin.
+      const half = await json('PATCH', `venues/${venue.id}`, { lng: null });
+      expect(half.status).toBe(400);
+      const row = await venueRow(venue.id);
+      expect(row?.lat).toBe(39.7);
+      expect(row?.lng).toBe(-104.9);
+    });
+
+    it('leaves an unrelated PATCH alone on a row that already has half a pin', async () => {
+      const venue = await seedVenue({ name: 'Gothic', slug: 'gothic', lat: 1 });
+      expect(
+        (await json('PATCH', `venues/${venue.id}`, { featured: true })).status,
+      ).toBe(200);
+    });
+
+    it('audits the before and after of a pin or email change, and nothing when unchanged', async () => {
+      const venue = await seedVenue({
+        name: 'Gothic',
+        slug: 'gothic',
+        contactEmail: 'old@gothic.example',
+      });
+      await json('PATCH', `venues/${venue.id}`, {
+        lat: 39.6,
+        lng: -104.9,
+        contactEmail: 'old@gothic.example',
+      });
+      await json('PATCH', `venues/${venue.id}`, {
+        contactEmail: 'new@gothic.example',
+      });
+      await json('PATCH', `venues/${venue.id}`, { name: 'Gothic Theatre' });
+
+      const audits = await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'venue.update'))
+        .orderBy(auditLog.createdAt);
+      expect(audits.map((audit) => audit.metadata)).toEqual([
+        {
+          contact: {
+            before: { lat: null, lng: null },
+            after: { lat: 39.6, lng: -104.9 },
+          },
+        },
+        {
+          contact: {
+            before: { contactEmail: 'old@gothic.example' },
+            after: { contactEmail: 'new@gothic.example' },
+          },
+        },
+        null,
+      ]);
     });
   });
 });

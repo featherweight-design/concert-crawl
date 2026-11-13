@@ -1947,9 +1947,8 @@ export interface NeedsYouCount {
 }
 
 // A kind an admin turned off for one venue ("Not useful"), for the venue
-// Overview's WARNINGS YOU TURNED OFF. `itemKey` is a current item it hides, the
-// key DELETE /needs-you/items/:key/snooze takes to turn it back on; null when
-// nothing of that kind is waiting at the venue right now.
+// Overview's WARNINGS YOU TURNED OFF. Turn back on is
+// DELETE /needs-you/snoozes/:id with its `id`.
 export interface NeedsYouNotUsefulSnooze {
   id: string;
   kind: NeedsYouKind;
@@ -1958,7 +1957,6 @@ export interface NeedsYouNotUsefulSnooze {
   createdAt: string;
   /** The admin's handle, or "a former admin". */
   createdByName: string;
-  itemKey: string | null;
 }
 
 // ── Admin People (redesign 5a) ───────────────────────────────────────────────
@@ -2022,7 +2020,10 @@ export interface PersonDetail {
 /** Why an admin hid a venue from the site. */
 export type VenueHideReason = 'venue_closed' | 'not_music_venue' | 'other';
 
-/** The latest crawl run of a venue, as the admin list shows it. */
+/**
+ * The latest crawl run of a venue. One shape, returned by both the admin list
+ * (`GET /admin/venues`) and the detail (`GET /admin/venues/:id`).
+ */
 export interface VenueLatestRun {
   /** The run's id, for Open run. */
   id: string;
