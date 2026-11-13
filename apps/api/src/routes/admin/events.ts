@@ -9,6 +9,7 @@ import { httpUrl } from '../../lib/url-schema.js';
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   gte,
@@ -16,6 +17,7 @@ import {
   inArray,
   isNull,
   lte,
+  max,
   or,
   sql,
   type SQL,
@@ -26,6 +28,8 @@ import {
   eventReports,
   events,
   notifications,
+  priceRetrievalLog,
+  priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db';
@@ -45,6 +49,15 @@ import { eventPatchSchema, updateEvent } from './lib/event-update.js';
 import { mergeEvents } from './lib/event-merge.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
+import {
+  eventListQuerySchema,
+  eventListStatusSql,
+  hiddenReasonSql,
+  listAdminEvents,
+} from './lib/events-browse.js';
+import { watchingCountOf, wentCountOf } from './lib/event-counts.js';
+import { todayInDenver } from '../../lib/time.js';
+import { currentPriceCondition } from '../../lib/price-check.js';
 
 const eventIdSchema = z.object({ id: idSchema });
 
@@ -158,6 +171,29 @@ const viewClauses = (view: EventsListView): SQL[] => {
 };
 
 export const eventsAdminRouter = new Hono<AdminVariables>();
+
+/**
+ * A Submitted price that stands on a show: awaiting review, or setting the
+ * displayed price (`currentPriceCondition`, which keeps a price under an
+ * open Price check). Never a counter filed against another price.
+ */
+const submittedPriceWhere = () =>
+  and(
+    isNull(priceSubmissions.disputedSubmissionId),
+    or(eq(priceSubmissions.status, 'pending'), currentPriceCondition()),
+  );
+
+// GET /v1/admin/events/list — the admin Events page (4b-1): Upcoming or Past,
+// search, venue and status filters, No price and Hidden, with the chip and
+// popover counts. Registered before `/:id` so `list` is never read as an id.
+eventsAdminRouter.get(
+  '/list',
+  zValidator('query', eventListQuerySchema, validationHook),
+  async (ctx) => {
+    const data = await listAdminEvents(ctx.req.valid('query'), todayInDenver());
+    return ctx.json({ success: true, data } as const);
+  },
+);
 
 // GET /v1/admin/events/count — returns unverified + verified counts for badges/filter rail
 eventsAdminRouter.get('/count', async (ctx) => {
@@ -590,6 +626,7 @@ eventsAdminRouter.get(
   zValidator('param', eventIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
+    const today = todayInDenver();
 
     const [row] = await db
       .select({
@@ -619,6 +656,27 @@ eventsAdminRouter.get(
         // by the LLM extractor, so JSON-LD venues need a manual entry path.
         tourName: events.tourName,
         isSoldOut: isSoldOutSql(),
+        // Admin 4b-2 (Event edit). Additive: the old editor ignores them.
+        venueSlug: venues.slug,
+        ticketUrl: events.ticketUrl,
+        delistedAt: events.delistedAt,
+        listStatus: eventListStatusSql(today),
+        hiddenReason: hiddenReasonSql(),
+        watchingCount: watchingCountOf(),
+        wentCount: wentCountOf(),
+        submittedPriceCount: sql<number>`(${db
+          .select({ total: count() })
+          .from(priceSubmissions)
+          .where(
+            and(eq(priceSubmissions.eventId, events.id), submittedPriceWhere()),
+          )})`.mapWith(Number),
+        priceRetrievedAt: sql<Date | null>`(${db
+          .select({ at: max(priceRetrievalLog.attemptedAt) })
+          .from(priceRetrievalLog)
+          .where(eq(priceRetrievalLog.eventId, events.id))})`.mapWith(
+          (value: string | Date | null) =>
+            value === null ? null : new Date(value),
+        ),
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
@@ -629,7 +687,25 @@ eventsAdminRouter.get(
       return ctx.json({ success: false, error: 'Not found' } as const, 404);
     }
 
-    return ctx.json({ success: true, data: row } as const);
+    // The admin's own live price on this show, which Edit price opens.
+    const actor = getAuthUser(ctx);
+    const [mine] = await db
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(
+        and(
+          eq(priceSubmissions.eventId, id),
+          eq(priceSubmissions.userId, actor.userId),
+          submittedPriceWhere(),
+        ),
+      )
+      .orderBy(desc(priceSubmissions.createdAt))
+      .limit(1);
+
+    return ctx.json({
+      success: true,
+      data: { ...row, mySubmissionId: mine?.id ?? null },
+    } as const);
   },
 );
 

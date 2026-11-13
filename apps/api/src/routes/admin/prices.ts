@@ -28,7 +28,6 @@ import {
   events,
   priceRetrievalLog,
   priceSubmissions,
-  userEvents,
   userProfiles,
   venues,
 } from '@concert-crawl/db';
@@ -53,6 +52,7 @@ import {
   rejectSubmission,
 } from './lib/price-rejection.js';
 import { todayInDenver } from '../../lib/time.js';
+import { watchingCountOf } from './lib/event-counts.js';
 
 const logger = createLogger('admin:prices');
 
@@ -72,17 +72,6 @@ const eventsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
-
-/** Fans Watching a show (a correlated count, built per request). */
-// `mapWith(Number)`: Postgres returns a count as bigint text, and the cursor
-// compares this value as a number.
-const watchingCountOf = () =>
-  sql<number>`(${db
-    .select({ total: count() })
-    .from(userEvents)
-    .where(
-      and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),
-    )})`.mapWith(Number);
 
 /**
  * The Missing a price list: soonest show first, then the one most fans are
