@@ -129,6 +129,23 @@ describe('VenueTile', () => {
     );
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('strokes each shape in its own neon colour when multicolour', () => {
+    const flat = render(<VenueTile slug="ogden-theatre" name="Ogden" />);
+    const flatStrokes = [...flat.container.querySelectorAll('g g > *')].map(
+      (shape) => shape.getAttribute('stroke'),
+    );
+    flat.unmount();
+    const neon = render(
+      <VenueTile slug="ogden-theatre" name="Ogden" multicolour />,
+    );
+    const neonStrokes = [...neon.container.querySelectorAll('g g > *')]
+      .map((shape) => shape.getAttribute('stroke'))
+      .filter((stroke) => stroke !== null && stroke !== 'none');
+    expect(neonStrokes.length).toBeGreaterThan(0);
+    expect(neonStrokes.every((stroke) => /^#/.test(stroke ?? ''))).toBe(true);
+    expect(flatStrokes.every((stroke) => stroke === null)).toBe(true);
+  });
 });
 
 describe('VenueGlyph', () => {

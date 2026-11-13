@@ -26,6 +26,11 @@ interface VenueTileProps {
    * sets 1.2 so the edge renders at the board's weight at any size.
    */
   edgeWeight?: number;
+  /**
+   * Draws each glyph shape in its own neon colour (`VENUE_NEON`, as the hero
+   * and the Where popover boards do) instead of one gradient across the glyph.
+   */
+  multicolour?: boolean;
 }
 
 /**
@@ -45,6 +50,7 @@ export function VenueTile({
   size = 40,
   labelled = false,
   edgeWeight,
+  multicolour = false,
 }: VenueTileProps) {
   const weighted = edgeWeight !== undefined;
   const edge = weighted ? (edgeWeight * 96) / size : 1.6;
@@ -109,7 +115,11 @@ export function VenueTile({
         strokeWidth={edge}
       />
       <g transform="translate(12.48 12.48) scale(2.96)">
-        <GlyphShapes glyphKey={glyphKey} paint={`url(#${glyphId})`} />
+        <GlyphShapes
+          glyphKey={glyphKey}
+          paint={`url(#${glyphId})`}
+          multicolour={multicolour}
+        />
       </g>
     </svg>
   );
