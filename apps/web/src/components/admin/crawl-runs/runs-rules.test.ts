@@ -9,6 +9,7 @@ import {
   filterRuns,
   firstFailedPage,
   hasMore,
+  inspectHref,
   isFailedPage,
   isNotOk,
   lastFullRuns,
@@ -241,6 +242,20 @@ describe('Inspect gate', () => {
   });
 });
 
+describe('inspectHref', () => {
+  it('points at the venue’s Inspect route for the run', () => {
+    expect(inspectHref('venue-1', 'run-9')).toBe(
+      '/admin/venues/venue-1/inspect/run-9',
+    );
+  });
+
+  it('encodes both ids', () => {
+    expect(inspectHref('a/b', 'r?1&x')).toBe(
+      '/admin/venues/a%2Fb/inspect/r%3F1%26x',
+    );
+  });
+});
+
 describe('runSummary', () => {
   it('adds a sentence only where it says more (Unchanged)', () => {
     expect(runSummary(row(), null)).toEqual({
@@ -260,15 +275,21 @@ describe('pages', () => {
   const first = 'https://www.ballarena.com/events';
 
   it('shortens URLs as the board does', () => {
-    expect(shortUrl(first, first)).toBe('ballarena.com/events');
+    expect(shortUrl(first, null)).toBe('ballarena.com/events');
     expect(shortUrl('https://www.ballarena.com/events?page=2', first)).toBe(
       '…/events?page=2',
     );
     expect(shortUrl('https://tickets.example.com/x', first)).toBe(
       'tickets.example.com/x',
     );
-    expect(shortUrl('https://ballarena.com/', first)).toBe('ballarena.com');
+    expect(shortUrl('https://ballarena.com/', null)).toBe('ballarena.com');
     expect(shortUrl('not a url', first)).toBe('not a url');
+  });
+
+  it('reads a later page that repeats the first, or is the root, as its path', () => {
+    expect(shortUrl(first, first)).toBe('/events');
+    expect(shortUrl('https://ballarena.com/', first)).toBe('/');
+    expect(shortUrl('https://ballarena.com/?page=2', first)).toBe('/?page=2');
   });
 
   it('reads sizes in B, KB and MB', () => {
@@ -277,18 +298,24 @@ describe('pages', () => {
     expect(pageSize(Math.round(1.9 * 1024 * 1024))).toBe('1.9 MB');
   });
 
+  it('rounds before choosing the unit, so 1,024 KB reads as MB', () => {
+    expect(pageSize(1_048_100)).toBe('1.0 MB');
+    expect(pageSize(1_047_000)).toBe('1,022 KB');
+  });
+
   it('reads status and size; no time is stored', () => {
     expect(pageLine({ httpStatus: 200, bytes: 2_000_000 })).toBe(
       '200 · 1.9 MB',
     );
     expect(pageLine({ httpStatus: 503, bytes: null })).toBe('503');
     expect(pageLine({ httpStatus: null, bytes: null })).toBe(
-      ADMIN_COPY.runDetail.noResponse,
+      ADMIN_COPY.runDetail.noStatus,
     );
+    expect(ADMIN_COPY.runDetail.noStatus).toBe('—');
   });
 
-  it('fails only an error status or no response; 2xx and 3xx pass', () => {
-    expect(isFailedPage({ httpStatus: null })).toBe(true);
+  it('fails only an error status; no status, 2xx and 3xx pass', () => {
+    expect(isFailedPage({ httpStatus: null })).toBe(false);
     expect(isFailedPage({ httpStatus: 404 })).toBe(true);
     expect(isFailedPage({ httpStatus: 503 })).toBe(true);
     expect(isFailedPage({ httpStatus: 200 })).toBe(false);
@@ -297,17 +324,17 @@ describe('pages', () => {
     expect(isFailedPage({ httpStatus: 304 })).toBe(false);
   });
 
-  it('marks the first page that failed or never answered', () => {
+  it('marks the first page that failed, passing a page with no status', () => {
     expect(
       firstFailedPage([
         { httpStatus: 200 },
+        { httpStatus: null },
         { httpStatus: 304 },
         { httpStatus: 404 },
-        { httpStatus: null },
       ]),
-    ).toBe(2);
+    ).toBe(3);
     expect(firstFailedPage([{ httpStatus: 200 }, { httpStatus: null }])).toBe(
-      1,
+      -1,
     );
     expect(firstFailedPage([{ httpStatus: 200 }, { httpStatus: 301 }])).toBe(
       -1,

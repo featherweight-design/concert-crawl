@@ -18,6 +18,7 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+// A fresh getToken on every render, as Clerk is free to hand over.
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: () => Promise.resolve('test-token') }),
 }));
@@ -147,33 +148,77 @@ describe('RunDetailPanel', () => {
     expect(screen.queryByText(DETAIL.firstFailure)).toBeNull();
   });
 
-  it('opens a short URL to the full one, a link, never a hover title', async () => {
+  it('the short URL is itself the link to the full one, named by it, never a hover title', async () => {
     const full = 'https://www.ballarena.com/events?page=2';
     mockGet.mockResolvedValue([page(), page({ id: 'page-2', url: full })]);
     renderPanel();
     const urls = await screen.findAllByTestId('run-page-url');
-    const second = urls[1]!;
-    fireEvent.click(within(second).getByText('…/events?page=2'));
-    const link = within(second).getByRole('link', { name: full });
+    const link = within(urls[1]!).getByRole('link', { name: full });
     expect(link.getAttribute('href')).toBe(full);
+    expect(link.textContent).toBe('…/events?page=2');
+    expect(screen.getByRole('dialog').querySelector('details')).toBeNull();
     // House rule: no native tooltip anywhere in the panel.
     expect(screen.getByRole('dialog').querySelector('[title]')).toBeNull();
   });
 
-  it('marks the first failed page only', async () => {
+  it('a retry of the first page reads as its path, not the first page again', async () => {
+    mockGet.mockResolvedValue([page(), page({ id: 'page-2' })]);
+    renderPanel();
+    const urls = await screen.findAllByTestId('run-page-url');
+    expect(urls[0]!.textContent).toBe('ballarena.com/events');
+    expect(urls[1]!.textContent).toBe('/events');
+  });
+
+  it('shows where a redirect landed after the page’s URL', async () => {
     mockGet.mockResolvedValue([
-      page(),
+      page({ finalUrl: 'https://www.ballarena.com/events/2026' }),
+      page({
+        id: 'page-2',
+        url: 'https://www.ballarena.com/events?page=2',
+        finalUrl: 'https://www.ballarena.com/events?page=2',
+      }),
+    ]);
+    renderPanel();
+    const urls = await screen.findAllByTestId('run-page-url');
+    expect(urls[0]!.textContent).toContain(
+      DETAIL.redirectedTo('…/events/2026'),
+    );
+    // A finalUrl that is the URL itself is no redirect.
+    expect(within(urls[1]!).queryByTestId('run-page-redirect')).toBeNull();
+  });
+
+  it('marks the first failed page only; a page with no status is neutral', async () => {
+    mockGet.mockResolvedValue([
+      page({ httpStatus: null }),
       page({ id: 'page-2', httpStatus: 503, bytes: null }),
-      page({ id: 'page-3', httpStatus: null, bytes: null }),
+      page({ id: 'page-3', httpStatus: 500, bytes: null }),
     ]);
     renderPanel();
     const pages = await screen.findAllByTestId('run-page');
     expect(pages[0]!.getAttribute('data-first-failure')).toBeNull();
+    expect(pages[0]!.textContent).toContain(`${DETAIL.noStatus} · 1.9 MB`);
     expect(pages[1]!.getAttribute('data-first-failure')).toBe('true');
     expect(pages[1]!.textContent).toContain(DETAIL.firstFailure);
     expect(pages[2]!.getAttribute('data-first-failure')).toBeNull();
-    expect(pages[2]!.textContent).toContain(DETAIL.noResponse);
     expect(screen.getAllByText(DETAIL.firstFailure)).toHaveLength(1);
+  });
+
+  it('does not fetch the pages again when getToken changes identity', async () => {
+    mockGet.mockResolvedValue([page()]);
+    const { rerender, onClose } = renderPanel();
+    await screen.findAllByTestId('run-page');
+    // The Clerk mock hands over a new getToken on every render.
+    rerender(
+      <RunDetailPanel
+        venueId="venue-1"
+        run={row()}
+        lastFullRun={LAST_FULL}
+        phone={false}
+        onClose={onClose}
+      />,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockGet).toHaveBeenCalledTimes(1);
   });
 
   it('a redirect or a 304 is not a failure', async () => {

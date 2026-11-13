@@ -445,6 +445,56 @@ describe('RunsTab', () => {
     ).toHaveLength(0);
   });
 
+  it('Open run on the same run after a tab switch opens it again', async () => {
+    // `?run=` is read through parseVenueRun, which takes a UUID.
+    const RUN_ID = '0b7f7c1e-3c55-4d7e-9a43-6f0c2b1d9e21';
+    const named = row({ id: RUN_ID, status: 'failed', reason: 'timeout' });
+    const props = {
+      venueId: VENUE,
+      runs: { rows: [unchanged, named], returned: 2 },
+      initialRun: RUN_ID,
+    };
+    window.history.replaceState(
+      null,
+      '',
+      `/admin/venues/venue-1?tab=runs&run=${RUN_ID}`,
+    );
+    const { rerender } = render(<RunsTab {...props} active />);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    await pagesSettled();
+    // Another tab: the detail closes and the URL loses `?run=`.
+    window.history.replaceState(null, '', '/admin/venues/venue-1?tab=overview');
+    rerender(<RunsTab {...props} active={false} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // Overview's Open run names the same run; `initialRun` is unchanged.
+    window.history.replaceState(
+      null,
+      '',
+      `/admin/venues/venue-1?tab=runs&run=${RUN_ID}`,
+    );
+    rerender(<RunsTab {...props} active />);
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    expect(rows()[1]!.getAttribute('aria-current')).toBe('true');
+    await pagesSettled();
+  });
+
+  it('coming back to the tab with a ?run= it hasn’t loaded drops it', () => {
+    const props = {
+      venueId: VENUE,
+      runs: { rows: [unchanged, ok, failed], returned: 3 },
+      initialRun: null,
+    };
+    const { rerender } = render(<RunsTab {...props} active={false} />);
+    window.history.replaceState(
+      null,
+      '',
+      '/admin/venues/venue-1?tab=runs&run=9d1f2a64-1b7c-4e0a-8f3e-2c5d6a7b8c90',
+    );
+    rerender(<RunsTab {...props} active />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(window.location.search).toBe('?tab=runs');
+  });
+
   it('?run= on load opens that run, highlights it and scrolls it into view', async () => {
     window.history.replaceState(
       null,

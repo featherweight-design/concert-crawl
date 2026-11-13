@@ -7,8 +7,8 @@ import {
 
 /**
  * The boundary checks on a venue's runs and a run's pages, keeping only the
- * fields the list and the run detail read. A body that isn't a list is null (Couldn't load); a row this build
- * can't read is dropped on its own.
+ * fields the list and the run detail read. A body that isn't a list is null
+ * (Couldn't load); a row this build can't read is dropped on its own.
  */
 
 /** `GET /v1/admin/crawl/runs?venueId=&limit=`, newest first. */
