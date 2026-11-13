@@ -24,12 +24,10 @@ import {
   AdminButton,
   MonoLabel,
   StatusBadge,
-  RelTime,
   SectionHead,
 } from '@/components/admin/primitives';
 import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
-import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge';
-import { CrawlPausedBadge } from '@/components/admin/crawl-paused-badge';
+import { VenueHeader } from '@/components/admin/venues/VenueHeader';
 import { deriveVenueStatus } from '@/lib/admin/venue-status';
 import {
   IdentityArt,
@@ -47,7 +45,6 @@ import {
   type GenerateFieldState,
   type GenerateFieldResult,
 } from './generate-field/GenerateField';
-import { CrawlTriggerButton } from './crawl-trigger-button/CrawlTriggerButton';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import {
   ExternalLink,
@@ -71,21 +68,6 @@ function slugify(name: string): string {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 60);
-}
-
-function strategyLabel(strategy: string | null): string {
-  if (strategy === 'structured_data') return 'structured';
-  if (strategy === 'llm') return 'llm';
-  if (strategy === 'manual') return 'manual';
-  return 'auto';
-}
-
-function strategyKind(
-  strategy: string | null,
-): 'signal' | 'accent' | 'neutral' {
-  if (strategy === 'structured_data') return 'signal';
-  if (strategy === 'llm') return 'accent';
-  return 'neutral';
 }
 
 // Platform probe (#665) — single-POST status machine, mirroring
@@ -950,151 +932,24 @@ export function VenueDetailsClient({
         }
       />
 
-      {/* Venue header summary card */}
-      {(() => {
-        const venueStatus = deriveVenueStatus(venue);
-        return (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-              padding: '12px 16px',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-            }}
+      <VenueHeader
+        venue={venue}
+        actions={
+          // Until the ⋯ menu (3a part 4b) takes Make flagship over.
+          <AdminButton
+            variant={venue.featured ? 'success' : 'outline'}
+            size="sm"
+            icon={Star}
+            disabled={isPending}
+            onClick={handleFeaturedToggle}
+            type="button"
           >
-            <div
-              style={{ borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}
-            >
-              <IdentityArt
-                name={venue.name}
-                kind="venue"
-                scale="tile"
-                width={96}
-                height={96}
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  marginBottom: 4,
-                }}
-              >
-                <MonoLabel>{venue.slug} · venue</MonoLabel>
-                <StatusBadge
-                  kind={
-                    venueStatus === 'active'
-                      ? 'success'
-                      : venueStatus === 'paused'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                  dot
-                >
-                  {venueStatus.charAt(0).toUpperCase() + venueStatus.slice(1)}
-                </StatusBadge>
-                <StatusBadge
-                  kind={strategyKind(venue.extractionStrategy)}
-                  variant="outline"
-                >
-                  {strategyLabel(venue.extractionStrategy)}
-                </StatusBadge>
-                {venue.consecutiveFailures > 0 && (
-                  <StatusBadge kind="danger">
-                    {venue.consecutiveFailures} consec. failures
-                  </StatusBadge>
-                )}
-                <CrawlPausedBadge crawlPausedAt={venue.crawlPausedAt} />
-                <VenueExpectedBadge venueId={venue.id} />
-              </div>
-              <h2
-                style={{
-                  margin: 0,
-                  fontFamily: 'var(--admin-font, Inter, sans-serif)',
-                  fontSize: 22,
-                  fontWeight: 700,
-                  color: 'var(--fg)',
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {venue.name}
-              </h2>
-              <div
-                style={{
-                  marginTop: 4,
-                  display: 'flex',
-                  gap: 14,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 11,
-                  color: 'var(--fg-muted)',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                }}
-              >
-                <span>
-                  {ADMIN_COPY.venueDetailsClient.summary.lastCrawl}{' '}
-                  {crawlHealth.lastCrawledAt ? (
-                    <RelTime iso={crawlHealth.lastCrawledAt} />
-                  ) : (
-                    ADMIN_COPY.venueDetailsClient.summary.never
-                  )}
-                </span>
-                <span>·</span>
-                <span>
-                  {crawlHealth.eventsTracked}{' '}
-                  {ADMIN_COPY.venueDetailsClient.summary.eventsLive}
-                </span>
-                <span>·</span>
-                <span>
-                  {ADMIN_COPY.venueDetailsClient.summary.health}{' '}
-                  {crawlHealth.sevenDayPercent}%
-                </span>
-              </div>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                flexWrap: 'wrap',
-                minWidth: 0,
-              }}
-            >
-              <AdminButton
-                variant={venue.featured ? 'success' : 'outline'}
-                size="sm"
-                icon={Star}
-                disabled={isPending}
-                onClick={handleFeaturedToggle}
-                type="button"
-              >
-                {venue.featured
-                  ? ADMIN_COPY.venueDetailsClient.actions.flagship
-                  : ADMIN_COPY.venueDetailsClient.actions.makeFlagship}
-              </AdminButton>
-              <CrawlTriggerButton venueId={venue.id} />
-              {isSafeHttpUrl(venue.websiteUrl) && (
-                <a
-                  href={venue.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ textDecoration: 'none' }}
-                >
-                  <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                    {ADMIN_COPY.venueDetailsClient.actions.viewOnSite}
-                  </AdminButton>
-                </a>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+            {venue.featured
+              ? ADMIN_COPY.venueDetailsClient.actions.flagship
+              : ADMIN_COPY.venueDetailsClient.actions.makeFlagship}
+          </AdminButton>
+        }
+      />
 
       {/* Error banner */}
       {saveError && (

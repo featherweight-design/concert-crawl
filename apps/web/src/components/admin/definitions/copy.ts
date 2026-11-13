@@ -586,6 +586,31 @@ export const ADMIN_COPY = {
         : 'Pick a date after today',
   },
 
+  // The venue page header (`A3/03/re-crawl-states`, phone
+  // `A3/03/venue-overview-m`).
+  venueHeader: {
+    // "235 upcoming shows", as the board writes it.
+    upcoming: (shows: number) =>
+      `${shows.toLocaleString('en-US')} upcoming ${shows === 1 ? 'show' : 'shows'}`,
+    recrawl: 'Re-crawl',
+    queued: 'Queued',
+    running: 'Crawling now',
+    viewOnSite: 'View on site',
+    // Why Re-crawl is off. The API refuses all three (paused 409, robots 409,
+    // hidden 400). The board's "/events" has no source, so no path is named.
+    recrawlOff: {
+      paused: 'Resume crawling to re-crawl',
+      robots: 'robots.txt disallows the page we crawl. We never override it.',
+      hidden: 'Show it on the site to re-crawl',
+    },
+    // Rule 10 through `states.saveFailed`: "Couldn't change crawling for Ball
+    // Arena. The re-crawl didn't start. Nothing changed."
+    failed: {
+      recrawl: (venue: string) => `crawling for ${venue}`,
+      recrawlSaved: 'The re-crawl didn’t start.',
+    },
+  },
+
   robotsAudit: {
     page: {
       eyebrow: 'Venues · robots.txt',

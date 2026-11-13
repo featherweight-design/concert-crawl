@@ -55,8 +55,9 @@ vi.mock('./generate-field/GenerateField', () => ({
   GenerateField: () => null,
 }));
 
-vi.mock('./crawl-trigger-button/CrawlTriggerButton', () => ({
-  CrawlTriggerButton: () => null,
+// The header polls crawls behind Clerk auth; it has its own suite.
+vi.mock('@/components/admin/venues/VenueHeader', () => ({
+  VenueHeader: () => null,
 }));
 
 // Reads triage over the network behind Clerk auth; these suites are about the
