@@ -9,12 +9,13 @@
  *     the topbar breadcrumb + sidebar + mobile bottom bar can rebuild
  *     `/admin/review?tab=<from>` safely.
  *
- * Review keeps three tabs. The decision tabs moved to Admin > Needs you
- * (2b), so their keys live in `RETIRED_REVIEW_TABS` instead. Adding,
- * removing, or renaming a Review tab MUST happen here so every surface
- * stays in lock-step (#1089).
+ * Review keeps one tab. The decision tabs moved to Admin > Needs you (2b),
+ * so their keys live in `RETIRED_REVIEW_TABS`; the price tabs moved to
+ * Admin > Prices (4d) and `reviewPricesRedirect` sends their URLs there.
+ * Adding, removing, or renaming a Review tab MUST happen here so every
+ * surface stays in lock-step (#1089).
  */
-export const REVIEW_TAB_KEYS = ['prices', 'submissions', 'all-events'] as const;
+export const REVIEW_TAB_KEYS = ['all-events'] as const;
 
 export type ReviewTabKey = (typeof REVIEW_TAB_KEYS)[number];
 
@@ -46,30 +47,45 @@ export const isRetiredReviewTab = (value: string | null | undefined): boolean =>
 /** Where retired tabs and a tab-less `/admin/review` land. */
 export const NEEDS_YOU_HREF = '/admin/needs-you';
 
+/** Where the retired Review price tabs land. */
+export const PRICES_HREF = '/admin/prices';
+export const PRICES_SUBMITTED_HREF = '/admin/prices?tab=submitted';
+
 /**
- * True when `/admin/review` should send the admin to Needs you: a retired
- * tab, or no usable `?tab=`. The legacy `?section=submissions` is the one
- * tab-less URL that stays on Review.
+ * Where a retired Review price URL goes, or null when it is not one:
+ * `?tab=prices` (coverage) lands on Prices, and `?tab=submissions` or the
+ * legacy `?section=submissions` land on its Submitted prices tab. An explicit
+ * `?tab=` wins over `?section=`.
  */
-export const reviewRedirectsToNeedsYou = (
+export const reviewPricesRedirect = (
   tab: string | null | undefined,
   section: string | null | undefined,
-): boolean => {
-  if (isRetiredReviewTab(tab)) return true;
-  if (tab !== null && tab !== undefined && isReviewTabKey(tab)) return false;
-  return section !== 'submissions';
+): string | null => {
+  if (tab === 'prices') return PRICES_HREF;
+  if (tab === 'submissions') return PRICES_SUBMITTED_HREF;
+  if (tab === null || tab === undefined || tab === '') {
+    if (section === 'submissions') return PRICES_SUBMITTED_HREF;
+  }
+  return null;
 };
 
 /**
- * `?section=submissions` predates the tab split and used to land on `prices`,
- * which then smooth-scrolled to a `#submissions-section` anchor. Submissions is
- * now its own tab, so the legacy URL resolves straight to it. The page
- * redirects a tab-less URL to Needs you before this runs, so the `prices`
- * fallback only guards the client against an unknown value.
+ * True when `/admin/review` should send the admin to Needs you: a retired
+ * tab, or no usable `?tab=`. Price URLs are redirected to Prices first by
+ * `reviewPricesRedirect`.
+ */
+export const reviewRedirectsToNeedsYou = (
+  tab: string | null | undefined,
+): boolean => {
+  if (isRetiredReviewTab(tab)) return true;
+  return !(tab !== null && tab !== undefined && isReviewTabKey(tab));
+};
+
+/**
+ * The page redirects everything but a live tab away before this runs, so the
+ * single tab is also the fallback for an unknown value.
  */
 export const resolveReviewTab = (params: URLSearchParams): ReviewTabKey => {
   const tab = params.get('tab');
-  if (isReviewTabKey(tab)) return tab;
-  if (params.get('section') === 'submissions') return 'submissions';
-  return 'prices';
+  return isReviewTabKey(tab) ? tab : 'all-events';
 };

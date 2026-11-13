@@ -87,8 +87,6 @@ describe('activeNavKey', () => {
     ['/admin/review', '', 'needs-you'],
     ['/admin/review', 'tab=missing', 'needs-you'],
     ['/admin/review', 'tab=all-events', 'events'],
-    ['/admin/review', 'tab=prices', 'prices'],
-    ['/admin/review', 'tab=submissions', 'prices'],
     ['/admin/review/contests/abc', '', 'needs-you'],
     ['/admin/events/abc/edit', '', 'events'],
     ['/admin/events/abc/edit', 'from=event-flags', 'needs-you'],

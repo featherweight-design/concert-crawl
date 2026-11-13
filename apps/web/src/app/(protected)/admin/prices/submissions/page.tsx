@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
+import { PRICES_SUBMITTED_HREF } from '@/lib/admin/review-tabs';
 
-// The submissions UI now lives inside Review as its own tab. Bookmarks and
-// stored deep links keep resolving through this redirect.
+// Submitted prices is a tab of /admin/prices. Bookmarks and stored deep links
+// keep resolving through this redirect.
 export default function PricesSubmissionsPage() {
-  redirect('/admin/review?tab=submissions');
+  redirect(PRICES_SUBMITTED_HREF);
 }
