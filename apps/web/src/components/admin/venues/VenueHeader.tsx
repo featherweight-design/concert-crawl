@@ -12,10 +12,9 @@ import {
 } from '@/components/admin/primitives';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge';
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { crawlingLabel } from './venue-list-rules';
-import { headerLine, recrawlOff, showsViewOnSite } from './venue-header-rules';
-import { useRecrawl } from './useRecrawl';
+import { headerLine, recrawlOff, viewOnSiteHref } from './venue-header-rules';
+import { useRecrawl, type RecrawlState } from './useRecrawl';
 
 const COPY = ADMIN_COPY.venueHeader;
 
@@ -51,12 +50,60 @@ const Spinner = ({ tone }: { tone: string }) => (
   </svg>
 );
 
+/** Settled outcomes with nothing to retry, and the line each one reads. */
+const NOTICE: Partial<Record<RecrawlState, string>> = {
+  ranFailed: COPY.notice.ranFailed,
+  unknown: COPY.notice.unknown,
+  stalled: COPY.notice.stalled,
+};
+
+/** A settled outcome that offers no retry, only a dismiss. */
+const RecrawlNotice = ({
+  text,
+  onDismiss,
+}: {
+  text: string;
+  onDismiss: () => void;
+}) => (
+  <div
+    data-testid="recrawl-notice"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '12px 16px',
+      borderRadius: 12,
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--border-strong)',
+    }}
+  >
+    <span
+      style={{
+        flex: 1,
+        minWidth: 0,
+        fontSize: 13,
+        color: 'var(--fg)',
+        overflowWrap: 'anywhere',
+      }}
+    >
+      {text}
+    </span>
+    <AdminButton type="button" variant="outline" size="sm" onClick={onDismiss}>
+      {COPY.notice.dismiss}
+    </AdminButton>
+  </div>
+);
+
 /**
  * The venue page header: glyph, name, both status chips and the line beside
  * them, then Re-crawl and View on site (`A3/03/re-crawl-states`; phone
  * `A3/03/venue-overview-m`). Lifted out of `VenueDetailsClient`. `actions`
  * holds what follows View on site: the old Flagship button until the ⋯ menu
  * takes its place.
+ *
+ * Re-crawl stays one mounted button through every state, so focus is never
+ * dropped: busy, it reads Queued or Crawling now and is `aria-disabled`; off,
+ * it is disabled and described by the line that says why.
  */
 export const VenueHeader = ({
   venue,
@@ -66,10 +113,14 @@ export const VenueHeader = ({
   actions?: ReactNode;
 }) => {
   const isPhone = useIsPhone();
-  const recrawl = useRecrawl(venue.id);
   const off = recrawlOff(venue);
+  const recrawl = useRecrawl(venue.id, off !== null);
   const line = headerLine(venue, isPhone);
   const busy = recrawl.state === 'queued' || recrawl.state === 'running';
+  const busyLabel = recrawl.state === 'running' ? COPY.running : COPY.queued;
+  const notice = NOTICE[recrawl.state];
+  const siteHref = viewOnSiteHref(venue);
+  const lineId = `venue-header-line-${venue.id}`;
   const grow = isPhone ? 1 : 'none';
 
   return (
@@ -137,6 +188,7 @@ export const VenueHeader = ({
               <VenueExpectedBadge venueId={venue.id} />
               {line !== '' && (
                 <span
+                  id={lineId}
                   data-testid="venue-header-line"
                   style={{
                     fontSize: isPhone ? 12.5 : 13,
@@ -150,45 +202,48 @@ export const VenueHeader = ({
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {busy ? (
-            <span
-              role="status"
-              style={{
-                ...BUTTON,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                color: 'var(--fg-muted)',
-                flex: grow,
-              }}
-            >
+        {/* Wraps so three nowrap buttons never overflow a 320px phone. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 8,
+          }}
+        >
+          <AdminButton
+            type="button"
+            data-testid="recrawl-button"
+            {...(!busy && { icon: RefreshCw })}
+            disabled={off !== null}
+            aria-disabled={busy || undefined}
+            aria-describedby={off !== null && line !== '' ? lineId : undefined}
+            // A no-op while busy or off: the hook guards both.
+            onClick={recrawl.start}
+            style={{
+              ...BUTTON,
+              gap: busy ? 8 : 6,
+              flex: grow,
+              ...(busy && { color: 'var(--fg-muted)', cursor: 'default' }),
+              ...(off !== null && { opacity: 0.45, cursor: 'not-allowed' }),
+            }}
+          >
+            {busy && (
               <Spinner
                 tone={
                   recrawl.state === 'running' ? 'var(--signal)' : 'currentColor'
                 }
               />
-              {recrawl.state === 'running' ? COPY.running : COPY.queued}
-            </span>
-          ) : (
-            <AdminButton
-              type="button"
-              icon={RefreshCw}
-              disabled={off !== null}
-              onClick={recrawl.start}
-              style={{
-                ...BUTTON,
-                flex: grow,
-                ...(off !== null && { opacity: 0.45, cursor: 'not-allowed' }),
-              }}
-            >
-              {COPY.recrawl}
-            </AdminButton>
-          )}
-          {showsViewOnSite(venue) && isSafeHttpUrl(venue.websiteUrl) && (
+            )}
+            {busy ? busyLabel : COPY.recrawl}
+          </AdminButton>
+          {/* Always mounted, so a screen reader hears each state change. */}
+          <span role="status" aria-live="polite" className="sr-only">
+            {busy ? busyLabel : (notice ?? '')}
+          </span>
+          {siteHref !== null && (
             <a
-              href={venue.websiteUrl}
+              href={siteHref}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -208,12 +263,17 @@ export const VenueHeader = ({
           {actions}
         </div>
       </div>
-      {recrawl.state === 'failed' && (
+      {/* Try again only where nothing was queued, and never on a venue
+          Re-crawl is off for (the hook clears `refused` when `off` lands). */}
+      {recrawl.state === 'refused' && off === null && (
         <SaveFailedToast
           what={COPY.failed.recrawl(venue.name)}
-          saved={COPY.failed.recrawlSaved}
+          saved={recrawl.reason ?? COPY.failed.recrawlSaved}
           onRetry={recrawl.start}
         />
+      )}
+      {notice !== undefined && (
+        <RecrawlNotice text={notice} onDismiss={recrawl.dismiss} />
       )}
     </div>
   );

@@ -28,6 +28,7 @@ import {
 } from '@/components/admin/primitives';
 import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
 import { VenueHeader } from '@/components/admin/venues/VenueHeader';
+import { VenueSummaryLine } from '@/components/admin/venues/VenueSummaryLine';
 import { deriveVenueStatus } from '@/lib/admin/venue-status';
 import {
   IdentityArt,
@@ -950,6 +951,10 @@ export function VenueDetailsClient({
           </AdminButton>
         }
       />
+      {/* Last crawl, 7-day health, strategy and failures from the old header
+          card, so none of it disappears before 3a part 5's Overview tab
+          moves them there. */}
+      <VenueSummaryLine venue={venue} />
 
       {/* Error banner */}
       {saveError && (

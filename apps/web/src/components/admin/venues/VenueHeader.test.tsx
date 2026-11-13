@@ -32,8 +32,10 @@ vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
 }));
 
 import { VenueHeader } from './VenueHeader';
+import { MAX_POLL_MS } from './useRecrawl';
 import { POLL_INTERVAL_MS } from '@/components/admin/crawl-trigger-button/definitions/constants';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { ApiError } from '@/lib/api';
 
 const COPY = ADMIN_COPY.venueHeader;
 const FAILED = ADMIN_COPY.states.saveFailed;
@@ -116,7 +118,9 @@ const makeTrigger = (over: Partial<CrawlTrigger>): CrawlTrigger => ({
   ...over,
 });
 
-const recrawlButton = () => screen.getByRole('button', { name: COPY.recrawl });
+/** Re-crawl stays one mounted button; its label changes with its state. */
+const recrawlButton = () => screen.getByTestId('recrawl-button');
+const liveStatus = () => screen.getByRole('status').textContent;
 
 /** Lets a poll tick land and its state updates flush. */
 const tick = async (ms: number) => {
@@ -153,11 +157,18 @@ describe('VenueHeader — idle', () => {
     );
   });
 
-  it('offers Re-crawl and View on site', () => {
+  it('offers Re-crawl and View on site, which opens our venue page', () => {
     render(<VenueHeader venue={buildVenue()} />);
     expect(recrawlButton().hasAttribute('disabled')).toBe(false);
+    expect(recrawlButton().textContent).toBe(COPY.recrawl);
+    expect(recrawlButton().hasAttribute('aria-describedby')).toBe(false);
     const link = screen.getByRole('link', { name: COPY.viewOnSite });
-    expect(link.getAttribute('href')).toBe('https://ballarena.example.com');
+    expect(link.getAttribute('href')).toBe('/venues/ball-arena');
+  });
+
+  it('keeps an empty live region mounted while idle', () => {
+    render(<VenueHeader venue={buildVenue()} />);
+    expect(liveStatus()).toBe('');
   });
 
   it('renders what it is handed after View on site', () => {
@@ -213,6 +224,25 @@ describe('VenueHeader — Re-crawl off', () => {
     expect(screen.queryByRole('link', { name: COPY.viewOnSite })).toBeNull();
   });
 
+  it('is disabled on an active but unverified venue, with the reason', () => {
+    render(<VenueHeader venue={buildVenue({ verified: false })} />);
+    expect(recrawlButton().hasAttribute('disabled')).toBe(true);
+    expect(screen.getByTestId('venue-header-line').textContent).toBe(
+      COPY.recrawlOff.unverified,
+    );
+    fireEvent.click(recrawlButton());
+    expect(mockTrigger).not.toHaveBeenCalled();
+  });
+
+  it('points the disabled button at the line that says why', () => {
+    render(<VenueHeader venue={buildVenue({ robotsTxtAllowed: false })} />);
+    const describedBy = recrawlButton().getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? '')?.textContent).toBe(
+      COPY.recrawlOff.robots,
+    );
+  });
+
   it('never starts a crawl from a disabled Re-crawl', () => {
     render(<VenueHeader venue={buildVenue({ robotsTxtAllowed: false })} />);
     fireEvent.click(recrawlButton());
@@ -258,16 +288,50 @@ describe('VenueHeader — Re-crawl states', () => {
     fireEvent.click(recrawlButton());
     await tick(POLL_INTERVAL_MS);
     await tick(POLL_INTERVAL_MS);
-    expect(screen.queryByRole('status')).toBeNull();
-    expect(recrawlButton()).toBeTruthy();
+    expect(liveStatus()).toBe('');
+    expect(recrawlButton().textContent).toBe(COPY.recrawl);
     expect(mockRefresh).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('save-failed')).toBeNull();
+    expect(screen.queryByTestId('recrawl-notice')).toBeNull();
     // Settled: no more polling.
     await tick(POLL_INTERVAL_MS * 3);
     expect(mockFetchTrigger).toHaveBeenCalledTimes(2);
   });
 
-  it('treats a failed trigger with a run as settled, not a failure', async () => {
+  it('keeps one button mounted, aria-disabled while busy', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(makeTrigger({ status: 'processing' }));
+    render(<VenueHeader venue={buildVenue()} />);
+    const button = recrawlButton();
+    fireEvent.click(button);
+    await tick(POLL_INTERVAL_MS);
+    expect(recrawlButton()).toBe(button);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.textContent).toBe(COPY.running);
+  });
+
+  it('never queues a second crawl while one is pending', async () => {
+    let resolvePost: (value: { triggerId: string }) => void = () => undefined;
+    mockTrigger.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePost = resolve;
+      }),
+    );
+    mockFetchTrigger.mockResolvedValue(makeTrigger({ status: 'pending' }));
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    fireEvent.click(recrawlButton());
+    await tick(0);
+    fireEvent.click(recrawlButton());
+    expect(mockTrigger).toHaveBeenCalledTimes(1);
+    resolvePost({ triggerId: 'trigger-1' });
+    await tick(POLL_INTERVAL_MS);
+    fireEvent.click(recrawlButton());
+    await tick(0);
+    expect(mockTrigger).toHaveBeenCalledTimes(1);
+  });
+
+  it('says the run failed, refreshes, and offers no Try again', async () => {
     mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
     mockFetchTrigger.mockResolvedValue(
       makeTrigger({ status: 'failed', crawlRunId: 'run-1' }),
@@ -276,7 +340,15 @@ describe('VenueHeader — Re-crawl states', () => {
     fireEvent.click(recrawlButton());
     await tick(POLL_INTERVAL_MS);
     expect(screen.queryByTestId('save-failed')).toBeNull();
+    expect(screen.getByTestId('recrawl-notice').textContent).toContain(
+      COPY.notice.ranFailed,
+    );
+    expect(liveStatus()).toBe(COPY.notice.ranFailed);
+    expect(screen.queryByRole('button', { name: FAILED.tryAgain })).toBeNull();
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.notice.dismiss }));
+    expect(screen.queryByTestId('recrawl-notice')).toBeNull();
   });
 
   it('says so when the trigger fails without a run, and Try again re-queues', async () => {
@@ -295,26 +367,138 @@ describe('VenueHeader — Re-crawl states', () => {
     fireEvent.click(screen.getByRole('button', { name: FAILED.tryAgain }));
     await tick(0);
     expect(mockTrigger).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('status').textContent).toBe(COPY.queued);
+    expect(liveStatus()).toBe(COPY.queued);
     expect(screen.queryByTestId('save-failed')).toBeNull();
   });
 
-  it('says so and refreshes when the API refuses the trigger', async () => {
-    mockTrigger.mockRejectedValue(new Error('Crawling is paused'));
+  it('shows the API’s reason when it refuses the trigger, and refreshes', async () => {
+    mockTrigger.mockRejectedValue(
+      new ApiError(409, 'Crawling is paused for this venue'),
+    );
     render(<VenueHeader venue={buildVenue()} />);
     fireEvent.click(recrawlButton());
     await tick(0);
-    expect(screen.getByTestId('save-failed')).toBeTruthy();
+    expect(screen.getByTestId('save-failed').textContent).toContain(
+      FAILED.body('Crawling is paused for this venue.'),
+    );
     expect(mockRefresh).toHaveBeenCalledTimes(1);
     expect(mockFetchTrigger).not.toHaveBeenCalled();
   });
 
-  it('says so when a poll fails', async () => {
+  it('falls back to the generic line when the refusal has no API reason', async () => {
+    mockTrigger.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(0);
+    expect(screen.getByTestId('save-failed').textContent).toContain(
+      FAILED.body(COPY.failed.recrawlSaved),
+    );
+  });
+
+  it('drops Try again once the refresh turns Re-crawl off', async () => {
+    mockTrigger.mockRejectedValue(
+      new ApiError(409, 'Crawling is paused for this venue'),
+    );
+    const { rerender } = render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(0);
+    expect(screen.getByTestId('save-failed')).toBeTruthy();
+    rerender(
+      <VenueHeader
+        venue={buildVenue({ crawlPausedAt: '2026-11-12T00:00:00.000Z' })}
+      />,
+    );
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+    // Unpausing later doesn't bring the stale toast back.
+    rerender(<VenueHeader venue={buildVenue()} />);
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+  });
+
+  it('retries a failed poll with backoff and keeps polling once it reads', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce(makeTrigger({ status: 'processing' }));
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(POLL_INTERVAL_MS);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+    expect(liveStatus()).toBe(COPY.queued);
+    // The retry waits twice as long.
+    await tick(POLL_INTERVAL_MS);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(1);
+    await tick(POLL_INTERVAL_MS);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(2);
+    expect(liveStatus()).toBe(COPY.running);
+  });
+
+  it('says the progress is unread, never that it didn’t start, when polling keeps failing', async () => {
     mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
     mockFetchTrigger.mockRejectedValue(new Error('network down'));
     render(<VenueHeader venue={buildVenue()} />);
     fireEvent.click(recrawlButton());
+    // 2s, then retries at 4s, 8s and 16s.
+    await tick(POLL_INTERVAL_MS * (1 + 2 + 4 + 8));
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(4);
+    expect(screen.queryByTestId('save-failed')).toBeNull();
+    expect(screen.getByTestId('recrawl-notice').textContent).toContain(
+      COPY.notice.unknown,
+    );
+    expect(screen.queryByRole('button', { name: FAILED.tryAgain })).toBeNull();
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    await tick(POLL_INTERVAL_MS * 20);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(4);
+  });
+
+  it('stops waiting on a trigger that never settles, without re-queuing', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(makeTrigger({ status: 'pending' }));
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(MAX_POLL_MS + POLL_INTERVAL_MS);
+    expect(screen.getByTestId('recrawl-notice').textContent).toContain(
+      COPY.notice.stalled,
+    );
+    expect(screen.queryByRole('button', { name: FAILED.tryAgain })).toBeNull();
+    expect(recrawlButton().textContent).toBe(COPY.recrawl);
+    const polls = mockFetchTrigger.mock.calls.length;
+    await tick(POLL_INTERVAL_MS * 10);
+    expect(mockFetchTrigger.mock.calls.length).toBe(polls);
+    expect(mockTrigger).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops polling once unmounted mid-poll', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(makeTrigger({ status: 'pending' }));
+    const { unmount } = render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
     await tick(POLL_INTERVAL_MS);
-    expect(screen.getByTestId('save-failed')).toBeTruthy();
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(1);
+    unmount();
+    await tick(POLL_INTERVAL_MS * 10);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets and drops the old poll when the venue changes', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(makeTrigger({ status: 'processing' }));
+    const { rerender } = render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(recrawlButton());
+    await tick(POLL_INTERVAL_MS);
+    expect(liveStatus()).toBe(COPY.running);
+    rerender(
+      <VenueHeader
+        venue={buildVenue({ id: 'venue-2', name: 'Ogden Theatre' })}
+      />,
+    );
+    expect(liveStatus()).toBe('');
+    expect(recrawlButton().textContent).toBe(COPY.recrawl);
+    await tick(POLL_INTERVAL_MS * 10);
+    expect(mockFetchTrigger).toHaveBeenCalledTimes(1);
+    // The new venue can start its own crawl.
+    fireEvent.click(recrawlButton());
+    await tick(0);
+    expect(mockTrigger).toHaveBeenLastCalledWith('venue-2', 'test-token');
   });
 });

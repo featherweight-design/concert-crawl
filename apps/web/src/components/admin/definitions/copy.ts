@@ -663,18 +663,41 @@ export const ADMIN_COPY = {
     queued: 'Queued',
     running: 'Crawling now',
     viewOnSite: 'View on site',
-    // Why Re-crawl is off. The API refuses all three (paused 409, robots 409,
-    // hidden 400). The board's "/events" has no source, so no path is named.
+    // Why Re-crawl is off. The API refuses all four (paused 409, robots 409,
+    // hidden or unverified 400). The board's "/events" has no source, so no
+    // path is named.
     recrawlOff: {
       paused: 'Resume crawling to re-crawl',
       robots: 'robots.txt disallows the page we crawl. We never override it.',
       hidden: 'Show it on the site to re-crawl',
+      unverified: 'Verify the venue to re-crawl',
     },
     // Rule 10 through `states.saveFailed`: "Couldn't change crawling for Ball
-    // Arena. The re-crawl didn't start. Nothing changed."
+    // Arena. The re-crawl didn't start. Nothing changed." When the API says
+    // why it refused, its message takes `recrawlSaved`'s place.
     failed: {
       recrawl: (venue: string) => `crawling for ${venue}`,
       recrawlSaved: 'The re-crawl didn’t start.',
+    },
+    // Settled outcomes with nothing to retry: the crawl was queued, so
+    // Try again would only queue a second one.
+    notice: {
+      ranFailed: 'The re-crawl ran and failed. See Crawl history.',
+      unknown:
+        'The re-crawl was queued, but we couldn’t read its progress. See Crawl history.',
+      stalled: 'Still queued. Check Crawl history.',
+      dismiss: 'Dismiss',
+    },
+    // The crawl summary the old header card carried, kept under the new
+    // header until part 5's Overview tab takes it.
+    summary: {
+      consecutiveFailures: (count: number) => `${count} consec. failures`,
+      strategy: {
+        structured_data: 'structured',
+        llm: 'llm',
+        manual: 'manual',
+        auto: 'auto',
+      },
     },
   },
 
