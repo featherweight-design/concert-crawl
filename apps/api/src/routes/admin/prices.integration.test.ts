@@ -43,7 +43,6 @@ import {
   seedEvent,
   seedPriceRetrievalLog,
   seedPriceSubmission,
-  seedSubmissionConfirm,
   seedUserEvent,
   seedUserProfile,
   seedVenue,
@@ -1338,11 +1337,11 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     const waiting = await seedPriceSubmission(waitingEvent.id, 'user_anna', {
       status: 'pending',
     });
+    // The submitter plus two fans who confirmed it.
     const published = await seedPriceSubmission(publishedEvent.id, 'user_b', {
       status: 'corroborated',
+      corroborationCount: 3,
     });
-    await seedSubmissionConfirm(published.id, 'user_c');
-    await seedSubmissionConfirm(published.id, 'user_d');
     const checked = await seedPriceSubmission(checkedEvent.id, 'user_e', {
       status: 'corroborated',
     });
@@ -1362,8 +1361,8 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     const byId = new Map(rows.map((row) => [row.id, row]));
     expect(byId.get(waiting.id)?.handle).toBe('annab');
     expect(byId.get(published.id)?.handle).toBeNull();
-    expect(byId.get(published.id)?.backedBy).toBe(2);
-    expect(byId.get(waiting.id)?.backedBy).toBe(0);
+    expect(byId.get(published.id)?.backedBy).toBe(3);
+    expect(byId.get(waiting.id)?.backedBy).toBe(1);
   });
 
   it('puts every row in exactly one state: a price with an open Price check is a price-check', async () => {
@@ -1390,35 +1389,68 @@ describe('GET /v1/admin/prices/submissions — the Submitted prices tab', () => 
     expect(await only('published')).toEqual([published.id]);
     expect(await only('price-check')).toEqual([checked.id]);
 
-    const res = await app.request('/v1/admin/prices/submissions/counts', {
-      headers: ADMIN_HEADERS,
-    });
-    const body = (await res.json()) as {
-      data: {
-        all: number;
-        waiting: number;
-        published: number;
-        priceCheck: number;
-      };
+    const counts = async (query = '') => {
+      const res = await app.request(
+        `/v1/admin/prices/submissions/state-counts${query}`,
+        { headers: ADMIN_HEADERS },
+      );
+      expect(res.status).toBe(200);
+      return ((await res.json()) as { data: Record<string, number> }).data;
     };
     // The counter row is not a row of this tab; the rejected price is under All.
-    expect(body.data).toEqual({
+    expect(await counts()).toEqual({
       all: 4,
       waiting: 1,
       published: 1,
       priceCheck: 1,
     });
+    // With a search the chips count the matches, so they agree with the list.
+    expect(await counts('?search=annab')).toEqual({
+      all: 1,
+      waiting: 1,
+      published: 0,
+      priceCheck: 0,
+    });
   });
 
-  it('searches the show, the venue and the handle, and treats % literally', async () => {
-    await seedTab();
+  it('searches the show, the venue and the handle (with or without "@"), and treats % literally', async () => {
+    const { waiting } = await seedTab();
     expect((await list('&search=vince')).map((row) => row.eventTitle)).toEqual([
       'Vince Staples',
       'Vince Staples',
     ]);
     expect(await list('&search=annab')).toHaveLength(1);
+    expect((await list('&search=@annab')).map((row) => row.id)).toEqual([
+      waiting.id,
+    ]);
     expect(await list('&search=mission')).toHaveLength(4);
-    expect(await list('&search=50%25')).toHaveLength(0);
+
+    // "50%" must match a title that contains it, not act as a wildcard that
+    // would also match "Fifty off".
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' });
+    const literal = await seedEvent(venue.id, {
+      title: '50% off night',
+      artist: '50% off night',
+      date: '2099-11-01',
+    });
+    const other = await seedEvent(venue.id, {
+      title: '50 cent night',
+      artist: '50 cent night',
+      date: '2099-11-02',
+    });
+    await seedPriceSubmission(literal.id, 'user_h', { status: 'pending' });
+    await seedPriceSubmission(other.id, 'user_i', { status: 'pending' });
+    expect((await list('&search=50%25')).map((row) => row.eventTitle)).toEqual([
+      '50% off night',
+    ]);
+  });
+
+  it('refuses status and state together instead of choosing one', async () => {
+    const res = await app.request(
+      '/v1/admin/prices/submissions?status=pending&state=all',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(422);
   });
 });
 
