@@ -627,7 +627,7 @@ describe('Needs you sources and ranking', () => {
     await seedPriceSubmission(event.id, 'user-checker', {
       priceMin: '45.00',
       priceMax: null,
-      tier: 'ga',
+      tier: 'GA',
       corroborationCount: 1,
       disputedSubmissionId: listed.id,
     });
@@ -646,7 +646,7 @@ describe('Needs you sources and ranking', () => {
     expect(items[0]).toMatchObject({
       listedMax: '64.00',
       checkedMax: null,
-      tier: 'ga',
+      tier: 'GA',
       checkedFans: 1,
       ticketUrl: 'https://tickets.example.com/clipse',
       // The checker's other prices only: the check itself is not counted.
