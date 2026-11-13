@@ -941,14 +941,14 @@ const priceBatchItems: Adapter = async ({ now }) => {
         .digest('hex')
         .slice(0, 12)}`,
       kind: 'price-batch',
-      title: `${rows.length} corroborated price submissions`,
+      title: `${rows.length} new ${rows.length === 1 ? 'price' : 'prices'}`,
       venueId: null,
       venueName: null,
       fanDate: first.date,
       watchers: 0,
       submissionIds: rows.map((row) => row.id),
       evidence: [
-        ...line('Submissions', rows.length),
+        ...line('Prices', rows.length),
         ...line('Soonest show', first.date),
         ...line('Corroborations each', `${PRICE_BATCH_MIN_CORROBORATIONS}+`),
       ],

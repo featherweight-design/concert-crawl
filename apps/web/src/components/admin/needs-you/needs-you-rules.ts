@@ -211,7 +211,7 @@ export const whatOf = (row: QueueRow): string => {
         ) ?? evidenceValue(row, 'Checked price'),
       );
     case 'price-batch':
-      return what.priceBatch(evidenceValue(row, 'Submissions'));
+      return what.priceBatch(evidenceValue(row, 'Prices'));
     case 'bug':
       return what.bug(evidenceValue(row, 'Page'));
   }
