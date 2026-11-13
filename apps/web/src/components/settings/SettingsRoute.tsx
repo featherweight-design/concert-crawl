@@ -170,6 +170,7 @@ export function SettingsRoute({
         {/* Changelog / version footer */}
         <UserMenuVersionFooter
           build={APP_VERSION.split(' · ')[0] ?? APP_VERSION}
+          endInset={28}
         />
       </div>
     </>

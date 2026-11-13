@@ -59,7 +59,10 @@ export const ThemeCard = ({
         <Dot color={tokens['accent'] ?? ''} />
         {active && (
           <span
-            className="ml-auto text-[8px] font-bold uppercase tracking-[0.14em]"
+            // leading-none: the label's own line box is taller than the 8px
+            // dots, which pushed the active card's sample 4px below its
+            // neighbours' and broke the name baselines.
+            className="ml-auto text-[8px] font-bold uppercase leading-none tracking-[0.14em]"
             style={{
               fontFamily: 'var(--font-mono)',
               color: tokens['signal'],

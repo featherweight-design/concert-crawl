@@ -10,9 +10,17 @@ const COPY = CONSUMER_COPY.releaseNotes;
 
 interface UserMenuVersionFooterProps {
   build: string;
+  /**
+   * Extra room at the right edge, px. The Settings page sets it so its last
+   * chevron clears the fixed "Tell us" tab that sits on that edge.
+   */
+  endInset?: number;
 }
 
-export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
+export function UserMenuVersionFooter({
+  build,
+  endInset = 0,
+}: UserMenuVersionFooterProps) {
   const router = useRouter();
   const latestVersion = RELEASES[0]?.version ?? '';
   const { unread } = useReleaseReadState(latestVersion);
@@ -32,7 +40,7 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
         all: 'unset',
         cursor: 'pointer',
         width: '100%',
-        padding: '10px 14px',
+        padding: `10px ${14 + endInset}px 10px 14px`,
         borderTop: '1px solid var(--border)',
         background: 'var(--surface-1)',
         display: 'flex',
