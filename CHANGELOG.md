@@ -1,3 +1,16 @@
+# [1.412.0](https://github.com/featherweight-design/concert-crawl/compare/v1.411.0...v1.412.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** pad segmented tabs so a fitted strip keeps its labels apart ([6fa73ff](https://github.com/featherweight-design/concert-crawl/commit/6fa73ff48300a44e950f1f0b51bb87a950935c37))
+
+
+### Features
+
+* **web:** fill the Health right column and Done for you ([9bf8c17](https://github.com/featherweight-design/concert-crawl/commit/9bf8c17b34d2151f7e03a7ce6cc76efa01d6783d))
+* **web:** inspect a fetched page, text and html (3b part 5a) ([694e11f](https://github.com/featherweight-design/concert-crawl/commit/694e11ff8584e6073a241cbf6c510c3d83de89be))
+
 # [1.411.0](https://github.com/featherweight-design/concert-crawl/compare/v1.410.0...v1.411.0) (2026-11-13)
 
 
