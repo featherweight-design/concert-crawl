@@ -38,28 +38,15 @@ vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
   identityFor: () => ({ palette: { bg: '#101010' } }),
 }));
 
-vi.mock('./DeleteVenueConfirm', () => ({
-  DeleteVenueConfirm: () => null,
-}));
-
 vi.mock('./generate-field/GenerateField', () => ({
   GenerateField: () => null,
 }));
 
-// The header (status chips, Re-crawl) has its own suite; here it only has to
-// be handed the venue and the Flagship button it carries for now.
+// The header (status chips, Re-crawl, the ⋯ menu) has its own suites; here it
+// only has to be handed the venue.
 vi.mock('@/components/admin/venues/VenueHeader', () => ({
-  VenueHeader: ({
-    venue,
-    actions,
-  }: {
-    venue: { name: string };
-    actions?: ReactNode;
-  }) => (
-    <div data-testid="venue-header-stub">
-      {venue.name}
-      {actions}
-    </div>
+  VenueHeader: ({ venue }: { venue: { name: string } }) => (
+    <div data-testid="venue-header-stub">{venue.name}</div>
   ),
 }));
 
@@ -133,10 +120,11 @@ const buildVenue = (
 });
 
 const ACTIONS = ADMIN_COPY.venueDetailsClient.actions;
+const DANGER = ADMIN_COPY.venueDetailsClient.dangerZone;
 
 // The old paused pill became the header's crawling chip ("Paused"), which
 // `VenueHeader.test.tsx` covers. This checks the page hands the header the
-// venue and keeps the Flagship button until the ⋯ menu lands.
+// venue, and that the ⋯ menu (`VenueMenu.test.tsx`) replaced the danger zone.
 describe('VenueDetailsClient — venue header', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
@@ -157,9 +145,24 @@ describe('VenueDetailsClient — venue header', () => {
     );
   });
 
-  it('keeps the Flagship button in the header', () => {
+  it('drops the danger zone and the old Flagship button', () => {
     render(<VenueDetailsClient venue={buildVenue({ featured: true })} />);
-    expect(screen.getByRole('button', { name: ACTIONS.flagship })).toBeTruthy();
+    expect(
+      screen.queryByText(
+        ADMIN_COPY.venueDetailsClient.sections.dangerZone.title,
+      ),
+    ).toBeNull();
+    for (const name of [
+      ACTIONS.flagship,
+      DANGER.crawlPause.pauseButton,
+      DANGER.remove.trigger,
+      DANGER.pause.pauseButton,
+      DANGER.pause.activateButton,
+    ]) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+    expect(screen.queryByTestId('crawl-pause-line')).toBeNull();
+    expect(screen.queryByText(DANGER.delete.description)).toBeNull();
   });
 
   it('keeps the old card’s crawl summary under the header until part 5', () => {

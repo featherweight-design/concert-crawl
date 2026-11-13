@@ -16,7 +16,6 @@ import {
   updateVenue,
   pauseVenue,
   activateVenue,
-  setVenueFeatured,
   generateVenueAbout,
   probeVenuePlatform,
 } from '@/lib/actions/venues';
@@ -36,9 +35,6 @@ import {
   ia_isDark,
   identityFor,
 } from '@/components/consumer/identity-art/IdentityArt';
-import { DeleteVenueConfirm } from './DeleteVenueConfirm';
-import { CrawlPauseControl } from './crawl-pause-control/CrawlPauseControl';
-import { RemoveVenueControl } from './remove-venue-control/RemoveVenueControl';
 import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
@@ -50,9 +46,6 @@ import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import {
   ExternalLink,
   RefreshCw,
-  Star,
-  Pause,
-  Play,
   AlertCircle,
   Check,
   Loader2,
@@ -867,24 +860,6 @@ export function VenueDetailsClient({
     }
   }
 
-  function handlePauseToggle() {
-    startTransition(async () => {
-      if (venue.active) {
-        await pauseVenue(venue.id);
-      } else {
-        await activateVenue(venue.id);
-      }
-      router.refresh();
-    });
-  }
-
-  function handleFeaturedToggle() {
-    startTransition(async () => {
-      await setVenueFeatured(venue.id, !venue.featured);
-      router.refresh();
-    });
-  }
-
   function handleStatusChange(newStatus: 'active' | 'paused') {
     startTransition(async () => {
       if (newStatus === 'active') {
@@ -895,8 +870,6 @@ export function VenueDetailsClient({
       router.refresh();
     });
   }
-
-  const { crawlHealth } = venue;
 
   return (
     <div
@@ -933,24 +906,7 @@ export function VenueDetailsClient({
         }
       />
 
-      <VenueHeader
-        venue={venue}
-        actions={
-          // Until the ⋯ menu (3a part 4b) takes Make flagship over.
-          <AdminButton
-            variant={venue.featured ? 'success' : 'outline'}
-            size="sm"
-            icon={Star}
-            disabled={isPending}
-            onClick={handleFeaturedToggle}
-            type="button"
-          >
-            {venue.featured
-              ? ADMIN_COPY.venueDetailsClient.actions.flagship
-              : ADMIN_COPY.venueDetailsClient.actions.makeFlagship}
-          </AdminButton>
-        }
-      />
+      <VenueHeader venue={venue} />
       {/* Last crawl, 7-day health, strategy and failures from the old header
           card, so none of it disappears before 3a part 5's Overview tab
           moves them there. */}
@@ -2499,135 +2455,7 @@ export function VenueDetailsClient({
           </div>
         </VDSection>
 
-        {/* 06 · danger */}
-        <VDSection
-          eyebrow={ADMIN_COPY.venueDetailsClient.sections.dangerZone.eyebrow}
-          title={ADMIN_COPY.venueDetailsClient.sections.dangerZone.title}
-          danger
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <CrawlPauseControl
-              venue={venue}
-              showCount={venue.deleteBlockers?.upcomingShows ?? 0}
-            />
-
-            <div
-              style={{
-                height: 1,
-                background:
-                  'color-mix(in oklab, var(--danger) 16%, transparent)',
-              }}
-            />
-
-            <RemoveVenueControl
-              venueId={venue.id}
-              venueName={venue.name}
-              removed={venue.removedAt !== null}
-            />
-
-            <div
-              style={{
-                height: 1,
-                background:
-                  'color-mix(in oklab, var(--danger) 16%, transparent)',
-              }}
-            />
-
-            {/* Pause / activate */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 14,
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--fg)',
-                  }}
-                >
-                  {ADMIN_COPY.venueDetailsClient.dangerZone.pause.title}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 12,
-                    color: 'var(--fg-muted)',
-                    marginTop: 2,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {ADMIN_COPY.venueDetailsClient.dangerZone.pause.description}
-                </div>
-              </div>
-              <AdminButton
-                variant="outline"
-                size="sm"
-                icon={venue.active ? Pause : Play}
-                disabled={isPending}
-                onClick={handlePauseToggle}
-                type="button"
-              >
-                {venue.active
-                  ? ADMIN_COPY.venueDetailsClient.dangerZone.pause.pauseButton
-                  : ADMIN_COPY.venueDetailsClient.dangerZone.pause
-                      .activateButton}
-              </AdminButton>
-            </div>
-
-            <div
-              style={{
-                height: 1,
-                background:
-                  'color-mix(in oklab, var(--danger) 16%, transparent)',
-              }}
-            />
-
-            {/* Delete */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 14,
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--danger)',
-                  }}
-                >
-                  {ADMIN_COPY.venueDetailsClient.dangerZone.delete.title}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 12,
-                    color: 'var(--fg-muted)',
-                    marginTop: 2,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {ADMIN_COPY.venueDetailsClient.dangerZone.delete.description}
-                </div>
-              </div>
-              <DeleteVenueConfirm
-                venueId={venue.id}
-                venueName={venue.name}
-                eventsTracked={crawlHealth.eventsTracked}
-              />
-            </div>
-          </div>
-        </VDSection>
+        {/* The old danger zone's controls live in the header's ⋯ now. */}
       </div>
 
       {/* Sticky save bar */}

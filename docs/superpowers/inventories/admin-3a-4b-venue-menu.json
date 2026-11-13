@@ -1,0 +1,72 @@
+{
+  "feature": "Admin 3a part 4b: the venue page ⋯ menu and its confirms",
+  "note": "Read-only; opens the menu and the confirms but never presses a confirm button. Boards: design/design_handoff_admin_redesign A3/03/venue-menu-states, A3/03/hide-other-d, A3/03/take-down-d. Admin role (CONTACT_SHEET_ROLE=admin). Scratch Neon rows: Bluebird Theater (active, crawling) and the sheet seed sheet-paused-venue (paused). Walked by hand: the hidden, auto-paused and taken-down menus and the refused Delete row (A3/03/delete-refused), which need a hidden or taken-down venue with shows; no sheet seed has one.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "menu-active",
+      "label": "Active venue: ⋯ open, Pause, Make flagship, Hide, Take down",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-menu\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"venue-menu\"]" },
+        { "wait": "[data-testid=\"venue-menu-take-down\"]" },
+        { "settle": 500 }
+      ]
+    },
+    {
+      "id": "menu-paused",
+      "label": "Paused venue: ⋯ open, Resume with who paused it and why",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-menu\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"venue-menu\"]" },
+        { "wait": "[data-testid=\"venue-menu-resume\"]" },
+        { "settle": 500 }
+      ]
+    },
+    {
+      "id": "hide-confirm",
+      "label": "Hide confirm open: Why picker, foot line, Hide venue held",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-menu\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"venue-menu\"]" },
+        { "click": "[data-testid=\"venue-menu-hide\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "settle": 800 }
+      ]
+    },
+    {
+      "id": "take-down-confirm",
+      "label": "Take down confirm open: warning, ticked reason, note, typed name",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-menu\"]"
+        },
+        { "settle": 1500 },
+        { "click": "[data-testid=\"venue-menu\"]" },
+        { "click": "[data-testid=\"venue-menu-take-down\"]" },
+        { "wait": "[role=\"dialog\"]" },
+        { "settle": 800 }
+      ]
+    }
+  ]
+}
