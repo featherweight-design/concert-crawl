@@ -10,7 +10,7 @@ import {
 } from '@concert-crawl/db';
 import type { CrawlRun, CrawlRunReason } from '@concert-crawl/db';
 import { reportFailure } from '@concert-crawl/logger';
-import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import { CRAWLER_USER_AGENT, showTimeKey } from '@concert-crawl/types';
 import {
   CRAWL_DELAY_CAP_MS,
   CrawlSkipError,
@@ -19,6 +19,7 @@ import {
   isAiUseAllowed,
   resolveCrawlDelayMs,
 } from './lib/robots.js';
+import { alignToNights } from './lib/align-nights.js';
 import { sendCrawlFailureEmail } from './lib/email.js';
 import { checkEventCountDrop } from './lib/event-count-alert.js';
 import { checkEventCeiling } from './lib/event-ceiling-alert.js';
@@ -111,20 +112,11 @@ function platformOverallTimeoutMs(
   );
 }
 
-// Normalizes a show_time string to the Postgres `time` output form
-// (HH:MM:SS) for building the in-memory dedup key. Null/empty/unparseable
-// → '' — which groups with the DB's NULL under NULLS NOT DISTINCT. DB rows
-// return 'HH:MM:SS' already, so this is idempotent on the existingMap side.
-function showTimeKey(raw: string | null | undefined): string {
-  if (!raw) return '';
-  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(raw.trim());
-  if (!match) return '';
-  const hours = match[1] ?? '';
-  const minutes = match[2] ?? '00';
-  const seconds = match[3] ?? '00';
-  return `${hours.padStart(2, '0')}:${minutes}:${seconds}`;
-}
-
+// showTimeKey (shared with the night matcher) normalizes a show_time string
+// to the Postgres `time` output form (HH:MM:SS) for the in-memory dedup key.
+// Null/empty/unparseable → '' — which groups with the DB's NULL under NULLS
+// NOT DISTINCT. DB rows return 'HH:MM:SS' already, so it is idempotent on the
+// existingMap side.
 function dedupKey(
   canonicalArtist: string,
   date: string,
@@ -991,6 +983,7 @@ export async function crawlVenue(
     // changes on rows the admin has already cancelled.
     const existingRows = await db
       .select({
+        id: events.id,
         canonicalArtist: events.canonicalArtist,
         canonicalTitle: events.canonicalTitle,
         date: events.date,
@@ -1142,7 +1135,7 @@ export async function crawlVenue(
       // "cannot affect row a second time." The in-memory dedup drops it
       // before the upsert. (#1053)
       const seenEventKeys = new Set<string>();
-      const eventsWithHashes = normalizedEvents
+      const enriched = normalizedEvents
         .map((event) => ({
           ...event,
           canonicalArtist: canonicalizeArtist(event.artist),
@@ -1195,13 +1188,36 @@ export async function crawlVenue(
         // date into a single ('|YYYY-MM-DD|') key, risking spurious UNIQUE
         // violations against events_venue_date_canonical_artist_showtime_idx.
         // Mirror the canonical_title guard's rationale. (#1053)
-        .filter((evt) => evt.canonicalArtist !== '')
-        .filter((evt) => {
-          const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
-          if (seenEventKeys.has(key)) return false;
-          seenEventKeys.add(key);
-          return true;
-        });
+        .filter((evt) => evt.canonicalArtist !== '');
+
+      // One night is one row. A listing that is the same night as a stored
+      // row, or as another listing in this crawl (an untimed copy of a timed
+      // show, "Rossi" and "Rossi."), takes that row's key so the upsert below
+      // updates it instead of inserting a second one. A stored untimed row a
+      // timed listing now dates gets its time first, and existingMap follows,
+      // so the insert/update counts and the verified-change check see the row
+      // under its new key.
+      const { aligned, promotions } = alignToNights(enriched, existingRows);
+      for (const promotion of promotions) {
+        await db
+          .update(events)
+          .set({ showTime: promotion.showTime, updatedAt: new Date() })
+          .where(eq(events.id, promotion.id));
+        for (const [key, row] of existingMap) {
+          if (row.id !== promotion.id) continue;
+          existingMap.delete(key);
+          existingMap.set(
+            dedupKey(row.canonicalArtist, row.date, promotion.showTime),
+            { ...row, showTime: promotion.showTime },
+          );
+        }
+      }
+      const eventsWithHashes = aligned.filter((evt) => {
+        const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
+        if (seenEventKeys.has(key)) return false;
+        seenEventKeys.add(key);
+        return true;
+      });
 
       // Notify admin when a verified event's source data has changed.
       //

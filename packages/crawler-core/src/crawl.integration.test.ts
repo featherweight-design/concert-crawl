@@ -614,6 +614,75 @@ describe('crawlVenue — canonical-artist + show_time upsert key (#1053)', () =>
     expect(rows[0]!.showTime).toBeNull();
     expect(rows[0]!.canonicalTitle).toBe('hilary duff: greatest hits tour');
   });
+
+  // One night is one row even when the listings differ in the key: a timed
+  // listing dates the stored untimed row, and a later untimed copy folds in.
+  it('dates a stored untimed row from a timed listing, then folds an untimed copy into it', async () => {
+    const venue = await seedTestVenue();
+    const showDate = futureDate(14);
+    const crawl = async (showTime?: string) => {
+      mockFetchPage.mockResolvedValue({
+        html: showTime === undefined ? HTML_BASE : HTML_BASE_V2,
+        httpStatus: 200,
+        finalUrl: venue.url,
+      });
+      mockExtractWithLlm.mockResolvedValue({
+        events: [
+          {
+            title: 'Hilary Duff',
+            rawTitle: 'Hilary Duff',
+            artist: 'Hilary Duff',
+            date: showDate,
+            ...(showTime === undefined ? {} : { showTime }),
+            confidence: 0.9,
+            sourceUrl: venue.url,
+          },
+        ],
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+      expect((await crawlVenue(venue.id, mockBrowser)).status).toBe('success');
+    };
+
+    await crawl();
+    await crawl('19:00');
+    await crawl();
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.showTime).toBe('19:00:00');
+  });
+
+  it('keeps "Rossi" and "Rossi." on one night as one row', async () => {
+    const venue = await seedTestVenue();
+    const showDate = futureDate(14);
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: ['Rossi', 'Rossi.'].map((artist) => ({
+        title: artist,
+        rawTitle: artist,
+        artist,
+        date: showDate,
+        confidence: 0.9,
+        sourceUrl: venue.url,
+      })),
+      usage: { inputTokens: 100, outputTokens: 50 },
+    });
+
+    expect((await crawlVenue(venue.id, mockBrowser)).status).toBe('success');
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id));
+    expect(rows).toHaveLength(1);
+  });
 });
 
 describe('crawlVenue — event_url self-heal (#1152)', () => {
