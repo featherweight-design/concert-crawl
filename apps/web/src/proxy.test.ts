@@ -236,10 +236,12 @@ describe('proxy — auth gate (#841)', () => {
     const { middlewareHandler } = await import('./proxy');
 
     const auth = makeAuth(null);
-    await middlewareHandler(
-      auth,
-      new NextRequest('http://localhost/whats-new/secret'),
-    );
+    await expect(
+      middlewareHandler(
+        auth,
+        new NextRequest('http://localhost/whats-new/secret'),
+      ),
+    ).rejects.toThrow('Unauthorized');
 
     expect(auth.protect).toHaveBeenCalled();
   });
