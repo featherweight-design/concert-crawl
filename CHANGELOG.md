@@ -1,3 +1,16 @@
+# [1.419.0](https://github.com/featherweight-design/concert-crawl/compare/v1.418.0...v1.419.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** invite headline sized to the boards ([e1b077a](https://github.com/featherweight-design/concert-crawl/commit/e1b077ac2c0852d00d79f435abafd232828a8486))
+* **web:** invite landing headline sized to the boards ([976534f](https://github.com/featherweight-design/concert-crawl/commit/976534fe094fab12ca33391038dffcfc71c10f54))
+
+
+### Features
+
+* **web:** review on a price batch opens its sheet on the phone ([aa3497e](https://github.com/featherweight-design/concert-crawl/commit/aa3497eb1f45249c2603a8597692d57a645edddd))
+
 # [1.418.0](https://github.com/featherweight-design/concert-crawl/compare/v1.417.0...v1.418.0) (2026-11-13)
 
 
