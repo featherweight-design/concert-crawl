@@ -619,7 +619,12 @@ describe('Needs you sources and ranking', () => {
       corroborationCount: 1,
       disputedSubmissionId: listed.id,
     });
-    await seedPriceSubmission(event.id, 'user-checker', {
+    // One price per fan per event: the checker's track record is on another show.
+    const other = await seedEvent(venue.id, {
+      artist: 'Other Act',
+      date: inDays(20),
+    });
+    await seedPriceSubmission(other.id, 'user-checker', {
       priceMin: '40.00',
       status: 'corroborated',
     });
