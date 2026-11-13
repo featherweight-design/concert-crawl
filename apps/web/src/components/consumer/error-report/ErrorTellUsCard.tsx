@@ -18,6 +18,17 @@ const NOTE_MAX = 900;
 
 type CardState = 'prompt' | 'form' | 'sending' | 'sent' | 'failed';
 
+// The desktop boards draw the card smaller than the phone's: a 20px heading and
+// 34px chips (a mouse needs no 44px target). `!important` only where the phone
+// size is inline.
+const CARD_CSS = `
+@media (min-width: 900px) {
+  [data-testid='error-tell-us-card'] { padding: 18px !important; border-radius: 20px !important; margin-top: 0 !important; }
+  .cc-tu-h { font-size: 20px !important; }
+  .cc-tu-chip { min-height: 34px !important; padding: 0 14px !important; font-size: 13px !important; }
+}
+`;
+
 interface ErrorTellUsCardProps {
   /** The server's digest for a server-side throw. */
   digest?: string | undefined;
@@ -170,7 +181,25 @@ export const ErrorTellUsCard = ({
         marginTop: 24,
       }}
     >
+      <style>{CARD_CSS}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...MONO }}>
+        <svg
+          aria-hidden
+          width="22"
+          height="22"
+          viewBox="0 0 96 96"
+          focusable="false"
+          style={{ flex: 'none' }}
+        >
+          <rect width="96" height="96" rx="16" fill="var(--bg)" />
+          <circle cx="72" cy="24" r="20" fill="var(--accent)" opacity="0.22" />
+          <circle cx="72" cy="24" r="12" fill="var(--accent)" opacity="0.42" />
+          <circle cx="72" cy="24" r="7" fill="var(--signal)" />
+          <circle cx="14" cy="76" r="2" fill="var(--signal)" opacity="0.4" />
+          <circle cx="34" cy="64" r="3" fill="var(--signal)" opacity="0.55" />
+          <circle cx="50" cy="50" r="4" fill="var(--signal)" opacity="0.7" />
+          <circle cx="66" cy="32" r="6" fill="var(--signal)" opacity="0.9" />
+        </svg>
         <span
           aria-hidden
           style={{
@@ -194,6 +223,7 @@ export const ErrorTellUsCard = ({
           <h2
             ref={headingRef}
             tabIndex={-1}
+            className="cc-tu-h"
             style={{
               margin: 0,
               fontSize: 26,
@@ -228,6 +258,7 @@ export const ErrorTellUsCard = ({
           <h2
             ref={headingRef}
             tabIndex={-1}
+            className="cc-tu-h"
             style={{
               margin: 0,
               fontSize: 26,
@@ -315,6 +346,7 @@ export const ErrorTellUsCard = ({
           <h2
             ref={formHeadingRef}
             tabIndex={-1}
+            className="cc-tu-h"
             style={{
               margin: 0,
               fontSize: 26,
@@ -378,6 +410,7 @@ export const ErrorTellUsCard = ({
                   if (state === 'prompt') setState('form');
                   chipRefs.current[next]?.focus();
                 }}
+                className="cc-tu-chip"
                 style={chipStyle(doing === chip)}
               >
                 {chip}
