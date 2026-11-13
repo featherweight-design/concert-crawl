@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { PHONE_SHELL_CLASS } from '@/components/consumer/app-shell/phone-shell';
 
 // Whitespace-collapsed, so Prettier's line breaks never fail the pin.
 const flat = (text: string): string =>
@@ -53,7 +54,9 @@ describe('page-ambient', () => {
   });
 
   it('is the background of the main shell', () => {
-    expect(shell).toMatch(/className="page-ambient /);
-    expect(shell).not.toMatch(/overflow-x-clip bg-bg/);
+    expect(shell).toContain('className={PHONE_SHELL_CLASS}');
+    const tokens = PHONE_SHELL_CLASS.split(/\s+/);
+    expect(tokens[0]).toBe('page-ambient');
+    expect(tokens).not.toContain('bg-bg');
   });
 });

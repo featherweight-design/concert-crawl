@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { PHONE_SHELL_CLASS } from '@/components/consumer/app-shell/phone-shell';
 import GlobalNotFound from './not-found';
 
 // The chrome reads Clerk, the router and the query client; what matters here is
@@ -48,5 +49,21 @@ describe('global not-found', () => {
     expect(screen.getByTestId('app-header')).toBeDefined();
     expect(screen.getByTestId('bottom-nav')).toBeDefined();
     expect(container.querySelector('.page-ambient')).not.toBeNull();
+  });
+
+  it('uses the shared phone shell, so the 404 keeps the viewport and inset sizing', () => {
+    render(<GlobalNotFound />);
+    expect(screen.getByTestId('phone-shell').className).toBe(PHONE_SHELL_CLASS);
+  });
+
+  // 48px sat under the 52px BottomNav; the phone gets the 80px every page
+  // under the nav keeps.
+  it('clears the bottom nav on the phone', () => {
+    render(<GlobalNotFound />);
+    const surface = screen.getByTestId('not-found-surface');
+    const classes = surface.className.split(/\s+/);
+    expect(classes).toContain('max-sm:pb-20');
+    expect(classes).toContain('pb-12');
+    expect(surface.style.paddingBottom).toBe('');
   });
 });

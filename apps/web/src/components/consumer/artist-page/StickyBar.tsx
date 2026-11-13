@@ -29,11 +29,15 @@ export const StickyBar = ({ name, visible }: StickyBarProps) => {
         left: 0,
         right: 0,
         zIndex: 30,
-        height: 56,
+        // 56px of bar below the status-bar inset, and clear of a landscape
+        // notch: viewport-fit=cover makes all three insets live.
+        height: 'calc(56px + env(safe-area-inset-top, 0px))',
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        padding: '0 12px',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingLeft: 'calc(12px + env(safe-area-inset-left, 0px))',
+        paddingRight: 'calc(12px + env(safe-area-inset-right, 0px))',
         background: 'var(--bg)',
         borderBottom: '1px solid var(--border)',
       }}

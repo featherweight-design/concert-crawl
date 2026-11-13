@@ -51,10 +51,12 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
   return (
     <header className="w-full">
       {/* ── Mobile bar (hidden sm+) ─────────────────────── */}
-      {/* No fill: the page glow shows through the phone header. */}
+      {/* No fill: the page glow shows through the phone header. The top pad
+          adds the status-bar inset: with viewport-fit=cover (and iOS's
+          black-translucent standalone bar) the page starts under it. */}
       <div
         data-testid="header-mobile"
-        className="flex items-center justify-between px-4 pb-2.5 pt-4 sm:hidden"
+        className="flex items-center justify-between px-4 pb-2.5 pt-[calc(1rem+env(safe-area-inset-top))] sm:hidden"
       >
         <Link href="/events" className="flex shrink-0 items-center gap-2">
           <div
