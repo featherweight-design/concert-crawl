@@ -355,11 +355,12 @@ describe('VenueDetailsClient — Wait until control', () => {
   });
 });
 
-// The form once accepted 1 s, and the API now refuses anything under 3 s, so
-// a legacy row has to start at the floor or no field on it could be saved.
+// The request delay is read-only (3b ruling d). A legacy row stored under the
+// 3 s floor (the form once accepted 1 s) shows the floor, the delay the
+// crawler actually paces at, and a save never sends the field.
 const DELAY_LABEL = ADMIN_COPY.venueDetailsClient.fields.requestDelay.label;
 
-describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
+describe('VenueDetailsClient — Request delay is read-only', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
     mockUpdateVenue.mockReset();
@@ -371,11 +372,15 @@ describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows a legacy 1000ms delay as 3000', () => {
+  it.each([
+    [1000, String(MIN_CRAWL_DELAY_MS)],
+    [3000, '3000'],
+    [5000, '5000'],
+  ])('shows a stored %ims delay as %s, read-only', (stored, shown) => {
     render(
       <VenueDetailsClient
         initialTab="source"
-        venue={buildVenue({ crawlDelayMs: 1000 })}
+        venue={buildVenue({ crawlDelayMs: stored })}
       />,
     );
 
@@ -383,32 +388,18 @@ describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
     if (!(input instanceof HTMLInputElement)) {
       throw new Error('Expected the request delay input');
     }
-    expect(input.value).toBe('3000');
-    // The hint states the minimum the field enforces, from the one constant.
-    const hint = ADMIN_COPY.venueDetailsClient.fields.requestDelay.hint;
-    expect(hint).toContain(`at least ${String(MIN_CRAWL_DELAY_MS)}`);
-    expect(screen.getByText(hint)).toBeTruthy();
+    expect(input.value).toBe(shown);
+    expect(input.readOnly).toBe(true);
+    expect(
+      screen.getByText(ADMIN_COPY.venueDetailsClient.fields.requestDelay.hint),
+    ).toBeTruthy();
   });
 
-  it('reads as changed from the start, naming Request delay', () => {
+  it('opens clean for a legacy row under the floor', () => {
     render(
       <VenueDetailsClient
         initialTab="source"
         venue={buildVenue({ crawlDelayMs: 1000 })}
-      />,
-    );
-
-    // The save bar is up before any edit, so the admin can save the fix.
-    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
-    // Listed in the save bar as well as labelling the field.
-    expect(screen.getAllByText(DELAY_LABEL)).toHaveLength(2);
-  });
-
-  it('opens clean for a row already at the floor', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlDelayMs: 3000 })}
       />,
     );
 
@@ -416,24 +407,7 @@ describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
     expect(screen.getAllByText(DELAY_LABEL)).toHaveLength(1);
   });
 
-  it('names the delay change alongside an unrelated edit', () => {
-    render(
-      <VenueDetailsClient
-        initialTab="source"
-        venue={buildVenue({ crawlDelayMs: 1000 })}
-      />,
-    );
-
-    const name = document.getElementById('edit-venue-name');
-    if (!(name instanceof HTMLInputElement)) {
-      throw new Error('Expected the name input');
-    }
-    fireEvent.change(name, { target: { value: 'Renamed Venue' } });
-
-    expect(screen.getByText(`Name · ${DELAY_LABEL}`)).toBeTruthy();
-  });
-
-  it('sends 3000 when another field is saved, correcting the row', async () => {
+  it('never sends the delay when another field is saved', async () => {
     render(
       <VenueDetailsClient
         initialTab="source"
@@ -456,6 +430,6 @@ describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
       throw new Error('Expected updateVenue to receive a FormData');
     }
     expect(formData.get('name')).toBe('Renamed Venue');
-    expect(formData.get('crawlDelayMs')).toBe('3000');
+    expect(formData.has('crawlDelayMs')).toBe(false);
   });
 });

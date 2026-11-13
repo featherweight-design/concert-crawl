@@ -2165,7 +2165,9 @@ export function VenueDetailsClient({
                   <VDInput
                     id="edit-venue-crawl-delay"
                     type="number"
-                    value={venue.crawlDelayMs}
+                    // The delay the crawler uses: a legacy row stored under
+                    // the floor is paced at the floor, so show that.
+                    value={Math.max(venue.crawlDelayMs, MIN_CRAWL_DELAY_MS)}
                     readOnly
                     style={{
                       borderTopRightRadius: 0,
