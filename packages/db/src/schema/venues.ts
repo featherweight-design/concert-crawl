@@ -42,9 +42,11 @@ export const venues = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    // Optional short caption for places narrower than about 90px (the Where
-    // tiles, the Venues collected grid). NULL means those places fall back to
-    // the full name under a 2-line clamp. Everywhere else shows `name`.
+    // Optional admin-set short name (B+ addendum 4, item 4). Read by the
+    // narrow tiles (the Where tiles and the Venues collected grid, wiring still
+    // to come), which fall back to `name` under a 2-line clamp when NULL, and
+    // by the first-timer guide's venueShortName, which prefers it over its
+    // name heuristic. Other surfaces show `name`.
     shortName: text('short_name'),
     slug: text('slug').notNull().unique(),
     websiteUrl: text('website_url').notNull(),

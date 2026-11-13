@@ -34,14 +34,14 @@ describe('buildUpdateVenueBody — API integration fields', () => {
     }
   });
 
-  it('trims shortName, clears it when empty, and leaves it out when missing', () => {
+  it('trims shortName, sends empty for the API to clear, and leaves it out when missing', () => {
     expect(
       buildUpdateVenueBody(formDataFrom({ shortName: '  Bluebird  ' }))
         .shortName,
     ).toBe('Bluebird');
     expect(
       buildUpdateVenueBody(formDataFrom({ shortName: '   ' })).shortName,
-    ).toBeNull();
+    ).toBe('');
     expect(buildUpdateVenueBody(formDataFrom({})).shortName).toBeUndefined();
   });
 
