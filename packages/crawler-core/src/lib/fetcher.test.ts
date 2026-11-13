@@ -459,6 +459,20 @@ describe('fetchPageHttp', () => {
     );
   });
 
+  it('always sleeps the paced wait before the request', async () => {
+    // jitter() never returns under 3 s, so there is no "no wait" case to
+    // skip: the sleep is unconditional, even for the 0 this suite's stub
+    // returns.
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<html>events</html>', { status: 200 }),
+    );
+
+    await fetchPageHttp('https://example.com', 0);
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 0);
+  });
+
   it('returns html, httpStatus, and finalUrl on success', async () => {
     const mockFetch = vi.mocked(fetch);
     mockFetch

@@ -326,6 +326,33 @@ export function parseCalendarUrls(
   return [...seen].sort();
 }
 
+/** "YYYY-MM" for `now` in Mountain Time, the venues' and the sitemap's zone. */
+function currentMonthMountain(now: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Denver',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(now);
+  const pick = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${pick('year')}-${pick('month')}`;
+}
+
+/**
+ * The month the admin probe reads: the current month in Mountain Time, else
+ * the first future one. A sitemap that still lists past months would
+ * otherwise send the probe to a month with nothing upcoming in it. If every
+ * advertised month is past, the latest is the nearest to now. `calendarUrls`
+ * is non-empty and sorted, as `parseCalendarUrls` returns it.
+ */
+export function pickProbeMonth(calendarUrls: string[], now: Date): string {
+  const current = currentMonthMountain(now);
+  const upcoming = calendarUrls.find(
+    (url) => (url.match(/(\d{4}-\d{2})$/)?.[1] ?? '') >= current,
+  );
+  return upcoming ?? calendarUrls[calendarUrls.length - 1]!;
+}
+
 function pickImageUrl(images: LiveNationEvent['images']): string | undefined {
   if (!images || images.length === 0) return undefined;
   let best: { width: number; url: string } | null = null;
@@ -475,10 +502,10 @@ async function liveNationFetch(
   let schemaRejectCount = 0;
   let otherVenueCount = 0;
 
-  // The probe reads the first allowed month only. The sitemap read above is
-  // what names that month, so it stays.
+  // The probe reads one month only: the current one, or the first after it.
+  // The sitemap read above is what names that month, so it stays.
   const monthsToFetch = opts.firstPageOnly
-    ? calendarUrls.slice(0, 1)
+    ? [pickProbeMonth(calendarUrls, new Date())]
     : calendarUrls;
 
   for (const calendarUrl of monthsToFetch) {

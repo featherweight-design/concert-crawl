@@ -10,6 +10,7 @@ import {
   cleanup,
 } from '@testing-library/react';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
+import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
 
 // ───── Mocks ─────────────────────────────────────────────────────────────────
 
@@ -356,6 +357,8 @@ describe('VenueDetailsClient — Wait until control', () => {
 
 // The form once accepted 1 s, and the API now refuses anything under 3 s, so
 // a legacy row has to start at the floor or no field on it could be saved.
+const DELAY_LABEL = ADMIN_COPY.venueDetailsClient.fields.requestDelay.label;
+
 describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
@@ -381,10 +384,53 @@ describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
       throw new Error('Expected the request delay input');
     }
     expect(input.value).toBe('3000');
-    // The hint states the minimum the field enforces.
+    // The hint states the minimum the field enforces, from the one constant.
     const hint = ADMIN_COPY.venueDetailsClient.fields.requestDelay.hint;
-    expect(hint).toMatch(/at least 3000/);
+    expect(hint).toContain(`at least ${String(MIN_CRAWL_DELAY_MS)}`);
     expect(screen.getByText(hint)).toBeTruthy();
+  });
+
+  it('reads as changed from the start, naming Request delay', () => {
+    render(
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlDelayMs: 1000 })}
+      />,
+    );
+
+    // The save bar is up before any edit, so the admin can save the fix.
+    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
+    // Listed in the save bar as well as labelling the field.
+    expect(screen.getAllByText(DELAY_LABEL)).toHaveLength(2);
+  });
+
+  it('opens clean for a row already at the floor', () => {
+    render(
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlDelayMs: 3000 })}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
+    expect(screen.getAllByText(DELAY_LABEL)).toHaveLength(1);
+  });
+
+  it('names the delay change alongside an unrelated edit', () => {
+    render(
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlDelayMs: 1000 })}
+      />,
+    );
+
+    const name = document.getElementById('edit-venue-name');
+    if (!(name instanceof HTMLInputElement)) {
+      throw new Error('Expected the name input');
+    }
+    fireEvent.change(name, { target: { value: 'Renamed Venue' } });
+
+    expect(screen.getByText(`Name · ${DELAY_LABEL}`)).toBeTruthy();
   });
 
   it('sends 3000 when another field is saved, correcting the row', async () => {

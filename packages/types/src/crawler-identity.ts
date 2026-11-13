@@ -13,3 +13,14 @@
  */
 export const CRAWLER_USER_AGENT =
   'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)';
+
+/**
+ * The crawl rules' floor: never less than 3 seconds between requests to a
+ * venue, whatever its stored `crawl_delay_ms` says (the admin form once
+ * accepted 1 s). Jitter is added on top of this, never taken from it.
+ *
+ * Here for the same reason as the user agent: the crawler enforces it, the
+ * API's venue schema refuses less, the admin form starts a legacy row at it,
+ * and `/bot` promises it. One declaration keeps them from drifting apart.
+ */
+export const MIN_CRAWL_DELAY_MS = 3_000;

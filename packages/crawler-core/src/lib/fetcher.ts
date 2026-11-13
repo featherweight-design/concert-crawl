@@ -69,8 +69,9 @@ export async function fetchPage(
   waitForSelector?: string,
   fetchLog?: FetchLog,
 ): Promise<FetchResult> {
+  // jitter() floors every wait at 3 s, so there is always a wait to take.
   const delay = jitter(crawlDelayMs);
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+  await new Promise((resolve) => setTimeout(resolve, delay));
 
   const context = await browser.newContext({
     userAgent: CRAWLER_USER_AGENT,
@@ -311,8 +312,9 @@ export async function fetchPageHttp(
   crawlDelayMs = 3000,
   fetchLog?: FetchLog,
 ): Promise<FetchResult> {
+  // jitter() floors every wait at 3 s, so there is always a wait to take.
   const delay = jitter(crawlDelayMs);
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+  await new Promise((resolve) => setTimeout(resolve, delay));
 
   console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }));
 

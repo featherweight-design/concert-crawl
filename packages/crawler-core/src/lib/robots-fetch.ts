@@ -103,8 +103,8 @@ export async function clearRedirect(
       'robots_crawl_delay',
     );
   }
-  const wait = jitter(delayMs);
-  if (wait > 0) await sleep(wait, signal);
+  // jitter() floors every wait at 3 s, so there is always a wait to take.
+  await sleep(jitter(delayMs), signal);
 }
 
 export interface RobotsFetchResult {

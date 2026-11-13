@@ -66,12 +66,18 @@ export interface PlatformFetchOptions {
    */
   budgetFollowsCrawlDelay?: boolean;
   /**
-   * Stop after the first listing response. The admin probe sets this: it
-   * only has to prove the platform answers, so it makes one listing request
-   * and never paginates or follows detail pages. That keeps it inside its
-   * fixed budget and stops a probe from hitting the venue repeatedly. A
-   * robots.txt or sitemap read the first page depends on still happens.
-   * The crawl never sets it.
+   * Read only as much as proves the platform answers with events. The admin
+   * probe sets this, so a probe stays inside its budget and never walks a
+   * venue's whole calendar; the crawl never sets it. Per adapter:
+   * - AEG: unchanged, its one blob is the whole listing.
+   * - VenuePilot: page 1 only, no pagination.
+   * - Live Nation: the sitemap, then one calendar month (the current one in
+   *   Mountain Time, or the first after it).
+   * - detail-page: the sitemap and the listing, then at most one detail page,
+   *   the first link the sitemap vouches for or, with no sitemap match, the
+   *   first detail-shaped one. No qualifying link means no detail fetch, and
+   *   a failed detail page fails the probe.
+   * robots.txt reads happen as usual and every request is paced.
    */
   firstPageOnly?: boolean;
   /** Collects a record of each page this fetch requests. */

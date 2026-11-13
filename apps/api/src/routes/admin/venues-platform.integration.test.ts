@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const { authState, dispatchMock } = vi.hoisted(() => ({
+const { authState, dispatchMock, crawlDelayMock } = vi.hoisted(() => ({
   authState: {
     current: null as {
       userId: string;
@@ -8,6 +8,16 @@ const { authState, dispatchMock } = vi.hoisted(() => ({
     } | null,
   },
   dispatchMock: vi.fn(),
+  // The site's robots.txt Crawl-delay the probe reads; none unless a test
+  // says otherwise, and never a network request.
+  crawlDelayMock: vi.fn(async (): Promise<number | null> => null),
+}));
+
+vi.mock('@concert-crawl/crawler-core/robots', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@concert-crawl/crawler-core/robots')
+  >()),
+  getCrawlDelayMs: crawlDelayMock,
 }));
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -321,6 +331,80 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     clearAuth();
     await clearTables();
     dispatchMock.mockReset();
+    crawlDelayMock.mockReset();
+    crawlDelayMock.mockResolvedValue(null);
+  });
+
+  // Runs a probe against a stand-in adapter and returns the options it got.
+  async function probeOptions(
+    seed: Parameters<typeof seedVenue>[0],
+    source = 'aeg',
+  ) {
+    setAuth('admin');
+    const fetchMock = vi.fn().mockResolvedValue({
+      events: [],
+      sourceUrl: 'https://platform.example.com/events.json',
+    });
+    dispatchMock.mockReturnValue({ source, fetch: fetchMock });
+    const venue = await seedVenue({
+      platform: 'aeg',
+      platformVenueId: '89',
+      ...seed,
+    });
+    const res = await app.request(
+      `/v1/admin/venues/${venue.id}/probe-platform`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    );
+    expect(res.status).toBe(200);
+    return { fetchMock, res, opts: fetchMock.mock.calls[0]?.[1] };
+  }
+
+  it("paces at the venue's stored delay when it is above the floor", async () => {
+    const { opts } = await probeOptions({ crawlDelayMs: 10_000 });
+    expect(opts).toMatchObject({ crawlDelayMs: 10_000, firstPageOnly: true });
+  });
+
+  it("paces at the site's robots.txt Crawl-delay when it is longer", async () => {
+    crawlDelayMock.mockResolvedValue(8_000);
+    const { opts } = await probeOptions({ crawlDelayMs: 3_000 });
+    expect(opts).toMatchObject({ crawlDelayMs: 8_000 });
+    expect(crawlDelayMock).toHaveBeenCalledWith(
+      'https://testvenue.example.com',
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+    );
+  });
+
+  it('sizes the budget so a 15 s Crawl-delay does not breach it', async () => {
+    crawlDelayMock.mockResolvedValue(15_000);
+    const { opts } = await probeOptions({ crawlDelayMs: 3_000 });
+    // The pacing wait at its longest (15 s + 999ms of jitter) must fit, with
+    // the full request allowance still left after it.
+    expect(opts.crawlDelayMs).toBe(15_000);
+    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(15_999 + 15_000);
+    expect(opts.budgetFollowsCrawlDelay).toBe(true);
+  });
+
+  it('budgets two paced waits for the detail-page adapter', async () => {
+    crawlDelayMock.mockResolvedValue(15_000);
+    const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'detail-page');
+    // The listing and its one detail page are each paced.
+    expect(opts.overallTimeoutMs).toBeGreaterThanOrEqual(2 * 15_999 + 15_000);
+  });
+
+  it('does not fetch when the site asks for a Crawl-delay over the cap', async () => {
+    crawlDelayMock.mockResolvedValue(120_000);
+    const { fetchMock, res } = await probeOptions({ crawlDelayMs: 3_000 });
+    expect(fetchMock).not.toHaveBeenCalled();
+    const body = (await res.json()) as {
+      data: { ok: boolean; reason?: string; error?: string };
+    };
+    expect(body.data.ok).toBe(false);
+    expect(body.data.reason).toBe('fetch_error');
+    expect(body.data.error).toMatch(/Crawl-delay/);
   });
 
   it('returns 404 for unknown venue', async () => {
@@ -472,16 +556,19 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
       'https://aegwebprod.blob.core.windows.net/json/events/89',
     );
 
-    // Dry-run: paced at the 3 s floor like a crawl, stopped after the first
-    // listing response, saved config as candidate.
+    // Dry-run: paced like the crawl paces this venue (its stored 3 s, no
+    // robots.txt delay), stopped after the first listing response, saved
+    // config as candidate.
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({ platform: 'aeg', platformVenueId: '89' }),
       {
         crawlDelayMs: 3_000,
         perRequestTimeoutMs: 15_000,
         // The probe's budget is a ceiling on the whole fetch, not on each
-        // of an adapter's sequential requests (#1184).
-        overallTimeoutMs: 15_000,
+        // of an adapter's sequential requests (#1184): one paced wait
+        // (3 s + up to 1 s of jitter) plus 15 s for the requests.
+        overallTimeoutMs: 19_000,
+        budgetFollowsCrawlDelay: true,
         firstPageOnly: true,
       },
     );

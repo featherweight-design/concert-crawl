@@ -47,6 +47,7 @@ import { sql } from 'drizzle-orm';
 import { db, venues } from '@concert-crawl/db';
 import { SEED_VENUES } from '../packages/db/seed.js';
 import {
+  assertCrawlDelayFloor,
   COMPARED_FIELDS,
   diffVenues,
   parseOnly,
@@ -134,6 +135,9 @@ export const runSync = async ({
       );
     }
   }
+
+  // Before any read or write: a seed under the 3 s floor is a seed bug.
+  assertCrawlDelayFloor(seedVenues);
 
   const existing = await db.select().from(venues);
   const { toCreate, toUpdate, unchanged } = diffVenues(

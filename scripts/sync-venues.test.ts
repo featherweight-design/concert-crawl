@@ -1,5 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { diffVenues, parseOnly } from './sync-venues-helpers.js';
+import {
+  assertCrawlDelayFloor,
+  diffVenues,
+  parseOnly,
+} from './sync-venues-helpers.js';
+
+describe('assertCrawlDelayFloor', () => {
+  it('refuses a seed crawlDelayMs under 3000, naming the venue', () => {
+    expect(() =>
+      assertCrawlDelayFloor([
+        { slug: 'globe-hall', crawlDelayMs: 3000 },
+        { slug: 'hi-dive', crawlDelayMs: 1000 },
+      ]),
+    ).toThrow(/hi-dive \(1000\)/);
+  });
+
+  it('accepts the floor, anything above it, and an omitted delay', () => {
+    expect(() =>
+      assertCrawlDelayFloor([
+        { slug: 'globe-hall', crawlDelayMs: 3000 },
+        { slug: 'lost-lake', crawlDelayMs: 6000 },
+        { slug: 'oriental' },
+      ]),
+    ).not.toThrow();
+  });
+});
 
 const venue = (slug: string, overrides = {}) => ({
   slug,

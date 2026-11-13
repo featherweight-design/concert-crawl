@@ -103,19 +103,54 @@ describe('createDeadline', () => {
     }
   });
 
-  it('caps the crawl delay at the remaining budget', async () => {
-    // Politeness pacing is real wall-clock time. An unbounded sleep between
-    // requests would overshoot the overall deadline by up to a full delay
-    // however tightly each individual request is capped.
+  it('throws up front, without sleeping, when the budget cannot hold the wait', async () => {
+    // Politeness pacing is real wall-clock time. Sleeping a truncated wait and
+    // then requesting would send the request early; the wait is never cut.
     const deadline = createDeadline({ overallTimeoutMs: 100 });
     const startedAt = Date.now();
 
-    await deadline.wait(5_000);
+    await expect(deadline.wait(5_000)).rejects.toBeInstanceOf(
+      PlatformFetchDeadlineError,
+    );
 
     expect(Date.now() - startedAt).toBeLessThan(1_000);
   });
 
+  it('throws rather than requesting when the budget left is under the 3 s floor', async () => {
+    // A 1 s pace is floored to 3 s, and 2.5 s of budget can't hold that, so
+    // the request after it is never made.
+    const deadline = createDeadline({ overallTimeoutMs: 2_500 });
+    const request = vi.fn(async () => 'page');
+
+    const outcome = await deadline
+      .wait(1_000)
+      .then(() => deadline.run('page-1', request))
+      .catch((caught: unknown) => caught);
+
+    expect(outcome).toBeInstanceOf(PlatformFetchDeadlineError);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('floors a short pace at 3 s', async () => {
+    vi.useFakeTimers();
+    try {
+      const deadline = createDeadline({});
+      let done = false;
+      const waiting = deadline.wait(1_000).then(() => {
+        done = true;
+      });
+      await vi.advanceTimersByTimeAsync(2_999);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await waiting;
+      expect(done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not pace a caller that asked for no delay', async () => {
+    // Only a test stub of jitter() passes 0; jitter itself never returns one.
     const deadline = createDeadline({ overallTimeoutMs: 5_000 });
     const startedAt = Date.now();
 
