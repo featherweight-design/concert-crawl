@@ -164,25 +164,30 @@ describe('NeedsYouClient', () => {
     expect(screen.getByText('The map will not load')).toBeInTheDocument();
   });
 
-  it('answers a quiet answer, takes the card off and moves the counts', async () => {
+  it('answers a quiet answer, leaves an Undo line, and Undo takes it back', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');
     const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
     fireEvent.click(within(card).getByRole('button', { name: 'Still on' }));
-    await waitFor(() =>
-      expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1),
-    );
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(line).toHaveTextContent('Olive Jones marked Still on.');
+    expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
     expect(calls.find((call) => call.url.endsWith('/answer'))?.body).toEqual({
       answer: 'still_on',
     });
-    expect(
-      screen.getByText(
-        /1 decision\. Soonest for fans first\. 7 handled today\./,
-      ),
-    ).toBeInTheDocument();
+
+    fireEvent.click(within(line).getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(
+        calls.some((call) => call.url.endsWith('/answers/audit-1/undo')),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('needs-you-answered')).toBeNull(),
+    );
   });
 
-  it('asks before an answer that tells fans', async () => {
+  it('asks before an answer that tells fans, and leaves no Undo', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');
     const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
@@ -194,9 +199,26 @@ describe('NeedsYouClient', () => {
     await waitFor(() =>
       expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(true),
     );
-    await waitFor(() =>
-      expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1),
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(within(line).queryByRole('button', { name: 'Undo' })).toBeNull();
+  });
+
+  it('snoozing a card takes it off the list without an Undo', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByTestId('snooze-trigger'));
+    fireEvent.click(
+      await screen.findByRole('menuitem', { name: /Snooze 1 day/ }),
     );
+    const line = await screen.findByTestId('needs-you-answered');
+    expect(line).toHaveTextContent('Olive Jones snoozed.');
+    expect(within(line).queryByRole('button', { name: 'Undo' })).toBeNull();
+    expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
+    const snooze = calls.find((call) => call.url.endsWith('/snooze'));
+    expect(snooze?.body).toMatchObject({
+      until: expect.stringMatching(/T08:00:00-0[67]:00$/),
+    });
   });
 
   it('says All clear when the queue is empty', async () => {

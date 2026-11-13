@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
@@ -14,6 +14,7 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { AllClear } from './AllClear';
+import { AnsweredRow } from './AnsweredRow';
 import { EvidenceSlot } from './EvidenceSlot';
 import { QueueItem } from './QueueItem';
 import {
@@ -24,6 +25,7 @@ import {
 import {
   FILTERS,
   NAVIGATION_SLUGS,
+  answeredName,
   countAfterRemoval,
   filterCount,
   inFilter,
@@ -52,6 +54,14 @@ const pillStyle = (on: boolean): CSSProperties => ({
     : 'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
 });
 
+interface Answered {
+  line: string;
+  /** The audit row an Undo points at. Null: nothing to take back. */
+  auditId: string | null;
+  /** Where the card sat in the visible list, so the line takes its place. */
+  at: number;
+}
+
 interface Pending {
   row: QueueRow;
   answer: NeedsYouAnswer;
@@ -59,7 +69,8 @@ interface Pending {
 
 /**
  * 2b Needs you: the queue. The list and the count load in the browser with the
- * admin's token. An answer takes its card off the list and moves the counts.
+ * admin's token. An answer takes its card off the list and leaves a dashed
+ * line with Undo in its place; a snooze does the same without the Undo.
  * `?item=<key>` selects a card and opens its panel.
  */
 export const NeedsYouClient = ({ item }: { item: string | null }) => {
@@ -73,7 +84,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const [failedLoad, setFailedLoad] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selected, setSelected] = useState<string | null>(item);
+  const [answered, setAnswered] = useState<Answered | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [undoing, setUndoing] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [failure, setFailure] = useState<{
     title: string;
@@ -107,16 +120,38 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     );
   };
 
+  const settle = (
+    row: QueueRow,
+    next: Omit<Answered, 'at'>,
+    handled: boolean,
+  ) => {
+    const at = Math.max(
+      0,
+      (rows ?? [])
+        .filter((candidate) => inFilter(candidate, filter))
+        .findIndex((candidate) => candidate.key === row.key),
+    );
+    setRows(
+      (was) => was?.filter((candidate) => candidate.key !== row.key) ?? was,
+    );
+    setCount((was) => (was ? countAfterRemoval(was, row.kind, handled) : was));
+    setAnswered({ ...next, at });
+    if (selected === row.key) select(null);
+  };
+
   const runAnswer = async (row: QueueRow, answer: NeedsYouAnswer) => {
     setBusyKey(row.key);
     setFailure(null);
     try {
-      await api.answer(row.key, answer.slug);
-      setRows(
-        (was) => was?.filter((candidate) => candidate.key !== row.key) ?? was,
+      const result = await api.answer(row.key, answer.slug);
+      settle(
+        row,
+        {
+          line: COPY.answered(answeredName(row.title), answer.label),
+          auditId: result.undoable ? result.auditId : null,
+        },
+        true,
       );
-      setCount((was) => (was ? countAfterRemoval(was, row.kind) : was));
-      if (selected === row.key) select(null);
     } catch {
       setFailure({
         title: COPY.answerFailed.title,
@@ -135,6 +170,58 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     if (answer.notifiesFans) return setPending({ row, answer });
     void runAnswer(row, answer);
   };
+
+  const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
+    setBusyKey(row.key);
+    setFailure(null);
+    try {
+      await action();
+      settle(
+        row,
+        { line: COPY.snoozedLine(answeredName(row.title)), auditId: null },
+        false,
+      );
+    } catch {
+      setFailure({
+        title: COPY.snooze.failed,
+        saved: COPY.answerFailed.saved,
+        retry: () => void runSnooze(row, action),
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const onUndo = async () => {
+    if (!answered?.auditId) return;
+    setUndoing(true);
+    try {
+      await api.undo(answered.auditId);
+      setAnswered(null);
+      await load();
+    } catch {
+      setFailure({
+        title: COPY.undo.failed,
+        saved: COPY.undo.failedSaved,
+        retry: () => void onUndo(),
+      });
+    } finally {
+      setUndoing(false);
+    }
+  };
+
+  const visibleCount = (rows ?? []).filter((row) =>
+    inFilter(row, filter),
+  ).length;
+  /** The dashed line, drawn where the answered card sat (clamped to the end). */
+  const answeredRow = (index: number) =>
+    answered && Math.min(answered.at, visibleCount) === index ? (
+      <AnsweredRow
+        line={answered.line}
+        undoing={undoing}
+        onUndo={answered.auditId ? () => void onUndo() : undefined}
+      />
+    ) : null;
 
   if (failedLoad)
     return <CouldntLoad page={COPY.title} onRetry={() => void load()} />;
@@ -217,18 +304,27 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
               aria-label={COPY.list}
               style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
             >
-              {visible.map((row) => (
-                <QueueItem
-                  key={row.key}
-                  row={row}
-                  today={today}
-                  selected={row.key === selected}
-                  busy={busyKey === row.key}
-                  onSelect={() => select(row.key)}
-                  onAnswer={(answer) => onAnswer(row, answer)}
-                />
+              {visible.map((row, index) => (
+                <Fragment key={row.key}>
+                  {answeredRow(index)}
+                  <QueueItem
+                    row={row}
+                    today={today}
+                    selected={row.key === selected}
+                    busy={busyKey === row.key}
+                    onSelect={() => select(row.key)}
+                    onAnswer={(answer) => onAnswer(row, answer)}
+                    onSnooze={(until) =>
+                      void runSnooze(row, () => api.snooze(row.key, until))
+                    }
+                    onNotUseful={(reason) =>
+                      void runSnooze(row, () => api.notUseful(row.key, reason))
+                    }
+                  />
+                </Fragment>
               ))}
-              {visible.length === 0 && (
+              {answeredRow(visible.length)}
+              {visible.length === 0 && !answered && (
                 <div
                   style={{
                     display: 'flex',
