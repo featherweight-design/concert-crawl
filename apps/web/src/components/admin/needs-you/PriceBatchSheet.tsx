@@ -27,7 +27,9 @@ export interface PriceBatchSheetProps {
   row: PriceBatchRow;
   /**
    * Approve exactly these submissions. A rejection keeps the sheet open with a
-   * line saying nothing changed; a resolve is the caller's cue to close.
+   * line saying nothing changed; a resolve is the caller's cue to close. Ids
+   * left unticked stay waiting: the caller re-reads the queue (the batch's key
+   * changes after a partial approval) rather than treating the batch as done.
    */
   onApprove: (submissionIds: string[]) => Promise<void> | void;
   onClose: () => void;
@@ -65,13 +67,41 @@ export const PriceBatchSheet = ({
   // It runs after the trap's own effect (a parent effect follows its children).
   const restRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const timer = window.setTimeout(() => restRef.current?.focus(), 0);
+    const timer = window.setTimeout(() => {
+      // Only take focus from the trap's own opening choice (a button, or
+      // nothing), never from a control the person has already moved to.
+      const active = document.activeElement;
+      if (
+        active === null ||
+        active === document.body ||
+        active instanceof HTMLButtonElement
+      )
+        restRef.current?.focus();
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
-  const wanted = useMemo(() => new Set(row.submissionIds), [row.submissionIds]);
+  // Keyed on the ids' text, not the array's identity, so a parent that rebuilds
+  // an identical list on every render does not restart the load.
+  const idKey = row.submissionIds.join(',');
+  const wanted = useMemo(
+    () => new Set(idKey === '' ? [] : idKey.split(',')),
+    [idKey],
+  );
+
+  // Each read takes a turn number; a read that is no longer the latest (the
+  // batch changed, or the sheet closed) drops its answer.
+  const turn = useRef(0);
+  useEffect(
+    () => () => {
+      turn.current += 1;
+    },
+    [],
+  );
 
   const read = useCallback(async () => {
+    turn.current += 1;
+    const mine = turn.current;
     setLoad({ kind: 'loading' });
     try {
       const api = submittedApi(() => tokenRef.current());
@@ -79,15 +109,27 @@ export const PriceBatchSheet = ({
       for (let offset = 0; ; offset += PAGE) {
         const page = await api.list('waiting', '', offset, PAGE);
         found.push(...page.rows.filter((entry) => wanted.has(entry.id)));
-        // Stop at the end of the list, or once every id has turned up.
-        if (offset + PAGE >= page.total || found.length >= wanted.size) break;
+        // Stop at the end of the list, once every id has turned up, or when
+        // the server stops giving rows or a usable total (no endless paging).
+        if (
+          page.rows.length === 0 ||
+          !Number.isFinite(page.total) ||
+          offset + PAGE >= page.total ||
+          found.length >= wanted.size
+        )
+          break;
       }
+      if (mine !== turn.current) return;
+      // What was unticked belongs to the list just replaced.
+      setUnticked(new Set());
       setLoad({
         kind: 'ready',
         rows: found,
         gone: Math.max(0, wanted.size - found.length),
       });
-    } catch {
+    } catch (err) {
+      if (mine !== turn.current) return;
+      console.error('[admin] price batch failed to load', err);
       setLoad({ kind: 'failed' });
     }
   }, [wanted]);
@@ -188,7 +230,7 @@ export const PriceBatchSheet = ({
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {rows.map((entry, index) => {
               const on = !unticked.has(entry.id);
-              const name = entry.title === '' ? '—' : entry.title;
+              const name = entry.title === '' ? copy.untitled : entry.title;
               return (
                 <li
                   key={entry.id}
@@ -275,7 +317,7 @@ export const PriceBatchSheet = ({
                       >
                         {[entry.venueName, entry.date && metaDate(entry.date)]
                           .filter(Boolean)
-                          .join(' · ')}
+                          .join(copy.metaSeparator)}
                       </span>
                     </span>
                     {/* The board sets the price and the chip on one line. */}

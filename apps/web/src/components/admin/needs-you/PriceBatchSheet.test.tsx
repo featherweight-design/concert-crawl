@@ -197,6 +197,69 @@ describe('<PriceBatchSheet />', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('stops paging when the server gives no rows or no usable total', async () => {
+    mockList.mockReset();
+    mockList.mockResolvedValue({ rows: [], total: Number.NaN });
+    mount(['a']);
+    expect(
+      await screen.findByText('None of these prices is waiting any more.'),
+    ).toBeInTheDocument();
+    expect(mockList).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reload when the parent rebuilds an identical id list', async () => {
+    const onApprove = vi.fn(async () => undefined);
+    const view = render(
+      <PriceBatchSheet
+        row={{ key: 'batch', submissionIds: ['a', 'b'] }}
+        onApprove={onApprove}
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText('Marian Hill');
+    const calls = mockList.mock.calls.length;
+    view.rerender(
+      <PriceBatchSheet
+        row={{ key: 'batch', submissionIds: ['a', 'b'] }}
+        onApprove={onApprove}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText('Marian Hill')).toBeInTheDocument();
+    expect(mockList).toHaveBeenCalledTimes(calls);
+  });
+
+  it('shows the latest batch, not a slower answer for the old one', async () => {
+    mockList.mockReset();
+    let release: (rows: SubmittedRow[]) => void = () => undefined;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = (rows) => resolve({ rows, total: rows.length });
+        }),
+    );
+    mockList.mockResolvedValue({ rows: ROWS, total: 3 });
+    const view = render(
+      <PriceBatchSheet
+        row={{ key: 'old', submissionIds: ['a'] }}
+        onApprove={vi.fn(async () => undefined)}
+        onClose={vi.fn()}
+      />,
+    );
+    view.rerender(
+      <PriceBatchSheet
+        row={{ key: 'new', submissionIds: ['b'] }}
+        onApprove={vi.fn(async () => undefined)}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText('Ninth Key')).toBeInTheDocument();
+    release([submission('a', 'Marian Hill')]);
+    await new Promise((done) => setTimeout(done, 0));
+    expect(screen.queryByText('Marian Hill')).toBeNull();
+    expect(screen.getByText('Ninth Key')).toBeInTheDocument();
+  });
+
   it('walks the pending list past one page until it has the whole batch', async () => {
     const page = (which: number) =>
       Array.from({ length: 100 }, (_, index) =>
