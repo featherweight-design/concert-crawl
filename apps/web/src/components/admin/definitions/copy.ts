@@ -2621,7 +2621,9 @@ export const ADMIN_COPY = {
       priceCheck: (listed: string | null, checked: string | null) =>
         `Listed ${listed ?? 'a price'}, a fan checked ${checked ?? 'another'}.`,
       priceBatch: (count: string | null) =>
-        `${count ?? 'New'} new prices, each confirmed by a second fan.`,
+        count === '1'
+          ? '1 new price, confirmed by a second fan.'
+          : `${count ?? 'New'} new prices, each confirmed by a second fan.`,
       bug: (page: string | null) => `Reported${page ? ` on ${page}` : ''}.`,
     },
     emptyFilter: (kindLabel: string, others: number) =>

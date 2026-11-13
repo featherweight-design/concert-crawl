@@ -254,6 +254,18 @@ describe('price and bug helpers', () => {
     ).toBe('Resolve');
   });
 
+  it('words a price batch card in the singular at one and the plural at many', () => {
+    const batch = (count: string): QueueRow =>
+      ({
+        kind: 'price-batch',
+        evidence: [{ label: 'Prices', value: count }],
+      }) as unknown as QueueRow;
+    expect(whatOf(batch('1'))).toBe('1 new price, confirmed by a second fan.');
+    expect(whatOf(batch('8'))).toBe(
+      '8 new prices, each confirmed by a second fan.',
+    );
+  });
+
   it('counts minutes since, and null for a bad instant', () => {
     const now = Date.parse('2026-11-13T12:00:00Z');
     expect(minutesSince('2026-11-13T11:30:00Z', now)).toBe(30);

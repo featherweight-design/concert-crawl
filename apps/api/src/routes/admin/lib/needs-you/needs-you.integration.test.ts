@@ -418,6 +418,8 @@ describe('Needs you sources and ranking', () => {
         2,
       );
       expect(batch?.fanDate).toBe(inDays(10));
+      // The card's own words: plural at two, and no "submissions".
+      expect(batch?.title).toBe('2 new prices');
 
       const count = await countNeedsYou(now());
       expect(count.byKind['price-batch']).toBe(1);
