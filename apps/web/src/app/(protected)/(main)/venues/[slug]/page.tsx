@@ -221,11 +221,16 @@ export default async function VenueProfilePage({
               suppressed entirely when the venue has not published a guide. */}
           {venue.guide !== null && guideViewerMode === 'first_timer' && (
             <div style={{ marginTop: 22 }}>
-              <FirstTimerCallout venueName={venue.name} guide={venue.guide} />
+              <FirstTimerCallout
+                venueName={venue.name}
+                storedShortName={venue.shortName}
+                guide={venue.guide}
+              />
             </div>
           )}
           <GuideSection
             venueName={venue.name}
+            storedShortName={venue.shortName}
             guide={venue.guide}
             followsCallout={guideViewerMode === 'first_timer'}
             mode={guideViewerMode}

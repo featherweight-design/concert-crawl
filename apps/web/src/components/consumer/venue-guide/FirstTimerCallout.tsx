@@ -9,6 +9,8 @@ export const GUIDE_ANCHOR_ID = 'ft-guide';
 
 interface FirstTimerCalloutProps {
   venueName: string;
+  /** The venue's stored short name; wins over the name heuristic when set. */
+  storedShortName?: string | null;
   guide: VenueGuide;
 }
 
@@ -18,9 +20,10 @@ interface FirstTimerCalloutProps {
  */
 export const FirstTimerCallout = ({
   venueName,
+  storedShortName = null,
   guide,
 }: FirstTimerCalloutProps) => {
-  const shortName = venueShortName(venueName);
+  const shortName = venueShortName(venueName, storedShortName);
   const density = deriveGuideDensity({
     chips: guide.chips,
     insiderTip: guide.insiderTip,

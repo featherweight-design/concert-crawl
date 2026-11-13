@@ -56,6 +56,7 @@ venuesPublicRouter.get('/', async (ctx) => {
     .select({
       id: venues.id,
       name: venues.name,
+      shortName: venues.shortName,
       slug: venues.slug,
       city: venues.city,
       timezone: venues.timezone,
@@ -123,6 +124,7 @@ venuesPublicRouter.get(
       .select({
         id: venues.id,
         name: venues.name,
+        shortName: venues.shortName,
         slug: venues.slug,
         city: venues.city,
         timezone: venues.timezone,

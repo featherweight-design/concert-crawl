@@ -11,7 +11,11 @@ import type {
   VenuePlatform,
   VenueWithCrawlHealth,
 } from '@concert-crawl/types';
-import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types';
+import {
+  VENUE_SHORT_NAME_MAX,
+  isVenuePlatform,
+  platformRequiresVenueId,
+} from '@concert-crawl/types';
 import {
   updateVenue,
   pauseVenue,
@@ -581,10 +585,12 @@ export function VenueDetailsClient({
   const [neighborhoodVal, setNeighborhoodVal] = useState(
     venue.neighborhood ?? '',
   );
+  const [shortNameVal, setShortNameVal] = useState(venue.shortName ?? '');
   const [slugManual, setSlugManual] = useState(true);
   const [slugFocused, setSlugFocused] = useState(false);
   const dirtyFields: string[] = [
     ...(nameVal !== venue.name ? ['Name'] : []),
+    ...(shortNameVal.trim() !== (venue.shortName ?? '') ? ['Short name'] : []),
     ...(slugVal !== venue.slug ? ['Slug'] : []),
     ...(urlVal !== venue.websiteUrl ? ['URL'] : []),
     ...(cityVal !== venue.city ? ['City'] : []),
@@ -635,6 +641,7 @@ export function VenueDetailsClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
     slug?: string | undefined;
+    shortName?: string | undefined;
     platformVenueId?: string | undefined;
     apiAccountId?: string | undefined;
     crawlWaitForSelector?: string | undefined;
@@ -757,6 +764,7 @@ export function VenueDetailsClient({
 
   function handleDiscard() {
     setNameVal(venue.name);
+    setShortNameVal(venue.shortName ?? '');
     setSlugVal(venue.slug);
     setUrlVal(venue.websiteUrl);
     setCityVal(venue.city);
@@ -809,10 +817,20 @@ export function VenueDetailsClient({
       return;
     }
 
+    // Mirrors the API's cap, counted after the trim the API applies.
+    if (shortNameVal.trim().length > VENUE_SHORT_NAME_MAX) {
+      setFieldErrors({
+        shortName: ADMIN_COPY.venueDetailsClient.fields.shortName.tooLong,
+      });
+      setSaveState('error');
+      return;
+    }
+
     setSaveState('saving');
 
     const formData = new FormData();
     formData.set('name', nameVal.trim());
+    formData.set('shortName', shortNameVal.trim());
     formData.set('slug', slugVal.trim());
     formData.set('websiteUrl', urlVal.trim());
     formData.set('city', cityVal.trim() || 'Denver');
@@ -1270,6 +1288,34 @@ export function VenueDetailsClient({
                 </div>
               </VDField>
             </div>
+
+            {/* Short name. Addendum 4 puts it on the Look card, which isn't
+                built yet, so it sits under the name until that card lands. */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.shortName.label}
+              htmlFor="edit-venue-short-name"
+              hint={ADMIN_COPY.venueDetailsClient.fields.shortName.hint}
+              {...(fieldErrors.shortName
+                ? { error: fieldErrors.shortName }
+                : {})}
+            >
+              <VDInput
+                id="edit-venue-short-name"
+                value={shortNameVal}
+                placeholder={
+                  ADMIN_COPY.venueDetailsClient.fields.shortName.placeholder
+                }
+                disabled={isDisabled}
+                hasError={Boolean(fieldErrors.shortName)}
+                // No maxLength: the browser counts it before the trim, so a
+                // pasted " Bluebird…" would lose a real character to the space.
+                // The save checks the trimmed length instead, as the API does.
+                onChange={(evt) => {
+                  setShortNameVal(evt.target.value);
+                  setFieldErrors((prev) => ({ ...prev, shortName: undefined }));
+                }}
+              />
+            </VDField>
 
             {/* Source URL */}
             <VDField
