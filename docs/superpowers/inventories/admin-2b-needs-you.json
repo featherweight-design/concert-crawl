@@ -1,0 +1,60 @@
+{
+  "feature": "Admin 2b · Needs you queue",
+  "note": "Plan row 2b-A. CONTACT_SHEET_ROLE=admin. Boards: 02-needs-you/needs-you-desktop, needs-you-mobile, answered-with-undo, snooze-menu, all-clear, couldnt-load; 07/loading-needs-you. By hand: answered-with-undo (it writes), all-clear (needs an empty queue), couldnt-load (API down).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "queue",
+      "label": "/admin/needs-you",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-queue\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "item",
+      "label": "First item open",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "snooze",
+      "label": "Snooze menu",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        {
+          "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0 >> [data-testid=\"snooze-trigger\"]"
+        },
+        { "wait": "[data-testid=\"snooze-menu\"]" }
+      ]
+    },
+    {
+      "id": "venues-filter",
+      "label": "Venues filter",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-queue\"]"
+        },
+        { "clickRole": "tab", "name": "^Venues" },
+        { "wait": "[data-testid=\"needs-you-queue\"]", "settle": 300 }
+      ]
+    }
+  ]
+}

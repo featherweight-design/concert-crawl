@@ -44,7 +44,7 @@ describe('buildBreadcrumbs', () => {
     expect(
       buildBreadcrumbs('/admin/events/e1/edit', params('from=event-flags')),
     ).toEqual([
-      { label: 'Needs you', href: '/admin/review' },
+      { label: 'Needs you', href: '/admin/needs-you' },
       { label: 'Details' },
     ]);
     expect(buildBreadcrumbs('/admin/events/e1/edit')).toEqual([

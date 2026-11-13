@@ -2205,6 +2205,113 @@ export const ADMIN_COPY = {
   },
 
   // 5b, boards 07/invite-codes* and addendum-3 12/code-taken-d.
+  // Admin 2b: the Needs you queue. Boards: 02/needs-you-desktop, needs-you-mobile,
+  // all-clear, couldnt-load; addendum-3 01/filter-empty-d.
+  needsYou: {
+    title: 'Needs you',
+    summary: (decisions: number, handledToday: number) =>
+      `${decisions} ${decisions === 1 ? 'decision' : 'decisions'}. Soonest for fans first.${
+        handledToday > 0 ? ` ${handledToday} handled today.` : ''
+      }`,
+    filtersLabel: 'Kind of decision',
+    filters: {
+      all: 'All',
+      shows: 'Shows',
+      venues: 'Venues',
+      artists: 'Artists',
+      prices: 'Prices',
+      bugs: 'Bugs',
+    },
+    when: {
+      today: 'Today',
+      tomorrow: 'Tomorrow',
+      inDays: (days: number) => `In ${days} days`,
+    },
+    watching: (count: number) => `${count} watching`,
+    reports: (count: number) =>
+      `${count} ${count === 1 ? 'report' : 'reports'}`,
+    batch: 'Batch',
+    hiddenUntilDecided: 'Hidden until you decide',
+    noFanImpact: 'No fan impact yet',
+    // Undrawn: the card's "what happened" line. The API sends evidence lines,
+    // not a sentence, so each kind's line is built from them.
+    what: {
+      showDropped: (venue: string | null, lastSeen: string | null) =>
+        `Dropped off ${venue ?? 'the venue'}'s calendar${lastSeen ? `, last seen ${lastSeen}` : ''}.`,
+      showMoved: (venue: string | null) =>
+        `Looks like it moved${venue ? ` to ${venue}` : ''}.`,
+      venueFailing: (failures: string | null) =>
+        failures
+          ? `Failed ${failures} crawls in a row.`
+          : 'Its crawl is failing.',
+      venueBlocked: (status: string | null) =>
+        status
+          ? `The site refused the crawler (HTTP ${status}).`
+          : 'The site refused the crawler.',
+      // The API sends the match status as an enum; say it in words.
+      artist: (status: string | null, reports: string | null) =>
+        `${status === 'no_match' ? 'No match found' : status === 'ambiguous' ? 'More than one artist fits' : `Match status: ${status ?? 'unknown'}`}${reports ? `. ${reports} open reports.` : '.'}`,
+      eventLowConfidence: (confidence: string | null) =>
+        `Reads like it may not be a concert${confidence ? `. Confidence ${confidence}` : ''}.`,
+      priceCheck: (listed: string | null, checked: string | null) =>
+        `Listed ${listed ?? 'a price'}, a fan checked ${checked ?? 'another'}.`,
+      priceBatch: (count: string | null) =>
+        `${count ?? 'New'} new prices, each confirmed by a second fan.`,
+      bug: (page: string | null) => `Reported${page ? ` on ${page}` : ''}.`,
+    },
+    emptyFilter: (kindLabel: string, others: number) =>
+      `No ${kindLabel.toLowerCase()} waiting. ${others} in other kinds.`,
+    showAll: 'Show all',
+    allClear: {
+      title: 'All clear',
+      body: (handledToday: number) =>
+        handledToday > 0
+          ? `Nothing needs a decision. You handled ${handledToday} today.`
+          : 'Nothing needs a decision.',
+      openHealth: 'Open Health',
+    },
+    panel: {
+      yourAnswer: 'YOUR ANSWER',
+      details: 'DETAILS',
+    },
+    list: 'Decisions waiting',
+    // `02/answered-with-undo`: the dashed line that takes the answered card's place.
+    answered: (name: string, label: string) => `${name} marked ${label}.`,
+    snoozedLine: (name: string) => `${name} snoozed.`,
+    undo: {
+      action: 'Undo',
+      failed: "Couldn't undo that.",
+      failedSaved: 'The answer stands.',
+    },
+    answerFailed: {
+      title: "Couldn't save that answer",
+      saved: 'The item is still waiting.',
+    },
+    // A notifying answer sits behind a confirm and has no Undo (decision 2).
+    confirmNotify: {
+      title: (label: string) => `${label}?`,
+      body: 'Fans watching this show are told right away. This can’t be undone.',
+    },
+    // `02/snooze-menu`.
+    snooze: {
+      trigger: 'Snooze',
+      menuLabel: 'Snooze this decision',
+      oneDay: 'Snooze 1 day',
+      oneDaySub: 'Back tomorrow at 8 AM.',
+      aWeek: 'Snooze a week',
+      backOn: (day: string) => `Back ${day}.`,
+      untilDate: 'Until a date...',
+      untilDateSub: 'For off-season venues and slow replies.',
+      dateLabel: 'Back on',
+      setDate: 'Snooze',
+      notUseful: 'Not useful',
+      notUsefulSub: 'Stops this kind of warning for this venue. Tell us why.',
+      reasonLabel: 'Why is it not useful?',
+      reasonPlaceholder: 'Optional',
+      stopWarning: 'Stop this warning',
+      failed: "Couldn't snooze that",
+    },
+  },
   peoplePage: {
     title: 'People',
     subtitle:

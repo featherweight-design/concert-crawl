@@ -59,7 +59,7 @@ export const NAV: NavItem[] = [
   {
     key: 'needs-you',
     label: navCopy.needsYou,
-    href: '/admin/review',
+    href: '/admin/needs-you',
     icon: Inbox,
     group: 'primary',
   },
