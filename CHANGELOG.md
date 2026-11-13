@@ -1,3 +1,13 @@
+## [1.392.1](https://github.com/featherweight-design/concert-crawl/compare/v1.392.0...v1.392.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** render the phone empty card only when nothing is ahead ([02ac000](https://github.com/featherweight-design/concert-crawl/commit/02ac000d9f825b262722dbcec0e028fc062ca6c9))
+* **web:** the NEXT ghost is the venue's greyscale tile, as the kit's ghost_stamp ([6a4a9d9](https://github.com/featherweight-design/concert-crawl/commit/6a4a9d9afee965cc5879da349cfc882d4f26f3b2))
+* **web:** the NEXT ghost straight, and no empty block beside the open book ([5bc83e5](https://github.com/featherweight-design/concert-crawl/commit/5bc83e5bc2950a5fa978c12a25d9018056402fc4))
+* **web:** the Passport open book with a show ahead, and a wider Up next column ([665ea0f](https://github.com/featherweight-design/concert-crawl/commit/665ea0f526d9e76ac5c0f7c48f5f15c131c9b2a6))
+
 # [1.392.0](https://github.com/featherweight-design/concert-crawl/compare/v1.391.0...v1.392.0) (2026-11-13)
 
 
