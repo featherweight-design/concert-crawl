@@ -1,3 +1,18 @@
+# [1.380.0](https://github.com/featherweight-design/concert-crawl/compare/v1.379.0...v1.380.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** stop every Haiku call when the budget is spent with the switch on ([dedd645](https://github.com/featherweight-design/concert-crawl/commit/dedd6459ad660c5a439f8a93673d9272fce0b0c7))
+* **web:** close the venues Select review findings ([9411dea](https://github.com/featherweight-design/concert-crawl/commit/9411dea3b293d455d22617009d9a355da5755b1d))
+* **web:** close the venues Select risk review ([affc3be](https://github.com/featherweight-design/concert-crawl/commit/affc3be4331d7f620d73e1f0c97a900158767456))
+
+
+### Features
+
+* **crawler:** act on the LLM budget's "If it runs out" switch, default off ([297c7b9](https://github.com/featherweight-design/concert-crawl/commit/297c7b9a521eeaf0e4cba1b5405f23c76d0f8ffd))
+* **web:** venues Select mode with bulk Re-crawl and Pause ([2e799b1](https://github.com/featherweight-design/concert-crawl/commit/2e799b17dea9a3368bc3371ad77e6b04dde7b82b))
+
 # [1.379.0](https://github.com/featherweight-design/concert-crawl/compare/v1.378.0...v1.379.0) (2026-11-13)
 
 
