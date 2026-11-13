@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   inArray,
@@ -14,6 +15,7 @@ import {
 import { alias } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 import {
+  auditLog,
   db,
   events,
   priceSubmissions,
@@ -302,6 +304,121 @@ const detailParamsSchema = z.object({
 // else the most recent: historical resolved counters stack up after multiple
 // contests on the same parent, and the latest is the right surface for the
 // panel. `pendingCounters` lists every open one.
+// The resolved Price checks (the "Resolved" list on the Price checks tab):
+// one row per `contest.resolve` audit entry, newest first. The answer, the
+// decider and the date all come from that entry, so a price the check later
+// touched again does not rewrite history. Registered before `/prices/:contestId`
+// so "resolved" is not read as an id.
+const resolvedListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+
+const resolvedAuditMetaSchema = z.object({
+  resolution: z.enum(['parent_wins', 'challenger_wins']),
+  parentId: z.string().optional(),
+  challengerId: z.string().optional(),
+  eventId: z.string().optional(),
+  parentAfter: z.object({ priceMin: z.string().nullable() }).optional(),
+  challengerAfter: z.object({ priceMin: z.string().nullable() }).optional(),
+});
+
+contestsAdminRouter.get(
+  '/prices/resolved',
+  zValidator('query', resolvedListQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422);
+    }
+  }),
+  async (ctx) => {
+    const { limit, offset } = ctx.req.valid('query');
+    const resolvedOnly = eq(auditLog.action, 'contest.resolve');
+
+    const [rows, [totalRow]] = await Promise.all([
+      db
+        .select({
+          id: auditLog.id,
+          decidedAt: auditLog.createdAt,
+          actorId: auditLog.actorId,
+          contestId: auditLog.targetId,
+          metadata: auditLog.metadata,
+        })
+        .from(auditLog)
+        .where(resolvedOnly)
+        .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
+        .limit(limit)
+        .offset(offset),
+      db.select({ total: count() }).from(auditLog).where(resolvedOnly),
+    ]);
+
+    const parsed = rows.map((row) => ({
+      row,
+      meta: resolvedAuditMetaSchema.safeParse(row.metadata),
+    }));
+    const eventIds = [
+      ...new Set(
+        parsed.flatMap(({ meta }) =>
+          meta.success && meta.data.eventId ? [meta.data.eventId] : [],
+        ),
+      ),
+    ];
+    const actorIds = [...new Set(rows.map((row) => row.actorId))];
+
+    const [eventRows, handleRows] = await Promise.all([
+      eventIds.length === 0
+        ? []
+        : db
+            .select({
+              id: events.id,
+              title: events.title,
+              date: events.date,
+              venueName: venues.name,
+            })
+            .from(events)
+            .innerJoin(venues, eq(venues.id, events.venueId))
+            .where(inArray(events.id, eventIds)),
+      db
+        .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+        .from(userProfiles)
+        .where(inArray(userProfiles.userId, actorIds)),
+    ]);
+    const eventById = new Map(eventRows.map((event) => [event.id, event]));
+    const handleByUser = new Map(
+      handleRows.map((profile) => [profile.userId, profile.handle]),
+    );
+
+    const resolved = parsed.flatMap(({ row, meta }) => {
+      if (!meta.success) return [];
+      const { resolution, eventId, parentAfter, challengerAfter } = meta.data;
+      const event = eventId ? eventById.get(eventId) : undefined;
+      // "Used" = the fan's update won and is now the price; "Kept" = the
+      // price stood. The winning row's own price is the one named.
+      const used = resolution === 'challenger_wins';
+      const price = (used ? challengerAfter : parentAfter)?.priceMin ?? null;
+      return [
+        {
+          id: row.id,
+          contestId: row.contestId,
+          eventId: eventId ?? null,
+          eventTitle: event?.title ?? null,
+          eventDate: event?.date ?? null,
+          venueName: event?.venueName ?? null,
+          resolution,
+          answer: used ? ('used' as const) : ('kept' as const),
+          price,
+          decidedBy: handleByUser.get(row.actorId) ?? null,
+          decidedAt: row.decidedAt,
+        },
+      ];
+    });
+
+    return ctx.json({
+      success: true,
+      data: { items: resolved, total: totalRow?.total ?? 0, limit, offset },
+    });
+  },
+);
+
 contestsAdminRouter.get(
   '/prices/:contestId',
   zValidator('param', detailParamsSchema, (result, ctx) => {
