@@ -1,7 +1,9 @@
 name: Merge duplicate nights
 
 # One-off cleanup of events stored twice for one night: runs
-# apps/crawler/scripts/merge-duplicate-nights.ts against PRODUCTION data.
+# apps/crawler/scripts/merge-duplicate-nights.ts against PRODUCTION data by
+# default, or against the STAGING database with `target: staging` (the staging
+# environment's DATABASE_URL_DIRECT, the same secret the staging API deploy uses).
 #
 # Safe by default. Dispatching it does a DRY RUN: nothing is written, and the
 # run's summary page lists every night it would merge (the row kept, the rows
@@ -13,8 +15,9 @@ name: Merge duplicate nights
 # Guards:
 # - Only main's copy of this workflow and its script may read the production
 #   secrets: a dispatch from any other branch is skipped.
-# - `environment: production` holds the job behind that environment's
-#   protection rules (required reviewers) before any secret is released.
+# - The job runs in the chosen target's environment (`production` or
+#   `staging`), behind that environment's protection rules, and reads only that
+#   environment's secret.
 # - Each folded row merges in its own transaction (the admin merge's own core),
 #   and the plan is re-checked against the live rows just before it runs, so a
 #   row that changed since the dry run is skipped. A night that fails part-way
@@ -40,6 +43,13 @@ on:
         description: 'Merge at most this many nights (a first sample). Blank means all.'
         type: string
         default: ''
+      target:
+        description: 'Which database. Production is the default; staging uses the staging environment and its own direct database URL.'
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
 
 permissions:
   contents: read
@@ -50,10 +60,12 @@ concurrency:
 
 jobs:
   merge:
-    name: ${{ inputs.apply && 'Merge duplicate nights (APPLY)' || 'Merge duplicate nights (dry run)' }}
+    name: ${{ inputs.apply && format('Merge duplicate nights ({0}, APPLY)', inputs.target) || format('Merge duplicate nights ({0}, dry run)', inputs.target) }}
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    environment: production
+    # Each target reads only its own environment's secret, behind that
+    # environment's protection rules.
+    environment: ${{ inputs.target }}
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -77,16 +89,16 @@ jobs:
       # Checked by name, never printed. GitHub masks secret values in logs.
       - name: Verify configuration
         env:
-          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          TARGET_DATABASE_URL: ${{ inputs.target == 'staging' && secrets.DATABASE_URL_DIRECT || secrets.CRAWLER_DATABASE_URL }}
         run: |
-          if [ -z "$CRAWLER_DATABASE_URL" ]; then
-            echo "Missing production-environment secret: CRAWLER_DATABASE_URL"
+          if [ -z "$TARGET_DATABASE_URL" ]; then
+            echo "Missing ${{ inputs.target }}-environment database secret"
             exit 1
           fi
 
       - name: Merge duplicate nights (${{ inputs.apply && 'APPLY' || 'dry run' }})
         env:
-          DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          DATABASE_URL: ${{ inputs.target == 'staging' && secrets.DATABASE_URL_DIRECT || secrets.CRAWLER_DATABASE_URL }}
           APPLY: ${{ inputs.apply }}
           MAX_GROUPS: ${{ inputs.max_groups }}
         run: |
