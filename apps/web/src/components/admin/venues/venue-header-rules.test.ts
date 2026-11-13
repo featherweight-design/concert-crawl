@@ -87,13 +87,23 @@ describe('viewOnSiteHref', () => {
 });
 
 describe('recrawlOff — taken down', () => {
-  it('treats a taken-down venue as hidden, even with `active` set', () => {
+  it('reads a taken-down venue as removed, even with `active` set', () => {
     expect(recrawlOff(venue({ removedAt: '2026-11-02T18:00:00Z' }))).toBe(
-      'hidden',
+      'removed',
     );
     expect(
       recrawlOff(venue({ active: false, removedAt: '2026-11-02T18:00:00Z' })),
-    ).toBe('hidden');
+    ).toBe('removed');
+  });
+
+  // Show is refused on a taken-down venue, so the line never points at it.
+  it('never tells a taken-down venue to show it on the site', () => {
+    const takenDown = venue({
+      active: false,
+      removedAt: '2026-11-02T18:00:00Z',
+    });
+    expect(headerLine(takenDown, false)).toBe(COPY.recrawlOff.removed);
+    expect(headerLine(takenDown, true)).toBe(COPY.recrawlOff.removed);
   });
 });
 

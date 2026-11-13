@@ -266,12 +266,25 @@ describe('VenueDetailsClient — Status toggle', () => {
   });
 
   it('Active on a hidden venue shows it at once, as Show on site does', async () => {
-    mockActivateVenue.mockResolvedValue(undefined);
+    mockActivateVenue.mockResolvedValue({ ok: true });
     render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
     fireEvent.click(screen.getByTestId('venue-status-active'));
     await waitFor(() =>
       expect(mockActivateVenue).toHaveBeenCalledWith('venue-1'),
     );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  // A page loaded before the venue was removed still offers Active. The API
+  // refuses it (409 venue_removed); its reason goes to the page's banner.
+  it('a refused Active on a stale page shows the API’s reason', async () => {
+    const refusal =
+      'This venue asked us to remove its data, so it stays off the site.';
+    mockActivateVenue.mockResolvedValue({ ok: false, error: refusal });
+    render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
+    fireEvent.click(screen.getByTestId('venue-status-active'));
+    expect(await screen.findByText(refusal)).toBeTruthy();
+    expect(mockActivateVenue).toHaveBeenCalledWith('venue-1');
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 

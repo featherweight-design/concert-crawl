@@ -127,6 +127,10 @@ const REMOVED = { ...HIDDEN, removedAt: '2026-11-02T18:00:00.000Z' } as const;
 
 const NO_BLOCKERS = { pastShows: 0, upcomingShows: 0, watchers: 0 };
 
+/** The API's 409 venue_removed message, as the action hands it back. */
+const REFUSAL =
+  'This venue asked us to remove its data, so it stays off the site.';
+
 const onFailure = vi.fn<(failure: VenueMenuFailure | null) => void>();
 
 const trigger = () =>
@@ -242,7 +246,7 @@ describe('VenueMenu — rows per state', () => {
   });
 
   it('hidden and paused: the crawl row is Resume, and it runs', async () => {
-    mockResume.mockResolvedValue(undefined);
+    mockResume.mockResolvedValue({ ok: true });
     openMenu(buildVenue({ ...HIDDEN, ...PAUSED }));
     expect(rows()[1]).toBe(
       `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission.`,
@@ -253,7 +257,7 @@ describe('VenueMenu — rows per state', () => {
   });
 
   it('Show on site runs at once and refreshes', async () => {
-    mockActivate.mockResolvedValue(undefined);
+    mockActivate.mockResolvedValue({ ok: true });
     openMenu(buildVenue(HIDDEN));
     fireEvent.click(row('show'));
     expect(mockActivate).toHaveBeenCalledWith('venue-1');
@@ -571,7 +575,7 @@ describe('VenueMenu — Pause failures (as the old CrawlPauseControl)', () => {
 
 describe('VenueMenu — immediate changes', () => {
   it('Resume runs at once and refreshes', async () => {
-    mockResume.mockResolvedValue(undefined);
+    mockResume.mockResolvedValue({ ok: true });
     openMenu(buildVenue(PAUSED));
     fireEvent.click(row('resume'));
     expect(mockResume).toHaveBeenCalledWith('venue-1');
@@ -598,7 +602,10 @@ describe('VenueMenu — immediate changes', () => {
   it('holds the rows while one runs, so a second press sends nothing', async () => {
     let finish: () => void = () => undefined;
     mockResume.mockImplementation(
-      () => new Promise<void>((resolve) => (finish = resolve)),
+      () =>
+        new Promise<{ ok: true }>(
+          (resolve) => (finish = () => resolve({ ok: true })),
+        ),
     );
     openMenu(buildVenue(PAUSED));
     fireEvent.click(row('resume'));
@@ -636,6 +643,38 @@ describe('VenueMenu — immediate changes', () => {
     );
     finish();
     await waitFor(() => expect(onFailure).toHaveBeenLastCalledWith(null));
+  });
+
+  // A page loaded before the venue was removed still offers Show and Resume.
+  // The API refuses them (409 venue_removed), and the action hands back its
+  // reason, which the header toast says in place of the usual line.
+  it.each([
+    ['show', HIDDEN, mockActivate, COPY.failed.show('Ball Arena')],
+    ['resume', PAUSED, mockResume, COPY.failed.resume('Ball Arena')],
+  ] as const)(
+    'a refused %s on a stale page puts the API’s reason in the toast',
+    async (key, state, action, what) => {
+      action.mockResolvedValue({ ok: false, error: REFUSAL });
+      openMenu(buildVenue(state));
+      fireEvent.click(row(key));
+      expect(action).toHaveBeenCalledWith('venue-1');
+      await waitFor(() =>
+        expect(onFailure).toHaveBeenLastCalledWith(
+          expect.objectContaining({ what, saved: REFUSAL, retrying: false }),
+        ),
+      );
+      // The refresh brings the removed venue's own menu.
+      expect(mockRefresh).toHaveBeenCalled();
+    },
+  );
+
+  it('the toast says the refusal', async () => {
+    mockActivate.mockResolvedValue({ ok: false, error: REFUSAL });
+    render(<WithToast venue={buildVenue(HIDDEN)} />);
+    fireEvent.click(trigger());
+    fireEvent.click(row('show'));
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast.textContent).toContain(REFUSAL);
   });
 
   it('a confirmed change clears an earlier failure', async () => {

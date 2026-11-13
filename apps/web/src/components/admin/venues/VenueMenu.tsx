@@ -14,6 +14,7 @@ import {
   pauseCrawling,
   resumeCrawling,
   setVenueFeatured,
+  type VenueChangeOutcome,
 } from '@/lib/actions/venues';
 import { PausePanel } from './PausePanel';
 import type { PauseOutcome } from './pause-rules';
@@ -109,17 +110,27 @@ export const VenueMenu = ({
     },
   });
 
-  // Rule 10: a failed change snaps back, and the toast can try it again.
+  // Rule 10: a failed change snaps back, and the toast can try it again. A
+  // refusal that comes back as a value (Show or Resume on a venue removed at
+  // its request, seen from a page loaded before the removal) puts the API's
+  // own reason in the toast, and the refresh brings the removed venue's page.
   const attempt = (
-    run: () => Promise<void>,
+    run: () => Promise<VenueChangeOutcome>,
     what: string,
     saved: string,
   ): boolean =>
     guarded(async () => {
       try {
-        await run();
-        onFailure(null);
+        const outcome = await run();
         router.refresh();
+        if (!outcome.ok) {
+          console.warn('VenueMenu: change refused', { what });
+          onFailure(
+            failure(what, outcome.error, () => attempt(run, what, saved)),
+          );
+          return;
+        }
+        onFailure(null);
       } catch (err: unknown) {
         console.warn('VenueMenu: change failed', { what, err });
         onFailure(failure(what, saved, () => attempt(run, what, saved)));
@@ -169,7 +180,10 @@ export const VenueMenu = ({
         ),
       flagship: () =>
         attempt(
-          () => setVenueFeatured(venue.id, !venue.featured),
+          async () => {
+            await setVenueFeatured(venue.id, !venue.featured);
+            return { ok: true } as const;
+          },
           COPY.failed.flagship,
           COPY.failed.flagshipSaved,
         ),
