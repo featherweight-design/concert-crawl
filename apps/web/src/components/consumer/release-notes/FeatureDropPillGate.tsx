@@ -31,6 +31,7 @@ export function FeatureDropPillGate() {
     !isLoaded ||
     !isSignedIn ||
     pathname === '/changelog' ||
+    pathname === '/whats-new' ||
     pathname.startsWith('/admin');
 
   const handleOpen = useCallback(() => setModalOpen(true), []);

@@ -172,19 +172,22 @@ describe('proxy — auth gate (#841)', () => {
 
   // Not merely public-once-launched: the account menu offers "What's new" to
   // signed-out visitors in both launch modes, and the page has no user data.
-  it('lets a signed-out visitor read the changelog before launch', async () => {
-    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false');
-    const { middlewareHandler } = await import('./proxy');
+  it.each(['/changelog', '/whats-new'])(
+    'lets a signed-out visitor read %s before launch',
+    async (path) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false');
+      const { middlewareHandler } = await import('./proxy');
 
-    const auth = makeAuth(null);
-    const result = await middlewareHandler(
-      auth,
-      new NextRequest('http://localhost/changelog'),
-    );
+      const auth = makeAuth(null);
+      const result = await middlewareHandler(
+        auth,
+        new NextRequest(`http://localhost${path}`),
+      );
 
-    expect(result).toBeUndefined();
-    expect(auth.protect).not.toHaveBeenCalled();
-  });
+      expect(result).toBeUndefined();
+      expect(auth.protect).not.toHaveBeenCalled();
+    },
+  );
 
   // Our own user agent advertises /bot on every crawl request, so it has to
   // resolve for a venue sysadmin with no account, in either launch mode.

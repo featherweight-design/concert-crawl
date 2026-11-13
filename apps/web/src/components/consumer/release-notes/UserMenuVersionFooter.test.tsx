@@ -55,10 +55,10 @@ describe('UserMenuVersionFooter', () => {
     expect(screen.getByText('What’s new')).toBeTruthy();
   });
 
-  it('navigates to /changelog when clicked', () => {
+  it('navigates to the feature page, /whats-new, when clicked', () => {
     render(<UserMenuVersionFooter build="v0.5.0-beta" />);
     fireEvent.click(screen.getByRole('button'));
-    expect(mockPush).toHaveBeenCalledWith('/changelog');
+    expect(mockPush).toHaveBeenCalledWith('/whats-new');
   });
 
   it('renders nothing when the release-notes flag is off', () => {

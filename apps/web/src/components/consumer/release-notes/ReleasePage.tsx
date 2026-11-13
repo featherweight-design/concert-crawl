@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Release } from '@/lib/definitions/releases';
 import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal';
@@ -128,7 +129,13 @@ export function ReleasePage({ releases }: ReleasePageProps) {
             >
               {COPY.page.feedbackCta}
             </button>
-            .
+            .{' '}
+            <Link
+              href="/whats-new"
+              style={{ color: 'var(--signal)', fontWeight: 700 }}
+            >
+              {COPY.page.featuresLink} →
+            </Link>
           </p>
 
           {/* timeline */}

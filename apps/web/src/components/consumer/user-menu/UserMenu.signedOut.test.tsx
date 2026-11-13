@@ -273,7 +273,8 @@ describe('account menu — signed out (#794)', () => {
     openDesktopMenu();
     expect(screen.queryByRole('dialog')).not.toBeNull();
 
-    // The version footer pushes to /changelog, which shares this layout, so the
+    // The version footer pushes to /whats-new (and /changelog sits beside it),
+    // which share this layout, so the
     // menu would otherwise stay open covering the destination page.
     mockPathname = '/changelog';
     act(() => {
