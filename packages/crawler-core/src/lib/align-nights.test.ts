@@ -61,7 +61,7 @@ describe('alignToNights', () => {
       [listing('beck', '19:30')],
       [stored('a', 'beck', null)],
     );
-    expect(aligned[0]?.showTime).toBe('19:30');
+    expect(aligned[0]?.showTime).toBe('19:30:00');
     expect(promotions).toEqual([{ id: 'a', showTime: '19:30:00' }]);
   });
 
