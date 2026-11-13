@@ -1,3 +1,20 @@
+# [1.388.0](https://github.com/featherweight-design/concert-crawl/compare/v1.387.0...v1.388.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** draw cost by day to the board, rename the Health audit row ([4cc2716](https://github.com/featherweight-design/concert-crawl/commit/4cc2716f2c2ea564f289179945c5ad66782f6d77))
+* **web:** health page drops the triage block no board draws ([9781f55](https://github.com/featherweight-design/concert-crawl/commit/9781f559ffc9d884e55924804ff88ab03250b38c))
+* **web:** keep the Add sheet alive across the empty and populated layouts ([d15b5d0](https://github.com/featherweight-design/concert-crawl/commit/d15b5d05892e9829513f5564afaef5cb85ce4169))
+* **web:** one Needs you count and phone fixes on Health ([2781044](https://github.com/featherweight-design/concert-crawl/commit/2781044f0f79eb77aef3f130f6f8603f7d86a1a7))
+* **web:** sub-cent money, named loads and month total on Health ([d7024e6](https://github.com/featherweight-design/concert-crawl/commit/d7024e6ea0780d25731fe2807abf97e24b628be0))
+
+
+### Features
+
+* **web:** admin Health page replaces the dashboard (admin 1c-2b) ([fb89574](https://github.com/featherweight-design/concert-crawl/commit/fb895746b02355173965a40ff4aa159697c08437))
+* **web:** mount the Add a show sheet from the Concerts rail ([3353a21](https://github.com/featherweight-design/concert-crawl/commit/3353a21d2f575c1008800b790260942a1bd39291))
+
 # [1.387.0](https://github.com/featherweight-design/concert-crawl/compare/v1.386.0...v1.387.0) (2026-11-13)
 
 
