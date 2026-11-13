@@ -10,6 +10,7 @@ import {
   AdminButton,
   CouldntLoad,
   EmptyState,
+  PageSkeleton,
   RowMenu,
   useIsPhone,
   type RowMenuItem,
@@ -29,6 +30,7 @@ import {
   type BackedTone,
   type RejectionReason,
   type StateFilter,
+  type SubmissionState,
 } from './submitted-rules';
 
 const COPY = ADMIN_COPY.pricesSubmitted;
@@ -58,6 +60,15 @@ const TONES: Record<
     bg: 'color-mix(in srgb, var(--accent) 14%, transparent)',
     border: 'color-mix(in srgb, var(--accent) 32%, transparent)',
   },
+};
+
+// The phone's state pill, one tone per state (Price check pink as drawn).
+const PHONE_TONE: Record<SubmissionState, BackedTone | 'pink'> = {
+  published: 'green',
+  waiting: 'amber',
+  'price-check': 'pink',
+  'not-used': 'red',
+  stale: 'amber',
 };
 
 const Pill = ({
@@ -156,6 +167,8 @@ export const SubmittedTab = () => {
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState<StateCounts | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // A load is in flight: the rows on screen are the previous filter's.
+  const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [more, setMore] = useState<'idle' | 'loading' | 'failed'>('idle');
   const [rejecting, setRejecting] = useState<SubmittedRow | null>(null);
@@ -170,6 +183,8 @@ export const SubmittedTab = () => {
   const latest = useRef(0);
   const load = useCallback(async () => {
     const mine = ++latest.current;
+    setBusy(true);
+    setMore('idle');
     try {
       const [list, nextCounts] = await Promise.all([
         api.list(filter, search, 0, PAGE),
@@ -181,8 +196,12 @@ export const SubmittedTab = () => {
       setCounts(nextCounts);
       setFailed(false);
       setLoaded(true);
+      setBusy(false);
     } catch {
-      if (mine === latest.current) setFailed(true);
+      if (mine === latest.current) {
+        setFailed(true);
+        setBusy(false);
+      }
     }
   }, [api, filter, search]);
 
@@ -191,15 +210,18 @@ export const SubmittedTab = () => {
   }, [load]);
 
   const loadMore = async () => {
+    // A filter or search change while this runs makes its answer stale.
+    const mine = latest.current;
     setMore('loading');
     try {
       const list = await api.list(filter, search, rows.length, PAGE);
+      if (mine !== latest.current) return;
       const seen = new Set(rows.map((row) => row.id));
       setRows([...rows, ...list.rows.filter((row) => !seen.has(row.id))]);
       setTotal(list.total);
       setMore('idle');
     } catch {
-      setMore('failed');
+      if (mine === latest.current) setMore('failed');
     }
   };
 
@@ -216,7 +238,7 @@ export const SubmittedTab = () => {
         : COPY.reject.failed;
     }
     setRejecting(null);
-    await load();
+    void load();
     return null;
   };
 
@@ -346,234 +368,237 @@ export const SubmittedTab = () => {
           page={ADMIN_COPY.pricesSubmitted.listLabel}
           onRetry={() => void load()}
         />
-      ) : loaded && rows.length === 0 ? (
+      ) : !loaded ? (
+        <PageSkeleton rows={5} columns={5} rowHeight={52} />
+      ) : rows.length === 0 ? (
         <EmptyState title={COPY.empty.title} body={COPY.empty.body} />
       ) : (
         <div
-          style={
-            isPhone
-              ? undefined
-              : {
-                  borderRadius: 14,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface-1)',
-                  overflow: 'hidden',
-                }
-          }
+          aria-busy={busy}
+          style={busy ? { opacity: 0.55, pointerEvents: 'none' } : undefined}
         >
-          {!isPhone && (
-            <div
-              aria-hidden="true"
-              style={{
-                display: 'flex',
-                gap: 12,
-                padding: '12px 18px',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 10,
-                fontWeight: 600,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              <span style={{ flex: 1.6 }}>{COPY.columns.show}</span>
-              <span style={{ width: 90 }}>{COPY.columns.price}</span>
-              <span style={{ width: 120 }}>{COPY.columns.from}</span>
-              <span style={{ width: 110 }}>{COPY.columns.backedBy}</span>
-              <span style={{ width: 130 }}>{COPY.columns.state}</span>
-              <span style={{ width: 20 }} />
-            </div>
-          )}
-          <ul
-            aria-label={COPY.listLabel}
-            style={{ listStyle: 'none', margin: 0, padding: 0 }}
+          <div
+            style={
+              isPhone
+                ? undefined
+                : {
+                    borderRadius: 14,
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface-1)',
+                    overflow: 'hidden',
+                  }
+            }
           >
-            {rows.map((row) => {
-              const pill = backedPill(row.backedBy, row.state);
-              return isPhone ? (
-                <li
-                  key={row.id}
-                  style={{
-                    display: 'flex',
-                    gap: 12,
-                    padding: '12px 0',
-                    borderBottom: '1px solid var(--border)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 14.5,
-                        fontWeight: 700,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {row.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12.5,
-                        color: 'var(--fg-muted)',
-                        marginTop: 3,
-                      }}
-                    >
-                      {sub(row)}
-                    </div>
-                    <div
-                      style={{ fontSize: 13.5, fontWeight: 700, marginTop: 6 }}
-                    >
-                      {fan(row)}
-                    </div>
-                  </div>
-                  <div
+            {!isPhone && (
+              <div
+                aria-hidden="true"
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  padding: '12px 18px',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                <span style={{ flex: 1.6 }}>{COPY.columns.show}</span>
+                <span style={{ width: 90 }}>{COPY.columns.price}</span>
+                <span style={{ width: 120 }}>{COPY.columns.from}</span>
+                <span style={{ width: 110 }}>{COPY.columns.backedBy}</span>
+                <span style={{ width: 130 }}>{COPY.columns.state}</span>
+                <span style={{ width: 20 }} />
+              </div>
+            )}
+            <ul
+              aria-label={COPY.listLabel}
+              style={{ listStyle: 'none', margin: 0, padding: 0 }}
+            >
+              {rows.map((row) => {
+                const pill = backedPill(row.backedBy, row.state);
+                return isPhone ? (
+                  <li
+                    key={row.id}
                     style={{
                       display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-end',
-                      gap: 6,
+                      gap: 12,
+                      padding: '12px 0',
+                      borderBottom: '1px solid var(--border)',
                     }}
                   >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 14.5,
+                          fontWeight: 700,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {row.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          color: 'var(--fg-muted)',
+                          marginTop: 3,
+                        }}
+                      >
+                        {sub(row)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13.5,
+                          fontWeight: 700,
+                          marginTop: 6,
+                        }}
+                      >
+                        {fan(row)}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {priceRange(row.priceMin, row.priceMax)}
+                      </span>
+                      <Pill tone={PHONE_TONE[row.state]}>
+                        {COPY.phoneStates[row.state]}
+                      </Pill>
+                    </div>
+                  </li>
+                ) : (
+                  <li
+                    key={row.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '10px 18px',
+                      borderTop: '1px solid var(--border)',
+                    }}
+                  >
+                    <div style={{ flex: 1.6, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13.5,
+                          fontWeight: 600,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {row.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--fg-muted)',
+                          marginTop: 2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {sub(row)}
+                      </div>
+                    </div>
                     <span
                       style={{
-                        fontSize: 14,
+                        width: 90,
+                        fontSize: 13.5,
                         fontWeight: 700,
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
                       {priceRange(row.priceMin, row.priceMax)}
                     </span>
-                    <Pill
-                      tone={
-                        row.state === 'price-check'
-                          ? 'pink'
-                          : row.state === 'waiting'
-                            ? 'amber'
-                            : 'green'
-                      }
-                    >
-                      {COPY.phoneStates[row.state]}
-                    </Pill>
-                  </div>
-                </li>
-              ) : (
-                <li
-                  key={row.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '10px 18px',
-                    borderTop: '1px solid var(--border)',
-                  }}
-                >
-                  <div style={{ flex: 1.6, minWidth: 0 }}>
-                    <div
+                    <span
                       style={{
-                        fontSize: 13.5,
-                        fontWeight: 600,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {row.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
+                        width: 120,
+                        fontSize: 12.5,
                         color: 'var(--fg-muted)',
-                        marginTop: 2,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {sub(row)}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      width: 90,
-                      fontSize: 13.5,
-                      fontWeight: 700,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
-                    {priceRange(row.priceMin, row.priceMax)}
-                  </span>
-                  <span
-                    style={{
-                      width: 120,
-                      fontSize: 12.5,
-                      color: 'var(--fg-muted)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {fan(row)}
-                  </span>
-                  <span style={{ width: 110 }}>
-                    <Pill tone={pill.tone}>
-                      {pill.fans === null
-                        ? COPY.priceCheck
-                        : COPY.fans(pill.fans)}
-                    </Pill>
-                  </span>
-                  <span
-                    style={{
-                      width: 130,
-                      fontSize: 12.5,
-                      color: 'var(--fg-muted)',
-                    }}
-                  >
-                    {COPY.states[row.state]}
-                  </span>
-                  <span style={{ width: 20, flex: 'none' }}>
-                    <RowMenu
-                      label={COPY.menu.label}
-                      items={menuItems(row)}
-                      width={300}
-                    />
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          {remaining > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: isPhone ? '12px 0' : '12px 18px',
-                borderTop: isPhone ? 'none' : '1px solid var(--border)',
-                fontSize: 12.5,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              <span>{COPY.showing(rows.length, total)}</span>
-              <span style={{ flex: 1 }} />
-              {more === 'failed' && (
-                <span role="alert" style={{ color: 'var(--danger)' }}>
-                  {COPY.loadMoreFailed}
-                </span>
-              )}
-              <AdminButton
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-disabled={more === 'loading' || undefined}
-                onClick={() => {
-                  if (more !== 'loading') void loadMore();
+                      {fan(row)}
+                    </span>
+                    <span style={{ width: 110 }}>
+                      <Pill tone={pill.tone}>
+                        {pill.fans === null
+                          ? COPY.priceCheck
+                          : COPY.fans(pill.fans)}
+                      </Pill>
+                    </span>
+                    <span
+                      style={{
+                        width: 130,
+                        fontSize: 12.5,
+                        color: 'var(--fg-muted)',
+                      }}
+                    >
+                      {COPY.states[row.state]}
+                    </span>
+                    <span style={{ width: 20, flex: 'none' }}>
+                      <RowMenu
+                        label={COPY.menu.label}
+                        items={menuItems(row)}
+                        width={300}
+                      />
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            {remaining > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: isPhone ? '12px 0' : '12px 18px',
+                  borderTop: isPhone ? 'none' : '1px solid var(--border)',
+                  fontSize: 12.5,
+                  color: 'var(--fg-subtle)',
                 }}
               >
-                {more === 'loading' ? COPY.loadingMore : COPY.loadMore}
-              </AdminButton>
-            </div>
-          )}
+                <span>{COPY.showing(rows.length, total)}</span>
+                <span style={{ flex: 1 }} />
+                {more === 'failed' && (
+                  <span role="alert" style={{ color: 'var(--danger)' }}>
+                    {COPY.loadMoreFailed}
+                  </span>
+                )}
+                <AdminButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-disabled={more === 'loading' || undefined}
+                  onClick={() => {
+                    if (more !== 'loading') void loadMore();
+                  }}
+                >
+                  {more === 'loading' ? COPY.loadingMore : COPY.loadMore}
+                </AdminButton>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

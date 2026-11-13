@@ -52,21 +52,29 @@ export const RejectPriceDialog = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const title = COPY.title(
+    priceRange(row.priceMin, row.priceMax),
+    row.title === '' ? COPY.thisShow : row.title,
+  );
+
   const confirm = async () => {
     if (reason === null) return;
     setBusy(true);
     setError(null);
     const refused = await onConfirm(reason, note.trim());
-    setBusy(false);
-    if (refused !== null) setError(refused);
+    // A saved rejection closes the dialog, so only a refusal needs the form back.
+    if (refused !== null) {
+      setBusy(false);
+      setError(refused);
+    }
   };
 
   return (
     <AdminDialog
       accent="var(--danger)"
-      label={COPY.title(priceRange(row.priceMin, row.priceMax), row.title)}
+      label={title}
       eyebrow={COPY.eyebrow}
-      heading={COPY.title(priceRange(row.priceMin, row.priceMax), row.title)}
+      heading={title}
       width={520}
       dismissible={!busy}
       onDismiss={onCancel}
