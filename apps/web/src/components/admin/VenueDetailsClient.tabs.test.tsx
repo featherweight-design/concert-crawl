@@ -2,7 +2,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  waitFor,
+} from '@testing-library/react';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 
 // ───── Mocks ─────────────────────────────────────────────────────────────────
@@ -12,8 +18,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), replace: mockReplace }),
 }));
 
+const mockUpdateVenue = vi.fn();
 vi.mock('@/lib/actions/venues', () => ({
-  updateVenue: vi.fn(),
+  updateVenue: (...args: unknown[]) => mockUpdateVenue(...args),
   pauseVenue: vi.fn(),
   activateVenue: vi.fn(),
   setVenueFeatured: vi.fn(),
@@ -133,10 +140,13 @@ describe('VenueDetailsClient — tabs', () => {
   beforeEach(() => {
     vi.stubGlobal('matchMedia', matchMediaStub);
     mockReplace.mockReset();
+    mockUpdateVenue.mockReset();
+    mockUpdateVenue.mockResolvedValue({ success: true });
   });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('opens on Overview, with all five panels mounted and the rest hidden', () => {
@@ -168,12 +178,16 @@ describe('VenueDetailsClient — tabs', () => {
     expect(panel('overview').hidden).toBe(true);
   });
 
-  it('switches with router.replace, keeping the scroll', () => {
+  it('switches on the client: history.replaceState, never router.replace', () => {
+    const replaceState = vi.spyOn(window.history, 'replaceState');
     render(<VenueDetailsClient venue={venue} />);
     fireEvent.click(screen.getByRole('tab', { name: TABS.runs }));
-    expect(mockReplace).toHaveBeenCalledWith('/admin/venues/venue-1?tab=runs', {
-      scroll: false,
-    });
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    expect(replaceState.mock.calls[0]?.[2]).toBe(
+      '/admin/venues/venue-1?tab=runs',
+    );
+    expect(window.location.search).toBe('?tab=runs');
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(panel('runs').hidden).toBe(false);
     expect(
       screen.getByTestId('venue-runs-interim-link').getAttribute('href'),
@@ -207,5 +221,135 @@ describe('VenueDetailsClient — tabs', () => {
     render(<VenueDetailsClient venue={venue} />);
     expect(screen.queryByRole('button', { name: 'Back to venues' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Crawl history' })).toBeNull();
+  });
+
+  it('brings a strip scrolled above the fold back into view, and only then', () => {
+    render(<VenueDetailsClient venue={venue} />);
+    const strip = screen.getByTestId('venue-tabs');
+    const scrollSpy = vi.fn();
+    strip.scrollIntoView = scrollSpy;
+    const rect = strip.getBoundingClientRect();
+    const rectSpy = vi.spyOn(strip, 'getBoundingClientRect');
+
+    rectSpy.mockReturnValue({ ...rect, top: 120 });
+    fireEvent.click(screen.getByRole('tab', { name: TABS.runs }));
+    expect(scrollSpy).not.toHaveBeenCalled();
+
+    rectSpy.mockReturnValue({ ...rect, top: -300 });
+    fireEvent.click(screen.getByRole('tab', { name: TABS.source }));
+    expect(scrollSpy).toHaveBeenCalledWith({ block: 'start' });
+  });
+
+  it('a save from Overview submits the edits made on Details and Source', async () => {
+    render(<VenueDetailsClient venue={venue} />);
+    fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: ADMIN_COPY.venueDetailsClient.fields.waitUntil.options.load,
+        hidden: true,
+      }),
+    );
+    expect(panel('overview').hidden).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
+
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    const formData = mockUpdateVenue.mock.calls[0]?.[1];
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData');
+    }
+    expect(formData.get('address')).toBe('1 Colfax Ave');
+    expect(formData.get('crawlWaitUntil')).toBe('load');
+  });
+});
+
+// A refused save marks a field that may sit in a hidden panel: the page opens
+// that field's tab, focuses it, and says which field in the banner.
+describe('VenueDetailsClient — a refused save opens the field’s tab', () => {
+  const FIELDS = ADMIN_COPY.venueDetailsClient.fields;
+
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', matchMediaStub);
+    mockUpdateVenue.mockReset();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const saveFromOverview = (overrides: Partial<VenueWithCrawlHealth>) => {
+    render(<VenueDetailsClient venue={{ ...venue, ...overrides }} />);
+    fireEvent.change(addressInput(), { target: { value: '1 Colfax Ave' } });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
+  };
+
+  const expectOpenedAt = async (
+    tab: 'details' | 'source',
+    inputId: string,
+    label: string,
+  ) => {
+    await waitFor(() => expect(document.activeElement?.id).toBe(inputId));
+    expect(panel(tab).hidden).toBe(false);
+    expect(panel('overview').hidden).toBe(true);
+    expect(
+      screen
+        .getByRole('tab', { name: TABS[tab] })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(screen.getByTestId('venue-save-error').textContent).toContain(
+      TABS.refused(label, TABS[tab]),
+    );
+  };
+
+  it.each([
+    {
+      field: 'slug',
+      tab: 'details',
+      inputId: 'edit-venue-slug',
+      label: FIELDS.slug.label,
+      overrides: {},
+    },
+    {
+      field: 'apiAccountId',
+      tab: 'source',
+      inputId: 'edit-venue-api-account-id',
+      label: FIELDS.apiAccountId.label,
+      overrides: { apiProvider: 'venuepilot', apiAccountId: '1105' },
+    },
+    {
+      field: 'platformVenueId',
+      tab: 'source',
+      inputId: 'edit-venue-platform-venue-id',
+      label: FIELDS.platformRouting.platformVenueId.label,
+      overrides: { platform: 'aeg', platformVenueId: '89' },
+    },
+    {
+      field: 'crawlWaitForSelector',
+      tab: 'source',
+      inputId: 'edit-venue-wait-for-selector',
+      label: FIELDS.waitSelector.label,
+      overrides: {},
+    },
+  ] as const)(
+    'the API refusing $field opens $tab and focuses it',
+    async ({ field, tab, inputId, label, overrides }) => {
+      mockUpdateVenue.mockResolvedValue({
+        success: false,
+        field,
+        error: `${field} was refused`,
+      });
+      saveFromOverview(overrides);
+      await expectOpenedAt(tab, inputId, label);
+      expect(screen.getByText(`${field} was refused`)).toBeTruthy();
+    },
+  );
+
+  it('the missing platform venue ID guard opens Source before any request', async () => {
+    saveFromOverview({ platform: 'aeg', platformVenueId: null });
+    await expectOpenedAt(
+      'source',
+      'edit-venue-platform-venue-id',
+      FIELDS.platformRouting.platformVenueId.label,
+    );
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
   });
 });

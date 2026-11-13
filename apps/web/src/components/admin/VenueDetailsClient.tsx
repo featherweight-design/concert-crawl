@@ -505,6 +505,36 @@ const VENUE_TAB_ITEMS = VENUE_TABS.map((key) => ({
   key,
   label: VENUE_TAB_LABEL[key],
 }));
+/** The fields a save can be refused on, and where each one lives. */
+type RefusedField =
+  'slug' | 'platformVenueId' | 'apiAccountId' | 'crawlWaitForSelector';
+const REFUSED_FIELD_HOME: Record<
+  RefusedField,
+  { tab: VenueTab; inputId: string; label: string }
+> = {
+  slug: {
+    tab: 'details',
+    inputId: 'edit-venue-slug',
+    label: ADMIN_COPY.venueDetailsClient.fields.slug.label,
+  },
+  platformVenueId: {
+    tab: 'source',
+    inputId: 'edit-venue-platform-venue-id',
+    label:
+      ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
+        .label,
+  },
+  apiAccountId: {
+    tab: 'source',
+    inputId: 'edit-venue-api-account-id',
+    label: ADMIN_COPY.venueDetailsClient.fields.apiAccountId.label,
+  },
+  crawlWaitForSelector: {
+    tab: 'source',
+    inputId: 'edit-venue-wait-for-selector',
+    label: ADMIN_COPY.venueDetailsClient.fields.waitSelector.label,
+  },
+};
 const venueTabId = (key: VenueTab) => `venue-tab-${key}`;
 const venuePanelId = (key: VenueTab) => `venue-panel-${key}`;
 
@@ -562,10 +592,44 @@ export function VenueDetailsClient({
     setTabFromUrl(initialTab);
     setTab(initialTab);
   }
+  const tablistRef = useRef<HTMLDivElement | null>(null);
+  // An input to focus once its panel is showing (a refused save).
+  const focusAfterRender = useRef<string | null>(null);
+  useEffect(() => {
+    const inputId = focusAfterRender.current;
+    if (!inputId) return;
+    focusAfterRender.current = null;
+    document.getElementById(inputId)?.focus();
+  });
+  /**
+   * Client-only: the tab lives in state and the URL follows through
+   * `history.replaceState`, which the App Router syncs with
+   * `useSearchParams` without a server round trip, so nothing re-renders
+   * the page or shows `loading.tsx`. The server reads `?tab=` on first load.
+   */
   const changeTab = (next: VenueTab) => {
     if (next === tab) return;
     setTab(next);
-    router.replace(venueTabHref(venue.id, next), { scroll: false });
+    window.history.replaceState(
+      window.history.state,
+      '',
+      venueTabHref(venue.id, next),
+    );
+    // Scroll ruling: a strip scrolled above the fold comes back into view, so
+    // the new panel starts at its top; otherwise the page stays put.
+    const strip = tablistRef.current;
+    if (strip && strip.getBoundingClientRect().top < 0) {
+      strip.scrollIntoView({ block: 'start' });
+    }
+  };
+  /** A refused save: open the field's tab, focus it, and say which field. */
+  const refuseField = (field: RefusedField, message: string) => {
+    const home = REFUSED_FIELD_HOME[field];
+    setFieldErrors({ [field]: message });
+    // The banner names the field and its tab; the reason stays at the field.
+    setSaveError(TAB_COPY.refused(home.label, VENUE_TAB_LABEL[home.tab]));
+    focusAfterRender.current = home.inputId;
+    changeTab(home.tab);
   };
   const [isPending, startTransition] = useTransition();
   const [hideOpen, setHideOpen] = useState(false);
@@ -847,11 +911,11 @@ export function VenueDetailsClient({
       platformRequiresVenueId(platformVal) &&
       platformVenueIdVal.trim() === ''
     ) {
-      setFieldErrors({
-        platformVenueId:
-          ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
-            .requiredError,
-      });
+      refuseField(
+        'platformVenueId',
+        ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
+          .requiredError,
+      );
       setSaveState('error');
       return;
     }
@@ -895,23 +959,23 @@ export function VenueDetailsClient({
       const result = await updateVenue(venue.id, formData);
       if (!result.success) {
         if (result.field === 'slug') {
-          setFieldErrors({
-            slug:
-              result.error ?? ADMIN_COPY.venueDetailsClient.errors.slugInUse,
-          });
+          refuseField(
+            'slug',
+            result.error ?? ADMIN_COPY.venueDetailsClient.errors.slugInUse,
+          );
         } else if (result.field === 'apiAccountId') {
-          setFieldErrors({
-            apiAccountId:
-              result.error ??
+          refuseField(
+            'apiAccountId',
+            result.error ??
               ADMIN_COPY.venueDetailsClient.fields.apiAccountId.errorRequired,
-          });
+          );
         } else if (
           (result.field === 'crawlWaitForSelector' ||
             result.field === 'platformVenueId') &&
           result.error !== undefined
         ) {
           // The API names the field and the rule; mark the input with it.
-          setFieldErrors({ [result.field]: result.error });
+          refuseField(result.field, result.error);
         } else {
           setSaveError(
             result.error ?? ADMIN_COPY.venueDetailsClient.errors.saveFailed,
@@ -987,12 +1051,15 @@ export function VenueDetailsClient({
         tabId={venueTabId}
         panelId={venuePanelId}
         phone={isPhone}
+        tablistRef={tablistRef}
         testId="venue-tabs"
       />
 
       {/* Error banner */}
       {saveError && (
         <div
+          role="alert"
+          data-testid="venue-save-error"
           style={{
             padding: '10px 14px',
             background: 'rgba(184,56,26,0.1)',
