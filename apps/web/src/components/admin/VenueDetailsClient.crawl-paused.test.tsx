@@ -293,7 +293,12 @@ describe('VenueDetailsClient — Status toggle', () => {
     const refusal =
       'This venue asked us to remove its data, so it stays off the site.';
     mockActivateVenue.mockResolvedValue({ ok: false, error: refusal });
-    render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ active: false })}
+      />,
+    );
     fireEvent.click(screen.getByTestId('venue-status-active'));
     expect(await screen.findByText(refusal)).toBeTruthy();
     expect(mockActivateVenue).toHaveBeenCalledWith('venue-1');
@@ -303,7 +308,12 @@ describe('VenueDetailsClient — Status toggle', () => {
   it('any other Active failure shows the unexpected-error banner and still refreshes', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockActivateVenue.mockRejectedValue(new Error('boom'));
-    render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ active: false })}
+      />,
+    );
     fireEvent.click(screen.getByTestId('venue-status-active'));
     expect(
       await screen.findByText(ADMIN_COPY.venueDetailsClient.errors.unexpected),
