@@ -157,7 +157,10 @@ afterEach(() => {
 describe('VenueHeader — idle', () => {
   it('draws the name, both chips and the place line', () => {
     render(<VenueHeader venue={buildVenue()} />);
-    expect(screen.getByRole('heading', { name: 'Ball Arena' })).toBeTruthy();
+    // The venue name is the page's one h1 (orchestrator ruling, 3b part 1).
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Ball Arena' }),
+    ).toBeTruthy();
     expect(screen.getByTestId('venue-status-on-site').textContent).toBe(
       ADMIN_COPY.venueStatus.onSite.live,
     );

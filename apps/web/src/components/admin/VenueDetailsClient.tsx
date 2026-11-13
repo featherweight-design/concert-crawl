@@ -23,7 +23,6 @@ import {
   AdminTabs,
   MonoLabel,
   StatusBadge,
-  SectionHead,
   useIsPhone,
 } from '@/components/admin/primitives';
 import {
@@ -1034,13 +1033,7 @@ export function VenueDetailsClient({
         position: 'relative',
       }}
     >
-      {/* Header */}
-      <SectionHead
-        eyebrow={ADMIN_COPY.venueDetailsClient.header.eyebrow}
-        title={ADMIN_COPY.venueDetailsClient.header.title}
-        subtitle={ADMIN_COPY.venueDetailsClient.header.subtitle}
-      />
-
+      {/* The venue header holds the page's one h1 (the venue name). */}
       <VenueHeader venue={venue} />
 
       <AdminTabs
