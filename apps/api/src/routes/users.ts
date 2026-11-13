@@ -402,6 +402,11 @@ usersRouter.get('/me/submissions', async (ctx) => {
     corroborationCount: row.corroborationCount,
     submittedAt: row.submittedAt.toISOString(),
     status: submissionDisplayStatus(row.status ?? 'pending'),
+    // A closed row says why: stale (no second fan in time) or archived (a newer
+    // price replaced it). Only those two stored statuses read as closed.
+    ...(row.status === 'stale' || row.status === 'archived'
+      ? { closedReason: row.status }
+      : {}),
   }));
 
   return ctx.json({ success: true, data });

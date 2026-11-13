@@ -743,7 +743,10 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
       headers: { Authorization: 'Bearer test' },
     });
     const list = (await listRes.json()) as {
-      data: Array<{ status: SubmissionDisplayStatus }>;
+      data: Array<{
+        status: SubmissionDisplayStatus;
+        closedReason?: string;
+      }>;
     };
     const deprecatedRes = await app.request('/v1/users/me/submissions/count', {
       headers: { Authorization: 'Bearer test' },
@@ -765,6 +768,18 @@ describe('submitted-price counts agree across /me and /me/submissions', () => {
     expect(tallySubmissionCounts(list.data)).toEqual(me.data.submissionCounts);
     // The deprecated count route agrees too, rather than being a second answer.
     expect(deprecated.data.count).toBe(7);
+    // A closed row says why (stale or archived); no other row carries a reason.
+    expect(
+      list.data
+        .filter((row) => row.closedReason !== undefined)
+        .map((row) => row.closedReason)
+        .sort(),
+    ).toEqual(['archived', 'stale']);
+    expect(
+      list.data.every(
+        (row) => (row.status === 'closed') === (row.closedReason !== undefined),
+      ),
+    ).toBe(true);
   });
 });
 
