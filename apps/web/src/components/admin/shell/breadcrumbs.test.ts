@@ -7,7 +7,9 @@ describe('buildBreadcrumbs', () => {
   it('shows only the section on a section page', () => {
     expect(buildBreadcrumbs('/admin/venues')).toEqual([{ label: 'Venues' }]);
     expect(buildBreadcrumbs('/admin')).toEqual([{ label: 'Health' }]);
-    expect(buildBreadcrumbs('/admin/review')).toEqual([{ label: 'Needs you' }]);
+    expect(buildBreadcrumbs('/admin/needs-you')).toEqual([
+      { label: 'Needs you' },
+    ]);
   });
 
   it('names the interim Review tabs by their new homes', () => {
