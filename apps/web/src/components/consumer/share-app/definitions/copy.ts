@@ -50,6 +50,25 @@ export const SHARE_APP_COPY = {
   error: 'Couldn’t make your invite. Check your connection and try again.',
   retry: 'Try again',
 
+  // The Full screen press, and the white page it opens.
+  fullscreen: 'Full screen',
+  fullscreenTitle: 'Scan to get in',
+  fullscreenTitleOpen: 'Scan to open Concert Crawl',
+  fullscreenDone: 'Done',
+  fullscreenNote: 'Dim room? Turn your brightness up.',
+  // The line under the link; the board draws only the 2-friends case, so the
+  // singular and the zero case follow the sheet's own count strings.
+  fullscreenJoinedOne: '1 friend joined with your code',
+  fullscreenJoinedCount: (count: number): string =>
+    `${count} friends joined with your code`,
+
+  // The link preview a pasted `/i/` link unfurls as (the `/auth/code` page's
+  // Open Graph card). It names nobody, so one cached image serves every code.
+  ogEyebrow: 'You’re invited',
+  ogTitle: 'Every Denver show in one calendar',
+  ogSub: 'Concert Crawl is invite-only for now. This link lets you in.',
+  ogImageAlt: 'You’re invited to Concert Crawl',
+
   // An admin turned the code off. Never says why.
   offCode:
     'Your invite code is turned off. This link takes friends to the waitlist instead.',

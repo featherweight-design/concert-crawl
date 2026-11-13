@@ -259,13 +259,38 @@ describe('<ShareAppSheet /> — after launch', () => {
 });
 
 describe('<ShareAppSheet /> — presses', () => {
-  it('leads with Share… on a phone, Copy link beneath it, and no Full screen yet', () => {
+  it('leads with Share… on a phone, Copy link and Full screen beneath it', () => {
     mount({ capabilities: { share: vi.fn(async () => undefined) } });
-    expect(presses().filter((text) => /share…|copy link/i.test(text))).toEqual([
+    expect(
+      presses().filter((text) => /share…|copy link|full screen/i.test(text)),
+    ).toEqual([
       SHARE.destinations.systemShare,
       SHARE.destinations.copyLink,
+      COPY.fullscreen,
     ]);
-    expect(screen.queryByText(/full screen/i)).toBeNull();
+  });
+
+  it('opens Full screen from its press or a tap on the code, tracks it, and closes on Done', () => {
+    mount();
+    expect(screen.queryByTestId('share-fullscreen')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: COPY.fullscreen }));
+    expect(mockTrack).toHaveBeenCalledWith('app_share_destination_selected', {
+      destination: 'fullscreen',
+    });
+    const page = screen.getByTestId('share-fullscreen');
+    expect(page.textContent).toContain(COPY.fullscreenTitle);
+    expect(page.textContent).toContain(COPY.fullscreenNote);
+    expect(page.textContent).toContain(`concertcrawl.app/i/${CODE}`);
+    fireEvent.click(screen.getByRole('button', { name: COPY.fullscreenDone }));
+    expect(screen.queryByTestId('share-fullscreen')).toBeNull();
+    fireEvent.click(screen.getByTestId('share-qr'));
+    expect(screen.getByTestId('share-fullscreen')).toBeTruthy();
+  });
+
+  it('has no Full screen on desktop', () => {
+    mockPhone = false;
+    mount();
+    expect(screen.queryByRole('button', { name: COPY.fullscreen })).toBeNull();
   });
 
   it('leads with Copy link on desktop, and shows Share… only where the browser has it', () => {

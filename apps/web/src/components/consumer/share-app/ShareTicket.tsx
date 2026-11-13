@@ -25,7 +25,17 @@ export interface TicketFace {
 export type TicketBody =
   | { kind: 'loading' }
   | { kind: 'error'; onRetry: () => void }
-  | { kind: 'ready'; qr: QrPath; ariaLabel: string; shownUrl: string };
+  | {
+      kind: 'ready';
+      qr: QrPath;
+      ariaLabel: string;
+      shownUrl: string;
+      /**
+       * Tapping the code opens Full screen, a shortcut with no icon of its own
+       * (the Full screen press is the visible way in). Phone only.
+       */
+      onOpenFullscreen?: () => void;
+    };
 
 export type TicketLower =
   | { kind: 'joined'; count: number; faces: readonly TicketFace[] }
@@ -134,10 +144,14 @@ const TicketBodyView = ({ body }: { body: TicketBody }) => {
   }
   return (
     <>
+      {/* A click shortcut for Full screen. It is not a control of its own (the
+          Full screen press is, and is the keyboard and screen-reader way in),
+          so it carries no role or tab stop. */}
       <div
         className="rounded-[14px] p-1.5"
         style={{ background: QR_PAPER }}
         data-testid="share-qr"
+        onClick={body.onOpenFullscreen}
       >
         <svg
           role="img"
