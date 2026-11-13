@@ -32,7 +32,8 @@ export interface VenueMenuFailure {
   saved: string;
   /** True while Try again runs, so the toast's button holds. */
   retrying: boolean;
-  retry: () => void;
+  /** Null for a refusal that would only be refused again: no Try again. */
+  retry: (() => void) | null;
 }
 
 /**
@@ -124,10 +125,14 @@ export const VenueMenu = ({
         const outcome = await run();
         router.refresh();
         if (!outcome.ok) {
+          // A removed venue is refused every time, so no Try again.
           console.warn('VenueMenu: change refused', { what });
-          onFailure(
-            failure(what, outcome.error, () => attempt(run, what, saved)),
-          );
+          onFailure({
+            what,
+            saved: outcome.error,
+            retrying: false,
+            retry: null,
+          });
           return;
         }
         onFailure(null);

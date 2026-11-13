@@ -34,6 +34,7 @@ export const CrawlPauseControl = ({
     body: CrawlPauseRequest;
     error: string;
   } | null>(null);
+  const [resumeRefused, setResumeRefused] = useState<string | null>(null);
   const paused = venue.crawlPausedAt !== null;
 
   const pause = async (body: CrawlPauseRequest): Promise<string | null> => {
@@ -60,9 +61,13 @@ export const CrawlPauseControl = ({
     }
   };
 
+  // A removed venue's Resume is refused (409 venue_removed) as a value; its
+  // reason shows under the row instead of being dropped.
   const resume = () => {
+    setResumeRefused(null);
     startTransition(async () => {
-      await resumeCrawling(venue.id);
+      const outcome = await resumeCrawling(venue.id);
+      if (!outcome.ok) setResumeRefused(outcome.error);
       router.refresh();
     });
   };
@@ -119,6 +124,14 @@ export const CrawlPauseControl = ({
           {paused ? COPY.resumeButton : COPY.pauseButton}
         </AdminButton>
       </div>
+      {resumeRefused !== null && (
+        <p
+          role="alert"
+          style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}
+        >
+          {resumeRefused}
+        </p>
+      )}
       {failedBody && (
         <SaveFailedToast
           what={COPY.failedWhat(venue.name)}

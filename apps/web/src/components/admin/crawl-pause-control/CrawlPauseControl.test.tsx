@@ -135,6 +135,21 @@ describe('CrawlPauseControl', () => {
     expect(mockPauseCrawling).not.toHaveBeenCalled();
   });
 
+  it('shows the API’s reason when Resume is refused', async () => {
+    const refusal =
+      'This venue asked us to remove its data, so it stays off the site.';
+    mockResumeCrawling.mockResolvedValueOnce({ ok: false, error: refusal });
+    render(
+      <CrawlPauseControl
+        venue={venue({ crawlPausedAt: '2026-10-28T15:00:00.000Z' })}
+        showCount={1}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: COPY.resumeButton }));
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe(refusal);
+  });
+
   it('reads an auto-pause without the held re-crawl hint', () => {
     render(
       <CrawlPauseControl

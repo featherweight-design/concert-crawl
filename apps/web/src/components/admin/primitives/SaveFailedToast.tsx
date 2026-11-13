@@ -13,7 +13,8 @@ const copy = ADMIN_COPY.states.saveFailed;
 type SaveFailedToastProps = {
   /** What is still saved, as a sentence, e.g. "Staging is still Beta." */
   saved: string;
-  onRetry: () => void;
+  /** Left out for a refusal that would only be refused again: no Try again. */
+  onRetry?: () => void;
   retrying?: boolean;
   /** Adds a Dismiss beside Try again, as the venue header's notices have. */
   onDismiss?: () => void;
@@ -75,15 +76,17 @@ export const SaveFailedToast = ({
         {copy.body(saved)}
       </div>
     </div>
-    <AdminButton
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={retrying}
-      onClick={onRetry}
-    >
-      {copy.tryAgain}
-    </AdminButton>
+    {onRetry && (
+      <AdminButton
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={retrying}
+        onClick={onRetry}
+      >
+        {copy.tryAgain}
+      </AdminButton>
+    )}
     {onDismiss && (
       <AdminButton
         type="button"

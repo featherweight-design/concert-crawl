@@ -288,6 +288,18 @@ describe('VenueDetailsClient — Status toggle', () => {
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 
+  it('any other Active failure shows the unexpected-error banner and still refreshes', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockActivateVenue.mockRejectedValue(new Error('boom'));
+    render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
+    fireEvent.click(screen.getByTestId('venue-status-active'));
+    expect(
+      await screen.findByText(ADMIN_COPY.venueDetailsClient.errors.unexpected),
+    ).toBeTruthy();
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    errorSpy.mockRestore();
+  });
+
   it('a taken-down venue’s Active is disabled and says why', () => {
     render(
       <VenueDetailsClient
