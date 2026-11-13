@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ErrorTellUsCard } from './ErrorTellUsCard';
@@ -111,6 +117,51 @@ describe('ErrorTellUsCard', () => {
       await screen.findByRole('heading', { name: copy.sentHeading }),
     ).toBeTruthy();
     expect(loadPendingReport()).toBeNull();
+  });
+
+  it('is a real radio group: one tab stop, arrow keys move the choice', () => {
+    render(<ErrorTellUsCard />);
+    const radios = screen.getAllByRole('radio');
+    // None chosen yet: the first chip is the single tab stop.
+    expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual([
+      '0',
+      '-1',
+      '-1',
+      '-1',
+      '-1',
+      '-1',
+    ]);
+
+    fireEvent.keyDown(radios[0]!, { key: 'ArrowRight' });
+    expect(radios[1]!.getAttribute('aria-checked')).toBe('true');
+    expect(radios[1]!.getAttribute('tabindex')).toBe('0');
+    expect(radios[0]!.getAttribute('tabindex')).toBe('-1');
+
+    // It wraps at the ends.
+    fireEvent.keyDown(screen.getAllByRole('radio')[1]!, { key: 'ArrowLeft' });
+    fireEvent.keyDown(screen.getAllByRole('radio')[0]!, { key: 'ArrowLeft' });
+    expect(screen.getAllByRole('radio')[5]!.getAttribute('aria-checked')).toBe(
+      'true',
+    );
+  });
+
+  it('Edit drops the saved copy and puts focus on the form heading', async () => {
+    sendErrorReport.mockRejectedValue(new Error('503'));
+    render(<ErrorTellUsCard />);
+    pick('Searching');
+    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+    await screen.findByRole('heading', { name: copy.failedHeading });
+    expect(loadPendingReport()).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: copy.edit }));
+
+    // The saved copy is about to be replaced; it must not go out on its own.
+    expect(loadPendingReport()).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: copy.heading }),
+      ),
+    );
   });
 
   it('Edit on the failed card goes back to the form with the choice kept', async () => {

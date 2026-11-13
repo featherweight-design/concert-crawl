@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ReportRejectedError } from './send-report';
 import {
   clearPendingReport,
   flushPendingReport,
@@ -9,7 +10,11 @@ import {
 } from './pending-report';
 
 const sendErrorReport = vi.hoisted(() => vi.fn());
-vi.mock('./send-report', () => ({ sendErrorReport }));
+vi.mock('./send-report', async (importOriginal) => ({
+  // Everything real (the error class the store checks for) except the send.
+  ...(await importOriginal<Record<string, unknown>>()),
+  sendErrorReport,
+}));
 
 const draft = {
   doing: 'Opening a show',
@@ -68,6 +73,21 @@ describe('flushPendingReport', () => {
     sendErrorReport.mockRejectedValue(new Error('503'));
     expect(await flushPendingReport(async () => 'token', 'UA')).toBe(false);
     expect(loadPendingReport()).not.toBeNull();
+  });
+
+  it('drops a report the API refuses on its merits, but keeps one it may take later', async () => {
+    savePendingReport(draft);
+    sendErrorReport.mockRejectedValue(new ReportRejectedError(400));
+    expect(await flushPendingReport(async () => 'token', 'UA')).toBe(false);
+    expect(loadPendingReport()).toBeNull();
+
+    // Sign in again, slow down and timed out can all succeed on a later open.
+    for (const status of [401, 408, 429, 503]) {
+      savePendingReport(draft);
+      sendErrorReport.mockRejectedValue(new ReportRejectedError(status));
+      await flushPendingReport(async () => 'token', 'UA');
+      expect(loadPendingReport()).not.toBeNull();
+    }
   });
 
   it('does nothing when nothing is saved', async () => {

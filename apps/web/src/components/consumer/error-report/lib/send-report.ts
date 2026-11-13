@@ -59,5 +59,22 @@ export const sendErrorReport = async (
       },
     }),
   });
-  if (!res.ok) throw new Error(String(res.status));
+  if (!res.ok) throw new ReportRejectedError(res.status);
 };
+
+/** The API answered, and said no. `permanent` when retrying cannot change it. */
+export class ReportRejectedError extends Error {
+  readonly permanent: boolean;
+
+  constructor(readonly status: number) {
+    super(String(status));
+    // 401 (sign in again), 408 and 429 (slow down) can succeed later; any
+    // other 4xx is the report itself being refused.
+    this.permanent =
+      status >= 400 &&
+      status < 500 &&
+      status !== 401 &&
+      status !== 408 &&
+      status !== 429;
+  }
+}

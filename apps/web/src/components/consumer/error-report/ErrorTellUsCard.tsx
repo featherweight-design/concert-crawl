@@ -94,6 +94,11 @@ export const ErrorTellUsCard = ({
   const [note, setNote] = useState('');
   const [device, setDevice] = useState('');
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const formHeadingRef = useRef<HTMLHeadingElement>(null);
+  const chipRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  // Set by Edit: the failed card's button unmounts, so focus has to be sent on
+  // to the form's heading or it drops to the page.
+  const [focusForm, setFocusForm] = useState(false);
 
   const page = reportPage(pathname);
   // The chip shows whichever id the failure has: a server throw's digest, or
@@ -103,6 +108,12 @@ export const ErrorTellUsCard = ({
   useEffect(() => {
     setDevice(deviceSummary(navigator.userAgent));
   }, []);
+
+  useEffect(() => {
+    if (!focusForm || state !== 'form') return;
+    formHeadingRef.current?.focus();
+    setFocusForm(false);
+  }, [focusForm, state]);
 
   // Sent and failed replace the form, so focus follows to the new heading.
   useEffect(() => {
@@ -269,7 +280,13 @@ export const ErrorTellUsCard = ({
             <button
               type="button"
               style={QUIET_BUTTON}
-              onClick={() => setState('form')}
+              onClick={() => {
+                // Editing means the saved copy is about to be replaced; it
+                // must not go out on its own if the edit is abandoned.
+                clearPendingReport();
+                setFocusForm(true);
+                setState('form');
+              }}
             >
               {copy.edit}
             </button>
@@ -296,6 +313,8 @@ export const ErrorTellUsCard = ({
           }}
         >
           <h2
+            ref={formHeadingRef}
+            tabIndex={-1}
             style={{
               margin: 0,
               fontSize: 26,
@@ -326,15 +345,38 @@ export const ErrorTellUsCard = ({
               gap: 10,
             }}
           >
-            {copy.chips.map((chip) => (
+            {copy.chips.map((chip, index) => (
               <button
                 key={chip}
+                ref={(node) => {
+                  chipRefs.current[index] = node;
+                }}
                 type="button"
                 role="radio"
                 aria-checked={doing === chip}
+                // Radio contract: one tab stop (the chosen chip, or the first
+                // while none is chosen), arrow keys move the choice.
+                tabIndex={(doing ?? copy.chips[0]) === chip ? 0 : -1}
                 onClick={() => {
                   setDoing(chip);
                   if (state === 'prompt') setState('form');
+                }}
+                onKeyDown={(event) => {
+                  const step =
+                    event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                      ? 1
+                      : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                        ? -1
+                        : 0;
+                  if (step === 0) return;
+                  event.preventDefault();
+                  const next =
+                    (index + step + copy.chips.length) % copy.chips.length;
+                  const nextChip = copy.chips[next];
+                  if (nextChip === undefined) return;
+                  setDoing(nextChip);
+                  if (state === 'prompt') setState('form');
+                  chipRefs.current[next]?.focus();
                 }}
                 style={chipStyle(doing === chip)}
               >
@@ -366,20 +408,20 @@ export const ErrorTellUsCard = ({
                   resize: 'vertical',
                 }}
               />
-              <dl style={{ margin: '14px 0 0' }}>
-                <dt
-                  style={{
-                    ...MONO,
-                    fontSize: 10,
-                    color: 'var(--fg-subtle)',
-                    margin: '0 0 6px',
-                  }}
-                >
-                  <span aria-hidden style={{ color: 'var(--success)' }}>
-                    ✓{' '}
-                  </span>
-                  {copy.attachHeading}
-                </dt>
+              <div
+                style={{
+                  ...MONO,
+                  fontSize: 10,
+                  color: 'var(--fg-subtle)',
+                  margin: '14px 0 6px',
+                }}
+              >
+                <span aria-hidden style={{ color: 'var(--success)' }}>
+                  ✓{' '}
+                </span>
+                {copy.attachHeading}
+              </div>
+              <dl style={{ margin: 0 }}>
                 {[
                   ...(shownId ? [[copy.errorId, shownId] as const] : []),
                   [copy.page, page] as const,
