@@ -148,8 +148,8 @@ const parseUnreadByCategory = (
   if (!isRecord(value)) return undefined;
   const out: Record<string, number> = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (!isCount(entry)) return undefined;
-    out[key] = entry;
+    // One bad entry costs only its own dot, not the whole split.
+    if (isCount(entry)) out[key] = entry;
   }
   return out;
 };
