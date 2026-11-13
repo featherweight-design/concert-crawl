@@ -298,8 +298,9 @@ async function detailPageFetch(
   // own links keeps discovery scoped to what the venue is currently
   // advertising while guaranteeing we only ever request pages the site
   // itself publishes as crawlable.
-  // The probe skips it: the sitemap only filters detail pages, and the probe
-  // never fetches any.
+  // The probe (firstPageOnly) skips it: it reads the listing and the first
+  // detail page it links to, two requests in all, so there is no set of
+  // detail pages for the sitemap to narrow.
   let sitemapUrls = new Set<string>();
   if (
     !opts.firstPageOnly &&
@@ -345,21 +346,6 @@ async function detailPageFetch(
     );
   }
 
-  // The probe stops at the listing. Its events live one hop away on the
-  // detail pages, so it reports none; a listing with links to follow is the
-  // proof the platform answers.
-  if (opts.firstPageOnly) {
-    return {
-      events: [],
-      sourceUrl: listingUrl,
-      meta: {
-        fetchLatencyMs: Date.now() - startedAt,
-        candidateCount: candidates.length,
-        firstPageOnly: true,
-      },
-    };
-  }
-
   const inSitemap = candidates.filter((url) => sitemapUrls.has(url));
   // An empty intersection means the sitemap and the calendar disagree — a
   // stale or partial sitemap. Trusting it then would zero the run, so the
@@ -375,11 +361,13 @@ async function detailPageFetch(
   // Checked one at a time and stopped at the cap: a link-heavy listing can
   // yield hundreds of candidates, and only MAX_DETAIL_PAGES of them will ever
   // be fetched. Resolving robots.txt for the rest is wasted work and noise.
+  // The probe follows one: enough to show the events come through.
+  const detailCap = opts.firstPageOnly ? 1 : MAX_DETAIL_PAGES;
   const detailUrls: string[] = [];
   let examinedCount = 0;
   let robotsSkippedCount = 0;
   for (const url of allowlisted) {
-    if (detailUrls.length >= MAX_DETAIL_PAGES) break;
+    if (detailUrls.length >= detailCap) break;
     examinedCount++;
     if (await isAllowed(url, CRAWLER_USER_AGENT)) {
       detailUrls.push(url);
@@ -394,7 +382,10 @@ async function detailPageFetch(
     );
   }
 
-  const truncatedCount = allowlisted.length - examinedCount;
+  // A probe stops after one page on purpose, which is not truncation.
+  const truncatedCount = opts.firstPageOnly
+    ? 0
+    : allowlisted.length - examinedCount;
   if (truncatedCount > 0) {
     // Worth an alert rather than a debug line: past the cap we are certainly
     // missing events, and the cap is the thing to revisit.
@@ -448,6 +439,9 @@ async function detailPageFetch(
         );
         throw err;
       }
+      // The probe reads one detail page, so its failure is the answer rather
+      // than a page to skip: report it instead of an ok with no events.
+      if (opts.firstPageOnly) throw err;
       failedPageCount++;
       if (failedPageCount > MAX_DETAIL_FAILURES) {
         throw new DetailPageFetchError(

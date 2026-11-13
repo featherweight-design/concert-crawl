@@ -2,6 +2,7 @@ import { jitter } from '@concert-crawl/crawler-core/jitter';
 import {
   checkRobots,
   getCrawlDelayMs,
+  MIN_CRAWL_DELAY_MS,
   resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots';
 import { fetchFollowingRobots } from '@concert-crawl/crawler-core/robots-fetch';
@@ -11,7 +12,7 @@ import { apiLogger } from './logger.js';
 
 // Our own floor between requests, the same 3 seconds the crawler uses. It
 // separates the robots.txt read from the page fetch.
-const DETECT_FETCH_DELAY_MS = 3000;
+const DETECT_FETCH_DELAY_MS = MIN_CRAWL_DELAY_MS;
 
 const VENDOR_SIGNALS: Array<{ pattern: RegExp; vendor: TicketVendor }> = [
   { pattern: /axs\.com/i, vendor: 'axs' },

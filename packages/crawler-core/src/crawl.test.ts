@@ -1798,6 +1798,53 @@ describe('crawlVenue — crawlMode orchestration', () => {
     );
   });
 
+  // A row stored below the floor (the admin form once accepted 1 s) must not
+  // pace faster than the crawl rules' 3 seconds on any fetch path.
+  describe('a venue stored with crawlDelayMs below the 3 s floor', () => {
+    it('hands fetchPageHttp at least 3000ms', async () => {
+      const venue = seedVenue({ crawlMode: 'http', crawlDelayMs: 1_000 });
+      mockFetchPageHttp.mockResolvedValue(FETCH_RESULT);
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(mockFetchPageHttp).toHaveBeenCalledOnce();
+      const [, delayMs] = mockFetchPageHttp.mock.calls[0]!;
+      expect(delayMs).toBeGreaterThanOrEqual(3_000);
+    });
+
+    it('hands fetchPage at least 3000ms', async () => {
+      const venue = seedVenue({ crawlMode: 'browser', crawlDelayMs: 1_000 });
+      mockFetchPage.mockResolvedValue(FETCH_RESULT);
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(mockFetchPage).toHaveBeenCalledOnce();
+      const [, , delayMs] = mockFetchPage.mock.calls[0]!;
+      expect(delayMs).toBeGreaterThanOrEqual(3_000);
+    });
+
+    it('hands the platform fetcher at least 3000ms', async () => {
+      const venue = seedVenue({ crawlDelayMs: 1_000 });
+      const fetch = vi.fn().mockResolvedValue({
+        events: [],
+        sourceUrl: 'https://platform.example.com/events.json',
+      });
+      mockDispatch.mockReturnValue({
+        source: 'aeg',
+        maxRequests: 1,
+        canHandle: () => true,
+        fetch,
+      });
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(fetch.mock.calls[0]![1].crawlDelayMs).toBeGreaterThanOrEqual(
+        3_000,
+      );
+    });
+  });
+
   it('skips the run when the site asks for a Crawl-delay longer than the cap', async () => {
     const venue = seedVenue({ crawlMode: 'http', crawlDelayMs: 3_000 });
     vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(300_000);

@@ -1267,7 +1267,7 @@ export const ADMIN_COPY = {
       },
       requestDelay: {
         label: 'Request delay',
-        hint: 'Milliseconds between requests inside one sweep. Tune up if you hit rate limits.',
+        hint: 'Milliseconds between requests, at least 3000. Raise it if you hit rate limits.',
         unit: 'ms',
       },
       fetchMode: {

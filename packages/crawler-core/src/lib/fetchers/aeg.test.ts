@@ -11,6 +11,14 @@ import {
 import type { Venue } from '@concert-crawl/db';
 import * as robots from '../robots.js';
 import { PlatformFetchDeadlineError } from './deadline.js';
+import { jitter } from './jitter.js';
+
+// jitter() floors every wait at 3 s, so the real one would make each fetch
+// here sleep 3-4 s. Stubbed to 0 by default; the tests that assert pacing on
+// purpose switch the real one back in.
+vi.mock('./jitter.js', () => ({ jitter: vi.fn(() => 0) }));
+const { jitter: realJitter } =
+  await vi.importActual<typeof import('./jitter.js')>('./jitter.js');
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -100,6 +108,7 @@ describe('aegFetcher.fetch', () => {
   let crawlDelaySpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.mocked(jitter).mockImplementation(() => 0);
     fetchSpy = vi.spyOn(globalThis, 'fetch');
     // Stub the robots gate so the rest of the suite keeps asserting on the
     // blob request alone. isAllowedOrSkip() would otherwise issue its own fetch.
@@ -141,7 +150,6 @@ describe('aegFetcher.fetch', () => {
   it('makes the single blob request and returns its events when firstPageOnly is set', async () => {
     // The blob is AEG's only listing request, so the probe's first-page cut
     // changes nothing here: still exactly one request, still every event.
-    recordSleepDelays();
     mockFetchOk(BLUEBIRD_FIXTURE);
 
     const full = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 });
@@ -192,6 +200,7 @@ describe('aegFetcher.fetch', () => {
   });
 
   it("waits the blob host's longer Crawl-delay, within a widened budget", async () => {
+    vi.mocked(jitter).mockImplementation(realJitter);
     vi.useFakeTimers();
     try {
       crawlDelaySpy.mockResolvedValueOnce(10_000);
@@ -213,6 +222,7 @@ describe('aegFetcher.fetch', () => {
   });
 
   it("keeps a fixed budget fixed when the blob host's Crawl-delay is longer", async () => {
+    vi.mocked(jitter).mockImplementation(realJitter);
     vi.useFakeTimers();
     try {
       crawlDelaySpy.mockResolvedValueOnce(10_000);
@@ -523,27 +533,33 @@ describe('aegFetcher.fetch', () => {
   });
 
   it('sets a jittered crawlDelayMs as a leading delay before the fetch', async () => {
+    vi.mocked(jitter).mockImplementation(realJitter);
     mockFetchOk(BLUEBIRD_FIXTURE);
-    // Pin the jitter to its floor (+0ms) so the assertion is deterministic
-    // and the test doesn't pay for a random extra second.
+    // Pin the jitter to +0ms so the assertion is deterministic. The sleep
+    // itself is recorded, not taken.
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
     const delays = recordSleepDelays();
-    await aegFetcher.fetch(makeVenue({ crawlDelayMs: 600 }), {
-      crawlDelayMs: 600,
+    await aegFetcher.fetch(makeVenue({ crawlDelayMs: 5000 }), {
+      crawlDelayMs: 5000,
     });
     randomSpy.mockRestore();
-    // Jitter only ever adds, so the configured delay is the floor.
-    expect(delays).toEqual([600]);
+    // Jitter only ever adds, so the configured delay is the minimum.
+    expect(delays).toEqual([5000]);
   });
 
-  it('does not delay at all when crawlDelayMs is 0', async () => {
-    mockFetchOk(BLUEBIRD_FIXTURE);
-    const delays = recordSleepDelays();
-    await aegFetcher.fetch(makeVenue({ crawlDelayMs: 0 }), { crawlDelayMs: 0 });
-    // Jittering zero must stay zero — an admin probe should not be paced by a
-    // delay the venue explicitly turned off.
-    expect(delays).toEqual([]);
-  });
+  it.each([0, 600])(
+    'paces a crawlDelayMs of %ims at the 3 s floor',
+    async (crawlDelayMs) => {
+      vi.mocked(jitter).mockImplementation(realJitter);
+      mockFetchOk(BLUEBIRD_FIXTURE);
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const delays = recordSleepDelays();
+      await aegFetcher.fetch(makeVenue({ crawlDelayMs }), { crawlDelayMs });
+      // Neither a short stored delay nor the probe's old 0 paces faster than
+      // the crawl rules' 3 seconds.
+      expect(delays).toEqual([3000]);
+    },
+  );
 
   // An Origin naming the venue's own site would make the request look like it
   // came from the venue's page. We identify only as ourselves.

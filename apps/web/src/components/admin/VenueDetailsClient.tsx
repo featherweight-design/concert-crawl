@@ -586,6 +586,10 @@ const EMPTY_GUIDE: VenueGuide = {
   publishedAt: null,
 };
 
+// The crawl rules' 3 s floor. Mirrors MIN_CRAWL_DELAY_MS in crawler-core,
+// which the web can't import; the API and the crawler both enforce it.
+const MIN_CRAWL_DELAY_MS = 3000;
+
 export function VenueDetailsClient({
   venue,
   guide = EMPTY_GUIDE,
@@ -668,7 +672,11 @@ export function VenueDetailsClient({
   const [cityVal, setCityVal] = useState(venue.city);
   const [addressVal, setAddressVal] = useState(venue.address ?? '');
   const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil);
-  const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs);
+  // A legacy row stored below the floor (the form once accepted 1 s) starts
+  // at the floor, so saving any other field sends a value the API accepts
+  // and corrects the row, instead of refusing the whole save.
+  const initialCrawlDelay = Math.max(venue.crawlDelayMs, MIN_CRAWL_DELAY_MS);
+  const [crawlDelayVal, setCrawlDelayVal] = useState(initialCrawlDelay);
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
     venue.crawlWaitForSelector ?? '',
   );
@@ -714,7 +722,7 @@ export function VenueDetailsClient({
     ...(cityVal !== venue.city ? ['City'] : []),
     ...(addressVal !== (venue.address ?? '') ? ['Address'] : []),
     ...(waitUntilVal !== venue.crawlWaitUntil ? ['Wait until'] : []),
-    ...(crawlDelayVal !== venue.crawlDelayMs ? ['Crawl delay'] : []),
+    ...(crawlDelayVal !== initialCrawlDelay ? ['Crawl delay'] : []),
     ...((waitForSelectorVal || null) !== venue.crawlWaitForSelector
       ? ['Selector']
       : []),
@@ -886,7 +894,7 @@ export function VenueDetailsClient({
     setCityVal(venue.city);
     setAddressVal(venue.address ?? '');
     setWaitUntilVal(venue.crawlWaitUntil);
-    setCrawlDelayVal(venue.crawlDelayMs);
+    setCrawlDelayVal(initialCrawlDelay);
     setWaitForSelectorVal(venue.crawlWaitForSelector ?? '');
     setTicketVendorVal(venue.ticketVendor ?? null);
     setPriceUrlVal(venue.priceUrl ?? '');
@@ -911,7 +919,7 @@ export function VenueDetailsClient({
     if (cityRef.current) cityRef.current.value = venue.city;
     if (addressRef.current) addressRef.current.value = venue.address ?? '';
     if (crawlDelayRef.current)
-      crawlDelayRef.current.value = String(venue.crawlDelayMs);
+      crawlDelayRef.current.value = String(initialCrawlDelay);
   }
 
   async function handleSave() {
@@ -2163,10 +2171,9 @@ export function VenueDetailsClient({
                     id="edit-venue-crawl-delay"
                     type="number"
                     inputRef={crawlDelayRef}
-                    defaultValue={venue.crawlDelayMs}
+                    defaultValue={initialCrawlDelay}
                     disabled={isDisabled}
-                    // The crawl rules' 3 s floor (the API and crawler enforce it).
-                    min={3000}
+                    min={MIN_CRAWL_DELAY_MS}
                     max={30000}
                     step={500}
                     onChange={(evt) => {
