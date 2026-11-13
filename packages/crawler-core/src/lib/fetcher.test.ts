@@ -15,13 +15,22 @@ import type {
 } from 'playwright';
 import * as robots from './robots.js';
 import { FetchLog } from './fetch-log.js';
+import { jitter } from './fetchers/jitter.js';
 
-// jitter(0) = 0, so tests that pass crawlDelayMs 0 never wait. Pinning random
-// keeps any test that does pass a delay deterministic.
+// jitter() floors every wait at 3 s, so the real one would make each request
+// here sleep 3-4 s. Stubbed to 0 by default; a test that asserts pacing on
+// purpose switches the real one back in and drives it with fake timers.
+vi.mock('./fetchers/jitter.js', () => ({ jitter: vi.fn(() => 0) }));
+const { jitter: realJitter } = await vi.importActual<
+  typeof import('./fetchers/jitter.js')
+>('./fetchers/jitter.js');
+
+// Pinning random keeps any test that runs the real jitter deterministic.
 // Every redirect hop clears robots.txt; allowed unless a test says otherwise.
 let isAllowedSpy: ReturnType<typeof vi.spyOn>;
 let crawlDelaySpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
+  vi.mocked(jitter).mockImplementation(() => 0);
   vi.spyOn(Math, 'random').mockReturnValue(0.5);
   isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true);
   crawlDelaySpy = vi.spyOn(robots, 'getCrawlDelayMs').mockResolvedValue(null);
@@ -551,6 +560,7 @@ describe('fetchPageHttp', () => {
   });
 
   it("waits the redirect target's Crawl-delay before following it", async () => {
+    vi.mocked(jitter).mockImplementation(realJitter);
     vi.useFakeTimers();
     try {
       const mockFetch = vi.mocked(fetch);
@@ -566,7 +576,13 @@ describe('fetchPageHttp', () => {
         } as unknown as Response);
       crawlDelaySpy.mockResolvedValueOnce(10_000);
 
+      // A delay of 0 is floored: the first request waits 3000 + 500 jitter.
       const run = fetchPageHttp('https://example.com', 0);
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(mockFetch).toHaveBeenCalledTimes(0);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // The redirect hop then waits the target's 10 s + 500 jitter (~14 s in).
       await vi.advanceTimersByTimeAsync(9_000);
       expect(mockFetch).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(2_000);

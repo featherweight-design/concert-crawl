@@ -4,17 +4,22 @@
 // to the configured crawl delay so a run doesn't hit a host on a bot-like fixed
 // interval. It was duplicated across the HTML cascade (lib/fetcher.ts),
 // VenuePilot, detail-page and Live Nation before being centralized here.
+//
+// It is also where the 3 second floor is enforced for every wait: each pacing
+// wait in the crawler, the admin probe's included, goes through this function,
+// so no caller can pass a short or zero delay and pace faster than the rule.
+// robots.ts imports nothing, so taking the constant from it adds no cycle.
+
+import { MIN_CRAWL_DELAY_MS } from '../robots.js';
 
 /**
- * Jitter a crawl delay by adding 0–999ms.
+ * Turn a crawl delay into the wait to actually take: the delay, floored at
+ * MIN_CRAWL_DELAY_MS, plus 0–999ms.
  *
- * Additive only: the configured delay is a floor, and /bot publishes it as
+ * Additive only: the floored delay is a minimum, and /bot publishes it as
  * "at least 3 seconds". Jitter that could subtract would break that promise.
- *
- * A venue that asks for no delay gets none — without the zero guard,
- * jittering zero would sometimes return up to 999ms and pace the admin probe.
+ * A delay of 0 is floored too, so the result is never below 3000ms.
  */
 export function jitter(ms: number): number {
-  if (ms <= 0) return 0;
-  return ms + Math.floor(Math.random() * 1000);
+  return Math.max(ms, MIN_CRAWL_DELAY_MS) + Math.floor(Math.random() * 1000);
 }

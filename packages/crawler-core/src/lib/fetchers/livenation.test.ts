@@ -13,6 +13,10 @@ import type { Venue } from '@concert-crawl/db';
 import { PlatformFetchDeadlineError } from './deadline.js';
 import { CrawlSkipError } from '../robots.js';
 
+// jitter() floors every wait at 3 s, so the real one would make each of the
+// 13 page requests here sleep 3-4 s. The floor is pinned by jitter.test.ts.
+vi.mock('./jitter.js', () => ({ jitter: () => 0 }));
+
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '__fixtures__',

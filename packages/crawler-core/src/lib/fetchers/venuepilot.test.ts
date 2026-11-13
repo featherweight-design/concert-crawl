@@ -11,6 +11,14 @@ import {
   VenuePilotSchemaError,
 } from './venuepilot.js';
 import type { Venue } from '@concert-crawl/db';
+import { jitter } from './jitter.js';
+
+// jitter() floors every wait at 3 s, so the real one would make each page
+// here sleep 3-4 s. Stubbed to 0 by default; the tests that assert pacing on
+// purpose switch the real one back in and drive it with fake timers.
+vi.mock('./jitter.js', () => ({ jitter: vi.fn(() => 0) }));
+const { jitter: realJitter } =
+  await vi.importActual<typeof import('./jitter.js')>('./jitter.js');
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -124,6 +132,7 @@ describe('venuePilotFetcher.fetch', () => {
   let crawlDelaySpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.mocked(jitter).mockImplementation(() => 0);
     fetchSpy = vi.spyOn(globalThis, 'fetch');
     // Stub the robots gate so the rest of the suite keeps asserting on the
     // API requests alone. isAllowedOrSkip() would otherwise issue its own fetch.
@@ -542,6 +551,7 @@ describe('venuePilotFetcher.fetch', () => {
   });
 
   it("widens the run budget for the endpoint's longer Crawl-delay", async () => {
+    vi.mocked(jitter).mockImplementation(realJitter);
     vi.useFakeTimers();
     try {
       crawlDelaySpy.mockResolvedValueOnce(10_000);
@@ -574,6 +584,7 @@ describe('venuePilotFetcher.fetch', () => {
   });
 
   it("keeps a fixed budget fixed when the endpoint's Crawl-delay is longer", async () => {
+    vi.mocked(jitter).mockImplementation(realJitter);
     vi.useFakeTimers();
     try {
       crawlDelaySpy.mockResolvedValueOnce(10_000);
@@ -756,39 +767,51 @@ describe('venuePilotFetcher.fetch', () => {
   it('throws instead of returning a partial set when the overall budget runs out', async () => {
     // A slow page against a 50-page ceiling is the #1184 case: a per-request
     // timeout alone lets worst-case wall time reach MAX_PAGES × the budget.
-    fetchSpy.mockImplementation(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      return new Response(
-        graphqlBody(
-          [
-            {
-              id: 1,
-              name: 'Slow',
-              date: '2026-08-08',
-              doorTime: '18:00:00',
-              startTime: '19:00:00',
-              description: '',
-              ticketsUrl: '',
-              status: 'BUY TICKETS',
-              announceArtists: [{ name: 'S' }],
-              announceImages: [],
-            },
-          ],
-          { totalPages: 40 },
-        ),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      );
-    });
+    // Jitter is stubbed to 0 and each page costs a fixed 30ms on a fake
+    // clock, so the 90ms budget lets pages through and then breaches on a
+    // later one, mid-pagination, without the test sleeping for real.
+    vi.useFakeTimers();
+    try {
+      fetchSpy.mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return new Response(
+          graphqlBody(
+            [
+              {
+                id: 1,
+                name: 'Slow',
+                date: '2026-08-08',
+                doorTime: '18:00:00',
+                startTime: '19:00:00',
+                description: '',
+                ticketsUrl: '',
+                status: 'BUY TICKETS',
+                announceArtists: [{ name: 'S' }],
+                announceImages: [],
+              },
+            ],
+            { totalPages: 40 },
+          ),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      });
 
-    await expect(
-      venuePilotFetcher.fetch(makeVenue(), {
+      const run = venuePilotFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 90,
-      }),
-    ).rejects.toThrow(PlatformFetchDeadlineError);
+      });
+      const settled = expect(run).rejects.toThrow(PlatformFetchDeadlineError);
+      await vi.runAllTimersAsync();
+      await settled;
 
-    // Loud failure, not a truncated success: crawl.ts's stale-event pass
-    // would read the pages we never reached as shows that had come down.
-    expect(fetchSpy.mock.calls.length).toBeLessThan(40);
+      // The breach came mid-pagination, after real pages had landed...
+      expect(fetchSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+      // ...and is a loud failure, not a truncated success: crawl.ts's
+      // stale-event pass would read the pages we never reached as shows that
+      // had come down.
+      expect(fetchSpy.mock.calls.length).toBeLessThan(40);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

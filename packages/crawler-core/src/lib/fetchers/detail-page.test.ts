@@ -14,6 +14,12 @@ import {
 import { dispatch } from './dispatch.js';
 import { PlatformFetchDeadlineError } from './deadline.js';
 import type { Venue } from '@concert-crawl/db';
+import { jitter } from './jitter.js';
+
+// jitter() floors every wait at 3 s, so the real one would make each of the
+// dozens of page requests here sleep 3-4 s. The floor is pinned by
+// jitter.test.ts; tests here count the paced waits instead.
+vi.mock('./jitter.js', () => ({ jitter: vi.fn(() => 0) }));
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -355,21 +361,42 @@ describe('detailPageFetcher.fetch', () => {
     expect(event.description).not.toContain('&nbsp;');
   });
 
-  it('requests only the listing when firstPageOnly is set', async () => {
-    // The admin probe sets this. The listing is the first page; the sitemap
-    // only filters detail pages, and the probe follows none of them.
-    const fetchMock = mockSiteFetch();
+  it('requests the listing and one detail page when firstPageOnly is set', async () => {
+    // The admin probe sets this. The listing carries no event data of its
+    // own, so the probe follows its first link and returns that page's
+    // events: two requests, no sitemap, no other detail pages.
+    vi.mocked(jitter).mockClear();
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/e/one">1</a><a href="/e/two">2</a><a href="/e/three">3</a>`,
+    });
     const result = await detailPageFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
       firstPageOnly: true,
     });
 
-    expect(pageRequests(fetchMock)).toEqual([LISTING_URL]);
+    expect(pageRequests(fetchMock)).toEqual([LISTING_URL, `${ORIGIN}/e/one`]);
+    // Both requests are paced through jitter, which floors them at 3 s.
+    expect(jitter).toHaveBeenCalledTimes(2);
     expect(result.sourceUrl).toBe(LISTING_URL);
-    // The listing carries no event data of its own: its events live on the
-    // detail pages, so the probe reports the links it found instead.
-    expect(result.events).toEqual([]);
-    expect(result.meta?.candidateCount).toBeGreaterThan(0);
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]!.title).toBe('Hip-Hop Summit Denver');
+    expect(result.meta?.truncatedCount).toBe(0);
+  });
+
+  it('fails a first-page-only fetch whose one detail page fails', async () => {
+    // The probe reads a single detail page, so a failed one is the answer,
+    // not a page to skip past with an ok and no events.
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/e/one">1</a><a href="/e/two">2</a>`,
+      detail: () => ({ ok: false, status: 404, body: '' }),
+    });
+    await expect(
+      detailPageFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        firstPageOnly: true,
+      }),
+    ).rejects.toThrow(DetailPageFetchError);
+    expect(pageRequests(fetchMock)).toEqual([LISTING_URL, `${ORIGIN}/e/one`]);
   });
 
   it('still fails a first-page-only fetch whose listing has no links', async () => {

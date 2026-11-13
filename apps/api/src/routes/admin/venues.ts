@@ -82,9 +82,13 @@ const createVenueSchema = z.object({
   websiteUrl: httpUrl(),
   city: z.string().default('Denver'),
   active: z.boolean().default(true),
-  // 3 s is the crawl rules' floor (the crawler enforces it too:
-  // MIN_CRAWL_DELAY_MS in crawler-core).
-  crawlDelayMs: z.number().int().min(3000).max(30000).default(3000),
+  // The crawl rules' 3 s floor, which the crawler enforces on every wait too.
+  crawlDelayMs: z
+    .number()
+    .int()
+    .min(MIN_CRAWL_DELAY_MS)
+    .max(30000)
+    .default(MIN_CRAWL_DELAY_MS),
   crawlWaitUntil: z
     .enum(['networkidle', 'load', 'domcontentloaded'])
     .default('networkidle'),

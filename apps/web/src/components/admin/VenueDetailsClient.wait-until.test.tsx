@@ -353,3 +353,63 @@ describe('VenueDetailsClient — Wait until control', () => {
     expect(formData.get('apiProvider')).toBe('');
   });
 });
+
+// The form once accepted 1 s, and the API now refuses anything under 3 s, so
+// a legacy row has to start at the floor or no field on it could be saved.
+describe('VenueDetailsClient — Request delay below the 3 s floor', () => {
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', matchMediaStub);
+    mockUpdateVenue.mockReset();
+    mockUpdateVenue.mockResolvedValue({ success: true });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows a legacy 1000ms delay as 3000', () => {
+    render(
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlDelayMs: 1000 })}
+      />,
+    );
+
+    const input = document.getElementById('edit-venue-crawl-delay');
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('Expected the request delay input');
+    }
+    expect(input.value).toBe('3000');
+    // The hint states the minimum the field enforces.
+    const hint = ADMIN_COPY.venueDetailsClient.fields.requestDelay.hint;
+    expect(hint).toMatch(/at least 3000/);
+    expect(screen.getByText(hint)).toBeTruthy();
+  });
+
+  it('sends 3000 when another field is saved, correcting the row', async () => {
+    render(
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlDelayMs: 1000 })}
+      />,
+    );
+
+    const name = document.getElementById('edit-venue-name');
+    if (!(name instanceof HTMLInputElement)) {
+      throw new Error('Expected the name input');
+    }
+    fireEvent.change(name, { target: { value: 'Renamed Venue' } });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
+
+    await waitFor(() => {
+      expect(mockUpdateVenue).toHaveBeenCalledTimes(1);
+    });
+    const formData = mockUpdateVenue.mock.calls[0]?.[1];
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData');
+    }
+    expect(formData.get('name')).toBe('Renamed Venue');
+    expect(formData.get('crawlDelayMs')).toBe('3000');
+  });
+});

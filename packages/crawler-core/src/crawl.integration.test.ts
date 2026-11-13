@@ -27,11 +27,11 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
   isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
-  // The real one floors every delay at 3 s (MIN_CRAWL_DELAY_MS); these tests
-  // fetch from stubs, so pacing would only slow the suite. The floor is pinned
-  // by robots.test.ts.
-  resolveCrawlDelayMs: vi.fn().mockReturnValue(0),
 }));
+// jitter() floors every wait at 3 s (MIN_CRAWL_DELAY_MS). These tests fetch
+// from stubs, so real pacing would only slow the suite; the floor itself is
+// pinned by jitter.test.ts and robots.test.ts.
+vi.mock('./lib/fetchers/jitter.js', () => ({ jitter: () => 0 }));
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
   // Fixtures here report their performers, so the derivation ladder settles
