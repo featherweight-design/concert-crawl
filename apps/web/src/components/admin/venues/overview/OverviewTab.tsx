@@ -244,23 +244,29 @@ const BAR_STYLE: Record<BarKind, CSSProperties> = {
   },
 };
 
-/** The legend's swatch: the bar itself, at the legend board's size. */
-const Swatch = ({ kind }: { kind: BarKind }) => (
-  <span
-    aria-hidden
-    style={{
-      width: 14,
-      height: 40,
-      display: 'flex',
-      alignItems: 'flex-end',
-      flex: 'none',
-    }}
-  >
+/**
+ * The in-card legend swatch (`04/venue-overview`): a 10px square in the
+ * bar's colour, and a 10×4 line for the low bars (Skipped, unchanged and
+ * Paused, the latter dashed as its bar is).
+ */
+const Swatch = ({ kind }: { kind: BarKind }) => {
+  const { background, border } = BAR_STYLE[kind];
+  const line = kind === 'unchanged' || kind === 'paused';
+  return (
     <span
-      style={{ width: '100%', boxSizing: 'border-box', ...BAR_STYLE[kind] }}
+      aria-hidden
+      style={{
+        width: 10,
+        height: line ? 4 : 10,
+        borderRadius: 2,
+        boxSizing: 'border-box',
+        flex: 'none',
+        background,
+        border,
+      }}
     />
-  </span>
-);
+  );
+};
 
 const LastRunsCard = ({
   venueId,
@@ -352,17 +358,17 @@ const LastRunsCard = ({
               padding: 0,
               display: 'flex',
               flexWrap: 'wrap',
-              columnGap: 26,
-              rowGap: 10,
+              columnGap: 14,
+              rowGap: 6,
             }}
           >
             {kinds.map((kind) => (
               <li
                 key={kind}
-                style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 <Swatch kind={kind} />
-                <span style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
+                <span style={{ fontSize: 11.5, color: 'var(--fg-muted)' }}>
                   {COPY.lastRuns.kinds[kind]}
                 </span>
               </li>
