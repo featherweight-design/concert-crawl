@@ -180,7 +180,7 @@ export const ResultPrimaryButton = ({
       fontWeight: 800,
       border: 'none',
       color: 'var(--fg-on-accent)',
-      background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+      background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
       cursor: disabled ? 'not-allowed' : 'pointer',
       opacity: disabled ? 0.45 : 1,
     }}

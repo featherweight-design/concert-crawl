@@ -139,7 +139,7 @@ export const PassportActions = ({
             className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-bold text-fg-on-accent disabled:opacity-60 lg:flex-none"
             style={{
               background:
-                'linear-gradient(135deg, var(--signal), var(--accent))',
+                'linear-gradient(135deg, var(--signal), var(--cta-end))',
               boxShadow: PASSPORT_CTA_GLOW,
             }}
           >

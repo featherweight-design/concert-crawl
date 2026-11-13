@@ -31,8 +31,7 @@ export const NotifPanelEdge = () => {
       <defs>
         <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
           <stop offset="0" stopColor="var(--signal)" />
-          {/* fwd-allow-hex: board art colour */}
-          <stop offset="1" stopColor="#de96df" />
+          <stop offset="1" stopColor="var(--cta-end)" />
         </linearGradient>
         <linearGradient id={fadeId} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#fff" />

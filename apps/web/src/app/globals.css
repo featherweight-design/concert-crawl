@@ -21,6 +21,12 @@
     --signal-muted: #3fa3c2;
     --accent: #ff7bd4;
     --accent-muted: #b8559a;
+    /* The end stop of a gradient that FILLS a CTA under dark label text
+       (addendum-4 §3, the B+ kit's grad()). Derived from the theme's own
+       --accent, so every theme gets its own; the inline theme script sets
+       --accent on <html>, the same element this resolves on. Gradient text,
+       borders, the sheet edge and solid accents keep --accent. */
+    --cta-end: color-mix(in srgb, var(--accent) 75%, var(--signal));
     --success: #7bffb0;
     --warning: #ffd27a;
     --danger: #ff7a8a;

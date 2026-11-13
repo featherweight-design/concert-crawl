@@ -170,7 +170,7 @@ const TRY_AGAIN_CLASS =
   // 41px as the board draws it; the ::before extends the hit area to 44px.
   "relative inline-flex h-[41px] items-center justify-center rounded-[14px] px-8 text-[17px] font-bold text-fg-on-accent before:absolute before:inset-x-0 before:-inset-y-[1.5px] before:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal";
 export const TRY_AGAIN_STYLE = {
-  background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+  background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
   boxShadow: '0 8px 28px color-mix(in oklch, var(--signal) 22%, transparent)',
 } as const;
 export { TRY_AGAIN_CLASS };

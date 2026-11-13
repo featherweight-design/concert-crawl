@@ -4,10 +4,11 @@ export const INVITE_GRADIENT =
 
 /**
  * The Redeem button's fill, as invite-320 draws it: 135deg, cyan to a softened
- * pink. The end stop is no token (the accent is #FF7BD4), so both stops are
- * fixed board colours.
+ * pink. The softened pink is `--cta-end` (addendum-4 §3), each theme's accent
+ * mixed toward its signal.
  */
-export const REDEEM_GRADIENT = 'linear-gradient(135deg, #7AE6FF, #de96df)'; // fwd-allow-hex: board art colour
+export const REDEEM_GRADIENT =
+  'linear-gradient(135deg, var(--signal), var(--cta-end))';
 
 /**
  * The invite code field's border: cyan to pink at 135deg, fading to the border

@@ -108,7 +108,7 @@ export const VibeShowButton = ({ count, onClick }: VibeShowButtonProps) => {
       className="inline-flex h-10 cursor-pointer items-center rounded-[12px] px-[18px] text-[14.5px] font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       style={{
         color: 'var(--fg-on-accent)',
-        background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+        background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
         boxShadow:
           '0 6px 18px color-mix(in oklab, var(--signal) 25%, transparent)',
       }}

@@ -12,7 +12,7 @@ function FindAShow({ compact }: { compact: boolean }) {
         compact ? 'mt-2 px-[22px] text-[14.5px]' : 'mt-3 px-6 text-[15px]'
       }`}
       style={{
-        background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+        background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
         boxShadow: PASSPORT_CTA_GLOW,
       }}
     >

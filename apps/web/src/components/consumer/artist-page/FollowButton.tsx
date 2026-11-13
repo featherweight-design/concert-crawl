@@ -159,7 +159,7 @@ export const FollowButton = ({
             border: '1.5px solid var(--signal)',
           }
         : {
-            background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+            background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
             color: 'var(--fg-on-accent)',
             border: '1px solid transparent',
             boxShadow:

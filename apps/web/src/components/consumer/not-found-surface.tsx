@@ -106,7 +106,7 @@ export const NotFoundSurface = () => (
         minHeight: 48,
         padding: '0 28px',
         borderRadius: 14,
-        background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+        background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
         boxShadow:
           '0 8px 28px -10px color-mix(in oklch, var(--signal) 55%, transparent)',
         color: 'var(--fg-on-accent)',
