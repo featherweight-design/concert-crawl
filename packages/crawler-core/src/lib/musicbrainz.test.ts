@@ -96,24 +96,44 @@ describe('makeMusicBrainzLookup', () => {
     expect(lookup.stats).toEqual({ found: 1, notFound: 1, unavailable: 0 });
   });
 
-  it('reads a failed call as UNKNOWN (null, never false), and asks again next time', async () => {
-    // Each lookup makes four asks (one try, three retries) before giving up.
+  it('reads a failed call as UNKNOWN (null, never false) and does not ask the same name again', async () => {
+    // One lookup makes four asks (one try, three retries) before giving up.
     const fetchImpl = vi.fn();
     for (let ask = 0; ask < 4; ask += 1) {
       fetchImpl.mockRejectedValueOnce(new Error('timeout'));
     }
-    for (let ask = 0; ask < 4; ask += 1) {
-      fetchImpl.mockResolvedValueOnce(new Response('busy', { status: 503 }));
-    }
     fetchImpl.mockResolvedValueOnce(
-      Response.json({ artists: [{ name: 'Nas' }] }),
+      Response.json({ artists: [{ name: 'Wu-Tang Clan' }] }),
     );
     const lookup = makeMusicBrainzLookup({
       fetchImpl,
       sleepImpl: async () => {},
     });
     expect(await lookup('Nas')).toBeNull();
-    expect(await lookup('Nas')).toBeNull();
+    expect(await lookup('NAS')).toBeNull();
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(await lookup('Wu-Tang Clan')).toBe(true);
+    expect(lookup.stats).toEqual({ found: 1, notFound: 0, unavailable: 1 });
+  });
+
+  it('waits out a Retry-After longer than the schedule', async () => {
+    const sleeps: number[] = [];
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response('slow down', {
+          status: 429,
+          headers: { 'Retry-After': '30' },
+        }),
+      )
+      .mockResolvedValueOnce(Response.json({ artists: [{ name: 'Nas' }] }));
+    const lookup = makeMusicBrainzLookup({
+      fetchImpl,
+      sleepImpl: async (ms) => {
+        sleeps.push(ms);
+      },
+    });
     expect(await lookup('Nas')).toBe(true);
+    expect(sleeps).toContain(30000);
   });
 });

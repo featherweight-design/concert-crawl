@@ -23,7 +23,7 @@ const normalise = (name: string): string =>
   name
     .trim()
     .toLowerCase()
-    .replace(/\s*[&+]\s*/g, ' & ')
+    .replace(/\s+[&+]\s+/g, ' & ')
     .replace(/\s+/g, ' ');
 
 const namesOf = (artist: MusicBrainzArtist): string[] => {
@@ -71,7 +71,10 @@ export const makeMusicBrainzLookup = (
     options.sleepImpl ??
     ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const now = options.now ?? Date.now;
-  const cache = new Map<string, boolean>();
+  // Answers for the run. A name that could not be asked (null) is cached too:
+  // after one exhausted retry sequence the same name is not asked again for
+  // every event that carries it, which would spend about 17 seconds each.
+  const cache = new Map<string, boolean | null>();
   const stats: MusicBrainzStats = { found: 0, notFound: 0, unavailable: 0 };
   let lastAt = 0;
   // Calls queue behind one another so two lookups never overlap.
@@ -109,11 +112,18 @@ export const makeMusicBrainzLookup = (
     let res = await ask(name);
     for (const delay of RETRY_DELAYS_MS) {
       if (res !== null && res.status !== 503 && res.status !== 429) break;
-      await sleep(delay);
+      // A Retry-After the server sends is honoured when it asks for longer.
+      const asked = Number(res?.headers.get('retry-after'));
+      const wait = Number.isFinite(asked)
+        ? Math.max(delay, Math.min(asked, 60) * 1000)
+        : delay;
+      await res?.body?.cancel().catch(() => undefined);
+      await sleep(wait);
       res = await ask(name);
     }
     // null = could not ask (outage, rate limit, a bad reply): never "no such artist".
     if (res === null || !res.ok) {
+      cache.set(key, null);
       stats.unavailable += 1;
       return null;
     }
@@ -137,6 +147,7 @@ export const makeMusicBrainzLookup = (
       else stats.notFound += 1;
       return found;
     } catch {
+      cache.set(key, null);
       stats.unavailable += 1;
       return null;
     }

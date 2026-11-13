@@ -5,8 +5,9 @@
 //
 // The evidence:
 //   whole(N)  an independent source (MusicBrainz) has an artist named exactly N
-//   part(P)   P is a known artist: one of ours with an exact Spotify match, or
-//             an exact-name artist at MusicBrainz
+//   part(P)   P is a known artist of ours: an exact Spotify match, created from
+//             this very name, and billed alone at some venue. An outside
+//             source naming a one-word P proves nothing about the act billed.
 //
 // Then: the whole is known -> WHOLE; else every part is known -> SPLIT; else
 // UNRESOLVED, and the caller writes nothing for that event.
