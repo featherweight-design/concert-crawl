@@ -1,3 +1,11 @@
+## [1.419.4](https://github.com/featherweight-design/concert-crawl/compare/v1.419.3...v1.419.4) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** pad the phone chrome for every live safe-area inset ([4737d23](https://github.com/featherweight-design/concert-crawl/commit/4737d231889a5cbc1f7f2b23584307259aab57f4))
+* **web:** size the phone shell to the dynamic viewport and honour the safe-area inset ([abdde63](https://github.com/featherweight-design/concert-crawl/commit/abdde630c40ffe65a424e3248ed00dbdb5f5d47a))
+
 ## [1.419.3](https://github.com/featherweight-design/concert-crawl/compare/v1.419.2...v1.419.3) (2026-11-13)
 
 
