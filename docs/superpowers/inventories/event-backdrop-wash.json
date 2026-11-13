@@ -1,0 +1,23 @@
+{
+  "feature": "Event page · the backdrop wash, the title block position, the phone rays",
+  "note": "Boards: design/design_handoff_bplus_redesign/screens/01-core/bp-event, 02-mobile/bp-m-event_m, 03-themes/bp-td-electric-event_A, 03-themes/bp-t-electric-event_m_A. Needs CC_EVENT_ID, an upcoming show with a photo.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "event-hero",
+      "label": "/events/[id]: the hero",
+      "steps": [
+        {
+          "goto": "/events/${CC_EVENT_ID}",
+          "settle": 1000
+        },
+        {
+          "wait": "[data-testid=\"stage-meta\"]"
+        }
+      ]
+    }
+  ]
+}

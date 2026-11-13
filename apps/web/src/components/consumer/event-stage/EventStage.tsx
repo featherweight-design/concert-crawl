@@ -31,7 +31,7 @@ export const STAGE_DESATURATE = 'grayscale(.85)';
 // on Light and dark on the dark themes, which is what keeps --fg readable over
 // it on every theme without a per-theme rule.
 export const THEME_WASH =
-  'linear-gradient(110deg, color-mix(in oklch, var(--signal) 46%, var(--bg)) 0%, color-mix(in oklch, var(--accent) 46%, var(--bg)) 100%)';
+  'linear-gradient(110deg, color-mix(in oklch, var(--signal) 58%, var(--bg)) 0%, color-mix(in oklch, var(--accent) 58%, var(--bg)) 100%)';
 // The halftone. Drawn in the ground color, so it darkens a dark wash and
 // lightens a light one.
 const HALFTONE =
@@ -42,7 +42,7 @@ const GROUND_FADE =
   'linear-gradient(to bottom, transparent 38%, color-mix(in oklch, var(--bg) 72%, transparent) 76%, var(--bg) 100%)';
 // Mobile only: rays fanning out from behind the countdown, as drawn.
 const RAYS =
-  'repeating-conic-gradient(from 0deg at 50% 66%, color-mix(in oklch, var(--accent) 13%, transparent) 0deg 3deg, transparent 3deg 11deg)';
+  'repeating-conic-gradient(from 0deg at 50% 66%, color-mix(in oklch, var(--accent) 22%, transparent) 0deg 3deg, transparent 3deg 11deg)';
 const RAYS_MASK =
   'linear-gradient(to bottom, transparent 56%, #000 70%, #000 86%, transparent 100%)';
 
@@ -186,14 +186,14 @@ export const StageShell = ({
         <div className="flex gap-2">{actions}</div>
       </div>
     )}
-    <div className="relative mx-auto flex max-w-[900px] flex-col items-center sm:flex-row sm:items-center sm:gap-10">
+    <div className="relative mx-auto flex max-w-[900px] flex-col items-center sm:flex-row sm:items-end sm:gap-10">
       <div className="mt-5 w-[180px] shrink-0 sm:mt-0 sm:w-[244px]">{card}</div>
       {/* The headline steps at the breakpoint through one custom property,
             so the title block reads a single size token instead of knowing
             about breakpoints. */}
       <div
         data-testid="stage-column"
-        className={`mt-4 flex w-full min-w-0 flex-col items-center text-center ${titleStep === undefined ? STAGE_HEAD_DEFAULT : STAGE_HEAD_STEP[titleStep]} sm:mt-0 sm:w-auto sm:flex-1 sm:items-start sm:text-left sm:[--stage-head:64px]`}
+        className={`mt-4 flex w-full min-w-0 flex-col items-center text-center ${titleStep === undefined ? STAGE_HEAD_DEFAULT : STAGE_HEAD_STEP[titleStep]} sm:mt-0 sm:w-auto sm:flex-1 sm:items-start sm:pb-3 sm:text-left sm:[--stage-head:64px]`}
       >
         {eyebrow && (
           <div className="relative z-[2] -mt-7 mb-4 sm:mt-0 sm:mb-3">
