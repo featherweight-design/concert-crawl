@@ -497,6 +497,21 @@ export interface VenueWithCrawlHealth extends Venue {
   // The detail's delete guard counts, which also give its upcoming show count
   // (shows today or later, Mountain Time). Optional for the same reason.
   deleteBlockers?: VenueDeleteBlockers;
+  // The Overview's Shows card (3b): shows today or later, Mountain Time, split
+  // by whether fans see them. The two add up to `deleteBlockers.upcomingShows`.
+  // Optional for the same reason as above; the API always sends them.
+  upcomingShows?: number;
+  hiddenUpcomingShows?: number;
+  // The latest `success` run, null when the venue has never had one.
+  lastFullRun?: VenueLastFullRun | null;
+  // The latest run of any status, in the list's shape; null when never crawled.
+  latestRun?: VenueLatestRun | null;
+}
+
+/** The latest run that read the venue's shows (`success`), for "Found in the last full run". */
+export interface VenueLastFullRun {
+  at: string;
+  eventsFound: number;
 }
 
 // VenueRobotsStatus — robots.txt audit row for the admin audit page.
@@ -1931,6 +1946,21 @@ export interface NeedsYouCount {
   handledToday: number;
 }
 
+// A kind an admin turned off for one venue ("Not useful"), for the venue
+// Overview's WARNINGS YOU TURNED OFF. `itemKey` is a current item it hides, the
+// key DELETE /needs-you/items/:key/snooze takes to turn it back on; null when
+// nothing of that kind is waiting at the venue right now.
+export interface NeedsYouNotUsefulSnooze {
+  id: string;
+  kind: NeedsYouKind;
+  venueId: string;
+  reason: string | null;
+  createdAt: string;
+  /** The admin's handle, or "a former admin". */
+  createdByName: string;
+  itemKey: string | null;
+}
+
 // ── Admin People (redesign 5a) ───────────────────────────────────────────────
 
 /** How a person came in: a personal invite code, a poster code (a multi-use
@@ -1994,6 +2024,8 @@ export type VenueHideReason = 'venue_closed' | 'not_music_venue' | 'other';
 
 /** The latest crawl run of a venue, as the admin list shows it. */
 export interface VenueLatestRun {
+  /** The run's id, for Open run. */
+  id: string;
   status: CrawlStatus;
   reason: CrawlRunReason | null;
   at: string;

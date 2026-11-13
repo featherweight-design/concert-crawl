@@ -69,6 +69,7 @@ import {
   HIDE_REASONS,
   deleteBlockers,
   upcomingShowCount,
+  upcomingShowSplit,
 } from './lib/venue-hide.js';
 
 const createVenueSchema = z.object({
@@ -180,6 +181,19 @@ export const updateVenueSchema = createVenueSchema
       .nullable()
       .optional()
       .transform((val) => (val === '' ? null : val)),
+    // The Details Map pin (3b), entered by hand: there is no geocoder. Null
+    // clears it.
+    lat: z.number().min(-90).max(90).nullable().optional(),
+    lng: z.number().min(-180).max(180).nullable().optional(),
+    // The address Ask the venue writes to. Trimmed; empty clears it to null.
+    contactEmail: z
+      .string()
+      .trim()
+      .max(254)
+      .transform((val) => (val === '' ? null : val))
+      .pipe(z.email().nullable())
+      .nullable()
+      .optional(),
     // API-backed venue crawling (#506). When apiProvider is set, the crawler
     // (per #505) bypasses the HTML → JSON-LD → LLM cascade. null = None.
     apiProvider: z.enum(['venuepilot']).nullable().optional(),
@@ -224,10 +238,11 @@ export const updateVenueSchema = createVenueSchema
     },
   );
 
-/** The latest crawl run of a venue, as the list shows it. */
+/** The latest crawl run of a venue, as the list and the detail show it. */
 const latestRunOf = (
   run:
     | {
+        id: string;
         status: CrawlStatus;
         reason: CrawlRunReason | null;
         at: Date;
@@ -240,6 +255,7 @@ const latestRunOf = (
   run === undefined
     ? null
     : {
+        id: run.id,
         status: run.status,
         reason: run.reason,
         at: run.at.toISOString(),
@@ -247,6 +263,18 @@ const latestRunOf = (
         eventsInserted: run.eventsInserted,
         errorMessage: run.errorMessage,
       };
+
+/** The columns `latestRunOf` reads, shared by the list and the detail. */
+const latestRunColumns = {
+  id: crawlRuns.id,
+  venueId: crawlRuns.venueId,
+  status: crawlRuns.status,
+  reason: crawlRuns.reason,
+  at: crawlRuns.createdAt,
+  eventsFound: crawlRuns.eventsFound,
+  eventsInserted: crawlRuns.eventsInserted,
+  errorMessage: sql<string | null>`left(${crawlRuns.errorMessage}, 300)`,
+};
 
 export const venuesAdminRouter = new Hono<AdminVariables>();
 
@@ -286,15 +314,7 @@ venuesAdminRouter.get('/', async (ctx) => {
   // reads as Active with full health everywhere else, so the list carries the
   // real outcome of its most recent run.
   const latestRuns = await db
-    .selectDistinctOn([crawlRuns.venueId], {
-      venueId: crawlRuns.venueId,
-      status: crawlRuns.status,
-      reason: crawlRuns.reason,
-      at: crawlRuns.createdAt,
-      eventsFound: crawlRuns.eventsFound,
-      eventsInserted: crawlRuns.eventsInserted,
-      errorMessage: sql<string | null>`left(${crawlRuns.errorMessage}, 300)`,
-    })
+    .selectDistinctOn([crawlRuns.venueId], latestRunColumns)
     .from(crawlRuns)
     .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt));
 
@@ -470,6 +490,22 @@ venuesAdminRouter.get('/:id', async (ctx) => {
   // What a delete would destroy, for the ⋯ menu to say so before it is tried.
   const blockers = await deleteBlockers(id);
 
+  // The Overview's Shows card and Latest run (3b). `eventsTracked` above
+  // counts past shows too, so the card needs its own upcoming split.
+  const shows = await upcomingShowSplit(id);
+  const [latestRun] = await db
+    .select(latestRunColumns)
+    .from(crawlRuns)
+    .where(eq(crawlRuns.venueId, id))
+    .orderBy(desc(crawlRuns.createdAt))
+    .limit(1);
+  const [lastFull] = await db
+    .select({ at: crawlRuns.createdAt, eventsFound: crawlRuns.eventsFound })
+    .from(crawlRuns)
+    .where(and(eq(crawlRuns.venueId, id), eq(crawlRuns.status, 'success')))
+    .orderBy(desc(crawlRuns.createdAt))
+    .limit(1);
+
   const adminNames = await adminNamesOf([venue.crawlPausedBy, venue.hiddenBy]);
 
   return ctx.json({
@@ -478,6 +514,16 @@ venuesAdminRouter.get('/:id', async (ctx) => {
       ...venue,
       crawlHealth,
       deleteBlockers: blockers,
+      upcomingShows: shows.shown,
+      hiddenUpcomingShows: shows.hidden,
+      lastFullRun:
+        lastFull === undefined
+          ? null
+          : {
+              at: lastFull.at.toISOString(),
+              eventsFound: lastFull.eventsFound,
+            },
+      latestRun: latestRunOf(latestRun),
       crawlPausedByName: nameOf(adminNames, venue.crawlPausedBy),
       hiddenByName: nameOf(adminNames, venue.hiddenBy),
     },

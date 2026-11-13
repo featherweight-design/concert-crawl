@@ -3,7 +3,7 @@
 // snooze, and answers with undo.
 
 import { zValidator } from '@hono/zod-validator';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { adminQueueSnoozes, auditLog, db } from '@concert-crawl/db';
@@ -11,7 +11,9 @@ import { createLogger } from '@concert-crawl/logger';
 import { getAuthUser } from '../../middleware/auth.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { validationHook } from '../../lib/validator.js';
+import type { NeedsYouNotUsefulSnooze } from '@concert-crawl/types';
 import type { AdminVariables } from './index.js';
+import { FORMER_ADMIN, adminNamesOf, nameOf } from './lib/admin-names.js';
 import { ANSWER_HANDLERS, NAVIGATION_SLUGS } from './lib/needs-you/answers.js';
 import {
   NEEDS_YOU_ANSWER_ACTION,
@@ -20,7 +22,7 @@ import {
   listNeedsYou,
   summarizeNeedsYou,
 } from './lib/needs-you/index.js';
-import { NEEDS_YOU_KINDS, parseItemKey } from './lib/needs-you/keys.js';
+import { NEEDS_YOU_KINDS, isKind, parseItemKey } from './lib/needs-you/keys.js';
 import { loadNeedsYouItems } from './lib/needs-you/sources.js';
 
 const logger = createLogger('admin:needs-you');
@@ -32,7 +34,18 @@ export const needsYouAdminRouter = new Hono<AdminVariables>();
 const [firstKind, ...otherKinds] = NEEDS_YOU_KINDS;
 const kindSchema = z.enum([firstKind ?? 'bug', ...otherKinds]);
 
-const listQuerySchema = z.object({ kind: kindSchema.optional() });
+const listQuerySchema = z.object({
+  kind: kindSchema.optional(),
+  // The venue Overview's In Needs you card (3b): one venue's items.
+  venueId: idSchema.optional(),
+});
+
+// Only Not useful entries are listed: a timed snooze is per item and has no
+// venue card to show it on. `notUseful=true` is accepted to say so explicitly.
+const snoozesQuerySchema = z.object({
+  venueId: idSchema,
+  notUseful: z.literal('true').optional(),
+});
 
 const keyParamSchema = z.object({
   key: z
@@ -74,18 +87,70 @@ needsYouAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { kind } = ctx.req.valid('query');
+    const { kind, venueId } = ctx.req.valid('query');
     const now = new Date();
     // The count always describes the whole queue, not the filtered view, so the
     // badge does not change when an admin narrows the list.
     const all = await listNeedsYou({ now });
-    const data =
-      kind === undefined ? all : all.filter((item) => item.kind === kind);
+    const data = all.filter(
+      (item) =>
+        (kind === undefined || item.kind === kind) &&
+        (venueId === undefined || item.venueId === venueId),
+    );
     return ctx.json({
       success: true,
       data,
       count: await summarizeNeedsYou(all, now),
     });
+  },
+);
+
+needsYouAdminRouter.get(
+  '/snoozes',
+  zValidator('query', snoozesQuerySchema, validationHook),
+  async (ctx) => {
+    const { venueId } = ctx.req.valid('query');
+    const rows = await db
+      .select({
+        id: adminQueueSnoozes.id,
+        kind: adminQueueSnoozes.kind,
+        reason: adminQueueSnoozes.reason,
+        createdAt: adminQueueSnoozes.createdAt,
+        createdBy: adminQueueSnoozes.createdBy,
+      })
+      .from(adminQueueSnoozes)
+      .where(
+        and(
+          eq(adminQueueSnoozes.venueId, venueId),
+          eq(adminQueueSnoozes.notUseful, true),
+        ),
+      )
+      .orderBy(desc(adminQueueSnoozes.createdAt));
+    if (rows.length === 0) return ctx.json({ success: true, data: [] });
+
+    // Turn back on goes through DELETE /items/:key/snooze, which needs a
+    // current item's key; the source items still include the muted ones.
+    const items = await loadNeedsYouItems({ now: new Date() });
+    const names = await adminNamesOf(rows.map((row) => row.createdBy));
+    const data: NeedsYouNotUsefulSnooze[] = rows.flatMap((row) =>
+      isKind(row.kind)
+        ? [
+            {
+              id: row.id,
+              kind: row.kind,
+              venueId,
+              reason: row.reason,
+              createdAt: row.createdAt.toISOString(),
+              createdByName: nameOf(names, row.createdBy) ?? FORMER_ADMIN,
+              itemKey:
+                items.find(
+                  (item) => item.kind === row.kind && item.venueId === venueId,
+                )?.key ?? null,
+            },
+          ]
+        : [],
+    );
+    return ctx.json({ success: true, data });
   },
 );
 
