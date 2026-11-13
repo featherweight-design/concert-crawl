@@ -95,17 +95,31 @@ const WIDE_BUILDINGS = [
   [1175, 29, 273.6],
 ] as const;
 
+/**
+ * The venue page's hero is 1300x340, wider than the board's 3:1 card, so the
+ * 1200x420 layer is cropped at the top and the same geometry reads taller. The
+ * skyline drops by this much so it stays the short strip along the bottom the
+ * board draws (roofs at 65 to 80% of the hero).
+ */
+const WIDE_SKYLINE_DROP = 36;
+
 /** Every fifth building is lit: three columns of windows, 9px apart, from 6px under the roof. */
-const WIDE_WINDOWS = WIDE_BUILDINGS.flatMap(([bx, , top], index) =>
-  index % 5 === 0
+const WIDE_WINDOWS = WIDE_BUILDINGS.flatMap(([bx, , roof], index) => {
+  const top = roof + WIDE_SKYLINE_DROP;
+  return index % 5 === 0
     ? Array.from(
-        { length: Math.max(0, Math.ceil((358 - (top + 6)) / 9)) },
+        {
+          length: Math.max(
+            0,
+            Math.ceil((358 + WIDE_SKYLINE_DROP - (top + 6)) / 9),
+          ),
+        },
         (_, row) => top + 6 + row * 9,
       ).flatMap((wy) =>
         [5, 12, 19].map((dx): readonly [number, number] => [bx + dx, wy]),
       )
-    : [],
-);
+    : [];
+});
 
 /** Buildings as [x, width, top y]; each runs off the bottom of the viewBox. */
 const BUILDINGS = [
@@ -246,13 +260,13 @@ export function VenueBackdrop({
             className="hidden sm:block"
             style={SVG_STYLE}
           >
-            {WIDE_BUILDINGS.map(([bx, width, top]) => (
+            {WIDE_BUILDINGS.map(([bx, width, roof]) => (
               <rect
                 key={bx}
                 x={bx}
-                y={top}
+                y={roof + WIDE_SKYLINE_DROP}
                 width={width}
-                height={420 - top + 60}
+                height={420 - roof + 60}
                 fill={ground}
                 stroke={from}
                 strokeOpacity={0.18}
