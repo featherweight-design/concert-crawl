@@ -13,7 +13,7 @@ export function VenueHero({ slug, name }: VenueHeroProps) {
   // The venue's glyph in neon (B+ rule 5), 380px on a phone. A venue with no
   // glyph keeps its identity art.
   return (
-    <div className="relative h-[380px] w-full shrink-0 sm:h-[400px]">
+    <div className="relative h-[380px] w-full shrink-0 sm:h-[340px]">
       {glyphKey !== null ? (
         // Measured from `10-venue-art/hero-m-redrocks.jpg`: on a 390 phone the
         // glyph's 24-unit grid is ~140pt wide inside a ~185pt halo, so the svg
