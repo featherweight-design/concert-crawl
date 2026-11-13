@@ -236,7 +236,7 @@ describe('HeroEventCard genre color', () => {
     );
     // The genre wash lives over the blurred photo, not in the card fill.
     expect(screen.getByTestId('hero-backdrop-wash').style.background).toContain(
-      'color-mix(in oklch, var(--genre-rock) 30%, transparent)',
+      'color-mix(in oklch, var(--genre-rock) 42%, transparent)',
     );
     // MetaRow mounts a measuring copy beside the rendered chip, so every
     // chip node appears twice; the dot still takes only the lead genre.
@@ -284,7 +284,7 @@ describe('HeroEventCard — spotlight backdrop (B+ fidelity)', () => {
     const backdrop = screen.getByTestId('hero-backdrop');
     expect(backdrop.getAttribute('aria-hidden')).toBe('true');
     expect(backdrop.style.filter).toBe('blur(36px) saturate(1.5)');
-    expect(backdrop.style.opacity).toBe('0.45');
+    expect(backdrop.style.opacity).toBe('0.3');
     expect(backdrop.style.top).toBe('-40px');
     expect(backdrop.style.left).toBe('-40px');
     expect(backdrop.querySelector('img')?.getAttribute('src')).toBe(portrait);

@@ -1,0 +1,21 @@
+{
+  "feature": "Browse · the Tonight spotlight wash",
+  "note": "Boards: design/design_handoff_bplus_redesign/screens/01-core/bp-browse, 02-mobile/bp-m-browse_m. The wash coming off the art side is the show's lead genre colour, not the photo's colour.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "browse-spotlight",
+      "label": "Browse, the Tonight spotlight",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"hero-event-card\"]",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}
