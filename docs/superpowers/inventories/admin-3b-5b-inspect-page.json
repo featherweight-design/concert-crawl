@@ -1,0 +1,27 @@
+{
+  "feature": "Admin 3b PR 5b · Inspect Page tab (sandboxed srcdoc frame)",
+  "note": "CONTACT_SHEET_ROLE=admin. Board: 04-venues/inspect-a-fetched-page, phone-addendum gap-2 inspect-fetched. Read-only. Uses the lane-seeded synthetic body on Sheet Paused Venue's failed run (links and a script in it, both neutralised).",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/3b-5b-contact-sheet",
+  "widths": [
+    { "label": "320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "640", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "page-tab",
+      "label": "Page tab: the fetched page in a sandboxed frame, links and scripts neutralised",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097/inspect/51d6b92c-da21-4b54-b48f-e1ad253cd273?page=30b2dd05-9db3-4a41-9afd-2e0361661eeb",
+          "wait": "[data-testid=\"inspect-html\"]"
+        },
+        { "settle": 2000 },
+        { "clickRole": "tab", "name": "^Page$" },
+        { "wait": "[data-testid=\"inspect-frame\"]" },
+        { "settle": 2000 }
+      ]
+    }
+  ]
+}
