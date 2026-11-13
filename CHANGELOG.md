@@ -1,3 +1,18 @@
+# [1.383.0](https://github.com/featherweight-design/concert-crawl/compare/v1.382.0...v1.383.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** close the needs a look review findings ([09124e1](https://github.com/featherweight-design/concert-crawl/commit/09124e1a58a5156f887a25d6d78fef606c20bf7d))
+* **web:** loading live region is announced, retry floor tested ([b3c22ae](https://github.com/featherweight-design/concert-crawl/commit/b3c22aed2367bfe6dc4b82bf144d38bd664fa9ac))
+* **web:** notification tab states, no stray footer, Mark all read while loading, greedy failed title ([d9db3e2](https://github.com/featherweight-design/concert-crawl/commit/d9db3e2da2acd5972b026a9cf8e797c5eadf9cc3))
+
+
+### Features
+
+* **web:** needs a look chip and the needs you dot on venues ([4ecfe0f](https://github.com/featherweight-design/concert-crawl/commit/4ecfe0fbf89d8368931ae98ba7611fbef76d6af8))
+* **web:** notification tab states match the addendum-3 boards ([2e89935](https://github.com/featherweight-design/concert-crawl/commit/2e8993576636ebeb27724f898ba419c3e792a6ef))
+
 # [1.382.0](https://github.com/featherweight-design/concert-crawl/compare/v1.381.0...v1.382.0) (2026-11-13)
 
 
