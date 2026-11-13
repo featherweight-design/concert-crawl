@@ -1,3 +1,24 @@
+# [1.417.0](https://github.com/featherweight-design/concert-crawl/compare/v1.416.0...v1.417.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** chrome comments from review ([4b62f3b](https://github.com/featherweight-design/concert-crawl/commit/4b62f3b7ab543c2cf23cc17afd09373ad93556d6))
+* **web:** edit price handles a removed price, a no-op save and enter ([19c5f98](https://github.com/featherweight-design/concert-crawl/commit/19c5f9891f490c796bba68c2b1ceece7069c2203))
+* **web:** left-align the header search hint ([0d7cede](https://github.com/featherweight-design/concert-crawl/commit/0d7cede4791c594d847676ca982139b0fb482935))
+* **web:** palette fill, search gap, notif tile ([c8afdd3](https://github.com/featherweight-design/concert-crawl/commit/c8afdd3bcf49eef2b356618a77d1800d5ac65aa7))
+* **web:** pass answer params only when a panel supplies them; bug test counts the quoted title ([5e57ad0](https://github.com/featherweight-design/concert-crawl/commit/5e57ad0ca33c4599b0d5d5547e0443f684fd0cbd))
+* **web:** plain cmd-K hint, grey version dot ([7c4545b](https://github.com/featherweight-design/concert-crawl/commit/7c4545b31aa7b5adb0d4cfdf58ce4f273ef6a248))
+* **web:** price check card names its prices; cover CHECKED FOR YOU and WHO SEES IT ([ad7b095](https://github.com/featherweight-design/concert-crawl/commit/ad7b095714cc642ada19a76bfb49485945db5e33))
+* **web:** settings desktop uses the shared page glow ([5187b0e](https://github.com/featherweight-design/concert-crawl/commit/5187b0e81bb7d58b1668d7ea6cda0154eb5ecd6e))
+* **web:** settings polish, rows 29 30 32 33 ([da3dc30](https://github.com/featherweight-design/concert-crawl/commit/da3dc305946e9951d5369da2b482c9a0cda34bd4))
+
+
+### Features
+
+* **web:** artist, low-confidence event, price-check and bug panels in Needs you ([087fb80](https://github.com/featherweight-design/concert-crawl/commit/087fb803b0c18e2075eeae6e3ae0208eb3954f09))
+* **web:** edit price from the submitted prices row menu ([f53740a](https://github.com/featherweight-design/concert-crawl/commit/f53740a23392c988739a0261b911546107ba3090))
+
 # [1.416.0](https://github.com/featherweight-design/concert-crawl/compare/v1.415.0...v1.416.0) (2026-11-13)
 
 
