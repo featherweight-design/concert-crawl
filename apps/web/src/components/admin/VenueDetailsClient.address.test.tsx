@@ -44,10 +44,6 @@ vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
   identityFor: () => ({ palette: { bg: '#101010' } }),
 }));
 
-vi.mock('./DeleteVenueConfirm', () => ({
-  DeleteVenueConfirm: () => null,
-}));
-
 vi.mock('./generate-field/GenerateField', () => ({
   GenerateField: () => null,
 }));

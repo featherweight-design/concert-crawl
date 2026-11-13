@@ -23,7 +23,19 @@ vi.mock('@clerk/nextjs', () => ({
 
 const mockRefresh = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: mockRefresh }),
+  useRouter: () => ({ refresh: mockRefresh, push: vi.fn() }),
+}));
+
+// The ⋯ menu's server actions; `VenueMenu.test.tsx` covers what they do.
+const mockFeatured = vi.fn();
+vi.mock('@/lib/actions/venues', () => ({
+  activateVenue: vi.fn(),
+  hideVenue: vi.fn(),
+  pauseCrawling: vi.fn(),
+  removeVenue: vi.fn(),
+  resumeCrawling: vi.fn(),
+  setVenueFeatured: (...args: unknown[]) => mockFeatured(...args),
+  tryDeleteVenue: vi.fn(),
 }));
 
 // Reads triage over the network; it has its own suite.
@@ -171,11 +183,39 @@ describe('VenueHeader — idle', () => {
     expect(liveStatus()).toBe('');
   });
 
-  it('renders what it is handed after View on site', () => {
-    render(
-      <VenueHeader venue={buildVenue()} actions={<button>Flagship</button>} />,
+  it('ends the row with the venue’s ⋯ menu', () => {
+    render(<VenueHeader venue={buildVenue()} />);
+    expect(
+      screen.getByRole('button', { name: COPY.menuLabel('Ball Arena') }),
+    ).toBeTruthy();
+  });
+});
+
+describe('VenueHeader — ⋯ menu failures', () => {
+  beforeEach(() => {
+    mockFeatured.mockReset();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows a failed change as the toast, and Try again that works clears it', async () => {
+    mockFeatured.mockRejectedValueOnce(new Error('boom'));
+    render(<VenueHeader venue={buildVenue()} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.menuLabel('Ball Arena') }),
     );
-    expect(screen.getByRole('button', { name: 'Flagship' })).toBeTruthy();
+    fireEvent.click(screen.getByTestId('venue-menu-flagship'));
+    const toast = await screen.findByTestId('save-failed');
+    expect(toast.textContent).toContain(FAILED.title(COPY.failed.flagship));
+    expect(toast.textContent).toContain(FAILED.body(COPY.failed.flagshipSaved));
+    mockFeatured.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: FAILED.tryAgain }));
+    });
+    expect(mockFeatured).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId('save-failed')).toBeNull();
   });
 });
 

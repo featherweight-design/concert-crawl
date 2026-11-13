@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -15,6 +15,7 @@ import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/Venu
 import { crawlingLabel } from './venue-list-rules';
 import { headerLine, recrawlOff, viewOnSiteHref } from './venue-header-rules';
 import { useRecrawl, type RecrawlState } from './useRecrawl';
+import { VenueMenu, type VenueMenuFailure } from './VenueMenu';
 
 const COPY = ADMIN_COPY.venueHeader;
 
@@ -96,23 +97,18 @@ const RecrawlNotice = ({
 
 /**
  * The venue page header: glyph, name, both status chips and the line beside
- * them, then Re-crawl and View on site (`A3/03/re-crawl-states`; phone
- * `A3/03/venue-overview-m`). Lifted out of `VenueDetailsClient`. `actions`
- * holds what follows View on site: the old Flagship button until the ⋯ menu
- * takes its place.
+ * them, then Re-crawl, View on site and the ⋯ menu per state
+ * (`A3/03/re-crawl-states`, `A3/03/venue-menu-states`; phone
+ * `A3/03/venue-overview-m`). Lifted out of `VenueDetailsClient`, whose old
+ * danger zone the ⋯ replaces.
  *
  * Re-crawl stays one mounted button through every state, so focus is never
  * dropped: busy, it reads Queued or Crawling now and is `aria-disabled`; off,
  * it is disabled and described by the line that says why.
  */
-export const VenueHeader = ({
-  venue,
-  actions,
-}: {
-  venue: VenueWithCrawlHealth;
-  actions?: ReactNode;
-}) => {
+export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
   const isPhone = useIsPhone();
+  const [failure, setFailure] = useState<VenueMenuFailure | null>(null);
   const off = recrawlOff(venue);
   const recrawl = useRecrawl(venue.id, off !== null);
   const line = headerLine(venue, isPhone);
@@ -202,7 +198,7 @@ export const VenueHeader = ({
             </div>
           </div>
         </div>
-        {/* Wraps so three nowrap buttons never overflow a 320px phone. */}
+        {/* Wraps so the nowrap buttons never overflow a 320px phone. */}
         <div
           style={{
             display: 'flex',
@@ -260,7 +256,17 @@ export const VenueHeader = ({
               {COPY.viewOnSite}
             </a>
           )}
-          {actions}
+          <VenueMenu
+            venue={venue}
+            onFailure={setFailure}
+            triggerStyle={{
+              ...BUTTON,
+              width: 36,
+              padding: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          />
         </div>
       </div>
       {/* Try again only where nothing was queued, and never on a venue
@@ -270,6 +276,14 @@ export const VenueHeader = ({
           what={COPY.failed.recrawl(venue.name)}
           saved={recrawl.reason ?? COPY.failed.recrawlSaved}
           onRetry={recrawl.start}
+        />
+      )}
+      {failure !== null && (
+        <SaveFailedToast
+          what={failure.what}
+          saved={failure.saved}
+          onRetry={failure.retry}
+          retrying={failure.retrying}
         />
       )}
       {notice !== undefined && (

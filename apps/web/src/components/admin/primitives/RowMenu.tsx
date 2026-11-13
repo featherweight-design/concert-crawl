@@ -50,8 +50,11 @@ export const RowMenu = ({
   items,
   width = 320,
   triggerStyle,
+  testId,
 }: {
   label: string;
+  /** Marks the ⋯ as `testId` and each item as `testId-<key>`. */
+  testId?: string;
   items: readonly RowMenuItem[];
   /** The menu's width; the person and artist menus are 300. */
   width?: number;
@@ -130,6 +133,7 @@ export const RowMenu = ({
         ref={triggerRef}
         type="button"
         aria-label={label}
+        data-testid={testId}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={(evt) => {
@@ -219,6 +223,9 @@ export const RowMenu = ({
                 <button
                   type="button"
                   role="menuitem"
+                  data-testid={
+                    testId === undefined ? undefined : `${testId}-${item.key}`
+                  }
                   tabIndex={-1}
                   // aria-disabled, not disabled: a disabled button can't
                   // hold focus, so a click on it would drop focus out of

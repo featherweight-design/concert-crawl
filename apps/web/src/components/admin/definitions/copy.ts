@@ -611,7 +611,54 @@ export const ADMIN_COPY = {
     failed: {
       recrawl: (venue: string) => `crawling for ${venue}`,
       recrawlSaved: 'The re-crawl didn’t start.',
+      // The ⋯ menu's changes that run at once.
+      flagship: 'the flagship',
+      flagshipSaved: 'Venues is in the same order.',
+      resume: (venue: string) => `crawling for ${venue}`,
+      resumeSaved: 'Crawling is still paused.',
+      show: (venue: string) => venue,
+      showSaved: 'It is still hidden.',
     },
+    menuLabel: (venue: string) => `More for ${venue}`,
+    // The ⋯ menu per state (`A3/03/venue-menu-states`, `A3/03/delete-refused`).
+    // The refused Delete row's hint is `venueConfirms.deleteRefused`.
+    menu: {
+      pause: 'Pause crawling…',
+      pauseHint: 'Shows stay listed. Pick a reason.',
+      resume: 'Resume crawling',
+      makeFlagship: 'Make flagship',
+      makeFlagshipHint: 'Shows it first on Venues.',
+      removeFlagship: 'Remove flagship',
+      removeFlagshipHint: 'It goes back to its place on Venues.',
+      hide: 'Hide from site…',
+      // The auto-paused board drops the count; the others carry it.
+      hideHint: (shows: number | null) =>
+        shows === null
+          ? 'Removes the venue and its shows from the app.'
+          : `Removes the venue and its ${showCount(shows)} from the app.`,
+      takeDown: 'Take down…',
+      takeDownHint: 'They asked us to remove their data.',
+      show: 'Show on site',
+      delete: 'Delete venue…',
+      deleteHint: 'Only for venues added by mistake.',
+      deleteRefusedLabel: 'Delete venue',
+    },
+    // "Hidden by @hugh, Nov 2: venue closed.", as the paused line says it.
+    hiddenBy: (name: string, date: string, reason: string | null) =>
+      reason
+        ? `Hidden by ${name}, ${date}: ${reason}.`
+        : `Hidden by ${name}, ${date}.`,
+    hiddenSince: (date: string, reason: string | null) =>
+      reason ? `Hidden since ${date}: ${reason}.` : `Hidden since ${date}.`,
+    hiddenNoRecord: 'Hidden from the site.',
+    hiddenReasons: {
+      venue_closed: 'venue closed',
+      not_music_venue: 'not a music venue',
+    },
+    // A taken-down venue (`removedAt`): its menu is this line and Delete.
+    takenDown: (date: string) =>
+      `Taken down ${date} at their request. Its prices are gone.`,
+    takenDownRestore: 'Restoring it needs a separate approval.',
     // Settled outcomes with nothing to retry: the crawl was queued, so
     // Try again would only queue a second one.
     notice: {
