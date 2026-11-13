@@ -685,6 +685,16 @@ describe('a joined name settled by evidence', () => {
     expect(result.unresolvedJoined).toBeUndefined();
   });
 
+  it('lists a joined name once when its parts are already on the bill', async () => {
+    const result = await ask(
+      'Cypress Hill & Method Man & Redman',
+      ['Cypress Hill', 'Method Man & Redman'],
+      ['Cypress Hill', 'Method Man', 'Redman', 'Method Man & Redman'],
+      known(['Method Man & Redman'], []),
+    );
+    expect(result.headliners).toEqual(['Cypress Hill', 'Method Man', 'Redman']);
+  });
+
   it('adds a presenter only when it is a known artist', async () => {
     const title = (presenter: string) => `${presenter} Presents: Hallow Rocks`;
     const withTapeB = await ask(

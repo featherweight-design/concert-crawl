@@ -3,6 +3,7 @@ import {
   adjudicateEventWithUsage,
   calculateCost,
   makeJoinedEvidence,
+  makeMusicBrainzLookup,
   rederiveEventArtists,
 } from '@concert-crawl/crawler-core';
 
@@ -95,6 +96,7 @@ async function main(): Promise<void> {
     }`,
   );
 
+  const musicBrainz = makeMusicBrainzLookup();
   const result = await rederiveEventArtists({
     dryRun,
     adjudicate: async (input) => {
@@ -114,7 +116,7 @@ async function main(): Promise<void> {
     // Our artists table and MusicBrainz (the bot user agent, one request a
     // second) decide whether "A & B" is one act or two; what they cannot
     // settle is left unwritten and listed below.
-    joinedEvidence: makeJoinedEvidence(),
+    joinedEvidence: makeJoinedEvidence(musicBrainz),
     shouldStop: () => spentUsd >= maxCostUsd,
     // Every change, not a sample: the summary is the list an apply is judged by.
     sampleSize: Number.MAX_SAFE_INTEGER,
@@ -146,6 +148,10 @@ async function main(): Promise<void> {
       Object.entries(result.strategies)
         .map(([name, count]) => `${name}=${count}`)
         .join(' '),
+  );
+  const mb = musicBrainz.stats;
+  console.warn(
+    `[rederive-event-artists] MusicBrainz lookups — found=${mb.found} not-found=${mb.notFound} unavailable=${mb.unavailable}`,
   );
   for (const item of result.unresolvedJoined) {
     console.warn(
@@ -196,6 +202,8 @@ async function main(): Promise<void> {
           ]
         : []),
       `### Unresolved joined names (${result.unresolvedJoined.length}), left unwritten`,
+      '',
+      `MusicBrainz lookups for whole names: ${musicBrainz.stats.found} found, ${musicBrainz.stats.notFound} not found (a real "no"), ${musicBrainz.stats.unavailable} unavailable (an outage, so those names are unknown, not "no").`,
       '',
       "Neither our artists nor MusicBrainz could say whether these are one act or two. The event is not touched; the model's guess is shown for an admin to read, not applied.",
       '',

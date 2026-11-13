@@ -2,21 +2,29 @@
 // pass (see joined-names.ts). One request at a time, at most one per second,
 // with a timeout and the crawler's own bot user agent (no email). A failed,
 // rate-limited or timed-out call is UNKNOWN (null), never "no such artist", so
-// it leaves the event unresolved rather than guessing.
+// it leaves the event unresolved rather than guessing. A busy server (503) or
+// a rate limit (429) is retried after 2, 5 and 10 seconds before giving up.
 
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 
 const ENDPOINT = 'https://musicbrainz.org/ws/2/artist/';
 const MIN_GAP_MS = 1100;
 const TIMEOUT_MS = 8000;
+const RETRY_DELAYS_MS = [2000, 5000, 10000];
 
 interface MusicBrainzArtist {
   name?: unknown;
   aliases?: unknown;
 }
 
+// "&" and "+" are the same joiner for this comparison: a venue's "for KING +
+// COUNTRY" is MusicBrainz's "for KING & COUNTRY".
 const normalise = (name: string): string =>
-  name.trim().toLowerCase().replace(/\s+/g, ' ');
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/\s*[&+]\s*/g, ' & ')
+    .replace(/\s+/g, ' ');
 
 const namesOf = (artist: MusicBrainzArtist): string[] => {
   const names: string[] = [];
@@ -41,29 +49,39 @@ export interface MusicBrainzClientOptions {
   now?: () => number;
 }
 
+/** How each distinct name ended, so a run can tell real unknowns from outages. */
+export interface MusicBrainzStats {
+  found: number;
+  /** MusicBrainz answered and has no artist by that name. */
+  notFound: number;
+  /** MusicBrainz could not be asked (busy after every retry, down, timed out). */
+  unavailable: number;
+}
+
+export type MusicBrainzLookup = ((name: string) => Promise<boolean | null>) & {
+  stats: MusicBrainzStats;
+};
+
 /** A lookup that is true when an artist is named exactly `name` (alias counts). */
 export const makeMusicBrainzLookup = (
   options: MusicBrainzClientOptions = {},
-): ((name: string) => Promise<boolean | null>) => {
+): MusicBrainzLookup => {
   const doFetch = options.fetchImpl ?? fetch;
   const sleep =
     options.sleepImpl ??
     ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const now = options.now ?? Date.now;
   const cache = new Map<string, boolean>();
+  const stats: MusicBrainzStats = { found: 0, notFound: 0, unavailable: 0 };
   let lastAt = 0;
   // Calls queue behind one another so two lookups never overlap.
   let chain: Promise<unknown> = Promise.resolve();
 
-  const lookup = async (name: string): Promise<boolean | null> => {
-    const key = normalise(name);
-    const cached = cache.get(key);
-    if (cached !== undefined) return cached;
+  // One request, never throwing: a Response, or null when none came back.
+  const ask = async (name: string): Promise<Response | null> => {
     const wait = lastAt + MIN_GAP_MS - now();
     if (wait > 0) await sleep(wait);
     lastAt = now();
-    // null = could not ask (outage, rate limit, a bad reply): never "no such artist".
-    let found: boolean | null = null;
     try {
       const url = new URL(ENDPOINT);
       url.searchParams.set(
@@ -72,40 +90,62 @@ export const makeMusicBrainzLookup = (
       );
       url.searchParams.set('fmt', 'json');
       url.searchParams.set('limit', '25');
-      const res = await doFetch(url, {
+      return await doFetch(url, {
         headers: {
           'User-Agent': CRAWLER_USER_AGENT,
           Accept: 'application/json',
         },
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
-      if (res.ok) {
-        const body: unknown = await res.json();
-        const artists =
-          typeof body === 'object' &&
-          body !== null &&
-          'artists' in body &&
-          Array.isArray(body.artists)
-            ? body.artists
-            : [];
-        found = artists.some(
-          (artist: MusicBrainzArtist) =>
-            typeof artist === 'object' &&
-            artist !== null &&
-            namesOf(artist).includes(key),
-        );
-        cache.set(key, found);
-      }
     } catch {
-      // Unreachable or slow: unknown, and not cached, so a later row retries.
-      found = null;
+      return null;
     }
-    return found;
   };
 
-  return (name) => {
+  const lookup = async (name: string): Promise<boolean | null> => {
+    const key = normalise(name);
+    const cached = cache.get(key);
+    if (cached !== undefined) return cached;
+    let res = await ask(name);
+    for (const delay of RETRY_DELAYS_MS) {
+      if (res !== null && res.status !== 503 && res.status !== 429) break;
+      await sleep(delay);
+      res = await ask(name);
+    }
+    // null = could not ask (outage, rate limit, a bad reply): never "no such artist".
+    if (res === null || !res.ok) {
+      stats.unavailable += 1;
+      return null;
+    }
+    try {
+      const body: unknown = await res.json();
+      const list =
+        typeof body === 'object' &&
+        body !== null &&
+        'artists' in body &&
+        Array.isArray(body.artists)
+          ? body.artists
+          : [];
+      const found = list.some(
+        (artist: MusicBrainzArtist) =>
+          typeof artist === 'object' &&
+          artist !== null &&
+          namesOf(artist).includes(key),
+      );
+      cache.set(key, found);
+      if (found) stats.found += 1;
+      else stats.notFound += 1;
+      return found;
+    } catch {
+      stats.unavailable += 1;
+      return null;
+    }
+  };
+
+  const queued = (name: string): Promise<boolean | null> => {
     const next = chain.then(() => lookup(name));
     chain = next.catch(() => undefined);
     return next;
   };
+  return Object.assign(queued, { stats });
 };
