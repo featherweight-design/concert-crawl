@@ -391,6 +391,25 @@ export const failuresOf = (row: QueueRow): number | null => {
   return Number.isInteger(count) && count > 0 ? count : null;
 };
 
+/** "Nov 11 at 3:02 AM": when a venue's newest run happened, or null. */
+export const latestRunWhen = (
+  row: Pick<QueueRow, 'lastRuns'>,
+): string | null => {
+  const [latest] = [...row.lastRuns].sort(
+    (left, right) => Date.parse(right.at) - Date.parse(left.at),
+  );
+  return latest
+    ? (mountainStamp(latest.at)?.replace(', ', ' at ') ?? null)
+    : null;
+};
+
+/** The recorded robots.txt result in words, or null when none or unchecked. */
+export const robotsText = (robots: string | null): string | null => {
+  if (robots === 'yes') return PANEL.venue.robotsResult.yes;
+  if (robots === 'no') return PANEL.venue.robotsResult.no;
+  return null;
+};
+
 /** The HTTP status on a blocked venue ("429"), or null. */
 export const httpStatusOf = (row: QueueRow): string | null =>
   row.evidence.find((line) => line.label === 'HTTP status')?.value ?? null;
@@ -461,7 +480,12 @@ export const lastRunsOf = (
               day,
               status: runStatusWord(run.status),
               ok: run.status === 'success',
-              detail: run.errorMessage,
+              // A failed run says why; an OK one says how many shows it found.
+              detail:
+                run.errorMessage ??
+                (run.status === 'success' && run.eventsFound !== null
+                  ? PANEL.venue.runShows(run.eventsFound)
+                  : null),
             },
           ]
         : [];

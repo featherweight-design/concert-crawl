@@ -34,6 +34,8 @@ export interface RunLine {
   at: string;
   status: string;
   errorMessage: string | null;
+  /** Events the run's extractor found, when it recorded a count. */
+  eventsFound: number | null;
 }
 
 /** The show a moved one now looks like. */
@@ -67,6 +69,18 @@ export interface QueueRow {
   moveTo: MoveTo | null;
   /** A venue item's recent runs, as the API sent them (empty on other kinds). */
   lastRuns: RunLine[];
+  /** A venue item's published state; null when the API did not say. */
+  venueLive: boolean | null;
+  /** When crawling was paused (an ISO instant), or null. */
+  pausedAt: string | null;
+  /** A venue item's upcoming shows, or null when the API did not say. */
+  showCount: number | null;
+  /** A blocked venue's pages fetched by the latest run, or null. */
+  pagesThisRun: number | null;
+  /** A blocked venue's recorded robots.txt result (yes, no, unchecked), or null. */
+  robots: string | null;
+  /** A dropped show's venue: its other upcoming shows the last run still saw. */
+  otherShowsCrawledFine: number | null;
 }
 
 // Every kind the API serves. A `Record` so a kind added to the type fails to
@@ -104,20 +118,26 @@ const isEvidenceLine = (value: unknown): value is EvidenceLine =>
 const evidenceFrom = (value: unknown): EvidenceLine[] =>
   Array.isArray(value) ? value.filter(isEvidenceLine) : [];
 
-const isRunLine = (value: unknown): value is RunLine =>
-  isRecord(value) &&
-  isText(value['at']) &&
-  isText(value['status']) &&
-  isTextOrNull(value['errorMessage']);
-
 /** A venue item's runs: the ones this build can draw, or none. */
 const runsFrom = (value: unknown): RunLine[] =>
   Array.isArray(value)
-    ? value.filter(isRunLine).map((run) => ({
-        at: run.at,
-        status: run.status,
-        errorMessage: run.errorMessage,
-      }))
+    ? value.flatMap((run): RunLine[] =>
+        isRecord(run) &&
+        isText(run['at']) &&
+        isText(run['status']) &&
+        isTextOrNull(run['errorMessage'])
+          ? [
+              {
+                at: run['at'],
+                status: run['status'],
+                errorMessage: run['errorMessage'],
+                eventsFound: isCount(run['eventsFound'])
+                  ? run['eventsFound']
+                  : null,
+              },
+            ]
+          : [],
+      )
     : [];
 
 const moveToFrom = (value: unknown): MoveTo | null =>
@@ -162,6 +182,14 @@ const rowFrom = (value: unknown): QueueRow | null => {
     lastSeenAt: isText(value['lastSeenAt']) ? value['lastSeenAt'] : null,
     moveTo: moveToFrom(value['moveTo']),
     lastRuns: runsFrom(value['lastRuns']),
+    venueLive: isBoolean(value['venueLive']) ? value['venueLive'] : null,
+    pausedAt: isText(value['pausedAt']) ? value['pausedAt'] : null,
+    showCount: isCount(value['showCount']) ? value['showCount'] : null,
+    pagesThisRun: isCount(value['pagesThisRun']) ? value['pagesThisRun'] : null,
+    robots: isText(value['robots']) ? value['robots'] : null,
+    otherShowsCrawledFine: isCount(value['otherShowsCrawledFine'])
+      ? value['otherShowsCrawledFine']
+      : null,
   };
 };
 

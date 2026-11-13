@@ -6,13 +6,23 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { venueTabHref } from '@/lib/admin/venue-tabs';
 import {
   causeText,
+  failuresOf,
   httpStatusOf,
   lastRunsOf,
+  latestRunWhen,
   metaDate,
+  robotsText,
   statusPhrase,
 } from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
-import { AnswerButtons, Chip, ChipRow, Prose, Section } from './panel-parts';
+import {
+  AnswerButtons,
+  Chip,
+  ChipRow,
+  Prose,
+  RowCard,
+  Section,
+} from './panel-parts';
 
 const PANEL = ADMIN_COPY.needsYou.panel;
 
@@ -59,30 +69,69 @@ const RunRows = ({ row }: Pick<PanelProps, 'row'>) => {
 export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
   const blocked = row.kind === 'venue-blocked';
   const status = httpStatusOf(row);
+  const failures = failuresOf(row);
+  const robots = robotsText(row.robots);
+  const checked = [
+    ...(robots ? [{ label: PANEL.venue.robotsTxt, value: robots }] : []),
+    // Our pace is the crawler's fixed delay, not a recorded value.
+    { label: PANEL.venue.ourPace, value: PANEL.venue.pace },
+    ...(row.pagesThisRun !== null
+      ? [
+          {
+            label: PANEL.venue.pagesRun,
+            value: PANEL.venue.pages(row.pagesThisRun),
+          },
+        ]
+      : []),
+  ];
   const who = (
     <Section label={PANEL.whoSeesIt}>
       <Prose>
-        {PANEL.venue.stayListed(row.fanDate ? metaDate(row.fanDate) : null)}
+        {PANEL.venue.stayListed(
+          row.fanDate ? metaDate(row.fanDate) : null,
+          row.showCount,
+        )}
       </Prose>
     </Section>
   );
+  const chips = (
+    <ChipRow>
+      {row.venueLive && (
+        <Chip kind="success" dot>
+          {PANEL.venue.live}
+        </Chip>
+      )}
+      {blocked && status && (
+        <Chip kind="danger" dot>
+          {PANEL.blockedChip(status)}
+        </Chip>
+      )}
+      {!blocked && row.pausedAt && failures && (
+        <Chip kind="danger" dot>
+          {PANEL.venue.autoPaused(failures)}
+        </Chip>
+      )}
+    </ChipRow>
+  );
   return (
     <>
+      {(row.venueLive || (blocked && status) || (row.pausedAt && failures)) &&
+        chips}
       {blocked ? (
         <>
-          {status && (
-            <ChipRow>
-              <Chip kind="danger" dot>
-                {PANEL.blockedChip(status)}
-              </Chip>
-            </ChipRow>
-          )}
           <Section label={PANEL.whatHappened}>
             <Prose>
               {status
-                ? PANEL.venue.answered(row.venueName, statusPhrase(status))
+                ? PANEL.venue.answered(
+                    row.venueName,
+                    statusPhrase(status),
+                    latestRunWhen(row),
+                  )
                 : PANEL.venue.refused}
             </Prose>
+          </Section>
+          <Section label={PANEL.checkedForYou}>
+            <RowCard rows={checked} />
           </Section>
           {who}
         </>

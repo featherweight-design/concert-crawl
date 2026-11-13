@@ -2620,6 +2620,8 @@ export const ADMIN_COPY = {
         skipped: 'Skipped',
       },
       showDropped: {
+        otherFine: (count: number, venue: string | null) =>
+          `The other ${count} ${venue ?? 'venue'} ${count === 1 ? 'show' : 'shows'} crawled fine, so this isn’t a page problem.`,
         title: (name: string, venue: string | null) =>
           `${name} dropped off ${venue ?? 'the venue'}’s calendar`,
         wasOn: (name: string, venue: string | null, date: string | null) =>
@@ -2670,12 +2672,36 @@ export const ADMIN_COPY = {
           crawl_error: 'The runs do not say why.',
           unknown: 'The runs do not say why.',
         },
-        answered: (venue: string | null, status: string | null) =>
-          `${venue ?? 'The site'} answered${status ? ` with ${status}` : ''}. We flagged it blocked straight away and won’t retry on our own.`,
+        answered: (
+          venue: string | null,
+          status: string | null,
+          when: string | null,
+        ) =>
+          `${venue ?? 'The site'} answered${status ? ` with ${status}` : ''}${when ? ` on ${when}` : ''}. We flagged it blocked straight away and won’t retry on our own.`,
+        live: 'Live',
+        autoPaused: (failures: number) => `Auto-paused: ${failures} failures`,
+        runShows: (count: number) =>
+          `${count} ${count === 1 ? 'show' : 'shows'}`,
+        robotsTxt: 'robots.txt',
+        robotsResult: {
+          yes: 'Blocks the crawler',
+          no: 'Allows the crawler',
+          unchecked: 'Not checked',
+        },
+        ourPace: 'Our pace',
+        pace: '1 page every 3–5 s',
+        pagesRun: 'Pages this run',
+        pages: (count: number) => `${count} ${count === 1 ? 'page' : 'pages'}`,
         refused:
           'We flagged it blocked straight away and won’t retry on our own.',
-        stayListed: (next: string | null) =>
-          `Its shows stay listed but won’t update.${next ? ` The next one is ${next}.` : ''}`,
+        stayListed: (next: string | null, count: number | null) =>
+          `${
+            count === null
+              ? 'Its shows stay'
+              : count === 1
+                ? 'Its 1 show stays'
+                : `Its ${count} shows stay`
+          } listed but won’t update.${next ? ` The next one is ${next}.` : ''}`,
         checkSource: 'Check source',
         failingNote:
           'Re-crawl tries the HTML, JSON-LD and Haiku steps again. If the page changed, Check source opens the venue’s Source tab to fix the address or the selector.',
