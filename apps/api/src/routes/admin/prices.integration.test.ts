@@ -1492,6 +1492,136 @@ describe('GET /v1/admin/prices/submissions/:id/fan-others', () => {
   });
 });
 
+// Redesign 4d: the Missing a price tab. Soonest show first, then the one most
+// fans are Watching; a "next" cursor; the tab-strip numbers; and adding a price
+// only to a show that has none.
+describe('Missing a price tab', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const seedMissing = async () => {
+    const venue = await seedVenue({
+      name: 'Missing Hall',
+      slug: 'missing-hall',
+    });
+    const soonQuiet = await seedEvent(venue.id, {
+      title: 'Soon Quiet',
+      artist: 'Soon Quiet',
+      date: '2099-01-01',
+    });
+    const laterBusy = await seedEvent(venue.id, {
+      title: 'Later Busy',
+      artist: 'Later Busy',
+      date: '2099-01-02',
+    });
+    const laterQuiet = await seedEvent(venue.id, {
+      title: 'Later Quiet',
+      artist: 'Later Quiet',
+      date: '2099-01-02',
+    });
+    const priced = await seedEvent(venue.id, {
+      title: 'Priced',
+      artist: 'Priced',
+      date: '2099-01-01',
+      ticketPriceMin: '30',
+    });
+    await seedUserEvent('watcher_1', laterBusy.id, { status: 'watching' });
+    await seedUserEvent('watcher_2', laterBusy.id, { status: 'watching' });
+    await seedUserEvent('watcher_1', soonQuiet.id, { status: 'watching' });
+    return { soonQuiet, laterBusy, laterQuiet, priced };
+  };
+
+  type MissingRow = { eventId: string; eventTitle: string; watching: number };
+  const getJson = async <T>(path: string): Promise<T> => {
+    const res = await app.request(`/v1/admin/prices${path}`, {
+      headers: ADMIN_HEADERS,
+    });
+    expect(res.status).toBe(200);
+    return ((await res.json()) as { data: T }).data;
+  };
+  const nextAfter = async (after?: string): Promise<MissingRow | null> =>
+    getJson<MissingRow | null>(
+      after === undefined ? '/missing/next' : `/missing/next?after=${after}`,
+    );
+
+  it('lists soonest first, then most Watched, with the Watching count', async () => {
+    await seedMissing();
+    const data = await getJson<{ rows: MissingRow[] }>('/events?count=true');
+    expect(data.rows.map((row) => row.eventTitle)).toEqual([
+      'Soon Quiet',
+      'Later Busy',
+      'Later Quiet',
+    ]);
+    expect(data.rows.map((row) => row.watching)).toEqual([1, 2, 0]);
+  });
+
+  it('walks the same order with /missing/next and ends with null', async () => {
+    const { soonQuiet, laterBusy, laterQuiet } = await seedMissing();
+    expect((await nextAfter())?.eventId).toBe(soonQuiet.id);
+    expect((await nextAfter(soonQuiet.id))?.eventId).toBe(laterBusy.id);
+    expect((await nextAfter(laterBusy.id))?.eventId).toBe(laterQuiet.id);
+    expect(await nextAfter(laterQuiet.id)).toBeNull();
+  });
+
+  it('/missing/next still finds the neighbour of a show that just got a price', async () => {
+    const { soonQuiet, laterBusy } = await seedMissing();
+    await testDb
+      .update(events)
+      .set({ ticketPriceMin: '25' })
+      .where(eq(events.id, soonQuiet.id));
+    expect((await nextAfter(soonQuiet.id))?.eventId).toBe(laterBusy.id);
+  });
+
+  it('/missing/next 404s an unknown show and 422s a bad id', async () => {
+    const unknown = await app.request(
+      '/v1/admin/prices/missing/next?after=00000000-0000-0000-0000-000000000000',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(unknown.status).toBe(404);
+    const bad = await app.request('/v1/admin/prices/missing/next?after=nope', {
+      headers: ADMIN_HEADERS,
+    });
+    expect(bad.status).toBe(422);
+  });
+
+  it('/tabs counts missing shows, submitted prices, open checks and people', async () => {
+    const { priced, soonQuiet } = await seedMissing();
+    const parent = await seedPriceSubmission(priced.id, 'tabs_a');
+    await seedPriceSubmission(priced.id, 'tabs_b', {
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+    await seedPriceSubmission(soonQuiet.id, 'tabs_a');
+    expect(await getJson<unknown>('/tabs')).toEqual({
+      missing: 3,
+      submitted: 2,
+      checksOpen: 1,
+      checksResolved: 0,
+      peopleSubmitting: 2,
+    });
+  });
+
+  it('refuses to add a price to a show that already has one', async () => {
+    const { priced, soonQuiet } = await seedMissing();
+    const add = (eventId: string) =>
+      app.request('/v1/admin/prices/submissions', {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          eventId,
+          priceMin: '40',
+          vendor: 'Ticketmaster',
+          howFound: 'saw_listing',
+        }),
+      });
+    expect((await add(priced.id)).status).toBe(409);
+    expect((await add(soonQuiet.id)).status).toBe(201);
+    expect((await add(soonQuiet.id)).status).toBe(409);
+  });
+});
+
 // Redesign 4d: the Submitted prices tab shows the fan's @handle (never the
 // Clerk id), how many fans back each price, one of four exclusive states, and
 // a search over the show, the venue and the handle.
