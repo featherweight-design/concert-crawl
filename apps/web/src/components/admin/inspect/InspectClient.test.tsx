@@ -10,6 +10,7 @@ import {
   within,
 } from '@testing-library/react';
 import type * as ApiModule from '@/lib/api';
+import type * as RulesModule from './inspect-rules';
 
 const mockGet = vi.fn();
 vi.mock('@/lib/api', async () => {
@@ -40,6 +41,17 @@ const setPageTrail = vi.fn();
 vi.mock('@/components/admin/shell/PageTitleContext', () => ({
   usePageTitle: () => ({ setPageTrail }),
 }));
+
+// Lets one test force the sanitiser to fail closed (no markup reliably does).
+const sanitiser = vi.hoisted(() => ({ failClosed: false }));
+vi.mock('./inspect-rules', async (importOriginal) => {
+  const actual = await importOriginal<typeof RulesModule>();
+  return {
+    ...actual,
+    pageSrcDoc: (html: string) =>
+      sanitiser.failClosed ? null : actual.pageSrcDoc(html),
+  };
+});
 
 import { ApiError } from '@/lib/api';
 import { InspectClient, type InspectClientProps } from './InspectClient';
@@ -270,6 +282,21 @@ describe('InspectClient', () => {
     expect(document.querySelector('h1')?.textContent).not.toBe('Tate McRae');
     expect(document.querySelector('script')).toBeNull();
     expect(Reflect.get(window, '__inspectRan')).toBeUndefined();
+  });
+
+  it('fails closed: no frame, a line pointing at HTML and Text, when the page cannot be made safe', async () => {
+    sanitiser.failClosed = true;
+    try {
+      mockGet.mockResolvedValue({ html: HTML });
+      render(<InspectClient {...props()} />);
+      await screen.findByTestId('inspect-html');
+      const tabs = within(screen.getByTestId('inspect-tabs'));
+      fireEvent.click(tabs.getByRole('tab', { name: COPY.tabs.page }));
+      expect(screen.getByText(COPY.pageUnsafe)).toBeTruthy();
+      expect(document.querySelector('iframe')).toBeNull();
+    } finally {
+      sanitiser.failClosed = false;
+    }
   });
 
   it('a page’s scripts and handlers never run from the Page tab', async () => {
