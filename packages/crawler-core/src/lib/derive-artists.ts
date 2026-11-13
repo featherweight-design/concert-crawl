@@ -147,6 +147,13 @@ export function tidyBill(
 // and kept the honored acts on their bills). Words, not name shapes (#1343).
 const TRIBUTE_TITLE = /\btributes?\b|\bcover (?:show|night)\b/i;
 
+// "X play R.E.M.'s Document", "X plays the music of Y": a night of someone
+// else's songs, which the owner ruled the same as a tribute (it only ever
+// empties a bill). The album after "'s" is capitalised, which keeps "plays
+// Neil's place" style prose out.
+const PLAYS_ALBUM =
+  /\b[Pp]lays?\s+(?:the music of\b|[^,()]{1,60}?['’]s\s+[A-Z0-9])/;
+
 // "A & B" is one act or two, and the model answers that differently run to run
 // ("Nas & The Roots" came back whole after coming back split). When the venue's
 // own performer field lists every member as its own entry, the venue has said
@@ -245,7 +252,8 @@ async function withKnownPresenter(
 // a parenthesis is one act's note on a real bill ("Rio Rosa, LivSings (Beyonce
 // Tribute)"), which leaves the bill alone.
 export function isTributeTitle(title: string): boolean {
-  return TRIBUTE_TITLE.test(title.replace(/\([^)]*\)/g, ' '));
+  const plain = title.replace(/\([^)]*\)/g, ' ');
+  return TRIBUTE_TITLE.test(plain) || PLAYS_ALBUM.test(plain);
 }
 
 // Words that mark a title as describing the EVENT rather than naming an act.

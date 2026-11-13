@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   deriveArtists,
   isSuspiciousObservation,
+  isTributeTitle,
   joinsSeveralNames,
   tidyBill,
   wouldAdjudicate,
@@ -525,6 +526,8 @@ describe('a cover or tribute night', () => {
     'HIDE DEPECHE MODE TRIBUTES!',
     'Tributes to Oingo Boingo & DEVO!',
     'Night 0 Tributes to Steely Dan, Grateful Dead & Tyler Childers',
+    "Michael Shannon & Jason Narducy and Friends play R.E.M.'s Document",
+    'The Wild Ones plays the music of Fleetwood Mac',
   ])('settles "%s" from the title: no bill, never hidden', async (title) => {
     const result = await deriveArtists(
       {
@@ -542,6 +545,14 @@ describe('a cover or tribute night', () => {
     expect(result.headliners).toEqual([]);
     expect(result.supportingArtists).toEqual([]);
     expect(result.isConcert).toBe(true);
+  });
+
+  it.each([
+    'Joslyn plays Denver',
+    "Band plays tonight at Neil's place",
+    'Rush plays Red Rocks',
+  ])('leaves "%s" alone: not a night of someone else\'s songs', (title) => {
+    expect(isTributeTitle(title)).toBe(false);
   });
 
   it('does not ask the reuse gate for a verdict on a tribute title', () => {
