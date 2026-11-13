@@ -38,8 +38,23 @@ describe('FeedbackEdgeTab', () => {
   it('sits flush at every width, with no tuck or slide-out', () => {
     render(<FeedbackEdgeTab />);
     const anchor = screen.getByTestId('feedback-edge-tab-anchor');
-    expect(anchor.className).not.toMatch(/translate-x/);
-    expect(anchor.className).not.toContain('focus-within');
+    const button = screen.getByRole('button', {
+      name: CONSUMER_COPY.feedback.edgeTab.ariaLabel,
+    });
+    const classes = anchor.className.split(/\s+/);
+    expect(classes).toContain('right-0');
+    // No tuck by any route: a translate, a negative right offset or a
+    // negative right margin, on the anchor's classes or either inline style.
+    for (const token of classes) {
+      expect(token).not.toMatch(
+        /translate-x|(^|:)-right-|right-\[-|(^|:)-mr-|mr-\[-/,
+      );
+    }
+    for (const el of [anchor, button]) {
+      expect(el.style.right).not.toMatch(/^-/);
+      expect(el.style.marginRight).not.toMatch(/^-/);
+      expect(el.style.transform).not.toMatch(/translate/);
+    }
   });
 
   it('has no transparent hit slop, so it never steals a tap meant for content, and a focus-visible ring class', () => {
