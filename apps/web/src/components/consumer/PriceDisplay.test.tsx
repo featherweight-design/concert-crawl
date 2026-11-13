@@ -29,7 +29,7 @@ describe('PriceDisplay price provenance tip', () => {
     stubMatchMedia(false);
   });
 
-  it('offers the who-set-this-price tip alongside the price label', () => {
+  it('draws no info icon next to the TICKETS label (the board has none)', () => {
     render(
       <PriceDisplay
         priceMin="35.00"
@@ -47,7 +47,7 @@ describe('PriceDisplay price provenance tip', () => {
       screen.queryByRole('button', {
         name: TIP_CONTENT['who-set-this-price'].label,
       }),
-    ).not.toBeNull();
+    ).toBeNull();
   });
 });
 

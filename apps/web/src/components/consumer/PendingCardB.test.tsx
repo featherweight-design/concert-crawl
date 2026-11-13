@@ -46,7 +46,7 @@ function buildProps(
     tier: 'GA',
     vendor: 'AXS',
     kind: 'community',
-    submitter: { handle: '@friend', url: 'https://example.com/friend' },
+    submitter: { handle: 'friend', url: 'https://example.com/friend' },
     submittedAt: minutesAgo(5),
     confirms: 1,
     needed: 2,
@@ -195,7 +195,7 @@ describe('PendingCardB', () => {
         <PendingCardB
           {...buildProps({
             view: 'other',
-            submitter: { handle: '@friend', url: 'https://example.com/friend' },
+            submitter: { handle: 'friend', url: 'https://example.com/friend' },
           })}
         />,
       );
@@ -234,7 +234,7 @@ describe('PendingCardB', () => {
         <PendingCardB
           {...buildProps({
             view: 'submitter',
-            submitter: { handle: '@friend', url: 'https://example.com/friend' },
+            submitter: { handle: 'friend', url: 'https://example.com/friend' },
           })}
         />,
       );
@@ -250,7 +250,7 @@ describe('PendingCardB', () => {
           {...buildProps({
             view: 'self-locked',
             kind: 'boxoffice',
-            submitter: { handle: '@friend', url: 'https://example.com/friend' },
+            submitter: { handle: 'friend', url: 'https://example.com/friend' },
           })}
         />,
       );
