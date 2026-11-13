@@ -16,11 +16,17 @@ vi.mock('next/link', () => ({
 
 import { EmptyState } from '../empty-state/EmptyState';
 import { InviteShell } from './InviteShell';
-import { gradientEdgeCard } from './lib/styles';
+import { CREW_ROW, gradientEdgeCard } from './lib/styles';
 
 afterEach(cleanup);
 
 describe('Crews B14 fidelity', () => {
+  it('sizes the Crews list patch to the patch-rim board (76px) and keeps the row tall enough', () => {
+    expect(CREW_ROW.patch).toBe(76);
+    const padded = 14 * 2 + 2;
+    expect(CREW_ROW.minHeight).toBeLessThanOrEqual(CREW_ROW.patch + padded);
+  });
+
   it('glows the invite page from the top centre over the ground', () => {
     render(
       <InviteShell>
