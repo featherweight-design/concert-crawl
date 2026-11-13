@@ -1,0 +1,33 @@
+{
+  "feature": "Artists tab and the Browse shelf · the venue and date line",
+  "note": "Boards: design/design_handoff_bplus_redesign/screens/02-mobile/bp-m-artists_m, 01-core/bp-artists, addendum-2/screens/20-browse-shelf/shelf-see-all-m. The Artists line is grey with a space before the dot; the shelf card sets the venue (two lines, ellipsised) and the date in two columns. Needs a signed-in user following artists with announced shows.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "artists-line",
+      "label": "My shows, Artists tab rows",
+      "steps": [
+        {
+          "goto": "/following",
+          "wait": "a[href^=\"/artists/\"]",
+          "settle": 1200
+        }
+      ]
+    },
+    {
+      "id": "browse-shelf",
+      "label": "Browse, the Coming to Denver shelf",
+      "steps": [
+        {
+          "goto": "/events",
+          "wait": "[data-testid=\"shelf-card\"]",
+          "settle": 1200
+        }
+      ]
+    }
+  ]
+}

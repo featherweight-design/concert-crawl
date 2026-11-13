@@ -161,9 +161,9 @@ export const ArtistManageRow = ({
             letterSpacing: dateLine === null ? '0.08em' : '0.06em',
             fontWeight: dateLine === null ? 600 : 400,
             marginTop: card ? 4 : 0,
-            // The quiet group is not a signal, so it does not get the signal
-            // colour — the date line earns that by being actionable.
-            color: dateLine === null ? 'var(--fg-subtle)' : 'var(--signal)',
+            // Grey, as `bp-artists` draws the venue and date line: the cyan
+            // here was a signal the board never put on it.
+            color: 'var(--fg-subtle)',
           }}
         />
 
