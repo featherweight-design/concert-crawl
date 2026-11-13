@@ -1,3 +1,25 @@
+# [1.392.0](https://github.com/featherweight-design/concert-crawl/compare/v1.391.0...v1.392.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** --cta-end falls back to the accent on global-error; no empty grid row on a phone ([a538f90](https://github.com/featherweight-design/concert-crawl/commit/a538f9002d5d2f2f1296e75da1d30378ae2209c1))
+* **web:** empty search query matches no venue ([7d9f792](https://github.com/featherweight-design/concert-crawl/commit/7d9f7921c79ac8e39921decb84cb7f14732b7598))
+* **web:** public status card drops the Watching clause it cannot act on ([ebe9f83](https://github.com/featherweight-design/concert-crawl/commit/ebe9f83fc334353c068fc6a617878ffb79aed048))
+* **web:** search venue order and settled highlight ([024c80d](https://github.com/featherweight-design/concert-crawl/commit/024c80d31a979c3c7e8a5eb84421e0c59666f845))
+* **web:** search venue relevance, whole-dollar prices, desktop first-result highlight ([b9de7fa](https://github.com/featherweight-design/concert-crawl/commit/b9de7fa6c8fc037b6c5be6c5d760796f79172230))
+* **web:** the Artists venue line in grey with its space, and the shelf card in two columns ([9ae14de](https://github.com/featherweight-design/concert-crawl/commit/9ae14de3312c1fa954fe68d09d25114e9621842e))
+* **web:** the error page defines --cta-end itself ([3aa88e6](https://github.com/featherweight-design/concert-crawl/commit/3aa88e6e254ded2ea7f64e2640af7e2bc68c4299))
+* **web:** the error page's Try again ends on --cta-end ([74bdab7](https://github.com/featherweight-design/concert-crawl/commit/74bdab7f870b417456fc02b776d3edb10a1b02e3))
+* **web:** the Going prompt as a dark inset panel with a left bar ([a05cb54](https://github.com/featherweight-design/concert-crawl/commit/a05cb5437ee95ec327c6ef16f74ea825e25c4d82))
+* **web:** tidy the Going prompt's border widths and comments ([77d6bb8](https://github.com/featherweight-design/concert-crawl/commit/77d6bb821687fd2c38bf3fba6bc543d7e7e37976))
+
+
+### Features
+
+* **web:** public event page shows the read-only status card ([5fd61ff](https://github.com/featherweight-design/concert-crawl/commit/5fd61ff8710189bc1452bff0d75abf7150df19b6))
+* **web:** the desktop two-column error page and the card's header mark ([35a9776](https://github.com/featherweight-design/concert-crawl/commit/35a9776f099f45624c94ea10ba4c949640fd9289))
+
 # [1.391.0](https://github.com/featherweight-design/concert-crawl/compare/v1.390.0...v1.391.0) (2026-11-13)
 
 
