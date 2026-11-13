@@ -26,6 +26,22 @@ const renderNudge = () => {
   return { onYes, onDismiss };
 };
 
+// `bp-watching`, `bp-m-watching_m`: a darker inset panel with no outline, and
+// only a 3px left bar in the show's stamp colour.
+describe('GoingNudge panel', () => {
+  it('has a left bar and no outline, and a sans sub-line on a phone', () => {
+    renderNudge();
+    const panel = screen.getByTestId('going-nudge');
+    expect(panel.style.borderLeftWidth).toBe('3px');
+    expect(panel.style.borderTopWidth).toBe('0px');
+    expect(panel.style.borderRightWidth).toBe('0px');
+    expect(panel.style.borderBottomWidth).toBe('0px');
+    expect(screen.getByTestId('going-nudge-support').className).toContain(
+      'max-sm:[font-family:var(--font-ui)]',
+    );
+  });
+});
+
 describe('GoingNudge', () => {
   it('asks the question with the support line', () => {
     renderNudge();
