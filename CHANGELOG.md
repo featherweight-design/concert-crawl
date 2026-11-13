@@ -1,3 +1,10 @@
+# [1.398.0](https://github.com/featherweight-design/concert-crawl/compare/v1.397.2...v1.398.0) (2026-11-13)
+
+
+### Features
+
+* **api,web:** the crew lens honours the When, Where, Price and Vibe filters ([188e6b9](https://github.com/featherweight-design/concert-crawl/commit/188e6b9605b6da0f7821cf21798b114c0ac4e16d))
+
 ## [1.397.2](https://github.com/featherweight-design/concert-crawl/compare/v1.397.1...v1.397.2) (2026-11-13)
 
 
