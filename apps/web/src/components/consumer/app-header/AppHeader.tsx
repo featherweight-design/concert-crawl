@@ -157,8 +157,9 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
             <span className="hidden flex-1 text-[13px] lg:block">
               {copy.search.placeholder}
             </span>
+            {/* Plain text, not a key cap (bp-account, notifications-panel-d). */}
             <span
-              className="hidden rounded border border-border-strong px-1.5 py-0.5 text-[10px] text-fg-subtle lg:block"
+              className="hidden text-[10px] text-fg-subtle lg:block"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               {copy.search.keyboardShortcut}

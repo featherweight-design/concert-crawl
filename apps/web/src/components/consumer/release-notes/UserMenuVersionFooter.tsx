@@ -47,9 +47,9 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
           height: 5,
           borderRadius: 5,
           flexShrink: 0,
-          background: 'var(--signal)',
-          boxShadow: '0 0 5px var(--signal)',
-          animation: 'rnPulse 2.2s ease-in-out infinite',
+          // The version's dot is grey and still (bp-m-account_m); the live,
+          // pulsing one is the unread dot beside "What's new" on the right.
+          background: 'var(--fg-subtle)',
         }}
       />
       <span
