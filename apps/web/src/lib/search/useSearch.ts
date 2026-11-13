@@ -131,8 +131,11 @@ export function venueLeadsQuery(venueName: string, query: string): boolean {
  */
 export function venueNameMatches(venueName: string, query: string): boolean {
   if (venueLeadsQuery(venueName, query)) return true;
-  const nameWords = foldName(venueName).split(' ');
-  const needleWords = foldName(query).split(' ');
+  const name = foldName(venueName);
+  const needle = foldName(query);
+  if (name === '' || needle === '') return false;
+  const nameWords = name.split(' ');
+  const needleWords = needle.split(' ');
   return nameWords.some((_, start) =>
     needleWords.every((word, offset) => {
       const nameWord = nameWords[start + offset];
