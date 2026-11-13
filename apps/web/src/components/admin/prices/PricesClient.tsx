@@ -14,7 +14,12 @@ import {
 } from '@/components/admin/primitives';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { AddPricePanel, type AddPriceOutcome } from './AddPricePanel';
-import { MISSING_PAGE_SIZE, MissingTab } from './MissingTab';
+import {
+  MISSING_MAX_PER_CALL,
+  MISSING_PAGE_SIZE,
+  MissingTab,
+  type LoadMoreState,
+} from './MissingTab';
 import {
   pricesApi,
   type MissingRow,
@@ -132,7 +137,7 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
   const [tab, setTab] = useState<PricesTab>(initialTab);
   const [counts, setCounts] = useState<TabCounts | null>(null);
   const [rows, setRows] = useState<MissingRow[]>([]);
-  const [page, setPage] = useState(1);
+  const [loadState, setLoadState] = useState<LoadMoreState>('idle');
   const [failed, setFailed] = useState(false);
   const [approveOn, setApproveOn] = useState<boolean | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -141,32 +146,52 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
 
   // Only the newest load may write: a slow older one must not overwrite it.
   const latestLoad = useRef(0);
-  const load = useCallback(
-    async (at: number) => {
-      const mine = ++latestLoad.current;
-      try {
-        const [nextCounts, list] = await Promise.all([
-          api.tabs(),
-          api.missing((at - 1) * MISSING_PAGE_SIZE, MISSING_PAGE_SIZE),
-        ]);
-        if (mine !== latestLoad.current) return;
-        setCounts(nextCounts);
-        setRows(list.rows);
-        setFailed(false);
-        // The last row of the last page just got its price: step back a page.
-        if (list.rows.length === 0 && at > 1 && nextCounts.missing > 0) {
-          setPage(Math.ceil(nextCounts.missing / MISSING_PAGE_SIZE));
-        }
-      } catch {
-        if (mine === latestLoad.current) setFailed(true);
-      }
-    },
-    [api],
-  );
+  // How many rows Load more has put on screen, so a refresh after a save keeps
+  // them (the API serves at most 100 in one call).
+  const loadedCount = useRef(0);
+  const load = useCallback(async () => {
+    const mine = ++latestLoad.current;
+    try {
+      const [nextCounts, list] = await Promise.all([
+        api.tabs(),
+        api.missing(
+          0,
+          Math.min(
+            MISSING_MAX_PER_CALL,
+            Math.max(loadedCount.current, MISSING_PAGE_SIZE),
+          ),
+        ),
+      ]);
+      if (mine !== latestLoad.current) return;
+      loadedCount.current = list.rows.length;
+      setCounts(nextCounts);
+      setRows(list.rows);
+      setFailed(false);
+    } catch {
+      if (mine === latestLoad.current) setFailed(true);
+    }
+  }, [api]);
 
   useEffect(() => {
-    void load(page);
-  }, [load, page]);
+    void load();
+  }, [load]);
+
+  const onLoadMore = async () => {
+    setLoadState('loading');
+    try {
+      const list = await api.missing(rows.length, MISSING_PAGE_SIZE);
+      const seen = new Set(rows.map((row) => row.eventId));
+      const merged = [
+        ...rows,
+        ...list.rows.filter((row) => !seen.has(row.eventId)),
+      ];
+      loadedCount.current = merged.length;
+      setRows(merged);
+      setLoadState('idle');
+    } catch {
+      setLoadState('failed');
+    }
+  };
 
   // A link to `?tab=` while the page is mounted changes the prop, not the mount.
   useEffect(() => setTab(initialTab), [initialTab]);
@@ -224,7 +249,7 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
         setNotice(COPY.add.soldOutFailed);
       }
     }
-    await load(page);
+    await load();
     if (!next || published === null) {
       setAdding(null);
       return { ok: true };
@@ -326,7 +351,7 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
       >
         {tab === 'missing' ? (
           failed ? (
-            <CouldntLoad page={COPY.title} onRetry={() => void load(page)} />
+            <CouldntLoad page={COPY.title} onRetry={() => void load()} />
           ) : counts === null ? (
             <PageSkeleton rows={5} columns={4} rowHeight={64} />
           ) : (
@@ -345,10 +370,10 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
               <MissingTab
                 rows={rows}
                 total={counts.missing}
-                page={page}
                 adding={adding?.eventId ?? null}
+                loadState={loadState}
                 onAdd={setAdding}
-                onPage={setPage}
+                onLoadMore={() => void onLoadMore()}
               />
             </>
           )
