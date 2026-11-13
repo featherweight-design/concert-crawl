@@ -121,6 +121,8 @@ const missingEventsQuery = () => {
       eventTitle: events.title,
       artist: events.artist,
       venueName: venues.name,
+      // The venue's icon tile is chosen by slug.
+      venueSlug: venues.slug,
       date: events.date,
       ticketUrl: events.ticketUrl,
       priceMin: events.ticketPriceMin,
