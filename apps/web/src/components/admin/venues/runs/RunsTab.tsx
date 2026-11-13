@@ -18,6 +18,7 @@ import {
   RunsFilterEmpty,
   type LoadMoreState,
 } from '@/components/admin/crawl-runs/RunsList';
+import { RunDetailPanel } from '@/components/admin/crawl-runs/RunDetailPanel';
 import {
   parseRunsPage,
   type RunRow,
@@ -53,10 +54,13 @@ const replaceUrl = (href: string) =>
  * `04/venue-runs-mobile`). Fault acknowledgement sits on top (ruling a), then
  * the Runs card: All and Not OK, the rows, and Load more.
  *
- * Selecting a row highlights it and puts `?run=` in the URL; selecting it
- * again clears both. `?run=` on load (Overview's Open run) highlights that
- * row and scrolls it into view; a `?run=` not among the loaded rows is
- * dropped from the URL. The run detail panel lands in 4b.
+ * Selecting a row highlights it, opens its run detail (a side panel; a
+ * bottom sheet on the phone) and puts `?run=` in the URL; selecting it again,
+ * or closing the detail, clears all three. `?run=` on load (Overview's Open
+ * run) does the same for that row and scrolls it into view; a `?run=` not
+ * among the loaded rows is dropped from the URL. Leaving the tab closes the
+ * detail: the panel stays mounted, only hidden, and a dialog must not stay
+ * open behind another tab.
  *
  * The first page comes from the server; Load more re-asks the API with a
  * bigger `limit` (there is no cursor), up to its cap of 100.
@@ -65,12 +69,15 @@ export const RunsTab = ({
   venueId,
   runs,
   initialRun,
+  active,
 }: {
   venueId: string;
   /** The first page, newest first; null when that fetch failed. */
   runs: RunsPage | null;
-  /** The run `?run=` named, highlighted on load. */
+  /** The run `?run=` named, opened on load. */
   initialRun: string | null;
+  /** Whether the Runs tab is the one showing. */
+  active: boolean;
 }) => {
   const phone = useIsPhone();
   const router = useRouter();
@@ -118,6 +125,9 @@ export const RunsTab = ({
       setSelectedId(knownRun(initialRun, merged));
     }
   }
+  // Another tab took over: close the detail. The tab switch has already
+  // rewritten the URL without `?run=`.
+  if (!active && selectedId !== null) setSelectedId(null);
 
   useEffect(
     () => () => {
@@ -143,10 +153,14 @@ export const RunsTab = ({
       ?.scrollIntoView({ block: 'nearest' });
   }, [initialRun]);
 
+  const close = () => {
+    setSelectedId(null);
+    replaceUrl(venueTabHref(venueId, 'runs'));
+  };
+
   const select = (runId: string) => {
     if (runId === selectedId) {
-      setSelectedId(null);
-      replaceUrl(venueTabHref(venueId, 'runs'));
+      close();
       return;
     }
     setSelectedId(runId);
@@ -182,6 +196,9 @@ export const RunsTab = ({
   const shown = filterRuns(rows, filter);
   const notOkCount = rows.filter(isNotOk).length;
   const lastFull = lastFullRuns(rows);
+  const selectedRun = active
+    ? (rows.find((run) => run.id === selectedId) ?? null)
+    : null;
 
   return (
     <div
@@ -272,6 +289,15 @@ export const RunsTab = ({
           </>
         )}
       </section>
+      {selectedRun !== null && (
+        <RunDetailPanel
+          venueId={venueId}
+          run={selectedRun}
+          lastFullRun={lastFull.get(selectedRun.id) ?? null}
+          phone={phone}
+          onClose={close}
+        />
+      )}
     </div>
   );
 };

@@ -6,8 +6,8 @@ import {
 } from '@/components/admin/venues/overview/overview-data';
 
 /**
- * The boundary check on a venue's runs, keeping only the fields the list
- * reads. A body that isn't a list is null (Couldn't load); a row this build
+ * The boundary checks on a venue's runs and a run's pages, keeping only the
+ * fields the list and the run detail read. A body that isn't a list is null (Couldn't load); a row this build
  * can't read is dropped on its own.
  */
 
@@ -27,6 +27,18 @@ const runRowSchema = z.object({
 export type RunRow = z.infer<typeof runRowSchema>;
 
 export const parseRunRows = parseRows(runRowSchema);
+
+/** `GET /v1/admin/crawl/runs/:id/pages`, oldest first: what the run detail reads. */
+const runPageSchema = z.object({
+  id: z.string(),
+  url: z.string(),
+  finalUrl: z.string().nullable(),
+  httpStatus: z.number().nullable(),
+  bytes: z.number().nullable(),
+});
+export type RunPage = z.infer<typeof runPageSchema>;
+
+export const parseRunPages = parseRows(runPageSchema);
 
 /**
  * A page of runs: the rows this build can read, and how many the API sent.

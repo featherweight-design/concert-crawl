@@ -5,11 +5,24 @@ import {
   isUnchanged,
   runOutcome,
   runReasonLine,
+  runSentence,
   shortDate,
 } from '@/components/admin/venues/overview/overview-rules';
-import type { RunRow } from './run-data';
+import type { RunPage, RunRow } from './run-data';
 
 const COPY = ADMIN_COPY.venueRuns;
+const DETAIL = ADMIN_COPY.runDetail;
+
+/**
+ * Whether Inspect page and Compare show. Inspect is 3b part 5 (PR 5): until
+ * its route lands the buttons would 404, so they stay hidden. Flip this in
+ * that PR.
+ */
+export const INSPECT_READY = false;
+
+/** The Inspect route (3b part 5) for one run. */
+export const inspectHref = (venueId: string, runId: string): string =>
+  `/admin/venues/${encodeURIComponent(venueId)}/inspect/${encodeURIComponent(runId)}`;
 
 // ── Load more ────────────────────────────────────────────────
 
@@ -61,21 +74,29 @@ export const runCost = (usd: number | null | undefined): string => {
   return COPY.cost(usd.toFixed(2));
 };
 
+/** A last full run, with its id: Compare opens Inspect on it. */
+export type LastFullRun = VenueLastFullRun & { id: string };
+
 /**
  * Each run's last full run: the next older `success` in the list (newest
- * first). It names the date an Unchanged run kept. One pass, oldest to
- * newest; a run with none loaded behind it is absent from the map.
+ * first). It names the date an Unchanged run kept, and is the run Compare
+ * targets. One pass, oldest to newest; a run with none loaded behind it is
+ * absent from the map.
  */
 export const lastFullRuns = (
   runs: readonly RunRow[],
-): Map<string, VenueLastFullRun> => {
-  const byId = new Map<string, VenueLastFullRun>();
-  let previous: VenueLastFullRun | null = null;
+): Map<string, LastFullRun> => {
+  const byId = new Map<string, LastFullRun>();
+  let previous: LastFullRun | null = null;
   for (let i = runs.length - 1; i >= 0; i -= 1) {
     const run = runs[i]!;
     if (previous !== null) byId.set(run.id, previous);
     if (run.status === 'success') {
-      previous = { at: run.createdAt, eventsFound: run.eventsFound };
+      previous = {
+        id: run.id,
+        at: run.createdAt,
+        eventsFound: run.eventsFound,
+      };
     }
   }
   return byId;
@@ -116,3 +137,78 @@ export const runLine = (
   }
   return runReasonLine(run) ?? runOutcome(run);
 };
+
+/**
+ * The run detail's summary: the row's line as its title, and a sentence
+ * under it only where it adds something (Unchanged says what was kept).
+ */
+export const runSummary = (
+  run: RunRow,
+  lastFullRun: VenueLastFullRun | null,
+): { title: string; body: string | null } => ({
+  title: runLine(run, lastFullRun),
+  body: isUnchanged(run) ? runSentence(run, lastFullRun) : null,
+});
+
+// ── Pages ────────────────────────────────────────────────────
+
+const hostOf = (url: string): string | null => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+};
+
+const restOf = (url: string): string => {
+  const parsed = new URL(url);
+  const path = parsed.pathname === '/' ? '' : parsed.pathname;
+  return `${path}${parsed.search}`;
+};
+
+/**
+ * A page's URL as the board shortens it: "ballarena.com/events" for the
+ * first, "…/events?page=2" for a later page on the same host. A URL that
+ * won't parse reads as itself.
+ */
+export const shortUrl = (url: string, firstUrl: string): string => {
+  const host = hostOf(url);
+  if (host === null) return url;
+  const rest = restOf(url);
+  if (url !== firstUrl && host === hostOf(firstUrl) && rest !== '') {
+    return `…${rest}`;
+  }
+  return `${host}${rest}`;
+};
+
+const KB = 1024;
+const MB = KB * 1024;
+
+/** "1.9 MB", "640 KB", "512 B". */
+export const pageSize = (bytes: number): string => {
+  if (bytes >= MB) return DETAIL.megabytes((bytes / MB).toFixed(1));
+  if (bytes >= KB) return DETAIL.kilobytes(Math.round(bytes / KB));
+  return DETAIL.bytes(bytes);
+};
+
+/**
+ * A page that failed: an error status (4xx, 5xx) or no response at all.
+ * 2xx and 3xx (a redirect, a 304 Not Modified) are not failures.
+ */
+export const isFailedPage = (page: Pick<RunPage, 'httpStatus'>): boolean =>
+  page.httpStatus === null || page.httpStatus >= 400;
+
+/** The first failed page, the one the list marks; -1 when none failed. */
+export const firstFailedPage = (
+  pages: readonly Pick<RunPage, 'httpStatus'>[],
+): number => pages.findIndex(isFailedPage);
+
+/**
+ * "200 · 1.9 MB". No per-page time is stored, so the board's third part is
+ * left off.
+ */
+export const pageLine = (page: Pick<RunPage, 'httpStatus' | 'bytes'>): string =>
+  DETAIL.pageLine([
+    page.httpStatus === null ? DETAIL.noResponse : String(page.httpStatus),
+    ...(page.bytes === null ? [] : [pageSize(page.bytes)]),
+  ]);

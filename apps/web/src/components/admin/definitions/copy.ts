@@ -811,6 +811,28 @@ export const ADMIN_COPY = {
     tryAgain: 'Try again',
   },
 
+  // A run's detail: the desktop side panel and the phone sheet
+  // (`07/a-runs-detail`, `G2/run-detail-sheet`). Shared with 1d.
+  runDetail: {
+    // "Nov 9 · 3:02 AM · 212 s · $0.14"
+    meta: (parts: readonly string[]) => parts.join(' · '),
+    pages: 'Pages',
+    // Couldn't load {this}.
+    pagesPage: 'this run’s pages',
+    loadingPages: 'Loading pages…',
+    noPages: 'No pages were kept for this run.',
+    // "200 · 1.9 MB"
+    pageLine: (parts: readonly string[]) => parts.join(' · '),
+    // A request that never got an HTTP status.
+    noResponse: 'No response',
+    firstFailure: 'First failure',
+    bytes: (count: number) => `${count.toLocaleString('en-US')} B`,
+    kilobytes: (count: number) => `${count.toLocaleString('en-US')} KB`,
+    megabytes: (count: string) => `${count} MB`,
+    inspect: 'Inspect page',
+    compare: (date: string) => `Compare with ${date}`,
+  },
+
   robotsAudit: {
     page: {
       eyebrow: 'Venues · robots.txt',
