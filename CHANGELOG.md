@@ -1,3 +1,25 @@
+# [1.414.0](https://github.com/featherweight-design/concert-crawl/compare/v1.413.0...v1.414.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **api:** a bug screenshot must be a base64 png, jpeg or webp ([ac76113](https://github.com/featherweight-design/concert-crawl/commit/ac76113759f3e1fb27a3a2cfd9fb017ba33c231d))
+* **api:** cap the bug screenshot, key plays-denver on visible shows, align exact match and horizon ([50f4506](https://github.com/featherweight-design/concert-crawl/commit/50f450623f5726e07d87e806a6fb2586795915af))
+* **api:** count only corroborated checker prices as approved ([bd3c118](https://github.com/featherweight-design/concert-crawl/commit/bd3c1188a525b8af31aa28f3ec7fb438cc5ef00d))
+* **api:** seed a valid submission tier in the price-check test ([65866cb](https://github.com/featherweight-design/concert-crawl/commit/65866cb4babfb8245e81772d89c76ff22820939b))
+* **web:** defuse the inspect page to a fixpoint and fail closed ([30d76b0](https://github.com/featherweight-design/concert-crawl/commit/30d76b0b83b1e4f3d3e722170bf206216c976d31))
+* **web:** filter bar becomes the chips row under 1024 ([aadaa2a](https://github.com/featherweight-design/concert-crawl/commit/aadaa2a49494f8493dd998a161cd4244e5d066fa))
+* **web:** filters sheet drags to 1023, pin the switch ([46af857](https://github.com/featherweight-design/concert-crawl/commit/46af85750cad35adf6cf2b90a8dfd50784880ef4))
+* **web:** keep the shared popover's sm class for Venues ([baf6dda](https://github.com/featherweight-design/concert-crawl/commit/baf6ddab3c8a815176f15e09885d1d64ad9fd2ee))
+
+
+### Features
+
+* **api:** a blocked venue carries its OK streak too ([62365f1](https://github.com/featherweight-design/concert-crawl/commit/62365f15b60e3460e5d7ffe104c9dfbc51c35b8c))
+* **api:** needs you artist, event, price check and bug items carry the evidence the panels draw ([f412ffc](https://github.com/featherweight-design/concert-crawl/commit/f412ffc3328c683e560ba82e0234398ce9f86096))
+* **api:** ticket link and watching count on the open price checks ([6615efa](https://github.com/featherweight-design/concert-crawl/commit/6615efa4536f88e59f7669824a9fe7a1ba728bb7))
+* **web:** inspect page tab in a sandboxed frame (3b part 5b) ([610adcc](https://github.com/featherweight-design/concert-crawl/commit/610adccfc5a21ddd1db1c7cea9b8d8cb852d719a))
+
 # [1.413.0](https://github.com/featherweight-design/concert-crawl/compare/v1.412.0...v1.413.0) (2026-11-13)
 
 
