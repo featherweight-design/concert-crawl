@@ -373,9 +373,12 @@ describe('RunsTab', () => {
     expect(within(dialog).getByRole('heading').textContent).toBe(
       '106 shows · 2 new',
     );
-    expect(mockGet).toHaveBeenCalledWith(
-      '/v1/admin/crawl/runs/run-ok/pages',
-      'test-token',
+    // The token is awaited before the fetch goes out.
+    await waitFor(() =>
+      expect(mockGet).toHaveBeenCalledWith(
+        '/v1/admin/crawl/runs/run-ok/pages',
+        'test-token',
+      ),
     );
     await pagesSettled();
   });

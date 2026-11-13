@@ -289,7 +289,8 @@ describe('pages', () => {
   it('reads a later page that repeats the first, or is the root, as its path', () => {
     expect(shortUrl(first, first)).toBe('/events');
     expect(shortUrl('https://ballarena.com/', first)).toBe('/');
-    expect(shortUrl('https://ballarena.com/?page=2', first)).toBe('/?page=2');
+    // A later page with a query keeps the board's "…/" form.
+    expect(shortUrl('https://ballarena.com/?page=2', first)).toBe('…/?page=2');
   });
 
   it('reads sizes in B, KB and MB', () => {
