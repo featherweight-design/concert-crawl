@@ -39,6 +39,7 @@ import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
+  ProbeRequests,
 } from './index.js';
 
 const logger = createLogger('aeg-fetcher');
@@ -432,6 +433,12 @@ async function aegFetch(
     },
   };
 }
+
+/** A probe reads the one events blob, paced; AEG never follows a redirect. */
+export const AEG_PROBE_REQUESTS: ProbeRequests = {
+  paced: 1,
+  followsRedirects: false,
+};
 
 export const aegFetcher: PlatformFetcher = {
   source: 'aeg',

@@ -417,10 +417,10 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
   it('caps probe redirects at 3 and sizes the budget from that same cap', async () => {
     const { opts } = await probeOptions({ crawlDelayMs: 3_000 }, 'detail-page');
     expect(opts.maxRedirects).toBe(3);
-    // Three paced requests, each a 4 s wait (3 s + a full second of jitter)
-    // plus a 4 s wait for each of its 3 allowed hops, then the 15 s request
-    // allowance: 3 × 4 × 4 + 15 = 63 s.
-    expect(opts.overallTimeoutMs).toBe(3 * 4_000 * (1 + 3) + 15_000);
+    // Three paced requests, each plus its 3 allowed hops, and every one of
+    // those 12 requests gets a 4 s wait (3 s + a full second of jitter) and
+    // its own 15 s network allowance: 3 × 4 × (4 + 15) = 228 s.
+    expect(opts.overallTimeoutMs).toBe(3 * (1 + 3) * (4_000 + 15_000));
   });
 
   it('fails a probe on its 4th redirect as a fetch_error, without hanging', async () => {
@@ -612,7 +612,9 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
       events: [{ title: 'Show A' }, { title: 'Show B' }],
       sourceUrl: 'https://aegwebprod.blob.core.windows.net/json/events/89',
     });
-    dispatchMock.mockReturnValue({ platform: 'aeg', fetch: fetchMock });
+    // `source`, as a real PlatformFetcher carries it: the probe sizes its
+    // budget from the adapter's source.
+    dispatchMock.mockReturnValue({ source: 'aeg', fetch: fetchMock });
     const venue = await seedVenue({
       name: 'AEG Venue',
       slug: 'aeg-venue',
@@ -655,11 +657,13 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
         crawlDelayMs: 3_000,
         perRequestTimeoutMs: 15_000,
         // The probe's budget is a ceiling on the whole fetch, not on each
-        // of an adapter's sequential requests (#1184): one paced wait
-        // (3 s + up to 1 s of jitter) plus 15 s for the requests.
+        // of an adapter's sequential requests (#1184). AEG's one request,
+        // which never redirects: its paced wait (3 s + up to 1 s of jitter)
+        // plus its own 15 s network allowance.
         overallTimeoutMs: 19_000,
         budgetFollowsCrawlDelay: true,
         firstPageOnly: true,
+        maxRedirects: 3,
       },
     );
     expect(dispatchMock).toHaveBeenCalledWith(
@@ -676,7 +680,9 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ events: [], sourceUrl: 'https://example.com/feed' });
-    dispatchMock.mockReturnValue({ platform: 'aeg', fetch: fetchMock });
+    // `source`, as a real PlatformFetcher carries it: the probe sizes its
+    // budget from the adapter's source.
+    dispatchMock.mockReturnValue({ source: 'aeg', fetch: fetchMock });
     const venue = await seedVenue({
       name: 'Unsaved Config',
       slug: 'unsaved-config',
@@ -710,7 +716,7 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
   it('returns fetch_error when the platform fetch throws', async () => {
     setAuth('admin');
     dispatchMock.mockReturnValue({
-      platform: 'aeg',
+      source: 'aeg',
       fetch: vi.fn().mockRejectedValue(new Error('AEG feed returned 503')),
     });
     const venue = await seedVenue({
@@ -742,7 +748,7 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
   it('returns schema_error when the fetch throws AegSchemaError', async () => {
     setAuth('admin');
     dispatchMock.mockReturnValue({
-      platform: 'aeg',
+      source: 'aeg',
       fetch: vi
         .fn()
         .mockRejectedValue(

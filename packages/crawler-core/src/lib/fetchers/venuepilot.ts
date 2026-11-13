@@ -31,6 +31,7 @@ import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
+  ProbeRequests,
 } from './index.js';
 
 const logger = createLogger('venuepilot-fetcher');
@@ -472,6 +473,12 @@ async function venuePilotFetch(
     },
   };
 }
+
+/** A probe reads page 1 only, paced; VenuePilot never follows a redirect. */
+export const VENUEPILOT_PROBE_REQUESTS: ProbeRequests = {
+  paced: 1,
+  followsRedirects: false,
+};
 
 export const venuePilotFetcher: PlatformFetcher = {
   source: 'venuepilot',

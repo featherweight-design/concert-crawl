@@ -7,6 +7,7 @@
 
 import { createLogger } from '@concert-crawl/logger';
 import { MIN_CRAWL_DELAY_MS } from '@concert-crawl/types';
+import type { ChainBudget } from '../robots-fetch.js';
 
 const logger = createLogger('platform-fetch-deadline');
 
@@ -37,18 +38,20 @@ export interface FetchDeadline {
    * breach message (e.g. `sitemap`, `page-3`).
    *
    * `timeoutMs` bounds one network request: the per-request cap, or the
-   * remaining budget when that is shorter. `budget` aborts when the overall
-   * budget runs out, and is absent when there is none. A request that
-   * follows redirects, sleeping a pacing wait before each hop, hands
-   * `timeoutMs` to each hop on its own and `budget` to the whole chain: the
-   * hop sleeps then count against the budget, never against a hop's
-   * network allowance.
+   * remaining budget when that is shorter. `budget` is the overall budget,
+   * absent when there is none: its signal aborts when the budget runs out,
+   * `remainingMs()` reads what is left now, and `wait` is this deadline's
+   * pacing wait. A request that follows redirects hands `timeoutMs` and
+   * `budget` to `fetchFollowingRobots`: each hop's network time is then
+   * capped at the shorter of `timeoutMs` and the live remaining budget, and
+   * each hop's pacing wait counts against the budget (breaching up front
+   * when it can't fit), never against a hop's network allowance.
    */
   run<TResult>(
     stage: string,
     request: (
       timeoutMs: number | undefined,
-      budget: AbortSignal | undefined,
+      budget: ChainBudget | undefined,
     ) => Promise<TResult>,
   ): Promise<TResult>;
 
@@ -115,39 +118,50 @@ export const createDeadline = ({
       : { timeoutMs: remaining, budgetBound: true };
   };
 
+  const wait = async (delayMs: number): Promise<void> => {
+    if (delayMs <= 0) return;
+    const pace = Math.max(delayMs, MIN_CRAWL_DELAY_MS);
+    if (overallTimeoutMs !== undefined) {
+      const spent = elapsed();
+      if (overallTimeoutMs - spent < pace) {
+        // Reported at the point the wait would have ended, which is where
+        // the budget runs out; nothing is requested.
+        throw new PlatformFetchDeadlineError(
+          overallTimeoutMs,
+          spent + pace,
+          'pacing wait',
+        );
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, pace));
+  };
+
+  const remainingMs = (): number =>
+    overallTimeoutMs === undefined
+      ? Number.POSITIVE_INFINITY
+      : Math.max(0, overallTimeoutMs - elapsed());
+
   return {
     extend(extraMs) {
       if (overallTimeoutMs !== undefined && extraMs > 0)
         overallTimeoutMs += extraMs;
     },
 
-    async wait(delayMs) {
-      if (delayMs <= 0) return;
-      const pace = Math.max(delayMs, MIN_CRAWL_DELAY_MS);
-      if (overallTimeoutMs !== undefined) {
-        const spent = elapsed();
-        if (overallTimeoutMs - spent < pace) {
-          // Reported at the point the wait would have ended, which is where
-          // the budget runs out; nothing is requested.
-          throw new PlatformFetchDeadlineError(
-            overallTimeoutMs,
-            spent + pace,
-            'pacing wait',
-          );
-        }
-      }
-      await new Promise((resolve) => setTimeout(resolve, pace));
-    },
+    wait,
 
     async run(stage, request) {
       const spentBefore = breach(stage);
       if (spentBefore) throw spentBefore;
 
       const { timeoutMs, budgetBound } = nextTimeout();
-      const budget =
+      const budget: ChainBudget | undefined =
         overallTimeoutMs === undefined
           ? undefined
-          : AbortSignal.timeout(Math.max(0, overallTimeoutMs - elapsed()));
+          : {
+              signal: AbortSignal.timeout(remainingMs()),
+              remainingMs,
+              wait,
+            };
 
       try {
         return await request(timeoutMs, budget);
@@ -166,7 +180,7 @@ export const createDeadline = ({
         // the budget out in a hop's pacing wait while each hop's own timeout
         // is the per-request cap.
         if (
-          (budgetBound || budget?.aborted === true) &&
+          (budgetBound || budget?.signal.aborted === true) &&
           overallTimeoutMs !== undefined &&
           err instanceof Error &&
           ABORT_ERROR_NAMES.has(err.name)

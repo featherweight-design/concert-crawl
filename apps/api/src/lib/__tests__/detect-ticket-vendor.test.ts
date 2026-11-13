@@ -19,7 +19,14 @@ import {
   isAllowedOrSkip,
   resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots';
-import { detectTicketVendor } from '../detect-ticket-vendor.js';
+import {
+  DETECT_MAX_REDIRECTS,
+  detectTicketVendor,
+} from '../detect-ticket-vendor.js';
+
+const { jitter: realJitter } = await vi.importActual<
+  typeof import('@concert-crawl/crawler-core/jitter')
+>('@concert-crawl/crawler-core/jitter');
 
 afterEach(() => vi.clearAllMocks());
 
@@ -150,6 +157,78 @@ describe('detectTicketVendor', () => {
       }),
     );
     expect(await detectTicketVendor('https://venue.example')).toBe('unknown');
+  });
+
+  it('follows at most 3 redirect hops, then fails cleanly as unknown', async () => {
+    // A site that redirects forever, one step deeper each time.
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: `${url}/next` }),
+      body: null,
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await detectTicketVendor('https://venue.example')).toBe('unknown');
+    // The page and its 3 allowed hops; the 4th target never goes out.
+    expect(fetchMock).toHaveBeenCalledTimes(1 + DETECT_MAX_REDIRECTS);
+    expect(DETECT_MAX_REDIRECTS).toBe(3);
+  });
+
+  it("fails cleanly as unknown, up front, when a hop's wait can't fit the budget", async () => {
+    // The page redirects to a host whose Crawl-delay (resolved to 10 min)
+    // dwarfs the detection's budget. The hop's wait must breach before it
+    // starts, never sleep the 10 minutes, and the hop must never go out.
+    vi.useFakeTimers();
+    vi.mocked(jitter).mockImplementation(realJitter);
+    vi.mocked(resolveCrawlDelayMs)
+      .mockReturnValueOnce(3_000)
+      .mockReturnValueOnce(600_000);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: 'https://slow-host.example/' }),
+      body: null,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const result = detectTicketVendor('https://venue.example', 3_000);
+      // Past the page's own paced wait (at most 4 s), far short of the hop's.
+      await vi.advanceTimersByTimeAsync(5_000);
+      // Settled inside those 5 s of fake time, so the 10-minute wait never ran.
+      expect(await result).toBe('unknown');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(jitter).mockImplementation(() => 0);
+      vi.useRealTimers();
+    }
+  });
+
+  it('paces the page at least 3 s after the robots.txt read on the real jitter', async () => {
+    vi.useFakeTimers();
+    vi.mocked(jitter).mockImplementation(realJitter);
+    const requestedAt: number[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        requestedAt.push(Date.now());
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          arrayBuffer: async () => new TextEncoder().encode('<p>x</p>').buffer,
+        };
+      }),
+    );
+    try {
+      const startedAt = Date.now();
+      const result = detectTicketVendor('https://venue.example');
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(await result).toBe('unknown');
+      expect(requestedAt[0]! - startedAt).toBeGreaterThanOrEqual(3_000);
+    } finally {
+      vi.mocked(jitter).mockImplementation(() => 0);
+      vi.useRealTimers();
+    }
   });
 
   it('does not follow a redirect robots.txt disallows', async () => {

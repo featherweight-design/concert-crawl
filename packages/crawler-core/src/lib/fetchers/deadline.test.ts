@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { ChainBudget } from '../robots-fetch.js';
 import { PlatformFetchDeadlineError, createDeadline } from './deadline.js';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -52,24 +53,55 @@ describe('createDeadline', () => {
         expect(timeoutMs).toBe(10);
         if (!budget) throw new Error('no budget signal handed to the request');
         await new Promise((resolve) =>
-          budget.addEventListener('abort', resolve, { once: true }),
+          budget.signal.addEventListener('abort', resolve, { once: true }),
         );
-        throw budget.reason;
+        throw budget.signal.reason;
       })
       .catch((caught: unknown) => caught);
 
     expect(err).toBeInstanceOf(PlatformFetchDeadlineError);
   });
 
-  it('hands no budget signal when no overall budget is set', async () => {
+  it('hands no budget when no overall budget is set', async () => {
     const deadline = createDeadline({ perRequestTimeoutMs: 5_000 });
-    let seen: AbortSignal | undefined = new AbortController().signal;
+    let seen: ChainBudget | undefined = {
+      signal: new AbortController().signal,
+      remainingMs: () => 0,
+      wait: async () => undefined,
+    };
 
     await deadline.run('page-1', async (_timeoutMs, budget) => {
       seen = budget;
     });
 
     expect(seen).toBeUndefined();
+  });
+
+  it("hands a request the live remaining budget and the deadline's own wait", async () => {
+    vi.useFakeTimers();
+    try {
+      const deadline = createDeadline({
+        perRequestTimeoutMs: 5_000,
+        overallTimeoutMs: 10_000,
+      });
+      const run = deadline.run('page-1', async (_timeoutMs, budget) => {
+        expect(budget?.remainingMs()).toBe(10_000);
+        await budget?.wait(4_000);
+        // Read after the wait, not frozen at the start of the run.
+        const afterWait = budget?.remainingMs();
+        // A 6.5 s wait can't fit the 6 s left: it breaches before sleeping.
+        const breach = await budget?.wait(6_500).catch((err: unknown) => err);
+        return { afterWait, breach, at: Date.now() };
+      });
+      const startedAt = Date.now();
+      await vi.advanceTimersByTimeAsync(4_000);
+      const { afterWait, breach, at } = await run;
+      expect(afterWait).toBe(6_000);
+      expect(breach).toBeInstanceOf(PlatformFetchDeadlineError);
+      expect(at - startedAt).toBe(4_000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('passes the per-request timeout through when no overall budget is set', async () => {

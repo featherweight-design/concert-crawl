@@ -17,10 +17,12 @@ export {
   DetailPageFetchError,
 } from './lib/fetchers/detail-page.js';
 export { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js';
+export { PROBE_REQUESTS } from './lib/fetchers/probe-requests.js';
 export type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
   PlatformSource,
+  ProbeRequests,
   VenuePlatform,
 } from './lib/fetchers/index.js';

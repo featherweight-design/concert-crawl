@@ -41,16 +41,23 @@ import type { NormalizedEvent } from '../../types.js';
 import type { FetchLog } from '../fetch-log.js';
 import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
+  type ChainBudget,
   fetchFollowingRobots,
   RobotsDisallowedError,
   type RobotsFetchResult,
 } from '../robots-fetch.js';
 import { createDeadline } from './deadline.js';
 import { jitter } from './jitter.js';
+import {
+  isBudgetBreach,
+  type Pacing,
+  pacedChainOptions,
+} from './paced-fetch.js';
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
+  ProbeRequests,
 } from './index.js';
 
 const logger = createLogger('livenation-fetcher');
@@ -115,35 +122,27 @@ const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled']);
 // onto `landed`, since provenance for the AI gate is the landing.
 async function fetchText(
   url: string,
-  {
-    crawlDelayMs,
-    maxRedirects,
-  }: Pick<PlatformFetchOptions, 'crawlDelayMs' | 'maxRedirects'>,
+  pacing: Pacing,
   timeoutMs?: number,
-  budget?: AbortSignal,
+  budget?: ChainBudget,
   landed?: string[],
   fetchLog?: FetchLog,
 ): Promise<string> {
   let fetched: RobotsFetchResult;
   try {
-    fetched = await fetchFollowingRobots(url, {
-      headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
-      crawlDelayMs,
-      ...(maxRedirects !== undefined ? { maxRedirects } : {}),
-      // `timeoutMs` bounds each hop's network time on its own, so a hung
-      // connection can't pin the caller (the admin probe holds an API worker
-      // slot while this resolves). A hop's pacing wait is not network time:
-      // it counts against `budget`, the deadline's signal for the whole
-      // chain, and never against the per-request cap.
-      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-      ...(budget !== undefined ? { signal: budget } : {}),
-    });
+    fetched = await fetchFollowingRobots(
+      url,
+      pacedChainOptions(pacing, timeoutMs, budget),
+    );
   } catch (err) {
     // A request that threw before any response (a timeout, a reset) is the
-    // page that explains the run; one robots.txt declined was never requested.
+    // page that explains the run; one robots.txt declined was never
+    // requested, and a budget that ran out (in a hop's pacing wait, say) is
+    // the deadline breach `deadline.run` reports, not a failed page.
     if (
       !(err instanceof RobotsDisallowedError) &&
-      !(err instanceof CrawlSkipError)
+      !(err instanceof CrawlSkipError) &&
+      !isBudgetBreach(err, budget)
     ) {
       fetchLog?.record({ url, mode: 'http' });
     }
@@ -583,6 +582,15 @@ async function liveNationFetch(
     },
   };
 }
+
+/**
+ * A probe reads the sitemap and one calendar month, each paced, and either
+ * can follow redirects hop by hop.
+ */
+export const LIVENATION_PROBE_REQUESTS: ProbeRequests = {
+  paced: 2,
+  followsRedirects: true,
+};
 
 export const liveNationFetcher: PlatformFetcher = {
   source: 'livenation',
