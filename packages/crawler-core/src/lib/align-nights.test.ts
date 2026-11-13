@@ -44,6 +44,20 @@ describe('alignToNights: a time misread on the same show page', () => {
     expect(aligned[0]?.showTime).toBe('19:30:00');
   });
 
+  it('joins the two readings inside one crawl, so both upsert under the evening time', () => {
+    const { aligned } = alignToNights(
+      [
+        withUrl(listing('beck', '07:30:00'), page),
+        withUrl(listing('beck', '19:30:00'), page),
+      ],
+      [],
+    );
+    expect(aligned.map((row) => row.showTime)).toEqual([
+      '19:30:00',
+      '19:30:00',
+    ]);
+  });
+
   it('needs the same page URL: without one, or on another page, two times stay two nights', () => {
     for (const eventUrl of [
       null,

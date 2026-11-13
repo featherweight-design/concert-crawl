@@ -5,6 +5,10 @@
 // on the Rocks at 7:00 AM) is never moved: if the page carries both, or neither,
 // the model's answer stands.
 
+/** How much page text around an event's title belongs to its listing. */
+const NEARBY_BEFORE = 200;
+const NEARBY_AFTER = 600;
+
 /** `07:30`, `7:30:00` -> hour, minutes, seconds; null when not a clock time. */
 const parseClock = (
   time: string,
@@ -39,12 +43,25 @@ const showsClock = (
 export function correctMorningTime<T extends string | null | undefined>(
   time: T,
   pageText: string,
+  eventTitle: string,
 ): T | string {
   if (typeof time !== 'string') return time;
   const clock = parseClock(time);
   if (clock === null || clock.hour < 1 || clock.hour > 11) return time;
-  const evening = showsClock(pageText, clock.hour, clock.minutes, 'p');
-  const morning = showsClock(pageText, clock.hour, clock.minutes, 'a');
+  // Only the text around THIS event's own title counts: a page lists many
+  // events, and another one's "7:30 PM" says nothing about this one. A title
+  // the page does not carry leaves the model's answer alone.
+  const at =
+    eventTitle.trim() === ''
+      ? -1
+      : pageText.toLowerCase().indexOf(eventTitle.trim().toLowerCase());
+  if (at < 0) return time;
+  const nearby = pageText.slice(
+    Math.max(0, at - NEARBY_BEFORE),
+    at + eventTitle.length + NEARBY_AFTER,
+  );
+  const evening = showsClock(nearby, clock.hour, clock.minutes, 'p');
+  const morning = showsClock(nearby, clock.hour, clock.minutes, 'a');
   if (!evening || morning) return time;
   return `${String(clock.hour + 12).padStart(2, '0')}:${clock.minutes}:${clock.seconds}`;
 }

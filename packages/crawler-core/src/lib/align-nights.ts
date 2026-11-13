@@ -32,6 +32,8 @@ export interface NightPromotion {
 
 interface Slot extends UrlNightRow {
   id: string | null;
+  /** The index of the listing of this crawl that created the slot, if any. */
+  owner?: number;
 }
 
 const isTimed = (row: NightRow): boolean => showTimeKey(row.showTime) !== '';
@@ -111,6 +113,7 @@ export function alignToNights<T extends UrlNightRow>(
         date: listing.date,
         showTime: listing.showTime,
         eventUrl: listing.eventUrl,
+        owner: index,
       });
       continue;
     }
@@ -123,7 +126,8 @@ export function alignToNights<T extends UrlNightRow>(
     if (
       isTimed(target) &&
       isTimed(listing) &&
-      showTimeKey(target.showTime) !== showTimeKey(listing.showTime)
+      showTimeKey(target.showTime) !== showTimeKey(listing.showTime) &&
+      isTwelveHourMisread(target, listing)
     ) {
       const evening = [
         showTimeKey(target.showTime),
@@ -135,6 +139,12 @@ export function alignToNights<T extends UrlNightRow>(
         promotions.set(target.id, { id: target.id, showTime: evening });
       }
       target.showTime = evening;
+      // A listing of this same crawl that created the slot is rewritten too,
+      // or the two would still upsert under different times.
+      if (target.owner !== undefined) {
+        const earlier = aligned[target.owner] as T;
+        aligned[target.owner] = { ...earlier, showTime: evening };
+      }
       aligned[index] = {
         ...listing,
         canonicalArtist: target.canonicalArtist,
