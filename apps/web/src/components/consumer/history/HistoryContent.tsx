@@ -37,7 +37,9 @@ import { HistoryHeader } from './HistoryHeader';
 import { HistoryItem } from './HistoryItem';
 import { HistoryEmpty } from './HistoryEmpty';
 import { HistoryLocked } from './HistoryLocked';
+import { createPortal } from 'react-dom';
 import { AddShowRow } from './AddShowRow';
+import { AddShowSheet } from './AddShowSheet';
 import { SaveCalendarRow } from './SaveCalendarRow';
 import { PassportTeaser } from './PassportTeaser';
 import { groupHistoryByMonth } from './lib/buckets';
@@ -175,6 +177,7 @@ export const HistoryContent = ({
   locked,
   scaRegion,
 }: HistoryContentProps) => {
+  const [addOpen, setAddOpen] = useState(false);
   const { isLoading, active } = useEntitlement('concert-history');
   // Only poll the API when the client agrees the plan can read history —
   // otherwise the query just re-earns the 403 the server already reported.
@@ -278,6 +281,19 @@ export const HistoryContent = ({
     );
   }
 
+  // Portaled to the body: the rail is sticky from lg, which makes it its own
+  // stacking context, and the page's rows would paint over a sheet mounted
+  // inside it. `addOpen` only turns true on a click, so `document` exists by
+  // then. The key keeps one sheet alive when the first stamp (or the last
+  // un-stamp) swaps the empty layout for the populated one.
+  const addSheet =
+    addOpen &&
+    createPortal(
+      <AddShowSheet open onClose={() => setAddOpen(false)} />,
+      document.body,
+      'add-show-sheet',
+    );
+
   if (history.past.length === 0 && history.upcoming.length === 0) {
     return (
       <Shell>
@@ -286,8 +302,9 @@ export const HistoryContent = ({
         {/* Not drawn: a reader with no nights is the one most likely to add
             one, so the row follows the empty card. */}
         <div className="mt-4">
-          <AddShowRow />
+          <AddShowRow onOpen={() => setAddOpen(true)} />
         </div>
+        {addSheet}
       </Shell>
     );
   }
@@ -307,7 +324,7 @@ export const HistoryContent = ({
         >
           <SaveCalendarRow count={history.past.length} />
           <PassportTeaser stats={history.stats} shows={history.past} />
-          <AddShowRow />
+          <AddShowRow onOpen={() => setAddOpen(true)} />
         </aside>
 
         <div className="flex flex-col gap-6 lg:col-start-1 lg:row-start-1">
@@ -359,6 +376,7 @@ export const HistoryContent = ({
           handle={user?.username ?? null}
         />
       )}
+      {addSheet}
     </Shell>
   );
 };

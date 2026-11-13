@@ -71,7 +71,14 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
 }));
 
 vi.mock('./AddShowRow', () => ({
-  AddShowRow: () => <div data-testid="add-show-row" />,
+  AddShowRow: ({ onOpen }: { onOpen: () => void }) => (
+    <button type="button" data-testid="add-show-row" onClick={onOpen} />
+  ),
+}));
+
+vi.mock('./AddShowSheet', () => ({
+  AddShowSheet: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="add-sheet" /> : null,
 }));
 
 import { HistoryContent } from './HistoryContent';
@@ -186,6 +193,19 @@ describe('HistoryContent', () => {
       <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
     );
     expect(screen.getByTestId('add-show-row')).toBeInTheDocument();
+  });
+
+  // The rail is sticky from lg, so it is its own stacking context: a sheet left
+  // inside it is painted under the page's rows.
+  it('opens the Add sheet on the body, outside the page', () => {
+    const { container } = render(
+      <HistoryContent initialData={EMPTY} locked={false} scaRegion={false} />,
+    );
+    expect(screen.queryByTestId('add-sheet')).toBeNull();
+    fireEvent.click(screen.getByTestId('add-show-row'));
+    const sheet = screen.getByTestId('add-sheet');
+    expect(sheet.parentElement).toBe(document.body);
+    expect(container.contains(sheet)).toBe(false);
   });
 
   // B+ rule 4: the empty state shows unearned dashed venue stamps.
