@@ -64,6 +64,11 @@ vi.mock('@/components/admin/venues/useRecrawl', () => ({
 
 // The header (status chips, Re-crawl, the ⋯ menu) has its own suites; here it
 // only has to be handed the venue and the page's re-crawl.
+// The Runs tab fetches behind Clerk auth; it has its own suite.
+vi.mock('@/components/admin/venues/runs/RunsTab', () => ({
+  RunsTab: () => null,
+}));
+
 vi.mock('@/components/admin/venues/VenueHeader', () => ({
   VenueHeader: ({
     venue,

@@ -13,14 +13,14 @@ import type {
  */
 
 // Only settled runs are stored: `in_progress` is never persisted.
-const RUN_STATUSES = [
+export const RUN_STATUSES = [
   'success',
   'failed',
   'partial',
   'skipped',
 ] as const satisfies readonly CrawlStatus[];
 
-const RUN_REASONS = [
+export const RUN_REASONS = [
   'page_unchanged',
   'crawl_paused',
   'robots_unreachable',
@@ -46,7 +46,10 @@ const NEEDS_YOU_KINDS = [
   'bug',
 ] as const satisfies readonly NeedsYouKind[];
 
-/** `GET /v1/admin/crawl/runs?venueId=&limit=14`, newest first. */
+/**
+ * `GET /v1/admin/crawl/runs?venueId=&limit=`, newest first. The page asks
+ * once for the Runs tab's first page too; Last 14 runs reads the newest 14.
+ */
 const runSchema = z.object({
   id: z.string(),
   status: z.enum(RUN_STATUSES),
@@ -80,7 +83,7 @@ const rowsSchema = z.array(z.unknown());
  * A list of rows: null when the body isn't a list; otherwise the rows that
  * hold to `row`, so one row this build can't read never costs the card.
  */
-const parseRows =
+export const parseRows =
   <T>(row: z.ZodType<T>) =>
   (raw: unknown): T[] | null => {
     const list = rowsSchema.safeParse(raw);

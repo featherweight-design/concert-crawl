@@ -3,18 +3,32 @@ import { apiClient } from '@/lib/api';
 import type { VenueGuide, VenueWithCrawlHealth } from '@concert-crawl/types';
 import { VenueDetailsClient } from '@/components/admin/VenueDetailsClient';
 import { notFound } from 'next/navigation';
-import { parseVenueTab } from '@/lib/admin/venue-tabs';
+import { parseVenueRun, parseVenueTab } from '@/lib/admin/venue-tabs';
 import {
   parseOverviewNeedsYou,
   parseOverviewRuns,
   parseOverviewSnoozes,
 } from '@/components/admin/venues/overview/overview-data';
-import { LAST_RUNS } from '@/components/admin/venues/overview/overview-rules';
+import { parseRunsPage } from '@/components/admin/crawl-runs/run-data';
+import { RUNS_FIRST_PAGE } from '@/components/admin/crawl-runs/runs-rules';
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string | string[] }>;
+  searchParams: Promise<{
+    tab?: string | string[];
+    run?: string | string[];
+  }>;
 }
+
+/**
+ * One runs fetch feeds both tabs: Overview's last 14 and the Runs tab's first
+ * page. Null when the body isn't a list (each tab's Couldn't load).
+ */
+const parseBothRuns = (raw: unknown) => {
+  const overview = parseOverviewRuns(raw);
+  const tab = parseRunsPage(raw);
+  return overview === null || tab === null ? null : { overview, tab };
+};
 
 const EMPTY_GUIDE: VenueGuide = {
   chips: [],
@@ -25,7 +39,10 @@ const EMPTY_GUIDE: VenueGuide = {
 export default async function VenueDetailPage({ params, searchParams }: Props) {
   await requireAdminUser();
   const { id } = await params;
-  const tab = parseVenueTab((await searchParams).tab);
+  const query = await searchParams;
+  const tab = parseVenueTab(query.tab);
+  // `?run=` highlights a run, on the Runs tab only.
+  const initialRun = tab === 'runs' ? parseVenueRun(query.run) : null;
   const { getToken } = await auth();
   const token = await getToken();
   if (!token) return null;
@@ -69,7 +86,7 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
   // from a genuinely empty guide, and saving it would send `chips: []`, which
   // the PUT handler treats as "delete every chip for this venue".
   let guideLoadFailed = false;
-  const [guide, runs, needsYou, snoozes] = await Promise.all([
+  const [guide, bothRuns, needsYou, snoozes] = await Promise.all([
     apiClient
       .get<VenueGuide>(`/v1/admin/venues/${id}/guide`, token)
       .catch((err: unknown) => {
@@ -82,8 +99,8 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
       }),
     overviewFetch(
       'runs',
-      `/v1/admin/crawl/runs?${venueQuery}&limit=${LAST_RUNS}`,
-      parseOverviewRuns,
+      `/v1/admin/crawl/runs?${venueQuery}&limit=${RUNS_FIRST_PAGE}`,
+      parseBothRuns,
     ),
     overviewFetch(
       'needs-you',
@@ -103,7 +120,8 @@ export default async function VenueDetailPage({ params, searchParams }: Props) {
       guide={guide}
       guideLoadFailed={guideLoadFailed}
       initialTab={tab}
-      overview={{ runs, needsYou, snoozes }}
+      overview={{ runs: bothRuns?.overview ?? null, needsYou, snoozes }}
+      runs={{ runs: bothRuns?.tab ?? null, initialRun }}
     />
   );
 }

@@ -430,24 +430,21 @@ describe('TriagePanel — rows and links', () => {
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
     expect(hrefs).toContain(`/admin/venues/${base.venueId}`);
-    expect(hrefs).toContain(`/admin/crawl?venueId=${base.venueId}&tab=history`);
-    expect(hrefs).toContain(
-      `/admin/crawl?venueId=${base.venueId}&tab=diagnostics`,
-    );
+    expect(hrefs).toContain(`/admin/venues/${base.venueId}?tab=runs`);
+    expect(hrefs.some((href) => href?.startsWith('/admin/crawl'))).toBe(false);
   });
 
-  // The Diagnostics pane only renders for a failed run. A ceiling-suspected
-  // venue's latest run succeeded, so pointing it there opens an empty pane —
-  // its evidence is the run series on History. Asserting the set of hrefs is
-  // not enough; the condition-to-tab mapping is the thing that can invert.
+  // The crawl page's inspector now redirects to the venue's Runs tab and
+  // drops `tab` (Diagnostics is dropped by ruling, A3 §3b row 8), so every
+  // run-scoped row goes straight there.
   it.each([
-    ['failed', failed, 'diagnostics'],
-    ['ceiling', ceilingPinned, 'history'],
-    ['wentDark', wentDark, 'history'],
-  ])('routes a %s row to the %s tab', (_name, fault, tab) => {
+    ['failed', failed],
+    ['ceiling', ceilingPinned],
+    ['wentDark', wentDark],
+  ])('routes a %s row to the venue’s Runs tab', (_name, fault) => {
     render(<TriagePanel data={data([fault])} />);
     expect(screen.getByRole('link').getAttribute('href')).toBe(
-      `/admin/crawl?venueId=${base.venueId}&tab=${tab}`,
+      `/admin/venues/${base.venueId}?tab=runs`,
     );
   });
 

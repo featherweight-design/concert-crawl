@@ -34,15 +34,38 @@ const run = {
   reason: null,
   createdAt: '2026-11-11T10:02:00.000Z',
 };
+// The Runs tab's row reads more of the run than Overview does.
+const fullRun = {
+  ...run,
+  eventsFound: 106,
+  eventsInserted: 2,
+  durationMs: 230000,
+  llmCostUsd: 0.15,
+  errorMessage: null,
+};
+const RUN_ID = '0b7c6f3e-8d2a-4c1b-9e5f-1a2b3c4d5e6f';
 
-const render = async (tab?: string | string[]) => {
+interface ClientProps {
+  initialTab: unknown;
+  overview: OverviewData;
+  runs: {
+    runs: { rows: unknown[]; returned: number } | null;
+    initialRun: string | null;
+  };
+}
+
+const render = async (
+  tab?: string | string[],
+  runParam?: string | string[],
+) => {
   const element = await VenueDetailPage({
     params: Promise.resolve({ id: 'v-1' }),
-    searchParams: Promise.resolve(tab === undefined ? {} : { tab }),
+    searchParams: Promise.resolve({
+      ...(tab !== undefined && { tab }),
+      ...(runParam !== undefined && { run: runParam }),
+    }),
   });
-  if (
-    !isValidElement<{ initialTab: unknown; overview: OverviewData }>(element)
-  ) {
+  if (!isValidElement<ClientProps>(element)) {
     throw new Error('Expected the page to render the venue client');
   }
   return element.props;
@@ -92,10 +115,12 @@ describe('/admin/venues/[id] ?tab=', () => {
 });
 
 describe('/admin/venues/[id] Overview fetches', () => {
-  it('asks for this venue’s last 14 runs, its Needs you items and snoozes', async () => {
+  it('asks once for this venue’s runs (the Runs tab’s first 20), its Needs you items and snoozes', async () => {
     const { overview } = await render();
     const paths = mockGet.mock.calls.map(([path]) => path);
-    expect(paths).toContain(`${RUNS}?venueId=v-1&limit=14`);
+    expect(paths.filter((path) => path.startsWith(RUNS))).toEqual([
+      `${RUNS}?venueId=v-1&limit=20`,
+    ]);
     expect(paths).toContain(`${NEEDS_YOU}?venueId=v-1`);
     expect(paths).toContain(`${SNOOZES}?venueId=v-1`);
     expect(overview).toEqual({ runs: [run], needsYou: [], snoozes: [] });
@@ -114,11 +139,35 @@ describe('/admin/venues/[id] Overview fetches', () => {
 
   it('a body of the wrong shape is null for that slice only, and logs', async () => {
     responses.set(RUNS, async () => ({ data: [run] }));
-    const { overview } = await render();
+    const { overview, runs } = await render();
     expect(overview).toEqual({ runs: null, needsYou: [], snoozes: [] });
+    expect(runs.runs).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith(
       'VenueDetailPage: runs: unexpected shape',
       { id: 'v-1' },
     );
+  });
+});
+
+describe('/admin/venues/[id] Runs tab', () => {
+  it('hands the Runs tab the rows it can read', async () => {
+    responses.set(RUNS, async () => [fullRun, run]);
+    const { overview, runs } = await render('runs');
+    // Overview reads both; the Runs tab drops the row missing its counts,
+    // but counts it as returned so Load more still decides on the API's 2.
+    expect(overview.runs).toHaveLength(2);
+    expect(runs.runs).toEqual({ rows: [fullRun], returned: 2 });
+  });
+
+  it('opens the run ?run= names, on the Runs tab only', async () => {
+    expect((await render('runs', RUN_ID)).runs.initialRun).toBe(RUN_ID);
+    expect((await render('overview', RUN_ID)).runs.initialRun).toBeNull();
+    expect((await render(undefined, RUN_ID)).runs.initialRun).toBeNull();
+  });
+
+  it('ignores a ?run= that isn’t a run id, without throwing', async () => {
+    expect((await render('runs', 'nope')).runs.initialRun).toBeNull();
+    expect((await render('runs', [RUN_ID, RUN_ID])).runs.initialRun).toBeNull();
+    expect((await render('runs')).runs.initialRun).toBeNull();
   });
 });

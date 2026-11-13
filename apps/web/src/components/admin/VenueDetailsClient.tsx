@@ -3,7 +3,6 @@ import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import type {
   ApiProvider,
   PlatformProbeResult,
@@ -35,6 +34,8 @@ import { useRecrawl } from '@/components/admin/venues/useRecrawl';
 import { recrawlOff } from '@/components/admin/venues/venue-header-rules';
 import { OverviewTab } from '@/components/admin/venues/overview/OverviewTab';
 import type { OverviewData } from '@/components/admin/venues/overview/overview-data';
+import { RunsTab } from '@/components/admin/venues/runs/RunsTab';
+import type { RunsPage } from '@/components/admin/crawl-runs/run-data';
 import {
   IdentityArt,
   ia_getInitials,
@@ -492,9 +493,15 @@ interface Props {
   initialTab?: VenueTab;
   /** Overview's runs and Needs you fetches; null where one failed. */
   overview?: OverviewData;
+  /** The Runs tab's first page (null when it failed) and the `?run=` to highlight. */
+  runs?: { runs: RunsPage | null; initialRun: string | null };
 }
 
 const NO_OVERVIEW: OverviewData = { runs: [], needsYou: [], snoozes: [] };
+const NO_RUNS: NonNullable<Props['runs']> = {
+  runs: { rows: [], returned: 0 },
+  initialRun: null,
+};
 
 const TAB_COPY = ADMIN_COPY.venueDetailsClient.tabs;
 const VENUE_TAB_LABEL: Record<VenueTab, string> = {
@@ -585,6 +592,7 @@ export function VenueDetailsClient({
   guideLoadFailed = false,
   initialTab = 'overview',
   overview = NO_OVERVIEW,
+  runs = NO_RUNS,
 }: Props) {
   const router = useRouter();
   const isPhone = useIsPhone();
@@ -1054,26 +1062,11 @@ export function VenueDetailsClient({
       </VenueTabPanel>
 
       <VenueTabPanel tab="runs" active={tab}>
-        {/* Interim: the runs list lands in 3b part 2. */}
-        <p
-          style={{
-            margin: 0,
-            fontSize: 13,
-            color: 'var(--fg-muted)',
-            lineHeight: 1.5,
-          }}
-        >
-          {TAB_COPY.runsInterim.body}
-        </p>
-        <Link
-          href={`/admin/crawl?venueId=${venue.id}&tab=history`}
-          data-testid="venue-runs-interim-link"
-          style={{ textDecoration: 'none', alignSelf: 'flex-start' }}
-        >
-          <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-            {TAB_COPY.runsInterim.link}
-          </AdminButton>
-        </Link>
+        <RunsTab
+          venueId={venue.id}
+          runs={runs.runs}
+          initialRun={runs.initialRun}
+        />
       </VenueTabPanel>
 
       <VenueTabPanel tab="details" active={tab}>
