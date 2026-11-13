@@ -308,12 +308,13 @@ export const StandaloneError = ({
           {copy.goHomeButton}
         </a>
       )}
+      {/* The Tell us card comes before the chip, as the boards draw it. */}
+      {children}
       {errorId ? (
         <div style={{ marginTop: 24 }}>
           <ErrorIdChip errorId={errorId} />
         </div>
       ) : null}
-      {children}
     </main>
   </div>
 );
