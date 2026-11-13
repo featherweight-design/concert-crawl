@@ -23,7 +23,10 @@ const subLabelFor = (item: NavItem, pathname: string): string => {
 const isSectionRoot = (item: NavItem, pathname: string): boolean => {
   const root = item.href.split('?')[0];
   return (
-    pathname === root || (item.key === 'events' && pathname === '/admin/events')
+    pathname === root ||
+    (item.key === 'events' && pathname === '/admin/events') ||
+    // The Review price tabs stay interim pages of Prices until 4d PR 4.
+    (item.key === 'prices' && pathname === '/admin/review')
   );
 };
 
