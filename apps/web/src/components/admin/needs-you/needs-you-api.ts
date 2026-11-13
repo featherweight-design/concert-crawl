@@ -29,6 +29,20 @@ export interface EvidenceLine {
   value: string;
 }
 
+/** One crawl run a venue item lists (newest first). `status` is the run's own word. */
+export interface RunLine {
+  at: string;
+  status: string;
+  errorMessage: string | null;
+}
+
+/** The show a moved one now looks like. */
+export interface MoveTo {
+  eventId: string;
+  title: string;
+  venueName: string | null;
+}
+
 /** One card: the fields the queue draws, whatever the item's kind. */
 export interface QueueRow {
   key: string;
@@ -47,6 +61,12 @@ export interface QueueRow {
   cause: string | null;
   /** An artist item's open reports. */
   reportCount: number | null;
+  /** A dropped show's last sighting, an ISO instant. */
+  lastSeenAt: string | null;
+  /** A moved show's new listing. */
+  moveTo: MoveTo | null;
+  /** A venue item's recent runs, as the API sent them (empty on other kinds). */
+  lastRuns: RunLine[];
 }
 
 // Every kind the API serves. A `Record` so a kind added to the type fails to
@@ -84,6 +104,34 @@ const isEvidenceLine = (value: unknown): value is EvidenceLine =>
 const evidenceFrom = (value: unknown): EvidenceLine[] =>
   Array.isArray(value) ? value.filter(isEvidenceLine) : [];
 
+const isRunLine = (value: unknown): value is RunLine =>
+  isRecord(value) &&
+  isText(value['at']) &&
+  isText(value['status']) &&
+  isTextOrNull(value['errorMessage']);
+
+/** A venue item's runs: the ones this build can draw, or none. */
+const runsFrom = (value: unknown): RunLine[] =>
+  Array.isArray(value)
+    ? value.filter(isRunLine).map((run) => ({
+        at: run.at,
+        status: run.status,
+        errorMessage: run.errorMessage,
+      }))
+    : [];
+
+const moveToFrom = (value: unknown): MoveTo | null =>
+  isRecord(value) &&
+  isText(value['eventId']) &&
+  isText(value['title']) &&
+  isTextOrNull(value['venueName'])
+    ? {
+        eventId: value['eventId'],
+        title: value['title'],
+        venueName: value['venueName'],
+      }
+    : null;
+
 const rowFrom = (value: unknown): QueueRow | null => {
   if (
     !isRecord(value) ||
@@ -111,6 +159,9 @@ const rowFrom = (value: unknown): QueueRow | null => {
     evidence: evidenceFrom(value['evidence']),
     cause: isText(value['cause']) ? value['cause'] : null,
     reportCount: isCount(value['reportCount']) ? value['reportCount'] : null,
+    lastSeenAt: isText(value['lastSeenAt']) ? value['lastSeenAt'] : null,
+    moveTo: moveToFrom(value['moveTo']),
+    lastRuns: runsFrom(value['lastRuns']),
   };
 };
 

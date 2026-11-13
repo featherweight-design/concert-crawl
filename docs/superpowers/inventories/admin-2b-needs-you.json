@@ -31,6 +31,54 @@
       ]
     },
     {
+      "id": "panel-show-dropped",
+      "label": "Show dropped panel (needs a show-dropped item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"show-dropped:\"]"
+        },
+        { "click": "[data-item-key^=\"show-dropped:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "panel-show-moved",
+      "label": "Show moved panel (needs a show-moved item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"show-moved:\"]"
+        },
+        { "click": "[data-item-key^=\"show-moved:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "panel-venue-failing",
+      "label": "Venue failing panel (needs a venue-failing item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-failing:\"]"
+        },
+        { "click": "[data-item-key^=\"venue-failing:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "panel-venue-blocked",
+      "label": "Venue blocked panel (needs a venue-blocked item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"venue-blocked:\"]"
+        },
+        { "click": "[data-item-key^=\"venue-blocked:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
       "id": "snooze",
       "label": "Snooze menu",
       "steps": [
