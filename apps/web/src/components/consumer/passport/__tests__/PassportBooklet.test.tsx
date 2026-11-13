@@ -196,12 +196,20 @@ describe('PassportBooklet', () => {
     expect(statusOf('spread')).toBe(COPY.spreadOf(2, 2));
   });
 
-  it('draws the next show as the dashed slot after the last stamp', () => {
+  // Addendum 4 item 8: the kit's ghost_stamp, the venue's own tile in
+  // greyscale, straight, with NEXT above and the date below.
+  it('draws the next show as the greyscale ghost tile after the last stamp', () => {
     renderBooklet(2, row(20, { artist: 'Marian Hill' }));
 
-    const next = view('spread').querySelector('[data-booklet-next]');
+    const next = view('spread').querySelector<HTMLElement>(
+      '[data-booklet-next]',
+    );
     expect(next).not.toBeNull();
-    expect(next?.querySelector('[data-venue-stamp="dashed"]')).not.toBeNull();
+    const ghost = next?.querySelector<HTMLElement>('[data-booklet-ghost]');
+    expect(ghost).not.toBeNull();
+    expect(ghost?.style.filter).toContain('grayscale');
+    expect(ghost?.querySelector('[data-venue-stamp]')).toBeNull();
+    expect(next?.style.transform).toBe('');
     expect(
       view('spread').querySelectorAll('[data-booklet-empty]'),
     ).toHaveLength(1);
