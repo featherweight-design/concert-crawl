@@ -69,6 +69,7 @@ vi.mock('@concert-crawl/db', () => {
         _store = getStore(t);
         return b;
       },
+      innerJoin: () => b,
       where: () => b,
       orderBy: () => b,
       limit: (n: number) => {
@@ -154,6 +155,8 @@ vi.mock('@concert-crawl/db', () => {
     db,
     venues,
     events,
+    // Admin 4a: merged-listing routing reads redirects; none exist here.
+    eventRedirects: { _t: 'eventRedirects' },
     crawlRuns,
     crawlRunPages,
     notifications,
