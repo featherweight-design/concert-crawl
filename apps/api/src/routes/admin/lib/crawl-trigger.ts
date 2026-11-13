@@ -5,6 +5,7 @@ import { dispatchCrawlerInBackground } from '../../../lib/crawler-dispatch.js';
 export type QueueVenueCrawlResult =
   | { ok: 'queued'; triggerId: string }
   | { ok: 'not_found' }
+  | { ok: 'removed' }
   | { ok: 'not_crawlable' }
   | { ok: 'paused' }
   | { ok: 'robots_disallowed' }
@@ -21,6 +22,9 @@ export const queueVenueCrawl = async (
 ): Promise<QueueVenueCrawlResult> => {
   const [venue] = await db.select().from(venues).where(eq(venues.id, venueId));
   if (!venue) return { ok: 'not_found' };
+  // Checked first and on its own, so a removed venue is refused as removed
+  // whatever its other columns say. There is no crawl path back for it.
+  if (venue.removedAt !== null) return { ok: 'removed' };
   if (!venue.active || !venue.verified) return { ok: 'not_crawlable' };
   // A queued trigger on a paused venue would only write a skipped run, so
   // say so now. The crawler pauses a venue itself at its third failure;

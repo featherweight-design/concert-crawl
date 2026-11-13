@@ -13,6 +13,24 @@ export const HIDE_REASONS = [
 ] as const;
 export type HideReason = (typeof HIDE_REASONS)[number];
 
+/**
+ * The refusal every ordinary admin action gives a removed venue (removed_at
+ * set by POST /v1/admin/venues/:id/remove: the venue asked us to remove its
+ * data). Showing it again, resuming its crawl, queueing a crawl and probing its
+ * source all answer 409 with this body, before any write and with no audit row.
+ *
+ * There is deliberately no way back from here. Restoring a removed venue needs
+ * a deliberate, separately approved path of its own; it must never ride in on
+ * Show, Resume or a crawl trigger.
+ */
+export const VENUE_REMOVED_ERROR =
+  'This venue asked us to remove its data, so it stays off the site.';
+export const venueRemovedBody = {
+  success: false,
+  error: VENUE_REMOVED_ERROR,
+  code: 'venue_removed',
+} as const;
+
 /** The database or a transaction on it, so a count can join a delete's lock. */
 type Reader = Pick<typeof db, 'select'>;
 

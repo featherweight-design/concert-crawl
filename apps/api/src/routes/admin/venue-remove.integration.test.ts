@@ -30,6 +30,7 @@ import {
 import { testDb } from '../../test/helpers/db.js';
 import {
   auditLog,
+  crawlTriggers,
   events,
   notifications,
   priceSubmissions,
@@ -195,7 +196,7 @@ describe('admin venue removal', () => {
     ).toHaveLength(1);
   });
 
-  it("takes the venue's past shows off the artist page, and activation brings them back", async () => {
+  it("takes the venue's past shows off the artist page, and Show cannot bring them back", async () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Church', slug: 'church' });
     await seedArtist({ name: 'Past Band' });
@@ -218,8 +219,8 @@ describe('admin venue removal', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: true }),
     });
-    expect(reactivate.status).toBe(200);
-    expect(await pastShows()).toHaveLength(1);
+    expect(reactivate.status).toBe(409);
+    expect(await pastShows()).toHaveLength(0);
   });
 
   it('makes a pipeline write wait out an uncommitted removal', async () => {
@@ -319,6 +320,148 @@ describe('admin venue removal', () => {
       .from(venues)
       .where(eq(venues.id, venue.id));
     expect(row?.crawlPausedAt?.toISOString()).toBe(pausedAt.toISOString());
+  });
+});
+
+describe('a removed venue stays off the site', () => {
+  const REMOVED_BODY = {
+    success: false,
+    error: 'This venue asked us to remove its data, so it stays off the site.',
+    code: 'venue_removed',
+  };
+  const takenAt = new Date('2026-11-01T00:00:00Z');
+
+  const send = (method: string, path: string, body?: unknown) =>
+    app.request(path, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+
+  // The four ordinary actions that would put a venue back on the site or
+  // fetch its source again.
+  const show = (id: string) =>
+    send('PATCH', `/v1/admin/venues/${id}`, { active: true });
+  const resume = (id: string) =>
+    send('DELETE', `/v1/admin/venues/${id}/crawl-pause`);
+  const trigger = (id: string) => send('POST', `/v1/admin/crawl/${id}`);
+  const probe = (id: string) =>
+    send('POST', `/v1/admin/venues/${id}/probe-platform`, {});
+
+  const venueRow = async (id: string) => {
+    const [row] = await testDb.select().from(venues).where(eq(venues.id, id));
+    return row;
+  };
+
+  // The state POST /remove leaves: hidden, paused, removed.
+  const seedRemoved = () =>
+    seedVenue({
+      name: 'Gone',
+      slug: 'gone',
+      active: false,
+      crawlPausedAt: takenAt,
+      removedAt: takenAt,
+    });
+
+  // Hidden and paused by an admin, but never removed.
+  const seedHidden = () =>
+    seedVenue({
+      name: 'Resting',
+      slug: 'resting',
+      active: false,
+      hiddenAt: takenAt,
+      hiddenBy: 'admin_x',
+      hiddenReason: 'venue_closed',
+      crawlPausedAt: takenAt,
+    });
+
+  beforeEach(async () => {
+    authState.current = {
+      userId: 'admin_1',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    await clearTables();
+  });
+
+  it.each([
+    ['Show (PATCH active: true)', show],
+    ['Resume crawling', resume],
+    ['a crawl trigger', trigger],
+    ['a platform probe', probe],
+  ])(
+    'refuses %s with 409 venue_removed, writing nothing',
+    async (_name, act) => {
+      const venue = await seedRemoved();
+
+      const res = await act(venue.id);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual(REMOVED_BODY);
+
+      expect(await venueRow(venue.id)).toEqual(venue);
+      expect(await testDb.select().from(auditLog)).toHaveLength(0);
+      expect(await testDb.select().from(crawlTriggers)).toHaveLength(0);
+    },
+  );
+
+  it('refuses Show even when it rides along with other edits', async () => {
+    const venue = await seedRemoved();
+    const res = await send('PATCH', `/v1/admin/venues/${venue.id}`, {
+      active: true,
+      name: 'Renamed',
+    });
+    expect(res.status).toBe(409);
+    expect(await venueRow(venue.id)).toEqual(venue);
+    expect(await testDb.select().from(auditLog)).toHaveLength(0);
+  });
+
+  it('refuses a crawl trigger on a removed venue whatever its other columns say', async () => {
+    // Not a state POST /remove leaves, but removed_at alone must be enough.
+    const venue = await seedVenue({
+      name: 'Gone',
+      slug: 'gone',
+      removedAt: takenAt,
+    });
+
+    const res = await trigger(venue.id);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual(REMOVED_BODY);
+
+    const all = await send('POST', '/v1/admin/crawl');
+    expect(all.status).toBe(202);
+    expect(await testDb.select().from(crawlTriggers)).toHaveLength(0);
+    expect(await venueRow(venue.id)).toEqual(venue);
+  });
+
+  it('still lets a hidden venue that was never removed be shown, resumed, crawled and probed', async () => {
+    const venue = await seedHidden();
+
+    expect((await show(venue.id)).status).toBe(200);
+    expect((await resume(venue.id)).status).toBe(200);
+    expect(await venueRow(venue.id)).toMatchObject({
+      active: true,
+      hiddenAt: null,
+      crawlPausedAt: null,
+      removedAt: null,
+    });
+
+    expect((await trigger(venue.id)).status).toBe(202);
+    expect(await testDb.select().from(crawlTriggers)).toHaveLength(1);
+
+    // No platform configured, so the probe answers without a fetch.
+    const probed = await probe(venue.id);
+    expect(probed.status).toBe(200);
+
+    const actions = (
+      await testDb.select({ action: auditLog.action }).from(auditLog)
+    ).map((row) => row.action);
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        'venue.show',
+        'venue.crawl_resume',
+        'crawl.trigger',
+        'venue.platform_probe',
+      ]),
+    );
   });
 });
 
