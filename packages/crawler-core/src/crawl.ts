@@ -1166,8 +1166,13 @@ export async function crawlVenue(
           .update(events)
           .set({ showTime: promotion.showTime, updatedAt: new Date() })
           .where(eq(events.id, promotion.id));
-        for (const [key, row] of existingMap) {
-          if (row.id !== promotion.id) continue;
+        // Found first, changed after: a Map iterator also visits entries added
+        // while it runs, so rekeying inside the loop would never end.
+        const stored = [...existingMap].find(
+          ([, row]) => row.id === promotion.id,
+        );
+        if (stored) {
+          const [key, row] = stored;
           existingMap.delete(key);
           existingMap.set(
             dedupKey(row.canonicalArtist, row.date, promotion.showTime),
@@ -1175,12 +1180,25 @@ export async function crawlVenue(
           );
         }
       }
-      const eventsWithHashes = aligned.filter((evt) => {
-        const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
-        if (seenEventKeys.has(key)) return false;
-        seenEventKeys.add(key);
-        return true;
-      });
+      const eventsWithHashes = aligned
+        // The hash covers the time, and alignment may have changed it: hash
+        // what will be stored, so a stable listing does not look changed to
+        // the row it folded into on every crawl.
+        .map((evt) => ({
+          ...evt,
+          sourceHash: hashEvent({
+            title: evt.title,
+            date: evt.date,
+            doorsTime: showTimeKey(evt.doorsTime),
+            showTime: showTimeKey(evt.showTime),
+          }),
+        }))
+        .filter((evt) => {
+          const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime);
+          if (seenEventKeys.has(key)) return false;
+          seenEventKeys.add(key);
+          return true;
+        });
 
       // Notify admin when a verified event's source data has changed.
       //
