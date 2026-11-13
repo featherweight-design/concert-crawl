@@ -1,3 +1,21 @@
+# [1.389.0](https://github.com/featherweight-design/concert-crawl/compare/v1.388.0...v1.389.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** pick the toast action colour per theme by contrast ([2b083d8](https://github.com/featherweight-design/concert-crawl/commit/2b083d87e8d9c80c80319cec968d440fc2a374bc))
+* **web:** read the Passport card's year in Mountain Time ([c2931fa](https://github.com/featherweight-design/concert-crawl/commit/c2931fac2dcef268ef8cd92b75bd3cd3c296c325))
+* **web:** tab dot parsing skips one bad entry and stamps read in one pass ([3c32e5b](https://github.com/featherweight-design/concert-crawl/commit/3c32e5bb6ab5170be66932e215d8a56a6da08e37))
+* **web:** the Concerts Passport card and the phone stats row as the boards draw them ([9a25c82](https://github.com/featherweight-design/concert-crawl/commit/9a25c82f3dac8041f2e53c78aa62aa8affd58e3f))
+* **web:** toast actions in the board's cyan, one style app-wide ([e5033ea](https://github.com/featherweight-design/concert-crawl/commit/e5033ead36361c4be9136bd55e55401ef28d8e3a))
+* **web:** venue confirms review fixes (3a 4b part 1) ([866f891](https://github.com/featherweight-design/concert-crawl/commit/866f891d5986dcd36fc78dd9a4d145c9db4215ba))
+
+
+### Features
+
+* **web:** per-tab unread dots from the server's category counts ([3a6fd56](https://github.com/featherweight-design/concert-crawl/commit/3a6fd56fc5a2de22f5ec24515824d657cd36db5f))
+* **web:** venue Hide, Take down and Delete confirms, inert (3a 4b part 1) ([059ad19](https://github.com/featherweight-design/concert-crawl/commit/059ad19fd8bbb7996fd46cd5cb4a57a2aa662967))
+
 # [1.388.0](https://github.com/featherweight-design/concert-crawl/compare/v1.387.0...v1.388.0) (2026-11-13)
 
 
