@@ -46,7 +46,7 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
       <div
         role="group"
         aria-label={SETTINGS_COPY.submissionsFilterAria}
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+        className="flex flex-wrap gap-1.5 min-[400px]:gap-2"
       >
         {SUBMISSION_FILTERS.map((key) => {
           const active = key === filter;
@@ -56,7 +56,7 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
               type="button"
               aria-pressed={active}
               onClick={() => setFilter(key)}
-              className="shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+              className="shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-[13px] font-semibold min-[400px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
               style={{
                 borderColor: active ? 'var(--accent)' : 'var(--border)',
                 background: active ? 'var(--surface-2)' : 'transparent',
