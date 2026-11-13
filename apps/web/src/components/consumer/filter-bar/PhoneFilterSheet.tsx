@@ -142,6 +142,9 @@ const Chevron = ({ back = false }: { back?: boolean }) => (
   </svg>
 );
 
+/** The "All N" link's trailing mark, as the boards draw it (`bp-f-filt_sheet_m`). */
+const ALL_LINK_MARK = '›';
+
 interface RadioOption {
   value: string;
   label: string;
@@ -200,7 +203,7 @@ const RadioPills = ({ label, options, selected, onPick }: RadioPillsProps) => {
       role="radiogroup"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className="flex flex-wrap gap-x-2 gap-y-1.5"
+      className="flex flex-wrap gap-x-[6.5px] gap-y-1.5"
     >
       {options.map((option, index) => {
         const checked = option.value === selected;
@@ -218,7 +221,7 @@ const RadioPills = ({ label, options, selected, onPick }: RadioPillsProps) => {
               setActive(index);
               onPick(option.value);
             }}
-            className={`inline-flex h-[34px] max-w-full min-w-0 cursor-pointer items-center gap-2 rounded-full border px-3.5 text-[14px] ${MOTION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
+            className={`inline-flex h-[34px] max-w-full min-w-0 cursor-pointer items-center gap-2 rounded-full border px-[13px] text-[13px] ${MOTION_CLASS} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2`}
             style={pillStyle(checked)}
           >
             {option.leading}
@@ -412,7 +415,8 @@ export function PhoneFilterSheet({
       className="-my-2 inline-flex cursor-pointer items-center gap-0.5 py-2 text-[15px] leading-3 font-bold text-signal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       {copy.phone.allCount(total)}
-      <Chevron />
+      {/* The boards draw a text-weight ›, not a stroke chevron. */}
+      <span aria-hidden>{ALL_LINK_MARK}</span>
     </button>
   );
 
