@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type RefObject } from 'react';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 // `:not([disabled])` is load-bearing, not tidiness. A disabled button cannot
 // take focus, so counting one as a trap member breaks the trap twice over:
@@ -131,4 +132,10 @@ export const useDialogKeyboard = (
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
   }, [panelRef, dismissible, enabled]);
+
+  // The background is inert to the pointer too: the shared, ref-counted page
+  // scroll lock, held for exactly as long as the keyboard contract is. Every
+  // admin modal (AdminDialog, AdminSheet, SidePanel and the hand-rolled
+  // confirms) comes through here.
+  useBodyScrollLock(enabled);
 };

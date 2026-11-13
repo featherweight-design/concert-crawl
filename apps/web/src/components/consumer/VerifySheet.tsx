@@ -3,6 +3,7 @@
 import type { SubmissionWithMeta } from '@concert-crawl/types';
 import { SubmissionList } from './SubmissionList';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 const copy = CONSUMER_COPY;
 
@@ -27,6 +28,7 @@ export function VerifySheet({
   eventDate,
   currentUserId,
 }: VerifySheetProps) {
+  useBodyScrollLock(open);
   if (!open) return null;
 
   const dateStr = new Date(eventDate).toLocaleDateString('en-US', {

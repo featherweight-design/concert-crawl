@@ -6,6 +6,7 @@ import {
   KIND_COLORS,
 } from '@/components/admin/primitives/utils';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface EventSummary {
   id: string;
@@ -40,6 +41,8 @@ export const BulkApproveModal = ({
   onConfirm,
   onCancel,
 }: BulkApproveModalProps) => {
+  // Mounted only while open, over a full-viewport backdrop.
+  useBodyScrollLock(true);
   const lowConfidenceCount = events.filter(
     (ev) => (ev.confidenceScore ?? 0) < LOW_CONFIDENCE_THRESHOLD,
   ).length;

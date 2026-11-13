@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { LANDING_COPY } from '@/app/_components/definitions/copy';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 
 interface WaitlistModalProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<ModalState>('idle');
   const inputRef = useRef<HTMLInputElement>(null);
+  useBodyScrollLock(open);
 
   // Reset state and inputs each time the modal opens
   useEffect(() => {
