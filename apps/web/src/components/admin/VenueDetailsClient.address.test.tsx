@@ -228,4 +228,23 @@ describe('VenueDetailsClient — street address field', () => {
       '1380 W Florida Ave, Denver, CO 80223',
     );
   });
+
+  // A missing key now means "leave it", so a venue with no vendor (or one just
+  // cleared) must send an explicit empty value for the API to store null.
+  it('always sends the ticket vendor, empty when there is none', async () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ address: null, ticketVendor: null })}
+      />,
+    );
+    fireEvent.change(addressInput(), { target: { value: '1 Main St' } });
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }));
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    const formData = mockUpdateVenue.mock.calls[0]?.[1];
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData');
+    }
+    expect(formData.has('ticketVendor')).toBe(true);
+    expect(formData.get('ticketVendor')).toBe('');
+  });
 });

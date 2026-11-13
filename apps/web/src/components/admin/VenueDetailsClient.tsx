@@ -948,9 +948,9 @@ export function VenueDetailsClient({
     // `active` is left out on purpose: Pause and Activate own it. Resending the
     // value this page loaded with would let a stale tab reactivate a venue
     // paused or removed since.
-    if (ticketVendorVal !== null) {
-      formData.set('ticketVendor', ticketVendorVal);
-    }
+    // Always sent: an empty value is how a cleared vendor reaches the API (a
+    // missing key now means "leave it", so skipping it could never clear one).
+    formData.set('ticketVendor', ticketVendorVal ?? '');
     formData.set('extractionStrategy', extractionStrategyVal ?? '');
     // The API re-checks the browser-mode selector rule whenever any of these
     // fields is in the body, so send them only when one changed. Otherwise a

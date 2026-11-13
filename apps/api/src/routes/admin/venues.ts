@@ -173,8 +173,10 @@ const fixedByCrawlRules = z.never({ error: FIXED_BY_CRAWL_RULES }).optional();
 // create schema. Otherwise a PATCH that only toggles `verified` would reset
 // the venue's city and wait strategy to the create defaults.
 //
-// Strict: an unknown key (a user agent, a pause or blocked column) is a 400,
-// never silently stripped.
+// The crawl-rule keys (crawl delay, robots, user agent) are declared below as
+// `fixedByCrawlRules`, so they get the "Fixed by the crawl rules" 400; keep
+// them declared. Strict additionally makes any other unknown key (a pause or
+// blocked column) a 400 instead of silently stripping it.
 export const updateVenueSchema = createVenueSchema
   .partial()
   .extend({
