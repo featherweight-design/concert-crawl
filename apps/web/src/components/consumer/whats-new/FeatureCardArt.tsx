@@ -12,7 +12,24 @@ import type { FeatureCardArt as ArtKey } from '@/lib/definitions/releases';
 const COPY = CONSUMER_COPY.releaseNotes.featurePage;
 
 /** The board draws 14 tiles on desktop and the first 8 on a phone. */
-const TILE_SLUGS = Object.keys(VENUE_SLUG_GLYPHS).slice(0, 14);
+// Read off the board where the glyph is legible (bird, disco globe, trumpet,
+// crate, arch, chandelier, ramp); the rest are venues we list.
+const TILE_SLUGS = [
+  'bluebird-theater',
+  'globe-hall',
+  'marquis-theater',
+  'the-black-box',
+  'oriental-theater',
+  'fillmore-auditorium',
+  'red-rocks-amphitheatre',
+  'meow-wolf-denver',
+  'hi-dive',
+  'levitt-pavilion',
+  'lost-lake-lounge',
+  'the-junkyard',
+  'mission-ballroom',
+  'larimer-lounge',
+].filter((slug) => Object.hasOwn(VENUE_SLUG_GLYPHS, slug));
 const PHONE_TILES = 8;
 
 const humanise = (slug: string) =>
