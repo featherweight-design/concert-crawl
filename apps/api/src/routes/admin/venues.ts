@@ -70,6 +70,7 @@ import {
   upcomingShowCount,
   pastShowsAndWatchers,
   upcomingShowSplit,
+  venueRemovedBody,
 } from './lib/venue-hide.js';
 
 const createVenueSchema = z.object({
@@ -623,6 +624,12 @@ venuesAdminRouter.patch(
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
+    // A removed venue asked us to remove its data: Show never brings it back.
+    // Restoring one needs a deliberate, separately approved path, not this one.
+    if (body.active === true && existing.removedAt !== null) {
+      return ctx.json(venueRemovedBody, 409);
+    }
+
     if (
       body.active === false &&
       hideReason === 'other' &&
@@ -902,14 +909,24 @@ venuesAdminRouter.patch(
         ...platformClearFields,
         ...apiProviderClearFields,
         ...verificationFields,
-        // Activating a removed venue undoes the removal marker, so its past
-        // shows return to artist pages with the rest of it.
-        ...(body.active === true ? { removedAt: null } : {}),
+        // removed_at is never cleared here: a removed venue is refused above,
+        // and nothing in an ordinary edit undoes a removal.
         ...hiddenFields,
         updatedAt: new Date(),
       })
-      .where(eq(venues.id, id))
+      .where(
+        and(
+          eq(venues.id, id),
+          // A removal committed after the read above still wins over Show.
+          body.active === true ? isNull(venues.removedAt) : undefined,
+        ),
+      )
       .returning();
+    if (!updated) {
+      return body.active === true
+        ? ctx.json(venueRemovedBody, 409)
+        : ctx.json({ success: false, error: 'Venue not found' }, 404);
+    }
 
     // Distinct audit action when platform routing changed, with a
     // before/after snapshot — this config redirects the crawler entirely,
@@ -992,7 +1009,11 @@ venuesAdminRouter.post(
     if (!venue) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
-    // A probe fetches the venue's source like a crawl does.
+    // A probe fetches the venue's source like a crawl does, so a removed
+    // venue's source is never fetched, paused or not.
+    if (venue.removedAt !== null) {
+      return ctx.json(venueRemovedBody, 409);
+    }
     if (venue.crawlPausedAt !== null) {
       return ctx.json(
         { success: false, error: 'Crawling is paused for this venue' },
@@ -1406,11 +1427,17 @@ venuesAdminRouter.delete(
     // and not one an overlapping request has already replaced.
     const result = await db.transaction(async (tx) => {
       const [existing] = await tx
-        .select({ crawlPausedAt: venues.crawlPausedAt })
+        .select({
+          crawlPausedAt: venues.crawlPausedAt,
+          removedAt: venues.removedAt,
+        })
         .from(venues)
         .where(eq(venues.id, id))
         .for('update');
       if (!existing) return null;
+      // A removed venue's crawl stays stopped; restoring one needs a
+      // deliberate, separately approved path, not Resume.
+      if (existing.removedAt !== null) return { removed: true } as const;
       const [updated] = await tx
         .update(venues)
         .set({
@@ -1426,6 +1453,9 @@ venuesAdminRouter.delete(
     });
     if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
+    }
+    if ('removed' in result) {
+      return ctx.json(venueRemovedBody, 409);
     }
     const { existing, venue } = result;
 

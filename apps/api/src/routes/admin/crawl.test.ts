@@ -63,6 +63,7 @@ const mockVenue = {
   verified: true,
   consecutiveFailures: 0,
   crawlPausedAt: null,
+  removedAt: null,
   crawlDelayMs: 3000,
   createdAt: new Date(),
   updatedAt: new Date(),

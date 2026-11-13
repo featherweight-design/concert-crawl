@@ -18,6 +18,7 @@ import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js';
 import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { queueVenueCrawl } from './lib/crawl-trigger.js';
+import { venueRemovedBody } from './lib/venue-hide.js';
 
 const logger = createLogger('admin:crawl');
 
@@ -136,6 +137,9 @@ crawlAdminRouter.post('/', async (ctx) => {
         eq(venues.verified, true),
         isNull(venues.blockedAt),
         isNull(venues.crawlPausedAt),
+        // Removal also hides and pauses, but a removed venue is never
+        // crawled whatever those columns say.
+        isNull(venues.removedAt),
       ),
     );
 
@@ -189,6 +193,9 @@ crawlAdminRouter.post(
 
     if (queued.ok === 'not_found') {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
+    }
+    if (queued.ok === 'removed') {
+      return ctx.json(venueRemovedBody, 409);
     }
     if (queued.ok === 'not_crawlable') {
       return ctx.json(
