@@ -1,0 +1,41 @@
+{
+  "feature": "Dynamic-viewport leftovers: the signed-out full-height pages",
+  "note": "Bug fix, no new drawing: min-h-screen and 100vh moved to dvh on pages the app shell does not wrap. Each row is photographed at every width to show no page is a toolbar taller than the screen. /sign-up has no row: while the beta is invite-gated a signed-out visit lands on /auth/code, so the sheet cannot reach it. Walked by hand, since they need an account, an admin role or an offline browser: the price-check page, the admin layout, SidePanel, OfflineFallback and StandaloneError.",
+  "signedOut": true,
+  "rows": [
+    {
+      "id": "legal-terms",
+      "label": "/legal/terms",
+      "steps": [
+        { "goto": "/legal/terms", "wait": "h1:has-text(\"Terms of Service\")" }
+      ]
+    },
+    {
+      "id": "legal-privacy",
+      "label": "/legal/privacy",
+      "steps": [
+        { "goto": "/legal/privacy", "wait": "h1:has-text(\"Privacy Policy\")" }
+      ]
+    },
+    {
+      "id": "legal-beta",
+      "label": "/legal/beta",
+      "steps": [
+        {
+          "goto": "/legal/beta",
+          "wait": "h1:has-text(\"Private Beta Agreement\")"
+        }
+      ]
+    },
+    {
+      "id": "bot",
+      "label": "/bot",
+      "steps": [{ "goto": "/bot", "wait": "[data-testid=\"bot-page-root\"]" }]
+    },
+    {
+      "id": "sign-in",
+      "label": "/sign-in",
+      "steps": [{ "goto": "/sign-in", "wait": "input[name=\"identifier\"]" }]
+    }
+  ]
+}
