@@ -863,6 +863,9 @@ export const ADMIN_COPY = {
       source: 'Source',
       details: 'Details',
       guide: 'Guide',
+      // A refused save opens the field's tab; this banner says where.
+      refused: (field: string, tab: string) =>
+        `Not saved. Check ${field} on the ${tab} tab.`,
       // Until 3b part 2 draws this venue's runs here.
       runsInterim: {
         body: 'For now, this venue’s runs are on the Crawl runs page.',
