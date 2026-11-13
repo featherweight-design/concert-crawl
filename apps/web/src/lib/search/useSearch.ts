@@ -99,9 +99,35 @@ function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
   return Array.from(map.values());
 }
 
-function deriveVenueResults(rows: EventRow[]): VenueResult[] {
+/**
+ * Whether a venue's own name answers the query: the whole query is the name, or
+ * a word in the name starts with it ("red" finds Red Rocks Amphitheatre), or the
+ * query reads on past the name ("Bluebird Theater tonight"). A venue is a
+ * result for its name, not for hosting an event that matched.
+ */
+export function venueNameMatches(venueName: string, query: string): boolean {
+  const name = venueName.toLowerCase().trim();
+  const needle = query.toLowerCase().trim();
+  if (needle === '') return false;
+  if (name === needle || name.startsWith(needle) || needle.startsWith(name)) {
+    return true;
+  }
+  return name.split(/[^a-z0-9]+/).some((word) => word.startsWith(needle));
+}
+
+/**
+ * The venues the query names. The rows are the events the query matched, so a
+ * venue appears among them for any show on its calendar (an artist called "Red
+ * Hot ..." at Globe Hall puts Globe Hall in the rows). Only the venues whose own
+ * name matches are results; the artist rows carry the rest.
+ */
+export function deriveVenueResults(
+  rows: EventRow[],
+  query: string,
+): VenueResult[] {
   const map = new Map<string, VenueResult>();
   for (const row of rows) {
+    if (!venueNameMatches(row.venue.name, query)) continue;
     const existing = map.get(row.venue.id);
     if (existing) {
       existing.showCount += 1;
@@ -211,7 +237,7 @@ export function useSearch() {
             .then((body: { success: boolean; data: { data: EventRow[] } }) => {
               if (body.success) {
                 setArtistResults(deriveArtistResults(body.data.data));
-                setVenueResults(deriveVenueResults(body.data.data));
+                setVenueResults(deriveVenueResults(body.data.data, trimmed));
               }
             })
             .catch((err: unknown) => {

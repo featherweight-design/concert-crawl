@@ -8,6 +8,7 @@ import { createContext, useContext } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { formatPrice } from '@/components/consumer/definitions/lib';
 import { Panel } from '../image-slot';
 import { genreRing } from '../event-row/lib/genre-ring';
 
@@ -237,18 +238,21 @@ export function VenueDateLine({
 
 /** The price on the right: the figure in --fg, or a quiet TBA. */
 export function ResultPrice({ value }: { value: string | null | undefined }) {
+  // The shared formatter every consumer surface uses: whole dollars ("$29", not
+  // "$29.00"), and Free for a zero price.
+  const label = formatPrice(value ?? null, null);
   return (
     <span
       style={{
         flexShrink: 0,
         fontFamily: 'var(--font-mono)',
-        fontSize: value ? 13.5 : 11,
-        fontWeight: value ? 700 : 500,
-        letterSpacing: value ? '0' : '0.12em',
-        color: value ? 'var(--fg)' : 'var(--fg-subtle)',
+        fontSize: label ? 13.5 : 11,
+        fontWeight: label ? 700 : 500,
+        letterSpacing: label ? '0' : '0.12em',
+        color: label ? 'var(--fg)' : 'var(--fg-subtle)',
       }}
     >
-      {value ? `$${value}` : copy.priceNotAnnounced}
+      {label ?? copy.priceNotAnnounced}
     </span>
   );
 }
