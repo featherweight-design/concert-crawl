@@ -2623,7 +2623,9 @@ export const ADMIN_COPY = {
       priceBatch: (count: string | null) =>
         count === '1'
           ? '1 new price, confirmed by a second fan.'
-          : `${count ?? 'New'} new prices, each confirmed by a second fan.`,
+          : count === null
+            ? 'New prices, each confirmed by a second fan.'
+            : `${count} new prices, each confirmed by a second fan.`,
       bug: (page: string | null) => `Reported${page ? ` on ${page}` : ''}.`,
     },
     emptyFilter: (kindLabel: string, others: number) =>
