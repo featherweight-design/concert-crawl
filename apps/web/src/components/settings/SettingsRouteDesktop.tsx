@@ -23,8 +23,7 @@ import { NOTIFICATIONS_COPY } from './notifications/definitions/copy';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
-import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark';
-import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark';
+import { CCMark } from '@/components/brand/cc-mark';
 import type {
   UserProfileResponse,
   UserSubmissionItem,
@@ -215,17 +214,43 @@ export function SettingsRouteDesktop({
     <div className="flex min-h-screen flex-col">
       {/* Topbar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg-elevated px-6">
-        <div className="flex items-center gap-2">
-          <CCClusterMark size={24} color="var(--signal)" />
-          <CCWordmark size={18} />
-        </div>
+        {/* more-s-d_profile: a bordered "[mark] concertcrawl. | BROWSE" pill
+            that goes home, and the section's name on the right. */}
         <Link
           href="/events"
-          className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg"
+          aria-label={SETTINGS_COPY.desktopBackToBrowse}
+          className="flex items-center gap-2.5 rounded-xl border border-border bg-surface-1 py-1.5 pl-1.5 pr-3 transition-colors hover:bg-surface-2"
+        >
+          <span
+            aria-hidden
+            className="h-8 w-8 shrink-0 overflow-hidden rounded-[7px]"
+          >
+            <CCMark size={32} />
+          </span>
+          <span
+            aria-hidden
+            className="text-[17px] font-extrabold tracking-[-0.02em] text-fg"
+            style={{ fontFamily: 'var(--font-ui)' }}
+          >
+            {CONSUMER_COPY.appHeader.brand.name}
+            <span className="text-accent">
+              {CONSUMER_COPY.appHeader.brand.accent}
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className="border-l border-border pl-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-fg-subtle"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            {SETTINGS_COPY.desktopBarBrowse}
+          </span>
+        </Link>
+        <span
+          className="text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          {SETTINGS_COPY.desktopBackToBrowse}
-        </Link>
+          {SETTINGS_COPY.mobileHeaderTitle}
+        </span>
       </header>
 
       {/* Sidebar + Panel */}

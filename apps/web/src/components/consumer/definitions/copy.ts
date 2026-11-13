@@ -1386,7 +1386,10 @@ export const CONSUMER_COPY = {
     // shells deliberately word the same section differently.
     mobileHeaderBack: '← Done',
     mobileHeaderTitle: 'Settings',
-    desktopBackToBrowse: '← Back to browse',
+    // The desktop top bar's brand pill (more-s-d_profile): the pill names where
+    // it goes, and the label on the right names where you are.
+    desktopBarBrowse: 'Browse',
+    desktopBackToBrowse: 'Back to browse',
     operationsSection: 'Operations',
     adminRow: 'Admin',
     profileSection: 'Profile',
