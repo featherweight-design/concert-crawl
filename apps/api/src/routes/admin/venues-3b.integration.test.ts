@@ -18,6 +18,7 @@ vi.mock('@hono/clerk-auth', () => ({
 
 import { eq } from 'drizzle-orm';
 import { auditLog, venues } from '@concert-crawl/db';
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 import type {
   VenueLastFullRun,
   VenueLatestRun,
@@ -327,8 +328,9 @@ describe('admin venues API, redesign 3b', () => {
     });
   });
 
-  // 3b part 6a: the crawl rules are shown, never edited (ruling d), so a
-  // PATCH naming one is refused outright.
+  // 3b part 6a: the crawl rules are shown, never edited (ruling d). For one
+  // release (#404) a key sent with its stored value is tolerated and stripped,
+  // because the deployed web can lag the API; a changed one is refused.
   describe('PATCH and the crawl rules', () => {
     const seedSourceVenue = () =>
       seedVenue({
@@ -339,6 +341,62 @@ describe('admin venues API, redesign 3b', () => {
         robotsTxtCheckedAt: new Date('2026-11-11T10:00:00Z'),
       });
 
+    const expectRulesUntouched = async (id: string) => {
+      const row = await venueRow(id);
+      expect(row?.crawlDelayMs).toBe(5000);
+      expect(row?.robotsTxtAllowed).toBe(false);
+      expect(row?.robotsTxtCheckedAt?.toISOString()).toBe(
+        '2026-11-11T10:00:00.000Z',
+      );
+    };
+
+    it.each([
+      ['crawlDelayMs', { crawlDelayMs: 5000 }],
+      ['robotsTxtAllowed', { robotsTxtAllowed: false }],
+      [
+        'robotsTxtCheckedAt',
+        { robotsTxtCheckedAt: '2026-11-11T10:00:00.000Z' },
+      ],
+      // The same instant in Mountain Time is the same value.
+      [
+        'robotsTxtCheckedAt',
+        { robotsTxtCheckedAt: '2026-11-11T03:00:00-07:00' },
+      ],
+      ['userAgent', { userAgent: CRAWLER_USER_AGENT }],
+    ])(
+      'tolerates %s sent with its stored value: saves the rest, writes and audits no rule',
+      async (key, rule) => {
+        const venue = await seedSourceVenue();
+        const res = await json('PATCH', `venues/${venue.id}`, {
+          name: 'Gothic Theatre',
+          ...rule,
+        });
+        expect(res.status).toBe(200);
+
+        expect((await venueRow(venue.id))?.name).toBe('Gothic Theatre');
+        await expectRulesUntouched(venue.id);
+
+        const audits = await testDb
+          .select()
+          .from(auditLog)
+          .where(eq(auditLog.action, 'venue.update'));
+        expect(audits).toHaveLength(1);
+        expect(JSON.stringify(audits[0]?.metadata ?? null)).not.toContain(key);
+      },
+    );
+
+    // The old web's venue save: every field, the stored delay among them.
+    it('accepts the old web shape { name, crawlDelayMs: <stored> }', async () => {
+      const venue = await seedSourceVenue();
+      const res = await json('PATCH', `venues/${venue.id}`, {
+        name: 'Gothic Theatre',
+        crawlDelayMs: 5000,
+      });
+      expect(res.status).toBe(200);
+      expect((await venueRow(venue.id))?.name).toBe('Gothic Theatre');
+      await expectRulesUntouched(venue.id);
+    });
+
     it.each([
       [{ crawlDelayMs: 1000 }],
       [{ crawlDelayMs: 3000 }],
@@ -346,10 +404,14 @@ describe('admin venues API, redesign 3b', () => {
       [{ robotsTxtAllowed: true }],
       [{ robotsTxtAllowed: null }],
       [{ robotsTxtCheckedAt: null }],
+      [{ robotsTxtCheckedAt: '2026-11-11T10:00:01.000Z' }],
       [{ userAgent: 'ConcertCrawl/2.0' }],
+      // An unchanged key does not carry a changed one through.
+      [{ crawlDelayMs: 5000, robotsTxtAllowed: true }],
       // Riding along with a valid Source save does not get it through.
       [{ websiteUrl: 'https://gothic.example/new', crawlDelayMs: 1000 }],
       [{ websiteUrl: 'https://gothic.example/new', robotsTxtAllowed: true }],
+      [{ name: 'Gothic Theatre', userAgent: 'ConcertCrawl/2.0' }],
     ])(
       'refuses %j with a 400, writes nothing and audits nothing',
       async (body) => {
@@ -362,12 +424,9 @@ describe('admin venues API, redesign 3b', () => {
           /^Fixed by the crawl rules/,
         );
 
+        await expectRulesUntouched(venue.id);
         const row = await venueRow(venue.id);
-        expect(row?.crawlDelayMs).toBe(5000);
-        expect(row?.robotsTxtAllowed).toBe(false);
-        expect(row?.robotsTxtCheckedAt?.toISOString()).toBe(
-          '2026-11-11T10:00:00.000Z',
-        );
+        expect(row?.name).toBe('Gothic');
         expect(row?.websiteUrl).toBe(venue.websiteUrl);
         expect(row?.updatedAt.toISOString()).toBe(
           venue.updatedAt.toISOString(),
