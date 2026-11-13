@@ -6,6 +6,7 @@
 // CTA both hand control back via onDone.
 
 import { useEffect } from 'react';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { TIER_PICKER_COPY } from './definitions/copy';
 import { FULL_BLEED_TAKEOVER_Z_INDEX } from './definitions/constants';
 import { TierBadge } from './TierBadge';
@@ -90,13 +91,9 @@ export const FounderClaimTakeover = ({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onDone]);
 
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
+  // The shared, ref-counted lock: a private save-and-restore of
+  // body.overflow would put back another surface's `hidden` as the page's own.
+  useBodyScrollLock(true);
 
   return (
     <div

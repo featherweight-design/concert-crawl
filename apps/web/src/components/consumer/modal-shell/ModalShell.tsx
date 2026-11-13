@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import {
   CREW_DIALOG_GLOW,
   CREW_EDGE_BACKGROUND,
@@ -114,6 +115,8 @@ export function ModalShell({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, handleKeyDown]);
+
+  useBodyScrollLock(open);
 
   // Focus stayed on the trigger behind the scrim, so a screen reader carried on
   // reading the page the modal had just covered. Focus lands on the dialog

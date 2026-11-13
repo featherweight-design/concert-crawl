@@ -51,6 +51,7 @@ import { AccountMenuContext, useAccountMenu } from './account-menu-context';
 import type { AccountMenuState } from './account-menu-context';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import {
   markCameFromMenu,
   takeMenuReopen,
@@ -1109,6 +1110,9 @@ function UserMenuPopover(props: MenuBodyProps) {
 
 function UserMenuSheet(props: MenuBodyProps) {
   useFocusTrap(props.surfaceRef, props.open);
+  // The phone sheet only: the desktop popover has no scrim and leaves the
+  // page live.
+  useBodyScrollLock(props.open);
   const drag = useSheetDrag(props.onDismiss);
   return (
     <div

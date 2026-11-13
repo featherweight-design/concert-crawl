@@ -18,6 +18,7 @@ import {
 } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
 import {
   addMonths,
@@ -192,6 +193,7 @@ export const JumpPicker = ({
   // before the open-focus effect below, so the trap's container focus runs
   // first and the selected day takes focus after it.
   useFocusTrap(dialogRef, open);
+  useBodyScrollLock(open);
   const drag = useSheetDrag(onClose, open);
 
   // Escape closes from anywhere, not only from inside the dialog, so the
