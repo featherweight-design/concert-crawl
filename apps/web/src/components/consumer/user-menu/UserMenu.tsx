@@ -1044,7 +1044,7 @@ function MenuBody({
         }
       />
 
-      {/* Status footer — routes to /changelog, shows unread dot */}
+      {/* Status footer: routes to the /whats-new feature page, shows unread dot */}
       <UserMenuVersionFooter build={buildLabel} />
     </>
   );

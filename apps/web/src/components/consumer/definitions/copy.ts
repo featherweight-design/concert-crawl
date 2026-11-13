@@ -453,7 +453,48 @@ export const CONSUMER_COPY = {
       heading: 'What we shipped.',
       description: "Everything we've shipped. Spotted a bug or got an idea?",
       feedbackCta: 'Send us a note',
+      featuresLink: 'What you can do here',
       endOfLog: '— end of log —',
+    },
+
+    // The feature page (B+ B21, more-r3-whatsnew): the big capabilities, one
+    // card each. The cards' own words live in releases.ts.
+    featurePage: {
+      eyebrow: 'What’s in Concert Crawl',
+      titleLead: 'What you can ',
+      titleAccent: 'do here.',
+      sub: 'The big stuff, one card each.',
+      feedbackLead: 'Spotted a bug or got an idea?',
+      feedbackCta: 'Send us a note.',
+      changelogLink: 'See every update',
+      backAria: 'Back',
+      // Board sample for the Prices card art; not a real price.
+      priceSample: '$44',
+      priceFans: '✓ 2 fans',
+      // Board samples for the Passport card art: made-up nights.
+      stampSamples: [
+        {
+          artist: 'Neon Parade',
+          venueSlug: 'marquis-theater',
+          venueName: 'Marquis Theater',
+          date: '2026-11-05',
+          dateLabel: 'Thu, Nov 5',
+        },
+        {
+          artist: 'Moth & Flame',
+          venueSlug: 'the-black-box',
+          venueName: 'The Black Box',
+          date: '2026-10-08',
+          dateLabel: 'Thu, Oct 8',
+        },
+        {
+          artist: 'Static Choir',
+          venueSlug: 'globe-hall',
+          venueName: 'Globe Hall',
+          date: '2026-10-03',
+          dateLabel: 'Sat, Oct 3',
+        },
+      ],
     },
 
     entry: {

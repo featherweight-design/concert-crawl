@@ -26,7 +26,7 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
   return (
     <button
       type="button"
-      onClick={() => void router.push('/changelog')}
+      onClick={() => void router.push('/whats-new')}
       aria-label={COPY.versionFooter.ariaLabel}
       style={{
         all: 'unset',

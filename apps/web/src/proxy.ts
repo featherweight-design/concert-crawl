@@ -72,6 +72,8 @@ const isAlwaysPublic = createRouteMatcher([
   // static release list with no user data — gating it sent that menu row to
   // sign-up.
   '/changelog(.*)',
+  // The feature page the same menu row opens: static cards from releases.ts.
+  '/whats-new(.*)',
   // Serwist precaches the offline fallback with a plain navigation fetch that
   // carries no session. Gating it redirects that fetch, so the fallback never
   // lands in the cache and an offline navigation dies with ERR_FAILED instead
@@ -186,6 +188,7 @@ export const KNOWN_TOP_LEVEL_SEGMENTS = new Set([
   'auth',
   'bot',
   'changelog',
+  'whats-new',
   'crew',
   'crews',
   'e',
