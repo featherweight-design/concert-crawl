@@ -200,8 +200,12 @@ export function BookletStamp({ show, size, tilt = 0 }: BookletStampProps) {
   );
 }
 
-/** The slot the next stamp lands in: a faint ring, its dashed stamp, the date. */
-export function NextSlot({ show, size, tilt = 0 }: BookletStampProps) {
+/**
+ * The slot the next stamp lands in: a faint ring, its dashed stamp, the date.
+ * Straight, never tilted: it has not been stamped yet, so there is no hand to
+ * have tilted it (addendum 4 item 8, `passport-next-d`).
+ */
+export function NextSlot({ show, size }: Omit<BookletStampProps, 'tilt'>) {
   const date = stampDateParts(show.date);
   return (
     <span
@@ -209,7 +213,7 @@ export function NextSlot({ show, size, tilt = 0 }: BookletStampProps) {
       aria-label={`${COPY.nextStamp}: ${show.artist}, ${show.venueName}, ${show.dateLabel}`}
       role="img"
       className="flex flex-col items-center justify-center gap-1.5 rounded-full border border-dashed border-border-strong"
-      style={{ width: size, height: size, transform: tiltStyle(tilt) }}
+      style={{ width: size, height: size }}
     >
       <span className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-signal">
         {COPY.nextSlot}

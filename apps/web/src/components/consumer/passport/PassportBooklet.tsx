@@ -80,9 +80,7 @@ function StampPage({ page, size }: { page: BookletPage; size: number }) {
             <BookletStamp key={key} show={slot.show} size={size} tilt={tilt} />
           );
         if (slot.kind === 'next')
-          return (
-            <NextSlot key={key} show={slot.show} size={size} tilt={tilt} />
-          );
+          return <NextSlot key={key} show={slot.show} size={size} />;
         return <EmptySlot key={key} size={size} tilt={tilt} />;
       })}
       <span className={`absolute bottom-3 right-4 ${MONO_LABEL}`}>
