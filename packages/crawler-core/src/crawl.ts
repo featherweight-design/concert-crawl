@@ -391,10 +391,16 @@ async function markEventsSeenForVenue(
  * manual target takes them; a crawled target, which has its own listing, only
  * fills ones it lacks) and the seen marks, so Pass 2 never counts the target
  * missing while this listing is still up. Title, lineup, date and times stay
- * as the target has them. A key that still has its own live row is never
- * routed: the caller passes only listings with no existing row.
+ * as the target has them.
  *
- * Returns the listings left to upsert.
+ * A listing is routed only when its key has no live row of its own: none in
+ * `existingIdFor`, or the one there is the merged-away source (an admin merged
+ * it while this crawl was extracting). A target no longer upcoming takes
+ * nothing, and the listing is upserted as any relisted show is. A target an
+ * admin moved to another venue takes nothing either, and the listing is
+ * dropped: its fields and seen marks belong to the old venue's page.
+ *
+ * Returns the listings left to upsert and the keys it consumed.
  */
 async function routeMergedListings<
   T extends {
@@ -405,44 +411,65 @@ async function routeMergedListings<
     ticketLinks: TicketLink[] | null;
     eventUrl: string | null;
   },
->(venueId: string, listings: T[], seenAt: Date): Promise<T[]> {
-  if (listings.length === 0) return listings;
+>(
+  venueId: string,
+  listings: T[],
+  existingIdFor: (listing: T) => string | undefined,
+  seenAt: Date,
+): Promise<{ remaining: T[]; routedKeys: Set<string> }> {
+  const routedKeys = new Set<string>();
+  if (listings.length === 0) return { remaining: listings, routedKeys };
   const dates = [...new Set(listings.map((listing) => listing.date))];
   const redirects = await db
     .select({
+      sourceId: eventRedirects.sourceId,
       targetId: eventRedirects.targetId,
+      targetVenueId: events.venueId,
+      targetStatus: events.status,
       canonicalArtist: eventRedirects.sourceCanonicalArtist,
       date: eventRedirects.sourceDate,
       showTime: eventRedirects.sourceShowTime,
     })
     .from(eventRedirects)
+    .innerJoin(events, eq(events.id, eventRedirects.targetId))
     .where(
       and(
         eq(eventRedirects.sourceVenueId, venueId),
         inArray(eventRedirects.sourceDate, dates),
       ),
     )
+    // Oldest first, so where two merges left one key the latest one wins,
+    // the same target on every crawl.
     .orderBy(asc(eventRedirects.createdAt));
-  if (redirects.length === 0) return listings;
-  // Oldest first, so where two merges left one key the latest one wins,
-  // the same target on every crawl.
-  const targetByKey = new Map<string, string>();
+  if (redirects.length === 0) return { remaining: listings, routedKeys };
+  const redirectByKey = new Map<string, (typeof redirects)[number]>();
   for (const redirect of redirects) {
     if (redirect.canonicalArtist === null || redirect.date === null) continue;
-    targetByKey.set(
+    redirectByKey.set(
       dedupKey(redirect.canonicalArtist, redirect.date, redirect.showTime),
-      redirect.targetId,
+      redirect,
     );
   }
   const remaining: T[] = [];
   for (const listing of listings) {
-    const targetId = targetByKey.get(
-      dedupKey(listing.canonicalArtist, listing.date, listing.showTime),
+    const key = dedupKey(
+      listing.canonicalArtist,
+      listing.date,
+      listing.showTime,
     );
-    if (targetId === undefined) {
+    const redirect = redirectByKey.get(key);
+    const existingId = existingIdFor(listing);
+    if (
+      redirect === undefined ||
+      (existingId !== undefined && existingId !== redirect.sourceId) ||
+      redirect.targetStatus !== 'upcoming'
+    ) {
       remaining.push(listing);
       continue;
     }
+    routedKeys.add(key);
+    if (redirect.targetVenueId !== venueId) continue;
+    const targetId = redirect.targetId;
     // A listing never erases a link. Where it has one, a manual target takes
     // it and a crawled target (which has its own listing) only fills an
     // empty one; the URL and the links derived from it move as a pair.
@@ -460,9 +487,7 @@ async function routeMergedListings<
         : {
             eventUrl: sql`CASE WHEN ${events.manual} OR ${events.eventUrl} IS NULL THEN ${listing.eventUrl}::text ELSE ${events.eventUrl} END`,
           };
-    // Only an upcoming target takes the listing. One an admin has cancelled
-    // since is left alone, and the listing is inserted as the crawl does for
-    // any relisted show.
+    // Re-checked at write time: an admin may cancel the target meanwhile.
     const routed = await db
       .update(events)
       .set({
@@ -474,9 +499,12 @@ async function routeMergedListings<
       })
       .where(and(eq(events.id, targetId), eq(events.status, 'upcoming')))
       .returning({ id: events.id });
-    if (routed.length === 0) remaining.push(listing);
+    if (routed.length === 0) {
+      routedKeys.delete(key);
+      remaining.push(listing);
+    }
   }
-  return remaining;
+  return { remaining, routedKeys };
 }
 
 /**
@@ -1291,6 +1319,10 @@ export async function crawlVenue(
     // upsert's RETURNING clause by checking each returned (canonical_artist,
     // date, show_time) key against existingMap. Feeds the Spotify fan-out (#763 §10.1).
     const insertedEventIds: string[] = [];
+    // Admin 4a: keys of listings routed to a merge target. Their bill names
+    // the target's show, whose lineup is the target's own, so it is not
+    // projected.
+    const mergedListingKeys = new Set<string>();
     // Track (canonical_artist, date, show_time) tuples seen this run so the
     // stale-event detection below can refresh last_seen_at for them. Includes
     // both freshly-inserted and unchanged-hash events — "seen" means "the
@@ -1377,6 +1409,9 @@ export async function crawlVenue(
       // under its new key.
       const { aligned, promotions } = alignToNights(enriched, existingRows);
       for (const promotion of promotions) {
+        // Admin 4a: this also applies to a manual row. It only joins a
+        // listing to the same night (an empty time, or a morning misread of
+        // an evening show); skipping it would list the show twice.
         await db
           .update(events)
           .set({ showTime: promotion.showTime, updatedAt: new Date() })
@@ -1433,8 +1468,11 @@ export async function crawlVenue(
         const existing = existingMap.get(
           dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
         );
+        // Admin 4a: a manual row keeps what the admin typed, so a listing
+        // that words it differently is expected, not a change to alert on.
         if (
           !existing ||
+          existing.manual ||
           existing.verified !== true ||
           existing.sourceHash === null
         ) {
@@ -1519,6 +1557,11 @@ export async function crawlVenue(
               derived: string[] | null,
               stored: unknown,
             ): boolean => {
+              // Admin 4a: the upsert never writes a manual or saved bill, so
+              // a listing that bills it differently is not a reason to write.
+              if (existing.manual || existing.lineupEditedAt !== null) {
+                return false;
+              }
               if (derived === null) return false;
               if (!Array.isArray(stored) || stored.length !== derived.length) {
                 return true;
@@ -1640,18 +1683,22 @@ export async function crawlVenue(
           existingMap.has(
             dedupKey(value.canonicalArtist, value.date, value.showTime),
           );
-        const withRow = eventValues.filter(hasRow);
-        const withoutRow = eventValues.filter((value) => !hasRow(value));
-        // Admin 4a: a listing with no row of its own whose key an admin
-        // merged away updates the merge target, never inserts again.
-        const toInsert = await routeMergedListings(
-          venueId,
-          withoutRow,
-          startedAtDate,
-        );
-        const valuesToUpsert = [...withRow, ...toInsert];
-        eventsUpdated += withRow.length + (withoutRow.length - toInsert.length);
-        eventsInserted += toInsert.length;
+        // Admin 4a: a listing whose key an admin merged away updates the
+        // merge target, never inserts again.
+        const { remaining: valuesToUpsert, routedKeys } =
+          await routeMergedListings(
+            venueId,
+            eventValues,
+            (value) =>
+              existingMap.get(
+                dedupKey(value.canonicalArtist, value.date, value.showTime),
+              )?.id,
+            startedAtDate,
+          );
+        for (const key of routedKeys) mergedListingKeys.add(key);
+        const updatedCount = valuesToUpsert.filter(hasRow).length;
+        eventsUpdated += updatedCount + routedKeys.size;
+        eventsInserted += valuesToUpsert.length - updatedCount;
 
         const upsertedRows =
           valuesToUpsert.length === 0
@@ -1855,7 +1902,8 @@ export async function crawlVenue(
             return (
               evt.isConcert !== false &&
               !hiddenKeys.has(key) &&
-              !billLockedKeys.has(key)
+              !billLockedKeys.has(key) &&
+              !mergedListingKeys.has(key)
             );
           })
           .flatMap((evt) => [
