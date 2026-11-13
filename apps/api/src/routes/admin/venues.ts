@@ -161,30 +161,83 @@ const createVenueSchema = z.object({
 });
 
 // robots.txt compliance, the request delay and the user agent are the crawl
-// rules: shown in Source, never edited (3b ruling d). A PATCH naming one is
-// refused with this message rather than quietly dropped, so a caller can't
-// believe it loosened a rule. The robots columns are the crawler's alone.
+// rules: shown in Source, never edited (3b ruling d). A PATCH that would change
+// one is refused with this message rather than quietly dropped, so a caller
+// can't believe it loosened a rule. The robots columns are the crawler's alone.
 const FIXED_BY_CRAWL_RULES =
   'Fixed by the crawl rules: robots.txt, the request delay and the user agent cannot be changed';
-const fixedByCrawlRules = z.never({ error: FIXED_BY_CRAWL_RULES }).optional();
+
+/** The crawl-rule keys a PATCH may name, as the schema parses them. */
+interface SentCrawlRules {
+  crawlDelayMs?: number | undefined;
+  robotsTxtAllowed?: boolean | null | undefined;
+  robotsTxtCheckedAt?: string | null | undefined;
+  userAgent?: string | undefined;
+}
+
+/** The stored crawl rules a sent key is compared with. */
+interface StoredCrawlRules {
+  crawlDelayMs: number;
+  robotsTxtAllowed: boolean | null;
+  robotsTxtCheckedAt: Date | null;
+}
+
+// TODO(2026-11-13, #404): drop this tolerance one release after #404 ships; refuse these keys outright again.
+//
+// Expand/contract tolerance: the deployed web can lag the API, and the old web
+// sends the stored `crawlDelayMs` on every venue save. A crawl-rule key equal
+// to the stored value (the user agent to `CRAWLER_USER_AGENT`) is tolerated
+// and stripped by the PATCH handler; the first one that differs is returned
+// here, and the handler refuses the whole request with it. Instants are
+// compared as instants, never as strings.
+export const changedCrawlRule = (
+  sent: SentCrawlRules,
+  stored: StoredCrawlRules,
+): keyof SentCrawlRules | null => {
+  if (
+    sent.crawlDelayMs !== undefined &&
+    sent.crawlDelayMs !== stored.crawlDelayMs
+  ) {
+    return 'crawlDelayMs';
+  }
+  if (
+    sent.robotsTxtAllowed !== undefined &&
+    sent.robotsTxtAllowed !== stored.robotsTxtAllowed
+  ) {
+    return 'robotsTxtAllowed';
+  }
+  if (sent.robotsTxtCheckedAt !== undefined) {
+    const sentAt =
+      sent.robotsTxtCheckedAt === null
+        ? null
+        : new Date(sent.robotsTxtCheckedAt).getTime();
+    const storedAt = stored.robotsTxtCheckedAt?.getTime() ?? null;
+    if (sentAt !== storedAt) return 'robotsTxtCheckedAt';
+  }
+  if (sent.userAgent !== undefined && sent.userAgent !== CRAWLER_USER_AGENT) {
+    return 'userAgent';
+  }
+  return null;
+};
 
 // Zod 4 applies a default inside .partial(), so every field that carries a
 // create-time default is redeclared here from its unwrapped (default-free)
 // create schema. Otherwise a PATCH that only toggles `verified` would reset
 // the venue's city and wait strategy to the create defaults.
 //
-// The crawl-rule keys (crawl delay, robots, user agent) are declared below as
-// `fixedByCrawlRules`, so they get the "Fixed by the crawl rules" 400; keep
-// them declared. Strict additionally makes any other unknown key (a pause or
-// blocked column) a 400 instead of silently stripping it.
+// The crawl-rule keys (crawl delay, robots, user agent) are declared below,
+// typed but unbounded, for the one-release tolerance in `changedCrawlRule`:
+// the PATCH handler refuses a changed one and strips an unchanged one, so they
+// are never written. Strict makes any other unknown key (a pause or blocked
+// column) a 400 instead of silently stripping it.
 export const updateVenueSchema = createVenueSchema
   .partial()
   .extend({
     city: createVenueSchema.shape.city.unwrap().optional(),
-    crawlDelayMs: fixedByCrawlRules,
-    robotsTxtAllowed: fixedByCrawlRules,
-    robotsTxtCheckedAt: fixedByCrawlRules,
-    userAgent: fixedByCrawlRules,
+    crawlDelayMs: z.number().int().optional(),
+    robotsTxtAllowed: z.boolean().nullable().optional(),
+    robotsTxtCheckedAt: z.iso.datetime({ offset: true }).nullable().optional(),
+    userAgent: z.string().optional(),
     crawlWaitUntil: createVenueSchema.shape.crawlWaitUntil.unwrap().optional(),
     active: z.boolean().optional(),
     // Why a venue is hidden (`active: false`), kept on the venue and in the
@@ -665,11 +718,45 @@ venuesAdminRouter.patch(
   zValidator('json', updateVenueSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.param();
-    const { hideReason, hideNote, ...body } = ctx.req.valid('json');
+    // The crawl-rule keys come off the body here, so they are never written
+    // and never reach the audit (see `changedCrawlRule`).
+    const {
+      hideReason,
+      hideNote,
+      crawlDelayMs,
+      robotsTxtAllowed,
+      robotsTxtCheckedAt,
+      userAgent,
+      ...body
+    } = ctx.req.valid('json');
 
     const [existing] = await db.select().from(venues).where(eq(venues.id, id));
     if (!existing) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404);
+    }
+
+    // TODO(2026-11-13, #404): drop this tolerance one release after #404 ships; refuse these keys outright again.
+    const changedRule = changedCrawlRule(
+      { crawlDelayMs, robotsTxtAllowed, robotsTxtCheckedAt, userAgent },
+      existing,
+    );
+    if (changedRule !== null) {
+      return ctx.json(
+        {
+          success: false,
+          error: {
+            issues: [
+              {
+                code: 'custom',
+                path: [changedRule],
+                message: FIXED_BY_CRAWL_RULES,
+              },
+            ],
+            name: 'ZodError',
+          },
+        },
+        400,
+      );
     }
 
     // A removed venue asked us to remove its data: Show never brings it back,

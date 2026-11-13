@@ -6,7 +6,8 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => null,
 }));
 
-import { updateVenueSchema } from './venues.js';
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import { changedCrawlRule, updateVenueSchema } from './venues.js';
 
 // Zod 4 applies .default() inside .partial(). The update schema must not, or
 // a PATCH touching one field would rewrite the venue's city, crawl delay and
@@ -22,24 +23,35 @@ describe('updateVenueSchema', () => {
     expect(updateVenueSchema.parse({})).toEqual({});
   });
 
-  // The crawl rules are read-only (3b ruling d): any value, even a slower
-  // delay or the current one, is refused with the crawl-rules message.
+  // The crawl rules are read-only (3b ruling d), but for one release (#404)
+  // the schema lets a well-typed crawl-rule key through: the PATCH handler
+  // tolerates it when it equals the stored value and refuses it otherwise.
   it.each([
     ['crawlDelayMs', 500],
     ['crawlDelayMs', 3000],
-    ['crawlDelayMs', 10000],
-    ['crawlDelayMs', null],
     ['robotsTxtAllowed', true],
     ['robotsTxtAllowed', null],
     ['robotsTxtCheckedAt', '2026-11-13T10:00:00.000Z'],
+    ['robotsTxtCheckedAt', '2026-11-13T03:00:00-07:00'],
+    ['robotsTxtCheckedAt', null],
     ['userAgent', 'ConcertCrawl/2.0'],
-  ])('refuses %s = %j as fixed by the crawl rules', (key, value) => {
+  ])('lets %s = %j through to the handler', (key, value) => {
+    expect(updateVenueSchema.parse({ [key]: value })).toEqual({
+      [key]: value,
+    });
+  });
+
+  it.each([
+    ['crawlDelayMs', null],
+    ['crawlDelayMs', 3000.5],
+    ['crawlDelayMs', '3000'],
+    ['robotsTxtAllowed', 'yes'],
+    ['robotsTxtCheckedAt', 'yesterday'],
+    ['userAgent', null],
+  ])('refuses a mistyped %s = %j', (key, value) => {
     const result = updateVenueSchema.safeParse({ [key]: value });
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.path).toEqual([key]);
-    expect(result.error?.issues[0]?.message).toMatch(
-      /^Fixed by the crawl rules/,
-    );
   });
 
   it('refuses any key it does not know rather than stripping it', () => {
@@ -73,4 +85,64 @@ describe('updateVenueSchema', () => {
       expect(updateVenueSchema.safeParse({ websiteUrl }).success).toBe(false);
     },
   );
+});
+
+describe('changedCrawlRule', () => {
+  const stored = {
+    crawlDelayMs: 5000,
+    robotsTxtAllowed: false,
+    robotsTxtCheckedAt: new Date('2026-11-11T10:00:00Z'),
+  };
+
+  it('tolerates a body with no crawl-rule key', () => {
+    expect(changedCrawlRule({}, stored)).toBeNull();
+  });
+
+  it('tolerates every key sent with its stored value', () => {
+    expect(
+      changedCrawlRule(
+        {
+          crawlDelayMs: 5000,
+          robotsTxtAllowed: false,
+          robotsTxtCheckedAt: '2026-11-11T10:00:00.000Z',
+          userAgent: CRAWLER_USER_AGENT,
+        },
+        stored,
+      ),
+    ).toBeNull();
+  });
+
+  it('compares the robots check as an instant, not a string', () => {
+    expect(
+      changedCrawlRule(
+        { robotsTxtCheckedAt: '2026-11-11T03:00:00-07:00' },
+        stored,
+      ),
+    ).toBeNull();
+  });
+
+  it('tolerates a null robots verdict and check against a never-checked venue', () => {
+    expect(
+      changedCrawlRule(
+        { robotsTxtAllowed: null, robotsTxtCheckedAt: null },
+        {
+          crawlDelayMs: 3000,
+          robotsTxtAllowed: null,
+          robotsTxtCheckedAt: null,
+        },
+      ),
+    ).toBeNull();
+  });
+
+  it.each([
+    [{ crawlDelayMs: 3000 }, 'crawlDelayMs'],
+    [{ robotsTxtAllowed: true }, 'robotsTxtAllowed'],
+    [{ robotsTxtAllowed: null }, 'robotsTxtAllowed'],
+    [{ robotsTxtCheckedAt: '2026-11-11T10:00:01.000Z' }, 'robotsTxtCheckedAt'],
+    [{ robotsTxtCheckedAt: null }, 'robotsTxtCheckedAt'],
+    [{ userAgent: 'ConcertCrawl/2.0' }, 'userAgent'],
+    [{ crawlDelayMs: 5000, userAgent: 'ConcertCrawl/2.0' }, 'userAgent'],
+  ])('names the changed key in %j', (sent, key) => {
+    expect(changedCrawlRule(sent, stored)).toBe(key);
+  });
 });
