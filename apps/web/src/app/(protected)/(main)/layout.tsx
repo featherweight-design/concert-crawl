@@ -26,7 +26,13 @@ export default function MainLayout({
     // overflow:clip never hides them.
     // `page-ambient` (globals.css) is the B+ page glow: a fixed layer behind
     // every page in this shell, `--bg` where a theme has no drawn glow.
-    <div className="page-ambient flex min-h-screen flex-col overflow-x-clip">
+    //
+    // `min-h-dvh`, not the `100vh` screen height: `100vh` is the LARGEST viewport (browser
+    // bars retracted), so at scroll-top, with the bars showing, the shell was a
+    // toolbar's height taller than the screen. The bottom padding is the
+    // safe-area inset the fixed BottomNav grows by, so a page's own `pb-20`
+    // still clears the taller nav above an Android gesture bar.
+    <div className="page-ambient flex min-h-dvh flex-col overflow-x-clip pb-[env(safe-area-inset-bottom)] sm:pb-0">
       {/* Wraps header and bottom nav so their two account triggers share one
           open state — otherwise a mobile tap could stack two menu sheets. */}
       <AccountMenuProvider>

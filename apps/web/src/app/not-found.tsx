@@ -18,7 +18,9 @@ import { AccountMenuProvider } from '@/components/consumer/user-menu';
 import { OfflinePill } from '@/components/pwa/OfflinePill';
 
 const GlobalNotFound = () => (
-  <div className="page-ambient flex min-h-screen flex-col overflow-x-clip">
+  // Same shell sizing as the (main) layout: the dynamic viewport plus the
+  // safe-area inset the BottomNav grows by.
+  <div className="page-ambient flex min-h-dvh flex-col overflow-x-clip pb-[env(safe-area-inset-bottom)] sm:pb-0">
     <AccountMenuProvider>
       <SearchPaletteProvider>
         <AppHeader rightSlots={<OfflinePill />} />
