@@ -150,7 +150,7 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
             />
           </span>
           <div style={{ minWidth: 0 }}>
-            <h2
+            <h1
               style={{
                 margin: 0,
                 fontSize: isPhone ? 22 : 26,
@@ -161,7 +161,7 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
               }}
             >
               {venue.name}
-            </h2>
+            </h1>
             {isPhone && venue.neighborhood && (
               <div
                 style={{
