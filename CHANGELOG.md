@@ -1,3 +1,17 @@
+# [1.390.0](https://github.com/featherweight-design/concert-crawl/compare/v1.389.0...v1.390.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** keep the venue's own site one click away on the admin venue page ([b8116d7](https://github.com/featherweight-design/concert-crawl/commit/b8116d7fc5ddde16bd3dd588bbc2fc1a2c4faae1))
+* **web:** one pointer wording across the re-crawl notices ([16ae7c9](https://github.com/featherweight-design/concert-crawl/commit/16ae7c9b2137f97d94c1099d60e5350ee7b6169d))
+* **web:** re-crawl review fixes, poll retries, no double trigger, unverified ([2466ce1](https://github.com/featherweight-design/concert-crawl/commit/2466ce1698c119bb1ec89c1a1875c3b28d2829ed))
+
+
+### Features
+
+* **web:** venue header and Re-crawl states (3a part 4a) ([3c52024](https://github.com/featherweight-design/concert-crawl/commit/3c52024a7b7bd7386edefcbd2f3deae39fb11add))
+
 # [1.389.0](https://github.com/featherweight-design/concert-crawl/compare/v1.388.0...v1.389.0) (2026-11-13)
 
 
