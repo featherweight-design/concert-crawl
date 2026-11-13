@@ -44,7 +44,8 @@ const inDays = (days: number): string => addDays(denverDate(new Date()), days);
 interface ListBody {
   success: boolean;
   data: NeedsYouItem[];
-  count: NeedsYouCount;
+  // Left out on a ?venueId= view.
+  count?: NeedsYouCount;
 }
 
 interface SnoozesBody {
@@ -108,7 +109,7 @@ describe('admin needs-you, by venue (3b)', () => {
     ).toBe(401);
   });
 
-  it('?venueId= narrows data to that venue; the count stays the whole queue', async () => {
+  it('?venueId= narrows data to that venue and leaves the count out', async () => {
     setAuth('admin');
     const levitt = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const gothic = await seedVenue({ name: 'Gothic', slug: 'gothic' });
@@ -125,7 +126,11 @@ describe('admin needs-you, by venue (3b)', () => {
 
     const narrowed = await list(`?venueId=${levitt.id}`);
     expect(narrowed.data.map((item) => item.key)).toEqual([lowKey(here.id)]);
-    expect(narrowed.count).toEqual(all.count);
+    // The venue view never shows the badge, so the summary isn't computed.
+    expect(all.count).toBeDefined();
+    expect(narrowed.count).toBeUndefined();
+    // ?kind= alone still carries the whole-queue count.
+    expect((await list('?kind=bug')).count).toEqual(all.count);
 
     // Combines with ?kind=.
     expect((await list(`?venueId=${levitt.id}&kind=bug`)).data).toEqual([]);
