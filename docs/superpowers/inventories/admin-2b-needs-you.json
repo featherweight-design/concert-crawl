@@ -79,6 +79,56 @@
       ]
     },
     {
+      "id": "panel-artist",
+      "label": "Artist panel (needs an artist item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"artist:\"]"
+        },
+        { "click": "[data-item-key^=\"artist:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "panel-event-low-confidence",
+      "label": "Low-confidence event panel (needs an event-low-confidence item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"event-low-confidence:\"]"
+        },
+        {
+          "click": "[data-item-key^=\"event-low-confidence:\"]:visible >> nth=0"
+        },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "panel-price-check",
+      "label": "Price check panel (needs a price-check item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"price-check:\"]"
+        },
+        { "click": "[data-item-key^=\"price-check:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "panel-bug",
+      "label": "Bug report panel (needs a bug item)",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-item-key^=\"bug:\"]"
+        },
+        { "click": "[data-item-key^=\"bug:\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
       "id": "snooze",
       "label": "Snooze menu",
       "steps": [
