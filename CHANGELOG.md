@@ -1,3 +1,22 @@
+# [1.378.0](https://github.com/featherweight-design/concert-crawl/compare/v1.377.2...v1.378.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* address review — shared count helper, deprecated count route kept, guard, rename ([cb1af18](https://github.com/featherweight-design/concert-crawl/commit/cb1af1892eefa55897b5b37ee9d089036c93958f))
+* **crawler:** an unreachable evidence source is unknown, never no; list every unresolved name ([b2459d9](https://github.com/featherweight-design/concert-crawl/commit/b2459d92a3fdab46992834dc17287a37cba0850b))
+* **crawler:** decide joined names by evidence in the artist repair, never by shape ([fe08d88](https://github.com/featherweight-design/concert-crawl/commit/fe08d88936033071bb195f55de12ac9b3a0ae8f1))
+* one submitted-price count definition across the menu, delete sheet, Settings and the page ([7da4257](https://github.com/featherweight-design/concert-crawl/commit/7da42578262234cbbbd0aacd76cc482b40c1608d))
+* **web:** harden the popover's open-scroll guard ([355bd44](https://github.com/featherweight-design/concert-crawl/commit/355bd443b7757a566442d52f760073227906522f))
+* **web:** keep search focus, loaded rows and the stamped state in the Add sheet ([984b0cf](https://github.com/featherweight-design/concert-crawl/commit/984b0cf49992d276f023ba6101f954ffdc81bd6a))
+* **web:** open filter popovers below the bar, scrolling it up for room ([03a5ce9](https://github.com/featherweight-design/concert-crawl/commit/03a5ce90a4ee36de33a930367bfc98b85adfad89))
+* **web:** recognise a page scroll by its non-element target ([94f2def](https://github.com/featherweight-design/concert-crawl/commit/94f2defdbb3271d187dd39fd2a581fb3ac6a2be0))
+
+
+### Features
+
+* **web:** the Add a show sheet and the shared went pill ([e085436](https://github.com/featherweight-design/concert-crawl/commit/e085436011346940579e2997acc6b061b5526321))
+
 ## [1.377.2](https://github.com/featherweight-design/concert-crawl/compare/v1.377.1...v1.377.2) (2026-11-12)
 
 
