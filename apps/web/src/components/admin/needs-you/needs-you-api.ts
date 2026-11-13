@@ -156,51 +156,14 @@ export const needsYouApi = (getToken: GetToken) => ({
     if (!count) throw new Error('needs-you count');
     return count;
   },
-  /** One answer. `auditId` is what Undo points at; null when it can't be undone. */
-  answer: async (key: string, slug: string): Promise<AnswerResult> => {
-    const data = await call(
+  /** One answer, by the slug the item offered. */
+  answer: async (key: string, slug: string): Promise<void> => {
+    await call(
       getToken,
       `/v1/admin/needs-you/items/${encodeURIComponent(key)}/answer`,
       { method: 'POST', body: { answer: slug } },
     );
-    if (!isRecord(data)) throw new Error('needs-you answer');
-    const auditId = isText(data['auditId']) ? data['auditId'] : null;
-    return { auditId, undoable: data['undoable'] === true && auditId !== null };
-  },
-  undo: async (auditId: string): Promise<void> => {
-    await call(
-      getToken,
-      `/v1/admin/needs-you/answers/${encodeURIComponent(auditId)}/undo`,
-      { method: 'POST' },
-    );
-  },
-  /** Back in the queue at `until` (an ISO instant with an offset). */
-  snooze: async (key: string, until: string): Promise<void> => {
-    await call(
-      getToken,
-      `/v1/admin/needs-you/items/${encodeURIComponent(key)}/snooze`,
-      { method: 'POST', body: { until } },
-    );
-  },
-  /** Stops this kind of warning for the item's venue. */
-  notUseful: async (key: string, reason: string): Promise<void> => {
-    const trimmed = reason.trim();
-    await call(
-      getToken,
-      `/v1/admin/needs-you/items/${encodeURIComponent(key)}/snooze`,
-      {
-        method: 'POST',
-        body: trimmed
-          ? { notUseful: true, reason: trimmed }
-          : { notUseful: true },
-      },
-    );
   },
 });
-
-export interface AnswerResult {
-  auditId: string | null;
-  undoable: boolean;
-}
 
 export type NeedsYouApi = ReturnType<typeof needsYouApi>;

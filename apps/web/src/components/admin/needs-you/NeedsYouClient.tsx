@@ -14,7 +14,6 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { AllClear } from './AllClear';
-import { AnsweredRow } from './AnsweredRow';
 import { EvidenceSlot } from './EvidenceSlot';
 import { QueueItem } from './QueueItem';
 import {
@@ -25,7 +24,6 @@ import {
 import {
   FILTERS,
   NAVIGATION_SLUGS,
-  answeredName,
   countAfterRemoval,
   filterCount,
   inFilter,
@@ -54,12 +52,6 @@ const pillStyle = (on: boolean): CSSProperties => ({
     : 'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
 });
 
-interface Answered {
-  line: string;
-  /** The audit row an Undo points at. Null: nothing to take back. */
-  auditId: string | null;
-}
-
 interface Pending {
   row: QueueRow;
   answer: NeedsYouAnswer;
@@ -67,8 +59,7 @@ interface Pending {
 
 /**
  * 2b Needs you: the queue. The list and the count load in the browser with the
- * admin's token. An answer takes its card off the list and leaves a dashed
- * line with Undo in its place; a snooze does the same without the Undo.
+ * admin's token. An answer takes its card off the list and moves the counts.
  * `?item=<key>` selects a card and opens its panel.
  */
 export const NeedsYouClient = ({ item }: { item: string | null }) => {
@@ -82,9 +73,7 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const [failedLoad, setFailedLoad] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selected, setSelected] = useState<string | null>(item);
-  const [answered, setAnswered] = useState<Answered | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [undoing, setUndoing] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [failure, setFailure] = useState<{
     title: string;
@@ -118,28 +107,16 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     );
   };
 
-  const settle = (row: QueueRow, next: Answered, handled: boolean) => {
-    setRows(
-      (was) => was?.filter((candidate) => candidate.key !== row.key) ?? was,
-    );
-    setCount((was) => (was ? countAfterRemoval(was, row.kind, handled) : was));
-    setAnswered(next);
-    if (selected === row.key) select(null);
-  };
-
   const runAnswer = async (row: QueueRow, answer: NeedsYouAnswer) => {
     setBusyKey(row.key);
     setFailure(null);
     try {
-      const result = await api.answer(row.key, answer.slug);
-      settle(
-        row,
-        {
-          line: COPY.answered(answeredName(row.title), answer.label),
-          auditId: result.undoable ? result.auditId : null,
-        },
-        true,
+      await api.answer(row.key, answer.slug);
+      setRows(
+        (was) => was?.filter((candidate) => candidate.key !== row.key) ?? was,
       );
+      setCount((was) => (was ? countAfterRemoval(was, row.kind) : was));
+      if (selected === row.key) select(null);
     } catch {
       setFailure({
         title: COPY.answerFailed.title,
@@ -157,45 +134,6 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     // An answer that tells fans asks first and cannot be taken back.
     if (answer.notifiesFans) return setPending({ row, answer });
     void runAnswer(row, answer);
-  };
-
-  const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
-    setBusyKey(row.key);
-    setFailure(null);
-    try {
-      await action();
-      settle(
-        row,
-        { line: COPY.snoozedLine(answeredName(row.title)), auditId: null },
-        false,
-      );
-    } catch {
-      setFailure({
-        title: COPY.snooze.failed,
-        saved: COPY.answerFailed.saved,
-        retry: () => void runSnooze(row, action),
-      });
-    } finally {
-      setBusyKey(null);
-    }
-  };
-
-  const onUndo = async () => {
-    if (!answered?.auditId) return;
-    setUndoing(true);
-    try {
-      await api.undo(answered.auditId);
-      setAnswered(null);
-      await load();
-    } catch {
-      setFailure({
-        title: COPY.undo.failed,
-        saved: COPY.undo.failedSaved,
-        retry: () => void onUndo(),
-      });
-    } finally {
-      setUndoing(false);
-    }
   };
 
   if (failedLoad)
@@ -274,14 +212,6 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
                 onDismiss={() => setFailure(null)}
               />
             )}
-            {answered && (
-              <AnsweredRow
-                line={answered.line}
-                undoing={undoing}
-                onUndo={answered.auditId ? () => void onUndo() : undefined}
-              />
-            )}
-
             <div
               data-testid="needs-you-queue"
               aria-label={COPY.list}
@@ -296,12 +226,6 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
                   busy={busyKey === row.key}
                   onSelect={() => select(row.key)}
                   onAnswer={(answer) => onAnswer(row, answer)}
-                  onSnooze={(until) =>
-                    void runSnooze(row, () => api.snooze(row.key, until))
-                  }
-                  onNotUseful={(reason) =>
-                    void runSnooze(row, () => api.notUseful(row.key, reason))
-                  }
                 />
               ))}
               {visible.length === 0 && (

@@ -1,6 +1,6 @@
 {
   "feature": "Admin 2b · Needs you queue",
-  "note": "Plan row 2b-A. CONTACT_SHEET_ROLE=admin. Boards: 02-needs-you/needs-you-desktop, needs-you-mobile, answered-with-undo, snooze-menu, all-clear, couldnt-load; 07/loading-needs-you. By hand: answered-with-undo (it writes), all-clear (needs an empty queue), couldnt-load (API down).",
+  "note": "Plan row 2b-A. CONTACT_SHEET_ROLE=admin. Boards: 02-needs-you/needs-you-desktop, needs-you-mobile, all-clear, couldnt-load; 07/loading-needs-you. By hand: all-clear (needs an empty queue), couldnt-load (API down). Snooze and answered-with-undo are 2b-A2.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -28,20 +28,6 @@
         },
         { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
         { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
-      ]
-    },
-    {
-      "id": "snooze",
-      "label": "Snooze menu",
-      "steps": [
-        {
-          "goto": "/admin/needs-you",
-          "wait": "[data-testid=\"needs-you-item\"]"
-        },
-        {
-          "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0 >> [data-testid=\"snooze-trigger\"]"
-        },
-        { "wait": "[data-testid=\"snooze-menu\"]" }
       ]
     },
     {
