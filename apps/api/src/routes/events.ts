@@ -752,9 +752,17 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       .where(eq(eventRedirects.sourceId, id))
       .limit(1);
     if (moved) {
+      // A relative Location (the caller resolves it against the origin it
+      // asked), swapping only the path segment that IS the id. Temporary and
+      // uncacheable: the survivor can itself be deleted later, and a cached
+      // permanent redirect would keep sending people to a 404.
       const url = new URL(ctx.req.url);
-      url.pathname = url.pathname.replace(id, moved.targetId);
-      return ctx.redirect(url.toString(), 308);
+      const path = url.pathname
+        .split('/')
+        .map((segment) => (segment === id ? moved.targetId : segment))
+        .join('/');
+      ctx.header('Cache-Control', 'no-store');
+      return ctx.redirect(`${path}${url.search}`, 307);
     }
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
