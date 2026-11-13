@@ -1,0 +1,46 @@
+{
+  "feature": "Admin 3a part 4a: venue header and Re-crawl",
+  "note": "Read-only; never presses Re-crawl. Boards: design/design_handoff_admin_redesign A3/03/re-crawl-states and the phone venue-overview-m header. Admin role (CONTACT_SHEET_ROLE=admin). Scratch Neon rows: Bluebird Theater (active, idle) and the sheet seed sheet-paused-venue (paused: Re-crawl off with its reason). Walked by hand: the queued, crawling, ran-failed, unknown and stalled states, which need a live trigger.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "active-idle",
+      "label": "Active venue: header, Re-crawl idle, View on site, summary line",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-header\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "paused-off",
+      "label": "Paused venue: Re-crawl off, Resume crawling to re-crawl",
+      "steps": [
+        {
+          "goto": "/admin/venues/e4e87c16-2822-402e-a21a-e7b7b070e097",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"venue-header\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "source-url-link",
+      "label": "Identity card: Source URL with the venue-site link",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "expectStatus": 200,
+          "wait": "#edit-venue-url"
+        },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}
