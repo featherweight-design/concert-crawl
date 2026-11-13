@@ -291,7 +291,7 @@ function BookletView({
                   width: index === current ? 28 : 6,
                   background:
                     index === current
-                      ? 'linear-gradient(90deg, var(--signal), var(--accent))'
+                      ? 'linear-gradient(90deg, var(--signal), var(--cta-end))'
                       : 'var(--border-strong)',
                   transition: 'width var(--motion-base) var(--motion-ease)',
                 }}

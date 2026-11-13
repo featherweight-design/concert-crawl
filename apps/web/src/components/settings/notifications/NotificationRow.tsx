@@ -28,7 +28,7 @@ export const GroupHeading = ({ text }: { text: string }) => (
 export const CTA_CLASS =
   'inline-flex min-h-[44px] w-fit items-center justify-center rounded-xl px-5 py-2.5 text-[15px] font-bold text-fg-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60';
 export const CTA_STYLE: CSSProperties = {
-  background: 'linear-gradient(90deg, var(--signal), var(--accent))',
+  background: 'linear-gradient(90deg, var(--signal), var(--cta-end))',
   boxShadow: '0 6px 18px color-mix(in oklch, var(--accent) 28%, transparent)',
 };
 

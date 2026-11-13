@@ -290,7 +290,7 @@ export const PublicEventDetail = ({
                 style={{
                   minHeight: 48,
                   background:
-                    'linear-gradient(90deg, var(--signal), var(--accent))',
+                    'linear-gradient(90deg, var(--signal), var(--cta-end))',
                   fontFamily: 'var(--font-ui)',
                   fontWeight: 800,
                   fontSize: 15,

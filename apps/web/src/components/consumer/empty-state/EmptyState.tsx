@@ -128,7 +128,7 @@ function CardPrimary({ cta }: { cta: EmptyStateCta }) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+        background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
         color: 'var(--fg-on-accent)',
         borderRadius: 14,
         padding: '12px 22px',
