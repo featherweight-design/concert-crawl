@@ -142,9 +142,10 @@ export const QueueItem = ({
             data-slug={answer.slug}
             onClick={() => onAnswer(answer)}
             style={
-              // The board tints the lead answer cyan: the one the API
-              // suggests, else the first drawn.
-              answer === answers[0]
+              // The board tints the lead answer cyan. Only the answer the API
+              // suggests is tinted: its order is not a ranking, so the first
+              // drawn is not implied to be a recommendation.
+              answer.suggested
                 ? {
                     color: 'var(--signal)',
                     background:
