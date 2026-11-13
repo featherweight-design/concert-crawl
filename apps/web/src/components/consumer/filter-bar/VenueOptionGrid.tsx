@@ -39,15 +39,15 @@ interface VenueOptionGridProps {
   variant?: 'popover' | 'sheet';
 }
 
+// `bp-f-filt_where_d` and `bp-f-filt_venues_m` draw the same tile at both
+// widths: the glyph in its neon colours inside a 1.5px ring in the venue's own.
+const TILE_RING = 1.5;
+
 const VARIANT = {
   popover: {
     grid: 'grid-cols-2',
     gap: 'gap-y-1.5',
-    // `bp-f-filt_where_d`: a 34px tile whose ring takes the venue's colours
-    // and whose glyph strokes each shape in its own neon colour.
     tile: 34,
-    multicolour: true,
-    edge: 1.5,
     name: 13.5,
     sub: 11,
     nameLead: undefined,
@@ -60,8 +60,6 @@ const VARIANT = {
     grid: 'grid-cols-1',
     gap: 'gap-y-1',
     tile: 36,
-    multicolour: false,
-    edge: undefined,
     name: 14,
     sub: 11.5,
     nameLead: '18px',
@@ -152,8 +150,8 @@ export const VenueOptionGrid = ({
                   slug={venue.slug}
                   name={venue.name}
                   size={look.tile}
-                  multicolour={look.multicolour}
-                  {...(look.edge !== undefined && { edgeWeight: look.edge })}
+                  multicolour
+                  edgeWeight={TILE_RING}
                 />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span
