@@ -738,6 +738,8 @@ export const ADMIN_COPY = {
       title: 'In Needs you',
       empty: (venue: string) => `Nothing waiting for ${venue}.`,
       turnedOff: 'Warnings you turned off',
+      // Couldn't load {this}, when only the turned-off list failed.
+      turnedOffPage: 'the warnings you turned off',
       // "Off since Nov 3, by @hugh · “It’s normal for this venue”"
       offSince: (date: string, by: string, reason: string | null) =>
         reason

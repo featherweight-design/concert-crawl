@@ -185,9 +185,7 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     let triggerId: string;
     try {
       const auth = await token();
-      ({ triggerId } = force
-        ? await triggerVenueCrawl(venueId, auth, true)
-        : await triggerVenueCrawl(venueId, auth));
+      ({ triggerId } = await triggerVenueCrawl(venueId, auth, force));
     } catch (err) {
       // A paused, unverified or disallowed venue is refused here: the
       // refresh brings the disabled Re-crawl and its reason.

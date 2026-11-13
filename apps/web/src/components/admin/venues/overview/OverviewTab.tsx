@@ -15,13 +15,13 @@ import {
   SaveFailedToast,
   useIsPhone,
 } from '@/components/admin/primitives';
-import { navItem } from '@/components/admin/shell/nav';
 import { ApiError, apiClient } from '@/lib/api';
 import { venueTabHref } from '@/lib/admin/venue-tabs';
 import type { Recrawl } from '../useRecrawl';
 import { headerLine, recrawlOff } from '../venue-header-rules';
 import type { OverviewData, OverviewSnooze } from './overview-data';
 import {
+  EVENTS_BY_VENUE_READY,
   LAST_RUNS,
   NEEDS_YOU_KIND_LABEL,
   isUnchanged,
@@ -181,7 +181,10 @@ const LatestRunCard = ({
             variant={phone ? 'outline' : 'ghost'}
             icon={RefreshCw}
             data-testid="overview-recrawl-anyway"
-            disabled={off !== null || busy}
+            // As the header's Re-crawl: busy stays focusable (the hook makes
+            // the click a no-op); only off is natively disabled.
+            disabled={off !== null}
+            aria-disabled={busy || undefined}
             // The header's line says why it is off.
             aria-describedby={
               // Only while the header draws that line (`VenueHeader`).
@@ -412,13 +415,15 @@ const ShowsCard = ({
       phone={phone}
       testId="overview-shows"
       action={
-        <Link
-          href={`/admin/events?venue=${encodeURIComponent(venue.id)}`}
-          style={{ ...linkButton('ghost', false), height: 28 }}
-        >
-          <ChevronRight size={14} aria-hidden />
-          {COPY.shows.openInEvents}
-        </Link>
+        EVENTS_BY_VENUE_READY ? (
+          <Link
+            href={`/admin/events?venue=${encodeURIComponent(venue.id)}`}
+            style={{ ...linkButton('ghost', false), height: 28 }}
+          >
+            <ChevronRight size={14} aria-hidden />
+            {COPY.shows.openInEvents}
+          </Link>
+        ) : undefined
       }
     >
       <div>
@@ -475,6 +480,9 @@ const NeedsYouCard = ({
     } catch (err: unknown) {
       // Already back on (turned on elsewhere): the row is stale, not stuck.
       if (err instanceof ApiError && err.status === 404) {
+        console.warn('Overview: snooze already gone, refreshing', {
+          id: snooze.id,
+        });
         router.refresh();
         return;
       }
@@ -485,7 +493,7 @@ const NeedsYouCard = ({
     }
   };
 
-  if (needsYou === null || snoozes === null) {
+  if (needsYou === null) {
     return (
       <Card
         title={COPY.needsYou.title}
@@ -496,7 +504,6 @@ const NeedsYouCard = ({
       </Card>
     );
   }
-  const href = navItem('needs-you').href;
   return (
     <Card title={COPY.needsYou.title} phone={phone} testId="overview-needs-you">
       {needsYou.length === 0 ? (
@@ -508,7 +515,7 @@ const NeedsYouCard = ({
           {needsYou.map((item) => (
             <li key={item.key} style={{ borderTop: '1px solid var(--border)' }}>
               <Link
-                href={href}
+                href={`/admin/needs-you?item=${encodeURIComponent(item.key)}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -530,7 +537,16 @@ const NeedsYouCard = ({
           ))}
         </ul>
       )}
-      {snoozes.length > 0 && (
+      {snoozes === null && (
+        // Only the turned-off section failed: the items above still read.
+        <>
+          <div style={{ marginTop: 2 }}>
+            <MonoLabel>{COPY.needsYou.turnedOff}</MonoLabel>
+          </div>
+          <CouldntLoad page={COPY.needsYou.turnedOffPage} onRetry={onRetry} />
+        </>
+      )}
+      {snoozes !== null && snoozes.length > 0 && (
         <>
           <div style={{ marginTop: 2 }}>
             <MonoLabel>{COPY.needsYou.turnedOff}</MonoLabel>

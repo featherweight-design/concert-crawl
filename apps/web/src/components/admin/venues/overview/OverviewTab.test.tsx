@@ -50,6 +50,7 @@ import { OverviewTab } from './OverviewTab';
 import type { OverviewData } from './overview-data';
 import type { Recrawl } from '../useRecrawl';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { EVENTS_BY_VENUE_READY } from './overview-rules';
 
 const COPY = ADMIN_COPY.venueOverview;
 const RUN = ADMIN_COPY.venuesList.latestRun;
@@ -221,18 +222,22 @@ describe('OverviewTab — Latest run', () => {
       'venue-header-line-venue-1',
     );
     unmount();
-    render(
-      <OverviewTab
-        venue={buildVenue()}
-        data={DATA}
-        recrawl={recrawl('queued')}
-      />,
-    );
-    expect(
-      screen
-        .getByRole('button', { name: COPY.latestRun.recrawlAnyway })
-        .hasAttribute('disabled'),
-    ).toBe(true);
+    for (const state of ['queued', 'running'] as const) {
+      const busy = render(
+        <OverviewTab
+          venue={buildVenue()}
+          data={DATA}
+          recrawl={recrawl(state)}
+        />,
+      );
+      // As the header's Re-crawl: busy stays focusable, aria-disabled only.
+      const button = screen.getByRole('button', {
+        name: COPY.latestRun.recrawlAnyway,
+      });
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.hasAttribute('disabled')).toBe(false);
+      busy.unmount();
+    }
   });
 
   it('reads No runs yet when the venue has never crawled', () => {
@@ -258,12 +263,6 @@ describe('OverviewTab — Last 14 runs', () => {
       createdAt: '2026-11-11T10:02:00.000Z',
     },
     {
-      id: 'going',
-      status: 'in_progress',
-      reason: null,
-      createdAt: '2026-11-11T09:00:00.000Z',
-    },
-    {
       id: 'b',
       status: 'failed',
       reason: 'timeout',
@@ -277,7 +276,7 @@ describe('OverviewTab — Last 14 runs', () => {
     },
   ];
 
-  it('draws one bar per settled run, oldest first, each labelled', () => {
+  it('draws one bar per run, oldest first, each labelled', () => {
     render(
       <OverviewTab
         venue={buildVenue()}
@@ -364,11 +363,18 @@ describe('OverviewTab — Shows', () => {
     expect(
       shows.getByText(COPY.shows.hidden).parentElement?.textContent,
     ).toContain('4');
+  });
+
+  it('offers no Open in Events until Events reads ?venue=', () => {
+    render(
+      <OverviewTab venue={buildVenue()} data={DATA} recrawl={recrawl()} />,
+    );
+    expect(EVENTS_BY_VENUE_READY).toBe(false);
+    const shows = within(card(COPY.shows.title));
     expect(
-      shows
-        .getByRole('link', { name: COPY.shows.openInEvents })
-        .getAttribute('href'),
-    ).toBe('/admin/events?venue=venue-1');
+      shows.queryByRole('link', { name: COPY.shows.openInEvents }),
+    ).toBeNull();
+    expect(shows.queryByText(COPY.shows.openInEvents)).toBeNull();
   });
 
   it('reads None yet without a full run', () => {
@@ -403,7 +409,7 @@ describe('OverviewTab — In Needs you', () => {
     expect(needs.queryByText(COPY.needsYou.turnedOff)).toBeNull();
   });
 
-  it('lists the venue’s items with their kind labels, linking to Needs you', () => {
+  it('lists the venue’s items with their kind labels, linking to each item', () => {
     render(
       <OverviewTab
         venue={buildVenue()}
@@ -428,8 +434,8 @@ describe('OverviewTab — In Needs you', () => {
     const needs = within(card(COPY.needsYou.title));
     const links = needs.getAllByRole('link');
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
-      '/admin/review',
-      '/admin/review',
+      '/admin/needs-you?item=show-dropped%3A1',
+      '/admin/needs-you?item=venue-failing%3Av',
     ]);
     expect(links[0]?.textContent).toBe(`${ADMIN_COPY.kind.show}Khruangbin`);
     expect(links[1]?.textContent).toBe(`${ADMIN_COPY.kind.venue}Ball Arena`);
@@ -497,7 +503,8 @@ describe('OverviewTab — In Needs you', () => {
     errorSpy.mockRestore();
   });
 
-  it('a 404 (already back on elsewhere) refreshes instead of failing', async () => {
+  it('a 404 (already back on elsewhere) logs and refreshes instead of failing', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     mockDelete.mockRejectedValueOnce(new MockApiError(404));
     render(
       <OverviewTab
@@ -514,14 +521,18 @@ describe('OverviewTab — In Needs you', () => {
       }),
     );
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+    expect(warnSpy).toHaveBeenCalledWith(expect.any(String), {
+      id: 'snooze-1',
+    });
     expect(
       screen.queryByRole('button', {
         name: ADMIN_COPY.states.saveFailed.tryAgain,
       }),
     ).toBeNull();
+    warnSpy.mockRestore();
   });
 
-  it('shows Couldn’t load in this card only when Needs you failed', () => {
+  it('shows Couldn’t load for the whole card when Needs you failed', () => {
     render(
       <OverviewTab
         venue={buildVenue()}
@@ -529,9 +540,41 @@ describe('OverviewTab — In Needs you', () => {
         recrawl={recrawl()}
       />,
     );
-    expect(
-      within(card(COPY.needsYou.title)).getByTestId('couldnt-load'),
-    ).toBeTruthy();
+    const needs = within(card(COPY.needsYou.title));
+    expect(needs.getByTestId('couldnt-load')).toBeTruthy();
+    expect(needs.queryByText(COPY.needsYou.empty('Ball Arena'))).toBeNull();
     expect(screen.getAllByTestId('couldnt-load')).toHaveLength(1);
+  });
+
+  it('when only snoozes failed, still lists the items, failing just that section', () => {
+    render(
+      <OverviewTab
+        venue={buildVenue()}
+        data={{
+          ...DATA,
+          needsYou: [{ key: 'bug:1', kind: 'bug', title: 'Prices look wrong' }],
+          snoozes: null,
+        }}
+        recrawl={recrawl()}
+      />,
+    );
+    const needs = within(card(COPY.needsYou.title));
+    expect(needs.getByText('Prices look wrong')).toBeTruthy();
+    expect(needs.getByText(COPY.needsYou.turnedOff)).toBeTruthy();
+    expect(needs.getAllByTestId('couldnt-load')).toHaveLength(1);
+    expect(screen.getAllByTestId('couldnt-load')).toHaveLength(1);
+  });
+
+  it('when only snoozes failed with no items, still says nothing is waiting', () => {
+    render(
+      <OverviewTab
+        venue={buildVenue()}
+        data={{ ...DATA, snoozes: null }}
+        recrawl={recrawl()}
+      />,
+    );
+    const needs = within(card(COPY.needsYou.title));
+    expect(needs.getByText(COPY.needsYou.empty('Ball Arena'))).toBeTruthy();
+    expect(needs.getByTestId('couldnt-load')).toBeTruthy();
   });
 });
