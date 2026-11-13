@@ -326,7 +326,7 @@ export const ADMIN_COPY = {
         },
         rate_limit: {
           label: 'Rate limiting',
-          body: "429 means the venue is rate-limiting requests. Raise the request delay on the venue's settings page, or ask the venue what rate it wants.",
+          body: '429 means the venue is rate-limiting requests. Our pace is fixed by the crawl rules: ask the venue what rate it wants, or move it to manual entry.',
         },
         parse_failure: {
           label: 'Parse failure',
