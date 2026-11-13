@@ -36,7 +36,12 @@ import {
   priceSubmissions,
   userEvents,
 } from '@concert-crawl/db';
-import { nightArtistKey, sameNight, showTimeKey } from '@concert-crawl/types';
+import {
+  isTwelveHourMisread,
+  sameNight,
+  secondsOf,
+  showTimeKey,
+} from '@concert-crawl/types';
 import { alignToNights } from './lib/align-nights.js';
 
 export const CLEANUP_ACTOR = 'system:duplicate-night-cleanup';
@@ -128,41 +133,10 @@ const MULTI_DAY_PASS =
 export const isMultiDayPass = (title: string): boolean =>
   MULTI_DAY_PASS.test(title);
 
-/** Seconds past midnight, or null for an untimed row. */
-const secondsOf = (showTime: string | null | undefined): number | null => {
-  const key = showTimeKey(showTime);
-  if (key === '') return null;
-  const [hours, minutes, seconds] = key.split(':');
-  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
-};
-const HOUR = 3600;
-
-/**
- * The same night stored with a morning-and-evening misread of one show time
- * (19:30 and 07:30): one artist, one date, both timed, exactly twelve hours
- * apart to the second, the earlier from 01:00 to before 10:00. Venues do not run
- * a 7:30 morning concert, so the pair is one show; 00:00 is excluded because it
- * is the usual "no time given" placeholder, not a morning show. Only this
- * cleanup applies it; the crawl's own match keeps two different times apart.
- */
-export const isTwelveHourMisread = (
-  left: Pick<NightRow, 'canonicalArtist' | 'date' | 'showTime'>,
-  right: Pick<NightRow, 'canonicalArtist' | 'date' | 'showTime'>,
-): boolean => {
-  const first = secondsOf(left.showTime);
-  const second = secondsOf(right.showTime);
-  if (first === null || second === null) return false;
-  const key = nightArtistKey(left.canonicalArtist);
-  const earlier = Math.min(first, second);
-  return (
-    left.date === right.date &&
-    key !== '' &&
-    key === nightArtistKey(right.canonicalArtist) &&
-    Math.abs(first - second) === 12 * HOUR &&
-    earlier >= HOUR &&
-    earlier < 10 * HOUR
-  );
-};
+// The rule itself (one artist, one date, both timed, exactly twelve hours
+// apart, the earlier from 01:00 to before 10:00) is shared with the crawl's
+// night match, which applies it only on the same event page URL.
+export { isTwelveHourMisread };
 
 /** Whether two live rows of one venue are still one night, as planned. */
 export const stillOneNight = (
