@@ -75,6 +75,28 @@ describe('useRecrawl', () => {
     expect(result.current.state).toBe('queued');
   });
 
+  it('sends force only when Re-crawl anyway asks for it', async () => {
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(pending);
+    const { result } = renderHook(() => useRecrawl('venue-1', false));
+    act(() => result.current.start(true));
+    await tick(0);
+    expect(mockTrigger).toHaveBeenCalledWith('venue-1', 'test-token', true);
+  });
+
+  it('Try again repeats a refused forced start as forced', async () => {
+    mockTrigger.mockRejectedValueOnce(new Error('nope'));
+    const { result } = renderHook(() => useRecrawl('venue-1', false));
+    act(() => result.current.start(true));
+    await tick(0);
+    expect(result.current.state).toBe('refused');
+    mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
+    mockFetchTrigger.mockResolvedValue(pending);
+    act(() => result.current.retry());
+    await tick(0);
+    expect(mockTrigger).toHaveBeenLastCalledWith('venue-1', 'test-token', true);
+  });
+
   it('dismiss never interrupts a crawl in flight', async () => {
     mockTrigger.mockResolvedValue({ triggerId: 'trigger-1' });
     mockFetchTrigger.mockResolvedValue(pending);

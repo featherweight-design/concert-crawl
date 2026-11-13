@@ -172,15 +172,22 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     schedule(gen, triggerId, startedAt, 0);
   };
 
-  const start = async (): Promise<void> => {
+  // Whether the last start was forced, so Try again repeats it as it was.
+  const lastForce = useRef(false);
+
+  const start = async (force: boolean): Promise<void> => {
     if (off || pending.current !== null) return;
+    lastForce.current = force;
     const gen = generation.current;
     pending.current = { triggerId: null };
     setState('queued');
     setReason(null);
     let triggerId: string;
     try {
-      ({ triggerId } = await triggerVenueCrawl(venueId, await token()));
+      const auth = await token();
+      ({ triggerId } = force
+        ? await triggerVenueCrawl(venueId, auth, true)
+        : await triggerVenueCrawl(venueId, auth));
     } catch (err) {
       // A paused, unverified or disallowed venue is refused here: the
       // refresh brings the disabled Re-crawl and its reason.
@@ -200,5 +207,16 @@ export const useRecrawl = (venueId: string, off: boolean) => {
     setReason(null);
   };
 
-  return { state, reason, start: () => void start(), dismiss };
+  return {
+    state,
+    reason,
+    /** `force` re-reads an unchanged page (Overview's Re-crawl anyway). */
+    start: (force = false) => void start(force),
+    /** Try again: repeats the refused start, forced or not. */
+    retry: () => void start(lastForce.current),
+    dismiss,
+  };
 };
+
+/** One venue's re-crawl, shared by the header and Overview's Latest run. */
+export type Recrawl = ReturnType<typeof useRecrawl>;

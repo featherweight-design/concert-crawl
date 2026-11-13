@@ -54,6 +54,21 @@ vi.mock('@/components/admin/venues/VenueHeader', () => ({
   VenueHeader: () => null,
 }));
 
+// The page's one re-crawl and the Overview cards sit behind Clerk auth and
+// have their own suites.
+vi.mock('@/components/admin/venues/useRecrawl', () => ({
+  useRecrawl: () => ({
+    state: 'idle',
+    reason: null,
+    start: () => undefined,
+    retry: () => undefined,
+    dismiss: () => undefined,
+  }),
+}));
+vi.mock('@/components/admin/venues/overview/OverviewTab', () => ({
+  OverviewTab: () => null,
+}));
+
 vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
   VenueExpectedBadge: () => null,
 }));

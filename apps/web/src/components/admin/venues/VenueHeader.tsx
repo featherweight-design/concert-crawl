@@ -14,7 +14,7 @@ import { VenueTile } from '@/components/consumer/venue-glyph';
 import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge';
 import { crawlingLabel } from './venue-list-rules';
 import { headerLine, recrawlOff, viewOnSiteHref } from './venue-header-rules';
-import { useRecrawl, type RecrawlState } from './useRecrawl';
+import type { Recrawl, RecrawlState } from './useRecrawl';
 import { VenueMenu, type VenueMenuFailure } from './VenueMenu';
 
 const COPY = ADMIN_COPY.venueHeader;
@@ -106,14 +106,23 @@ const RecrawlNotice = ({
  * dropped: busy, it reads Queued or Crawling now and is `aria-disabled`; off,
  * it is disabled and described by the line that says why.
  */
-export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
+export const VenueHeader = ({
+  venue,
+  recrawl,
+}: {
+  venue: VenueWithCrawlHealth;
+  /**
+   * The page's one `useRecrawl` (built with `recrawlOff(venue)`), shared with
+   * Overview's Re-crawl anyway so both read the same state.
+   */
+  recrawl: Recrawl;
+}) => {
   const isPhone = useIsPhone();
   const [failure, setFailure] = useState<VenueMenuFailure | null>(null);
   // While any menu change runs, the toast's Try again holds rather than
   // swallowing a press.
   const [menuBusy, setMenuBusy] = useState(false);
   const off = recrawlOff(venue);
-  const recrawl = useRecrawl(venue.id, off !== null);
   const line = headerLine(venue, isPhone);
   const busy = recrawl.state === 'queued' || recrawl.state === 'running';
   const busyLabel = recrawl.state === 'running' ? COPY.running : COPY.queued;
@@ -218,7 +227,7 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
             aria-disabled={busy || undefined}
             aria-describedby={off !== null && line !== '' ? lineId : undefined}
             // A no-op while busy or off: the hook guards both.
-            onClick={recrawl.start}
+            onClick={() => recrawl.start()}
             style={{
               ...BUTTON,
               gap: busy ? 8 : 6,
@@ -279,7 +288,7 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
         <SaveFailedToast
           what={COPY.failed.recrawl(venue.name)}
           saved={recrawl.reason ?? COPY.failed.recrawlSaved}
-          onRetry={recrawl.start}
+          onRetry={recrawl.retry}
         />
       )}
       {failure !== null && (

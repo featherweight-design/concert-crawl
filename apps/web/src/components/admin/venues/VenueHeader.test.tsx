@@ -43,14 +43,24 @@ vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
   VenueExpectedBadge: () => null,
 }));
 
-import { VenueHeader } from './VenueHeader';
-import { MAX_POLL_MS } from './useRecrawl';
+import { VenueHeader as VenueHeaderView } from './VenueHeader';
+import { MAX_POLL_MS, useRecrawl } from './useRecrawl';
+import { recrawlOff } from './venue-header-rules';
 import { POLL_INTERVAL_MS } from '@/components/admin/crawl-trigger-button/definitions/constants';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { ApiError } from '@/lib/api';
 
 const COPY = ADMIN_COPY.venueHeader;
 const FAILED = ADMIN_COPY.states.saveFailed;
+
+/**
+ * The header as `VenueDetailsClient` mounts it: the page owns the one
+ * `useRecrawl` and hands it down, so Overview's Re-crawl anyway shares it.
+ */
+const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
+  const recrawl = useRecrawl(venue.id, recrawlOff(venue) !== null);
+  return <VenueHeaderView venue={venue} recrawl={recrawl} />;
+};
 
 const matchMediaStub = (query: string): MediaQueryList => ({
   matches: false,
