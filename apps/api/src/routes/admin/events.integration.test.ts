@@ -2685,8 +2685,14 @@ describe('a merged-away event keeps answering at its old id', () => {
 
   it('records where the source went, and GET /v1/events/:id follows it with a 307', async () => {
     const venue = await seedVenue();
-    const source = await seedEvent(venue.id, { date: '2099-09-01' });
-    const target = await seedEvent(venue.id, { date: '2099-09-01' });
+    const source = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Source Act',
+    });
+    const target = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Target Act',
+    });
 
     expect((await merge(source.id, target.id)).status).toBe(200);
 
@@ -2707,9 +2713,18 @@ describe('a merged-away event keeps answering at its old id', () => {
 
   it('keeps a chain one hop: merging the survivor away repoints the earlier redirect', async () => {
     const venue = await seedVenue();
-    const first = await seedEvent(venue.id, { date: '2099-09-01' });
-    const second = await seedEvent(venue.id, { date: '2099-09-01' });
-    const third = await seedEvent(venue.id, { date: '2099-09-01' });
+    const first = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'First Act',
+    });
+    const second = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Second Act',
+    });
+    const third = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Third Act',
+    });
 
     expect((await merge(first.id, second.id)).status).toBe(200);
     expect((await merge(second.id, third.id)).status).toBe(200);
@@ -2722,8 +2737,14 @@ describe('a merged-away event keeps answering at its old id', () => {
 
   it("moves a person's hidden-show mark and Spotify alert claim to the survivor", async () => {
     const venue = await seedVenue();
-    const source = await seedEvent(venue.id, { date: '2099-09-01' });
-    const target = await seedEvent(venue.id, { date: '2099-09-01' });
+    const source = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Source Act',
+    });
+    const target = await seedEvent(venue.id, {
+      date: '2099-09-01',
+      artist: 'Target Act',
+    });
     await testDb
       .insert(userEventDismissals)
       .values({ userId: 'user-a', eventId: source.id });
