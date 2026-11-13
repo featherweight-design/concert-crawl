@@ -725,19 +725,19 @@ pricesAdminRouter.patch(
 // is allowed (a free show); the consumer path's floor of 1 is a fan-input rule.
 const dollarsSchema = z
   .string()
-  .regex(/^\d+(\.\d{1,2})?$/)
+  .regex(/^(0|[1-9]\d*)(\.\d{1,2})?$/)
   .refine((value) => Number(value) <= SP_POLICY.ceilingMax);
 
+// `priceMax` is always sent: `null` clears the top of the range, and leaving it
+// out is an error rather than a silent clear (the edit sheet sends both).
 const editPriceSchema = z
   .object({
     priceMin: dollarsSchema,
-    priceMax: dollarsSchema.nullable().optional(),
+    priceMax: dollarsSchema.nullable(),
   })
   .refine(
     (body) =>
-      body.priceMax === null ||
-      body.priceMax === undefined ||
-      Number(body.priceMax) >= Number(body.priceMin),
+      body.priceMax === null || Number(body.priceMax) >= Number(body.priceMin),
     { message: 'priceMax must be at least priceMin' },
   );
 
