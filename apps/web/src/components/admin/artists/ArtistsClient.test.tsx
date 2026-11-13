@@ -505,3 +505,45 @@ describe('ArtistsClient', () => {
     ).toBeTruthy();
   });
 });
+
+// The tablist moved onto AdminTabs (3b part 1) with the same ids, names and
+// keys it had when it was hand-rolled here.
+describe('ArtistsClient tabs on AdminTabs', () => {
+  it('keeps the tab ids, the one panel and the roving tabindex', async () => {
+    render(<ArtistsClient />);
+    const list = await screen.findByRole('tablist', { name: 'Artist lists' });
+    const tabs = screen.getAllByRole('tab');
+    expect(list.contains(tabs[0]!)).toBe(true);
+    expect(tabs.map((tab) => tab.id)).toEqual([
+      'artists-tab-to_check',
+      'artists-tab-matched',
+      'artists-tab-not_an_artist',
+    ]);
+    for (const tab of tabs) {
+      expect(tab.getAttribute('aria-controls')).toBe('artists-tab-panel');
+    }
+    expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1]);
+    const panel = await screen.findByRole('tabpanel');
+    expect(panel.id).toBe('artists-tab-panel');
+    expect(panel.getAttribute('aria-labelledby')).toBe('artists-tab-to_check');
+  });
+
+  it('moves selection and focus with the arrow keys, Home and End', async () => {
+    render(<ArtistsClient />);
+    const toCheck = await screen.findByRole('tab', { name: /To check/ });
+    fireEvent.keyDown(toCheck, { key: 'ArrowLeft' });
+    const notArtists = screen.getByRole('tab', { name: /Not artists/ });
+    expect(notArtists.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(notArtists);
+    fireEvent.keyDown(notArtists, { key: 'Home' });
+    expect(document.activeElement).toBe(
+      screen.getByRole('tab', { name: /To check/ }),
+    );
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+    expect(
+      screen
+        .getByRole('tab', { name: /Matched/ })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
+  });
+});

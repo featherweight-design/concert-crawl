@@ -146,7 +146,10 @@ describe('VenueDetailsClient — Wait until control', () => {
 
   it("shows the venue's current setting and its hint", () => {
     render(
-      <VenueDetailsClient venue={buildVenue({ crawlWaitUntil: 'load' })} />,
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlWaitUntil: 'load' })}
+      />,
     );
 
     expect(screen.getByText(WAIT_COPY.hints.load)).toBeTruthy();
@@ -155,6 +158,7 @@ describe('VenueDetailsClient — Wait until control', () => {
   it('sends the chosen value to updateVenue on save', async () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ crawlWaitUntil: 'networkidle' })}
       />,
     );
@@ -191,6 +195,7 @@ describe('VenueDetailsClient — Wait until control', () => {
     });
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ crawlWaitUntil: 'networkidle' })}
       />,
     );
@@ -217,6 +222,7 @@ describe('VenueDetailsClient — Wait until control', () => {
   it('says the setting is ignored while a Wait selector is set', () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ crawlWaitForSelector: '.event-card' })}
       />,
     );
@@ -225,7 +231,12 @@ describe('VenueDetailsClient — Wait until control', () => {
   });
 
   it('says the setting is ignored in HTTP only mode', () => {
-    render(<VenueDetailsClient venue={buildVenue({ crawlMode: 'http' })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlMode: 'http' })}
+      />,
+    );
 
     expect(screen.getByText(WAIT_COPY.ignoredHttpOnly)).toBeTruthy();
   });
@@ -233,6 +244,7 @@ describe('VenueDetailsClient — Wait until control', () => {
   it('describes HTTP only when a selector is also set', () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({
           crawlMode: 'http',
           crawlWaitForSelector: '.event-card',
@@ -245,7 +257,10 @@ describe('VenueDetailsClient — Wait until control', () => {
 
   it('marks the selected option as pressed', () => {
     render(
-      <VenueDetailsClient venue={buildVenue({ crawlWaitUntil: 'load' })} />,
+      <VenueDetailsClient
+        initialTab="source"
+        venue={buildVenue({ crawlWaitUntil: 'load' })}
+      />,
     );
 
     const load = screen.getByRole('button', { name: WAIT_COPY.options.load });
@@ -261,6 +276,7 @@ describe('VenueDetailsClient — Wait until control', () => {
   it('omits unchanged browser-gate fields for a browser venue with no selector', async () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ crawlMode: 'browser', crawlWaitForSelector: null })}
       />,
     );
@@ -293,6 +309,7 @@ describe('VenueDetailsClient — Wait until control', () => {
   it('sends the whole browser-gate group when one of its fields changes', async () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ crawlMode: 'browser', crawlWaitForSelector: null })}
       />,
     );

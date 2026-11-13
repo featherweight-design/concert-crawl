@@ -317,6 +317,20 @@ const manifest: AuditManifest = validateManifest([
           );
         },
       },
+      // The venue page's tabs (3b part 1). Each runs on the page the step
+      // before left behind, so the same venue is walked through
+      // `?tab=runs|source|details|guide`; open-first-venue above captures
+      // Overview, the tab the page opens on.
+      ...(['runs', 'source', 'details', 'guide'] as const).map((key) => ({
+        id: `venue-tab-${key}`,
+        description: `Switch the venue page to its ${key} tab (?tab=${key})`,
+        run: async (page: Page) => {
+          const tab = page.locator(`#venue-tab-${key}`);
+          await waitForHydrated(tab);
+          await tab.click();
+          await page.waitForURL((url) => url.searchParams.get('tab') === key);
+        },
+      })),
     ],
   },
   {

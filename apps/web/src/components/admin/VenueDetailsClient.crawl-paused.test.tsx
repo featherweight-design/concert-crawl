@@ -150,6 +150,7 @@ describe('VenueDetailsClient — venue header', () => {
   it('renders the header for a paused venue', () => {
     render(
       <VenueDetailsClient
+        initialTab="details"
         venue={buildVenue({ crawlPausedAt: '2026-11-10T18:00:00.000Z' })}
       />,
     );
@@ -159,7 +160,12 @@ describe('VenueDetailsClient — venue header', () => {
   });
 
   it('drops the danger zone and the old Flagship button', () => {
-    render(<VenueDetailsClient venue={buildVenue({ featured: true })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ featured: true })}
+      />,
+    );
     expect(
       screen.queryByText(
         ADMIN_COPY.venueDetailsClient.sections.dangerZone.title,
@@ -183,6 +189,7 @@ describe('VenueDetailsClient — venue header', () => {
     const SUMMARY = ADMIN_COPY.venueDetailsClient.summary;
     render(
       <VenueDetailsClient
+        initialTab="details"
         venue={buildVenue({
           extractionStrategy: 'structured_data',
           consecutiveFailures: 2,
@@ -206,7 +213,7 @@ describe('VenueDetailsClient — venue header', () => {
   });
 
   it('leaves the failures badge off a venue with none', () => {
-    render(<VenueDetailsClient venue={buildVenue()} />);
+    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
     const line = screen.getByTestId('venue-summary-line').textContent ?? '';
     expect(line).toContain(ADMIN_COPY.venueHeader.summary.strategy.auto);
     expect(line).not.toContain('consec.');
@@ -236,7 +243,7 @@ describe('VenueDetailsClient — Status toggle', () => {
   });
 
   it('Paused opens the Hide confirm and never calls pauseVenue', () => {
-    render(<VenueDetailsClient venue={buildVenue()} />);
+    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
     fireEvent.click(screen.getByTestId('venue-status-paused'));
     expect(screen.getByText(CONFIRMS.hide.title('Test Venue'))).toBeTruthy();
     expect(mockPauseVenue).not.toHaveBeenCalled();
@@ -245,7 +252,7 @@ describe('VenueDetailsClient — Status toggle', () => {
 
   it('confirming sends hideVenue with the chosen reason, then refreshes', async () => {
     mockHideVenue.mockResolvedValue(undefined);
-    render(<VenueDetailsClient venue={buildVenue()} />);
+    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
     fireEvent.click(screen.getByTestId('venue-status-paused'));
     fireEvent.click(
       screen.getByRole('radio', { name: CONFIRMS.hide.reasons.venue_closed }),
@@ -267,7 +274,12 @@ describe('VenueDetailsClient — Status toggle', () => {
 
   it('Active on a hidden venue shows it at once, as Show on site does', async () => {
     mockActivateVenue.mockResolvedValue({ ok: true });
-    render(<VenueDetailsClient venue={buildVenue({ active: false })} />);
+    render(
+      <VenueDetailsClient
+        initialTab="details"
+        venue={buildVenue({ active: false })}
+      />,
+    );
     fireEvent.click(screen.getByTestId('venue-status-active'));
     await waitFor(() =>
       expect(mockActivateVenue).toHaveBeenCalledWith('venue-1'),
@@ -303,6 +315,7 @@ describe('VenueDetailsClient — Status toggle', () => {
   it('a taken-down venue’s Active is disabled and says why', () => {
     render(
       <VenueDetailsClient
+        initialTab="details"
         venue={buildVenue({
           active: false,
           removedAt: '2026-11-02T18:00:00.000Z',

@@ -3,9 +3,11 @@ import { apiClient } from '@/lib/api';
 import type { VenueGuide, VenueWithCrawlHealth } from '@concert-crawl/types';
 import { VenueDetailsClient } from '@/components/admin/VenueDetailsClient';
 import { notFound } from 'next/navigation';
+import { parseVenueTab } from '@/lib/admin/venue-tabs';
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }
 
 const EMPTY_GUIDE: VenueGuide = {
@@ -14,9 +16,10 @@ const EMPTY_GUIDE: VenueGuide = {
   publishedAt: null,
 };
 
-export default async function VenueDetailPage({ params }: Props) {
+export default async function VenueDetailPage({ params, searchParams }: Props) {
   await requireAdminUser();
   const { id } = await params;
+  const tab = parseVenueTab((await searchParams).tab);
   const { getToken } = await auth();
   const token = await getToken();
   if (!token) return null;
@@ -55,6 +58,7 @@ export default async function VenueDetailPage({ params }: Props) {
       venue={venue}
       guide={guide}
       guideLoadFailed={guideLoadFailed}
+      initialTab={tab}
     />
   );
 }

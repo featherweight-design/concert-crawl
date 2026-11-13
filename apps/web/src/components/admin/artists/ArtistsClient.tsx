@@ -6,6 +6,7 @@ import { Music, Search } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
+  AdminTabs,
   ConfirmDialog,
   CouldntLoad,
   EmptyState,
@@ -80,19 +81,11 @@ const Count = ({ value, phone }: { value: number | null; phone: boolean }) =>
 /** The tab panel's id, which every tab controls. */
 const PANEL_ID = 'artists-tab-panel';
 const tabId = (key: ArtistTab) => `artists-tab-${key}`;
-
-/** The key that moves selection, as the WAI-ARIA tabs pattern sets them. */
-const TAB_KEY_STEP: Record<string, (at: number, last: number) => number> = {
-  ArrowRight: (at, last) => (at === last ? 0 : at + 1),
-  ArrowLeft: (at, last) => (at === 0 ? last : at - 1),
-  Home: () => 0,
-  End: (_at, last) => last,
-};
+const panelId = () => PANEL_ID;
 
 /**
- * To check, Matched, Not artists: underline tabs, or the phone's segments.
- * The ARIA tabs pattern: one tab in the Tab order (roving tabindex), arrows,
- * Home and End move and select, and each tab controls the one panel.
+ * To check, Matched, Not artists: underline tabs, or the phone's segments,
+ * on `AdminTabs`. Every tab controls the one panel.
  */
 const Tabs = ({
   isPhone,
@@ -106,85 +99,27 @@ const Tabs = ({
   value: ArtistTab;
   onChange: (next: ArtistTab) => void;
   tablistRef: React.RefObject<HTMLDivElement | null>;
-}) => {
-  const onTabKeyDown = (evt: React.KeyboardEvent<HTMLButtonElement>) => {
-    const move = TAB_KEY_STEP[evt.key];
-    if (!move) return;
-    evt.preventDefault();
-    const at = TABS_ORDER.indexOf(value);
-    const next = TABS_ORDER[move(at, TABS_ORDER.length - 1)];
-    if (!next) return;
-    onChange(next);
-    tablistRef.current
-      ?.querySelector<HTMLButtonElement>(`#${tabId(next)}`)
-      ?.focus();
-  };
-  return (
-    <div
-      ref={tablistRef}
-      role="tablist"
-      aria-label={COPY.tabs.label}
-      style={
-        isPhone
-          ? {
-              display: 'flex',
-              padding: 3,
-              borderRadius: 10,
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border)',
-            }
-          : { display: 'flex', gap: 4, borderBottom: '1px solid var(--border)' }
-      }
-    >
-      {TABS_ORDER.map((key) => {
-        const on = key === value;
-        return (
-          <button
-            key={key}
-            id={tabId(key)}
-            type="button"
-            role="tab"
-            aria-selected={on}
-            aria-controls={PANEL_ID}
-            tabIndex={on ? 0 : -1}
-            onClick={() => onChange(key)}
-            onKeyDown={onTabKeyDown}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              whiteSpace: 'nowrap',
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              color: on ? 'var(--fg)' : 'var(--fg-muted)',
-              border: 'none',
-              ...(isPhone
-                ? {
-                    flex: 1,
-                    height: 32,
-                    borderRadius: 7,
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    background: on ? 'var(--bg-elevated)' : 'transparent',
-                  }
-                : {
-                    height: 40,
-                    padding: '0 14px',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    background: 'transparent',
-                    borderBottom: `2px solid ${on ? 'var(--signal)' : 'transparent'}`,
-                  }),
-            }}
-          >
-            {TAB_LABEL[key]}
-            <Count value={counts ? counts[key] : null} phone={isPhone} />
-          </button>
-        );
-      })}
-    </div>
-  );
-};
+}) => (
+  <AdminTabs
+    tabs={TABS_ORDER.map((key) => ({
+      key,
+      label: (
+        <>
+          {TAB_LABEL[key]}
+          <Count value={counts ? counts[key] : null} phone={isPhone} />
+        </>
+      ),
+    }))}
+    value={value}
+    onChange={onChange}
+    label={COPY.tabs.label}
+    tabId={tabId}
+    panelId={panelId}
+    variant={isPhone ? 'segments' : 'underline'}
+    gap={4}
+    tablistRef={tablistRef}
+  />
+);
 
 /** Show in 60 days, Later, No show: pills with counts. */
 const WindowChips = ({

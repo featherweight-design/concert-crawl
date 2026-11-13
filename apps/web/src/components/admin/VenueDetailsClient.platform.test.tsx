@@ -175,7 +175,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
   });
 
   it('renders the platform select with Auto selected and no ID input by default', () => {
-    render(<VenueDetailsClient venue={buildVenue()} />);
+    render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
 
     expect(platformSelect().value).toBe('');
     expect(platformVenueIdInput()).toBeNull();
@@ -183,7 +183,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
   });
 
   it('shows the venue ID input when a platform is selected', () => {
-    render(<VenueDetailsClient venue={buildVenue()} />);
+    render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
 
     fireEvent.change(platformSelect(), { target: { value: 'aeg' } });
 
@@ -198,6 +198,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
   it('hides and clears the venue ID when switching back to Auto', () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );
@@ -213,7 +214,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
   });
 
   it('offers detail-page and collects no venue ID for it (#1435)', () => {
-    render(<VenueDetailsClient venue={buildVenue()} />);
+    render(<VenueDetailsClient initialTab="source" venue={buildVenue()} />);
 
     fireEvent.change(platformSelect(), { target: { value: 'detail-page' } });
 
@@ -227,6 +228,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
   it('drops a stale venue ID when switching from AEG to detail-page', () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );
@@ -259,6 +261,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
 
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );
@@ -307,6 +310,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
 
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );
@@ -334,6 +338,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
 
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );
@@ -361,6 +366,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
   it('short-circuits to missing_config without a request when the ID is empty', async () => {
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: null })}
       />,
     );
@@ -390,6 +396,7 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
 
     render(
       <VenueDetailsClient
+        initialTab="source"
         venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
       />,
     );

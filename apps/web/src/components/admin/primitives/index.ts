@@ -45,4 +45,6 @@ export type { SnapBack } from './useSnapBack';
 export { useIsPhone, ADMIN_PHONE_MAX_WIDTH } from './useIsPhone';
 export { useContentBox } from './useContentBox';
 export { RowMenu } from './RowMenu';
+export { AdminTabs } from './AdminTabs';
+export type { AdminTab, AdminTabsProps } from './AdminTabs';
 export type { RowMenuItem } from './RowMenu';
