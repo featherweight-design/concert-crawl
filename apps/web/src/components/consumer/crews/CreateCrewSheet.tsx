@@ -73,8 +73,9 @@ export const CreateCrewSheet = ({
       open={open}
       onClose={onClose}
       ariaLabel={COPY.title}
-      // "short" is 62% of the viewport, which on a 320×568 phone put "Make the
-      // crew" below the fold with no internal scroll to reach it.
+      // Sized to its content, up to 85% of the screen, and the body scrolls
+      // inside that cap, so "Make the crew" stays reachable on a 320×568 phone
+      // (a fixed 62% once put it below the fold).
       sheetHeight="fit"
       surface="crew"
       desktopWidth={520}

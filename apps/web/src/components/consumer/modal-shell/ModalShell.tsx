@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
+import {
+  CREW_DIALOG_GLOW,
+  CREW_EDGE_BACKGROUND,
+  CREW_PANEL,
+} from './crew-surface';
 
 interface ModalShellProps {
   open: boolean;
@@ -129,9 +134,7 @@ export function ModalShell({
     sheetHeight === 'tall' ? '85%' : sheetHeight === 'short' ? '62%' : 'auto';
   const crew = surface === 'crew';
   // The drawn Crews panel is a lighter navy than the page's elevated ground.
-  const panel = crew
-    ? 'color-mix(in srgb, var(--bg-elevated), white 6%)'
-    : 'var(--bg-elevated)';
+  const panel = crew ? CREW_PANEL : 'var(--bg-elevated)';
 
   // Portalled to the body: triggers live inside clipping and transformed
   // ancestors — the filter rail scrolls horizontally, and a transformed
@@ -262,9 +265,8 @@ export function ModalShell({
             ...(crew
               ? {
                   border: '1.5px solid transparent',
-                  background: `linear-gradient(${panel}, ${panel}) padding-box, linear-gradient(90deg, var(--signal), var(--accent)) top / 100% 2px no-repeat border-box, var(--border-strong) border-box`,
-                  boxShadow:
-                    '0 32px 80px rgba(0,0,0,0.5), 0 0 64px -12px color-mix(in srgb, var(--signal) 30%, transparent)',
+                  background: CREW_EDGE_BACKGROUND,
+                  boxShadow: `0 32px 80px rgba(0,0,0,0.5), ${CREW_DIALOG_GLOW}`,
                 }
               : {
                   background: 'var(--bg-elevated)',
