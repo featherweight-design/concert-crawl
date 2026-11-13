@@ -1,3 +1,23 @@
+# [1.384.0](https://github.com/featherweight-design/concert-crawl/compare/v1.383.0...v1.384.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** a play-an-album night bills nobody, like a tribute ([b2070c7](https://github.com/featherweight-design/concert-crawl/commit/b2070c7e70d19e6162ed70b313e1b9111008cc0b))
+* **crawler:** keep a ruled-whole name, cache failed lookups, honour Retry-After ([90daa7b](https://github.com/featherweight-design/concert-crawl/commit/90daa7b04c1f0dd6e192f6b062aa4b8bbff320f9))
+* **crawler:** strict evidence for splitting joined names, retry a busy MusicBrainz ([42e86bf](https://github.com/featherweight-design/concert-crawl/commit/42e86bf48c9aa7550dd606e32d73609cba311425))
+* one helper decides closed and its reason; tidy the row tests ([cfac22d](https://github.com/featherweight-design/concert-crawl/commit/cfac22d8ef27032fff2370470fc39f5a63ea183c))
+* **web:** arena hero skyline stays the board's short strip on desktop ([eb24897](https://github.com/featherweight-design/concert-crawl/commit/eb24897cb26e50ec6fcf5dfa8155e26a510cc7dd))
+* **web:** treat the city as generic in the venue name gradient ([ed5fada](https://github.com/featherweight-design/concert-crawl/commit/ed5fadad4c0f7c2d234239f11c0f864ff30951a2))
+* **web:** venue hero backdrop honours sm breakpoint, title overlaps hero ([95448df](https://github.com/featherweight-design/concert-crawl/commit/95448df35470fbf3602652746bc64a4a270e7767))
+* **web:** venue hero desktop ridge, skyline, title row, glyph size, name gradient ([e3198e4](https://github.com/featherweight-design/concert-crawl/commit/e3198e486ef2b17caec9dadfcc97fdb50584872c))
+
+
+### Features
+
+* closed submitted-price rows say why, with a muted price ([1bffef8](https://github.com/featherweight-design/concert-crawl/commit/1bffef85ff39256bf3f10ac238f87f2bfd2e08a3))
+* **web:** launch animation and startup stills have no switch ([a189b35](https://github.com/featherweight-design/concert-crawl/commit/a189b35f0fd5bfba4dca8c898937d44833442b81))
+
 # [1.383.0](https://github.com/featherweight-design/concert-crawl/compare/v1.382.0...v1.383.0) (2026-11-13)
 
 
