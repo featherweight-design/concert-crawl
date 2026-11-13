@@ -182,12 +182,10 @@ export const stampRead = (
   const willMark = (item: ConsumerNotification): boolean =>
     item.readAt === null && matches(item);
 
-  const marked = data.pages.reduce(
-    (total, page) => total + page.items.filter(willMark).length,
-    0,
-  );
+  const markedItems = data.pages.flatMap((page) => page.items.filter(willMark));
   const unreadCount =
-    countAfter ?? Math.max(0, (data.pages[0]?.unreadCount ?? 0) - marked);
+    countAfter ??
+    Math.max(0, (data.pages[0]?.unreadCount ?? 0) - markedItems.length);
 
   // The per-category split moves with the total so the tab dots drop in step
   // with the header. Loaded-page decrements only; the settle refetch reconciles.
@@ -198,11 +196,9 @@ export const stampRead = (
       unreadByCategory = {};
     } else {
       unreadByCategory = { ...baseSplit };
-      for (const page of data.pages) {
-        for (const item of page.items.filter(willMark)) {
-          const left = (unreadByCategory[item.category] ?? 0) - 1;
-          unreadByCategory[item.category] = Math.max(0, left);
-        }
+      for (const item of markedItems) {
+        const left = (unreadByCategory[item.category] ?? 0) - 1;
+        unreadByCategory[item.category] = Math.max(0, left);
       }
     }
   }
