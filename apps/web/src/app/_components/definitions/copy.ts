@@ -76,13 +76,13 @@ export const LANDING_COPY = {
   invite: {
     eyebrow: 'Got an invite?',
     fieldLabel: 'Invite code',
-    placeholder: 'Your code',
+    placeholder: 'BETA-XXXX-XXXX',
     redeem: 'Redeem',
     noCode: 'No code yet?',
     signInPrompt: 'Already have an account?',
     signInLink: 'Sign in',
     venueCount: (count: number) =>
-      `${count} ${count === 1 ? 'venue' : 'venues'} · checked every night`,
+      `${count} ${count === 1 ? 'venue' : 'venues'} · crawled every morning`,
     ticker: 'This week in Denver',
     tonight: 'Tonight',
   },

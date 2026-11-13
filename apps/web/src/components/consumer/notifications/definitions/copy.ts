@@ -55,7 +55,7 @@ export const NOTIFICATIONS_COPY = {
   emptyEyebrow: 'All caught up',
   emptyTitle: 'All quiet.',
   emptyBody:
-    "Nothing's dropped, moved, or sold out on you yet. We'll make noise when it does.",
+    'Nothing’s dropped, moved, or sold out on you yet. We’ll make noise when it does.',
   emptyAction: 'Find something to watch',
   endOfList: "That's everything. Denver's been calm.",
   today: 'Today',
