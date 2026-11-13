@@ -1,0 +1,24 @@
+{
+  "feature": "Edit Concerts · the artist page's Past shows with the went pill",
+  "note": "Board: design/design_handoff_edit_concerts/screens/artist_past_m (phone); no desktop board, so desktop follows the phone row. The Past shows section sits after Listen, as B10 draws it. Hand-walked, not in the sheet: tapping a pill (it mutates) and the signed-out pill (needs a signed-out session; a tap goes to sign-in). Needs CC_PAST_ARTIST_SLUG, an artist with past shows in our records (two venues shows the two stamp colours).",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "sm", "width": 640, "height": 900 },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "artist-past",
+      "label": "Artist page Past shows: date tile, venue stamp, went pill",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/artists/${CC_PAST_ARTIST_SLUG}",
+          "wait": "h2:has-text(\"Past shows\")",
+          "settle": 4000
+        }
+      ]
+    }
+  ]
+}
