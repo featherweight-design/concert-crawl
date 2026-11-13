@@ -204,6 +204,60 @@ describe('rederive-event-artists integration', () => {
     });
   });
 
+  it('does not clear a bill on a model verdict alone: only the title word rule does', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      title: 'Concrete & Jerry Garcia ',
+      artist: 'Concrete & Jerry Garcia ',
+      canonicalArtist: 'concrete',
+      canonicalTitle: 'concrete & jerry garcia',
+      date: '2026-12-20',
+      headliners: ['Concrete & Jerry Garcia'],
+      canonicalHeadliners: ['concrete & jerry garcia'],
+    });
+    const result = await run(
+      vi.fn(async () => ({
+        isConcert: true,
+        headliners: [],
+        supportingArtists: [],
+        coversOtherArtists: true,
+      })),
+      false,
+    );
+    expect((await readEvent(event.id)).headliners).toEqual([
+      'Concrete & Jerry Garcia',
+    ]);
+    expect(result.updated).toBe(0);
+    expect(result.notWritten.map((item) => item.reason)).toEqual([
+      'would-drop-stored-headliner',
+    ]);
+  });
+
+  it('never attaches a split part as supporting', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      title: 'Concrete & Jerry Garcia',
+      artist: 'Concrete & Jerry Garcia',
+      canonicalArtist: 'concrete',
+      canonicalTitle: 'concrete & jerry garcia',
+      date: '2026-12-21',
+      headliners: ['Concrete & Jerry Garcia'],
+      canonicalHeadliners: ['concrete & jerry garcia'],
+    });
+    const result = await run(
+      vi.fn(async () => ({
+        isConcert: true,
+        headliners: ['Concrete'],
+        supportingArtists: ['Jerry Garcia'],
+      })),
+      false,
+    );
+    expect((await readEvent(event.id)).headliners).toEqual([
+      'Concrete & Jerry Garcia',
+    ]);
+    expect(result.notWritten).toHaveLength(1);
+  });
+
   it('splits a billing a structured source flattened into one name (Clipse & J.I.D, Galdive & rum.gold)', async () => {
     const venue = await seedVenue();
     const clipse = await seedEvent(venue.id, {

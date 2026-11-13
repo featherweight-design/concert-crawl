@@ -19,13 +19,19 @@ describe('classifyBillChange: what the repair may write', () => {
     ).toEqual({ write: true, kind: 'split' });
   });
 
-  it('writes a split where a part moves to supporting (Galdive & rum.gold)', () => {
+  it('refuses a split that moves a part down to supporting (Concrete & Jerry Garcia, Galdive & rum.gold)', () => {
+    expect(
+      verdict(
+        { h: ['Concrete & Jerry Garcia'] },
+        { h: ['Concrete'], s: ['Jerry Garcia'] },
+      ),
+    ).toEqual({ write: false, reason: 'would-drop-stored-headliner' });
     expect(
       verdict(
         { h: ['Galdive & rum.gold'] },
         { h: ['Galdive'], s: ['rum.gold'] },
       ),
-    ).toEqual({ write: true, kind: 'split' });
+    ).toEqual({ write: false, reason: 'would-drop-stored-headliner' });
   });
 
   it('keeps the other stored acts beside a split', () => {

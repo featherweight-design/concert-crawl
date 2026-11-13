@@ -4,8 +4,9 @@
 // A repair that writes every difference turns each quirk into a write, so it
 // writes only what it can evidence, and leaves the rest for a human:
 //
-//   split     a stored joined name ("A & B") the evidence ruled two acts, every
-//             stored act otherwise kept, nothing else added
+//   split     a stored joined name ("A & B") the evidence ruled two acts, both
+//             parts headliners, every stored act otherwise kept, nothing else
+//             added (a part never lands in supporting)
 //   tribute   a cover or tribute night, bill cleared (the word rule)
 //   dedupe    the same bill with a repeat removed, or a joined name beside its
 //             own parts reduced to the ruled form
@@ -56,13 +57,17 @@ export function classifyBillChange(input: {
   const nextS = keysOf(next.supporting);
   const nextAll = new Set([...nextH, ...nextS]);
 
-  // Stored joined names whose parts are all on the new bill: split.
+  // Stored joined names whose parts are all HEADLINERS on the new bill: split.
+  // A stored headliner's parts stay headliners; a part the ladder moved down to
+  // supporting ("Concrete & Jerry Garcia" -> Concrete, with Jerry Garcia
+  // supporting) is a billing the stored row does not evidence, so it is not a
+  // split and the row is left alone.
   const splitNames = stored.headliners.filter((name) => {
     const parts = partsOf(name);
     return (
       parts.length > 0 &&
       !nextAll.has(nameKey(name)) &&
-      parts.every((part) => nextAll.has(nameKey(part)))
+      parts.every((part) => nextH.has(nameKey(part)))
     );
   });
   const splitParts = new Set(splitNames.flatMap(partsOf).map(nameKey));
@@ -92,7 +97,7 @@ export function classifyBillChange(input: {
     return { write: false, reason: 'would-add-an-artist' };
   }
   for (const key of nextS) {
-    if (storedS.has(key) || splitParts.has(key)) continue;
+    if (storedS.has(key)) continue;
     return { write: false, reason: 'would-add-an-artist' };
   }
   if (splitNames.length > 0) return { write: true, kind: 'split' };
