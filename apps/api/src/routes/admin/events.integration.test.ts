@@ -2,11 +2,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { and, eq, inArray, or } from 'drizzle-orm';
 import {
   auditLog,
+  eventRedirects,
   eventReports,
   events,
   notifications,
   priceRetrievalLog,
   priceSubmissions,
+  spotifyAlertLog,
+  userEventDismissals,
   userEvents,
 } from '@concert-crawl/db';
 
@@ -2664,6 +2667,85 @@ describe('GET /v1/admin/events/:id — single-event editor payload', () => {
       headers: NON_ADMIN_HEADERS,
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe('a merged-away event keeps answering at its old id', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const merge = (sourceId: string, targetId: string) =>
+    app.request(`/v1/admin/events/${sourceId}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId }),
+    });
+
+  it('records where the source went, and GET /v1/events/:id follows it with a 308', async () => {
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { date: '2099-09-01' });
+    const target = await seedEvent(venue.id, { date: '2099-09-01' });
+
+    expect((await merge(source.id, target.id)).status).toBe(200);
+
+    const rows = await testDb
+      .select()
+      .from(eventRedirects)
+      .where(eq(eventRedirects.sourceId, source.id));
+    expect(rows.map((row) => row.targetId)).toEqual([target.id]);
+
+    const res = await app.request(`/v1/events/${source.id}`, {
+      redirect: 'manual',
+    });
+    expect(res.status).toBe(308);
+    expect(new URL(res.headers.get('location') ?? '').pathname).toBe(
+      `/v1/events/${target.id}`,
+    );
+    expect((await app.request(`/v1/events/${target.id}`)).status).toBe(200);
+  });
+
+  it('keeps a chain one hop: merging the survivor away repoints the earlier redirect', async () => {
+    const venue = await seedVenue();
+    const first = await seedEvent(venue.id, { date: '2099-09-01' });
+    const second = await seedEvent(venue.id, { date: '2099-09-01' });
+    const third = await seedEvent(venue.id, { date: '2099-09-01' });
+
+    expect((await merge(first.id, second.id)).status).toBe(200);
+    expect((await merge(second.id, third.id)).status).toBe(200);
+
+    const rows = await testDb.select().from(eventRedirects);
+    expect(
+      Object.fromEntries(rows.map((row) => [row.sourceId, row.targetId])),
+    ).toEqual({ [first.id]: third.id, [second.id]: third.id });
+  });
+
+  it("moves a person's hidden-show mark and Spotify alert claim to the survivor", async () => {
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { date: '2099-09-01' });
+    const target = await seedEvent(venue.id, { date: '2099-09-01' });
+    await testDb
+      .insert(userEventDismissals)
+      .values({ userId: 'user-a', eventId: source.id });
+    await testDb
+      .insert(spotifyAlertLog)
+      .values({ userId: 'user-a', eventId: source.id, kind: 'push' });
+
+    expect((await merge(source.id, target.id)).status).toBe(200);
+
+    expect(
+      await testDb
+        .select()
+        .from(userEventDismissals)
+        .where(eq(userEventDismissals.eventId, target.id)),
+    ).toHaveLength(1);
+    expect(
+      await testDb
+        .select()
+        .from(spotifyAlertLog)
+        .where(eq(spotifyAlertLog.eventId, target.id)),
+    ).toHaveLength(1);
   });
 });
 

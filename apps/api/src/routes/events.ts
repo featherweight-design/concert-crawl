@@ -8,6 +8,7 @@ import { z } from 'zod';
 import {
   db,
   artists,
+  eventRedirects,
   events,
   venues,
   userEvents,
@@ -742,6 +743,19 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     );
 
   if (!row) {
+    // An event merged into another keeps answering at its old id: a shared
+    // link, a share card or an old notification points here. The redirect names
+    // the survivor, and the same request is replayed there.
+    const [moved] = await db
+      .select({ targetId: eventRedirects.targetId })
+      .from(eventRedirects)
+      .where(eq(eventRedirects.sourceId, id))
+      .limit(1);
+    if (moved) {
+      const url = new URL(ctx.req.url);
+      url.pathname = url.pathname.replace(id, moved.targetId);
+      return ctx.redirect(url.toString(), 308);
+    }
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 

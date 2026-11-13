@@ -2,7 +2,7 @@ import { perfRoute } from '@/lib/perf/timing';
 import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import type {
   EventDetailResponse,
@@ -105,7 +105,7 @@ export const generateMetadata = async ({
   const event = await fetchEvent(id, null);
   if (event === null) return {};
 
-  return eventShareMetadata(event, eventCanonicalPath(id));
+  return eventShareMetadata(event, eventCanonicalPath(event.id));
 };
 
 async function fetchReports(
@@ -180,6 +180,10 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
     headers(),
   ]);
   if (!event) notFound();
+  // A show merged into another answers at its old id with the survivor's data
+  // (the API follows the redirect), so a shared link, a share card or an old
+  // notification lands on the one page that exists.
+  if (event.id !== id) permanentRedirect(eventCanonicalPath(event.id));
 
   // Monetization spec §1.7: SCA notice gating for the tier picker a locked
   // "I'm going!" tap can open. Unknown (local dev, header absent) fails safe.
