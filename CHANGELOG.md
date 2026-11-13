@@ -1,3 +1,14 @@
+## [1.419.5](https://github.com/featherweight-design/concert-crawl/compare/v1.419.4...v1.419.5) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** lock page scroll behind every modal sheet and dialog ([f7bc1a0](https://github.com/featherweight-design/concert-crawl/commit/f7bc1a0324aff7d308ef086347ad64fd1c02f00c))
+* **web:** lock page scroll behind every scrim, admin included ([a705a60](https://github.com/featherweight-design/concert-crawl/commit/a705a60d6b12666a0a6f4964af4aa9b0f400cc99))
+* **web:** mount the scroll reset for every protected route, pin Back on staging ([70b248b](https://github.com/featherweight-design/concert-crawl/commit/70b248b0c8566e18164785c12289b7fb37dbbee4))
+* **web:** seat the tell-us tab flush on phones instead of half tucked ([925a7fc](https://github.com/featherweight-design/concert-crawl/commit/925a7fc2968789adb869ab98120cac9782b2e67f))
+* **web:** start each navigated page at the top ([57fc4bc](https://github.com/featherweight-design/concert-crawl/commit/57fc4bcea6ad89e24bac666241a7738cc798e54b))
+
 ## [1.419.4](https://github.com/featherweight-design/concert-crawl/compare/v1.419.3...v1.419.4) (2026-11-13)
 
 
