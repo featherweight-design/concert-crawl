@@ -1,3 +1,26 @@
+# [1.407.0](https://github.com/featherweight-design/concert-crawl/compare/v1.406.0...v1.407.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** draw a pending-only resale tier's other-tiers row as resale ([ed96e04](https://github.com/featherweight-design/concert-crawl/commit/ed96e0459e16ce8ce4e12997d0de7c00dbc3a867))
+* **web:** draw the pending price card and Submit another price as the board does ([c566064](https://github.com/featherweight-design/concert-crawl/commit/c5660647918cdd67980630ec980fd2cae841b618))
+* **web:** fall back to the vendor for a live other-tiers row with no category ([cacc57e](https://github.com/featherweight-design/concert-crawl/commit/cacc57eafb23372673d386655aba298a6452079d))
+* **web:** filter sheet pills at the board's 13px, text chevron on All links ([79adf6d](https://github.com/featherweight-design/concert-crawl/commit/79adf6d41fa12d1ebac82907292151b9866019db))
+* **web:** filter sheet show button ends at the CTA end stop ([fc5ff91](https://github.com/featherweight-design/concert-crawl/commit/fc5ff918f65364ea20d1369615cdc110f2aa2dc1))
+* **web:** open the corroboration sheet as resale for a pending resale price ([778a3d8](https://github.com/featherweight-design/concert-crawl/commit/778a3d86805714336ca8fdaf1fe7f75770b88cad))
+* **web:** reconcile phone filters with main after the rebase ([e01a1b3](https://github.com/featherweight-design/concert-crawl/commit/e01a1b37552bf2427abf59a204c8b995eb9503b9))
+* **web:** restore pending-card focus rings and lift its text to AA ([b30f7f8](https://github.com/featherweight-design/concert-crawl/commit/b30f7f8f4334bb9f1942581b7be03b70fdc8c10e))
+* **web:** show [@handle](https://github.com/handle) on the pending card, drop the live card's info icon ([4e52cd7](https://github.com/featherweight-design/concert-crawl/commit/4e52cd799d84dc654698266b24b0191abac37dc1))
+* **web:** spell out the price-age units and give pending resale its pill ([8a24c1d](https://github.com/featherweight-design/concert-crawl/commit/8a24c1def15e437c695491e9ce41d80ba0db8e1e))
+* **web:** wrap the pending footers at 320 and tighten the anonymous test ([c3438a8](https://github.com/featherweight-design/concert-crawl/commit/c3438a8020d3f950c38d521af519957aefe051dc))
+
+
+### Features
+
+* **web:** one trust pill and a plain price-age line on the price cards ([6ad0e7d](https://github.com/featherweight-design/concert-crawl/commit/6ad0e7d421840346c93b8843e32bf12f5dd67788))
+* **web:** phone Filters button, chips and staged filter sheet (B+ B6b) ([f695681](https://github.com/featherweight-design/concert-crawl/commit/f6956810edf5146a03e8cb4327dd7314a475742e))
+
 # [1.406.0](https://github.com/featherweight-design/concert-crawl/compare/v1.405.0...v1.406.0) (2026-11-13)
 
 
