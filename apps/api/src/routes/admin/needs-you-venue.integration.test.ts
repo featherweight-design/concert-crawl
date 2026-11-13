@@ -127,7 +127,7 @@ describe('admin needs-you, by venue (3b)', () => {
     const narrowed = await list(`?venueId=${levitt.id}`);
     expect(narrowed.data.map((item) => item.key)).toEqual([lowKey(here.id)]);
     // The venue view never shows the badge, so the summary isn't computed.
-    expect(all.count).toBeDefined();
+    expect(all.count?.decisions).toBe(3);
     expect(narrowed.count).toBeUndefined();
     // ?kind= alone still carries the whole-queue count.
     expect((await list('?kind=bug')).count).toEqual(all.count);
