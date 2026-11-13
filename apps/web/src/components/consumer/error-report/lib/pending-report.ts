@@ -1,4 +1,8 @@
-import { sendErrorReport, type ErrorReportDraft } from './send-report';
+import {
+  ReportRejectedError,
+  sendErrorReport,
+  type ErrorReportDraft,
+} from './send-report';
 
 // A report that could not be sent is kept on the device and sent the next time
 // the app opens (the Tell us card's failed state promises exactly that). One
@@ -78,7 +82,13 @@ export const flushPendingReport = async (
     await sendErrorReport(token, pending, userAgent);
     clearPendingReport();
     return true;
-  } catch {
+  } catch (err) {
+    // A report the API refuses on its merits (a 4xx that is not "sign in
+    // again", "slow down" or "timed out") will be refused every time: drop it
+    // rather than retrying it on every app open for a week.
+    if (err instanceof ReportRejectedError && err.permanent) {
+      clearPendingReport();
+    }
     return false;
   }
 };

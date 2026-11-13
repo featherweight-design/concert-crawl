@@ -1175,7 +1175,6 @@ export const CONSUMER_COPY = {
     // sent and failed.
     card: {
       eyebrow: 'Tell us · Beta',
-      eyebrowOpen: 'Tell us · Beta',
       tagOptional: 'Optional',
       tagOpen: 'Open',
       heading: 'What were you doing?',
