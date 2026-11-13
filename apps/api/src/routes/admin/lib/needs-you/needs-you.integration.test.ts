@@ -662,6 +662,42 @@ describe('Needs you sources and ranking', () => {
     expect(item?.title.length).toBeLessThanOrEqual(80);
   });
 
+  it('keeps only a png, jpeg or webp data image as a bug screenshot', async () => {
+    await testDb.insert(feedback).values([
+      {
+        pageUrl: 'https://concertcrawl.app/svg',
+        category: 'bug',
+        message: 'Script image',
+        metadata: { screenshot: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' },
+      },
+      {
+        pageUrl: 'https://concertcrawl.app/html',
+        category: 'bug',
+        message: 'Text',
+        metadata: { screenshot: 'data:text/html;base64,PGI+aGk8L2I+' },
+      },
+      {
+        pageUrl: 'https://concertcrawl.app/webp',
+        category: 'bug',
+        message: 'Good image',
+        metadata: { screenshot: 'data:image/webp;base64,UklGRg==' },
+      },
+    ]);
+    const items = await listNeedsYou({ kind: 'bug', now: now() });
+    expect(
+      items.map((item) => [
+        item.title,
+        item.kind === 'bug' ? item.screenshot : 'x',
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['Script image', null],
+        ['Text', null],
+        ['Good image', 'data:image/webp;base64,UklGRg=='],
+      ]),
+    );
+  });
+
   it('keeps only an inline image, under the cap, as a bug screenshot', async () => {
     await testDb.insert(feedback).values([
       {
