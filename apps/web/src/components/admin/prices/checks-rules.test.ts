@@ -25,6 +25,14 @@ describe('filedWhen', () => {
     expect(filedWhen('2026-11-13T03:00:00Z', words, now)).toBe('Today');
   });
 
+  it('finds yesterday by calendar day across the spring-forward night', () => {
+    // 00:30 MDT on Mar 9 2026 (DST began Mar 8); 24 hours earlier is still Mar 7.
+    const afterDst = new Date('2026-03-09T06:30:00Z');
+    expect(filedWhen('2026-03-08T20:00:00Z', words, afterDst)).toBe(
+      'Yesterday',
+    );
+  });
+
   it('is empty for a bad timestamp', () => {
     expect(filedWhen('not a date', words, now)).toBe('');
   });

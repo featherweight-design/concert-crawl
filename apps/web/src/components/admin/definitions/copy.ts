@@ -2540,7 +2540,6 @@ export const ADMIN_COPY = {
     views: { open: 'Open', resolved: 'Resolved' },
     listLabel: 'Open Price checks',
     resolvedLabel: 'Resolved Price checks',
-    kicker: 'Price check',
     listedNow: 'Listed now',
     priceCheck: 'Price check',
     today: 'Today',

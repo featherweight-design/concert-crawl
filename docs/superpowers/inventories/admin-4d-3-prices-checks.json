@@ -1,0 +1,37 @@
+{
+  "feature": "Admin 4d · Price checks tab, open and resolved",
+  "note": "Plan row 4d, UI PR 3. CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/prices-price-checks, price-checks-mobile, prices-no-checks; addendum-3/boards/11-events-artists-prices/price-checks-resolved-d. By hand: Use and Keep (they resolve a check and notify both fans), and the empty Open state (needs a database with no open check). The phone draws the Open list only, so the Resolved row is desktop-only and times out at 320 and 390 by design.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "open",
+      "label": "/admin/prices?tab=checks (Open)",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[aria-label=\"Open Price checks\"], [data-testid=\"empty-state\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "resolved",
+      "label": "Resolved view (desktop only)",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=checks",
+          "wait": "[aria-label=\"Open Price checks\"], [data-testid=\"empty-state\"]"
+        },
+        { "click": "button[aria-pressed]:has-text(\"Resolved\")" },
+        {
+          "wait": "[aria-label=\"Resolved Price checks\"], [data-testid=\"empty-state\"]",
+          "settle": 400
+        }
+      ]
+    }
+  ]
+}
