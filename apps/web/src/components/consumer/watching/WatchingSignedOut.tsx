@@ -264,7 +264,10 @@ function Cta() {
 
 export function WatchingSignedOut() {
   return (
-    <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
+    // The gutters are the My shows layout's (MyShowsShell). Its column widens
+    // to 960 at lg for Concerts; the teaching state keeps its drawn 880 (816
+    // inside the 32px gutters).
+    <main className="mx-auto w-full max-w-[816px] flex-1">
       {/* DOM order matches reading order at both breakpoints: the two desktop
           columns are head+CTA and example+facts, so the CTA lands before the
           example in source and the visual order is a column reflow, not a

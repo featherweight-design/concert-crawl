@@ -15,6 +15,7 @@ import type { FollowedArtist } from '@concert-crawl/types';
 import { MyShowsArtistsContent } from './MyShowsArtistsContent';
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import { HISTORY_COPY } from '@/components/consumer/history/definitions/copy';
+import { MyShowsShell } from '@/components/consumer/history/MyShowsShell';
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({
@@ -174,19 +175,25 @@ describe('MyShowsArtistsContent', () => {
     expect(screen.queryByText(COPY.groups.undated(0))).toBeNull();
   });
 
-  it('carries the follow count on the Artists sub-tab', () => {
+  it('hands the follow count up to the shared Artists sub-tab', () => {
     render(
-      <MyShowsArtistsContent
-        artists={[artist('One', '2026-09-12'), artist('Two', null)]}
-        scaRegion={false}
-      />,
+      <MyShowsShell signedIn>
+        <MyShowsArtistsContent
+          artists={[artist('One', '2026-09-12'), artist('Two', null)]}
+          scaRegion={false}
+        />
+      </MyShowsShell>,
     );
 
+    // One bar, from the layout's shell: the page draws none of its own.
     expect(
-      screen.getAllByRole('link', {
+      screen.getAllByRole('navigation', { name: HISTORY_COPY.tabs.ariaLabel }),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole('link', {
         name: HISTORY_COPY.tabs.tabCountAria(HISTORY_COPY.tabs.artists, 2),
       }),
-    ).not.toHaveLength(0);
+    ).toHaveAttribute('aria-current', 'page');
   });
 
   it('shows the Spotify footnote only when a follow came from Spotify', () => {

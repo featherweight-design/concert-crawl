@@ -32,7 +32,6 @@ import { toPosterEvent } from '@/lib/share/poster-event';
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useHistory } from '@/lib/queries/use-history';
-import { MyShowsTabs } from './MyShowsTabs';
 import { HistoryHeader } from './HistoryHeader';
 import { HistoryItem } from './HistoryItem';
 import { HistoryEmpty } from './HistoryEmpty';
@@ -56,10 +55,10 @@ interface HistoryContentProps {
   scaRegion: boolean;
 }
 
+// The column and the sub-tab bar are the My shows layout's (MyShowsShell), so
+// they hold still when a tab is tapped.
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8 lg:max-w-[960px]">
-    {children}
-  </main>
+  <main className="w-full flex-1">{children}</main>
 );
 
 type RowActions = { onRemove: () => void; onShare: () => void };
@@ -265,7 +264,6 @@ export const HistoryContent = ({
   if (isLocked) {
     return (
       <Shell>
-        <MyShowsTabs active="history" />
         <HistoryLocked scaRegion={scaRegion} />
       </Shell>
     );
@@ -274,11 +272,7 @@ export const HistoryContent = ({
   // Hold the layout while the plan resolves rather than flashing empty at a
   // Supporter whose rows are already in `initialData`.
   if (history === null) {
-    return (
-      <Shell>
-        <MyShowsTabs active="history" />
-      </Shell>
-    );
+    return <Shell>{null}</Shell>;
   }
 
   // Portaled to the body: the rail is sticky from lg, which makes it its own
@@ -297,7 +291,6 @@ export const HistoryContent = ({
   if (history.past.length === 0 && history.upcoming.length === 0) {
     return (
       <Shell>
-        <MyShowsTabs active="history" />
         <HistoryEmpty />
         {/* Not drawn: a reader with no nights is the one most likely to add
             one, so the row follows the empty card. */}
@@ -311,7 +304,6 @@ export const HistoryContent = ({
 
   return (
     <Shell>
-      <MyShowsTabs active="history" />
       <HistoryHeader stats={history.stats} />
 
       <div className="lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-8">

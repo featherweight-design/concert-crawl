@@ -2,7 +2,6 @@
 // the sub-tab bar renders for real, then the headline and carded rows as
 // `SkeletonBlock`s with neutral left edges.
 
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
 import {
   MyShowsGroupSkeleton,
   MyShowsHeadlineSkeleton,
@@ -14,9 +13,8 @@ export default function WatchingLoading() {
   return (
     <>
       <NavProgress />
-      {/* Matches WatchingContent's main container. */}
-      <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
-        <MyShowsTabs active="watching" />
+      {/* The column and the real sub-tab bar are the My shows layout's. */}
+      <main className="w-full flex-1">
         <MyShowsHeadlineSkeleton />
         <MyShowsGroupSkeleton />
         <div className="flex flex-col gap-2.5">

@@ -22,7 +22,7 @@ import { usePlanState } from '@/lib/queries/use-plan-state';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo';
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
+import { useMyShowsArtistCount } from '@/components/consumer/history/MyShowsShell';
 import { MY_SHOWS_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { SHELF_NARROW_QUERY } from '@/components/consumer/following/definitions/constants';
 import { ArtistManageRow } from './ArtistManageRow';
@@ -66,6 +66,8 @@ export const MyShowsArtistsContent = ({
   const follows = useMemo(() => artists ?? [], [artists]);
   const groups = useMemo(() => groupFollows(follows), [follows]);
   const spotifyCount = useMemo(() => spotifyFollowCount(follows), [follows]);
+  // The shared tab bar draws it on the Artists tab. A failed read has no count.
+  useMyShowsArtistCount(artists === undefined ? undefined : follows.length);
 
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
@@ -93,8 +95,7 @@ export const MyShowsArtistsContent = ({
   // is a claim about the account, and we are not in a position to make it.
   if (artists === undefined) {
     return (
-      <main className="mx-auto flex w-full max-w-[940px] flex-1 flex-col px-4 pb-20 pt-4 sm:px-[30px] sm:pb-10 sm:pt-7">
-        <MyShowsTabs active="artists" />
+      <main className="flex w-full flex-1 flex-col">
         <p
           className="text-fg-muted"
           style={{ fontSize: 13.5, lineHeight: 1.5, marginTop: 24 }}
@@ -107,8 +108,7 @@ export const MyShowsArtistsContent = ({
 
   if (follows.length === 0) {
     return (
-      <main className="mx-auto flex w-full max-w-[940px] flex-1 flex-col px-4 pb-20 pt-4 sm:px-[30px] sm:pb-10 sm:pt-7">
-        <MyShowsTabs active="artists" />
+      <main className="flex w-full flex-1 flex-col">
         <div className="flex flex-1 flex-col sm:hidden">
           <ArtistsEmpty locked={locked} />
         </div>
@@ -192,9 +192,8 @@ export const MyShowsArtistsContent = ({
       {/* Mobile: a list of cards (B+), so it no longer bleeds to the edge. */}
       <div
         data-testid="my-shows-artists-mobile"
-        className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:hidden"
+        className="w-full flex-1 sm:hidden"
       >
-        <MyShowsTabs active="artists" artistCount={follows.length} />
         {meta}
         <div>
           {groups.dated.length > 0 && (
@@ -247,7 +246,7 @@ export const MyShowsArtistsContent = ({
         {picker}
       </div>
 
-      {/* Desktop: 940px column, two-up cards, actions in the heading row.
+      {/* Desktop: the shared My shows column, two-up cards, actions in the heading row.
           DELTA vs the handoff, which draws three-up: the handoff's card carries
           an `sm` ICON-ONLY control, and this one deliberately keeps the
           labelled `md` button (see ArtistManageRow's header). A labelled
@@ -257,13 +256,10 @@ export const MyShowsArtistsContent = ({
           was truncating what mobile showed. Two-up gives the cell 434px. */}
       <div
         data-testid="my-shows-artists-desktop"
-        className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block"
+        className="hidden w-full flex-1 sm:block"
       >
-        {/* No page title: the active sub-tab 18px below already reads
-            "Artists", and the sibling Watching and Concerts tabs ship none
-            either. It also only rendered on the populated branch, so the
-            heading appeared and vanished with the list length. */}
-        <MyShowsTabs active="artists" artistCount={follows.length} />
+        {/* No page title: the active sub-tab above already reads "Artists",
+            and the sibling Watching and Concerts tabs ship none either. */}
         {meta}
 
         {groups.dated.length > 0 && (
