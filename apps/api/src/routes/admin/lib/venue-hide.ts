@@ -1,7 +1,7 @@
 // What hiding and deleting a venue need to know (redesign 3a): why a venue is
 // hidden, and how much it would lose if it were deleted.
 
-import { and, count, countDistinct, eq, gte, lt } from 'drizzle-orm';
+import { and, count, countDistinct, eq, gte, lt, sql } from 'drizzle-orm';
 import { db, events, userEvents } from '@concert-crawl/db';
 import { todayInDenver } from '../../../lib/time.js';
 
@@ -16,6 +16,10 @@ export type HideReason = (typeof HIDE_REASONS)[number];
 /** The database or a transaction on it, so a count can join a delete's lock. */
 type Reader = Pick<typeof db, 'select'>;
 
+/** A venue's shows on or after today, Mountain Time: the one upcoming rule. */
+const upcomingOf = (venueId: string) =>
+  and(eq(events.venueId, venueId), gte(events.date, todayInDenver()));
+
 /** A venue's shows on or after today, Mountain Time. */
 export const upcomingShowCount = async (
   venueId: string,
@@ -24,8 +28,25 @@ export const upcomingShowCount = async (
   const [row] = await reader
     .select({ total: count(events.id) })
     .from(events)
-    .where(and(eq(events.venueId, venueId), gte(events.date, todayInDenver())));
+    .where(upcomingOf(venueId));
   return row?.total ?? 0;
+};
+
+/**
+ * The same upcoming shows split by whether fans see them, for the venue
+ * Overview's Shows card. The two always add up to `upcomingShowCount`.
+ */
+export const upcomingShowSplit = async (
+  venueId: string,
+): Promise<{ shown: number; hidden: number }> => {
+  const [row] = await db
+    .select({
+      shown: sql<number>`count(*) filter (where not ${events.hiddenFromConsumer})::int`,
+      hidden: sql<number>`count(*) filter (where ${events.hiddenFromConsumer})::int`,
+    })
+    .from(events)
+    .where(upcomingOf(venueId));
+  return { shown: row?.shown ?? 0, hidden: row?.hidden ?? 0 };
 };
 
 export interface DeleteBlockers {

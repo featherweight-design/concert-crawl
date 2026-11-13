@@ -36,6 +36,7 @@ const PAUSED = '2026-11-10T00:00:00Z';
 // 2:00 PM in Denver on Nov 12; the runs below are at 3:04 AM that morning.
 const NOW = new Date('2026-11-12T21:00:00Z');
 const run = (over: Partial<VenueLatestRun> = {}): VenueLatestRun => ({
+  id: 'run-1',
   status: 'success',
   reason: null,
   at: '2026-11-12T10:04:00Z',
