@@ -3,8 +3,9 @@
 //
 // It is the inbox strip's zero-unread shape AND the option-A fallback shape:
 // one row, bell chip, label, optional mono meta. Both call sites render this
-// component rather than each drawing their own 44px row, so the target size
-// and the hairline can only be got right once. It carries no nested
+// component rather than each drawing their own row (at least 44px; the 30px
+// chip and its padding make it 54), so the target size and the hairline can
+// only be got right once. It carries no nested
 // interactives, so it is a real `<button>` — keyboard activation and the
 // focus ring come from the platform rather than a hand-rolled key handler.
 
