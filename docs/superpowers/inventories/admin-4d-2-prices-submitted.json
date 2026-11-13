@@ -1,6 +1,6 @@
 {
   "feature": "Admin 4d · Submitted prices tab, row menu, reject",
-  "note": "Plan row 4d, UI PR 2. CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/prices-submitted-prices, prices-row-menu, reject-a-submitted-price, submitted-prices-mobile. By hand: the reject dialog (needs a price waiting for you on the scratch branch, and Reject writes) and the empty state (needs a search with no match).",
+  "note": "Plan row 4d, UI PR 2. CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/prices-submitted-prices, prices-row-menu, reject-a-submitted-price, submitted-prices-mobile. The row menu, reject dialog and empty search rows are desktop-only: the phone board draws no menu, no chips and no search, so those rows time out at 320 and 390 by design (18 of 36 cells). The reject-dialog row needs a price waiting for you on the scratch branch (seeded by hand, user seed-adm2-4d-u2) and never presses Reject price.",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -28,6 +28,38 @@
         },
         { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
         { "wait": "[role=\"menu\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "reject-dialog",
+      "label": "Reject dialog open (not confirmed; needs a price waiting for you)",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]"
+        },
+        {
+          "click": "button[aria-label=\"Waiting for you\"], button:has-text(\"Waiting for you\"):visible >> nth=0"
+        },
+        { "wait": "[aria-label=\"Submitted prices\"]", "settle": 600 },
+        { "click": "[aria-label=\"Price actions\"]:visible >> nth=0" },
+        { "click": "[role=\"menuitem\"]:has-text(\"Reject\")" },
+        { "wait": "[role=\"dialog\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "empty-search",
+      "label": "Search with no match",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-label=\"Submitted prices\"]"
+        },
+        {
+          "fill": "input[type=\"search\"]:visible",
+          "text": "zzzz-no-such-show"
+        },
+        { "wait": "[data-testid=\"empty-state\"]", "settle": 600 }
       ]
     }
   ]
