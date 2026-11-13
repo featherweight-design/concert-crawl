@@ -6,7 +6,6 @@ import type {
   AdminSettings,
   Venue,
 } from '@concert-crawl/types';
-import { TriagePanel, parseTriageResponse } from '@/components/admin/triage';
 import { fetchNeedsYouDecisions } from '@/components/admin/shell/needs-you-count';
 import { navItem } from '@/components/admin/shell/nav';
 import {
@@ -30,7 +29,9 @@ import {
 /**
  * Health (admin 1c-2): `03/health-desktop` and `03/health-mobile`. The tiles'
  * data is the page: when any of it fails, the page throws to `error.tsx`'s
- * Couldn't load. The Needs you count and triage only degrade their own part.
+ * Couldn't load. The Needs you count only degrades its own part. The old
+ * "Needs attention" triage block is not drawn by either board, so it is not
+ * rendered here: Needs you and the venue grid carry that information.
  * 1c-3 adds the budget panel, Done for you, Artist sync and The site panels.
  */
 export default async function AdminHealthPage() {
@@ -48,7 +49,7 @@ export default async function AdminHealthPage() {
       throw new Error(`Failed to load ${path}`, { cause: err });
     });
 
-  const [status, venues, costs, settings, artists, delivery, needsYou, triage] =
+  const [status, venues, costs, settings, artists, delivery, needsYou] =
     await Promise.all([
       load<HealthStatusRow[]>('/v1/admin/crawl/status'),
       load<Venue[]>('/v1/admin/venues'),
@@ -62,13 +63,6 @@ export default async function AdminHealthPage() {
         console.error('[admin] failed to load the Needs you count:', err);
         return null;
       }),
-      // Interim until 2b (decision 20): degrades to its own one-line message.
-      load<unknown>('/v1/admin/triage')
-        .then(parseTriageResponse)
-        .catch((err: unknown) => {
-          console.error('[admin] failed to load triage:', err);
-          return null;
-        }),
     ]);
 
   const lastNight = lastNightWindow(now);
@@ -107,7 +101,6 @@ export default async function AdminHealthPage() {
         </div>
         {/* 1c-3: Artist sync and The site, desktop only (gap G12). */}
       </div>
-      <TriagePanel data={triage} />
     </div>
   );
 }
