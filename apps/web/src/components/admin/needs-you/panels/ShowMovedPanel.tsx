@@ -1,0 +1,98 @@
+'use client';
+
+import { MapPin } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { lookalikeDate, whenChipOf } from '../needs-you-rules';
+import type { PanelProps } from './panel-props';
+import { AnswerButtons, Chip, ChipRow, Prose, Section } from './panel-parts';
+
+const PANEL = ADMIN_COPY.needsYou.panel;
+
+/** `02/show-renamed-moved`. */
+export const ShowMovedPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
+  const chip = whenChipOf(row.fanDate, today);
+  const target = row.moveTo;
+  const date = lookalikeDate(row);
+  const venue = target?.venueName ?? null;
+  // The card's own meta: venue and date. The new listing's time and crawl day
+  // are not in the API's row.
+  const meta = [venue, date].filter((part) => part !== null).join(' · ');
+  return (
+    <>
+      <ChipRow>
+        {chip && (
+          <Chip kind={chip.soon ? 'accent' : 'neutral'} dot>
+            {chip.text}
+          </Chip>
+        )}
+        {row.watchers > 0 && (
+          <Chip kind="neutral">
+            {ADMIN_COPY.needsYou.watching(row.watchers)}
+          </Chip>
+        )}
+      </ChipRow>
+      {target && venue && (
+        <Section label={PANEL.whatHappened}>
+          <Prose>{PANEL.showMoved.nowLists(venue)}</Prose>
+        </Section>
+      )}
+      {target && (
+        <Section label={PANEL.matchingShow}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: 14,
+              borderRadius: 14,
+              border: '1px solid var(--border)',
+              background: 'var(--surface-1)',
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                flex: 'none',
+                width: 44,
+                height: 44,
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: 10,
+                background: 'var(--surface-2)',
+                color: 'var(--signal)',
+              }}
+            >
+              <MapPin size={20} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: 'var(--fg)',
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {target.title}
+              </div>
+              {meta && (
+                <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                  {meta}
+                </div>
+              )}
+            </div>
+            <Chip kind="success" dot>
+              {PANEL.match}
+            </Chip>
+          </div>
+        </Section>
+      )}
+      <Section label={PANEL.whatMovingDoes}>
+        <Prose muted>
+          {PANEL.showMoved.doesWhat(venue, row.venueName, row.watchers)}
+        </Prose>
+      </Section>
+      <AnswerButtons row={row} busy={busy} note={null} onAnswer={onAnswer} />
+    </>
+  );
+};

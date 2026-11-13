@@ -7,17 +7,45 @@ import {
   SidePanel,
   useIsPhone,
 } from '@/components/admin/primitives';
-import { evidenceText, kindLabelOf, metaOf, whatOf } from './needs-you-rules';
+import {
+  evidenceText,
+  kindLabelOf,
+  metaOf,
+  panelTitleOf,
+  whatOf,
+} from './needs-you-rules';
 import type { NeedsYouAnswer, QueueRow } from './needs-you-api';
+import { ShowDroppedPanel } from './panels/ShowDroppedPanel';
+import { ShowMovedPanel } from './panels/ShowMovedPanel';
+import { VenuePanel } from './panels/VenuePanel';
 
 const COPY = ADMIN_COPY.needsYou;
 
 interface EvidenceSlotProps {
   row: QueueRow;
+  /** Mountain Time's today, `YYYY-MM-DD`. */
+  today: string;
+  /** True when this item is first in the queue's own order. */
+  ranksFirst: boolean;
   busy: boolean;
   onClose: () => void;
   onAnswer: (answer: NeedsYouAnswer) => void;
 }
+
+/** The kinds whose panel is drawn per kind; the rest keep the generic one. */
+const drawnPanel = (kind: QueueRow['kind']) => {
+  switch (kind) {
+    case 'show-dropped':
+      return ShowDroppedPanel;
+    case 'show-moved':
+      return ShowMovedPanel;
+    case 'venue-failing':
+    case 'venue-blocked':
+      return VenuePanel;
+    default:
+      return null;
+  }
+};
 
 /**
  * The item's own panel: `SidePanel` beside the list on desktop (so you can
@@ -28,11 +56,37 @@ interface EvidenceSlotProps {
  */
 export const EvidenceSlot = ({
   row,
+  today,
+  ranksFirst,
   busy,
   onClose,
   onAnswer,
 }: EvidenceSlotProps) => {
   const isPhone = useIsPhone();
+  const Drawn = drawnPanel(row.kind);
+  if (Drawn)
+    return (
+      <SidePanel
+        inline={!isPhone}
+        onClose={onClose}
+        eyebrow={<KindLabel kind={kindLabelOf(row.kind)} />}
+        title={panelTitleOf(row)}
+      >
+        <div
+          data-testid="evidence-panel"
+          data-kind={row.kind}
+          style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
+        >
+          <Drawn
+            row={row}
+            today={today}
+            ranksFirst={ranksFirst}
+            busy={busy}
+            onAnswer={onAnswer}
+          />
+        </div>
+      </SidePanel>
+    );
   return (
     <SidePanel
       inline={!isPhone}

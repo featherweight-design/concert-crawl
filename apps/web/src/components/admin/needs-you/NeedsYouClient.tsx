@@ -357,6 +357,8 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       {selectedRow && (
         <EvidenceSlot
           row={selectedRow}
+          today={today}
+          ranksFirst={rows[0]?.key === selectedRow.key}
           busy={busyKey === selectedRow.key}
           onClose={() => select(null)}
           onAnswer={(answer) => onAnswer(selectedRow, answer)}

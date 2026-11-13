@@ -2406,6 +2406,85 @@ export const ADMIN_COPY = {
     panel: {
       yourAnswer: 'YOUR ANSWER',
       details: 'DETAILS',
+      whatHappened: 'WHAT HAPPENED',
+      checkedForYou: 'CHECKED FOR YOU',
+      whoSeesIt: 'WHO SEES IT',
+      matchingShow: 'MATCHING SHOW',
+      whatMovingDoes: 'WHAT MOVING DOES',
+      likelyCause: 'LIKELY CAUSE',
+      lastRuns: 'LAST 4 RUNS',
+      lastSeen: 'Last seen',
+      match: 'Match',
+      blockedChip: (status: string) => `Blocked: ${status}`,
+      // The word a run's status wears in LAST 4 RUNS. Failed and OK are drawn.
+      runStatus: {
+        failed: 'Failed',
+        ok: 'OK',
+        partial: 'Partial',
+        skipped: 'Skipped',
+      },
+      showDropped: {
+        title: (name: string, venue: string | null) =>
+          `${name} dropped off ${venue ?? 'the venue'}’s calendar`,
+        wasOn: (name: string, venue: string | null, date: string | null) =>
+          `${name} was on ${venue ?? 'the venue'}’s calendar${date ? ` until ${date}` : ''}, then stopped appearing.`,
+        watchers: (count: number) =>
+          count === 0
+            ? 'Nobody is Watching it yet.'
+            : count === 1
+              ? '1 person is Watching it.'
+              : `${count} people are Watching it.`,
+        itsWhen: (when: string) => `It’s ${when}, so it ranks first.`,
+        answerNote:
+          'Cancelled and Postponed tell Watchers; Still on keeps it listed and stops this warning for this show.',
+      },
+      showMoved: {
+        title: (name: string, venue: string) => `${name} moved to ${venue}`,
+        nowLists: (venue: string) =>
+          `${venue} now lists the same act on the same night.`,
+        doesWhat: (
+          venue: string | null,
+          from: string | null,
+          watchers: number,
+        ) =>
+          `Keeps one event${venue ? `, now at ${venue}` : ''}.${
+            watchers > 0
+              ? ` The ${watchers} Watchers keep it and get one “Moved” notice.`
+              : ''
+          }${
+            from
+              ? ` Prices submitted for ${from} stay on the history, not the new listing.`
+              : ''
+          }`,
+      },
+      venue: {
+        failingTitle: (venue: string | null, failures: number | null) =>
+          `${venue ?? 'The venue'} stopped crawling${failures ? ` after ${failures} failures` : ''}`,
+        blockedTitle: (venue: string | null) =>
+          `${venue ?? 'The site'} refused our crawler`,
+        // Authored: one sentence per error class the triage names.
+        cause: {
+          bot_detection: 'The site refused the crawler.',
+          server_error: 'The site’s server is returning errors.',
+          timeout: 'The site is not answering in time.',
+          robots_disallowed: 'robots.txt disallows the page.',
+          network_error: 'We could not reach the site.',
+          parse_failure:
+            'The page loads, but we could not read the calendar from it.',
+          crawl_error: 'The runs do not say why.',
+          unknown: 'The runs do not say why.',
+        },
+        answered: (venue: string | null, status: string | null) =>
+          `${venue ?? 'The site'} answered${status ? ` with ${status}` : ''}. We flagged it blocked straight away and won’t retry on our own.`,
+        refused:
+          'We flagged it blocked straight away and won’t retry on our own.',
+        stayListed: (next: string | null) =>
+          `Its shows stay listed but won’t update.${next ? ` The next one is ${next}.` : ''}`,
+        checkSource: 'Check source',
+        failingNote:
+          'Re-crawl tries the HTML, JSON-LD and Haiku steps again. If the page changed, Check source opens the venue’s Source tab to fix the address or the selector.',
+        blockedNote: 'Re-crawl once is a single, manual try.',
+      },
     },
     list: 'Decisions waiting',
     // The API sends an artist's match status as an enum; the queue says it in

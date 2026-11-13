@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  causeText,
   countAfterRemoval,
   eightAmMountain,
   evidenceText,
+  lastRunsOf,
+  leadFirst,
   metaTime,
+  mountainDay,
   mountainDayAhead,
+  mountainStamp,
   snoozeDayLabel,
+  statusPhrase,
+  whenChipOf,
 } from './needs-you-rules';
 
 describe('metaTime', () => {
@@ -60,6 +67,66 @@ describe('evidenceText', () => {
     );
     expect(evidenceText('Match status', 'unmatched')).toBe('unmatched');
     expect(evidenceText('Page', '/events/abc')).toBe('/events/abc');
+  });
+});
+
+describe('panel helpers', () => {
+  it('says an instant in Mountain Time', () => {
+    expect(mountainDay('2026-11-11T12:00:00Z')).toBe('Nov 11');
+    expect(mountainStamp('2026-11-09T10:00:00Z')).toBe('Nov 9, 3 AM');
+    expect(mountainStamp('2026-11-11T10:02:00Z')).toBe('Nov 11, 3:02 AM');
+    expect(mountainStamp('nope')).toBeNull();
+  });
+
+  it('builds the when chip', () => {
+    expect(whenChipOf('2026-11-13', '2026-11-12')).toEqual({
+      text: 'Tomorrow · Fri Nov 13',
+      soon: true,
+    });
+    expect(whenChipOf('2026-11-15', '2026-11-12')?.text).toBe(
+      'In 3 days · Sun Nov 15',
+    );
+    expect(whenChipOf('2026-12-30', '2026-11-12')?.text).toBe('Wed Dec 30');
+    expect(whenChipOf(null, '2026-11-12')).toBeNull();
+  });
+
+  it('names an HTTP status, or falls back', () => {
+    expect(statusPhrase('429')).toBe('429 Too Many Requests');
+    expect(statusPhrase('418')).toBe('HTTP 418');
+  });
+
+  it('puts the suggested answer first and keeps the rest in order', () => {
+    const base = { notifiesFans: false, undoable: false };
+    const ordered = leadFirst({
+      answers: [
+        { ...base, slug: 'a', label: 'A', suggested: false },
+        { ...base, slug: 'b', label: 'B', suggested: true },
+        { ...base, slug: 'c', label: 'C', suggested: false },
+      ],
+    }).map((item) => item.slug);
+    expect(ordered).toEqual(['b', 'a', 'c']);
+  });
+
+  it('keeps the four newest runs and the status words', () => {
+    const runs = ['01', '02', '03', '04', '05'].map((day) => ({
+      at: `2026-11-${day}T12:00:00Z`,
+      status: day === '05' ? 'success' : 'failed',
+      errorMessage: null,
+    }));
+    const listed = lastRunsOf({ lastRuns: runs });
+    expect(listed.map((run) => run.day)).toEqual([
+      'Nov 5',
+      'Nov 4',
+      'Nov 3',
+      'Nov 2',
+    ]);
+    expect(listed[0]?.status).toBe('OK');
+    expect(listed[1]?.status).toBe('Failed');
+  });
+
+  it('turns an error class into a sentence and passes an unknown one through', () => {
+    expect(causeText('timeout')).toBe('The site is not answering in time.');
+    expect(causeText('weird')).toBe('weird');
   });
 });
 

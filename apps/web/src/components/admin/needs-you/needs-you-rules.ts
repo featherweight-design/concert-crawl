@@ -284,3 +284,191 @@ export const countAfterRemoval = (
 /** The card's headline name for an answered line: the title up to " w/ ". */
 export const answeredName = (title: string): string =>
   title.split(' w/ ')[0] ?? title;
+
+// ---------------------------------------------------------------------------
+// The evidence panel's drawn layouts (02/show-dropped, show-moved, venue-*)
+// ---------------------------------------------------------------------------
+
+const PANEL = COPY.panel;
+
+const mountainParts = (iso: string) => {
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Denver',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hourCycle: 'h12',
+  }).formatToParts(instant);
+  const pick = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return {
+    month: pick('month'),
+    day: pick('day'),
+    hour: pick('hour'),
+    minute: pick('minute'),
+    period: pick('dayPeriod').toUpperCase(),
+  };
+};
+
+/** "Nov 11", an instant's Mountain Time day. Null when it does not parse. */
+export const mountainDay = (iso: string): string | null => {
+  const parts = mountainParts(iso);
+  return parts ? `${parts.month} ${parts.day}` : null;
+};
+
+/** "Nov 9, 3 AM" or "Nov 9, 3:02 AM", an instant in Mountain Time. */
+export const mountainStamp = (iso: string): string | null => {
+  const parts = mountainParts(iso);
+  if (!parts) return null;
+  const clock =
+    parts.minute === '00' ? parts.hour : `${parts.hour}:${parts.minute}`;
+  return `${parts.month} ${parts.day}, ${clock} ${parts.period}`;
+};
+
+/** The days from `today` to `fanDate`, or null when there is no date. */
+const daysUntil = (fanDate: string | null, today: string): number | null =>
+  fanDate ? Math.round(dayNumber(fanDate) - dayNumber(today)) : null;
+
+/** The chip under a show panel's title: "Tomorrow · Thu Nov 12". */
+export const whenChipOf = (
+  fanDate: string | null,
+  today: string,
+): { text: string; soon: boolean } | null => {
+  const when = whenOf(fanDate, today);
+  const days = daysUntil(fanDate, today);
+  if (!when || !fanDate || days === null) return null;
+  const date = metaDate(fanDate);
+  return days > 13
+    ? { text: date, soon: false }
+    : { text: `${when.word} · ${date}`, soon: when.soon };
+};
+
+/** "tomorrow", "in 3 days" or "Sat Nov 28": how the sentence says the date. */
+const whenWord = (fanDate: string, today: string): string => {
+  const days = daysUntil(fanDate, today) ?? 0;
+  if (days <= 0) return COPY.when.today.toLowerCase();
+  if (days === 1) return COPY.when.tomorrow.toLowerCase();
+  if (days <= 13) return COPY.when.inDays(days).toLowerCase();
+  return metaDate(fanDate);
+};
+
+/** WHO SEES IT on a dropped show. */
+export const whoSeesDropped = (
+  row: QueueRow,
+  today: string,
+  ranksFirst: boolean,
+): string => {
+  const watching = PANEL.showDropped.watchers(row.watchers);
+  // The chip above already says when; the sentence earns its place only for
+  // the show that ranks first.
+  if (!row.fanDate || !ranksFirst) return watching;
+  return `${watching} ${PANEL.showDropped.itsWhen(whenWord(row.fanDate, today))}`;
+};
+
+/** WHAT HAPPENED on a dropped show. */
+export const droppedWhat = (row: QueueRow): string => {
+  const seen = row.lastSeenAt
+    ? mountainDay(row.lastSeenAt)
+    : evidenceValue(row, 'Last seen');
+  return PANEL.showDropped.wasOn(answeredName(row.title), row.venueName, seen);
+};
+
+/** The date in a moved show's "Looks like" line ("<title> on 2026-11-14"). */
+export const lookalikeDate = (row: QueueRow): string | null => {
+  const value = row.evidence.find((line) => line.label === 'Looks like')?.value;
+  const date = value ? /\son (\d{4}-\d{2}-\d{2})$/.exec(value)?.[1] : undefined;
+  return date ? metaDate(date) : null;
+};
+
+/** The failed-crawl count on a failing venue, or null. */
+export const failuresOf = (row: QueueRow): number | null => {
+  const count = Number(
+    row.evidence.find((line) => line.label === 'Consecutive failures')?.value,
+  );
+  return Number.isInteger(count) && count > 0 ? count : null;
+};
+
+/** The HTTP status on a blocked venue ("429"), or null. */
+export const httpStatusOf = (row: QueueRow): string | null =>
+  row.evidence.find((line) => line.label === 'HTTP status')?.value ?? null;
+
+const STATUS_NAMES: Record<string, string> = {
+  '403': '403 Forbidden',
+  '429': '429 Too Many Requests',
+};
+
+/** "429 Too Many Requests", or "HTTP 418" for a status with no name here. */
+export const statusPhrase = (status: string): string =>
+  STATUS_NAMES[status] ?? `HTTP ${status}`;
+
+/** The panel's title, as the board draws it for each of the four kinds. */
+export const panelTitleOf = (row: QueueRow): string => {
+  switch (row.kind) {
+    case 'show-dropped':
+      return PANEL.showDropped.title(answeredName(row.title), row.venueName);
+    case 'show-moved':
+      return row.moveTo?.venueName
+        ? PANEL.showMoved.title(answeredName(row.title), row.moveTo.venueName)
+        : row.title;
+    case 'venue-failing':
+      return PANEL.venue.failingTitle(row.venueName, failuresOf(row));
+    case 'venue-blocked':
+      return PANEL.venue.blockedTitle(row.venueName);
+    default:
+      return row.title;
+  }
+};
+
+/** LIKELY CAUSE: a sentence for the error class, or what the API sent. */
+export const causeText = (cause: string): string => {
+  const known = Object.entries(PANEL.venue.cause).find(
+    ([key]) => key === cause,
+  );
+  return known ? known[1] : cause;
+};
+
+/** The word a run's status wears. */
+export const runStatusWord = (status: string): string => {
+  switch (status) {
+    case 'failed':
+      return PANEL.runStatus.failed;
+    case 'success':
+      return PANEL.runStatus.ok;
+    case 'partial':
+      return PANEL.runStatus.partial;
+    case 'skipped':
+      return PANEL.runStatus.skipped;
+    default:
+      return status;
+  }
+};
+
+/** The last four runs, newest first, each with its Mountain Time day. */
+export const lastRunsOf = (
+  row: Pick<QueueRow, 'lastRuns'>,
+): { day: string; status: string; ok: boolean; detail: string | null }[] =>
+  [...row.lastRuns]
+    .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
+    .slice(0, 4)
+    .flatMap((run) => {
+      const day = mountainDay(run.at);
+      return day
+        ? [
+            {
+              day,
+              status: runStatusWord(run.status),
+              ok: run.status === 'success',
+              detail: run.errorMessage,
+            },
+          ]
+        : [];
+    });
+
+/** The suggested answer first, the others in the API's order. */
+export const leadFirst = (row: Pick<QueueRow, 'answers'>) =>
+  [...row.answers].sort(
+    (left, right) => Number(right.suggested) - Number(left.suggested),
+  );
