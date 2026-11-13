@@ -59,6 +59,12 @@ export { sweepExpiredPageBodies } from './lib/page-body-sweep.js';
 export type { PageBodySweepResult } from './lib/page-body-sweep.js';
 export { rederiveEventArtists } from './rederive-event-artists.js';
 export { makeJoinedEvidence } from './joined-name-evidence.js';
+export { mergeDuplicateNights } from './merge-duplicate-nights.js';
+export type {
+  ArtistReview,
+  MergeDuplicateNightsResult,
+  NightGroupPlan,
+} from './merge-duplicate-nights.js';
 export { makeMusicBrainzLookup } from './lib/musicbrainz.js';
 export type {
   UnresolvedJoined,
