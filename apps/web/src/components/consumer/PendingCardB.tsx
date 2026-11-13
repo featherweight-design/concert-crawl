@@ -2,6 +2,7 @@
 
 import { SP_POLICY } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { formatHandle } from '@/components/consumer/lib/format-handle';
 import { CCTip, type TipContent } from '@/components/ui/cc-tip';
 import {
   Eyebrow,
@@ -465,10 +466,12 @@ export const PendingCardB = ({
                 className="ph-no-capture"
                 style={{ color: 'inherit', textDecoration: 'none' }}
               >
-                {submitter.handle}
+                {formatHandle(submitter.handle)}
               </a>
             ) : (
-              <span className="ph-no-capture">{submitter.handle}</span>
+              <span className="ph-no-capture">
+                {formatHandle(submitter.handle)}
+              </span>
             )
           ) : (
             copy.anonymousFan
