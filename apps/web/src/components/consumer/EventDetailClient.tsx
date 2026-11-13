@@ -1246,11 +1246,15 @@ export function EventDetailPriceBlock({
         // Pending-only tier → render the cheapest pending row with the
         // per-tier pending tell (`pending · N/needed`).
         const firstPending = block.pending[0];
-        const pendingKind: 'boxoffice' | 'community' | null = firstPending
-          ? firstPending.vendor === 'VenueBoxOffice'
-            ? 'boxoffice'
-            : 'community'
-          : null;
+        // From sourceCategory (vendor only as the legacy fallback): a vendor
+        // check alone sent a pending resale price through as community.
+        const pendingKind: 'boxoffice' | 'community' | 'resale' | null =
+          firstPending
+            ? resolvePendingKind(
+                firstPending.vendor,
+                firstPending.sourceCategory,
+              )
+            : null;
         return {
           tier: block.tier,
           vendor: firstPending?.vendor ?? 'Community',
