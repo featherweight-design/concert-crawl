@@ -1,3 +1,27 @@
+# [1.415.0](https://github.com/featherweight-design/concert-crawl/compare/v1.414.1...v1.415.0) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** distinct disabled delete label ([e5b10a3](https://github.com/featherweight-design/concert-crawl/commit/e5b10a3d2814867e4140e77a42a4aa34d0257f3e))
+* **web:** drop a decided price check at once, track busy per card, hide a dead ticket link ([6e71300](https://github.com/featherweight-design/concert-crawl/commit/6e7130069ba01726ef45e7e30910abe72fd45d1d))
+* **web:** drop price submissions from the review page subtitle ([e169ff0](https://github.com/featherweight-design/concert-crawl/commit/e169ff0285fe01b8c19765bc19dab0a05e3abab1))
+* **web:** ellipsize long handles on the price check sides, tint the Use answer ([62bb114](https://github.com/featherweight-design/concert-crawl/commit/62bb1143319b923296f2076aca248742c309b3d7))
+* **web:** keep the nav mapping for stored review price links, add the sheet inventory ([3408c50](https://github.com/featherweight-design/concert-crawl/commit/3408c509cc0f9f1297d87513fc0db1eeaa8b8761))
+* **web:** one price form with a plus for no top, keep the check meta on one line ([d2d9d23](https://github.com/featherweight-design/concert-crawl/commit/d2d9d23dfa4d045082a78458f139e31884f43b79))
+* **web:** review fixes for the price checks tab, add its sheet inventory ([82f0a35](https://github.com/featherweight-design/concert-crawl/commit/82f0a357007cfaf369cc3b28242b4bd5aaff343d))
+* **web:** xcheck copy rows 34 to 37 ([d526b1a](https://github.com/featherweight-design/concert-crawl/commit/d526b1a0e82aff7894a84753899711c0a886f29c))
+
+
+### Features
+
+* **web:** needs you venue and dropped-show panels draw the evidence the API now sends ([66b1aa4](https://github.com/featherweight-design/concert-crawl/commit/66b1aa4499b6a16be69beab4af2a67377c88d845))
+* **web:** price checks tab components, open and resolved ([9ecbb09](https://github.com/featherweight-design/concert-crawl/commit/9ecbb090495342b92474c9860d6d8df3534d6113))
+* **web:** retire the review price tabs into admin prices ([c42c891](https://github.com/featherweight-design/concert-crawl/commit/c42c8917567a125a38b6d2e5b28e1cb1a419f11b))
+* **web:** the blocked panel draws Before this, answer labels stay on one line ([4a952cf](https://github.com/featherweight-design/concert-crawl/commit/4a952cfd8cb94d4814e4725b06d65dcab369ef9a))
+* **web:** ticket page button and watching count on the open price checks ([67a7810](https://github.com/featherweight-design/concert-crawl/commit/67a781025563774cee59b09e263a119c45c35a64))
+* **web:** wire the price checks tab into the prices page ([7c3d353](https://github.com/featherweight-design/concert-crawl/commit/7c3d353fad18a678f76a474771426deb6c047f89))
+
 ## [1.414.1](https://github.com/featherweight-design/concert-crawl/compare/v1.414.0...v1.414.1) (2026-11-13)
 
 
