@@ -142,7 +142,9 @@ export const QueueItem = ({
             data-slug={answer.slug}
             onClick={() => onAnswer(answer)}
             style={
-              answer.suggested
+              // The board tints the lead answer cyan: the one the API
+              // suggests, else the first drawn.
+              answer === answers[0]
                 ? {
                     color: 'var(--signal)',
                     background:
