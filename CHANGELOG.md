@@ -1,3 +1,11 @@
+## [1.419.1](https://github.com/featherweight-design/concert-crawl/compare/v1.419.0...v1.419.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **web:** a missing batch count reads New prices, not New new prices ([9faca2e](https://github.com/featherweight-design/concert-crawl/commit/9faca2ebec03b9c779cb5cb2a88b27f00e1a58b0))
+* **web:** price batch card says new price(s), not submissions ([04d1123](https://github.com/featherweight-design/concert-crawl/commit/04d1123e496430751c62b78a93a5d96b9f335c08))
+
 # [1.419.0](https://github.com/featherweight-design/concert-crawl/compare/v1.418.0...v1.419.0) (2026-11-13)
 
 
