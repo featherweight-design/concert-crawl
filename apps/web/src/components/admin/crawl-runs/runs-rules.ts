@@ -14,15 +14,17 @@ const COPY = ADMIN_COPY.venueRuns;
 const DETAIL = ADMIN_COPY.runDetail;
 
 /**
- * Whether Inspect page and Compare show. Inspect is 3b part 5 (PR 5): until
- * its route lands the buttons would 404, so they stay hidden. Flip this in
- * that PR.
+ * The Inspect route (3b part 5) for one run, on one of its pages when
+ * `pageId` is given. Without it, the route opens its default page.
  */
-export const INSPECT_READY = false;
-
-/** The Inspect route (3b part 5) for one run. */
-export const inspectHref = (venueId: string, runId: string): string =>
-  `/admin/venues/${encodeURIComponent(venueId)}/inspect/${encodeURIComponent(runId)}`;
+export const inspectHref = (
+  venueId: string,
+  runId: string,
+  pageId?: string | null,
+): string => {
+  const base = `/admin/venues/${encodeURIComponent(venueId)}/inspect/${encodeURIComponent(runId)}`;
+  return pageId ? `${base}?page=${encodeURIComponent(pageId)}` : base;
+};
 
 // ── Load more ────────────────────────────────────────────────
 
@@ -216,6 +218,14 @@ export const isFailedPage = (page: Pick<RunPage, 'httpStatus'>): boolean =>
 export const firstFailedPage = (
   pages: readonly Pick<RunPage, 'httpStatus'>[],
 ): number => pages.findIndex(isFailedPage);
+
+/**
+ * The page Inspect opens on (row 30): the first that failed, else the first.
+ * Null for a run with no pages.
+ */
+export const defaultInspectPage = <T extends Pick<RunPage, 'httpStatus'>>(
+  pages: readonly T[],
+): T | null => pages[Math.max(firstFailedPage(pages), 0)] ?? null;
 
 /**
  * "200 · 1.9 MB", or "— · 1.9 MB" without a status. No per-page time is

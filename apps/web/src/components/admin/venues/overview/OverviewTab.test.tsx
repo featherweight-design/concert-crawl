@@ -50,7 +50,6 @@ import { OverviewTab } from './OverviewTab';
 import type { OverviewData } from './overview-data';
 import type { Recrawl } from '../useRecrawl';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { EVENTS_BY_VENUE_READY } from './overview-rules';
 
 const COPY = ADMIN_COPY.venueOverview;
 const RUN = ADMIN_COPY.venuesList.latestRun;
@@ -363,18 +362,6 @@ describe('OverviewTab — Shows', () => {
     expect(
       shows.getByText(COPY.shows.hidden).parentElement?.textContent,
     ).toContain('4');
-  });
-
-  it('offers no Open in Events until Events reads ?venue=', () => {
-    render(
-      <OverviewTab venue={buildVenue()} data={DATA} recrawl={recrawl()} />,
-    );
-    expect(EVENTS_BY_VENUE_READY).toBe(false);
-    const shows = within(card(COPY.shows.title));
-    expect(
-      shows.queryByRole('link', { name: COPY.shows.openInEvents }),
-    ).toBeNull();
-    expect(shows.queryByText(COPY.shows.openInEvents)).toBeNull();
   });
 
   it('reads None yet without a full run', () => {

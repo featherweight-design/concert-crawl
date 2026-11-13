@@ -198,13 +198,6 @@ export const NEEDS_YOU_KIND_LABEL: Record<NeedsYouKind, Kind> = {
 };
 
 /**
- * Whether Shows offers Open in Events. Flips when the 4b Events page reads
- * `?venue=`: until then `/admin/events` redirects and drops the venue, so the
- * link would lie.
- */
-export const EVENTS_BY_VENUE_READY = false;
-
-/**
  * "Off since Nov 3, by @hugh · “It’s normal for this venue”"
  * (`A3/01/warnings-off-overview-d`). A former admin has no handle to tag.
  */

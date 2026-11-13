@@ -21,7 +21,7 @@ import {
 import { RunChip } from './RunChip';
 import { parseRunPages, type RunPage, type RunRow } from './run-data';
 import {
-  INSPECT_READY,
+  defaultInspectPage,
   firstFailedPage,
   inspectHref,
   isFailedPage,
@@ -122,8 +122,13 @@ const PageUrl = ({
   );
 };
 
-const Pages = ({ runId }: { runId: string }) => {
-  const { state, retry } = useRunPages(runId);
+const Pages = ({
+  state,
+  retry,
+}: {
+  state: PagesState | null;
+  retry: () => void;
+}) => {
   if (state === null) {
     return (
       <div
@@ -218,23 +223,25 @@ const actionLink = (primary: boolean, phone: boolean): CSSProperties => ({
 });
 
 /**
- * Inspect page and Compare with {date}. Hidden until Inspect lands (3b part 5,
- * `INSPECT_READY`): the route would 404 before then. Compare's target is the
- * run's last full run, from the list's one `lastFullRuns` map.
+ * Inspect page and Compare with {date}. Inspect opens on the first failed
+ * page, else the first, once the pages are in; before then (or with none) the
+ * route picks the same default itself. Compare's target is the run's last
+ * full run, from the list's one `lastFullRuns` map, and shows only with one.
  */
 const Actions = ({
   venueId,
   run,
+  pages,
   compare,
   phone,
 }: {
   venueId: string;
   run: RunRow;
+  pages: readonly RunPage[];
   compare: LastFullRun | null;
   phone: boolean;
 }) => {
-  // PR 5 (Inspect) flips INSPECT_READY.
-  if (!INSPECT_READY) return null;
+  const target = defaultInspectPage(pages);
   return (
     <div
       style={{
@@ -244,7 +251,10 @@ const Actions = ({
         gap: 8,
       }}
     >
-      <Link href={inspectHref(venueId, run.id)} style={actionLink(true, phone)}>
+      <Link
+        href={inspectHref(venueId, run.id, target?.id)}
+        style={actionLink(true, phone)}
+      >
         {!phone && <ExternalLink size={14} aria-hidden />}
         {COPY.inspect}
       </Link>
@@ -284,6 +294,7 @@ export const RunDetailPanel = ({
   phone: boolean;
   onClose: () => void;
 }) => {
+  const { state: pagesState, retry } = useRunPages(run.id);
   const summary = runSummary(run, lastFullRun);
   const meta = COPY.meta([
     runWhen(run.createdAt),
@@ -304,11 +315,12 @@ export const RunDetailPanel = ({
         <div style={{ marginBottom: 8 }}>
           <MonoLabel>{COPY.pages}</MonoLabel>
         </div>
-        <Pages runId={run.id} />
+        <Pages state={pagesState} retry={retry} />
       </div>
       <Actions
         venueId={venueId}
         run={run}
+        pages={pagesState?.kind === 'loaded' ? pagesState.pages : []}
         compare={lastFullRun}
         phone={phone}
       />

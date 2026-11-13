@@ -32,7 +32,7 @@ vi.mock('next/link', () => ({
 
 import { RunDetailPanel } from './RunDetailPanel';
 import type { RunPage, RunRow } from './run-data';
-import { INSPECT_READY, type LastFullRun } from './runs-rules';
+import type { LastFullRun } from './runs-rules';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const DETAIL = ADMIN_COPY.runDetail;
@@ -286,15 +286,51 @@ describe('RunDetailPanel', () => {
     expect(after[0]!.textContent).toContain('example.com/new');
   });
 
-  it('hides Inspect page and Compare until Inspect lands', async () => {
-    expect(INSPECT_READY).toBe(false);
-    mockGet.mockResolvedValue([page()]);
+  it('Inspect page opens on the first failed page, and Compare on the last full run', async () => {
+    mockGet.mockResolvedValue([
+      page(),
+      page({ id: 'page-2', httpStatus: 503 }),
+    ]);
     renderPanel();
     await screen.findAllByTestId('run-page');
-    expect(screen.queryByRole('link', { name: DETAIL.inspect })).toBeNull();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('link', { name: DETAIL.inspect }).getAttribute('href'),
+      ).toBe('/admin/venues/venue-1/inspect/run-9?page=page-2'),
+    );
     expect(
-      screen.queryByRole('link', { name: DETAIL.compare('Nov 7') }),
-    ).toBeNull();
+      screen
+        .getByRole('link', { name: DETAIL.compare('Nov 7') })
+        .getAttribute('href'),
+    ).toBe('/admin/venues/venue-1/inspect/run-7');
+  });
+
+  it('Inspect page opens on the first page when none failed', async () => {
+    mockGet.mockResolvedValue([page(), page({ id: 'page-2' })]);
+    renderPanel();
+    await screen.findAllByTestId('run-page');
+    expect(
+      screen.getByRole('link', { name: DETAIL.inspect }).getAttribute('href'),
+    ).toBe('/admin/venues/venue-1/inspect/run-9?page=page-1');
+  });
+
+  it('leaves Compare off without an earlier full run', async () => {
+    mockGet.mockResolvedValue([]);
+    render(
+      <RunDetailPanel
+        venueId="venue-1"
+        run={row()}
+        lastFullRun={null}
+        phone={false}
+        onClose={vi.fn()}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());
+    // With no pages the route picks its own default.
+    expect(
+      screen.getByRole('link', { name: DETAIL.inspect }).getAttribute('href'),
+    ).toBe('/admin/venues/venue-1/inspect/run-9');
+    expect(screen.queryByRole('link', { name: /^Compare/ })).toBeNull();
   });
 
   it('closes from its ✕', async () => {
