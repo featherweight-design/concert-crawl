@@ -8,9 +8,9 @@ import {
   resolveCrawlDelayMs,
 } from './robots.js';
 
-// The most redirect hops we follow, matching fetch's own limit. Exported so
-// the admin probe can budget a hop's pacing wait for each one.
-export const MAX_REDIRECTS = 20;
+// The most redirect hops we follow by default, matching fetch's own limit.
+// A caller with a tight budget (the admin probe) passes a lower `maxRedirects`.
+const MAX_REDIRECTS = 20;
 
 // Rejects with the signal's reason if it aborts first, so a caller's budget
 // bounds the pacing wait as well as the requests around it.
@@ -128,6 +128,8 @@ export async function fetchFollowingRobots(
     crawlDelayMs: number;
     timeoutMs?: number;
     signal?: AbortSignal;
+    /** The most hops to follow; defaults to MAX_REDIRECTS. */
+    maxRedirects?: number;
     /** Runs before each hop is cleared; throw to refuse the redirect. */
     onRedirect?: (from: string, to: string) => void;
   },
@@ -153,7 +155,7 @@ export async function fetchFollowingRobots(
     // We never read a redirect's body; release its connection now rather
     // than hold it through the robots check and the wait below.
     await response.body?.cancel().catch(() => undefined);
-    if (hop >= MAX_REDIRECTS) {
+    if (hop >= (options.maxRedirects ?? MAX_REDIRECTS)) {
       throw new Error(`Too many redirects starting at ${url}`);
     }
     const next = new URL(location, currentUrl).toString();

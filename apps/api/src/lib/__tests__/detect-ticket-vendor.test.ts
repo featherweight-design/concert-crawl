@@ -49,6 +49,45 @@ describe('detectTicketVendor', () => {
     expect(jitter).toHaveBeenCalledWith(3000);
   });
 
+  it("paces at the venue's stored delay, as the crawl does", async () => {
+    mockFetch('<p>nothing</p>');
+    await detectTicketVendor('https://venue.example', 10_000);
+    // The venue's 10 s, not a bare 3 s floor, is what robots.txt's
+    // Crawl-delay (none here) is weighed against.
+    expect(resolveCrawlDelayMs).toHaveBeenCalledWith(
+      10_000,
+      null,
+      expect.anything(),
+    );
+  });
+
+  it('paces each redirect hop at the resolved delay, not the 3 s floor', async () => {
+    // The page wait resolves to 10 s; a hop must clear at least that long.
+    vi.mocked(resolveCrawlDelayMs).mockReturnValueOnce(10_000);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: 'https://venue.example/home' }),
+        body: null,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        arrayBuffer: async () => new TextEncoder().encode('<p>x</p>').buffer,
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    await detectTicketVendor('https://venue.example', 3_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // robots.txt → page, then page → hop: each wait goes through jitter.
+    expect(jitter).toHaveBeenCalledTimes(2);
+    expect(jitter).toHaveBeenNthCalledWith(1, 10_000);
+    // The hop's floor handed to clearRedirect is the resolved 10 s.
+    expect(vi.mocked(resolveCrawlDelayMs).mock.calls[1]?.[0]).toBe(10_000);
+  });
+
   it('does not fetch a site whose Crawl-delay exceeds the cap', async () => {
     vi.mocked(resolveCrawlDelayMs).mockReturnValueOnce(null);
     const fetchMock = vi.fn();

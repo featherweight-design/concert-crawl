@@ -613,7 +613,10 @@ venuesAdminRouter.post(
     if (!body.ticketVendor) {
       runBackgroundTask(async () => {
         try {
-          const detectedVendor = await detectTicketVendor(body.websiteUrl);
+          const detectedVendor = await detectTicketVendor(
+            body.websiteUrl,
+            venue.crawlDelayMs,
+          );
           await db
             .update(venues)
             .set({ ticketVendor: detectedVendor })
@@ -1024,11 +1027,12 @@ venuesAdminRouter.patch(
 // the probe (#1184).
 const PROBE_TIMEOUT_MS = 15_000;
 
-// The most redirect hops one probe request may follow. It must equal
-// crawler-core's MAX_REDIRECTS, the cap `fetchFollowingRobots` enforces; it
-// is restated here because the API reads crawler-core's built output, and
-// venues-platform.integration.test.ts pins the two together.
-const MAX_PROBE_REDIRECT_HOPS = 20;
+// The most redirect hops one probe request may follow, handed to the adapter
+// as `maxRedirects`; a 4th redirect fails the probe as a fetch_error. The
+// crawl keeps fetch's own 20. Every hop costs a full pacing wait, so at 20 a
+// detail-page probe's ceiling would be about 267 s, far past any web or
+// server-action timeout. Three is enough for http→https→www→path.
+const MAX_PROBE_REDIRECT_HOPS = 3;
 
 // Paced requests each adapter makes with `firstPageOnly`. Live Nation reads
 // the sitemap and one month; detail-page reads the sitemap, the listing and
@@ -1060,6 +1064,11 @@ const PROBE_FOLLOWS_REDIRECTS: ReadonlySet<PlatformSource> = new Set([
  * follows waits again before the hop is requested; those hop waits run inside
  * the request's budget too, so every hop the cap allows is paid for.
  * PROBE_TIMEOUT_MS on top is the requests' own network time.
+ *
+ * Worst case at the 3 s floor (wait = 4 s), every request redirecting the
+ * full MAX_PROBE_REDIRECT_HOPS (3) times: AEG and VenuePilot 19 s, Live
+ * Nation 2 × 4 × 4 + 15 = 47 s, detail-page 3 × 4 × 4 + 15 = 63 s. A longer
+ * Crawl-delay scales the waits with it.
  */
 function probeBudgetMs(source: PlatformSource, crawlDelayMs: number): number {
   const waitMs = Math.max(crawlDelayMs, MIN_CRAWL_DELAY_MS) + 1_000;
@@ -1166,6 +1175,8 @@ venuesAdminRouter.post(
           // asks for a longer Crawl-delay widens it rather than breaching.
           budgetFollowsCrawlDelay: true,
           firstPageOnly: true,
+          // The same cap the budget above was sized from.
+          maxRedirects: MAX_PROBE_REDIRECT_HOPS,
         });
         return {
           ok: true,
