@@ -4,9 +4,8 @@
 //
 // Two things this file exists to nail down, because both have failed silently
 // before: (1) the pip must NEVER appear for an anonymous visitor on EITHER
-// trigger, and (2) mobile and desktop are the same feature — every panel state
-// is asserted in the popover AND in the sheet, so parity is a test rather than
-// a claim in a PR description.
+// trigger, and (2) the panel states hold in the desktop popover. On the phone
+// the panel is a page (NotificationsPage.test.tsx), not a mode of the sheet.
 
 import React from 'react';
 import '@testing-library/jest-dom';
@@ -176,6 +175,7 @@ beforeEach(() => {
   markPanelSeen.mockReset();
   markPanelSeen.mockResolvedValue(new Date().toISOString());
   localStorage.clear();
+  sessionStorage.clear();
   setViewport(false);
 });
 
@@ -643,33 +643,57 @@ describe('#737 notifications mode — one shell, one escape', () => {
     expect(screen.queryByText(CONSUMER_COPY.userMenu.sections.app)).toBeNull();
   });
 
-  it('renames the dialog when the body swaps, on both shells', async () => {
+  it('renames the dialog when the body swaps', async () => {
     // The swap replaces the ENTIRE surface. A dialog that keeps announcing
     // "Account" tells a screen-reader user nothing happened at the one moment
     // the accessible name is load-bearing.
-    for (const isMobile of [false, true]) {
-      cleanup();
-      setViewport(isMobile);
-      signIn();
-      await renderChrome(<UserMenu />);
-      await click(desktopTrigger());
+    setViewport(false);
+    signIn();
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
 
-      // Assert WHICH shell rendered, or a viewport regression that served the
-      // popover on mobile would still satisfy "on both shells". Only the sheet
-      // is modal — it is the one with a scrim and a focus trap.
-      const dialog = screen.getByRole('dialog');
-      expect(dialog.getAttribute('aria-modal')).toBe(isMobile ? 'true' : null);
-      expect(dialog).toHaveAccessibleName(
-        CONSUMER_COPY.userMenu.ariaLabels.menuTitle,
-      );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBeNull();
+    expect(dialog).toHaveAccessibleName(
+      CONSUMER_COPY.userMenu.ariaLabels.menuTitle,
+    );
 
-      await click(
-        screen.getByRole('button', { name: NOTIFICATIONS_COPY.seeAll(1) }),
-      );
-      expect(screen.getByRole('dialog')).toHaveAccessibleName(
-        NOTIFICATIONS_COPY.panelTitle,
-      );
-    }
+    await click(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.seeAll(1) }),
+    );
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(
+      NOTIFICATIONS_COPY.panelTitle,
+    );
+  });
+
+  it('on the phone, the Notifications row opens the page and closes the sheet', async () => {
+    setViewport(true);
+    signIn();
+    await renderChrome(<UserMenu />);
+    await click(desktopTrigger());
+    await click(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.seeAll(1) }),
+    );
+
+    expect(routerPush).toHaveBeenCalledWith('/me/notifications');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(sessionStorage.getItem('cc_notifs_from_menu')).toBe('1');
+  });
+
+  it("reopens the menu where the page's ‹ Menu lands, once", async () => {
+    sessionStorage.setItem('cc_reopen_account_menu', '1');
+    signIn();
+    await renderChrome(<UserMenu />);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(sessionStorage.getItem('cc_reopen_account_menu')).toBeNull();
+  });
+
+  it('does not reopen the menu for a signed-out visitor, and clears nothing', async () => {
+    sessionStorage.setItem('cc_reopen_account_menu', '1');
+    await renderChrome(<UserMenu />);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('marks the panel seen exactly once per entry', async () => {
@@ -766,14 +790,11 @@ describe('#737 notifications mode — one shell, one escape', () => {
   });
 });
 
-// Parity is the requirement, so the same table runs against both shells. The
-// only difference between them is which one `matchMedia` selects.
-describe.each([
-  ['desktop popover', false],
-  ['mobile sheet', true],
-])('#737 panel parity — %s', (_label, isMobile) => {
+// Every panel state, in the desktop popover. (The phone's page runs the same
+// NotifMenuPanel; its own behaviour is in NotificationsPage.test.tsx.)
+describe('#737 panel states — desktop popover', () => {
   beforeEach(() => {
-    setViewport(isMobile);
+    setViewport(false);
   });
 
   async function openPanel(): Promise<void> {
@@ -880,9 +901,9 @@ describe.each([
   });
 });
 
-// The two shells deliberately DISAGREE here, so this cannot live in the parity
-// table above. Both findings came from the mid-run cold-eyes review of #737.
-describe('#737 panel — the sheet is not the popover', () => {
+// On the phone the panel is a page, not a sheet mode, so the popover is the
+// only shell that renders it.
+describe('#737 panel — the popover', () => {
   async function openPanel(): Promise<void> {
     signIn();
     await renderChrome(<UserMenu />);
@@ -895,20 +916,7 @@ describe('#737 panel — the sheet is not the popover', () => {
     );
   }
 
-  it('gives the sheet a fixed height so the backfill has room to scroll', async () => {
-    setViewport(true);
-    await openPanel();
-
-    // Growing to content is right for the menu body and wrong here: a six-row
-    // account gets a card ending mid-screen with the page showing beneath it,
-    // and a fifty-row account gets a sheet running off the top with nothing to
-    // scroll. The handoff specs 88%.
-    const sheet = screen.getByRole('dialog');
-    expect(sheet.style.height).toBe('88svh');
-    expect(sheet.style.flexDirection).toBe('column');
-  });
-
-  it('leaves the popover growing to content — Escape is its way out', async () => {
+  it('grows to content — Escape is its way out', async () => {
     setViewport(false);
     await openPanel();
 
@@ -916,21 +924,7 @@ describe('#737 panel — the sheet is not the popover', () => {
     expect(popover.style.height).toBe('');
   });
 
-  it('offers a close button on the sheet, where there is no Escape key', async () => {
-    setViewport(true);
-    await openPanel();
-
-    // `‹ Menu` alone costs two gestures to leave a touch sheet — back, then
-    // dismiss. NotifBody has supported showClose/onClose all along; nothing
-    // wired it.
-    const close = screen.getByRole('button', {
-      name: NOTIFICATIONS_COPY.closeLabel,
-    });
-    await click(close);
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('omits the close button on the popover, which answers Escape', async () => {
+  it('omits the close button, which Escape makes redundant', async () => {
     setViewport(false);
     await openPanel();
 
