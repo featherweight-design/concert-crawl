@@ -2357,6 +2357,14 @@ export const ADMIN_COPY = {
         : status === 'ambiguous'
           ? 'More than one artist fits'
           : status,
+    // `02/answered-with-undo`: the dashed line that takes the answered card's place.
+    answered: (name: string, label: string) => `${name} marked ${label}.`,
+    snoozedLine: (name: string) => `${name} snoozed.`,
+    undo: {
+      action: 'Undo',
+      failed: "Couldn't undo that.",
+      failedSaved: 'The answer stands.',
+    },
     answerFailed: {
       title: "Couldn't save that answer",
       saved: 'The item is still waiting.',
@@ -2365,6 +2373,25 @@ export const ADMIN_COPY = {
     confirmNotify: {
       title: (label: string) => `${label}?`,
       body: 'Fans watching this show are told right away. This can’t be undone.',
+    },
+    // `02/snooze-menu`.
+    snooze: {
+      trigger: 'Snooze',
+      menuLabel: 'Snooze this decision',
+      oneDay: 'Snooze 1 day',
+      oneDaySub: 'Back tomorrow at 8 AM.',
+      aWeek: 'Snooze a week',
+      backOn: (day: string) => `Back ${day}.`,
+      untilDate: 'Until a date...',
+      untilDateSub: 'For off-season venues and slow replies.',
+      dateLabel: 'Back on',
+      setDate: 'Snooze',
+      notUseful: 'Not useful',
+      notUsefulSub: 'Stops this kind of warning for this venue. Tell us why.',
+      reasonLabel: 'Why is it not useful?',
+      reasonPlaceholder: 'Optional',
+      stopWarning: 'Stop this warning',
+      failed: "Couldn't snooze that",
     },
   },
   peoplePage: {
