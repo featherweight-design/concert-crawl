@@ -1,3 +1,14 @@
+## [1.419.2](https://github.com/featherweight-design/concert-crawl/compare/v1.419.1...v1.419.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **crawler:** floor every crawl wait at 3 s in one place ([c79a846](https://github.com/featherweight-design/concert-crawl/commit/c79a846a874a791ea3295f00f1bef806498ef0cf))
+* **crawler:** never crawl a venue faster than the 3 second floor ([adb0e4e](https://github.com/featherweight-design/concert-crawl/commit/adb0e4eebd8d7b32dbb96495a5fd3952234caad3))
+* **crawler:** pace the platform probe and stop it after the first page ([f665e79](https://github.com/featherweight-design/concert-crawl/commit/f665e79ba4874de3132cd7efa045c5e44d13ef24))
+* **crawler:** probe paces like the crawl, floor in the wait itself ([63a9eb4](https://github.com/featherweight-design/concert-crawl/commit/63a9eb4c1f36a0069dd32073f40305e05200cd49))
+* **scripts:** import the crawl floor source-relatively ([c88d939](https://github.com/featherweight-design/concert-crawl/commit/c88d939e5954cf7367039913a8530d36a199b7cf))
+
 ## [1.419.1](https://github.com/featherweight-design/concert-crawl/compare/v1.419.0...v1.419.1) (2026-11-13)
 
 
