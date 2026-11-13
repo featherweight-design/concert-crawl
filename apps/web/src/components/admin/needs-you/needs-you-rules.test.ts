@@ -5,8 +5,10 @@ import {
   eightAmMountain,
   evidenceText,
   lastRunsOf,
+  latestRunWhen,
   leadFirst,
   metaTime,
+  robotsText,
   mountainDay,
   mountainDayAhead,
   mountainStamp,
@@ -112,6 +114,7 @@ describe('panel helpers', () => {
       at: `2026-11-${day}T12:00:00Z`,
       status: day === '05' ? 'success' : 'failed',
       errorMessage: null,
+      eventsFound: day === '05' ? 14 : 0,
     }));
     const listed = lastRunsOf({ lastRuns: runs });
     expect(listed.map((run) => run.day)).toEqual([
@@ -122,6 +125,38 @@ describe('panel helpers', () => {
     ]);
     expect(listed[0]?.status).toBe('OK');
     expect(listed[1]?.status).toBe('Failed');
+    // An OK run says how many shows it found; a failed one has no detail.
+    expect(listed[0]?.detail).toBe('14 shows');
+    expect(listed[1]?.detail).toBeNull();
+  });
+
+  it('says when the newest run happened, in Mountain Time', () => {
+    expect(
+      latestRunWhen({
+        lastRuns: [
+          {
+            at: '2026-11-10T12:00:00Z',
+            status: 'failed',
+            errorMessage: null,
+            eventsFound: null,
+          },
+          {
+            at: '2026-11-11T10:02:00Z',
+            status: 'failed',
+            errorMessage: null,
+            eventsFound: null,
+          },
+        ],
+      }),
+    ).toBe('Nov 11 at 3:02 AM');
+    expect(latestRunWhen({ lastRuns: [] })).toBeNull();
+  });
+
+  it('puts the recorded robots result in words, nothing for unchecked', () => {
+    expect(robotsText('no')).toBe('Allows the crawler');
+    expect(robotsText('yes')).toBe('Blocks the crawler');
+    expect(robotsText('unchecked')).toBeNull();
+    expect(robotsText(null)).toBeNull();
   });
 
   it('turns an error class into a sentence and passes an unknown one through', () => {

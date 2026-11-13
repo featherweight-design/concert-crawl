@@ -44,7 +44,12 @@ export const ShowDroppedPanel = ({
         )}
       </ChipRow>
       <Section label={PANEL.whatHappened}>
-        <Prose>{droppedWhat(row)}</Prose>
+        <Prose>
+          {droppedWhat(row)}
+          {row.otherShowsCrawledFine
+            ? ` ${PANEL.showDropped.otherFine(row.otherShowsCrawledFine, row.venueName)}`
+            : ''}
+        </Prose>
       </Section>
       {seen && (
         <Section label={PANEL.checkedForYou}>
