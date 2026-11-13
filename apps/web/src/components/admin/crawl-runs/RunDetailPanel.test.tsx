@@ -25,8 +25,19 @@ vi.mock('@clerk/nextjs', () => ({
 
 // The mock drops data-testid, so links are found by role and name.
 vi.mock('next/link', () => ({
-  default: ({ href, children }: { href: string; children: ReactNode }) => (
-    <a href={href}>{children}</a>
+  // Passes aria-label through: the per-page Inspect link is named by it.
+  default: ({
+    href,
+    children,
+    'aria-label': ariaLabel,
+  }: {
+    href: string;
+    children: ReactNode;
+    'aria-label'?: string;
+  }) => (
+    <a href={href} aria-label={ariaLabel}>
+      {children}
+    </a>
   ),
 }));
 
