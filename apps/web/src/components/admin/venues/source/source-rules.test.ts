@@ -5,15 +5,18 @@ import {
   PAGE_LOADINGS,
   READERS,
   READ_MODES,
+  SOURCE_COLUMNS,
   changedColumns,
   columnsOf,
   crawlModeOf,
+  dirtyColumns,
   draftOf,
   isStoredManual,
   paceLine,
   pageLoadingOf,
   pristineColumns,
   readModeOf,
+  readerOf,
   robotsStateOf,
   sourceFieldOf,
   sourceFormData,
@@ -143,7 +146,7 @@ describe('source mapping: columns to the radio', () => {
 
   it.each(CONFIGS)('$name writes itself back unchanged', ({ columns }) => {
     expect(columnsOf(draftOf(columns), columns)).toEqual(columns);
-    expect(changedColumns(pristineColumns(columns), columns)).toEqual([]);
+    expect(dirtyColumns(draftOf(columns), columns)).toEqual([]);
   });
 
   it('has no Don’t crawl radio: a stored manual reads as what the crawler does', () => {
@@ -260,6 +263,16 @@ describe('source mapping: the radio to columns', () => {
       base,
     );
     expect(next.extractionStrategy).not.toBe('manual');
+    // A stored manual only stays as it is; no draft that changes the reader
+    // or the mode writes it.
+    const manual: SourceColumns = { ...base, extractionStrategy: 'manual' };
+    const changed = columnsOf(
+      draft({ mode, seller: 'aeg', feedId: '89', reader }),
+      manual,
+    );
+    if (mode === 'feed' || reader !== readerOf(manual)) {
+      expect(changed.extractionStrategy).not.toBe('manual');
+    }
   });
 
   it('Detail pages sets the detail-page platform, with no ID, and keeps the strategy', () => {
@@ -349,14 +362,58 @@ describe('what a Source save sends', () => {
     ]);
   });
 
-  it('never reads an old row’s leftovers as an edit', () => {
-    const orphan: SourceColumns = { ...base, apiAccountId: 'stale' };
-    expect(
-      changedColumns(pristineColumns(orphan), pristineColumns(orphan)),
-    ).toEqual([]);
+  it.each<[string, SourceColumns]>([
+    ['an account ID with no provider', { ...base, apiAccountId: 'stale' }],
+    ['a venue ID with no platform', { ...base, platformVenueId: 'stale' }],
+    [
+      'a feed with a stored reader',
+      {
+        ...base,
+        platform: 'aeg',
+        platformVenueId: '89',
+        extractionStrategy: 'llm',
+      },
+    ],
+  ])('never reads an old row’s leftovers as an edit: %s', (_name, orphan) => {
+    // The raw row would read as changed; the pristine baseline does not.
+    expect(dirtyColumns(draftOf(orphan), orphan)).toEqual([]);
   });
 
-  it('builds a body of Source fields only, with no crawl rule in it', () => {
+  it('sends only the real edit on a row with leftovers', () => {
+    const orphan: SourceColumns = { ...base, apiAccountId: 'stale' };
+    expect(
+      dirtyColumns(
+        { ...draftOf(orphan), websiteUrl: 'https://gothic.example/cal' },
+        orphan,
+      ),
+    ).toEqual(['websiteUrl']);
+  });
+
+  it('lets an old browser venue with no selector change its calendar page', () => {
+    const browser: SourceColumns = {
+      ...base,
+      crawlMode: 'browser',
+      crawlWaitForSelector: null,
+    };
+    const keys = dirtyColumns(
+      { ...draftOf(browser), websiteUrl: 'https://gothic.example/cal' },
+      browser,
+    );
+    expect(keys).toEqual(['websiteUrl']);
+  });
+
+  it('lists no crawl-rule column among the Source columns', () => {
+    for (const rule of [
+      'crawlDelayMs',
+      'robotsTxtAllowed',
+      'robotsTxtCheckedAt',
+      'userAgent',
+    ]) {
+      expect(SOURCE_COLUMNS).not.toContain(rule);
+    }
+  });
+
+  it('builds a body of Source fields only', () => {
     const next: SourceColumns = {
       ...base,
       platform: 'aeg',
@@ -370,7 +427,6 @@ describe('what a Source save sends', () => {
       ),
     );
     expect(body).toEqual({ platform: 'aeg', platformVenueId: '89' });
-    expect(body).not.toHaveProperty('crawlDelayMs');
   });
 
   it('sends a switch to VenuePilot as both pairs, clearing the platform', () => {
@@ -482,6 +538,8 @@ describe('the read-only cards', () => {
     expect(paceLine(1000)).toBe(COPY.rules.paceValue('3'));
     expect(paceLine(10000)).toBe(COPY.rules.paceValue('10'));
     expect(paceLine(4500)).toBe(COPY.rules.paceValue('4.5'));
+    expect(paceLine(3999)).toBe(COPY.rules.paceValue('4'));
+    expect(paceLine(3240)).toBe(COPY.rules.paceValue('3.2'));
   });
 
   it('reads the stored robots verdict', () => {
