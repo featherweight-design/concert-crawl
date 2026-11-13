@@ -460,9 +460,11 @@ describe('VenueHeader — Re-crawl states', () => {
     expect(mockFetchTrigger).not.toHaveBeenCalled();
   });
 
-  // A page loaded before the venue was taken down still offers Re-crawl. The
-  // API refuses it (409 venue_removed), and its reason is what the toast says.
-  it('shows the removed-venue refusal on a stale page', async () => {
+  // Characterization: this already passed before the removed-venue work. The
+  // trigger runs in the browser, so the API's message is never redacted and
+  // the existing reason path carries it. It pins that a stale page (venue not
+  // yet known removed) shows the 409 venue_removed reason in the toast.
+  it('characterization: shows the removed-venue refusal on a stale page', async () => {
     const refusal =
       'This venue asked us to remove its data, so it stays off the site.';
     mockTrigger.mockRejectedValue(

@@ -876,9 +876,16 @@ export function VenueDetailsClient({
     startTransition(async () => {
       // A page loaded before the venue was removed still offers Active; the
       // API refuses it (409 venue_removed) and its reason goes to the banner.
-      const outcome = await activateVenue(venue.id);
-      if (!outcome.ok) setSaveError(outcome.error);
-      router.refresh();
+      // Any other failure throws, and says so as the save path does.
+      try {
+        const outcome = await activateVenue(venue.id);
+        if (!outcome.ok) setSaveError(outcome.error);
+      } catch (err: unknown) {
+        console.error('activateVenue failed', err);
+        setSaveError(ADMIN_COPY.venueDetailsClient.errors.unexpected);
+      } finally {
+        router.refresh();
+      }
     });
   }
 

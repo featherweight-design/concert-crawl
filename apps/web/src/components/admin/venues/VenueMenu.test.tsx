@@ -482,7 +482,7 @@ const WithToast = ({ venue }: { venue: VenueWithCrawlHealth }) => {
         <SaveFailedToast
           what={failure.what}
           saved={failure.saved}
-          onRetry={failure.retry}
+          {...(failure.retry !== null && { onRetry: failure.retry })}
           retrying={failure.retrying}
         />
       )}
@@ -635,6 +635,7 @@ describe('VenueMenu — immediate changes', () => {
     mockFeatured.mockImplementation(
       () => new Promise<void>((resolve) => (finish = resolve)),
     );
+    if (!failed.retry) throw new Error('no Try again offered');
     failed.retry();
     failed.retry();
     expect(mockFeatured).toHaveBeenCalledTimes(2);
@@ -660,7 +661,13 @@ describe('VenueMenu — immediate changes', () => {
       expect(action).toHaveBeenCalledWith('venue-1');
       await waitFor(() =>
         expect(onFailure).toHaveBeenLastCalledWith(
-          expect.objectContaining({ what, saved: REFUSAL, retrying: false }),
+          expect.objectContaining({
+            what,
+            saved: REFUSAL,
+            retrying: false,
+            // It would be refused every time, so there is no Try again.
+            retry: null,
+          }),
         ),
       );
       // The refresh brings the removed venue's own menu.
@@ -668,13 +675,19 @@ describe('VenueMenu — immediate changes', () => {
     },
   );
 
-  it('the toast says the refusal', async () => {
+  it('the toast says the refusal and offers no Try again', async () => {
     mockActivate.mockResolvedValue({ ok: false, error: REFUSAL });
     render(<WithToast venue={buildVenue(HIDDEN)} />);
     fireEvent.click(trigger());
     fireEvent.click(row('show'));
     const toast = await screen.findByTestId('save-failed');
     expect(toast.textContent).toContain(REFUSAL);
+    expect(
+      screen.queryByRole('button', {
+        name: ADMIN_COPY.states.saveFailed.tryAgain,
+      }),
+    ).toBeNull();
+    expect(mockActivate).toHaveBeenCalledTimes(1);
   });
 
   it('a confirmed change clears an earlier failure', async () => {

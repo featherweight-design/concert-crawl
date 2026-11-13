@@ -286,7 +286,7 @@ export const VenueHeader = ({ venue }: { venue: VenueWithCrawlHealth }) => {
         <SaveFailedToast
           what={failure.what}
           saved={failure.saved}
-          onRetry={failure.retry}
+          {...(failure.retry !== null && { onRetry: failure.retry })}
           retrying={failure.retrying || menuBusy}
           onDismiss={() => setFailure(null)}
         />
