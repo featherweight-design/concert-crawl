@@ -47,6 +47,7 @@ import {
   REJECTION_REASONS,
   rejectSubmission,
 } from './lib/price-rejection.js';
+import { todayInDenver } from '../../lib/time.js';
 
 const logger = createLogger('admin:prices');
 
@@ -92,9 +93,6 @@ const upcomingVisibleClauses = (today: string) => [
   gte(events.date, today),
   eq(events.hiddenFromConsumer, false),
 ];
-
-const denverToday = (): string =>
-  new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
 
 // One row shape for the Missing a price list and its "next" cursor. A single
 // aggregating join (not two correlated subqueries per row): price_retrieval_log
@@ -150,7 +148,7 @@ pricesAdminRouter.get(
     // been triaged as non-concerts — they shouldn't appear in the missing-
     // price queue or skew the coverage %.
     const conditions = [
-      ...upcomingVisibleClauses(denverToday()),
+      ...upcomingVisibleClauses(todayInDenver()),
       ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
     ];
     const whereClause = and(...conditions);
@@ -193,7 +191,7 @@ pricesAdminRouter.get(
   async (ctx) => {
     const { after } = ctx.req.valid('query');
     const missing = and(
-      ...upcomingVisibleClauses(denverToday()),
+      ...upcomingVisibleClauses(todayInDenver()),
       isNull(events.ticketPriceMin),
     );
 
@@ -246,7 +244,7 @@ pricesAdminRouter.get('/tabs', async (ctx) => {
         .from(events)
         .where(
           and(
-            ...upcomingVisibleClauses(denverToday()),
+            ...upcomingVisibleClauses(todayInDenver()),
             isNull(events.ticketPriceMin),
           ),
         ),
@@ -886,7 +884,7 @@ pricesAdminRouter.post(
     const adminUser = getAuthUser(ctx);
 
     const [event] = await db
-      .select({ id: events.id, ticketPriceMin: events.ticketPriceMin })
+      .select({ id: events.id })
       .from(events)
       .where(eq(events.id, eventId))
       .limit(1);
@@ -896,14 +894,20 @@ pricesAdminRouter.post(
 
     // The Missing a price tab adds a price to a show without one. A show that
     // already has a price is changed through a Price check, not overwritten.
-    if (event.ticketPriceMin !== null) {
-      return ctx.json(
-        { success: false, error: 'This show already has a price' },
-        409,
-      );
-    }
+    const added = await db.transaction(async (tx) => {
+      // The guard is the UPDATE's own predicate, so two admins adding at once
+      // cannot both pass: the second finds the price set and gets no row.
+      const claimed = await tx
+        .update(events)
+        .set({
+          ticketPriceMin: priceMin,
+          ticketPriceMax: priceMax ?? null,
+          priceSource: 'community',
+        })
+        .where(and(eq(events.id, eventId), isNull(events.ticketPriceMin)))
+        .returning({ id: events.id });
+      if (claimed.length === 0) return false;
 
-    await db.transaction(async (tx) => {
       await tx.insert(priceSubmissions).values({
         eventId,
         userId: adminUser.userId,
@@ -918,16 +922,14 @@ pricesAdminRouter.post(
         priceMax: priceMax ?? null,
         status: 'corroborated',
       });
-
-      await tx
-        .update(events)
-        .set({
-          ticketPriceMin: priceMin,
-          ticketPriceMax: priceMax ?? null,
-          priceSource: 'community',
-        })
-        .where(eq(events.id, eventId));
+      return true;
     });
+    if (!added) {
+      return ctx.json(
+        { success: false, error: 'This show already has a price' },
+        409,
+      );
+    }
 
     ctx.set('auditActorId', adminUser.userId);
     ctx.set('auditAction', 'price.submission.admin_add');
