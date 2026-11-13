@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
-import { events, notifications, userCred, venues } from '@concert-crawl/db';
+import {
+  auditLog,
+  events,
+  notifications,
+  priceSubmissions,
+  userCred,
+  venues,
+} from '@concert-crawl/db';
 
 vi.mock('@sentry/hono/node', async () => {
   const actual =
@@ -1284,6 +1291,167 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
     };
     expect(body.data.total).toBe(2);
     expect(body.data.rows).toHaveLength(2);
+  });
+});
+
+// Redesign 4d: rejecting a waiting price. A rejection is `archived` with the
+// reason in archived_reason, never `disputed` (that is a Price check).
+describe('POST /v1/admin/prices/submissions/:id/reject', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const reject = (id: string, body: unknown) =>
+    app.request(`/v1/admin/prices/submissions/${id}/reject`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify(body),
+    });
+
+  const seedShow = async (slug: string) => {
+    const venue = await seedVenue({ name: 'Reject Hall', slug });
+    return seedEvent(venue.id, {
+      title: `Show ${slug}`,
+      artist: `Artist ${slug}`,
+      date: '2099-11-01',
+    });
+  };
+
+  it('archives a waiting price with the reason and clears the hold', async () => {
+    const event = await seedShow('reject-ok');
+    const row = await seedPriceSubmission(event.id, 'rej_user', {
+      status: 'pending',
+      heldForAdminAt: new Date(),
+    });
+    const res = await reject(row.id, {
+      reason: 'wrong-amount',
+      note: 'that is the VIP tier',
+    });
+    expect(res.status).toBe(200);
+    const [after] = await testDb
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, row.id));
+    expect(after?.status).toBe('archived');
+    expect(after?.archivedReason).toBe(
+      'rejected:wrong-amount|that is the VIP tier',
+    );
+    expect(after?.heldForAdminAt).toBeNull();
+
+    const [audit] = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'price.submission.reject'));
+    expect(audit?.targetId).toBe(row.id);
+  });
+
+  it('lists the rejection parsed, in the "not-used" state', async () => {
+    const event = await seedShow('reject-list');
+    const row = await seedPriceSubmission(event.id, 'rej_list_user', {
+      status: 'pending',
+    });
+    await reject(row.id, { reason: 'resale' });
+    const res = await app.request(
+      '/v1/admin/prices/submissions?count=true&state=all',
+      { headers: ADMIN_HEADERS },
+    );
+    const body = (await res.json()) as {
+      data: {
+        rows: Array<{
+          id: string;
+          state: string;
+          rejection: { reason: string; note: string | null } | null;
+        }>;
+      };
+    };
+    const found = body.data.rows.find((entry) => entry.id === row.id);
+    expect(found?.state).toBe('not-used');
+    expect(found?.rejection).toEqual({ reason: 'resale', note: null });
+  });
+
+  it('refuses a price that is not waiting', async () => {
+    const event = await seedShow('reject-published');
+    const row = await seedPriceSubmission(event.id, 'rej_pub_user', {
+      status: 'corroborated',
+    });
+    const res = await reject(row.id, { reason: 'other' });
+    expect(res.status).toBe(409);
+  });
+
+  it('refuses a price that has an open Price check, and a counter row', async () => {
+    const event = await seedShow('reject-contest');
+    const parent = await seedPriceSubmission(event.id, 'rej_parent', {
+      status: 'pending',
+    });
+    const counter = await seedPriceSubmission(event.id, 'rej_counter', {
+      status: 'pending',
+      disputedSubmissionId: parent.id,
+    });
+    expect((await reject(parent.id, { reason: 'other' })).status).toBe(409);
+    expect((await reject(counter.id, { reason: 'other' })).status).toBe(409);
+    const [after] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, parent.id));
+    expect(after?.status).toBe('pending');
+  });
+
+  it('422s an unknown reason and 404s an unknown id', async () => {
+    const event = await seedShow('reject-bad');
+    const row = await seedPriceSubmission(event.id, 'rej_bad_user');
+    expect((await reject(row.id, { reason: 'because' })).status).toBe(422);
+    expect(
+      (
+        await reject('00000000-0000-0000-0000-000000000000', {
+          reason: 'other',
+        })
+      ).status,
+    ).toBe(404);
+  });
+});
+
+describe('GET /v1/admin/prices/submissions/:id/fan-others', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  it("lists the same fan's other prices and nobody else's", async () => {
+    const venue = await seedVenue({ name: 'Fan Hall', slug: 'fan-hall' });
+    const first = await seedEvent(venue.id, {
+      title: 'First',
+      artist: 'First Artist',
+      date: '2099-12-01',
+    });
+    const second = await seedEvent(venue.id, {
+      title: 'Second',
+      artist: 'Second Artist',
+      date: '2099-12-02',
+    });
+    await seedUserProfile('fan_a', { handle: 'fana' });
+    const own = await seedPriceSubmission(first.id, 'fan_a');
+    await seedPriceSubmission(second.id, 'fan_a');
+    await seedPriceSubmission(second.id, 'fan_b');
+
+    const res = await app.request(
+      `/v1/admin/prices/submissions/${own.id}/fan-others`,
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { handle: string | null; rows: Array<{ eventTitle: string }> };
+    };
+    expect(body.data.handle).toBe('fana');
+    expect(body.data.rows.map((row) => row.eventTitle)).toEqual(['Second']);
+  });
+
+  it('404s an unknown submission', async () => {
+    const res = await app.request(
+      '/v1/admin/prices/submissions/00000000-0000-0000-0000-000000000000/fan-others',
+      { headers: ADMIN_HEADERS },
+    );
+    expect(res.status).toBe(404);
   });
 });
 

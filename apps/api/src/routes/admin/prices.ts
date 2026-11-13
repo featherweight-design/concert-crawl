@@ -10,6 +10,7 @@ import {
   ilike,
   isNull,
   max,
+  ne,
   or,
   sql,
   type SQL,
@@ -36,6 +37,11 @@ import type { AdminVariables } from './index.js';
 import { idSchema } from '../../lib/id-schema.js';
 import { setSubmissionStatus } from './lib/price-submission-status.js';
 import { containsPattern } from '../../lib/escape-like.js';
+import {
+  parseRejection,
+  REJECTION_REASONS,
+  rejectSubmission,
+} from './lib/price-rejection.js';
 
 const logger = createLogger('admin:prices');
 
@@ -385,6 +391,7 @@ pricesAdminRouter.get(
         priceMin: priceSubmissions.priceMin,
         priceMax: priceSubmissions.priceMax,
         status: priceSubmissions.status,
+        archivedReason: priceSubmissions.archivedReason,
         // Always null in the filtered result (we excluded contest rows
         // above), but surfaced on the wire so any future UI can know which
         // rows are contests without re-querying.
@@ -409,10 +416,14 @@ pricesAdminRouter.get(
       .limit(limit)
       .offset(offset);
 
-    const withState = (
-      list: Awaited<typeof rowsPromise>,
-    ): (Awaited<typeof rowsPromise>[number] & { state: SubmissionState })[] =>
-      list.map((row) => ({ ...row, state: stateOf(row) }));
+    // `rejection` is the parsed reason of a rejected price (null otherwise);
+    // the raw archived_reason text stays on the row for the older client.
+    const withState = (list: Awaited<typeof rowsPromise>) =>
+      list.map((row) => ({
+        ...row,
+        state: stateOf(row),
+        rejection: parseRejection(row.archivedReason),
+      }));
 
     if (!count) {
       const rows = await rowsPromise;
@@ -559,6 +570,131 @@ pricesAdminRouter.patch(
     ctx.set('auditTargetId', id);
 
     return ctx.json({ success: true, data: result.updated });
+  },
+);
+
+const rejectSubmissionSchema = z.object({
+  reason: z.enum(REJECTION_REASONS),
+  note: z.string().trim().min(1).max(500).optional(),
+});
+
+// POST /v1/admin/prices/submissions/:id/reject — turn a waiting price down.
+// The row becomes `archived` with the reason in `archived_reason`; it is not
+// a Price check (that is status `disputed`), and the fan sees "Not used".
+pricesAdminRouter.post(
+  '/submissions/:id/reject',
+  zValidator('param', z.object({ id: idSchema }), (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid id' }, 400);
+    }
+  }),
+  zValidator('json', rejectSubmissionSchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid rejection' }, 422);
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const { reason, note } = ctx.req.valid('json');
+
+    const result = await rejectSubmission(id, reason, note);
+    if (result.ok === 'contest_lockout') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'This price is part of a Price check. Resolve it from the Price checks tab.',
+        },
+        409,
+      );
+    }
+    if (result.ok === 'not_waiting') {
+      return ctx.json(
+        { success: false, error: 'Only a waiting price can be rejected' },
+        409,
+      );
+    }
+    if (!result.ok)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
+
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    ctx.set('auditAction', 'price.submission.reject');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditMeta', { reason, note: note ?? null });
+
+    return ctx.json({ success: true, data: result.updated });
+  },
+);
+
+// GET /v1/admin/prices/submissions/:id/fan-others — the other prices the same
+// fan has submitted (the row menu's "See this fan's other prices"), newest
+// first, at most 20. Price check counter rows are not prices and are left out.
+pricesAdminRouter.get(
+  '/submissions/:id/fan-others',
+  zValidator('param', z.object({ id: idSchema }), (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid id' }, 400);
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const [own] = await db
+      .select({
+        userId: priceSubmissions.userId,
+        handle: userProfiles.handle,
+      })
+      .from(priceSubmissions)
+      .leftJoin(userProfiles, eq(priceSubmissions.userId, userProfiles.userId))
+      .where(eq(priceSubmissions.id, id))
+      .limit(1);
+    if (!own) {
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
+    }
+    if (own.userId === null) {
+      return ctx.json({
+        success: true,
+        data: { handle: own.handle, rows: [] },
+      });
+    }
+
+    const rows = await db
+      .select({
+        id: priceSubmissions.id,
+        eventId: priceSubmissions.eventId,
+        eventTitle: events.title,
+        eventDate: events.date,
+        venueName: venues.name,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        status: priceSubmissions.status,
+        archivedReason: priceSubmissions.archivedReason,
+        priceCheck: hasOpenPriceCheck(),
+        createdAt: priceSubmissions.createdAt,
+      })
+      .from(priceSubmissions)
+      .leftJoin(events, eq(priceSubmissions.eventId, events.id))
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .where(
+        and(
+          eq(priceSubmissions.userId, own.userId),
+          ne(priceSubmissions.id, id),
+          isNull(priceSubmissions.disputedSubmissionId),
+        ),
+      )
+      .orderBy(desc(priceSubmissions.createdAt))
+      .limit(20);
+
+    return ctx.json({
+      success: true,
+      data: {
+        handle: own.handle,
+        rows: rows.map(({ archivedReason, ...row }) => ({
+          ...row,
+          state: stateOf(row),
+          rejection: parseRejection(archivedReason),
+        })),
+      },
+    });
   },
 );
 
