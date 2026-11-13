@@ -284,6 +284,8 @@ describe('VenueDetailsClient — Overview', () => {
     const button = screen.getByRole('button', {
       name: OVERVIEW.latestRun.recrawlAnyway,
     });
-    expect(button.hasAttribute('disabled')).toBe(true);
+    // Held as the header's Re-crawl is: focusable, announced as unavailable.
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.hasAttribute('disabled')).toBe(false);
   });
 });
