@@ -41,6 +41,11 @@ import { AccountMenuContext, useAccountMenu } from './account-menu-context';
 import type { AccountMenuState } from './account-menu-context';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useSheetDrag } from '@/lib/hooks/useSheetDrag';
+import {
+  markCameFromMenu,
+  takeMenuReopen,
+  NOTIFICATIONS_PAGE_HREF,
+} from './menu-return';
 import type { SheetDragZone } from '@/lib/hooks/useSheetDrag';
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
@@ -272,6 +277,13 @@ export function AccountMenuProvider({
     setMode('menu');
   }, [pathname]);
 
+  // The Notifications page's `‹ Menu` lands here asking for the menu back,
+  // open. Declared after the effect above so, in the same commit, it wins.
+  useEffect(() => {
+    if (isSignedIn !== true || pathname === NOTIFICATIONS_PAGE_HREF) return;
+    if (takeMenuReopen()) openFrom(null);
+  }, [pathname, isSignedIn, openFrom]);
+
   // Returning from the panel unmounts the element focus was sitting on (the
   // panel surface), which drops focus to <body> while the dialog is still
   // open — a keyboard user is then stranded outside the surface they are
@@ -392,7 +404,18 @@ export function AccountMenuProvider({
     surfaceRef,
     open,
     mode,
-    onOpenNotifications: () => setMode('notifications'),
+    // The phone gets a page of its own (`bp-s-notif_empty_m`); the desktop
+    // popover swaps into its notifications mode in place.
+    onOpenNotifications: () => {
+      if (!isMobile) {
+        setMode('notifications');
+        return;
+      }
+      markCameFromMenu();
+      setOpen(false);
+      setMode('menu');
+      router.push(NOTIFICATIONS_PAGE_HREF);
+    },
     onBackToMenu: () => {
       returningToMenu.current = true;
       setMode('menu');
@@ -607,19 +630,15 @@ const shellLabelOf = (props: MenuBodyProps): string =>
 function MenuShellContent({
   props,
   panelMaxHeight,
-  panelClosable = false,
 }: {
   props: MenuBodyProps;
   panelMaxHeight?: number | string;
-  /** See NotifMenuPanel's `onClose` — the sheet sets it, the popover does not. */
-  panelClosable?: boolean;
 }) {
   if (isNotifMode(props)) {
     return (
       <NotifMenuPanel
         onBack={props.onBackToMenu}
         onNavigate={props.onNavigateAway}
-        {...(panelClosable ? { onClose: props.onDismiss } : {})}
         {...(panelMaxHeight === undefined ? {} : { maxHeight: panelMaxHeight })}
       />
     );
@@ -1034,25 +1053,17 @@ function UserMenuSheet(props: MenuBodyProps) {
         overflow: 'hidden',
         fontFamily: 'var(--font-ui)',
         color: 'var(--fg)',
-        // The menu body grows to its content — it is a short, known list. The
-        // notifications panel does not: it is a backfill you scroll, so it
-        // takes the handoff's fixed 88% and scrolls inside itself. Growing to
-        // content there gives a six-row account a card that ends mid-screen
-        // with the page showing beneath it, and a fifty-row account a sheet
-        // that runs off the top with nothing to scroll.
+        // The menu grows to its content — it is a short, known list — but
+        // never past the screen: on a short phone (320x568) its rows scroll
+        // above the version footer instead of the footer covering Sign out.
+        // (Notifications are a page of their own on the phone, not a mode of
+        // this sheet.)
         //
         // `svh`, not `vh`: on iOS `vh` is the tallest viewport, so a sheet
         // pinned to the bottom would sit partly behind the URL bar.
-        ...(isNotifMode(props)
-          ? { height: '88svh', display: 'flex', flexDirection: 'column' }
-          : {
-              // The menu grows to its content but never past the screen: on a
-              // short phone (320x568) its rows scroll above the version
-              // footer instead of the footer covering Sign out.
-              maxHeight: '92svh',
-              display: 'flex',
-              flexDirection: 'column',
-            }),
+        maxHeight: '92svh',
+        display: 'flex',
+        flexDirection: 'column',
         ...drag.sheetStyle,
       }}
     >
@@ -1076,19 +1087,9 @@ function UserMenuSheet(props: MenuBodyProps) {
           }}
         />
       </div>
-      {/* The menu body scrolls inside the sheet's own max height (above); the
-          notifications panel already scrolls itself, so it is left alone. */}
-      <div
-        style={
-          isNotifMode(props)
-            ? { display: 'contents' }
-            : { overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }
-        }
-      >
-        <MenuShellContent
-          props={{ ...props, dragZone: drag.zoneProps }}
-          panelClosable
-        />
+      {/* The menu body scrolls inside the sheet's own max height (above). */}
+      <div style={{ overflowY: 'auto', minHeight: 0, flex: '1 1 auto' }}>
+        <MenuShellContent props={{ ...props, dragZone: drag.zoneProps }} />
       </div>
     </div>
   );
