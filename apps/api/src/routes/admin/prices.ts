@@ -70,7 +70,7 @@ const eventsQuerySchema = z.object({
 /** Fans Watching a show (a correlated count, built per request). */
 const watchingCountOf = (): SQL<number> =>
   sql<number>`(${db
-    .select({ n: count() })
+    .select({ total: count() })
     .from(userEvents)
     .where(
       and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),
@@ -242,7 +242,7 @@ pricesAdminRouter.get('/tabs', async (ctx) => {
   const [[missing], [submitted], [checksOpen], [checksResolved], [people]] =
     await Promise.all([
       db
-        .select({ n: count() })
+        .select({ total: count() })
         .from(events)
         .where(
           and(
@@ -250,29 +250,31 @@ pricesAdminRouter.get('/tabs', async (ctx) => {
             isNull(events.ticketPriceMin),
           ),
         ),
-      db.select({ n: count() }).from(priceSubmissions).where(notACounter),
+      db.select({ total: count() }).from(priceSubmissions).where(notACounter),
       // One open check per price, however many fans have an update pending.
       db
-        .select({ n: countDistinct(priceSubmissions.disputedSubmissionId) })
+        .select({
+          total: countDistinct(priceSubmissions.disputedSubmissionId),
+        })
         .from(priceSubmissions)
         .where(eq(priceSubmissions.status, 'pending')),
       db
-        .select({ n: count() })
+        .select({ total: count() })
         .from(auditLog)
         .where(eq(auditLog.action, 'contest.resolve')),
       db
-        .select({ n: countDistinct(priceSubmissions.userId) })
+        .select({ total: countDistinct(priceSubmissions.userId) })
         .from(priceSubmissions)
         .where(gte(priceSubmissions.createdAt, since)),
     ]);
   return ctx.json({
     success: true,
     data: {
-      missing: missing?.n ?? 0,
-      submitted: submitted?.n ?? 0,
-      checksOpen: checksOpen?.n ?? 0,
-      checksResolved: checksResolved?.n ?? 0,
-      peopleSubmitting: people?.n ?? 0,
+      missing: missing?.total ?? 0,
+      submitted: submitted?.total ?? 0,
+      checksOpen: checksOpen?.total ?? 0,
+      checksResolved: checksResolved?.total ?? 0,
+      peopleSubmitting: people?.total ?? 0,
     },
   });
 });
