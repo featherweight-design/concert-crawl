@@ -1895,7 +1895,10 @@ export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'show-dropped';
       eventId: string;
-      /** The show's start time as the crawl has it (`HH:MM:SS`), or null. */
+      /**
+       * The show's start time as stored (`HH:MM:SS`, venue-local Mountain wall
+       * clock, no zone to convert), or null. The same on the other two kinds.
+       */
       showTime: string | null;
       classification: MissingClassification;
       lastSeenAt: string | null;

@@ -125,14 +125,22 @@ describe('Needs you sources and ranking', () => {
       date: inDays(6),
       verified: false,
     });
-    const items = await listNeedsYou({
-      kind: 'event-low-confidence',
-      now: now(),
+    const dropped = await seedEvent(venue.id, {
+      artist: 'Dropped Act',
+      date: inDays(4),
+      showTime: '19:30:00',
+      verified: true,
+      firstMissingAt: new Date(),
     });
+    const items = await listNeedsYou({ now: now() });
     const timeOf = (eventId: string) =>
-      items.find((item) => item.key === lowKey(eventId));
+      items.find((item) => 'eventId' in item && item.eventId === eventId);
     expect(timeOf(timed.id)).toMatchObject({ showTime: '20:00:00' });
     expect(timeOf(untimed.id)).toMatchObject({ showTime: null });
+    expect(timeOf(dropped.id)).toMatchObject({
+      kind: 'show-dropped',
+      showTime: '19:30:00',
+    });
   });
 
   it('keeps a venue fault snoozed under one stable key', async () => {

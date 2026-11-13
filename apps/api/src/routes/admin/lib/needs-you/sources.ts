@@ -142,7 +142,7 @@ const missingItems: Adapter = async ({ now }) => {
       venueId: row.venueId,
       venueName: row.venueName,
       fanDate: row.date,
-      showTime: row.showTime ?? null,
+      showTime: row.showTime,
       watchers: watchers.get(row.id) ?? 0,
     };
     const evidence = [
@@ -437,7 +437,7 @@ const lowConfidenceItems: Adapter = async ({ now }) => {
     venueId: row.venueId,
     venueName: row.venueName,
     fanDate: row.date,
-    showTime: row.showTime ?? null,
+    showTime: row.showTime,
     watchers: watchers.get(row.id) ?? 0,
     eventId: row.id,
     evidence: [
