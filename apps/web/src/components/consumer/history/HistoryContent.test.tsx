@@ -275,8 +275,10 @@ describe('HistoryContent', () => {
     expect(
       screen.queryByRole('heading', { name: HISTORY_COPY.locked.headline }),
     ).not.toBeInTheDocument();
-    // The sub-tabs belong to the My shows layout, which keeps them mounted
-    // across tabs, so the page draws no second bar of its own.
+    // The sub-tabs belong to the My shows layout, so the page draws no second
+    // bar of its own. That the layout's bar stays mounted while this content
+    // resolves and across tab switches is pinned in MyShowsShell.test.tsx
+    // ("keeps the same bar node across a tab switch").
     expect(
       screen.queryByRole('navigation', { name: HISTORY_COPY.tabs.ariaLabel }),
     ).not.toBeInTheDocument();

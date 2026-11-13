@@ -14,6 +14,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from 'react';
@@ -30,12 +31,22 @@ const TAB_FOR_PREFIX: readonly (readonly [string, MyShowsTab])[] = [
   ['/following', 'artists'],
 ];
 
-export const myShowsTabFor = (pathname: string | null): MyShowsTab => {
-  const match = TAB_FOR_PREFIX.find(
+const matchTab = (pathname: string | null) =>
+  TAB_FOR_PREFIX.find(
     ([prefix]) => pathname === prefix || pathname?.startsWith(`${prefix}/`),
   );
-  return match?.[1] ?? 'watching';
-};
+
+export const myShowsTabFor = (pathname: string | null): MyShowsTab =>
+  matchTab(pathname)?.[1] ?? 'watching';
+
+/** One of the three My shows tabs (Watching, Concerts, Artists). */
+export const isMyShowsPath = (pathname: string | null): boolean =>
+  matchTab(pathname) !== undefined;
+
+// useLayoutEffect warns during server rendering; the count only matters in
+// the browser.
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 type SetArtistCount = (count: number | undefined) => void;
 
@@ -47,7 +58,9 @@ const ArtistCountContext = createContext<SetArtistCount | null>(null);
  */
 export const useMyShowsArtistCount = (count: number | undefined) => {
   const setCount = useContext(ArtistCountContext);
-  useEffect(() => {
+  // Layout, not passive: the count lands before the first paint of the
+  // Artists tab, so the label never paints once without it and then widens.
+  useIsomorphicLayoutEffect(() => {
     setCount?.(count);
     return () => setCount?.(undefined);
   }, [setCount, count]);

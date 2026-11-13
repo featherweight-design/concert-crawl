@@ -67,12 +67,15 @@ describe('ProfileHero Edit button', () => {
   const zOf = (el: Element) =>
     Number(/(?:^|\s)z-(\d+)(?:\s|$)/.exec(el.className)?.[1] ?? 0);
 
-  it('keeps the avatar layer to the avatar width, off the Edit button', () => {
+  it('shrinks the avatar layer to its content (self-start) and stacks Edit above it', () => {
     render(
       <ProfileHero {...base} avatarColor="signal" avatarSecondColor={null} />,
     );
     const layer = screen.getByTestId('profile-avatar-layer');
     expect(layer.className).toContain('self-start');
+    expect(zOf(screen.getByRole('link', { name: 'Edit' }))).toBeGreaterThan(
+      zOf(layer),
+    );
   });
 
   it.each([

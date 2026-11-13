@@ -49,6 +49,29 @@ describe('ScrollResetOnNavigate', () => {
     expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
+  // The My shows tab row stays mounted across its three tabs, so a tab tap
+  // must not throw the reader back to the top.
+  it.each([
+    ['/watching', '/history'],
+    ['/history', '/following'],
+    ['/following', '/watching'],
+  ])('keeps its place between My shows tabs (%s to %s)', (from, to) => {
+    pathname = from;
+    const view = render(<ScrollResetOnNavigate />);
+    navigate(view, to);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['/events', '/watching'],
+    ['/watching', '/events'],
+  ])('still resets into or out of My shows (%s to %s)', (from, to) => {
+    pathname = from;
+    const view = render(<ScrollResetOnNavigate />);
+    navigate(view, to);
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+  });
+
   it('keeps its place on a re-render with the same pathname', () => {
     const view = render(<ScrollResetOnNavigate />);
     view.rerender(<ScrollResetOnNavigate />);
