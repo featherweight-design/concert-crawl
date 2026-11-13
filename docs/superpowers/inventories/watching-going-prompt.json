@@ -1,0 +1,22 @@
+{
+  "feature": "Watching · the Going prompt panel",
+  "note": "Boards: design/design_handoff_bplus_redesign/screens/02-mobile/bp-m-watching_m and 01-core/bp-watching. The heading stays \"Going to this show?\" plus the day count (addendum 2 item 5 over the README shorthand). Needs a signed-in user with a watched show inside the Going window, which the local audit user has.",
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "watching-going-prompt",
+      "label": "Watching with the Going prompt",
+      "steps": [
+        {
+          "goto": "/watching",
+          "wait": "[data-testid=\"going-nudge\"]",
+          "settle": 1200
+        }
+      ]
+    }
+  ]
+}

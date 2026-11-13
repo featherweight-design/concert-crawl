@@ -103,19 +103,17 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
       role="status"
       aria-live="polite"
       data-testid="going-nudge"
-      // The accent edge is the mobile cue; from sm the dashed stamp carries it.
-      className="border-l-[3px] sm:border-l"
+      // A darker inset panel with no outline: only a 3px bar in the show's
+      // stamp colour on its left edge (`bp-watching`, `bp-m-watching_m`).
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: '10px 12px 10px 14px',
-        background: `color-mix(in oklch, ${accent} 10%, var(--surface-1))`,
+        background: 'color-mix(in oklch, var(--bg) 55%, var(--surface-1))',
         borderStyle: 'solid',
-        borderTopWidth: 1,
-        borderRightWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: `color-mix(in oklch, ${accent} 40%, var(--border))`,
+        borderWidth: 0,
+        borderLeftWidth: 3,
         borderLeftColor: accent,
         borderRadius: 10,
         color: 'var(--fg)',
@@ -157,10 +155,11 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
             {daysUntilLabel(show)}
           </span>
         </span>
+        {/* Sans on a phone, as `bp-m-watching_m` sets it; mono from `sm`. */}
         <span
+          data-testid="going-nudge-support"
+          className="max-sm:[font-family:var(--font-ui)] sm:[font-family:var(--font-mono)] max-sm:text-[11.5px] sm:text-[10.5px]"
           style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10.5,
             color: 'var(--fg-subtle)',
             letterSpacing: '0.02em',
           }}
