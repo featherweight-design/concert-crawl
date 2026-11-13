@@ -12,7 +12,13 @@ interface ModalShellProps {
   footer?: React.ReactNode;
   mobileFooter?: React.ReactNode;
   children: React.ReactNode;
-  sheetHeight?: 'tall' | 'short';
+  /** `fit` sizes the phone sheet to its content (up to 85% of the screen). */
+  sheetHeight?: 'tall' | 'short' | 'fit';
+  /**
+   * `crew` is the Crews sheets' drawn surface: a lighter panel, a cyan-to-pink
+   * top edge, a soft glow on desktop and a dim without a blur.
+   */
+  surface?: 'default' | 'crew';
   /** Desktop modal width in px (default 520). Wide surfaces (tier picker) pass more. */
   desktopWidth?: number;
   /**
@@ -34,6 +40,7 @@ export function ModalShell({
   mobileFooter,
   children,
   sheetHeight = 'tall',
+  surface = 'default',
   desktopWidth = 520,
   role = 'dialog',
   ariaLabelledBy,
@@ -118,7 +125,13 @@ export function ModalShell({
 
   if (!open || !mounted) return null;
 
-  const heightValue = sheetHeight === 'tall' ? '85%' : '62%';
+  const heightValue =
+    sheetHeight === 'tall' ? '85%' : sheetHeight === 'short' ? '62%' : 'auto';
+  const crew = surface === 'crew';
+  // The drawn Crews panel is a lighter navy than the page's elevated ground.
+  const panel = crew
+    ? 'color-mix(in srgb, var(--bg-elevated), white 6%)'
+    : 'var(--bg-elevated)';
 
   // Portalled to the body: triggers live inside clipping and transformed
   // ancestors — the filter rail scrolls horizontally, and a transformed
@@ -135,7 +148,8 @@ export function ModalShell({
           inset: 0,
           zIndex: 90,
           background: 'var(--scrim)',
-          backdropFilter: 'blur(4px)',
+          // The Crews boards dim the page; they do not blur it.
+          ...(crew ? {} : { backdropFilter: 'blur(4px)' }),
         }}
         onClick={onClose}
       />
@@ -149,13 +163,15 @@ export function ModalShell({
           aria-label={ariaLabelledBy === undefined ? ariaLabel : undefined}
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
-          className="sheet-edge [--sheet-bg:var(--bg-elevated)]"
+          className="sheet-edge"
           style={{
+            ['--sheet-bg' as string]: panel,
             position: 'fixed',
             left: 0,
             right: 0,
             bottom: 0,
             height: heightValue,
+            maxHeight: sheetHeight === 'fit' ? '85%' : undefined,
             zIndex: 100,
             borderTopLeftRadius: 22,
             borderTopRightRadius: 22,
@@ -216,7 +232,7 @@ export function ModalShell({
                 flexShrink: 0,
                 padding: '12px 18px 22px',
                 borderTop: '1px solid var(--border)',
-                background: 'var(--bg-elevated)',
+                background: panel,
               }}
             >
               {mobileFooter ?? footer}
@@ -241,10 +257,21 @@ export function ModalShell({
             width: desktopWidth,
             maxWidth: 'calc(100% - 64px)',
             maxHeight: 'calc(100% - 80px)',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-strong)',
+            // The Crews dialogs draw a cyan-to-pink top edge over a quiet
+            // border, a lighter panel and a soft cyan glow.
+            ...(crew
+              ? {
+                  border: '1.5px solid transparent',
+                  background: `linear-gradient(${panel}, ${panel}) padding-box, linear-gradient(90deg, var(--signal), var(--accent)) top / 100% 2px no-repeat border-box, var(--border-strong) border-box`,
+                  boxShadow:
+                    '0 32px 80px rgba(0,0,0,0.5), 0 0 64px -12px color-mix(in srgb, var(--signal) 30%, transparent)',
+                }
+              : {
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-strong)',
+                  boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+                }),
             borderRadius: 16,
-            boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -255,7 +282,7 @@ export function ModalShell({
               style={{
                 flexShrink: 0,
                 padding: '10px 16px 8px',
-                borderBottom: '1px solid var(--border)',
+                ...(crew ? {} : { borderBottom: '1px solid var(--border)' }),
               }}
             >
               {header}
@@ -277,7 +304,7 @@ export function ModalShell({
                 flexShrink: 0,
                 padding: '14px 22px 18px',
                 borderTop: '1px solid var(--border)',
-                background: 'var(--bg-elevated)',
+                background: panel,
               }}
             >
               {footer}

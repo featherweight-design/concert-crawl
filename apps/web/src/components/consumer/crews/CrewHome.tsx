@@ -91,6 +91,8 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   const [nameOverride, setNameOverride] = useState<string | null>(null);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [options, setOptions] = useState(false);
+  // State, not a ref: the popover measures its anchor when it opens.
+  const [optionsAnchor, setOptionsAnchor] = useState<HTMLElement | null>(null);
   const [invite, setInvite] = useState(false);
   const [rename, setRename] = useState(false);
   const [reroll, setReroll] = useState(false);
@@ -218,6 +220,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
             </button>
             <button
               type="button"
+              ref={setOptionsAnchor}
               onClick={() => setOptions(true)}
               aria-label={COPY.a11y.options}
               className="cursor-pointer"
@@ -291,6 +294,10 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
       <CrewOptionsSheet
         open={options}
         onClose={() => setOptions(false)}
+        crewId={crew.id}
+        crewName={name}
+        patchSalt={patchSalt}
+        anchor={optionsAnchor}
         isKeeper={crew.isKeeper}
         onInvite={() => setInvite(true)}
         onRename={() => setRename(true)}
