@@ -38,7 +38,6 @@ const venue = (
   crawlPauseNote: null,
   consecutiveFailures: 0,
   crawlPausedByName: null,
-  removedAt: null,
   ...over,
 });
 
@@ -50,7 +49,7 @@ describe('CrawlPauseControl', () => {
       removeEventListener: vi.fn(),
     });
     mockPauseCrawling.mockResolvedValue({ ok: true });
-    mockResumeCrawling.mockResolvedValue({ ok: true });
+    mockResumeCrawling.mockResolvedValue(undefined);
   });
   afterEach(() => {
     cleanup();
@@ -134,40 +133,6 @@ describe('CrawlPauseControl', () => {
       expect(mockResumeCrawling).toHaveBeenCalledWith('venue-1'),
     );
     expect(mockPauseCrawling).not.toHaveBeenCalled();
-  });
-
-  it('does not offer Resume on a removed venue, and says why', () => {
-    render(
-      <CrawlPauseControl
-        venue={venue({
-          crawlPausedAt: '2026-11-01T00:00:00.000Z',
-          removedAt: '2026-11-01T00:00:00.000Z',
-        })}
-        showCount={0}
-      />,
-    );
-    expect(screen.getByTestId('crawl-pause-line').textContent).toBe(
-      COPY.removedLine,
-    );
-    const button = screen.getByRole('button', { name: COPY.resumeButton });
-    expect(button).toHaveProperty('disabled', true);
-    fireEvent.click(button);
-    expect(mockResumeCrawling).not.toHaveBeenCalled();
-  });
-
-  it("shows the API's refusal inline when Resume is refused", async () => {
-    const refusal =
-      'This venue asked us to remove its data, so it stays off the site.';
-    mockResumeCrawling.mockResolvedValueOnce({ ok: false, error: refusal });
-    render(
-      <CrawlPauseControl
-        venue={venue({ crawlPausedAt: '2026-10-28T15:00:00.000Z' })}
-        showCount={1}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: COPY.resumeButton }));
-    const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toBe(refusal);
   });
 
   it('reads an auto-pause without the held re-crawl hint', () => {

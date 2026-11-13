@@ -34,11 +34,7 @@ export const CrawlPauseControl = ({
     body: CrawlPauseRequest;
     error: string;
   } | null>(null);
-  const [resumeRefused, setResumeRefused] = useState<string | null>(null);
   const paused = venue.crawlPausedAt !== null;
-  // A venue removed at its request is never crawled again from here; the API
-  // refuses Resume (409 venue_removed), so the button is not offered.
-  const removed = venue.removedAt !== null;
 
   const pause = async (body: CrawlPauseRequest): Promise<string | null> => {
     const outcome = await pauseCrawling(venue.id, body).catch(
@@ -65,10 +61,8 @@ export const CrawlPauseControl = ({
   };
 
   const resume = () => {
-    setResumeRefused(null);
     startTransition(async () => {
-      const outcome = await resumeCrawling(venue.id);
-      if (!outcome.ok) setResumeRefused(outcome.error);
+      await resumeCrawling(venue.id);
       router.refresh();
     });
   };
@@ -104,16 +98,14 @@ export const CrawlPauseControl = ({
               lineHeight: 1.4,
             }}
           >
-            {removed
-              ? COPY.removedLine
-              : (pausedStateLine(venue) ?? COPY.description)}
+            {pausedStateLine(venue) ?? COPY.description}
           </div>
         </div>
         <AdminButton
           variant="outline"
           size="sm"
           icon={paused ? Play : Pause}
-          disabled={isPending || (removed && paused)}
+          disabled={isPending}
           onClick={
             paused
               ? resume
@@ -127,14 +119,6 @@ export const CrawlPauseControl = ({
           {paused ? COPY.resumeButton : COPY.pauseButton}
         </AdminButton>
       </div>
-      {resumeRefused !== null && (
-        <p
-          role="alert"
-          style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}
-        >
-          {resumeRefused}
-        </p>
-      )}
       {failedBody && (
         <SaveFailedToast
           what={COPY.failedWhat(venue.name)}

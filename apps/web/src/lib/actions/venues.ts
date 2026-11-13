@@ -220,34 +220,11 @@ export async function recrawlVenue(
   }
 }
 
-// What Show and Resume crawling come back with. A venue removed at its own
-// request is refused by the API (409 `venue_removed`); that refusal comes back
-// as a value carrying the API's message, because a server action's thrown
-// message is redacted in production. Anything else still throws.
-export type VenueRestoreOutcome = { ok: true } | { ok: false; error: string };
-
-const venueRemovedRefusal = (
-  err: unknown,
-  action: string,
-  id: string,
-): VenueRestoreOutcome => {
-  if (err instanceof ApiError && err.code === 'venue_removed') {
-    console.warn(`${action}: venue removed`, { id, status: err.status });
-    return { ok: false, error: err.message };
-  }
-  throw err;
-};
-
-export async function resumeCrawling(id: string): Promise<VenueRestoreOutcome> {
+export async function resumeCrawling(id: string): Promise<void> {
   const token = await getToken();
-  try {
-    await apiClient.delete<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token);
-  } catch (err: unknown) {
-    return venueRemovedRefusal(err, 'resumeCrawling', id);
-  }
+  await apiClient.delete<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token);
   revalidatePath('/admin/venues');
   revalidatePath(`/admin/venues/${id}`);
-  return { ok: true };
 }
 
 export interface VenueRemovalResult {
@@ -339,17 +316,12 @@ export async function setVenueFeatured(
   revalidatePath(`/admin/venues/${id}`);
 }
 
-export async function activateVenue(id: string): Promise<VenueRestoreOutcome> {
+export async function activateVenue(id: string): Promise<void> {
   const token = await getToken();
-  try {
-    await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-      active: true,
-    });
-  } catch (err: unknown) {
-    return venueRemovedRefusal(err, 'activateVenue', id);
-  }
+  await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+    active: true,
+  });
   revalidatePath('/admin/venues');
-  return { ok: true };
 }
 
 export async function verifyVenue(id: string): Promise<void> {
