@@ -193,6 +193,13 @@ describe('Needs you sources and ranking', () => {
         createdAt: hoursAgo(hours),
       });
     }
+    // As in triage, a partial run is an OK reading and counts toward the
+    // streak (so 3 successes + 1 partial = 4).
+    await seedCrawlRun(venue.id, {
+      status: 'partial',
+      reason: 'no_events_found',
+      createdAt: hoursAgo(9),
+    });
     // A skipped run in the middle of the OK streak carries no reading.
     await seedCrawlRun(venue.id, {
       status: 'skipped',
@@ -216,7 +223,7 @@ describe('Needs you sources and ranking', () => {
       venueLive: true,
       pausedAt: pausedAt.toISOString(),
       showCount: 2,
-      okStreakBefore: 3,
+      okStreakBefore: 4,
     });
     if (item?.kind !== 'venue-failing')
       throw new Error('expected venue-failing');
@@ -296,6 +303,22 @@ describe('Needs you sources and ranking', () => {
     expect(
       items.find((item) => 'eventId' in item && item.eventId === dropped.id),
     ).toMatchObject({ kind: 'show-dropped', otherShowsCrawledFine: 2 });
+  });
+
+  it('gives no crawled-fine count when the latest successful run has no duration', async () => {
+    const venue = await seedVenue({ name: 'No Duration', slug: 'no-duration' });
+    await seedCrawlRun(venue.id, { status: 'success', durationMs: null });
+    await seedEvent(venue.id, { artist: 'Seen Act', date: inDays(5) });
+    const dropped = await seedEvent(venue.id, {
+      artist: 'Dropped Act',
+      date: inDays(4),
+      firstMissingAt: new Date(),
+    });
+
+    const items = await listNeedsYou({ kind: 'show-dropped', now: now() });
+    expect(
+      items.find((item) => 'eventId' in item && item.eventId === dropped.id),
+    ).toMatchObject({ kind: 'show-dropped', otherShowsCrawledFine: null });
   });
 
   it('leaves out a fault on a removed venue', async () => {
