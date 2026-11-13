@@ -8,6 +8,7 @@ import { salvageJsonArrayPrefix } from './salvage-json-array.js';
 import { normalizeSupportingArtists } from '../normalize-supporting-artists.js';
 import { stripDescriptionHtml } from '../strip-description-html.js';
 import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js';
+import { keepWithJoiner } from '../with-billing.js';
 
 const isoDateSchema = z
   .string()
@@ -230,6 +231,7 @@ export const ARTIST_RULES = `- If artist is unclear, derive it from the event ti
   - "Dylan Earl, The Gray Jays, Johno Leeroy" → artist "Dylan Earl", supportingArtists ["The Gray Jays", "Johno Leeroy"]
   - "Hilary Duff with La Roux and Jade LeMac" → artist "Hilary Duff", supportingArtists ["La Roux", "Jade LeMac"]
   - "The Widdler w/ Thelem, Roommate, Aimerie" → artist "The Widdler", supportingArtists ["Thelem", "Roommate", "Aimerie"]
+- When "with", "w/", "featuring", "feat." or "special guest" joins two acts, the act after it ALWAYS supports and is never in headliners, even when it is a big name: "Clipse with J.I.D." → headliners ["Clipse"], supportingArtists ["J.I.D."]. ("An Evening with X" joins no acts: X headlines.) Never rewrite these words as "&", "+", "/" or a comma in the title.
 - BUT never fragment a single act's OWN name. Some band names legitimately contain a comma or ampersand — keep them whole with an empty supportingArtists:
   - "Goodnight, Texas" → artist "Goodnight, Texas", supportingArtists []
   - "hey, nothing" → artist "hey, nothing", supportingArtists []
@@ -523,7 +525,14 @@ export async function extractWithLlm(
     // which is exactly why it's passed as the cross-check (#863): a
     // repeat that also appears verbatim on the page (e.g. the band
     // "Bow Wow Wow") is real and must not be stripped.
-    const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle);
+    //
+    // And the venue's own "with" / "w/" / "featuring" survives: the model has
+    // rewritten "Clipse with J.I.D." as "Clipse & J.I.D", which displays a
+    // co-headline the venue never printed (see with-billing.ts).
+    const title = keepWithJoiner(
+      stripDuplicatedTrailingWord(evt.title, evt.rawTitle),
+      evt.rawTitle,
+    );
     // Normalize opener names through the shared helper: trim each, drop
     // blank/whitespace-only entries so they never render as empty opener
     // chips, and drop any opener that repeats the headliner (case-insensitive).

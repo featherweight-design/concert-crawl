@@ -1327,3 +1327,51 @@ describe('NormalizedEventSchema', () => {
     expect(parsed.artist).toBeNull();
   });
 });
+
+// Red Rocks billed "Clipse with J.I.D."; Haiku cleaned the title to
+// "Clipse & J.I.D", and that is what the calendar displayed.
+describe('extractWithLlm — the venue\'s "with" survives the cleaned title', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('keeps "with" where the model wrote "&"', async () => {
+    mockCreate.mockResolvedValue(
+      makeAnthropicResponse([
+        {
+          title: 'Clipse & J.I.D',
+          rawTitle: 'Clipse with J.I.D.',
+          artist: 'Clipse',
+          headliners: ['Clipse', 'J.I.D'],
+          supportingArtists: ['Samara Cyn'],
+          date: '2026-09-03',
+          confidence: 0.9,
+        },
+      ]),
+    );
+
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+
+    expect(result.events[0]?.title).toBe('Clipse with J.I.D');
+    expect(result.events[0]?.rawTitle).toBe('Clipse with J.I.D.');
+  });
+
+  it('leaves a genuine "&" co-headline title as the model cleaned it', async () => {
+    mockCreate.mockResolvedValue(
+      makeAnthropicResponse([
+        {
+          title: 'Desert Dwellers & Great Dane',
+          rawTitle: 'DESERT DWELLERS & GREAT DANE',
+          artist: 'Desert Dwellers',
+          headliners: ['Desert Dwellers', 'Great Dane'],
+          date: '2026-09-03',
+          confidence: 0.9,
+        },
+      ]),
+    );
+
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+
+    expect(result.events[0]?.title).toBe('Desert Dwellers & Great Dane');
+  });
+});

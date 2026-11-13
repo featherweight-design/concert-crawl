@@ -3,6 +3,7 @@ import {
   deriveArtists,
   isSuspiciousObservation,
   isTributeTitle,
+  isUnruledFlattening,
   joinsSeveralNames,
   tidyBill,
   wouldAdjudicate,
@@ -800,5 +801,150 @@ describe('what the adjudicator is given', () => {
     );
     expect(result.headliners).toEqual(['Hirshi & Friends']);
     expect(result.supportingArtists).toEqual(['Opener']);
+  });
+});
+
+// Red Rocks billed "Clipse with J.I.D." with Samara Cyn opening. The LLM
+// extractor listed J.I.D as a co-headliner; the venue's "with" says support.
+describe('a "with" billing bills the acts after it as support', () => {
+  it('demotes J.I.D below Clipse ahead of the listed opener', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Clipse with J.I.D',
+        rawTitle: 'Clipse with J.I.D.',
+        observedPerformers: ['Clipse', 'J.I.D'],
+        observedSupportingArtists: ['Samara Cyn'],
+      },
+      neverCalled,
+    );
+
+    expect(result).toEqual({
+      headliners: ['Clipse'],
+      supportingArtists: ['J.I.D', 'Samara Cyn'],
+      isConcert: true,
+      adjudicated: false,
+    });
+  });
+
+  it('reads the verbatim rawTitle when the cleaned title lost the joiner', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Clipse & J.I.D',
+        rawTitle: 'Clipse with J.I.D.',
+        observedPerformers: ['Clipse', 'J.I.D'],
+        observedSupportingArtists: ['Samara Cyn'],
+      },
+      neverCalled,
+    );
+
+    expect(result.headliners).toEqual(['Clipse']);
+    expect(result.supportingArtists).toEqual(['J.I.D', 'Samara Cyn']);
+  });
+
+  it('demotes every act after "w/"', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'The Widdler w/ Thelem, Roommate',
+        rawTitle: 'The Widdler w/ Thelem, Roommate',
+        observedPerformers: ['The Widdler', 'Thelem'],
+        observedSupportingArtists: ['Roommate'],
+      },
+      neverCalled,
+    );
+
+    expect(result.headliners).toEqual(['The Widdler']);
+    expect(result.supportingArtists).toEqual(['Thelem', 'Roommate']);
+  });
+
+  it('applies to an adjudicated bill too', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Clipse', 'J.I.D'],
+      supportingArtists: ['Samara Cyn'],
+    });
+
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Clipse with J.I.D.',
+        observedPerformers: ['Clipse & J.I.D'],
+      },
+      adjudicate,
+    );
+
+    expect(result.headliners).toEqual(['Clipse']);
+    expect(result.supportingArtists).toEqual(['J.I.D', 'Samara Cyn']);
+  });
+
+  it('keeps a genuine "&" co-headline as two headliners', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Desert Dwellers & Great Dane',
+        rawTitle: 'Desert Dwellers & Great Dane',
+        observedPerformers: ['Desert Dwellers', 'Great Dane'],
+        observedSupportingArtists: ['Opener'],
+      },
+      neverCalled,
+    );
+
+    expect(result.headliners).toEqual(['Desert Dwellers', 'Great Dane']);
+    expect(result.supportingArtists).toEqual(['Opener']);
+  });
+});
+
+// Bluebird (AEG) bills "Galdive & rum.gold" through headlinersText as one
+// string. The row was stored whole before flattened names were escalated, and
+// the crawl's verdict reuse kept handing that whole name back, so the
+// escalation never ran and rum.gold never got an artist page.
+describe('isUnruledFlattening — a stored flattened name is not a verdict', () => {
+  it('refuses to reuse "Galdive & rum.gold" stored whole', () => {
+    expect(
+      isUnruledFlattening(['Galdive & rum.gold'], ['Galdive & rum.gold']),
+    ).toBe(true);
+  });
+
+  it('reuses a bill the adjudicator already split', () => {
+    expect(
+      isUnruledFlattening(['Galdive & rum.gold'], ['Galdive', 'rum.gold']),
+    ).toBe(false);
+  });
+
+  it('only concerns a lone joined observation', () => {
+    expect(isUnruledFlattening(['Metallica'], ['Metallica'])).toBe(false);
+    expect(
+      isUnruledFlattening(
+        ['Desert Dwellers', 'Great Dane'],
+        ['Desert Dwellers'],
+      ),
+    ).toBe(false);
+  });
+
+  it('reads a never-ruled row as nothing to protect', () => {
+    expect(isUnruledFlattening(['Galdive & rum.gold'], null)).toBe(false);
+  });
+
+  it('the escalation it lets through bills Galdive and rum.gold as two headliners', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Galdive', 'rum.gold'],
+      supportingArtists: [],
+    });
+
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Galdive & rum.gold',
+        rawTitle: 'Galdive & rum.gold',
+        observedPerformers: ['Galdive & rum.gold'],
+      },
+      adjudicate,
+    );
+
+    expect(adjudicate).toHaveBeenCalledOnce();
+    expect(result.headliners).toEqual(['Galdive', 'rum.gold']);
   });
 });

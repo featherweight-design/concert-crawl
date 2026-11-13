@@ -48,7 +48,9 @@ import {
 } from './lib/crawl-error-class.js';
 import {
   deriveArtists,
+  isUnruledFlattening,
   mergeObservedSupporting,
+  withBillingApplied,
   wouldAdjudicate,
 } from './lib/derive-artists.js';
 import { calculateCost } from './lib/cost.js';
@@ -1047,6 +1049,9 @@ export async function crawlVenue(
         wouldAdjudicate(evt) &&
         prior !== undefined &&
         prior.canonicalHeadliners !== null &&
+        // A stored bill that is still the flattened name itself was never
+        // ruled on, so it is not a verdict to reuse ("Galdive & rum.gold").
+        !isUnruledFlattening(evt.observedPerformers, prior.headliners) &&
         prior.title === evt.title &&
         (prior.description ?? undefined) === evt.description
       ) {
@@ -1069,14 +1074,21 @@ export async function crawlVenue(
         // cost is that an opener REMOVED at the source lingers until the title
         // or description changes and the verdict is re-derived. Keeping a stale
         // name is the lesser harm, and it is the same call step 2 makes.
-        normalizedEvents.push({
-          ...evt,
-          headliners: prior.headliners,
-          supportingArtists: mergeObservedSupporting(
+        // A verdict stored before the "with" rule existed still listed the act
+        // after "with" as a co-headliner; the reused bill gets the same rule.
+        const reused = withBillingApplied(
+          evt,
+          prior.headliners ?? [],
+          mergeObservedSupporting(
             prior.headliners ?? [],
             prior.supportingArtists ?? [],
             evt.observedSupportingArtists,
           ),
+        );
+        normalizedEvents.push({
+          ...evt,
+          headliners: prior.headliners === null ? null : reused.headliners,
+          supportingArtists: reused.supportingArtists,
         });
         continue;
       }
