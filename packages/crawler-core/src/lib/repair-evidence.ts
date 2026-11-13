@@ -24,6 +24,8 @@ export type SkipReason =
   | 'stored-bill-unknown'
   | 'would-drop-stored-headliner'
   | 'would-drop-stored-supporting'
+  | 'would-demote-split-part'
+  | 'model-cover-verdict-only'
   | 'would-add-an-artist'
   | 'nothing-evidenced';
 
@@ -86,7 +88,22 @@ export function classifyBillChange(input: {
     if (nextH.has(key)) continue;
     if (keptWholeParts.has(key)) continue;
     if (splitNames.some((name) => nameKey(name) === key)) continue;
-    return { write: false, reason: 'would-drop-stored-headliner' };
+    // A stored joined name whose parts are all on the new bill, but not all as
+    // headliners, was split and demoted: say so rather than "dropped".
+    const demoted = stored.headliners.some((name) => {
+      const parts = partsOf(name);
+      return (
+        nameKey(name) === key &&
+        parts.length > 0 &&
+        parts.every((part) => nextAll.has(nameKey(part)))
+      );
+    });
+    return {
+      write: false,
+      reason: demoted
+        ? 'would-demote-split-part'
+        : 'would-drop-stored-headliner',
+    };
   }
   for (const key of storedS) {
     if (nextAll.has(key) || keptWholeParts.has(key)) continue;
@@ -97,7 +114,8 @@ export function classifyBillChange(input: {
     return { write: false, reason: 'would-add-an-artist' };
   }
   for (const key of nextS) {
-    if (storedS.has(key)) continue;
+    // A split part the ladder lists as headliner AND supporting is one act.
+    if (storedS.has(key) || (splitParts.has(key) && nextH.has(key))) continue;
     return { write: false, reason: 'would-add-an-artist' };
   }
   if (splitNames.length > 0) return { write: true, kind: 'split' };

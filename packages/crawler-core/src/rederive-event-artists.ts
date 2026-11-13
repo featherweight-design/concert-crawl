@@ -493,7 +493,13 @@ export async function rederiveEventArtists(
           notWritten.push({
             eventId: row.id,
             title: row.title,
-            reason: verdict.reason,
+            // A cover verdict from the model alone says so, so a reader can tell
+            // a refused tribute from an ordinary drop.
+            reason:
+              result.coversOtherArtists === true &&
+              !isTributeTitle(row.title.trim())
+                ? 'model-cover-verdict-only'
+                : verdict.reason,
             before: {
               headliners: row.headliners ?? [],
               supportingArtists: row.supportingArtists ?? [],

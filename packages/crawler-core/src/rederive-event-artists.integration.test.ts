@@ -229,7 +229,7 @@ describe('rederive-event-artists integration', () => {
     ]);
     expect(result.updated).toBe(0);
     expect(result.notWritten.map((item) => item.reason)).toEqual([
-      'would-drop-stored-headliner',
+      'model-cover-verdict-only',
     ]);
   });
 
@@ -255,7 +255,9 @@ describe('rederive-event-artists integration', () => {
     expect((await readEvent(event.id)).headliners).toEqual([
       'Concrete & Jerry Garcia',
     ]);
-    expect(result.notWritten).toHaveLength(1);
+    expect(result.notWritten.map((item) => item.reason)).toEqual([
+      'would-demote-split-part',
+    ]);
   });
 
   it('splits a billing a structured source flattened into one name (Clipse & J.I.D, Galdive & rum.gold)', async () => {
