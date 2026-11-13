@@ -44,7 +44,8 @@ describe('SupportingLine', () => {
   });
 
   // A wrapped detail bill stranded "with" at the left edge as its own flex
-  // item while the names centred. It flows inline now, as one block.
+  // item while the names centred. It flows inline now, as one block, with
+  // "with" inside the first name's block.
   it('flows the detail line as one inline run, lead and names together', () => {
     render(
       <SupportingLine
@@ -55,11 +56,14 @@ describe('SupportingLine', () => {
     const group = screen.getByRole('group');
     expect(group.className).not.toContain('flex');
     expect(group.className).toContain('text-balance');
-    expect(group.firstElementChild?.textContent).toBe('with');
+    const [first] = screen.getAllByTestId('support-name');
+    expect(first?.firstElementChild?.textContent).toBe('with');
+    expect(first?.textContent).toBe('withFrost Children·');
   });
 
-  // A detail bill breaks only after a separator: each name is one unbreakable
-  // word (non-breaking inner spaces), with a <wbr> after every "·".
+  // Each detail name is an inline-block, which a line never splits, and the
+  // only break opportunities are the <wbr>s after each "·". The text keeps
+  // plain ASCII spaces, so copy-paste and find-in-page see the real names.
   it('keeps each detail name whole and breaks only after a separator', () => {
     const { container } = render(
       <SupportingLine
@@ -67,27 +71,64 @@ describe('SupportingLine', () => {
         surface="detail"
       />,
     );
+    const units = screen.getAllByTestId('support-name');
+    expect(units.map((unit) => unit.textContent)).toEqual([
+      'withFrost Children·',
+      'Kavari·',
+      'Izzy Camina',
+    ]);
+    for (const unit of units) {
+      expect(unit.tagName).toBe('SPAN');
+      expect(unit.className).toContain('inline-block');
+      expect(unit.className).toContain('max-w-full');
+    }
     const run = container.querySelector('span.min-w-0');
-    expect(run?.textContent).toBe('Frost Children·Kavari·Izzy Camina');
-    expect(run?.textContent).not.toContain(' ');
+    expect(run?.textContent).toBe('withFrost Children·Kavari·Izzy Camina');
+    expect(run?.textContent).not.toContain(' ');
     const breaks = container.querySelectorAll('wbr');
     expect(breaks).toHaveLength(2);
     breaks.forEach((node) => {
-      expect(node.previousElementSibling?.textContent).toBe('·');
+      expect(node.previousElementSibling?.textContent?.endsWith('·')).toBe(
+        true,
+      );
     });
   });
 
-  it('lets a single name wider than the line wrap rather than overflow', () => {
+  // max-width 100% on the block: a single name wider than the line wraps
+  // inside its own block rather than overflow.
+  it('caps a single overlong detail name at the line so it wraps inside', () => {
     render(
       <SupportingLine
         artists={['The Extraordinarily Long Named Ensemble']}
         surface="detail"
       />,
     );
-    expect(screen.getByRole('group').className).toContain('wrap-anywhere');
+    const [unit] = screen.getAllByTestId('support-name');
+    expect(unit?.className).toContain('inline-block');
+    expect(unit?.className).toContain('max-w-full');
+    expect(unit?.textContent).toBe(
+      'withThe Extraordinarily Long Named Ensemble',
+    );
   });
 
-  it('leaves card names and their spaces untouched', () => {
+  it('puts the detail +N more tail in its own block after a break', () => {
+    const { container } = render(
+      <SupportingLine
+        artists={['A', 'B', 'C']}
+        maxInline={2}
+        surface="detail"
+      />,
+    );
+    expect(
+      screen.getAllByTestId('support-name').map((unit) => unit.textContent),
+    ).toEqual(['withA·', 'B·']);
+    const tail = screen.getByText('+1 more').parentElement;
+    expect(tail?.className).toContain('inline-block');
+    expect(tail?.previousElementSibling?.tagName).toBe('WBR');
+    expect(container.querySelectorAll('wbr')).toHaveLength(2);
+  });
+
+  it('leaves card names and their markup untouched', () => {
     const { container } = render(
       <SupportingLine artists={['Izzy Camina', 'Sakr']} surface="card" />,
     );
@@ -95,7 +136,7 @@ describe('SupportingLine', () => {
       'Izzy Camina·Sakr',
     );
     expect(container.querySelectorAll('wbr')).toHaveLength(0);
-    expect(screen.getByRole('group').className).not.toContain('wrap-anywhere');
+    expect(screen.queryAllByTestId('support-name')).toHaveLength(0);
   });
 
   it('keeps the card line a single flex row', () => {

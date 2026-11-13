@@ -18,13 +18,11 @@ const RAMP: Record<Surface, { lead: number; name: number }> = {
   detail: { lead: 13, name: 16 },
 };
 
-const NBSP = ' ';
-
 /**
- * A name with its inner spaces made non-breaking, so a wrapped detail bill
- * breaks only after a separator and "Izzy Camina" never splits.
+ * One name on the detail bill: never split across lines, unless it alone is
+ * wider than the line, and then it wraps inside itself (max-width 100%).
  */
-const keepWhole = (name: string): string => name.split(' ').join(NBSP);
+const NAME_UNIT = 'inline-block max-w-full';
 
 interface SupportingLineProps {
   artists: string[];
@@ -99,81 +97,98 @@ export const SupportingLine = ({
     letterSpacing: isRow ? '0.01em' : '-0.005em',
   };
 
+  const leadEl = (
+    <span
+      aria-hidden="true"
+      className={`relative mr-1.5 shrink-0 font-mono ${quietColor}`}
+      style={{ fontSize: ramp.lead, letterSpacing: '0.04em', top: '-0.02em' }}
+    >
+      {lead}
+    </span>
+  );
+  const sepEl = (
+    <span
+      aria-hidden="true"
+      className={`px-1.5 font-normal ${quietColor}`}
+      style={{ fontSize: ramp.name }}
+    >
+      {sep}
+    </span>
+  );
+  const renderName = (name: string, index: number) => {
+    const slug = linkedSlugs[index] ?? null;
+    return slug === null ? (
+      <span
+        className={`${isRow ? 'font-bold' : 'font-semibold'} ${nameColor}`}
+        style={nameStyle}
+      >
+        {name}
+      </span>
+    ) : (
+      <Link
+        href={`/artists/${slug}`}
+        className={`${isRow ? 'font-bold' : 'font-semibold'} underline-offset-2 hover:underline focus-visible:underline ${nameColor}`}
+        style={nameStyle}
+      >
+        {name}
+      </Link>
+    );
+  };
+
   return (
     <div
       role="group"
       aria-label={supportingA11yLabel(lead, artists)}
-      // `detail` flows as one inline run, so a wrapped bill reads as a single
-      // centred block with "with" glued to the first name; as two flex items,
-      // "with" was stranded at the left edge while the names centred.
-      //
-      // `wrap-anywhere` (overflow-wrap: anywhere) is the fallback for one name
-      // wider than the whole line at 320: it breaks inside that name rather
-      // than overflow, and only then, since each name is otherwise a single
-      // unbreakable word (see `keepWhole`).
+      // `detail` flows inline, so a wrapped bill reads as one centred block; as
+      // two flex items, "with" was stranded at the left edge while the names
+      // centred. Each name there is its own inline-block (`NAME_UNIT`), which a
+      // line never splits. "with" rides in the first block and each "·" in the
+      // block before it, so the line breaks only at the <wbr> after a "·". The
+      // text keeps plain spaces, so copy-paste and find-in-page are untouched.
       className={
         overArt
-          ? 'min-w-0 text-balance wrap-anywhere'
+          ? 'min-w-0 text-balance'
           : `flex min-w-0 items-baseline ${isRow ? 'font-mono' : ''}`
       }
       style={{ lineHeight: 1.35 }}
     >
-      <span
-        aria-hidden="true"
-        className={`relative mr-1.5 shrink-0 font-mono ${quietColor}`}
-        style={{ fontSize: ramp.lead, letterSpacing: '0.04em', top: '-0.02em' }}
-      >
-        {lead}
-      </span>
+      {!overArt && leadEl}
       <span
         className={`min-w-0 ${runClass}`}
         {...(hideRunFromAt ? { 'aria-hidden': true } : {})}
       >
         {shown.map((name, index) => {
-          const slug = linkedSlugs[index] ?? null;
-          const label = overArt ? keepWhole(name) : name;
+          const nameEl = renderName(name, index);
+          if (overArt) {
+            const trailingSep = index < shown.length - 1 || hidden > 0;
+            return (
+              <React.Fragment key={`${name}-${index}`}>
+                <span data-testid="support-name" className={NAME_UNIT}>
+                  {index === 0 && leadEl}
+                  {nameEl}
+                  {trailingSep && sepEl}
+                </span>
+                {trailingSep && <wbr />}
+              </React.Fragment>
+            );
+          }
           return (
             <span key={`${name}-${index}`}>
-              {index > 0 && (
-                <>
-                  <span
-                    aria-hidden="true"
-                    className={`px-1.5 font-normal ${quietColor}`}
-                    style={{ fontSize: ramp.name }}
-                  >
-                    {sep}
-                  </span>
-                  {overArt && <wbr />}
-                </>
-              )}
-              {slug === null ? (
-                <span
-                  className={`${isRow ? 'font-bold' : 'font-semibold'} ${nameColor}`}
-                  style={nameStyle}
-                >
-                  {label}
-                </span>
-              ) : (
-                <Link
-                  href={`/artists/${slug}`}
-                  className={`${isRow ? 'font-bold' : 'font-semibold'} underline-offset-2 hover:underline focus-visible:underline ${nameColor}`}
-                  style={nameStyle}
-                >
-                  {label}
-                </Link>
-              )}
+              {index > 0 && sepEl}
+              {nameEl}
             </span>
           );
         })}
         {hidden > 0 && (
-          <span aria-hidden="true">
-            <span
-              className={`px-1.5 ${quietColor}`}
-              style={{ fontSize: ramp.name }}
-            >
-              {sep}
-            </span>
-            {overArt && <wbr />}
+          <span aria-hidden="true" className={overArt ? NAME_UNIT : undefined}>
+            {!overArt && (
+              <span
+                className={`px-1.5 ${quietColor}`}
+                style={{ fontSize: ramp.name }}
+              >
+                {sep}
+              </span>
+            )}
             <span
               className={`whitespace-nowrap font-mono font-medium ${quietColor}`}
               style={{ fontSize: ramp.name - 1.5, letterSpacing: '0.01em' }}

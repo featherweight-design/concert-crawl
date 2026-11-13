@@ -156,7 +156,10 @@ export const EventTitleBlock = ({
       {heroDelistedChip && (
         // event-nll-d draws the chip above the title from `sm` up, 14px clear
         // of it; event-nll-m draws none, the card below carries it there.
+        // Hidden from assistive tech: the card's status region announces No
+        // longer listed, and two announcements would only repeat it.
         <div
+          aria-hidden="true"
           data-testid="title-nll-chip"
           className="hidden sm:flex"
           style={{ marginBottom: 14 - ramp.gap }}
