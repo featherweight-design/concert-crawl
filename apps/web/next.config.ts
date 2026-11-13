@@ -8,6 +8,14 @@ import { CLERK_JS_VERSION, CLERK_UI_VERSION } from './src/lib/clerk-scripts';
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@concert-crawl/types'],
+  // `next build` runs its own full type-check after compiling, in the same
+  // memory the webpack build still holds. The app has outgrown the 8 GB Vercel
+  // Standard build machine: compile finishes (about 90 s), then "Running
+  // TypeScript" is killed ("Out of Memory", then NEXT_NO_ROUTES_MANIFEST), which
+  // failed every web build from 2026-11-13 07:06Z. CI already type-checks the
+  // web workspace on every PR (`pnpm turbo run lint typecheck --filter=@concert-
+  // crawl/web`, the Checks job), so the build skips the second pass.
+  typescript: { ignoreBuildErrors: true },
   env: {
     // Exact Clerk script versions, so the browser skips two uncacheable
     // redirects per page load. See src/lib/clerk-scripts.ts.
