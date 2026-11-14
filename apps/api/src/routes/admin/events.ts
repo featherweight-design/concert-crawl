@@ -708,8 +708,8 @@ eventsAdminRouter.get(
 
     return ctx.json({
       success: true,
-      // `mySubmission` carries the prices Edit price opens with; the id stays
-      // on its own for older web builds.
+      // `mySubmission` carries the prices Edit price opens with.
+      // `mySubmissionId` is the field #418 shipped, kept as the contract.
       data: {
         ...row,
         mySubmissionId: mine?.id ?? null,
