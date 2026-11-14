@@ -33,7 +33,7 @@ import {
   evaluateEventCountCondition,
   type AcknowledgementKey,
 } from '@concert-crawl/crawler-core/triage-conditions';
-import { TRIAGE_NO_SWEEP } from '@concert-crawl/types';
+import { TRIAGE_NO_SWEEP, type CrawlRunReason } from '@concert-crawl/types';
 
 import { MT_TIME_ZONE } from '../../../lib/time.js';
 
@@ -129,6 +129,8 @@ export interface TriageRunRow {
   id: string;
   venueId: string;
   status: 'success' | 'failed' | 'partial' | 'skipped';
+  /** Why the run produced nothing; read only where the query selected it. */
+  reason?: CrawlRunReason | null;
   httpStatusCode: number | null;
   errorMessage: string | null;
   eventsFound: number;

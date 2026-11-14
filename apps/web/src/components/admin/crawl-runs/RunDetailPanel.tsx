@@ -15,6 +15,7 @@ import {
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { apiClient } from '@/lib/api';
 import {
+  runOutcome,
   runWhen,
   shortDate,
 } from '@/components/admin/venues/overview/overview-rules';
@@ -372,7 +373,7 @@ export const RunDetailPanel = ({
     return (
       <AdminSheet
         onClose={onClose}
-        label={when}
+        label={COPY.sheetLabel(when, runOutcome(run))}
         title={
           <span
             style={{

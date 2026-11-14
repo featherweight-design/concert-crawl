@@ -393,7 +393,10 @@ describe('RunDetailPanel', () => {
     mockGet.mockResolvedValue([]);
     renderPanel(row(), true);
     expect(screen.getByTestId('admin-sheet')).toBeTruthy();
-    const sheet = screen.getByRole('dialog', { name: 'Nov 9 · 3:02 AM' });
+    // The chip is drawn, so the sheet's name carries its word too.
+    const sheet = screen.getByRole('dialog', {
+      name: `Nov 9 · 3:02 AM, ${RUN.partial}`,
+    });
     const heading = within(sheet).getByRole('heading');
     expect(heading.textContent).toBe(`Nov 9 · 3:02 AM${RUN.partial}`);
     expect(within(heading).getByTestId('run-chip').textContent).toBe(
@@ -413,6 +416,9 @@ describe('RunDetailPanel', () => {
       row({ status: 'skipped', reason: 'page_unchanged', eventsFound: 0 }),
       true,
     );
+    expect(
+      screen.getByRole('dialog', { name: `Nov 9 · 3:02 AM, ${RUN.unchanged}` }),
+    ).toBeTruthy();
     const summary = screen.getByTestId('run-detail-summary');
     expect(summary.querySelectorAll('p')).toHaveLength(2);
     await waitFor(() => expect(screen.getByText(DETAIL.noPages)).toBeTruthy());

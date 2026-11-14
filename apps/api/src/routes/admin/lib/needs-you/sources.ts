@@ -408,11 +408,11 @@ const venueFaultItems: Adapter = async ({ now }) => {
       // list leaves it out the same way.
       .where(and(eq(venues.verified, true), isNull(venues.removedAt))),
     db.execute(sql`
-      SELECT id, venue_id, status, http_status_code, error_message,
+      SELECT id, venue_id, status, reason, http_status_code, error_message,
              events_found, events_usable, events_inserted, events_updated,
              furthest_event_date, created_at
       FROM (
-        SELECT cr.id, cr.venue_id, cr.status, cr.http_status_code,
+        SELECT cr.id, cr.venue_id, cr.status, cr.reason, cr.http_status_code,
                cr.error_message, cr.events_found, cr.events_usable,
                cr.events_inserted, cr.events_updated, cr.furthest_event_date,
                cr.created_at,
@@ -490,6 +490,7 @@ const venueFaultItems: Adapter = async ({ now }) => {
       .map((run) => ({
         at: run.createdAt.toISOString(),
         status: run.status,
+        reason: run.reason ?? null,
         errorMessage: run.errorMessage,
         eventsFound: run.eventsFound,
         httpStatus: run.httpStatusCode,

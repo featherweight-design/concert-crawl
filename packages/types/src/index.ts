@@ -1996,6 +1996,8 @@ export type NeedsYouItem =
       lastRuns: {
         at: string;
         status: CrawlStatus;
+        /** Why the run produced nothing; the run's chip reads it before the status. */
+        reason?: CrawlRunReason | null;
         errorMessage: string | null;
         /** Events the run's extractor found (raw, before the usable guards). */
         eventsFound?: number | null;

@@ -1196,6 +1196,9 @@ export const ADMIN_COPY = {
   runDetail: {
     // "Nov 9 · 3:02 AM · 212 s · $0.14"
     meta: (parts: readonly string[]) => parts.join(' · '),
+    // The phone sheet's accessible name: the title and the chip's word, since
+    // the chip is drawn and not read. "Nov 9 · 3:02 AM, Partial"
+    sheetLabel: (when: string, outcome: string) => `${when}, ${outcome}`,
     pages: 'Pages',
     // Couldn't load {this}.
     pagesPage: 'this run’s pages',
@@ -2696,13 +2699,6 @@ export const ADMIN_COPY = {
       lastSeen: 'Last seen',
       match: 'Match',
       blockedChip: (status: string) => `Blocked: ${status}`,
-      // The word a run's status wears in LAST 4 RUNS. Failed and OK are drawn.
-      runStatus: {
-        failed: 'Failed',
-        ok: 'OK',
-        partial: 'Partial',
-        skipped: 'Skipped',
-      },
       artist: {
         title: (reports: number, name: string) =>
           `${reports} ${reports === 1 ? 'fan says' : 'fans say'} this photo isn’t ${name}`,
