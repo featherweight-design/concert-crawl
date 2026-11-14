@@ -1,3 +1,19 @@
+# [1.448.0](https://github.com/featherweight-design/concert-crawl/compare/v1.447.0...v1.448.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** address the crawl batch list sheet and review ([4335dcb](https://github.com/featherweight-design/concert-crawl/commit/4335dcb64758f941eb99a59451af29b4d0430cff))
+* **admin:** couldn't load review fixes, full-width phone buttons, skeleton status ([5c7c49e](https://github.com/featherweight-design/concert-crawl/commit/5c7c49e4bc125bca4d1667dd72d77c7021317680))
+* **admin:** show a night that didn't start at its real cron time ([081621c](https://github.com/featherweight-design/concert-crawl/commit/081621c1da5bfaa483fb3c47e531315245fe8c02))
+
+
+### Features
+
+* **admin:** couldn't load, list and feature flags loading to the boards ([f98789c](https://github.com/featherweight-design/concert-crawl/commit/f98789cad8c562ec3114de380f50da42932e675c))
+* **admin:** list crawl runs as batches on /admin/crawl ([efa719f](https://github.com/featherweight-design/concert-crawl/commit/efa719f30a6fab3e469ae9973f3992b166657e37))
+* **api:** tell the admin how many Watchers a notifying answer reached ([017a92e](https://github.com/featherweight-design/concert-crawl/commit/017a92ee4c6215afc577209ec5fb14a8f5f748b7))
+
 # [1.447.0](https://github.com/featherweight-design/concert-crawl/compare/v1.446.0...v1.447.0) (2026-11-14)
 
 
