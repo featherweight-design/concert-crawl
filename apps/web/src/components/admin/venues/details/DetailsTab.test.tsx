@@ -750,6 +750,56 @@ describe('DetailsTab', () => {
     expect(within(hero).getByText(COPY.capacityTypes.arena)).toBeTruthy();
   });
 
+  it('hints City on desktop only, as the boards draw it', () => {
+    const { unmount } = render(<DetailsTab venue={venue} />);
+    const cityHint = () =>
+      input(FIELDS.city).parentElement?.textContent?.includes(FIELDS.cityHint);
+    expect(cityHint()).toBe(true);
+    unmount();
+    phone = true;
+    render(<DetailsTab venue={venue} />);
+    expect(cityHint()).toBe(false);
+    expect(screen.queryByText(FIELDS.cityHint)).toBeNull();
+  });
+
+  it('draws the Look card as details-d on desktop: 56px, icon radius 15, a rule, the hero bar', () => {
+    render(<DetailsTab venue={venue} />);
+    const icon = screen.getByTestId('details-look-icon');
+    const tile = icon.querySelector('svg[data-venue-tile]');
+    expect(tile?.getAttribute('width')).toBe('56');
+    expect(Number(tile?.querySelector('rect')?.getAttribute('rx'))).toBe(
+      (15 * 96) / 56,
+    );
+    expect(screen.getByTestId('details-look-icon-title').style.fontSize).toBe(
+      '13.5px',
+    );
+    const hero = screen.getByTestId('details-look-hero-thumb');
+    expect(hero.style.width).toBe('56px');
+    expect(hero.style.borderRadius).toBe('12px');
+    expect(screen.queryByTestId('details-look-hero-bar')).not.toBeNull();
+    expect(screen.queryByTestId('details-look-rule')).not.toBeNull();
+  });
+
+  it('draws the Look card as details-m on phone: 48px, radius 12, 14px titles, no rule, no hero bar', () => {
+    phone = true;
+    render(<DetailsTab venue={venue} />);
+    const tile = screen
+      .getByTestId('details-look-icon')
+      .querySelector('svg[data-venue-tile]');
+    expect(tile?.getAttribute('width')).toBe('48');
+    expect(Number(tile?.querySelector('rect')?.getAttribute('rx'))).toBe(
+      (12 * 96) / 48,
+    );
+    for (const id of ['details-look-icon-title', 'details-look-hero-title']) {
+      expect(screen.getByTestId(id).style.fontSize).toBe('14px');
+    }
+    const hero = screen.getByTestId('details-look-hero-thumb');
+    expect(hero.style.width).toBe('48px');
+    expect(hero.style.borderRadius).toBe('12px');
+    expect(screen.queryByTestId('details-look-hero-bar')).toBeNull();
+    expect(screen.queryByTestId('details-look-rule')).toBeNull();
+  });
+
   it('draws no fallback art and no Roll control (addendum 5)', () => {
     render(<DetailsTab venue={venue} />);
     expect(screen.queryByTestId('details-fallback-art')).toBeNull();

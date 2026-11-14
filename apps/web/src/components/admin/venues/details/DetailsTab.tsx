@@ -209,7 +209,12 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
           {text('neighborhood')}
         </Field>
         {/* Addendum 5 `details-d`: City sits beside Neighborhood. */}
-        <Field id={idOf('city')} label={FIELDS.city} error={errors.city}>
+        <Field
+          id={idOf('city')}
+          label={FIELDS.city}
+          hint={phone ? undefined : FIELDS.cityHint}
+          error={errors.city}
+        >
           {text('city')}
         </Field>
       </Pair>
@@ -390,7 +395,9 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
     </Card>
   );
 
-  const lookCard = <LookCard slug={venue.slug} name={venue.name} />;
+  const lookCard = (
+    <LookCard slug={venue.slug} name={venue.name} phone={phone} />
+  );
 
   const column: CSSProperties = {
     display: 'flex',
