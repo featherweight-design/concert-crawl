@@ -1,3 +1,24 @@
+# [1.455.0](https://github.com/featherweight-design/concert-crawl/compare/v1.454.0...v1.455.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** address the Add sheet toast review ([4c97242](https://github.com/featherweight-design/concert-crawl/commit/4c9724221993cf29f8490232e3cf62783c5b934c))
+* **web:** draw the budget switch track and phone Health summary as the boards ([e1ff9e6](https://github.com/featherweight-design/concert-crawl/commit/e1ff9e6defa3f5f6f35d10073015b9bf9afdbc50)), closes [#7AE6FF](https://github.com/featherweight-design/concert-crawl/issues/7AE6FF) [#de96df](https://github.com/featherweight-design/concert-crawl/issues/de96df)
+* **web:** draw the LLM budget month values at normal weight, as the board ([e5ef7a6](https://github.com/featherweight-design/concert-crawl/commit/e5ef7a65171be22cca1f13a3bc0e5a5d34f7b64b))
+* **web:** match the LLM budget panel and phone Health header to the boards ([7951c99](https://github.com/featherweight-design/concert-crawl/commit/7951c9967e8d448d932d0e9906887d7a4e14457e)), closes [#E8F3FF](https://github.com/featherweight-design/concert-crawl/issues/E8F3FF)
+* **web:** posters phone review fixes: no desktop data-phone, no flash, focus, counts ([b8681d6](https://github.com/featherweight-design/concert-crawl/commit/b8681d6225bd36a5c73268b61823335534b5b007))
+* **web:** read a missing wrong-photo count as 0 so web can deploy first ([2c71e70](https://github.com/featherweight-design/concert-crawl/commit/2c71e70851451936ff7d0031fabcbe1433f69f00))
+* **web:** space the LLM budget panel's rows as the board draws them ([239d4f7](https://github.com/featherweight-design/concert-crawl/commit/239d4f74e1865107e5b966302730ddbea0dc377e))
+
+
+### Features
+
+* **api:** add genres and wrong-photo report count to admin artist list rows ([cccac3d](https://github.com/featherweight-design/concert-crawl/commit/cccac3da02408d677987503699f772f6379d8a44))
+* **web:** hold the phone Posters page to 07/posters-mobile ([a8bb4f4](https://github.com/featherweight-design/concert-crawl/commit/a8bb4f4b7ac44a16bc940314c217cfdcb86a13de))
+* **web:** row status chips beside the name, and Date TBA on a postponed row ([30199e3](https://github.com/featherweight-design/concert-crawl/commit/30199e3099dfefb9626730d831606b159dd73e10))
+* **web:** the Add sheet raises its own toasts, with the venue stamp and a Retry ([3a19a80](https://github.com/featherweight-design/concert-crawl/commit/3a19a808d473215de4068050e0d307c3946b71fe))
+
 # [1.454.0](https://github.com/featherweight-design/concert-crawl/compare/v1.453.0...v1.454.0) (2026-11-14)
 
 
