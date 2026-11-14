@@ -1,0 +1,33 @@
+{
+  "feature": "Admin Events list · the phone's Upcoming / Past toggle above search (B+ addendum 6 item 36, `36/past-m`)",
+  "note": "CONTACT_SHEET_ROLE=admin. Board: design/design_handoff_bplus_redesign/addendum-6/boards/36-past-shows/past-m; it supersedes the Upcoming chip of design/design_handoff_admin_redesign/boards/06-events-artists-prices/events-mobile. Desktop must be unchanged. Read-only.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 1400, "touch": true },
+    { "label": "phone", "width": 390, "height": 1400, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "upcoming",
+      "label": "Upcoming, the toggle with Upcoming picked",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"events-load-more\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "past",
+      "label": "Past, the toggle with Past picked",
+      "steps": [
+        {
+          "goto": "/admin/events?when=past",
+          "wait": "[data-testid=\"events-load-more\"]",
+          "settle": 2500
+        }
+      ]
+    }
+  ]
+}
