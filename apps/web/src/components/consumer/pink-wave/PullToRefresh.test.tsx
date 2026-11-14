@@ -95,7 +95,10 @@ describe('PullToRefresh', () => {
       touch('touchend', 0);
     });
     expect(refreshMock).toHaveBeenCalledTimes(1);
-    expect(refetch).toHaveBeenCalledWith({ queryKey: ['events'] });
+    expect(refetch).toHaveBeenCalledWith(
+      { queryKey: ['events'] },
+      { throwOnError: true },
+    );
   });
 
   // addendum-3 #178 item 21: a failed pull says so instead of closing as if
