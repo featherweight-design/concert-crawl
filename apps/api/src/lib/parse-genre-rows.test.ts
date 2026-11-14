@@ -95,6 +95,14 @@ describe('parseGenreRows', () => {
     ]);
   });
 
+  it('samples an array row as an array, not an object', () => {
+    expect(parseGenreRows([['rock']])).toEqual([]);
+    const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? [];
+    expect(extraSchema.parse(options?.extra).sampleRows).toEqual([
+      { genreValue: undefined, genreType: 'array', otherKeys: [] },
+    ]);
+  });
+
   it('aggregates multiple drops into ONE signal per request so an incident cannot storm Sentry', () => {
     // /v1/events/genres runs on every browse-page load. If a driver
     // regression breaks every row (~85 in prod), we cannot afford one

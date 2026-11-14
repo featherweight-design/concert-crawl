@@ -326,6 +326,13 @@ describe('GET /v1/admin/audit-log', () => {
     const healthArea = await areaById('?area=health');
     expect(healthArea.get(health?.id ?? '')).toBe('health');
     expect(healthArea.has(prices?.id ?? '')).toBe(false);
+
+    // Both target the settings row, which is no price: neither names a target.
+    const targetById = new Map(
+      (await list()).body.data.map((row) => [row.id, row.target]),
+    );
+    expect(targetById.get(prices?.id ?? '')).toBeNull();
+    expect(targetById.get(health?.id ?? '')).toBeNull();
   });
 
   it('rejects an unknown area with 400', async () => {
