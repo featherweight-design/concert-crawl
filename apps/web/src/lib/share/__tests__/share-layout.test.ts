@@ -273,6 +273,28 @@ describe('meta line keeps the city (🔸 undrawn on the board)', () => {
     expect(graphemes(line ?? '')).toHaveLength(42);
   });
 
+  it('drops the venue when a long city leaves it no room on Square', () => {
+    const greenwood = {
+      ...source,
+      venue: 'The Church',
+      city: 'Greenwood Village',
+    };
+    expect(shareMetaLines(greenwood, 'square', 43)).toEqual([
+      'FRI NOV 13 · 9:00 PM · GREENWOOD VILLAGE',
+    ]);
+  });
+
+  it('cuts the city itself only when even it overflows', () => {
+    const greenwood = {
+      ...source,
+      venue: 'The Church',
+      city: 'Greenwood Village',
+    };
+    expect(shareMetaLines(greenwood, 'square', 33)).toEqual([
+      'FRI NOV 13 · 9:00 PM · GREENWOOD…',
+    ]);
+  });
+
   it('counts a mono meta character at 0.68em', () => {
     expect(metaMaxChars(936, 32)).toBe(43);
   });

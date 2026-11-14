@@ -102,8 +102,14 @@ const fitWhere = (venue: string, city: string, room: number): string => {
   const full = `${venue}${tail}`;
   if (graphemes(full).length <= room) return full;
   const venueRoom = room - graphemes(tail).length - 1;
-  // No room even for one letter: leave it whole for the renderer to clip.
-  if (venueRoom < 1) return full;
+  // No room for even one venue letter (a long city on Square): drop the
+  // venue and keep the city, cutting the city itself only as a last resort.
+  if (venueRoom < 1) {
+    const cityGlyphs = graphemes(city);
+    if (cityGlyphs.length <= room) return city;
+    const cityRoom = Math.max(1, room - 1);
+    return `${cityGlyphs.slice(0, cityRoom).join('').trimEnd()}${NAME_ELLIPSIS}`;
+  }
   const cut = graphemes(venue).slice(0, venueRoom).join('').trimEnd();
   return `${cut}${NAME_ELLIPSIS}${tail}`;
 };
