@@ -703,7 +703,8 @@
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
   font-weight: 900;
-  font-size: clamp(30px, 9vw, 40px);
+  /* About 42px at 390 on the artist boards. */
+  font-size: clamp(30px, 10.8vw, 42px);
   line-height: 1.04;
   letter-spacing: -0.045em;
   color: var(--fg);
@@ -773,7 +774,8 @@
     grid-column: 1;
   }
   .ap-name {
-    font-size: clamp(44px, 5.4vw, 64px);
+    /* About 78px on the 1280 board. */
+    font-size: clamp(44px, 6.1vw, 78px);
   }
   .ap-genres {
     justify-content: flex-start;

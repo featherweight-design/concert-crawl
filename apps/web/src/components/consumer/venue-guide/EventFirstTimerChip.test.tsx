@@ -63,7 +63,9 @@ describe('EventFirstTimerChip', () => {
     );
   });
 
-  it('marks its decorative svg aria-hidden', () => {
+  // bp-event, bp-m-event_m_end: a small rounded rectangle, text and an arrow,
+  // no leading dots glyph.
+  it('is a rounded rectangle with no leading glyph', () => {
     const { container } = render(
       <EventFirstTimerChip
         venueName="The Roxy"
@@ -72,10 +74,41 @@ describe('EventFirstTimerChip', () => {
         mode="first_timer"
       />,
     );
-    const svgs = Array.from(container.querySelectorAll('svg'));
-    expect(svgs.length).toBeGreaterThan(0);
-    for (const svg of svgs) {
-      expect(svg.getAttribute('aria-hidden')).toBe('true');
-    }
+    expect(container.querySelector('svg')).toBeNull();
+    const pill = container.querySelector<HTMLElement>(
+      '[data-testid="event-first-timer-chip"] > span',
+    );
+    expect(pill?.style.borderRadius).toBe('8px');
+  });
+
+  // The phone draws it under Ages, the desktop level with the Venue row, so the
+  // page renders a copy of each and CSS shows one.
+  it('hides the phone copy from the desktop line and the desktop copy below it', () => {
+    const { container } = render(
+      <>
+        <EventFirstTimerChip
+          venueName="The Roxy"
+          venueSlug="the-roxy"
+          venueGuidePublished
+          mode="first_timer"
+          placement="phone"
+        />
+        <EventFirstTimerChip
+          venueName="The Roxy"
+          venueSlug="the-roxy"
+          venueGuidePublished
+          mode="first_timer"
+          placement="desktop"
+        />
+      </>,
+    );
+    expect(
+      container.querySelector('[data-testid="event-first-timer-chip-phone"]')
+        ?.className,
+    ).toContain('lg:hidden');
+    expect(
+      container.querySelector('[data-testid="event-first-timer-chip"]')
+        ?.className,
+    ).toContain('hidden lg:inline-flex');
   });
 });

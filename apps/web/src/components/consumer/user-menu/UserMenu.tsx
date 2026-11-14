@@ -923,7 +923,8 @@ function MenuBody({
           <span
             style={{
               fontFamily: 'var(--font-ui)',
-              fontSize: 14,
+              // The @handle reads 16px on the account boards.
+              fontSize: 16,
               fontWeight: 700,
               color: 'var(--fg)',
               letterSpacing: '-0.005em',

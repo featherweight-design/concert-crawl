@@ -49,7 +49,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
       <div
         data-testid="venue-feature-card-desktop"
         className="relative hidden lg:grid rounded-[14px] overflow-hidden"
-        style={{ ...FLAGSHIP_EDGE, gridTemplateColumns: '360px 1fr' }}
+        style={{ ...FLAGSHIP_EDGE, gridTemplateColumns: '400px 1fr' }}
       >
         {/* Hover layer: sits over the card, never touches the padding-box
             gradient layers, so the border keeps its gradient. A tint plus an
@@ -67,7 +67,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
         {/* Left — identity art panel */}
         <div
           className="relative"
-          style={{ height: 240, background: identity.palette.bg }}
+          style={{ height: 250, background: identity.palette.bg }}
         >
           {glyphKey !== null ? (
             <VenueNeonArt glyphKey={glyphKey} glyphSize={150} />
@@ -133,28 +133,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
 
         {/* Right — meta column */}
         <div className="relative flex flex-col justify-between py-6 px-7">
-          {/* Chevron — top-right, lights up signal on card hover */}
-          <div
-            className="absolute top-5 right-5 w-9 h-9 rounded-full flex items-center justify-center border transition-all group-hover:bg-[var(--signal)] group-hover:border-[var(--signal)] group-hover:text-[var(--fg-on-accent)]"
-            style={{
-              background: 'var(--surface-2)',
-              borderColor: 'var(--border-strong)',
-              color: 'var(--fg-muted)',
-            }}
-            aria-hidden
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M5 3l5 5-5 5"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-
-          <div style={{ paddingRight: 52 }}>
+          <div>
             {/* Type chip */}
             {venue.venueType && (
               <span

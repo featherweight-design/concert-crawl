@@ -87,13 +87,13 @@ export default async function VenueProfilePage({
       {/* Content */}
       <div className="relative -mt-10 flex-1 lg:-mt-[116px] pb-24 lg:pb-10">
         <div className="mx-auto w-full max-w-[880px] px-[18px] lg:px-8">
-          {/* Phone (hero-m-redrocks.jpg): the tile with the type chip to its
-              right, then the full-width title on the next line. Desktop
+          {/* Phone (bp-m-venue_m.jpg): the type chip on its own line, then the
+              tile with the two-line title beside it. Desktop
               (bp-venue.jpg): the type chip above, then the 72px tile and the
               title on one row. One grid places the same three children both
               ways. */}
-          <div className="grid grid-cols-[auto_1fr] items-end gap-x-3 lg:items-center lg:gap-x-4">
-            <span className="col-start-1 row-start-1 shrink-0 lg:row-start-2">
+          <div className="grid grid-cols-[auto_1fr] items-center gap-x-3.5 lg:gap-x-4">
+            <span className="col-start-1 row-start-2 shrink-0">
               <span className="inline-flex lg:hidden">
                 <VenueTile slug={venue.slug} name={venue.name} size={64} />
               </span>
@@ -104,7 +104,7 @@ export default async function VenueProfilePage({
             {venue.venueType && (
               <span
                 data-testid="venue-type-chip"
-                className="col-start-2 row-start-1 inline-block justify-self-start rounded-[6px] border border-border-strong bg-surface-2 px-2.5 py-1 uppercase text-fg lg:col-span-2 lg:col-start-1 lg:mb-3"
+                className="col-span-2 col-start-1 row-start-1 mb-3 inline-block justify-self-start rounded-[6px] border border-border-strong bg-surface-2 px-2.5 py-1 uppercase text-fg"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: 11,
@@ -117,7 +117,7 @@ export default async function VenueProfilePage({
             )}
             <h1
               data-testid="venue-name"
-              className="col-span-2 row-start-2 mt-3.5 min-w-0 text-[30px] text-fg lg:col-span-1 lg:col-start-2 lg:mt-0 lg:text-[44px]"
+              className="col-start-2 row-start-2 min-w-0 text-[30px] text-fg lg:text-[44px]"
               style={{
                 fontFamily: 'var(--font-ui)',
                 fontWeight: 900,

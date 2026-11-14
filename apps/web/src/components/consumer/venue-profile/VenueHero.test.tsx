@@ -31,7 +31,7 @@ describe('VenueHero', () => {
     const glyph = container.querySelector(
       'svg[data-venue-glyph="church"]',
     ) as SVGElement;
-    expect(glyph.style.getPropertyValue('--vn-size')).toBe('163px');
+    expect(glyph.style.getPropertyValue('--vn-size')).toBe('254px');
     expect(glyph.style.getPropertyValue('--vn-size-sm')).toBe('245px');
   });
 
