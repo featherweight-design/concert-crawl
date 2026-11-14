@@ -6,9 +6,13 @@ import { useAuth } from '@clerk/nextjs';
 import { confirmEventReport } from '@/lib/events';
 import { REPORT_TOKENS } from './reportTokens';
 import { REPORTING_COPY } from './definitions/copy';
+import { EVIDENCE_METHOD_LABELS } from './PendingReportBanner';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+import { CheckGlyph } from '@/components/consumer/glyphs';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 
 const copy = REPORTING_COPY.confirmReportSheet;
+const PENDING_COPY = REPORTING_COPY.pendingReportBanner;
 
 // ── Glyphs (16×16) ────────────────────────────────────────────────
 
@@ -235,7 +239,11 @@ export interface ConfirmReportSheetProps {
   onClose: () => void;
   reportType: ConfirmReportType;
   reporter: { handle: string; url: string } | null;
-  reportedAt: string;
+  /** Kept for callers; the recap's one attribution line draws no time. */
+  reportedAt?: string;
+  /** How the reporter knew, and where: the recap's one mono line names both. */
+  evidenceMethod?: string | undefined;
+  evidenceUrl?: string | null | undefined;
   eventId: string;
   reportId: string;
   onSuccess?: () => void;
@@ -250,7 +258,8 @@ export const ConfirmReportSheet = ({
   onClose,
   reportType,
   reporter,
-  reportedAt,
+  evidenceMethod,
+  evidenceUrl,
   eventId,
   reportId,
   onSuccess,
@@ -265,8 +274,14 @@ export const ConfirmReportSheet = ({
   const token = REPORT_TOKENS[reportType];
   const Glyph = GLYPHS_16[reportType];
 
-  const attributionText =
-    reporter !== null ? `by ${reporter.handle}` : copy.recapCard.anonymousLabel;
+  // "REPORTED BY @SAMI · VENUE SITE · VIEW", one mono line.
+  const methodLabel = evidenceMethod
+    ? (EVIDENCE_METHOD_LABELS[evidenceMethod] ?? evidenceMethod)
+    : null;
+  const reportedBy =
+    reporter !== null
+      ? `${PENDING_COPY.attributionPrefix} ${reporter.handle}`
+      : copy.recapCard.anonymousLabel;
 
   const verifyOptions: Array<{
     method: VerifyMethod;
@@ -394,8 +409,12 @@ export const ConfirmReportSheet = ({
             disabled={selectedMethod === null || isSubmitting}
             style={{
               background: token.color,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
               height: 48,
-              borderRadius: 10,
+              borderRadius: 12,
               fontFamily: 'Inter, sans-serif',
               fontWeight: 800,
               fontSize: 14.5,
@@ -410,49 +429,64 @@ export const ConfirmReportSheet = ({
               transition: 'opacity 0.12s',
             }}
           >
+            <CheckGlyph size={15} color="var(--fg-on-accent)" />
             {copy.confirmButton}
           </button>
           {onFileCounter && (
-            <button
-              onClick={onFileCounter}
+            <p
               style={{
-                background: 'none',
-                border: 'none',
-                padding: '8px 0',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                fontSize: 13,
-                color: 'var(--fg-muted)',
-                cursor: 'pointer',
-                textAlign: 'center' as const,
+                margin: 0,
+                textAlign: 'center',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 14,
                 lineHeight: 1.4,
+                color: 'var(--fg-muted)',
               }}
             >
-              {copy.counterReportLink}
-            </button>
+              {copy.counterReportLead}{' '}
+              <button
+                type="button"
+                onClick={onFileCounter}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                  fontWeight: 800,
+                  color: 'var(--signal)',
+                }}
+              >
+                {copy.counterReportLink}
+              </button>
+            </p>
           )}
         </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Recap card */}
+        {/* Recap card: the status tile, the lead sentence and one mono line
+            naming who reported it, how, and the way to look (more-st-confirm_rep_m) */}
         <div
+          data-testid="confirm-recap"
           style={{
-            borderRadius: 12,
+            borderRadius: 14,
             background: token.bg,
             border: `1px solid ${token.border}`,
-            padding: '12px 14px',
+            padding: '14px',
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 12,
           }}
         >
           <div
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
+              width: 38,
+              height: 38,
+              borderRadius: 10,
               background: token.bgStrong,
+              border: `1px solid ${token.border}`,
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
@@ -462,28 +496,53 @@ export const ConfirmReportSheet = ({
           >
             <Glyph />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+              minWidth: 0,
+            }}
+          >
             <span
               style={{
-                fontFamily: 'Inter, sans-serif',
+                fontFamily: 'var(--font-ui)',
                 fontWeight: 800,
                 fontSize: 16,
                 color: 'var(--fg)',
                 letterSpacing: '-0.01em',
-                lineHeight: 1.2,
+                lineHeight: 1.25,
               }}
             >
-              {token.label}
+              {copy.recapCard.lead[reportType]}
             </span>
             <span
+              data-testid="confirm-recap-attribution"
               className="ph-no-capture"
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: 9,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
                 color: 'var(--fg-muted)',
               }}
             >
-              {attributionText} · {reportedAt}
+              {reportedBy}
+              {methodLabel !== null && ` · ${methodLabel}`}
+              {isSafeHttpUrl(evidenceUrl) && (
+                <>
+                  {' · '}
+                  <a
+                    href={evidenceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={PENDING_COPY.viewEvidenceAria}
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                  >
+                    {PENDING_COPY.viewEvidenceLink}
+                  </a>
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -507,26 +566,38 @@ export const ConfirmReportSheet = ({
           ))}
         </div>
 
-        {/* Caution note */}
-        <div
+        {/* Caution note: plain text with a people glyph, no card */}
+        <p
+          data-testid="confirm-caution"
           style={{
-            background: 'color-mix(in oklab, var(--fg) 3%, transparent)',
-            border: '1px solid var(--border)',
-            borderRadius: 10,
-            padding: '10px 12px',
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 14,
+            color: 'var(--fg-subtle)',
+            lineHeight: 1.4,
           }}
         >
-          <span
-            style={{
-              fontFamily: 'Inter, system-ui',
-              fontSize: 12,
-              color: 'var(--fg-subtle)',
-              lineHeight: 1.5,
-            }}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            aria-hidden="true"
+            style={{ flexShrink: 0 }}
           >
-            {copy.cautionNote}
-          </span>
-        </div>
+            <circle cx="7" cy="6.5" r="2.5" />
+            <path d="M2.5 14.5c0-2.4 2-4 4.5-4s4.5 1.6 4.5 4" />
+            <circle cx="13" cy="7" r="2" />
+            <path d="M13.2 10.6c1.5.2 2.8 1.4 2.8 3.4" />
+          </svg>
+          {copy.cautionNote}
+        </p>
       </div>
     </ModalShell>
   );

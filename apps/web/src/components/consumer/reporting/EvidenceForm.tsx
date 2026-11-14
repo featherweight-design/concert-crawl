@@ -6,7 +6,7 @@ import { ER_POLICY } from '@concert-crawl/types';
 import { ApiError } from '@/lib/api';
 import { fileEventReport, withdrawEventReport } from '@/lib/events';
 import { REPORTING_COPY } from './definitions/copy';
-import { REPORT_TOKENS } from './reportTokens';
+import { REPORT_TOKENS, type ReportTokenKey } from './reportTokens';
 import { ReportGlyph } from './ReportTypeMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 import { denverTodayUtcMs } from '@/lib/time';
@@ -181,6 +181,10 @@ const getDaysUntil = (eventDate: string): number => {
 export interface EvidenceFormProps {
   open: boolean;
   onClose: () => void;
+  /** The step before this one, when there is one: "← Back" returns to it (more-st-evidence_m). */
+  onBack?: (() => void) | undefined;
+  /** The status of the viewer's own open report, which the Already reported body names. */
+  ownReportStatus?: ReportTokenKey | null | undefined;
   reportType: ReportType;
   eventId: string;
   eventDate: string;
@@ -199,6 +203,8 @@ export interface EvidenceFormProps {
 export const EvidenceForm = ({
   open,
   onClose,
+  onBack,
+  ownReportStatus,
   reportType,
   eventId,
   eventDate,
@@ -306,6 +312,9 @@ export const EvidenceForm = ({
           onSuccess?.();
           onClose();
         }}
+        statusLabel={
+          ownReportStatus ? REPORT_TOKENS[ownReportStatus].label : null
+        }
         {...(ownReportId !== null && {
           // Back to the form with what they wrote, so they can file again.
           onWithdraw: async () => {
@@ -347,7 +356,7 @@ export const EvidenceForm = ({
               {copy.eyebrow}
             </span>
             <button
-              onClick={onClose}
+              onClick={onBack ?? onClose}
               style={{
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 9,
@@ -360,7 +369,7 @@ export const EvidenceForm = ({
                 cursor: 'pointer',
               }}
             >
-              {copy.cancelButton}
+              {onBack ? copy.backButton : copy.cancelButton}
             </button>
           </div>
           <h2
@@ -807,9 +816,11 @@ function AlreadyReported({
   onClose,
   onSeeReport,
   onWithdraw,
+  statusLabel,
 }: {
   open: boolean;
   onClose: () => void;
+  statusLabel: string | null;
   onSeeReport: () => void;
   onWithdraw?: () => Promise<void>;
 }) {
@@ -918,7 +929,7 @@ function AlreadyReported({
           margin: 0,
         }}
       >
-        {copy.body}
+        {copy.body(statusLabel)}
       </p>
       {withdrawFailed && (
         <p

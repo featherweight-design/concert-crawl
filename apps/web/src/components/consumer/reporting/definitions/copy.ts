@@ -73,6 +73,8 @@ export const REPORTING_COPY = {
       `Live after ${confirmsNeeded} fan confirms · or admin promotion`,
     eyebrow: 'Evidence',
     cancelButton: 'Cancel',
+    // The top-right link on the evidence step goes back a step.
+    backButton: '← Back',
     heading: 'How do you know?',
 
     // Shown in place of the form once the report is filed. Promotion at the
@@ -93,7 +95,9 @@ export const REPORTING_COPY = {
     alreadyReported: {
       eyebrow: 'Already reported',
       heading: "You've flagged this one.",
-      body: 'Your report is still waiting on fans. One open report per show, so withdraw it first if you got it wrong.',
+      // Names the status, as the board does ("Your Postponed report...").
+      body: (statusLabel: string | null) =>
+        `Your ${statusLabel === null ? '' : `${statusLabel} `}report is still waiting on fans. One open report per show, so withdraw it first if you got it wrong.`,
       seeReportButton: 'See your report',
       withdrawButton: 'Withdraw',
       withdrawError: "Couldn't withdraw it. Try again.",
@@ -154,24 +158,34 @@ export const REPORTING_COPY = {
     subtitle: 'Only what you know firsthand.',
     recapCard: {
       anonymousLabel: 'Anonymous',
+      // The lead sentence of each kind, as the pending card reads it
+      // (more-st-confirm_rep_m).
+      lead: {
+        cancelled: 'A fan reports the show is cancelled.',
+        postponed: 'A fan reports the show is being rescheduled.',
+        available: 'A fan reports tickets are back.',
+        'sold-out': 'A fan reports the show is sold out.',
+      },
     },
     verifyOptions: {
       sawSameSource: {
         label: 'I saw the same source',
-        description: 'Same announcement or listing',
+        description: 'The link or post they pointed to.',
       },
       ownEvidence: {
         label: 'I have my own evidence',
-        description: 'Different source, same conclusion',
+        description: "An email, a post or the venue's site.",
       },
       heardFromVenue: {
         label: 'I heard from someone at the venue',
-        description: 'Word of mouth, venue staff',
+        description: 'Staff, box office or the promoter.',
       },
     },
     cautionNote: 'False confirms affect your community standing.',
     confirmButton: 'Confirm',
-    counterReportLink: "This isn't right. File a counter-report.",
+    // "This isn't right." muted, then the link in signal (more-st-confirm_rep_m).
+    counterReportLead: "This isn't right.",
+    counterReportLink: 'File a counter-report.',
   },
 
   // ── LiveReportBanner ─────────────────────────────────────────────

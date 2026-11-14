@@ -115,6 +115,11 @@ function ownReportId(reports: EventReport[]): string | null {
   return reports.find((rpt) => rpt.isReporter)?.id ?? null;
 }
 
+/** The status the viewer's own unresolved report is about, if any. */
+function ownReportStatus(reports: EventReport[]): EventReport['status'] | null {
+  return reports.find((rpt) => rpt.isReporter)?.status ?? null;
+}
+
 // Derive the pending report of a given status from the reports array
 function findPendingReport(
   reports: EventReport[],
@@ -304,6 +309,8 @@ export function EventDetailBanners({
                   : 'sold-out'
           }
           reportedAt={activePendingReport.createdAt}
+          evidenceMethod={activePendingReport.evidenceMethod}
+          evidenceUrl={activePendingReport.evidenceUrl}
           eventId={event.id}
           reportId={activePendingReport.id}
           reporter={
@@ -340,11 +347,16 @@ export function EventDetailBanners({
       <EvidenceForm
         open={evidenceFormOpen}
         onClose={() => setEvidenceFormOpen(false)}
+        onBack={() => {
+          setEvidenceFormOpen(false);
+          setSawDifferentSheetOpen(true);
+        }}
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
         eventTitle={event.title}
         ownReportId={ownReportId(reports)}
+        ownReportStatus={ownReportStatus(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
           router.refresh();
@@ -1614,11 +1626,16 @@ export function EventDetailPriceBlock({
         <EvidenceForm
           open={soldOutEvidenceFormOpen}
           onClose={() => setSoldOutEvidenceFormOpen(false)}
+          onBack={() => {
+            setSoldOutEvidenceFormOpen(false);
+            setSoldOutSawDifferentOpen(true);
+          }}
           reportType={soldOutEvidenceReportType}
           eventId={event.id}
           eventDate={event.date}
           eventTitle={event.title}
           ownReportId={ownReportId(reports)}
+          ownReportStatus={ownReportStatus(reports)}
           onSuccess={() => {
             setSoldOutEvidenceFormOpen(false);
             router.refresh();
@@ -2226,11 +2243,16 @@ export function EventDetailFooter({
       <EvidenceForm
         open={evidenceFormOpen}
         onClose={() => setEvidenceFormOpen(false)}
+        onBack={() => {
+          setEvidenceFormOpen(false);
+          setIsReportSheetOpen(true);
+        }}
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
         eventTitle={event.title}
         ownReportId={ownReportId(reports)}
+        ownReportStatus={ownReportStatus(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
           router.refresh();

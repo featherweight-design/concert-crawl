@@ -102,4 +102,12 @@ describe('ReportSheet', () => {
     expect(push).not.toHaveBeenCalled();
     expect(screen.getByText(copy.options.cancelled.title)).toBeTruthy();
   });
+
+  // more-st-report_m: the footnote is bare text under the cards, not a card.
+  it('sets the footnote as plain text', () => {
+    renderSheet();
+    const note = screen.getByTestId('report-footnote');
+    expect(note.parentElement?.style.border ?? '').toBe('');
+    expect(note.style.border).toBe('');
+  });
 });

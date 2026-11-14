@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   act,
@@ -116,5 +117,73 @@ describe('ConfirmReportSheet', () => {
       'token',
       'own_evidence',
     );
+  });
+
+  // more-st-confirm_rep_m: the lead sentence, then one mono line naming who,
+  // how and the way to look.
+  it('recaps the report as its lead and one attribution line', () => {
+    render(
+      <ConfirmReportSheet
+        open
+        onClose={vi.fn()}
+        reportType="postponed"
+        reporter={{ handle: '@sami', url: '' }}
+        reportedAt="2026-09-01T02:00:00.000Z"
+        evidenceMethod="venue_site"
+        evidenceUrl="https://venue.example/post"
+        eventId="evt_1"
+        reportId="rep_1"
+      />,
+    );
+    const recap = screen.getByTestId('confirm-recap');
+    expect(recap).toHaveTextContent(copy.recapCard.lead.postponed);
+    const line = screen.getByTestId('confirm-recap-attribution');
+    expect(line).toHaveTextContent('Reported by @sami');
+    expect(line).toHaveTextContent('Venue site');
+    const link = screen.getByRole('link', {
+      name: REPORTING_COPY.pendingReportBanner.viewEvidenceAria,
+    });
+    expect(link.getAttribute('href')).toBe('https://venue.example/post');
+  });
+
+  it('draws no VIEW link for an unsafe evidence URL', () => {
+    render(
+      <ConfirmReportSheet
+        open
+        onClose={vi.fn()}
+        reportType="cancelled"
+        reporter={{ handle: '@sami', url: '' }}
+        evidenceMethod="venue_site"
+        evidenceUrl="javascript:alert(1)"
+        eventId="evt_1"
+        reportId="rep_1"
+      />,
+    );
+    expect(
+      screen.queryByRole('link', {
+        name: REPORTING_COPY.pendingReportBanner.viewEvidenceAria,
+      }),
+    ).toBeNull();
+  });
+
+  it("uses the board's option subtitles", () => {
+    renderSheet();
+    expect(screen.getByText('The link or post they pointed to.')).toBeTruthy();
+    expect(
+      screen.getByText("An email, a post or the venue's site."),
+    ).toBeTruthy();
+    expect(screen.getByText('Staff, box office or the promoter.')).toBeTruthy();
+  });
+
+  it('sets the caution as plain text and files a counter-report from a signal link', () => {
+    renderSheet();
+    const caution = screen.getByTestId('confirm-caution');
+    expect(caution).toHaveTextContent(copy.cautionNote);
+    expect(caution.style.border).toBe('');
+    expect(caution.querySelector('svg')).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: copy.counterReportLink }),
+    ).toBeTruthy();
+    expect(screen.getByText(copy.counterReportLead)).toBeTruthy();
   });
 });

@@ -171,7 +171,7 @@ const ReportOptionRow = ({
         alignItems: 'flex-start',
         gap: '12px',
         padding: '12px 14px',
-        borderRadius: '10px',
+        borderRadius: '12px',
         border: isSelected
           ? `1.5px solid ${tokens.color}`
           : '1px solid var(--border)',
@@ -458,27 +458,20 @@ export const ReportSheet = ({
             />
           ))}
         </div>
-        <div
+        {/* Bare text under the cards, not a card (more-st-report_m). */}
+        <p
+          data-testid="report-footnote"
           style={{
-            padding: '12px 14px',
-            borderRadius: 10,
-            background: 'color-mix(in oklab, var(--fg) 5%, transparent)',
-            border: '1px solid var(--border)',
+            margin: 0,
+            fontFamily: 'Inter, sans-serif',
+            fontSize: 13,
+            color: 'var(--fg-subtle)',
+            lineHeight: 1.5,
+            letterSpacing: '-0.005em',
           }}
         >
-          <p
-            style={{
-              margin: 0,
-              fontFamily: 'Inter, sans-serif',
-              fontSize: 13,
-              color: 'var(--fg-subtle)',
-              lineHeight: 1.5,
-              letterSpacing: '-0.005em',
-            }}
-          >
-            {copy.footnote}
-          </p>
-        </div>
+          {copy.footnote}
+        </p>
       </div>
     </ModalShell>
   );
