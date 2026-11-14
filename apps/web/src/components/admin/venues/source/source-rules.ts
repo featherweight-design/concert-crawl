@@ -152,6 +152,50 @@ export const draftOf = (columns: SourceColumns): SourceDraft => {
   };
 };
 
+const DRAFT_KEYS = [
+  'mode',
+  'websiteUrl',
+  'seller',
+  'feedId',
+  'reader',
+  'crawlMode',
+  'waitUntil',
+  'waitFor',
+] as const satisfies ReadonlyArray<keyof SourceDraft>;
+
+/**
+ * A dirty draft moved onto a newer server row: the fields edited against the
+ * old row stay, every other field takes the new row's value. The seller and
+ * its ID move together, so an edited ID never lands on another seller.
+ */
+export const rebaseDraft = (
+  draft: SourceDraft,
+  oldSaved: SourceDraft,
+  newSaved: SourceDraft,
+): SourceDraft => {
+  const next: SourceDraft = { ...newSaved };
+  const keep = <K extends keyof SourceDraft>(key: K) => {
+    next[key] = draft[key];
+  };
+  for (const key of DRAFT_KEYS) {
+    if (draft[key] !== oldSaved[key]) keep(key);
+  }
+  if (draft.seller !== oldSaved.seller || draft.feedId !== oldSaved.feedId) {
+    keep('seller');
+    keep('feedId');
+  }
+  return next;
+};
+
+/**
+ * The feed ID a seller pick starts with: the saved ID when it is the saved
+ * seller, so a mis-tap and back loses nothing; otherwise empty.
+ */
+export const feedIdForSeller = (
+  seller: FeedSeller,
+  saved: SourceColumns,
+): string => (sellerOf(saved) === seller ? feedIdOf(saved, seller) : '');
+
 /**
  * What a draft writes, over the saved columns (spec "How we read it"):
  *

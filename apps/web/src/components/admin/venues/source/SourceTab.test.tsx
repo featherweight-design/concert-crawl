@@ -238,13 +238,54 @@ describe('SourceTab — the platform probe, under the feed ID', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: PROBE.button }));
-    expect(
-      (await screen.findByTestId('source-probe-result')).textContent,
-    ).toContain(`12 ${PROBE.okEvents} 250ms`);
+    expect((await screen.findByTestId('source-probe-result')).textContent).toBe(
+      PROBE.ok(
+        12,
+        250,
+        'https://aegwebprod.blob.core.windows.net/json/events/89',
+      ),
+    );
     expect(mockProbe).toHaveBeenCalledWith('venue-1', {
       platform: 'aeg',
       platformVenueId: '89',
     });
+  });
+
+  it('drops an answer that arrives after the seller changed', async () => {
+    phone = true;
+    let answer: (value: unknown) => void = () => undefined;
+    mockProbe.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    render(
+      <SourceTab
+        venue={{ ...venue, platform: 'aeg', platformVenueId: '89' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: PROBE.button }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Live Nation' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'AEG' }));
+    answer({
+      success: true,
+      data: { ok: true, eventsFound: 3, fetchLatencyMs: 9, sourceUrl: 'x' },
+    });
+    // A second, unanswered probe would be needed to show anything now.
+    await waitFor(() => expect(mockProbe).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('source-probe-result')).toBeNull();
+  });
+
+  it('keeps the saved ID when the saved seller is picked again', () => {
+    phone = true;
+    render(
+      <SourceTab
+        venue={{ ...venue, platform: 'aeg', platformVenueId: '89' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('radio', { name: 'Live Nation' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'AEG' }));
+    expect(saveButton()).toBeNull();
   });
 
   it('asks for the ID before probing without one', () => {
@@ -376,7 +417,82 @@ describe('SourceTab — Advanced', () => {
   });
 });
 
+describe('SourceTab — a newer server row', () => {
+  it('a clean draft follows the new row', () => {
+    const { rerender } = render(<SourceTab venue={venue} />);
+    rerender(
+      <SourceTab
+        venue={{ ...venue, websiteUrl: 'https://gothic.example/new' }}
+      />,
+    );
+    expect(calendarInput()).toHaveProperty(
+      'value',
+      'https://gothic.example/new',
+    );
+    expect(saveButton()).toBeNull();
+  });
+
+  it('keeps only the edited field, and never sends the old value back', async () => {
+    const { rerender } = render(<SourceTab venue={venue} />);
+    fireEvent.click(
+      screen.getByRole('button', { name: new RegExp(COPY.advanced.label) }),
+    );
+    fireEvent.click(radio(COPY.advanced.reader.llm));
+    // Another tab changes the calendar page meanwhile.
+    rerender(
+      <SourceTab
+        venue={{ ...venue, websiteUrl: 'https://gothic.example/new' }}
+      />,
+    );
+    expect(calendarInput()).toHaveProperty(
+      'value',
+      'https://gothic.example/new',
+    );
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    const sent = sentFormData();
+    expect(sent.get('extractionStrategy')).toBe('llm');
+    expect(sent.has('websiteUrl')).toBe(false);
+  });
+});
+
 describe('SourceTab — its own save bar', () => {
+  it('leads the failure toast with the API’s reason', async () => {
+    mockUpdateVenue.mockResolvedValue({
+      success: false,
+      error: 'This venue was removed.',
+    });
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    expect(
+      await screen.findByText(
+        `This venue was removed. ${COPY.failed.saved.page}`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('opens Advanced to show a refused Wait for', async () => {
+    mockUpdateVenue.mockResolvedValue({
+      success: false,
+      error: 'Full browser needs a selector.',
+      field: 'crawlWaitForSelector',
+    });
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    await waitFor(() => expect(mockUpdateVenue).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId('source-advanced')).toBeTruthy();
+    expect(
+      screen.getAllByText('Full browser needs a selector.', { exact: false })
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
   it('appears only once something changed, and Discard puts it back', () => {
     render(<SourceTab venue={venue} />);
     expect(saveButton()).toBeNull();
