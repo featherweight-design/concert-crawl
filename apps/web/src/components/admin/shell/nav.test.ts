@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
@@ -14,10 +14,19 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const ADMIN_APP_DIR = path.resolve(__dirname, '../../../app/(protected)/admin');
 
+// The page for a URL, allowing a route group (`(list)/page.tsx`) directly
+// under its folder, as People's list has.
 const routeFileFor = (href: string): string => {
   const pathname = href.split('?')[0] ?? href;
   const rest = pathname.replace(/^\/admin\/?/, '');
-  return path.join(ADMIN_APP_DIR, rest, 'page.tsx');
+  const dir = path.join(ADMIN_APP_DIR, rest);
+  const direct = path.join(dir, 'page.tsx');
+  if (existsSync(direct) || !existsSync(dir)) return direct;
+  const group = readdirSync(dir).find(
+    (name) =>
+      /^\(.+\)$/.test(name) && existsSync(path.join(dir, name, 'page.tsx')),
+  );
+  return group ? path.join(dir, group, 'page.tsx') : direct;
 };
 
 describe('admin NAV', () => {
