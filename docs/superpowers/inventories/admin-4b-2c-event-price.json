@@ -1,0 +1,41 @@
+{
+  "feature": "Admin 4b-2 part c: Event edit Price card and the shared price sheet",
+  "note": "Plan row 4b-2, part c (docs/superpowers/plans/2026-11-13-admin-4b-events-ui.md). CONTACT_SHEET_ROLE=admin. Read-only: opens the sheet, never saves. Boards: 06-events-artists-prices/event-edit (Price card), event-edit-mobile, edit-price-desktop. Scratch Neon fixture: Violet Grohl (upcoming; the admin has no price on it, so Edit price opens the new-price sheet). By hand: Edit price on a show with the admin's own submission (the edit sheet), and a save failing (stop the API).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "price",
+      "label": "Price card: listed price, Submitted prices, ticket page, Edit price",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"event-edit-price\"] h2" },
+        { "settle": 300 }
+      ]
+    },
+    {
+      "id": "edit-price",
+      "label": "Edit price: the shared sheet, one show, no Sold out row",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl" },
+        { "settle": 2500 },
+        { "click": "[data-testid=\"event-edit-price-edit\"]" },
+        { "wait": "[role=\"dialog\"]", "settle": 500 }
+      ]
+    }
+  ]
+}
