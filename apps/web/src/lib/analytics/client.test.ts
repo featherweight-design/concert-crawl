@@ -315,6 +315,55 @@ describe('web analytics client', () => {
     await analytics.initAnalytics(PROD);
     expect(mockRegister).not.toHaveBeenCalled();
   });
+
+  it('shares one load between concurrent initAnalytics calls', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
+    const analytics = await loadModule();
+    await Promise.all([
+      analytics.initAnalytics(PROD),
+      analytics.initAnalytics(PROD),
+    ]);
+    expect(mockInit).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues a track made while the SDK loads and sends it once it is up', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
+    const analytics = await loadModule();
+    const started = analytics.initAnalytics(PROD);
+    analytics.track('passport_shared', { destination: 'system' });
+    expect(mockCapture).not.toHaveBeenCalled();
+    await started;
+    expect(mockCapture).toHaveBeenCalledWith('passport_shared', {
+      destination: 'system',
+    });
+  });
+
+  it('does not queue a track when analytics was never started', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
+    const analytics = await loadModule();
+    analytics.track('passport_shared', { destination: 'system' });
+    await analytics.initAnalytics(PROD);
+    expect(mockCapture).not.toHaveBeenCalled();
+  });
+
+  it('drops queued events and retries on the next call after a failed start', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockInit.mockImplementationOnce(() => {
+      throw new Error('blocked storage');
+    });
+    const analytics = await loadModule();
+    const first = analytics.initAnalytics(PROD);
+    analytics.track('passport_shared', { destination: 'system' });
+    await first;
+    expect(analytics.isAnalyticsEnabled()).toBe(false);
+    expect(mockCapture).not.toHaveBeenCalled();
+    await analytics.initAnalytics(PROD);
+    expect(analytics.isAnalyticsEnabled()).toBe(true);
+    expect(mockInit).toHaveBeenCalledTimes(2);
+    expect(mockCapture).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
 });
 
 describe('releaseProperties', () => {

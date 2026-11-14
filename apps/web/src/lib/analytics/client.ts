@@ -54,22 +54,16 @@ export const isProductionHostname = (hostname: string): boolean =>
 export const ADMIN_URL = /^https?:\/\/[^/]+\/admin(?:[/?#]|$)/i;
 
 // The posthog-js SDK is a separate chunk, fetched only once the gates below
-// pass and the browser is idle, so it is not in the first-load bundle of any
+// pass (after Clerk has loaded), so it is not in the first-load bundle of any
 // route. `client` is set when init succeeds and doubles as the "initialized"
 // flag; `starting` makes concurrent initAnalytics calls share one load.
 let client: PostHog | null = null;
 let starting: Promise<void> | null = null;
 
-// Resolves once the browser is idle (or after `maxWaitMs`), so the SDK
-// download and init do not compete with hydration.
-const whenIdle = (maxWaitMs: number): Promise<void> =>
-  new Promise((resolve) => {
-    if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(() => resolve(), { timeout: maxWaitMs });
-    } else {
-      window.setTimeout(resolve, 1);
-    }
-  });
+// Share events fired while the SDK is still loading, replayed once it is up so
+// a quick tap is not lost. Bounded; dropped if the load fails.
+const MAX_PENDING_EVENTS = 20;
+let pending: Array<(posthog: PostHog) => void> = [];
 
 // `posthog.reset()` clears super-properties along with the identity, so this
 // runs after every reset as well as at init.
@@ -94,14 +88,20 @@ export const initAnalytics = (hostname?: string): Promise<void> => {
     return Promise.resolve();
   }
   starting ??= (async () => {
-    await whenIdle(2000);
     try {
       const { default: posthog } = await import('posthog-js');
       startPostHog(posthog, apiKey);
+      const queued = pending;
+      pending = [];
+      for (const send of queued) send(posthog);
     } catch (err) {
       // A misconfiguration, blocked storage, a failed chunk fetch or an SDK
-      // regression must never crash the app: leave analytics disabled.
+      // regression must never crash the app: leave analytics disabled. Clear
+      // `starting` so a flaky-network chunk failure is retried by the next
+      // call rather than cached for the page's life.
       console.error('analytics: posthog.init failed', err);
+      starting = null;
+      pending = [];
     }
   })();
   return starting;
@@ -192,16 +192,23 @@ export const resetAnalyticsIdentity = (): void => {
 // Typed client-side capture. Share events (#72) only: `event` constrains
 // `properties` to that event's shape via the shared contract, so a wrong
 // property name or type, or a billing event, is a compile error. No-ops
-// (never throws) when analytics is disabled.
+// (never throws) when analytics is disabled. While the SDK is loading the
+// event is queued and sent once it is up.
 export const track = <TEvent extends ShareEvent>(
   event: TEvent,
   properties: ShareEventMap[TEvent],
 ): void => {
-  if (!client) return;
-  try {
-    client.capture(event, properties);
-  } catch (err) {
-    // A capture must never surface to the UI that fired it.
-    console.error('analytics: capture failed', err);
+  const send = (posthog: PostHog): void => {
+    try {
+      posthog.capture(event, properties);
+    } catch (err) {
+      // A capture must never surface to the UI that fired it.
+      console.error('analytics: capture failed', err);
+    }
+  };
+  if (client) {
+    send(client);
+  } else if (starting && pending.length < MAX_PENDING_EVENTS) {
+    pending.push(send);
   }
 };
