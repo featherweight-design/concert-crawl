@@ -169,6 +169,26 @@ describe('SubmittedTab on a desktop', () => {
       }),
     );
 
+  it('opens already filtered to the fan from ?handle= (A3/12 person menu)', async () => {
+    counts.mockResolvedValue({
+      all: 4,
+      waiting: 1,
+      published: 3,
+      priceCheck: 0,
+    });
+    list.mockResolvedValue({ rows: [ROWS[0]!], total: 4 });
+    render(<SubmittedTab initialFan="dlo" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('fan-filter')).toHaveTextContent(
+        COPY.fanFilter('dlo', 4),
+      ),
+    );
+    // The very first load is the fan's: never the unfiltered list first.
+    expect(list.mock.calls[0]).toEqual(['all', '', 0, 50, 'dlo']);
+    expect(counts.mock.calls[0]).toEqual(['', 'dlo']);
+  });
+
   it("filters to the fan's exact handle, counts the fan only once counted, and × clears it (4d#12)", async () => {
     render(<SubmittedTab />);
     await openMenu(0);

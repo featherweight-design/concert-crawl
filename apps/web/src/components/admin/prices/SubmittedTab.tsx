@@ -157,7 +157,12 @@ const countOf = (
  * filter chips with counts, a search over shows and people, the list with a row
  * menu on a desktop, and Reject for a price that is waiting for you.
  */
-export const SubmittedTab = () => {
+export const SubmittedTab = ({
+  initialFan = null,
+}: {
+  /** Open already filtered to this fan (`?handle=`, from the person page). */
+  initialFan?: string | null;
+} = {}) => {
   const { getToken } = useAuth();
   const router = useRouter();
   const isPhone = useIsPhone();
@@ -178,7 +183,16 @@ export const SubmittedTab = () => {
   const [editing, setEditing] = useState<SubmittedRow | null>(null);
   // "This fan's other prices" (4d#12): the list narrowed to one fan on the
   // whole handle, shown as a chip rather than typed into the search box.
-  const [fan, setFan] = useState<string | null>(null);
+  const [fan, setFan] = useState<string | null>(initialFan);
+  // A link to `?handle=` while the tab is mounted changes the prop, not the
+  // mount (as PricesClient does for `?tab=`).
+  useEffect(() => {
+    if (initialFan === null) return;
+    setFilter('all');
+    setTyped('');
+    setSearch('');
+    setFan(initialFan);
+  }, [initialFan]);
   // Whose prices `counts` were counted over, so the chip never shows another
   // load's figure.
   const [countsFan, setCountsFan] = useState<string | null>(null);

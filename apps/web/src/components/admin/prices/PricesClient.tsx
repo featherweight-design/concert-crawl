@@ -129,7 +129,14 @@ const ApproveCard = ({
  * and Price checks tabs link to their Review pages until the redesigned tabs
  * replace them.
  */
-export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
+export const PricesClient = ({
+  initialTab,
+  initialHandle = null,
+}: {
+  initialTab: PricesTab;
+  /** `?tab=submitted&handle=`: Submitted prices opens filtered to that fan. */
+  initialHandle?: string | null;
+}) => {
   const { getToken } = useAuth();
   const router = useRouter();
   const isPhone = useIsPhone();
@@ -380,7 +387,7 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
             </>
           )
         ) : tab === 'submitted' ? (
-          <SubmittedTab />
+          <SubmittedTab initialFan={initialHandle} />
         ) : (
           <PriceChecksTab />
         )}
