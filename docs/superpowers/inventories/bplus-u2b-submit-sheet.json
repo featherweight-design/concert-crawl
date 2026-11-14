@@ -1,0 +1,30 @@
+{
+  "feature": "U2b · Price submit sheet (B+ rail, buttons, desktop top edge)",
+  "note": "Spec-fidelity package U2, submit half, part 1 (rail, states, buttons, desktop top edge). Needs CC_PENDING_EVENT_ID: an upcoming event the audit user can still submit a price on. Boards (design/design_handoff_bplus_redesign/screens/08-prices-and-status/): submit = more-p-submit_m and more-p-submit_d; confirm dialog top edge = more-p-check_d. The done screen (more-p-submit_done_m) and the error screen (more-p-error_m) need a real submit or a failure, and a submit writes the shared scratch branch, so they are walked by hand and covered by unit tests. Electric only; the audit account's saved theme must be Electric.",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "submit-form",
+      "label": "Submit price sheet, open",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"submit-another-cta\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"submit-another-cta\"]" },
+        { "waitDialog": "^Submit price$" },
+        { "wait": "[data-testid=\"submit-rail\"]", "settle": 1200 }
+      ]
+    }
+  ]
+}
