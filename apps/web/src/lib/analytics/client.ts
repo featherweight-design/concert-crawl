@@ -10,10 +10,10 @@
 // No-op unless NEXT_PUBLIC_POSTHOG_KEY is set AND the page is served from the
 // production hostname (see PRODUCTION_HOSTNAMES): local dev and preview builds
 // have no key, staging is kept out by the hostname even if it gets one, and
-// neither gate ever breaks the UI. `initialized` gates every call, so
+// neither gate ever breaks the UI. `client` gates every call, so
 // track/identify are safe to call unconditionally.
 
-import posthog from 'posthog-js';
+import type { PostHog } from 'posthog-js';
 import type { ShareEvent, ShareEventMap } from '@concert-crawl/types';
 import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties';
 import { redactCapture } from './redact';
@@ -53,11 +53,27 @@ export const isProductionHostname = (hostname: string): boolean =>
 // Any URL on the admin (`/admin` and below), matched against the full href.
 export const ADMIN_URL = /^https?:\/\/[^/]+\/admin(?:[/?#]|$)/i;
 
-let initialized = false;
+// The posthog-js SDK is a separate chunk, fetched only once the gates below
+// pass and the browser is idle, so it is not in the first-load bundle of any
+// route. `client` is set when init succeeds and doubles as the "initialized"
+// flag; `starting` makes concurrent initAnalytics calls share one load.
+let client: PostHog | null = null;
+let starting: Promise<void> | null = null;
+
+// Resolves once the browser is idle (or after `maxWaitMs`), so the SDK
+// download and init do not compete with hydration.
+const whenIdle = (maxWaitMs: number): Promise<void> =>
+  new Promise((resolve) => {
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(() => resolve(), { timeout: maxWaitMs });
+    } else {
+      window.setTimeout(resolve, 1);
+    }
+  });
 
 // `posthog.reset()` clears super-properties along with the identity, so this
 // runs after every reset as well as at init.
-const registerRelease = (): void => {
+const registerRelease = (posthog: PostHog): void => {
   posthog.register(
     releaseProperties(
       process.env['NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA'],
@@ -66,62 +82,76 @@ const registerRelease = (): void => {
   );
 };
 
-// `hostname` defaults to the page's own; tests pass one in.
-export const initAnalytics = (hostname?: string): void => {
-  if (initialized || typeof window === 'undefined') return;
+// `hostname` defaults to the page's own; tests pass one in. Resolves when
+// analytics is running or has been ruled out (gates, failure); never rejects.
+// Callers that identify the reader must await it, so identity is settled
+// before posthog-js's first pageview.
+export const initAnalytics = (hostname?: string): Promise<void> => {
+  if (typeof window === 'undefined') return Promise.resolve();
   const apiKey = process.env['NEXT_PUBLIC_POSTHOG_KEY'];
-  if (apiKey === undefined || apiKey.length === 0) return;
-  if (!isProductionHostname(hostname ?? window.location.hostname)) return;
-  try {
-    posthog.init(apiKey, {
-      api_host: resolveHost(process.env['NEXT_PUBLIC_POSTHOG_HOST']),
-      // Clicks, submits and changes on interactive elements. posthog-js never
-      // records what is typed into an input, whatever the masking options say;
-      // the options below only keep element text and attributes, so a
-      // captured button still says what it was. Not on /admin: its rows carry
-      // other readers' ids and contact details in text and hrefs. (Pageviews
-      // still run there; ./redact takes the id out of /admin/users/<id> and
-      // /admin/people/<id>.)
-      autocapture: { url_ignorelist: [ADMIN_URL] },
-      mask_all_text: false,
-      mask_all_element_attributes: false,
-      // Pageviews on load AND on App Router client-side navigations, which
-      // change the URL through the History API without a page load.
-      capture_pageview: 'history_change',
-      disable_session_recording: true,
-      respect_dnt: true,
-      // Only build person profiles for signed-in (identified) users — anonymous
-      // browsing does not need a profile.
-      person_profiles: 'identified_only',
-      // No campaign tags or ad click ids from the landing URL, and none of
-      // the copies posthog-js keeps of them or of a search engine's keyword
-      // (./redact drops the same names from $set and $set_once, which the
-      // denylist does not reach).
-      save_campaign_params: false,
-      property_denylist: [...CAMPAIGN_PROPERTIES],
-      // Invite tokens and query strings never leave the browser (./redact).
-      before_send: redactCapture,
-      // No /flags request: this app uses no PostHog flags, surveys or remote
-      // config, and that request carries the initial URL (an invite token
-      // included) as person properties, outside before_send's reach.
-      advanced_disable_flags: true,
-    });
-    registerRelease();
-    initialized = true;
-  } catch (err) {
-    // A misconfiguration, blocked storage, or SDK regression must never crash
-    // the app — leave analytics disabled and carry on.
-    console.error('analytics: posthog.init failed', err);
+  if (apiKey === undefined || apiKey.length === 0) return Promise.resolve();
+  if (!isProductionHostname(hostname ?? window.location.hostname)) {
+    return Promise.resolve();
   }
+  starting ??= (async () => {
+    await whenIdle(2000);
+    try {
+      const { default: posthog } = await import('posthog-js');
+      startPostHog(posthog, apiKey);
+    } catch (err) {
+      // A misconfiguration, blocked storage, a failed chunk fetch or an SDK
+      // regression must never crash the app: leave analytics disabled.
+      console.error('analytics: posthog.init failed', err);
+    }
+  })();
+  return starting;
 };
 
-export const isAnalyticsEnabled = (): boolean => initialized;
+const startPostHog = (posthog: PostHog, apiKey: string): void => {
+  posthog.init(apiKey, {
+    api_host: resolveHost(process.env['NEXT_PUBLIC_POSTHOG_HOST']),
+    // Clicks, submits and changes on interactive elements. posthog-js never
+    // records what is typed into an input, whatever the masking options say;
+    // the options below only keep element text and attributes, so a
+    // captured button still says what it was. Not on /admin: its rows carry
+    // other readers' ids and contact details in text and hrefs. (Pageviews
+    // still run there; ./redact takes the id out of /admin/users/<id> and
+    // /admin/people/<id>.)
+    autocapture: { url_ignorelist: [ADMIN_URL] },
+    mask_all_text: false,
+    mask_all_element_attributes: false,
+    // Pageviews on load AND on App Router client-side navigations, which
+    // change the URL through the History API without a page load.
+    capture_pageview: 'history_change',
+    disable_session_recording: true,
+    respect_dnt: true,
+    // Only build person profiles for signed-in (identified) users — anonymous
+    // browsing does not need a profile.
+    person_profiles: 'identified_only',
+    // No campaign tags or ad click ids from the landing URL, and none of
+    // the copies posthog-js keeps of them or of a search engine's keyword
+    // (./redact drops the same names from $set and $set_once, which the
+    // denylist does not reach).
+    save_campaign_params: false,
+    property_denylist: [...CAMPAIGN_PROPERTIES],
+    // Invite tokens and query strings never leave the browser (./redact).
+    before_send: redactCapture,
+    // No /flags request: this app uses no PostHog flags, surveys or remote
+    // config, and that request carries the initial URL (an invite token
+    // included) as person properties, outside before_send's reach.
+    advanced_disable_flags: true,
+  });
+  registerRelease(posthog);
+  client = posthog;
+};
+
+export const isAnalyticsEnabled = (): boolean => client !== null;
 
 // Bind subsequent events to the reader's Clerk userId.
 export const identifyUser = (userId: string): void => {
-  if (!initialized) return;
+  if (!client) return;
   try {
-    posthog.identify(userId);
+    client.identify(userId);
   } catch (err) {
     console.error('analytics: identify failed', err);
   }
@@ -132,12 +162,12 @@ export const identifyUser = (userId: string): void => {
 // handle has the property removed, so a handle they cleared does not stay
 // behind in PostHog.
 export const setPersonName = (name: string | null): void => {
-  if (!initialized) return;
+  if (!client) return;
   try {
     if (name) {
-      posthog.setPersonProperties({ name });
+      client.setPersonProperties({ name });
     } else {
-      posthog.unsetPersonProperties('name');
+      client.unsetPersonProperties('name');
     }
   } catch (err) {
     console.error('analytics: set name failed', err);
@@ -149,11 +179,11 @@ export const setPersonName = (name: string | null): void => {
 // reset: resetting an anonymous one would mint a new anonymous id on every
 // signed-out page load and count each load as a new visitor.
 export const resetAnalyticsIdentity = (): void => {
-  if (!initialized) return;
+  if (!client) return;
   try {
-    if (posthog.get_property('$user_state') !== 'identified') return;
-    posthog.reset();
-    registerRelease();
+    if (client.get_property('$user_state') !== 'identified') return;
+    client.reset();
+    registerRelease(client);
   } catch (err) {
     console.error('analytics: reset failed', err);
   }
@@ -167,9 +197,9 @@ export const track = <TEvent extends ShareEvent>(
   event: TEvent,
   properties: ShareEventMap[TEvent],
 ): void => {
-  if (!initialized) return;
+  if (!client) return;
   try {
-    posthog.capture(event, properties);
+    client.capture(event, properties);
   } catch (err) {
     // A capture must never surface to the UI that fired it.
     console.error('analytics: capture failed', err);

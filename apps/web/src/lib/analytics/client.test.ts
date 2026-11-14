@@ -46,7 +46,7 @@ describe('web analytics client', () => {
   it('does not init when NEXT_PUBLIC_POSTHOG_KEY is absent', async () => {
     delete process.env['NEXT_PUBLIC_POSTHOG_KEY'];
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).not.toHaveBeenCalled();
     expect(analytics.isAnalyticsEnabled()).toBe(false);
   });
@@ -59,7 +59,7 @@ describe('web analytics client', () => {
       'concert-crawl-git-main.vercel.app',
     ]) {
       const analytics = await loadModule();
-      analytics.initAnalytics(host);
+      await analytics.initAnalytics(host);
       expect(analytics.isAnalyticsEnabled()).toBe(false);
     }
     expect(mockInit).not.toHaveBeenCalled();
@@ -69,14 +69,14 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
     // jsdom serves the test page from localhost, which is not production.
-    analytics.initAnalytics();
+    await analytics.initAnalytics();
     expect(mockInit).not.toHaveBeenCalled();
   });
 
   it('inits on the www production hostname', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics('www.concertcrawl.app');
+    await analytics.initAnalytics('www.concertcrawl.app');
     expect(mockInit).toHaveBeenCalledTimes(1);
   });
 
@@ -95,7 +95,7 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     delete process.env['NEXT_PUBLIC_POSTHOG_HOST'];
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).toHaveBeenCalledWith(
       'phc_test',
       expect.objectContaining({
@@ -110,7 +110,7 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     process.env['NEXT_PUBLIC_POSTHOG_HOST'] = '';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).toHaveBeenCalledWith(
       'phc_test',
       expect.objectContaining({ api_host: 'https://us.i.posthog.com' }),
@@ -121,7 +121,7 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     process.env['NEXT_PUBLIC_POSTHOG_HOST'] = 'https://eu.i.posthog.com';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).toHaveBeenCalledWith(
       'phc_test',
       expect.objectContaining({ api_host: 'https://eu.i.posthog.com' }),
@@ -131,15 +131,15 @@ describe('web analytics client', () => {
   it('inits only once across repeated calls', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).toHaveBeenCalledTimes(1);
   });
 
   it('captures typed events when enabled', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     analytics.track('share_destination_selected', {
       eventId: 'evt_1',
       destination: 'copy-link',
@@ -153,7 +153,7 @@ describe('web analytics client', () => {
   it('captures the app share event with its destination and nothing else', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     analytics.track('app_share_destination_selected', {
       destination: 'copy-link',
     });
@@ -165,7 +165,7 @@ describe('web analytics client', () => {
   it('identify and reset delegate to posthog when enabled', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     analytics.identifyUser('user_9');
     mockGetProperty.mockReturnValue('identified');
     analytics.resetAnalyticsIdentity();
@@ -178,7 +178,7 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     process.env['NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA'] = 'abcdef0123456';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     mockRegister.mockClear();
     mockGetProperty.mockReturnValue('identified');
     analytics.resetAnalyticsIdentity();
@@ -195,7 +195,7 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
     const { redactCapture } = await import('./redact');
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).toHaveBeenCalledWith(
       'phc_test',
       expect.objectContaining({ before_send: redactCapture }),
@@ -205,7 +205,7 @@ describe('web analytics client', () => {
   it('sets the display name as a person property', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     analytics.setPersonName('adal');
     expect(mockSetPersonProperties).toHaveBeenCalledWith({ name: 'adal' });
     expect(mockUnsetPersonProperties).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe('web analytics client', () => {
   it('removes the name when the reader has no handle', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     analytics.setPersonName(null);
     expect(mockUnsetPersonProperties).toHaveBeenCalledWith('name');
     expect(mockSetPersonProperties).not.toHaveBeenCalled();
@@ -223,7 +223,7 @@ describe('web analytics client', () => {
   it('does not touch the name while analytics is off', async () => {
     delete process.env['NEXT_PUBLIC_POSTHOG_KEY'];
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     analytics.setPersonName('adal');
     analytics.setPersonName(null);
     expect(mockSetPersonProperties).not.toHaveBeenCalled();
@@ -233,7 +233,7 @@ describe('web analytics client', () => {
   it('does not reset an anonymous browser, so a signed-out load keeps its id', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     mockGetProperty.mockReturnValue('anonymous');
     analytics.resetAnalyticsIdentity();
     expect(mockReset).not.toHaveBeenCalled();
@@ -242,7 +242,7 @@ describe('web analytics client', () => {
   it('turns on usage basics: autocapture, history pageviews, no replay, DNT', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockInit).toHaveBeenCalledWith(
       'phc_test',
       expect.objectContaining({
@@ -260,7 +260,7 @@ describe('web analytics client', () => {
   it('keeps campaign tags, click ids and search keywords out of events', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     const config = mockInit.mock.calls[0]?.[1];
     expect(config).toMatchObject({ save_campaign_params: false });
     for (const key of [
@@ -302,7 +302,7 @@ describe('web analytics client', () => {
       '0123456789abcdef0123456789abcdef01234567';
     process.env['NEXT_PUBLIC_PACKAGE_VERSION'] = '1.300.5';
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockRegister).toHaveBeenCalledWith({
       release: '0123456',
       app_version: '1.300.5',
@@ -312,7 +312,7 @@ describe('web analytics client', () => {
   it('does not register super-properties when analytics is disabled', async () => {
     delete process.env['NEXT_PUBLIC_POSTHOG_KEY'];
     const analytics = await loadModule();
-    analytics.initAnalytics(PROD);
+    await analytics.initAnalytics(PROD);
     expect(mockRegister).not.toHaveBeenCalled();
   });
 });

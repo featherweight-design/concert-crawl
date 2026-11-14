@@ -42,13 +42,22 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
 
   useEffect(() => {
     if (!isLoaded) return;
-    initAnalytics();
-    setAnalyticsOn(isAnalyticsEnabled());
-    if (userId) {
-      identifyUser(userId);
-    } else {
-      resetAnalyticsIdentity();
-    }
+    // posthog-js loads on demand, so identity is applied once it has started.
+    // `cancelled` drops a stale run when the reader changes mid-load; the
+    // newer run shares the same load and applies the current identity.
+    let cancelled = false;
+    void initAnalytics().then(() => {
+      if (cancelled) return;
+      setAnalyticsOn(isAnalyticsEnabled());
+      if (userId) {
+        identifyUser(userId);
+      } else {
+        resetAnalyticsIdentity();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [isLoaded, userId]);
 
   const { data: handle, isSuccess } = useQuery<string | null>({
