@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { CalendarClock, EyeOff, type LucideIcon } from 'lucide-react';
+import { EyeOff, type LucideIcon } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminCard,
@@ -131,7 +131,8 @@ const EventConfirm = ({
 }: {
   title: string;
   confirmLabel: string;
-  confirmIcon: LucideIcon;
+  /** Left out where the board draws a bare label (Mark postponed). */
+  confirmIcon?: LucideIcon;
   danger: boolean;
   failedWhat: string;
   failedSaved: string;
@@ -146,7 +147,7 @@ const EventConfirm = ({
     <ConfirmDialog
       title={title}
       confirmLabel={confirmLabel}
-      confirmIcon={confirmIcon}
+      {...(confirmIcon !== undefined && { confirmIcon })}
       tone={danger ? 'danger' : 'default'}
       confirmVariant={danger ? 'dangerOutline' : 'gradient'}
       buttonSize="large"
@@ -319,7 +320,6 @@ export const StatusCard = ({
         <EventConfirm
           title={COPY.postponed.title(detail.artist)}
           confirmLabel={COPY.postponed.confirm}
-          confirmIcon={CalendarClock}
           danger={false}
           failedWhat={COPY.postponed.failed}
           failedSaved={COPY.statusSaved(
