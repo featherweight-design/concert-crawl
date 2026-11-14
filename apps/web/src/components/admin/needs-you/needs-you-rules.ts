@@ -580,12 +580,12 @@ export const pageNameOf = (pageUrl: string): string | null => {
   const [first = '', second] = pathname
     .split('/')
     .filter((part) => part !== '');
-  const names = PANEL.bug.pageNames;
-  if (!Object.hasOwn(names, first)) return null;
+  const name = PANEL.bug.pageNames.find(([segment]) => segment === first)?.[1];
+  if (name === undefined) return null;
   const detail = PANEL.bug.pageNamesDetail;
   return second !== undefined && Object.hasOwn(detail, first)
-    ? (detail[first] ?? null)
-    : (names[first] ?? null);
+    ? (detail[first] ?? name)
+    : name;
 };
 
 export const panelTitleOf = (row: QueueRow): string => {
