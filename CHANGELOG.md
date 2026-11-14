@@ -1,3 +1,10 @@
+## [1.420.1](https://github.com/featherweight-design/concert-crawl/compare/v1.420.0...v1.420.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** count Submitted prices as Prices does, group statuses by alias, tolerate a trailing comma ([0ba962a](https://github.com/featherweight-design/concert-crawl/commit/0ba962a0fa3abe93e28541e59780b71440581265))
+
 # [1.420.0](https://github.com/featherweight-design/concert-crawl/compare/v1.419.6...v1.420.0) (2026-11-13)
 
 
