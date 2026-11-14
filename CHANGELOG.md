@@ -1,3 +1,18 @@
+# [1.425.0](https://github.com/featherweight-design/concert-crawl/compare/v1.424.0...v1.425.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** open the show's own venue page, else its calendar ([ec48731](https://github.com/featherweight-design/concert-crawl/commit/ec48731dcf476c58c8ab6961284dd84c239cb482))
+* **admin:** read a row without sourceUrl as no link ([a8e9add](https://github.com/featherweight-design/concert-crawl/commit/a8e9addeaaa4912b61d8907ff1592db4f6d5db4e))
+* **web:** name the phone Events link and prove the venue filter round-trips ([29fce9f](https://github.com/featherweight-design/concert-crawl/commit/29fce9f360a46e49ecbee571e3d4fbb9f56a347b))
+
+
+### Features
+
+* **admin:** view on the venue's site in the events row menu ([6a40f4c](https://github.com/featherweight-design/concert-crawl/commit/6a40f4cfdbc31e505bfbc2f08adc45b286c71126))
+* **web:** open the venue's shows in Events from the Overview Shows card ([9e7c2c5](https://github.com/featherweight-design/concert-crawl/commit/9e7c2c5ab67337349842a89b5442c63f31c91891)), closes [#422](https://github.com/featherweight-design/concert-crawl/issues/422)
+
 # [1.424.0](https://github.com/featherweight-design/concert-crawl/compare/v1.423.0...v1.424.0) (2026-11-14)
 
 
