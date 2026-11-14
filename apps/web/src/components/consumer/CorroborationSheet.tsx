@@ -505,7 +505,18 @@ export const CorroborationSheet = ({
                 boxShadow: `0 0 0 3px color-mix(in oklab, ${stateColor} 22%, transparent)`,
               }}
             />
-            <span style={RAIL_TEXT}>{copy.eyebrow}</span>
+            {/* At 320 the eyebrow gives way (an ellipsis) so the code and the
+                close tile stay on the screen; it ran past the right edge. */}
+            <span
+              style={{
+                ...RAIL_TEXT,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {copy.eyebrow}
+            </span>
             <span
               aria-hidden="true"
               style={{
@@ -516,7 +527,7 @@ export const CorroborationSheet = ({
             />
             <span
               data-testid="confirm-rail-status"
-              style={{ ...RAIL_TEXT, color: stateText }}
+              style={{ ...RAIL_TEXT, color: stateText, flexShrink: 0 }}
             >
               {isSelfLocked
                 ? copy.selfLocked.railTag
@@ -645,7 +656,7 @@ export const CorroborationSheet = ({
             )}
           </div>
         ) : (
-          /* Fresh state footer: Confirm CTA + escape link + disclaimer */
+          /* Fresh state footer: the Confirm CTA only */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <button
               type="button"
@@ -676,30 +687,6 @@ export const CorroborationSheet = ({
             >
               <CheckGlyph size={13} color="var(--fg-on-accent)" />
               {copy.confirmButton}
-            </button>
-            <button
-              type="button"
-              onClick={onSubmitUpdate}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '8px 0',
-                width: '100%',
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                fontSize: 13,
-                color: 'var(--fg-muted)',
-                cursor: 'pointer',
-                textAlign: 'center' as const,
-                lineHeight: 1.4,
-              }}
-            >
-              {copy.escapeLead}{' '}
-              <span
-                style={{ fontWeight: 800, color: 'var(--price-text-signal)' }}
-              >
-                {copy.escapeAction}
-              </span>
             </button>
           </div>
         )
@@ -816,6 +803,34 @@ export const CorroborationSheet = ({
             >
               {copy.honestyDisclaimer}
             </p>
+
+            {/* A secondary link stays in the body, last, so it is reached by
+                scrolling; the footer is the main action only (addendum 6
+                item 15, 15/sheet-short-phone). */}
+            <button
+              type="button"
+              onClick={onSubmitUpdate}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '8px 0',
+                width: '100%',
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                fontSize: 13,
+                color: 'var(--fg-muted)',
+                cursor: 'pointer',
+                textAlign: 'center' as const,
+                lineHeight: 1.4,
+              }}
+            >
+              {copy.escapeLead}{' '}
+              <span
+                style={{ fontWeight: 800, color: 'var(--price-text-signal)' }}
+              >
+                {copy.escapeAction}
+              </span>
+            </button>
           </>
         )}
       </div>
