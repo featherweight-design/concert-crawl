@@ -3,12 +3,16 @@ import { endDelisting } from '@concert-crawl/db/upcoming-events';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { activeSoldOutWhere, isSoldOutSql } from '../../lib/sold-out.js';
-import {
-  clearSoldOut,
-  clearSoldOutRows,
-  notifyBackOnSale,
-} from '../../lib/clear-sold-out.js';
+import { clearSoldOut } from '../../lib/clear-sold-out.js';
 import type { DbExecutor } from '../../lib/db-executor.js';
+import {
+  EventNotFoundError,
+  isPastShow,
+  lockEventForSaleWrite,
+  PAST_LOCKED_BODY,
+  PastLockedError,
+} from '../../lib/past-lock.js';
+import { promoteSoldOutReport } from '../../lib/promote-sold-out.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import {
@@ -50,13 +54,7 @@ import {
   withMissingClassification,
 } from './lib/missing-events.js';
 import { idSchema } from '../../lib/id-schema.js';
-import {
-  eventPatchSchema,
-  isPastShow,
-  PAST_LOCKED_BODY,
-  PastLockedError,
-  updateEvent,
-} from './lib/event-update.js';
+import { eventPatchSchema, updateEvent } from './lib/event-update.js';
 import { mergeEvents } from './lib/event-merge.js';
 import { containsPattern } from '../../lib/escape-like.js';
 import { setHiddenFromConsumer, verifyEvent } from './lib/event-actions.js';
@@ -279,45 +277,44 @@ eventsAdminRouter.patch(
     }
 
     // Pre-state check: does promoting this report actually flip user-visible
-    // state? cancelled/postponed compare against events.status; sold-out
-    // compares against whether another live promoted sold-out already exists.
-    // Fan-out only fires on real transitions so duplicate confirmed reports
-    // don't re-spam watchers.
+    // state? cancelled/postponed compare against events.status. Fan-out only
+    // fires on real transitions so duplicate confirmed reports don't re-spam
+    // watchers. A sold-out's check runs inside promoteSoldOutReport, under
+    // the row lock.
     let isRealTransition = false;
-    if (resolution === 'promoted') {
-      if (report.status === 'cancelled' || report.status === 'postponed') {
-        const [eventRow] = await db
-          .select({ status: events.status, delistedAt: events.delistedAt })
-          .from(events)
-          .where(eq(events.id, report.eventId))
-          .limit(1);
-        // A delisted show was cancelled silently by the sweep (B+ A5).
-        isRealTransition =
-          eventRow?.status !== report.status || eventRow.delistedAt !== null;
-      } else if (report.status === 'sold-out') {
-        // Excludes the current report because we haven't run the update
-        // below yet — its resolution is still null, so the resolution=
-        // 'promoted' filter naturally omits it. Any match here is another
-        // pre-existing promoted sold-out on this event.
-        const existing = await db
-          .select({ id: eventReports.id })
-          .from(eventReports)
-          .where(activeSoldOutWhere(report.eventId))
-          .limit(1);
-        isRealTransition = existing.length === 0;
-      }
+    if (
+      resolution === 'promoted' &&
+      (report.status === 'cancelled' || report.status === 'postponed')
+    ) {
+      const [eventRow] = await db
+        .select({ status: events.status, delistedAt: events.delistedAt })
+        .from(events)
+        .where(eq(events.id, report.eventId))
+        .limit(1);
+      // A delisted show was cancelled silently by the sweep (B+ A5).
+      isRealTransition =
+        eventRow?.status !== report.status || eventRow.delistedAt !== null;
     }
 
     // Promoting a Tickets available is clearing the sold-out it answered,
     // which must still be live (the same rule as the fan threshold). The
-    // sold-out reports it cleared go in the audit.
+    // sold-out reports it cleared go in the audit. Promoting either sale
+    // report on a past show is 409 `past_locked` from the shared write, with
+    // nothing written and no audit row.
     let clearedSoldOut: string[] = [];
     if (resolution === 'promoted' && report.status === 'available') {
-      clearedSoldOut = await clearSoldOut(
-        report.eventId,
-        adminNote ?? `cleared by tickets available report ${reportId}`,
-        { filedAt: report.createdAt },
-      );
+      try {
+        clearedSoldOut = await clearSoldOut(
+          report.eventId,
+          adminNote ?? `cleared by tickets available report ${reportId}`,
+          { filedAt: report.createdAt },
+        );
+      } catch (err) {
+        if (err instanceof PastLockedError) {
+          return ctx.json(PAST_LOCKED_BODY, 409);
+        }
+        throw err;
+      }
       if (clearedSoldOut.length === 0) {
         return ctx.json(
           {
@@ -330,15 +327,31 @@ eventsAdminRouter.patch(
       }
     }
 
-    const [updated] = await db
-      .update(eventReports)
-      .set({
-        resolvedAt: new Date(),
-        resolution,
-        adminNote: adminNote ?? null,
-      })
-      .where(eq(eventReports.id, reportId))
-      .returning();
+    let updated: typeof eventReports.$inferSelect | undefined;
+    if (resolution === 'promoted' && report.status === 'sold-out') {
+      try {
+        ({ report: updated, isRealTransition } = await promoteSoldOutReport(
+          report.eventId,
+          reportId,
+          { adminNote: adminNote ?? null },
+        ));
+      } catch (err) {
+        if (err instanceof PastLockedError) {
+          return ctx.json(PAST_LOCKED_BODY, 409);
+        }
+        throw err;
+      }
+    } else {
+      [updated] = await db
+        .update(eventReports)
+        .set({
+          resolvedAt: new Date(),
+          resolution,
+          adminNote: adminNote ?? null,
+        })
+        .where(eq(eventReports.id, reportId))
+        .returning();
+    }
 
     // If promoted and report maps to an event status — update the event
     if (resolution === 'promoted') {
@@ -766,9 +779,7 @@ eventsAdminRouter.patch(
     // than a 500.
     let updated: Awaited<ReturnType<typeof updateEvent>>;
     try {
-      updated = await updateEvent(id, body, {
-        lockPastBefore: todayInDenver(),
-      });
+      updated = await updateEvent(id, body, { lockPast: true });
     } catch (err) {
       if (err instanceof PastLockedError) {
         return ctx.json(PAST_LOCKED_BODY, 409);
@@ -834,9 +845,11 @@ const markSoldOutSchema = z.object({
   note: z.string().max(280).optional(),
 });
 
+// Migration 0032's partial unique index: one live promoted sold-out per event.
+const ACTIVE_SOLD_OUT_UNIQUE_INDEX =
+  'event_reports_one_active_sold_out_per_event_idx';
+
 type SoldOutMarkOutcome =
-  | { kind: 'missing' }
-  | { kind: 'past_locked' }
   | { kind: 'existing'; report: typeof eventReports.$inferSelect }
   | { kind: 'created'; report: typeof eventReports.$inferSelect | undefined };
 
@@ -852,107 +865,109 @@ eventsAdminRouter.post(
     const { id } = ctx.req.valid('param');
     const { evidenceMethod, evidenceUrl, note } = ctx.req.valid('json');
     const actor = getAuthUser(ctx);
-    const today = todayInDenver();
 
-    // Idempotency check: if an active promoted sold-out report already exists,
-    // return it instead of inserting a duplicate. "Active" here means resolved
-    // with resolution='promoted' (i.e. the event is currently marked sold out).
-    //
-    // Race-safety: the event row is read FOR UPDATE, so concurrent admin
-    // POSTs serialize on it and the loser sees the winner's report. Migration
-    // 0032 also enforces the invariant at the DB layer with a partial unique
-    // index on event_reports (event_id) WHERE status='sold-out' AND
-    // resolved_at IS NOT NULL AND resolution='promoted', for writers that
-    // don't take the row lock. The catch below turns that unique-violation
-    // into the idempotent 200 by re-querying for the now-existing row.
+    // "Active" means resolved with resolution='promoted' (i.e. the event is
+    // currently marked sold out).
     const fetchExisting = (executor: DbExecutor) =>
       executor
         .select()
         .from(eventReports)
         .where(activeSoldOutWhere(id))
         .limit(1);
-
-    let outcome: SoldOutMarkOutcome;
-    try {
-      outcome = await db.transaction(
-        async (tx): Promise<SoldOutMarkOutcome> => {
-          const [eventRow] = await tx
-            .select({ date: events.date })
-            .from(events)
-            .where(eq(events.id, id))
-            .for('update')
-            .limit(1);
-          if (!eventRow) return { kind: 'missing' };
-          // The past lock, read under the row lock so a concurrent PATCH
-          // can't move the date between this check and the insert. A past
-          // show's sale state is history, so it is refused before any write
-          // or audit. A postponed show whose date has passed is refused too:
-          // it "stays Postponed until you set the new date or mark it
-          // cancelled" (addendum 6), so it has no live sale to mark until it
-          // is rescheduled through the PATCH.
-          if (isPastShow(eventRow.date, today)) return { kind: 'past_locked' };
-
-          const [existing] = await fetchExisting(tx);
-          if (existing) return { kind: 'existing', report: existing };
-
-          const [inserted] = await tx
-            .insert(eventReports)
-            .values({
-              eventId: id,
-              reporterId: actor.userId,
-              status: 'sold-out',
-              evidenceMethod,
-              evidenceUrl: evidenceUrl ?? null,
-              note: note ?? null,
-              resolvedAt: new Date(),
-              resolution: 'promoted',
-              adminNote: 'admin-authored — auto-promoted on creation',
-            })
-            .returning();
-          return { kind: 'created', report: inserted };
-        },
-      );
-    } catch (err) {
-      // Unique-violation from the partial index = another concurrent POST won
-      // the race. Treat as idempotent: re-query and return that row at 200.
-      if (
-        err instanceof Error &&
-        'code' in err &&
-        (err as { code?: string }).code === '23505'
-      ) {
-        const [winner] = await fetchExisting(db);
-        if (winner) {
-          ctx.set('auditAction', 'event.sold_out.mark');
-          ctx.set('auditTargetId', id);
-          ctx.set('auditActorId', actor.userId);
-          ctx.set('auditMeta', {
-            reportId: winner.id,
-            idempotent: true,
-            raceLost: true,
-          });
-          return ctx.json({ success: true, data: winner }, 200);
-        }
-      }
-      throw err;
-    }
-
-    if (outcome.kind === 'missing') {
-      return ctx.json({ success: false, error: 'Event not found' }, 404);
-    }
-    if (outcome.kind === 'past_locked') {
-      return ctx.json(PAST_LOCKED_BODY, 409);
-    }
-    if (outcome.kind === 'existing') {
-      // Audit even on the idempotent path so admin actions are always traceable.
+    // Audit even on the idempotent path so admin actions are always traceable.
+    const answerExisting = (
+      existing: typeof eventReports.$inferSelect,
+      raceLost: boolean,
+    ) => {
       ctx.set('auditAction', 'event.sold_out.mark');
       ctx.set('auditTargetId', id);
       ctx.set('auditActorId', actor.userId);
       ctx.set('auditMeta', {
-        reportId: outcome.report.id,
+        reportId: existing.id,
         idempotent: true,
+        ...(raceLost && { raceLost: true }),
       });
-      return ctx.json({ success: true, data: outcome.report }, 200);
+      return ctx.json({ success: true, data: existing }, 200);
+    };
+
+    // The cheap path, with no row lock: a missing event, a past show and an
+    // idempotent re-mark answer from plain reads, and the lock is taken only
+    // when a write is needed. The past lock answers before idempotency, so
+    // re-marking a PAST show that is already sold out is 409 `past_locked`,
+    // not the idempotent 200 it was before the lock: its sale state is
+    // history either way, and the refusal writes nothing and audits nothing.
+    const [eventRow] = await db
+      .select({ date: events.date })
+      .from(events)
+      .where(eq(events.id, id))
+      .limit(1);
+    if (!eventRow) {
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
+    if (isPastShow(eventRow.date, todayInDenver())) {
+      return ctx.json(PAST_LOCKED_BODY, 409);
+    }
+    const [already] = await fetchExisting(db);
+    if (already) return answerExisting(already, false);
+
+    // The write, under the event's row lock. lockEventForSaleWrite re-checks
+    // existence and the past lock with today read after the lock, so a PATCH
+    // that moved the date, or midnight passing while this waited, is caught.
+    // Concurrent admin POSTs serialize on the lock and the loser finds the
+    // winner's report. Migration 0032's partial unique index backs the
+    // invariant for any writer that skips the lock: the insert runs in a
+    // savepoint, so its unique violation leaves this transaction usable and
+    // the recovery read is still made under the lock.
+    let outcome: SoldOutMarkOutcome;
+    try {
+      outcome = await db.transaction(
+        async (tx): Promise<SoldOutMarkOutcome> => {
+          await lockEventForSaleWrite(tx, id);
+
+          const [existing] = await fetchExisting(tx);
+          if (existing) return { kind: 'existing', report: existing };
+
+          try {
+            const [inserted] = await tx.transaction(async (savepoint) =>
+              savepoint
+                .insert(eventReports)
+                .values({
+                  eventId: id,
+                  reporterId: actor.userId,
+                  status: 'sold-out',
+                  evidenceMethod,
+                  evidenceUrl: evidenceUrl ?? null,
+                  note: note ?? null,
+                  resolvedAt: new Date(),
+                  resolution: 'promoted',
+                  adminNote: 'admin-authored — auto-promoted on creation',
+                })
+                .returning(),
+            );
+            return { kind: 'created', report: inserted };
+          } catch (err) {
+            if (!isUniqueViolationOn(err, ACTIVE_SOLD_OUT_UNIQUE_INDEX)) {
+              throw err;
+            }
+            const [winner] = await fetchExisting(tx);
+            if (!winner) throw err;
+            return { kind: 'existing', report: winner };
+          }
+        },
+      );
+    } catch (err) {
+      if (err instanceof PastLockedError) {
+        return ctx.json(PAST_LOCKED_BODY, 409);
+      }
+      if (err instanceof EventNotFoundError) {
+        return ctx.json({ success: false, error: 'Event not found' }, 404);
+      }
+      throw err;
+    }
+
+    // Found under the lock: another write landed after the cheap read.
+    if (outcome.kind === 'existing')
+      return answerExisting(outcome.report, true);
 
     const created = outcome.report;
     ctx.set('auditAction', 'event.sold_out.mark');
@@ -1015,43 +1030,23 @@ eventsAdminRouter.post(
     const { note } = ctx.req.valid('json');
     const actor = getAuthUser(ctx);
 
-    const today = todayInDenver();
-
-    const outcome = await db.transaction(
-      async (tx): Promise<'missing' | 'past_locked' | string[]> => {
-        // Verify the event exists — return 404 for unknown IDs so this
-        // endpoint doesn't masquerade a bogus call as a successful no-op
-        // (matches the sold-out endpoint and the rest of admin/events).
-        // Read FOR UPDATE so the past lock below holds until the clear
-        // commits.
-        const [eventRow] = await tx
-          .select({ date: events.date })
-          .from(events)
-          .where(eq(events.id, id))
-          .for('update')
-          .limit(1);
-        if (!eventRow) return 'missing';
-        // The past lock, as on sold-out: a past show's sale state is history,
-        // so it is refused before any write, audit or watcher notice. A
-        // postponed show whose date has passed is refused too: it "stays
-        // Postponed until you set the new date or mark it cancelled"
-        // (addendum 6), so it has no sale to reopen until it is rescheduled.
-        if (isPastShow(eventRow.date, today)) return 'past_locked';
-        return clearSoldOutRows(tx, id, note ?? 'admin marked available');
-      },
-    );
-
-    if (outcome === 'missing') {
-      return ctx.json({ success: false, error: 'Event not found' }, 404);
+    // clearSoldOut takes the event's row lock and applies the past lock
+    // (postponed-passed included) before any write, so a refusal changes
+    // nothing, audits nothing and tells no watcher. An unknown id is 404 so
+    // this endpoint doesn't masquerade a bogus call as a successful no-op
+    // (matches the sold-out endpoint and the rest of admin/events).
+    let cleared: string[];
+    try {
+      cleared = await clearSoldOut(id, note ?? 'admin marked available');
+    } catch (err) {
+      if (err instanceof PastLockedError) {
+        return ctx.json(PAST_LOCKED_BODY, 409);
+      }
+      if (err instanceof EventNotFoundError) {
+        return ctx.json({ success: false, error: 'Event not found' }, 404);
+      }
+      throw err;
     }
-    if (outcome === 'past_locked') {
-      return ctx.json(PAST_LOCKED_BODY, 409);
-    }
-
-    const cleared = outcome;
-    // After commit, as clearSoldOut does: watchers hear only of a clear that
-    // happened.
-    if (cleared.length > 0) await notifyBackOnSale(id, cleared);
 
     // 204 either way (idempotent no-op when nothing was active). Audit only
     // when we actually cleared something — admin action with no DB effect

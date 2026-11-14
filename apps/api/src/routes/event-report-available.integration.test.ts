@@ -25,6 +25,7 @@ import {
 import { ER_POLICY } from '@concert-crawl/types';
 import { and, eq } from 'drizzle-orm';
 import { createApp } from '../app.js';
+import { todayInDenver } from '../lib/time.js';
 import {
   clearTables,
   seedEvent,
@@ -314,5 +315,186 @@ describe('Tickets available reports', () => {
       },
     );
     expect(res.status).toBe(422);
+  });
+});
+
+/**
+ * The past lock on the shared sale writes (clearSoldOut, promoteSoldOutReport):
+ * on a show dated before today in Denver, played or still postponed, a fan
+ * confirm crossing the threshold promotes nothing and tells nobody, silently,
+ * and an admin promote is 409 `past_locked` with no write and no audit row.
+ */
+describe('sale reports on a past show', () => {
+  const WATCHER = 'user_past_watcher';
+  let eventId: string;
+
+  const daysFromToday = (days: number) => {
+    const day = new Date(`${todayInDenver()}T00:00:00Z`);
+    day.setUTCDate(day.getUTCDate() + days);
+    return day.toISOString().slice(0, 10);
+  };
+
+  const seedShow = async (overrides: {
+    date: string;
+    status?: 'postponed';
+  }) => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, overrides);
+    eventId = event.id;
+    await seedUserEvent(WATCHER, eventId, { status: 'watching' });
+  };
+
+  beforeEach(async () => {
+    authState.current = null;
+    await clearTables();
+  });
+
+  const promoteSoldOut = () =>
+    seedEventReport(eventId, 'user_sold_reporter', {
+      status: 'sold-out',
+      resolution: 'promoted',
+      resolvedAt: new Date(),
+    });
+
+  const reportState = async (reportId: string) => {
+    const [row] = await db
+      .select({
+        resolvedAt: eventReports.resolvedAt,
+        resolution: eventReports.resolution,
+      })
+      .from(eventReports)
+      .where(eq(eventReports.id, reportId));
+    return row;
+  };
+
+  const confirmPastThreshold = async (reportId: string) => {
+    const needed = Math.max(
+      ER_POLICY.confirmsRequired,
+      ER_POLICY.confirmsRequiredImminent,
+    );
+    for (let idx = 0; idx < needed; idx++) {
+      setAuth(`user_past_confirmer_${idx}`);
+      const res = await post(
+        `/v1/events/${eventId}/reports/${reportId}/confirm`,
+        {},
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { resolved: boolean } };
+      expect(body.data.resolved).toBe(false);
+    }
+  };
+
+  const adminPromote = (reportId: string) => {
+    authState.current = {
+      userId: 'admin_user',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    return app.request(`/v1/admin/events/reports/${reportId}/resolve`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer test-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ resolution: 'promoted' }),
+    });
+  };
+
+  const noticesSent = () => db.select().from(notifications);
+  const auditRows = () => db.select().from(auditLog);
+
+  it('leaves a fan Tickets available pending and the sold-out live when confirms cross the threshold', async () => {
+    await seedShow({ date: daysFromToday(-7) });
+    const soldOut = await promoteSoldOut();
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'available',
+    });
+
+    await confirmPastThreshold(report.id);
+
+    expect(await reportState(report.id)).toEqual({
+      resolvedAt: null,
+      resolution: null,
+    });
+    expect((await reportState(soldOut.id))?.resolution).toBe('promoted');
+    expect(await noticesSent()).toEqual([]);
+  });
+
+  it('leaves a fan sold-out report pending on a postponed past show when confirms cross the threshold', async () => {
+    await seedShow({ date: daysFromToday(-6), status: 'postponed' });
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'sold-out',
+    });
+
+    await confirmPastThreshold(report.id);
+
+    expect(await reportState(report.id)).toEqual({
+      resolvedAt: null,
+      resolution: null,
+    });
+    expect(await noticesSent()).toEqual([]);
+  });
+
+  it('refuses an admin promote of a Tickets available on a past show', async () => {
+    await seedShow({ date: daysFromToday(-7) });
+    const soldOut = await promoteSoldOut();
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'available',
+    });
+
+    const res = await adminPromote(report.id);
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    expect(await reportState(report.id)).toEqual({
+      resolvedAt: null,
+      resolution: null,
+    });
+    expect((await reportState(soldOut.id))?.resolution).toBe('promoted');
+    expect(await auditRows()).toEqual([]);
+    expect(await noticesSent()).toEqual([]);
+  });
+
+  it('refuses an admin promote of a sold-out report on a played or postponed past show', async () => {
+    for (const status of [undefined, 'postponed'] as const) {
+      await clearTables();
+      await seedShow({
+        date: daysFromToday(-7),
+        ...(status && { status }),
+      });
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'sold-out',
+      });
+
+      const res = await adminPromote(report.id);
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+      expect(await reportState(report.id)).toEqual({
+        resolvedAt: null,
+        resolution: null,
+      });
+      expect(await auditRows()).toEqual([]);
+      expect(await noticesSent()).toEqual([]);
+    }
+  });
+
+  it('still lets an admin promote a sold-out report on a show dated today, telling watchers', async () => {
+    await seedShow({ date: todayInDenver() });
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'sold-out',
+    });
+
+    const res = await adminPromote(report.id);
+
+    expect(res.status).toBe(200);
+    expect((await reportState(report.id))?.resolution).toBe('promoted');
+    const sent = await db
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.soldout'));
+    expect(sent.map((row) => row.userId)).toEqual([WATCHER]);
   });
 });

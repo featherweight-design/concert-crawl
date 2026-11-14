@@ -12,6 +12,8 @@ import {
 import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
 import { fanoutWatchNotification } from '@concert-crawl/push';
 import { activePromotedReportWhere } from '../../../lib/sold-out.js';
+import { isPastShow, PastLockedError } from '../../../lib/past-lock.js';
+import { todayInDenver } from '../../../lib/time.js';
 
 // The body of PATCH /v1/admin/events/:id: the transition rules and the
 // watcher fan-out.
@@ -55,34 +57,18 @@ export const eventPatchSchema = z.object({
 
 export type EventPatch = z.input<typeof eventPatchSchema>;
 
-/**
- * Thrown inside the update transaction when a past show's PATCH changes a
- * locked field. A past show takes `hiddenFromConsumer` and the corrections
+/*
+ * The PATCH's past lock: PastLockedError is thrown inside the update
+ * transaction when a past show's PATCH changes a locked field. A past show takes `hiddenFromConsumer` and the corrections
  * (B+ addendum 5 §4, addendum 6 item 36: "Title, lineup, venue and times stay
  * editable as corrections and notify nobody"); status, price and the rest stay
  * locked. A postponed past show takes the title correction and may also move
  * its date, times and status, or it could never be rescheduled. The throw
- * rolls the transaction back, so nothing is written.
+ * (PastLockedError, lib/past-lock.ts) rolls the transaction back, so nothing
+ * is written. The PATCH cannot use lockEventForSaleWrite: a past show still
+ * takes its corrections here, so the lock reads the whole row and decides by
+ * field.
  */
-export class PastLockedError extends Error {
-  constructor() {
-    super('past_locked');
-    this.name = 'PastLockedError';
-  }
-}
-
-/** The 409 body every admin write returns when the past lock refuses it. */
-export const PAST_LOCKED_BODY = {
-  success: false,
-  error: 'past_locked',
-} as const;
-
-/**
- * The past lock's one definition of "past": a show dated before `today`, the
- * Denver date from `todayInDenver()`. A show dated today is not past.
- */
-export const isPastShow = (date: string, today: string): boolean =>
-  date < today;
 
 type EventRow = typeof events.$inferSelect;
 type PatchKey = keyof EventPatch & keyof EventRow;
@@ -176,15 +162,17 @@ const changedKeys = (body: EventPatch, stored: EventRow): PatchKey[] =>
 
 export interface UpdateEventOptions {
   /**
-   * Today's date in Denver (`YYYY-MM-DD`). When given, a show dated before it
+   * Enforce the past lock. When set, a show dated before today in Denver
    * (the list's Past side) takes only `hiddenFromConsumer` and the
    * corrections (title, times, a date still in the past), which fire no
    * date-move notice; anything else is PastLockedError. A postponed one may
    * change its title, and its date, times and status, and its watchers hear
    * of a new date. A corrected title refreshes `canonical_title`.
-   * Read from the locked row, never from the request.
+   * The date is read from the locked row, never from the request, and today
+   * is read after the lock is taken, so a PATCH that waited on the lock
+   * across midnight judges by the day it writes on.
    */
-  lockPastBefore?: string;
+  lockPast?: boolean;
 }
 
 /**
@@ -198,16 +186,15 @@ export const updateEventNotifying = async (
 ) => {
   // Set only when the patch reaches past `hiddenFromConsumer`, so the past
   // lock has something to check.
-  const pastLockBefore = setsPastCheckedField(body)
-    ? options.lockPastBefore
-    : undefined;
+  const checksPastLock =
+    options.lockPast === true && setsPastCheckedField(body);
   // Read the locked pre-state row only when something needs it: a status or
   // date change (the transition fan-out) or the past lock. Every other edit
   // skips the serialize gate.
   const readsPreState =
     typeof body.status === 'string' ||
     typeof body.date === 'string' ||
-    pastLockBefore !== undefined;
+    checksPastLock;
 
   // #1107: read pre-state + write inside a transaction so two concurrent
   // PATCHes can't both observe the same pre-state and fan out twice.
@@ -234,12 +221,10 @@ export const updateEventNotifying = async (
       // The stored row decides, so a PATCH that also moves the date cannot
       // unlock a past show. A field re-sent at its stored value is not a
       // write; a postponed show may still be rescheduled. "Past" means dated
-      // before today in Denver: a show dated today is not past.
-      if (
-        pastLockBefore !== undefined &&
-        preUpdate &&
-        isPastShow(preUpdate.date, pastLockBefore)
-      ) {
+      // before today in Denver, read now that the row is locked: a show
+      // dated today is not past.
+      const today = todayInDenver();
+      if (checksPastLock && preUpdate && isPastShow(preUpdate.date, today)) {
         const postponed = preUpdate.status === 'postponed';
         const allowed = postponed ? POSTPONED_PAST_ALLOWED : PAST_ALLOWED;
         const changed = changedKeys(body, preUpdate);
@@ -252,7 +237,7 @@ export const updateEventNotifying = async (
           !postponed &&
           changed.includes('date') &&
           typeof body.date === 'string' &&
-          body.date >= pastLockBefore
+          !isPastShow(body.date, today)
         ) {
           throw new PastLockedError();
         }

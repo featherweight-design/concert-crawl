@@ -508,6 +508,29 @@ describe('POST /v1/admin/events/:id/sold-out and /available — past_locked', ()
     expect(await testDb.select().from(notifications)).toEqual([]);
   });
 
+  // The past lock answers before idempotency: this was a 200 before the lock.
+  it('refuses re-marking a past show that is already sold out', async () => {
+    for (const event of await seedPastShows()) {
+      const soldOut = await seedEventReport(event.id, 'user_reporter', {
+        status: 'sold-out',
+        resolution: 'promoted',
+        resolvedAt: new Date(),
+      });
+
+      const res = await post(event.id, 'sold-out');
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+      expect(
+        (await reportsFor(event.id)).map((row) => [row.id, row.resolution]),
+      ).toEqual([[soldOut.id, 'promoted']]);
+      expect(await auditRowsFor(event.id)).toEqual([]);
+    }
+  });
+
   it('still marks and clears an upcoming show, auditing each', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: futureDate(30) });
@@ -1032,10 +1055,12 @@ describe('GET /v1/admin/events — isSoldOut derivation', () => {
   });
 });
 
+// Counted from today in Denver, the day the past lock and the lists judge by,
+// not the UTC day, which runs ahead of Denver every evening.
 function futureDate(daysFromNow: number): string {
-  const now = new Date();
-  now.setUTCDate(now.getUTCDate() + daysFromNow);
-  return now.toISOString().slice(0, 10);
+  const day = new Date(`${todayInDenver()}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + daysFromNow);
+  return day.toISOString().slice(0, 10);
 }
 
 describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
