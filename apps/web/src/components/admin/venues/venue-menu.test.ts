@@ -12,6 +12,7 @@ const venue = (
   id: 'venue-1',
   name: 'Ball Arena',
   slug: 'ball-arena',
+  shortName: null,
   websiteUrl: 'https://ballarena.example.com',
   city: 'Denver',
   timezone: 'America/Denver',
