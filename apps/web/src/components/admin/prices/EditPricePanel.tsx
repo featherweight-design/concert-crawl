@@ -10,6 +10,7 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { metaDate } from '../needs-you/needs-you-rules';
+import { SheetCheckbox } from './SheetCheckbox';
 import type { SubmittedRow } from './submitted-api';
 import { parseDollars, shortDate } from './prices-rules';
 
@@ -153,14 +154,16 @@ export const EditPricePanel = ({
         </div>
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input
-          type="checkbox"
-          checked={free}
-          disabled={busy}
-          onChange={(event) => setFree(event.target.checked)}
-          // The edit sheet draws a cyan check (`06/edit-price-desktop`).
-          style={single ? { accentColor: 'var(--signal)' } : undefined}
-        />
+        {single ? (
+          <SheetCheckbox checked={free} disabled={busy} onChange={setFree} />
+        ) : (
+          <input
+            type="checkbox"
+            checked={free}
+            disabled={busy}
+            onChange={(event) => setFree(event.target.checked)}
+          />
+        )}
         {ADD.free}
       </label>
       {error && (
