@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,8 @@ import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
+  AdminCard as Card,
+  AdminCardRow as Row,
   CouldntLoad,
   KindLabel,
   MonoLabel,
@@ -66,43 +68,6 @@ const linkButton = (
         border: '1px solid transparent',
       }),
 });
-
-/** A card: title, an optional action at the right, then its body. */
-const Card = ({
-  title,
-  action,
-  phone,
-  testId,
-  children,
-}: {
-  title: string;
-  action?: ReactNode;
-  phone: boolean;
-  testId: string;
-  children: ReactNode;
-}) => (
-  <section
-    data-testid={testId}
-    aria-label={title}
-    style={{
-      borderRadius: 14,
-      border: '1px solid var(--border)',
-      background: 'var(--bg-elevated)',
-      padding: phone ? '14px 16px' : '16px 18px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-      minWidth: 0,
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{title}</h2>
-      <span style={{ flex: 1 }} />
-      {action}
-    </div>
-    {children}
-  </section>
-);
 
 // ── Latest run ───────────────────────────────────────────────
 
@@ -383,22 +348,6 @@ const LastRunsCard = ({
 };
 
 // ── Shows ────────────────────────────────────────────────────
-
-const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      gap: 12,
-      fontSize: 13,
-      padding: '8px 0',
-      borderTop: '1px solid var(--border)',
-    }}
-  >
-    <span style={{ color: 'var(--fg-muted)' }}>{label}</span>
-    <span style={{ textAlign: 'right' }}>{children}</span>
-  </div>
-);
 
 const ShowsCard = ({
   venue,
