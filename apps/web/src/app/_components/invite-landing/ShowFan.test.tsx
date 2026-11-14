@@ -16,6 +16,7 @@ const show = (id: string, imageUrl: string | null): InviteShow => ({
   showTime: '8:00 PM',
   showTimeShort: '8 PM',
   genre: 'rock',
+  genreExtra: null,
   imageUrl,
   artistPhotoUrl: null,
 });
@@ -30,6 +31,22 @@ describe('ShowFan', () => {
     const img = container.querySelector('img');
     expect(img?.getAttribute('src')).toBe(src);
     expect(img?.hasAttribute('srcset')).toBe(false);
+  });
+
+  // `inv-mob`, `inv-desk`: a show with two genres reads "ALTERNATIVE / METAL".
+  it('reads two genres on the chip, and one when there is one', () => {
+    const { container, rerender } = render(
+      <ShowFan
+        shows={[
+          { ...show('a', null), genre: 'alternative', genreExtra: 'metal' },
+        ]}
+      />,
+    );
+    expect(container.textContent).toContain('alternative / metal');
+
+    rerender(<ShowFan shows={[show('a', null)]} />);
+    expect(container.textContent).toContain('rock');
+    expect(container.textContent).not.toContain(' / ');
   });
 
   it('tilts the cards -9, -2 and 8 degrees', () => {

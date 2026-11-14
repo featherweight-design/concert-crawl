@@ -12,6 +12,8 @@ export interface InviteShow {
   /** `6 PM` (`6:30 PM` off the hour) for the card, or empty. */
   showTimeShort: string;
   genre: string | null;
+  /** A second genre, when the show has one: the card reads `A / B`. */
+  genreExtra: string | null;
   imageUrl: string | null;
   artistPhotoUrl: string | null;
 }
