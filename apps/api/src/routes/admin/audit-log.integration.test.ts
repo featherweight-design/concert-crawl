@@ -267,6 +267,31 @@ describe('GET /v1/admin/audit-log', () => {
     expect(areaOf.get('userXemail.shown')).toBeNull();
   });
 
+  it('files a single-venue crawl under Venues and a crawl-all under Crawl runs', async () => {
+    setAuth('admin');
+    await testDb.insert(auditLog).values([
+      { actorId: 'system:crawler', action: 'crawl.trigger', createdAt: at(3) },
+      {
+        actorId: 'system:crawler',
+        action: 'crawl.trigger_all',
+        createdAt: at(2),
+      },
+      { actorId: 'system:crawler', action: 'venue.update', createdAt: at(1) },
+    ]);
+
+    const actions = async (query: string) =>
+      (await list(query)).body.data.map((row) => [row.action, row.area]);
+
+    expect(await actions('?area=venues')).toEqual([
+      ['venue.update', 'venues'],
+      ['crawl.trigger', 'venues'],
+    ]);
+    expect(await actions('?area=crawl-runs')).toEqual([
+      ['crawl.trigger_all', 'crawl-runs'],
+    ]);
+    expect(await actions('?area=venues,crawl-runs')).toHaveLength(3);
+  });
+
   it('files a settings save by what changed, in the filter as in the column', async () => {
     setAuth('admin');
     const settings = {
@@ -603,6 +628,10 @@ describe('GET /v1/admin/audit-log', () => {
       name: 'Levitt Pavilion',
       href: `/admin/venues/${venue.id}`,
     });
+    // One venue's crawl is queued from Venues, so it is filed there too.
+    expect(body.data.find((row) => row.action === 'crawl.trigger')?.area).toBe(
+      'venues',
+    );
     expect(byAction.get('event.update')).toEqual({
       kind: 'event',
       name: 'Vince Staples',
