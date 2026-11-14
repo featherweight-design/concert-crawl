@@ -592,15 +592,24 @@ describe('SourceTab — its own save bar', () => {
     const discard = within(row).getByRole('button', {
       name: COPY.saveBar.discard,
     });
-    expect(discard.style).toMatchObject({
+    const styleOf = (el: HTMLElement) => ({
+      height: el.style.height,
+      fontSize: el.style.fontSize,
+      borderRadius: el.style.borderRadius,
+      padding: el.style.padding,
+      background: el.style.background,
+      border: el.style.border,
+    });
+    expect(styleOf(discard)).toEqual({
       height: '36px',
       fontSize: '13px',
       borderRadius: '9px',
+      padding: '0px 12px',
       background: 'transparent',
+      border: '1px solid transparent',
     });
-    expect(discard.style.border).toBe('1px solid transparent');
     const save = within(row).getByRole('button', { name: COPY.saveBar.save });
-    expect(save.style).toMatchObject({
+    expect(styleOf(save)).toMatchObject({
       height: '36px',
       fontSize: '13.5px',
       borderRadius: '9px',
@@ -636,6 +645,47 @@ describe('SourceTab — its own save bar', () => {
     const heading = screen.getByRole('heading', { name: COPY.read.title });
     await waitFor(() => expect(document.activeElement).toBe(heading));
     expect(heading.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('a phone save hands focus to the Source heading as the pinned bar goes', async () => {
+    phone = true;
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    await waitFor(() =>
+      expect(screen.queryByTestId('source-save-bar')).toBeNull(),
+    );
+    const heading = screen.getByRole('heading', { name: COPY.read.title });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+  });
+
+  it('a failed phone save hands focus to its toast', async () => {
+    phone = true;
+    mockUpdateVenue.mockRejectedValueOnce(new Error('network'));
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    const toast = await screen.findByTestId('save-failed');
+    expect(screen.queryByTestId('source-save-bar')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(toast));
+  });
+
+  it('focuses the heading without scrolling', async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    render(<SourceTab venue={venue} />);
+    fireEvent.change(calendarInput(), {
+      target: { value: 'https://gothic.example/calendar' },
+    });
+    clickSave();
+    const heading = screen.getByRole('heading', { name: COPY.read.title });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    const call = focus.mock.contexts.findIndex((ctx) => ctx === heading);
+    expect(focus.mock.calls[call]?.[0]).toEqual({ preventScroll: true });
+    focus.mockRestore();
   });
 
   it('a failed desktop save hands focus to its toast', async () => {
@@ -858,7 +908,7 @@ describe('SourceTab — Fixed by the crawl rules', () => {
     expect(screen.getByText('Daily, 3:07 AM MT')).toBeTruthy();
   });
 
-  it.each([null, undefined, 'not a time'])(
+  it.each([null, undefined])(
     'drops the Schedule row when there is no daily crawl to name (%s)',
     (nextCrawlAt) => {
       render(

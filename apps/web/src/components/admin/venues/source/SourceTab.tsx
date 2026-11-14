@@ -12,8 +12,8 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   PinnedSaveBar,
-  SaveFailedToast,
   useIsPhone,
+  type PinnedSaveBarLook,
 } from '@/components/admin/primitives';
 import {
   Card,
@@ -72,19 +72,39 @@ const probeReason = (
       ? PROBE.reasons.schemaError
       : PROBE.reasons.fetchError;
 
-/** Desktop's inline save row (`04/venue-source`): 36 tall, radius 9. */
-const SAVE_ROW_BUTTON: CSSProperties = { height: 36, borderRadius: 9 };
-const SAVE_ROW_DISCARD: CSSProperties = {
-  ...SAVE_ROW_BUTTON,
-  padding: '0 12px',
-  fontSize: 13,
-  fontWeight: 600,
+/**
+ * Desktop's inline save row (`04/venue-source`): right-aligned, 8 apart; a
+ * borderless Discard 36 tall at 13, the gradient Save 36 tall at 13.5,
+ * radius 9.
+ */
+const DESKTOP_ROW_LOOK: PinnedSaveBarLook = {
+  gap: 8,
+  discardVariant: 'ghost',
+  discardStyle: {
+    height: 36,
+    borderRadius: 9,
+    padding: '0 12px',
+    fontSize: 13,
+    fontWeight: 600,
+  },
+  saveStyle: {
+    height: 36,
+    borderRadius: 9,
+    padding: '0 16px',
+    fontSize: 13.5,
+    fontWeight: 700,
+  },
 };
-const SAVE_ROW_SAVE: CSSProperties = {
-  ...SAVE_ROW_BUTTON,
-  padding: '0 16px',
-  fontSize: 13.5,
-  fontWeight: 700,
+
+/** The phone's pinned bar (`G4/source-feed-edited`): message over buttons. */
+const PHONE_BAR_LOOK: PinnedSaveBarLook = {
+  gap: 8,
+  stack: true,
+  padding: '10px 16px 24px',
+  messageStyle: { fontSize: 12, color: 'var(--fg-muted)' },
+  discardVariant: 'outline',
+  discardStyle: { height: 44, fontSize: 14, fontWeight: 600, borderRadius: 9 },
+  saveStyle: { flex: 1, height: 44, fontSize: 15, borderRadius: 9 },
 };
 
 /** What went wrong on the last save, for the toast. */
@@ -112,9 +132,10 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   const [probe, setProbe] = useState<ProbeStatus>({ kind: 'idle' });
   const probeRun = useRef(0);
 
-  // Desktop's inline save row unmounts once a save settles, taking focus
-  // with it: a save hands focus to the Source heading, a failure to its
-  // toast. Set by `save`, used once by the render that shows the outcome.
+  // The save row (desktop) or pinned bar (phone) unmounts once a save
+  // settles, taking focus with it: a save hands focus to the "How we read
+  // it" card's heading, a failure to its toast. Set by `save`, used once by
+  // the render that shows the outcome. No scroll: focus only.
   const rootRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusAfterSave = useRef<'heading' | 'toast' | null>(null);
@@ -123,7 +144,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
     if (next === null) return;
     focusAfterSave.current = null;
     if (next === 'heading') {
-      headingRef.current?.focus();
+      headingRef.current?.focus({ preventScroll: true });
       return;
     }
     const toast = rootRef.current?.querySelector<HTMLElement>(
@@ -131,10 +152,10 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
     );
     if (toast === null || toast === undefined) return;
     toast.setAttribute('tabindex', '-1');
-    toast.focus();
+    toast.focus({ preventScroll: true });
   });
   const focusNext = (target: 'heading' | 'toast') => {
-    if (!phone) focusAfterSave.current = target;
+    focusAfterSave.current = target;
   };
 
   // Clearing the probe also retires any request still in flight.
@@ -483,99 +504,22 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
       </div>
 
       {/* Desktop draws Discard and Save as an inline row under the cards
-          (`04/venue-source`), not a pinned bar. With nothing unsaved, a
-          failed save's toast floats 24px above the screen's bottom
-          (`G4/source-save-failed`), through the pinned bar's anchor. */}
-      {!phone && dirty ? (
-        <div
-          data-testid="source-save-row"
-          style={{
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 8,
-          }}
-        >
-          {barFailure !== null && (
-            <div
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 'calc(100% + 12px)',
-                zIndex: 30,
-              }}
-            >
-              {/* One shadow, passed to the toast as the pinned bar does. */}
-              <SaveFailedToast
-                title={barFailure.title}
-                saved={barFailure.saved}
-                retrying={saving}
-                shadow="0 14px 30px rgba(0,0,0,0.45)"
-                {...(barFailure.onRetry === undefined
-                  ? {}
-                  : { onRetry: barFailure.onRetry })}
-              />
-            </div>
-          )}
-          <AdminButton
-            type="button"
-            variant="ghost"
-            disabled={saving}
-            onClick={discard}
-            style={SAVE_ROW_DISCARD}
-          >
-            {COPY.saveBar.discard}
-          </AdminButton>
-          <AdminButton
-            type="button"
-            variant="gradient"
-            disabled={saving}
-            onClick={() => void save(draft)}
-            style={SAVE_ROW_SAVE}
-          >
-            {saving ? COPY.saveBar.saving : COPY.saveBar.save}
-          </AdminButton>
-        </div>
-      ) : (
-        <PinnedSaveBar
-          phone={phone}
-          dirty={dirty}
-          saving={saving}
-          testId="source-save-bar"
-          message={COPY.saveBar.unsaved(COPY.read.title)}
-          labels={COPY.saveBar}
-          failure={barFailure}
-          onDiscard={discard}
-          onSave={() => void save(draft)}
-          look={{
-            gap: 8,
-            // `G4/source-feed-edited` stacks the message over the buttons.
-            ...(phone ? { stack: true } : { wrap: true }),
-            padding: phone ? '10px 16px 24px' : '10px 16px',
-            messageStyle: phone
-              ? { fontSize: 12, color: 'var(--fg-muted)' }
-              : { fontSize: 12, color: 'var(--fg-muted)', flex: 1 },
-            discardVariant: 'outline',
-            ...(phone
-              ? {
-                  discardStyle: {
-                    height: 44,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    borderRadius: 9,
-                  },
-                  saveStyle: {
-                    flex: 1,
-                    height: 44,
-                    fontSize: 15,
-                    borderRadius: 9,
-                  },
-                }
-              : {}),
-          }}
-        />
-      )}
+          (`04/venue-source`); the phone pins the two-row bar
+          (`G4/source-feed-edited`). With nothing unsaved, a failed save's
+          toast floats 24px above the screen's bottom (`G4/source-save-failed`). */}
+      <PinnedSaveBar
+        phone={phone}
+        dirty={dirty}
+        saving={saving}
+        variant={phone ? 'pinned' : 'inline'}
+        testId={phone ? 'source-save-bar' : 'source-save-row'}
+        message={COPY.saveBar.unsaved(COPY.read.title)}
+        labels={COPY.saveBar}
+        failure={barFailure}
+        onDiscard={discard}
+        onSave={() => void save(draft)}
+        look={phone ? PHONE_BAR_LOOK : DESKTOP_ROW_LOOK}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Venue } from '@concert-crawl/types';
+import type { Venue, VenueWithCrawlHealth } from '@concert-crawl/types';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { formatMtTime } from '@/components/admin/health/health-model';
@@ -356,7 +356,8 @@ export const sourceFieldOf = (
 };
 
 /**
- * "3 s minimum between pages, plus jitter": the stored delay, never below
+ * "3 s minimum before each page or API call, plus jitter": the stored
+ * delay, never below
  * 3 s. robots.txt's Crawl-delay is resolved at crawl time and not stored, so
  * the board's "raised by robots.txt to 10 s" clause has nothing to read yet.
  */
@@ -368,21 +369,29 @@ export const paceLine = (crawlDelayMs: number): string => {
   );
 };
 
-/** The venue read's `nextCrawlAt`, as GET /crawl/estimate's is checked. */
-const nextCrawlAtSchema = z.string().datetime().nullable().optional();
-
 /**
  * "Daily, 2:07 AM MT": the daily crawl's real start, from the API's next
  * crawl (the cron, so it follows MST and MDT). Null when there is none to
- * name (outside production, where no daily crawl runs) or the field is
- * malformed: the Schedule row is dropped rather than guessed.
+ * name: outside production, or a venue the daily run skips. The Schedule row
+ * is dropped rather than guessed. Checked once, where the venue is fetched
+ * (`venueNextCrawlAt`).
  */
-export const scheduleLine = (nextCrawlAt: unknown): string | null => {
-  const parsed = nextCrawlAtSchema.safeParse(nextCrawlAt);
-  if (!parsed.success || parsed.data === null || parsed.data === undefined) {
-    return null;
-  }
-  return COPY.rules.scheduleValue(formatMtTime(parsed.data));
+export const scheduleLine = (
+  nextCrawlAt: VenueWithCrawlHealth['nextCrawlAt'],
+): string | null =>
+  nextCrawlAt === null || nextCrawlAt === undefined
+    ? null
+    : COPY.rules.scheduleValue(formatMtTime(nextCrawlAt));
+
+const nextCrawlAtSchema = z.iso.datetime({ offset: true }).nullable();
+
+/**
+ * The venue read's `nextCrawlAt`, validated at the fetch: a malformed or
+ * missing value is null (no Schedule row), never a guessed time.
+ */
+export const venueNextCrawlAt = (raw: unknown): string | null => {
+  const parsed = nextCrawlAtSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 };
 
 /** What is still saved, for the save-failed toast. */

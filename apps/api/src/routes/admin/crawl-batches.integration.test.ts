@@ -25,7 +25,7 @@ import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
-import { CRAWLER_DAILY_CRON_UTC } from './lib/needs-you/all-clear-facts.js';
+import { CRAWLER_DAILY_CRON_UTC } from '../../lib/crawl-schedule.js';
 
 const app = createApp();
 

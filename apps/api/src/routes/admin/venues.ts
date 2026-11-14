@@ -79,8 +79,7 @@ import {
   resolvePauseDetails,
 } from './lib/venue-crawl-pause.js';
 import { todayInDenver } from '../../lib/time.js';
-import { crawlerDispatchEnvironment } from '../../lib/crawler-dispatch.js';
-import { nextCrawlAfter } from './lib/needs-you/all-clear-facts.js';
+import { nextDailyCrawlAt } from '../../lib/crawl-schedule.js';
 import {
   HIDE_REASONS,
   deleteBlockers,
@@ -89,6 +88,23 @@ import {
   upcomingShowSplit,
   venueRemovedBody,
 } from './lib/venue-hide.js';
+
+/**
+ * Whether the daily crawl reads this venue: the same filter as
+ * apps/crawler/src/run.ts (active, verified, not blocked, not paused, not
+ * removed). Keep the two in step.
+ */
+const inDailyCrawl = (
+  venue: Pick<
+    typeof venues.$inferSelect,
+    'active' | 'verified' | 'blockedAt' | 'crawlPausedAt' | 'removedAt'
+  >,
+): boolean =>
+  venue.active &&
+  venue.verified &&
+  venue.blockedAt === null &&
+  venue.crawlPausedAt === null &&
+  venue.removedAt === null;
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -650,12 +666,10 @@ venuesAdminRouter.get('/:id', async (ctx) => {
       latestRun: latestRunOf(latestRun),
       crawlPausedByName: nameOf(adminNames, venue.crawlPausedBy),
       hiddenByName: nameOf(adminNames, venue.hiddenBy),
-      // The Source tab's Schedule line, as GET /crawl/estimate names it: only
-      // production starts the daily crawl, so anywhere else there is none.
-      nextCrawlAt:
-        crawlerDispatchEnvironment() === 'production'
-          ? nextCrawlAfter(new Date()).toISOString()
-          : null,
+      // The Source tab's Schedule line: the next daily crawl, but only for a
+      // venue that crawl reads (run.ts's filter). Null for one it skips, and
+      // anywhere but production, where none runs.
+      nextCrawlAt: inDailyCrawl(venue) ? nextDailyCrawlAt(new Date()) : null,
     },
   });
 });

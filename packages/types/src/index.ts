@@ -2090,8 +2090,11 @@ export interface NeedsYouCount {
 export interface AllClearFacts {
   /** The latest nightly that started: venues read OK (fetched or unchanged) of all it covered. */
   lastCrawl: { ok: number; total: number; at: string } | null;
-  /** The next daily crawl, ISO UTC, from the cron schedule in `apps/api/vercel.json`. */
-  nextCrawlAt: string;
+  /**
+   * The next daily crawl, ISO UTC, from the cron schedule in
+   * `apps/api/vercel.json`; null outside production, where none runs.
+   */
+  nextCrawlAt: string | null;
   /** Venues whose Needs you item is snoozed right now. */
   snoozedVenues: number;
 }

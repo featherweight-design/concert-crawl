@@ -1,7 +1,10 @@
 /** The Source tab's read-only right column: the robots.txt card and the crawl rules card. */
 
 import { Check, Flag } from 'lucide-react';
-import { CRAWLER_USER_AGENT, type Venue } from '@concert-crawl/types';
+import {
+  CRAWLER_USER_AGENT,
+  type VenueWithCrawlHealth,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { runWhen } from '../overview/overview-rules';
 import { Card, Row } from './source-parts';
@@ -16,9 +19,9 @@ export const SourceRulesCards = ({
   phone,
 }: {
   venue: Pick<
-    Venue,
-    'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt'
-  > & { nextCrawlAt?: string | null };
+    VenueWithCrawlHealth,
+    'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt' | 'nextCrawlAt'
+  >;
   phone: boolean;
 }) => {
   const robots = robotsStateOf(venue.robotsTxtAllowed);
