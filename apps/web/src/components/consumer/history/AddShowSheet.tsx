@@ -430,7 +430,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             onChange={(event) => setText(event.target.value)}
             placeholder={COPY.searchPlaceholder}
             aria-label={COPY.searchPlaceholder}
-            className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none sm:text-[15px]"
+            className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none lg:text-[15px]"
             style={{ color: 'var(--fg)' }}
           />
           {text !== '' && (
