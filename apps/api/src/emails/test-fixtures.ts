@@ -12,6 +12,7 @@
 // alerts) are enumerated explicitly below.
 
 import { getTemplateRenderer } from './registry.js';
+import type { AdminTestEmailOption } from '@concert-crawl/types';
 import type { EmailTemplateVars, LiveEmailTemplateKey } from './types.js';
 
 // Operational (non-transactional) sends the app makes outside the template
@@ -40,10 +41,13 @@ export interface BuiltTestEmail {
   fromCategory: TestEmailFromCategory;
 }
 
-export interface TestEmailOption {
+/** The subject a fixture test send delivers: every test is marked as one. */
+export const testEmailSubject = (subject: string): string =>
+  `[TEST] ${subject}`;
+
+// The shared shape the web reads, narrowed to the keys the send path can build.
+export interface TestEmailOption extends AdminTestEmailOption {
   key: TestEmailKey;
-  label: string;
-  group: 'Customer' | 'Operational';
 }
 
 // Drives the picker dropdown (via GET /v1/admin/notifications/test-email/options).
@@ -168,7 +172,7 @@ function buildAdminAlertSample(): BuiltTestEmail {
     html: `
       <p>This is a test of the Concert Crawl admin notifications pipeline.</p>
       <p>If you received this, the alert pipeline is healthy end-to-end: Resend API key, sender domain, and delivery to ADMIN_EMAIL are all working.</p>
-      <p><a href="${SAMPLE_ADMIN_URL}/admin/operations?tab=emails">Admin emails</a></p>
+      <p><a href="${SAMPLE_ADMIN_URL}/admin/settings">Admin settings</a></p>
     `,
     text: [
       'This is a test of the Concert Crawl admin notifications pipeline.',

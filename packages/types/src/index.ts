@@ -1953,12 +1953,19 @@ export interface AdminEmailDelivery {
   hours: number;
 }
 
-/** One email in Operations › Emails (GET /admin/notifications/test-email/options). */
+/**
+ * One email in Operations › Emails (GET /admin/notifications/test-email/options).
+ * The API narrows `key` to the keys its send path can build.
+ */
 export interface AdminTestEmailOption {
   key: string;
   label: string;
   group: 'Customer' | 'Operational';
 }
+
+/** Why a test send did not go out; the API's EmailSendResult uses this union. */
+export type AdminTestEmailFailureReason =
+  'missing_api_key' | 'missing_admin_email' | 'send_failed';
 
 /**
  * GET /admin/notifications/test-email/:emailKey/preview: the email built from
@@ -1974,13 +1981,16 @@ export interface AdminEmailPreview {
 
 /**
  * POST /admin/notifications/test-email. Every test goes to ADMIN_EMAIL;
- * `sentTo` is that address masked (`h***@gmail.com`).
+ * `sentTo` is that address masked (`h***@gmail.com`, each address of a
+ * comma-separated list masked on its own). A failure carries the error's
+ * name and message only.
  */
 export type AdminTestEmailResult =
   | { sent: true; resendId: string | null; sentTo: string }
   | {
       sent: false;
-      reason: 'missing_api_key' | 'missing_admin_email' | 'send_failed';
+      reason: AdminTestEmailFailureReason;
+      error?: unknown;
     };
 
 // The admin page an audit action belongs to: the Activity log's WHERE column

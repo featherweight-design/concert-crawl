@@ -7,6 +7,7 @@ import { db, emailSendLog } from '@concert-crawl/db';
 import type {
   AdminEmailDelivery,
   AdminEmailPreview,
+  AdminTestEmailResult,
 } from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
@@ -18,6 +19,7 @@ import {
   TEST_EMAIL_KEYS,
   TEST_EMAIL_OPTIONS,
   buildTestEmail,
+  testEmailSubject,
   type TestEmailKey,
 } from '../../emails/test-fixtures.js';
 import { maskEmail } from '../../lib/mask-email.js';
@@ -120,17 +122,30 @@ notificationsAdminRouter.get('/test-email/options', (ctx) => {
 });
 
 // GET /v1/admin/notifications/test-email/:emailKey/preview — the subject,
-// HTML and text of one email built from its sample payload, the same build
-// the test send uses, so Operations > Emails shows what "Send me a test"
-// delivers. A text-only email (invite_code) has empty html. Read-only, so it
-// writes no audit row.
+// HTML and text of one email exactly as POST /test-email would send it now:
+// the generic admin alert from the same builder (with the caller and this
+// moment), every other key from its sample payload with the [TEST] subject.
+// A text-only email (invite_code) has empty html. A build failure throws to
+// the app's error handler (a JSON 500). Read-only, so it writes no audit row.
 notificationsAdminRouter.get(
   '/test-email/:emailKey/preview',
   zValidator('param', previewParamSchema, validationHook),
   (ctx) => {
+    const { userId } = getAuthUser(ctx);
     const { emailKey } = ctx.req.valid('param');
-    const { subject, html, text } = buildTestEmail(emailKey);
-    const data: AdminEmailPreview = { emailKey, subject, html, text };
+    const built =
+      emailKey === 'admin_alert'
+        ? buildGenericAdminAlertTest(userId)
+        : buildTestEmail(emailKey);
+    const data: AdminEmailPreview = {
+      emailKey,
+      subject:
+        emailKey === 'admin_alert'
+          ? built.subject
+          : testEmailSubject(built.subject),
+      html: built.html,
+      text: built.text,
+    };
     return ctx.json({ success: true, data });
   },
 );
@@ -152,7 +167,7 @@ notificationsAdminRouter.post(
     // fixture-backed sendTestEmail so the picker can preview real templates.
     const result: EmailSendResult =
       emailKey === 'admin_alert'
-        ? await sendGenericAdminAlertTest(userId)
+        ? await sendAdminAlertEmail(buildGenericAdminAlertTest(userId))
         : await sendTestEmail(emailKey);
 
     ctx.set('auditAction', 'notification.test_email');
@@ -160,19 +175,41 @@ notificationsAdminRouter.post(
     ctx.set('auditMeta', { emailKey, result: serializeResultForAudit(result) });
 
     // Every test goes to ADMIN_EMAIL; the sent line names it masked
-    // (`h***@gmail.com`), never in full.
-    const data = result.sent
-      ? { ...result, sentTo: maskEmail(process.env.ADMIN_EMAIL ?? '') }
-      : result;
+    // (`h***@gmail.com`), never in full. A failure carries the error's name
+    // and message, never the provider's raw object.
+    const data: AdminTestEmailResult = result.sent
+      ? { ...result, sentTo: maskAdminEmail(process.env.ADMIN_EMAIL ?? '') }
+      : {
+          sent: false,
+          reason: result.reason,
+          ...(result.error === undefined
+            ? {}
+            : { error: serializeErrorForAudit(result.error) }),
+        };
     return ctx.json({ success: true, data });
   },
 );
 
-function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
+// ADMIN_EMAIL may list several addresses; mask each on its own.
+function maskAdminEmail(adminEmail: string): string {
+  return adminEmail
+    .split(',')
+    .map((address) => maskEmail(address.trim()))
+    .filter((masked) => masked !== '')
+    .join(', ');
+}
+
+// The generic admin alert, with who asked for it and when. Both the test send
+// and its preview build it here, so the preview is what arrives.
+function buildGenericAdminAlertTest(userId: string): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const triggeredAt = new Date().toISOString();
   const adminUrl = process.env['ADMIN_URL'] ?? 'https://concertcrawl.app';
 
-  return sendAdminAlertEmail({
+  return {
     subject: 'Concert Crawl — test alert',
     html: `
       <p>This is a test email from the Concert Crawl admin notifications pipeline.</p>
@@ -181,7 +218,7 @@ function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
         <li><strong>Triggered by:</strong> admin user ${userId}</li>
       </ul>
       <p>If you received this, the alert pipeline is working end-to-end: Resend API key, sender domain, and delivery to ADMIN_EMAIL are all healthy.</p>
-      <p><a href="${adminUrl}/admin/operations?tab=emails">Admin emails</a></p>
+      <p><a href="${adminUrl}/admin/settings">Admin settings</a></p>
     `,
     text: [
       'This is a test email from the Concert Crawl admin notifications pipeline.',
@@ -191,7 +228,7 @@ function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
       '',
       'If you received this, the alert pipeline is working end-to-end.',
     ].join('\n'),
-  });
+  };
 }
 
 // audit_log.metadata is jsonb, and JSON.stringify(new Error('msg')) returns
