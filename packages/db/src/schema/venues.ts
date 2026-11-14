@@ -104,8 +104,9 @@ export const venues = pgTable(
     hiddenReason: text('hidden_reason'),
     hiddenNote: text('hidden_note'),
     // When the venue went live (3c). NULL means a draft. Migration 0116
-    // backfilled every venue that existed then to created_at, so only venues
-    // created afterwards can be drafts.
+    // backfilled every venue that existed then to created_at. Every writer
+    // that creates a live venue (the admin create route, the seed) stamps it,
+    // so a NULL is only ever a draft the 3c draft flow made.
     wentLiveAt: timestamp('went_live_at', { withTimezone: true }),
     // When we last asked the venue for permission to crawl (Ask the venue,
     // with its 14-day reminder).

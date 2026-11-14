@@ -1171,10 +1171,12 @@ async function seed() {
   // Venues — upsert so re-runs pick up data changes
   await db
     .insert(venues)
-    .values(SEED_VENUES)
+    // Seeded venues are live, never drafts (admin 3c: NULL went_live_at).
+    .values(SEED_VENUES.map((venue) => ({ ...venue, wentLiveAt: new Date() })))
     .onConflictDoUpdate({
       target: venues.slug,
       set: {
+        wentLiveAt: sql`COALESCE(venues.went_live_at, excluded.went_live_at)`,
         name: sql`excluded.name`,
         websiteUrl: sql`excluded.website_url`,
         address: sql`COALESCE(venues.address, excluded.address)`,
