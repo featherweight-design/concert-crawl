@@ -581,10 +581,11 @@ export const EventsClient = () => {
       <EventsList
         rows={page.rows}
         when={filters.when}
-        // Saves, then reloads, so the row's tag and the Hidden count agree.
+        // Saves, then reloads before the dialog closes, so the row's tag and
+        // the Hidden count agree and the ⋯ never offers Hide twice.
         onHide={async (row) => {
           await api.hide(row.id);
-          void load();
+          await load();
         }}
       />
       {footer(page)}

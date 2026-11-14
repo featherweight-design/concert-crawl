@@ -57,7 +57,8 @@ const page: EventListPage = {
   },
 };
 const list = vi.fn(async () => page);
-vi.mock('./events-api', () => ({ eventsListApi: () => ({ list }) }));
+const hide = vi.fn(async (_id: string) => undefined);
+vi.mock('./events-api', () => ({ eventsListApi: () => ({ list, hide }) }));
 
 import { EventsClient } from './EventsClient';
 
@@ -293,5 +294,51 @@ describe('EventsClient filters', () => {
     expect(screen.queryByTestId('status-filter-chip')).toBeNull();
     expect(screen.queryByRole('button', { name: /No price/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Hidden/ })).toBeNull();
+  });
+});
+
+describe('EventsClient row ⋯', () => {
+  it('hides a show from its ⋯, then reloads the list', async () => {
+    const HIDE = ADMIN_COPY.eventEdit.hide;
+    list.mockResolvedValue({
+      ...page,
+      rows: [
+        {
+          id: 'evt-1',
+          title: 'Marian Hill',
+          date: '2026-11-13',
+          venueName: 'Bluebird Theater',
+          venueSlug: 'bb',
+          venueUrl: null,
+          status: 'available',
+          hidden: false,
+          hiddenReason: null,
+          priceMin: '44.00',
+          priceMax: null,
+          watchingCount: 18,
+          wentCount: null,
+        },
+      ],
+      total: 1,
+    });
+    render(<EventsClient />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: COPY.menu.label('Marian Hill'),
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(HIDE.menu) }),
+    );
+    const loads = list.mock.calls.length;
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: new RegExp(HIDE.confirm),
+      }),
+    );
+    await waitFor(() => expect(hide).toHaveBeenCalledWith('evt-1'));
+    await waitFor(() => expect(list.mock.calls.length).toBe(loads + 1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    list.mockResolvedValue(page);
   });
 });

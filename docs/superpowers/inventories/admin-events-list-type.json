@@ -1,0 +1,87 @@
+{
+  "feature": "Admin Events · list type polish and Hide in the row ⋯",
+  "note": "Boards 06-events-artists-prices/events, events-mobile, event-menu, events-no-results. CONTACT_SHEET_ROLE=admin. Desktop: title 13.5/600, 24px venue tile, price 13 tabular. Phone: title 14.5 clamped to 2 lines, venue on one line, price 13/600 tabular, Watching 11.5. The ⋯ (desktop only; a phone card is a link) gains Hide from site…, which opens the Hide dialog; the sheet never confirms it. The menu and hide rows are desktop-only, and open the ⋯ of the first row that isn't hidden.",
+  "widths": [
+    {
+      "label": "phone-320",
+      "width": 320,
+      "height": 740,
+      "touch": true
+    },
+    {
+      "label": "phone",
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    {
+      "label": "desktop",
+      "width": 1300,
+      "height": 900
+    }
+  ],
+  "rows": [
+    {
+      "id": "list",
+      "label": "/admin/events",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"events-list\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "no-results",
+      "label": "/admin/events?q=zzqxv",
+      "steps": [
+        {
+          "goto": "/admin/events?q=zzqxv",
+          "wait": "[data-testid=\"empty-state\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "menu",
+      "label": "Row ⋯ open",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"event-row-menu\"]"
+        },
+        {
+          "click": "tr:not(:has([data-testid=\"hidden-tag\"])) [data-testid=\"event-row-menu\"]"
+        },
+        {
+          "wait": "[role=\"menu\"]",
+          "settle": 400
+        }
+      ],
+      "widths": ["desktop"]
+    },
+    {
+      "id": "hide-dialog",
+      "label": "Hide from site… dialog",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"event-row-menu\"]"
+        },
+        {
+          "click": "tr:not(:has([data-testid=\"hidden-tag\"])) [data-testid=\"event-row-menu\"]"
+        },
+        {
+          "clickRole": "menuitem",
+          "name": "^Hide from site"
+        },
+        {
+          "wait": "[role=\"dialog\"]",
+          "settle": 500
+        }
+      ],
+      "widths": ["desktop"]
+    }
+  ]
+}

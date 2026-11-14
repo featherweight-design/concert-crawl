@@ -204,6 +204,10 @@ describe('EventsList on desktop', () => {
       ),
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // Back on the ⋯: the menu item it opened from is gone.
+    expect(
+      screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
+    ).toHaveFocus();
   });
 
   it('keeps the Hide dialog open and says so when the save fails', async () => {

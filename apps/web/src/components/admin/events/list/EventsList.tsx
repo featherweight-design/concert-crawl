@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Calendar, ExternalLink, Eye, EyeOff } from 'lucide-react';
@@ -156,9 +156,20 @@ const EventMenu = ({
 }) => {
   const router = useRouter();
   const [hiding, setHiding] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  // The dialog opened from a menu item that has since unmounted, so focus
+  // goes back to the ⋯ itself once the dialog closes.
+  const wasHiding = useRef(false);
+  useEffect(() => {
+    if (wasHiding.current && !hiding)
+      wrapRef.current
+        ?.querySelector<HTMLButtonElement>('[data-testid="event-row-menu"]')
+        ?.focus();
+    wasHiding.current = hiding;
+  }, [hiding]);
   const { venueUrl } = row;
   return (
-    <>
+    <span ref={wrapRef}>
       {hiding && onHide !== undefined && (
         <HideEventDialog
           artist={row.title}
@@ -217,7 +228,7 @@ const EventMenu = ({
             : []),
         ]}
       />
-    </>
+    </span>
   );
 };
 
