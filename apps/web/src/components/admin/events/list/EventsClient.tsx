@@ -9,7 +9,6 @@ import {
   AdminButton,
   CouldntLoad,
   EmptyState,
-  PageSkeleton,
   useIsPhone,
 } from '@/components/admin/primitives';
 import { StatusChip } from '@/components/consumer/StatusChip';
@@ -22,6 +21,7 @@ import {
   type VenueCount,
 } from './events-api';
 import { EventsList } from './EventsList';
+import { EventsSkeleton } from './EventsSkeleton';
 import {
   EMPTY_FILTERS,
   EVENT_LIST_STATUSES,
@@ -247,17 +247,7 @@ export const EventsClient = () => {
   }
 
   if (loaded === null) {
-    return (
-      <PageSkeleton
-        heading
-        inlineSearch
-        card
-        filters={5}
-        rows={8}
-        columns={5}
-        rowHeight={65}
-      />
-    );
+    return <EventsSkeleton />;
   }
 
   const searchBox = (
@@ -549,9 +539,10 @@ export const EventsClient = () => {
   const content = failed ? (
     <CouldntLoad page={COPY.title} onRetry={() => void load()} />
   ) : page === null ? (
-    // A page for other filters is still on hand: the table's skeleton, under
-    // the filter row, until these filters' page arrives (`07/loading-events`).
-    <PageSkeleton card rows={8} columns={5} rowHeight={65} />
+    // A page for other filters is still on hand: the rows' skeleton, under
+    // the filter row, until these filters' page arrives (`07/loading-events`,
+    // plain rows on the phone).
+    <EventsSkeleton rowsOnly />
   ) : page.total === 0 ? (
     <EmptyState
       title={COPY.empty.title}
