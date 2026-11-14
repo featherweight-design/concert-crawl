@@ -61,7 +61,7 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'changed',
-        text: 'Sharing a show now makes a new card with the photo, the date and a countdown, in story, square or wide.',
+        text: 'Sharing a show now makes a new card with the photo, the date and a countdown, in Story, Square or Wide.',
       },
     ],
   },
