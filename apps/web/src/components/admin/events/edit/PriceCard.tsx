@@ -70,9 +70,9 @@ export const PriceCard = ({
   // with no listed price it edits the admin's own price, else adds one.
   const replacing = detail.priceMin !== null;
   const editingMine = !replacing && mine !== null ? mine : null;
-  // The admin's own price under an open Price check waits for the check (the
-  // server refuses any price write on the show while one is open).
-  const lockedByCheck = detail.mySubmission?.status === 'disputed';
+  // No client-side hold for a Price check: a 'disputed' row may be an admin
+  // denial rather than an open check, so the server decides and its 409
+  // shows the Price check line.
   const close = () => setOpen(false);
 
   return (
@@ -103,14 +103,8 @@ export const PriceCard = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <AdminButton
             data-testid="event-edit-price-edit"
-            disabled={lockedByCheck}
             onClick={() => setOpen(true)}
-            style={{
-              ...TINT_BUTTON,
-              height: 32,
-              padding: '0 12px',
-              ...(lockedByCheck && { opacity: 0.5, cursor: 'not-allowed' }),
-            }}
+            style={{ ...TINT_BUTTON, height: 32, padding: '0 12px' }}
           >
             {COPY.edit}
           </AdminButton>
