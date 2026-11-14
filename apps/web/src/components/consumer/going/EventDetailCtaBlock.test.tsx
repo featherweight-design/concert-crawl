@@ -126,7 +126,15 @@ describe('EventDetailCtaBlock', () => {
     expect(
       screen.getByText(GOING_COPY.past.hint('Gothic Theatre')),
     ).toBeInTheDocument();
-    // The boards draw the ⓘ on a past night too.
+    // Addendum 5 item 3: the past night carries no ⓘ; it explains a button
+    // the past card no longer has.
+    expect(
+      screen.queryByRole('button', { name: EXPLAINER_LABEL }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps the ⓘ on an upcoming night', () => {
+    renderBlock();
     expect(
       screen.getByRole('button', { name: EXPLAINER_LABEL }),
     ).toBeInTheDocument();

@@ -283,6 +283,10 @@ export const EventDetailCtaBlock = ({
           gap: 6,
           marginTop: -2,
           marginBottom: -3,
+          // The disc (26px) sets this row's height; the negative margins are
+          // tuned to it. A past night has no disc, so hold the height and the
+          // card keeps the same rhythm as an upcoming one.
+          minHeight: 26,
         }}
       >
         <span
@@ -301,8 +305,13 @@ export const EventDetailCtaBlock = ({
         {/* No children: CCTip's own info disc is the designed trigger, and it
             carries the open state and the 44px touch target that a hand-rolled
             glyph here would silently replace. */}
-        {/* The boards draw the ⓘ on a past night too (event_stamped_m). */}
-        <CCTip tip="going-vs-watch" placement="bottom" align="end" />
+        {/* Not on a past night: addendum 5 item 3 drops the ⓘ there (as
+            addendum 3 item 19 ruled). "Going vs watching" explains a button
+            the past card no longer has, and event-past-d / event_stamped_m
+            still draw it, superseded on that one point. */}
+        {isPast ? null : (
+          <CCTip tip="going-vs-watch" placement="bottom" align="end" />
+        )}
       </div>
 
       {/* Full width down to 320px — the button ellipsizes its own label, so
