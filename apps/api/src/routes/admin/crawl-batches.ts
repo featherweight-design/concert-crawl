@@ -24,6 +24,7 @@ import {
 import { readWindow } from './lib/crawl-window.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
+import { nextCrawlAfter } from './lib/needs-you/all-clear-facts.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -112,6 +113,8 @@ crawlBatchesAdminRouter.get('/estimate', async (ctx) => {
       now,
       firstNight: addDays(denverDate(from), 1),
     }),
+    // The confirm's "Tonight's {time} crawl still runs."
+    nextCrawlAt: nextCrawlAfter(now).toISOString(),
   };
   return ctx.json({ success: true, data: estimate });
 });

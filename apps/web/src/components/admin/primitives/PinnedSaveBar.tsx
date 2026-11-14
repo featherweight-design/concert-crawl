@@ -81,20 +81,17 @@ export const PinnedSaveBar = ({
   const paneSlot = pane === undefined ? null : slot;
   // No Dismiss: the board draws Try again only; the next save or Discard
   // clears it.
+  // One shadow: the floating save bar's .45, passed to the toast in place of
+  // its default rather than painted again by a wrapper.
   const toast =
     failure === null ? null : (
-      <div
-        style={{ borderRadius: 12, boxShadow: '0 14px 30px rgba(0,0,0,0.45)' }}
-      >
-        <SaveFailedToast
-          title={failure.title}
-          saved={failure.saved}
-          retrying={saving}
-          {...(failure.onRetry === undefined
-            ? {}
-            : { onRetry: failure.onRetry })}
-        />
-      </div>
+      <SaveFailedToast
+        title={failure.title}
+        saved={failure.saved}
+        retrying={saving}
+        shadow="0 14px 30px rgba(0,0,0,0.45)"
+        {...(failure.onRetry === undefined ? {} : { onRetry: failure.onRetry })}
+      />
     );
 
   const buttons = (
