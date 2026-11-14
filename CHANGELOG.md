@@ -1,3 +1,16 @@
+# [1.427.0](https://github.com/featherweight-design/concert-crawl/compare/v1.426.0...v1.427.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** keep the details cards at the board's 16/18 on phone, tighten the About subtitle ([0d72193](https://github.com/featherweight-design/concert-crawl/commit/0d721933a4f0bc39eff1f55cd328f9ebd97eb41b))
+* **web:** unstack the details save bars, tighten parsing, keep failed drafts ([5d207f4](https://github.com/featherweight-design/concert-crawl/commit/5d207f4dce7af09bd3e02818ce58a91c2a6b4656))
+
+
+### Features
+
+* **web:** venue Details tab, Venue, Tickets and Contact cards (3b part 5a) ([2400774](https://github.com/featherweight-design/concert-crawl/commit/2400774edc1a6e433f31934f6b4c072e84028929))
+
 # [1.426.0](https://github.com/featherweight-design/concert-crawl/compare/v1.425.1...v1.426.0) (2026-11-14)
 
 
