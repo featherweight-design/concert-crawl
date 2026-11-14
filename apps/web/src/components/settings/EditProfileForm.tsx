@@ -252,7 +252,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
-              className="w-full rounded-xl border border-border bg-surface-1 py-3 pl-8 pr-4 text-[14px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
+              className="w-full rounded-xl border border-border bg-surface-1 py-3 pl-[34px] pr-4 text-[14px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
               style={handleError ? { borderColor: 'var(--danger)' } : undefined}
             />
           </div>
@@ -291,7 +291,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
             onChange={(evt) => setCity(evt.target.value)}
             placeholder={SETTINGS_COPY.cityPlaceholder}
             maxLength={100}
-            className="w-full rounded-xl border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
+            className="w-full rounded-xl border border-border bg-surface-1 px-5 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
           />
           <span className="text-[12px] text-fg-subtle">
             {SETTINGS_COPY.cityHint}
