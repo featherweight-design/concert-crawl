@@ -12,7 +12,13 @@ vi.mock('drizzle-orm', async (importOriginal) => ({
   eq: vi.fn(),
 }));
 vi.mock('@concert-crawl/db', () => ({
-  db: { select: vi.fn(), insert: vi.fn() },
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    execute: vi.fn(),
+  },
   venues: {},
   auditLog: {},
   inviteCodes: {},
@@ -52,26 +58,36 @@ describe('GET /v1/health', () => {
   // paying to keep Neon awake, so a ping that touched the DB would be a bug.
   describe('as the keep-warm target', () => {
     it('is pinged every 5 minutes by the API cron', () => {
-      const config = readFileSync(resolve(here, '../../vercel.json'), 'utf8');
-      expect(config).toContain(
-        '{ "path": "/v1/health", "schedule": "*/5 * * * *" }',
+      const config: unknown = JSON.parse(
+        readFileSync(resolve(here, '../../vercel.json'), 'utf8'),
       );
+      expect(config).toMatchObject({
+        crons: expect.arrayContaining([
+          { path: '/v1/health', schedule: '*/5 * * * *' },
+        ]),
+      });
     });
 
-    it('answers without touching the database', async () => {
-      vi.mocked(db.select).mockClear();
-      vi.mocked(db.insert).mockClear();
+    it('answers through the whole app without touching the database', async () => {
+      const calls = [
+        db.select,
+        db.insert,
+        db.update,
+        db.delete,
+        db.execute,
+      ].map((method) => vi.mocked(method));
+      for (const call of calls) call.mockClear();
       await app.request('/v1/health');
-      expect(db.select).not.toHaveBeenCalled();
-      expect(db.insert).not.toHaveBeenCalled();
+      for (const call of calls) expect(call).not.toHaveBeenCalled();
     });
 
     it('imports nothing that reads data or calls Clerk', () => {
       const source = readFileSync(resolve(here, 'health.ts'), 'utf8');
-      const imports = [...source.matchAll(/from '([^']+)'/g)].map(
+      const imports = [...source.matchAll(/from ['"]([^'"]+)['"]/g)].map(
         (match) => match[1],
       );
       expect(imports).toEqual(['hono']);
+      expect(source).not.toMatch(/\bimport\(|\brequire\(/);
     });
   });
 });

@@ -17,17 +17,17 @@ describe('GET /api/warm', () => {
 
   it('imports nothing at all, so it cannot touch the database or Clerk', () => {
     const source = readFileSync(resolve(__dirname, '../route.ts'), 'utf8');
-    expect(source).not.toMatch(/^import /m);
-    expect(source).not.toMatch(/\bfrom '/);
+    // Static, dynamic and CommonJS forms alike.
+    expect(source).not.toMatch(/^\s*import\b|\bimport\(|\brequire\(/m);
+    expect(source).not.toMatch(/\bfrom\s+['"]/);
   });
 
   it('is pinged every 5 minutes by the web cron', () => {
-    const config = readFileSync(
-      resolve(__dirname, '../../../../../vercel.json'),
-      'utf8',
+    const config: unknown = JSON.parse(
+      readFileSync(resolve(__dirname, '../../../../../vercel.json'), 'utf8'),
     );
-    expect(config).toContain(
-      '{ "path": "/api/warm", "schedule": "*/5 * * * *" }',
-    );
+    expect(config).toMatchObject({
+      crons: [{ path: '/api/warm', schedule: '*/5 * * * *' }],
+    });
   });
 });
