@@ -43,7 +43,8 @@ export const EventStatusChip = ({
 /**
  * Hidden is not a status (addendum 5, §2): a hidden show keeps its status
  * chip and gets this muted tag under its title, "HIDDEN · UNSURE" or
- * "HIDDEN · BY ADMIN" (`02/events-statuschip-d`, `-m`).
+ * "HIDDEN · BY ADMIN" (`02/events-statuschip-d`, `-m`). Addendum 6 item 21
+ * lifts it to 10px `--fg-muted`, eye included, for contrast (7.5:1).
  */
 export const HiddenTag = ({
   row,
@@ -58,7 +59,7 @@ export const HiddenTag = ({
         alignItems: 'flex-start',
         gap: 5,
         minWidth: 0,
-        color: 'var(--fg-subtle)',
+        color: 'var(--fg-muted)',
       }}
     >
       <Eye
@@ -74,7 +75,7 @@ export const HiddenTag = ({
           ...MONO,
           minWidth: 0,
           lineHeight: '12px',
-          fontSize: 9,
+          fontSize: 10,
           letterSpacing: '0.1em',
           fontWeight: 600,
           textTransform: 'uppercase',
@@ -86,23 +87,26 @@ export const HiddenTag = ({
   ) : null;
 
 /**
- * Event edit's header: the status chip and, for a hidden show, a Hidden chip
- * (4b#8). The header with the list's tag isn't drawn, so it stays as built
- * (⏸ Design gap, addendum 5 §2).
+ * Event edit's header (addendum 6 item 19, `19/event-edit-hidden-header`):
+ * the fan status chip, then for a hidden show the list's Hidden tag, not a
+ * second chip. Wraps the tag to its own line before it would truncate.
  */
 export const StatusChips = ({
   row,
 }: {
   row: Pick<EventListRow, 'status' | 'hidden' | 'hiddenReason'>;
 }) => (
-  <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6 }}>
+  <span
+    style={{
+      display: 'inline-flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 8,
+      minWidth: 0,
+    }}
+  >
     <EventStatusChip row={row} />
-    {row.hidden && (
-      <StatusChip
-        status="hidden"
-        label={COPY.hiddenReason[row.hiddenReason ?? 'admin']}
-      />
-    )}
+    <HiddenTag row={row} />
   </span>
 );
 

@@ -91,7 +91,11 @@ describe('EventEdit', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: DETAIL.title }),
     ).toBeInTheDocument();
-    expect(screen.getByText(COPY.meta('Sat Nov 14', 4))).toBeInTheDocument();
+    // `19/event-edit-hidden-header`: date · venue, no Watching count.
+    expect(
+      screen.getByText(COPY.meta('Sat Nov 14', 'Larimer Lounge')),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('hidden-tag')).toBeNull();
     expect(
       screen.getByRole('link', { name: COPY.onVenueSite }),
     ).toHaveAttribute('href', DETAIL.venueUrl);
@@ -383,6 +387,28 @@ describe('EventEdit Status card', () => {
     fireEvent.click(screen.getByTestId('event-edit-menu'));
     fireEvent.click(screen.getByTestId('event-edit-menu-hide'));
     expect(screen.getByText(COPY.hide.foot)).toBeInTheDocument();
+  });
+
+  it('tags a hidden show in the header with the list tag, not a second chip', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, hidden: true, hiddenReason: 'unsure' }}
+        today="2026-11-13"
+      />,
+    );
+    const tag = screen.getByTestId('hidden-tag');
+    expect(tag).toHaveTextContent(ADMIN_COPY.eventsList.hiddenTag.unsure);
+    // Addendum 6 item 21: 10px in --fg-muted, the eye the same colour.
+    expect(tag.style.color).toBe('var(--fg-muted)');
+    // The old second chip ("Hidden: unsure") is gone.
+    expect(screen.queryByText(/^Hidden: unsure$/)).toBeNull();
+  });
+
+  it('names a show with no venue by its date alone', () => {
+    render(
+      <EventEdit detail={{ ...DETAIL, venueName: null }} today="2026-11-13" />,
+    );
+    expect(screen.getByText(COPY.meta('Sat Nov 14', null))).toBeInTheDocument();
   });
 
   it('shows a hidden show again at once, with no dialog', async () => {

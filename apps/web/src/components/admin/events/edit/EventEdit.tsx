@@ -181,18 +181,22 @@ const Header = ({
             <EventEditMenu detail={detail} onMerge={onMerge} onHide={onHide} />
           )}
         </div>
+        {/* `19/event-edit-hidden-header`: desktop draws chip, tag and meta on
+            one line; the phone puts the meta under the title and the chips
+            on their own wrapping row below it. */}
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
+            flexDirection: phone ? 'column-reverse' : 'row',
+            alignItems: phone ? 'flex-start' : 'center',
+            flexWrap: phone ? 'nowrap' : 'wrap',
             gap: 8,
-            marginTop: 8,
+            marginTop: phone ? 4 : 8,
           }}
         >
           <StatusChips row={detail} />
           <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-            {COPY.meta(metaDate(detail.date), detail.watchingCount)}
+            {COPY.meta(metaDate(detail.date), detail.venueName)}
           </span>
         </div>
       </div>
