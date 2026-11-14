@@ -119,6 +119,12 @@ jobs:
           check "concert-crawl-api" \
             bash .github/scripts/vercel-api-prod.sh health \
             "${{ vars.VERCEL_PROJECT_ID_API }}" "${{ vars.PROD_API_URL }}"
+          # The web project's only cron is the keep-warm ping; a disabled
+          # Cron Jobs switch stops it silently. VERCEL_PROJECT_ID_WEB is
+          # optional: the prod web project's name works in its place.
+          check "web-crons" \
+            bash .github/scripts/vercel-web-crons-health.sh \
+            "${{ vars.VERCEL_PROJECT_ID_WEB || 'concert-crawl' }}"
           # The crawler left Render for GitHub Actions (Render exit step 2). Its
           # code ships with the API, so the API check covers its deploy path;
           # this one checks the daily crawl is actually running.
