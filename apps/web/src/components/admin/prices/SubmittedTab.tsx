@@ -369,7 +369,8 @@ export const SubmittedTab = () => {
           height: 36,
           padding: '0 12px 0 34px',
           borderRadius: 10,
-          fontSize: 13,
+          // 16 on the phone: iOS zooms the page into a smaller field.
+          fontSize: isPhone ? 16 : 13,
           color: 'var(--fg)',
           background: 'var(--surface-1)',
           border: '1px solid var(--border)',

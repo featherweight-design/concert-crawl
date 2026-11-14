@@ -1,0 +1,52 @@
+{
+  "feature": "Admin Prices · Submitted prices fidelity (P47-9b)",
+  "note": "Boards 06-events-artists-prices/prices-submitted-prices, submitted-prices-mobile, prices-row-menu, edit-price-desktop; addendum-3 §4d #8, #12, #21. CONTACT_SHEET_ROLE=admin. Phone: search on top, filters as a segment (counts with a space), Published pill, PersonAvatar (README rule 12) beside each @handle. Desktop: unchanged chips plus the '@handle · N' fan chip from a row's ⋯ (exact handle). Edit price opens the single sheet (Cancel). Fan chip and Edit price are desktop-only (no phone row ⋯ is drawn).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "submitted",
+      "label": "/admin/prices?tab=submitted",
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[data-testid=\"person-avatar\"], [data-testid=\"empty-state\"]",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "fan-chip",
+      "label": "This fan's other prices",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[data-testid=\"person-avatar\"], [aria-haspopup=\"menu\"]"
+        },
+        {
+          "click": "li:has([data-testid=\"person-avatar\"]) [aria-haspopup=\"menu\"], tr:has([data-testid=\"person-avatar\"]) [aria-haspopup=\"menu\"], [role=\"listitem\"]:has-text(\"@\") [aria-haspopup=\"menu\"]"
+        },
+        { "clickRole": "menuitem", "name": "^This fan" },
+        { "wait": "text=/@\\w+ · \\d+/", "settle": 800 }
+      ]
+    },
+    {
+      "id": "edit-price",
+      "label": "Edit price sheet",
+      "widths": ["desktop"],
+      "steps": [
+        {
+          "goto": "/admin/prices?tab=submitted",
+          "wait": "[aria-haspopup=\"menu\"]"
+        },
+        { "click": "[aria-haspopup=\"menu\"]" },
+        { "clickRole": "menuitem", "name": "^Edit price" },
+        { "wait": "[role=\"dialog\"]", "settle": 600 }
+      ]
+    }
+  ]
+}
