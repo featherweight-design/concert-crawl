@@ -376,6 +376,37 @@ export const websiteHost = (websiteUrl: string): string =>
     ? new URL(websiteUrl).host.replace(/^www\./, '')
     : websiteUrl;
 
+/**
+ * The address opened in Maps (addendum 5 `07/map-pin-states`): the board
+ * opens the venue's address, never the pin, so the pin can be copied from
+ * it. The same Google Maps search the fan venue page uses, which hands off
+ * to the device's maps app. Null when there is no address to open, or when
+ * what it builds is not a plain http(s) URL.
+ */
+export const addressMapsUrl = (address: string): string | null => {
+  const query = address.trim();
+  if (query === '') return null;
+  const url = `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+  return isSafeHttpUrl(url) ? url : null;
+};
+
+/**
+ * The pin field's three drawn states (`07/map-pin-states`): set, not set,
+ * and can't read it. A pin that doesn't parse reads as `invalid` even before
+ * its error shows, so the Maps link is never offered beside it.
+ */
+export type MapPinState = 'set' | 'notSet' | 'invalid';
+
+export const mapPinState = (
+  text: string,
+  error: string | undefined,
+): MapPinState => {
+  if (error !== undefined) return 'invalid';
+  const pin = parsePin(text);
+  if (pin === null) return 'invalid';
+  return pin.lat === null ? 'notSet' : 'set';
+};
+
 /** The link made from the name, as the old slug button made it. */
 export const slugify = (name: string): string =>
   name

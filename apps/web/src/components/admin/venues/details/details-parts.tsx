@@ -3,15 +3,17 @@
 /** The Details tab's building blocks: a labelled field, a two-up row, and the Look card. */
 
 import type { CSSProperties, ReactNode } from 'react';
-import { MapPin } from 'lucide-react';
+import { ArrowUpRight, MapPin } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard as Card } from '@/components/admin/primitives';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 import { VenueTile, venueGlyphKey } from '@/components/consumer/venue-glyph';
 import { VENUE_HERO_SETTINGS } from '@/components/consumer/venue-glyph/definitions/venue-settings';
 import { errorStyle, fieldLabel, hintStyle } from '../source/source-parts';
-import { capacityTypeLabel } from './details-rules';
+import { capacityTypeLabel, type MapPinState } from './details-rules';
 
 const COPY = ADMIN_COPY.venueDetails;
+const PIN_COPY = COPY.fields.mapPin;
 
 /** A label over its input, then the input's error, else its hint. */
 export const Field = ({
@@ -23,7 +25,7 @@ export const Field = ({
 }: {
   id: string;
   label: string;
-  hint?: string | undefined;
+  hint?: ReactNode;
   error?: string | undefined;
   children: ReactNode;
 }) => (
@@ -40,6 +42,45 @@ export const Field = ({
       hint !== undefined && <div style={hintStyle}>{hint}</div>
     )}
   </div>
+);
+
+/**
+ * The line under the map pin (addendum 5 `07/map-pin-states`, `06/details-*`):
+ * "Entered by hand." or "Not set: …", then **Open the address in Maps ↗** in
+ * the signal colour at 600, opening the address in a new tab. No link while
+ * the pin can't be read (its error takes the line) or there is no address.
+ */
+export const MapPinHint = ({
+  state,
+  mapsUrl,
+}: {
+  state: MapPinState;
+  mapsUrl: string | null;
+}) => (
+  <>
+    {state === 'notSet' ? PIN_COPY.notSet : PIN_COPY.set}
+    {state !== 'invalid' && mapsUrl !== null && (
+      <>
+        {' '}
+        <SafeExternalLink
+          href={mapsUrl}
+          style={{
+            color: 'var(--signal)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          {PIN_COPY.openInMaps}
+          <ArrowUpRight
+            size={12}
+            strokeWidth={2.5}
+            aria-hidden
+            style={{ marginLeft: 3, verticalAlign: '-1px' }}
+          />
+        </SafeExternalLink>
+      </>
+    )}
+  </>
 );
 
 /** Two fields side by side on desktop (`details-d`), stacked on phone (`details-m`). */

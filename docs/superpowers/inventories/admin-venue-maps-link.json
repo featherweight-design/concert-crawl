@@ -1,0 +1,49 @@
+{
+  "feature": "Admin venue Details tab · map pin line with Open the address in Maps ↗",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_bplus_redesign/addendum-5/boards/07-map-pin/map-pin-states (set, not set, can't read it) and 06-venue-details/details-d (desktop), details-m (phone). Both rows type into the Map pin field so the state does not depend on what the scratch row stores; neither clicks Save, so nothing is written. Set reads \"Entered by hand. Open the address in Maps ↗\"; empty reads \"Not set: fans get no Directions link. Open the address in Maps ↗\". The link needs an address: the rows assume Bluebird's is stored.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/b1-venue-maps-link-sheet",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 1400, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 1200 }
+  ],
+  "rows": [
+    {
+      "id": "details-pin-set",
+      "label": "Venue page, Details, map pin set: Entered by hand, then the Maps link (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "[data-testid=\"details-venue\"]"
+        },
+        {
+          "fill": "[data-testid=\"details-venue\"] label:text-is(\"Map pin\") + input",
+          "text": "39.7402, -104.9488"
+        },
+        {
+          "wait": "[data-testid=\"details-venue\"] a:has-text(\"Open the address in Maps\")"
+        },
+        { "scrollTo": "[data-testid=\"details-venue\"]" },
+        { "settle": 1500 }
+      ]
+    },
+    {
+      "id": "details-pin-empty",
+      "label": "Venue page, Details, map pin empty: Not set, fans get no Directions link, then the Maps link (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=details",
+          "wait": "[data-testid=\"details-venue\"]"
+        },
+        {
+          "fill": "[data-testid=\"details-venue\"] label:text-is(\"Map pin\") + input",
+          "text": ""
+        },
+        {
+          "wait": "[data-testid=\"details-venue\"] :text(\"Not set: fans get no Directions link.\")"
+        },
+        { "scrollTo": "[data-testid=\"details-venue\"]" },
+        { "settle": 1500 }
+      ]
+    }
+  ]
+}
