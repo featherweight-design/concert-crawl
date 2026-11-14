@@ -94,7 +94,7 @@ describe('Needs you sources and ranking', () => {
     await seedUserProfile('price-user');
     await seedPriceSubmission(priced.id, 'price-user', {
       priceMin: '25',
-      status: 'approved',
+      status: 'corroborated',
       corroborationCount: 2,
     });
     const items = await listNeedsYou({
