@@ -1,22 +1,29 @@
 // GET /v1/admin/crawl/batches and /batches/:key — the admin Crawl runs list
-// (redesign 1d). Batches are derived from crawl_runs and crawl_triggers by
+// (redesign 1d) — and /estimate, the Crawl all confirm's numbers. Batches are derived from crawl_runs and crawl_triggers by
 // lib/crawl-batches.ts and never stored. Reading only: Crawl all is still
 // POST /v1/admin/crawl.
 
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lt, sql } from 'drizzle-orm';
 import { crawlRuns, crawlTriggers, db, venues } from '@concert-crawl/db';
-import type { CrawlBatch, CrawlBatchDetail } from '@concert-crawl/types';
+import type {
+  CrawlAllEstimate,
+  CrawlBatch,
+  CrawlBatchDetail,
+} from '@concert-crawl/types';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
 import {
+  ESTIMATE_NIGHTS,
   groupCrawlBatches,
   parseBatchKey,
+  usualNightly,
   type BatchRunInput,
   type BatchTriggerInput,
 } from './lib/crawl-batches.js';
+import { crawlAllSkipReason } from './lib/crawl-all.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // A run row's error text is the whole message the crawl threw; the list only
@@ -45,6 +52,7 @@ const readWindow = async (
         eventsFound: crawlRuns.eventsFound,
         eventsInserted: crawlRuns.eventsInserted,
         durationMs: crawlRuns.durationMs,
+        llmCostUsd: crawlRuns.llmCostUsd,
         // The first of the message only: a run stores everything the crawl threw.
         errorMessage: sql<
           string | null
@@ -116,6 +124,44 @@ crawlBatchesAdminRouter.get(
     return ctx.json({ success: true, data: batches });
   },
 );
+
+// What the Crawl all confirm says first (addendum-3 09/crawl-all-m): how many
+// venues it takes, which it skips and why, and what recent nights took and
+// cost. Counted by lib/crawl-all.ts, the rule POST /v1/admin/crawl queues by.
+crawlBatchesAdminRouter.get('/estimate', async (ctx) => {
+  const now = new Date();
+  // Room for ESTIMATE_NIGHTS nights past a few retried or missed ones.
+  const from = new Date(now.getTime() - 2 * ESTIMATE_NIGHTS * DAY_MS);
+  const [venueRows, window] = await Promise.all([
+    db
+      .select({
+        id: venues.id,
+        name: venues.name,
+        active: venues.active,
+        verified: venues.verified,
+        blockedAt: venues.blockedAt,
+        crawlPausedAt: venues.crawlPausedAt,
+      })
+      .from(venues)
+      .where(isNull(venues.removedAt))
+      .orderBy(asc(venues.name)),
+    readWindow(from, new Date(now.getTime() + DAY_MS)),
+  ]);
+
+  const skipped = venueRows.flatMap((venue) => {
+    const reason = crawlAllSkipReason(venue);
+    return reason === null
+      ? []
+      : [{ venueId: venue.id, name: venue.name, reason }];
+  });
+  const estimate: CrawlAllEstimate = {
+    total: venueRows.length,
+    eligible: venueRows.length - skipped.length,
+    skipped,
+    usual: usualNightly({ ...window, now }),
+  };
+  return ctx.json({ success: true, data: estimate });
+});
 
 // One batch with its runs.
 crawlBatchesAdminRouter.get(

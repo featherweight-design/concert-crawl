@@ -16,7 +16,11 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { crawlRuns, crawlTriggers } from '@concert-crawl/db';
-import type { CrawlBatch, CrawlBatchDetail } from '@concert-crawl/types';
+import type {
+  CrawlAllEstimate,
+  CrawlBatch,
+  CrawlBatchDetail,
+} from '@concert-crawl/types';
 import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
@@ -179,6 +183,58 @@ describe('admin crawl batches', () => {
     expect(missingBody.data).toMatchObject({ didntStart: true, runs: [] });
     expect((await get('/nonsense')).status).toBe(400);
     expect((await get(`/nightly:${addDays(night, -60)}`)).status).toBe(404);
+  });
+
+  it('estimates Crawl all: the venues it takes, the ones it skips and why, and recent nights', async () => {
+    setAuth('admin');
+    const venue = (name: string, over: Parameters<typeof seedVenue>[0] = {}) =>
+      seedVenue({ name, slug: name.toLowerCase(), ...over });
+    const ogden = await venue('Ogden', { blockedAt: new Date() });
+    const levitt = await venue('Levitt', { crawlPausedAt: new Date() });
+    await venue('Hidden', { active: false });
+    await venue('Fresh', { verified: false });
+    await venue('Gone', { removedAt: new Date(), active: false });
+    const bluebird = await venue('Bluebird');
+    await seedRun(bluebird.id, nightAt(2), {
+      durationMs: 60_000,
+      llmCostUsd: 0.5,
+    });
+    await seedRun(levitt.id, nightAt(2, 10), {
+      durationMs: 60_000,
+      llmCostUsd: 0.25,
+    });
+
+    const res = await app.request('/v1/admin/crawl/estimate');
+    expect(res.status).toBe(200);
+    const body: { data: CrawlAllEstimate } = await res.json();
+    // The removed venue is neither crawled nor counted.
+    expect(body.data.total).toBe(5);
+    expect(body.data.eligible).toBe(1);
+    expect(body.data.skipped).toEqual([
+      { venueId: expect.any(String), name: 'Fresh', reason: 'unverified' },
+      { venueId: expect.any(String), name: 'Hidden', reason: 'hidden' },
+      { venueId: levitt.id, name: 'Levitt', reason: 'paused' },
+      { venueId: ogden.id, name: 'Ogden', reason: 'blocked' },
+    ]);
+    // One night: 10:10 to 10:21 (the second run starts at 10:20, takes 1 min).
+    expect(body.data.usual).toEqual({
+      durationMs: 11 * 60 * 1000,
+      costUsd: 0.75,
+      nights: 1,
+    });
+  });
+
+  it('estimates no time or cost with no nightly history', async () => {
+    setAuth('admin');
+    await seedVenue({ name: 'Bluebird', slug: 'bluebird' });
+    const res = await app.request('/v1/admin/crawl/estimate');
+    const body: { data: CrawlAllEstimate } = await res.json();
+    expect(body.data).toMatchObject({ total: 1, eligible: 1, usual: null });
+  });
+
+  it('keeps the estimate admin only', async () => {
+    setAuth('user');
+    expect((await app.request('/v1/admin/crawl/estimate')).status).toBe(403);
   });
 
   it('refuses a limit out of range', async () => {
