@@ -94,8 +94,7 @@ describe('CorroborationSheet signed-out gate (#1247)', () => {
 });
 
 // B+ restyle of the confirm sheet (bp-s-confirm_price_m, bp-s-confirm_self_m,
-// more-p-check_m). The selected option's and the CTA's accent is HELD FOR
-// DESIGN (08 pink vs 06 green), so nothing here pins it.
+// more-p-check_m); the accent is pinned separately below (addendum 5 item 1).
 describe('CorroborationSheet rail and body', () => {
   beforeEach(cleanup);
 
@@ -279,6 +278,37 @@ describe('CorroborationSheet self-locked state (confirm_self_m)', () => {
 
 // Regression: a resale submission reached the sheet as community and showed
 // the Community pill (addendum 4 item 5, the shared TrustPill).
+// Addendum 5 item 1: the accent is the price's own trust colour, signal for a
+// community price and gold (the warning token) for a box-office one, on the
+// rail dot and code and on the CTA, which is solid with dark text.
+describe('CorroborationSheet accent (addendum 5 item 1)', () => {
+  beforeEach(cleanup);
+
+  const renderKind = (kind: 'community' | 'boxoffice') =>
+    render(
+      <CorroborationSheet
+        submission={{ ...submission, kind }}
+        open
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        onSubmitUpdate={vi.fn()}
+      />,
+    );
+
+  it('draws a community price in signal', () => {
+    renderKind('community');
+    const cta = screen.getByRole('button', { name: /Confirm: same number/ });
+    expect(cta.style.background).toBe('var(--signal)');
+    expect(cta.style.color).toBe('var(--fg-on-accent)');
+  });
+
+  it('draws a box-office price in gold', () => {
+    renderKind('boxoffice');
+    const cta = screen.getByRole('button', { name: /Confirm: same number/ });
+    expect(cta.style.background).toBe('var(--warning)');
+  });
+});
+
 describe('CorroborationSheet trust pill', () => {
   beforeEach(cleanup);
 

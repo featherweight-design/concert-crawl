@@ -26,11 +26,17 @@ const formatTimeAgo = (isoDate: string): string => {
 };
 
 // ── Color constants ──────────────────────────────────────────────
-// HELD FOR DESIGN: the selected option's and the CTA's accent. The 08 board
-// (more-p-check_m) draws it pink and the 06 board (bp-s-confirm_price_m) draws
-// it green, and no ruling picks one, so it stays the azure it is on main.
-const AZURE = 'oklch(0.62 0.12 240)';
-const GOLD = 'oklch(0.66 0.14 78)';
+// The sheet's accent is the price's own trust colour (addendum 5 item 1,
+// confirm-price-m / confirm-price-box-m): signal for a community price, gold
+// (the warning token) for a box-office one. It colours the rail dot and code,
+// the detail card, the selected option and radio, and the CTA. `fill` is for
+// dots, borders and the CTA; `text` is the Light-safe variant for glyphs.
+const accentFor = (
+  kind: 'community' | 'boxoffice' | 'resale',
+): { fill: string; text: string } =>
+  kind === 'boxoffice'
+    ? { fill: 'var(--warning)', text: 'var(--price-text-warning)' }
+    : { fill: 'var(--signal)', text: 'var(--price-text-signal)' };
 
 const RAIL_TEXT = {
   fontFamily: 'JetBrains Mono, monospace',
@@ -64,9 +70,9 @@ const pendingTokens = (
   }
 
   return {
-    color: GOLD,
-    bg: `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`,
-    border: `color-mix(in oklab, ${GOLD} 38%, var(--border))`,
+    color: 'var(--price-text-warning)',
+    bg: `color-mix(in oklab, var(--warning) 8%, var(--surface-1))`,
+    border: `color-mix(in oklab, var(--warning) 38%, var(--border))`,
   };
 };
 
@@ -119,7 +125,6 @@ interface SubmissionDetailCardProps {
   submitter: { handle: string; url: string } | null;
   submittedAt: string;
   note?: string | null | undefined;
-  accentColor: string;
 }
 
 const SubmissionDetailCard = ({
@@ -131,7 +136,6 @@ const SubmissionDetailCard = ({
   submitter,
   submittedAt,
   note,
-  accentColor,
 }: SubmissionDetailCardProps) => {
   const tokens = pendingTokens(kind);
 
@@ -257,7 +261,7 @@ const SubmissionDetailCard = ({
               fontFamily: 'Inter, sans-serif',
               fontWeight: 600,
               fontSize: '12px',
-              color: accentColor,
+              color: accentFor(kind).text,
             }}
           >
             {copy.boxOfficeFaceValueNote}
@@ -417,10 +421,11 @@ export const CorroborationSheet = ({
     null,
   );
 
-  const accentColor = submission.kind === 'boxoffice' ? GOLD : AZURE;
+  const { fill: accentColor, text: accentText } = accentFor(submission.kind);
   // The rail's dot and code: the accent while confirmable, amber when the
   // viewer's own price (bp-s-confirm_self_m).
   const stateColor = isSelfLocked ? 'var(--warning)' : accentColor;
+  const stateText = isSelfLocked ? 'var(--price-text-warning)' : accentText;
 
   const isBoxOfficeSubmission = submission.kind === 'boxoffice';
 
@@ -522,7 +527,7 @@ export const CorroborationSheet = ({
             />
             <span
               data-testid="confirm-rail-status"
-              style={{ ...RAIL_TEXT, color: stateColor }}
+              style={{ ...RAIL_TEXT, color: stateText }}
             >
               {isSelfLocked
                 ? copy.selfLocked.railTag
@@ -724,7 +729,6 @@ export const CorroborationSheet = ({
           submitter={submission.submitter}
           submittedAt={submission.submittedAt}
           note={submission.note}
-          accentColor={accentColor}
         />
 
         {isSelfLocked ? (
