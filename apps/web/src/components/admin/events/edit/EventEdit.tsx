@@ -352,6 +352,11 @@ export const EventEdit = ({
   const [draft, setDraft] = useState<Fields>(snap.value);
   // What is saved (after a save, a refresh, or a snap-back) resets the form.
   useEffect(() => setDraft(snap.value), [snap.value]);
+  // A save that fails fast can batch its pending and failed states into one
+  // render, so `snap.value` never changes identity: snap back on the failure.
+  useEffect(() => {
+    if (snap.failed !== null) setDraft(snap.failed.saved);
+  }, [snap.failed]);
   const count = changedCount(draft, snap.value);
   // The API refuses an empty title, so Save waits for one.
   const valid = draft.title.trim() !== '';
