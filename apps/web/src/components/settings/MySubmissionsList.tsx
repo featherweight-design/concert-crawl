@@ -46,11 +46,11 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
       {/* `submitted-prices-m`: one line that runs off the right edge (the row
           bleeds to the screen edge and scrolls sideways), not a wrapping
           pair of lines. From `lg` the sort note sits at the far end. */}
-      <div className="-mx-4 flex items-center justify-between gap-3 lg:mx-0">
+      <div className="-mx-4 flex items-center justify-between gap-3 sm:mx-0">
         <div
           role="group"
           aria-label={SETTINGS_COPY.submissionsFilterAria}
-          className="flex flex-1 gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] min-[400px]:gap-2 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden"
+          className="-my-1 flex flex-1 gap-1.5 overflow-x-auto px-4 py-1 [scrollbar-width:none] min-[400px]:gap-2 sm:px-0 lg:overflow-visible [&::-webkit-scrollbar]:hidden"
         >
           {SUBMISSION_FILTERS.map((key) => {
             const active = key === filter;
@@ -59,6 +59,7 @@ export function MySubmissionsList({ submissions }: MySubmissionsListProps) {
                 key={key}
                 type="button"
                 aria-pressed={active}
+                data-ring={active ? 'gradient' : undefined}
                 onClick={() => setFilter(key)}
                 className="shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-[13px] font-semibold min-[400px]:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                 style={

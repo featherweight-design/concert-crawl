@@ -53,11 +53,12 @@ describe('MySubmissionsList filter row', () => {
     render(<MySubmissionsList submissions={[row]} />);
     const [first, second] = screen.getAllByRole('button');
     expect(first?.getAttribute('aria-pressed')).toBe('true');
-    expect(first?.style.background).toContain('linear-gradient');
-    expect(second?.style.background).not.toContain('linear-gradient');
+    expect(first?.getAttribute('data-ring')).toBe('gradient');
+    expect(second?.getAttribute('data-ring')).toBeNull();
 
     fireEvent.click(second as HTMLElement);
-    expect(second?.style.background).toContain('linear-gradient');
+    expect(second?.getAttribute('data-ring')).toBe('gradient');
+    expect(first?.getAttribute('data-ring')).toBeNull();
   });
 
   it('notes the sort order at the end of the row', () => {
