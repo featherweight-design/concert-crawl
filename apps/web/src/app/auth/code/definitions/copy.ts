@@ -35,6 +35,18 @@ export const copy = {
     ratelimit: 'Too many attempts. Try again in a few minutes.',
     server_error: 'Something went wrong. Try again.',
   },
+  // A code an admin ended on purpose (`code-ended-fan-m`). The board's last
+  // sentence says Concert Crawl is "still open to everyone", which this app is
+  // not while the beta is invite-only (this page asks for a code and offers a
+  // waitlist), so the line says what is true: the landing page is still open.
+  ended: {
+    heading: 'This code has ended',
+    body: "It was for a limited group, and it isn't taking new people now. You can still look around.",
+    browse: "See what's on in Denver",
+    browseHref: '/',
+    signIn: 'Sign in',
+    signInHref: '/sign-in',
+  },
   footer: {
     waitlist: "Don't have a code? Join the waitlist",
     back: '← Back to landing',

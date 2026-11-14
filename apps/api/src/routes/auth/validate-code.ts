@@ -61,9 +61,18 @@ validateCodeRouter.post(
       .from(inviteCodes)
       .where(eq(inviteCodes.code, code));
 
-    if (!invite || invite.revokedAt) {
+    if (!invite) {
       if (overMisses) return refuse();
       return ctx.json({ success: false, error: 'notfound' }, 404);
+    }
+    // A revoked code is one an admin ended on purpose; the fan sees "This code
+    // has ended" (`code-ended-fan-m`), not a typo hint. It still counts as a
+    // miss (no refund below), so a guesser gains no free probes by finding
+    // codes that once existed, and a miss over the limit is refused the same
+    // way as any other.
+    if (invite.revokedAt) {
+      if (overMisses) return refuse();
+      return ctx.json({ success: false, error: 'ended' }, 410);
     }
     await refundRateLimit(limitKey);
 

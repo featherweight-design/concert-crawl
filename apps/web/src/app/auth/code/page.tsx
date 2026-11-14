@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { validateAndSetInviteCode } from './actions';
+import { CodeEnded } from './CodeEnded';
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
 import { copy } from './definitions/copy';
 import {
@@ -16,6 +17,7 @@ type ErrorKind =
   | 'notfound'
   | 'used'
   | 'expired'
+  | 'ended'
   | 'ratelimit'
   | 'server_error'
   | null;
@@ -57,6 +59,9 @@ export default function InviteCodePage() {
       if (!result.ok) setErrorKind(result.error);
     });
   }
+
+  // An ended code is a page of its own: there is nothing to retype.
+  if (errorKind === 'ended') return <CodeEnded />;
 
   return (
     <div

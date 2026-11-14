@@ -21,6 +21,7 @@ type ValidationResult =
         | 'notfound'
         | 'used'
         | 'expired'
+        | 'ended'
         | 'ratelimit'
         | 'server_error';
     };
@@ -90,7 +91,17 @@ export async function validateAndSetInviteCode(
 
     if (res.status === 404) return { ok: false, error: 'notfound' };
     if (res.status === 409) return { ok: false, error: 'used' };
-    if (res.status === 410) return { ok: false, error: 'expired' };
+    if (res.status === 410) {
+      // 410 is both "expired" and "ended" (an admin revoked the code); the
+      // body says which, and an unreadable one is the older answer.
+      const body: unknown = await res.json().catch(() => null);
+      const ended =
+        typeof body === 'object' &&
+        body !== null &&
+        'error' in body &&
+        body.error === 'ended';
+      return { ok: false, error: ended ? 'ended' : 'expired' };
+    }
     if (res.status === 429) return { ok: false, error: 'ratelimit' };
     if (!res.ok) return { ok: false, error: 'server_error' };
   } catch {
