@@ -104,10 +104,10 @@ Hugh 18 (keep Reader + Back to Automatic in the Source panel); Hugh 22 (Pause/Re
 
 ## Rulings
 
-The orchestrator's decisions under Hugh's delegation, 2026-11-14. Hugh can override any of them.
+All decided 2026-11-14. 32 and 40c were decided with Hugh. The rest are the orchestrator's decisions under Hugh's delegation, and Hugh can override any of them.
 
-- **32:** ship the full-screen enlarged poster (`32/poster-enlarged-m`).
-- **40c:** keep the resale price in both places, the price card and Where it's sold.
+- **32** (Hugh, 2026-11-14): ship the full-screen enlarged poster (`32/poster-enlarged-m`).
+- **40c** (Hugh, 2026-11-14): keep the resale price in both places, the price card and Where it's sold.
 - **16:** no draft/published split. Hugh ruled on 2026-11-14 that Publish is fine as it is, so this is signposting only, with no migration. The Guide tab keeps writing live, and the item drops out of the migration list above.
 - **43:** Approve without Undo. Price-drop pushes and the fan notice cannot be recalled, so the toast offers no Undo and the "no confirm because undoable" rationale goes with it.
 - **33:** "N failed" counts failed sends (`email_send_log.status = failed`), not bounces. No bounce webhook is built; drop "or bounced" from the copy.
