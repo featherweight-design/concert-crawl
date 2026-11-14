@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -23,27 +24,38 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
-  IdentityArt: () => null,
+  IdentityArt: ({ name }: { name: string }) => (
+    <span data-testid="identity-art">{name}</span>
+  ),
 }));
 
-// The review UI has its own suite; this stub accepts the draft on a click.
+// The review UI has its own suite; this stub accepts the draft on a click,
+// shows what it holds, and offers Cancel.
 vi.mock('@/components/admin/generate-field/GenerateField', () => ({
   GenerateField: ({
     state,
     result,
     onAccept,
+    onCancel,
   }: {
     state: string;
     result?: { content: string };
     onAccept: (content: string) => void;
+    onCancel?: () => void;
   }) => (
-    <button
-      type="button"
-      data-testid={`generate-${state}`}
-      onClick={() => onAccept(result?.content ?? '')}
-    >
-      accept
-    </button>
+    <>
+      <button
+        type="button"
+        data-testid={`generate-${state}`}
+        data-content={result?.content ?? ''}
+        onClick={() => onAccept(result?.content ?? '')}
+      >
+        accept
+      </button>
+      <button type="button" onClick={() => onCancel?.()}>
+        cancel
+      </button>
+    </>
   ),
 }));
 
@@ -54,15 +66,56 @@ const COPY = ADMIN_COPY.venueDetails;
 const FIELDS = COPY.fields;
 
 let phone = false;
+const mediaListeners = new Set<EventListenerOrEventListenerObject>();
 const matchMediaStub = (query: string): MediaQueryList => ({
-  matches: phone,
+  get matches() {
+    return phone;
+  },
   media: query,
   onchange: null,
   addListener: () => undefined,
   removeListener: () => undefined,
-  addEventListener: () => undefined,
-  removeEventListener: () => undefined,
+  addEventListener: (
+    _type: string,
+    listener: EventListenerOrEventListenerObject,
+  ) => {
+    mediaListeners.add(listener);
+  },
+  removeEventListener: (
+    _type: string,
+    listener: EventListenerOrEventListenerObject,
+  ) => {
+    mediaListeners.delete(listener);
+  },
   dispatchEvent: () => false,
+});
+/** Crosses the admin breakpoint, as a resize would. */
+const setPhone = (next: boolean) => {
+  phone = next;
+  act(() => {
+    const change = new Event('change');
+    for (const listener of mediaListeners) {
+      if (typeof listener === 'function') listener(change);
+      else listener.handleEvent(change);
+    }
+  });
+};
+/** A draft request the test settles by hand. */
+const deferred = <T,>() => {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+const drafted = (about: string) => ({
+  success: true,
+  data: {
+    about,
+    capacity: 18000,
+    venueType: 'Amphitheater',
+    neighborhood: 'LoDo',
+  },
 });
 
 const venue: DetailsVenue = {
@@ -100,6 +153,7 @@ const save = () =>
 describe('DetailsTab', () => {
   beforeEach(() => {
     phone = false;
+    mediaListeners.clear();
     vi.stubGlobal('matchMedia', matchMediaStub);
     mockUpdateVenue.mockReset();
     mockUpdateVenue.mockResolvedValue({ success: true });
@@ -400,21 +454,146 @@ describe('DetailsTab', () => {
     ]);
   });
 
-  it('a draft with no capacity or neighborhood keeps the venue’s own', async () => {
+  it('a draft with no capacity keeps the venue’s own', async () => {
     mockGenerate.mockResolvedValue({
       success: true,
       data: {
         about: 'A drafted line.',
         capacity: null,
         venueType: 'Arena',
-        neighborhood: '',
+        neighborhood: 'LoDo',
       },
     });
     render(<DetailsTab venue={venue} />);
     fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
     fireEvent.click(await screen.findByTestId('generate-review'));
     expect(input(FIELDS.capacity.label).value).toBe('19,500');
-    expect(input(FIELDS.neighborhood).value).toBe('Central Platte Valley');
+    expect(input(FIELDS.neighborhood).value).toBe('LoDo');
+  });
+
+  it('accepting a draft never replaces an edit, and fills the unedited fields', async () => {
+    mockGenerate.mockResolvedValue(drafted('A drafted line.'));
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.capacity.label), {
+      target: { value: '20000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    // The admin's capacity survives; the untouched neighborhood and type
+    // take the draft's.
+    expect(input(FIELDS.capacity.label).value).toBe('20000');
+    expect(input(FIELDS.neighborhood).value).toBe('LoDo');
+    expect(screen.getByLabelText(FIELDS.capacityType.label)).toHaveProperty(
+      'value',
+      COPY.capacityTypes.outdoor,
+    );
+  });
+
+  it('an unedited capacity takes the draft’s', async () => {
+    mockGenerate.mockResolvedValue(drafted('A drafted line.'));
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.neighborhood), {
+      target: { value: 'Five Points' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(input(FIELDS.capacity.label).value).toBe('18,000');
+    expect(input(FIELDS.neighborhood).value).toBe('Five Points');
+  });
+
+  it('keeps a draft in review across the phone breakpoint', async () => {
+    mockGenerate.mockResolvedValue(drafted('A paid-for line.'));
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    await screen.findByTestId('generate-review');
+    setPhone(true);
+    // About moved into the phone column (a remount), still in review.
+    expect(screen.getByTestId('details-venue').parentElement).toBe(
+      screen.getByTestId('details-other').parentElement,
+    );
+    expect(
+      screen.getByTestId('generate-review').getAttribute('data-content'),
+    ).toBe('A paid-for line.');
+    setPhone(false);
+    expect(
+      screen.getByTestId('generate-review').getAttribute('data-content'),
+    ).toBe('A paid-for line.');
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the rolled fallback seed across the phone breakpoint', () => {
+    render(<DetailsTab venue={venue} />);
+    const roll = () =>
+      fireEvent.click(
+        within(screen.getByTestId('details-fallback-art')).getByRole('button', {
+          name: COPY.fallbackArt.roll,
+        }),
+      );
+    const artName = () =>
+      within(screen.getByTestId('details-fallback-art')).getByTestId(
+        'identity-art',
+      ).textContent;
+    roll();
+    roll();
+    expect(artName()).toBe('Ball Arena·2');
+    setPhone(true);
+    expect(artName()).toBe('Ball Arena·2');
+  });
+
+  it('a draft cancelled while loading never opens a review', async () => {
+    const request = deferred<ReturnType<typeof drafted>>();
+    mockGenerate.mockReturnValueOnce(request.promise);
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    expect(screen.getByTestId('generate-loading')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
+    await act(async () => {
+      request.resolve(drafted('Too late.'));
+      await request.promise;
+    });
+    expect(screen.queryByTestId('generate-review')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: FIELDS.about.draft }),
+    ).toBeTruthy();
+  });
+
+  it('of two overlapping drafts, only the latest lands', async () => {
+    const first = deferred<ReturnType<typeof drafted>>();
+    const second = deferred<ReturnType<typeof drafted>>();
+    mockGenerate
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    // The first lands while the second is out: still loading.
+    await act(async () => {
+      first.resolve(drafted('The first.'));
+      await first.promise;
+    });
+    expect(screen.getByTestId('generate-loading')).toBeTruthy();
+    await act(async () => {
+      second.resolve(drafted('The second.'));
+      await second.promise;
+    });
+    expect(
+      screen.getByTestId('generate-review').getAttribute('data-content'),
+    ).toBe('The second.');
+  });
+
+  it('refuses an About over 280 on save, never cutting it', async () => {
+    const long = 'a'.repeat(281);
+    mockGenerate.mockResolvedValue(drafted(long));
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(
+      screen.getByRole('textbox', { name: COPY.cards.about }),
+    ).toHaveProperty('value', long);
+    save();
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    expect(screen.getByText(COPY.errors.aboutTooLong)).toBeTruthy();
   });
 
   it('a failed draft says so and changes nothing', async () => {

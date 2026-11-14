@@ -9,7 +9,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard as Card, useIsPhone } from '@/components/admin/primitives';
 import { inputStyle } from '../source/source-parts';
 import { Field, LookCard, OtherCard, Pair } from './details-parts';
-import { DetailsAbout } from './DetailsAbout';
+import { DetailsAbout, useAboutDraft } from './DetailsAbout';
 import { DetailsSaveBar } from './DetailsSaveBar';
 import {
   CAPACITY_TYPES,
@@ -73,6 +73,10 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   const [errors, setErrors] = useState<DetailsErrors>({});
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // About and Other sit in different parents on phone and desktop, so they
+  // remount across the breakpoint: their state lives here, never in them.
+  const aboutDraft = useAboutDraft(venue.id);
+  const [seed, setSeed] = useState(0);
 
   const savedDraft = draftOf(baseline);
   const edited = editedFields(draft, savedDraft);
@@ -310,12 +314,15 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
 
   const aboutCard = (
     <DetailsAbout
-      venueId={venue.id}
       id={idOf('about')}
       draft={draft}
+      saved={savedDraft}
       error={errors.about}
       saving={saving}
       edit={edit}
+      review={aboutDraft.review}
+      onDraft={() => void aboutDraft.run()}
+      onStop={aboutDraft.stop}
     />
   );
 
@@ -377,7 +384,11 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
   );
 
   const otherCard = (
-    <OtherCard name={venue.name}>
+    <OtherCard
+      name={venue.name}
+      seed={seed}
+      onRoll={() => setSeed((prev) => prev + 1)}
+    >
       <Field id={idOf('city')} label={FIELDS.city} error={errors.city}>
         {text('city')}
       </Field>

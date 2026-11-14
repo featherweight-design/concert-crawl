@@ -320,6 +320,9 @@ export type DetailsErrors = Partial<Record<DetailsField, string>>;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** The longest About the API takes. */
+export const ABOUT_MAX = 280;
+
 /**
  * Checked before any request; the API's own refusals land through
  * `detailsFieldOf`. Only the fields edited against `saved` are checked, so an
@@ -342,6 +345,11 @@ export const validateDetails = (
   }
   if (edited.has('capacity') && Number.isNaN(parseCapacity(draft.capacity))) {
     errors.capacity = COPY.fields.capacity.invalid;
+  }
+  // The API takes 280 at most (`z.string().max(280)`) and this tab sends it
+  // trimmed: a longer About is refused here, never cut.
+  if (edited.has('about') && draft.about.trim().length > ABOUT_MAX) {
+    errors.about = COPY.errors.aboutTooLong;
   }
   const priceUrl = draft.priceUrl.trim();
   if (edited.has('priceUrl') && priceUrl !== '' && !isSafeHttpUrl(priceUrl)) {
