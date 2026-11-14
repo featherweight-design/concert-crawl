@@ -15,6 +15,12 @@ describe('titleStepPx', () => {
     expect(titleStepPx('Supercalifragilistic')).toBe(26);
   });
 
+  // The same number of letters, not the same width.
+  it('sizes by measure, not by letter count', () => {
+    expect(titleStepPx('Fliltjilll')).toBe(38);
+    expect(titleStepPx('Wmwmwmwmwm')).toBe(26);
+  });
+
   it('sizes by the longest word, not the whole name', () => {
     expect(titleStepPx('Red Rocks Park Amphitheatre')).toBe(30);
   });

@@ -68,7 +68,8 @@ export function BackChip({
           // disappeared. A background mixed from `--bg` is opposite the
           // foreground in every theme by construction, so the chevron holds
           // contrast wherever the chip lands.
-          background: 'color-mix(in oklab, var(--bg) 82%, transparent)',
+          background:
+            'var(--back-chip-bg, color-mix(in oklab, var(--bg) 82%, transparent))',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
         }}

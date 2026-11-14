@@ -224,8 +224,10 @@ export const EventTitleBlock = ({
           wordBreak: 'normal',
           fontSize: headSize ?? ramp.head,
           fontWeight: surface === 'detail' ? 900 : 800,
-          letterSpacing: surface === 'detail' ? '-0.03em' : '-0.02em',
-          lineHeight: 1.12,
+          // The detail hero is drawn at -0.04em and 1.05 (`hero-320-wrap`,
+          // `hero-320-long-word`); the list surfaces keep their own.
+          letterSpacing: surface === 'detail' ? '-0.04em' : '-0.02em',
+          lineHeight: surface === 'detail' ? 1.05 : 1.12,
         }}
       >
         {/* The link lives INSIDE the heading so the h1 keeps its text and its

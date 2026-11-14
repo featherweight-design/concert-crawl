@@ -3,8 +3,9 @@
  * these plain and gradient the distinctive words ("The Church Nightclub",
  * "Red Rocks Amphitheatre"). The addendum-3 ruling names Theatre, Theater,
  * Hall, Club, Nightclub, Ballroom, Lounge, Pavilion, Amphitheatre, Arena and
- * Room; the rest of this list is the extra nouns we also treat as generic.
- * "box" is deliberately not here: "The Black Box" gradients "Box".
+ * Room, and nothing else: a wider list picked the wrong word ("Summit Music
+ * Hall" is "Music" under the ruling). "Amphitheater" is the US spelling of the
+ * ruled "Amphitheatre". "box" is not here: "The Black Box" gradients "Box".
  */
 const GENERIC_VENUE_NOUNS: ReadonlySet<string> = new Set([
   'amphitheatre',
@@ -13,26 +14,12 @@ const GENERIC_VENUE_NOUNS: ReadonlySet<string> = new Set([
   'theatre',
   'ballroom',
   'hall',
-  'auditorium',
   'lounge',
   'nightclub',
   'club',
   'pavilion',
   'arena',
-  'garden',
-  'gardens',
   'room',
-  'stage',
-  'center',
-  'centre',
-  'music',
-  'saloon',
-  'bar',
-  'tavern',
-  'stadium',
-  'house',
-  // The city is a place, not the venue's name ("Meow Wolf Denver" gradients "Wolf").
-  'denver',
 ]);
 
 const ARTICLES: ReadonlySet<string> = new Set(['the']);

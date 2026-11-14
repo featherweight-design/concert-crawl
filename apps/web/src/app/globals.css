@@ -121,6 +121,9 @@
     --price-text-signal: color-mix(in oklab, var(--signal) 85%, var(--fg));
     --price-text-accent: color-mix(in oklab, var(--accent) 82%, var(--fg));
     --price-text-danger: color-mix(in oklab, var(--danger) 80%, var(--fg));
+    /* `venue-light-m`: on Light the back chip is a 55% disc, not the 82% one
+       the dark themes use over their artwork. */
+    --back-chip-bg: color-mix(in oklab, var(--bg) 55%, transparent);
   }
 
   * {

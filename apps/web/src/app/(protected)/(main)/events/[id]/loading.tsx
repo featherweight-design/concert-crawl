@@ -40,12 +40,12 @@ export default function EventDetailLoading() {
         {/* The name, its genre chips, then the date and venue line, in the
             loaded column's order and spacing (EventStage). The name is one
             line of the stage headline: `--stage-head` at the title block's
-            1.12 line height. */}
+            1.05 line height. */}
         <span
           data-testid="stage-skeleton-title"
           className="block w-[min(230px,70%)] lg:w-full lg:max-w-[460px]"
         >
-          <SkeletonBlock height="calc(var(--stage-head) * 1.12)" radius={10} />
+          <SkeletonBlock height="calc(var(--stage-head) * 1.05)" radius={10} />
         </span>
         <span data-testid="stage-skeleton-genres" className="mt-3 block">
           <SkeletonBlock width={128} height={20} radius={5} />

@@ -23,9 +23,12 @@ describe('splitVenueName', () => {
     expect(splitVenueName('The Black Box')?.highlight).toBe('Box');
   });
 
-  it('treats "music" and the city as generic', () => {
-    expect(splitVenueName('Summit Music Hall')?.highlight).toBe('Summit');
-    expect(splitVenueName('Meow Wolf Denver')?.highlight).toBe('Wolf');
+  // The ruled list is the whole list (addendum-3 B11): "Music" and "Denver"
+  // are not generic nouns, so they take the gradient as the last distinctive word.
+  it('only treats the ruled nouns as generic', () => {
+    expect(splitVenueName('Summit Music Hall')?.highlight).toBe('Music');
+    expect(splitVenueName('Meow Wolf Denver')?.highlight).toBe('Denver');
+    expect(splitVenueName('Boulder Bandshell Stage')?.highlight).toBe('Stage');
   });
 
   it('takes a single distinctive word whole', () => {
@@ -33,7 +36,8 @@ describe('splitVenueName', () => {
   });
 
   it('returns null when every word is generic', () => {
-    expect(splitVenueName('The Music Hall')).toBeNull();
+    expect(splitVenueName('The Grand Ballroom Hall')?.highlight).toBe('Grand');
+    expect(splitVenueName('The Hall')).toBeNull();
     expect(splitVenueName('')).toBeNull();
   });
 
