@@ -1,3 +1,15 @@
+# [1.442.0](https://github.com/featherweight-design/concert-crawl/compare/v1.441.1...v1.442.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** lift the promoter chip text on Light and pin the role dot colour ([3772d5a](https://github.com/featherweight-design/concert-crawl/commit/3772d5af8da481548a2148a494682ebf418d0be0))
+
+
+### Features
+
+* **web:** draw every Settings role chip in its own colour as addendum 5 does ([a5cff2c](https://github.com/featherweight-design/concert-crawl/commit/a5cff2c9f950f6356e198677af2a16f3e9a2e785))
+
 ## [1.441.1](https://github.com/featherweight-design/concert-crawl/compare/v1.441.0...v1.441.1) (2026-11-14)
 
 
