@@ -314,7 +314,7 @@ describe('EventRow — lifecycle beats the price state', () => {
         .getByTestId('row-title-line')
         .contains(screen.getByTestId('row-cancelled')),
     ).toBe(true);
-    expect(screen.getByTestId('row-no-price')).toHaveTextContent(
+    expect(screen.getByTestId('row-no-price').textContent).toContain(
       'No price, cancelled',
     );
   });
@@ -329,8 +329,8 @@ describe('EventRow — lifecycle beats the price state', () => {
         .contains(screen.getByTestId('row-postponed')),
     ).toBe(true);
     expect(screen.queryByTestId('row-no-price')).toBeNull();
-    expect(screen.getByText(/\$\d/)).toBeInTheDocument();
-    expect(screen.getByText('Date TBA')).toBeInTheDocument();
+    expect(screen.getByText(/\$\d/)).not.toBeNull();
+    expect(screen.getByText('Date TBA')).not.toBeNull();
   });
 
   it('reads Postponed, not Sold out, on a show that is both', () => {
@@ -853,7 +853,7 @@ describe('EventRow — No longer listed (A5)', () => {
     render(<EventRow show={removedShow()} surface="browse" />);
     const chip = screen.getByTestId('row-removed');
     expect(screen.getByTestId('row-title-line').contains(chip)).toBe(true);
-    expect(screen.getByTestId('row-no-price')).toHaveTextContent(
+    expect(screen.getByTestId('row-no-price').textContent).toContain(
       'No price, no longer listed',
     );
   });
