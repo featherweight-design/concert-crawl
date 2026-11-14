@@ -1,7 +1,10 @@
 {
   "feature": "Admin 1d · Crawl runs batch list (P47-18 PR2)",
-  "note": "CONTACT_SHEET_ROLE=admin. Desktop only: the phone cards and filters land in the next PR, and until then the phone draws this table scrolling sideways. Boards: 07/crawl-runs-desktop, A3/09/loading-runs-d, A3/09/runs-filter-empty-d, A3/09/load-more. Read-only: every row answers GET /v1/admin/crawl/batches with a mocked body (the API's { success, data, hasMore, nextBefore } envelope); nothing starts a crawl. One route answers every page, so Load more's second page repeats the first and the dedupe keeps the list as it was: the row shows the footer, not a second page. The loading row screenshots the skeleton before the mocked body lands, so it is best-effort. Rows link to ?run=<linkKey>; the batch detail is PR3, so no detail row.",
-  "widths": [{ "label": "desktop", "width": 1440, "height": 1000 }],
+  "note": "CONTACT_SHEET_ROLE=admin. Phone: cards and the segmented filter (A3/09/runs-filters-m), skeleton per 07/loading-any-list-on-mobile. Boards: 07/crawl-runs-desktop, A3/09/runs-filters-m, A3/09/loading-runs-d, 07/loading-any-list-on-mobile, A3/09/runs-filter-empty-d, A3/09/load-more. Read-only: every row answers GET /v1/admin/crawl/batches with a mocked body (the API's { success, data, hasMore, nextBefore } envelope); nothing starts a crawl. One route answers every page, so Load more's second page repeats the first and the dedupe keeps the list as it was: the row shows the footer, not a second page. The loading row screenshots the skeleton before the mocked body lands, so it is best-effort. Rows link to ?run=<linkKey>; the batch detail is PR3, so no detail row.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1440, "height": 1000 }
+  ],
   "rows": [
     {
       "id": "list",
