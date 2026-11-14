@@ -1,3 +1,10 @@
+## [1.474.1](https://github.com/featherweight-design/concert-crawl/compare/v1.474.0...v1.474.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** name platform feeds on venue runs, count same-day failures ([abbfd48](https://github.com/featherweight-design/concert-crawl/commit/abbfd48c46d36ebea5266b0d1f0dd03568295fbb))
+
 # [1.474.0](https://github.com/featherweight-design/concert-crawl/compare/v1.473.0...v1.474.0) (2026-11-14)
 
 
