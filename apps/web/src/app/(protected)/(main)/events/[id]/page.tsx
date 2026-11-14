@@ -287,7 +287,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   const stageChips = (
     <GenreChips
       genres={event.genre}
-      className={`mt-3 justify-center sm:justify-start ${delistedStage ? 'max-sm:hidden' : ''}`}
+      className={`mt-3 justify-center lg:justify-start ${delistedStage ? 'max-lg:hidden' : ''}`}
     />
   );
 
@@ -351,7 +351,7 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
           beforePill={stageChips}
         />
         {delistedStage ? (
-          <div className="max-sm:hidden">{stageMetaEl}</div>
+          <div className="max-lg:hidden">{stageMetaEl}</div>
         ) : (
           stageMetaEl
         )}

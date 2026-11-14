@@ -106,7 +106,7 @@ export const StageBackdrop = ({
             style={{ backgroundImage: HALFTONE, backgroundSize: '9px 9px' }}
           />
           <div
-            className="absolute inset-0 sm:hidden"
+            className="absolute inset-0 lg:hidden"
             style={{
               background: rays,
               maskImage: RAYS_MASK,
@@ -184,18 +184,18 @@ export const StageShell = ({
 }: StageShellProps) => (
   <div
     data-testid="hero-band"
-    className={`relative isolate overflow-hidden px-4 pt-4 sm:px-8 sm:pb-11 sm:pt-[84px] ${compactPhone ? 'pb-1.5' : 'pb-7'}`}
+    className={`relative isolate overflow-hidden px-4 pt-4 lg:px-8 lg:pb-11 lg:pt-[84px] ${compactPhone ? 'pb-1.5' : 'pb-7'}`}
   >
     {backdrop}
     {(back || actions) && (
-      <div className="absolute inset-x-4 top-3 z-[3] flex items-center justify-between sm:inset-x-8 sm:top-6">
+      <div className="absolute inset-x-4 top-3 z-[3] flex items-center justify-between lg:inset-x-8 lg:top-6">
         <div className="flex gap-2">{back}</div>
         <div className="flex gap-2">{actions}</div>
       </div>
     )}
-    <div className="relative mx-auto flex max-w-[900px] flex-col items-center sm:flex-row sm:items-end sm:gap-10">
+    <div className="relative mx-auto flex max-w-[900px] flex-col items-center lg:flex-row lg:items-end lg:gap-10">
       <div
-        className={`mt-5 shrink-0 sm:mt-0 sm:w-[244px] ${compactPhone ? 'w-[154px]' : 'w-[180px]'}`}
+        className={`mt-5 shrink-0 lg:mt-0 lg:w-[244px] ${compactPhone ? 'w-[154px]' : 'w-[180px]'}`}
       >
         {card}
       </div>
@@ -204,10 +204,10 @@ export const StageShell = ({
             about breakpoints. */}
       <div
         data-testid="stage-column"
-        className={`mt-4 flex w-full min-w-0 flex-col items-center text-center ${titleStep === undefined ? STAGE_HEAD_DEFAULT : STAGE_HEAD_STEP[titleStep]} sm:mt-0 sm:w-auto sm:flex-1 sm:items-start sm:pb-3 sm:text-left sm:[--stage-head:64px]`}
+        className={`mt-4 flex w-full min-w-0 flex-col items-center text-center ${titleStep === undefined ? STAGE_HEAD_DEFAULT : STAGE_HEAD_STEP[titleStep]} lg:mt-0 lg:w-auto lg:flex-1 lg:items-start lg:pb-3 lg:text-left lg:[--stage-head:64px]`}
       >
         {eyebrow && (
-          <div className="relative z-[2] -mt-7 mb-4 sm:mt-0 sm:mb-3">
+          <div className="relative z-[2] -mt-7 mb-4 lg:mt-0 lg:mb-3">
             {eyebrow}
           </div>
         )}
@@ -356,7 +356,7 @@ export const EventStage = ({
             data-testid="stage-card"
             className={
               venueRing
-                ? '[--stage-shadow:var(--genre-shadow)] max-sm:[--stage-shadow:var(--past-shadow)]'
+                ? '[--stage-shadow:var(--genre-shadow)] max-lg:[--stage-shadow:var(--past-shadow)]'
                 : undefined
             }
             style={
@@ -393,7 +393,7 @@ export const EventStage = ({
       {belowHero !== undefined && (
         <div
           data-testid="stage-below"
-          className="flex flex-col items-center px-4 pt-3 text-center sm:hidden"
+          className="flex flex-col items-center px-4 pt-3 text-center lg:hidden"
         >
           {belowHero}
         </div>

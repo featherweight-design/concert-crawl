@@ -160,7 +160,7 @@ export const PublicEventDetail = ({
           beforePill={
             <GenreChips
               genres={event.genre}
-              className="mt-3 justify-center sm:justify-start"
+              className="mt-3 justify-center lg:justify-start"
             />
           }
         />
@@ -192,9 +192,9 @@ export const PublicEventDetail = ({
           {/* The board's order (bp-s-public_m, _d): what it costs, the way to
               buy it, then the account. Side by side from `sm` up, the account
               card in the right column. */}
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-4">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:gap-4">
             {(priceLabel || !past || billBlock) && (
-              <div className="flex min-w-0 flex-col gap-5 sm:flex-1">
+              <div className="flex min-w-0 flex-col gap-5 lg:flex-1">
                 {/* A flat, read-only price card rather than
                     EventDetailPriceBlock. That block is a client component
                     that wires up price submission, tier-add and report modals
@@ -266,7 +266,7 @@ export const PublicEventDetail = ({
                 through to /events and the link they were sent is gone. */}
             <div
               data-testid="public-account-card"
-              className="flex flex-col gap-4 rounded-[16px] p-5 sm:w-[340px] sm:shrink-0"
+              className="flex flex-col gap-4 rounded-[16px] p-5 lg:w-[340px] lg:shrink-0"
               style={{
                 border: '1.5px solid transparent',
                 background:

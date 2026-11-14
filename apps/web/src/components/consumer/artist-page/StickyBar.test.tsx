@@ -34,7 +34,7 @@ describe('StickyBar', () => {
     const bar = container.querySelector('[data-sticky-bar]');
     expect(bar).not.toBeNull();
     // Mobile-only: the handoff is explicit that there is no desktop sub-header.
-    expect(bar?.className).toContain('md:hidden');
+    expect(bar?.className).toContain('lg:hidden');
     const style = bar?.getAttribute('style') ?? '';
     // 56px of bar below the status-bar inset (viewport-fit=cover).
     expect(style).toContain('height: calc(56px + env(safe-area-inset-top');

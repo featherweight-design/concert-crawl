@@ -108,7 +108,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
       // with no outline. On the phone only, a 3px bar in the show's stamp
       // colour on its left edge (`bp-m-watching_m`); the desktop board draws
       // no bar here (`bp-watching`), the venue colour rides the stamp instead.
-      className="border-l-[3px] sm:border-l-0"
+      className="border-l-[3px] lg:border-l-0"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -124,7 +124,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
         color: 'var(--fg)',
       }}
     >
-      <span className="hidden sm:inline-flex" data-testid="going-nudge-stamp">
+      <span className="hidden lg:inline-flex" data-testid="going-nudge-stamp">
         <VenueStamp
           venueSlug={show.venueSlug}
           venueName={show.venueName}
@@ -164,7 +164,7 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
         {/* Sans on a phone, as `bp-m-watching_m` sets it; mono from `sm`. */}
         <span
           data-testid="going-nudge-support"
-          className="max-sm:[font-family:var(--font-ui)] sm:[font-family:var(--font-mono)] max-sm:text-[11.5px] sm:text-[10.5px]"
+          className="max-lg:[font-family:var(--font-ui)] lg:[font-family:var(--font-mono)] max-lg:text-[11.5px] lg:text-[10.5px]"
           style={{
             color: 'var(--fg-subtle)',
             letterSpacing: '0.02em',

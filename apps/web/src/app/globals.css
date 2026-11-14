@@ -743,7 +743,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .ap-shell {
     max-width: 1040px;
     margin: 0 auto;
