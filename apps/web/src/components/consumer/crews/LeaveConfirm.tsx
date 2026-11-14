@@ -155,7 +155,8 @@ export const LeaveConfirm = ({
             <CrewPatch
               crewId={crewId}
               patchSalt={patchSalt}
-              size={44}
+              // The crew card size on the rim scale (`02/patch-rim-spec`: 56).
+              size={56}
               scale="tile"
             />
             <span

@@ -326,29 +326,12 @@ export function SpotlightModal({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  // `more-r3-feature_modal`: the dots alone, centred; there is no
+                  // Back or Next beside them.
+                  justifyContent: 'center',
                   gap: 10,
                 }}
               >
-                <button
-                  type="button"
-                  onClick={() => setStep(Math.max(0, step - 1))}
-                  disabled={step === 0}
-                  style={{
-                    all: 'unset',
-                    cursor: step === 0 ? 'default' : 'pointer',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    fontWeight: 800,
-                    color: step === 0 ? 'var(--fg-subtle)' : 'var(--fg-muted)',
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase',
-                    opacity: step === 0 ? 0.4 : 1,
-                  }}
-                >
-                  {COPY.modal.prevButton}
-                </button>
-
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   {Array.from({ length: totalSteps }).map((_, idx) => (
                     <button
@@ -371,28 +354,6 @@ export function SpotlightModal({
                     />
                   ))}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setStep(Math.min(totalSteps - 1, step + 1))}
-                  disabled={step === totalSteps - 1}
-                  style={{
-                    all: 'unset',
-                    cursor: step === totalSteps - 1 ? 'default' : 'pointer',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    fontWeight: 800,
-                    color:
-                      step === totalSteps - 1
-                        ? 'var(--fg-subtle)'
-                        : 'var(--signal)',
-                    letterSpacing: '0.14em',
-                    textTransform: 'uppercase',
-                    opacity: step === totalSteps - 1 ? 0.4 : 1,
-                  }}
-                >
-                  {COPY.modal.nextButton}
-                </button>
               </div>
             </div>
           )}
