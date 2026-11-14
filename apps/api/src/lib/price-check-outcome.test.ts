@@ -23,11 +23,13 @@ const row = (
 
 const pick = (
   archived: ArchivedCheckRow[],
-  live: { id?: string; disputed?: string | null } = {},
+  live: { id?: string; disputed?: string | null; updatedAt?: Date } = {},
 ) =>
   pickPriceCheckOutcome({
     liveId: live.id ?? 'live',
     liveDisputedSubmissionId: live.disputed ?? null,
+    // Deciding a check stamps the live and archived rows alike.
+    liveUpdatedAt: live.updatedAt ?? daysAgo(1),
     archived,
     now: NOW,
   });
@@ -89,6 +91,17 @@ describe('pickPriceCheckOutcome', () => {
         disputed: 'old',
       })?.outcome,
     ).toBe('updated');
+  });
+
+  it('drops the outcome once the live row was written after the decision (an admin price edit)', () => {
+    expect(
+      pick([row('counter', { disputedSubmissionId: 'live' })], {
+        updatedAt: daysAgo(0.5),
+      }),
+    ).toBeNull();
+    expect(
+      pick([row('old')], { disputed: 'old', updatedAt: daysAgo(0.5) }),
+    ).toBeNull();
   });
 
   it('ignores a row stamped in the future', () => {
