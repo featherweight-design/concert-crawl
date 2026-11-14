@@ -212,4 +212,42 @@ describe('ModalShell focus containment', () => {
     expect(scrim.getAttribute('aria-hidden')).toBe('true');
     expect(scrim.tabIndex).toBe(-1);
   });
+
+  // The price sheets' desktop dialogs draw a blue-to-pink top edge
+  // (more-p-submit_d, more-p-check_d). It is opt-in: other dialogs are not
+  // drawn with it.
+  describe('desktop top edge', () => {
+    it('is drawn only when asked for', () => {
+      const { unmount } = render(
+        <ModalShell open onClose={vi.fn()} ariaLabel="Test">
+          <div>Content</div>
+        </ModalShell>,
+      );
+      expect(screen.queryByTestId('modal-top-edge')).toBeNull();
+      unmount();
+      render(
+        <ModalShell open onClose={vi.fn()} ariaLabel="Test" desktopTopEdge>
+          <div>Content</div>
+        </ModalShell>,
+      );
+      const edge = screen.getByTestId('modal-top-edge');
+      expect(edge.style.background).toContain('var(--signal)');
+      expect(edge.style.background).toContain('var(--accent)');
+    });
+
+    it('leaves the crew surface to its own edge', () => {
+      render(
+        <ModalShell
+          open
+          onClose={vi.fn()}
+          ariaLabel="Test"
+          surface="crew"
+          desktopTopEdge
+        >
+          <div>Content</div>
+        </ModalShell>,
+      );
+      expect(screen.queryByTestId('modal-top-edge')).toBeNull();
+    });
+  });
 });

@@ -479,6 +479,7 @@ export const CorroborationSheet = ({
 
   return (
     <ModalShell
+      desktopTopEdge
       open={open}
       onClose={onClose}
       ariaLabel="Corroborate price submission"
