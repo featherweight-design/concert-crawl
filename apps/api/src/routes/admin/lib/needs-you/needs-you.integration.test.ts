@@ -258,7 +258,7 @@ describe('Needs you sources and ranking', () => {
     if (item?.kind !== 'venue-failing')
       throw new Error('expected venue-failing');
     expect(item.lastRuns).toHaveLength(14);
-    expect(item.lastRuns[0]?.errorMessage).toBe('boom 1');
+    expect(item.lastRuns[0]?.errorMessage).toBe('boom 2');
   });
 
   it('carries the latest run page count and robots result on a blocked venue', async () => {
