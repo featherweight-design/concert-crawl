@@ -9,6 +9,6 @@
   "devDependencies": {
     "@fwd-stack/eslint-config": "github:featherweight-design/fwd-stack#path:/packages/eslint-config",
     "@fwd-stack/tsconfig": "github:featherweight-design/fwd-stack#path:/packages/tsconfig",
-    "eslint": "^9.39.5"
+    "eslint": "^10.14.0"
   }
 }

@@ -40,7 +40,7 @@
     "@concert-crawl/config": "workspace:*",
     "@concert-crawl/crawler-core": "workspace:*",
     "@types/node": "^26.6.6",
-    "eslint": "^9.39.5",
+    "eslint": "^10.14.0",
     "postgres": "^3.4.9",
     "tsx": "^4.23.15",
     "typescript": "^5.0.0",
