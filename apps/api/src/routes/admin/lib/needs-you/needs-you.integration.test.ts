@@ -82,7 +82,9 @@ describe('Needs you sources and ranking', () => {
     const devices = items.flatMap((item) =>
       item.kind === 'bug' ? [item.device ?? null] : [],
     );
-    expect(devices.sort()).toEqual([null, 'iPhone · Safari 19']);
+    expect(devices).toHaveLength(2);
+    expect(devices).toContain('iPhone · Safari 19');
+    expect(devices).toContain(null);
   });
 
   it('breaks a date tie by watchers', async () => {
