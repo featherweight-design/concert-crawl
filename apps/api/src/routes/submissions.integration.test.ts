@@ -552,6 +552,51 @@ describe('DELETE /v1/submissions/:id', () => {
     });
     expect(checkRes.status).toBe(404);
   });
+
+  // The original of a price check is referenced by its updates (and, once an
+  // update won, by the price that replaced it). The foreign key refuses the
+  // delete; it used to come back as a 500.
+  it('refuses with 409 to withdraw an archived price that a live update replaced', async () => {
+    const archived = await seedPriceSubmission(eventId, 'user_owner', {
+      status: 'archived',
+      archivedReason: 'Replaced by price check update',
+    });
+    await seedPriceSubmission(eventId, 'user_winner', {
+      status: 'corroborated',
+      disputedSubmissionId: archived.id,
+    });
+    setAuth('user_owner');
+    const res = await app.request(`/v1/submissions/${archived.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toMatch(/price check/);
+    // Still there.
+    const [still] = await testDb
+      .select({ id: priceSubmissions.id })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, archived.id));
+    expect(still?.id).toBe(archived.id);
+  });
+
+  it('refuses with 409 to withdraw a live price that has an update pending against it', async () => {
+    const live = await seedPriceSubmission(eventId, 'user_owner', {
+      status: 'disputed',
+    });
+    await seedPriceSubmission(eventId, 'user_challenger', {
+      status: 'pending',
+      disputedSubmissionId: live.id,
+    });
+    setAuth('user_owner');
+    const res = await app.request(`/v1/submissions/${live.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(res.status).toBe(409);
+  });
 });
 
 // B+ B9: withdrawing an update and a counter winning on confirms both end or
