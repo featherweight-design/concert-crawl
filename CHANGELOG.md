@@ -1,3 +1,10 @@
+## [1.440.1](https://github.com/featherweight-design/concert-crawl/compare/v1.440.0...v1.440.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **crawler-core:** abort iframe documents in browser fetches ([4f9652b](https://github.com/featherweight-design/concert-crawl/commit/4f9652b8a47057623189ccdcf410969db5d4e6fe))
+
 # [1.440.0](https://github.com/featherweight-design/concert-crawl/compare/v1.439.0...v1.440.0) (2026-11-14)
 
 
