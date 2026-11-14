@@ -3,9 +3,11 @@ import type { TokenUsage } from '../types.js';
 // Per-token rates for every Claude model id this repo calls, keyed by the exact
 // id the call sends. Source: the claude-api skill's pricing (2026-11-03 cache):
 // Claude Haiku 4.5 is $1 input / $5 output per million tokens; cache reads are
-// 0.1x input and 5-minute cache writes 1.25x input. Every call here caches with
-// `cache_control: { type: 'ephemeral' }`, the 5-minute TTL, so the 1.25x write
-// rate applies (a 1-hour TTL would be 2x and need its own entry).
+// 0.1x input and 5-minute cache writes 1.25x input. The calls that cache (the
+// extractor and the genre tagger) use `cache_control: { type: 'ephemeral' }`,
+// the 5-minute TTL, so the 1.25x write rate applies; a call that sends no
+// cache_control (generate-about) reports zero cache tokens, so the cache rates
+// never touch it. A 1-hour TTL would be 2x and need its own entry.
 //
 // Rows written before this table existed were priced at fixed Haiku 3.5 rates
 // ($0.80 in, $4 out, $0.08 cache read, $1.00 cache write per million) even
