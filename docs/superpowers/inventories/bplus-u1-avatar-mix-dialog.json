@@ -19,8 +19,9 @@
       "steps": [
         {
           "goto": "/me",
-          "wait": "[data-testid=\"profile-banner\"]"
+          "wait": "[data-testid=\"profile-banner\"]:visible"
         },
+        { "settle": 3000 },
         { "clickRole": "button", "name": "^Edit$" },
         { "waitDialog": "^Edit profile$" },
         { "wait": "[data-testid=\"avatar-picker\"]", "settle": 3000 }

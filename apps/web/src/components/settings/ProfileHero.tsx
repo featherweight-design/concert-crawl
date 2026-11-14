@@ -103,12 +103,16 @@ export function ProfileHero({
             gap: 5,
             padding: '3px 7px',
             borderRadius: 4,
-            // The board's ADMIN chip (more-s-settings_m): the dot's colour
-            // carries through the text and a hairline. Promoter and Beta take
-            // the same treatment in their own dot colours.
+            // The board draws the ADMIN chip with amber text and an amber
+            // hairline (more-s-settings_m). Promoter and Beta are not drawn,
+            // so they keep the neutral chip until Design draws them.
             background: 'var(--surface-2)',
-            border: `1px solid color-mix(in oklch, ${ROLE_BADGE_DOT[roleBadge]} 45%, transparent)`,
-            color: ROLE_BADGE_DOT[roleBadge],
+            border:
+              roleBadge === 'admin'
+                ? `1px solid color-mix(in oklch, ${ROLE_BADGE_DOT.admin} 45%, transparent)`
+                : '1px solid var(--border-strong)',
+            color:
+              roleBadge === 'admin' ? ROLE_BADGE_DOT.admin : 'var(--fg-muted)',
             fontFamily: 'var(--font-mono)',
             fontSize: 9,
             fontWeight: 700,

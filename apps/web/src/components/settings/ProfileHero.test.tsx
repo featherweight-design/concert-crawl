@@ -36,6 +36,42 @@ const base = {
 const bannerImage = () =>
   (screen.getByTestId('profile-banner') as HTMLElement).style.backgroundImage;
 
+// more-s-settings_m draws the ADMIN chip in amber; Promoter and Beta are not
+// drawn, so they stay neutral until Design draws them.
+describe('ProfileHero role chips', () => {
+  const chip = (label: string) =>
+    screen.getByText(label).closest('span') as HTMLElement;
+
+  it('draws ADMIN with amber text and an amber hairline', () => {
+    render(
+      <ProfileHero
+        {...base}
+        roleBadge="admin"
+        avatarColor="signal"
+        avatarSecondColor={null}
+      />,
+    );
+    expect(chip('Admin').style.color).toBe('var(--warning)');
+    expect(chip('Admin').style.border).toContain('var(--warning)');
+  });
+
+  it.each([
+    ['promoter', 'Promoter'],
+    ['beta', 'Beta'],
+  ] as const)('leaves %s neutral', (roleBadge, label) => {
+    render(
+      <ProfileHero
+        {...base}
+        roleBadge={roleBadge}
+        avatarColor="signal"
+        avatarSecondColor={null}
+      />,
+    );
+    expect(chip(label).style.color).toBe('var(--fg-muted)');
+    expect(chip(label).style.border).toContain('var(--border-strong)');
+  });
+});
+
 describe('ProfileHero banner', () => {
   it('is a solid band with one avatar colour', () => {
     render(

@@ -1598,6 +1598,14 @@ export const CONSUMER_COPY = {
     avatarSolidEyebrow: 'Or keep it solid',
     avatarPairSwatchAriaLabel: (first: string, second: string) =>
       `Avatar colors: ${first} and ${second}`,
+    // What each colour looks like, for the swatch labels: a screen reader has
+    // no use for the token names.
+    avatarColorNames: {
+      signal: 'blue',
+      accent: 'pink',
+      success: 'green',
+      warning: 'amber',
+    },
     handleLabel: 'Handle',
     cityLabel: 'City',
   },

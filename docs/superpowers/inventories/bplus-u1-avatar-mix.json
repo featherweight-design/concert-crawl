@@ -31,7 +31,7 @@
       "steps": [
         {
           "goto": "/me",
-          "wait": "[data-testid=\"profile-banner\"]"
+          "wait": "[data-testid=\"profile-banner\"]:visible"
         },
         {
           "settle": 4000
