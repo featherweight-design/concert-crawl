@@ -190,7 +190,11 @@ Consequences worth knowing before changing anything here:
 
 The **staging** project keeps its git integration. Its Ignored Build Step skips
 pushes that do not touch the web app, which is why `staging-e2e.yml`'s web-readiness
-wait treats "no deployment for this SHA" as benign.
+wait treats "no deployment for this SHA" as benign, but only while the project's
+newest deployment is healthy: if it is failed or cancelled the wait exits 125.
+Both `staging-e2e.yml` and `staging-smoke.yml` run that wait on every push and
+fail closed when `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID_STAGING`
+are not set as repo-level secret and variables.
 
 ### Environment variables
 

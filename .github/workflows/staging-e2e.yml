@@ -92,20 +92,24 @@ jobs:
       # API at this SHA passes E2E", against a staging web build that may still
       # be the previous commit — and most of this suite drives the web app.
       #
-      # Only runs when the API wait cleared, so a skipped push stays skipped,
-      # and only when the Vercel credentials exist: they are scoped to the
-      # `production` GitHub environment for the prod promotion step, and this
-      # workflow does not use that environment. Absent credentials therefore
-      # degrade to the pre-existing behaviour with a warning that says so,
-      # rather than failing a suite that was passing yesterday.
+      # Runs on every push, not only when the API deployed. A web-only push has
+      # no API deploy, so gating this on the API wait meant the one change that
+      # can break the web build was the one that never checked it: on
+      # 2026-11-14 every staging web build was OOM-killed while this workflow
+      # went green as "skipped".
       #
-      # 124 is benign for the same reason it is on the API: the staging web
+      # It fails closed when the Vercel credentials are missing: a gate that
+      # cannot check must not pass. They are repo-level `VERCEL_TOKEN`,
+      # `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID_STAGING`.
+      #
+      # 124 is benign only while the project is healthy: the staging web
       # project's Ignored Build Step skips pushes that do not touch the web app,
-      # so an API-only merge legitimately produces no web deployment. The API
-      # wait already proved something deployed, so the suite still runs.
+      # so an API-only merge legitimately produces no web deployment. If the
+      # newest deployment the project has is failed or cancelled, the script
+      # exits 125 instead (vercel-wait-for-ready.sh).
       - name: Wait for staging web app to be ready on pushed SHA
         id: wait_for_web
-        if: github.event_name == 'push' && steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name == 'push'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
@@ -116,8 +120,8 @@ jobs:
             [ -z "${VERCEL_TOKEN}" ] && missing+=("VERCEL_TOKEN (repo-level secret)")
             [ -z "${VERCEL_ORG_ID}" ] && missing+=("VERCEL_ORG_ID (repo-level variable)")
             [ -z "${VERCEL_PROJECT_ID_STAGING}" ] && missing+=("VERCEL_PROJECT_ID_STAGING (repo-level variable)")
-            echo "::warning title=Web readiness unchecked::Missing ${missing[*]} — cannot confirm the staging web app is serving ${{ github.sha }}. Running E2E against whatever it currently serves, which may be the previous commit. Set these under Settings → Secrets and variables → Actions."
-            exit 0
+            echo "::error title=Web readiness cannot be checked::Missing ${missing[*]}. Without them this workflow cannot confirm the staging web app is serving ${{ github.sha }}, so it fails rather than pass unchecked. Set them under Settings → Secrets and variables → Actions."
+            exit 1
           fi
           set +e
           bash .github/scripts/vercel-wait-for-ready.sh \
