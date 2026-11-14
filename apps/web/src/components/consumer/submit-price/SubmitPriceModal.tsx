@@ -1495,6 +1495,8 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
           fontWeight: 700,
+          // At 320 the eyebrow and code stay on one line (addendum 6 item 15).
+          whiteSpace: 'nowrap',
         }}
       >
         {code}

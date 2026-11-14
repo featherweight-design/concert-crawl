@@ -477,7 +477,13 @@ function SheetHeader({
         <span
           data-testid="counter-rail-code"
           data-tone={isError ? 'danger' : 'warning'}
-          style={{ ...MONO_RAIL, fontWeight: 700, color: tone }}
+          style={{
+            ...MONO_RAIL,
+            fontWeight: 700,
+            color: tone,
+            // At 320 the eyebrow and code stay on one line (addendum 6 item 15).
+            whiteSpace: 'nowrap',
+          }}
         >
           {code}
         </span>
