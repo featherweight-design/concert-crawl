@@ -4201,6 +4201,8 @@ export const ADMIN_COPY = {
     pastCrumb: 'Past',
     search: 'Search shows or artists',
     when: { upcoming: 'Upcoming', past: 'Past' },
+    // The phone's Upcoming / Past toggle (`36/past-m`).
+    whenLabel: 'Shows',
     // 4b-1b (`06/venue-filter`, `06/status-filter`); with a pick, the chip
     // shows it (`04/filter-chips-picked`).
     anyVenue: 'Any venue',

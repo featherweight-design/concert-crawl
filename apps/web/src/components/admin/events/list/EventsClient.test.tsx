@@ -456,3 +456,61 @@ describe('EventsClient row ⋯', () => {
     list.mockResolvedValue(page);
   });
 });
+
+describe('EventsClient on the phone (36/past-m)', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+  });
+
+  it('swaps the Upcoming / Past chips for a two-part toggle above search', async () => {
+    render(<EventsClient />);
+    const toggle = await screen.findByRole('tablist', {
+      name: COPY.whenLabel,
+    });
+    const upcoming = within(toggle).getByRole('tab', {
+      name: COPY.when.upcoming,
+    });
+    expect(upcoming).toHaveAttribute('aria-selected', 'true');
+    expect(
+      screen.queryByRole('button', { name: COPY.when.upcoming }),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: COPY.when.past })).toBeNull();
+    // Drawn above search, and the list is the panel both tabs control.
+    const search = screen.getByRole('searchbox', { name: COPY.search });
+    expect(
+      toggle.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const panel = screen.getByRole('tabpanel');
+    expect(upcoming).toHaveAttribute('aria-controls', panel.id);
+    expect(panel).toHaveAttribute('aria-labelledby', upcoming.id);
+    // Upcoming keeps its filter chips under search.
+    expect(
+      await screen.findByRole('button', { name: /No price/ }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(toggle).getByRole('tab', { name: COPY.when.past }));
+    expect(lastHref()).toBe('/admin/events?when=past');
+  });
+
+  it('draws the toggle on Past too, with Past picked', async () => {
+    mockSearch = 'when=past';
+    render(<EventsClient />);
+    const toggle = await screen.findByRole('tablist', {
+      name: COPY.whenLabel,
+    });
+    expect(
+      within(toggle).getByRole('tab', { name: COPY.when.past }),
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByTestId('venue-filter-chip')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /No price/ })).toBeNull();
+
+    fireEvent.click(
+      within(toggle).getByRole('tab', { name: COPY.when.upcoming }),
+    );
+    expect(lastHref()).toBe('/admin/events');
+  });
+});

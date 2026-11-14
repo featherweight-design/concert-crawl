@@ -7,6 +7,7 @@ import { Eye, Search } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
+  AdminTabs,
   CouldntLoad,
   EmptyState,
   useIsPhone,
@@ -51,6 +52,8 @@ const RUNS_COPY = ADMIN_COPY.venueRuns;
 /** `A3/09/load-more`: "Showing 25 of N", Load 25 more. */
 export const EVENTS_PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
+const WHENS = ['upcoming', 'past'] as const satisfies readonly When[];
+const WHEN_PANEL_ID = 'events-when-panel';
 
 interface Loaded {
   /** The filters' URL, so a page is only ever extended for its own filters. */
@@ -294,7 +297,24 @@ export const EventsClient = () => {
     </label>
   );
 
-  const whenChips = (['upcoming', 'past'] as const).map((when) => (
+  // The phone's two-part Upcoming / Past toggle above search, on both sides
+  // (`36/past-m`, superseding the Upcoming chip of `06/events-mobile`). Both
+  // tabs control the one list panel below.
+  const whenToggle = (
+    <AdminTabs
+      tabs={WHENS.map((when) => ({ key: when, label: COPY.when[when] }))}
+      value={filters.when}
+      onChange={onWhen}
+      label={COPY.whenLabel}
+      tabId={(when) => `events-when-${when}`}
+      panelId={() => WHEN_PANEL_ID}
+      variant="segments"
+      phone
+      testId="events-when"
+    />
+  );
+
+  const whenChips = WHENS.map((when) => (
     <button
       key={when}
       type="button"
@@ -490,13 +510,13 @@ export const EventsClient = () => {
   const filterChips = counts === undefined ? null : filterChipsFor(counts);
 
   // Desktop draws one row: search, the side, a rule, then the filters. The
-  // phone stacks search over a scrolling chip row in the board's order
-  // (`06/events-mobile`, with Past added by 4b#23).
+  // phone stacks the side's toggle over search over a scrolling chip row in
+  // the board's order (`36/past-m`; `06/events-mobile` for Upcoming's chips).
   const filterRow = isPhone ? (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ paddingBottom: 2 }}>{whenToggle}</div>
       {searchBox}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
-        {whenChips}
         {filterChips &&
           (past
             ? [filterChips.venue, filterChips.status]
@@ -680,7 +700,17 @@ export const EventsClient = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {header}
       {filterRow}
-      {content}
+      {isPhone ? (
+        <div
+          id={WHEN_PANEL_ID}
+          role="tabpanel"
+          aria-labelledby={`events-when-${filters.when}`}
+        >
+          {content}
+        </div>
+      ) : (
+        content
+      )}
     </div>
   );
 };
