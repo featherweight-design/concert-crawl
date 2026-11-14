@@ -192,6 +192,24 @@ describe('Skeletons (07/loading-people, 07/loading-person, 07/loading-any-list-o
     expect(desktop.closest('.max-\\[720px\\]\\:hidden')).not.toBeNull();
   });
 
+  it('never sets display inline on a breakpoint-hidden wrapper', () => {
+    // jsdom applies no stylesheet, so assert the cause: an inline `display`
+    // outranks the class's `hidden`, and both skeletons would draw.
+    render(<PeopleSkeleton />);
+    for (const id of [
+      'people-desktop-skeleton-bar',
+      'people-phone-skeleton-wrap',
+    ]) {
+      const wrap = screen.getByTestId(id);
+      expect(wrap.className).toMatch(/\bflex\b/);
+      expect(wrap.style.display).toBe('');
+    }
+    const hidden = document.querySelectorAll<HTMLElement>(
+      '[class*="max-[720px]:hidden"], [class*="min-[721px]:hidden"]',
+    );
+    hidden.forEach((node) => expect(node.style.display).toBe(''));
+  });
+
   it('phone rows: 44px r10 tile, fading 13% a row', () => {
     render(<PeopleSkeleton />);
     const rows = screen.getAllByTestId('people-phone-skeleton-row');
@@ -299,7 +317,8 @@ describe('SH50: the Undo toast (07/role-changed-with-undo)', () => {
   });
 });
 
-describe('SH50: Make admin (07/make-an-admin-asks-first)', () => {
+// Already right on main (the audit's SH50 note predates it): pinned, not a fix.
+describe('SH50: Make admin (07/make-an-admin-asks-first), pinned', () => {
   it('ends the gradient on --cta-end (#de96df), not the raw accent', () => {
     render(
       <AdminButton type="button" variant="gradient">
