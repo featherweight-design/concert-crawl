@@ -2,6 +2,11 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+// The artist panel's search reads a token: a stand-in, no Clerk provider here.
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: async () => 'token' }),
+}));
+
 import { EvidenceSlot } from '../EvidenceSlot';
 import type {
   ArtistCandidate,
@@ -290,6 +295,7 @@ const artistRow = (
       answer({ slug: 'keep_this_match', label: 'Keep this match' }),
     ],
     artistFacts: {
+      artistId: 'artist-1',
       nextShowVenue: 'Globe Hall',
       spotifyArtistId: 'cur',
       photoUrl: null,
@@ -312,6 +318,18 @@ describe('ArtistPanel', () => {
       expect.objectContaining({ slug: 'pick_the_right_artist' }),
       { spotifyArtistId: 'sp2' },
     );
+  });
+
+  it('offers Search for another only when the item carries the artist id', () => {
+    open(artistRow([candidate({ id: 'sp1', name: 'One' })]));
+    expect(screen.getByTestId('search-for-another')).toBeInTheDocument();
+    cleanup();
+    const noId = artistRow([candidate({ id: 'sp1', name: 'One' })]);
+    open({
+      ...noId,
+      artistFacts: noId.artistFacts && { ...noId.artistFacts, artistId: null },
+    });
+    expect(screen.queryByTestId('search-for-another')).toBeNull();
   });
 
   it('names the Denver act on the lead button, and only that one', () => {

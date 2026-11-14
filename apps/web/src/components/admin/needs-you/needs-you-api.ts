@@ -52,6 +52,8 @@ export interface ArtistCandidate {
 
 /** What an artist item adds to the card's fields. */
 export interface ArtistFacts {
+  /** The artist's own id, for the search panel's candidate lookup. */
+  artistId: string | null;
   nextShowVenue: string | null;
   spotifyArtistId: string | null;
   photoUrl: string | null;
@@ -259,6 +261,7 @@ const candidateFrom = (value: unknown): ArtistCandidate[] =>
     : [];
 
 const artistFactsFrom = (value: Record<string, unknown>): ArtistFacts => ({
+  artistId: textOf(value['artistId']),
   nextShowVenue: textOf(value['nextShowVenue']),
   spotifyArtistId: textOf(value['spotifyArtistId']),
   photoUrl: textOf(value['photoUrl']),
