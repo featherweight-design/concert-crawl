@@ -26,7 +26,7 @@ const ellipsis: CSSProperties = {
 };
 
 /** The show's one status, as the fan app's `StatusChip` (addendum 5, §2). */
-export const ShowStatusChip = ({
+export const EventStatusChip = ({
   row,
 }: {
   /** A list row or Event edit's detail: both carry it. */
@@ -91,7 +91,7 @@ export const StatusChips = ({
   row: Pick<EventListRow, 'status' | 'hidden' | 'hiddenReason'>;
 }) => (
   <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6 }}>
-    <ShowStatusChip row={row} />
+    <EventStatusChip row={row} />
     {row.hidden && (
       <StatusChip
         status="hidden"
@@ -269,7 +269,7 @@ const DesktopTable = ({ rows, when }: { rows: EventListRow[]; when: When }) => {
                 <VenueLine row={row} size={22} />
               </td>
               <td style={td}>
-                <ShowStatusChip row={row} />
+                <EventStatusChip row={row} />
               </td>
               <td
                 style={{
@@ -363,7 +363,7 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
             {countLine}
           </span>
         )}
-        <ShowStatusChip row={row} />
+        <EventStatusChip row={row} />
       </div>
     </>
   );

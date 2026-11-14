@@ -1,6 +1,6 @@
 {
   "feature": "Admin Events · StatusChip and the Hidden tag",
-  "note": "Addendum-5 item 2, boards 02-events-status-chips/events-statuschip-d and -m. CONTACT_SHEET_ROLE=admin. The status column (desktop) and the card's right column (phone) show only the fan StatusChip. A hidden show gets a muted eye and 'HIDDEN · UNSURE' or 'HIDDEN · BY ADMIN' under its title. Event edit's header carries the same tag beside the status chip (undrawn; nearest pattern).",
+  "note": "Addendum-5 item 2, boards 02-events-status-chips/events-statuschip-d and -m. CONTACT_SHEET_ROLE=admin. The status column (desktop) and the card's right column (phone) show only the fan StatusChip. A hidden show gets a muted eye and 'HIDDEN · UNSURE' or 'HIDDEN · BY ADMIN' under its title. Event edit's header is unchanged: its Hidden tag is undrawn (⏸ Design gap).",
   "widths": [
     { "label": "phone-320", "width": 320, "height": 740, "touch": true },
     { "label": "phone", "width": 390, "height": 844, "touch": true },
@@ -27,21 +27,6 @@
           "wait": "[data-testid=\"hidden-tag\"]",
           "settle": 600
         }
-      ]
-    },
-    {
-      "id": "edit-hidden",
-      "label": "Event edit, a hidden show",
-      "steps": [
-        {
-          "goto": "/admin/events?hidden=1",
-          "wait": "[data-testid=\"hidden-tag\"]"
-        },
-        {
-          "click": "[data-testid=\"event-row\"] a, [data-testid=\"events-list\"] li a"
-        },
-        { "wait": "#event-edit-title" },
-        { "wait": "[data-testid=\"hidden-tag\"]", "settle": 800 }
       ]
     }
   ]

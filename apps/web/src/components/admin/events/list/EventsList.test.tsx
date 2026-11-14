@@ -183,7 +183,11 @@ describe('EventsList on the phone', () => {
     const [hiddenCard, plainCard] = within(list).getAllByRole('listitem');
     const hidden = within(hiddenCard as HTMLElement);
     expect(hidden.getByText(COPY.status.postponed)).toBeInTheDocument();
-    expect(hidden.getByText(COPY.hiddenTag.unsure)).toBeInTheDocument();
+    // Between the title and the venue line (`02/events-statuschip-m`).
+    const text = hiddenCard?.textContent ?? '';
+    const tagAt = text.indexOf(COPY.hiddenTag.unsure);
+    expect(tagAt).toBeGreaterThan(text.indexOf('Clipse & J.I.D'));
+    expect(tagAt).toBeLessThan(text.indexOf('Red Rocks'));
     expect(hidden.queryByText(COPY.watching(31))).toBeNull();
     const plain = within(plainCard as HTMLElement);
     expect(plain.getByText(COPY.phoneNoPrice)).toBeInTheDocument();
