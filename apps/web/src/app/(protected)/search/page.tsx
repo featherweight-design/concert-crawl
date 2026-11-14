@@ -29,6 +29,8 @@ export default function SearchPage() {
 
   return (
     <div
+      // The phone layout holds to 1023 inside a centred 640 column (tablet option A).
+      className="mx-auto w-full max-w-[640px] lg:max-w-none"
       style={{
         minHeight: '100dvh',
         background: 'var(--bg)',
