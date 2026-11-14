@@ -78,29 +78,37 @@ const CalendarIcon = () => (
   </svg>
 );
 
+// The row as `add-two-scopes-m` draws it: a 44px tile, a 14.5px name and a mono
+// 10.5px line under it, a hairline between rows. Only the venue truncates; the
+// date never does (addendum 3 README 38).
 const ShowRow = ({ row }: { row: PastShowRow }) => (
   <li
     data-testid="add-show-item"
-    className="flex items-center gap-3 border-b border-[var(--border)] py-3 last:border-b-0"
+    className="flex items-center gap-3 border-t border-[var(--border)] py-2.5 first:border-t-0"
   >
     <Panel
       surface="artist"
       name={row.artist}
       photoUrl={row.artistPhotoUrl}
-      size={46}
+      size={44}
     />
     <span className="min-w-0 flex-1">
       <span
-        className="block truncate text-[17px] font-bold"
-        style={{ color: 'var(--fg)', letterSpacing: '-0.01em' }}
+        className="block truncate text-[14.5px] font-bold"
+        style={{ color: 'var(--fg)' }}
       >
         {row.artist}
       </span>
       <span
-        className="mt-0.5 block truncate text-[12.5px]"
-        style={{ fontFamily: 'var(--font-mono)', color: 'var(--fg-subtle)' }}
+        className="mt-[3px] flex text-[10.5px] font-medium"
+        style={{
+          fontFamily: 'var(--font-mono)',
+          letterSpacing: '0.02em',
+          color: 'var(--fg-muted)',
+        }}
       >
-        {`${row.venueName} · ${row.dateLabel}`}
+        <span className="min-w-0 truncate">{row.venueName}</span>
+        <span className="shrink-0 whitespace-pre">{` · ${row.dateLabel}`}</span>
       </span>
     </span>
     <WentPill
@@ -115,23 +123,168 @@ const ShowRow = ({ row }: { row: PastShowRow }) => (
   </li>
 );
 
-const SkeletonRows = ({ count }: { count: number }) => (
-  <ul
-    aria-hidden="true"
-    data-testid="add-show-skeleton"
-    className="m-0 list-none p-0"
+// `add-loading-m`: a month-label bar, then rows with a hairline between them
+// that fade out down the list. The pill is 72x32 on the board; the real pill is
+// taller (a tap target), so the skeleton is the real size.
+const SkeletonRows = ({
+  count,
+  withLabel = false,
+}: {
+  count: number;
+  withLabel?: boolean;
+}) => (
+  <div aria-hidden="true" data-testid="add-show-skeleton">
+    {withLabel && (
+      <div className="mt-4">
+        <SkeletonBlock width={110} height={9} radius={6} />
+      </div>
+    )}
+    <ul className="m-0 mt-2 list-none p-0">
+      {Array.from({ length: count }, (_, index) => (
+        <li
+          key={index}
+          className="flex items-center gap-3 border-t border-[var(--border)] py-2.5 first:border-t-0"
+          style={{ opacity: Math.max(0.4, 1 - index * 0.15) }}
+        >
+          <SkeletonBlock width={44} height={44} radius={10} />
+          <span className="flex flex-1 flex-col gap-[7px]">
+            <SkeletonBlock width="60%" height={13} radius={6} />
+            <SkeletonBlock width="80%" height={10} radius={6} />
+          </span>
+          <SkeletonBlock width={72} height={44} radius={22} />
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const GradientButton = ({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="min-h-11 cursor-pointer rounded-xl border-0 px-6 text-[14.5px] font-bold"
+    style={{
+      background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
+      color: 'var(--fg-on-accent)',
+      boxShadow: '0 8px 24px -12px var(--signal)',
+    }}
   >
-    {Array.from({ length: count }, (_, index) => (
-      <li key={index} className="flex items-center gap-3 py-3">
-        <SkeletonBlock width={46} height={46} radius={10} />
-        <span className="flex flex-1 flex-col gap-2">
-          <SkeletonBlock width="55%" height={16} />
-          <SkeletonBlock width="75%" height={12} />
-        </span>
-        <SkeletonBlock width={96} height={44} radius={22} />
-      </li>
-    ))}
-  </ul>
+    {children}
+  </button>
+);
+
+// The red tile, eyebrow, headline and reassurance of `add-error-m`.
+const LoadError = ({ onRetry }: { onRetry: () => void }) => (
+  <div
+    role="alert"
+    data-testid="add-show-error"
+    className="flex flex-col items-center px-2.5 py-[30px] text-center"
+  >
+    <span
+      aria-hidden="true"
+      className="flex h-[84px] w-[84px] items-center justify-center rounded-3xl"
+      style={{
+        background: 'color-mix(in oklab, var(--danger) 10%, transparent)',
+        border: '1px solid color-mix(in oklab, var(--danger) 45%, transparent)',
+        boxShadow:
+          '0 0 40px color-mix(in oklab, var(--danger) 20%, transparent)',
+        color: 'var(--danger)',
+      }}
+    >
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 4 3 19.5h18L12 4Z M12 10v4.5 M12 17v.01"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+    <span
+      className="mt-[18px] text-[9.5px] font-bold"
+      style={{
+        ...mono,
+        letterSpacing: '0.16em',
+        color: 'var(--price-text-danger)',
+      }}
+    >
+      {COPY.errorEyebrow}
+    </span>
+    <span
+      className="mt-2 max-w-[320px] text-[28px] font-black leading-[1.1]"
+      style={{ color: 'var(--fg)', letterSpacing: '-0.03em' }}
+    >
+      {COPY.errorTitle}
+    </span>
+    <p
+      className="m-0 mt-2.5 max-w-[320px] text-[14.5px] leading-[1.5]"
+      style={{ color: 'var(--fg-muted)' }}
+    >
+      {COPY.errorBody}
+    </p>
+    <div className="mt-[22px]">
+      <GradientButton onClick={onRetry}>{COPY.retry}</GradientButton>
+    </div>
+  </div>
+);
+
+// `add-my-venues-empty-m`: a scope with nothing in it points back to All Denver.
+const ScopeEmpty = ({
+  scope,
+  onShowAll,
+}: {
+  scope: 'venues' | 'follows';
+  onShowAll: () => void;
+}) => (
+  <div data-testid="add-show-scope-empty" className="mt-[34px] text-center">
+    <span
+      aria-hidden="true"
+      className="inline-flex"
+      style={{ color: 'var(--fg-subtle)' }}
+    >
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 21s-6.5-5.6-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="12"
+          cy="10.5"
+          r="2.3"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+      </svg>
+    </span>
+    <p
+      className="m-0 mt-3.5 text-[20px] font-black"
+      style={{ color: 'var(--fg)', letterSpacing: '-0.02em' }}
+    >
+      {scope === 'venues' ? COPY.emptyVenuesTitle : COPY.emptyFollowsTitle}
+    </p>
+    <p
+      className="m-0 mt-1.5 px-3 text-[13.5px] leading-[1.5]"
+      style={{ color: 'var(--fg-muted)' }}
+    >
+      {scope === 'venues' ? COPY.emptyVenuesBody : COPY.emptyFollowsBody}
+    </p>
+    <button
+      type="button"
+      onClick={onShowAll}
+      className="mt-3.5 min-h-11 cursor-pointer border-0 bg-transparent px-3 text-[15px] font-extrabold"
+      style={{ color: 'var(--signal)' }}
+    >
+      {COPY.showAll}
+    </button>
+  </div>
 );
 
 interface AddShowSheetProps {
@@ -224,6 +377,13 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
       : []),
   ];
 
+  const scopeEmpty =
+    !isPending &&
+    !isError &&
+    rows.length === 0 &&
+    !searching &&
+    (effectiveScope === 'venues' || effectiveScope === 'follows');
+
   return (
     <BottomSheet
       open={open}
@@ -231,30 +391,30 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
       title={COPY.title}
       maxWidth={SHEET_WIDTH}
       closeText={COPY.done}
+      eyebrow={COPY.eyebrow}
+      pinned
+      handle
+      edgeFromSm
     >
-      <div className="flex flex-col gap-3.5 pt-1">
-        <span
-          className="text-[11px] font-bold"
-          style={{ ...mono, color: 'var(--signal)' }}
-        >
-          {COPY.eyebrow}
-        </span>
+      {/* Pinned: the title, search and chips stay put while the list scrolls
+          (README 44), and the keyboard shrinks the list, not this. */}
+      <div className="flex shrink-0 flex-col pt-2">
         <span
           aria-hidden="true"
-          className="text-[30px] font-extrabold leading-[1.05]"
-          style={{ color: 'var(--fg)', letterSpacing: '-0.03em' }}
+          className="text-[25px] font-black leading-[1.1]"
+          style={{ color: 'var(--fg)', letterSpacing: '-0.025em' }}
         >
           {COPY.title}
         </span>
         <p
-          className="m-0 text-[15px] leading-[1.45]"
+          className="m-0 mt-1.5 text-[13.5px] leading-[1.45]"
           style={{ color: 'var(--fg-muted)' }}
         >
           {COPY.subtitle}
         </p>
 
         <label
-          className="flex min-h-12 items-center gap-2.5 rounded-xl border px-3.5 focus-within:border-[var(--signal)]"
+          className="mt-3.5 flex h-[46px] items-center gap-2.5 rounded-xl border-[1.5px] px-3.5 focus-within:border-[var(--signal)]"
           style={{
             borderColor: 'var(--border-strong)',
             background: 'var(--bg)',
@@ -268,7 +428,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             onChange={(event) => setText(event.target.value)}
             placeholder={COPY.searchPlaceholder}
             aria-label={COPY.searchPlaceholder}
-            className="min-w-0 flex-1 border-0 bg-transparent text-[17px] outline-none"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-none"
             style={{ color: 'var(--fg)' }}
           />
           {text !== '' && (
@@ -285,11 +445,12 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
         </label>
 
         {/* A button group with `aria-pressed`: radio semantics would promise
-            arrow-key movement these chips do not have. */}
+            arrow-key movement these chips do not have. The chip is drawn 32px
+            tall; the touch target stays 44px through the padding of its group. */}
         <div
           role="group"
           aria-label={COPY.scopeAria}
-          className="flex flex-wrap gap-2"
+          className="mt-3 flex flex-wrap gap-1.5 pb-1"
         >
           {scopes.map((item) => {
             const on = effectiveScope === item.value;
@@ -299,13 +460,13 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
                 type="button"
                 aria-pressed={on}
                 onClick={() => setScope(item.value)}
-                className="min-h-11 cursor-pointer rounded-full border px-4 text-[15px] font-bold"
+                className="inline-flex h-8 cursor-pointer items-center rounded-full border px-3 text-[13px] font-bold whitespace-nowrap"
                 style={{
                   borderColor: on
-                    ? 'color-mix(in oklab, var(--signal) 55%, transparent)'
+                    ? 'color-mix(in oklab, var(--signal) 50%, transparent)'
                     : 'var(--border-strong)',
                   background: on
-                    ? 'color-mix(in oklab, var(--signal) 14%, transparent)'
+                    ? 'color-mix(in oklab, var(--signal) 12%, transparent)'
                     : 'transparent',
                   color: on ? 'var(--signal)' : 'var(--fg-muted)',
                 }}
@@ -315,17 +476,20 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             );
           })}
         </div>
+      </div>
 
-        {!searching && (
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+        {!searching && !scopeEmpty && (
           <p
             data-testid="add-records-note"
-            className="m-0 flex items-start gap-3 rounded-xl border border-dashed px-3.5 py-3 text-[15px] leading-[1.45]"
+            className="m-0 mt-3 flex items-start gap-2.5 rounded-xl border border-dashed px-[13px] py-[11px] text-[12.5px] leading-[1.45]"
             style={{
               borderColor: 'var(--border-strong)',
+              background: 'var(--surface-1)',
               color: 'var(--fg-muted)',
             }}
           >
-            <span style={{ color: 'var(--signal)', marginTop: 2 }}>
+            <span style={{ color: 'var(--signal)', marginTop: 1 }}>
               <CalendarIcon />
             </span>
             <span>
@@ -340,7 +504,7 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
         {searching && !isPending && !isError && rows.length > 0 && (
           <span
             data-testid="add-show-count"
-            className="text-[11px] font-bold"
+            className="mt-3 block text-[9.5px] font-bold"
             style={{ ...mono, color: 'var(--fg-subtle)' }}
           >
             {COPY.resultCount(total)}
@@ -348,27 +512,14 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
         )}
 
         {isPending ? (
-          <SkeletonRows count={SKELETON_ROWS} />
+          <SkeletonRows count={SKELETON_ROWS} withLabel />
         ) : isError && rows.length === 0 ? (
-          <div
-            role="alert"
-            className="flex flex-col items-start gap-2 py-3 text-[15px]"
-            style={{ color: 'var(--fg-muted)' }}
-          >
-            <span>{COPY.loadFailed}</span>
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="min-h-11 cursor-pointer rounded-full border px-4 font-bold"
-              style={{
-                borderColor: 'var(--border-strong)',
-                background: 'transparent',
-                color: 'var(--fg)',
-              }}
-            >
-              {COPY.retry}
-            </button>
-          </div>
+          <LoadError onRetry={() => void refetch()} />
+        ) : scopeEmpty ? (
+          <ScopeEmpty
+            scope={effectiveScope === 'follows' ? 'follows' : 'venues'}
+            onShowAll={() => setScope('all')}
+          />
         ) : rows.length === 0 ? (
           <div
             data-testid="add-show-none"
@@ -392,12 +543,12 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             {buckets.map((bucket) => (
               <section key={bucket.key} aria-label={bucket.label}>
                 <h3
-                  className="m-0 mb-1 mt-2 text-[11.5px] font-semibold"
+                  className="m-0 mt-4 text-[9.5px] font-bold"
                   style={{ ...mono, color: 'var(--fg-subtle)' }}
                 >
                   {bucket.label}
                 </h3>
-                <ul className="m-0 list-none p-0">
+                <ul className="m-0 mt-1 list-none p-0">
                   {bucket.shows.map((row) => (
                     <ShowRow key={row.eventId} row={row} />
                   ))}
@@ -438,9 +589,18 @@ export const AddShowSheet = ({ open, onClose }: AddShowSheetProps) => {
             {!hasNextPage && (
               <div
                 data-testid="add-show-end"
-                className="flex flex-col gap-2 pb-2 pt-1"
+                className="flex flex-col gap-2 pb-2 pt-3"
               >
-                {searching && singleArtist ? (
+                {effectiveScope !== 'all' ? (
+                  <p
+                    className="m-0 text-[13.5px] leading-[1.45]"
+                    style={{ color: 'var(--fg-muted)' }}
+                  >
+                    {effectiveScope === 'venues'
+                      ? COPY.endLineVenues
+                      : COPY.endLineFollows}
+                  </p>
+                ) : searching && singleArtist ? (
                   <p
                     className="m-0 text-[15px]"
                     style={{ color: 'var(--fg-muted)' }}

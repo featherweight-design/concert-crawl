@@ -109,7 +109,9 @@ describe('AddShowSheet', () => {
   it('groups rows under a month and year, with a pill each', () => {
     setup();
     expect(screen.getByText('November 2026')).toBeInTheDocument();
-    expect(screen.getByText('Gothic Theatre · Sat, Nov 7')).toBeInTheDocument();
+    // Only the venue truncates: the date is its own, never-shrinking span.
+    expect(screen.getByText('Gothic Theatre')).toHaveClass('truncate');
+    expect(screen.getByText(/Sat, Nov 7/)).toHaveClass('shrink-0');
     expect(screen.getAllByTestId('went-pill')).toHaveLength(1);
   });
 
@@ -123,7 +125,10 @@ describe('AddShowSheet', () => {
   it('shows an error line with a retry that refetches', () => {
     usePastShows.mockReturnValue(result({ data: undefined, isError: true }));
     setup();
-    expect(screen.getByRole('alert')).toHaveTextContent(COPY.loadFailed);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(COPY.errorEyebrow);
+    expect(alert).toHaveTextContent(COPY.errorTitle);
+    expect(alert).toHaveTextContent(COPY.errorBody);
     fireEvent.click(screen.getByRole('button', { name: COPY.retry }));
     expect(refetch).toHaveBeenCalled();
   });
@@ -244,8 +249,38 @@ describe('AddShowSheet', () => {
         vi.advanceTimersByTime(300);
       });
       fireEvent.click(screen.getByRole('button', { name: COPY.scopeVenues }));
+      expect(screen.getByTestId('add-show-end')).not.toHaveTextContent(
+        COPY.resultsFooter('Culture Wars', recordsStartLabel()),
+      );
+    });
+
+    // The end of a scoped list is worded for its scope (README 35).
+    it('words the end of the list for My venues and Artists I follow', () => {
+      setup();
+      fireEvent.click(screen.getByRole('button', { name: COPY.scopeVenues }));
       expect(screen.getByTestId('add-show-end')).toHaveTextContent(
-        COPY.endDivider(recordsStartShort()),
+        COPY.endLineVenues,
+      );
+      fireEvent.click(screen.getByRole('button', { name: COPY.scopeFollows }));
+      expect(screen.getByTestId('add-show-end')).toHaveTextContent(
+        COPY.endLineFollows,
+      );
+    });
+
+    // `add-my-venues-empty-m`: an empty scope points back to All Denver.
+    it('draws an empty scope with a way back to All Denver', () => {
+      usePastShows.mockReturnValue(
+        result({ data: { pages: [{ rows: [], total: 0, nextCursor: null }] } }),
+      );
+      setup();
+      fireEvent.click(screen.getByRole('button', { name: COPY.scopeVenues }));
+      const empty = screen.getByTestId('add-show-scope-empty');
+      expect(empty).toHaveTextContent(COPY.emptyVenuesTitle);
+      expect(empty).toHaveTextContent(COPY.emptyVenuesBody);
+      expect(screen.queryByTestId('add-records-note')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: COPY.showAll }));
+      expect(usePastShows).toHaveBeenLastCalledWith(
+        expect.objectContaining({ scope: 'all' }),
       );
     });
   });
