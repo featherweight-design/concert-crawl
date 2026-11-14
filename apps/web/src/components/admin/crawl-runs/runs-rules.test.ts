@@ -99,11 +99,14 @@ describe('Load more', () => {
 });
 
 describe('Not OK', () => {
-  it('keeps everything but OK and Unchanged', () => {
-    expect(RUNS.filter(isNotOk).map((run) => run.id)).toEqual([
-      'nov-9',
-      'nov-8',
-    ]);
+  it('keeps only the amber and red outcomes', () => {
+    expect(RUNS.filter(isNotOk).map((run) => run.id)).toEqual(['nov-9']);
+  });
+
+  it('leaves Skipped out: a paused venue is not a venue failure', () => {
+    expect(isNotOk(row({ status: 'skipped', reason: 'crawl_paused' }))).toBe(
+      false,
+    );
   });
 
   it('All keeps every run, in order', () => {

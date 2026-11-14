@@ -2,6 +2,7 @@ import type { VenueLastFullRun } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   LAST_RUNS,
+  RUN_OUTCOME_TONE,
   isUnchanged,
   runOutcome,
   runOutcomeKey,
@@ -65,14 +66,16 @@ export const RUN_FILTERS = ['all', 'notOk'] as const;
 export type RunFilter = (typeof RUN_FILTERS)[number];
 
 /**
- * Not OK: anything but a run that read shows, found the page unchanged, or
- * was Not run. Not run is the account-wide LLM refusal, which
- * `09/run-result-chips` draws grey as "not a venue failure", and Design's
- * Not OK is the amber and red outcomes (addendum-3 1d row 4).
+ * Not OK is Design's amber and red outcomes (addendum-3 1d row 4): Partial,
+ * Failed, Blocked and robots.txt. The grey ones stay out: Unchanged, Skipped
+ * (a paused or hidden venue, which we chose not to crawl) and Not run (the
+ * account-wide LLM refusal, which `09/run-result-chips` calls "not a venue
+ * failure"). Reading the tone map keeps the filter and the chip colour from
+ * disagreeing.
  */
 export const isNotOk = (run: Pick<RunRow, 'status' | 'reason'>): boolean => {
-  const key = runOutcomeKey(run);
-  return key !== 'success' && key !== 'unchanged' && key !== 'notRun';
+  const tone = RUN_OUTCOME_TONE[runOutcomeKey(run)];
+  return tone === 'var(--warning)' || tone === 'var(--danger)';
 };
 
 export const filterRuns = <T extends Pick<RunRow, 'status' | 'reason'>>(
