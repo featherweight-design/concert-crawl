@@ -94,7 +94,10 @@ describe('NotifItem — crew rows', () => {
     const { container } = render(<NotifItem item={crewRow()} now={NOW} />);
     expect(container.querySelector('svg[viewBox="0 0 100 100"]')).toBeNull();
     expect(container.querySelector('svg[viewBox="0 0 16 16"]')).not.toBeNull();
-    expect(CATEGORY_MAP['crew.going'].ink).toBe('var(--signal)');
+    const tile = container.querySelector<HTMLElement>(
+      'span[aria-hidden="true"]',
+    );
+    expect(tile?.style.color).toBe('var(--signal)');
   });
 
   it('labels the row with the category, not the crew name', () => {

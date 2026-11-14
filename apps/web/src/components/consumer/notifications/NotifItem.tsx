@@ -22,8 +22,6 @@ import { itemLabel, isUnread, relTime } from './lib/format-time';
 import { activateOnKey } from './lib/activate-keys';
 import { CREW_CATEGORY_PREFIX } from './lib/crew-meta';
 
-/** Matches the row's 30px category tile (B+), so the row's rhythm holds. */
-
 export const NotifItem = ({
   item,
   onOpen,
