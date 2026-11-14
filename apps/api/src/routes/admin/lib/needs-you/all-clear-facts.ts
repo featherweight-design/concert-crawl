@@ -1,52 +1,37 @@
 // What the Needs you All clear card says (`02-needs-you/all-clear`): last
-// night's crawl, the next one, and how many venues are snoozed off-season. Read
+// night's crawl, the next one, and how many items are snoozed and when the
+// next comes back (`01-snooze/all-clear-d`). Read
 // only when the queue is empty, from GET /v1/admin/needs-you/facts.
 
-import { and, gt, inArray, isNotNull } from 'drizzle-orm';
+import { and, count, gt, isNotNull, min } from 'drizzle-orm';
 import { adminQueueSnoozes, db } from '@concert-crawl/db';
 import type { AllClearFacts } from '@concert-crawl/types';
 import { BURST_GAP_MS, groupCrawlBatches } from '../crawl-batches.js';
 import { readWindow } from '../crawl-window.js';
-import { parseItemKey } from './keys.js';
 import { nextDailyCrawlAt } from '../../../../lib/crawl-schedule.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const VENUE_KINDS = ['venue-failing', 'venue-blocked'] as const;
-
 /**
- * A venue snoozed longer than this is off for the season, not for a day or a
- * week: "Snooze a week" ends 7 days out at most, "Until a date…" can run past it.
+ * Every item snoozed right now, of any kind, and the soonest one back. A
+ * "Not useful" switch has no return time and is not a snooze, so it is left out.
  */
-export const OFF_SEASON_AFTER_DAYS = 7;
-
-/** The distinct venues named by `<kind>:<venueId>[:<evidenceKey>]` item keys. */
-export const venuesOfKeys = (keys: readonly string[]): number => {
-  const venues = new Set<string>();
-  for (const key of keys) {
-    const parsed = parseItemKey(key);
-    if (parsed) venues.add(parsed.rest.split(':')[0] ?? parsed.rest);
-  }
-  return venues.size;
-};
-
-const snoozedOffSeason = async (now: Date): Promise<number> => {
-  const rows = await db
-    .select({ itemKey: adminQueueSnoozes.itemKey })
+const snoozedNow = async (
+  now: Date,
+): Promise<{ count: number; nextBackAt: string | null }> => {
+  const [row] = await db
+    .select({ count: count(), next: min(adminQueueSnoozes.until) })
     .from(adminQueueSnoozes)
     .where(
       and(
         isNotNull(adminQueueSnoozes.itemKey),
-        inArray(adminQueueSnoozes.kind, [...VENUE_KINDS]),
-        gt(
-          adminQueueSnoozes.until,
-          new Date(now.getTime() + OFF_SEASON_AFTER_DAYS * DAY_MS),
-        ),
+        gt(adminQueueSnoozes.until, now),
       ),
     );
-  return venuesOfKeys(
-    rows.flatMap((row) => (row.itemKey === null ? [] : [row.itemKey])),
-  );
+  return {
+    count: row?.count ?? 0,
+    nextBackAt: row?.next ? new Date(row.next).toISOString() : null,
+  };
 };
 
 type BatchInputs = Parameters<typeof groupCrawlBatches>[0];
@@ -77,17 +62,18 @@ export const lastNightlyFact = (
 };
 
 export const readAllClearFacts = async (now: Date): Promise<AllClearFacts> => {
-  const [window, snoozedVenues] = await Promise.all([
+  const [window, snoozed] = await Promise.all([
     readWindow(
       new Date(now.getTime() - 3 * DAY_MS),
       new Date(now.getTime() + DAY_MS),
     ),
-    snoozedOffSeason(now),
+    snoozedNow(now),
   ]);
   return {
     lastCrawl: lastNightlyFact({ ...window, now }),
     // Null outside production, where no daily crawl runs.
     nextCrawlAt: nextDailyCrawlAt(now),
-    snoozedVenues,
+    snoozed: snoozed.count,
+    nextBackAt: snoozed.nextBackAt,
   };
 };

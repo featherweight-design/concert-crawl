@@ -4,13 +4,17 @@ import Link from 'next/link';
 import { Activity, Check } from 'lucide-react';
 import type { AllClearFacts } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { nextCrawlWhen } from './needs-you-rules';
+import {
+  mountainToday,
+  nextCrawlWhen,
+  snoozeDayLabel,
+} from './needs-you-rules';
 
 const COPY = ADMIN_COPY.needsYou.allClear;
 
 /**
  * `02/all-clear`: a green check in a tile, "All clear", what you handled today,
- * the facts card (last night's crawl, next crawl, snoozed venues) and the way
+ * the facts card (last night's crawl, next crawl, snoozed items) and the way
  * out to Health. The facts load after the card draws; a row whose number is
  * unknown (no nightly yet, nothing snoozed) is left out rather than made up.
  */
@@ -35,10 +39,15 @@ export const AllClear = ({
       ? null
       : nextCrawlWhen(facts.nextCrawlAt, now);
   if (next) rows.push([COPY.facts.nextCrawl, next]);
-  if (facts && facts.snoozedVenues > 0)
+  if (facts && facts.snoozed > 0)
     rows.push([
       COPY.facts.snoozed,
-      COPY.facts.snoozedValue(facts.snoozedVenues),
+      COPY.facts.snoozedValue(
+        facts.snoozed,
+        facts.nextBackAt
+          ? snoozeDayLabel(mountainToday(new Date(facts.nextBackAt)))
+          : null,
+      ),
     ]);
   return (
     <div

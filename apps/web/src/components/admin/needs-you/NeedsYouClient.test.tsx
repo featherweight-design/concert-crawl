@@ -355,7 +355,7 @@ describe('NeedsYouClient', () => {
     });
   });
 
-  it('snoozing a card takes it off the list without an Undo', async () => {
+  it('snoozing a card leaves the return time and an Undo that clears the snooze', async () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');
     const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
@@ -364,13 +364,23 @@ describe('NeedsYouClient', () => {
       await screen.findByRole('menuitem', { name: /Snooze 1 day/ }),
     );
     const line = await screen.findByTestId('needs-you-answered');
-    expect(line).toHaveTextContent('Olive Jones snoozed.');
-    expect(within(line).queryByRole('button', { name: 'Undo' })).toBeNull();
+    expect(line).toHaveTextContent(/Olive Jones snoozed until .+ at 8 AM\./);
     expect(screen.getAllByTestId('needs-you-item')).toHaveLength(1);
     const snooze = calls.find((call) => call.url.endsWith('/snooze'));
     expect(snooze?.body).toMatchObject({
       until: expect.stringMatching(/T08:00:00-0[67]:00$/),
     });
+    fireEvent.click(within(line).getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) => call.url.endsWith('/snooze') && call.method === 'DELETE',
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('needs-you-answered')).toBeNull(),
+    );
   });
 
   it('opens the price batch sheet on the phone and approves exactly the ticked ids', async () => {
@@ -488,7 +498,8 @@ describe('NeedsYouClient', () => {
           return json({
             lastCrawl: { ok: 20, total: 21, at: '2026-11-13T09:08:00.000Z' },
             nextCrawlAt: '2099-01-01T09:07:00.000Z',
-            snoozedVenues: 0,
+            snoozed: 0,
+            nextBackAt: null,
           });
         return json([]);
       }),
@@ -515,7 +526,8 @@ describe('NeedsYouClient', () => {
           return json({
             lastCrawl: { ok: 20, total: 21, at: '2026-11-13T09:08:00.000Z' },
             nextCrawlAt: null,
-            snoozedVenues: 0,
+            snoozed: 0,
+            nextBackAt: null,
           });
         return json([]);
       }),

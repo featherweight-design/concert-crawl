@@ -152,7 +152,8 @@ describe('admin needs-you routes', () => {
       vi.unstubAllEnvs();
     }
     expect(body.data.lastCrawl).toBeNull();
-    expect(body.data.snoozedVenues).toBe(0);
+    expect(body.data.snoozed).toBe(0);
+    expect(body.data.nextBackAt).toBeNull();
     const next = body.data.nextCrawlAt;
     if (next === null) throw new Error('expected a next crawl');
     expect(new Date(next).getTime()).toBeGreaterThan(Date.now());
@@ -185,22 +186,24 @@ describe('admin needs-you routes', () => {
       status: 'failed',
       reason: 'timeout',
     });
-    // A season-long snooze counts; a two-day one does not.
+    // Every snooze counts, and the soonest one sets the next return.
     // Written straight to the table: the snooze route only takes an item that
     // is in the queue right now, and these venues are not failing.
-    const hold = (venueId: string, hours: number) =>
+    const hold = (venueId: string, until: Date) =>
       testDb.insert(adminQueueSnoozes).values({
         itemKey: `venue-failing:${venueId}`,
         kind: 'venue-failing',
-        until: inHours(hours),
+        until,
         createdBy: 'test-admin-1',
       });
-    await hold(venue.id, 24 * 10);
-    await hold(other.id, 48);
+    const soon = inHours(48);
+    await hold(venue.id, inHours(24 * 10));
+    await hold(other.id, soon);
 
     const res = await app.request('/v1/admin/needs-you/facts');
     const body: { data: AllClearFacts } = await res.json();
-    expect(body.data.snoozedVenues).toBe(1);
+    expect(body.data.snoozed).toBe(2);
+    expect(body.data.nextBackAt).toBe(soon.toISOString());
     expect(body.data.lastCrawl).toEqual({
       ok: 1,
       total: 2,

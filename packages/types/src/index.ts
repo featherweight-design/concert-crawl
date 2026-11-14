@@ -2174,8 +2174,10 @@ export interface AllClearFacts {
    * `apps/api/vercel.json`; null outside production, where none runs.
    */
   nextCrawlAt: string | null;
-  /** Venues whose Needs you item is snoozed right now. */
-  snoozedVenues: number;
+  /** Items of any kind snoozed right now (a "Not useful" switch is not one). */
+  snoozed: number;
+  /** When the soonest snoozed item comes back, ISO UTC; null with none. */
+  nextBackAt: string | null;
 }
 
 // A kind an admin turned off for one venue ("Not useful"), for the venue

@@ -2659,8 +2659,9 @@ export const ADMIN_COPY = {
             : `${count} new prices, each confirmed by a second fan.`,
       bug: (page: string | null) => `Reported${page ? ` on ${page}` : ''}.`,
     },
+    // `01-snooze/filter-empty-d`.
     emptyFilter: (kindLabel: string, others: number) =>
-      `No ${kindLabel.toLowerCase()} waiting. ${others} in other kinds.`,
+      `No ${kindLabel.toLowerCase()} waiting. ${others} other ${others === 1 ? 'decision is' : 'decisions are'}.`,
     showAll: 'Show all',
     allClear: {
       title: 'All clear',
@@ -2675,8 +2676,9 @@ export const ADMIN_COPY = {
         lastCrawlValue: (ok: number, total: number) => `${ok} of ${total} OK`,
         nextCrawl: 'Next crawl',
         snoozed: 'Snoozed',
-        snoozedValue: (count: number) =>
-          `${count} ${count === 1 ? 'venue' : 'venues'} off-season`,
+        // `01-snooze/all-clear-d`: how many, and when the first comes back.
+        snoozedValue: (count: number, nextBack: string | null) =>
+          `${count} ${count === 1 ? 'item' : 'items'}${nextBack ? ` · next back ${nextBack}` : ''}`,
       },
     },
     // The price batch sheet (`02-needs-you/a-batch-of-prices`): a phone bottom
@@ -2895,6 +2897,9 @@ export const ADMIN_COPY = {
     // `02/answered-with-undo`: the dashed line that takes the answered card's place.
     answered: (name: string, label: string) => `${name} marked ${label}.`,
     snoozedLine: (name: string) => `${name} snoozed.`,
+    // `01-snooze/answered-d`: the return time, with Undo beside it.
+    snoozedUntilLine: (name: string, when: string) =>
+      `${name} snoozed until ${when}.`,
     undo: {
       action: 'Undo',
       failed: "Couldn't undo that.",

@@ -364,7 +364,8 @@ const factsFrom = (value: unknown): AllClearFacts | null => {
     !isRecord(value) ||
     // Null outside production, where no daily crawl runs.
     !(value['nextCrawlAt'] === null || isText(value['nextCrawlAt'])) ||
-    !isCount(value['snoozedVenues'])
+    !isCount(value['snoozed']) ||
+    !(value['nextBackAt'] === null || isText(value['nextBackAt']))
   )
     return null;
   const nextCrawlAt = value['nextCrawlAt'];
@@ -373,7 +374,8 @@ const factsFrom = (value: unknown): AllClearFacts | null => {
     return {
       lastCrawl: null,
       nextCrawlAt,
-      snoozedVenues: value['snoozedVenues'],
+      snoozed: value['snoozed'],
+      nextBackAt: value['nextBackAt'],
     };
   if (
     !isRecord(last) ||
@@ -385,7 +387,8 @@ const factsFrom = (value: unknown): AllClearFacts | null => {
   return {
     lastCrawl: { ok: last['ok'], total: last['total'], at: last['at'] },
     nextCrawlAt,
-    snoozedVenues: value['snoozedVenues'],
+    snoozed: value['snoozed'],
+    nextBackAt: value['nextBackAt'],
   };
 };
 
@@ -487,6 +490,14 @@ export const needsYouApi = (getToken: GetToken) => ({
       getToken,
       `/v1/admin/needs-you/items/${encodeURIComponent(key)}/snooze`,
       { method: 'POST', body: { until } },
+    );
+  },
+  /** Takes a timed snooze back: the item returns to the queue. */
+  unsnooze: async (key: string): Promise<void> => {
+    await call(
+      getToken,
+      `/v1/admin/needs-you/items/${encodeURIComponent(key)}/snooze`,
+      { method: 'DELETE' },
     );
   },
   /** Stops this kind of warning for the item's venue. */
