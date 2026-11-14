@@ -164,28 +164,19 @@ describe('Activity log', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('1000'));
   });
 
-  it('sends Anyone as actorHandle and Any page as area', async () => {
-    logPage = () =>
-      json({
-        success: true,
-        data: [item(), item({ id: 'a2', actor: 'jules' })],
-        nextCursor: null,
-      });
+  // `07/activity-log` draws Anyone and Today highlighted, Any page not. No
+  // menu is drawn for them, so they are static and read the whole day.
+  it('draws Anyone, Any page and Today as static pills', async () => {
     renderLog();
     await screen.findByTestId('activity-log-table');
-    fireEvent.change(screen.getByLabelText(COPY.log.whoLabel), {
-      target: { value: 'jules' },
-    });
-    await waitFor(() =>
-      expect(logCalls().at(-1)?.searchParams.get('actorHandle')).toBe('jules'),
+    const filters = screen.getByRole('group', { name: COPY.log.filtersLabel });
+    expect(filters).toHaveTextContent(
+      `${COPY.log.anyone}${COPY.log.anyPage}${COPY.log.today}`,
     );
-    fireEvent.change(screen.getByLabelText(COPY.log.whereLabel), {
-      target: { value: 'venues' },
-    });
-    await waitFor(() =>
-      expect(logCalls().at(-1)?.searchParams.get('area')).toBe('venues'),
-    );
-    expect(logCalls().at(-1)?.searchParams.get('actorHandle')).toBe('jules');
+    expect(within(filters).queryByRole('combobox')).not.toBeInTheDocument();
+    expect(within(filters).queryByRole('button')).not.toBeInTheDocument();
+    expect(logCalls().at(-1)?.searchParams.has('actorHandle')).toBe(false);
+    expect(logCalls().at(-1)?.searchParams.has('area')).toBe(false);
   });
 
   it('draws the row and links WHAT to the thing it changed', async () => {
@@ -205,9 +196,10 @@ describe('Activity log', () => {
   it('shows the empty day', async () => {
     logPage = () => json({ success: true, data: [], nextCursor: null });
     renderLog();
-    expect(await screen.findByTestId('activity-log-empty')).toHaveTextContent(
-      COPY.log.emptyTitle,
-    );
+    const empty = await screen.findByTestId('activity-log-empty');
+    expect(empty).toHaveTextContent(COPY.log.emptyTitle);
+    // No day picker yet, so it names no other day to pick.
+    expect(empty).not.toHaveTextContent(/pick/i);
   });
 
   it("falls into Couldn't load", async () => {
@@ -222,7 +214,9 @@ describe('Activity log', () => {
     const card = (await screen.findAllByTestId('activity-log-card'))[0];
     expect(card).toHaveTextContent('Revoked invite code SHARED1');
     expect(card).toHaveTextContent(/@hugh · \d{1,2}:\d{2} [AP]M · People/);
-    expect(screen.queryByLabelText(COPY.log.whoLabel)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: COPY.log.filtersLabel }),
+    ).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('operations-tabs')).getByRole('tab', {
         name: 'Log',
