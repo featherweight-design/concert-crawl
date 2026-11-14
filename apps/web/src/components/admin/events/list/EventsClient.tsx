@@ -18,6 +18,7 @@ import {
   eventsListApi,
   type EventListCounts,
   type EventListPage,
+  type VenueCount,
 } from './events-api';
 import { EventsList } from './EventsList';
 import {
@@ -86,6 +87,10 @@ export const EventsClient = () => {
     [router],
   );
 
+  // Every venue a load has named, so a ticked venue the current search leaves
+  // out of `byVenue` still has a row (at 0) to untick in the picker.
+  const knownVenues = useRef(new Map<string, VenueCount>());
+
   // Only the newest load may write: a slow older one must not overwrite it.
   const latestLoad = useRef(0);
   const load = useCallback(async () => {
@@ -95,6 +100,8 @@ export const EventsClient = () => {
     try {
       const data = await api.list(filters, 0, EVENTS_PAGE_SIZE);
       if (mine !== latestLoad.current) return;
+      for (const venue of data.counts.byVenue)
+        knownVenues.current.set(venue.venueId, venue);
       setLoaded({ key: eventsListHref(filters), when: filters.when, data });
       setFailed(false);
     } catch (err) {
@@ -233,17 +240,17 @@ export const EventsClient = () => {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        height: 38,
-        width: isPhone ? '100%' : 286,
+        height: 36,
+        width: isPhone ? '100%' : 260,
         flex: 'none',
-        padding: '0 14px',
-        borderRadius: 12,
+        padding: '0 12px',
+        borderRadius: 10,
         border: '1px solid var(--border)',
         background: 'var(--surface-1)',
         color: 'var(--fg-subtle)',
       }}
     >
-      <Search size={15} strokeWidth={1.8} aria-hidden="true" />
+      <Search size={15} strokeWidth={1.7} aria-hidden="true" />
       <input
         type="search"
         value={text}
@@ -256,7 +263,7 @@ export const EventsClient = () => {
           border: 'none',
           outline: 'none',
           background: 'transparent',
-          fontSize: 14,
+          fontSize: 13,
           color: 'var(--fg)',
         }}
       />
@@ -288,6 +295,17 @@ export const EventsClient = () => {
     </button>
   );
 
+  const withTicked = (byVenue: readonly VenueCount[]): VenueCount[] => {
+    const listed = new Set(byVenue.map((venue) => venue.venueId));
+    const ticked = filters.venueIds.flatMap((id) => {
+      const known = knownVenues.current.get(id);
+      return listed.has(id) || known === undefined
+        ? []
+        : [{ ...known, total: 0 }];
+    });
+    return [...byVenue, ...ticked];
+  };
+
   const filterChipsFor = (shownCounts: EventListCounts) => ({
     venue: (
       <FilterPicker
@@ -297,7 +315,7 @@ export const EventsClient = () => {
         search={COPY.findVenue}
         all={shownCounts.all}
         selected={filters.venueIds}
-        options={[...shownCounts.byVenue]
+        options={withTicked(shownCounts.byVenue)
           .sort(
             (one, two) =>
               two.total - one.total || one.name.localeCompare(two.name),
@@ -341,7 +359,7 @@ export const EventsClient = () => {
   // phone stacks search over a scrolling chip row in the board's order
   // (`06/events-mobile`, with Past added by 4b#23).
   const filterRow = isPhone ? (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {searchBox}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
         {whenChips}

@@ -15,32 +15,27 @@ import { showCount } from './events-rules';
 const COPY = ADMIN_COPY.eventsList;
 
 /**
- * A pill on `06/events`; `on` draws the board's selected Upcoming edge, which
- * a chosen filter reuses.
+ * A pill on `06/events` and `06/events-mobile` (32px, 13px, the same on
+ * both); `on` draws the board's selected Upcoming edge, which a chosen filter
+ * reuses.
  */
 export const chipStyle = (on: boolean): CSSProperties => ({
   display: 'inline-flex',
   alignItems: 'center',
   gap: 7,
   flex: 'none',
-  height: 36,
-  padding: '0 14px',
+  height: 32,
+  padding: '0 12px',
   borderRadius: 999,
-  fontSize: 13.5,
-  fontWeight: on ? 700 : 600,
+  fontSize: 13,
+  fontWeight: 600,
   whiteSpace: 'nowrap',
   cursor: 'pointer',
   color: on ? 'var(--fg)' : 'var(--fg-muted)',
-  ...(on
-    ? {
-        border: '1px solid transparent',
-        background:
-          'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(90deg, var(--signal), var(--accent)) border-box',
-      }
-    : {
-        border: '1px solid var(--border)',
-        background: 'var(--surface-1)',
-      }),
+  border: on ? '1px solid transparent' : '1px solid var(--border)',
+  background: on
+    ? 'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box'
+    : 'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
 });
 
 /** The count after No price and Hidden (`06/events`). */
@@ -80,22 +75,18 @@ const footButton = (primary: boolean): CSSProperties => ({
       }),
 });
 
-/** The popover's (or sheet's) contents: search, checkbox rows, Clear and Show N. */
+/** The popover's (or sheet's) search and checkbox rows. */
 const PickerBody = ({
   options,
   chosen,
   setChosen,
   search,
-  all,
-  onApply,
   sheet,
 }: {
   options: readonly PickerOption[];
   chosen: string[];
   setChosen: (next: string[]) => void;
   search: string | undefined;
-  all: number;
-  onApply: () => void;
   sheet: boolean;
 }) => {
   const [text, setText] = useState('');
@@ -104,8 +95,6 @@ const PickerBody = ({
     needle === ''
       ? options
       : options.filter((option) => option.label.toLowerCase().includes(needle));
-  const countOf = (key: string) =>
-    options.find((option) => option.key === key)?.count ?? 0;
   const toggle = (key: string) =>
     setChosen(
       chosen.includes(key)
@@ -224,26 +213,6 @@ const PickerBody = ({
           );
         })}
       </ul>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          padding: '8px 10px 4px',
-          marginTop: 4,
-          borderTop: '1px solid var(--border)',
-        }}
-      >
-        <button
-          type="button"
-          style={footButton(false)}
-          onClick={() => setChosen([])}
-        >
-          {COPY.clear}
-        </button>
-        <button type="button" style={footButton(true)} onClick={onApply}>
-          {COPY.show(showCount(chosen, countOf, all))}
-        </button>
-      </div>
     </div>
   );
 };
@@ -317,10 +286,35 @@ export const FilterPicker = ({
       chosen={chosen}
       setChosen={setChosen}
       search={search}
-      all={all}
-      onApply={apply}
       sheet={isPhone}
     />
+  );
+
+  const countOf = (key: string) =>
+    options.find((option) => option.key === key)?.count ?? 0;
+  // Clear and Show N. The phone sheet pins it under its scrolling list, so a
+  // long venue list never pushes it out of reach.
+  const footer = (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '8px 10px 4px',
+        marginTop: 4,
+        borderTop: '1px solid var(--border)',
+      }}
+    >
+      <button
+        type="button"
+        style={footButton(false)}
+        onClick={() => setChosen([])}
+      >
+        {COPY.clear}
+      </button>
+      <button type="button" style={footButton(true)} onClick={apply}>
+        {COPY.show(showCount(chosen, countOf, all))}
+      </button>
+    </div>
   );
 
   return (
@@ -341,7 +335,11 @@ export const FilterPicker = ({
       </button>
       {open &&
         (isPhone ? (
-          <AdminSheet onClose={() => setOpen(false)} title={label}>
+          <AdminSheet
+            onClose={() => setOpen(false)}
+            title={label}
+            footer={footer}
+          >
             <div data-testid={testId}>{body}</div>
           </AdminSheet>
         ) : (
@@ -364,6 +362,7 @@ export const FilterPicker = ({
             }}
           >
             {body}
+            {footer}
           </div>
         ))}
     </div>
