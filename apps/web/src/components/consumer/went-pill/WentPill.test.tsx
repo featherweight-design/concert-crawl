@@ -221,6 +221,25 @@ describe('WentPill', () => {
       await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
     });
 
+    // A request still in flight when the sheet closes has nowhere to toast in
+    // the sheet, so the house toaster says it failed.
+    it('falls back to the house toast when the sheet has closed', async () => {
+      let rejectStamp: (error: Error) => void = () => undefined;
+      mutateAsync.mockReturnValueOnce(
+        new Promise((_, reject) => {
+          rejectStamp = reject;
+        }),
+      );
+      const view = inSheet(false);
+      fireEvent.click(screen.getByTestId('went-pill'));
+      // BottomSheet unmounts its children on close, provider and pill together.
+      view.unmount();
+      rejectStamp(new Error('down'));
+      await waitFor(() =>
+        expect(showAttendanceError).toHaveBeenCalledWith('save'),
+      );
+    });
+
     it('raises the removed toast with Undo in the sheet when unmarked', async () => {
       mutateAsync.mockResolvedValue({
         going: false,

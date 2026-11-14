@@ -70,26 +70,20 @@ export const WentPill = ({
       const result = await toggle.mutateAsync({ eventId, going: false });
       const restore = result.restore ?? null;
       const onUndo = restore ? () => void undoRemove(restore) : null;
-      if (sheetToast) {
-        sheetToast.show({
-          message: GOING_COPY.toast.removed(artist),
-          ...(onUndo
-            ? { action: { label: GOING_COPY.toast.undo, onClick: onUndo } }
-            : {}),
-        });
-      } else {
-        showRemovedToast({ artist, onUndo });
-      }
+      const shown = sheetToast?.show({
+        message: GOING_COPY.toast.removed(artist),
+        ...(onUndo
+          ? { action: { label: GOING_COPY.toast.undo, onClick: onUndo } }
+          : {}),
+      });
+      if (!shown) showRemovedToast({ artist, onUndo });
     } catch {
       setWent(true);
-      if (sheetToast) {
-        sheetToast.show({
-          message: GOING_COPY.toast.saveFailed,
-          tone: 'error',
-        });
-      } else {
-        showAttendanceError('save');
-      }
+      const shown = sheetToast?.show({
+        message: GOING_COPY.toast.saveFailed,
+        tone: 'error',
+      });
+      if (!shown) showAttendanceError('save');
     }
   };
 
@@ -102,14 +96,11 @@ export const WentPill = ({
       await toggle.mutateAsync({ eventId, going: true, restore });
     } catch {
       setWent(false);
-      if (sheetToast) {
-        sheetToast.show({
-          message: GOING_COPY.toast.undoFailed,
-          tone: 'error',
-        });
-      } else {
-        showAttendanceError('undo');
-      }
+      const shown = sheetToast?.show({
+        message: GOING_COPY.toast.undoFailed,
+        tone: 'error',
+      });
+      if (!shown) showAttendanceError('undo');
     }
   };
 
@@ -117,17 +108,19 @@ export const WentPill = ({
     setWent(true);
     try {
       await toggle.mutateAsync({ eventId, going: true });
-      if (sheetToast && afterStamp === 'undo') {
-        // Inside the Add sheet the toast draws the venue stamp (add-tapped-d).
-        sheetToast.show({
-          message: GOING_COPY.toast.stamped(artist),
-          stamp: { venueSlug, venueName },
-          action: {
-            label: GOING_COPY.toast.undo,
-            onClick: () => void unstamp(),
-          },
-        });
-      } else {
+      // Inside the Add sheet the toast draws the venue stamp (add-tapped-d).
+      const shown =
+        afterStamp === 'undo'
+          ? sheetToast?.show({
+              message: GOING_COPY.toast.stamped(artist),
+              stamp: { venueSlug, venueName },
+              action: {
+                label: GOING_COPY.toast.undo,
+                onClick: () => void unstamp(),
+              },
+            })
+          : false;
+      if (!shown) {
         showStampedToast({
           artist,
           ...(afterStamp === 'undo'
@@ -137,18 +130,15 @@ export const WentPill = ({
       }
     } catch {
       setWent(false);
-      if (sheetToast) {
-        sheetToast.show({
-          message: GOING_COPY.toast.stampFailed(artist),
-          tone: 'error',
-          action: {
-            label: GOING_COPY.toast.retry,
-            onClick: () => void stamp(),
-          },
-        });
-      } else {
-        showAttendanceError('save');
-      }
+      const shown = sheetToast?.show({
+        message: GOING_COPY.toast.stampFailed(artist),
+        tone: 'error',
+        action: {
+          label: GOING_COPY.toast.retry,
+          onClick: () => void stamp(),
+        },
+      });
+      if (!shown) showAttendanceError('save');
     }
   };
 

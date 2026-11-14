@@ -14,6 +14,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -33,7 +34,8 @@ export interface SheetToastData {
 }
 
 interface SheetToastApi {
-  show: (toast: SheetToastData) => void;
+  /** False when the sheet has already closed, so the caller can fall back. */
+  show: (toast: SheetToastData) => boolean;
   clear: () => void;
 }
 
@@ -88,12 +90,21 @@ export const SheetToastProvider = ({
   open: boolean;
   children: ReactNode;
 }) => {
-  const [toast, setToast] = useState<(SheetToastData & { key: number }) | null>(
-    null,
-  );
+  const [toast, setToast] = useState<SheetToastData | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const show = useCallback((next: SheetToastData) => {
-    // A new toast replaces the last (ruling 7), keyed so its timer restarts.
-    setToast({ ...next, key: Date.now() + Math.random() });
+    // A pill outlives its sheet when a request is still in flight at close;
+    // say so, so it can raise the house toast instead of a silent no-op.
+    if (!mounted.current) return false;
+    // A new toast replaces the last (ruling 7); a fresh object restarts the timer.
+    setToast({ ...next });
+    return true;
   }, []);
   const clear = useCallback(() => setToast(null), []);
 
@@ -125,8 +136,10 @@ const SheetToastHostView = ({
 }) => (
   // Always mounted so assistive tech sees the live region before it speaks.
   <div
+    // One stable region: only `aria-live` changes with the tone, so assistive
+    // tech sees the same node speak rather than a role swap.
+    role="status"
     aria-live={toast?.tone === 'error' ? 'assertive' : 'polite'}
-    role={toast?.tone === 'error' ? 'alert' : 'status'}
     className="pointer-events-none absolute inset-x-4 bottom-6 z-20"
   >
     {toast && (

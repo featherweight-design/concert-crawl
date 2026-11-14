@@ -75,14 +75,18 @@ describe('SheetToast', () => {
 
   it('is an alert for a failure and polite status otherwise', () => {
     const { rerender } = renderSheet({ message: 'Fine.' });
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
     rerender(
       <SheetToastProvider open>
         <Trigger toast={{ message: 'Broke.', tone: 'error' }} />
       </SheetToastProvider>,
     );
     fireEvent.click(screen.getByText('fire'));
-    expect(screen.getByRole('alert')).toHaveTextContent('Broke.');
+    // The same region, now assertive.
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveAttribute('aria-live', 'assertive');
+    expect(region).toHaveTextContent('Broke.');
   });
 
   it('goes away on its own after a few seconds', () => {
