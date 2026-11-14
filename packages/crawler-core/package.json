@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
-    "@clerk/backend": "^2.33.6",
+    "@clerk/backend": "^3.27.0",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/entitlements": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
