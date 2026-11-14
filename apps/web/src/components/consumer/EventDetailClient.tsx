@@ -304,6 +304,8 @@ export function EventDetailBanners({
                   : 'sold-out'
           }
           reportedAt={activePendingReport.createdAt}
+          evidenceMethod={activePendingReport.evidenceMethod}
+          evidenceUrl={activePendingReport.evidenceUrl}
           eventId={event.id}
           reportId={activePendingReport.id}
           reporter={
@@ -340,6 +342,10 @@ export function EventDetailBanners({
       <EvidenceForm
         open={evidenceFormOpen}
         onClose={() => setEvidenceFormOpen(false)}
+        onBack={() => {
+          setEvidenceFormOpen(false);
+          setSawDifferentSheetOpen(true);
+        }}
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
@@ -1614,6 +1620,10 @@ export function EventDetailPriceBlock({
         <EvidenceForm
           open={soldOutEvidenceFormOpen}
           onClose={() => setSoldOutEvidenceFormOpen(false)}
+          onBack={() => {
+            setSoldOutEvidenceFormOpen(false);
+            setSoldOutSawDifferentOpen(true);
+          }}
           reportType={soldOutEvidenceReportType}
           eventId={event.id}
           eventDate={event.date}
@@ -2226,6 +2236,10 @@ export function EventDetailFooter({
       <EvidenceForm
         open={evidenceFormOpen}
         onClose={() => setEvidenceFormOpen(false)}
+        onBack={() => {
+          setEvidenceFormOpen(false);
+          setIsReportSheetOpen(true);
+        }}
         reportType={evidenceFormReportType}
         eventId={event.id}
         eventDate={event.date}
