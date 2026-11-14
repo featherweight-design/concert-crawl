@@ -42,9 +42,9 @@ export const venues = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
-    // Optional admin-set short name (B+ addendum 4, item 4). Read by the
-    // narrow tiles (the Where tiles and the Venues collected grid, wiring still
-    // to come), which fall back to `name` under a 2-line clamp when NULL, and
+    // Optional admin-set short name (B+ addendum 4, item 4). For the narrow
+    // tiles (the Where tiles and the Venues collected grid; a6's tile PR wires
+    // them, none reads it yet), which fall back to `name` under a 2-line clamp when NULL, and
     // by the first-timer guide's venueShortName, which prefers it over its
     // name heuristic. Other surfaces show `name`.
     shortName: text('short_name'),
