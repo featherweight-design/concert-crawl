@@ -7,7 +7,9 @@ import {
   matchesFilter,
   needsByVenue,
   parseNeedsYou,
+  parseRunDates,
   sortWorstFirst,
+  streakDates,
   type VenueListRow,
 } from './venue-list-rules';
 
@@ -247,5 +249,106 @@ describe('venue list rules', () => {
 
   it('says No runs yet for a venue that never crawled', () => {
     expect(latestRunLine(venue('A'), NOW)).toBe('No runs yet');
+  });
+
+  it('reads Unchanged with the date of the last full run, in Mountain Time', () => {
+    expect(
+      lineFor(run({ status: 'skipped', reason: 'page_unchanged' }), {
+        // 1:30 AM on Nov 10 in Denver, still Nov 10 there.
+        lastFullRunAt: '2026-11-10T08:30:00Z',
+      }),
+    ).toBe('Unchanged since Nov 10');
+    expect(
+      lineFor(run({ status: 'skipped', reason: 'page_unchanged' }), {
+        lastFullRunAt: null,
+      }),
+    ).toBe('Unchanged · 3:04 AM');
+  });
+});
+
+describe('the failure streak', () => {
+  // 3 AM nightly runs in Denver.
+  const NIGHTS = [
+    '2026-11-11T10:02:00Z',
+    '2026-11-10T10:01:00Z',
+    '2026-11-09T10:02:00Z',
+  ];
+  const autoPaused = (over: Partial<VenueListRow> = {}) =>
+    latestRunLine(
+      venue('Junkyard', {
+        crawlPausedAt: PAUSED,
+        consecutiveFailures: 3,
+        failureStreak: NIGHTS,
+        latestRun: run({ status: 'skipped', reason: 'crawl_paused' }),
+        ...over,
+      }),
+      NOW,
+    );
+
+  it('reads an auto-paused row as its failures by date, oldest first', () => {
+    expect(autoPaused()).toBe('Failed Nov 9, 10, 11');
+    expect(
+      autoPaused({
+        latestRun: run({ status: 'failed', reason: 'calendar_not_found' }),
+      }),
+    ).toBe('Failed Nov 9, 10, 11');
+  });
+
+  it('says the month once per month, and a day once', () => {
+    expect(
+      streakDates([
+        '2026-11-02T10:00:00Z',
+        '2026-11-01T10:00:00Z',
+        '2026-10-31T10:00:00Z',
+        '2026-11-02T20:00:00Z',
+      ]),
+    ).toBe('Oct 31, Nov 1, 2');
+  });
+
+  it('reads the date in Mountain Time, not UTC', () => {
+    // 1 AM UTC on Nov 10 is 6 PM on Nov 9 in Denver.
+    expect(streakDates(['2026-11-10T01:00:00Z'])).toBe('Nov 9');
+  });
+
+  it('falls back when the dates don’t cover every failure', () => {
+    expect(autoPaused({ failureStreak: NIGHTS.slice(0, 2) })).toBe(
+      'Paused · Nov 9',
+    );
+    expect(autoPaused({ failureStreak: [] })).toBe('Paused · Nov 9');
+  });
+
+  it('is only an auto-paused row’s line', () => {
+    expect(autoPaused({ crawlPauseReason: 'waiting_on_permission' })).toBe(
+      'Paused · Nov 9',
+    );
+    expect(
+      autoPaused({
+        crawlPausedAt: null,
+        latestRun: run({ status: 'failed', reason: 'timeout' }),
+      }),
+    ).toBe('Failed: timed out');
+  });
+});
+
+describe('parseRunDates', () => {
+  it('keeps well-formed run dates', () => {
+    expect(
+      parseRunDates({
+        lastFullRunAt: '2026-11-10T10:01:00.000Z',
+        failureStreak: ['2026-11-11T10:02:00.000Z'],
+      }),
+    ).toEqual({
+      lastFullRunAt: '2026-11-10T10:01:00.000Z',
+      failureStreak: ['2026-11-11T10:02:00.000Z'],
+    });
+  });
+
+  it('reads missing or bad dates as absent', () => {
+    const empty = { lastFullRunAt: null, failureStreak: [] };
+    expect(parseRunDates({})).toEqual(empty);
+    expect(
+      parseRunDates({ lastFullRunAt: 'Nov 10', failureStreak: ['soon'] }),
+    ).toEqual(empty);
+    expect(parseRunDates(null)).toEqual(empty);
   });
 });

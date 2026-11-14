@@ -21,6 +21,10 @@ const runRowSchema = z.object({
   eventsInserted: z.number(),
   durationMs: z.number().nullable(),
   llmCostUsd: z.number().nullable().optional(),
+  // How the run read its shows: 'structured_data', 'llm' or
+  // 'platform:{source}'. Kept as a string, and a bad value reads as none, so
+  // a new reader never drops the row.
+  extractionStrategyUsed: z.string().nullable().optional().catch(null),
   errorMessage: z.string().nullable(),
   createdAt: z.string(),
 });

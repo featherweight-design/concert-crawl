@@ -6,6 +6,7 @@ import type {
 } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { deriveVenueStatusChips } from '@/lib/admin/venue-status';
+import { z } from 'zod';
 import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 
 const COPY = ADMIN_COPY.venuesList;
@@ -86,9 +87,71 @@ export const VISIBLE_ROWS = 10;
 export interface VenueListRow extends VenueWithEventCount {
   latestRun: VenueLatestRun | null;
   needsLook?: boolean;
+  /** When the venue last read its shows (ISO); null when it never has. */
+  lastFullRunAt?: string | null;
+  /** The failed runs of its current streak (ISO), newest first. */
+  failureStreak?: readonly string[];
 }
 
+/**
+ * The boundary check on the list row's run dates, the two fields added after
+ * the row's shape settled. A bad value reads as absent, so the line falls
+ * back to what it said before, never a wrong date.
+ */
+const runDatesSchema = z.object({
+  lastFullRunAt: z.iso.datetime({ offset: true }).nullable().catch(null),
+  failureStreak: z.array(z.iso.datetime({ offset: true })).catch([]),
+});
+
+export const parseRunDates = (
+  raw: unknown,
+): { lastFullRunAt: string | null; failureStreak: string[] } => {
+  const parsed = runDatesSchema.safeParse(raw);
+  return parsed.success
+    ? parsed.data
+    : { lastFullRunAt: null, failureStreak: [] };
+};
+
 const RUN = COPY.latestRun;
+
+const monthDay = (iso: string): { month: string; day: string } => ({
+  month: formatISODate(iso, DENVER_TIME_ZONE, { month: 'short' }),
+  day: formatISODate(iso, DENVER_TIME_ZONE, { day: 'numeric' }),
+});
+
+/**
+ * "Nov 9, 10, 11": dates in Mountain Time, oldest first, the month said once
+ * per month ("Oct 31, Nov 1, 2"). Two runs on one day read as one date.
+ */
+export const streakDates = (isos: readonly string[]): string => {
+  const days: { month: string; day: string }[] = [];
+  for (const iso of [...isos].sort()) {
+    const next = monthDay(iso);
+    const last = days[days.length - 1];
+    if (last?.month === next.month && last.day === next.day) continue;
+    days.push(next);
+  }
+  return RUN.dateList(
+    days.map((date, i) =>
+      i > 0 && days[i - 1]!.month === date.month
+        ? date.day
+        : `${date.month} ${date.day}`,
+    ),
+  );
+};
+
+/**
+ * An auto-paused row's "Failed Nov 9, 10, 11", or null when the streak isn't
+ * all there: the dates must account for every failure on the counter, or the
+ * line would undercount.
+ */
+const failedStreakLine = (venue: VenueListRow): string | null => {
+  const streak = venue.failureStreak ?? [];
+  if (streak.length === 0 || streak.length !== venue.consecutiveFailures) {
+    return null;
+  }
+  return RUN.failedOn(streakDates(streak));
+};
 
 /** Today's runs read as a time ("3:04 AM"), older ones as a date ("Nov 10"). */
 const runWhen = (iso: string, now: Date): string => {
@@ -117,7 +180,11 @@ const errorLine = (run: VenueLatestRun): string => {
   return first ? RUN.withReason(RUN.failed, first) : RUN.failed;
 };
 
-const runLine = (run: VenueLatestRun, now: Date): string => {
+const runLine = (
+  run: VenueLatestRun,
+  now: Date,
+  lastFullRunAt: string | null,
+): string => {
   const when = runWhen(run.at, now);
   const added =
     run.eventsInserted > 0 ? RUN.newShows(run.eventsInserted) : null;
@@ -127,7 +194,15 @@ const runLine = (run: VenueLatestRun, now: Date): string => {
   if (run.status === 'partial') return joined(RUN.partial, when, added);
   switch (run.reason) {
     case 'page_unchanged':
-      return joined(RUN.unchanged, when);
+      // The date of the shows it kept; the run's own time without one.
+      return lastFullRunAt === null
+        ? joined(RUN.unchanged, when)
+        : RUN.unchangedSince(
+            formatISODate(lastFullRunAt, DENVER_TIME_ZONE, {
+              month: 'short',
+              day: 'numeric',
+            }),
+          );
     case 'crawl_paused':
       return RUN.withReason(RUN.skipped, RUN.reasons.crawl_paused);
     case 'robots_disallowed':
@@ -155,14 +230,21 @@ const runLine = (run: VenueLatestRun, now: Date): string => {
  * instead, "Paused · Oct 28", and so does an auto-paused one once its nightly
  * runs are skips for the pause: the failure that paused it is no longer the
  * latest run, and names who paused it when someone did: "Paused by Hugh ·
- * Oct 28" (`A3/03/venues-select-d`). HOLD: the auto-paused row's failure reason,
- * "since Nov 10" on Unchanged and "off-season until Apr 1" have no data yet.
+ * Oct 28" (`A3/03/venues-select-d`). An auto-paused row reads the failures
+ * that paused it, "Failed Nov 9, 10, 11" (`01/venues-list-status-columns`,
+ * addendum-2 item 29), when it has every date; Unchanged reads "Unchanged
+ * since Nov 10" when the last full run is known. HOLD: "off-season until
+ * Apr 1" has no data yet.
  */
 export const latestRunLine = (
   venue: VenueListRow,
   now: Date = new Date(),
 ): string => {
   const chips = deriveVenueStatusChips(venue);
+  if (chips.crawling === 'auto_paused') {
+    const failed = failedStreakLine(venue);
+    if (failed !== null) return failed;
+  }
   const pauseSkip = venue.latestRun?.reason === 'crawl_paused';
   if (
     chips.onSite === 'live' &&
@@ -178,7 +260,9 @@ export const latestRunLine = (
       ? RUN.pausedBy(venue.crawlPausedByName, date)
       : RUN.pausedOn(date);
   }
-  return venue.latestRun === null ? RUN.never : runLine(venue.latestRun, now);
+  return venue.latestRun === null
+    ? RUN.never
+    : runLine(venue.latestRun, now, venue.lastFullRunAt ?? null);
 };
 
 /**

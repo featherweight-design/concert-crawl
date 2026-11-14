@@ -3,6 +3,7 @@ import { apiClient } from '@/lib/api';
 import { VenuesList } from '@/components/admin/venues/VenuesList';
 import {
   parseNeedsYou,
+  parseRunDates,
   type VenueListRow,
 } from '@/components/admin/venues/venue-list-rules';
 
@@ -20,6 +21,9 @@ export default async function AdminVenuesPage() {
   const [venues, needsYou] = await Promise.all([
     apiClient
       .get<VenueListRow[]>('/v1/admin/venues', token)
+      // The run dates are checked here, at the boundary: a bad one reads as
+      // absent, and its line falls back.
+      .then((rows) => rows.map((row) => ({ ...row, ...parseRunDates(row) })))
       .catch((err: unknown) => {
         console.error('[admin/venues] list failed:', err);
         return null;

@@ -116,7 +116,7 @@ export const VenueHeader = ({
   // swallowing a press.
   const [menuBusy, setMenuBusy] = useState(false);
   const off = recrawlOff(venue);
-  const line = headerLine(venue, isPhone);
+  const line = headerLine(venue, isPhone, recrawl.startedAt);
   const busy = recrawl.state === 'queued' || recrawl.state === 'running';
   const busyLabel = recrawl.state === 'running' ? COPY.running : COPY.queued;
   const notice = NOTICE[recrawl.state];
