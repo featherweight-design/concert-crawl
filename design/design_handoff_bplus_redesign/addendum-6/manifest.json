@@ -1,0 +1,298 @@
+[
+ {
+  "section": "15-sheet-overflow",
+  "name": "sheet-short-phone",
+  "title": "Sheets on a short phone · 320 × 568",
+  "note": "Pinned footer, scrolling body, rail fixed.",
+  "w": 1180,
+  "h": 760
+ },
+ {
+  "section": "16-guide-publish",
+  "name": "guide-tab-d",
+  "title": "Guide · changes waiting, Publish guide",
+  "note": "The tab says what’s unpublished and owns the one Publish.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "16-guide-publish",
+  "name": "guide-panel-d",
+  "title": "Guide · the section panel",
+  "note": "Save draft is this section; Publish guide is all of them, and says so.",
+  "w": 1280,
+  "h": 900
+ },
+ {
+  "section": "16-guide-publish",
+  "name": "guide-m",
+  "title": "Guide · phone",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "18-source-reader",
+  "name": "source-advanced-d",
+  "title": "Source › Advanced, open",
+  "note": "Its own full-width card under the columns. Page loading and Reader both keep Automatic.",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "18-source-reader",
+  "name": "source-forced-d",
+  "title": "Source › Advanced, closed, with settings forced",
+  "note": "Each forced setting is a chip, with Back to Automatic.",
+  "w": 1280,
+  "h": 1000
+ },
+ {
+  "section": "18-source-reader",
+  "name": "source-advanced-states",
+  "title": "Source › Advanced, closed states",
+  "note": "",
+  "w": 1280,
+  "h": 300
+ },
+ {
+  "section": "18-source-reader",
+  "name": "source-advanced-m",
+  "title": "Source › Advanced, phone",
+  "note": "Reader as wrapping chips.",
+  "w": 390,
+  "h": 1060
+ },
+ {
+  "section": "19-hidden-header",
+  "name": "event-edit-hidden-header",
+  "title": "Event edit header · a hidden show",
+  "note": "",
+  "w": 1460,
+  "h": 680
+ },
+ {
+  "section": "20-tier-price-check",
+  "name": "tier-price-check",
+  "title": "A price check on one tier",
+  "note": "",
+  "w": 1300,
+  "h": 640
+ },
+ {
+  "section": "21-hidden-tag-contrast",
+  "name": "hidden-tag-contrast",
+  "title": "The Hidden tag · AA contrast",
+  "note": "",
+  "w": 1180,
+  "h": 400
+ },
+ {
+  "section": "22-hidden-venue-menu",
+  "name": "hidden-venue-menu",
+  "title": "Venue menu · a hidden venue keeps Pause and Resume",
+  "note": "",
+  "w": 1200,
+  "h": 760
+ },
+ {
+  "section": "23-checks-resolved-phone",
+  "name": "checks-resolved-m",
+  "title": "Price checks · Resolved, phone",
+  "note": "The desktop table’s rows as a list, with Load more.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "23-checks-resolved-phone",
+  "name": "checks-resolved-detail-m",
+  "title": "Price checks · a resolved check, phone",
+  "note": "Read only, in a sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "32-poster-enlarge",
+  "name": "poster-preview-m",
+  "title": "Posters · the preview, phone",
+  "note": "The real poster, small, with Enlarge.",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "32-poster-enlarge",
+  "name": "poster-enlarged-m",
+  "title": "Posters · enlarged, phone",
+  "note": "Full screen over the page; pinch to zoom; Print stays one tap away.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "33-health-emails",
+  "name": "emails-states",
+  "title": "Health › Emails · three states",
+  "note": "",
+  "w": 1180,
+  "h": 420
+ },
+ {
+  "section": "36-past-shows",
+  "name": "past-d",
+  "title": "Events › Past, desktop",
+  "note": "Venue and status filters as on Upcoming; the row opens the editor.",
+  "w": 1280,
+  "h": 780
+ },
+ {
+  "section": "36-past-shows",
+  "name": "past-status-menu-d",
+  "title": "Events › Past · the status filter",
+  "note": "Past statuses only.",
+  "w": 1280,
+  "h": 780
+ },
+ {
+  "section": "36-past-shows",
+  "name": "past-m",
+  "title": "Events › Past, phone",
+  "note": "",
+  "w": 390,
+  "h": 900
+ },
+ {
+  "section": "36-past-shows",
+  "name": "past-show-m",
+  "title": "A past show, phone",
+  "note": "The desktop board, stacked: banner, Show, Status, Price, a pinned Save.",
+  "w": 390,
+  "h": 1080
+ },
+ {
+  "section": "36-past-shows",
+  "name": "postponed-passed-d",
+  "title": "Postponed, original date passed",
+  "note": "Never PLAYED: it stays Postponed with an amber banner until it gets a date or is cancelled.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "37-activity-log",
+  "name": "log-day-picker-d",
+  "title": "Activity log · the day picker",
+  "note": "Arrows step a day; the chip opens a month. A dot marks days with changes.",
+  "w": 1280,
+  "h": 760
+ },
+ {
+  "section": "37-activity-log",
+  "name": "log-older-day-d",
+  "title": "Activity log · an older day",
+  "note": "The day ends with links to the days either side.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "37-activity-log",
+  "name": "log-filter-menus",
+  "title": "Activity log · Anyone and Any page",
+  "note": "",
+  "w": 1180,
+  "h": 560
+ },
+ {
+  "section": "37-activity-log",
+  "name": "log-m",
+  "title": "Activity log · phone",
+  "note": "Search, the day stepper, then the two filters.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "37-activity-log",
+  "name": "log-filter-sheet-m",
+  "title": "Activity log · a filter, phone",
+  "note": "Each filter chip opens a sheet.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "38-trust-tones",
+  "name": "trust-tones",
+  "title": "Trust tones in every theme",
+  "note": "",
+  "w": 1300,
+  "h": 880
+ },
+ {
+  "section": "40-where-its-sold",
+  "name": "where-its-sold",
+  "title": "Where it’s sold · tiers, resale, and both cards",
+  "note": "",
+  "w": 1260,
+  "h": 740
+ },
+ {
+  "section": "41-crew-coming-up",
+  "name": "crew-coming-up",
+  "title": "Crew page · the Coming up row",
+  "note": "",
+  "w": 1260,
+  "h": 580
+ },
+ {
+  "section": "42-code-ended",
+  "name": "code-ended-way-back",
+  "title": "Invite code ended · the way back",
+  "note": "",
+  "w": 1000,
+  "h": 800
+ },
+ {
+  "section": "43-approve-one",
+  "name": "approve-menu-d",
+  "title": "Submitted prices · Approve in the row menu",
+  "note": "Approve first, in success.",
+  "w": 1280,
+  "h": 860
+ },
+ {
+  "section": "43-approve-one",
+  "name": "approve-busy-d",
+  "title": "Submitted prices · approving",
+  "note": "The row tints; the state reads Approving…",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "43-approve-one",
+  "name": "approve-done-d",
+  "title": "Submitted prices · approved",
+  "note": "The row turns Published, with a toast and Undo.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "43-approve-one",
+  "name": "approve-failed-d",
+  "title": "Submitted prices · didn’t approve",
+  "note": "The row stays Waiting; the toast offers Try again.",
+  "w": 1280,
+  "h": 640
+ },
+ {
+  "section": "43-approve-one",
+  "name": "approve-m",
+  "title": "Submitted prices · Approve, phone",
+  "note": "A waiting row carries Approve and ⋯; the second shows it in flight.",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "section": "43-approve-one",
+  "name": "approve-sheet-m",
+  "title": "Submitted prices · the ⋯ sheet, phone",
+  "note": "",
+  "w": 390,
+  "h": 844
+ }
+]
