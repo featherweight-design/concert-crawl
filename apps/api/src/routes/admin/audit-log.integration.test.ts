@@ -578,16 +578,22 @@ describe('GET /v1/admin/audit-log', () => {
         targetId: event.id,
         createdAt: at(0.25),
       },
+      {
+        actorId: 'system:crawler',
+        action: 'price.submission.replace_listed',
+        targetId: event.id,
+        createdAt: at(0.1),
+      },
     ]);
 
-    // 15 rows over 7 kinds of lookup: the list query plus one per kind,
+    // 16 rows over 7 kinds of lookup: the list query plus one per kind,
     // however many rows share a kind.
     const selectSpy = vi.spyOn(db, 'select');
     const { body } = await list();
     expect(selectSpy).toHaveBeenCalledTimes(1 + 7);
     selectSpy.mockRestore();
 
-    expect(body.data).toHaveLength(15);
+    expect(body.data).toHaveLength(16);
     const byAction = new Map(body.data.map((row) => [row.action, row.target]));
 
     expect(byAction.get('event.drift_duplicates_merged')).toEqual({
@@ -596,6 +602,11 @@ describe('GET /v1/admin/audit-log', () => {
       href: `/admin/venues/${venue.id}`,
     });
     expect(byAction.get('price.pipeline.run')).toEqual({
+      kind: 'price',
+      name: 'Vince Staples',
+      href: '/admin/prices',
+    });
+    expect(byAction.get('price.submission.replace_listed')).toEqual({
       kind: 'price',
       name: 'Vince Staples',
       href: '/admin/prices',

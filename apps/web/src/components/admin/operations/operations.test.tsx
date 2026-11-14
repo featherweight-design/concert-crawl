@@ -738,6 +738,7 @@ const WRITTEN_ACTIONS = [
   'price.promoted',
   'price.pipeline.run',
   'price.submission.admin_add',
+  'price.submission.replace_listed',
   'price.submission.edit_price',
   'price.submission.reject',
   'price.submission.update',
