@@ -246,6 +246,33 @@ describe('ArtistsClient', () => {
     });
   });
 
+  it('notes under the Not artists list what the tab holds, on that tab only', async () => {
+    const FOOTNOTE =
+      'Tours, series, promoters and non-music acts. Their shows keep the venue photo. Not an artist also hides it from To check.';
+    render(<ArtistsClient />);
+    await screen.findByText('Kyle Emerson', { selector: 'div' });
+    expect(screen.queryByText(FOOTNOTE)).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: /Matched/ }));
+    await screen.findByText('Kyle Emerson', { selector: 'div' });
+    expect(screen.queryByText(FOOTNOTE)).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: /Not artists/ }));
+    const footnote = await screen.findByText(FOOTNOTE);
+    expect(footnote.style.fontSize).toBe('12.5px');
+    expect(footnote.style.color).toBe('var(--fg-muted)');
+    expect(footnote.style.margin).toBe('0px');
+  });
+
+  it('leaves the footnote off an empty Not artists tab', async () => {
+    listFor = (query) =>
+      query.get('status') === 'not_an_artist'
+        ? { data: [], total: 0 }
+        : { data: [row()], total: 1 };
+    render(<ArtistsClient />);
+    fireEvent.click(await screen.findByRole('tab', { name: /Not artists/ }));
+    expect(await screen.findByText('Nothing marked')).toBeTruthy();
+    expect(screen.queryByTestId('not-artists-footnote')).toBeNull();
+  });
+
   it('draws a Check row with its counts', async () => {
     render(<ArtistsClient />);
     expect(

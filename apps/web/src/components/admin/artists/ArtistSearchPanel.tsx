@@ -44,12 +44,24 @@ type Results =
       searched: boolean;
     };
 
-/** "Lost Lake · Sun Nov 15 · 2 wrong-artist reports", from the row. */
-const contextLine = (row: AdminArtistRow): string | null => {
-  const parts = [
-    showLine(row),
-    row.openReportCount > 0 ? COPY.reports(row.openReportCount) : null,
-  ].filter((part): part is string => part !== null);
+/**
+ * "Lost Lake · Sun Nov 15 · 2 wrong-artist reports", from the row. The
+ * desktop board names the wrong-photo reports instead ("2 fans say the
+ * current photo is wrong") when there are any; an older API that sends no
+ * count, or a count of 0, keeps the wrong-artist clause. The phone board
+ * draws the wrong-artist clause only.
+ */
+const contextLine = (row: AdminArtistRow, isPhone: boolean): string | null => {
+  const wrongPhoto = isPhone ? 0 : (row.wrongPhotoReportCount ?? 0);
+  const reports =
+    wrongPhoto > 0
+      ? PANEL.wrongPhoto(wrongPhoto)
+      : row.openReportCount > 0
+        ? COPY.reports(row.openReportCount)
+        : null;
+  const parts = [showLine(row), reports].filter(
+    (part): part is string => part !== null,
+  );
   return parts.length > 0 ? parts.join(PANEL.separator) : null;
 };
 
@@ -137,7 +149,7 @@ export const ArtistSearchPanel = ({
     shown.find((each) => each.id === row.spotifyArtistId)?.id ??
     shown[0]?.id ??
     null;
-  const context = contextLine(row);
+  const context = contextLine(row, isPhone);
 
   const body = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
