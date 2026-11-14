@@ -1545,6 +1545,26 @@ export const submissionClosedReason = (
   dbStatus === 'stale' || dbStatus === 'archived' ? dbStatus : undefined;
 
 /**
+ * The archive reason an admin's Edit price writes on the corroborated fan
+ * prices it replaces (Hugh, 2026-11-14: fans who sent the old price aren't
+ * told). Read by `fanStoredStatus`.
+ */
+export const REPLACED_BY_ADMIN_REASON = 'replaced by admin';
+
+/**
+ * The stored status a fan's own list reads a submission as. A price an admin
+ * replaced reads as it did before, corroborated (it was, when they sent it),
+ * so the replacement tells them nothing; every other row reads as stored.
+ */
+export const fanStoredStatus = (
+  dbStatus: string,
+  archivedReason: string | null,
+): string =>
+  dbStatus === 'archived' && archivedReason === REPLACED_BY_ADMIN_REASON
+    ? 'corroborated'
+    : dbStatus;
+
+/**
  * What every surface that shows a submitted-price count reads: the menu (live),
  * the delete sheet (total, since every row goes), the Settings card (total and
  * live) and the Submitted prices page (total, and each filter's own count).

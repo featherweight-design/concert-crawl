@@ -35,6 +35,7 @@ import { loadPlanContext } from '../lib/plan.js';
 import { resolveFounderWindowView } from './billing-founder-window.js';
 import {
   AVATAR_COLORS,
+  fanStoredStatus,
   submissionClosedReason,
   submissionDisplayStatus,
   tallySubmissionCounts,
@@ -91,13 +92,19 @@ const HANDLE_REGEX = /^[a-z0-9_]+$/;
 // takes it from here (see SubmissionCounts), so none can disagree.
 async function loadSubmissionCounts(userId: string): Promise<SubmissionCounts> {
   const rows = await db
-    .select({ status: priceSubmissions.status, value: count() })
+    .select({
+      status: priceSubmissions.status,
+      archivedReason: priceSubmissions.archivedReason,
+      value: count(),
+    })
     .from(priceSubmissions)
     .where(eq(priceSubmissions.userId, userId))
-    .groupBy(priceSubmissions.status);
+    .groupBy(priceSubmissions.status, priceSubmissions.archivedReason);
   return tallySubmissionCounts(
     rows.map((row) => ({
-      status: submissionDisplayStatus(row.status),
+      status: submissionDisplayStatus(
+        fanStoredStatus(row.status, row.archivedReason),
+      ),
       count: row.value,
     })),
   );
@@ -367,6 +374,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     corroborationCount: number;
     submittedAt: Date;
     status: string | null;
+    archivedReason: string | null;
   };
 
   const rows: SubmissionRow[] = await db
@@ -383,6 +391,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
       corroborationCount: priceSubmissions.corroborationCount,
       submittedAt: priceSubmissions.createdAt,
       status: priceSubmissions.status,
+      archivedReason: priceSubmissions.archivedReason,
     })
     .from(priceSubmissions)
     .leftJoin(events, eq(priceSubmissions.eventId, events.id))
@@ -391,7 +400,8 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .orderBy(desc(priceSubmissions.createdAt));
 
   const data: UserSubmissionItem[] = rows.map((row) => {
-    const stored = row.status ?? 'pending';
+    // A price an admin replaced reads as it did before (fanStoredStatus).
+    const stored = fanStoredStatus(row.status ?? 'pending', row.archivedReason);
     // A closed row says why: stale (no second fan in time) or archived (a newer
     // price replaced it). The same helper decides `closed` and its reason.
     const closedReason = submissionClosedReason(stored);
