@@ -161,6 +161,33 @@ describe('<LlmBudgetControl />', () => {
     );
   });
 
+  it('spaces the label, If it runs out row and month rows as the board', () => {
+    mount();
+    open();
+    // Labels sit 6px above their field.
+    expect(screen.getByText('Budget per month').style.marginBottom).toBe('6px');
+    // If it runs out: gap 10, 10px 0, label 13.5/600, sub-line 12px.
+    const label = screen.getByText('If it runs out');
+    expect(label.style.fontSize).toBe('13.5px');
+    expect(label.style.fontWeight).toBe('600');
+    expect(
+      screen.getByText(
+        'Haiku keeps running past the budget, and I get a warning.',
+      ).style.fontSize,
+    ).toBe('12px');
+    const row = screen.getByRole('switch').parentElement;
+    if (!(row instanceof HTMLElement)) throw new Error('no row');
+    expect(row.style.gap).toBe('10px');
+    expect(row.style.padding).toBe('10px 0px');
+    // So far and Last month: 13px text, 8px 0.
+    for (const term of ['This month so far', 'Last month']) {
+      const monthRow = screen.getByText(term).parentElement;
+      if (!(monthRow instanceof HTMLElement)) throw new Error('no month row');
+      expect(monthRow.style.fontSize).toBe('13px');
+      expect(monthRow.style.padding).toBe('8px 0px');
+    }
+  });
+
   it('saves only what changed, closes, and refreshes the page data', async () => {
     mockPatch.mockResolvedValue({});
     mount();

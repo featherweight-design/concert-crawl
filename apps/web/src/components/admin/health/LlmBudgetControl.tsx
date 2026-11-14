@@ -45,7 +45,7 @@ const labelStyle = {
   fontSize: 12.5,
   fontWeight: 600,
   color: 'var(--fg-muted)',
-  marginBottom: 8,
+  marginBottom: 6,
 } satisfies React.CSSProperties;
 
 /** A Warn-me pill, as `03/llm-budget-panel` draws it: h32, 0 12px, 13px. */
@@ -243,21 +243,21 @@ export const LlmBudgetControl = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 16,
-          paddingTop: 18,
+          gap: 10,
+          padding: '10px 0',
           borderTop: '1px solid var(--border)',
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             id="llm-budget-runs-out"
-            style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg)' }}
+            style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--fg)' }}
           >
             {copy.runsOutLabel}
           </div>
           <div
             style={{
-              fontSize: 12.5,
+              fontSize: 12,
               lineHeight: 1.45,
               color: 'var(--fg-muted)',
               marginTop: 2,
@@ -309,9 +309,9 @@ export const LlmBudgetControl = ({
             display: 'flex',
             justifyContent: 'space-between',
             gap: 12,
-            padding: '14px 0',
+            padding: '8px 0',
             borderTop: '1px solid var(--border)',
-            fontSize: 14,
+            fontSize: 13,
           }}
         >
           <dt style={{ color: 'var(--fg-muted)' }}>{copy.soFar}</dt>
@@ -325,9 +325,9 @@ export const LlmBudgetControl = ({
               display: 'flex',
               justifyContent: 'space-between',
               gap: 12,
-              padding: '14px 0',
+              padding: '8px 0',
               borderTop: '1px solid var(--border)',
-              fontSize: 14,
+              fontSize: 13,
             }}
           >
             <dt style={{ color: 'var(--fg-muted)' }}>{copy.lastMonth}</dt>
