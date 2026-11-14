@@ -1,3 +1,23 @@
+# [1.437.0](https://github.com/featherweight-design/concert-crawl/compare/v1.436.0...v1.437.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** drop a price check outcome once the live price was edited or a new check opened ([bfae904](https://github.com/featherweight-design/concert-crawl/commit/bfae9043dee59583d5fdc6991c01d557e43ac286))
+* **api:** refuse with 409 to withdraw a price that a price check references ([275a257](https://github.com/featherweight-design/concert-crawl/commit/275a25728dca94466650467e6cc21346ef37ce25))
+* **api:** tolerate clock skew, bound the outcome read, and ignore fan-won archives ([c21e0b6](https://github.com/featherweight-design/concert-crawl/commit/c21e0b62674ba404a16f77bb99037f4e01ed474a))
+* **web:** address the [#466](https://github.com/featherweight-design/concert-crawl/issues/466) review on the Source tab and Inspect ([e1fe072](https://github.com/featherweight-design/concert-crawl/commit/e1fe072b8125d33f65fa26c34b0bfeffa2c3ccfa))
+* **web:** hidden tag review fixes ([38fac7b](https://github.com/featherweight-design/concert-crawl/commit/38fac7bfeee2ae0f77f52da588cd2d4e8123be91))
+* **web:** keep Event edit's header as built (its Hidden tag is undrawn) ([47d42a2](https://github.com/featherweight-design/concert-crawl/commit/47d42a2c9608d64458d22e9f1027599f73e6d72e))
+* **web:** name the daily crawl's real time on the Source tab ([389fc9c](https://github.com/featherweight-design/concert-crawl/commit/389fc9c2c01b204f01c785fa846170e1d8d82d49))
+
+
+### Features
+
+* **api:** say how the last price check on a live price ended ([822fe7e](https://github.com/featherweight-design/concert-crawl/commit/822fe7edfc5352293da936b53fc5f9d9e294abc6))
+* **web:** bring the admin Source tab and Inspect closer to the V3 boards ([dc1a421](https://github.com/featherweight-design/concert-crawl/commit/dc1a421f3391c544a31def0b890c5f863fe31d2d))
+* **web:** tag hidden shows under the title on admin Events ([36ab4b9](https://github.com/featherweight-design/concert-crawl/commit/36ab4b9f0c33b721f286441a84d70ea1edfc6b91))
+
 # [1.436.0](https://github.com/featherweight-design/concert-crawl/compare/v1.435.0...v1.436.0) (2026-11-14)
 
 
