@@ -52,6 +52,18 @@ describe('/bot', () => {
 
     expect(screen.getByText(BOT_COPY.facts.javascript.value)).toBeTruthy();
   });
+
+  // A public crawl-ethics claim. robots.txt reads and a rendered page's own
+  // subresources go out unpaced, so "between requests" would overclaim.
+  it('states the pacing we actually have', () => {
+    render(<BotPage />);
+
+    const pace = screen.getByText(BOT_COPY.facts.rate.value);
+    expect(pace.textContent).toBe(
+      'We wait at least 3 seconds before each page or API call we request, plus a random jitter so we never arrive on a fixed beat.',
+    );
+    expect(pace.textContent).not.toContain('between requests');
+  });
 });
 
 describe('CopyBlock', () => {
