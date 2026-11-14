@@ -383,7 +383,7 @@ export const PendingCardB = ({
           }}
         >
           <Eyebrow
-            color={isBox ? tok.color : SUBTLE_TEXT}
+            color={isBox ? tok.text : SUBTLE_TEXT}
             size={PRICE_EYEBROW.size}
             tracking={PRICE_EYEBROW.tracking}
           >
@@ -439,7 +439,8 @@ export const PendingCardB = ({
                 fontFamily: 'Inter, system-ui',
                 fontWeight: 600,
                 fontSize: '12px',
-                color: tok.color,
+                // Type: the AA-safe text token, not the raw tone.
+                color: tok.text,
                 letterSpacing: '-0.005em',
               }}
             >
