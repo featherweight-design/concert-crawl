@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { reportFailure } from '@concert-crawl/logger';
 import type { LLMResult, TokenUsage } from '../../types.js';
+import { LLM_EXTRACTION_MODEL } from '../llm-models.js';
 import { cleanHtml, resolveExtractedUrl } from './clean-html.js';
 import { correctMorningTime } from './morning-time-guard.js';
 import { salvageJsonArrayPrefix } from './salvage-json-array.js';
@@ -154,7 +155,8 @@ const ToolInputSchema = z.object({
 
 type NormalizedEventRow = z.infer<typeof NormalizedEventSchema>;
 
-const MODEL = 'claude-haiku-4-5-20251001';
+// Shared with the callers that price this module's usage (llm-models.ts).
+const MODEL = LLM_EXTRACTION_MODEL;
 
 // Output token budget for the save_events tool call. Haiku 4.5 supports
 // up to 64K output. The prior cap of 16384 was hit silently by Red Rocks

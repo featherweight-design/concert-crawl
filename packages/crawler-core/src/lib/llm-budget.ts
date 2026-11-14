@@ -9,17 +9,32 @@
 //   counts toward its three strikes.
 //
 // Month-to-date spend is extraction cost (crawl_runs.llm_cost_usd, what the
-// admin cost tile sums) plus genre-tagging cost (cost_tracking), from the first
-// of the current Mountain Time month. On, the switch also skips adjudication
-// and genre tagging, so no Haiku call is made at all.
+// admin cost tile sums) plus every other LLM service's cost_tracking rows,
+// from the first of the current Mountain Time month. On, the switch also skips
+// adjudication and genre tagging, so no Haiku call is made at all.
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, notInArray, sql } from 'drizzle-orm';
 import { adminSettings, costTracking, crawlRuns, db } from '@concert-crawl/db';
+
+/**
+ * cost_tracking services left out of the LLM budget. An exclude list rather
+ * than an include list, so a new LLM caller counts the day it starts writing
+ * rows instead of only once someone remembers to add it here.
+ */
+export const NON_BUDGET_COST_SERVICES = [
+  // The crawl's extraction call. crawl.ts writes the same dollars to
+  // crawl_runs.llm_cost_usd, which is summed above; counting both would
+  // double it.
+  'claude',
+  // Spotify sync and the weekly digest: zero-dollar observability rows that
+  // carry API call counts. Spotify is not an LLM and its API costs nothing.
+  'spotify',
+] as const;
 
 export interface LlmBudgetStatus {
   /** null when no budget is set: the crawl never stops for it. */
   budgetUsd: number | null;
-  /** LLM spend this Mountain Time month, from crawl_runs. */
+  /** LLM spend this Mountain Time month, from crawl_runs and cost_tracking. */
   spentUsd: number;
   /** "If it runs out" switched on: skip the LLM once the budget is spent. */
   stopWhenSpent: boolean;
@@ -81,21 +96,22 @@ export async function readLlmBudgetStatus(): Promise<LlmBudgetStatus> {
     })
     .from(crawlRuns)
     .where(sql`${crawlRuns.createdAt} >= ${monthStart}`);
-  // Genre tagging is Haiku too, recorded in cost_tracking rather than on the
-  // run. (cost_tracking's 'claude' rows duplicate crawl_runs, so only the
-  // tagger's are added.) Artist adjudication's cost is not recorded anywhere.
-  const [tagging] = await db
+  // Every other LLM caller (genre tagging, the admin generate-about route, and
+  // whatever comes next) records to cost_tracking rather than to a run, so
+  // every service counts unless it is excluded by name. Artist adjudication's
+  // cost is not recorded anywhere.
+  const [otherLlm] = await db
     .select({
       spentUsd: sql<number>`coalesce(sum(${costTracking.costUsd}), 0)`,
     })
     .from(costTracking)
     .where(
       and(
-        eq(costTracking.service, 'genre-tagger'),
+        notInArray(costTracking.service, [...NON_BUDGET_COST_SERVICES]),
         sql`${costTracking.recordedAt} >= ${monthStart}`,
       ),
     );
   const spentUsd =
-    Number(extraction?.spentUsd ?? 0) + Number(tagging?.spentUsd ?? 0);
+    Number(extraction?.spentUsd ?? 0) + Number(otherLlm?.spentUsd ?? 0);
   return { budgetUsd, spentUsd, stopWhenSpent };
 }

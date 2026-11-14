@@ -37,6 +37,7 @@ import { RobotsDisallowedError } from './lib/robots-fetch.js';
 import { extractJsonLd } from './lib/extractors/json-ld.js';
 import { extractTicketure } from './lib/extractors/ticketure.js';
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
+import { LLM_EXTRACTION_MODEL } from './lib/llm-models.js';
 import {
   LlmBudgetSpentError,
   llmBudgetVerdict,
@@ -1827,7 +1828,9 @@ export async function crawlVenue(
     }
 
     const durationMs = Date.now() - startedAt;
-    const llmCostUsd = tokenUsage ? calculateCost(tokenUsage) : null;
+    const llmCostUsd = tokenUsage
+      ? calculateCost(tokenUsage, LLM_EXTRACTION_MODEL)
+      : null;
 
     // A crawl that fetched the page but came away with nothing is not a
     // success — it's "we learned nothing". Recording it as 'success' is how

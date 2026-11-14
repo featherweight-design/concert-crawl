@@ -9,7 +9,8 @@ export {
   extractWithLlm,
   IS_CONCERT_RULES,
 } from './lib/extractors/llm.js';
-export { calculateCost } from './lib/cost.js';
+export { calculateCost, MODEL_RATES, type PricedModelId } from './lib/cost.js';
+export { LLM_EXTRACTION_MODEL } from './lib/llm-models.js';
 export {
   canonicalizeArtist,
   canonicalizeSupporting,

@@ -1,18 +1,66 @@
 import type { TokenUsage } from '../types.js';
 
-// Haiku pricing sourced from Anthropic pricing page at time of implementation.
-// If pricing changes, update these constants manually — historical cost_tracking
-// rows are not retroactively updated.
-const INPUT_COST_PER_TOKEN = 0.8 / 1_000_000;
-const OUTPUT_COST_PER_TOKEN = 4.0 / 1_000_000;
-const CACHE_READ_COST_PER_TOKEN = 0.08 / 1_000_000;
-const CACHE_WRITE_COST_PER_TOKEN = 1.0 / 1_000_000;
+// Per-token rates for every Claude model id this repo calls, keyed by the exact
+// id the call sends. Source: the claude-api skill's pricing (2026-11-03 cache):
+// Claude Haiku 4.5 is $1 input / $5 output per million tokens; cache reads are
+// 0.1x input and 5-minute cache writes 1.25x input. Every call here caches with
+// `cache_control: { type: 'ephemeral' }`, the 5-minute TTL, so the 1.25x write
+// rate applies (a 1-hour TTL would be 2x and need its own entry).
+//
+// Rows written before this table existed were priced at fixed Haiku 3.5 rates
+// ($0.80 in, $4 out, $0.08 cache read, $1.00 cache write per million) even
+// though the calls were Haiku 4.5, so those cost_tracking rows and
+// crawl_runs.llm_cost_usd values understate spend. They are not rewritten.
+// When a rate changes, update it here; history stays at the rate it was
+// written with.
+const perMillion = (usd: number): number => usd / 1_000_000;
 
-export function calculateCost(usage: TokenUsage): number {
+interface ModelRates {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+const HAIKU_4_5_RATES: ModelRates = {
+  input: perMillion(1),
+  output: perMillion(5),
+  cacheRead: perMillion(0.1),
+  cacheWrite: perMillion(1.25),
+};
+
+export const MODEL_RATES = {
+  // The alias (the admin generate-about route) and the dated snapshot it
+  // points to (the crawler's extractor, adjudicator and genre tagger).
+  'claude-haiku-4-5': HAIKU_4_5_RATES,
+  'claude-haiku-4-5-20251001': HAIKU_4_5_RATES,
+} as const satisfies Record<string, ModelRates>;
+
+export type PricedModelId = keyof typeof MODEL_RATES;
+
+const isPricedModel = (model: string): model is PricedModelId =>
+  Object.hasOwn(MODEL_RATES, model);
+
+/**
+ * The dollar cost of one call's usage at `model`'s rates.
+ *
+ * An unpriced model throws rather than pricing at zero or at another model's
+ * rate: either would quietly understate spend, which is the defect this table
+ * fixes. The parameter type already rejects an unpriced id at compile time
+ * for every caller passing its call's model constant, so the throw only fires
+ * for a string that bypassed the type.
+ */
+export function calculateCost(usage: TokenUsage, model: PricedModelId): number {
+  if (!isPricedModel(model)) {
+    throw new Error(
+      `No rates for model "${String(model)}": add it to MODEL_RATES in cost.ts`,
+    );
+  }
+  const rates = MODEL_RATES[model];
   return (
-    usage.inputTokens * INPUT_COST_PER_TOKEN +
-    usage.outputTokens * OUTPUT_COST_PER_TOKEN +
-    usage.cacheReadTokens * CACHE_READ_COST_PER_TOKEN +
-    usage.cacheWriteTokens * CACHE_WRITE_COST_PER_TOKEN
+    usage.inputTokens * rates.input +
+    usage.outputTokens * rates.output +
+    usage.cacheReadTokens * rates.cacheRead +
+    usage.cacheWriteTokens * rates.cacheWrite
   );
 }
