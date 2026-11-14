@@ -38,6 +38,11 @@ import { EventDetailCtaBlock } from '@/components/consumer/going';
 import { CrewGoingZone } from '@/components/consumer/crews';
 import { GenreChips } from '@/components/consumer/GenreChips';
 import {
+  WhereItsSoldAnchors,
+  WhereItsSoldCard,
+} from '@/components/consumer/where-its-sold/WhereItsSoldCard';
+import { buildWhereItsSoldRows } from '@/components/consumer/where-its-sold/rows';
+import {
   EventDetailBanners,
   EventDetailPriceBlock,
   EventDetailFooter,
@@ -225,6 +230,8 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
   // then one CTA (refund info, or Watching for the new date).
   const leadsWithStatus =
     event.status === 'cancelled' || event.status === 'postponed';
+  // Where it's sold (B+ TS3): empty, so no card, below two sellers.
+  const sellerRows = buildWhereItsSoldRows(event);
   const statusBanners = (
     <EventDetailBanners
       event={event}
@@ -465,11 +472,19 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
               when no Phase 8.5 override applies. */}
           {!leadsWithStatus && (
             <div className="mt-4">
+              {/* Each Where it's sold row's › lands here, on the price card. */}
+              <WhereItsSoldAnchors rows={sellerRows} />
               <EventDetailPriceBlock
                 event={event}
                 reports={reports}
                 currentUserId={userId ?? null}
               />
+            </div>
+          )}
+
+          {!leadsWithStatus && sellerRows.length > 0 && (
+            <div className="mt-3">
+              <WhereItsSoldCard rows={sellerRows} />
             </div>
           )}
 

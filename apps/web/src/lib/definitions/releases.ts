@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.72.0-beta',
+    date: 'Nov 14, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'added',
+        text: "When fans have found a show's price at more than one seller, the event page lists each one under Where it's sold, cheapest first.",
+      },
+    ],
+  },
+  {
     version: 'v0.71.0-beta',
     date: 'Nov 13, 2026',
     headline: null,
