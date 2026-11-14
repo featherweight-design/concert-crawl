@@ -64,8 +64,7 @@ describe('page URL and filters', () => {
     ).toEqual({
       ...EMPTY_FILTERS,
       venueIds: [V1, V2],
-      // Moved waits for Hugh (4b#1), so it is not a filter yet.
-      statuses: ['postponed', 'cancelled'],
+      statuses: ['postponed', 'cancelled', 'moved'],
       noPrice: true,
       hidden: true,
     });

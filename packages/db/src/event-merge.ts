@@ -207,12 +207,15 @@ export const mergeEventRows = async ({
       sourceCanonicalArtist: sourceRow.canonicalArtist,
       sourceShowTime: sourceRow.showTime,
     };
+    // `notifyWatchers` is the confirmed-move path (see the admin merge's
+    // schema), so it is also what marks the redirect as a move.
+    const reason = notifyWatchers ? ('moved' as const) : null;
     await tx
       .insert(eventRedirects)
-      .values({ sourceId, targetId, ...sourceKey })
+      .values({ sourceId, targetId, reason, ...sourceKey })
       .onConflictDoUpdate({
         target: eventRedirects.sourceId,
-        set: { targetId, ...sourceKey },
+        set: { targetId, reason, ...sourceKey },
       });
 
     // With every reference moved, deleting the source row is safe — there's

@@ -10,6 +10,7 @@ export type ShowStatusChip =
   | 'soldout'
   | 'postponed'
   | 'cancelled'
+  | 'moved'
   | 'available'
   | 'removed'
   | 'played'
@@ -21,6 +22,7 @@ const STATUS_TONE: Record<ShowStatusChip, ChipTone> = {
   soldout: 'accent',
   postponed: 'warn',
   cancelled: 'danger',
+  moved: 'signal',
   available: 'success',
   removed: 'neutral',
   played: 'neutral',

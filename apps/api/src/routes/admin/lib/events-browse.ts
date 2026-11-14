@@ -14,7 +14,7 @@ import {
   type SQLWrapper,
 } from 'drizzle-orm';
 import { z } from 'zod';
-import { db, events, venues } from '@concert-crawl/db';
+import { db, eventRedirects, events, venues } from '@concert-crawl/db';
 import { idSchema } from '../../../lib/id-schema.js';
 import { containsPattern } from '../../../lib/escape-like.js';
 import { isSoldOutSql } from '../../../lib/sold-out.js';
@@ -23,14 +23,15 @@ import { watchingCountOf, wentCountOf } from './event-counts.js';
 /**
  * The admin Events list (admin 4b-1, `GET /v1/admin/events/list`). One status
  * per show, in the words fans see: Tickets available, Sold out, Postponed,
- * Cancelled, No longer listed, and Played for a past show that went ahead.
- * Hidden is separate (a flag with its reason), never a status.
+ * Cancelled, Moved, No longer listed, and Played for a past show that went
+ * ahead. Hidden is separate (a flag with its reason), never a status.
  */
 export const EVENT_LIST_STATUSES = [
   'available',
   'soldout',
   'postponed',
   'cancelled',
+  'moved',
   'delisted',
   'played',
 ] as const;
@@ -71,7 +72,10 @@ export type EventListQuery = z.infer<typeof eventListQuerySchema>;
  * The fan-facing status of the row in scope, as SQL so the list can filter,
  * count and return the same value. Sold out is a promoted sold-out report
  * (`isSoldOutSql`), as on the fan side; No longer listed is a cancelled row
- * the stale sweep delisted (B+ A5).
+ * the stale sweep delisted (B+ A5). Moved is an upcoming show that absorbed
+ * a listing through a confirmed move (`event_redirects.reason`); a cancelled,
+ * postponed or already-played show keeps its own status, and a moved show
+ * that is also sold out reads as Moved, the newer news for a fan.
  */
 export const eventListStatusSql = (today: string): SQL<EventListStatus> =>
   sql<EventListStatus>`CASE
@@ -79,6 +83,11 @@ export const eventListStatusSql = (today: string): SQL<EventListStatus> =>
     WHEN ${events.status} = 'cancelled' THEN 'cancelled'
     WHEN ${events.status} = 'postponed' THEN 'postponed'
     WHEN ${events.date} < ${today} THEN 'played'
+    WHEN EXISTS (
+      SELECT 1 FROM ${eventRedirects}
+      WHERE ${eventRedirects.targetId} = ${events.id}
+        AND ${eventRedirects.reason} = 'moved'
+    ) THEN 'moved'
     WHEN ${isSoldOutSql()} THEN 'soldout'
     ELSE 'available'
   END`;
