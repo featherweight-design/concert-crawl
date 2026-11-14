@@ -750,6 +750,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   let priceApprovalKind: 'admin' | 'fan' | null = null;
   let priceApprovedAt: string | null = null;
   let priceAlternates: Array<{
+    id: string;
+    tier: Tier;
     vendor: string | null;
     priceMin: string;
     priceMax: string | null;
@@ -1021,7 +1023,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       legacyPrimary.userId !== null
         ? (aggregateHandles.get(legacyPrimary.userId) ?? null)
         : null;
+    // An explicit projection: `id` opens that price's card and `tier` names
+    // it ("GA · …"). Nothing else on the row (submitter, moderation) leaves.
     priceAlternates = otherSubs.map((sub) => ({
+      id: sub.id,
+      tier: sub.tier,
       vendor: sub.vendor,
       priceMin: sub.priceMin,
       priceMax: sub.priceMax,

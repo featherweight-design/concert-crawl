@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import type { PriceSource, SourceCategory } from '@concert-crawl/types';
+import type { PriceSource, SourceCategory, Tier } from '@concert-crawl/types';
 import { SubmitPriceModal } from '@/components/consumer/submit-price';
 import { gradientEdge } from '@/lib/gradient-edge';
 import { formatHandle } from '@/components/consumer/lib/format-handle';
@@ -97,6 +97,9 @@ interface PriceDisplayProps {
   priceApprovalKind?: 'admin' | 'fan' | null;
   priceApprovedAt?: string | null;
   priceAlternates?: Array<{
+    // Optional: an API from before these fields still renders.
+    id?: string;
+    tier?: Tier;
     vendor: string | null;
     priceMin: string;
     priceMax: string | null;
