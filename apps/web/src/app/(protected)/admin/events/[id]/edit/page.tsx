@@ -11,8 +11,9 @@ interface PageProps {
 
 /**
  * Event edit (`06/event-edit`). A missing show (404) or a malformed id (the
- * API's 400) is Not found; any other failure reaches the segment's
- * `error.tsx`, which draws Couldn't load.
+ * API's 400) is Not found; any other failure, a payload that drifted
+ * included, reaches the admin-wide `admin/error.tsx`, which draws Couldn't
+ * load inside the shell.
  */
 export default async function EventEditPage({ params }: PageProps) {
   await requireAdminUser();

@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { ExternalLink, GitMerge } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -20,6 +20,7 @@ import {
   useIsPhone,
   useSnapBack,
 } from '@/components/admin/primitives';
+import { buildBreadcrumbs } from '@/components/admin/shell/breadcrumbs';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import { inputStyle } from '@/components/admin/venues/source/source-parts';
 import { shortDate } from '@/components/admin/venues/overview/overview-rules';
@@ -39,11 +40,9 @@ interface Fields {
   title: string;
 }
 
-const fieldsOf = (detail: EventDetail): Fields => ({ title: detail.title });
-
 /** How many fields differ from what is saved: the Save bar's count. */
 const changedCount = (draft: Fields, saved: Fields): number =>
-  draft.title.trim() !== saved.title ? 1 : 0;
+  draft.title.trim() !== saved.title.trim() ? 1 : 0;
 
 /** The header's 36px buttons, as on the venue header (`06/event-edit`). */
 const BUTTON: CSSProperties = {
@@ -243,12 +242,14 @@ const EventEditMenu = ({
 
 const SaveBar = ({
   count,
+  valid,
   saving,
   phone,
   onDiscard,
   onSave,
 }: {
   count: number;
+  valid: boolean;
   saving: boolean;
   phone: boolean;
   onDiscard: () => void;
@@ -285,7 +286,7 @@ const SaveBar = ({
       variant="gradient"
       data-testid="event-edit-save"
       onClick={onSave}
-      disabled={count === 0 || saving}
+      disabled={count === 0 || !valid || saving}
       fullWidth={phone}
       style={{ height: phone ? 46 : 40, padding: '0 22px', fontSize: 14 }}
     >
@@ -319,13 +320,21 @@ export const EventEdit = ({
     setPageTitle(detail.artist);
     return () => setPageTitle(null);
   }, [detail.artist, setPageTitle]);
+  // The phone's "‹ Events" goes where the desktop breadcrumb's section does,
+  // which follows the Review tab the editor was opened from (#1083).
+  const [section] = buildBreadcrumbs(usePathname(), useSearchParams());
+  const backLabel = section?.label ?? LIST.title;
+  const backHref = section?.href ?? '/admin/events';
   useEffect(() => {
-    setPhoneBack({ label: LIST.title, href: '/admin/events' });
+    setPhoneBack({ label: backLabel, href: backHref });
     return () => setPhoneBack(null);
-  }, [setPhoneBack]);
+  }, [backLabel, backHref, setPhoneBack]);
 
   // Memoised: `useSnapBack` treats a new object as a fresh server value.
-  const saved = useMemo(() => fieldsOf(detail), [detail]);
+  // Keyed on the saved title alone, so a refresh after another save (status,
+  // Hidden, a merge) never throws away a title being typed.
+  const savedTitle = detail.title;
+  const saved = useMemo(() => ({ title: savedTitle }), [savedTitle]);
   const snap = useSnapBack<Fields>(saved, async (next) => {
     const token = await getToken();
     if (!token) throw new Error('signed out');
@@ -336,6 +345,8 @@ export const EventEdit = ({
   // What is saved (after a save, a refresh, or a snap-back) resets the form.
   useEffect(() => setDraft(snap.value), [snap.value]);
   const count = changedCount(draft, snap.value);
+  // The API refuses an empty title, so Save waits for one.
+  const valid = draft.title.trim() !== '';
 
   const venue = detail.venueName ?? COPY.none;
   const method = COPY.crawl.method(detail.extractionStrategy);
@@ -350,6 +361,8 @@ export const EventEdit = ({
           style={{
             ...inputStyle(false),
             height: 40,
+            // 16px on the phone, so focusing the field never zooms the page.
+            ...(phone && { fontSize: 16 }),
             ...(past && { color: 'var(--fg-muted)' }),
           }}
         />
@@ -444,6 +457,7 @@ export const EventEdit = ({
       {!past && (
         <SaveBar
           count={count}
+          valid={valid}
           saving={snap.saving}
           phone={phone}
           onDiscard={() => setDraft(snap.value)}
