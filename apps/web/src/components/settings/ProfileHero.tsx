@@ -40,6 +40,14 @@ const ROLE_BADGE_DOT: Record<RoleBadge, string> = {
   beta: 'var(--signal)',
 };
 
+// The chip's text: the Light-safe text variants where the theme has them
+// (warning, signal), the accent itself otherwise.
+const ROLE_BADGE_TEXT: Record<RoleBadge, string> = {
+  admin: 'var(--price-text-warning)',
+  promoter: 'var(--accent)',
+  beta: 'var(--price-text-signal)',
+};
+
 const ROLE_BADGE_LABEL: Record<RoleBadge, string> = {
   admin: 'Admin',
   promoter: 'Promoter',
@@ -103,16 +111,12 @@ export function ProfileHero({
             gap: 5,
             padding: '3px 7px',
             borderRadius: 4,
-            // The board draws the ADMIN chip with amber text and an amber
-            // hairline (more-s-settings_m). Promoter and Beta are not drawn,
-            // so they keep the neutral chip until Design draws them.
+            // The board draws every role chip in its own colour, text and
+            // hairline (addendum 5 item 9, role-chips-m): ADMIN amber,
+            // PROMOTER accent, BETA signal, the dot matching.
             background: 'var(--surface-2)',
-            border:
-              roleBadge === 'admin'
-                ? `1px solid color-mix(in oklch, ${ROLE_BADGE_DOT.admin} 45%, transparent)`
-                : '1px solid var(--border-strong)',
-            color:
-              roleBadge === 'admin' ? ROLE_BADGE_DOT.admin : 'var(--fg-muted)',
+            border: `1px solid color-mix(in oklch, ${ROLE_BADGE_DOT[roleBadge]} 45%, transparent)`,
+            color: ROLE_BADGE_TEXT[roleBadge],
             fontFamily: 'var(--font-mono)',
             fontSize: 9,
             fontWeight: 700,

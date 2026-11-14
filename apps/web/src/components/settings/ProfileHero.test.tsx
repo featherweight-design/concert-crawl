@@ -36,39 +36,45 @@ const base = {
 const bannerImage = () =>
   (screen.getByTestId('profile-banner') as HTMLElement).style.backgroundImage;
 
-// more-s-settings_m draws the ADMIN chip in amber; Promoter and Beta are not
-// drawn, so they stay neutral until Design draws them.
+// Addendum 5 item 9 (role-chips-m): every role chip is drawn in its own
+// colour, text and hairline, with a matching dot: ADMIN amber, PROMOTER
+// accent, BETA signal. Everyone else gets no chip.
 describe('ProfileHero role chips', () => {
   const chip = (label: string) =>
     screen.getByText(label).closest('span') as HTMLElement;
 
-  it('draws ADMIN with amber text and an amber hairline', () => {
-    render(
-      <ProfileHero
-        {...base}
-        roleBadge="admin"
-        avatarColor="signal"
-        avatarSecondColor={null}
-      />,
-    );
-    expect(chip('Admin').style.color).toBe('var(--warning)');
-    expect(chip('Admin').style.border).toContain('var(--warning)');
-  });
-
   it.each([
-    ['promoter', 'Promoter'],
-    ['beta', 'Beta'],
-  ] as const)('leaves %s neutral', (roleBadge, label) => {
+    ['admin', 'Admin', 'var(--price-text-warning)', 'var(--warning)'],
+    ['promoter', 'Promoter', 'var(--accent)', 'var(--accent)'],
+    ['beta', 'Beta', 'var(--price-text-signal)', 'var(--signal)'],
+  ] as const)(
+    'draws %s in its own colour, text and hairline',
+    (roleBadge, label, text, hairline) => {
+      render(
+        <ProfileHero
+          {...base}
+          roleBadge={roleBadge}
+          avatarColor="signal"
+          avatarSecondColor={null}
+        />,
+      );
+      expect(chip(label).style.color).toBe(text);
+      expect(chip(label).style.border).toContain(hairline);
+    },
+  );
+
+  it('draws no chip for everyone else', () => {
     render(
       <ProfileHero
         {...base}
-        roleBadge={roleBadge}
+        roleBadge={null}
         avatarColor="signal"
         avatarSecondColor={null}
       />,
     );
-    expect(chip(label).style.color).toBe('var(--fg-muted)');
-    expect(chip(label).style.border).toContain('var(--border-strong)');
+    expect(screen.queryByText('Admin')).toBeNull();
+    expect(screen.queryByText('Promoter')).toBeNull();
+    expect(screen.queryByText('Beta')).toBeNull();
   });
 });
 
