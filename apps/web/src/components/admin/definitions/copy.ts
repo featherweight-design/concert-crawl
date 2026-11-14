@@ -1078,6 +1078,8 @@ export const ADMIN_COPY = {
         set: 'Entered by hand.',
         notSet: 'Not set: fans get no Directions link.',
         openInMaps: 'Open the address in Maps',
+        // Drawn as text after the link words (`07/map-pin-states`).
+        externalArrow: ' ↗',
         invalid: 'Enter it as latitude, longitude, like 39.7487, -105.0077.',
       },
       link: {

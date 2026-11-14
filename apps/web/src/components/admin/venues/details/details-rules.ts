@@ -1,5 +1,6 @@
 import type { TicketVendor, Venue } from '@concert-crawl/types';
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+import { googleMapsUrl } from '@/components/consumer/definitions/lib';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const COPY = ADMIN_COPY.venueDetails;
@@ -386,7 +387,8 @@ export const websiteHost = (websiteUrl: string): string =>
 export const addressMapsUrl = (address: string): string | null => {
   const query = address.trim();
   if (query === '') return null;
-  const url = `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+  // The fan page's Directions link builds the same URL.
+  const url = googleMapsUrl(query);
   return isSafeHttpUrl(url) ? url : null;
 };
 
