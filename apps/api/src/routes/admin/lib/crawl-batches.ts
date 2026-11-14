@@ -17,6 +17,7 @@ import type {
   CrawlBatchRun,
   CrawlRunReason,
   CrawlStatus,
+  UsualNightly,
 } from '@concert-crawl/types';
 import { addDays, denverDate } from './needs-you/keys.js';
 
@@ -334,35 +335,32 @@ export const groupCrawlBatches = ({
 /** How many recent nights the Crawl all estimate averages (addendum-3 row 17). */
 export const ESTIMATE_NIGHTS = 7;
 
-export interface UsualNightly {
-  durationMs: number;
-  costUsd: number;
-  nights: number;
-}
-
 /**
  * What a full crawl usually takes: the average span and LLM cost of the last
- * ESTIMATE_NIGHTS nightly batches. Only nights that are over (past the 6 AM
- * deadline) and ran in one wave count: a retried night's span includes the
- * wait for the retry, so it would overstate a crawl. Null with no such night,
- * and the confirm then drops its time and cost line.
+ * ESTIMATE_NIGHTS nightly batches. Only whole nights count:
+ *   - from `firstNight` on, the first night the read window holds in full
+ *     (a window cut mid-night would average a short night);
+ *   - before today, since a night's backup dispatch can land after the 6 AM
+ *     deadline (12:07Z is 6:07 AM MDT), so today may still be one wave short;
+ *   - in one wave: a retried night's span includes the wait for the retry.
+ * Null with no such night, and the confirm then drops its time and cost line.
  */
-export const usualNightly = (input: GroupInput): UsualNightly | null => {
+export const usualNightly = ({
+  firstNight,
+  ...input
+}: GroupInput & { firstNight: string }): UsualNightly | null => {
   const costById = new Map(
     input.runs.map((run) => [run.id, run.llmCostUsd ?? 0]),
   );
   const today = denverDate(input.now);
-  const lastOver =
-    mountainHour(input.now) >= NIGHT_DEADLINE_HOUR_MT
-      ? today
-      : addDays(today, -1);
   const spans = groupCrawlBatches(input)
     .flatMap((batch) =>
       batch.kind === 'nightly' &&
       !batch.didntStart &&
       !batch.retried &&
       batch.night !== null &&
-      batch.night <= lastOver &&
+      batch.night >= firstNight &&
+      batch.night < today &&
       batch.startedAt !== null &&
       batch.endedAt !== null
         ? [
@@ -383,7 +381,8 @@ export const usualNightly = (input: GroupInput): UsualNightly | null => {
     spans.reduce((total, span) => total + pick(span), 0) / spans.length;
   return {
     durationMs: Math.round(average((span) => span.durationMs)),
-    costUsd: average((span) => span.costUsd),
+    // To the cent: the confirm reads "about $0.80".
+    costUsd: Math.round(average((span) => span.costUsd) * 100) / 100,
     nights: spans.length,
   };
 };
