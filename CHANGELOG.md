@@ -1,3 +1,23 @@
+# [1.484.0](https://github.com/featherweight-design/concert-crawl/compare/v1.483.0...v1.484.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** address the feedback API review ([3b07f94](https://github.com/featherweight-design/concert-crawl/commit/3b07f94524a2d2e50d289d8d672fe96fd43b516e))
+* **api:** cap email sends per recipient, per network and per day ([f9a18b7](https://github.com/featherweight-design/concert-crawl/commit/f9a18b7edde13229f9ac8a2439c7bb2ebcc26f37))
+* **api:** one exact daily email count, claimed before the dedupe key ([3ba87ea](https://github.com/featherweight-design/concert-crawl/commit/3ba87ea880f73a1faeeb9a6cf27e8c57df5d3441))
+* **api:** pin the email day's release to its claim, and pass the cap to the crawler ([f4e4997](https://github.com/featherweight-design/concert-crawl/commit/f4e4997e579d51edf1a2ae297025eb80b8fe9ec1))
+* **api:** refuse a NUL in feedback search as a 400 ([4ac0f0f](https://github.com/featherweight-design/concert-crawl/commit/4ac0f0f2e37c28e361444815613686b47ca6a426))
+* **api:** refuse a NUL in feedback search; pin the kind filters ([150bc54](https://github.com/featherweight-design/concert-crawl/commit/150bc54c416d565ef3ac1ae19e360f08d999fcb2))
+* **web:** reset the enlarged poster when its preview unmounts ([4910eb4](https://github.com/featherweight-design/concert-crawl/commit/4910eb4af52b6de8f1468bad73c50b8527be401d))
+
+
+### Features
+
+* **api:** feedback submitter handle, kind filter and counts, Done search ([cea784f](https://github.com/featherweight-design/concert-crawl/commit/cea784f7f6f352909352d649997ce4bb27158566))
+* **web:** enlarge the poster full screen on the phone ([4376a88](https://github.com/featherweight-design/concert-crawl/commit/4376a881fcf2a16b06ade337fb5a08a51ab64527))
+* **web:** sit the pinch hint under the enlarged poster ([38dde83](https://github.com/featherweight-design/concert-crawl/commit/38dde8328f3323ccc4129d480d9addd4042baceb))
+
 # [1.483.0](https://github.com/featherweight-design/concert-crawl/compare/v1.482.0...v1.483.0) (2026-11-14)
 
 
