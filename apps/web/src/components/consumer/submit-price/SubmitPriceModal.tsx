@@ -1481,6 +1481,11 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
           textTransform: 'uppercase',
           fontWeight: 600,
           whiteSpace: 'nowrap',
+          // At 320 the eyebrow gives way (an ellipsis) so the code and the
+          // close button stay clear of it; it was running under the button.
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}
       >
         {eyebrow}
@@ -1497,6 +1502,7 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
           fontWeight: 700,
           // At 320 the eyebrow and code stay on one line (addendum 6 item 15).
           whiteSpace: 'nowrap',
+          flexShrink: 0,
         }}
       >
         {code}
