@@ -20,11 +20,13 @@ import {
   db,
   eventReportConfirms,
   eventReports,
+  events,
   notifications,
 } from '@concert-crawl/db';
 import { ER_POLICY } from '@concert-crawl/types';
 import { and, eq } from 'drizzle-orm';
 import { createApp } from '../app.js';
+import type { DbTransaction } from '../lib/db-executor.js';
 import { todayInDenver } from '../lib/time.js';
 import {
   clearTables,
@@ -319,12 +321,15 @@ describe('Tickets available reports', () => {
 });
 
 /**
- * The past lock on the shared sale writes (clearSoldOut, promoteSoldOutReport):
- * on a show dated before today in Denver, played or still postponed, a fan
- * confirm crossing the threshold promotes nothing and tells nobody, silently,
- * and an admin promote is 409 `past_locked` with no write and no audit row.
+ * The shared sale writes (clearSoldOut, promoteSoldOutReport), decided under
+ * the event's and the report's row locks. On a show dated before today in
+ * Denver, played or still postponed, a fan confirm crossing the threshold
+ * closes the report as moot (`rejected`, "show already played") and tells
+ * nobody, and an admin promote is 409 `past_locked` with no write and no
+ * audit row. A sold-out on a show already sold out closes as moot too, and a
+ * report resolved before the lock is never written over.
  */
-describe('sale reports on a past show', () => {
+describe('sale reports under the shared writes', () => {
   const WATCHER = 'user_past_watcher';
   let eventId: string;
 
@@ -361,27 +366,56 @@ describe('sale reports on a past show', () => {
       .select({
         resolvedAt: eventReports.resolvedAt,
         resolution: eventReports.resolution,
+        adminNote: eventReports.adminNote,
       })
       .from(eventReports)
       .where(eq(eventReports.id, reportId));
     return row;
   };
 
-  const confirmPastThreshold = async (reportId: string) => {
-    const needed = Math.max(
-      ER_POLICY.confirmsRequired,
-      ER_POLICY.confirmsRequiredImminent,
-    );
-    for (let idx = 0; idx < needed; idx++) {
-      setAuth(`user_past_confirmer_${idx}`);
+  const PENDING = { resolvedAt: null, resolution: null, adminNote: null };
+
+  const closedMoot = (adminNote: string) => ({
+    resolvedAt: expect.any(Date),
+    resolution: 'rejected',
+    adminNote,
+  });
+
+  // Every show here is past or weeks away, so none is imminent: the last of
+  // confirmsRequired confirms crosses the threshold and resolves the report.
+  const confirmToThreshold = async (reportId: string) => {
+    for (let idx = 0; idx < ER_POLICY.confirmsRequired; idx++) {
+      setAuth(`user_threshold_confirmer_${idx}`);
       const res = await post(
         `/v1/events/${eventId}/reports/${reportId}/confirm`,
         {},
       );
       expect(res.status).toBe(200);
       const body = (await res.json()) as { data: { resolved: boolean } };
-      expect(body.data.resolved).toBe(false);
+      expect(body.data.resolved).toBe(idx === ER_POLICY.confirmsRequired - 1);
     }
+  };
+
+  // Holds the event's row lock in a second connection while `during` runs,
+  // so the request it starts blocks on the lock and decides only after this
+  // commits, as a concurrent admin edit would make it.
+  const withEventLocked = async <T>(
+    start: () => Promise<T>,
+    during: (tx: DbTransaction) => Promise<unknown>,
+  ): Promise<T> => {
+    let pending: Promise<T> | undefined;
+    await db.transaction(async (tx) => {
+      await tx
+        .select({ id: events.id })
+        .from(events)
+        .where(eq(events.id, eventId))
+        .for('update');
+      pending = start();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await during(tx);
+    });
+    if (!pending) throw new Error('the request was never sent');
+    return pending;
   };
 
   const adminPromote = (reportId: string) => {
@@ -402,35 +436,33 @@ describe('sale reports on a past show', () => {
   const noticesSent = () => db.select().from(notifications);
   const auditRows = () => db.select().from(auditLog);
 
-  it('leaves a fan Tickets available pending and the sold-out live when confirms cross the threshold', async () => {
+  it('closes a fan Tickets available on a past show as moot at the threshold, leaving the sold-out live', async () => {
     await seedShow({ date: daysFromToday(-7) });
     const soldOut = await promoteSoldOut();
     const report = await seedEventReport(eventId, 'user_reporter', {
       status: 'available',
     });
 
-    await confirmPastThreshold(report.id);
+    await confirmToThreshold(report.id);
 
-    expect(await reportState(report.id)).toEqual({
-      resolvedAt: null,
-      resolution: null,
-    });
+    expect(await reportState(report.id)).toEqual(
+      closedMoot('show already played'),
+    );
     expect((await reportState(soldOut.id))?.resolution).toBe('promoted');
     expect(await noticesSent()).toEqual([]);
   });
 
-  it('leaves a fan sold-out report pending on a postponed past show when confirms cross the threshold', async () => {
+  it('closes a fan sold-out report on a postponed past show as moot at the threshold', async () => {
     await seedShow({ date: daysFromToday(-6), status: 'postponed' });
     const report = await seedEventReport(eventId, 'user_reporter', {
       status: 'sold-out',
     });
 
-    await confirmPastThreshold(report.id);
+    await confirmToThreshold(report.id);
 
-    expect(await reportState(report.id)).toEqual({
-      resolvedAt: null,
-      resolution: null,
-    });
+    expect(await reportState(report.id)).toEqual(
+      closedMoot('show already played'),
+    );
     expect(await noticesSent()).toEqual([]);
   });
 
@@ -445,10 +477,7 @@ describe('sale reports on a past show', () => {
 
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
-    expect(await reportState(report.id)).toEqual({
-      resolvedAt: null,
-      resolution: null,
-    });
+    expect(await reportState(report.id)).toEqual(PENDING);
     expect((await reportState(soldOut.id))?.resolution).toBe('promoted');
     expect(await auditRows()).toEqual([]);
     expect(await noticesSent()).toEqual([]);
@@ -472,10 +501,7 @@ describe('sale reports on a past show', () => {
         success: false,
         error: 'past_locked',
       });
-      expect(await reportState(report.id)).toEqual({
-        resolvedAt: null,
-        resolution: null,
-      });
+      expect(await reportState(report.id)).toEqual(PENDING);
       expect(await auditRows()).toEqual([]);
       expect(await noticesSent()).toEqual([]);
     }
@@ -496,5 +522,112 @@ describe('sale reports on a past show', () => {
       .from(notifications)
       .where(eq(notifications.category, 'watch.soldout'));
     expect(sent.map((row) => row.userId)).toEqual([WATCHER]);
+  });
+
+  describe('a second sold-out on a show already sold out', () => {
+    const markSoldOut = () => {
+      authState.current = {
+        userId: 'admin_user',
+        sessionClaims: { metadata: { role: 'admin' } },
+      };
+      return post(`/v1/admin/events/${eventId}/sold-out`, {});
+    };
+
+    const soldOutNotices = () =>
+      db
+        .select({ userId: notifications.userId })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.soldout'));
+
+    beforeEach(async () => {
+      await seedShow({ date: daysFromToday(30) });
+      expect((await markSoldOut()).status).toBe(201);
+      expect(await soldOutNotices()).toEqual([{ userId: WATCHER }]);
+    });
+
+    it('closes a fan report reaching the threshold as moot, with no 500 and no second notice', async () => {
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'sold-out',
+      });
+
+      await confirmToThreshold(report.id);
+
+      expect(await reportState(report.id)).toEqual(
+        closedMoot('already sold out'),
+      );
+      expect(await isSoldOut(eventId)).toBe(true);
+      expect(await soldOutNotices()).toEqual([{ userId: WATCHER }]);
+    });
+
+    it('closes it as moot when an admin promotes it, with no second notice', async () => {
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'sold-out',
+      });
+
+      const res = await adminPromote(report.id);
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { resolution: string } };
+      expect(body.data.resolution).toBe('rejected');
+      expect(await reportState(report.id)).toEqual(
+        closedMoot('already sold out'),
+      );
+      expect(await isSoldOut(eventId)).toBe(true);
+      expect(await soldOutNotices()).toEqual([{ userId: WATCHER }]);
+      const [audit] = await db
+        .select({ metadata: auditLog.metadata })
+        .from(auditLog)
+        .where(eq(auditLog.action, 'event.report.resolve'));
+      expect(audit?.metadata).toMatchObject({ closedAsMoot: true });
+    });
+  });
+
+  describe('a report rejected before the locked write', () => {
+    const reject = async (tx: DbTransaction, reportId: string) =>
+      tx
+        .update(eventReports)
+        .set({ resolvedAt: new Date(), resolution: 'rejected' })
+        .where(eq(eventReports.id, reportId));
+
+    it('is not flipped to promoted by an admin promote of a sold-out report', async () => {
+      await seedShow({ date: daysFromToday(30) });
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'sold-out',
+      });
+
+      const res = await withEventLocked(
+        () => adminPromote(report.id),
+        (tx) => reject(tx, report.id),
+      );
+
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'Report already resolved',
+      });
+      expect((await reportState(report.id))?.resolution).toBe('rejected');
+      expect(await isSoldOut(eventId)).toBe(false);
+      expect(await auditRows()).toEqual([]);
+      expect(await noticesSent()).toEqual([]);
+    });
+
+    it('does not clear the sold-out on an admin promote of a Tickets available', async () => {
+      await seedShow({ date: daysFromToday(30) });
+      const soldOut = await promoteSoldOut();
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'available',
+      });
+
+      const res = await withEventLocked(
+        () => adminPromote(report.id),
+        (tx) => reject(tx, report.id),
+      );
+
+      expect(res.status).toBe(400);
+      expect((await reportState(report.id))?.resolution).toBe('rejected');
+      expect((await reportState(soldOut.id))?.resolution).toBe('promoted');
+      expect(await auditRows()).toEqual([]);
+      expect(await noticesSent()).toEqual([]);
+    });
   });
 });

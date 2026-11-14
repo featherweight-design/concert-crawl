@@ -531,6 +531,45 @@ describe('POST /v1/admin/events/:id/sold-out and /available — past_locked', ()
     }
   });
 
+  // The check runs under the row lock: a request that waits on it behind an
+  // edit moving the show into the past judges by the moved date.
+  it('refuses both writes when the date moves into the past while they wait on the row lock', async () => {
+    for (const action of ['sold-out', 'available'] as const) {
+      await clearTables();
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, { date: futureDate(30) });
+      if (action === 'available') {
+        await seedEventReport(event.id, 'user_reporter', {
+          status: 'sold-out',
+          resolution: 'promoted',
+          resolvedAt: new Date(),
+        });
+      }
+      const before = await reportsFor(event.id);
+      let pending: Promise<Response> | undefined;
+
+      await testDb.transaction(async (tx) => {
+        await tx
+          .update(events)
+          .set({ date: futureDate(-7) })
+          .where(eq(events.id, event.id));
+        // A second connection: the API's own pool, blocked on the row lock.
+        pending = post(event.id, action);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      });
+      if (!pending) throw new Error('the request was never sent');
+      const res = await pending;
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'past_locked',
+      });
+      expect(await reportsFor(event.id)).toEqual(before);
+      expect(await auditRowsFor(event.id)).toEqual([]);
+    }
+  });
+
   it('still marks and clears an upcoming show, auditing each', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: futureDate(30) });

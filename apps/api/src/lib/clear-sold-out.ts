@@ -10,7 +10,13 @@ import {
 import { fanoutWatchNotification } from '@concert-crawl/push';
 import type { DbTransaction } from './db-executor.js';
 import { apiLogger } from './logger.js';
-import { lockEventForSaleWrite } from './past-lock.js';
+import { lockEventSaleState, PastLockedError } from './past-lock.js';
+import {
+  closeReportAsMoot,
+  lockPendingReport,
+  MOOT_NOTE,
+  type OnPastShow,
+} from './sale-report.js';
 import { activeSoldOutWhere } from './sold-out.js';
 
 /**
@@ -28,32 +34,55 @@ import { activeSoldOutWhere } from './sold-out.js';
  * it: it said what just happened, and left open it would keep taking confirms
  * and could later clear a different, newer sold-out.
  *
- * The writes run in one transaction under the event's row lock, and a past
- * show (lockEventForSaleWrite) throws PastLockedError before any of them,
- * so nothing changes and nobody hears. A missing event throws
- * EventNotFoundError. The watchers hear only after the clear commits.
- *
- * Returns the cleared sold-out report ids. Empty means nothing was sold out,
- * so nothing changed and nobody is notified.
+ * The writes run in one transaction under the event's row lock (and, for a
+ * report, the report's), so nothing changes and nobody hears unless the clear
+ * happens. A missing event throws EventNotFoundError. A past show throws
+ * PastLockedError, except for a report with `onPast: 'close'`, which closes
+ * as moot. A report resolved before the lock is left alone. The watchers hear
+ * only after the clear commits.
  */
 export async function clearSoldOut(
   eventId: string,
   note: string,
   options: ClearSoldOutOptions = {},
-): Promise<string[]> {
-  const ids = await db.transaction((tx) =>
+): Promise<ClearSoldOutResult> {
+  const result = await db.transaction((tx) =>
     clearSoldOutRows(tx, eventId, note, options),
   );
-  if (ids.length > 0) await notifyBackOnSale(eventId, ids);
-  return ids;
+  if (result.cleared.length > 0) {
+    await notifyBackOnSale(eventId, result.cleared);
+  }
+  return result;
 }
 
 export interface ClearSoldOutOptions {
+  /** The Tickets available report asking for the clear, when one is. */
+  report?: {
+    id: string;
+    /**
+     * The report's filing time: only a sold-out already live then is
+     * cleared, so a report can never clear a newer sold-out it never saw.
+     */
+    filedAt: Date;
+    /**
+     * 'refuse' (an admin promote): a past show throws PastLockedError, and
+     * nothing to clear writes nothing. 'close' (the fan threshold): either
+     * closes the report as moot.
+     */
+    onPast: OnPastShow;
+  };
+}
+
+export interface ClearSoldOutResult {
   /**
-   * A fan report's filing time: only a sold-out already live then is
-   * cleared, so a report can never clear a newer sold-out it never saw.
+   * 'cleared': the sold-out ended. 'nothing_to_clear': no live sold-out, and
+   * nothing written. 'moot': the report closed as `rejected`, changing
+   * nothing else. 'already_resolved': the report was resolved before the
+   * lock, so nothing was written.
    */
-  filedAt?: Date;
+  outcome: 'cleared' | 'nothing_to_clear' | 'moot' | 'already_resolved';
+  /** The cleared sold-out report ids, sorted; empty unless 'cleared'. */
+  cleared: string[];
 }
 
 /** The writes of `clearSoldOut`, past-locked, inside the caller's transaction. */
@@ -62,23 +91,42 @@ async function clearSoldOutRows(
   eventId: string,
   note: string,
   options: ClearSoldOutOptions,
-): Promise<string[]> {
-  await lockEventForSaleWrite(tx, eventId);
+): Promise<ClearSoldOutResult> {
+  const { report } = options;
+  const state = await lockEventSaleState(tx, eventId);
+  if (report && !(await lockPendingReport(tx, report.id))) {
+    return { outcome: 'already_resolved', cleared: [] };
+  }
+  const closeOrLeave = async (
+    mootNote: string,
+    leave: ClearSoldOutResult['outcome'],
+  ): Promise<ClearSoldOutResult> => {
+    if (report?.onPast !== 'close') return { outcome: leave, cleared: [] };
+    await closeReportAsMoot(tx, report.id, mootNote);
+    return { outcome: 'moot', cleared: [] };
+  };
+
+  if (state === 'past') {
+    if (report?.onPast !== 'close') throw new PastLockedError();
+    return closeOrLeave(MOOT_NOTE.pastShow, 'moot');
+  }
 
   const cleared = await tx
     .update(eventReports)
     .set({ resolution: 'rejected', adminNote: note })
     .where(
-      options.filedAt
+      report
         ? and(
             activeSoldOutWhere(eventId),
-            lte(eventReports.resolvedAt, options.filedAt),
+            lte(eventReports.resolvedAt, report.filedAt),
           )
         : activeSoldOutWhere(eventId),
     )
     .returning({ id: eventReports.id });
 
-  if (cleared.length === 0) return [];
+  if (cleared.length === 0) {
+    return closeOrLeave(MOOT_NOTE.nothingToClear, 'nothing_to_clear');
+  }
 
   await tx
     .update(eventReports)
@@ -91,7 +139,7 @@ async function clearSoldOutRows(
       ),
     );
 
-  return cleared.map((row) => row.id).sort();
+  return { outcome: 'cleared', cleared: cleared.map((row) => row.id).sort() };
 }
 
 /** Tell a show's watchers it is back on sale, after the clear has committed. */

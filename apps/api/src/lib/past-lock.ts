@@ -1,12 +1,16 @@
-// The past lock (admin 4a-3b): a show dated before today in Denver is
-// history, so its sale state and most of its fields stay as they were. One
-// definition of "past", one error and one 409 body for every path that
-// enforces it: the admin PATCH, the admin sold-out and available endpoints,
-// the admin report resolve and the fan confirm threshold.
+// The past lock on sale state (admin 4a-3b): a show dated before today in
+// Denver is history, so whether it is sold out stays as it was. This gate
+// covers the sale-state writes, marking or promoting sold out and clearing it
+// (Tickets available), on every path: the admin sold-out and available
+// endpoints, the admin report resolve and the fan confirm threshold.
+// Cancelled and postponed report promotions are NOT covered yet; that
+// follow-up waits on a ruling. The admin PATCH has its own field-level lock
+// (routes/admin/lib/event-update.ts) and shares this file's definitions.
 
 import { eq } from 'drizzle-orm';
 import { events } from '@concert-crawl/db';
 import type { DbTransaction } from './db-executor.js';
+import { apiLogger } from './logger.js';
 import { todayInDenver } from './time.js';
 
 /** A write the past lock refuses. Thrown inside a transaction, it rolls back. */
@@ -39,20 +43,20 @@ export const isPastShow = (date: string, today: string): boolean =>
   date < today;
 
 /**
- * Lock the event row FOR UPDATE and refuse a past show, before any sale-state
- * write (marking or promoting sold out, clearing it). Today is read after the
- * lock is taken, so a request that waited on the lock across midnight judges
- * by the day it writes on. Throws EventNotFoundError for a missing event and
- * PastLockedError for a past one; the caller's transaction then rolls back.
+ * Lock the event row FOR UPDATE and say whether the show is past, before a
+ * sale-state write. Today is read after the lock is taken, so a request that
+ * waited on the lock across midnight, or behind a PATCH that moved the date,
+ * judges by the row and the day it writes on. Throws EventNotFoundError for a
+ * missing event.
  *
- * A postponed show whose date has passed is refused too: it "stays Postponed
+ * A postponed show whose date has passed is past too: it "stays Postponed
  * until you set the new date or mark it cancelled" (addendum 6), so it has no
  * live sale to change until the PATCH reschedules it.
  */
-export const lockEventForSaleWrite = async (
+export const lockEventSaleState = async (
   tx: DbTransaction,
   eventId: string,
-): Promise<void> => {
+): Promise<'open' | 'past'> => {
   const [row] = await tx
     .select({ date: events.date })
     .from(events)
@@ -60,5 +64,40 @@ export const lockEventForSaleWrite = async (
     .for('update')
     .limit(1);
   if (!row) throw new EventNotFoundError();
-  if (isPastShow(row.date, todayInDenver())) throw new PastLockedError();
+  return isPastShow(row.date, todayInDenver()) ? 'past' : 'open';
+};
+
+/**
+ * lockEventSaleState for a write that refuses a past show outright: throws
+ * PastLockedError, and the caller's transaction rolls back.
+ */
+export const lockEventForSaleWrite = async (
+  tx: DbTransaction,
+  eventId: string,
+): Promise<void> => {
+  if ((await lockEventSaleState(tx, eventId)) === 'past') {
+    throw new PastLockedError();
+  }
+};
+
+/**
+ * Log an error caught from a sale-state write and classify it: 'past' and
+ * 'missing' are the gate's refusals (logged at warn), null is anything else
+ * (logged at error), which the caller rethrows.
+ */
+export const classifySaleRefusal = (
+  err: unknown,
+  context: { msg: string; eventId: string; reportId?: string },
+): 'past' | 'missing' | null => {
+  const { msg, ...ids } = context;
+  if (err instanceof PastLockedError) {
+    apiLogger.warn(ids, `${msg}: refused, past show`);
+    return 'past';
+  }
+  if (err instanceof EventNotFoundError) {
+    apiLogger.warn(ids, `${msg}: event not found`);
+    return 'missing';
+  }
+  apiLogger.error({ err, ...ids }, `${msg}: failed`);
+  return null;
 };
