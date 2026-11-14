@@ -226,6 +226,67 @@ describe('POST /v1/admin/prices/pipeline/:eventId', () => {
   });
 });
 
+// Addendum 6 #43: Approve one waiting price from Submitted prices.
+describe('POST /v1/admin/prices/submissions/:id/approve', () => {
+  beforeEach(() => {
+    setAdminAuth();
+    return clearTables();
+  });
+
+  const approve = (id: string) =>
+    app.request(`/v1/admin/prices/submissions/${id}/approve`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+    });
+
+  const statusOf = async (id: string) => {
+    const [row] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, id));
+    return row?.status;
+  };
+
+  it('publishes a waiting price and credits its fan', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const submission = await seedPriceSubmission(event.id, 'user_approve');
+
+    const res = await approve(submission.id);
+    expect(res.status).toBe(200);
+    expect(await statusOf(submission.id)).toBe('corroborated');
+    const [cred] = await testDb
+      .select({ priceCredScore: userCred.priceCredScore })
+      .from(userCred)
+      .where(eq(userCred.userId, 'user_approve'));
+    expect(cred?.priceCredScore).toBe(1);
+  });
+
+  // A stale screen never overturns a decision made since it loaded.
+  it.each(['archived', 'corroborated', 'disputed', 'stale'] as const)(
+    'refuses a %s price as no longer waiting, and leaves it',
+    async (status) => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id);
+      const submission = await seedPriceSubmission(event.id, 'user_late', {
+        status,
+      });
+
+      const res = await approve(submission.id);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ code: 'not_waiting' });
+      expect(await statusOf(submission.id)).toBe(status);
+    },
+  );
+
+  it('refuses an id that is not a uuid, and a missing price', async () => {
+    expect((await approve('nope')).status).toBe(400);
+    expect((await approve('00000000-0000-4000-8000-000000000000')).status).toBe(
+      404,
+    );
+  });
+});
+
 describe('PATCH /v1/admin/prices/submissions/:id', () => {
   beforeEach(() => {
     setAdminAuth();
@@ -259,7 +320,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     expect(cred?.priceCredScore).toBe(1);
   });
 
-  it('refuses a price that is no longer waiting, and awards nothing', async () => {
+  it('does not double-increment when status is already corroborated', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id);
     const userId = 'user_no_double';
@@ -275,8 +336,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         body: JSON.stringify({ status: 'corroborated' }),
       },
     );
-    expect(res.status).toBe(409);
-    expect(await res.json()).toMatchObject({ code: 'not_waiting' });
+    expect(res.status).toBe(200);
 
     // No transition occurred, so no award ran and no user_cred row exists —
     // which the read path treats as 0.
@@ -286,32 +346,6 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       .where(eq(userCred.userId, userId))
       .limit(1);
     expect(cred?.priceCredScore ?? 0).toBe(0);
-  });
-
-  // Regression (addendum 6 #43): a price another admin had rejected could be
-  // approved and published from a stale screen.
-  it('never approves a rejected price', async () => {
-    const venue = await seedVenue();
-    const event = await seedEvent(venue.id);
-    // Reject archives the row (lib/price-rejection.ts).
-    const submission = await seedPriceSubmission(event.id, 'user_rejected', {
-      status: 'archived',
-    });
-
-    const res = await app.request(
-      `/v1/admin/prices/submissions/${submission.id}`,
-      {
-        method: 'PATCH',
-        headers: ADMIN_HEADERS,
-        body: JSON.stringify({ status: 'corroborated' }),
-      },
-    );
-    expect(res.status).toBe(409);
-    const [row] = await testDb
-      .select({ status: priceSubmissions.status })
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, submission.id));
-    expect(row?.status).toBe('archived');
   });
 
   it('refuses an id that is not a uuid', async () => {

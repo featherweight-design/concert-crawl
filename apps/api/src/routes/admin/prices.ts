@@ -730,15 +730,11 @@ pricesAdminRouter.patch(
       );
     }
 
-    // Approved, rejected or checked since this screen loaded (addendum 6
-    // #43's Approve, or a stale queue): say so rather than overturn it.
+    // The PATCH doesn't ask for a waiting row, so this can't come back; it
+    // is answered rather than read as a success all the same.
     if (result.ok === 'not_waiting') {
       return ctx.json(
-        {
-          success: false,
-          error: 'Only a waiting price can be changed',
-          code: 'not_waiting',
-        },
+        { success: false, error: 'Not waiting', code: 'not_waiting' },
         409,
       );
     }
@@ -750,6 +746,56 @@ pricesAdminRouter.patch(
     ctx.set('auditAction', 'price.submission.update');
     ctx.set('auditTargetId', id);
     ctx.set('auditMeta', { status });
+
+    return ctx.json({ success: true, data: result.updated });
+  },
+);
+
+// POST /v1/admin/prices/submissions/:id/approve — Approve one waiting price
+// (addendum 6 #43, Submitted prices' row menu and the phone's Approve). Only a
+// waiting price: one approved, rejected or checked since the screen loaded is
+// a 409 `not_waiting`, never overturned. Publishes as the PATCH does (cred,
+// the show's price, the price-drop push to watchers).
+pricesAdminRouter.post(
+  '/submissions/:id/approve',
+  zValidator('param', z.object({ id: idSchema }), (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid id' }, 400);
+    }
+  }),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param');
+    const result = await setSubmissionStatus(id, 'corroborated', {
+      onlyIfWaiting: true,
+    });
+    if (result.ok === 'not_waiting') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Only a waiting price can be approved',
+          code: 'not_waiting',
+        },
+        409,
+      );
+    }
+    if (result.ok === 'contest_lockout') {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'This price is part of a Price check. Resolve it from the Price checks tab.',
+          code: 'price_check',
+        },
+        409,
+      );
+    }
+    if (!result.ok)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
+
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    ctx.set('auditAction', 'price.submission.update');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditMeta', { status: 'corroborated', via: 'approve' });
 
     return ctx.json({ success: true, data: result.updated });
   },
@@ -867,7 +913,11 @@ pricesAdminRouter.post(
     }
     if (result.ok === 'not_waiting') {
       return ctx.json(
-        { success: false, error: 'Only a waiting price can be rejected' },
+        {
+          success: false,
+          error: 'Only a waiting price can be rejected',
+          code: 'not_waiting',
+        },
         409,
       );
     }

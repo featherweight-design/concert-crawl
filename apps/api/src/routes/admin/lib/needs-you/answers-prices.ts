@@ -65,7 +65,9 @@ export const approveAll = define({
     // One at a time through the same path as the admin approve button, so cred
     // and pricedrop fan-out run per submission.
     for (const id of new Set(ids)) {
-      const outcome = await setSubmissionStatus(id, 'corroborated');
+      const outcome = await setSubmissionStatus(id, 'corroborated', {
+        onlyIfWaiting: true,
+      });
       if (outcome.ok === true) approved.push(id);
       else
         skipped.push({
