@@ -436,7 +436,11 @@ describe('GET /v1/admin/invite-codes/:id/redemptions', () => {
   it('lists who joined, newest first, with handles, roles and the total', async () => {
     setAuth('admin');
     const code = await seedCode();
-    await seedUserProfile('fan-1', { handle: 'rae' });
+    await seedUserProfile('fan-1', {
+      handle: 'rae',
+      avatarColor: 'success',
+      avatarSecondColor: 'accent',
+    });
     await testDb.insert(inviteCodeRedemptions).values([
       {
         codeId: code.id,
@@ -472,12 +476,17 @@ describe('GET /v1/admin/invite-codes/:id/redemptions', () => {
         handle: null,
         role: 'user',
         redeemedAt: '2026-10-05T00:00:00.000Z',
+        // No profile: no colours chosen.
+        avatarColor: null,
+        avatarSecondColor: null,
       },
       {
         userId: 'fan-1',
         handle: 'rae',
         role: 'beta',
         redeemedAt: '2026-10-02T00:00:00.000Z',
+        avatarColor: 'success',
+        avatarSecondColor: 'accent',
       },
     ]);
   });
