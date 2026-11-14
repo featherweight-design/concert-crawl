@@ -26,6 +26,7 @@ import { avatarColumns, avatarOf } from '../../lib/avatar.js';
 import { apiLogger } from '../../lib/logger.js';
 import { MT_TIME_ZONE, todayInDenver } from '../../lib/time.js';
 import { staffUserIds } from './people.js';
+import { addDays } from './lib/needs-you/keys.js';
 import { areaOfAction, auditAreaFilter } from './lib/audit-area.js';
 import { resolveAuditTargets } from './lib/audit-targets.js';
 import type { AdminVariables } from './index.js';
@@ -127,7 +128,6 @@ auditLogAdminRouter.get(
       }
     }
 
-    const isSystem = like(auditLog.actorId, `${SYSTEM_ACTOR_PREFIX}%`);
     const rows = await db
       .select({
         id: auditLog.id,
@@ -143,8 +143,7 @@ auditLogAdminRouter.get(
       .leftJoin(userProfiles, eq(userProfiles.userId, auditLog.actorId))
       .where(
         and(
-          actor === 'system' ? isSystem : undefined,
-          actor === 'admin' ? not(isSystem) : undefined,
+          actorKindFilter(actor),
           // The joined profile's handle, so a system row never matches.
           actorHandle === undefined
             ? undefined
@@ -208,23 +207,30 @@ auditLogAdminRouter.get(
 // Mountain Time calendar days, the same window the log reads.
 // ---------------------------------------------------------------------------
 
+// The zone is inlined as a literal, as costs.ts does: the day expression sits
+// in both SELECT DISTINCT and ORDER BY, and two bind parameters would break
+// Postgres's matching of the two. A constant, never input.
+const mtZone = () => sql.raw(`'${MT_TIME_ZONE}'`);
+
 /** Rows from MT midnight of `startDay` up to MT midnight of `endDay`. */
 const mtDays = (startDay: string, endDay: string) =>
   and(
-    sql`${auditLog.createdAt} >= (${startDay}::date::timestamp AT TIME ZONE ${MT_TIME_ZONE})`,
-    sql`${auditLog.createdAt} < (${endDay}::date::timestamp AT TIME ZONE ${MT_TIME_ZONE})`,
+    sql`${auditLog.createdAt} >= (${startDay}::date::timestamp AT TIME ZONE ${mtZone()})`,
+    sql`${auditLog.createdAt} < (${endDay}::date::timestamp AT TIME ZONE ${mtZone()})`,
   );
 
-/** `YYYY-MM-DD` plus `days` calendar days. */
-const addDays = (day: string, days: number): string => {
-  const at = new Date(`${day}T00:00:00Z`);
-  at.setUTCDate(at.getUTCDate() + days);
-  return at.toISOString().slice(0, 10);
+/** The log's actor and area filters, shared by the list, days and actors. */
+const actorKindFilter = (actor: 'system' | 'admin' | undefined) => {
+  const isSystem = like(auditLog.actorId, `${SYSTEM_ACTOR_PREFIX}%`);
+  if (actor === 'system') return isSystem;
+  if (actor === 'admin') return not(isSystem);
+  return undefined;
 };
 
 const daysQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'month is YYYY-MM'),
   // The same filters as the log, so a dot never leads to an empty day.
+  actor: z.enum(['system', 'admin']).optional(),
   actorHandle: handleQuerySchema,
   area: areaSchema,
 });
@@ -235,11 +241,11 @@ auditLogAdminRouter.get(
   '/days',
   zValidator('query', daysQuerySchema, validationHook),
   async (ctx) => {
-    const { month, actorHandle, area } = ctx.req.valid('query');
+    const { month, actor, actorHandle, area } = ctx.req.valid('query');
     const first = `${month}-01`;
-    const next = new Date(`${first}T00:00:00Z`);
-    next.setUTCMonth(next.getUTCMonth() + 1);
-    const day = sql<string>`to_char(${auditLog.createdAt} AT TIME ZONE ${MT_TIME_ZONE}, 'YYYY-MM-DD')`;
+    // The 1st of the next month: day 32 of any month lands in the next one.
+    const next = `${addDays(first, 32).slice(0, 7)}-01`;
+    const day = sql<string>`to_char(${auditLog.createdAt} AT TIME ZONE ${mtZone()}, 'YYYY-MM-DD')`;
 
     const rows = await db
       .selectDistinct({ day })
@@ -247,7 +253,8 @@ auditLogAdminRouter.get(
       .leftJoin(userProfiles, eq(userProfiles.userId, auditLog.actorId))
       .where(
         and(
-          mtDays(first, next.toISOString().slice(0, 10)),
+          mtDays(first, next),
+          actorKindFilter(actor),
           actorHandle === undefined
             ? undefined
             : eq(userProfiles.handle, actorHandle),
@@ -265,6 +272,8 @@ auditLogAdminRouter.get(
 const actorsQuerySchema = z.object({
   // The MT day the counts are for; today when absent.
   day: z.iso.date().optional(),
+  // The page filter, so a count matches the rows picking that person shows.
+  area: areaSchema,
 });
 
 // GET /v1/admin/audit-log/actors?day=YYYY-MM-DD — the Anyone menu: every
@@ -275,31 +284,34 @@ auditLogAdminRouter.get(
   '/actors',
   zValidator('query', actorsQuerySchema, validationHook),
   async (ctx) => {
-    const day = ctx.req.valid('query').day ?? todayInDenver();
+    const query = ctx.req.valid('query');
+    const day = query.day ?? todayInDenver();
     const me = getAuth(ctx)?.userId ?? null;
 
-    const counted = await db
-      .select({
-        actorId: auditLog.actorId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(auditLog)
-      .where(
-        and(
-          mtDays(day, addDays(day, 1)),
-          not(like(auditLog.actorId, `${SYSTEM_ACTOR_PREFIX}%`)),
-        ),
-      )
-      .groupBy(auditLog.actorId);
-
-    // Staff comes from Clerk (People's cached scan). If Clerk is down the
-    // menu still lists everyone who changed something that day.
-    let staff: string[] = [];
-    try {
-      staff = await staffUserIds();
-    } catch (err: unknown) {
-      apiLogger.warn({ err }, 'audit-log actors: staff scan failed');
-    }
+    // Staff comes from Clerk (People's cached scan), read alongside the
+    // counts. If Clerk is down the menu still lists that day's actors.
+    const [counted, staff] = await Promise.all([
+      db
+        .select({
+          actorId: auditLog.actorId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(auditLog)
+        .where(
+          and(
+            mtDays(day, addDays(day, 1)),
+            actorKindFilter('admin'),
+            query.area === undefined
+              ? undefined
+              : auditAreaFilter(query.area, auditLog.action),
+          ),
+        )
+        .groupBy(auditLog.actorId),
+      staffUserIds().catch((err: unknown) => {
+        apiLogger.warn({ err }, 'audit-log actors: staff scan failed');
+        return [];
+      }),
+    ]);
 
     const counts = new Map(counted.map((row) => [row.actorId, row.count]));
     const ids = [...new Set([...staff, ...counts.keys()])];
