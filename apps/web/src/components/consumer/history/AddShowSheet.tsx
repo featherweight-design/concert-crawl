@@ -12,6 +12,7 @@ import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { Panel } from '@/components/consumer/image-slot';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { WentPill } from '@/components/consumer/went-pill/WentPill';
+import { slotRadiusFor } from '@/components/consumer/image-slot/lib/slot-metrics';
 import { genreRing } from '@/components/consumer/event-row/lib/genre-ring';
 import { genreColor, NEUTRAL_GENRE_COLOR } from '@/lib/genre-color';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
@@ -91,10 +92,12 @@ const ShowRow = ({ row }: { row: PastShowRow }) => (
     {/* The lead genre rings the art, as every other row does (B+ rule 2). */}
     <span
       data-testid="add-show-image-ring"
-      className="block shrink-0 overflow-hidden rounded-[10px]"
+      className="block shrink-0 overflow-hidden"
       style={{
         width: 44,
         height: 44,
+        // The same radius the tile inside draws, so ring and art agree.
+        borderRadius: slotRadiusFor(44),
         boxShadow: genreRing(genreColor(row.genre) ?? NEUTRAL_GENRE_COLOR),
       }}
     >
