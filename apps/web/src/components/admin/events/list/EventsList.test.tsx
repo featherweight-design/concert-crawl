@@ -76,7 +76,7 @@ describe('EventsList on desktop', () => {
     expect(cells.getByText(COPY.status.soldout)).toBeInTheDocument();
     // Hidden is not a status (addendum 5, §2): the tag sits in the Show cell.
     const tag = cells.getByTestId('hidden-tag');
-    expect(tag).toHaveTextContent(COPY.hiddenReason.unsure);
+    expect(tag).toHaveTextContent(COPY.hiddenTag.unsure);
     expect(tag.closest('td')).toHaveTextContent('Michael Smoak');
     expect(tag.closest('td')).not.toHaveTextContent(COPY.status.soldout);
     // Watching reads "—" on a hidden row.
@@ -92,14 +92,14 @@ describe('EventsList on desktop', () => {
       />,
     );
     expect(screen.getByText(COPY.status.available)).toBeInTheDocument();
-    expect(screen.getByText(COPY.hiddenReason.admin)).toBeInTheDocument();
+    expect(screen.getByText(COPY.hiddenTag.admin)).toBeInTheDocument();
   });
 
   it('draws price, Watching and the ⋯ on an upcoming row', () => {
     render(<EventsList when="upcoming" rows={[row({})]} />);
     expect(screen.getByText('$65–$495')).toBeInTheDocument();
     expect(screen.getByText('31')).toBeInTheDocument();
-    expect(screen.queryByText(COPY.hiddenReason.unsure)).toBeNull();
+    expect(screen.queryByTestId('hidden-tag')).toBeNull();
     expect(
       screen.getByRole('button', { name: COPY.menu.label('Clipse & J.I.D') }),
     ).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe('EventsList on the phone', () => {
     const [hiddenCard, plainCard] = within(list).getAllByRole('listitem');
     const hidden = within(hiddenCard as HTMLElement);
     expect(hidden.getByText(COPY.status.postponed)).toBeInTheDocument();
-    expect(hidden.getByText(COPY.hiddenReason.unsure)).toBeInTheDocument();
+    expect(hidden.getByText(COPY.hiddenTag.unsure)).toBeInTheDocument();
     expect(hidden.queryByText(COPY.watching(31))).toBeNull();
     const plain = within(plainCard as HTMLElement);
     expect(plain.getByText(COPY.phoneNoPrice)).toBeInTheDocument();
