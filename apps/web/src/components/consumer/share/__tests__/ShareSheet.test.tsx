@@ -243,6 +243,36 @@ describe('<ShareSheet />', () => {
     });
   });
 
+  // jsdom does no layout, so the 44px targets are pinned on their classes:
+  // Save image and Copy link draw 38px with a 1px border, and an ::after 4px
+  // past their 36px padding box on each side makes the hit area 44px.
+  it('gives every press a 44px hit area', () => {
+    mount({ capabilities: { share: async () => undefined } });
+    for (const press of [
+      screen.getByRole('link', { name: 'Save image' }),
+      screen.getByRole('button', { name: 'Copy link' }),
+    ]) {
+      const classes = press.className.split(/\s+/);
+      expect(classes).toEqual(
+        expect.arrayContaining([
+          'relative',
+          'h-[38px]',
+          'border',
+          'after:absolute',
+          'after:-inset-y-[4px]',
+          'after:inset-x-0',
+          "after:content-['']",
+        ]),
+      );
+    }
+    expect(
+      screen.getByRole('button', { name: 'Share…' }).className.split(/\s+/),
+    ).toContain('h-11');
+    expect(
+      screen.getByRole('button', { name: 'Close' }).className.split(/\s+/),
+    ).toEqual(expect.arrayContaining(['h-11', 'w-11']));
+  });
+
   describe('as the B+ boards draw it', () => {
     it('heads the sheet with the SHARE THIS SHOW eyebrow and a labelled ×', () => {
       mount();
