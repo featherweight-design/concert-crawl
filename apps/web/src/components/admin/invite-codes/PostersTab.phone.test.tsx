@@ -194,7 +194,7 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     expect(screen.queryByText(copy.printTips[0]!)).toBeNull();
   });
 
-  it('pins Print alone, with no QR download and no tap-to-enlarge', () => {
+  it('pins Print alone, with no QR download', () => {
     const print = vi.spyOn(window, 'print').mockImplementation(() => {});
     renderTab();
     const buttons = document.querySelectorAll('.pt-pbar button');
@@ -202,10 +202,30 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Print' }));
     expect(print).toHaveBeenCalledOnce();
     expect(screen.queryByRole('button', { name: /QR/ })).toBeNull();
-    // The board's "tap to enlarge" is dropped by orchestrator ruling (Design
-    // item 32), not an omission: guard that it stays out.
-    expect(screen.queryByText(/tap to enlarge/i)).toBeNull();
     expect(screen.queryByTestId('poster-preview-spec')).toBeNull();
+  });
+
+  it('enlarges the poster full screen (32): Escape and Back close it, Print prints', () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    renderTab();
+    expect(screen.queryByTestId('poster-enlarged')).toBeNull();
+    const opener = screen.getByRole('button', { name: 'Enlarge' });
+    fireEvent.click(opener);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleName(/^Night · /);
+    expect(
+      screen.getByText('Pinch to zoom. Check the QR scans before you print.'),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Print' }));
+    expect(print).toHaveBeenCalledOnce();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('poster-enlarged')).toBeNull();
+    expect(opener).toHaveFocus();
+    fireEvent.click(opener);
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Back' }),
+    );
+    expect(screen.queryByTestId('poster-enlarged')).toBeNull();
   });
 
   it('moves focus to a radio after Change and to Change after a pick', () => {

@@ -3242,6 +3242,13 @@ export const ADMIN_COPY = {
           'Test scan from 6 ft',
         ],
         print: 'Print',
+        // From 32/poster-preview-m and 32/poster-enlarged-m.
+        enlarge: 'Enlarge',
+        enlargedTitle: (look: string, code: string) => `${look} · ${code}`,
+        paperSize: 'US Letter',
+        close: 'Close',
+        back: 'Back',
+        pinchHint: 'Pinch to zoom. Check the QR scans before you print.',
       },
     },
   },
