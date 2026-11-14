@@ -1592,6 +1592,12 @@ export const CONSUMER_COPY = {
     editSaveErrorFallback: 'Something went wrong. Try again.',
     avatarColorLabel: 'Avatar color',
     avatarColorSwatchAriaLabel: (color: string) => `Avatar color: ${color}`,
+    // The two picker eyebrows (B+ more-s-e_mix, COPY.md: kept as deliberate
+    // voice). Drawn in capitals by the style, not the string.
+    avatarMixTwoEyebrow: 'Mix two',
+    avatarSolidEyebrow: 'Or keep it solid',
+    avatarPairSwatchAriaLabel: (first: string, second: string) =>
+      `Avatar colors: ${first} and ${second}`,
     handleLabel: 'Handle',
     cityLabel: 'City',
   },

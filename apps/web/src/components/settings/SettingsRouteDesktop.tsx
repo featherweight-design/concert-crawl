@@ -445,6 +445,14 @@ export function SettingsRouteDesktop({
             }}
             onClick={(ev) => ev.stopPropagation()}
           >
+            {/* The blue-to-pink top edge every B+ desktop dialog carries
+                (README rule 7); the dialog's overflow clips it to the corners. */}
+            <div
+              aria-hidden="true"
+              data-testid="edit-profile-top-edge"
+              className="absolute inset-x-0 top-0"
+              style={{ height: 2, background: SIGNAL_TO_ACCENT }}
+            />
             <EditProfileForm profile={profile} onClose={closeEdit} />
           </div>
         </>

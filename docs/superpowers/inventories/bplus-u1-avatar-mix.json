@@ -1,0 +1,42 @@
+{
+  "feature": "U1 · Edit avatar Mix two picker and Edit profile preview",
+  "note": "Spec-fidelity package U1. /me mounts ThemeSync, so this sheet runs one theme pass, Electric, and the audit account's saved theme must be Electric. Boards (design/design_handoff_bplus_redesign/screens/07-more-screens/): edit-mobile = more-s-e_mix; edit-dialog = more-s-edit_d; settings-hero = more-s-settings_m and more-s-d_profile. The sheet does not click Save: a save writes the shared audit account. Walked by hand: picking a swatch and saving (the preview and the profile banner then follow the pair).",
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "edit-mobile",
+      "label": "/me/edit: Edit profile with the Mix two picker",
+      "steps": [
+        {
+          "goto": "/me/edit",
+          "wait": "[data-testid=\"avatar-picker\"]"
+        },
+        {
+          "settle": 3000
+        }
+      ]
+    },
+    {
+      "id": "settings-hero",
+      "label": "/me: the profile hero (ADMIN chip, @, Edit hairline)",
+      "steps": [
+        {
+          "goto": "/me",
+          "wait": "[data-testid=\"profile-banner\"]"
+        },
+        {
+          "settle": 4000
+        }
+      ]
+    }
+  ]
+}
