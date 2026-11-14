@@ -1264,10 +1264,12 @@ export const CONSUMER_COPY = {
       // Refused (addendum-2 18-error-page/error-report-refused-m): a rate
       // limit or a rejection. Not saved, not retried. The rail reuses
       // failedEyebrow with this code.
-      refusedTag: 'LIMIT',
+      // The rail is mono and uppercased in CSS, so this reads LIMIT, as drawn.
+      refusedTag: 'Limit',
       refusedHeading: 'Not sent.',
+      // No "below": on desktop the error ID chip sits beside the card.
       refusedBody:
-        'We couldn’t take this report, so it isn’t saved. If it keeps happening, the error ID below is all we need.',
+        'We couldn’t take this report, so it isn’t saved. If it keeps happening, the error ID is all we need.',
       done: 'Done',
     },
   },
