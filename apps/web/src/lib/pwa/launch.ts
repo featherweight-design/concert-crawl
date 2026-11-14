@@ -12,9 +12,12 @@
 //   on screen in the very first frame, and it has to start its CSS animation
 //   there, not after hydration (a slow Android phone's hydration outlasted the
 //   old JS animation, which finished unseen). It only reads.
-// - The overlay (`LaunchAnimation`) is rendered by the signed-in shell alone,
-//   so it alone writes `LAUNCH_PLAYED_KEY`. A signed-out document has no
-//   overlay to play, and a flag written there would use up the next cold start.
+// - The overlay (`LaunchAnimation`) is rendered by the app shell, the
+//   `(protected)/(main)` layout, so it alone writes `LAUNCH_PLAYED_KEY`. A
+//   document without the shell (sign-in, onboarding, admin) has no overlay to
+//   play, and a flag written there would use up the next cold start. Anonymous
+//   browse sits inside the shell, so a standalone cold start there plays too,
+//   as it always has.
 //
 // `sessionStorage` is the lifetime of "cold start": the installed app's window
 // gets a fresh one per launch and keeps it across reloads and navigations.
@@ -39,6 +42,9 @@ export const LAUNCH_MS = {
   total: 1040,
 } as const;
 
+/** The animation's end, plus slack: `data-launch` is cleared by then, always. */
+export const LAUNCH_END_MS = LAUNCH_MS.total + 1500;
+
 /** Header logo spot the mark lands in: 28px at (16, 15). */
 export const LAUNCH_LANDING = { size: 28, left: 16, top: 15 } as const;
 
@@ -58,7 +64,12 @@ export const LAUNCH_DETECT =
   'var d=document.documentElement;' +
   `d.setAttribute("${LAUNCH_ATTR}","1");` +
   'd.style.setProperty("--ll-w",String(w.innerWidth));' +
-  'd.style.setProperty("--ll-h",String(w.innerHeight))' +
+  'd.style.setProperty("--ll-h",String(w.innerHeight));' +
+  // The overlay's own animationend ends it, but a document with no overlay
+  // (sign-in, onboarding, admin) or a hydration later than the animation would
+  // leave the attribute set, and a later client navigation into the shell would
+  // then play the whole cover mid-session. This timer is nobody's to forget.
+  `w.setTimeout(function(){d.removeAttribute("${LAUNCH_ATTR}")},${LAUNCH_END_MS})` +
   '}catch(e){}})();';
 
 /** Called once by the overlay: this session has had its launch (or needed none). */
