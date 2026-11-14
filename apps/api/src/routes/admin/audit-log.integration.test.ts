@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 
 interface TestAuth {
   userId: string;
@@ -16,7 +16,7 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
-import { auditLog, events, inviteCodes, venues } from '@concert-crawl/db';
+import { auditLog, db, events, inviteCodes, venues } from '@concert-crawl/db';
 import type { AuditLogItem } from '@concert-crawl/types';
 import { eq } from 'drizzle-orm';
 import { createApp } from '../../app.js';
@@ -59,6 +59,10 @@ describe('GET /v1/admin/audit-log', () => {
   beforeEach(async () => {
     authState.current = null;
     await clearTables();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('refuses non-admins', async () => {
@@ -170,20 +174,22 @@ describe('GET /v1/admin/audit-log', () => {
       `?actorHandle=${encodeURIComponent(' @jules ')}`,
     );
     expect(prefixed.body.data.map((row) => row.actor)).toEqual(['jules']);
+
+    // Handles are stored lowercase, so the filter lowercases too.
+    const cased = await list(`?actorHandle=${encodeURIComponent('@Hugh')}`);
+    expect(cased.body.data.map((row) => row.actor)).toEqual(['hugh']);
   });
 
   it('returns an empty list for an unknown handle, and 400 for an empty one', async () => {
     setAuth('admin');
     await seedUserProfile('user_clerk_hugh', { handle: 'hugh' });
-    await testDb
-      .insert(auditLog)
-      .values([
-        {
-          actorId: 'user_clerk_hugh',
-          action: 'venue.update',
-          createdAt: at(1),
-        },
-      ]);
+    await testDb.insert(auditLog).values([
+      {
+        actorId: 'user_clerk_hugh',
+        action: 'venue.update',
+        createdAt: at(1),
+      },
+    ]);
 
     const unknown = await list('?actorHandle=nobody');
     expect(unknown.status).toBe(200);
@@ -261,12 +267,36 @@ describe('GET /v1/admin/audit-log', () => {
     expect(areaOf.get('userXemail.shown')).toBeNull();
   });
 
-  it('rejects an unknown or empty area with 400', async () => {
+  it('rejects an unknown area with 400', async () => {
     setAuth('admin');
     expect((await list('?area=billing')).status).toBe(400);
     expect((await list('?area=people,billing')).status).toBe(400);
-    expect((await list('?area=')).status).toBe(400);
     expect((await list('?area=People')).status).toBe(400);
+  });
+
+  it('reads an empty area as no filter, and collapses repeated areas', async () => {
+    setAuth('admin');
+    await testDb.insert(auditLog).values([
+      { actorId: 'system:crawler', action: 'venue.update', createdAt: at(2) },
+      { actorId: 'system:crawler', action: 'mystery', createdAt: at(1) },
+    ]);
+
+    for (const query of ['?area=', '?area=,', '?area=%20,%20']) {
+      const { status, body } = await list(query);
+      expect(status).toBe(200);
+      expect(body.data.map((row) => row.action)).toEqual([
+        'mystery',
+        'venue.update',
+      ]);
+    }
+
+    // More repeats than there are areas is still one area, not a 400.
+    const repeats = Array.from({ length: 15 }, () => 'venues').join(',');
+    const repeated = await list(`?area=${repeats}`);
+    expect(repeated.status).toBe(200);
+    expect(repeated.body.data.map((row) => row.action)).toEqual([
+      'venue.update',
+    ]);
   });
 
   it('honours until as an exclusive upper bound, and since plus until as a window', async () => {
@@ -291,6 +321,29 @@ describe('GET /v1/admin/audit-log', () => {
     expect(window.body.data.map((row) => row.action)).toEqual(['inside']);
 
     expect((await list('?until=yesterday')).status).toBe(400);
+  });
+
+  it('rejects an until at or before since with a validation error on until', async () => {
+    setAuth('admin');
+    const early = encodeURIComponent(at(120).toISOString());
+    const late = encodeURIComponent(at(60).toISOString());
+
+    for (const query of [
+      `?since=${late}&until=${early}`,
+      `?since=${late}&until=${late}`,
+    ]) {
+      const res = await app.request(`/v1/admin/audit-log${query}`);
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as {
+        success: boolean;
+        error: { name: string; issues: { path: unknown[] }[] };
+      };
+      expect(body.success).toBe(false);
+      expect(body.error.name).toBe('ZodError');
+      expect(body.error.issues.map((issue) => issue.path)).toContainEqual([
+        'until',
+      ]);
+    }
   });
 
   it('combines filters and keeps paging with a cursor under them', async () => {
@@ -348,7 +401,7 @@ describe('GET /v1/admin/audit-log', () => {
     expect(seen).toEqual([4, 3, 2, 1, 0]);
   });
 
-  it('resolves each target kind to a name and an admin link, without an N+1', async () => {
+  it('resolves each target kind to a name and an admin link, with one query per kind', async () => {
     setAuth('admin');
     await seedUserProfile('user_clerk_mira', { handle: 'mira.k' });
     const venue = await seedVenue({ name: 'Levitt Pavilion' });
@@ -443,10 +496,42 @@ describe('GET /v1/admin/audit-log', () => {
         action: 'notification.test_email',
         createdAt: at(1),
       },
+      // Overrides: an `event.*` key that stores a venue id, and a `price.*`
+      // key that stores the show's id.
+      {
+        actorId: 'system:crawler',
+        action: 'event.drift_duplicates_merged',
+        targetId: venue.id,
+        createdAt: at(0.5),
+      },
+      {
+        actorId: 'system:crawler',
+        action: 'price.pipeline.run',
+        targetId: event.id,
+        createdAt: at(0.25),
+      },
     ]);
 
+    // 15 rows over 7 kinds of lookup: the list query plus one per kind,
+    // however many rows share a kind.
+    const selectSpy = vi.spyOn(db, 'select');
     const { body } = await list();
+    expect(selectSpy).toHaveBeenCalledTimes(1 + 7);
+    selectSpy.mockRestore();
+
+    expect(body.data).toHaveLength(15);
     const byAction = new Map(body.data.map((row) => [row.action, row.target]));
+
+    expect(byAction.get('event.drift_duplicates_merged')).toEqual({
+      kind: 'venue',
+      name: 'Levitt Pavilion',
+      href: `/admin/venues/${venue.id}`,
+    });
+    expect(byAction.get('price.pipeline.run')).toEqual({
+      kind: 'price',
+      name: 'Vince Staples',
+      href: '/admin/prices',
+    });
 
     expect(byAction.get('venue.crawl_pause')).toEqual({
       kind: 'venue',
@@ -586,6 +671,47 @@ describe('GET /v1/admin/audit-log', () => {
       kind: 'price',
       name: null,
       href: null,
+    });
+  });
+
+  it('degrades a failed target lookup to a null target instead of failing the list', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Bluebird' });
+    const event = await seedEvent(venue.id, { title: 'Still Named' });
+    await testDb.insert(auditLog).values([
+      {
+        actorId: 'system:crawler',
+        action: 'venue.update',
+        targetId: venue.id,
+        createdAt: at(2),
+      },
+      {
+        actorId: 'system:crawler',
+        action: 'event.update',
+        targetId: event.id,
+        createdAt: at(1),
+      },
+    ]);
+
+    // Only the venue lookup (the one select of `venues.name`) errors.
+    const realSelect = db.select.bind(db);
+    vi.spyOn(db, 'select').mockImplementation(
+      (...args: Parameters<typeof db.select>) => {
+        if (args[0]?.['name'] === venues.name) {
+          throw new Error('venue lookup down');
+        }
+        return realSelect(...args);
+      },
+    );
+
+    const { status, body } = await list();
+    expect(status).toBe(200);
+    const byAction = new Map(body.data.map((row) => [row.action, row.target]));
+    expect(byAction.get('venue.update')).toBeNull();
+    expect(byAction.get('event.update')).toEqual({
+      kind: 'event',
+      name: 'Still Named',
+      href: `/admin/events/${event.id}/edit`,
     });
   });
 });

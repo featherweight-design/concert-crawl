@@ -1,5 +1,19 @@
 import './zod-messages.js';
 import type { Context } from 'hono';
+import { z } from 'zod';
+
+/**
+ * One person by their whole handle, as a query param (`?handle=` on Prices,
+ * `?actorHandle=` on the audit log). A leading "@" is ignored, and the value
+ * is lowercased because handles are stored lowercase (`HANDLE_REGEX` in
+ * routes/users.ts), so `@Hugh` finds `hugh`.
+ */
+export const handleQuerySchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/^@/, '').toLowerCase())
+  .pipe(z.string().min(1).max(100))
+  .optional();
 
 /**
  * The failure hook every `zValidator` call passes. Without a hook,
