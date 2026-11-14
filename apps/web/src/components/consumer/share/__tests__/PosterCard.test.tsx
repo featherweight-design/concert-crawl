@@ -4,7 +4,10 @@ import path from 'node:path';
 import { ImageResponse } from 'next/og';
 import { describe, expect, it } from 'vitest';
 import { PosterCard } from '@/components/consumer/share/PosterCard';
+import { identityArtDataUri } from '@/lib/share/fallback-art';
 import {
+  frameArtSize,
+  SC_METRICS,
   SC_RATIOS,
   SHARE_RATIOS,
   type ShareRatio,
@@ -77,6 +80,23 @@ describe('<PosterCard /> (B+ share card) renders through satori', () => {
     },
     60_000,
   );
+
+  // satori mis-rotates inline SVG on the tilted card, so the route hands the
+  // card IdentityArt pre-rendered flat.
+  it('draws pre-rendered IdentityArt on the tilted card', async () => {
+    const frame = SC_METRICS.square.frame;
+    expect(frame).not.toBeNull();
+    const size = frame === null ? 0 : frameArtSize(frame);
+    const art = await identityArtDataUri('TOKiMONSTA', size);
+    expect(art).toMatch(/^data:image\/png;base64,/);
+    const response = new ImageResponse(
+      <PosterCard card={baseCard} ratio="square" photo={null} frameArt={art} />,
+      { ...SC_RATIOS.square, fonts: await fontsPromise },
+    );
+    const buffer = Buffer.from(await response.arrayBuffer());
+    expect(buffer.subarray(0, 4)).toEqual(PNG_MAGIC);
+    expect(digest(buffer)).not.toBe(digest(await render('square', null)));
+  }, 30_000);
 
   it('is deterministic: identical input yields byte-identical output', async () => {
     const photo = await photoPromise;

@@ -234,3 +234,25 @@ export const fitLineSize = (
   const fitting = width / (length * NAME_ADVANCE_RATIO);
   return Math.floor(Math.max(floor, Math.min(base, fitting)));
 };
+
+/** The estimated set width of `text` at `size`, on the same ratio as fitting. */
+export const estimatedLineWidth = (text: string, size: number): number =>
+  text.length * NAME_ADVANCE_RATIO * size;
+
+/**
+ * The one-line name as drawn: its size, and its text cut to fit with a `…`
+ * when even the floor size overflows. Cut here rather than by satori's
+ * `textOverflow`, which clipped the ellipsis's last dot at the box edge.
+ */
+export const fitLine = (
+  name: string,
+  base: number,
+  width: number,
+  floor: number,
+): { size: number; text: string } => {
+  const text = name.trim();
+  const size = fitLineSize(text, base, width, floor);
+  if (estimatedLineWidth(text, size) <= width) return { size, text };
+  const keep = Math.max(1, Math.floor(width / (NAME_ADVANCE_RATIO * size)) - 1);
+  return { size, text: `${text.slice(0, keep).trimEnd()}…` };
+};
