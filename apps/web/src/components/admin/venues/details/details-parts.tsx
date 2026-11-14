@@ -2,7 +2,7 @@
 
 /** The Details tab's building blocks: a labelled field, a two-up row, and the Look and Other cards. */
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { MapPin } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, AdminCard as Card } from '@/components/admin/primitives';
@@ -66,7 +66,7 @@ export const Pair = ({
     </div>
   );
 
-/** The board's small secondary button (`details-d` Draft from the venue's site). */
+/** The board's small secondary button (`details-d`'s About draft button). */
 export const smallButton: CSSProperties = {
   height: 30,
   borderRadius: 9,
@@ -188,16 +188,20 @@ export const LookCard = ({ slug, name }: { slug: string; name: string }) => {
 
 /**
  * The Other card (ruling g): City, and the fallback art's seed. The seed is
- * a preview: nothing stores it yet.
+ * a preview: nothing stores it yet. The tab holds the seed, so a roll
+ * survives the card remounting across the phone breakpoint.
  */
 export const OtherCard = ({
   name,
+  seed,
+  onRoll,
   children,
 }: {
   name: string;
+  seed: number;
+  onRoll: () => void;
   children: ReactNode;
 }) => {
-  const [seed, setSeed] = useState(0);
   const artName = seed === 0 ? name : `${name}·${seed}`;
   return (
     <Card title={COPY.cards.other} phone={false} testId="details-other">
@@ -208,12 +212,9 @@ export const OtherCard = ({
         thumb={
           <div
             style={{
-              width: THUMB,
-              height: THUMB,
-              flex: 'none',
-              borderRadius: 12,
-              overflow: 'hidden',
+              ...emptyThumb,
               border: '1px solid var(--border)',
+              overflow: 'hidden',
             }}
           >
             <IdentityArt
@@ -232,7 +233,7 @@ export const OtherCard = ({
           <AdminButton
             type="button"
             variant="outline"
-            onClick={() => setSeed((prev) => prev + 1)}
+            onClick={onRoll}
             style={smallButton}
           >
             {COPY.fallbackArt.roll}

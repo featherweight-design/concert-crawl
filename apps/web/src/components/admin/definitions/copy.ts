@@ -1033,7 +1033,7 @@ export const ADMIN_COPY = {
         invalid: 'Enter a whole number above 0.',
       },
       about: {
-        draft: 'Draft from the venue’s site',
+        draft: 'Write a draft',
         hint: 'Fans see this on the venue page.',
       },
       ticketSeller: {
@@ -1085,6 +1085,7 @@ export const ADMIN_COPY = {
       linkRequired: 'Give the venue a link.',
       draftFailed: 'Couldn’t draft it. Try again.',
       draftUnreachable: 'Couldn’t reach the server. Try again.',
+      aboutTooLong: 'Keep it to 280 characters.',
     },
     saveBar: {
       unsaved: (count: number) =>

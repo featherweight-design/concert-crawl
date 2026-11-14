@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   applyColumns,
   changedColumns,
@@ -195,6 +196,20 @@ describe('validateDetails', () => {
       'priceUrl',
       'slug',
     ]);
+  });
+
+  it('refuses an edited About over 280 characters, as the API does', () => {
+    const pristine = draftOf(saved);
+    expect(
+      validateDetails({ ...pristine, about: 'a'.repeat(280) }, pristine),
+    ).toEqual({});
+    // Trimmed as it would send: surrounding spaces never count.
+    expect(
+      validateDetails({ ...pristine, about: ` ${'a'.repeat(280)} ` }, pristine),
+    ).toEqual({});
+    expect(
+      validateDetails({ ...pristine, about: 'a'.repeat(281) }, pristine),
+    ).toEqual({ about: ADMIN_COPY.venueDetails.errors.aboutTooLong });
   });
 
   it('checks only the edited fields, so a stored value it refuses never blocks another save', () => {

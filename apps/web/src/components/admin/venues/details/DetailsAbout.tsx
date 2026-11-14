@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { generateVenueAbout } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -13,7 +13,9 @@ import {
 import { inputStyle } from '../source/source-parts';
 import { smallButton } from './details-parts';
 import {
+  ABOUT_MAX,
   capacityTypeLabel,
+  editedFields,
   nearestCapacityType,
   type DetailsDraft,
 } from './details-rules';
@@ -27,79 +29,124 @@ type Drafted = {
   neighborhood: string;
 };
 
+/** Where the About draft stands: the review UI's state and what it holds. */
+export type AboutReview = {
+  state: GenerateFieldState;
+  drafted: Drafted | null;
+  failed: string | undefined;
+};
+
+const IDLE: AboutReview = { state: 'idle', drafted: null, failed: undefined };
+
 /**
- * The About card (`details-d`): the text (280 at most, as the API takes),
- * then Draft from the venue's site, which keeps the `generate-about` review:
- * accept or discard, never saved unseen.
+ * The About draft's request and review, held by the Details tab rather than
+ * the card: the card sits in a different parent on phone and desktop, so it
+ * remounts across the breakpoint, and a paid draft in review must survive
+ * that. Each request carries a token; only the latest one lands, so a
+ * cancelled or overtaken draft never opens a review.
  */
-export const DetailsAbout = ({
-  venueId,
-  id,
-  draft,
-  error,
-  saving,
-  edit,
-}: {
-  venueId: string;
-  id: string;
-  draft: DetailsDraft;
-  error: string | undefined;
-  saving: boolean;
-  edit: (patch: Partial<DetailsDraft>) => void;
-}) => {
-  const [state, setState] = useState<GenerateFieldState>('idle');
-  const [drafted, setDrafted] = useState<Drafted | null>(null);
-  const [failed, setFailed] = useState<string | undefined>();
+export const useAboutDraft = (venueId: string) => {
+  const [review, setReview] = useState<AboutReview>(IDLE);
+  const latest = useRef(0);
 
   const run = async () => {
-    setState('loading');
-    setFailed(undefined);
-    setDrafted(null);
+    latest.current += 1;
+    const token = latest.current;
+    const settle = (next: AboutReview) => {
+      if (token === latest.current) setReview(next);
+    };
+    setReview({ state: 'loading', drafted: null, failed: undefined });
     try {
       const result = await generateVenueAbout(venueId);
       if (!result.success || !result.data) {
-        setFailed(result.error ?? COPY.errors.draftFailed);
-        setState('error');
+        settle({
+          state: 'error',
+          drafted: null,
+          failed: result.error ?? COPY.errors.draftFailed,
+        });
         return;
       }
       const { about, capacity, venueType, neighborhood } = result.data;
-      setDrafted({
-        result: { content: about },
-        capacity,
-        venueType,
-        neighborhood,
+      settle({
+        state: 'review',
+        drafted: {
+          result: { content: about },
+          capacity,
+          venueType,
+          neighborhood,
+        },
+        failed: undefined,
       });
-      setState('review');
     } catch (err) {
+      if (token !== latest.current) return;
       console.error('DetailsAbout: draft failed', { venueId, err });
-      setFailed(COPY.errors.draftUnreachable);
-      setState('error');
+      settle({
+        state: 'error',
+        drafted: null,
+        failed: COPY.errors.draftUnreachable,
+      });
     }
   };
 
-  // Accepting the draft also takes its capacity, type and neighborhood, as
-  // the old editorial section did; each is an edit until saved.
+  /** Back to idle; any request still out is ignored when it lands. */
+  const stop = () => {
+    latest.current += 1;
+    setReview(IDLE);
+  };
+
+  return { review, run, stop };
+};
+
+/**
+ * The About card (`details-d`): the text (280 at most, as the API takes;
+ * a longer one is refused on save, never cut), then Write a draft, which
+ * keeps the `generate-about` review: accept or discard, so a draft never
+ * lands unreviewed. Accepting also fills capacity, type and neighborhood,
+ * but only those the admin hasn't edited: a draft never replaces an edit.
+ * Each is an edit until saved.
+ */
+export const DetailsAbout = ({
+  id,
+  draft,
+  saved,
+  error,
+  saving,
+  edit,
+  review,
+  onDraft,
+  onStop,
+}: {
+  id: string;
+  draft: DetailsDraft;
+  /** The saved row as a draft: a field equal to it is unedited. */
+  saved: DetailsDraft;
+  error: string | undefined;
+  saving: boolean;
+  edit: (patch: Partial<DetailsDraft>) => void;
+  review: AboutReview;
+  onDraft: () => void;
+  onStop: () => void;
+}) => {
+  const { state, drafted, failed } = review;
+
   const accept = (content: string) => {
     if (drafted !== null) {
-      const nearest = nearestCapacityType(drafted.venueType);
-      edit({
-        about: content.slice(0, 280),
-        capacity:
-          drafted.capacity === null
-            ? draft.capacity
-            : drafted.capacity.toLocaleString('en-US'),
-        venueType:
-          nearest === null ? drafted.venueType : capacityTypeLabel(nearest),
-        neighborhood: drafted.neighborhood || draft.neighborhood,
-      });
+      const edited = new Set(editedFields(draft, saved));
+      const patch: Partial<DetailsDraft> = { about: content };
+      if (!edited.has('capacity') && drafted.capacity !== null) {
+        patch.capacity = drafted.capacity.toLocaleString('en-US');
+      }
+      if (!edited.has('venueType')) {
+        const nearest = nearestCapacityType(drafted.venueType);
+        patch.venueType =
+          nearest === null ? drafted.venueType : capacityTypeLabel(nearest);
+      }
+      if (!edited.has('neighborhood')) {
+        patch.neighborhood = drafted.neighborhood;
+      }
+      edit(patch);
     }
-    setState('idle');
-    setDrafted(null);
-  };
-
-  const close = () => {
-    setState('idle');
-    setDrafted(null);
+    onStop();
   };
 
   return (
@@ -109,7 +156,7 @@ export const DetailsAbout = ({
         aria-label={COPY.cards.about}
         aria-invalid={error !== undefined}
         value={draft.about}
-        maxLength={280}
+        maxLength={ABOUT_MAX}
         disabled={saving || state === 'loading' || state === 'review'}
         onChange={(evt) => edit({ about: evt.target.value })}
         style={{
@@ -129,12 +176,15 @@ export const DetailsAbout = ({
       )}
       {state === 'idle' ? (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* The generator writes from the venue's name, address and type
+              only; it never reads the site. Site-sourced drafts arrive with
+              3d (drafting from allowed pages only). */}
           <AdminButton
             type="button"
             variant="outline"
             icon={Sparkles}
             disabled={saving}
-            onClick={() => void run()}
+            onClick={onDraft}
             style={smallButton}
           >
             {COPY.fields.about.draft}
@@ -154,11 +204,11 @@ export const DetailsAbout = ({
           state={state}
           result={drafted?.result}
           errorMessage={failed}
-          onGenerate={() => void run()}
-          onRegenerate={() => void run()}
-          onCancel={close}
+          onGenerate={onDraft}
+          onRegenerate={onDraft}
+          onCancel={onStop}
           onAccept={accept}
-          onDiscard={close}
+          onDiscard={onStop}
         />
       )}
     </Card>
