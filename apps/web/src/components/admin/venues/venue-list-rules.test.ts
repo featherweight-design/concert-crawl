@@ -294,6 +294,26 @@ describe('the failure streak', () => {
     ).toBe('Failed Nov 9, 10, 11');
   });
 
+  it('says how many when failures share a day', () => {
+    // Three retries on Nov 12: one date, three failures.
+    expect(
+      autoPaused({
+        failureStreak: [
+          '2026-11-12T10:02:00Z',
+          '2026-11-12T14:00:00Z',
+          '2026-11-12T20:00:00Z',
+        ],
+      }),
+    ).toBe('Failed 3 times on Nov 12');
+    // Some days repeat, some do not: the count covers every failure.
+    expect(
+      autoPaused({
+        consecutiveFailures: 4,
+        failureStreak: [...NIGHTS, '2026-11-11T20:00:00Z'],
+      }),
+    ).toBe('Failed 4 times on Nov 9, 10, 11');
+  });
+
   it('says the month once per month, and a day once', () => {
     expect(
       streakDates([

@@ -119,11 +119,10 @@ const monthDay = (iso: string): { month: string; day: string } => ({
   day: formatISODate(iso, DENVER_TIME_ZONE, { day: 'numeric' }),
 });
 
-/**
- * "Nov 9, 10, 11": dates in Mountain Time, oldest first, the month said once
- * per month ("Oct 31, Nov 1, 2"). Two runs on one day read as one date.
- */
-export const streakDates = (isos: readonly string[]): string => {
+/** The streak's Mountain Time days, oldest first; runs on one day are one. */
+const distinctDays = (
+  isos: readonly string[],
+): { month: string; day: string }[] => {
   const days: { month: string; day: string }[] = [];
   for (const iso of [...isos].sort()) {
     const next = monthDay(iso);
@@ -131,6 +130,15 @@ export const streakDates = (isos: readonly string[]): string => {
     if (last?.month === next.month && last.day === next.day) continue;
     days.push(next);
   }
+  return days;
+};
+
+/**
+ * "Nov 9, 10, 11": dates in Mountain Time, oldest first, the month said once
+ * per month ("Oct 31, Nov 1, 2"). Two runs on one day read as one date.
+ */
+export const streakDates = (isos: readonly string[]): string => {
+  const days = distinctDays(isos);
   return RUN.dateList(
     days.map((date, i) =>
       i > 0 && days[i - 1]!.month === date.month
@@ -143,14 +151,18 @@ export const streakDates = (isos: readonly string[]): string => {
 /**
  * An auto-paused row's "Failed Nov 9, 10, 11", or null when the streak isn't
  * all there: the dates must account for every failure on the counter, or the
- * line would undercount.
+ * line would undercount. When failures share a day the dates are fewer than
+ * the failures, so the line says how many: "Failed 3 times on Nov 12".
  */
 const failedStreakLine = (venue: VenueListRow): string | null => {
   const streak = venue.failureStreak ?? [];
   if (streak.length === 0 || streak.length !== venue.consecutiveFailures) {
     return null;
   }
-  return RUN.failedOn(streakDates(streak));
+  const dates = streakDates(streak);
+  return distinctDays(streak).length < streak.length
+    ? RUN.failedTimesOn(streak.length, dates)
+    : RUN.failedOn(dates);
 };
 
 /** Today's runs read as a time ("3:04 AM"), older ones as a date ("Nov 10"). */

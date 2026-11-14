@@ -365,6 +365,10 @@ export const ADMIN_COPY = {
       // `01/venues-list-status-columns`: an auto-paused row's failures, by
       // date ("Nov 9, 10, 11"), the count addendum-2 item 29 puts here.
       failedOn: (dates: string) => `Failed ${dates}`,
+      // When failures share a day the dates alone undercount: "Failed 3 times
+      // on Nov 12", "Failed 4 times on Nov 9, 10, 11". Always two or more.
+      failedTimesOn: (count: number, dates: string) =>
+        `Failed ${count.toLocaleString('en-US')} times on ${dates}`,
       // A month's later days drop the month: "Oct 31, Nov 1, 2".
       dateList: (dates: readonly string[]) => dates.join(', '),
       reasons: {
@@ -945,13 +949,18 @@ export const ADMIN_COPY = {
       added > 0
         ? `${showCount(shows)} · ${added.toLocaleString('en-US')} new`
         : showCount(shows),
-    // "106 shows · 2 new · via Haiku": the reader that found them, named as
-    // the run detail's HOW WE READ IT steps name it. A platform feed has no
-    // drawn name, so its line has no "via".
+    // "106 shows · 2 new · via Haiku": the reader that found them. The board
+    // draws only JSON-LD and Haiku; a platform feed is named by its seller, as
+    // the Source tab's seller names are, and detail pages by what they are.
     via: (line: string, reader: string) => `${line} · via ${reader}`,
+    // Keyed by the stored strategy (`crawl_runs.extraction_strategy_used`).
     readers: {
       structured_data: 'JSON-LD',
       llm: 'Haiku',
+      'platform:venuepilot': 'VenuePilot',
+      'platform:aeg': 'AEG',
+      'platform:livenation': 'Live Nation',
+      'platform:detail-page': 'detail pages',
     },
     unchangedSince: (date: string) => `Page unchanged since ${date}`,
     // "230 s"; a run with no recorded duration reads the dash.
