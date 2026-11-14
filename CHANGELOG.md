@@ -1,3 +1,16 @@
+# [1.422.0](https://github.com/featherweight-design/concert-crawl/compare/v1.421.0...v1.422.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** copy-review pass on the admin Events list ([688a1cc](https://github.com/featherweight-design/concert-crawl/commit/688a1ccc6569187d871dd208d6c73189686ace45))
+* **web:** review fixes on the admin Events list ([f3d91a5](https://github.com/featherweight-design/concert-crawl/commit/f3d91a5d2a819b1134137471b91db88673daeaa1))
+
+
+### Features
+
+* **admin:** 4b-1a Events list ([cc4de51](https://github.com/featherweight-design/concert-crawl/commit/cc4de51a66fa111fb572d183a6df64f7263dc77e)), closes [4b#8](https://github.com/4b/issues/8) [4b#21](https://github.com/4b/issues/21)
+
 # [1.421.0](https://github.com/featherweight-design/concert-crawl/compare/v1.420.1...v1.421.0) (2026-11-14)
 
 
