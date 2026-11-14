@@ -22,6 +22,25 @@ export function isSoldOutSql() {
 }
 
 /**
+ * isSoldOutSql as a fan reads it: a cancelled or postponed show (a delisted
+ * one reads `cancelled` too) has no sale to be sold out of, so it never reads
+ * Sold out, even when a sold-out promoted before the change is still live.
+ * The row is kept, so a show un-postponed reads Sold out again. Admin reads
+ * and every write keep the ungated isSoldOutSql / activeSoldOutWhere, so an
+ * admin still sees, and can clear, a postponed show's live sold-out.
+ */
+export function isSoldOutForFansSql() {
+  return sql<boolean>`(${isSoldOutSql()} AND "events"."status" NOT IN ('cancelled', 'postponed'))`;
+}
+
+/** The fan-read rule for one show already loaded: see isSoldOutForFansSql. */
+export const showsSoldOutToFans = (
+  hasLiveSoldOut: boolean,
+  status: string,
+): boolean =>
+  hasLiveSoldOut && status !== 'cancelled' && status !== 'postponed';
+
+/**
  * A promoted, resolved fan report of one status on one event: the report an
  * admin (or the confirm threshold) turned into the event's live state.
  */

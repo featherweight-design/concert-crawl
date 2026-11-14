@@ -38,7 +38,7 @@ import {
 
 import { venueSlug } from '../lib/venue-slug-schema.js';
 import { markPublicRead, markViewerScopedRead } from '../lib/edge-cache.js';
-import { isSoldOutSql } from '../lib/sold-out.js';
+import { isSoldOutForFansSql } from '../lib/sold-out.js';
 import { loadPriceByTierByEventId } from '../lib/price-aggregation/index.js';
 import { currentPriceCondition, underCheckSql } from '../lib/price-check.js';
 import { MT_TIME_ZONE, todayInDenver, todayInTimezone } from '../lib/time.js';
@@ -230,7 +230,7 @@ venuesPublicRouter.get(
     const upcomingEvents = await db
       .select({
         id: events.id,
-        isSoldOut: isSoldOutSql(),
+        isSoldOut: isSoldOutForFansSql(),
         venueId: events.venueId,
         title: events.title,
         artist: displayHeadliner(),

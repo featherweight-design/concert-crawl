@@ -597,6 +597,52 @@ describe('POST /v1/admin/events/:id/sold-out and /available — past_locked', ()
       'rejected',
     ]);
   });
+
+  // A cancelled, postponed or delisted show has no sale to mark sold out:
+  // 409 `not_on_sale` with the reason, writing, auditing and telling nothing.
+  it.each([
+    { status: 'cancelled', delisted: false, reason: 'cancelled' },
+    { status: 'postponed', delisted: false, reason: 'postponed' },
+    { status: 'cancelled', delisted: true, reason: 'delisted' },
+  ] as const)(
+    'refuses sold-out on a $reason upcoming show with 409 not_on_sale',
+    async ({ status, delisted, reason }) => {
+      const venue = await seedVenue();
+      const event = await seedEvent(venue.id, {
+        date: futureDate(30),
+        status,
+        ...(delisted && { delistedAt: new Date() }),
+      });
+      await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+
+      const res = await post(event.id, 'sold-out');
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({
+        success: false,
+        error: 'not_on_sale',
+        reason,
+      });
+      expect(await reportsFor(event.id)).toEqual([]);
+      expect(await auditRowsFor(event.id)).toEqual([]);
+      expect(fanoutWatchNotification).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still clears a live sold-out on a postponed upcoming show', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(30) });
+    expect((await post(event.id, 'sold-out')).status).toBe(201);
+    await testDb
+      .update(events)
+      .set({ status: 'postponed' })
+      .where(eq(events.id, event.id));
+
+    expect((await post(event.id, 'available')).status).toBe(204);
+    expect((await reportsFor(event.id)).map((row) => row.resolution)).toEqual([
+      'rejected',
+    ]);
+  });
 });
 
 describe('GET /v1/admin/events?missing=true — moved-candidate detection', () => {

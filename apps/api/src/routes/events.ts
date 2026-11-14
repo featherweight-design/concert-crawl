@@ -60,7 +60,7 @@ import {
 } from '../lib/event-billing.js';
 import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
-import { isSoldOutSql } from '../lib/sold-out.js';
+import { isSoldOutForFansSql, showsSoldOutToFans } from '../lib/sold-out.js';
 import { loadPromotedReportSummary } from '../lib/promoted-report.js';
 import { redactReporter } from '../lib/report-privacy.js';
 import { deriveStatusSource } from '../lib/event-status-source.js';
@@ -322,7 +322,7 @@ eventsRouter.get(
     const rowsQuery = db
       .select({
         id: events.id,
-        isSoldOut: isSoldOutSql(),
+        isSoldOut: isSoldOutForFansSql(),
         venueId: events.venueId,
         title: events.title,
         artist: displayHeadliner(),
@@ -714,10 +714,15 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   }
 
   // Detect a promoted sold-out report — drives the confirmed sold-out UI.
-  // Same predicate as isSoldOutSql, so detail and every row agree.
-  const soldOutReport = await loadPromotedReportSummary(id, 'sold-out', {
+  // Same rule as isSoldOutForFansSql, so detail and every row agree: a
+  // cancelled or postponed show never reads Sold out, even with a live
+  // sold-out promoted before its status changed.
+  const liveSoldOut = await loadPromotedReportSummary(id, 'sold-out', {
     includeHandle: isAuthed,
   });
+  const soldOutReport = showsSoldOutToFans(liveSoldOut !== null, row.status)
+    ? liveSoldOut
+    : null;
   const priceStatus: 'live' | 'soldout' | null = soldOutReport
     ? 'soldout'
     : null;
@@ -1332,7 +1337,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
   const relatedRows = await db
     .select({
       id: events.id,
-      isSoldOut: isSoldOutSql(),
+      isSoldOut: isSoldOutForFansSql(),
       venueId: events.venueId,
       title: events.title,
       artist: displayHeadliner(),

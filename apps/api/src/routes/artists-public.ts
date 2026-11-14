@@ -39,7 +39,7 @@ import type {
 } from '@concert-crawl/types';
 import { loadOpenReport } from './artist-reports.js';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
-import { isSoldOutSql } from '../lib/sold-out.js';
+import { isSoldOutForFansSql } from '../lib/sold-out.js';
 import { billsCanonicalName } from '../lib/event-billing.js';
 import { dedupeNights } from '../lib/dedupe-nights.js';
 import {
@@ -369,7 +369,7 @@ artistsPublicRouter.get(
       tourName: events.tourName,
       genre: events.genre,
       imageUrl: events.imageUrl,
-      isSoldOut: isSoldOutSql(),
+      isSoldOut: isSoldOutForFansSql(),
     };
 
     const upcomingRows = await db

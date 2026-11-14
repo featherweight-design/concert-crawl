@@ -28,7 +28,7 @@ import {
 } from '../lib/event-billing.js';
 import { idSchema } from '../lib/id-schema.js';
 import { todayInDenver } from '../lib/time.js';
-import { isSoldOutSql } from '../lib/sold-out.js';
+import { isSoldOutForFansSql } from '../lib/sold-out.js';
 
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
 // ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;
@@ -62,7 +62,7 @@ watchingRouter.get('/', async (ctx) => {
       eventDelistedAt: events.delistedAt,
       // watchStatus is the price's state, a separate axis from the show's
       // lifecycle (eventStatus): a cancelled show is not sold out.
-      isSoldOut: isSoldOutSql(),
+      isSoldOut: isSoldOutForFansSql(),
       imageUrl: events.imageUrl,
       genre: events.genre,
       updatedAt: events.updatedAt,
