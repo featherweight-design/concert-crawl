@@ -8,6 +8,7 @@ import { BottomSheet } from '@/components/pwa/BottomSheet';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { adminEnvironment } from '@/lib/admin/environment';
 import { THEME_META } from '@/theme/themes';
+import { TRUNCATE } from '@/components/admin/primitives/utils';
 import { useAdminTheme } from './AdminThemeProvider';
 import {
   AdminAvatar,
@@ -258,7 +259,10 @@ export const PhoneUserMenu = ({ user }: { user: AdminShellUser }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <AdminAvatar user={user} size={40} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>
+              <div
+                data-testid="admin-user-menu-name"
+                style={{ ...TRUNCATE, fontSize: 16, fontWeight: 800 }}
+              >
                 {displayNameFor(user)}
               </div>
               <span style={{ ...monoLabel, fontWeight: 600 }}>

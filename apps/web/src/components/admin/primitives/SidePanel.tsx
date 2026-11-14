@@ -116,6 +116,8 @@ const PanelBody = ({
               margin: '4px 0 0',
               fontSize: 13,
               color: 'var(--fg-muted)',
+              // A byline can carry a long handle with nowhere to break.
+              overflowWrap: 'anywhere',
             }}
           >
             {subtitle}

@@ -704,10 +704,14 @@ export const PriceChecksTab = () => {
                     </span>
                   </div>
                   <div
+                    data-testid="resolved-decided-by"
                     style={{
                       flex: 1,
+                      minWidth: 0,
                       fontSize: 12.5,
                       color: 'var(--fg-muted)',
+                      // A long handle wraps inside its column.
+                      overflowWrap: 'anywhere',
                     }}
                   >
                     {[

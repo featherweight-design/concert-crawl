@@ -134,3 +134,22 @@ describe('InviteCodesClient row menu', () => {
     expect(screen.queryByText(/of 10,?000/)).not.toBeInTheDocument();
   });
 });
+
+describe('InviteCodesClient phone list', () => {
+  it('ends a long handle in an ellipsis inside the row', async () => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    render(<InviteCodesClient origin="https://concertcrawl.app" />);
+    await screen.findByText('Personal · @hugh');
+    const label = screen
+      .getAllByTestId('invite-code-row-label')
+      .find((node) => node.textContent === 'Personal · @hugh');
+    expect(label?.style.minWidth).toBe('0px');
+    expect(label?.style.overflow).toBe('hidden');
+    expect(label?.style.textOverflow).toBe('ellipsis');
+    expect(label?.style.whiteSpace).toBe('nowrap');
+  });
+});

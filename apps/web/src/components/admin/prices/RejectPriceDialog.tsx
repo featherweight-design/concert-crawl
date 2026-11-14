@@ -99,6 +99,8 @@ export const RejectPriceDialog = ({
           fontSize: 13.5,
           color: 'var(--fg-muted)',
           lineHeight: 1.5,
+          // The fan's handle sits mid-sentence and can be 47 characters.
+          overflowWrap: 'anywhere',
         }}
       >
         {COPY.body(row.handle)}

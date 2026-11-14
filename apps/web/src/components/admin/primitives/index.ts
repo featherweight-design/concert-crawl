@@ -25,7 +25,7 @@ export {
   pageWindow,
 } from './pagination-logic';
 export type { StatusKind } from './utils';
-export { formatCost, confidenceColor } from './utils';
+export { formatCost, confidenceColor, TRUNCATE } from './utils';
 export { VenueChip, VenueStatus } from './VenueStatus';
 export type { VenueStatusVenue } from './VenueStatus';
 export { KindLabel } from './KindLabel';

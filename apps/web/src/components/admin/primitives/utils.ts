@@ -1,3 +1,16 @@
+import type { CSSProperties } from 'react';
+
+/**
+ * One line that ends in an ellipsis rather than running past its row: a
+ * handle can be 47 characters with nowhere to break.
+ */
+export const TRUNCATE: CSSProperties = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
 // Sub-$1 values show 4 decimals — per-run LLM costs are fractions of a
 // cent, and "$0.00" hides real spend (mock: admin-primitives.jsx CostText).
 export const formatCost = (value: number): string =>

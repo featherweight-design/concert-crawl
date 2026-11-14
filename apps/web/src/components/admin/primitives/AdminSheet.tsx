@@ -170,6 +170,8 @@ export const AdminSheet = ({
                 fontSize: 13,
                 lineHeight: 1.45,
                 color: 'var(--fg-muted)',
+                // A byline can carry a long handle with nowhere to break.
+                overflowWrap: 'anywhere',
               }}
             >
               {subtitle}
