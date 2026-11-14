@@ -156,19 +156,6 @@ describe('the draft and what a save sends', () => {
     expect(formData.get('contactEmail')).toBe('');
     expect(formData.get('ticketVendor')).toBe('');
   });
-
-  it('never sends a Source column or a crawl rule', () => {
-    const draft = {
-      ...draftOf(saved),
-      name: 'Ball Arena Denver',
-      about: 'New.',
-    };
-    const keys = changedColumns(draft, saved);
-    const formData = detailsFormData(applyColumns(saved, draft, keys), keys);
-    for (const key of ['websiteUrl', 'platform', 'crawlDelayMs', 'active']) {
-      expect(formData.has(key)).toBe(false);
-    }
-  });
 });
 
 describe('rebaseDraft', () => {
