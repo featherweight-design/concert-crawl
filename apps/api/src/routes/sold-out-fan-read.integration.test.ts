@@ -80,6 +80,16 @@ describe('sold out as fans read it', () => {
     },
   );
 
+  it('never reads sold out on a show the sweep delisted', async () => {
+    await testDb
+      .update(events)
+      .set({ status: 'cancelled', delistedAt: new Date() })
+      .where(eq(events.id, eventId));
+
+    expect((await detail()).priceStatus).toBeNull();
+    expect((await listed())?.isSoldOut).toBe(false);
+  });
+
   it('reads sold out again once a postponed show is back on', async () => {
     await setStatus('postponed');
     expect((await detail()).priceStatus).toBeNull();

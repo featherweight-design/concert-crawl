@@ -524,7 +524,9 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     // The locked event read (upcoming), the existing read (none yet), then
     // the recovery read after the savepoint rolls back.
     limit
-      .mockResolvedValueOnce([{ date: '2099-06-01' }])
+      .mockResolvedValueOnce([
+        { date: '2099-06-01', status: 'upcoming', delistedAt: null },
+      ])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([winner]);
     vi.mocked(db.insert().values().returning).mockRejectedValueOnce(
