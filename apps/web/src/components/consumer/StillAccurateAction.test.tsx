@@ -25,14 +25,10 @@ vi.mock('@clerk/nextjs', () => ({
 }));
 
 const mockRefresh = vi.fn();
+const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: mockRefresh }),
-}));
-
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: ({ entry }: { entry: string }) => (
-    <div data-testid="tier-picker" data-entry={entry} />
-  ),
+  useRouter: () => ({ refresh: mockRefresh, push: mockPush }),
+  usePathname: () => '/events/evt-1',
 }));
 
 import { StillAccurateAction } from './StillAccurateAction';
@@ -65,6 +61,7 @@ beforeEach(() => {
   isSignedIn = true;
   isLoaded = true;
   mockRefresh.mockReset();
+  mockPush.mockReset();
   mockFetch.mockReset();
   mockFetch.mockResolvedValue({ ok: true, status: 200 });
   vi.stubGlobal('fetch', mockFetch);
@@ -140,13 +137,18 @@ describe('StillAccurateAction', () => {
     expect(mockRefresh).toHaveBeenCalled();
   });
 
-  it('opens the sign-in gate on a 401 instead of refreshing', async () => {
+  it('sends the visitor to sign-in on a 401 instead of refreshing', async () => {
     const onSighted = vi.fn();
     mockFetch.mockResolvedValue({ ok: false, status: 401 });
     renderAction({ onSighted });
     fireEvent.click(screen.getByTestId('still-accurate-action'));
 
-    await waitFor(() => expect(screen.getByTestId('tier-picker')).toBeTruthy());
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith(
+        `/sign-in?redirect_url=${encodeURIComponent('/events/evt-1')}`,
+      ),
+    );
+    expect(mockPush).toHaveBeenCalledTimes(1);
     expect(onSighted).not.toHaveBeenCalled();
     expect(mockRefresh).not.toHaveBeenCalled();
   });

@@ -34,13 +34,10 @@ const mockGetToken = vi.fn(async () =>
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: mockGetToken, isLoaded, isSignedIn }),
 }));
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ entry }: { entry: string }) => (
-    <div data-testid="tier-picker" data-entry={entry} />
-  ),
-}));
+const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: mockPush, refresh: vi.fn() }),
+  usePathname: () => '/events/evt-1',
 }));
 vi.mock('lucide-react', () => ({
   ShieldCheck: () => <svg data-testid="shield-check-icon" />,
@@ -85,25 +82,26 @@ async function fillForm() {
 }
 
 describe('SubmitPriceModal — signed-out gate', () => {
-  it('offers an account instead of a form the API will reject', async () => {
+  it('sends a signed-out visitor to sign-in instead of a form the API will reject', async () => {
     isSignedIn = false;
     render(<SubmitPriceModal {...defaultProps} />);
 
-    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
-      'data-entry',
-      'logged-out-price',
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/evt-1')}`,
     );
+    expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Box office')).toBeNull();
   });
 
-  it('shows neither form nor gate while Clerk is still resolving', () => {
+  it('shows neither form nor redirect while Clerk is still resolving', () => {
     isLoaded = false;
     isSignedIn = false;
     render(<SubmitPriceModal {...defaultProps} />);
 
-    // Neither surface may render yet: the form would flash a submission the
-    // API will reject, and the gate would flash at a signed-in submitter.
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
+    // Neither surface may act yet: the form would flash a submission the API
+    // will reject, and the redirect would bounce a signed-in submitter.
+    expect(mockPush).not.toHaveBeenCalled();
     expect(screen.queryByText('Box office')).toBeNull();
   });
 
@@ -111,7 +109,7 @@ describe('SubmitPriceModal — signed-out gate', () => {
     render(<SubmitPriceModal {...defaultProps} />);
 
     await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy());
-    expect(screen.queryByTestId('tier-picker')).toBeNull();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });
 

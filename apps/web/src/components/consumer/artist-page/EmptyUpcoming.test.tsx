@@ -8,6 +8,7 @@ import { ARTIST_COPY } from './definitions/copy';
 import { EmptyUpcoming } from './EmptyUpcoming';
 
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/artists/wax-harbour',
   useSearchParams: () => new URLSearchParams(),
 }));

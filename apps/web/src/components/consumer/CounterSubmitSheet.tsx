@@ -1,5 +1,6 @@
 'use client';
 
+import { SignInRedirect } from '@/components/consumer/SignInRedirect';
 import { useState, useCallback, type ReactNode } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
@@ -8,8 +9,6 @@ import { ChipGroup } from './ChipGroup';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 import { PriceRailMark } from '@/components/consumer/price-rail/PriceRailMark';
 import { displayVendor } from '@/components/consumer/vendor-display';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { apiErrorMessage } from '@/components/consumer/lib/api-error-message';
 import { SP_POLICY } from '@concert-crawl/types';
@@ -301,17 +300,7 @@ export function CounterSubmitSheet({
   // the whole form and got silence (#1247). A price check is free; the account
   // is the only thing missing.
   if (open && isLoaded && !isSignedIn) {
-    return (
-      <TierPickerSheet
-        open
-        onClose={handleClose}
-        planState={LOGGED_OUT_PLAN_STATE}
-        // No payment element is reachable signed out; `true` only adds legal
-        // copy, matching the other logged-out picker call-sites.
-        scaRegion
-        entry="logged-out-price"
-      />
-    );
+    return <SignInRedirect onDone={handleClose} />;
   }
 
   return (

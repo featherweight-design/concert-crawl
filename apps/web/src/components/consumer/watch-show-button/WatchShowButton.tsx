@@ -1,16 +1,8 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { encodeIntent } from '@/lib/auth/intent';
 import { Eye, Loader2 } from 'lucide-react';
 import { useWatching } from '@/lib/queries/use-watching';
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle';
@@ -31,8 +23,6 @@ import { whenFollowNudgeClosed } from '@/components/consumer/following/nudge/lib
 import { PostWatchSheet } from '@/components/pwa/PostWatchSheet';
 import { IosHowToSheet } from '@/components/pwa/IosHowToSheet';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 
 interface WatchShowButtonProps {
   eventId: string;
@@ -57,8 +47,6 @@ export function WatchShowButton({
   variant = 'icon',
 }: WatchShowButtonProps) {
   const { isSignedIn, getToken } = useAuth();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { data: watchedShows } = useWatching();
   const toggle = useWatchToggle();
   // #1062 gate — subscribe to the server-side notification preference so we
@@ -78,11 +66,7 @@ export function WatchShowButton({
     null,
   );
   const [installSheetOpen, setInstallSheetOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  // Separate from `pickerOpen` so the sheet stays mounted once opened: `dynamic`
-  // only defers the chunk while the element is unrendered, and unmounting on
-  // close would skip ModalShell's exit animation.
-  const [pickerMounted, setPickerMounted] = useState(false);
+  const goToSignIn = useSignInRedirect();
   // Guard against the effect firing again while a pending toggle is in the
   // "just resolved" window — we only want to consider firing the sheet
   // once per component lifetime per successful watch.
@@ -118,22 +102,6 @@ export function WatchShowButton({
   }, [prefs?.masterEnabled]);
 
   const isPending = toggle.isPending;
-
-  // The signed-out click carries the watch through auth: Clerk lands on the
-  // tour, which hands the intent back to this page, which replays it. The
-  // button itself never fires the mutation while signed out.
-  const signUpHref = useMemo(() => {
-    // The query is part of where they were — `?tab=prices` is a different view
-    // of the page — so the hand-back returns them to the state they left, not
-    // just to the route.
-    const search = searchParams.toString();
-    const tour = new URLSearchParams({
-      intent: encodeIntent({ action: 'watch', eventId }),
-      return: search ? `${pathname}?${search}` : pathname,
-    });
-    if (artist) tour.set('label', artist);
-    return `/sign-up?redirect_url=${encodeURIComponent(`/onboarding?${tour.toString()}`)}`;
-  }, [eventId, pathname, searchParams, artist]);
 
   // Derive watching state from the cache when available. If the cache hasn't
   // loaded yet but a mutation is in-flight, apply a local optimistic override
@@ -186,11 +154,10 @@ export function WatchShowButton({
   const handleToggle = () => {
     if (isPending) return;
     // Signed out this was a silent no-op: a visitor tapped a full-strength eye
-    // and nothing happened at all. Route to the tier picker instead — Watching
-    // is free, it just needs an account to save to.
+    // and nothing happened at all. Route to sign-in instead — Watching is
+    // free, it just needs an account to save to.
     if (!isSignedIn) {
-      setPickerMounted(true);
-      setPickerOpen(true);
+      goToSignIn();
       return;
     }
     // Snapshot the pre-toggle state so a stale-cache read on the effect side
@@ -382,8 +349,6 @@ export function WatchShowButton({
     // NOT claim a pressed state — `aria-pressed` is omitted entirely
     // rather than set to false, which would announce an off switch.
     'aria-pressed': isSignedIn ? renderedWatching : undefined,
-    'aria-haspopup': isSignedIn ? undefined : ('dialog' as const),
-    'aria-expanded': isSignedIn ? undefined : pickerOpen,
     'aria-label': !isSignedIn
       ? CONSUMER_COPY.watchShowButton.button.ariaWatchSignedOut(who)
       : renderedWatching
@@ -494,22 +459,6 @@ export function WatchShowButton({
         open={installSheetOpen}
         onClose={() => setInstallSheetOpen(false)}
       />
-      {pickerMounted && (
-        <TierPickerSheet
-          open={pickerOpen}
-          onClose={() => setPickerOpen(false)}
-          planState={LOGGED_OUT_PLAN_STATE}
-          // Unreachable from here: a logged-out tier selection routes to
-          // /sign-up, never to a payment element, so no SCA challenge can
-          // occur before an account exists. `true` is the fail-safe value (it
-          // only adds legal copy), matching FilterBar's default, and this
-          // button renders across the browse grid where no request header is
-          // in scope.
-          scaRegion
-          entry="logged-out-watch"
-          signUpHref={signUpHref}
-        />
-      )}
     </>
   );
 }

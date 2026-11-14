@@ -5,6 +5,7 @@
 // its own entitlement check, because two copies of a paywall is how one of
 // them ends up ungated.
 
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { useState } from 'react';
 import type { PlanState, CrewSummary } from '@concert-crawl/types';
 
@@ -49,6 +50,7 @@ export const CreateCrewButton = ({
   const [createOpen, setCreateOpen] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const goToSignIn = useSignInRedirect();
 
   const tier = unlockTierFor('crews');
   // A plan that once paid and no longer does keeps its crews; only starting
@@ -74,7 +76,7 @@ export const CreateCrewButton = ({
       return;
     }
     if (surface === 'tier-picker-on-tap') {
-      setPickerOpen(true);
+      goToSignIn();
       return;
     }
     setGateOpen(true);
@@ -228,9 +230,7 @@ export const CreateCrewButton = ({
         onClose={() => setPickerOpen(false)}
         planState={planState ?? LOGGED_OUT_PLAN_STATE}
         scaRegion={scaRegion}
-        entry={
-          surface === 'tier-picker-on-tap' ? 'logged-out-paywall' : 'paywall'
-        }
+        entry="paywall"
       />
 
       <CreateCrewSheet

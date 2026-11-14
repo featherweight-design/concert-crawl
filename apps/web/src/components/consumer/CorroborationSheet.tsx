@@ -1,5 +1,6 @@
 'use client';
 
+import { SignInRedirect } from '@/components/consumer/SignInRedirect';
 import { useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -7,8 +8,6 @@ import { Users } from 'lucide-react';
 import { CheckGlyph, PendingTrustPill } from './glyphs';
 import { PriceRailMark } from './price-rail/PriceRailMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
 const copy = CONSUMER_COPY.corroborationSheet;
 
@@ -469,17 +468,7 @@ export const CorroborationSheet = ({
   // signed-out visitor previously picked a verify method and got silence
   // (#1247). Corroborating is free; the account is the only thing missing.
   if (open && isLoaded && !isSignedIn) {
-    return (
-      <TierPickerSheet
-        open
-        onClose={onClose}
-        planState={LOGGED_OUT_PLAN_STATE}
-        // No payment element is reachable signed out; `true` only adds legal
-        // copy, matching the other logged-out picker call-sites.
-        scaRegion
-        entry="logged-out-price"
-      />
-    );
+    return <SignInRedirect onDone={onClose} />;
   }
 
   return (

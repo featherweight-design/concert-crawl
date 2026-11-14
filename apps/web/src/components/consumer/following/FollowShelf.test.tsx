@@ -35,7 +35,9 @@ vi.mock('@/lib/queries/use-entitlement', () => ({
 
 // See all builds its href off the current Browse URL.
 const navState = { pathname: '/events', search: '' };
+const push = vi.fn();
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
   usePathname: () => navState.pathname,
   useSearchParams: () => new URLSearchParams(navState.search),
 }));
@@ -312,22 +314,26 @@ describe('FollowShelf', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('signed-out viewers hand off to the logged-out picker entry', () => {
+  it('signed-out viewers are sent to sign-in instead of the picker', () => {
     authState.isSignedIn = false;
     entitlementState.current = {
       isLoading: false,
       active: false,
       surface: 'tier-picker-on-tap',
     };
+    push.mockClear();
     renderShelf();
     fireEvent.click(
       screen.getByRole('button', {
         name: FOLLOWING_COPY.followAria('Ratbag'),
       }),
     );
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'logged-out-follow',
+    expect(toggle).not.toHaveBeenCalled();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events')}`,
     );
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
   });
 
   // Clerk and the entitlement resolve after mount. A tap in that window must

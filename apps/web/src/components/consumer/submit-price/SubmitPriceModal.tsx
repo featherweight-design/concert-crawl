@@ -1,12 +1,11 @@
 'use client';
 
+import { SignInRedirect } from '@/components/consumer/SignInRedirect';
 import { useState, useCallback, useEffect } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { useAuth } from '@clerk/nextjs';
 import { ShieldCheck } from 'lucide-react';
 import { ModalShell } from '@/components/consumer/modal-shell';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import { PriceRailMark } from '@/components/consumer/price-rail/PriceRailMark';
 import { displayVendor } from '@/components/consumer/vendor-display';
 import { SPNumberField } from '../SPNumberField';
@@ -738,17 +737,7 @@ export function SubmitPriceModal({
   // POST rejected. Submitting a price is free — the account is the only thing
   // missing — so the signed-out reach goes to the picker, not an error.
   if (open && isLoaded && !isSignedIn) {
-    return (
-      <TierPickerSheet
-        open
-        onClose={onClose}
-        planState={LOGGED_OUT_PLAN_STATE}
-        // No payment element is reachable signed out; `true` only adds legal
-        // copy, matching the other logged-out picker call-sites.
-        scaRegion
-        entry="logged-out-price"
-      />
-    );
+    return <SignInRedirect onDone={onClose} />;
   }
 
   return (

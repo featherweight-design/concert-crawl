@@ -1,13 +1,12 @@
 'use client';
 
+import { SignInRedirect } from '@/components/consumer/SignInRedirect';
 import { useId, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
 import { ReportTypeMark } from './ReportTypeMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
 // ── Report type glyphs (15×15) ────────────────────────────────────
 
@@ -300,17 +299,7 @@ export const ReportSheet = ({
   // form before EvidenceForm threw on submit. Reporting is free, so the
   // signed-out reach goes to the picker rather than a dead end.
   if (open && isLoaded && !isSignedIn) {
-    return (
-      <TierPickerSheet
-        open
-        onClose={onClose}
-        planState={LOGGED_OUT_PLAN_STATE}
-        // No payment element is reachable signed out; `true` only adds legal
-        // copy, matching the other logged-out picker call-sites.
-        scaRegion
-        entry="logged-out-report"
-      />
-    );
+    return <SignInRedirect onDone={onClose} />;
   }
 
   return (

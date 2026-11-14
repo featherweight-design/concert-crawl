@@ -32,7 +32,6 @@
 
 import React, { useId, useState } from 'react';
 import Link from 'next/link';
-import type { PickerEntry } from '@concert-crawl/types';
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import {
@@ -117,9 +116,6 @@ export const BillFollowBlock = ({
   // still resolving: showing a paying subscriber an upgrade-shaped block is
   // the worse of the two wrong answers, and the server enforces regardless.
   const locked = !signedOut && surface !== null && surface !== 'visible-active';
-
-  const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
   // Hooks above this line run unconditionally.
   if (artists.length === 0) return null;
@@ -387,7 +383,7 @@ export const BillFollowBlock = ({
         onClose={() => setPickerOpen(false)}
         planState={planState ?? LOGGED_OUT_PLAN_STATE}
         scaRegion={scaRegion}
-        entry={pickerEntry}
+        entry="paywall"
       />
     </section>
   );

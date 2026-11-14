@@ -8,12 +8,9 @@ import { ARTIST_COPY } from './definitions/copy';
 import { FollowBlock } from './FollowBlock';
 
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/artists/wax-harbour',
   useSearchParams: () => new URLSearchParams(),
-}));
-
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
-  TierPickerSheet: () => null,
 }));
 
 afterEach(cleanup);

@@ -39,6 +39,12 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }));
 
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => '/events',
+}));
+
 import { TasteFilterChip } from './TasteFilterChip';
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 
@@ -161,16 +167,20 @@ describe('TasteFilterChip', () => {
     expect(picker.getAttribute('data-entry')).toBe('paywall');
   });
 
-  it('locked (logged-out) taps open the tier picker directly', () => {
+  it('locked (logged-out) taps go straight to sign-in', () => {
     entitlementState.current = {
       isLoading: false,
       active: false,
       surface: 'tier-picker-on-tap',
     };
+    push.mockClear();
     renderChip();
     fireEvent.click(screen.getByRole('button', { name: COPY.chipLockedAria }));
     expect(screen.queryByText(COPY.upsell.title)).toBeNull();
-    const picker = screen.getByTestId('tier-picker');
-    expect(picker.getAttribute('data-entry')).toBe('logged-out-paywall');
+    expect(screen.queryByTestId('tier-picker')).toBeNull();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events')}`,
+    );
   });
 });

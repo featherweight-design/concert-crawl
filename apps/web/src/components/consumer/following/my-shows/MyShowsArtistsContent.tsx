@@ -15,7 +15,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
-import type { FollowedArtist, PickerEntry } from '@concert-crawl/types';
+import type { FollowedArtist } from '@concert-crawl/types';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 import { usePlanState } from '@/lib/queries/use-plan-state';
@@ -69,9 +69,6 @@ export const MyShowsArtistsContent = ({
   // The shared tab bar draws it on the Artists tab. A failed read has no count.
   useMyShowsArtistCount(artists === undefined ? undefined : follows.length);
 
-  const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
-
   // Fails OPEN while the plan is resolving: the empty state's CTAs write
   // nothing either way, and showing a paying subscriber an upgrade-shaped
   // pitch is the worse of the two wrong answers.
@@ -87,7 +84,7 @@ export const MyShowsArtistsContent = ({
       // resolves; the logged-out shape is what every other caller falls back to.
       planState={planState ?? LOGGED_OUT_PLAN_STATE}
       scaRegion={scaRegion}
-      entry={pickerEntry}
+      entry="paywall"
     />
   );
 

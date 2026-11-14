@@ -8,6 +8,7 @@
 // `children` rather than being rendered here, because it belongs to #1238 and
 // carries its own data — this component only owns the card and the commitment.
 
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import {
   useEffect,
   useRef,
@@ -16,7 +17,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { EventDetailResponse, PickerEntry } from '@concert-crawl/types';
+import type { EventDetailResponse } from '@concert-crawl/types';
 import { ApiError } from '@/lib/api';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
@@ -80,7 +81,7 @@ export const EventDetailCtaBlock = ({
   const { data: planState } = usePlanState();
   const toggle = useAttendingToggle();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall');
+  const goToSignIn = useSignInRedirect();
   // Holds the *intent* that failed, not just that something did. The error
   // button can't re-derive it: the `error` treatment reports as off, so a
   // failed release would retry as a mark-going no-op. `null` means no failure.
@@ -152,11 +153,12 @@ export const EventDetailCtaBlock = ({
         : serverState;
 
   const openUpgrade = () => {
-    // Signed out this is a reach for Concerts, not the taste paywall —
-    // the entry keys the gate's copy as well as the funnel dimension.
-    setPickerEntry(
-      surface === 'tier-picker-on-tap' ? 'logged-out-going' : 'paywall',
-    );
+    // Signed out goes to sign-in and back here; the picker is for a locked
+    // signed-in viewer only.
+    if (surface === 'tier-picker-on-tap') {
+      goToSignIn();
+      return;
+    }
     setPickerOpen(true);
   };
 
@@ -433,7 +435,7 @@ export const EventDetailCtaBlock = ({
         onClose={() => setPickerOpen(false)}
         planState={planState ?? LOGGED_OUT_PLAN_STATE}
         scaRegion={scaRegion}
-        entry={pickerEntry}
+        entry="paywall"
       />
     </div>
   );

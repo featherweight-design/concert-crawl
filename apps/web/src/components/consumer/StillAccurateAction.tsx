@@ -1,11 +1,10 @@
 'use client';
 
+import { SignInRedirect } from '@/components/consumer/SignInRedirect';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { isPriceStale } from '@/components/consumer/lib/staleness';
 
 const copy = CONSUMER_COPY.priceStaleness;
@@ -88,17 +87,7 @@ export const StillAccurateAction = ({
   };
 
   if (gateOpen) {
-    return (
-      <TierPickerSheet
-        open
-        onClose={() => setGateOpen(false)}
-        planState={LOGGED_OUT_PLAN_STATE}
-        // No payment element is reachable signed out; `true` only adds legal
-        // copy, matching the other logged-out picker call-sites.
-        scaRegion
-        entry="logged-out-price"
-      />
-    );
+    return <SignInRedirect onDone={() => setGateOpen(false)} />;
   }
 
   if (!eligible) return null;

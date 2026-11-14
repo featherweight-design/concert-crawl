@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
-import type { ArtistSearchResult, PickerEntry } from '@concert-crawl/types';
+import type { ArtistSearchResult } from '@concert-crawl/types';
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 import { useEntitlement } from '@/lib/queries/use-entitlement';
 import { usePlanState } from '@/lib/queries/use-plan-state';
@@ -96,11 +97,14 @@ function ArtistPageSection({
   const iconOnly = useMediaQuery(SEARCH_FOLLOW_ICON_ONLY_QUERY);
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
 
-  // A logged-out tap gets the sign-up pitch; a signed-in locked tap gets the
-  // paywall. `surface` is what the entitlements matrix routes on, so the entry
-  // is read from it rather than from `isSignedIn` alone.
-  const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
+  // A logged-out tap goes to sign-in; a signed-in locked tap gets the paywall.
+  // `surface` is what the entitlements matrix routes on, so the split is read
+  // from it rather than from `isSignedIn` alone.
+  const goToSignIn = useSignInRedirect();
+  const openGate = () => {
+    if (surface === 'tier-picker-on-tap') goToSignIn();
+    else setPickerOpen(true);
+  };
 
   if (artistPageResults.length === 0) return null;
   return (
@@ -125,8 +129,8 @@ function ArtistPageSection({
               }
               isSignedIn={isSignedIn}
               surface={surface}
-              onLockedTap={() => setPickerOpen(true)}
-              onEntitlementRequired={() => setPickerOpen(true)}
+              onLockedTap={openGate}
+              onEntitlementRequired={openGate}
               size={isDesktop ? 'rowWide' : 'row'}
               iconOnly={iconOnly}
             />
@@ -140,7 +144,7 @@ function ArtistPageSection({
         // Unknowable here and only ever widens the flow, so `true` is the
         // fail-safe: it asks for the extra confirmation rather than skipping it.
         scaRegion
-        entry={pickerEntry}
+        entry="paywall"
       />
     </>
   );

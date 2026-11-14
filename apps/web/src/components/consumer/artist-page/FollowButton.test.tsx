@@ -8,20 +8,17 @@ import { ARTIST_COPY } from './definitions/copy';
 import { NF_FOLLOW_SIZES } from './definitions/constants';
 import { FollowButton } from './FollowButton';
 
+const push = vi.fn();
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
   usePathname: () => '/artists/wax-harbour',
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// The signed-out branch mounts the tier picker, which drags in Stripe and
-// React Query. The contract under test is that a dialog opens, not what is in
-// it, so the sheet is stubbed.
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ open }: { open: boolean }) =>
-    open ? <div role="dialog" aria-label="Pick a lane" /> : null,
-}));
-
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  push.mockReset();
+});
 
 // VOCABULARY-BAN-CHECK — this file names the banned glyph to assert its absence.
 const noop = () => undefined;
@@ -58,16 +55,18 @@ describe('FollowButton', () => {
     expect(signedOut.getAttribute('class')).toBe(signedInClass);
     expect(signedOut.textContent).toBe(ARTIST_COPY.follow);
 
-    // They differ ONLY in the accessible name and the dialog affordance.
+    // They differ ONLY in the accessible name: signed out is a plain link-like
+    // button to sign-in, so it carries no dialog affordance.
     expect(signedOut.getAttribute('aria-label')).toBe(
       ARTIST_COPY.followSignedOutAria('Wax Harbour'),
     );
-    expect(signedOut.getAttribute('aria-haspopup')).toBe('dialog');
-    // Never an off switch — signed out this is a dialog trigger, not a toggle.
+    expect(signedOut.getAttribute('aria-haspopup')).toBeNull();
+    expect(signedOut.getAttribute('aria-expanded')).toBeNull();
+    // Never an off switch — signed out this is a sign-in hand-off, not a toggle.
     expect(signedOut.getAttribute('aria-pressed')).toBeNull();
   });
 
-  it('opens the sign-in hand-off on a signed-out click and never calls follow', () => {
+  it('sends a signed-out click to sign-in and never calls follow', () => {
     const onToggle = vi.fn();
     const { getByRole, queryByRole } = render(
       <FollowButton
@@ -78,9 +77,13 @@ describe('FollowButton', () => {
         onLockedTap={() => undefined}
       />,
     );
-    expect(queryByRole('dialog')).toBeNull();
+    expect(push).not.toHaveBeenCalled();
     fireEvent.click(getByRole('button'));
-    expect(queryByRole('dialog')).not.toBeNull();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/artists/wax-harbour')}`,
+    );
+    expect(queryByRole('dialog')).toBeNull();
     expect(onToggle).not.toHaveBeenCalled();
   });
 

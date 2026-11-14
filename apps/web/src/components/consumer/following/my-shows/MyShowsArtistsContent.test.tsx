@@ -25,7 +25,9 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }));
 
+// FollowButton reads the router for its signed-out sign-in hand-off.
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/following',
   useSearchParams: () => new URLSearchParams(),
 }));

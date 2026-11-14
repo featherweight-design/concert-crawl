@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useId, useMemo, useState } from 'react';
+import React, { useId, useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { useSignInRedirect } from '@/lib/auth/use-sign-in-redirect';
 
 import { ARTIST_COPY } from './definitions/copy';
 import { NF_FOLLOW_SIZES, NF_TAP_MIN } from './definitions/constants';
@@ -96,7 +95,7 @@ export const FollowButton = ({
   onToggle,
   onLockedTap,
 }: FollowButtonProps) => {
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const goToSignIn = useSignInRedirect();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -112,11 +111,6 @@ export const FollowButton = ({
     return search ? `${pathname}?${search}` : pathname;
   }, [pathname, searchParams]);
 
-  const signUpHref = useMemo(() => {
-    const tour = new URLSearchParams({ return: returnTo, label: name });
-    return `/sign-up?redirect_url=${encodeURIComponent(`/onboarding?${tour.toString()}`)}`;
-  }, [returnTo, name]);
-
   // Signed out we draw the at-rest skin, never the following one — there is no
   // relationship to render for a visitor who has no account. Locked likewise:
   // a plan that cannot follow cannot be following.
@@ -124,7 +118,7 @@ export const FollowButton = ({
 
   const onClick = () => {
     if (signedOut) {
-      setPickerOpen(true);
+      goToSignIn();
       return;
     }
     if (locked) {
@@ -250,8 +244,7 @@ export const FollowButton = ({
         // `aria-pressed` is omitted entirely rather than set to false, which
         // would announce an off switch the visitor cannot turn on.
         aria-pressed={signedOut || locked ? undefined : active}
-        aria-haspopup={signedOut || locked ? 'dialog' : undefined}
-        aria-expanded={signedOut ? pickerOpen : undefined}
+        aria-haspopup={locked ? 'dialog' : undefined}
         aria-describedby={locked ? gateId : undefined}
         aria-label={ariaLabel}
         {...(signedOut ? { 'data-return-to': returnTo } : {})}
@@ -328,19 +321,6 @@ export const FollowButton = ({
         >
           {ARTIST_COPY.followGate}
         </span>
-      )}
-      {signedOut && (
-        <TierPickerSheet
-          open={pickerOpen}
-          onClose={() => setPickerOpen(false)}
-          planState={LOGGED_OUT_PLAN_STATE}
-          // Unreachable from here: a logged-out tier selection routes to
-          // /sign-up, never to a payment element, so no SCA challenge can occur
-          // before an account exists. `true` is the fail-safe value.
-          scaRegion
-          entry="logged-out-follow"
-          signUpHref={signUpHref}
-        />
       )}
     </>
   );

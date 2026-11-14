@@ -14,17 +14,19 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ isLoaded, isSignedIn }),
 }));
 
-vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: ({ entry }: { entry: string }) => (
-    <div data-testid="tier-picker" data-entry={entry} />
-  ),
+const push = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => '/events/evt_1',
 }));
+
+const onClose = vi.fn();
 
 const renderSheet = () =>
   render(
     <ReportSheet
       open
-      onClose={vi.fn()}
+      onClose={onClose}
       liveStatus={null}
       eventDate="2026-09-01T02:00:00.000Z"
       onSelect={vi.fn()}
@@ -34,6 +36,8 @@ const renderSheet = () =>
 beforeEach(() => {
   isSignedIn = true;
   isLoaded = true;
+  push.mockClear();
+  onClose.mockClear();
 
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -78,22 +82,24 @@ describe('ReportSheet', () => {
     expect(screen.queryByText(copy.continueHint)).toBe(null);
   });
 
-  it('sends a signed-out visitor to the tier picker instead of the form', () => {
+  it('sends a signed-out visitor to sign-in instead of the form', () => {
     isSignedIn = false;
     renderSheet();
 
-    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
-      'logged-out-report',
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith(
+      `/sign-in?redirect_url=${encodeURIComponent('/events/evt_1')}`,
     );
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(copy.options.cancelled.title)).toBe(null);
   });
 
-  it('does not flash the picker while Clerk is still loading', () => {
+  it('does not redirect while Clerk is still loading', () => {
     isLoaded = false;
     isSignedIn = false;
     renderSheet();
 
-    expect(screen.queryByTestId('tier-picker')).toBe(null);
+    expect(push).not.toHaveBeenCalled();
     expect(screen.getByText(copy.options.cancelled.title)).toBeTruthy();
   });
 });

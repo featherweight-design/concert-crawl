@@ -33,6 +33,7 @@ vi.mock('@clerk/nextjs', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/events/evt-1',
   useSearchParams: () => new URLSearchParams(),
 }));

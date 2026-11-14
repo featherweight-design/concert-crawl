@@ -10,7 +10,6 @@ import { InstallSlot } from '@/components/pwa/InstallSlot';
 import { LaunchAnimation } from '@/components/pwa/LaunchAnimation';
 import { OfflinePill } from '@/components/pwa/OfflinePill';
 import { ReturnSeamReplay } from '@/components/consumer/return-seam/ReturnSeamReplay';
-import { PendingTierPicker } from '@/components/consumer/tier-picker/PendingTierPicker';
 import { Suspense } from 'react';
 
 export default function MainLayout({
@@ -56,10 +55,6 @@ export default function MainLayout({
             otherwise statically rendered. */}
           <Suspense fallback={null}>
             <ReturnSeamReplay />
-            {/* Same reasoning, other half of the seam: the tier a visitor chose
-              before signing up (#1284). Kept apart from the replay because the
-              two are independent — someone can arrive carrying either, or both. */}
-            <PendingTierPicker />
           </Suspense>
           <div data-testid="phone-column" className={PHONE_COLUMN_CLASS}>
             {children}
