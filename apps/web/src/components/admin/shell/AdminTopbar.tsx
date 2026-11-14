@@ -108,6 +108,7 @@ export const AdminPhoneHeader = ({ user }: { user: AdminShellUser }) => {
     return (
       <nav
         data-testid="admin-phone-back"
+        aria-label={ADMIN_COPY.shell.phoneBack.ariaLabel}
         style={{ padding: '12px 16px 0', marginBottom: 12 }}
       >
         <Link
