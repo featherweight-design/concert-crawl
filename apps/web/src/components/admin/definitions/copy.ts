@@ -3334,6 +3334,8 @@ export const ADMIN_COPY = {
 
   shell: {
     brand: { admin: 'ADMIN' },
+    // The phone back link's landmark (venue-overview-m draws "‹ Venues").
+    phoneBack: { ariaLabel: 'Back' },
     nav: {
       ariaLabel: 'Admin',
       needsYou: 'Needs you',

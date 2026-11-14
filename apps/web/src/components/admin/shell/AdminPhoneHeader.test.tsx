@@ -58,4 +58,33 @@ describe('AdminPhoneHeader', () => {
     expect(screen.queryByText('Hi-Dive')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Account' })).toBeNull();
   });
+
+  // Leaving the venue page must give the next route its title bar back.
+  it('brings the title bar back when the page that set the link unmounts', () => {
+    const back = { label: 'Venues', href: '/admin/venues' };
+    const Owner = () => {
+      const { setPhoneBack } = usePageTitle();
+      useEffect(() => {
+        setPhoneBack(back);
+        return () => setPhoneBack(null);
+      }, [setPhoneBack]);
+      return null;
+    };
+    const { rerender } = render(
+      <PageTitleProvider>
+        <AdminPhoneHeader user={user} />
+        <Page title="Hi-Dive" />
+        <Owner />
+      </PageTitleProvider>,
+    );
+    expect(screen.getByTestId('admin-phone-back')).toBeInTheDocument();
+    rerender(
+      <PageTitleProvider>
+        <AdminPhoneHeader user={user} />
+        <Page title="Hi-Dive" />
+      </PageTitleProvider>,
+    );
+    expect(screen.queryByTestId('admin-phone-back')).toBeNull();
+    expect(screen.getByText('Hi-Dive')).toBeInTheDocument();
+  });
 });
