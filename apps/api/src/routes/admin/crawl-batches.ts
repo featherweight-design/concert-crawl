@@ -14,6 +14,7 @@ import type {
   CrawlBatchDetail,
 } from '@concert-crawl/types';
 import { validationHook } from '../../lib/validator.js';
+import { crawlerDispatchEnvironment } from '../../lib/crawler-dispatch.js';
 import type { AdminVariables } from './index.js';
 import {
   ESTIMATE_NIGHTS,
@@ -113,8 +114,13 @@ crawlBatchesAdminRouter.get('/estimate', async (ctx) => {
       now,
       firstNight: addDays(denverDate(from), 1),
     }),
-    // The confirm's "Tonight's {time} crawl still runs."
-    nextCrawlAt: nextCrawlAfter(now).toISOString(),
+    // The confirm's "Tonight's {time} crawl still runs." Only production
+    // starts the daily crawl (startDailyCrawl's gate), so anywhere else there
+    // is no nightly to name.
+    nextCrawlAt:
+      crawlerDispatchEnvironment() === 'production'
+        ? nextCrawlAfter(now).toISOString()
+        : null,
   };
   return ctx.json({ success: true, data: estimate });
 });

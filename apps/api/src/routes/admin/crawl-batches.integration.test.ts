@@ -233,14 +233,34 @@ describe('admin crawl batches', () => {
     expect(body.data).toMatchObject({ total: 1, eligible: 1, usual: null });
   });
 
-  it('says when the next daily crawl runs', async () => {
+  it('names no next crawl outside production, which starts none', async () => {
     setAuth('admin');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+    try {
+      const res = await app.request('/v1/admin/crawl/estimate');
+      const body: { data: CrawlAllEstimate } = await res.json();
+      expect(body.data.nextCrawlAt).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('says when the next daily crawl runs in production', async () => {
+    setAuth('admin');
+    vi.stubEnv('VERCEL_TARGET_ENV', 'production');
     const before = Date.now();
-    const res = await app.request('/v1/admin/crawl/estimate');
-    const body: { data: CrawlAllEstimate } = await res.json();
-    const next = new Date(body.data.nextCrawlAt);
+    let nextCrawlAt: string | null;
+    try {
+      const res = await app.request('/v1/admin/crawl/estimate');
+      const body: { data: CrawlAllEstimate } = await res.json();
+      nextCrawlAt = body.data.nextCrawlAt;
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    if (nextCrawlAt === null) throw new Error('expected a next crawl');
+    const next = new Date(nextCrawlAt);
     // The daily cron's time, strictly ahead and within a day.
-    expect(next.toISOString()).toBe(body.data.nextCrawlAt);
+    expect(next.toISOString()).toBe(nextCrawlAt);
     expect([next.getUTCHours(), next.getUTCMinutes()]).toEqual([
       CRAWLER_DAILY_CRON_UTC.hour,
       CRAWLER_DAILY_CRON_UTC.minute,

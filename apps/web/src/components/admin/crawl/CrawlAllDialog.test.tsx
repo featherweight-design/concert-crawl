@@ -8,6 +8,7 @@ import {
   cleanup,
   fireEvent,
   waitFor,
+  act,
 } from '@testing-library/react';
 
 const mockGet = vi.fn();
@@ -46,6 +47,7 @@ vi.mock('@/components/admin/primitives/useIsPhone', () => ({
 
 import {
   CRAWL_ALL_ENDPOINT,
+  CrawlAllButton,
   CrawlAllDialog,
   type CrawlAllEstimateView,
 } from './CrawlAllDialog';
@@ -252,6 +254,36 @@ describe('CrawlAllDialog', () => {
     expect(mockFetch).toHaveBeenCalledWith(CRAWL_ALL_ENDPOINT, {
       method: 'POST',
     });
+    // The number queued matched the one confirmed.
+    expect(onStarted).toHaveBeenCalledWith(null);
+  });
+
+  it('hands back the real count when it differs from the one confirmed', async () => {
+    mockGet.mockResolvedValue(estimate());
+    mockFetch.mockResolvedValue(queued(17));
+    const { onStarted } = renderDialog();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Crawl all 19' }),
+    );
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith(17));
+  });
+
+  it('still counts as started when the response body is unreadable, and says so in a warning', async () => {
+    mockGet.mockResolvedValue(estimate());
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON')),
+    });
+    const { onStarted } = renderDialog();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Crawl all 19' }),
+    );
+    await waitFor(() => expect(onStarted).toHaveBeenCalledWith(null));
+    expect(console.warn).toHaveBeenCalledWith(
+      'CrawlAllDialog: could not read the crawl-all response',
+      expect.objectContaining({ status: 202 }),
+    );
   });
 
   it('shows Starting… and holds both buttons while the post is in flight', async () => {
@@ -326,5 +358,93 @@ describe('CrawlAllDialog', () => {
     const scroller = await screen.findByTestId('crawl-all-body');
     // The height cap is a calc() jsdom can't parse, so only the scroll is checked.
     expect(scroller.style.overflowY).toBe('auto');
+  });
+
+  it('names the next nightly in Mountain Time', async () => {
+    mockGet.mockResolvedValue(
+      estimate({ nextCrawlAt: '2026-11-15T09:07:00.000Z' }),
+    );
+    renderDialog();
+    expect(
+      await screen.findByText('Tonight’s 2:07 AM crawl still runs.'),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    ['null', { nextCrawlAt: null }],
+    ['missing', { nextCrawlAt: undefined }],
+  ])(
+    'drops the nightly line when the next crawl is %s',
+    async (_label, over) => {
+      mockGet.mockResolvedValue(estimate(over));
+      renderDialog();
+      await body();
+      expect(screen.queryByText(/crawl still runs/)).toBeNull();
+    },
+  );
+
+  it('shows a sub-cent usual cost to its own precision', async () => {
+    mockGet.mockResolvedValue(
+      estimate({ usual: { durationMs: 20 * 60000, costUsd: 0.0042 } }),
+    );
+    renderDialog();
+    expect(await body()).toContain('cost about $0.0042.');
+  });
+});
+
+describe('CrawlAllButton', () => {
+  beforeEach(() => {
+    phone = false;
+    mockGet.mockReset();
+    mockFetch.mockReset();
+    vi.stubGlobal('fetch', mockFetch);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // Advancing on its own keeps waitFor and the fetch promises moving.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const startCrawl = async () => {
+    render(<CrawlAllButton />);
+    fireEvent.click(screen.getByRole('button', { name: COPY.trigger }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Crawl all 19' }),
+    );
+  };
+
+  it('opens the confirm', async () => {
+    mockGet.mockResolvedValue(estimate());
+    render(<CrawlAllButton />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: COPY.trigger }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('reads Queued ✓, held, for 5 s after a start, then its label again', async () => {
+    mockGet.mockResolvedValue(estimate());
+    mockFetch.mockResolvedValue(queued());
+    await startCrawl();
+    const trigger = await screen.findByRole('button', { name: COPY.queued });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger.hasAttribute('disabled')).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    const back = screen.getByRole('button', { name: COPY.trigger });
+    expect(back.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('names the real count when it differs from the one confirmed', async () => {
+    mockGet.mockResolvedValue(estimate());
+    mockFetch.mockResolvedValue(queued(17));
+    await startCrawl();
+    expect(
+      await screen.findByRole('button', { name: COPY.queuedCount(17) }),
+    ).toBeTruthy();
   });
 });
