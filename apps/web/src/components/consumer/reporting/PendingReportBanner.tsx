@@ -174,7 +174,22 @@ export const PendingReportBanner = ({
               justifyContent: 'center',
             }}
           >
-            <ReportGlyph kind={kind} size={19} />
+            {kind === 'available' ? (
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3.5 8.5l3 3 6-7" />
+              </svg>
+            ) : (
+              <ReportGlyph kind={kind} size={19} />
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
@@ -196,30 +211,29 @@ export const PendingReportBanner = ({
                 fontFamily: 'var(--font-ui)',
                 fontSize: 14,
                 color: 'var(--fg-muted)',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 6,
               }}
             >
-              <span>{copy.attributionPrefix}</span>
+              {copy.attributionPrefix}{' '}
               {isReporter ? (
                 <span style={{ color: tokens.color, fontWeight: 700 }}>
                   {copy.attributionSelf}
                 </span>
-              ) : reporter !== null ? (
+              ) : reporter !== null && reporter.url ? (
                 <a
-                  href={reporter.url ?? '#'}
+                  href={reporter.url}
                   className="ph-no-capture"
                   style={{ color: 'inherit', textDecoration: 'none' }}
                 >
                   {reporter.handle}
                 </a>
+              ) : reporter !== null ? (
+                <span className="ph-no-capture">{reporter.handle}</span>
               ) : (
                 <span>{copy.reportedAnonymously}</span>
               )}
               {methodLabel !== null && (
                 <>
-                  <span>·</span>
+                  {' · '}
                   <span
                     style={{
                       color: isSafeHttpUrl(evidenceUrl)
@@ -234,11 +248,12 @@ export const PendingReportBanner = ({
               )}
               {isSafeHttpUrl(evidenceUrl) && (
                 <>
-                  <span>·</span>
+                  {' · '}
                   <a
                     href={evidenceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={copy.viewEvidenceAria}
                     style={{
                       color: 'var(--signal)',
                       fontWeight: 700,

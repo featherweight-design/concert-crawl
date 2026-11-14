@@ -243,6 +243,7 @@ export const REPORTING_COPY = {
     withdrawButton: 'Withdraw',
     waitingForConfirms: 'Waiting for confirms',
     // Link out to the evidence URL attached to a report
+    viewEvidenceAria: 'View the evidence',
     viewEvidenceLink: 'VIEW',
     attributionPrefix: 'Reported by',
     attributionSelf: 'you',
