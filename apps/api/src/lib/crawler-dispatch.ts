@@ -36,6 +36,31 @@ export type CrawlerDispatchResult =
   'dispatched' | 'skipped_no_token' | 'skipped_environment' | 'failed';
 
 /**
+ * The crawl_triggers rows a trigger dispatch is waking the crawler for. A
+ * report about a dispatch that did not wake it names them, so the admin can
+ * see which crawls wait for the next daily run. The rows themselves are never
+ * touched here: they stay pending, and that run drains them.
+ */
+export interface QueuedTriggers {
+  triggerIds: string[];
+  venueIds: string[];
+}
+
+/** The tail of a report's message: what happens to the queued rows now. */
+const queuedSuffix = (queued: QueuedTriggers | undefined): string =>
+  queued
+    ? `; ${queued.triggerIds.length} queued crawl trigger(s) stay pending and run on the next daily crawl`
+    : '';
+
+const queuedExtra = (
+  queued: QueuedTriggers | undefined,
+  outcome: CrawlerDispatchResult | 'threw',
+): Record<string, unknown> =>
+  queued
+    ? { triggerIds: queued.triggerIds, venueIds: queued.venueIds, outcome }
+    : {};
+
+/**
  * The run-name crawler-daily.yml gives each run. The runs API returns it as
  * `display_title`, and it is the only field there that says which environment
  * a run crawled. Keep this and the workflow's `run-name` in step.
@@ -130,6 +155,7 @@ async function dispatchWorkflow(
   repo: string,
   workflow: string,
   inputs: Record<string, string>,
+  queued?: QueuedTriggers,
 ): Promise<'dispatched' | 'failed'> {
   const environment = inputs['environment'];
   const url = `${GITHUB_API}/repos/${repo}/actions/workflows/${workflow}/dispatches`;
@@ -144,10 +170,16 @@ async function dispatchWorkflow(
   } catch (err: unknown) {
     const timedOut = err instanceof Error && err.name === 'TimeoutError';
     await report(
-      timedOut
+      (timedOut
         ? `Crawler dispatch timed out after ${DISPATCH_TIMEOUT_MS} ms; GitHub may still have started the run`
-        : 'Crawler dispatch request failed',
-      { repo, workflow, environment, error: String(err) },
+        : 'Crawler dispatch request failed') + queuedSuffix(queued),
+      {
+        repo,
+        workflow,
+        environment,
+        error: String(err),
+        ...queuedExtra(queued, 'failed'),
+      },
       timedOut ? 'warning' : 'error',
     );
     return 'failed';
@@ -159,25 +191,57 @@ async function dispatchWorkflow(
   }
 
   const body = (await response.text().catch(() => '')).slice(0, 300);
-  await report(refusalMessage(response.status, body, repo, workflow), {
-    repo,
-    workflow,
-    environment,
-    status: response.status,
-    body,
-  });
+  await report(
+    refusalMessage(response.status, body, repo, workflow) +
+      queuedSuffix(queued),
+    {
+      repo,
+      workflow,
+      environment,
+      status: response.status,
+      body,
+      ...queuedExtra(queued, 'failed'),
+    },
+  );
   return 'failed';
 }
 
 /**
  * Ask GitHub Actions to run the triggers workflow. Never throws; resolves to
  * what happened so callers and tests can tell the cases apart.
+ *
+ * What reaches Sentry, by outcome:
+ * - 'dispatched': nothing.
+ * - 'skipped_environment' (preview, development, local): nothing; those APIs
+ *   write to databases the crawler does not read, so not waking it is the
+ *   design.
+ * - 'skipped_no_token' off production and staging: nothing (local and dev
+ *   run without a token by design).
+ * - 'skipped_no_token' on production or staging: a warning. The runbook sets
+ *   the token on both, so its absence there is a misconfiguration that leaves
+ *   every admin crawl waiting for the daily run.
+ * - 'failed' (refused, rate-limited, timed out, network): an error, or a
+ *   warning for a timeout, since GitHub may still have started the run.
+ *
+ * `queued` names the trigger rows being woken for, so each report lists them
+ * and says they wait for the next daily crawl.
  */
-export async function dispatchCrawler(): Promise<CrawlerDispatchResult> {
+export async function dispatchCrawler(
+  queued?: QueuedTriggers,
+): Promise<CrawlerDispatchResult> {
   const token = process.env['CRAWLER_DISPATCH_TOKEN']?.trim();
-  if (!token) return 'skipped_no_token';
-
   const environment = crawlerDispatchEnvironment();
+  if (!token) {
+    if (environment !== null) {
+      await report(
+        `Crawler not woken: CRAWLER_DISPATCH_TOKEN is unset on the ${environment} API${queuedSuffix(queued)}`,
+        { environment, ...queuedExtra(queued, 'skipped_no_token') },
+        'warning',
+      );
+    }
+    return 'skipped_no_token';
+  }
+
   if (environment === null) {
     logger.info(
       'Not dispatching the crawler: this API is neither production nor staging',
@@ -185,9 +249,13 @@ export async function dispatchCrawler(): Promise<CrawlerDispatchResult> {
     return 'skipped_environment';
   }
 
-  return dispatchWorkflow(token, dispatchRepo(), TRIGGERS_WORKFLOW, {
-    environment,
-  });
+  return dispatchWorkflow(
+    token,
+    dispatchRepo(),
+    TRIGGERS_WORKFLOW,
+    { environment },
+    queued,
+  );
 }
 
 // Only the fields the check reads; GitHub sends many more.
@@ -444,10 +512,21 @@ export async function startDailyCrawl(
 
 /**
  * Dispatch after the response has been sent. Route handlers call this once
- * their trigger rows are written; it cannot fail or delay the request.
+ * their trigger rows are written, passing those rows so a failed wake-up
+ * reports which crawls now wait for the daily run; it cannot fail or delay
+ * the request, and it never changes the rows.
  */
-export function dispatchCrawlerInBackground(): void {
+export function dispatchCrawlerInBackground(queued?: QueuedTriggers): void {
   runBackgroundTask(async () => {
-    await dispatchCrawler();
+    try {
+      await dispatchCrawler(queued);
+    } catch (err: unknown) {
+      // dispatchCrawler should never throw; if it does, the rows still wait
+      // for the daily run and the admin still sees them queued.
+      await report(`Crawler dispatch threw${queuedSuffix(queued)}`, {
+        error: String(err),
+        ...queuedExtra(queued, 'threw'),
+      });
+    }
   });
 }

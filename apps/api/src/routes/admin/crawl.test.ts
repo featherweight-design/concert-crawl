@@ -10,7 +10,8 @@ vi.mock('@hono/clerk-auth', () => ({
 
 const mockDispatchCrawler = vi.fn();
 vi.mock('../../lib/crawler-dispatch.js', () => ({
-  dispatchCrawlerInBackground: () => mockDispatchCrawler(),
+  dispatchCrawlerInBackground: (...args: unknown[]) =>
+    mockDispatchCrawler(...args),
 }));
 
 // Spread the real module so a new drizzle-orm import elsewhere in the app
@@ -1178,6 +1179,10 @@ describe('Admin crawl routes wake the crawler (Render exit step 2)', () => {
     });
     expect(res.status).toBe(202);
     expect(mockDispatchCrawler).toHaveBeenCalledTimes(1);
+    expect(mockDispatchCrawler).toHaveBeenCalledWith({
+      triggerIds: ['t0', 't1', 't2'],
+      venueIds,
+    });
   });
 
   it('does not dispatch when there is no venue to queue', async () => {
@@ -1201,6 +1206,10 @@ describe('Admin crawl routes wake the crawler (Render exit step 2)', () => {
     });
     expect(res.status).toBe(202);
     expect(mockDispatchCrawler).toHaveBeenCalledTimes(1);
+    expect(mockDispatchCrawler).toHaveBeenCalledWith({
+      triggerIds: [TRIGGER_ID],
+      venueIds: [VENUE_ID],
+    });
   });
 
   it('does not dispatch for a venue that cannot be crawled', async () => {
