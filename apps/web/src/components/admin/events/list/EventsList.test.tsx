@@ -148,13 +148,27 @@ describe('EventsList on desktop', () => {
         ]}
       />,
     );
-    const link = screen.getByRole('link', { name: 'Japanese Breakfast' });
+    // Named with the date too, so same-title shows differ.
+    const link = screen.getByRole('link', {
+      name: `Japanese Breakfast${COPY.rowDate('Thu Nov 12')}`,
+    });
     expect(link).toHaveAttribute('href', '/admin/events/evt-1/edit');
-    // Stretched over the row, which is its containing block.
     expect(link.className).toContain('after:inset-0');
     const dataRow = screen.getByTestId('event-row');
-    expect(dataRow).toHaveStyle({ position: 'relative' });
     expect(dataRow.className).toContain('group');
+    // WebKit won't position a <tr>: every cell is the containing block, and
+    // each cell but the title's carries a cover to the same editor, out of
+    // the tab order and hidden from assistive tech.
+    const cells = within(dataRow).getAllByRole('cell');
+    for (const cell of cells)
+      expect(cell).toHaveStyle({ position: 'relative' });
+    const covers = within(dataRow).getAllByTestId('row-cover');
+    expect(covers).toHaveLength(cells.length - 1);
+    for (const cover of covers) {
+      expect(cover).toHaveAttribute('href', '/admin/events/evt-1/edit');
+      expect(cover).toHaveAttribute('tabindex', '-1');
+      expect(cover).toHaveAttribute('aria-hidden', 'true');
+    }
     // The chevron waits for hover or focus, and is never read out.
     const chevron = within(dataRow).getByTestId('row-chevron');
     expect(chevron.getAttribute('class')).toContain('group-hover:opacity-100');
@@ -350,8 +364,14 @@ describe('EventsList on the phone', () => {
     );
     const list = screen.getByRole('list', { name: COPY.title });
     const [card, postponed] = within(list).getAllByRole('listitem');
-    const link = within(card as HTMLElement).getByRole('link');
+    if (!(card instanceof HTMLElement) || !(postponed instanceof HTMLElement))
+      throw new Error('expected two cards');
+    const link = within(card).getByRole('link');
     expect(link).toHaveAttribute('href', '/admin/events/evt-5/edit');
+    // ", Thu Nov 12" holds no regex specials.
+    expect(link).toHaveAccessibleName(
+      new RegExp(`${COPY.rowDate('Thu Nov 12')}$`),
+    );
     expect(link).toHaveTextContent('Pink Fuzz');
     expect(link).toHaveTextContent(COPY.went(3));
     expect(link).toHaveTextContent(COPY.status.played);
@@ -359,7 +379,7 @@ describe('EventsList on the phone', () => {
     expect(link).toHaveFocus();
     expect(screen.queryByRole('button')).toBeNull();
     // A past card with no price draws —, and the amber line under Postponed.
-    const late = within(postponed as HTMLElement);
+    const late = within(postponed);
     expect(late.getByText(COPY.none)).toBeInTheDocument();
     expect(late.queryByText(COPY.phoneNoPrice)).toBeNull();
     expect(late.getByTestId('no-new-date')).toBeInTheDocument();

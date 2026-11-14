@@ -162,6 +162,8 @@ export const EventsClient = () => {
     const { key } = loaded;
     setLoadState('loading');
     try {
+      // Offset paging: a show that crosses into Past between pages shifts the
+      // offset by one (a known limit); the id dedupe below drops any repeat.
       const next = await api.list(
         filters,
         loaded.data.rows.length,

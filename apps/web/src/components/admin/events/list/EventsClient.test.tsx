@@ -344,6 +344,26 @@ describe('EventsClient filters', () => {
     expect(lastHref()).toBe('/admin/events?when=past');
   });
 
+  it('keeps both of two quick past picks made before the URL catches up', async () => {
+    mockSearch = 'when=past';
+    render(<EventsClient />);
+    fireEvent.click(await screen.findByTestId('status-filter-chip'));
+    const menu = within(screen.getByTestId('status-filter'));
+    // The mocked router never updates the URL, as before a replace lands.
+    fireEvent.click(menu.getByRole('button', { name: COPY.status.played }));
+    fireEvent.click(menu.getByRole('button', { name: COPY.status.cancelled }));
+    expect(lastHref()).toBe(
+      '/admin/events?when=past&statuses=played%2Ccancelled',
+    );
+    // The rows show what was asked for meanwhile.
+    expect(
+      menu.getByRole('button', { name: COPY.status.played }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    // Unpicking builds on the latest request too.
+    fireEvent.click(menu.getByRole('button', { name: COPY.status.played }));
+    expect(lastHref()).toBe('/admin/events?when=past&statuses=cancelled');
+  });
+
   it('labels two or more past statuses as a count, as Upcoming does', async () => {
     mockSearch = 'when=past&statuses=played,cancelled';
     render(<EventsClient />);

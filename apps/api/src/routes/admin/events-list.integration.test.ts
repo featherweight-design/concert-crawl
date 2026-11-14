@@ -390,6 +390,61 @@ describe('GET /v1/admin/events/list', () => {
     expect(body.data.rows[1]?.status).toBe('cancelled');
   });
 
+  it('filters past shows by venue and by past status, Played included (addendum 6 #36)', async () => {
+    const red = await seedVenue({ name: 'Red Rocks' });
+    const globe = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    const played = await seedEvent(red.id, {
+      artist: 'Played Red',
+      date: dayOffset(-1),
+    });
+    const playedGlobe = await seedEvent(globe.id, {
+      artist: 'Played Globe',
+      date: dayOffset(-2),
+    });
+    const postponed = await seedEvent(globe.id, {
+      artist: 'Never Moved',
+      date: dayOffset(-3),
+      status: 'postponed',
+    });
+    const cancelled = await seedEvent(red.id, {
+      artist: 'Called Off',
+      date: dayOffset(-4),
+      status: 'cancelled',
+    });
+    // Upcoming at the same venue never joins Past.
+    await seedEvent(red.id, { artist: 'Upcoming Red', date: dayOffset(2) });
+
+    const byVenue = await list(`?when=past&venueIds=${red.id}`);
+    expect(byVenue.data.rows.map((row) => row.id)).toEqual([
+      played.id,
+      cancelled.id,
+    ]);
+    expect(byVenue.data.total).toBe(2);
+
+    const byPlayed = await list('?when=past&statuses=played');
+    expect(byPlayed.data.rows.map((row) => row.id)).toEqual([
+      played.id,
+      playedGlobe.id,
+    ]);
+    expect(byPlayed.data.rows.every((row) => row.status === 'played')).toBe(
+      true,
+    );
+
+    // A postponed show whose date passed stays Postponed, never Played.
+    const byTwo = await list('?when=past&statuses=played,postponed');
+    expect(byTwo.data.rows.map((row) => row.id)).toEqual([
+      played.id,
+      playedGlobe.id,
+      postponed.id,
+    ]);
+
+    const both = await list(
+      `?when=past&venueIds=${globe.id}&statuses=postponed`,
+    );
+    expect(both.data.rows.map((row) => row.id)).toEqual([postponed.id]);
+    expect(both.data.total).toBe(1);
+  });
+
   it('searches title, artist and venue', async () => {
     const venue = await seedVenue({ name: 'Bluebird Theater' });
     await seedEvent(venue.id, { artist: 'Marian Hill', date: dayOffset(1) });

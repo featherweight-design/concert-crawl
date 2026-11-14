@@ -144,3 +144,40 @@ describe('FilterPicker', () => {
     expect(last).toBeEnabled();
   });
 });
+
+describe('FilterPicker with its own menu (36/past-status-menu-d)', () => {
+  const menu = (
+    <button type="button" data-testid="own-menu">
+      Played
+    </button>
+  );
+
+  it('draws the menu at 240px with no list, Clear or Show N, and closes on Escape back to its chip', () => {
+    render(picker({ menu }));
+    const chip = screen.getByTestId('status-filter-chip');
+    fireEvent.click(chip);
+    const popover = screen.getByTestId('status-filter');
+    expect(popover).toHaveStyle({ width: '240px' });
+    expect(within(popover).getByTestId('own-menu')).toBeInTheDocument();
+    expect(within(popover).queryByRole('checkbox')).toBeNull();
+    expect(within(popover).queryByRole('button', { name: 'Clear' })).toBeNull();
+    expect(
+      within(popover).queryByRole('button', { name: /^Show / }),
+    ).toBeNull();
+    // Focus starts in the menu.
+    expect(within(popover).getByTestId('own-menu')).toHaveFocus();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('status-filter')).toBeNull();
+    expect(chip).toHaveFocus();
+  });
+
+  it('puts the menu in the phone sheet with no footer', () => {
+    setPhone(true);
+    render(picker({ menu }));
+    fireEvent.click(screen.getByTestId('status-filter-chip'));
+    const sheet = screen.getByTestId('admin-sheet');
+    expect(within(sheet).getByTestId('own-menu')).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: /^Show / })).toBeNull();
+    expect(within(sheet).queryByRole('button', { name: 'Clear' })).toBeNull();
+  });
+});

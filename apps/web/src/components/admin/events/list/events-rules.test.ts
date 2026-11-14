@@ -200,6 +200,13 @@ describe('dateSpan', () => {
     expect(dateSpan('2026-11-04', '2026-11-08')).toBe('Nov 4–8');
     expect(dateSpan('2026-10-30', '2026-11-08')).toBe('Oct 30–Nov 8');
     expect(dateSpan('2026-11-08', '2026-11-08')).toBe('Nov 8');
+    // Across a year, both years, even in the same month.
+    expect(dateSpan('2025-12-30', '2026-01-02')).toBe(
+      'Dec 30, 2025–Jan 2, 2026',
+    );
+    expect(dateSpan('2025-11-04', '2026-11-08')).toBe(
+      'Nov 4, 2025–Nov 8, 2026',
+    );
     expect(dateSpan('nonsense', '2026-11-08')).toBeNull();
   });
 });

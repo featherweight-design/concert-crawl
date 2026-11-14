@@ -11,12 +11,17 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { RowMenu, useIsPhone } from '@/components/admin/primitives';
+import {
+  RowMenu,
+  STRETCHED_LINK,
+  useIsPhone,
+} from '@/components/admin/primitives';
 import { StatusChip } from '@/components/consumer/StatusChip';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { DateTile } from '../../prices/MissingTab';
+import { shortDate } from '../../prices/prices-rules';
 import { HideEventDialog } from '../edit/StatusCard';
 import type { EventListRow } from './events-api';
 import { STATUS_CHIP, formatPrice, type When } from './events-rules';
@@ -26,11 +31,10 @@ const HIDE_COPY = ADMIN_COPY.eventEdit.hide;
 const NO_NEW_DATE = ADMIN_COPY.eventEdit.postponed.noDate;
 
 /**
- * A past row's title link, stretched over the whole row (as Crawl runs'
- * rows are), with keyboard focus ringing the row rather than the title.
+ * A past row's title link: stretched over its own cell, with keyboard focus
+ * ringing the title (the row tints too, below).
  */
-const ROW_LINK =
-  "after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-[var(--focus)]";
+const ROW_LINK = `${STRETCHED_LINK} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]`;
 /** A past row tints on hover or focus, and only then shows its chevron. */
 const ROW_HOVER =
   'group hover:bg-[var(--surface-2)] focus-within:bg-[var(--surface-2)]';
@@ -324,6 +328,22 @@ const td: CSSProperties = {
 
 type OnHide = ((row: EventListRow) => Promise<void>) | undefined;
 
+/**
+ * A past row's other cells open the editor too. WebKit doesn't make a
+ * positioned `<tr>` a containing block, so each cell is positioned and gets
+ * its own cover: a mouse target only, out of the tab order and hidden from
+ * assistive tech, since the title link is the row's one real link.
+ */
+const CellCover = ({ href }: { href: string }) => (
+  <Link
+    href={href}
+    tabIndex={-1}
+    aria-hidden="true"
+    data-testid="row-cover"
+    style={{ position: 'absolute', inset: 0 }}
+  />
+);
+
 const DesktopTable = ({
   rows,
   when,
@@ -350,7 +370,8 @@ const DesktopTable = ({
         <col style={{ width: 164 }} />
         <col style={{ width: 132 }} />
         <col style={{ width: past ? 96 : 84 }} />
-        {/* Upcoming's ⋯; Past's 16px chevron (`36/past-d`) with its padding. */}
+        {/* Upcoming's ⋯; Past's 14px chevron in the 16px column `36/past-d`
+            draws, plus the row's 18px right padding and the cell's 12px. */}
         <col style={{ width: past ? 44 : 52 }} />
       </colgroup>
       <thead>
@@ -375,23 +396,30 @@ const DesktopTable = ({
             fontWeight: 600,
             color: 'var(--fg)',
           };
+          // On Past the whole row opens the past-show editor (`36/past-d`):
+          // the title is the link, and every cell is positioned with a cover
+          // (see `CellCover`). 06/past-shows' no-⋯ stands, so the row holds
+          // nothing else to press.
+          const href = editEventHref(row.id);
+          const cell = (extra: CSSProperties = {}): CSSProperties =>
+            past
+              ? { ...td, ...extra, position: 'relative' }
+              : { ...td, ...extra };
+          const cover = past ? <CellCover href={href} /> : null;
           return (
             <tr
               key={row.id}
               data-testid="event-row"
-              // On Past the whole row opens the past-show editor through the
-              // title's stretched link (`36/past-d`); 06/past-shows' no-⋯
-              // stands, so the row holds nothing else to press.
               className={past ? ROW_HOVER : undefined}
-              style={past ? { position: 'relative' } : undefined}
             >
-              <td style={{ ...td, paddingLeft: 18 }}>
+              <td style={cell({ paddingLeft: 18 })}>
                 <DateTile date={row.date} />
+                {cover}
               </td>
-              <td style={td}>
+              <td style={cell()}>
                 {past ? (
                   <Link
-                    href={editEventHref(row.id)}
+                    href={href}
                     className={ROW_LINK}
                     style={{
                       ...titleStyle,
@@ -400,6 +428,11 @@ const DesktopTable = ({
                     }}
                   >
                     {row.title}
+                    {/* Two shows can share a title; the date tells them
+                        apart to a screen reader. */}
+                    <span className="sr-only">
+                      {COPY.rowDate(shortDate(row.date))}
+                    </span>
                   </Link>
                 ) : (
                   <div style={titleStyle}>{row.title}</div>
@@ -410,36 +443,39 @@ const DesktopTable = ({
                   </div>
                 )}
               </td>
-              <td style={td}>
+              <td style={cell()}>
                 <VenueLine row={row} size={24} gap={8} />
+                {cover}
               </td>
-              <td style={td}>
+              <td style={cell()}>
                 <StatusCell row={row} past={past} align="flex-start" />
+                {cover}
               </td>
               <td
-                style={{
-                  ...td,
+                style={cell({
                   fontSize: 13,
                   fontVariantNumeric: 'tabular-nums',
                   whiteSpace: 'nowrap',
                   color:
                     price === null || past ? 'var(--fg-muted)' : 'var(--fg)',
-                }}
+                })}
               >
                 {price ?? COPY.none}
+                {cover}
               </td>
               <td
-                style={{
-                  ...td,
+                style={cell({
                   fontSize: 12.5,
                   whiteSpace: 'nowrap',
                   color: 'var(--fg-muted)',
-                }}
+                })}
               >
                 {past ? wentText(row) : watchingText(row)}
+                {cover}
               </td>
               {past ? (
-                <td style={{ ...td, paddingRight: 18 }}>
+                <td style={cell({ paddingRight: 18 })}>
+                  {/* 14px in its 16px column, as `36/past-d` draws it. */}
                   <ChevronRight
                     data-testid="row-chevron"
                     size={14}
@@ -448,6 +484,7 @@ const DesktopTable = ({
                     className={CHEVRON_ON_HOVER}
                     style={{ display: 'block', color: 'var(--fg-muted)' }}
                   />
+                  {cover}
                 </td>
               ) : (
                 <td style={{ ...td, textAlign: 'right', paddingRight: 14 }}>
@@ -579,6 +616,11 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
         }}
       >
         {body}
+        {/* The date tile is hidden from screen readers; as on desktop, the
+            date tells same-title past shows apart. */}
+        {past && (
+          <span className="sr-only">{COPY.rowDate(shortDate(row.date))}</span>
+        )}
       </Link>
     </li>
   );

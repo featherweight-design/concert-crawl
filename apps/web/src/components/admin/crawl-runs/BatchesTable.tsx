@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { VenueChip } from '@/components/admin/primitives';
+import { STRETCHED_LINK, VenueChip } from '@/components/admin/primitives';
 import { CrawlAllButton } from '@/components/admin/crawl/CrawlAllDialog';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
 import { shortTime } from '@/components/admin/venues/overview/overview-rules';
@@ -140,13 +140,10 @@ const ColumnLabels = () => (
   </div>
 );
 
-/**
- * The whole row opens `?run=` (the detail lands in PR3): the link sits in the
- * WHEN cell, carries the row's name, and its `::after` covers the row, so the
- * row keeps its table role and stays one click target. A night that didn't
- * start has no link (row 14).
- */
-const STRETCHED_LINK = "after:absolute after:inset-0 after:content-['']";
+// The whole row opens `?run=` (the detail lands in PR3): the link sits in the
+// WHEN cell, carries the row's name, and its `::after` (`STRETCHED_LINK`)
+// covers the row, so the row keeps its table role and stays one click
+// target. A night that didn't start has no link (row 14).
 
 const rowParts = (batch: BatchRow) => {
   const when = batchWhen(batch);

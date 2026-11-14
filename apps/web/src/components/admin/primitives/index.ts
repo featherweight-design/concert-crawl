@@ -1,4 +1,5 @@
 export { StatusBadge } from './StatusBadge';
+export { STRETCHED_LINK } from './stretched-link';
 export { AdminButton, adminButtonVariantStyle } from './AdminButton';
 export { MonoLabel } from './MonoLabel';
 export { CostText } from './CostText';
