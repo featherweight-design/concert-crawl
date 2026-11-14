@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { SnoozeMenu } from './SnoozeMenu';
 
@@ -22,6 +22,15 @@ const open = (withVenue = true) => {
   fireEvent.click(screen.getByTestId('snooze-trigger'));
   return { onSnooze, onNotUseful };
 };
+
+// `useIsPhone` reads matchMedia, which jsdom lacks: a desktop-width stand-in.
+beforeEach(() => {
+  window.matchMedia = vi.fn().mockImplementation(() => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+});
 
 afterEach(cleanup);
 
