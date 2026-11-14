@@ -225,4 +225,21 @@ describe('VenueDetailsClient — Source is split out (3b part 6)', () => {
       screen.getByRole('button', { name: ADMIN_COPY.venueSource.saveBar.save }),
     ).toBeTruthy();
   });
+
+  // Both bars pin to the bottom edge, so only one may show at a time.
+  it('steps the page’s bar aside on Source, and brings it back on Details', () => {
+    render(<VenueDetailsClient initialTab="details" venue={buildVenue()} />);
+    const address = document.getElementById('edit-venue-address');
+    if (!(address instanceof HTMLInputElement)) {
+      throw new Error('Expected #edit-venue-address to be an input');
+    }
+    fireEvent.change(address, { target: { value: '1 Colfax Ave' } });
+    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
+
+    const tabs = ADMIN_COPY.venueDetailsClient.tabs;
+    fireEvent.click(screen.getByRole('tab', { name: tabs.source }));
+    expect(screen.queryByRole('button', { name: SAVE_LABEL })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: tabs.details }));
+    expect(screen.getByRole('button', { name: SAVE_LABEL })).toBeTruthy();
+  });
 });

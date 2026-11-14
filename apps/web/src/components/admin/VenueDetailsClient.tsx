@@ -1556,8 +1556,9 @@ export function VenueDetailsClient({
 
       {/* The old danger zone's controls live in the header's ⋯ now. */}
 
-      {/* Sticky save bar */}
-      {isDirty && (
+      {/* Sticky save bar. Source pins its own bar to the same edge, so this
+          one steps aside on Source; its edits wait for the tab they live on. */}
+      {isDirty && tab !== 'source' && (
         <div
           style={{
             position: 'sticky',

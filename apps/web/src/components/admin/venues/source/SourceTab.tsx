@@ -1,22 +1,22 @@
 'use client';
 
-import { useId, useState, type CSSProperties, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import {
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
-  Flag,
-} from 'lucide-react';
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import { useRouter } from 'next/navigation';
+import { Check, ChevronDown, ChevronRight, Flag } from 'lucide-react';
 import {
   CRAWLER_USER_AGENT,
   type PlatformProbeResult,
   type Venue,
 } from '@concert-crawl/types';
 import { updateVenue, probeVenuePlatform } from '@/lib/actions/venues';
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { TAB_BAR_HEIGHT } from '@/components/admin/shell/MobileBottomBar';
 import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants';
 import {
   AdminButton,
@@ -33,6 +33,8 @@ import {
   crawlModeOf,
   dirtyColumns,
   draftOf,
+  feedIdForSeller,
+  rebaseDraft,
   isStoredManual,
   paceLine,
   pageLoadingOf,
@@ -61,18 +63,6 @@ export type SourceVenue = SourceColumns &
     'id' | 'name' | 'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt'
   >;
 
-const visuallyHidden: CSSProperties = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  margin: -1,
-  padding: 0,
-  overflow: 'hidden',
-  clip: 'rect(0 0 0 0)',
-  whiteSpace: 'nowrap',
-  border: 0,
-};
-
 const fieldLabel: CSSProperties = {
   fontSize: 12.5,
   fontWeight: 600,
@@ -80,10 +70,31 @@ const fieldLabel: CSSProperties = {
   marginBottom: 6,
   display: 'block',
 };
+/** An Advanced row's own label (`G4/source-advanced-open`). */
+const advancedLabel: CSSProperties = {
+  fontSize: 13.5,
+  fontWeight: 600,
+  color: 'var(--fg)',
+  display: 'block',
+};
+/** Each Advanced row is its own section under a rule. */
+const advancedRow = (last: boolean): CSSProperties => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  padding: last ? '12px 0 0' : '12px 0',
+  borderTop: '1px solid var(--border)',
+});
 const hintStyle: CSSProperties = {
   fontSize: 12,
   color: 'var(--fg-subtle)',
   marginTop: 5,
+};
+/** An Advanced row's hint: the row's 8px gap spaces it, not a margin. */
+const advancedHint: CSSProperties = {
+  ...hintStyle,
+  marginTop: 0,
+  lineHeight: 1.4,
 };
 const errorStyle: CSSProperties = {
   fontSize: 12,
@@ -200,10 +211,14 @@ function Segments<T extends string>({
             style={{
               position: 'relative',
               flex: 1,
-              textAlign: 'center',
-              padding: '7px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 32,
+              boxSizing: 'border-box',
+              padding: '0 10px',
               borderRadius: 8,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               whiteSpace: 'nowrap',
               cursor: disabled ? 'not-allowed' : 'pointer',
@@ -218,7 +233,75 @@ function Segments<T extends string>({
               checked={on}
               disabled={disabled}
               onChange={() => onChange(option.value)}
-              style={visuallyHidden}
+              className="sr-only"
+            />
+            {option.label}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Native radios, drawn as pill chips that wrap (`G4/source-feed-edited`). */
+function Chips<T extends string>({
+  name,
+  label,
+  options,
+  value,
+  disabled,
+  onChange,
+}: {
+  name: string;
+  label: string;
+  options: ReadonlyArray<{ value: T; label: string }>;
+  value: T | null;
+  disabled: boolean;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}
+    >
+      {options.map((option) => {
+        const on = option.value === value;
+        return (
+          <label
+            key={option.value}
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              height: 32,
+              padding: '0 12px',
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              ...(on
+                ? {
+                    border: '1px solid transparent',
+                    background:
+                      'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+                    color: 'var(--fg)',
+                  }
+                : {
+                    border: '1px solid var(--border)',
+                    color: 'var(--fg-muted)',
+                  }),
+            }}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={on}
+              disabled={disabled}
+              onChange={() => onChange(option.value)}
+              className="sr-only"
             />
             {option.label}
           </label>
@@ -270,7 +353,7 @@ const ModeRadio = ({
       onChange={() => onPick(mode)}
       aria-labelledby={`${name}-${mode}-label`}
       aria-describedby={`${name}-${mode}-sub`}
-      style={visuallyHidden}
+      className="sr-only"
     />
     <span
       aria-hidden
@@ -358,16 +441,23 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [probe, setProbe] = useState<ProbeStatus>({ kind: 'idle' });
+  const probeRun = useRef(0);
+  // Clearing the probe also retires any request still in flight.
+  const resetProbe = () => {
+    probeRun.current += 1;
+    setProbe({ kind: 'idle' });
+  };
 
   const changed = dirtyColumns(draft, baseline);
   const dirty = changed.length > 0;
 
   // A fresh server row (after a save, or another tab's) becomes the baseline.
-  // An unsaved edit here survives it; a clean draft follows it.
+  // Only the fields edited here survive it; every other field follows the new
+  // row, so a save never writes an old value back over someone's newer one.
   if (seenKey !== serverKey) {
     setSeenKey(serverKey);
     setBaseline(fromServer);
-    if (!dirty) setDraft(draftOf(fromServer));
+    setDraft(rebaseDraft(draft, draftOf(baseline), draftOf(fromServer)));
   }
 
   const edit = (patch: Partial<SourceDraft>) => {
@@ -379,7 +469,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
     setDraft(draftOf(baseline));
     setErrors({});
     setFailure(null);
-    setProbe({ kind: 'idle' });
+    resetProbe();
   };
 
   const save = async (attempt: SourceDraft) => {
@@ -402,17 +492,25 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         router.refresh();
         return;
       }
+      // The API's reason leads the toast, so a refusal is never silent, even
+      // when its input is collapsed (Advanced) or not drawn here (desktop's
+      // feed fields, #175).
+      const saved = [result.error, stillSavedLine(baseline)]
+        .filter(Boolean)
+        .join(' ');
       const field = sourceFieldOf(result.field);
       if (field !== null && result.error !== undefined) {
         // A refusal names its input; a retry would only be refused again.
         setErrors({ [field]: result.error });
-        setFailure({ attempt: null, saved: stillSavedLine(baseline) });
+        if (field === 'waitFor') setAdvancedOpen(true);
+        setFailure({ attempt: null, saved });
         return;
       }
       // Rule 10: snap back to what is saved, and offer Try again.
       setDraft(draftOf(baseline));
-      setFailure({ attempt, saved: stillSavedLine(baseline) });
-    } catch {
+      setFailure({ attempt, saved });
+    } catch (err) {
+      console.error('SourceTab: save failed', { venueId: venue.id, err });
       setDraft(draftOf(baseline));
       setFailure({ attempt, saved: stillSavedLine(baseline) });
     } finally {
@@ -427,18 +525,24 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
       setErrors({ feedId: COPY.read.feedId.required(sellerName(seller)) });
       return;
     }
+    // An edit while this probe runs makes its answer stale: only the latest
+    // probe may write a result.
+    const run = ++probeRun.current;
     setProbe({ kind: 'pending' });
     try {
       const result = await probeVenuePlatform(venue.id, {
         platform: seller,
         platformVenueId: draft.feedId.trim(),
       });
+      if (run !== probeRun.current) return;
       setProbe(
         result.success && result.data
           ? { kind: 'done', result: result.data }
           : { kind: 'error', message: result.error ?? PROBE.requestFailed },
       );
-    } catch {
+    } catch (err) {
+      console.error('SourceTab: probe failed', { venueId: venue.id, err });
+      if (run !== probeRun.current) return;
       setProbe({ kind: 'error', message: PROBE.requestFailed });
     }
   };
@@ -470,28 +574,15 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
       <label htmlFor={`${ids}-url`} style={fieldLabel}>
         {COPY.read.calendarPage.label}
       </label>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input
-          id={`${ids}-url`}
-          type="url"
-          value={draft.websiteUrl}
-          disabled={saving}
-          aria-invalid={errors.websiteUrl !== undefined}
-          onChange={(evt) => edit({ websiteUrl: evt.target.value })}
-          style={{ ...inputStyle(errors.websiteUrl !== undefined), flex: 1 }}
-        />
-        {isSafeHttpUrl(draft.websiteUrl.trim()) && (
-          <a
-            href={draft.websiteUrl.trim()}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={COPY.read.calendarPage.open}
-            style={{ color: 'var(--fg-muted)', display: 'flex' }}
-          >
-            <ExternalLink size={14} />
-          </a>
-        )}
-      </div>
+      <input
+        id={`${ids}-url`}
+        type="url"
+        value={draft.websiteUrl}
+        disabled={saving}
+        aria-invalid={errors.websiteUrl !== undefined}
+        onChange={(evt) => edit({ websiteUrl: evt.target.value })}
+        style={inputStyle(errors.websiteUrl !== undefined)}
+      />
       {errors.websiteUrl === undefined ? (
         <div style={hintStyle}>{COPY.read.calendarPage.hint}</div>
       ) : (
@@ -510,8 +601,10 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
       style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
     >
       <div>
-        <span style={fieldLabel}>{COPY.read.seller.label}</span>
-        <Segments
+        <span style={{ ...fieldLabel, marginBottom: 8 }}>
+          {COPY.read.seller.label}
+        </span>
+        <Chips
           name={`${ids}-seller`}
           label={COPY.read.seller.label}
           options={FEED_SELLERS.map((value) => ({
@@ -521,8 +614,8 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
           value={seller}
           disabled={saving}
           onChange={(value) => {
-            edit({ seller: value, feedId: '' });
-            setProbe({ kind: 'idle' });
+            edit({ seller: value, feedId: feedIdForSeller(value, baseline) });
+            resetProbe();
           }}
         />
       </div>
@@ -538,9 +631,9 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
             aria-invalid={errors.feedId !== undefined}
             onChange={(evt) => {
               edit({ feedId: evt.target.value });
-              setProbe({ kind: 'idle' });
+              resetProbe();
             }}
-            style={inputStyle(errors.feedId !== undefined, true)}
+            style={inputStyle(errors.feedId !== undefined)}
           />
           {errors.feedId === undefined ? (
             <div style={hintStyle}>{COPY.read.feedId.hints[seller]}</div>
@@ -572,8 +665,15 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
               style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}
             >
               {probe.result.ok
-                ? `${PROBE.okPrefix} ${probe.result.eventsFound} ${PROBE.okEvents} ${probe.result.fetchLatencyMs}ms`
-                : `${PROBE.failedPrefix} ${probeReason(probe.result.reason)}`}
+                ? PROBE.ok(
+                    probe.result.eventsFound,
+                    probe.result.fetchLatencyMs,
+                    probe.result.sourceUrl,
+                  )
+                : PROBE.failed(
+                    probeReason(probe.result.reason),
+                    probe.result.error,
+                  )}
             </div>
           )}
           {probe.kind === 'error' && (
@@ -588,7 +688,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
 
   const advancedId = `${ids}-advanced`;
   const advanced = (
-    <div style={{ borderTop: '1px solid var(--border)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <button
         type="button"
         aria-expanded={advancedOpen}
@@ -596,40 +696,71 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         onClick={() => setAdvancedOpen((open) => !open)}
         style={{
           display: 'flex',
-          alignItems: 'center',
+          // Phone stacks the line under the label, beside the chevron.
+          alignItems: phone && !advancedOpen ? 'flex-start' : 'center',
           gap: 8,
           width: '100%',
-          padding: '12px 0',
+          padding: phone || advancedOpen ? '12px 0 0' : '12px 0',
           background: 'none',
           border: 'none',
+          borderTop: '1px solid var(--border)',
           color: 'var(--fg)',
           cursor: 'pointer',
           textAlign: 'left',
-          flexWrap: 'wrap',
         }}
       >
         {advancedOpen ? (
-          <ChevronDown size={14} color="var(--fg-muted)" aria-hidden />
+          <ChevronDown
+            size={14}
+            color="var(--fg-muted)"
+            aria-hidden
+            style={{ flex: 'none' }}
+          />
         ) : (
-          <ChevronRight size={14} color="var(--fg-muted)" aria-hidden />
+          <ChevronRight
+            size={14}
+            color="var(--fg-muted)"
+            aria-hidden
+            style={{ flex: 'none' }}
+          />
         )}
-        <span style={{ fontSize: 14, fontWeight: 600 }}>
-          {COPY.advanced.label}
-        </span>
-        {!advancedOpen && (
-          <span style={{ fontSize: 12.5, color: 'var(--fg-subtle)' }}>
-            {COPY.advanced.collapsedLine}
+        <span
+          style={
+            phone
+              ? { display: 'flex', flexDirection: 'column', minWidth: 0 }
+              : {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  minWidth: 0,
+                }
+          }
+        >
+          <span style={{ fontSize: 14, fontWeight: 600 }}>
+            {COPY.advanced.label}
           </span>
-        )}
+          {!advancedOpen && (
+            <span
+              style={{
+                fontSize: 12.5,
+                color: 'var(--fg-subtle)',
+                lineHeight: 1.4,
+                ...(phone && { marginTop: 2 }),
+              }}
+            >
+              {COPY.advanced.collapsedLine}
+            </span>
+          )}
+        </span>
       </button>
       {advancedOpen && (
         <div
           id={advancedId}
           data-testid="source-advanced"
-          style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+          style={{ display: 'flex', flexDirection: 'column' }}
         >
-          <div>
-            <span style={fieldLabel}>{COPY.advanced.pageLoading.label}</span>
+          <div style={advancedRow(false)}>
+            <span style={advancedLabel}>{COPY.advanced.pageLoading.label}</span>
             <Segments
               name={`${ids}-loading`}
               label={COPY.advanced.pageLoading.label}
@@ -641,10 +772,10 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
               disabled={saving}
               onChange={(value) => edit({ crawlMode: crawlModeOf(value) })}
             />
-            <div style={hintStyle}>{COPY.advanced.pageLoading.hint}</div>
+            <div style={advancedHint}>{COPY.advanced.pageLoading.hint}</div>
           </div>
-          <div>
-            <span style={fieldLabel}>{COPY.advanced.waitUntil.label}</span>
+          <div style={advancedRow(false)}>
+            <span style={advancedLabel}>{COPY.advanced.waitUntil.label}</span>
             <Segments
               name={`${ids}-wait-until`}
               label={COPY.advanced.waitUntil.label}
@@ -657,8 +788,8 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
               onChange={(value) => edit({ waitUntil: value })}
             />
           </div>
-          <div>
-            <label htmlFor={`${ids}-wait-for`} style={fieldLabel}>
+          <div style={advancedRow(draft.mode !== 'page')}>
+            <label htmlFor={`${ids}-wait-for`} style={advancedLabel}>
               {COPY.advanced.waitFor.label}
             </label>
             <input
@@ -668,19 +799,23 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
               disabled={saving}
               aria-invalid={errors.waitFor !== undefined}
               onChange={(evt) => edit({ waitFor: evt.target.value })}
-              style={inputStyle(errors.waitFor !== undefined, true)}
+              style={{
+                ...inputStyle(errors.waitFor !== undefined, true),
+                // source-advanced-open draws Wait for at 40, not 38.
+                height: 40,
+              }}
             />
             {errors.waitFor === undefined ? (
-              <div style={hintStyle}>{COPY.advanced.waitFor.hint}</div>
+              <div style={advancedHint}>{COPY.advanced.waitFor.hint}</div>
             ) : (
-              <div role="alert" style={errorStyle}>
+              <div role="alert" style={{ ...errorStyle, marginTop: 0 }}>
                 {errors.waitFor}
               </div>
             )}
           </div>
           {draft.mode === 'page' && (
-            <div>
-              <span style={fieldLabel}>{COPY.advanced.reader.label}</span>
+            <div style={advancedRow(true)}>
+              <span style={advancedLabel}>{COPY.advanced.reader.label}</span>
               <Segments
                 name={`${ids}-reader`}
                 label={COPY.advanced.reader.label}
@@ -692,7 +827,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
                 disabled={saving}
                 onChange={(value) => edit({ reader: value })}
               />
-              <div style={hintStyle}>
+              <div style={advancedHint}>
                 {draft.reader === 'detail-page'
                   ? COPY.advanced.detailPage
                   : COPY.advanced.reader.hint}
@@ -784,7 +919,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         style={{
           fontSize: 12.5,
           lineHeight: 1.45,
-          color: robots === 'disallowed' ? 'var(--warning)' : 'var(--fg-muted)',
+          color: 'var(--fg-muted)',
         }}
       >
         {robots === 'disallowed'
@@ -808,6 +943,31 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
     </Card>
   );
 
+  // No Dismiss: the board draws Try again only; the next save or Discard
+  // clears it.
+  const toast =
+    failure === null ? null : (
+      <div
+        style={{ borderRadius: 12, boxShadow: '0 14px 30px rgba(0,0,0,0.45)' }}
+      >
+        <SaveFailedToast
+          title={COPY.failed.title}
+          saved={failure.saved}
+          retrying={saving}
+          {...(failure.attempt === null
+            ? {}
+            : {
+                onRetry: () => {
+                  const { attempt } = failure;
+                  if (attempt === null) return;
+                  setDraft(attempt);
+                  void save(attempt);
+                },
+              })}
+        />
+      </div>
+    );
+
   return (
     <div
       data-testid="venue-source"
@@ -830,23 +990,25 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
         </div>
       </div>
 
-      {failure !== null && (
-        <SaveFailedToast
-          title={COPY.failed.title}
-          saved={failure.saved}
-          retrying={saving}
-          onDismiss={() => setFailure(null)}
-          {...(failure.attempt === null
-            ? {}
-            : {
-                onRetry: () => {
-                  const { attempt } = failure;
-                  if (attempt === null) return;
-                  setDraft(attempt);
-                  void save(attempt);
-                },
-              })}
-        />
+      {/* Floats 24px above the screen's bottom (above the tab bar on phone),
+          out of the page's flow (`G4/source-save-failed`). */}
+      {toast !== null && !dirty && (
+        <div
+          style={{
+            position: 'sticky',
+            bottom: phone
+              ? `calc(${TAB_BAR_HEIGHT + 24}px + env(safe-area-inset-bottom))`
+              : 24,
+            height: 0,
+            // Cancels the column's gap, so the anchor takes no room.
+            marginTop: -16,
+            zIndex: 30,
+          }}
+        >
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+            {toast}
+          </div>
+        </div>
       )}
 
       {dirty && (
@@ -855,6 +1017,7 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
           style={{
             position: 'sticky',
             bottom: 0,
+            zIndex: 30,
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -865,6 +1028,19 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
             borderRadius: phone ? 0 : 12,
           }}
         >
+          {/* A refusal keeps the edit, so the bar stays: float above it. */}
+          {toast !== null && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 'calc(100% + 12px)',
+              }}
+            >
+              {toast}
+            </div>
+          )}
           <span
             style={{
               fontSize: 12,

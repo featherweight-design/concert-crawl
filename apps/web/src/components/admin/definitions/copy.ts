@@ -871,7 +871,6 @@ export const ADMIN_COPY = {
         label: 'Calendar page',
         hint: 'We start here and follow its own “next page” links.',
         invalid: 'Use a link that starts with http:// or https://.',
-        open: 'Open the calendar page',
       },
       seller: {
         label: 'Seller',
@@ -898,9 +897,12 @@ export const ADMIN_COPY = {
       probe: {
         button: 'Probe platform fetch',
         buttonPending: 'Probing…',
-        okPrefix: 'Probe OK:',
-        okEvents: 'events found in',
-        failedPrefix: 'Probe failed:',
+        ok: (events: number, ms: number, url: string) =>
+          `Probe OK: ${events} events found in ${ms}ms, from ${url}`,
+        // The reason, then the API's own error, so a wrong ID and a network
+        // failure read differently.
+        failed: (reason: string, error: string) =>
+          `Probe failed: ${reason} (${error})`,
         reasons: {
           missingConfig: 'missing config (set a platform and venue ID first)',
           fetchError: 'fetch error',

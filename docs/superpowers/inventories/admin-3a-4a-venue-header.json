@@ -32,12 +32,12 @@
     },
     {
       "id": "source-url-link",
-      "label": "Identity card: Source URL with the venue-site link",
+      "label": "Source tab: the calendar page (moved from the identity card's Source URL in 3b part 6b-ii)",
       "steps": [
         {
-          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=source",
           "expectStatus": 200,
-          "wait": "#edit-venue-url"
+          "wait": "[data-testid=\"venue-source\"]"
         },
         { "settle": 1500 }
       ]

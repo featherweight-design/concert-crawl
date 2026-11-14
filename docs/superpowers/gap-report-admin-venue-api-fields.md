@@ -1,5 +1,7 @@
 # Gap Report — Admin Venue API Fields (#506)
 
+> **Superseded (2026-11-13, admin redesign 3b part 6b-ii).** The API provider and account ID fields described below were cut from `VenueDetailsClient`. A VenuePilot feed is now set in the venue page's Source tab (`components/admin/venues/source/SourceTab.tsx`), as the Ticketing feed's VenuePilot seller and its venue ID. The IDs `edit-venue-api-provider` and `edit-venue-api-account-id` and the line references below no longer exist. This report is kept as a historical record.
+
 Verified the shipped implementation against the design property table
 (`docs/superpowers/design-tables/admin-venue-api-fields.md`, 26 items),
 the design handoff (`design/design_handoff_admin_venues/README.md`), and the
