@@ -71,7 +71,8 @@ export const SectionHead = ({
       {subtitle && (
         <p
           style={{
-            margin: '4px 0 0',
+            // 4 under the title on desktop, 2 on the phone boards.
+            margin: 'var(--section-head-sub-gap, 4px) 0 0',
             fontSize: 'var(--section-head-sub-size, 13.5px)',
             color: 'var(--fg-muted)',
           }}

@@ -37,6 +37,7 @@ describe('SectionHead (#986)', () => {
     ).replace(/\s+/g, ' ');
     expect(css).toContain('--section-head-title-size: 24px');
     expect(css).toContain('--section-head-sub-size: 12.5px');
+    expect(css).toContain('--section-head-sub-gap: 2px');
   });
 
   it('gives the title column minWidth: 0 so it can shrink inside the flex row', () => {

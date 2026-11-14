@@ -305,6 +305,7 @@
   :root {
     --section-head-title-size: 24px;
     --section-head-sub-size: 12.5px;
+    --section-head-sub-gap: 2px;
   }
 }
 
