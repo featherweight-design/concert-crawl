@@ -62,6 +62,14 @@ const VARIANT_STYLES: Record<
   },
 };
 
+/**
+ * A variant's colours, for a link drawn as a button (a `<Link>` can't be an
+ * AdminButton), so the two never drift apart.
+ */
+export const adminButtonVariantStyle = (
+  variant: NonNullable<AdminButtonProps['variant']>,
+): React.CSSProperties => VARIANT_STYLES[variant];
+
 export const AdminButton = ({
   variant = 'outline',
   size = 'md',

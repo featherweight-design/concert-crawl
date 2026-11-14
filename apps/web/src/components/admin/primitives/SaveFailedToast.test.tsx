@@ -46,3 +46,28 @@ describe('admin toasts set overflowWrap anywhere on their text', () => {
     expect(screen.getByText('Body copy.').style.overflowWrap).toBe('anywhere');
   });
 });
+
+describe('SaveFailedToast look', () => {
+  const cross = (toast: HTMLElement) => toast.querySelector('svg');
+
+  it('draws 07/save-failed by default: gap 12, cross stroke 2', () => {
+    render(<SaveFailedToast title="Couldn’t" body="Nothing changed." />);
+    const toast = screen.getByTestId('save-failed');
+    expect(toast.style.gap).toBe('12px');
+    expect(cross(toast)?.getAttribute('stroke-width')).toBe('2');
+  });
+
+  it('takes crawl-all-failed-m’s gap 10 and stroke 2.2 when passed', () => {
+    render(
+      <SaveFailedToast
+        title="Couldn’t"
+        body="Nothing was queued."
+        gap={10}
+        crossStroke={2.2}
+      />,
+    );
+    const toast = screen.getByTestId('save-failed');
+    expect(toast.style.gap).toBe('10px');
+    expect(cross(toast)?.getAttribute('stroke-width')).toBe('2.2');
+  });
+});

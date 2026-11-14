@@ -16,10 +16,10 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   AdminDialog,
+  adminButtonVariantStyle,
   AdminSheet,
   SaveFailedToast,
   Spinner,
-  useIsPhone,
   useIsPhoneResolved,
 } from '@/components/admin/primitives';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
@@ -273,12 +273,10 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
         justifyContent: 'center',
         gap: 6,
         padding: '0 12px',
-        fontWeight: 700,
         whiteSpace: 'nowrap',
         textDecoration: 'none',
-        background: 'linear-gradient(135deg, var(--signal), var(--accent))',
-        color: 'var(--bg)',
-        border: '1px solid transparent',
+        // AdminButton's gradient (a Link can't be an AdminButton).
+        ...adminButtonVariantStyle('gradient'),
       }}
     >
       <MapPin size={14} aria-hidden />
@@ -287,9 +285,12 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
   );
 
   // One toast for a post that failed and for a count that didn't load. The
-  // phone takes `09/crawl-all-failed-m`'s 12px and .45 shadow; desktop keeps
-  // the primitive's `07/save-failed` defaults (12px 14px, .4).
-  const toastLook = phone ? { padding: '12px', shadow: FAILED_SHADOW } : {};
+  // phone takes `09/crawl-all-failed-m`'s 12px padding, .45 shadow, 10 gap
+  // and 2.2 cross; desktop keeps the primitive's `07/save-failed` defaults
+  // (12px 14px, .4, 12, 2).
+  const toastLook = phone
+    ? { padding: '12px', shadow: FAILED_SHADOW, gap: 10, crossStroke: 2.2 }
+    : {};
   const failedToast =
     post === 'failed' ? (
       <SaveFailedToast
@@ -446,12 +447,15 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
   );
 };
 
+/** The trigger's size: `07/crawl-all-venues` on desktop, `09/crawl-all-m` at the admin breakpoint. */
+export const TRIGGER_CLASS =
+  'h-9 text-[13px] max-[720px]:h-10 max-[720px]:w-full max-[720px]:text-[13.5px]';
+
 /**
  * "Crawl all venues…" (`07/crawl-all-venues`, `09/crawl-all-m`): opens the
  * confirm. Full width on the phone.
  */
 export const CrawlAllButton = () => {
-  const phone = useIsPhone();
   const [open, setOpen] = useState(false);
   // Set for 5 s after a start; `count` only when it differs from the
   // number confirmed.
@@ -473,12 +477,16 @@ export const CrawlAllButton = () => {
         disabled={queued !== null}
         onClick={() => setOpen(true)}
         data-testid="crawl-all-trigger"
-        fullWidth={phone}
+        // Sized by the admin breakpoint in CSS (as SectionHead's actions),
+        // so the first paint on a phone is already 40px and full width: 36px
+        // and 13 on desktop, 40px, 13.5 and full width at 720 and under.
+        className={TRIGGER_CLASS}
         style={{
           ...raised,
-          height: phone ? 40 : 36,
+          // Left to the class: AdminButton's inline size would override it.
+          height: undefined,
+          fontSize: undefined,
           borderRadius: 9,
-          fontSize: phone ? 13.5 : 13,
           ...(queued !== null && {
             color: 'var(--success)',
             cursor: 'default',

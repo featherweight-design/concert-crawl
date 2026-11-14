@@ -38,6 +38,10 @@ type SaveFailedToastProps = {
   padding?: string;
   /** The block's shadow; defaults to `07/save-failed`'s. */
   shadow?: string;
+  /** Between the cross, the text and the buttons: 12 (`07/save-failed`), 10 on `09/crawl-all-failed-m`. */
+  gap?: number;
+  /** The cross's stroke: 2 (`07/save-failed`), 2.2 on `09/crawl-all-failed-m`. */
+  crossStroke?: number;
 } & (
   | {
       /** The thing that didn't change, e.g. "Crews". */
@@ -78,6 +82,8 @@ export const SaveFailedToast = ({
   padding = '12px 14px',
   // `07/save-failed` draws this shadow; `09/crawl-all-failed-m` draws .45.
   shadow = '0 14px 30px rgba(0,0,0,.4)',
+  gap = 12,
+  crossStroke = 2,
 }: SaveFailedToastProps) => (
   <div
     role="alert"
@@ -85,7 +91,7 @@ export const SaveFailedToast = ({
     style={{
       display: 'flex',
       alignItems: 'center',
-      gap: 10,
+      gap,
       padding,
       borderRadius: 12,
       background: 'var(--bg-elevated)',
@@ -93,14 +99,14 @@ export const SaveFailedToast = ({
       boxShadow: shadow,
     }}
   >
-    {/* `07/save-failed`'s drawn cross: an 8px X in a 16px box, stroke 2. */}
+    {/* The drawn cross: an 8px X in a 16px box, stroke 2 by default. */}
     <svg
       width={16}
       height={16}
       viewBox="0 0 16 16"
       fill="none"
       stroke="var(--danger)"
-      strokeWidth={2}
+      strokeWidth={crossStroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden

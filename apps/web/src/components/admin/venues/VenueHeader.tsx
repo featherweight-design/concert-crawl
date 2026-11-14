@@ -7,6 +7,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   SaveFailedToast,
+  Spinner,
   VenueStatus,
   useIsPhone,
 } from '@/components/admin/primitives';
@@ -31,25 +32,6 @@ const BUTTON: CSSProperties = {
   color: 'var(--fg)',
   border: '1px solid var(--border-strong)',
 };
-
-/** Queued and Crawling now draw a spinner in place of the icon. */
-const Spinner = ({ tone }: { tone: string }) => (
-  <svg
-    width={14}
-    height={14}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={tone}
-    strokeWidth={2.4}
-    strokeLinecap="round"
-    aria-hidden
-    className="animate-spin"
-    style={{ flex: 'none' }}
-  >
-    <circle cx={12} cy={12} r={9} opacity={0.25} />
-    <path d="M21 12a9 9 0 00-9-9" />
-  </svg>
-);
 
 /** Settled outcomes with nothing to retry, and the line each one reads. */
 const NOTICE: Partial<Record<RecrawlState, string>> = {
@@ -236,8 +218,10 @@ export const VenueHeader = ({
               ...(off !== null && { opacity: 0.45, cursor: 'not-allowed' }),
             }}
           >
+            {/* Queued and Crawling now draw a spinner in place of the icon. */}
             {busy && (
               <Spinner
+                size={14}
                 tone={
                   recrawl.state === 'running' ? 'var(--signal)' : 'currentColor'
                 }
