@@ -544,8 +544,10 @@ describe('NotifItem', () => {
     expect(row.getAttribute('style')).toContain('box-shadow: none');
     expect(row.getAttribute('style')).toContain('background: transparent');
     expect(row.getAttribute('style')).not.toContain('color-mix');
+    // `notif-shows-m`: a read title is still bold and white; read state is the
+    // missing wash and rail.
     expect(within(row).getByText(/The price for Geese/)).toHaveStyle({
-      fontWeight: '600',
+      fontWeight: '700',
     });
     expect(row.getAttribute('aria-label')).not.toContain('Unread');
   });

@@ -15,16 +15,14 @@
 
 import { useId } from 'react';
 import type { ConsumerNotification } from '@/lib/notifications';
-import { CrewPatch } from '@/components/consumer/crew-patch/CrewPatch';
 import { categoryFor } from './definitions/categories';
 import { NMono } from './NMono';
 import { NotifTile } from './NotifTile';
 import { itemLabel, isUnread, relTime } from './lib/format-time';
 import { activateOnKey } from './lib/activate-keys';
-import { CREW_CATEGORY_PREFIX, crewRowIdentity } from './lib/crew-meta';
+import { CREW_CATEGORY_PREFIX } from './lib/crew-meta';
 
 /** Matches the row's 30px category tile (B+), so the row's rhythm holds. */
-const CREW_PATCH_SIZE = 30;
 
 export const NotifItem = ({
   item,
@@ -40,11 +38,6 @@ export const NotifItem = ({
 }) => {
   const cat = categoryFor(item.category);
   const unread = isUnread(item);
-  // A crew row swaps the category tile for the crew's own patch and the
-  // category eyebrow for the crew's name — the patch is the fastest "which
-  // crew is this" cue there is, and "Crew" three times over is not. A row
-  // whose metadata failed the guard keeps the ordinary presentation.
-  const crew = crewRowIdentity(item.category, item.metadata);
   // A crew row's title names another reader ("x is going to …"). Analytics
   // autocapture records the clicked element's text and every ancestor's
   // attributes, so a crew row reads its accessible name from a hidden span
@@ -117,26 +110,7 @@ export const NotifItem = ({
           {itemLabel(item, now)}
         </span>
       )}
-      {crew === null ? (
-        <NotifTile category={item.category} size={30} />
-      ) : (
-        <span
-          style={{
-            display: 'inline-flex',
-            flexShrink: 0,
-            // The patch stands in for the category tile, and B19a tiles keep
-            // full colour when read (NotifTile), so the patch is never dimmed
-            // either: read state is the title weight and the missing wash.
-          }}
-        >
-          <CrewPatch
-            crewId={crew.crewId}
-            patchSalt={crew.patchSalt}
-            size={CREW_PATCH_SIZE}
-            scale="micro"
-          />
-        </span>
-      )}
+      <NotifTile category={item.category} size={30} />
       <div
         style={{
           flex: 1,
@@ -152,8 +126,8 @@ export const NotifItem = ({
             fontFamily: 'Inter, system-ui',
             fontSize: 14.5,
             lineHeight: 1.34,
-            fontWeight: unread ? 700 : 600,
-            color: unread ? 'var(--fg)' : 'var(--fg-muted)',
+            fontWeight: 700,
+            color: 'var(--fg)',
             letterSpacing: '-0.01em',
             textWrap: 'pretty',
             display: '-webkit-box',
@@ -190,7 +164,7 @@ export const NotifItem = ({
             marginTop: 1,
           }}
         >
-          <NMono>{crew === null ? cat.label : crew.crewName}</NMono>
+          <NMono>{cat.label}</NMono>
           {unread && (
             <span
               aria-hidden="true"

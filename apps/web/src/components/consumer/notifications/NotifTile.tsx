@@ -21,13 +21,13 @@ export const NotifTile = ({
       style={{
         width: size,
         height: size,
-        borderRadius: 8,
+        borderRadius: 9,
         flexShrink: 0,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border)',
+        // `notif-shows-m`: the border token as a flat fill, no outline.
+        background: 'var(--border)',
         color: ink,
         // B19a (`notif-shows-m`): a read row keeps its full-colour tile. The
         // glyph is the fastest scan cue in the list; read state is carried by
