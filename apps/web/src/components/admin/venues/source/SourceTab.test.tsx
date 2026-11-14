@@ -521,8 +521,9 @@ describe('SourceTab — its own save bar', () => {
 
   // Style contract only (jsdom has no layout): Source's look on the shared
   // PinnedSaveBar, which differs from Details' on purpose.
+  // Desktop keeps AdminButton's own 32px height, which it always sets inline.
   it.each([
-    [false, '10px 16px', 'wrap', '', '', ''],
+    [false, '10px 16px', 'wrap', '', '', '32px'],
     [true, '10px 16px 24px', '', 'column', '1', '44px'],
   ])(
     'draws the Save bar in Source’s look (phone %s)',
