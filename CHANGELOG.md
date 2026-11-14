@@ -1,3 +1,15 @@
+# [1.421.0](https://github.com/featherweight-design/concert-crawl/compare/v1.420.1...v1.421.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** one pristine-baseline dirty check, crawl rules refused by type ([afdec11](https://github.com/featherweight-design/concert-crawl/commit/afdec1131ca3397ef555827fa5ca0dde1edc3002))
+
+
+### Features
+
+* **web:** source tab rules and copy, inert (3b part 6b-i) ([a7144d4](https://github.com/featherweight-design/concert-crawl/commit/a7144d46d3828459c57dd6170f3866d8eab0d201)), closes [#409](https://github.com/featherweight-design/concert-crawl/issues/409)
+
 ## [1.420.1](https://github.com/featherweight-design/concert-crawl/compare/v1.420.0...v1.420.1) (2026-11-14)
 
 
