@@ -4,7 +4,10 @@ import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { and, count, eq, gte, lte, max, ne, or } from 'drizzle-orm';
 import { db, emailSendLog } from '@concert-crawl/db';
-import type { AdminEmailDelivery } from '@concert-crawl/types';
+import type {
+  AdminEmailDelivery,
+  AdminEmailPreview,
+} from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
   sendAdminAlertEmail,
@@ -14,8 +17,10 @@ import {
 import {
   TEST_EMAIL_KEYS,
   TEST_EMAIL_OPTIONS,
+  buildTestEmail,
   type TestEmailKey,
 } from '../../emails/test-fixtures.js';
+import { maskEmail } from '../../lib/mask-email.js';
 import type { AdminVariables } from './index.js';
 
 // TEST_EMAIL_KEYS (readonly TestEmailKey[]) is the single source of truth for
@@ -25,12 +30,13 @@ import type { AdminVariables } from './index.js';
 function isTestEmailKey(value: string): value is TestEmailKey {
   return TEST_EMAIL_KEYS.some((key) => key === value);
 }
+const emailKeySchema = z
+  .string()
+  .refine(isTestEmailKey, { message: 'Unknown email key' });
 const testEmailBodySchema = z.object({
-  emailKey: z
-    .string()
-    .refine(isTestEmailKey, { message: 'Unknown email key' })
-    .default('admin_alert'),
+  emailKey: emailKeySchema.default('admin_alert'),
 });
+const previewParamSchema = z.object({ emailKey: emailKeySchema });
 
 const deliveryQuerySchema = z.object({
   hours: z.coerce.number().int().min(1).max(168).default(24),
@@ -106,12 +112,28 @@ notificationsAdminRouter.get(
 );
 
 // GET /v1/admin/notifications/test-email/options — enumerate every email the
-// app can send, grouped for the Admin > Settings picker. Sourced from the same
+// app can send, grouped for the Operations > Emails list. Sourced from the same
 // key set the send path validates, so the menu can never list a key the backend
 // can't build, or omit one it can.
 notificationsAdminRouter.get('/test-email/options', (ctx) => {
   return ctx.json({ success: true, data: TEST_EMAIL_OPTIONS });
 });
+
+// GET /v1/admin/notifications/test-email/:emailKey/preview — the subject,
+// HTML and text of one email built from its sample payload, the same build
+// the test send uses, so Operations > Emails shows what "Send me a test"
+// delivers. A text-only email (invite_code) has empty html. Read-only, so it
+// writes no audit row.
+notificationsAdminRouter.get(
+  '/test-email/:emailKey/preview',
+  zValidator('param', previewParamSchema, validationHook),
+  (ctx) => {
+    const { emailKey } = ctx.req.valid('param');
+    const { subject, html, text } = buildTestEmail(emailKey);
+    const data: AdminEmailPreview = { emailKey, subject, html, text };
+    return ctx.json({ success: true, data });
+  },
+);
 
 // POST /v1/admin/notifications/test-email — send a sample of any email the app
 // can produce to ADMIN_EMAIL, so an admin can review how each template lands in
@@ -137,7 +159,12 @@ notificationsAdminRouter.post(
     ctx.set('auditActorId', userId);
     ctx.set('auditMeta', { emailKey, result: serializeResultForAudit(result) });
 
-    return ctx.json({ success: true, data: result });
+    // Every test goes to ADMIN_EMAIL; the sent line names it masked
+    // (`h***@gmail.com`), never in full.
+    const data = result.sent
+      ? { ...result, sentTo: maskEmail(process.env.ADMIN_EMAIL ?? '') }
+      : result;
+    return ctx.json({ success: true, data });
   },
 );
 
@@ -154,7 +181,7 @@ function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
         <li><strong>Triggered by:</strong> admin user ${userId}</li>
       </ul>
       <p>If you received this, the alert pipeline is working end-to-end: Resend API key, sender domain, and delivery to ADMIN_EMAIL are all healthy.</p>
-      <p><a href="${adminUrl}/admin/settings">Admin settings</a></p>
+      <p><a href="${adminUrl}/admin/operations?tab=emails">Admin emails</a></p>
     `,
     text: [
       'This is a test email from the Concert Crawl admin notifications pipeline.',

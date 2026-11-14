@@ -29,6 +29,7 @@ import {
 } from './lib/people-detail.js';
 import { validationHook } from '../../lib/validator.js';
 import { avatarColumns, avatarOf } from '../../lib/avatar.js';
+import { maskEmail } from '../../lib/mask-email.js';
 import type { AdminVariables } from './index.js';
 
 const secretKey = process.env['CLERK_SECRET_KEY'] ?? '';
@@ -115,13 +116,6 @@ export const forgetPeopleScan = (): void => {
   cachedScan = null;
   scanInFlight = null;
   scanGeneration += 1;
-};
-
-/** `h***@example.com`: enough to tell people apart, not to contact them. */
-export const maskEmail = (email: string): string => {
-  const at = email.lastIndexOf('@');
-  if (at < 1) return email === '' ? '' : '***';
-  return `${email.slice(0, 1)}***${email.slice(at)}`;
 };
 
 const iso = (ms: number | null): string | null =>

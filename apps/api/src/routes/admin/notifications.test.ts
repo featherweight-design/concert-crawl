@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createApp } from '../../app.js';
 
 const mockSendAdminAlertEmail = vi.fn();
@@ -66,6 +66,9 @@ describe('POST /v1/admin/notifications/test-email', () => {
     mockSendAdminAlertEmail.mockReset();
     mockSendTestEmail.mockReset();
   });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
     mockGetAuth.mockReturnValue(null);
@@ -90,8 +93,9 @@ describe('POST /v1/admin/notifications/test-email', () => {
     expect(mockSendAdminAlertEmail).not.toHaveBeenCalled();
   });
 
-  it('returns 200 with sent:true when email helper succeeds', async () => {
+  it('returns 200 with sent:true and the masked recipient when email helper succeeds', async () => {
     adminAuth();
+    vi.stubEnv('ADMIN_EMAIL', 'hugh@example.com');
     mockSendAdminAlertEmail.mockResolvedValueOnce({
       sent: true,
       resendId: 'resend_abc123',
@@ -105,7 +109,12 @@ describe('POST /v1/admin/notifications/test-email', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data).toEqual({ sent: true, resendId: 'resend_abc123' });
+    expect(body.data).toEqual({
+      sent: true,
+      resendId: 'resend_abc123',
+      sentTo: 'h***@example.com',
+    });
+    expect(JSON.stringify(body)).not.toContain('hugh@example.com');
     expect(mockSendAdminAlertEmail).toHaveBeenCalledTimes(1);
     const [payload] = mockSendAdminAlertEmail.mock.calls[0];
     expect(payload.subject).toBe('Concert Crawl — test alert');
@@ -186,7 +195,8 @@ describe('POST /v1/admin/notifications/test-email', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.data).toEqual({ sent: true, resendId: 'resend_digest' });
+    expect(body.data).toMatchObject({ sent: true, resendId: 'resend_digest' });
+    expect(typeof body.data.sentTo).toBe('string');
     expect(mockSendTestEmail).toHaveBeenCalledWith('spotify_digest');
     expect(mockSendAdminAlertEmail).not.toHaveBeenCalled();
   });
@@ -260,4 +270,72 @@ describe('GET /v1/admin/notifications/test-email/options', () => {
       expect(typeof opt.label).toBe('string');
     }
   });
+});
+
+describe('GET /v1/admin/notifications/test-email/:emailKey/preview', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset();
+    mockSendAdminAlertEmail.mockReset();
+    mockSendTestEmail.mockReset();
+  });
+
+  const preview = (key: string) =>
+    createApp().request(`/v1/admin/notifications/test-email/${key}/preview`);
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null);
+    expect((await preview('crawl_failure')).status).toBe(401);
+  });
+
+  it('returns 403 for non-admin users', async () => {
+    mockGetAuth.mockReturnValue({
+      userId: 'user_1',
+      sessionClaims: { metadata: { role: 'user' } },
+    });
+    expect((await preview('crawl_failure')).status).toBe(403);
+  });
+
+  it('builds the sample email without sending anything', async () => {
+    adminAuth();
+    const res = await preview('crawl_failure');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toEqual({
+      emailKey: 'crawl_failure',
+      subject: 'Crawl failing: Ogden Theatre',
+      html: expect.stringContaining('failed 3 consecutive crawls'),
+      text: expect.stringContaining('failed 3 consecutive crawls'),
+    });
+    expect(mockSendTestEmail).not.toHaveBeenCalled();
+    expect(mockSendAdminAlertEmail).not.toHaveBeenCalled();
+  });
+
+  it('previews every listed email', async () => {
+    adminAuth();
+    const options = await (
+      await createApp().request('/v1/admin/notifications/test-email/options')
+    ).json();
+    for (const { key } of options.data as { key: string }[]) {
+      const res = await preview(key);
+      expect(res.status, key).toBe(200);
+      const body = await res.json();
+      expect(body.data.subject.length, key).toBeGreaterThan(0);
+      expect(body.data.text.length, key).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps html empty for a text-only email', async () => {
+    adminAuth();
+    const body = await (await preview('invite_code')).json();
+    expect(body.data.html).toBe('');
+    expect(body.data.text).toContain('SAMPLE-CODE-1234');
+  });
+
+  it.each(['not_a_real_key', 'welcome_paid'])(
+    'rejects %s with 400',
+    async (key) => {
+      adminAuth();
+      expect((await preview(key)).status).toBe(400);
+    },
+  );
 });
