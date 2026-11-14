@@ -27,12 +27,15 @@
       "label": "Edit price: the shared sheet, one show, no Sold out row",
       "steps": [
         {
-          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "goto": "/admin/events/3e74a836-429e-4892-bcfc-32d050f52e0f/edit",
           "expectStatus": 200,
           "wait": "[data-testid=\"event-edit\"]"
         },
-        { "fill": "#event-edit-title", "text": "Violet Grohl" },
-        { "settle": 2500 },
+        {
+          "fill": "#event-edit-title",
+          "text": "mike. with opening set from DJ Stevie Daniels"
+        },
+        { "settle": 3000 },
         { "click": "[data-testid=\"event-edit-price-edit\"]" },
         { "wait": "[role=\"dialog\"]", "settle": 500 }
       ]
