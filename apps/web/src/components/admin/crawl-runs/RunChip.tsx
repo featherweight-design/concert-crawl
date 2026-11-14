@@ -8,7 +8,7 @@ import {
 
 /**
  * Each chip's tone, as drawn: the one outcome-tone map in overview-rules,
- * shared with Needs you's LAST 4 RUNS. Grey chips read their word in the
+ * shared with Needs you's LAST 14 RUNS. Grey chips read their word in the
  * muted ink.
  */
 export const RUN_CHIP_TONE = RUN_OUTCOME_TONE;
