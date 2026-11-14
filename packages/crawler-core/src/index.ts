@@ -12,6 +12,12 @@ export {
 export { calculateCost, MODEL_RATES, type PricedModelId } from './lib/cost.js';
 export { LLM_EXTRACTION_MODEL } from './lib/llm-models.js';
 export {
+  LLM_SERVICES,
+  recordLlmCost,
+  type LlmService,
+  type RecordLlmCostInput,
+} from './lib/record-llm-cost.js';
+export {
   canonicalizeArtist,
   canonicalizeSupporting,
 } from './lib/canonical-artist.js';

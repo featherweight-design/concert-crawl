@@ -1,14 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { and, eq, isNull } from 'drizzle-orm';
-import { db, events, costTracking } from '@concert-crawl/db';
+import { db, events } from '@concert-crawl/db';
 import { createLogger } from '@concert-crawl/logger';
-import { calculateCost } from './cost.js';
 import { GENRE_TAG_MODEL } from './llm-models.js';
+import { recordLlmCost } from './record-llm-cost.js';
 import type { TokenUsage } from '../types.js';
 
 const logger = createLogger('genre-tagger');
-const MODEL = GENRE_TAG_MODEL;
 
 export const GENRE_TAG_BATCH_SIZE = 50;
 
@@ -84,7 +83,7 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
   const client = new Anthropic();
 
   const response = await client.messages.create({
-    model: MODEL,
+    model: GENRE_TAG_MODEL,
     max_tokens: 4096,
     tools: [TAG_GENRES_TOOL],
     tool_choice: { type: 'tool', name: 'tag_genres' },
@@ -243,19 +242,11 @@ export async function tagEventsWithGenres(
         .where(eq(events.id, eventId));
     }
 
-    const costUsd = calculateCost(totalTokenUsage, MODEL);
-    await db.insert(costTracking).values({
+    const costUsd = await recordLlmCost({
       service: 'genre-tagger',
-      costUsd: costUsd.toFixed(6),
-      tokensUsed: String(
-        totalTokenUsage.inputTokens + totalTokenUsage.outputTokens,
-      ),
-      metadata: JSON.stringify({
-        crawlRunId,
-        venueId,
-        eventsTagged: allResults.length,
-        ...totalTokenUsage,
-      }),
+      usage: totalTokenUsage,
+      model: GENRE_TAG_MODEL,
+      metadata: { crawlRunId, venueId, eventsTagged: allResults.length },
     });
 
     logger.info(

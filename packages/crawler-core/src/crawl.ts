@@ -1877,6 +1877,9 @@ export async function crawlVenue(
       fetchLog,
     );
 
+    // Written directly, not through recordLlmCost, and 'claude' is not in
+    // LLM_SERVICES: these dollars are already in crawl_runs.llm_cost_usd, which
+    // the LLM budget sums, so counting this row too would double them.
     if (tokenUsage && llmCostUsd !== null) {
       await db.insert(costTracking).values({
         service: 'claude',

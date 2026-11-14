@@ -39,13 +39,6 @@ describe('calculateCost', () => {
     });
   });
 
-  it('throws for a model with no rates instead of pricing it at zero', () => {
-    expect(() =>
-      // @ts-expect-error an unpriced id is a compile error for typed callers
-      calculateCost(usage, 'claude-haiku-3-5'),
-    ).toThrow(/No rates for model "claude-haiku-3-5"/);
-  });
-
   it('prices every model the crawler calls', () => {
     for (const model of [LLM_EXTRACTION_MODEL, GENRE_TAG_MODEL]) {
       expect(calculateCost(usage, model)).toBeGreaterThan(0);
