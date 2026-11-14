@@ -33,6 +33,7 @@ import {
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
+import { CRAWLER_DAILY_CRON_UTC } from './lib/needs-you/all-clear-facts.js';
 
 const app = createApp();
 
@@ -62,6 +63,7 @@ interface DetailBody {
     lat: number | null;
     lng: number | null;
     contactEmail: string | null;
+    nextCrawlAt: string | null;
   };
 }
 
@@ -166,6 +168,37 @@ describe('admin venues API, redesign 3b', () => {
       const data = await detail(venue.id);
       expect(data.latestRun?.errorMessage).toHaveLength(300);
       expect(data.lastFullRun).toBeNull();
+    });
+
+    it('names no next crawl outside production, which starts none', async () => {
+      const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' });
+      vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
+      try {
+        expect((await detail(venue.id)).nextCrawlAt).toBeNull();
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it('says when the next daily crawl runs in production, from the cron', async () => {
+      const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' });
+      vi.stubEnv('VERCEL_TARGET_ENV', 'production');
+      const before = Date.now();
+      let nextCrawlAt: string | null;
+      try {
+        nextCrawlAt = (await detail(venue.id)).nextCrawlAt;
+      } finally {
+        vi.unstubAllEnvs();
+      }
+      if (nextCrawlAt === null) throw new Error('expected a next crawl');
+      const next = new Date(nextCrawlAt);
+      expect(next.toISOString()).toBe(nextCrawlAt);
+      expect([next.getUTCHours(), next.getUTCMinutes()]).toEqual([
+        CRAWLER_DAILY_CRON_UTC.hour,
+        CRAWLER_DAILY_CRON_UTC.minute,
+      ]);
+      expect(next.getTime()).toBeGreaterThan(before);
+      expect(next.getTime() - before).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
     });
 
     it('answers zeros and nulls for a venue with no shows and no runs', async () => {

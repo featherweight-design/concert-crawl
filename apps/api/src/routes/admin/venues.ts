@@ -79,6 +79,8 @@ import {
   resolvePauseDetails,
 } from './lib/venue-crawl-pause.js';
 import { todayInDenver } from '../../lib/time.js';
+import { crawlerDispatchEnvironment } from '../../lib/crawler-dispatch.js';
+import { nextCrawlAfter } from './lib/needs-you/all-clear-facts.js';
 import {
   HIDE_REASONS,
   deleteBlockers,
@@ -648,6 +650,12 @@ venuesAdminRouter.get('/:id', async (ctx) => {
       latestRun: latestRunOf(latestRun),
       crawlPausedByName: nameOf(adminNames, venue.crawlPausedBy),
       hiddenByName: nameOf(adminNames, venue.hiddenBy),
+      // The Source tab's Schedule line, as GET /crawl/estimate names it: only
+      // production starts the daily crawl, so anywhere else there is none.
+      nextCrawlAt:
+        crawlerDispatchEnvironment() === 'production'
+          ? nextCrawlAfter(new Date()).toISOString()
+          : null,
     },
   });
 });

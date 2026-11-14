@@ -833,16 +833,48 @@ describe('SourceTab — robots.txt', () => {
 
 describe('SourceTab — Fixed by the crawl rules', () => {
   it('shows pace, schedule and auto-pause, read-only', () => {
-    render(<SourceTab venue={venue} />);
+    // The cron's 09:07Z: 2:07 AM in November (MST).
+    render(
+      <SourceTab
+        venue={{ ...venue, nextCrawlAt: '2026-11-14T09:07:00.000Z' }}
+      />,
+    );
     const card = screen.getByTestId('source-rules');
     expect(within(card).getByText(COPY.rules.paceValue('3'))).toBeTruthy();
-    expect(within(card).getByText(COPY.rules.scheduleValue)).toBeTruthy();
+    expect(within(card).getByText('Daily, 2:07 AM MT')).toBeTruthy();
     expect(within(card).getByText(COPY.rules.autoPauseValue)).toBeTruthy();
     expect(within(card).getByText(COPY.rules.footnote)).toBeTruthy();
     expect(
       card.querySelectorAll('input, select, textarea, button'),
     ).toHaveLength(0);
   });
+
+  it('follows daylight time: 09:07Z in July is 3:07 AM', () => {
+    render(
+      <SourceTab
+        venue={{ ...venue, nextCrawlAt: '2026-07-14T09:07:00.000Z' }}
+      />,
+    );
+    expect(screen.getByText('Daily, 3:07 AM MT')).toBeTruthy();
+  });
+
+  it.each([null, undefined, 'not a time'])(
+    'drops the Schedule row when there is no daily crawl to name (%s)',
+    (nextCrawlAt) => {
+      render(
+        <SourceTab
+          venue={{
+            ...venue,
+            ...(nextCrawlAt === undefined ? {} : { nextCrawlAt }),
+          }}
+        />,
+      );
+      const card = screen.getByTestId('source-rules');
+      expect(within(card).queryByText(COPY.rules.schedule)).toBeNull();
+      expect(within(card).queryByText(/Daily/)).toBeNull();
+      expect(within(card).getByText(COPY.rules.autoPauseValue)).toBeTruthy();
+    },
+  );
 
   it('shows a venue’s higher stored delay', () => {
     render(<SourceTab venue={{ ...venue, crawlDelayMs: 10000 }} />);

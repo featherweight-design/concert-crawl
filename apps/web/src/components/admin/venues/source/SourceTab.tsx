@@ -2,7 +2,11 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import type { PlatformProbeResult, Venue } from '@concert-crawl/types';
+import type {
+  PlatformProbeResult,
+  Venue,
+  VenueWithCrawlHealth,
+} from '@concert-crawl/types';
 import { updateVenue, probeVenuePlatform } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
@@ -50,7 +54,8 @@ export type SourceVenue = SourceColumns &
   Pick<
     Venue,
     'id' | 'name' | 'crawlDelayMs' | 'robotsTxtAllowed' | 'robotsTxtCheckedAt'
-  >;
+  > &
+  Pick<VenueWithCrawlHealth, 'nextCrawlAt'>;
 
 type ProbeStatus =
   | { kind: 'idle' }
