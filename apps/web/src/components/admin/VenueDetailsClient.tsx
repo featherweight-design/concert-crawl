@@ -20,7 +20,10 @@ import { RunsTab } from '@/components/admin/venues/runs/RunsTab';
 import type { RunsPage } from '@/components/admin/crawl-runs/run-data';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
-import { PAGE_MAX_WIDTH } from '@/components/admin/shell/content-pane';
+import {
+  CONTENT_GUTTER_Y,
+  PAGE_MAX_WIDTH,
+} from '@/components/admin/shell/content-pane';
 
 interface Props {
   venue: VenueWithCrawlHealth;
@@ -164,7 +167,9 @@ export function VenueDetailsClient({
         flexDirection: 'column',
         gap: 18,
         maxWidth: PAGE_MAX_WIDTH,
-        paddingBottom: 32,
+        // `details-d` draws 24 between the last card and the pinned bar,
+        // which now sits past this column, at the end of the pane.
+        paddingBottom: CONTENT_GUTTER_Y,
         position: 'relative',
       }}
     >
