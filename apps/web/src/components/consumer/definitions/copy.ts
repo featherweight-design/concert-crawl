@@ -1378,14 +1378,14 @@ export const CONSUMER_COPY = {
     submissionAge: (ago: string) => `${ago} ago`,
     anonymousLabel: 'anonymous fan',
     anonymousExplainer:
-      "You're browsing as an anonymous fan. Pick a handle to get credit for your price submissions (it applies retroactively).",
+      "You're browsing as an anonymous fan. Pick a handle to get credit for the prices you submit (it applies retroactively).",
     heroCredNudge: 'Submit a price to start earning.',
-    heroAnonLead: 'Submissions show as',
+    heroAnonLead: 'Your prices show as',
     heroAnonTail: 'Pick a handle if you want credit.',
     heroJoinedLabel: 'joined',
     heroEditButton: 'Edit',
     goingAnonymousWarning:
-      'Clearing your handle makes you anonymous again. You may lose your handle and your past submissions will no longer show your name.',
+      'Clearing your handle makes you anonymous again. You may lose your handle and your past prices will no longer show your name.',
     handlePlaceholder: 'lowercase_handle',
     handleHint: 'Lowercase letters, numbers, underscores. 3–20 characters.',
     handleErrors: {
@@ -1403,11 +1403,11 @@ export const CONSUMER_COPY = {
       deleteAccountSubtitle:
         'Permanently remove your handle, profile, and Concerts.',
       deleteCardBody:
-        "This is permanent. Your handle, email, and profile are gone. Price submissions stay on the public record, but your name is removed from them. You can't undo deletion.",
+        "This is permanent. Your handle, email, and profile are gone. Submitted prices stay on the public record, but your name is removed from them. You can't undo deletion.",
       deleteAccountCta: 'Delete my account',
       deleteSheetTitle: 'Delete account permanently',
       deleteSheetBody:
-        "Your handle and profile will be gone. Price submissions you made will stay (they're part of the public record), but your name will be removed from them. Other fans' confirmations belong to them and will persist.",
+        "Your handle and profile will be gone. Prices you submitted will stay (they're part of the public record), but your name will be removed from them. Other fans' confirmations belong to them and will persist.",
       deleteConfirmPlaceholder: 'Type DELETE to enable',
       deleteButtonArmed: 'Delete my account permanently',
       deleteButtonDisabled: 'Delete permanently',
@@ -1507,7 +1507,7 @@ export const CONSUMER_COPY = {
     // are one sentence split only because the middle is styled.
     handleExplainerLead: 'Other fans see',
     handleExplainerTail:
-      "on every price you've submitted, and can tag you on confirmations. Drop the handle any time to go anonymous. Your existing submissions get reattributed.",
+      "on every price you've submitted, and can tag you on confirmations. Drop the handle any time to go anonymous. The prices you've already submitted get reattributed.",
     // `anonymousCardLead` + `anonymousCardLabel` are also one sentence,
     // split because the label renders in italics.
     anonymousCardLead: 'Submitting as',
@@ -1691,7 +1691,7 @@ export const CONSUMER_COPY = {
       boughtMyself: {
         label: 'Bought a ticket at the box office',
         description:
-          'Confirms this submission AND opens a separate gold-tier box-office submission for your purchase.',
+          'Confirms this price AND opens a separate gold-tier box-office price for your purchase.',
       },
     },
 
@@ -1912,7 +1912,7 @@ export const CONSUMER_COPY = {
       addAnotherEyebrow: 'This show has more than one tier?',
       addPillTemplate: (tier: string) => `+ Add ${tier.toLowerCase()}`,
       helperLine:
-        'Each tier is its own quick submission. Only add the ones you actually saw.',
+        'Each tier is its own price. Only add the ones you actually saw.',
       doneButton: 'Done',
       // Shown instead of the add-tier pills when the caller has used all
       // contribution acts for this event today (#876). Deliberately vague —
