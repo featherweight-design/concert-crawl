@@ -1,3 +1,23 @@
+# [1.433.0](https://github.com/featherweight-design/concert-crawl/compare/v1.432.0...v1.433.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** event edit status review fixes ([1819c6c](https://github.com/featherweight-design/concert-crawl/commit/1819c6ccc67811c4918ae8412dbd9d14c3484d3e))
+* **admin:** mark postponed is a bare label, as drawn ([ec7177d](https://github.com/featherweight-design/concert-crawl/commit/ec7177d4ec2962b68fe35ab498287b1d24b44d46))
+* **api:** make failed-dispatch reports truthful and filterable ([a2d9307](https://github.com/featherweight-design/concert-crawl/commit/a2d930735f4096346010203b14dcfe21b9709aca))
+* **api:** name the queued crawls a failed dispatch leaves for the daily run ([e8019e0](https://github.com/featherweight-design/concert-crawl/commit/e8019e07467cb74ca0a404da1321bb745ac1ba24))
+* **api:** never let a dispatch report throw or double-report ([b847877](https://github.com/featherweight-design/concert-crawl/commit/b847877626fd1d1c3084c15d41074c9257151c64))
+* **web:** fit the five tier chips on one phone row as the board draws them ([70eca88](https://github.com/featherweight-design/concert-crawl/commit/70eca8812b76eba67bbc2211a6e0a59c823e53e9))
+* **web:** mark the board-look price field required for assistive tech ([e20be82](https://github.com/featherweight-design/concert-crawl/commit/e20be82d143484ff9b4c5434626ec6003dd2c0a3))
+
+
+### Features
+
+* **admin:** event edit status card, postponed and hide dialogs (wip) ([14f3dd8](https://github.com/featherweight-design/concert-crawl/commit/14f3dd8dbcbf68b9b9b82bea357b41dd68525548))
+* **admin:** say before saving that a sale pill relists a delisted show ([5a6d96f](https://github.com/featherweight-design/concert-crawl/commit/5a6d96f9ff4905e837ab584190e40b271d4cbc1e))
+* **web:** the price submit sheet's tier cards and field look as the B+ boards draw them ([36b460d](https://github.com/featherweight-design/concert-crawl/commit/36b460daed3cd017a81483f7e64722a14797c344))
+
 # [1.432.0](https://github.com/featherweight-design/concert-crawl/compare/v1.431.1...v1.432.0) (2026-11-14)
 
 
