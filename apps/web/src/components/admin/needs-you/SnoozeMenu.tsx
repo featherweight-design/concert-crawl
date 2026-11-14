@@ -47,7 +47,8 @@ const MENU_ITEM: CSSProperties = {
   color: 'var(--fg)',
 };
 
-const Item = ({
+/** One row of the snooze menu: an icon tile, a title and a line under it. */
+export const MenuItem = ({
   icon,
   title,
   sub,
@@ -85,9 +86,152 @@ const Item = ({
 );
 
 /**
- * `02/snooze-menu`: Snooze 1 day, Snooze a week, Until a date, and "Not useful"
- * under a rule. The first two return at 8 AM Mountain. A date asks for the day
- * in place; "Not useful" asks why, in place, before it stops the warning.
+ * The menu's rows: Snooze 1 day, Snooze a week, Until a date, then "Not
+ * useful" under a rule. The first two return at 8 AM Mountain. A date asks for
+ * the day in place; "Not useful" asks why, in place, before it stops the
+ * warning. `afterDate` lands between Until a date and the rule (the phone's
+ * "Open {venue}" row, `01-snooze/item-menu-m`). The popover and the phone
+ * item's ⋯ sheet both draw these.
+ */
+export const SnoozeOptions = ({
+  onSnooze,
+  onNotUseful,
+  afterDate,
+  now,
+}: Omit<SnoozeMenuProps, 'disabled'> & { afterDate?: ReactNode }) => {
+  const [mode, setMode] = useState<'menu' | 'date' | 'reason'>('menu');
+  const [date, setDate] = useState('');
+  const [reason, setReason] = useState('');
+
+  const today = now ?? new Date();
+  const tomorrow = mountainDayAhead(today, 1);
+  const inAWeek = mountainDayAhead(today, 7);
+  const snoozeTo = (day: string) => onSnooze(eightAmMountain(day));
+
+  if (mode === 'date')
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          padding: 10,
+        }}
+      >
+        <label style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+          {COPY.dateLabel}
+          <input
+            type="date"
+            value={date}
+            min={tomorrow}
+            onChange={(event) => setDate(event.target.value)}
+            style={{
+              display: 'block',
+              width: '100%',
+              marginTop: 6,
+              height: 36,
+              padding: '0 10px',
+              borderRadius: 10,
+              border: '1px solid var(--border-strong)',
+              background: 'var(--surface-1)',
+              color: 'var(--fg)',
+            }}
+          />
+        </label>
+        <AdminButton
+          variant="primary"
+          disabled={date < tomorrow}
+          onClick={() => snoozeTo(date)}
+        >
+          {COPY.setDate}
+        </AdminButton>
+      </div>
+    );
+
+  if (mode === 'reason' && onNotUseful)
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          padding: 10,
+        }}
+      >
+        <label style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+          {COPY.reasonLabel}
+          <input
+            type="text"
+            value={reason}
+            maxLength={500}
+            placeholder={COPY.reasonPlaceholder}
+            onChange={(event) => setReason(event.target.value)}
+            style={{
+              display: 'block',
+              width: '100%',
+              marginTop: 6,
+              height: 36,
+              padding: '0 10px',
+              borderRadius: 10,
+              border: '1px solid var(--border-strong)',
+              background: 'var(--surface-1)',
+              color: 'var(--fg)',
+            }}
+          />
+        </label>
+        <AdminButton variant="outline" onClick={() => onNotUseful(reason)}>
+          {COPY.stopWarning}
+        </AdminButton>
+      </div>
+    );
+
+  return (
+    <>
+      <MenuItem
+        icon={<Clock size={17} />}
+        title={COPY.oneDay}
+        sub={COPY.oneDaySub}
+        onClick={() => snoozeTo(tomorrow)}
+      />
+      <MenuItem
+        icon={<Clock size={17} />}
+        title={COPY.aWeek}
+        sub={COPY.backOn(snoozeDayLabel(inAWeek))}
+        onClick={() => snoozeTo(inAWeek)}
+      />
+      <MenuItem
+        icon={<CalendarDays size={17} />}
+        title={COPY.untilDate}
+        sub={COPY.untilDateSub}
+        onClick={() => setMode('date')}
+      />
+      {afterDate}
+      {onNotUseful && (
+        <>
+          <div
+            aria-hidden
+            style={{
+              height: 1,
+              margin: '6px 10px',
+              background: 'var(--border)',
+            }}
+          />
+          <MenuItem
+            muted
+            icon={<X size={17} />}
+            title={COPY.notUseful}
+            sub={COPY.notUsefulSub}
+            onClick={() => setMode('reason')}
+          />
+        </>
+      )}
+    </>
+  );
+};
+
+/**
+ * `02/snooze-menu`: the card's Snooze button and its popover of
+ * `SnoozeOptions`. Closing the popover drops any half-filled date or reason.
  */
 export const SnoozeMenu = ({
   onSnooze,
@@ -97,23 +241,17 @@ export const SnoozeMenu = ({
 }: SnoozeMenuProps) => {
   const isPhone = useIsPhone();
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'menu' | 'date' | 'reason'>('menu');
-  const [date, setDate] = useState('');
-  const [reason, setReason] = useState('');
   const wrapRef = useRef<HTMLSpanElement>(null);
 
-  const close = () => {
-    setOpen(false);
-    setMode('menu');
-  };
+  const close = () => setOpen(false);
 
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) close();
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
+      if (event.key === 'Escape') setOpen(false);
     };
     document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onKey);
@@ -122,15 +260,6 @@ export const SnoozeMenu = ({
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
-
-  const today = now ?? new Date();
-  const tomorrow = mountainDayAhead(today, 1);
-  const inAWeek = mountainDayAhead(today, 7);
-
-  const snoozeTo = (day: string) => {
-    close();
-    onSnooze(eightAmMountain(day));
-  };
 
   return (
     <span
@@ -185,126 +314,21 @@ export const SnoozeMenu = ({
             boxShadow: '0 18px 48px rgba(0, 0, 0, 0.45)',
           }}
         >
-          {mode === 'menu' && (
-            <>
-              <Item
-                icon={<Clock size={17} />}
-                title={COPY.oneDay}
-                sub={COPY.oneDaySub}
-                onClick={() => snoozeTo(tomorrow)}
-              />
-              <Item
-                icon={<Clock size={17} />}
-                title={COPY.aWeek}
-                sub={COPY.backOn(snoozeDayLabel(inAWeek))}
-                onClick={() => snoozeTo(inAWeek)}
-              />
-              <Item
-                icon={<CalendarDays size={17} />}
-                title={COPY.untilDate}
-                sub={COPY.untilDateSub}
-                onClick={() => setMode('date')}
-              />
-              {onNotUseful && (
-                <>
-                  <div
-                    aria-hidden
-                    style={{
-                      height: 1,
-                      margin: '6px 10px',
-                      background: 'var(--border)',
-                    }}
-                  />
-                  <Item
-                    muted
-                    icon={<X size={17} />}
-                    title={COPY.notUseful}
-                    sub={COPY.notUsefulSub}
-                    onClick={() => setMode('reason')}
-                  />
-                </>
-              )}
-            </>
-          )}
-          {mode === 'date' && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                padding: 10,
-              }}
-            >
-              <label style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-                {COPY.dateLabel}
-                <input
-                  type="date"
-                  value={date}
-                  min={tomorrow}
-                  onChange={(event) => setDate(event.target.value)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    marginTop: 6,
-                    height: 36,
-                    padding: '0 10px',
-                    borderRadius: 10,
-                    border: '1px solid var(--border-strong)',
-                    background: 'var(--surface-1)',
-                    color: 'var(--fg)',
-                  }}
-                />
-              </label>
-              <AdminButton
-                variant="primary"
-                disabled={date < tomorrow}
-                onClick={() => snoozeTo(date)}
-              >
-                {COPY.setDate}
-              </AdminButton>
-            </div>
-          )}
-          {mode === 'reason' && onNotUseful && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                padding: 10,
-              }}
-            >
-              <label style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-                {COPY.reasonLabel}
-                <input
-                  type="text"
-                  value={reason}
-                  maxLength={500}
-                  placeholder={COPY.reasonPlaceholder}
-                  onChange={(event) => setReason(event.target.value)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    marginTop: 6,
-                    height: 36,
-                    padding: '0 10px',
-                    borderRadius: 10,
-                    border: '1px solid var(--border-strong)',
-                    background: 'var(--surface-1)',
-                    color: 'var(--fg)',
-                  }}
-                />
-              </label>
-              <AdminButton
-                variant="outline"
-                onClick={() => {
-                  close();
-                  onNotUseful(reason);
-                }}
-              >
-                {COPY.stopWarning}
-              </AdminButton>
-            </div>
-          )}
+          <SnoozeOptions
+            onSnooze={(until) => {
+              close();
+              onSnooze(until);
+            }}
+            onNotUseful={
+              onNotUseful
+                ? (reason) => {
+                    close();
+                    onNotUseful(reason);
+                  }
+                : undefined
+            }
+            {...(now ? { now } : {})}
+          />
         </div>
       )}
     </span>

@@ -73,6 +73,8 @@ const open = (item: QueueRow, onAnswer = vi.fn(), ranksFirst = true) => {
       busy={false}
       onClose={vi.fn()}
       onAnswer={onAnswer}
+      onSnooze={vi.fn()}
+      onNotUseful={vi.fn()}
     />,
   );
   return onAnswer;

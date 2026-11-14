@@ -2916,6 +2916,14 @@ export const ADMIN_COPY = {
       stopWarning: 'Stop this warning',
       failed: "Couldn't snooze that",
     },
+    // The phone's item page (`02/an-item-mobile`, `01-snooze/item-menu-m`):
+    // the back row's ⋯ opens a sheet of the snooze rows plus the venue link.
+    itemPage: {
+      more: 'More actions',
+      openVenue: (venue: string) => `Open ${venue}`,
+      openVenueSub: 'The venue page, on its Runs tab.',
+      close: 'Close',
+    },
   },
   peoplePage: {
     title: 'People',
