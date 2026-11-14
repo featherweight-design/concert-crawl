@@ -98,7 +98,13 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
   };
 
   const changed = dirtyColumns(draft, baseline);
-  const dirty = changed.length > 0;
+  // A switch of mode or seller is an edit even before it changes a column
+  // (a feed with no seller yet), so the bar is up and Save asks for the rest.
+  const savedDraft = draftOf(baseline);
+  const dirty =
+    changed.length > 0 ||
+    draft.mode !== savedDraft.mode ||
+    draft.seller !== savedDraft.seller;
 
   // A fresh server row (after a save, or another tab's) becomes the baseline.
   // Only the fields edited here survive it; every other field follows the new
@@ -349,7 +355,10 @@ export const SourceTab = ({ venue }: { venue: SourceVenue }) => {
             checked={draft.mode === mode}
             sub={mode === 'feed' ? feedSub : COPY.read.modes[mode].sub}
             disabled={saving || modeLocked}
-            onPick={(picked) => edit({ mode: picked })}
+            onPick={(picked) => {
+              // A locked feed (desktop, #175) never changes mode.
+              if (!modeLocked) edit({ mode: picked });
+            }}
           />
         ))}
       </div>

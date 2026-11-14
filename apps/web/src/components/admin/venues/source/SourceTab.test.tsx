@@ -475,9 +475,10 @@ describe('SourceTab — its own save bar', () => {
       target: { value: 'https://gothic.example/calendar' },
     });
     clickSave();
+    // The toast's body wraps the line ("… Nothing changed."), so match a part.
     expect(
-      await screen.findByText(
-        `This venue was removed. ${COPY.failed.saved.page}`,
+      await screen.findByText((text) =>
+        text.startsWith(`This venue was removed. ${COPY.failed.saved.page}`),
       ),
     ).toBeTruthy();
   });
