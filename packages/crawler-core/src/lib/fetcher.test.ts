@@ -622,6 +622,7 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     const cdp = makeMockCdp();
     let landed = 'original';
     let hop: Promise<Verdict> | undefined;
+    const events: string[] = [];
     // The hop's robots.txt lookup is still running when content() would be
     // read.
     isAllowedSpy.mockImplementation(async (url: string) => {
@@ -634,18 +635,23 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
       // A script navigates after load, while the selector wait runs.
       waitForSelector: vi.fn(async () => {
         hop = cdp.pause({ url: 'https://example.com/next' });
-        // Chromium commits the navigation once it is continued, and the new
-        // page reaches DOMContentLoaded.
+        // Chromium commits the navigation a little after it is continued,
+        // and the new page reaches DOMContentLoaded. Until then the old page
+        // is what content() would read.
         void hop.then((verdict) => {
           if (verdict !== 'continue') return;
-          landed = 'next';
-          cdp.emit('Page.domContentEventFired');
+          setTimeout(() => {
+            landed = 'next';
+            events.push('domContentEventFired');
+            cdp.emit('Page.domContentEventFired');
+          }, 50);
         });
         return null;
       }) as unknown as Page['waitForSelector'],
-      content: vi.fn(
-        async () => `<html><body>${landed}</body></html>`,
-      ) as unknown as Page['content'],
+      content: vi.fn(async () => {
+        events.push('content');
+        return `<html><body>${landed}</body></html>`;
+      }) as unknown as Page['content'],
       url: vi.fn(() =>
         landed === 'next' ? 'https://example.com/next' : 'https://example.com',
       ) as unknown as Page['url'],
@@ -660,10 +666,9 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     );
 
     expect(cdp.answered('Fetch.continueRequest')).toHaveLength(1);
-    expect(page.waitForLoadState).toHaveBeenCalledWith(
-      'domcontentloaded',
-      expect.anything(),
-    );
+    // The read waited for the gate's own session to report the new page's
+    // DOMContentLoaded, and only then read it.
+    expect(events).toEqual(['domContentEventFired', 'content']);
     expect(result.html).toBe('<html><body>next</body></html>');
     expect(result.finalUrl).toBe('https://example.com/next');
   });
