@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { VenueWithCrawlHealth } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { hiddenStateLine, venueMenuState } from './venue-menu';
+import { Eye, RefreshCw, X } from 'lucide-react';
+import { hiddenStateLine, venueMenuItems, venueMenuState } from './venue-menu';
 
 const COPY = ADMIN_COPY.venueHeader;
 
@@ -159,5 +160,40 @@ describe('venueMenuState', () => {
     expect(venueMenuState(venue({ active: true, removedAt: PAUSED_AT }))).toBe(
       'removed',
     );
+  });
+});
+
+describe('venueMenuItems icons (A3/03/venue-menu-states)', () => {
+  const noop = (): void => undefined;
+  const ACT = {
+    pause: noop,
+    resume: noop,
+    flagship: noop,
+    hide: noop,
+    takeDown: noop,
+    show: noop,
+    remove: noop,
+  };
+  const iconsOf = (over: Partial<VenueWithCrawlHealth>) =>
+    Object.fromEntries(
+      venueMenuItems(venue(over), ACT).map((item) => [item.key, item.icon]),
+    );
+
+  it('Resume is the refresh arrows and Hide is the eye', () => {
+    const icons = iconsOf({
+      active: true,
+      crawlPausedAt: '2026-10-28T18:00:00.000Z',
+    });
+    expect(icons.resume).toBe(RefreshCw);
+    expect(icons.hide).toBe(Eye);
+    expect(icons['take-down']).toBe(X);
+  });
+
+  it('a hidden venue: Show is the eye, Delete and Take down are X, no crawl row', () => {
+    const icons = iconsOf({ crawlPausedAt: '2026-10-28T18:00:00.000Z' });
+    expect(Object.keys(icons)).toEqual(['show', 'delete', 'take-down']);
+    expect(icons.show).toBe(Eye);
+    expect(icons.delete).toBe(X);
+    expect(icons['take-down']).toBe(X);
   });
 });

@@ -1,13 +1,4 @@
-import {
-  Eye,
-  EyeOff,
-  Info,
-  Pause,
-  Play,
-  Sparkle,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Eye, Info, Pause, RefreshCw, Sparkle, X } from 'lucide-react';
 import type {
   VenueDeleteBlockers,
   VenueWithCrawlHealth,
@@ -103,21 +94,21 @@ const itemsFor = (
     danger: true,
     onSelect: act.takeDown,
   };
-  // Pausing never touches `active`, so a hidden venue keeps its crawl row,
-  // as the old danger zone did. Its shows are already off the site, so its
-  // hint doesn't say they stay listed.
+  // Only a live venue gets the crawl row: the hidden menu draws Show on site,
+  // Delete and Take down, nothing else (`A3/03/venue-menu-states`). Resume is
+  // the board's refresh arrows, not a play triangle.
   const crawl: RowMenuItem =
     venue.crawlPausedAt === null
       ? {
           key: 'pause',
           icon: Pause,
           label: COPY.menu.pause,
-          hint: venue.active ? COPY.menu.pauseHint : COPY.menu.pauseHintHidden,
+          hint: COPY.menu.pauseHint,
           onSelect: act.pause,
         }
       : {
           key: 'resume',
-          icon: Play,
+          icon: RefreshCw,
           label: COPY.menu.resume,
           hint: pausedStateLine(venue) ?? '',
           onSelect: act.resume,
@@ -128,7 +119,7 @@ const itemsFor = (
     const remove: RowMenuItem = deleteRefused(blockers)
       ? {
           key: 'delete',
-          icon: Trash2,
+          icon: X,
           label: COPY.menu.deleteRefusedLabel,
           hint: ADMIN_COPY.venueConfirms.deleteRefused(
             blockers.pastShows,
@@ -142,7 +133,7 @@ const itemsFor = (
         }
       : {
           key: 'delete',
-          icon: Trash2,
+          icon: X,
           label: COPY.menu.delete,
           hint: COPY.menu.deleteHint,
           danger: true,
@@ -173,7 +164,6 @@ const itemsFor = (
             hint: line,
             onSelect: act.show,
           },
-          crawl,
           remove,
           takeDown,
         ];
@@ -192,7 +182,7 @@ const itemsFor = (
     },
     {
       key: 'hide',
-      icon: EyeOff,
+      icon: Eye,
       label: COPY.menu.hide,
       hint: COPY.menu.hideHint(
         state === 'autoPaused'

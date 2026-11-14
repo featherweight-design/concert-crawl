@@ -233,27 +233,24 @@ describe('VenueMenu — rows per state', () => {
     expect(rows()[2]).toBe(`${MENU.hide}|${MENU.hideHint(null)}`);
   });
 
-  it('hidden: Show on site with who hid it, Pause, Delete, Take down', () => {
+  it('hidden: Show on site with who hid it, Delete, Take down, and no crawl row', () => {
     openMenu(buildVenue({ ...HIDDEN, deleteBlockers: NO_BLOCKERS }));
     expect(rows()).toEqual([
       `${MENU.show}|Hidden by @hugh, Nov 2: venue closed.`,
-      // Its shows are already off the site, so not "Shows stay listed".
-      `${MENU.pause}|${MENU.pauseHintHidden}`,
       `${MENU.delete}|${MENU.deleteHint}`,
       `${MENU.takeDown}|${MENU.takeDownHint}`,
     ]);
     expect(row('delete').getAttribute('aria-disabled')).toBeNull();
+    expect(screen.queryByTestId('venue-menu-pause')).toBeNull();
   });
 
-  it('hidden and paused: the crawl row is Resume, and it runs', async () => {
-    mockResume.mockResolvedValue({ ok: true });
+  it('hidden and paused: still no crawl row, as the board draws', () => {
     openMenu(buildVenue({ ...HIDDEN, ...PAUSED }));
-    expect(rows()[1]).toBe(
-      `${MENU.resume}|Paused by @hugh, Oct 28: waiting on permission.`,
+    expect(screen.queryByTestId('venue-menu-resume')).toBeNull();
+    expect(screen.queryByTestId('venue-menu-pause')).toBeNull();
+    expect(rows()[0]).toBe(
+      `${MENU.show}|Hidden by @hugh, Nov 2: venue closed.`,
     );
-    fireEvent.click(row('resume'));
-    expect(mockResume).toHaveBeenCalledWith('venue-1');
-    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 
   it('Show on site runs at once and refreshes', async () => {
