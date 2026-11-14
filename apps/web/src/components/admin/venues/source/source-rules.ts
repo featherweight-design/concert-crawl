@@ -58,6 +58,9 @@ export const isFeedSeller = (value: unknown): value is FeedSeller =>
  * The Advanced reader (ruling c); `auto` is the cascade. `detail-page` is the
  * `platform = 'detail-page'` way of reading the calendar page (#1295), not an
  * extraction strategy, and moving off it clears the platform.
+ *
+ * ⏸ removal waits on Design item 18: the board draws no reader selector, but
+ * it is the only way to clear a forced strategy or detail-page today.
  */
 export type Reader = 'auto' | 'structured_data' | 'llm' | 'detail-page';
 export const READERS: readonly Reader[] = [
@@ -67,8 +70,14 @@ export const READERS: readonly Reader[] = [
   'detail-page',
 ];
 
-/** Advanced page loading; `auto` is `crawl_mode = null`. */
-export type PageLoading = 'auto' | 'http' | 'browser';
+/**
+ * Advanced page loading; `auto` is `crawl_mode = null`.
+ *
+ * ⏸ pending Design item 18: the board draws two segments (Plain fetch, Full
+ * browser), but main offers Automatic today, so it stays as a third segment
+ * in the drawn control (coordinator ruling) and a save can set it back.
+ */
+export type PageLoading = 'auto' | NonNullable<Venue['crawlMode']>;
 export const PAGE_LOADINGS: readonly PageLoading[] = [
   'auto',
   'http',
@@ -344,7 +353,11 @@ export const sourceFieldOf = (
   return null;
 };
 
-/** "3 s minimum between requests, plus jitter": the stored delay, never below 3 s. */
+/**
+ * "3 s minimum between pages, plus jitter": the stored delay, never below
+ * 3 s. robots.txt's Crawl-delay is resolved at crawl time and not stored, so
+ * the board's "raised by robots.txt to 10 s" clause has nothing to read yet.
+ */
 export const paceLine = (crawlDelayMs: number): string => {
   // Rounded to a tenth first, so 3999 reads "4", never "4.0".
   const seconds = Math.round(Math.max(3000, crawlDelayMs) / 100) / 10;

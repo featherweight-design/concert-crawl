@@ -47,7 +47,9 @@ test.describe('admin venue Source tab', () => {
       0,
     );
 
-    const saveBar = page.getByTestId('source-save-bar');
+    // Desktop Chrome: Discard and Save sit in an inline row (`04/venue-source`);
+    // the pinned `source-save-bar` is the phone's.
+    const saveBar = page.getByTestId('source-save-row');
     await expect(saveBar).toHaveCount(0);
 
     // A click before hydration never tells React.

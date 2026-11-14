@@ -69,7 +69,9 @@
           "fill": "[data-testid=\"venue-source\"] input[type=\"url\"]",
           "text": "https://hi-dive.example/calendar"
         },
-        { "wait": "[data-testid=\"source-save-bar\"]" },
+        {
+          "wait": "[data-testid=\"source-save-bar\"], [data-testid=\"source-save-row\"]"
+        },
         { "settle": 800 }
       ]
     },

@@ -381,14 +381,45 @@ describe('InspectClient', () => {
     expect(screen.queryByTestId('inspect-frame')).toBeNull();
   });
 
-  it('says where the run stopped, above the HTML', async () => {
+  it('says where the run stopped inside the HTML, after the body, and opens at it', async () => {
+    // jsdom has no layout: give the marker a place, and watch the well's
+    // scroll (only the well scrolls, never the page).
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockReturnValue(480);
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
     mockGet.mockResolvedValue({ html: HTML });
     const first = page();
     const pages = [first, page({ id: 'page-2', httpStatus: 503 })];
     render(<InspectClient {...props({ pages, page: first })} />);
-    expect(
-      (await screen.findByTestId('inspect-stopped-here')).textContent,
-    ).toBe(COPY.stoppedHere(2));
+    const stopped = await screen.findByTestId('inspect-stopped-here');
+    expect(stopped.textContent).toBe(COPY.stoppedHere(2));
+    // `G2/inspect-fetched`: under the source, inside the well, not above it.
+    const source = screen.getByTestId('inspect-html');
+    expect(stopped.parentElement).toBe(source);
+    expect(source.lastElementChild).toBe(stopped);
+    expect(stopped.tagName).toBe('SPAN');
+    expect(stopped.style).toMatchObject({
+      fontSize: '12px',
+      marginTop: '6px',
+      color: 'var(--warning)',
+    });
+    expect(source.style.position).toBe('relative');
+    expect(scrollTop).toHaveBeenCalledTimes(1);
+    expect(scrollTop.mock.calls[0]?.[0]).toBe(480);
+    expect(scrollTop.mock.contexts[0]).toBe(source);
+  });
+
+  it('draws no Stopped here, and scrolls nowhere, when the run did not stop', async () => {
+    const scrollTop = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+    mockGet.mockResolvedValue({ html: HTML });
+    const first = page();
+    render(
+      <InspectClient
+        {...props({ pages: [first, page({ id: 'page-2' })], page: first })}
+      />,
+    );
+    expect(await screen.findByTestId('inspect-html')).toBeTruthy();
+    expect(screen.queryByTestId('inspect-stopped-here')).toBeNull();
+    expect(scrollTop).not.toHaveBeenCalled();
   });
 
   it('a later page with no status is not where the run stopped', async () => {

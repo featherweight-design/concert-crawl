@@ -119,6 +119,7 @@ describe('Source Advanced — the browser gate', () => {
     const loading = within(
       screen.getByRole('radiogroup', { name: ADVANCED.pageLoading.label }),
     );
+    // ⏸ pending Design item 18: Automatic is kept as a third segment.
     expect(
       loading.getByRole('radio', { name: ADVANCED.pageLoading.auto }),
     ).toHaveProperty('checked', true);

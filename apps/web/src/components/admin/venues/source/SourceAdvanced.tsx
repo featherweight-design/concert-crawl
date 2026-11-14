@@ -171,6 +171,9 @@ export const SourceAdvanced = ({
               </div>
             )}
           </div>
+          {/* ⏸ removal waits on Design item 18: the board draws no reader
+              selector, but it is the only way to clear a forced strategy or
+              detail-page today. */}
           {draft.mode === 'page' && (
             <div style={advancedRow(true)}>
               <span style={advancedLabel}>{COPY.advanced.reader.label}</span>
