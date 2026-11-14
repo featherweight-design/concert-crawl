@@ -46,12 +46,12 @@ describe('guide rows', () => {
     expect(rowState(placeholder, 'accessibility')).toBe('cantDocument');
   });
 
-  it('counts published chips out of 8, never the insider tip', () => {
+  it('counts every published row, the insider tip included', () => {
     expect(publishedCount(guide())).toBe(0);
-    expect(publishedCount(guide({ publishedAt: '2026-11-01' }))).toBe(2);
+    expect(publishedCount(guide({ publishedAt: '2026-11-01' }))).toBe(3);
     expect(
       publishedCount(guide({ publishedAt: '2026-11-01', chips: [] })),
-    ).toBe(0);
+    ).toBe(1);
   });
 });
 

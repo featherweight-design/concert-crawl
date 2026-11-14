@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye } from 'lucide-react';
-import { GUIDE_CHIP_ORDER, type VenueGuide } from '@concert-crawl/types';
+import type { VenueGuide } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminCard,
@@ -143,7 +143,11 @@ export const GuideTab = ({
           key={section}
           type="button"
           onClick={open}
-          aria-label={missing ? COPY.writeLabel(label) : COPY.editLabel(label)}
+          aria-label={COPY.rowLabel(
+            missing ? COPY.writeLabel(label) : COPY.editLabel(label),
+            COPY.state[state],
+            shown,
+          )}
           data-testid={`guide-row-${section}`}
           style={{
             display: 'flex',
@@ -244,7 +248,12 @@ export const GuideTab = ({
             data-testid="guide-count"
             style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}
           >
-            {COPY.count(publishedCount(guide), GUIDE_CHIP_ORDER.length)}
+            {/* Supersedes 3b-ui-spec row 24 (board "6 of 9"): out of every
+                row drawn below, the insider tip included. */}
+            {(guide.publishedAt === null ? COPY.count : COPY.countLive)(
+              publishedCount(guide),
+              GUIDE_SECTIONS.length,
+            )}
           </p>
           <div>{GUIDE_SECTIONS.map(row)}</div>
         </>

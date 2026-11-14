@@ -13,6 +13,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   AdminSheet,
+  ConfirmDialog,
   KindLabel,
   RowMenu,
   SaveFailedToast,
@@ -83,10 +84,13 @@ export const GuideEditPanel = ({
     sectionDraft(guide, section),
   );
   const [busy, setBusy] = useState<Action | null>(null);
-  const [failed, setFailed] = useState<Action | null>(null);
+  // `gate`: the API's publish gate refused (accessibility), after the save.
+  const [failed, setFailed] = useState<Action | 'gate' | null>(null);
+  const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
 
   const label = COPY.section[section];
   const writing = rowState(guide, section) === 'missing';
+  const live = guide.publishedAt !== null;
   const next = withSection(guide, section, draft);
   const blocked = publishBlocked(next);
 
@@ -94,32 +98,44 @@ export const GuideEditPanel = ({
   const run = (action: Action) => {
     if (busy !== null) return;
     if (action === 'publish' && blocked) return;
+    // A live guide has no drafts: Save would change what fans see (ruling).
+    if (action === 'save' && live) return;
     setBusy(action);
     setFailed(null);
     void (async () => {
-      let result: VenueGuideActionResult;
       if (action === 'unpublish') {
-        result = await unpublishVenueGuide(venueId);
-      } else {
-        result = await saveVenueGuide(venueId, {
-          insiderTip: next.insiderTip,
-          chips: next.chips,
-        });
-        if (result.success && action === 'publish')
-          result = await publishVenueGuide(venueId);
+        const result = await unpublishVenueGuide(venueId);
+        setBusy(null);
+        setConfirmingUnpublish(false);
+        if (!result.success) return setFailed('unpublish');
+        onSaved(result.data ?? { ...guide, publishedAt: null });
+        return onClose();
+      }
+      const saved = await saveVenueGuide(venueId, {
+        insiderTip: next.insiderTip,
+        chips: next.chips,
+      });
+      if (!saved.success) {
+        setBusy(null);
+        return setFailed(action);
+      }
+      let result: VenueGuideActionResult = saved;
+      if (action === 'publish') {
+        result = await publishVenueGuide(venueId);
+        if (!result.success) {
+          // The save landed: the rows show it, and the panel stays open.
+          onSaved(saved.data ?? next);
+          setBusy(null);
+          return setFailed(result.field === 'accessibility' ? 'gate' : action);
+        }
       }
       setBusy(null);
-      if (!result.success) {
-        setFailed(action);
-        return;
-      }
-      const fallback =
-        action === 'unpublish'
-          ? { ...guide, publishedAt: null }
-          : action === 'publish'
+      onSaved(
+        result.data ??
+          (action === 'publish'
             ? { ...next, publishedAt: new Date().toISOString() }
-            : next;
-      onSaved(result.data ?? fallback);
+            : next),
+      );
       onClose();
     })();
   };
@@ -144,7 +160,7 @@ export const GuideEditPanel = ({
             hint: COPY.unpublishHint,
             warning: true,
             disabled: busy !== null,
-            onSelect: () => run('unpublish'),
+            onSelect: () => setConfirmingUnpublish(true),
           },
         ]}
       />
@@ -172,6 +188,8 @@ export const GuideEditPanel = ({
       <textarea
         id={fieldId}
         aria-label={label}
+        // The dialog opens on the field, not on ⋯ or ✕ (useDialogKeyboard).
+        data-autofocus
         value={draft.text}
         maxLength={GUIDE_FIELD_MAX_LENGTH}
         disabled={draft.cantDocument}
@@ -206,7 +224,16 @@ export const GuideEditPanel = ({
           {COPY.counter(draft.text.length, GUIDE_FIELD_MAX_LENGTH)}
         </span>
       </div>
+      {failed === 'gate' && (
+        <p
+          role="alert"
+          style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}
+        >
+          {COPY.publishGate}
+        </p>
+      )}
       {failed !== null &&
+        failed !== 'gate' &&
         (failed === 'unpublish' ? (
           <SaveFailedToast
             title={COPY.failed.unpublish}
@@ -252,9 +279,10 @@ export const GuideEditPanel = ({
         >
           {busy === 'publish' ? COPY.publishing : COPY.publish}
         </AdminButton>
+        {/* On a live guide only Publish saves (ruling): drawn, but held. */}
         <AdminButton
           type="button"
-          disabled={busy !== null}
+          disabled={live || busy !== null}
           onClick={() => run('save')}
           style={{
             height: 40,
@@ -262,6 +290,7 @@ export const GuideEditPanel = ({
             fontSize: 14,
             fontWeight: 600,
             background: 'var(--surface-2)',
+            ...(live && { opacity: 0.45, cursor: 'not-allowed' }),
           }}
         >
           {busy === 'save' ? COPY.saving : COPY.saveDraft}
@@ -270,41 +299,61 @@ export const GuideEditPanel = ({
     </div>
   );
 
+  // Unpublish asks first, through the shared ConfirmDialog, as the old
+  // VenueGuideBlock's `confirmingUnpublish` step did. useDialogKeyboard keys
+  // only the top dialog, so Escape here closes the confirm, not the panel.
+  const confirm = confirmingUnpublish && (
+    <ConfirmDialog
+      title={COPY.unpublishConfirm.title}
+      body={COPY.unpublishConfirm.body}
+      confirmLabel={COPY.unpublishConfirm.confirm}
+      pending={busy === 'unpublish'}
+      onConfirm={() => run('unpublish')}
+      onCancel={() => setConfirmingUnpublish(false)}
+    />
+  );
+
   const title = writing ? COPY.write : label;
   const eyebrow = <KindLabel kind="guide" />;
   if (phone)
     return (
-      <AdminSheet
-        fullScreen
+      <>
+        {confirm}
+        <AdminSheet
+          fullScreen
+          onClose={onClose}
+          dismissible={busy === null}
+          title={title}
+          label={writing ? COPY.writeLabel(label) : label}
+          subtitle={venueName}
+          menu={
+            <>
+              {eyebrow}
+              <span style={{ flex: 1 }} />
+              {menu}
+            </>
+          }
+          footer={footer}
+        >
+          {body}
+        </AdminSheet>
+      </>
+    );
+  return (
+    <>
+      {confirm}
+      <SidePanel
         onClose={onClose}
         dismissible={busy === null}
+        eyebrow={eyebrow}
+        menu={menu}
         title={title}
         label={writing ? COPY.writeLabel(label) : label}
         subtitle={venueName}
-        menu={
-          <>
-            {eyebrow}
-            <span style={{ flex: 1 }} />
-            {menu}
-          </>
-        }
-        footer={footer}
+        footer={<div style={{ flex: 1 }}>{footer}</div>}
       >
         {body}
-      </AdminSheet>
-    );
-  return (
-    <SidePanel
-      onClose={onClose}
-      dismissible={busy === null}
-      eyebrow={eyebrow}
-      menu={menu}
-      title={title}
-      label={writing ? COPY.writeLabel(label) : label}
-      subtitle={venueName}
-      footer={<div style={{ flex: 1 }}>{footer}</div>}
-    >
-      {body}
-    </SidePanel>
+      </SidePanel>
+    </>
   );
 };

@@ -13,6 +13,9 @@ import { useBodyScrollLock } from '@/lib/hooks/useBodyScrollLock';
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Open dialogs, oldest first: only the newest handles Escape and Tab. */
+const OPEN_DIALOGS: object[] = [];
+
 export interface UseDialogKeyboardOptions {
   /**
    * False while the dialog is not on screen. Callers that render their panel
@@ -66,16 +69,27 @@ export const useDialogKeyboard = (
   // That cancels IME composition mid-word.
   const dismissRef = useRef(onDismiss);
   dismissRef.current = onDismiss;
+  // Read through a ref too, so a busy flip doesn't re-run the effect: that
+  // would restore focus to the opener and then refocus the panel's head.
+  const dismissibleRef = useRef(dismissible);
+  dismissibleRef.current = dismissible;
 
   useEffect(() => {
     if (!enabled) return;
+    const token = {};
+    OPEN_DIALOGS.push(token);
     const previouslyFocused = document.activeElement;
     const focusable = (): HTMLElement[] =>
       Array.from(
         panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
       );
 
-    const opening = focusable()[0];
+    // A panel can name its field to open on (`data-autofocus`), so focus
+    // lands where the typing happens rather than on ⋯ or ✕.
+    const opening =
+      panelRef.current?.querySelector<HTMLElement>(
+        '[data-autofocus]:not([disabled])',
+      ) ?? focusable()[0];
     if (opening) opening.focus();
     else if (panelRef.current) {
       // Everything is disabled — mid-request, usually. Focus the panel so it
@@ -85,8 +99,10 @@ export const useDialogKeyboard = (
     }
 
     const onKeyDown = (evt: KeyboardEvent) => {
+      // A confirm opened over a panel owns the keyboard until it closes.
+      if (OPEN_DIALOGS[OPEN_DIALOGS.length - 1] !== token) return;
       if (evt.key === 'Escape') {
-        if (dismissible) dismissRef.current();
+        if (dismissibleRef.current) dismissRef.current();
         return;
       }
       if (evt.key !== 'Tab') return;
@@ -125,13 +141,14 @@ export const useDialogKeyboard = (
 
     document.addEventListener('keydown', onKeyDown);
     return () => {
+      OPEN_DIALOGS.splice(OPEN_DIALOGS.indexOf(token), 1);
       document.removeEventListener('keydown', onKeyDown);
       // Returning focus to the control that opened the dialog is the other
       // half of the contract: without it focus falls back to <body> and a
       // keyboard user restarts their traversal from the top of the page.
       if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
     };
-  }, [panelRef, dismissible, enabled]);
+  }, [panelRef, enabled]);
 
   // The background is inert to the pointer too: the shared, ref-counted page
   // scroll lock, held for exactly as long as the keyboard contract is. Every

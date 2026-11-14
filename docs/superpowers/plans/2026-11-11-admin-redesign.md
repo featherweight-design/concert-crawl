@@ -16,17 +16,17 @@ Replace the whole of `/admin` with the approved design. **Needs you** becomes th
 
 ## Non-goals and deferrals
 
-| Item | Why | Where it goes |
-| --- | --- | --- |
-| Billing | The app is free. | Out. |
-| New colour tokens or a new theme matrix | The admin adds no tokens (README). Admin follows the app's nine themes. | Out. |
-| Searching or crawling the web for venues | Crawl ethics. Discovery is only "Venues people asked for". | Never. |
-| Need 27: unsaved edits survive signing out or going offline | It's cross-cutting client storage with its own failure modes. The Signed out and Offline boards are built as states only. | Its own plan after Phase 5. Proposed intake. |
-| Need 20: Sentry error reports counted by people affected | It's a new integration (the Sentry API from the API server). 5d shows error reports without the count. | Follow-up after 5d. Proposed intake. |
-| Need 12: canonical names cut from multi-act and "An evening with" titles | It's crawl-adjacent and changes `canonical-title.ts` parity. It gets its own phase plan, as B+ A5 did. | Separate crawl plan. |
-| Not an admin (`07/not-an-admin`, "for a sub-admin") | `sub_admin` exists in `Role` but can't be assigned, and `requireAdminUser()` sends every non-admin away before admin renders. Nobody can reach this board. | Deferred until a sub-admin role is real. |
-| Block in the Person ⋯ menu | Waiting on Hugh. | PR 5e, only if he keeps it. |
-| Removing `sub_admin` from the `role` enum, and other contract steps | Migrations are expand only. | [Migrations ledger](#migrations-ledger), contract column. |
+| Item                                                                     | Why                                                                                                                                                        | Where it goes                                             |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Billing                                                                  | The app is free.                                                                                                                                           | Out.                                                      |
+| New colour tokens or a new theme matrix                                  | The admin adds no tokens (README). Admin follows the app's nine themes.                                                                                    | Out.                                                      |
+| Searching or crawling the web for venues                                 | Crawl ethics. Discovery is only "Venues people asked for".                                                                                                 | Never.                                                    |
+| Need 27: unsaved edits survive signing out or going offline              | It's cross-cutting client storage with its own failure modes. The Signed out and Offline boards are built as states only.                                  | Its own plan after Phase 5. Proposed intake.              |
+| Need 20: Sentry error reports counted by people affected                 | It's a new integration (the Sentry API from the API server). 5d shows error reports without the count.                                                     | Follow-up after 5d. Proposed intake.                      |
+| Need 12: canonical names cut from multi-act and "An evening with" titles | It's crawl-adjacent and changes `canonical-title.ts` parity. It gets its own phase plan, as B+ A5 did.                                                     | Separate crawl plan.                                      |
+| Not an admin (`07/not-an-admin`, "for a sub-admin")                      | `sub_admin` exists in `Role` but can't be assigned, and `requireAdminUser()` sends every non-admin away before admin renders. Nobody can reach this board. | Deferred until a sub-admin role is real.                  |
+| Block in the Person ⋯ menu                                               | Waiting on Hugh.                                                                                                                                           | PR 5e, only if he keeps it.                               |
+| Removing `sub_admin` from the `role` enum, and other contract steps      | Migrations are expand only.                                                                                                                                | [Migrations ledger](#migrations-ledger), contract column. |
 
 ## Status gates
 
@@ -34,23 +34,23 @@ Replace the whole of `/admin` with the approved design. **Needs you** becomes th
 
 **Wait for the Design phone addendum (READINESS gaps 1 to 4) and Hugh's yes:**
 
-| Gap | Blocks | Backend that may proceed |
-| --- | --- | --- |
-| 1 Merge duplicates at 320px | The merge-on-phone UI in **4b**. The rest of 4b proceeds, and merge ships desktop-first only if Hugh says so. | 4a |
-| 2 Inspect a fetched page on phone | **3b** (the Inspect viewer) | 1e |
-| 3 Add a venue start ("Venues people asked for", Nobody asked yet) and Gone live on phone | **3e** | 3c, 3d |
-| 4 The Venue Source tab on phone | **3b** | 3c |
+| Gap                                                                                      | Blocks                                                                                                        | Backend that may proceed |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 1 Merge duplicates at 320px                                                              | The merge-on-phone UI in **4b**. The rest of 4b proceeds, and merge ships desktop-first only if Hugh says so. | 4a                       |
+| 2 Inspect a fetched page on phone                                                        | **3b** (the Inspect viewer)                                                                                   | 1e                       |
+| 3 Add a venue start ("Venues people asked for", Nobody asked yet) and Gone live on phone | **3e**                                                                                                        | 3c, 3d                   |
+| 4 The Venue Source tab on phone                                                          | **3b**                                                                                                        | 3c                       |
 
 **Hugh decisions, and the PRs each one blocks:**
 
-| Decision | Blocks | Default if he has no preference |
-| --- | --- | --- |
+| Decision                                                                                             | Blocks                                                                                                                                    | Default if he has no preference                                                                                                                                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Cross-environment flag "verified" transport.** How production admin reads staging's verified mark. | **5c** (the production lock and the "Verified on staging" column). The staging-side ladder could ship alone, but one flags PR is cleaner. | A server-to-server `GET` from the prod API to the staging API (`/v1/internal/flags/verified`), with a shared secret in both Render env groups, read-only, cached for 60 s, and failing closed (the flag stays locked). The alternative is a verified mark copied by hand, which needs no secret but drifts. |
-| **Where the Test account tag lives** | **5a**. The count exclusions in 1c and 2a read it once it exists, and until then they exclude nobody. | DB: `user_profiles.is_test_account boolean NOT NULL DEFAULT false`. Counts can join on it, and Clerk metadata can't be queried in SQL. |
-| **Retention window for fetched HTML** | **1e**, and so Inspect in **3b** | 14 days, gzipped in Postgres, with a daily sweep. Rough estimate: 21 venues × about 2 pages × about 100 KB gzipped × 14 days ≈ 60 MB. Measure it in 1e before turning it on. |
-| **Block in the Person ⋯ menu** | **5e** only. 5a ships the menu without Block. | Drop it (moderation is out of scope for launch). |
-| **Send feedback in the account menu, and removing the edge tab at launch** | **6** | As proposed. |
-| **Arena hero accent** (crescent moon or ceiling lights) | The hero picker in **3e** (`05/all-six-settings`), and the Arena art, which comes from B+ B11. 3c's `hero_setting` column doesn't wait. | The crescent, as drawn. |
+| **Where the Test account tag lives**                                                                 | **5a**. The count exclusions in 1c and 2a read it once it exists, and until then they exclude nobody.                                     | DB: `user_profiles.is_test_account boolean NOT NULL DEFAULT false`. Counts can join on it, and Clerk metadata can't be queried in SQL.                                                                                                                                                                      |
+| **Retention window for fetched HTML**                                                                | **1e**, and so Inspect in **3b**                                                                                                          | 14 days, gzipped in Postgres, with a daily sweep. Rough estimate: 21 venues × about 2 pages × about 100 KB gzipped × 14 days ≈ 60 MB. Measure it in 1e before turning it on.                                                                                                                                |
+| **Block in the Person ⋯ menu**                                                                       | **5e** only. 5a ships the menu without Block.                                                                                             | Drop it (moderation is out of scope for launch).                                                                                                                                                                                                                                                            |
+| **Send feedback in the account menu, and removing the edge tab at launch**                           | **6**                                                                                                                                     | As proposed.                                                                                                                                                                                                                                                                                                |
+| **Arena hero accent** (crescent moon or ceiling lights)                                              | The hero picker in **3e** (`05/all-six-settings`), and the Arena art, which comes from B+ B11. 3c's `hero_setting` column doesn't wait.   | The crescent, as drawn.                                                                                                                                                                                                                                                                                     |
 
 **Other dependencies:**
 
@@ -68,20 +68,21 @@ Each READINESS Yellow item is recorded here as a decision, together with the dra
 3. **Feedback statuses map onto two filters.** **To read** covers `unread`, `read` and `flagged`. **Done** covers `resolved`, `archived` and `issue_opened` (`07/feedback`, `07/feedback-done`). The enum doesn't change.
 4. **Routes are renamed, and the old ones redirect.** The redirects are page stubs that call `redirect()`, the pattern `admin/events/page.tsx` already uses, since there are no `next.config.ts` redirects. An interim target is a temporary redirect, and a final home uses `permanentRedirect()`, so a browser never caches a hop that moves again later.
 
-   | Old | New | PR |
-   | --- | --- | --- |
-   | `/admin/settings` | `/admin/operations/emails` (permanent) | 0c |
-   | `/admin/review` (no tab, `event-flags`, `missing`, `contests`) | `/admin/needs-you` (permanent) | 2b |
-   | `/admin/review/contests/[contestId]` | `/admin/needs-you?item=price-check:<id>` | 2b |
-   | `/admin/review?tab=all-events` | `/admin/events` | 4b |
-   | `/admin/review?tab=prices`, `?tab=submissions`; `/admin/prices`, `/admin/prices/submissions` | `/admin/prices`, `/admin/prices?tab=submitted` | 4d |
-   | `/admin/venues/robots-audit` | `/admin/venues?robots=disallowed` | 3a |
-   | `/admin/users`, `/admin/users/[userId]` | `/admin/people`, `/admin/people/[userId]` | 5a |
-   | `/admin/invite-codes/**` | `/admin/people/invite-codes/**` (posters stay a tab) | 5b |
-   | `/admin/feedback` | `/admin/operations` (Feedback tab) | 5d |
-   | `/admin/crawl?venueId=X` (crawler emails, `crawler-core/src/lib/email.ts`) | Keeps today's split view until 3b, then `/admin/venues/X?tab=runs` | 1d, 3b |
+   | Old                                                                                          | New                                                                | PR     |
+   | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------ |
+   | `/admin/settings`                                                                            | `/admin/operations/emails` (permanent)                             | 0c     |
+   | `/admin/review` (no tab, `event-flags`, `missing`, `contests`)                               | `/admin/needs-you` (permanent)                                     | 2b     |
+   | `/admin/review/contests/[contestId]`                                                         | `/admin/needs-you?item=price-check:<id>`                           | 2b     |
+   | `/admin/review?tab=all-events`                                                               | `/admin/events`                                                    | 4b     |
+   | `/admin/review?tab=prices`, `?tab=submissions`; `/admin/prices`, `/admin/prices/submissions` | `/admin/prices`, `/admin/prices?tab=submitted`                     | 4d     |
+   | `/admin/venues/robots-audit`                                                                 | `/admin/venues?robots=disallowed`                                  | 3a     |
+   | `/admin/users`, `/admin/users/[userId]`                                                      | `/admin/people`, `/admin/people/[userId]`                          | 5a     |
+   | `/admin/invite-codes/**`                                                                     | `/admin/people/invite-codes/**` (posters stay a tab)               | 5b     |
+   | `/admin/feedback`                                                                            | `/admin/operations` (Feedback tab)                                 | 5d     |
+   | `/admin/crawl?venueId=X` (crawler emails, `crawler-core/src/lib/email.ts`)                   | Keeps today's split view until 3b, then `/admin/venues/X?tab=runs` | 1d, 3b |
 
    Every move updates `apps/e2e/src/audit/manifest.ts` (the ui-audit sweep lists 15 admin paths) in the same PR.
+
 5. **320 is checked against the 390 boards.** Every admin inventory carries its own `widths` (320, 390, 640, 1300). The 320 column is a layout check, and no board exists at that width.
 6. **"Paused" changes meaning.**
    - Today `deriveVenueStatus()` (`apps/web/src/lib/admin/venue-status.ts`) returns `'paused'` for `active=false`.
@@ -95,7 +96,7 @@ Each READINESS Yellow item is recorded here as a decision, together with the dra
    - `SkeletonBlock` is the skeleton primitive.
    - The focus trap excludes disabled controls, which is the selector rule in `components/pwa/BottomSheet.tsx`.
    - `CrawlPausedBadge` and the venue use of `StatusBadge` fold into `VenueStatus`.
-9. **`Kbd` is deleted (rule 11).** The hints are removed from `AddVenueModal`, `VenueGuideBlock` and `EventQueueSplit`, and their key handlers stay, so no behaviour is lost.
+9. **`Kbd` is deleted (rule 11).** The hints are removed from `AddVenueModal`, the venue Guide tab (`venues/guide/GuideEditPanel`, which replaced `VenueGuideBlock` in 3b) and `EventQueueSplit`, and their key handlers stay, so no behaviour is lost.
 10. **Colours.** The three off-token hexes in the boards (#FFB838, #4DA3FF, #DE96DF) are avatar or glyph colours. They map to the avatar palette (`avatar_color` enum) or the glyph set, never to new tokens. The token guard runs on every UI PR.
 11. **The theme follows the app.** The `cc-admin-theme` localStorage key and `ThemePicker` go. `AdminThemeProvider` reads only `cc-theme`, and the user menu shows it read-only (`07/user-menu-desktop`).
 12. **The More list follows `07/more-mobile`, not `01/more`.** The later board says **Operations** where the earlier one says "Tools", and "Tools" is banned by BUILD-CHECK step 5. Row details are plain counts, never badges (rule 1).
@@ -110,6 +111,7 @@ Each READINESS Yellow item is recorded here as a decision, together with the dra
     - Operations is `/admin/feedback`
 
     Invite codes keeps an interim row under Manage until 5b, so it never becomes orphaned.
+
 15. **The environment badge reads `NEXT_PUBLIC_SENTRY_ENVIRONMENT`.** That variable is already set per Vercel project (`docs/runbooks/production-launch.md`). The badge says `STAGING ADMIN` for `staging` and `PRODUCTION` for `production`. `local` shows `LOCAL`, which is admin copy and needs no review.
 16. **The breakpoint.** The admin shell keeps its single `MOBILE_BREAKPOINT` (720 today) and moves it into `nav.ts` as a named constant. The 640 column of the inventory therefore shows the phone shell, by design: a 232px sidebar would leave 408px for tables.
 17. **Done for you is `audit_log` rows with a `system:*` actor.** `actor_id` is `text NOT NULL`, so `system:crawler` and `system:prices` need no migration. The Activity log (5d) filters `system:*` out, because it shows admins only.
@@ -119,6 +121,7 @@ Each READINESS Yellow item is recorded here as a decision, together with the dra
     - "Didn't start" is a missing nightly group. It's derived, not stored.
 
     ⚠️ This reverses a deliberate non-change from 2026-09-28 ("no in-app run-level row"). The approved board wins, and the PR body says so.
+
 19. **Run reasons are a superset of the five drawn.** The crawler skips or fails for more reasons than the board names: paused, robots.txt unreachable, Crawl-delay over the cap, a platform adapter declining, and the account-wide LLM refusal. The enum covers all of them, and copy-review names each one.
 20. **Health keeps the old triage panel until 2b.** 1c replaces the dashboard, but `TriagePanel` is today's only home for live venue faults. It sits below the Health content until 2b moves those items into Needs you, then 2b deletes it.
 21. **Venue takedown survives.** Today's removal action (`removed_at`: a venue asked us to take its data down) isn't in the drawn ⋯ menu. It's an ethics capability, so 3a keeps it as a fourth ⋯ line behind the drawn sheet pattern, and copy-review names it.
@@ -128,51 +131,51 @@ Each READINESS Yellow item is recorded here as a decision, together with the dra
 
 Every change is expand only and nullable or defaulted. Old readers keep working. Migrations are hand-written SQL in `packages/db/migrations/` with a `meta/_journal.json` entry, and each takes the **next free number at build time**, which the orchestrator assigns. **Every prod migration needs Hugh.**
 
-| PR | Expand | Contract (deferred, its own later PR) |
-| --- | --- | --- |
-| 1a | Enum `crawl_run_reason`; `crawl_runs.reason crawl_run_reason NULL`; table `crawl_run_pages` (`id`, `crawl_run_id` FK cascade, `url`, `final_url`, `http_status`, `fetch_mode`, `bytes`, `content_hash`, `fetched_at`) with an index on `crawl_run_id` | Drop `crawl_runs.robots_txt_blocked` once every reader uses `reason`. Backfill nothing: old rows read "No reason recorded". |
-| 1b | Table `admin_settings`: one row (`id smallint PK DEFAULT 1 CHECK (id = 1)`), `llm_monthly_budget_usd numeric(8,2) NULL`, `approve_prices_myself boolean NOT NULL DEFAULT false`, `updated_at`, `updated_by` | None |
-| 1e | `crawl_run_pages.html_gz bytea NULL`; `crawl_run_pages.body_expires_at timestamptz NULL`, with an index | None. The sweep nulls the body and never drops rows. |
-| 2a | Table `admin_queue_snoozes` (`id`, `item_key text`, `kind text`, `venue_id uuid NULL`, `until timestamptz NULL` (NULL means Not useful), `reason text NULL`, `created_by`, `created_at`, `cleared_at NULL`), with a partial unique index on `item_key` where `cleared_at IS NULL`; `price_submissions.held_for_admin_at timestamptz NULL` | None |
-| 3c | `venues`: `went_live_at timestamptz NULL` (backfilled to `created_at` for existing rows, so a NULL means draft), `crawl_paused_reason text NULL`, `permission_asked_at timestamptz NULL`, `hero_setting` enum (`street`, `outdoor`, `arena`, `theater`, `club`, `gallery`) `NULL`, `glyph_svg text NULL`; `crawl_triggers.mode` (`crawl`, `test`) `NOT NULL DEFAULT 'crawl'` | None |
-| 4a | Table `event_artists` (`event_id`, `artist_id`, `role` `headliner` or `support`, `position`), backfilled from `canonical_headliners` and the supporting arrays; `events.manual boolean NOT NULL DEFAULT false`; `events.merged_into_id uuid NULL` | Stop writing `headliners` and `supporting_artists` once every reader moves (it gets its own plan). |
-| 5a | (if DB, per Hugh) `user_profiles.is_test_account boolean NOT NULL DEFAULT false` | None |
-| 5b | None. Full and Expired derive from `max_uses`, `use_count` and `expires_at`, and Reactivate clears `revoked_at`. | None |
-| 5c | Enum `flag_stage` (`off`, `me`, `beta`, `everyone`); `feature_flags.stage flag_stage NULL` (backfilled from `enabled`), `verified_at`, `verified_by`, `verified_note`; tables `feature_flag_users` and `feature_flag_history` | Drop `feature_flags.enabled` after readers move to `stage`. Remove the `spotify-sync` key in code. |
-| 5d | Enum values `feedback_category`: `error_report`, `venue_suggestion`; `feedback.reply_body text NULL`, `replied_at`, `replied_by` | None. The reply notice is a new `notifications.category` value, which is text, so it needs no enum change. |
+| PR  | Expand                                                                                                                                                                                                                                                                                                                                                                       | Contract (deferred, its own later PR)                                                                                       |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1a  | Enum `crawl_run_reason`; `crawl_runs.reason crawl_run_reason NULL`; table `crawl_run_pages` (`id`, `crawl_run_id` FK cascade, `url`, `final_url`, `http_status`, `fetch_mode`, `bytes`, `content_hash`, `fetched_at`) with an index on `crawl_run_id`                                                                                                                        | Drop `crawl_runs.robots_txt_blocked` once every reader uses `reason`. Backfill nothing: old rows read "No reason recorded". |
+| 1b  | Table `admin_settings`: one row (`id smallint PK DEFAULT 1 CHECK (id = 1)`), `llm_monthly_budget_usd numeric(8,2) NULL`, `approve_prices_myself boolean NOT NULL DEFAULT false`, `updated_at`, `updated_by`                                                                                                                                                                  | None                                                                                                                        |
+| 1e  | `crawl_run_pages.html_gz bytea NULL`; `crawl_run_pages.body_expires_at timestamptz NULL`, with an index                                                                                                                                                                                                                                                                      | None. The sweep nulls the body and never drops rows.                                                                        |
+| 2a  | Table `admin_queue_snoozes` (`id`, `item_key text`, `kind text`, `venue_id uuid NULL`, `until timestamptz NULL` (NULL means Not useful), `reason text NULL`, `created_by`, `created_at`, `cleared_at NULL`), with a partial unique index on `item_key` where `cleared_at IS NULL`; `price_submissions.held_for_admin_at timestamptz NULL`                                    | None                                                                                                                        |
+| 3c  | `venues`: `went_live_at timestamptz NULL` (backfilled to `created_at` for existing rows, so a NULL means draft), `crawl_paused_reason text NULL`, `permission_asked_at timestamptz NULL`, `hero_setting` enum (`street`, `outdoor`, `arena`, `theater`, `club`, `gallery`) `NULL`, `glyph_svg text NULL`; `crawl_triggers.mode` (`crawl`, `test`) `NOT NULL DEFAULT 'crawl'` | None                                                                                                                        |
+| 4a  | Table `event_artists` (`event_id`, `artist_id`, `role` `headliner` or `support`, `position`), backfilled from `canonical_headliners` and the supporting arrays; `events.manual boolean NOT NULL DEFAULT false`; `events.merged_into_id uuid NULL`                                                                                                                            | Stop writing `headliners` and `supporting_artists` once every reader moves (it gets its own plan).                          |
+| 5a  | (if DB, per Hugh) `user_profiles.is_test_account boolean NOT NULL DEFAULT false`                                                                                                                                                                                                                                                                                             | None                                                                                                                        |
+| 5b  | None. Full and Expired derive from `max_uses`, `use_count` and `expires_at`, and Reactivate clears `revoked_at`.                                                                                                                                                                                                                                                             | None                                                                                                                        |
+| 5c  | Enum `flag_stage` (`off`, `me`, `beta`, `everyone`); `feature_flags.stage flag_stage NULL` (backfilled from `enabled`), `verified_at`, `verified_by`, `verified_note`; tables `feature_flag_users` and `feature_flag_history`                                                                                                                                                | Drop `feature_flags.enabled` after readers move to `stage`. Remove the `spotify-sync` key in code.                          |
+| 5d  | Enum values `feedback_category`: `error_report`, `venue_suggestion`; `feedback.reply_body text NULL`, `replied_at`, `replied_by`                                                                                                                                                                                                                                             | None. The reply notice is a new `notifications.category` value, which is text, so it needs no enum change.                  |
 
 ## PR table
 
 There are no stacked PRs. Each PR comes from fresh main and stays within about 20 files or 800 lines. A PR that turns out bigger splits **before it opens**, and the split goes into this table. "Risky" means it gets `/code-review medium` plus the risk checklist, recorded under `## Claude review` with `## Copilot off`.
 
-| # | Title | Risky? | Routes | Files (approx.) | Depends on |
-| --- | --- | --- | --- | --- | --- |
-| **0a** | Shell: sidebar, tab bar, More, user menu, environment badge, one badge | No (the gate is untouched and a test pins it) | `admin/layout`, new `/admin/more` | 16 | — |
-| **0b** | Primitives: `VenueStatus`, `KindLabel`, `SidePanel`, `AdminSheet`, `ConfirmDialog`, `PageSkeleton`, `EmptyState`, `SaveFailedToast`, `CouldntLoad`, admin `not-found` | No | `admin/error.tsx`, `admin/not-found.tsx` | 18 | — |
-| **0c** | Removals: the Settings page (test email moves to an Emails stub), `Kbd`, the admin theme key; redirects | No | `/admin/settings` → `/admin/operations/emails` | 15 | 0a |
-| **1a** | Crawler: run reasons and fetched-page records | **Yes** (migration, crawler-core) | backend | 14 | — |
-| **1b** | `admin_settings`, the Done-for-you system audit writes, `GET /admin/audit-log`, settings API | **Yes** (migration, API routes) | backend | 16 | — |
-| **1c** | Health: tiles, the venue grid, the LLM budget panel, Done for you | No | `/admin` | 17 | 0a, 0b, 1a, 1b |
-| **1d** | Crawl runs: derived batches API, list, run detail, Crawl all | **Yes** (API route) | `/admin/crawl` | 15 | 0b, 1a |
-| **1e** | Fetched HTML bodies plus the retention sweep | **Yes** (migration, crawler-core) | backend | 8 | 1a; **Hugh: retention** |
-| **2a** | Needs you API: kinds, ranking, grouping, snooze, answer and undo, the price hold | **Yes** (migration, API routes, the price pipeline) | backend | 19 | 1a, 1b |
-| **2b** | Needs you: queue (desktop and phone), answered with Undo, snooze, all clear; retire Review's decision tabs | No | `/admin/needs-you`, `/admin/review` redirects | 17 | 0b, 2a |
-| **2c** | Needs you: the 8 evidence panels and the price batch sheet | No | `/admin/needs-you` | 16 | 2b |
-| 3a | Venues list, Overview, Runs, the ⋯ menu (Pause crawling, Hide, Delete with a guard, takedown) | **Yes** (Delete guard in the API) | `/admin/venues`, `/[id]` | ~18 | 0b, 1a |
-| 3b | Source, Details, Guide tabs; Inspect | No | `/admin/venues/[id]` | ~18 | 3a, 1e; **addendum gaps 2, 4** |
-| 3c | API and DB: drafts, test crawl, Ask the venue with a 14-day reminder, hero setting | **Yes** | backend | ~16 | 1a |
-| 3d | API: glyph and guide drafting (LLM, tracked in `cost_tracking`) | **Yes** | backend | ~12 | 3c |
-| 3e | Add a venue flow | No | `/admin/venues/new` | ~20 | 3c, 3d, B+ B11; **addendum gap 3**; Hugh: Arena |
-| 4a | API and DB: `event_artists`, manual shows, merge semantics with a redirect | **Yes** | backend | ~16 | — |
-| 4b | Events, Event edit, price sheet, Mark cancelled, add by hand, merge | No | `/admin/events/**` | ~20 | 4a; merge on phone: **addendum gap 1** |
-| 4c | Artists: three tabs and search | No | `/admin/artists` | ~14 | 0b |
-| 4d | Prices: three tabs, handles in submissions | **Yes** (API join) | `/admin/prices/**` | ~16 | 2a |
-| 5a | People, Person, Test account tag, Show email (audited), sign out everywhere | **Yes** (auth, Clerk) | `/admin/people/**` | ~18 | **Hugh: Test account storage** |
-| 5b | Invite codes and Posters under People; Edit, Reactivate, who joined | **Yes** (API) | `/admin/people/invite-codes/**` | ~16 | 5a |
-| 5c | Feature flags: stage ladder, named people, verify, history, production lock | **Yes** | `/admin/feature-flags` | ~20 | **Hugh: transport** |
-| 5d | Operations: Feedback (reply API), Emails, Activity log | **Yes** | `/admin/operations/**` | ~20 | 1b, 0c |
-| 5e | Block (only if Hugh keeps it) | **Yes** | `/admin/people/[userId]` | ~6 | 5a; **Hugh: Block** |
-| 6 | Fan side, behind a flag: Send feedback, reply delivery, Suggest a venue | **Yes** | account menu, feedback modal | ~16 | 5d; **Hugh: Send feedback** |
+| #      | Title                                                                                                                                                                 | Risky?                                              | Routes                                         | Files (approx.) | Depends on                                      |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------- | --------------- | ----------------------------------------------- |
+| **0a** | Shell: sidebar, tab bar, More, user menu, environment badge, one badge                                                                                                | No (the gate is untouched and a test pins it)       | `admin/layout`, new `/admin/more`              | 16              | —                                               |
+| **0b** | Primitives: `VenueStatus`, `KindLabel`, `SidePanel`, `AdminSheet`, `ConfirmDialog`, `PageSkeleton`, `EmptyState`, `SaveFailedToast`, `CouldntLoad`, admin `not-found` | No                                                  | `admin/error.tsx`, `admin/not-found.tsx`       | 18              | —                                               |
+| **0c** | Removals: the Settings page (test email moves to an Emails stub), `Kbd`, the admin theme key; redirects                                                               | No                                                  | `/admin/settings` → `/admin/operations/emails` | 15              | 0a                                              |
+| **1a** | Crawler: run reasons and fetched-page records                                                                                                                         | **Yes** (migration, crawler-core)                   | backend                                        | 14              | —                                               |
+| **1b** | `admin_settings`, the Done-for-you system audit writes, `GET /admin/audit-log`, settings API                                                                          | **Yes** (migration, API routes)                     | backend                                        | 16              | —                                               |
+| **1c** | Health: tiles, the venue grid, the LLM budget panel, Done for you                                                                                                     | No                                                  | `/admin`                                       | 17              | 0a, 0b, 1a, 1b                                  |
+| **1d** | Crawl runs: derived batches API, list, run detail, Crawl all                                                                                                          | **Yes** (API route)                                 | `/admin/crawl`                                 | 15              | 0b, 1a                                          |
+| **1e** | Fetched HTML bodies plus the retention sweep                                                                                                                          | **Yes** (migration, crawler-core)                   | backend                                        | 8               | 1a; **Hugh: retention**                         |
+| **2a** | Needs you API: kinds, ranking, grouping, snooze, answer and undo, the price hold                                                                                      | **Yes** (migration, API routes, the price pipeline) | backend                                        | 19              | 1a, 1b                                          |
+| **2b** | Needs you: queue (desktop and phone), answered with Undo, snooze, all clear; retire Review's decision tabs                                                            | No                                                  | `/admin/needs-you`, `/admin/review` redirects  | 17              | 0b, 2a                                          |
+| **2c** | Needs you: the 8 evidence panels and the price batch sheet                                                                                                            | No                                                  | `/admin/needs-you`                             | 16              | 2b                                              |
+| 3a     | Venues list, Overview, Runs, the ⋯ menu (Pause crawling, Hide, Delete with a guard, takedown)                                                                         | **Yes** (Delete guard in the API)                   | `/admin/venues`, `/[id]`                       | ~18             | 0b, 1a                                          |
+| 3b     | Source, Details, Guide tabs; Inspect                                                                                                                                  | No                                                  | `/admin/venues/[id]`                           | ~18             | 3a, 1e; **addendum gaps 2, 4**                  |
+| 3c     | API and DB: drafts, test crawl, Ask the venue with a 14-day reminder, hero setting                                                                                    | **Yes**                                             | backend                                        | ~16             | 1a                                              |
+| 3d     | API: glyph and guide drafting (LLM, tracked in `cost_tracking`)                                                                                                       | **Yes**                                             | backend                                        | ~12             | 3c                                              |
+| 3e     | Add a venue flow                                                                                                                                                      | No                                                  | `/admin/venues/new`                            | ~20             | 3c, 3d, B+ B11; **addendum gap 3**; Hugh: Arena |
+| 4a     | API and DB: `event_artists`, manual shows, merge semantics with a redirect                                                                                            | **Yes**                                             | backend                                        | ~16             | —                                               |
+| 4b     | Events, Event edit, price sheet, Mark cancelled, add by hand, merge                                                                                                   | No                                                  | `/admin/events/**`                             | ~20             | 4a; merge on phone: **addendum gap 1**          |
+| 4c     | Artists: three tabs and search                                                                                                                                        | No                                                  | `/admin/artists`                               | ~14             | 0b                                              |
+| 4d     | Prices: three tabs, handles in submissions                                                                                                                            | **Yes** (API join)                                  | `/admin/prices/**`                             | ~16             | 2a                                              |
+| 5a     | People, Person, Test account tag, Show email (audited), sign out everywhere                                                                                           | **Yes** (auth, Clerk)                               | `/admin/people/**`                             | ~18             | **Hugh: Test account storage**                  |
+| 5b     | Invite codes and Posters under People; Edit, Reactivate, who joined                                                                                                   | **Yes** (API)                                       | `/admin/people/invite-codes/**`                | ~16             | 5a                                              |
+| 5c     | Feature flags: stage ladder, named people, verify, history, production lock                                                                                           | **Yes**                                             | `/admin/feature-flags`                         | ~20             | **Hugh: transport**                             |
+| 5d     | Operations: Feedback (reply API), Emails, Activity log                                                                                                                | **Yes**                                             | `/admin/operations/**`                         | ~20             | 1b, 0c                                          |
+| 5e     | Block (only if Hugh keeps it)                                                                                                                                         | **Yes**                                             | `/admin/people/[userId]`                       | ~6              | 5a; **Hugh: Block**                             |
+| 6      | Fan side, behind a flag: Send feedback, reply delivery, Suggest a venue                                                                                               | **Yes**                                             | account menu, feedback modal                   | ~16             | 5d; **Hugh: Send feedback**                     |
 
 That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
 
@@ -216,6 +219,7 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
   - Sign out (`useClerk().signOut`)
 
   It's a popover on desktop and an `AdminSheet` on the phone. Until 0b merges, it uses `components/pwa/BottomSheet`, and 0b swaps it in a later PR.
+
 - `EnvironmentBadge.tsx` and `apps/web/src/lib/admin/environment.ts` (new): `adminEnvironment()` reads `NEXT_PUBLIC_SENTRY_ENVIRONMENT`, with a unit test.
 - `AdminTopbar.tsx` keeps the breadcrumbs and loses `AppSwitcher`. It adds the environment badge on desktop and the avatar button on the phone.
 - `breadcrumbs.ts` and `breadcrumbs.test.ts` take the new labels.
@@ -252,15 +256,52 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
     { "label": "desktop", "width": 1300, "height": 900 }
   ],
   "rows": [
-    { "id": "home", "label": "/admin in the shell", "steps": [{ "goto": "/admin", "wait": "[data-testid=\"admin-shell\"]" }] },
-    { "id": "venues", "label": "/admin/venues in the shell", "steps": [{ "goto": "/admin/venues", "wait": "[data-testid=\"admin-shell\"] h1" }] },
-    { "id": "review", "label": "/admin/review (interim Needs you)", "steps": [{ "goto": "/admin/review", "wait": "[data-testid=\"admin-shell\"] h1" }] },
-    { "id": "flags", "label": "/admin/feature-flags, More active on phone", "steps": [{ "goto": "/admin/feature-flags", "wait": "[data-testid=\"admin-shell\"] h1" }] },
-    { "id": "more", "label": "/admin/more", "widths": ["phone-320", "phone", "sm"], "steps": [{ "goto": "/admin/more", "wait": "[data-testid=\"admin-more\"]" }] },
-    { "id": "user-menu", "label": "User menu open", "steps": [
-      { "goto": "/admin", "wait": "[data-testid=\"admin-shell\"]" },
-      { "click": "[data-testid=\"admin-user-menu-trigger\"]:visible" },
-      { "wait": "[data-testid=\"admin-user-menu\"]", "settle": 300 } ] }
+    {
+      "id": "home",
+      "label": "/admin in the shell",
+      "steps": [{ "goto": "/admin", "wait": "[data-testid=\"admin-shell\"]" }]
+    },
+    {
+      "id": "venues",
+      "label": "/admin/venues in the shell",
+      "steps": [
+        { "goto": "/admin/venues", "wait": "[data-testid=\"admin-shell\"] h1" }
+      ]
+    },
+    {
+      "id": "review",
+      "label": "/admin/review (interim Needs you)",
+      "steps": [
+        { "goto": "/admin/review", "wait": "[data-testid=\"admin-shell\"] h1" }
+      ]
+    },
+    {
+      "id": "flags",
+      "label": "/admin/feature-flags, More active on phone",
+      "steps": [
+        {
+          "goto": "/admin/feature-flags",
+          "wait": "[data-testid=\"admin-shell\"] h1"
+        }
+      ]
+    },
+    {
+      "id": "more",
+      "label": "/admin/more",
+      "widths": ["phone-320", "phone", "sm"],
+      "steps": [
+        { "goto": "/admin/more", "wait": "[data-testid=\"admin-more\"]" }
+      ]
+    },
+    {
+      "id": "user-menu",
+      "label": "User menu open",
+      "steps": [
+        { "goto": "/admin", "wait": "[data-testid=\"admin-shell\"]" },
+        { "click": "[data-testid=\"admin-user-menu-trigger\"]:visible" },
+        { "wait": "[data-testid=\"admin-user-menu\"]", "settle": 300 }
+      ]
+    }
   ]
 }
 ```
@@ -311,7 +352,7 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
 - `app/(protected)/admin/settings/page.tsx` becomes a `permanentRedirect('/admin/operations/emails')`.
 - `app/(protected)/admin/operations/emails/page.tsx` (new) is a stub that renders the existing `OpsToolsSection`, moved to `components/admin/operations/TestEmailSection.tsx`. 5d replaces it.
 - `components/admin/shell/AdminThemeProvider.tsx` reads only `cc-theme`. The `STORAGE_KEY` and `setTheme` go (decision 11), and `admin.css`'s `[data-admin-theme]` scoping stays.
-- **Deleted:** `primitives/Kbd.tsx` and its export from `primitives/index.ts`. The hints are removed from `AddVenueModal.tsx`, `venue-guide/VenueGuideBlock.tsx` and `events/EventQueueSplit.tsx`, and the handlers stay.
+- **Deleted:** `primitives/Kbd.tsx` and its export from `primitives/index.ts`. The hints are removed from `AddVenueModal.tsx`, `venues/guide/GuideEditPanel.tsx` (formerly `venue-guide/VenueGuideBlock.tsx`) and `events/EventQueueSplit.tsx`, and the handlers stay.
 - `apps/api/src/routes/admin/notifications.ts:83` and `apps/api/src/emails/test-fixtures.ts:171` change the "Admin settings" link to `/admin/operations/emails`.
 - `definitions/copy.ts`: `settings.*` is deleted, and `operations.emails.stub.*` takes over the test-email strings.
 - `apps/e2e/src/audit/manifest.ts`: `/admin/settings` becomes `/admin/operations/emails`.
@@ -333,21 +374,22 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
 - **Migration:** see the ledger. In the schema, `packages/db/src/schema/crawl-runs.ts` gets `crawlRunReasonEnum` and `reason`, and a new `packages/db/src/schema/crawl-run-pages.ts` is exported from `schema/index.ts`.
 - **Reason values:**
 
-  | Value | Where it's set |
-  | --- | --- |
-  | `page_unchanged` | `crawl.ts`'s hash skip (~720) |
-  | `crawl_paused` | ~420 |
-  | `robots_unreachable` | ~455 |
-  | `robots_disallowed` | ~480 |
-  | `robots_crawl_delay` | ~515, and the platform adapter decline at ~1795 |
-  | `timeout` | the TimeoutError branch |
-  | `blocked_http` | 403 or 429, ~1856 |
-  | `no_events_found` | a partial with `foundNothing` (~1670) |
-  | `calendar_not_found` | the extractor finds no calendar block |
-  | `llm_account` | the account-wide LLM refusal, using `crawl-error-class.ts`'s `isAccountWideKind` |
-  | `error` | anything else |
+  | Value                | Where it's set                                                                   |
+  | -------------------- | -------------------------------------------------------------------------------- |
+  | `page_unchanged`     | `crawl.ts`'s hash skip (~720)                                                    |
+  | `crawl_paused`       | ~420                                                                             |
+  | `robots_unreachable` | ~455                                                                             |
+  | `robots_disallowed`  | ~480                                                                             |
+  | `robots_crawl_delay` | ~515, and the platform adapter decline at ~1795                                  |
+  | `timeout`            | the TimeoutError branch                                                          |
+  | `blocked_http`       | 403 or 429, ~1856                                                                |
+  | `no_events_found`    | a partial with `foundNothing` (~1670)                                            |
+  | `calendar_not_found` | the extractor finds no calendar block                                            |
+  | `llm_account`        | the account-wide LLM refusal, using `crawl-error-class.ts`'s `isAccountWideKind` |
+  | `error`              | anything else                                                                    |
 
   `success` rows carry NULL.
+
 - **One writer:** `packages/crawler-core/src/lib/record-run.ts` (new) is `insertCrawlRun(db, values)`. Its type makes `reason` required whenever `status !== 'success'`. All eight `db.insert(crawlRuns)` sites in `crawl.ts` go through it, so no future path can skip the reason.
 - **Fetched pages:** `packages/crawler-core/src/lib/fetch-log.ts` (new) is a per-run collector. It's passed to `fetchPage` and `fetchPageHttp` (`lib/fetcher.ts`), `lib/fetchers/detail-page.ts`, and the platform fetchers (`venuepilot.ts`, `livenation.ts`, `aeg.ts`). It records the URL, final URL, status, mode, bytes and hash, up to 50 per run, and flushes them with the run row. It holds **metadata only**, because bodies wait for 1e. The 3 s delay and the robots.txt check don't change.
 - **API and types:**
@@ -413,12 +455,28 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
   "feature": "Admin 1c · Health",
   "note": "Plan row 1c. CONTACT_SHEET_ROLE=admin. Boards: 03-health/health-desktop, health-mobile, tiles-in-each-state, llm-budget-panel; 07/loading-health. By hand: tile states other than the live one.",
   "rows": [
-    { "id": "health", "label": "/admin Health", "steps": [{ "goto": "/admin", "wait": "[data-testid=\"health-tiles\"]" }] },
-    { "id": "grid", "label": "/admin venue grid", "steps": [{ "goto": "/admin", "wait": "[data-testid=\"venue-grid\"]" }, { "scrollTo": "[data-testid=\"venue-grid\"]" }] },
-    { "id": "budget", "label": "LLM budget panel", "steps": [
-      { "goto": "/admin", "wait": "[data-testid=\"health-tiles\"]" },
-      { "clickRole": "button", "name": "^LLM cost" },
-      { "waitDialog": "LLM budget" } ] }
+    {
+      "id": "health",
+      "label": "/admin Health",
+      "steps": [{ "goto": "/admin", "wait": "[data-testid=\"health-tiles\"]" }]
+    },
+    {
+      "id": "grid",
+      "label": "/admin venue grid",
+      "steps": [
+        { "goto": "/admin", "wait": "[data-testid=\"venue-grid\"]" },
+        { "scrollTo": "[data-testid=\"venue-grid\"]" }
+      ]
+    },
+    {
+      "id": "budget",
+      "label": "LLM budget panel",
+      "steps": [
+        { "goto": "/admin", "wait": "[data-testid=\"health-tiles\"]" },
+        { "clickRole": "button", "name": "^LLM cost" },
+        { "waitDialog": "LLM budget" }
+      ]
+    }
   ]
 }
 ```
@@ -454,15 +512,37 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
   "feature": "Admin 1d · Crawl runs",
   "note": "Plan row 1d. CONTACT_SHEET_ROLE=admin. Boards: 07/crawl-runs-desktop, a-runs-detail, crawl-all-venues, crawl-runs-mobile, loading-crawl-runs. By hand: crawl-all-running (it starts a real crawl; staging only, and only when Hugh says so).",
   "rows": [
-    { "id": "list", "label": "/admin/crawl", "steps": [{ "goto": "/admin/crawl", "wait": "[data-testid=\"crawl-runs-table\"]" }] },
-    { "id": "detail", "label": "Run detail", "steps": [
-      { "goto": "/admin/crawl", "wait": "[data-testid=\"crawl-runs-table\"]" },
-      { "click": "[data-testid=\"crawl-batch-row\"]:visible >> nth=0" },
-      { "wait": "[data-testid=\"run-detail\"]", "settle": 300 } ] },
-    { "id": "crawl-all", "label": "Crawl all dialog (not confirmed)", "steps": [
-      { "goto": "/admin/crawl", "wait": "[data-testid=\"crawl-runs-table\"]" },
-      { "clickRole": "button", "name": "^Crawl all venues" },
-      { "waitDialog": "Crawl all venues now" } ] }
+    {
+      "id": "list",
+      "label": "/admin/crawl",
+      "steps": [
+        { "goto": "/admin/crawl", "wait": "[data-testid=\"crawl-runs-table\"]" }
+      ]
+    },
+    {
+      "id": "detail",
+      "label": "Run detail",
+      "steps": [
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-runs-table\"]"
+        },
+        { "click": "[data-testid=\"crawl-batch-row\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"run-detail\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "crawl-all",
+      "label": "Crawl all dialog (not confirmed)",
+      "steps": [
+        {
+          "goto": "/admin/crawl",
+          "wait": "[data-testid=\"crawl-runs-table\"]"
+        },
+        { "clickRole": "button", "name": "^Crawl all venues" },
+        { "waitDialog": "Crawl all venues now" }
+      ]
+    }
   ]
 }
 ```
@@ -483,16 +563,16 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
 
 **Sources.** These are existing ones, not rebuilt:
 
-| Kind | Source |
-| --- | --- |
-| `show-dropped` | `events.first_missing_at`; `routes/admin/lib/classify-missing.ts` |
-| `show-moved` | `routes/admin/lib/moved-candidate.ts` |
-| `venue-failing`, `venue-blocked`, `venue-quiet` ("Fewer shows than usual" with a likely cause) | `routes/admin/lib/triage.ts` |
-| `artist` | the artist match status, limited to upcoming shows within **60 days**, plus `artist_reports` |
-| `event-low-confidence` | `events.verified = false` |
-| `price-check` | contests: `price_submissions.disputed_submission_id` |
-| `price-batch` | held submissions |
-| `bug` | feedback of category `bug` in To read |
+| Kind                                                                                           | Source                                                                                       |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `show-dropped`                                                                                 | `events.first_missing_at`; `routes/admin/lib/classify-missing.ts`                            |
+| `show-moved`                                                                                   | `routes/admin/lib/moved-candidate.ts`                                                        |
+| `venue-failing`, `venue-blocked`, `venue-quiet` ("Fewer shows than usual" with a likely cause) | `routes/admin/lib/triage.ts`                                                                 |
+| `artist`                                                                                       | the artist match status, limited to upcoming shows within **60 days**, plus `artist_reports` |
+| `event-low-confidence`                                                                         | `events.verified = false`                                                                    |
+| `price-check`                                                                                  | contests: `price_submissions.disputed_submission_id`                                         |
+| `price-batch`                                                                                  | held submissions                                                                             |
+| `bug`                                                                                          | feedback of category `bug` in To read                                                        |
 
 **Files:**
 
@@ -505,6 +585,7 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
   - `POST /answers/:auditId/undo`
 
   All of it goes through Zod, and every mutation is audited (`needs_you.answer`, `needs_you.snooze`, `needs_you.undo`).
+
 - `apps/api/src/routes/admin/lib/needs-you/` (new):
   - `sources.ts`: one adapter per kind, giving a stable `item_key` of `<kind>:<id>[:<evidenceKey>]`
   - `rank.ts`: soonest fan-visible date first, then Watching count
@@ -573,19 +654,54 @@ That's 25 PRs plus a conditional 5e. Eleven are in Phases 0 to 2.
   "feature": "Admin 2b · Needs you queue",
   "note": "Plan row 2b. CONTACT_SHEET_ROLE=admin. Boards: 02-needs-you/needs-you-desktop, needs-you-mobile, answered-with-undo, snooze-menu, all-clear, couldnt-load; 07/loading-needs-you. By hand: answered-with-undo (it writes), all-clear (needs an empty queue), couldnt-load (API down), the /admin/review redirects (the kit fails a redirect).",
   "rows": [
-    { "id": "queue", "label": "/admin/needs-you", "steps": [{ "goto": "/admin/needs-you", "wait": "[data-testid=\"needs-you-queue\"]" }] },
-    { "id": "item", "label": "First item open", "steps": [
-      { "goto": "/admin/needs-you", "wait": "[data-testid=\"needs-you-item\"]" },
-      { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
-      { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 } ] },
-    { "id": "snooze", "label": "Snooze menu", "steps": [
-      { "goto": "/admin/needs-you", "wait": "[data-testid=\"needs-you-item\"]" },
-      { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0 >> [data-testid=\"snooze-trigger\"]" },
-      { "wait": "[data-testid=\"snooze-menu\"]" } ] },
-    { "id": "venues-filter", "label": "Venues filter", "steps": [
-      { "goto": "/admin/needs-you", "wait": "[data-testid=\"needs-you-queue\"]" },
-      { "clickRole": "tab", "name": "^Venues" },
-      { "wait": "[data-testid=\"needs-you-queue\"]", "settle": 300 } ] }
+    {
+      "id": "queue",
+      "label": "/admin/needs-you",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-queue\"]"
+        }
+      ]
+    },
+    {
+      "id": "item",
+      "label": "First item open",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        { "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"evidence-panel\"]", "settle": 300 }
+      ]
+    },
+    {
+      "id": "snooze",
+      "label": "Snooze menu",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-item\"]"
+        },
+        {
+          "click": "[data-testid=\"needs-you-item\"]:visible >> nth=0 >> [data-testid=\"snooze-trigger\"]"
+        },
+        { "wait": "[data-testid=\"snooze-menu\"]" }
+      ]
+    },
+    {
+      "id": "venues-filter",
+      "label": "Venues filter",
+      "steps": [
+        {
+          "goto": "/admin/needs-you",
+          "wait": "[data-testid=\"needs-you-queue\"]"
+        },
+        { "clickRole": "tab", "name": "^Venues" },
+        { "wait": "[data-testid=\"needs-you-queue\"]", "settle": 300 }
+      ]
+    }
   ]
 }
 ```

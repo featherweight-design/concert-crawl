@@ -1302,6 +1302,12 @@ export const ADMIN_COPY = {
     preview: 'Preview as a fan',
     count: (published: number, total: number) =>
       `${published} of ${total} published. Fans see published sections on the venue page; drafts stay here.`,
+    // A live guide has no drafts: only Publish saves (ruling).
+    countLive: (published: number, total: number) =>
+      `${published} of ${total} published. Fans see published sections on the venue page.`,
+    // The phone row is one button: what it does, its state, then its text.
+    rowLabel: (action: string, state: string, text: string) =>
+      `${action}, ${state}: ${text}`,
     section: {
       insider_tip: 'Insider tip',
       accessibility: 'Accessibility',
@@ -1332,7 +1338,14 @@ export const ADMIN_COPY = {
     saving: 'Saving…',
     publishBlocked:
       'Accessibility is required to publish. Write it, or mark it Can’t document yet.',
+    publishGate: 'Add Accessibility before publishing.',
     menu: 'More for this guide',
+    // The old guide block's unpublish confirm, split into title and body.
+    unpublishConfirm: {
+      title: 'Take this guide off the venue page?',
+      body: 'The draft is kept, so you can publish it again whenever you want.',
+      confirm: 'Unpublish',
+    },
     unpublish: 'Unpublish',
     unpublishHint:
       'Takes the guide off the venue page. Sections go back to Draft.',

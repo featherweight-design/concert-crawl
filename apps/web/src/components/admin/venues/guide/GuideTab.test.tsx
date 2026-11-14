@@ -110,15 +110,24 @@ describe('GuideTab rows', () => {
   it('draws the head, the count and every row in order', () => {
     renderTab({ ...draftGuide, publishedAt: '2026-11-01' });
     expect(screen.getByText(COPY.title)).toBeTruthy();
-    expect(screen.getByTestId('guide-count').textContent).toBe(
-      COPY.count(2, 8),
-    );
     const rows = screen
       .getAllByTestId(/^guide-row-/)
       .map((row) => row.getAttribute('data-testid'));
     expect(rows[0]).toBe('guide-row-insider_tip');
     expect(rows[1]).toBe('guide-row-accessibility');
     expect(rows).toHaveLength(9);
+    // The denominator is the rows drawn, the insider tip included (board
+    // "6 of 9"); a live guide drops "drafts stay here".
+    expect(screen.getByTestId('guide-count').textContent).toBe(
+      COPY.countLive(3, rows.length),
+    );
+  });
+
+  it('keeps "drafts stay here" on an unpublished guide', () => {
+    renderTab();
+    expect(screen.getByTestId('guide-count').textContent).toBe(
+      COPY.count(0, screen.getAllByTestId(/^guide-row-/).length),
+    );
   });
 
   it('opens Preview as a fan on the fan page’s guide, in a new tab', () => {
@@ -141,7 +150,7 @@ describe('GuideTab rows', () => {
     expect(stateOf('insider_tip')).toBe('published');
     expect(stateOf('accessibility')).toBe('cantDocument');
     expect(screen.getByTestId('guide-count').textContent).toBe(
-      COPY.count(0, 8),
+      COPY.countLive(1, 9),
     );
   });
 
@@ -261,8 +270,88 @@ describe('GuideTab edit panel', () => {
     fireEvent.click(
       screen.getByRole('menuitem', { name: new RegExp(COPY.unpublish) }),
     );
+    // It asks first (ConfirmDialog); Escape there closes only the confirm.
+    expect(mockUnpublish).not.toHaveBeenCalled();
+    expect(screen.getByText(COPY.unpublishConfirm.title)).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByText(COPY.unpublishConfirm.title)).toBeNull();
+    expect(screen.getByTestId('side-panel')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('guide-menu'));
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: new RegExp(COPY.unpublish) }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.unpublishConfirm.confirm }),
+    );
     await waitFor(() => expect(mockUnpublish).toHaveBeenCalledWith('venue-1'));
     expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('holds Save draft on a live guide: only Publish saves', () => {
+    renderTab({ ...draftGuide, publishedAt: '2026-11-01' });
+    open('parking');
+    const save = screen.getByRole('button', { name: COPY.saveDraft });
+    expect(save.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(save);
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('a draft guide’s Save draft works', () => {
+    mockSave.mockResolvedValue({ success: true, data: draftGuide });
+    renderTab();
+    open('parking');
+    const save = screen.getByRole('button', { name: COPY.saveDraft });
+    expect(save.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('keeps the save when Publish then fails, with the gate’s line', async () => {
+    const saved = { ...draftGuide, insiderTip: 'New tip.' };
+    mockSave.mockResolvedValue({ success: true, data: saved });
+    mockPublish.mockResolvedValue({ success: false, field: 'accessibility' });
+    renderTab();
+    open('parking');
+    fireEvent.click(screen.getByRole('button', { name: COPY.publish }));
+    await waitFor(() => expect(onGuideChange).toHaveBeenCalledWith(saved));
+    expect(screen.getByRole('alert').textContent).toBe(COPY.publishGate);
+    expect(screen.getByTestId('side-panel')).toBeTruthy();
+  });
+
+  it('a non-gate publish failure shows the save-failed toast', async () => {
+    mockSave.mockResolvedValue({ success: true, data: draftGuide });
+    mockPublish.mockResolvedValue({ success: false });
+    renderTab();
+    open('parking');
+    fireEvent.click(screen.getByRole('button', { name: COPY.publish }));
+    await waitFor(() => expect(screen.getByTestId('save-failed')).toBeTruthy());
+    expect(onGuideChange).toHaveBeenCalledWith(draftGuide);
+  });
+
+  it('opens on the field, closes on Escape and hands focus back', () => {
+    renderTab();
+    const opener = screen.getByRole('button', {
+      name: COPY.editLabel(COPY.section.parking),
+    });
+    opener.focus();
+    fireEvent.click(opener);
+    expect(document.activeElement).toBe(
+      screen.getByRole('textbox', { name: COPY.section.parking }),
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('side-panel')).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it('Escape in the open ⋯ closes the menu, not the panel', () => {
+    renderTab({ ...draftGuide, publishedAt: '2026-11-01' });
+    open('parking');
+    fireEvent.click(screen.getByTestId('guide-menu'));
+    const item = screen.getByRole('menuitem', {
+      name: new RegExp(COPY.unpublish),
+    });
+    fireEvent.keyDown(item, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByTestId('side-panel')).toBeTruthy();
   });
 
   it('titles Write mode "Write" but names the dialog after its section', () => {
@@ -281,7 +370,11 @@ describe('GuideTab edit panel', () => {
     renderTab({ ...draftGuide, insiderTip: null });
     fireEvent.click(
       await screen.findByRole('button', {
-        name: COPY.writeLabel(COPY.section.insider_tip),
+        name: COPY.rowLabel(
+          COPY.writeLabel(COPY.section.insider_tip),
+          COPY.state.missing,
+          COPY.notWritten,
+        ),
       }),
     );
     expect(
@@ -296,8 +389,13 @@ describe('GuideTab on the phone', () => {
   it('stacks each row as one button and opens the editor full screen', async () => {
     phone = true;
     renderTab();
+    // The row's name carries its state and text, not just "Edit Parking".
     const row = await screen.findByRole('button', {
-      name: COPY.editLabel(COPY.section.parking),
+      name: COPY.rowLabel(
+        COPY.editLabel(COPY.section.parking),
+        COPY.state.draft,
+        'Lots open 2 hours early.',
+      ),
     });
     expect(row.getAttribute('data-testid')).toBe('guide-row-parking');
     // No separate Edit link on the phone: the row is the control.
