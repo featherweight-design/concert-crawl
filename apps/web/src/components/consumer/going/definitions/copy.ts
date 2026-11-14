@@ -83,6 +83,10 @@ export const GOING_COPY = {
     openPassport: 'Open Passport',
     // New, not in COPY.md (plan D7). Goes through copy-review.
     saveFailed: "Didn't save. Try again.",
+    // The Add sheet's own failed-stamp toast (add-tap-failed-m): it names the
+    // show and offers a Retry on the right.
+    stampFailed: (artist: string) => `Couldn't stamp ${artist}. Try again.`,
+    retry: 'Retry',
     undoFailed: "Couldn't undo that. Open the show to add it back.",
   },
   error: {

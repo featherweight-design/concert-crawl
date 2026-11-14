@@ -19,6 +19,7 @@ import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
 import { pillInkFor } from '@/components/consumer/going/lib/pill-ink';
 import { stampColorsFor } from '@/lib/passport/stamp';
 import { useThemeName } from '@/theme';
+import { useSheetToast } from './SheetToast';
 
 interface WentPillProps {
   eventId: string;
@@ -51,6 +52,7 @@ export const WentPill = ({
   const router = useRouter();
   const pathname = usePathname();
   const toggle = useAttendingToggle();
+  const sheetToast = useSheetToast();
   // The tapped value answers at once; the server's answer re-syncs it.
   const [went, setWent] = useState(attending === true);
   useEffect(() => setWent(attending === true), [attending]);
@@ -67,13 +69,27 @@ export const WentPill = ({
     try {
       const result = await toggle.mutateAsync({ eventId, going: false });
       const restore = result.restore ?? null;
-      showRemovedToast({
-        artist,
-        onUndo: restore ? () => void undoRemove(restore) : null,
-      });
+      const onUndo = restore ? () => void undoRemove(restore) : null;
+      if (sheetToast) {
+        sheetToast.show({
+          message: GOING_COPY.toast.removed(artist),
+          ...(onUndo
+            ? { action: { label: GOING_COPY.toast.undo, onClick: onUndo } }
+            : {}),
+        });
+      } else {
+        showRemovedToast({ artist, onUndo });
+      }
     } catch {
       setWent(true);
-      showAttendanceError('save');
+      if (sheetToast) {
+        sheetToast.show({
+          message: GOING_COPY.toast.saveFailed,
+          tone: 'error',
+        });
+      } else {
+        showAttendanceError('save');
+      }
     }
   };
 
@@ -86,7 +102,14 @@ export const WentPill = ({
       await toggle.mutateAsync({ eventId, going: true, restore });
     } catch {
       setWent(false);
-      showAttendanceError('undo');
+      if (sheetToast) {
+        sheetToast.show({
+          message: GOING_COPY.toast.undoFailed,
+          tone: 'error',
+        });
+      } else {
+        showAttendanceError('undo');
+      }
     }
   };
 
@@ -94,15 +117,38 @@ export const WentPill = ({
     setWent(true);
     try {
       await toggle.mutateAsync({ eventId, going: true });
-      showStampedToast({
-        artist,
-        ...(afterStamp === 'undo'
-          ? { onUndo: () => void unstamp() }
-          : { onOpenPassport: () => router.push('/passport') }),
-      });
+      if (sheetToast && afterStamp === 'undo') {
+        // Inside the Add sheet the toast draws the venue stamp (add-tapped-d).
+        sheetToast.show({
+          message: GOING_COPY.toast.stamped(artist),
+          stamp: { venueSlug, venueName },
+          action: {
+            label: GOING_COPY.toast.undo,
+            onClick: () => void unstamp(),
+          },
+        });
+      } else {
+        showStampedToast({
+          artist,
+          ...(afterStamp === 'undo'
+            ? { onUndo: () => void unstamp() }
+            : { onOpenPassport: () => router.push('/passport') }),
+        });
+      }
     } catch {
       setWent(false);
-      showAttendanceError('save');
+      if (sheetToast) {
+        sheetToast.show({
+          message: GOING_COPY.toast.stampFailed(artist),
+          tone: 'error',
+          action: {
+            label: GOING_COPY.toast.retry,
+            onClick: () => void stamp(),
+          },
+        });
+      } else {
+        showAttendanceError('save');
+      }
     }
   };
 
