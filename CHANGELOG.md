@@ -1,3 +1,22 @@
+# [1.463.0](https://github.com/featherweight-design/concert-crawl/compare/v1.462.0...v1.463.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** pick the event price with the pipeline's own headline rule ([fe5a1d3](https://github.com/featherweight-design/concert-crawl/commit/fe5a1d37579bf07e4591e4909d108e7a8d3e5419))
+* **web:** address the report sheets review ([6fa61d2](https://github.com/featherweight-design/concert-crawl/commit/6fa61d2fd6fd78b398eed8a568453e8b29c1c438))
+* **web:** fetch the passport card only on the populated page ([6872b03](https://github.com/featherweight-design/concert-crawl/commit/6872b03019950f208030a541ac74f95e7cc82baa))
+* **web:** keep the API trust order in Where it's sold ([8a4c6cd](https://github.com/featherweight-design/concert-crawl/commit/8a4c6cdc1332d7b1054f282fa71c279ad23b7c95))
+* **web:** move seller alternates to Where it's sold, fix its inset and tile ([745f931](https://github.com/featherweight-design/concert-crawl/commit/745f931d283f1c3e90de54b9774c197b66cfc50d))
+
+
+### Features
+
+* **admin:** show the listed price on a low-confidence event ([2195547](https://github.com/featherweight-design/concert-crawl/commit/2195547df17fb62ca2e1237bb6ae4c33010b6f88))
+* **web:** list every seller under Where it's sold on the event page ([735a394](https://github.com/featherweight-design/concert-crawl/commit/735a394e4b4ac68463cac2a2a1e979b9de1fdcc4))
+* **web:** passport phone top bar with a share icon that runs the row's share ([fb9823b](https://github.com/featherweight-design/concert-crawl/commit/fb9823b2cec13b105eb02871a22d9e2642a9c01f))
+* **web:** the report sheets as the B+ boards draw them ([b9d0223](https://github.com/featherweight-design/concert-crawl/commit/b9d0223537de26eeae4d7294296d0931049ae765))
+
 # [1.462.0](https://github.com/featherweight-design/concert-crawl/compare/v1.461.0...v1.462.0) (2026-11-14)
 
 
