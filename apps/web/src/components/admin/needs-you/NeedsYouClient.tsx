@@ -432,6 +432,16 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           busy={busyKey === selectedRow.key}
           onClose={() => select(null)}
           onAnswer={(answer, params) => onAnswer(selectedRow, answer, params)}
+          onSnooze={(until) =>
+            void runSnooze(selectedRow, () =>
+              api.snooze(selectedRow.key, until),
+            )
+          }
+          onNotUseful={(reason) =>
+            void runSnooze(selectedRow, () =>
+              api.notUseful(selectedRow.key, reason),
+            )
+          }
         />
       )}
 

@@ -1,11 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, type CSSProperties, type ReactNode } from 'react';
+import {
+  Fragment,
+  useContext,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Pause, RefreshCw, type LucideIcon } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton, StatusBadge } from '@/components/admin/primitives';
 import type { StatusKind } from '@/components/admin/primitives';
+import { PhoneFooterContext } from '../PhoneItemPage';
 import { leadFirst } from '../needs-you-rules';
 import type { AnswerParams, NeedsYouAnswer, QueueRow } from '../needs-you-api';
 
@@ -218,6 +225,9 @@ export const AnswerButtons = ({
   const [lead, ...rest] = leadFirst({
     answers: row.answers.filter((answer) => !hide?.includes(answer.slug)),
   });
+  // On the phone's item page the answers pin to its footer (`an-item-mobile`):
+  // the lead 46 high and full width, the rest 40 high in one row.
+  const footer = useContext(PhoneFooterContext);
   const button = (answer: NeedsYouAnswer, wide: boolean) => (
     <AdminButton
       key={answer.slug}
@@ -232,15 +242,58 @@ export const AnswerButtons = ({
         else onAnswer(answer);
       }}
       style={
-        wide
-          ? { width: '100%', minHeight: 40, minWidth: 0 }
-          : { flex: '1 1 auto', minHeight: 36, whiteSpace: 'nowrap' }
+        footer
+          ? wide
+            ? { width: '100%', minHeight: 46, minWidth: 0, fontSize: 15 }
+            : {
+                flex: '1 1 0',
+                minHeight: 40,
+                minWidth: 0,
+                whiteSpace: 'nowrap',
+                fontSize: 13.5,
+              }
+          : wide
+            ? { width: '100%', minHeight: 40, minWidth: 0 }
+            : { flex: '1 1 auto', minHeight: 36, whiteSpace: 'nowrap' }
       }
     >
       {labelOf ? labelOf(answer) : answer.label}
     </AdminButton>
   );
   const others = lead && !lead.suggested ? [lead, ...rest] : rest;
+  if (footer)
+    return (
+      <>
+        {note && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            {note}
+          </p>
+        )}
+        {createPortal(
+          <>
+            {lead?.suggested && button(lead, true)}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {!extraLast && lead?.suggested && extra}
+              {others.map((answer, index) => (
+                <Fragment key={answer.slug}>
+                  {button(answer, false)}
+                  {!extraLast && !lead?.suggested && index === 0 && extra}
+                </Fragment>
+              ))}
+              {extraLast && extra}
+            </div>
+          </>,
+          footer,
+        )}
+      </>
+    );
   return (
     <Section label={ADMIN_COPY.needsYou.panel.yourAnswer}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -7,7 +8,9 @@ import {
   SidePanel,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { PhoneItemPage } from './PhoneItemPage';
 import {
+  answeredName,
   evidenceText,
   kindLabelOf,
   metaOf,
@@ -34,6 +37,9 @@ interface EvidenceSlotProps {
   busy: boolean;
   onClose: () => void;
   onAnswer: (answer: NeedsYouAnswer, params?: AnswerParams) => void;
+  /** The phone's ⋯ sheet snoozes from the item itself. */
+  onSnooze: (until: string) => void;
+  onNotUseful: (reason: string) => void;
 }
 
 /** The kinds whose panel is drawn per kind; the rest keep the generic one. */
@@ -73,98 +79,128 @@ export const EvidenceSlot = ({
   busy,
   onClose,
   onAnswer,
+  onSnooze,
+  onNotUseful,
 }: EvidenceSlotProps) => {
   const isPhone = useIsPhone();
   const Drawn = drawnPanel(row.kind);
-  if (Drawn)
-    return (
+  // Desktop docks the panel beside the list; the phone opens the item as a
+  // full page (`02/an-item-mobile`) with its own back row, ⋯ and answer footer.
+  const frame = (
+    title: string,
+    subtitle: string | undefined,
+    body: ReactNode,
+  ) =>
+    isPhone ? (
+      <PhoneItemPage
+        eyebrow={<KindLabel kind={kindLabelOf(row.kind)} />}
+        title={title}
+        menuTitle={answeredName(row.title)}
+        venue={
+          row.venueId && row.venueName
+            ? { id: row.venueId, name: row.venueName }
+            : null
+        }
+        onClose={onClose}
+        onSnooze={onSnooze}
+        onNotUseful={row.venueId ? onNotUseful : undefined}
+      >
+        {subtitle && (
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-muted)' }}>
+            {subtitle}
+          </p>
+        )}
+        {body}
+      </PhoneItemPage>
+    ) : (
       <SidePanel
-        inline={!isPhone}
+        inline
         onClose={onClose}
         eyebrow={<KindLabel kind={kindLabelOf(row.kind)} />}
-        title={panelTitleOf(row)}
+        title={title}
+        {...(subtitle ? { subtitle } : {})}
       >
-        <div
-          data-testid="evidence-panel"
-          data-kind={row.kind}
-          style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
-        >
-          <Drawn
-            row={row}
-            today={today}
-            ranksFirst={ranksFirst}
-            busy={busy}
-            onAnswer={onAnswer}
-          />
-        </div>
+        {body}
       </SidePanel>
     );
-  return (
-    <SidePanel
-      inline={!isPhone}
-      onClose={onClose}
-      eyebrow={<KindLabel kind={kindLabelOf(row.kind)} />}
-      title={row.title}
-      subtitle={metaOf(row)}
-    >
+  if (Drawn)
+    return frame(
+      panelTitleOf(row),
+      undefined,
       <div
         data-testid="evidence-panel"
         data-kind={row.kind}
         style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
       >
-        <p style={{ margin: 0, fontSize: 14, color: 'var(--fg)' }}>
-          {whatOf(row)}
-        </p>
-        {row.evidence.length > 0 && (
-          <section>
-            <h3 style={SECTION_HEAD}>{COPY.panel.details}</h3>
-            <dl style={{ margin: 0, display: 'grid', gap: 8 }}>
-              {row.evidence.map((line) => (
-                <div
-                  key={line.label}
+        <Drawn
+          row={row}
+          today={today}
+          ranksFirst={ranksFirst}
+          busy={busy}
+          onAnswer={onAnswer}
+        />
+      </div>,
+    );
+  return frame(
+    row.title,
+    metaOf(row),
+    <div
+      data-testid="evidence-panel"
+      data-kind={row.kind}
+      style={{ display: 'flex', flexDirection: 'column', gap: 18 }}
+    >
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--fg)' }}>
+        {whatOf(row)}
+      </p>
+      {row.evidence.length > 0 && (
+        <section>
+          <h3 style={SECTION_HEAD}>{COPY.panel.details}</h3>
+          <dl style={{ margin: 0, display: 'grid', gap: 8 }}>
+            {row.evidence.map((line) => (
+              <div
+                key={line.label}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                }}
+              >
+                <dt style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                  {line.label}
+                </dt>
+                <dd
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 16,
+                    margin: 0,
+                    fontSize: 13,
+                    color: 'var(--fg)',
+                    textAlign: 'right',
                   }}
                 >
-                  <dt style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-                    {line.label}
-                  </dt>
-                  <dd
-                    style={{
-                      margin: 0,
-                      fontSize: 13,
-                      color: 'var(--fg)',
-                      textAlign: 'right',
-                    }}
-                  >
-                    {evidenceText(line.label, line.value)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        )}
-        <section>
-          <h3 style={SECTION_HEAD}>{COPY.panel.yourAnswer}</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {row.answers.map((answer) => (
-              <AdminButton
-                key={answer.slug}
-                variant={answer.suggested ? 'gradient' : 'outline'}
-                disabled={busy}
-                data-testid="needs-you-answer"
-                data-slug={answer.slug}
-                onClick={() => onAnswer(answer)}
-              >
-                {answer.label}
-              </AdminButton>
+                  {evidenceText(line.label, line.value)}
+                </dd>
+              </div>
             ))}
-          </div>
+          </dl>
         </section>
-      </div>
-    </SidePanel>
+      )}
+      <section>
+        <h3 style={SECTION_HEAD}>{COPY.panel.yourAnswer}</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {row.answers.map((answer) => (
+            <AdminButton
+              key={answer.slug}
+              variant={answer.suggested ? 'gradient' : 'outline'}
+              disabled={busy}
+              data-testid="needs-you-answer"
+              data-slug={answer.slug}
+              onClick={() => onAnswer(answer)}
+            >
+              {answer.label}
+            </AdminButton>
+          ))}
+        </div>
+      </section>
+    </div>,
   );
 };
 
