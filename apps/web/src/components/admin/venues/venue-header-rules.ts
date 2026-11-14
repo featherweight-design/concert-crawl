@@ -71,8 +71,9 @@ export const runningSince = (trigger: {
  * The line beside the chips: "Central Platte Valley · 235 upcoming", or why
  * Re-crawl is off. The phone keeps the neighbourhood under the name instead
  * (`A3/03/venue-overview-m`), so its line is only the reason. While a
- * re-crawl runs, both read when it started, "Started 3:41 PM" in Mountain
- * Time (`A3/03/re-crawl-states`).
+ * re-crawl runs, the desktop line reads when it started, "Started 3:41 PM"
+ * in Mountain Time (`A3/03/re-crawl-states`). The running state is drawn
+ * for desktop only, so the phone line doesn't add it.
  */
 export const headerLine = (
   venue: HeaderVenue,
@@ -81,8 +82,8 @@ export const headerLine = (
 ): string => {
   const off = recrawlOff(venue);
   if (off !== null) return COPY.recrawlOff[off];
-  if (startedAt !== null) return COPY.startedAt(shortTime(startedAt));
   if (isPhone) return '';
+  if (startedAt !== null) return COPY.startedAt(shortTime(startedAt));
   const shows = venue.deleteBlockers?.upcomingShows ?? null;
   return [venue.neighborhood, shows === null ? null : COPY.upcoming(shows)]
     .filter((part): part is string => part !== null && part !== '')

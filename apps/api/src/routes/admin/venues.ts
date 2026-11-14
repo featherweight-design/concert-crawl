@@ -409,47 +409,61 @@ const latestRunColumns = () => ({
 const MAX_STREAK_DATES = 5;
 
 /**
- * Each venue's latest failed runs, newest first, up to `MAX_STREAK_DATES`:
- * the dates of its current streak once cut to `consecutive_failures`. Two
+ * One venue's current streak: its failed runs since its latest reset, newest
+ * first, up to `MAX_STREAK_DATES`. The crawler resets the counter on a
+ * success and on an unchanged-page skip, so only runs after the latest of
+ * those can be this streak's, even if a strike ever went unrecorded. Two
  * failed runs never count as a strike, so they are left out here too: an
  * account-wide LLM refusal, and a robots.txt disallow (written before the
- * crawl, which never touches the counter). No query when no venue is failing.
+ * crawl, which never touches the counter). Both lookups ride
+ * `crawl_runs_venue_status_created_idx`.
  */
-const failureStreaksOf = async (
-  venueIds: readonly string[],
-): Promise<Map<string, Date[]>> => {
-  const byVenueId = new Map<string, Date[]>();
-  if (venueIds.length === 0) return byVenueId;
-  const ranked = db
-    .select({
-      venueId: crawlRuns.venueId,
-      at: crawlRuns.createdAt,
-      rank: sql<number>`row_number() over (partition by ${crawlRuns.venueId} order by ${crawlRuns.createdAt} desc)`.as(
-        'rank',
-      ),
-    })
+const failureStreakOf = async (venueId: string): Promise<Date[]> => {
+  const resetAt = db
+    .select({ at: sql`max(${crawlRuns.createdAt})` })
     .from(crawlRuns)
     .where(
       and(
-        inArray(crawlRuns.venueId, [...venueIds]),
+        eq(crawlRuns.venueId, venueId),
+        or(
+          eq(crawlRuns.status, 'success'),
+          and(
+            eq(crawlRuns.status, 'skipped'),
+            eq(crawlRuns.reason, 'page_unchanged'),
+          ),
+        ),
+      ),
+    );
+  const rows = await db
+    .select({ at: crawlRuns.createdAt })
+    .from(crawlRuns)
+    .where(
+      and(
+        eq(crawlRuns.venueId, venueId),
         eq(crawlRuns.status, 'failed'),
         or(
           isNull(crawlRuns.reason),
           not(inArray(crawlRuns.reason, ['llm_account', 'robots_disallowed'])),
         ),
+        sql`${crawlRuns.createdAt} > coalesce((${resetAt}), '-infinity'::timestamptz)`,
       ),
     )
-    .as('ranked');
-  const rows = await db
-    .select({ venueId: ranked.venueId, at: ranked.at })
-    .from(ranked)
-    .where(sql`${ranked.rank} <= ${MAX_STREAK_DATES}`)
-    .orderBy(ranked.venueId, desc(ranked.at));
-  for (const row of rows) {
-    byVenueId.set(row.venueId, [...(byVenueId.get(row.venueId) ?? []), row.at]);
-  }
-  return byVenueId;
+    .orderBy(desc(crawlRuns.createdAt))
+    .limit(MAX_STREAK_DATES);
+  return rows.map((row) => row.at);
 };
+
+/** Each failing venue's streak, one query per venue; none when none fail. */
+const failureStreaksOf = async (
+  venueIds: readonly string[],
+): Promise<Map<string, Date[]>> =>
+  new Map(
+    await Promise.all(
+      venueIds.map(
+        async (venueId) => [venueId, await failureStreakOf(venueId)] as const,
+      ),
+    ),
+  );
 
 export const venuesAdminRouter = new Hono<AdminVariables>();
 

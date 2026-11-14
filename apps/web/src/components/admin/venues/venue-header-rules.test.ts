@@ -112,9 +112,12 @@ describe('a running re-crawl', () => {
   // 3:41 PM in Denver on Nov 12.
   const STARTED = '2026-11-12T22:41:00.000Z';
 
-  it('reads when it started, in Mountain Time, on both widths', () => {
-    expect(headerLine(venue(), false, STARTED)).toBe(COPY.startedAt('3:41 PM'));
-    expect(headerLine(venue(), true, STARTED)).toBe('Started 3:41 PM');
+  it('reads when it started, in Mountain Time, on desktop', () => {
+    expect(headerLine(venue(), false, STARTED)).toBe('Started 3:41 PM');
+  });
+
+  it('adds nothing to the phone line, where it isn’t drawn', () => {
+    expect(headerLine(venue(), true, STARTED)).toBe('');
   });
 
   it('still says why Re-crawl is off first', () => {
