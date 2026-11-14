@@ -11,6 +11,10 @@ import {
 import { getAuthUser } from '../../middleware/auth.js';
 import { validationHook } from '../../lib/validator.js';
 import type { AdminVariables } from './index.js';
+import {
+  SETTINGS_UPDATE_ACTION,
+  type AuditedSettings,
+} from './lib/settings-audit.js';
 
 // The one row of admin-wide settings. No row means the defaults, and the
 // first PATCH creates it. Every change is audited with its before and after.
@@ -56,10 +60,6 @@ const toSettings = (row: AdminSettingsRow | undefined): AdminSettings => ({
   updatedBy: row?.updatedBy ?? null,
 });
 
-// What the settings.update audit row records: every setting toSettings
-// returns, minus the row's own bookkeeping. Built by subtraction, so a new
-// setting joins the audit without anyone remembering to add it.
-type AuditedSettings = Omit<AdminSettings, 'updatedAt' | 'updatedBy'>;
 const toAuditedSettings = ({
   updatedAt: _updatedAt,
   updatedBy: _updatedBy,
@@ -128,7 +128,7 @@ settingsAdminRouter.patch(
     }
 
     const after = toSettings(row);
-    ctx.set('auditAction', 'settings.update');
+    ctx.set('auditAction', SETTINGS_UPDATE_ACTION);
     ctx.set('auditTargetId', 'admin_settings');
     ctx.set('auditActorId', userId);
     ctx.set('auditMeta', {

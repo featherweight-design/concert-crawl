@@ -1,20 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { areaOfAction, areaOfAuditRow } from './audit-area.js';
+import {
+  SETTINGS_UPDATE_ACTION,
+  type AuditedSettings,
+} from './settings-audit.js';
 
-const SETTINGS: {
-  llmMonthlyBudgetUsd: number | null;
-  llmBudgetWarnAtPercent: number;
-  llmBudgetFallbackToStructured: boolean;
-  approvePricesMyself: boolean;
-} = {
+const SETTINGS: AuditedSettings = {
   llmMonthlyBudgetUsd: 20,
-  llmBudgetWarnAtPercent: 80,
+  llmBudgetWarnAtPercent: 75,
   llmBudgetFallbackToStructured: false,
   approvePricesMyself: false,
 };
 
-const save = (changes: Partial<typeof SETTINGS>) => ({
-  action: 'settings.update',
+const save = (changes: Partial<AuditedSettings>) => ({
+  action: SETTINGS_UPDATE_ACTION,
   metadata: { before: SETTINGS, after: { ...SETTINGS, ...changes } },
 });
 
@@ -59,7 +58,7 @@ describe('areaOfAuditRow', () => {
       { before: { approvePricesMyself: false }, after: [true] },
     ],
   ])('files a save with %s metadata under Health', (_label, metadata) => {
-    expect(areaOfAuditRow({ action: 'settings.update', metadata })).toBe(
+    expect(areaOfAuditRow({ action: SETTINGS_UPDATE_ACTION, metadata })).toBe(
       'health',
     );
   });

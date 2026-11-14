@@ -1,22 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  inArray,
-  like,
-  lt,
-  not,
-  or,
-  sql,
-} from 'drizzle-orm';
+import { and, desc, eq, gte, like, lt, not, or, sql } from 'drizzle-orm';
 import { auditLog, db, userProfiles } from '@concert-crawl/db';
 import { AUDIT_AREAS, type AuditLogItem } from '@concert-crawl/types';
 import { handleQuerySchema, validationHook } from '../../lib/validator.js';
-import { areaOfAuditRow, prefixesOfAreas } from './lib/audit-area.js';
+import { areaOfAuditRow, auditAreaFilter, isRecord } from './lib/audit-area.js';
 import { resolveAuditTargets } from './lib/audit-targets.js';
 import type { AdminVariables } from './index.js';
 
@@ -102,9 +91,6 @@ const decodeCursor = (raw: string): { at: Date; id: string } | null => {
   }
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
 auditLogAdminRouter.get(
   '/',
   zValidator('query', querySchema, validationHook),
@@ -143,10 +129,10 @@ auditLogAdminRouter.get(
             : eq(userProfiles.handle, actorHandle),
           area === undefined
             ? undefined
-            : inArray(
-                sql`split_part(${auditLog.action}, '.', 1)`,
-                prefixesOfAreas(area),
-              ),
+            : auditAreaFilter(area, {
+                action: auditLog.action,
+                metadata: auditLog.metadata,
+              }),
           since === undefined
             ? undefined
             : gte(auditLog.createdAt, new Date(since)),

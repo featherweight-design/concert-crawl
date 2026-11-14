@@ -267,6 +267,66 @@ describe('GET /v1/admin/audit-log', () => {
     expect(areaOf.get('userXemail.shown')).toBeNull();
   });
 
+  it('files a settings save by what changed, in the filter as in the column', async () => {
+    setAuth('admin');
+    const settings = {
+      llmMonthlyBudgetUsd: 20,
+      llmBudgetWarnAtPercent: 75,
+      llmBudgetFallbackToStructured: false,
+      approvePricesMyself: false,
+    };
+    const saved = (changes: Record<string, unknown>) => ({
+      actorId: 'test-admin-1',
+      action: 'settings.update',
+      targetId: 'admin_settings',
+      metadata: { before: settings, after: { ...settings, ...changes } },
+    });
+    const [toggle, budget, mixed, unchanged, malformed, price] = await testDb
+      .insert(auditLog)
+      .values([
+        { ...saved({ approvePricesMyself: true }), createdAt: at(6) },
+        { ...saved({ llmMonthlyBudgetUsd: 50 }), createdAt: at(5) },
+        {
+          ...saved({ approvePricesMyself: true, llmMonthlyBudgetUsd: null }),
+          createdAt: at(4),
+        },
+        { ...saved({}), createdAt: at(3) },
+        {
+          actorId: 'test-admin-1',
+          action: 'settings.update',
+          metadata: { before: null, after: { approvePricesMyself: true } },
+          createdAt: at(2),
+        },
+        {
+          actorId: 'system:crawler',
+          action: 'price.promoted',
+          createdAt: at(1),
+        },
+      ])
+      .returning({ id: auditLog.id });
+
+    const ids = async (query: string) =>
+      (await list(query)).body.data.map((row) => row.id);
+
+    expect(await ids('?area=prices')).toEqual([price?.id, toggle?.id]);
+    expect(await ids('?area=health')).toEqual([
+      malformed?.id,
+      unchanged?.id,
+      mixed?.id,
+      budget?.id,
+    ]);
+    // Both areas together is every row, once.
+    expect(await ids('?area=prices,health')).toHaveLength(6);
+
+    const all = await list();
+    const areaOf = new Map(all.body.data.map((row) => [row.id, row.area]));
+    expect(areaOf.get(toggle?.id ?? '')).toBe('prices');
+    expect(areaOf.get(budget?.id ?? '')).toBe('health');
+    expect(areaOf.get(mixed?.id ?? '')).toBe('health');
+    expect(areaOf.get(unchanged?.id ?? '')).toBe('health');
+    expect(areaOf.get(malformed?.id ?? '')).toBe('health');
+  });
+
   it('rejects an unknown area with 400', async () => {
     setAuth('admin');
     expect((await list('?area=billing')).status).toBe(400);
