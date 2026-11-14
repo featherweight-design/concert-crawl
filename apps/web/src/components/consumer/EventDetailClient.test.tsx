@@ -1794,4 +1794,94 @@ describe('EventDetailPriceBlock price check', () => {
     );
     expect(screen.getByText('VIP')).toBeTruthy();
   });
+
+  // Every priced event carries priceByTier, which routes to the multi-tier
+  // branch; the check card used to be reachable only from the legacy flat
+  // branch, so it never drew. A single-tier event under a check shows it.
+  const headline = (id: string) => ({
+    submissionId: id,
+    priceMin: '44',
+    priceMax: null,
+    vendor: 'Ticketmaster' as const,
+    sourceCategory: 'standard' as const,
+    submitterHandle: 'hugh',
+    observedAt: '2026-11-01T12:00:00.000Z',
+    approvedAt: '2026-11-01T12:00:00.000Z',
+    approvalKind: 'fan' as const,
+    confirmsCount: 2,
+  });
+  const counterOn = (parentId: string): TierCounter => ({
+    id: `counter-on-${parentId}`,
+    parentSubmissionId: parentId,
+    floor: 52,
+    submitter: { handle: 'rae' },
+    submittedAt: '2026-11-01T12:00:00.000Z',
+    lastAdminActionAt: null,
+    lastAdminActionKind: null,
+    pendingCount: 1,
+    viewerAction: 'submit_update',
+    viewerCounterId: null,
+  });
+
+  it('draws the check card for a single-tier event with a headline under a check', () => {
+    const counter = counterOn('parent-1');
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceByTier: [
+        makeTierBlock({
+          tier: 'GA',
+          headline: headline('parent-1'),
+          counterSubmission: counter,
+        }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.getByTestId('disputed-price-card')).toBeTruthy();
+    expect(screen.getByTestId('proposed-price').textContent).toBe('$52?');
+    // The pending surface's "#counter-<id>" pointer lands on the card.
+    expect(document.getElementById('counter-counter-on-parent-1')).toBe(
+      screen.getByTestId('disputed-price-card'),
+    );
+  });
+
+  it('keeps the live card on a multi-tier event, with an anchor for the pointer to land on', () => {
+    const counter = counterOn('parent-1');
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceByTier: [
+        makeTierBlock({
+          tier: 'GA',
+          headline: headline('parent-1'),
+          counterSubmission: counter,
+        }),
+        makeTierBlock({ tier: 'VIP', headline: headline('parent-2') }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.queryByTestId('disputed-price-card')).toBeNull();
+    expect(
+      document.getElementById('counter-counter-on-parent-1'),
+    ).not.toBeNull();
+  });
+
+  it('draws no anchor and no check card when no tier is under a check', () => {
+    const event = buildBaseEvent({
+      ticketPriceMin: '44.00',
+      priceSource: 'community',
+      priceByTier: [
+        makeTierBlock({ tier: 'GA', headline: headline('parent-1') }),
+      ],
+    });
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    );
+    expect(screen.queryByTestId('disputed-price-card')).toBeNull();
+    expect(screen.queryByTestId('counter-anchor')).toBeNull();
+  });
 });
