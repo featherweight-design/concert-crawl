@@ -10,9 +10,11 @@ import type {
 } from '../emails/types.js';
 import {
   buildTestEmail,
+  testEmailSubject,
   type TestEmailFromCategory,
   type TestEmailKey,
 } from '../emails/test-fixtures.js';
+import type { AdminTestEmailFailureReason } from '@concert-crawl/types';
 import { apiLogger } from './logger.js';
 
 const ADMIN_EMAIL_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>';
@@ -32,7 +34,7 @@ export type EmailSendResult =
   | { sent: true; resendId: string | null }
   | {
       sent: false;
-      reason: 'missing_api_key' | 'missing_admin_email' | 'send_failed';
+      reason: AdminTestEmailFailureReason;
       error?: unknown;
     };
 
@@ -308,7 +310,7 @@ export async function sendTestEmail(
     const response = await resend.emails.send({
       from: testEmailFrom(built.fromCategory),
       to: adminEmail,
-      subject: `[TEST] ${built.subject}`,
+      subject: testEmailSubject(built.subject),
       text: built.text,
       // Omit html entirely for text-only samples (e.g. invite_code) — sending
       // the plain text as html collapses whitespace/newlines in many clients.

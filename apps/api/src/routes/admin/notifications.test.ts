@@ -158,6 +158,27 @@ describe('POST /v1/admin/notifications/test-email', () => {
     expect(body.success).toBe(true);
     expect(body.data.sent).toBe(false);
     expect(body.data.reason).toBe('send_failed');
+    expect(body.data.error).toEqual({
+      name: 'Error',
+      message: 'network timeout',
+    });
+  });
+
+  it('masks each address when ADMIN_EMAIL lists several', async () => {
+    adminAuth();
+    vi.stubEnv('ADMIN_EMAIL', 'hugh@gmail.com, ops@concertcrawl.app');
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: true,
+      resendId: 'resend_many',
+    });
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    );
+
+    const body = await res.json();
+    expect(body.data.sentTo).toBe('h***@gmail.com, o***@concertcrawl.app');
   });
 
   it('defaults to the generic admin alert when no emailKey is given', async () => {
@@ -302,7 +323,7 @@ describe('GET /v1/admin/notifications/test-email/:emailKey/preview', () => {
     const body = await res.json();
     expect(body.data).toEqual({
       emailKey: 'crawl_failure',
-      subject: 'Crawl failing: Ogden Theatre',
+      subject: '[TEST] Crawl failing: Ogden Theatre',
       html: expect.stringContaining('failed 3 consecutive crawls'),
       text: expect.stringContaining('failed 3 consecutive crawls'),
     });
@@ -322,6 +343,22 @@ describe('GET /v1/admin/notifications/test-email/:emailKey/preview', () => {
       expect(body.data.subject.length, key).toBeGreaterThan(0);
       expect(body.data.text.length, key).toBeGreaterThan(0);
     }
+  });
+
+  it('previews the generic admin alert exactly as the send builds it', async () => {
+    adminAuth();
+    const body = await (await preview('admin_alert')).json();
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: true,
+      resendId: null,
+    });
+    await createApp().request('/v1/admin/notifications/test-email', {
+      method: 'POST',
+    });
+    const [sent] = mockSendAdminAlertEmail.mock.calls[0];
+    expect(body.data.subject).toBe(sent.subject);
+    expect(body.data.html).toContain('admin user admin_123');
+    expect(body.data.text).toContain('admin user admin_123');
   });
 
   it('keeps html empty for a text-only email', async () => {
