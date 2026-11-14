@@ -35,7 +35,9 @@ export const Panel = ({
     <div
       className={phoneCompact ? 'admin-panel-phone-compact' : undefined}
       style={{
-        background: 'var(--bg-elevated)',
+        // The boards fill every card #11162E (`--surface-1`), a step above the
+        // page's `--bg-elevated`.
+        background: 'var(--surface-1)',
         border: '1px solid var(--border)',
         borderRadius: 14,
         overflow: 'hidden',
