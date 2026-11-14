@@ -226,15 +226,68 @@ describe('BottomSheet', () => {
 
   it('closes when the scrim is clicked', () => {
     const onClose = vi.fn();
-    const { container } = render(
+    render(
       <BottomSheet open onClose={onClose} title="test">
         <button>inside</button>
       </BottomSheet>,
     );
-    const scrim = container.querySelector('[aria-hidden="true"]');
-    expect(scrim).not.toBeNull();
+    // The sheet is portalled, so the scrim is the dialog's sibling under
+    // the body rather than anything inside the render container.
+    const scrim = screen.getByRole('dialog').previousElementSibling;
+    expect(scrim?.getAttribute('aria-hidden')).toBe('true');
     fireEvent.click(scrim!);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Inline, z-[90] ranks only inside the nearest stacking context: in the
+  // event page's `isolate` hero, later page cards drew over the share sheet.
+  it('portals out of the mounting tree to the body', () => {
+    const { container } = render(
+      <div className="isolate">
+        <BottomSheet open onClose={() => {}} title="test">
+          <button>inside</button>
+        </BottomSheet>
+      </div>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(container.contains(dialog)).toBe(false);
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+  });
+
+  it('hosts inside the admin theme scope when there is one', () => {
+    render(
+      <div data-admin-theme="dark">
+        <span>admin</span>
+      </div>,
+    );
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    );
+    expect(
+      screen.getByRole('dialog').closest('[data-admin-theme]'),
+    ).not.toBeNull();
+  });
+
+  it('still focuses its close and hands focus back to the trigger', () => {
+    const Harness = ({ open }: { open: boolean }) => (
+      <>
+        <button>trigger</button>
+        <BottomSheet open={open} onClose={() => {}} title="test">
+          <button>inside</button>
+        </BottomSheet>
+      </>
+    );
+    const { rerender } = render(<Harness open={false} />);
+    const trigger = screen.getByRole('button', { name: 'trigger' });
+    trigger.focus();
+    rerender(<Harness open />);
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Close' }),
+    );
+    rerender(<Harness open={false} />);
+    expect(document.activeElement).toBe(trigger);
   });
 
   // The Add sheet's frame (`04/add-*`): 92% tall on the phone, a drawn handle,
