@@ -21,9 +21,34 @@ import { OperationsClient } from './OperationsClient';
 // log's load effect on every render.
 const auth = vi.hoisted(() => ({ getToken: async () => 'token' }));
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => auth }));
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+// The tab lives in the URL: `replace` writes the search, `useSearchParams`
+// reads it back and re-renders, as the app router does.
+const nav = vi.hoisted(() => ({
+  search: '',
+  listeners: new Set<() => void>(),
 }));
+vi.mock('next/navigation', async () => {
+  const { useSyncExternalStore } = await import('react');
+  const subscribe = (listener: () => void) => {
+    nav.listeners.add(listener);
+    return () => {
+      nav.listeners.delete(listener);
+    };
+  };
+  const read = () => nav.search;
+  return {
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: (href: string) => {
+        nav.search = new URL(href, 'http://localhost').search;
+        nav.listeners.forEach((listener) => listener());
+      },
+      refresh: vi.fn(),
+    }),
+    useSearchParams: () =>
+      new URLSearchParams(useSyncExternalStore(subscribe, read, read)),
+  };
+});
 
 const COPY = ADMIN_COPY.operations;
 
@@ -50,7 +75,7 @@ const item = (over: Partial<AuditLogItem> = {}): AuditLogItem => ({
   ...over,
 });
 
-let logPage: (url: URL) => Response;
+let logPage: (url: URL, init?: RequestInit) => Response | Promise<Response>;
 let fetchMock: ReturnType<typeof vi.fn>;
 const logCalls = () =>
   fetchMock.mock.calls
@@ -67,10 +92,11 @@ const setPhone = (matches: boolean) => {
 
 beforeEach(() => {
   setPhone(false);
+  nav.search = '';
   logPage = () => json({ success: true, data: [item()], nextCursor: null });
-  fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
-    if (url.pathname === '/v1/admin/audit-log') return logPage(url);
+    if (url.pathname === '/v1/admin/audit-log') return logPage(url, init);
     return json({ success: true, data: [] });
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -78,16 +104,30 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
-const renderLog = () => render(<OperationsClient initialTab="log" />);
+const renderLog = () => {
+  nav.search = '?tab=log';
+  return render(<OperationsClient />);
+};
+
+/** A page of `count` rows, ids prefixed by `page`. */
+const rowsPage = (page: number, count: number, nextCursor: string | null) =>
+  json({
+    success: true,
+    data: Array.from({ length: count }, (_, i) =>
+      item({ id: `r${page}-${i}` }),
+    ),
+    nextCursor,
+  });
 
 // The Feedback tab's count and inbox are OperationsClient.test.tsx's.
 describe('Operations shell', () => {
   it('draws Feedback and Activity log, and no Emails', () => {
-    render(<OperationsClient initialTab="feedback" />);
+    render(<OperationsClient />);
     expect(
       screen.getByRole('heading', { level: 1, name: COPY.title }),
     ).toBeInTheDocument();
@@ -104,9 +144,23 @@ describe('Operations shell', () => {
   });
 
   it('switches to the Activity log', async () => {
-    render(<OperationsClient initialTab="feedback" />);
+    render(<OperationsClient />);
     fireEvent.click(screen.getByRole('tab', { name: COPY.tabs.log }));
     expect(await screen.findByTestId('activity-log-table')).toBeInTheDocument();
+    expect(nav.search).toBe('?tab=log');
+  });
+
+  // The tab is the URL's, so a quick double switch lands on the last one.
+  it('lands on the last tab of a quick double switch', async () => {
+    render(<OperationsClient />);
+    fireEvent.click(screen.getByRole('tab', { name: COPY.tabs.log }));
+    fireEvent.click(screen.getByRole('tab', { name: COPY.tabs.feedback }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('tab', { name: COPY.tabs.feedback }),
+      ).toHaveAttribute('aria-selected', 'true'),
+    );
+    expect(screen.queryByTestId('activity-log-table')).not.toBeInTheDocument();
   });
 });
 
@@ -132,18 +186,12 @@ describe('Activity log', () => {
     expect(midnight).toBe('00:00');
   });
 
-  it('walks the cursor and stops at 1000 rows with a warning', async () => {
+  it('walks the cursor, stops at 1000 rows, warns and says so', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let page = 0;
     logPage = () => {
       page += 1;
-      return json({
-        success: true,
-        data: Array.from({ length: 100 }, (_, i) =>
-          item({ id: `r${page}-${i}` }),
-        ),
-        nextCursor: `cursor-${page}`,
-      });
+      return rowsPage(page, 100, `cursor-${page}`);
     };
     renderLog();
     await waitFor(() =>
@@ -152,14 +200,125 @@ describe('Activity log', () => {
     expect(logCalls()).toHaveLength(10);
     expect(logCalls()[1]?.searchParams.get('cursor')).toBe('cursor-1');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('1000'));
+    expect(screen.getByTestId('activity-log-capped')).toHaveTextContent(
+      COPY.log.capped,
+    );
+  });
+
+  it('reads a day of exactly 1000 rows whole: no warning, no notice', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let page = 0;
+    logPage = () => {
+      page += 1;
+      return rowsPage(page, 100, page < 10 ? `cursor-${page}` : null);
+    };
+    renderLog();
+    await waitFor(() =>
+      expect(screen.getAllByTestId('activity-log-row')).toHaveLength(1000),
+    );
+    expect(logCalls()).toHaveLength(10);
+    expect(warn).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('activity-log-capped')).not.toBeInTheDocument();
+  });
+
+  it('stops at 10 pages even when the pages run short', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let page = 0;
+    logPage = () => {
+      page += 1;
+      return rowsPage(page, 5, `cursor-${page}`);
+    };
+    renderLog();
+    await waitFor(() =>
+      expect(screen.getAllByTestId('activity-log-row')).toHaveLength(50),
+    );
+    expect(logCalls()).toHaveLength(10);
+    expect(screen.getByTestId('activity-log-capped')).toBeInTheDocument();
+  });
+
+  it('ends the walk at an empty page, even one with a cursor', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    logPage = () => json({ success: true, data: [], nextCursor: 'again' });
+    renderLog();
+    expect(await screen.findByTestId('activity-log-empty')).toBeInTheDocument();
+    expect(logCalls()).toHaveLength(1);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  // All or nothing for a day: the rows before a failed page are not drawn.
+  it("falls into Couldn't load when a later page fails, with no rows", async () => {
+    let page = 0;
+    logPage = () => {
+      page += 1;
+      return page === 1
+        ? rowsPage(page, 100, 'cursor-1')
+        : json({ success: false }, 500);
+    };
+    renderLog();
+    expect(await screen.findByTestId('couldnt-load')).toBeInTheDocument();
+    expect(logCalls()).toHaveLength(2);
+    expect(screen.queryAllByTestId('activity-log-row')).toHaveLength(0);
+  });
+
+  it('aborts the walk on unmount, silently', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let pending: AbortSignal | null = null;
+    let page = 0;
+    logPage = (_url, init) => {
+      page += 1;
+      if (page === 1) return rowsPage(page, 100, 'cursor-1');
+      const signal = init?.signal ?? null;
+      pending = signal;
+      // As fetch does: a request rejects with an AbortError when aborted.
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener('abort', () =>
+          reject(new DOMException('Aborted', 'AbortError')),
+        );
+      });
+    };
+    const { unmount } = renderLog();
+    await waitFor(() => expect(pending).not.toBeNull());
+    unmount();
+    expect(pending).toHaveProperty('aborted', true);
+    await Promise.resolve();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('reads the new day when the tab comes back after midnight', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-14T18:00:00Z'));
+    renderLog();
+    await screen.findByTestId('activity-log-table');
+    // Back the same day: nothing to read.
+    fireEvent(document, new Event('visibilitychange'));
+    expect(logCalls()).toHaveLength(1);
+
+    vi.setSystemTime(new Date('2026-11-15T18:00:00Z'));
+    fireEvent(document, new Event('visibilitychange'));
+    await waitFor(() => expect(logCalls()).toHaveLength(2));
+    expect(logCalls()[1]?.searchParams.get('since')).toBe(
+      '2026-11-15T07:00:00.000Z',
+    );
+    expect(await screen.findByTestId('activity-log-table')).toBeInTheDocument();
+  });
+
+  it('draws the desktop log as a table', async () => {
+    renderLog();
+    const table = await screen.findByRole('table', { name: COPY.tabs.log });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
+    // The header row and one row.
+    expect(within(table).getAllByRole('row')).toHaveLength(2);
+    expect(within(table).getAllByRole('cell')).toHaveLength(4);
   });
 
   // `07/activity-log` draws Anyone and Today highlighted, Any page not. No
-  // menu is drawn for them, so they are static and read the whole day.
+  // menu is drawn for them, so they are static text and read the whole day.
   it('draws Anyone, Any page and Today as static pills', async () => {
     renderLog();
     await screen.findByTestId('activity-log-table');
-    const filters = screen.getByRole('group', { name: COPY.log.filtersLabel });
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    const filters = screen.getByText(COPY.log.anyone).parentElement;
+    if (!filters) throw new Error('no pills');
     expect(filters).toHaveTextContent(
       `${COPY.log.anyone}${COPY.log.anyPage}${COPY.log.today}`,
     );
@@ -204,9 +363,7 @@ describe('Activity log', () => {
     const card = (await screen.findAllByTestId('activity-log-card'))[0];
     expect(card).toHaveTextContent('Revoked invite code SHARED1');
     expect(card).toHaveTextContent(/@hugh · \d{1,2}:\d{2} [AP]M · People/);
-    expect(
-      screen.queryByRole('group', { name: COPY.log.filtersLabel }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(COPY.log.anyone)).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('operations-tabs')).getByRole('tab', {
         name: 'Log',
@@ -334,6 +491,69 @@ describe('sentences', () => {
       'Revoked invite code (deleted)',
     ],
     [{ action: 'venue.new_thing', target: null }, 'Venue new thing'],
+    // A target the API could not resolve keeps the name slot filled.
+    [
+      { action: 'venue.update', targetId: 'v1', target: null },
+      'Edited (deleted)',
+    ],
+    [{ action: 'venue.update', targetId: null, target: null }, 'Edited'],
+    // A toggle whose row didn't keep its flag reads neutrally.
+    [
+      {
+        action: 'feature_flag.toggle',
+        target: { kind: 'feature-flag', name: 'Crews', href: null },
+        metadata: null,
+      },
+      'Changed the Crews setting',
+    ],
+    [
+      {
+        action: 'feature_flag.toggle',
+        target: { kind: 'feature-flag', name: 'Crews', href: null },
+        metadata: { enabled: false },
+      },
+      'Turned Crews off',
+    ],
+    [
+      {
+        action: 'artist.visibility.update',
+        target: { kind: 'artist', name: 'Wilco', href: null },
+        metadata: { hidden: true },
+      },
+      'Hid Wilco',
+    ],
+    [
+      {
+        action: 'artist.visibility.update',
+        target: { kind: 'artist', name: 'Wilco', href: null },
+        metadata: { hidden: false },
+      },
+      'Showed Wilco again',
+    ],
+    [
+      {
+        action: 'artist.visibility.update',
+        target: { kind: 'artist', name: 'Wilco', href: null },
+        metadata: null,
+      },
+      'Changed whether Wilco is hidden',
+    ],
+    [
+      {
+        action: 'user.test_account.set',
+        target: { kind: 'person', name: '@sam', href: null },
+        metadata: { isTest: false },
+      },
+      'Untagged @sam as a test account',
+    ],
+    [
+      {
+        action: 'user.test_account.set',
+        target: { kind: 'person', name: '@sam', href: null },
+        metadata: {},
+      },
+      'Changed whether @sam is a test account',
+    ],
   ])('reads %j as "%s"', (over, expected) => {
     expect(words(over)).toBe(expected);
   });

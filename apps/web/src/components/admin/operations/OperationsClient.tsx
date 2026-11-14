@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FeedbackView,
   type FeedbackCounts,
@@ -9,7 +9,11 @@ import {
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminTabs, useIsPhoneResolved } from '@/components/admin/primitives';
 import { ActivityLog } from './ActivityLog';
-import { OPERATIONS_TABS, type OperationsTab } from './operations-tabs';
+import {
+  OPERATIONS_TABS,
+  operationsTabOf,
+  type OperationsTab,
+} from './operations-tabs';
 
 export { OPERATIONS_TABS, operationsTabOf } from './operations-tabs';
 export type { OperationsTab } from './operations-tabs';
@@ -43,13 +47,11 @@ const UnreadCount = ({ count, phone }: { count: number; phone: boolean }) => (
  * own so the page has one h1. The Feedback tab's count is the inbox's own,
  * reported once it has loaded; until then (or at 0) the tab draws none.
  */
-export const OperationsClient = ({
-  initialTab = 'feedback',
-}: {
-  initialTab?: OperationsTab;
-}) => {
+export const OperationsClient = () => {
   const router = useRouter();
-  const [tab, setTab] = useState<OperationsTab>(initialTab);
+  // The URL is the one source of the tab, on the server render too: a copy
+  // in state could be overwritten by a stale value after a quick double switch.
+  const tab = operationsTabOf(useSearchParams().get('tab'));
   const [feedbackUnread, setFeedbackUnread] = useState<number | null>(null);
   const handleFeedbackCounts = useCallback(
     ({ unread }: FeedbackCounts) => setFeedbackUnread(unread),
@@ -60,11 +62,7 @@ export const OperationsClient = ({
   const resolvedPhone = useIsPhoneResolved();
   const isPhone = resolvedPhone === true;
 
-  // A link to `?tab=` while the page is mounted changes the prop, not the mount.
-  useEffect(() => setTab(initialTab), [initialTab]);
-
   const onTab = (next: OperationsTab) => {
-    setTab(next);
     router.replace(
       next === 'feedback'
         ? '/admin/operations'

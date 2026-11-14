@@ -10,7 +10,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { CouldntLoad, PersonAvatar } from '@/components/admin/primitives';
 import { pill } from '@/components/admin/crawl-runs/RunsList';
 import { mtTodayWindow } from '@/components/admin/health/health-model';
-import { readLogDay } from './activity-api';
+import { readLogDay, type LogDay } from './activity-api';
 import {
   AREA_LABELS,
   actorLabel,
@@ -78,66 +78,82 @@ const LogTable = ({ rows }: { rows: AuditLogItem[] }) => (
       overflow: 'hidden',
     }}
   >
-    <div style={{ display: 'flex', gap: 12, padding: '12px 18px' }}>
-      <div style={{ width: 80, ...MONO_HEAD }}>{COPY.columns.when}</div>
-      <div style={{ width: 130, ...MONO_HEAD }}>{COPY.columns.who}</div>
-      <div style={{ flex: 1, ...MONO_HEAD }}>{COPY.columns.what}</div>
-      <div style={{ width: 120, ...MONO_HEAD }}>{COPY.columns.where}</div>
-    </div>
-    {rows.map((item) => (
+    {/* Divs with table roles, not a <table>: the columns are flex widths. */}
+    <div role="table" aria-label={ADMIN_COPY.operations.tabs.log}>
       <div
-        key={item.id}
-        data-testid="activity-log-row"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '10px 18px',
-          borderTop: BORDER,
-        }}
+        role="row"
+        style={{ display: 'flex', gap: 12, padding: '12px 18px' }}
       >
-        <div style={{ width: 80, minWidth: 0 }}>
-          <span
-            style={{
-              fontSize: 12.5,
-              color: 'var(--fg-muted)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {logTime(item.createdAt)}
-          </span>
+        <div role="columnheader" style={{ width: 80, ...MONO_HEAD }}>
+          {COPY.columns.when}
         </div>
-        <div
-          style={{
-            width: 130,
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-          }}
-        >
-          <Avatar item={item} size={24} />
-          <span
-            style={{
-              minWidth: 0,
-              fontSize: 13.5,
-              fontWeight: 700,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {actorLabel(item)}
-          </span>
+        <div role="columnheader" style={{ width: 130, ...MONO_HEAD }}>
+          {COPY.columns.who}
         </div>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 13.5 }}>
-          <What item={item} />
+        <div role="columnheader" style={{ flex: 1, ...MONO_HEAD }}>
+          {COPY.columns.what}
         </div>
-        <div style={{ width: 120, minWidth: 0, fontSize: 12.5 }}>
-          <Where item={item} />
+        <div role="columnheader" style={{ width: 120, ...MONO_HEAD }}>
+          {COPY.columns.where}
         </div>
       </div>
-    ))}
+      {rows.map((item) => (
+        <div
+          key={item.id}
+          role="row"
+          data-testid="activity-log-row"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '10px 18px',
+            borderTop: BORDER,
+          }}
+        >
+          <div role="cell" style={{ width: 80, minWidth: 0 }}>
+            <span
+              style={{
+                fontSize: 12.5,
+                color: 'var(--fg-muted)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {logTime(item.createdAt)}
+            </span>
+          </div>
+          <div
+            role="cell"
+            style={{
+              width: 130,
+              minWidth: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <Avatar item={item} size={24} />
+            <span
+              style={{
+                minWidth: 0,
+                fontSize: 13.5,
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {actorLabel(item)}
+            </span>
+          </div>
+          <div role="cell" style={{ flex: 1, minWidth: 0, fontSize: 13.5 }}>
+            <What item={item} />
+          </div>
+          <div role="cell" style={{ width: 120, minWidth: 0, fontSize: 12.5 }}>
+            <Where item={item} />
+          </div>
+        </div>
+      ))}
+    </div>
     <div
       style={{
         padding: '12px 18px',
@@ -237,41 +253,64 @@ const staticPill = (on: boolean): CSSProperties => ({
  */
 export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   const { getToken } = useAuth();
-  const [rows, setRows] = useState<AuditLogItem[] | null>(null);
+  const [day, setDay] = useState<LogDay | null>(null);
   const [failed, setFailed] = useState(false);
 
-  // Only the newest read may write: a slow older one must not overwrite it.
-  const latest = useRef(0);
+  // Only the newest read may write, and starting one stops the one before:
+  // its controller is the current one until the next read or the unmount.
+  const current = useRef<AbortController | null>(null);
+  // The start of the Mountain Time day on screen, to tell when it has passed.
+  const shownDayStart = useRef<number | null>(null);
   const load = useCallback(async () => {
-    const mine = ++latest.current;
+    current.current?.abort();
+    const mine = new AbortController();
+    current.current = mine;
     setFailed(false);
-    setRows(null);
+    setDay(null);
     try {
-      const day = mtTodayWindow(new Date());
-      const next = await readLogDay(getToken, {
-        since: day.start,
-        until: day.end,
-      });
-      if (mine !== latest.current) return;
-      setRows(next);
+      const today = mtTodayWindow(new Date());
+      shownDayStart.current = today.start;
+      const next = await readLogDay(
+        getToken,
+        { since: today.start, until: today.end },
+        mine.signal,
+      );
+      if (mine !== current.current) return;
+      setDay(next);
     } catch {
-      if (mine === latest.current) setFailed(true);
+      // An aborted walk (an unmount, or a newer read) is not a failure.
+      if (mine !== current.current || mine.signal.aborted) return;
+      // A failed page drops the rows read before it, on purpose: the log is
+      // all or nothing for a day, never a partial day that looks whole.
+      setFailed(true);
     }
   }, [getToken]);
 
   useEffect(() => {
     void load();
+    return () => current.current?.abort();
   }, [load]);
+
+  // A tab left open overnight shows yesterday: read the new day on return.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (shownDayStart.current === null) return;
+      if (mtTodayWindow(new Date()).start === shownDayStart.current) return;
+      void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [load]);
+
+  const rows = day?.rows ?? null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* `07/activity-log-mobile` draws no filter pills. */}
+      {/* `07/activity-log-mobile` draws no filter pills. They are text, not
+          controls, so they carry no group role or label. */}
       {!isPhone && (
-        <div
-          role="group"
-          aria-label={COPY.filtersLabel}
-          style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
-        >
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <span style={staticPill(true)}>{COPY.anyone}</span>
           <span style={staticPill(false)}>{COPY.anyPage}</span>
           {/* The day is always today until a day picker is drawn. */}
@@ -287,10 +326,18 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
         <ActivityLogRowsSkeleton />
       ) : rows.length === 0 ? (
         <EmptyDay />
-      ) : isPhone ? (
-        <LogCards rows={rows} />
       ) : (
-        <LogTable rows={rows} />
+        <>
+          {day?.truncated && (
+            <p
+              data-testid="activity-log-capped"
+              style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-subtle)' }}
+            >
+              {COPY.capped}
+            </p>
+          )}
+          {isPhone ? <LogCards rows={rows} /> : <LogTable rows={rows} />}
+        </>
       )}
     </div>
   );

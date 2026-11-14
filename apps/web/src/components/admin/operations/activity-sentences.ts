@@ -83,7 +83,15 @@ export const sentenceFor = (item: AuditLogItem): Sentence => {
             role: text(meta?.['role']),
           })
         : entry;
-  if (item.target === null) return { lead: lead.trimEnd(), name: null, tail };
+  if (item.target === null) {
+    // A known sentence with a slot for a name (its lead ends in a space)
+    // whose row names a target the API could not resolve: it was deleted, or
+    // the lookup failed. The slot still gets a name, so it reads whole.
+    const wantsName = entry !== null && /\s$/.test(lead);
+    if (wantsName && item.targetId !== null && item.targetId !== '')
+      return { lead, name: COPY.gone, tail };
+    return { lead: lead.trimEnd(), name: null, tail };
+  }
   return { lead, name: item.target.name ?? COPY.gone, tail };
 };
 

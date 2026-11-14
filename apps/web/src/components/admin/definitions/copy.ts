@@ -3361,7 +3361,6 @@ export const ADMIN_COPY = {
     // `07/activity-log-mobile` names the tab "Log" in the phone's segments.
     phoneTabs: { feedback: 'Feedback', log: 'Log' },
     log: {
-      filtersLabel: 'Filter the log',
       anyone: 'Anyone',
       anyPage: 'Any page',
       today: 'Today',
@@ -3369,9 +3368,12 @@ export const ADMIN_COPY = {
       footer:
         'Every admin change is kept, with who made it. Each row links to the thing it changed.',
       emptyTitle: 'No changes yet today',
+      // Over the rows when the day passed the read's cap.
+      capped: 'Showing the newest 1,000 changes from today.',
       system: 'System',
       noPage: '—',
-      // A target that has since been deleted: the API sends no name for it.
+      // A target that has since been deleted (or couldn't be looked up): the
+      // API sends no name for it, or no target at all.
       gone: '(deleted)',
       // An action this build has no sentence for: its key, made readable.
       unknown: (words: string) =>
@@ -3384,10 +3386,13 @@ export const ADMIN_COPY = {
         'artist.name.unlock': ['Handed the name of ', ' back to auto-repair'],
         'artist.name.lock': ['Locked the name of ', ''],
         'artist.reports.dismiss': ['Dismissed the reports on ', ''],
+        // `on` is the `hidden` flag; null when the row didn't keep it.
         'artist.visibility.update': (args: { on: boolean | null }) =>
-          args.on === false
-            ? (['Showed ', ' again'] as const)
-            : (['Hid ', ''] as const),
+          args.on === null
+            ? (['Changed whether ', ' is hidden'] as const)
+            : args.on
+              ? (['Hid ', ''] as const)
+              : (['Showed ', ' again'] as const),
         'contest.resolve': ['Answered a price check on ', ''],
         'contest.defer': ['Put off a price check on ', ''],
         'crawl.daily_cron': ['Started the daily crawl', ''],
@@ -3418,7 +3423,9 @@ export const ADMIN_COPY = {
         'event.update': ['Edited ', ''],
         'event.verify': ['Verified ', ''],
         'feature_flag.toggle': (args: { on: boolean | null }) =>
-          ['Turned ', args.on ? ' on' : ' off'] as const,
+          args.on === null
+            ? (['Changed the ', ' setting'] as const)
+            : (['Turned ', args.on ? ' on' : ' off'] as const),
         'feedback.update': ['Updated a feedback item', ''],
         'invite_code.create': ['Made invite code ', ''],
         'invite_code.edit': ['Edited invite code ', ''],
@@ -3449,9 +3456,11 @@ export const ADMIN_COPY = {
         'user.seeded': ['Added ', ''],
         'user.sessions_revoked': ['Signed ', ' out everywhere'],
         'user.test_account.set': (args: { on: boolean | null }) =>
-          args.on === false
-            ? (['Untagged ', ' as a test account'] as const)
-            : (['Tagged ', ' as a test account'] as const),
+          args.on === null
+            ? (['Changed whether ', ' is a test account'] as const)
+            : args.on
+              ? (['Tagged ', ' as a test account'] as const)
+              : (['Untagged ', ' as a test account'] as const),
         'venue.create': ['Added ', ''],
         'venue.update': ['Edited ', ''],
         'venue.delete': ['Deleted ', ''],

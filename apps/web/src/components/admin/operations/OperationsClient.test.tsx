@@ -13,6 +13,7 @@ const getToken = () => Promise.resolve('test-token');
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({ getToken }) }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(''),
 }));
 
 const COPY = ADMIN_COPY.operations;
