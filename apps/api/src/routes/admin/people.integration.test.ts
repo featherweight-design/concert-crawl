@@ -97,7 +97,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
-import { forgetPeopleScan, staffUserIds } from './people.js';
+import { forgetPeopleScan, staffRoles } from './people.js';
 import { maskEmail } from '../../lib/mask-email.js';
 
 const app = createApp();
@@ -178,7 +178,10 @@ describe('admin people', () => {
       person('user_promoter', { publicMetadata: { role: 'promoter' } }),
       person('user_plain'),
     ];
-    expect((await staffUserIds()).sort()).toEqual(['user_admin', 'user_sub']);
+    expect([...(await staffRoles()).entries()].sort()).toEqual([
+      ['user_admin', 'admin'],
+      ['user_sub', 'sub_admin'],
+    ]);
   });
 
   it('sends each person their own avatar colours, null when none were chosen', async () => {

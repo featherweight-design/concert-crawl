@@ -2134,6 +2134,12 @@ export interface AuditLogActor {
   avatarSecondColor: AvatarColor | null;
   count: number;
   you: boolean;
+  /**
+   * Their staff role, for the menu's "Sub-admin ·" line; null for someone who
+   * changed something that day but is no longer staff (or when Clerk's scan
+   * is unavailable).
+   */
+  role: 'admin' | 'sub_admin' | null;
 }
 
 // ---------------------------------------------------------------------------

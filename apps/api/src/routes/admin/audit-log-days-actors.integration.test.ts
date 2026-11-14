@@ -9,7 +9,12 @@ interface TestAuth {
 
 const { authState, staff } = vi.hoisted(() => ({
   authState: { current: null as TestAuth | null },
-  staff: { ids: [] as string[], fail: false },
+  staff: {
+    ids: [] as string[],
+    // Everyone in `ids` is an admin unless listed here.
+    subAdmins: [] as string[],
+    fail: false,
+  },
 }));
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -21,16 +26,26 @@ vi.mock('@hono/clerk-auth', () => ({
 // Staff comes from People's Clerk scan; the scan itself is People's to test.
 vi.mock('./people.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./people.js')>()),
-  staffUserIds: async () => {
+  staffRoles: async () => {
     if (staff.fail) throw new Error('clerk down');
-    return staff.ids;
+    return new Map(
+      staff.ids.map((id) => [
+        id,
+        staff.subAdmins.includes(id) ? 'sub_admin' : 'admin',
+      ]),
+    );
   },
 }));
 
 import { auditLog } from '@concert-crawl/db';
 import type { AuditLogActor, AuditLogItem } from '@concert-crawl/types';
 import { createApp } from '../../app.js';
-import { clearTables, seedUserProfile } from '../../test/helpers/seed.js';
+import {
+  clearTables,
+  seedEvent,
+  seedUserProfile,
+  seedVenue,
+} from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 
 const app = createApp();
@@ -60,6 +75,7 @@ describe('GET /v1/admin/audit-log/days', () => {
   beforeEach(async () => {
     authState.current = null;
     staff.ids = [];
+    staff.subAdmins = [];
     staff.fail = false;
     await clearTables();
   });
@@ -116,6 +132,7 @@ describe('GET /v1/admin/audit-log/actors', () => {
   beforeEach(async () => {
     authState.current = null;
     staff.ids = [];
+    staff.subAdmins = [];
     staff.fail = false;
     await clearTables();
   });
@@ -133,6 +150,7 @@ describe('GET /v1/admin/audit-log/actors', () => {
     await seedUserProfile('former', { handle: 'zed' });
     await seedUserProfile('no-handle');
     staff.ids = [ME, 'sub-1', 'sub-2', 'no-handle'];
+    staff.subAdmins = ['sub-1', 'sub-2'];
 
     await seedRow('sub-1', mt('2026-11-10', 9));
     await seedRow('sub-1', mt('2026-11-10', 10));
@@ -151,10 +169,17 @@ describe('GET /v1/admin/audit-log/actors', () => {
         avatarSecondColor: null,
         count: 0,
         you: true,
+        role: 'admin',
       },
-      expect.objectContaining({ handle: 'sam', count: 2, you: false }),
-      expect.objectContaining({ handle: 'zed', count: 1 }),
-      expect.objectContaining({ handle: 'alex', count: 0 }),
+      expect.objectContaining({
+        handle: 'sam',
+        count: 2,
+        you: false,
+        role: 'sub_admin',
+      }),
+      // No longer staff, but changed something that day: no role.
+      expect.objectContaining({ handle: 'zed', count: 1, role: null }),
+      expect.objectContaining({ handle: 'alex', count: 0, role: 'sub_admin' }),
     ]);
   });
 
@@ -198,5 +223,85 @@ describe('GET /v1/admin/audit-log rows', () => {
       null,
       { avatarColor: 'signal', avatarSecondColor: 'accent' },
     ]);
+  });
+});
+
+// "Search the log" (addendum 6 #37, PR C).
+describe('GET /v1/admin/audit-log?search=', () => {
+  beforeEach(async () => {
+    authState.current = null;
+    staff.ids = [];
+    staff.subAdmins = [];
+    staff.fail = false;
+    await clearTables();
+    setAuth('admin');
+  });
+
+  const seedTargeted = (
+    actorId: string,
+    action: string,
+    targetId: string | null,
+    createdAt: Date,
+  ) => testDb.insert(auditLog).values({ actorId, action, targetId, createdAt });
+
+  const actionsFor = async (search: string): Promise<string[]> => {
+    const { status, data } = await get<AuditLogItem[]>(
+      `?search=${encodeURIComponent(search)}`,
+    );
+    expect(status).toBe(200);
+    return data.map((row) => row.action);
+  };
+
+  it("matches the action, the actor's handle and the target's name", async () => {
+    await seedUserProfile(ME, { handle: 'huey' });
+    await seedUserProfile('sub-1', { handle: 'sam' });
+    const venue = await seedVenue({ name: 'Levitt Pavilion' });
+    const event = await seedEvent(venue.id, { title: 'Vince Staples' });
+    await seedTargeted(ME, 'venue.crawl.pause', venue.id, mt('2026-11-10', 9));
+    await seedTargeted(ME, 'event.hide', event.id, mt('2026-11-10', 10));
+    await seedTargeted(
+      'sub-1',
+      'invite_code.revoke',
+      null,
+      mt('2026-11-10', 11),
+    );
+    await seedTargeted('sub-1', 'user.role.update', ME, mt('2026-11-10', 12));
+
+    expect(await actionsFor('levitt')).toEqual(['venue.crawl.pause']);
+    expect(await actionsFor('STAPLES')).toEqual(['event.hide']);
+    expect(await actionsFor('revoke')).toEqual(['invite_code.revoke']);
+    // @sam made two changes; @huey is the target of one and made two.
+    expect(await actionsFor('sam')).toEqual([
+      'user.role.update',
+      'invite_code.revoke',
+    ]);
+    expect(await actionsFor('huey')).toEqual([
+      'user.role.update',
+      'event.hide',
+      'venue.crawl.pause',
+    ]);
+  });
+
+  it('treats % and _ as plain characters', async () => {
+    await seedTargeted(ME, 'venue.update', null, mt('2026-11-10', 9));
+    expect(await actionsFor('%')).toEqual([]);
+    expect(await actionsFor('_')).toEqual([]);
+  });
+
+  it('combines with the day and the dots', async () => {
+    const venue = await seedVenue({ name: 'Bluebird Theater' });
+    await seedTargeted(ME, 'venue.update', venue.id, mt('2026-11-04', 9));
+    await seedTargeted(ME, 'venue.update', null, mt('2026-11-06', 9));
+    const { data } = await get<string[]>('/days?month=2026-11&search=bluebird');
+    expect(data).toEqual(['2026-11-04']);
+  });
+
+  it('ignores a blank search and refuses one past 100 characters', async () => {
+    await seedTargeted(ME, 'venue.update', null, mt('2026-11-10', 9));
+    expect(await actionsFor('   ')).toEqual(['venue.update']);
+    const res = await app.request(
+      `/v1/admin/audit-log?search=${'x'.repeat(101)}`,
+    );
+    expect(res.status).toBe(400);
   });
 });

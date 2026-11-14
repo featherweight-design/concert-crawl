@@ -112,13 +112,19 @@ const scanClerkUsers = async (now: number): Promise<Scan> => {
 };
 
 /**
- * Every admin and sub-admin's Clerk id, from the same cached scan as the
- * People list (the Activity log's Anyone menu, addendum 6 #37).
+ * Every admin and sub-admin by Clerk id, with their role, from the same cached
+ * scan as the People list (the Activity log's Anyone menu, addendum 6 #37).
  */
-export const staffUserIds = async (): Promise<string[]> =>
-  (await scanClerkUsers(Date.now())).users
-    .filter((user) => user.role === 'admin' || user.role === 'sub_admin')
-    .map((user) => user.id);
+export const staffRoles = async (): Promise<
+  Map<string, 'admin' | 'sub_admin'>
+> => {
+  const staff = new Map<string, 'admin' | 'sub_admin'>();
+  for (const user of (await scanClerkUsers(Date.now())).users) {
+    if (user.role === 'admin' || user.role === 'sub_admin')
+      staff.set(user.id, user.role);
+  }
+  return staff;
+};
 
 /** Drops the cached scan, so the next list sees a change made just now. */
 export const forgetPeopleScan = (): void => {
