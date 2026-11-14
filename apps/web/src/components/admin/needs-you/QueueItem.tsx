@@ -1,7 +1,6 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   KindLabel,
