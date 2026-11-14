@@ -47,24 +47,6 @@ const card = (id: string): PosterCodeCard => {
 
 const CARDS = [card('hidive'), card('larimer')];
 
-const wireRow = (id: string) => ({
-  id,
-  code: id.toUpperCase(),
-  createdBy: 'user_1',
-  usedBy: null,
-  usedAt: null,
-  expiresAt: null,
-  revokedAt: null,
-  revokedBy: null,
-  createdAt: '2026-10-01T18:00:00Z',
-  maxUses: 50,
-  useCount: 3,
-  label: null,
-  kind: 'admin',
-  createdByHandle: 'hugh',
-  lastUsedAt: null,
-});
-
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), {
     status: 200,
@@ -86,24 +68,23 @@ const renderTab = () =>
       typedUrl="concertcrawl.app/i"
       venues={{ venueCount: 21, venueNames: ['Hi-Dive'], moreVenues: true }}
       initial={{ code: null, look: 'night', tabs: false }}
+      // Every code the server page loaded, posters and personal alike.
+      codeCount={7}
     />,
   );
 
 const sheet = () => screen.getByTestId('poster-sheet');
 
+const fetchMock = vi.fn(async (url: string) =>
+  url.includes('/v1/admin/people')
+    ? json({ success: true, data: { total: 214 } })
+    : new Response(null, { status: 500 }),
+);
+
 beforeEach(() => {
   window.history.replaceState(null, '', '/admin/people/invite-codes/posters');
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (url: string) =>
-      url.includes('/v1/admin/people')
-        ? json({ success: true, data: { total: 214 } })
-        : json({
-            success: true,
-            data: ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(wireRow),
-          }),
-    ),
-  );
+  fetchMock.mockClear();
+  vi.stubGlobal('fetch', fetchMock);
 });
 
 afterEach(() => {
@@ -120,9 +101,8 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     const nav = screen.getByRole('navigation', {
       name: ADMIN_COPY.codesPage.tabs.label,
     });
-    // People and Codes are fetched; Posters is the page's own list.
+    // People is fetched; Codes and Posters come from the server page's list.
     await within(nav).findByText('214');
-    await within(nav).findByText('7');
     const links = within(nav).getAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual([
       'People214',
@@ -149,7 +129,7 @@ describe('Posters on a phone (07/posters-mobile)', () => {
       const label = screen.getByText(copy.phone.step(num, name));
       expect(label).toHaveClass('pt-plabel');
     }
-    expect(copy.phone.step(1, copy.steps.code)).toBe('1 · Code');
+    expect(screen.getByText('1 · Code')).toHaveAttribute('id', 'pt-step-code');
     expect(document.querySelector('.pt-n')).toBeNull();
   });
 
@@ -222,13 +202,77 @@ describe('Posters on a phone (07/posters-mobile)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Print' }));
     expect(print).toHaveBeenCalledOnce();
     expect(screen.queryByRole('button', { name: /QR/ })).toBeNull();
+    // The board's "tap to enlarge" is dropped by orchestrator ruling (Design
+    // item 32), not an omission: guard that it stays out.
     expect(screen.queryByText(/tap to enlarge/i)).toBeNull();
     expect(screen.queryByTestId('poster-preview-spec')).toBeNull();
+  });
+
+  it('moves focus to a radio after Change and to Change after a pick', () => {
+    renderTab();
+    // Nothing is focused on mount.
+    expect(document.body).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: copy.phone.change }));
+    // Change unmounted; the selected code's radio takes focus.
+    expect(screen.getByRole('radio', { name: /HIDIVE/ })).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('radio', { name: /LARIMER/ }));
+    // The radio unmounted with the fold; the one-line Change takes focus.
+    expect(
+      screen.getByRole('button', { name: copy.phone.change }),
+    ).toHaveFocus();
+  });
+
+  it('keeps the selection on the current Posters segment', async () => {
+    renderTab();
+    const nav = screen.getByRole('navigation', {
+      name: ADMIN_COPY.codesPage.tabs.label,
+    });
+    await within(nav).findByText('214');
+    const posters = () => within(nav).getAllByRole('link')[2]!;
+    expect(posters()).toHaveAttribute('aria-current', 'page');
+    expect(posters()).toHaveAttribute(
+      'href',
+      '/admin/invite-codes/posters?code=hidive',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: copy.phone.change }));
+    fireEvent.click(screen.getByRole('radio', { name: /LARIMER/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /Paper/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tear-off tabs/ }));
+    // Tapping it lands on the page as it is, never a bare /posters.
+    expect(posters()).toHaveAttribute(
+      'href',
+      '/admin/invite-codes/posters?code=larimer&look=paper&tabs=1',
+    );
+  });
+
+  it('counts Codes from the page and never requests the invite-code list', async () => {
+    renderTab();
+    const nav = screen.getByRole('navigation', {
+      name: ADMIN_COPY.codesPage.tabs.label,
+    });
+    await within(nav).findByText('214');
+    expect(within(nav).getByText('7')).toBeInTheDocument();
+    const urls = fetchMock.mock.calls.map(([url]) => url);
+    expect(urls.some((url) => url.includes('/v1/admin/invite-codes'))).toBe(
+      false,
+    );
+    expect(urls.every((url) => url.includes('/v1/admin/people'))).toBe(true);
   });
 });
 
 describe('Posters on desktop keeps its approved design', () => {
   beforeEach(() => setPhone(false));
+
+  it('carries no data-phone or data-pending attribute once resolved', () => {
+    renderTab();
+    const page = screen.getByTestId('posters-tab');
+    expect(page).not.toHaveAttribute('data-phone');
+    expect(page).not.toHaveAttribute('data-pending');
+    expect(page.querySelector('.pt-grid')).not.toHaveAttribute('data-phone');
+  });
 
   it('keeps the heading, two tabs, numbered steps and the long Look hints', () => {
     renderTab();

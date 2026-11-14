@@ -70,6 +70,7 @@ export default async function InviteCodePostersPage({
       typedUrl={posterTypedUrl(origin)}
       venues={await loadPosterVenues(token)}
       initial={readSelection((await searchParams) ?? {})}
+      codeCount={codes.length}
     />
   );
 }

@@ -32,10 +32,13 @@ export const PeopleTabs = ({
   active,
   isPhone,
   counts,
+  postersLink = postersHref(),
 }: {
   active: 'people' | 'codes' | 'posters';
   isPhone: boolean;
   counts: PeopleTabCounts;
+  /** The Posters page passes its current selection, so its own tab keeps it. */
+  postersLink?: string;
 }) => {
   const tabs = [
     {
@@ -52,7 +55,7 @@ export const PeopleTabs = ({
     },
     {
       key: 'posters',
-      href: postersHref(),
+      href: postersLink,
       label: COPY.tabs.posters,
       count: counts.posters,
     },
