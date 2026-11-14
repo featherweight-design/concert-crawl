@@ -1,3 +1,20 @@
+# [1.429.0](https://github.com/featherweight-design/concert-crawl/compare/v1.428.1...v1.429.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **crawler-core:** charge malformed adjudication answers and drop the script's second counter ([e4c6e08](https://github.com/featherweight-design/concert-crawl/commit/e4c6e08e4d4c1484d3e9a68e8f702228937f560c))
+* **crawler-core:** record artist adjudication's LLM cost ([114a9ce](https://github.com/featherweight-design/concert-crawl/commit/114a9ce2e5a9fd8b2dda6a5bf6a0e41f3ba48b92))
+* **crawler:** say a dry repair pass records its Haiku spend, and pin the failed-crawl row ([acaab29](https://github.com/featherweight-design/concert-crawl/commit/acaab29b1d6f9ed56cc097403ff50c83a24dfb37))
+* **web:** address the confirm sheet review ([7b5f088](https://github.com/featherweight-design/concert-crawl/commit/7b5f088a37ce3fcb2dc31bb45a2e5d83994ae137))
+* **web:** fall through to the first item when ?item= is no longer queued ([e1617ae](https://github.com/featherweight-design/concert-crawl/commit/e1617ae19addeff1210374bd4dceba47d02d182f))
+
+
+### Features
+
+* **web:** show the needs-you skeleton through the real wait, open the first item on desktop ([9621458](https://github.com/featherweight-design/concert-crawl/commit/9621458891d84d0a2ba7f467bcb8d723bb5650a6))
+* **web:** the confirm price sheet as the b+ boards draw it ([69196d3](https://github.com/featherweight-design/concert-crawl/commit/69196d3a3d14915b2e000a13a42a5299f1d29a93))
+
 ## [1.428.1](https://github.com/featherweight-design/concert-crawl/compare/v1.428.0...v1.428.1) (2026-11-14)
 
 
