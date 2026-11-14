@@ -10,7 +10,7 @@
       "id": "share-story",
       "label": "/events/[id] → Share: sheet open, Story selected (desktop board more-r3-share_d)",
       "steps": [
-        { "goto": "/events/${CC_EVENT_ID}", "settle": 1000 },
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 4000 },
         {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
@@ -26,7 +26,7 @@
       "id": "share-square",
       "label": "/events/[id] → Share: sheet open, Square selected (phone board more-r3-share_m_square)",
       "steps": [
-        { "goto": "/events/${CC_EVENT_ID}", "settle": 1000 },
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 4000 },
         {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
@@ -43,7 +43,7 @@
       "id": "share-wide",
       "label": "/events/[id] → Share: sheet open, Wide selected (phone board more-r3-share_m)",
       "steps": [
-        { "goto": "/events/${CC_EVENT_ID}", "settle": 1000 },
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 4000 },
         {
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
@@ -54,6 +54,17 @@
           "wait": "[data-testid=\"share-shape-link\"][aria-pressed=\"true\"]",
           "settle": 4000
         }
+      ]
+    },
+    {
+      "id": "add-show-sheet",
+      "label": "/history (Concerts) → Add a show: AddShowSheet portaled to body, above the sticky rail and the rows",
+      "widths": ["phone"],
+      "steps": [
+        { "goto": "/history", "settle": 3000 },
+        { "wait": "[data-testid=\"add-show-row\"]:visible" },
+        { "click": "[data-testid=\"add-show-row\"]:visible" },
+        { "waitDialog": "^Add a show you went to$", "settle": 2000 }
       ]
     }
   ]
