@@ -1,6 +1,11 @@
 import { Resend } from 'resend';
 import { reportFailure } from '@concert-crawl/logger';
-import { countEmailSend, db } from '@concert-crawl/db';
+import {
+  claimEmailCapWarning,
+  countEmailSend,
+  db,
+  emailDailySendCap,
+} from '@concert-crawl/db';
 
 function escapeHtml(str: string): string {
   return str
@@ -183,7 +188,18 @@ async function sendAdminAlert(
   // Resend account is shared), but never refused: an alert always goes out,
   // and a lost count never stops one.
   try {
-    await countEmailSend(db);
+    const count = await countEmailSend(db);
+    const cap = emailDailySendCap();
+    // The day's one 80% warning, numbers only, whichever app reaches it.
+    if (await claimEmailCapWarning(db, count, cap)) {
+      reportFailure({
+        event: 'email.daily_cap_80',
+        severity: 'warn',
+        reason: 'daily send cap at 80%',
+        context,
+        tags: { area: 'email', cap: String(cap), count: String(count) },
+      });
+    }
   } catch {
     reportFailure({
       event: 'email.uncounted',

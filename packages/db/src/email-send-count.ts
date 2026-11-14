@@ -1,13 +1,18 @@
 /**
  * The account-wide email count. One Resend account (and its daily quota) is
  * shared with another app, so every email this project sends, from the API
- * or the crawler, counts against one Mountain Time calendar-day bucket in
- * `rate_limit_buckets`. The API refuses user-addressed mail past the cap;
+ * or the crawler, counts in one Mountain Time calendar-day row of
+ * `rate_limit_buckets`. The API refuses mail to users past the cap;
  * operational alerts are counted but always go out (orchestrator ruling,
- * 2026-11-14). The bucket's row is the API limiter's: same key, same
- * fixed-window columns, so either side can write it.
+ * 2026-11-14).
+ *
+ * This module is the only writer of the day's row, so the count is exact:
+ * every send adds one, and a claim that is refused or whose send fails takes
+ * its one back. (The API's general limiter clamps a refused key's count at
+ * max + 1, which would erase alerts counted past the cap, so it is not used
+ * for this row.)
  */
-import { sql } from 'drizzle-orm';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import type { Database } from './client.js';
 import { rateLimitBuckets } from './schema/index.js';
 
@@ -17,6 +22,18 @@ import { rateLimitBuckets } from './schema/index.js';
  */
 export const EMAIL_DAY_WINDOW_MS = 26 * 60 * 60 * 1000;
 
+/** Until Resend Pro: the free 100 a day are shared with another app. */
+export const DEFAULT_EMAIL_DAILY_SEND_CAP = 30;
+
+/** The share of the cap that raises the day's one warning. */
+export const EMAIL_CAP_WARN_SHARE = 0.8;
+
+/** The day's cap from `EMAIL_DAILY_SEND_CAP`; missing or invalid is 30. */
+export const emailDailySendCap = (): number => {
+  const raw = Number(process.env['EMAIL_DAILY_SEND_CAP']);
+  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_EMAIL_DAILY_SEND_CAP;
+};
+
 const mtDate = (now: Date): string =>
   new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Denver',
@@ -25,18 +42,18 @@ const mtDate = (now: Date): string =>
     day: '2-digit',
   }).format(now);
 
-/** Today's account-wide email bucket, by Mountain Time calendar day. */
+/** Today's account-wide email row, by Mountain Time calendar day. */
 export const emailDayKey = (now: Date = new Date()): string =>
   `email-day:${mtDate(now)}`;
 
-/** The once-a-day claim for the 80% warning. */
-export const emailDayWarnKey = (now: Date = new Date()): string =>
-  `email-day-warned:${mtDate(now)}`;
+const warnKey = (now: Date): string => `email-day-warned:${mtDate(now)}`;
+
+const freshResetAt = () =>
+  sql`now() + ${EMAIL_DAY_WINDOW_MS}::integer * interval '1 millisecond'`;
 
 /**
- * Count one send that must go out regardless of the cap (an alert to the
- * admin address). Returns the day's count after it. Throws on a store error;
- * callers catch, since a lost count must never stop an alert.
+ * Add one send to the day and return the day's count after it. Throws on a
+ * store error; the caller decides whether that refuses the send.
  */
 export const countEmailSend = async (
   database: Database,
@@ -45,12 +62,7 @@ export const countEmailSend = async (
   const expired = sql`${rateLimitBuckets.resetAt} <= now()`;
   const rows = await database
     .insert(rateLimitBuckets)
-    .values({
-      key: emailDayKey(now),
-      count: 1,
-      resetAt: sql`now() + ${EMAIL_DAY_WINDOW_MS}::integer * interval '1 millisecond'`,
-      userId: null,
-    })
+    .values({ key: emailDayKey(now), count: 1, resetAt: freshResetAt() })
     .onConflictDoUpdate({
       target: rateLimitBuckets.key,
       set: {
@@ -60,4 +72,47 @@ export const countEmailSend = async (
     })
     .returning({ count: rateLimitBuckets.count });
   return rows[0]?.count ?? 0;
+};
+
+/** Take back one send from the day it was counted in (a refusal, a failure). */
+export const uncountEmailSend = async (
+  database: Database,
+  now: Date = new Date(),
+): Promise<void> => {
+  await database
+    .update(rateLimitBuckets)
+    .set({ count: sql`${rateLimitBuckets.count} - 1` })
+    .where(
+      and(
+        eq(rateLimitBuckets.key, emailDayKey(now)),
+        gt(rateLimitBuckets.resetAt, sql`now()`),
+        gt(rateLimitBuckets.count, 0),
+      ),
+    );
+};
+
+/**
+ * True for the first caller each Mountain Time day whose count reaches 80% of
+ * the cap: that caller raises the day's one warning. Throws on a store error.
+ */
+export const claimEmailCapWarning = async (
+  database: Database,
+  count: number,
+  cap: number,
+  now: Date = new Date(),
+): Promise<boolean> => {
+  if (count < Math.ceil(cap * EMAIL_CAP_WARN_SHARE)) return false;
+  const expired = sql`${rateLimitBuckets.resetAt} <= now()`;
+  // Claimed by the first insert, or by reopening yesterday's expired row; a
+  // live row means today's warning has gone.
+  const rows = await database
+    .insert(rateLimitBuckets)
+    .values({ key: warnKey(now), count: 1, resetAt: freshResetAt() })
+    .onConflictDoUpdate({
+      target: rateLimitBuckets.key,
+      set: { count: 1, resetAt: sql`excluded.reset_at` },
+      setWhere: expired,
+    })
+    .returning({ key: rateLimitBuckets.key });
+  return rows.length > 0;
 };

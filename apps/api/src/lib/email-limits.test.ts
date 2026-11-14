@@ -8,13 +8,18 @@ vi.mock('./rate-limit.js', () => ({
 }));
 
 const mockCountEmailSend = vi.fn();
-vi.mock('@concert-crawl/db', () => ({
-  db: {},
-  countEmailSend: (...args: unknown[]) => mockCountEmailSend(...args),
-  emailDayKey: () => 'email-day:2026-11-14',
-  emailDayWarnKey: () => 'email-day-warned:2026-11-14',
-  EMAIL_DAY_WINDOW_MS: 26 * 60 * 60 * 1000,
-}));
+const mockUncountEmailSend = vi.fn().mockResolvedValue(undefined);
+const mockClaimWarning = vi.fn().mockResolvedValue(false);
+vi.mock('@concert-crawl/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@concert-crawl/db')>();
+  return {
+    db: {},
+    emailDailySendCap: actual.emailDailySendCap,
+    countEmailSend: (...args: unknown[]) => mockCountEmailSend(...args),
+    uncountEmailSend: (...args: unknown[]) => mockUncountEmailSend(...args),
+    claimEmailCapWarning: (...args: unknown[]) => mockClaimWarning(...args),
+  };
+});
 
 const mockCaptureMessage = vi.fn();
 vi.mock('@sentry/hono/node', () => ({
@@ -25,9 +30,9 @@ const {
   checkRecipientLimits,
   claimDailySend,
   countAlertSend,
-  dailySendCap,
   normalizeEmailAddress,
 } = await import('./email-limits.js');
+const { emailDailySendCap: dailySendCap } = await import('@concert-crawl/db');
 
 const allow = (count: number) => ({ allowed: true, retryAfterMs: 0, count });
 const deny = { allowed: false, retryAfterMs: 1000 };
@@ -52,6 +57,8 @@ describe('normalizeEmailAddress', () => {
     // Dots are only Gmail's to ignore.
     ['f.a.n@example.com', 'f.a.n@example.com'],
     ['  fan@example.com ', 'fan@example.com'],
+    // A leading + is the address itself, not a tag.
+    ['+a@example.com', '+a@example.com'],
   ])('%s is %s', (input, expected) => {
     expect(normalizeEmailAddress(input)).toBe(expected);
   });
@@ -77,42 +84,47 @@ describe('dailySendCap', () => {
 });
 
 describe('claimDailySend', () => {
-  it('claims the day under the cap, failing closed', async () => {
-    mockCheck.mockResolvedValueOnce(allow(3));
+  it('claims a send under the cap', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(3);
     const slot = await claimDailySend();
     expect(slot.allowed).toBe(true);
-    expect(mockCheck).toHaveBeenCalledWith(
-      'email-day:2026-11-14',
-      30,
-      26 * 60 * 60 * 1000,
-      { onStoreError: 'deny' },
-    );
+    expect(mockUncountEmailSend).not.toHaveBeenCalled();
     expect(mockCaptureMessage).not.toHaveBeenCalled();
   });
 
-  it('refuses at the cap', async () => {
-    mockCheck.mockResolvedValueOnce(deny);
+  it('allows the cap-th send and refuses the next, handing it back', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(30);
+    await expect(claimDailySend()).resolves.toMatchObject({ allowed: true });
+    mockCountEmailSend.mockResolvedValueOnce(31);
+    await expect(claimDailySend()).resolves.toEqual({ allowed: false });
+    // The refused claim leaves the day's count as it was.
+    expect(mockUncountEmailSend).toHaveBeenCalledOnce();
+  });
+
+  it('reads the cap from EMAIL_DAILY_SEND_CAP', async () => {
+    process.env['EMAIL_DAILY_SEND_CAP'] = '500';
+    mockCountEmailSend.mockResolvedValueOnce(31);
+    await expect(claimDailySend()).resolves.toMatchObject({ allowed: true });
+  });
+
+  it('fails closed when the count is unavailable', async () => {
+    mockCountEmailSend.mockRejectedValueOnce(new Error('db down'));
     await expect(claimDailySend()).resolves.toEqual({ allowed: false });
   });
 
-  it('releases the claim when the send then fails', async () => {
-    mockCheck.mockResolvedValueOnce(allow(3));
+  it('hands the send back when it then fails', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(3);
     const slot = await claimDailySend();
     if (!slot.allowed) throw new Error('refused');
     await slot.release();
-    expect(mockRefund).toHaveBeenCalledWith('email-day:2026-11-14');
+    expect(mockUncountEmailSend).toHaveBeenCalledOnce();
   });
 
-  it('warns once at 80%, with numbers and no address', async () => {
-    // 24 of 30, then the day's warn key is claimed.
-    mockCheck.mockResolvedValueOnce(allow(24)).mockResolvedValueOnce(allow(1));
+  it('raises the 80% warning when it claims the day, numbers only', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(24);
+    mockClaimWarning.mockResolvedValueOnce(true);
     await claimDailySend();
-    expect(mockCheck).toHaveBeenLastCalledWith(
-      'email-day-warned:2026-11-14',
-      1,
-      26 * 60 * 60 * 1000,
-      { onStoreError: 'deny' },
-    );
+    expect(mockClaimWarning).toHaveBeenCalledWith({}, 24, 30);
     expect(mockCaptureMessage).toHaveBeenCalledWith(
       'email: daily send cap at 80%',
       {
@@ -120,20 +132,29 @@ describe('claimDailySend', () => {
         tags: { area: 'email', cap: '30', count: '24' },
       },
     );
+  });
 
-    // The next send past the line finds the day's warning already claimed.
-    mockCheck.mockResolvedValueOnce(allow(25)).mockResolvedValueOnce(deny);
+  it('stays quiet when the day was already warned', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(25);
+    mockClaimWarning.mockResolvedValueOnce(false);
     await claimDailySend();
-    expect(mockCaptureMessage).toHaveBeenCalledOnce();
+    expect(mockCaptureMessage).not.toHaveBeenCalled();
+  });
+
+  it('still sends when the warning claim errors', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(25);
+    mockClaimWarning.mockRejectedValueOnce(new Error('db down'));
+    await expect(claimDailySend()).resolves.toMatchObject({ allowed: true });
   });
 });
 
 describe('countAlertSend', () => {
-  it('counts and warns past 80%, never refusing', async () => {
-    mockCountEmailSend.mockResolvedValueOnce(29);
-    mockCheck.mockResolvedValueOnce(allow(1));
+  it('counts past the cap, never refusing, and can warn', async () => {
+    mockCountEmailSend.mockResolvedValueOnce(45);
+    mockClaimWarning.mockResolvedValueOnce(true);
     await countAlertSend();
     expect(mockCountEmailSend).toHaveBeenCalledOnce();
+    expect(mockUncountEmailSend).not.toHaveBeenCalled();
     expect(mockCaptureMessage).toHaveBeenCalledOnce();
   });
 
@@ -151,7 +172,7 @@ describe('checkRecipientLimits', () => {
       .mockResolvedValueOnce(allow(1));
     await expect(
       checkRecipientLimits('Fan+x@example.com', '203.0.113.9'),
-    ).resolves.toEqual({ allowed: true });
+    ).resolves.toMatchObject({ allowed: true });
     const [network, hour, day] = mockCheck.mock.calls;
     expect(network?.[0]).toBe('email-net:203.0.113.9');
     expect(network?.[1]).toBe(300);
@@ -160,6 +181,16 @@ describe('checkRecipientLimits', () => {
     // The key holds a hash, never the address.
     expect(String(hour?.[0])).toMatch(/^email-to-hour:[0-9a-f]{32}$/);
     expect(String(day?.[0])).not.toContain('example');
+  });
+
+  it('hands every hit back when the send is stopped downstream', async () => {
+    mockCheck.mockResolvedValue(allow(1));
+    const limits = await checkRecipientLimits('fan@example.com', '203.0.113.9');
+    if (!limits.allowed) throw new Error('refused');
+    await limits.release();
+    const refunded = mockRefund.mock.calls.map(([key]) => String(key));
+    expect(refunded).toHaveLength(3);
+    expect(refunded).toContain('email-net:203.0.113.9');
   });
 
   it('gives aliases of one inbox one count', async () => {
