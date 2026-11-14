@@ -1,3 +1,10 @@
+## [1.431.1](https://github.com/featherweight-design/concert-crawl/compare/v1.431.0...v1.431.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** fill admin cards with the boards' surface-1 and define the done-for-you chip fill ([65ee4d3](https://github.com/featherweight-design/concert-crawl/commit/65ee4d312a14fadb304c3463a63ded1e7b6204f9))
+
 # [1.431.0](https://github.com/featherweight-design/concert-crawl/compare/v1.430.0...v1.431.0) (2026-11-14)
 
 
