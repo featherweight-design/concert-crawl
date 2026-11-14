@@ -11,6 +11,7 @@ import {
 } from '@testing-library/react';
 import type { SubmittedRow } from '@/components/admin/prices/submitted-api';
 import { NeedsYouClient } from './NeedsYouClient';
+import { mountainDayAhead } from './needs-you-rules';
 
 const { getTokenMock, replaceMock, mockList } = vi.hoisted(() => ({
   getTokenMock: async () => 'token',
@@ -227,11 +228,11 @@ describe('NeedsYouClient', () => {
     render(<NeedsYouClient item={null} />);
     await screen.findAllByTestId('needs-you-item');
     const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
-    fireEvent.click(within(card).getByRole('button', { name: 'Postponed' }));
+    fireEvent.click(within(card).getByRole('button', { name: 'Cancelled' }));
     expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(false);
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Postponed?');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Postponed' }));
+    expect(dialog).toHaveTextContent('Cancelled?');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelled' }));
     await waitFor(() =>
       expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(true),
     );
@@ -308,6 +309,50 @@ describe('NeedsYouClient', () => {
     expect(await screen.findByTestId('needs-you-answered')).toHaveTextContent(
       'marked Keep paused.',
     );
+  });
+
+  it('asks Postponed for a new date or none, and sends only what was chosen', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: 'Postponed' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Olive Jones is postponed?');
+    expect(dialog).toHaveTextContent('12 people Watching it get one notice.');
+    // No new date yet is the start: confirming sends the answer alone.
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Mark postponed' }),
+    );
+    await waitFor(() =>
+      expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(true),
+    );
+    expect(calls.find((call) => call.url.endsWith('/answer'))?.body).toEqual({
+      answer: 'postponed',
+    });
+  });
+
+  it('offers a New date field and sends the date with Postponed', async () => {
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    const card = screen.getAllByTestId('needs-you-item')[0] as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: 'Postponed' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'New date' }));
+    expect(
+      within(dialog).getByLabelText('Date', { exact: false }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Mark postponed' }),
+    );
+    await waitFor(() =>
+      expect(calls.some((call) => call.url.endsWith('/answer'))).toBe(true),
+    );
+    expect(calls.find((call) => call.url.endsWith('/answer'))?.body).toEqual({
+      answer: 'postponed',
+      // New date starts tomorrow (Mountain Time), never today or the show's own
+      // day. A blank Show time sends no showTime, so the API keeps the old one.
+      date: mountainDayAhead(new Date(), 1),
+    });
   });
 
   it('snoozing a card takes it off the list without an Undo', async () => {

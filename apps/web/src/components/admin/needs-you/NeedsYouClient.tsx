@@ -26,6 +26,7 @@ import { NeedsYouSkeleton } from './NeedsYouSkeleton';
 import { EvidenceSlot } from './EvidenceSlot';
 import { PausePanel } from '../venues/PausePanel';
 import { refusedStatus } from '../invite-codes/codes-api';
+import { PostponedDialog } from './PostponedDialog';
 import { PriceBatchSheet } from './PriceBatchSheet';
 import { QueueItem } from './QueueItem';
 import {
@@ -43,6 +44,7 @@ import {
   defaultParams,
   filterCount,
   inFilter,
+  mountainDayAhead,
   mountainToday,
   type FilterKey,
 } from './needs-you-rules';
@@ -105,6 +107,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   const [pending, setPending] = useState<Pending | null>(null);
   // The venue answer whose Pause panel is open (Keep paused..., Pause crawling...).
   const [pausing, setPausing] = useState<{
+    row: QueueRow;
+    answer: NeedsYouAnswer;
+  } | null>(null);
+  // The show whose Postponed dialog is open (New date or none).
+  const [postponing, setPostponing] = useState<{
     row: QueueRow;
     answer: NeedsYouAnswer;
   } | null>(null);
@@ -251,6 +258,8 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     if (PAUSE_SLUGS.has(answer.slug) && row.venueId)
       return setPausing({ row, answer });
     // An answer that tells fans asks first and cannot be taken back.
+    // Postponed asks for a new date, or none, in its own dialog.
+    if (answer.slug === 'postponed') return setPostponing({ row, answer });
     if (answer.notifiesFans) return setPending({ row, answer, params });
     void runAnswer(row, answer, params);
   };
@@ -559,6 +568,40 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
                 return ADMIN_COPY.pausePanel.dateError('');
               return `${COPY.answerFailed.title}. ${COPY.answerFailed.saved}`;
             }
+          }}
+        />
+      )}
+
+      {postponing && (
+        <PostponedDialog
+          name={answeredName(postponing.row.title)}
+          watching={postponing.row.watchers}
+          fanDate={postponing.row.fanDate}
+          today={mountainToday(new Date())}
+          tomorrow={mountainDayAhead(new Date(), 1)}
+          phone={isPhone}
+          onCancel={() => setPostponing(null)}
+          onConfirm={async (newDate) => {
+            const { row, answer } = postponing;
+            const result = await api.answer(
+              row.key,
+              answer.slug,
+              newDate
+                ? {
+                    date: newDate.date,
+                    ...(newDate.showTime ? { showTime: newDate.showTime } : {}),
+                  }
+                : undefined,
+            );
+            setPostponing(null);
+            settle(
+              row,
+              {
+                line: COPY.answered(answeredName(row.title), answer.label),
+                auditId: result.undoable ? result.auditId : null,
+              },
+              true,
+            );
           }}
         />
       )}
