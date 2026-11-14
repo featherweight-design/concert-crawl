@@ -405,7 +405,10 @@ eventReportsRouter.post(
     // reschedule can never promote it. Nothing else changes and nobody hears,
     // and the fan still gets an ordinary answer, never an error. A report
     // resolved before the lock is left as it is (resolved: false here), and a
-    // missing event is a silent no-op too.
+    // missing event is a silent no-op too. On a live show, promoteReport also
+    // closes as moot a report the show's state already answers: a postponed
+    // or sold-out on a cancelled show, a sold-out on a postponed or delisted
+    // one, or a second sold-out.
     const saleRefused = (err: unknown) =>
       classifySaleRefusal(err, {
         msg: 'fan confirm threshold',

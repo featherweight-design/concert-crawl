@@ -16,8 +16,10 @@ export type PromotableStatus = 'sold-out' | 'cancelled' | 'postponed';
 export interface PromoteReportResult {
   /**
    * 'promoted': the report is promoted and the show reads as it says.
-   * 'moot': the report closed as `rejected` (the show is past and `onPast`
-   * is 'close', or another sold-out was already live), changing nothing.
+   * 'moot': the report closed as `rejected`, changing nothing: the show is
+   * past and `onPast` is 'close'; the show is already cancelled; or, for a
+   * sold-out, the show is postponed or delisted, or another sold-out was
+   * already live.
    * 'already_resolved': the report was resolved before the lock, so nothing
    * was written.
    */
@@ -47,8 +49,8 @@ export interface PromoteReportResult {
  *   show whose date passed, which "stays Postponed until you set the new date
  *   or mark it cancelled" (addendum 6): it promotes as on an upcoming show;
  * - a postponed or sold-out report on a show already cancelled (not merely
- *   delisted), or a sold-out on a postponed show, closes as moot: nothing
- *   changes and nobody hears;
+ *   delisted), or a sold-out on a postponed or delisted show, closes as moot:
+ *   nothing changes and nobody hears;
  * - a sold-out, when another sold-out is already live, closes as moot rather
  *   than tripping migration 0032's one-live-sold-out index, and nobody hears
  *   again;
@@ -96,6 +98,12 @@ export async function promoteReport(
       show.status === 'cancelled' && show.delistedAt === null;
     if (status !== 'cancelled' && confirmedCancelled) {
       return moot(MOOT_NOTE.showCancelled);
+    }
+    // A sold-out never ends a delisting (only a status report does), so on a
+    // show the sweep delisted it would announce a sale for a show that still
+    // reads No longer listed.
+    if (status === 'sold-out' && show.delistedAt !== null) {
+      return moot(MOOT_NOTE.showDelisted);
     }
     // A sold-out on a postponed show has no live sale to sell out; the
     // show's own status already tells watchers more.

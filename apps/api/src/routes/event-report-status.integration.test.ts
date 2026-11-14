@@ -388,6 +388,20 @@ describe('cancelled and postponed reports under the shared write', () => {
       });
     }
 
+    it('closes a sold-out report on a show the sweep delisted as moot', async () => {
+      await seedShow(daysFromToday(30), 'cancelled', new Date());
+      const report = await seedEventReport(eventId, 'user_reporter', {
+        status: 'sold-out',
+      });
+
+      await confirmToThreshold(report.id);
+
+      expect(await reportState(report.id)).toEqual(
+        closedMoot('show no longer listed'),
+      );
+      expect(await noticesSent()).toEqual([]);
+    });
+
     it('still promotes a postponed report on a show the sweep delisted', async () => {
       await seedShow(daysFromToday(30), 'cancelled', new Date());
       const report = await seedEventReport(eventId, 'user_reporter', {

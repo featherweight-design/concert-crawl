@@ -19,6 +19,7 @@ export const MOOT_NOTE = {
   nothingToClear: 'no live sold-out to clear',
   showCancelled: 'show already cancelled',
   showPostponed: 'show is postponed',
+  showDelisted: 'show no longer listed',
 } as const;
 
 /**
