@@ -168,12 +168,17 @@ describe('admin needs-you routes', () => {
       reason: 'timeout',
     });
     // A season-long snooze counts; a two-day one does not.
+    // Written straight to the table: the snooze route only takes an item that
+    // is in the queue right now, and these venues are not failing.
     const hold = (venueId: string, hours: number) =>
-      snooze(`venue-failing:${venueId}`, {
-        until: inHours(hours).toISOString(),
+      testDb.insert(adminQueueSnoozes).values({
+        itemKey: `venue-failing:${venueId}`,
+        kind: 'venue-failing',
+        until: inHours(hours),
+        createdBy: 'test-admin-1',
       });
-    expect((await hold(venue.id, 24 * 10)).status).toBe(200);
-    expect((await hold(other.id, 48)).status).toBe(200);
+    await hold(venue.id, 24 * 10);
+    await hold(other.id, 48);
 
     const res = await app.request('/v1/admin/needs-you/facts');
     const body: { data: AllClearFacts } = await res.json();
