@@ -12,6 +12,8 @@ export interface SidePanelProps {
   title: ReactNode;
   /** A `KindLabel` or similar, above the title. */
   eyebrow?: ReactNode;
+  /** A ⋯ menu, just before the close button. */
+  menu?: ReactNode;
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
@@ -34,6 +36,7 @@ const PanelBody = ({
   title,
   titleId,
   eyebrow,
+  menu,
   subtitle,
   children,
   footer,
@@ -47,6 +50,7 @@ const PanelBody = ({
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {eyebrow}
       <span style={{ flex: 1 }} />
+      {menu}
       {/* Mid-request the ✕ is off too, like the scrim and Escape, so a reply
           the panel still has to show (a refused date) isn't closed away. */}
       <button

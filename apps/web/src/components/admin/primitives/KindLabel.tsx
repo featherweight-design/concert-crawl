@@ -9,7 +9,8 @@ export type Kind =
   | 'bug'
   | 'flag'
   | 'priceCheck'
-  | 'inviteCode';
+  | 'inviteCode'
+  | 'guide';
 
 /** Accent per kind, from the Needs you boards. */
 const TONE: Record<Kind, string> = {
@@ -24,6 +25,8 @@ const TONE: Record<Kind, string> = {
   priceCheck: 'var(--danger)',
   // `07/a-code-in-flow`: the info tone.
   inviteCode: 'var(--signal)',
+  // `04/guide-edit-a-section`: the info tone.
+  guide: 'var(--signal)',
 };
 
 /**

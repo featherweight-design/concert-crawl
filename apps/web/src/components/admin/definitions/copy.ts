@@ -1251,6 +1251,53 @@ export const ADMIN_COPY = {
     loadError: 'Could not load the robots.txt audit. Try refreshing.',
   },
 
+  // 3b part 6: the venue page's Guide tab and its edit panel
+  // (`04/venue-guide`, `04/guide-edit-a-section`). Labels are the board's.
+  venueGuide: {
+    title: 'First-timer guide',
+    preview: 'Preview as a fan',
+    count: (published: number, total: number) =>
+      `${published} of ${total} published. Fans see published sections on the venue page; drafts stay here.`,
+    section: {
+      insider_tip: 'Insider tip',
+      accessibility: 'Accessibility',
+      parking: 'Parking',
+      age_policy: 'Age policy',
+      bag_check: 'Bag check',
+      coat_check: 'Coat check',
+      will_call: 'Will call',
+      food_drink: 'Food and drink',
+      transit: 'Transit',
+    },
+    notWritten: 'Not written yet',
+    state: {
+      missing: 'Missing',
+      published: 'Published',
+      draft: 'Draft',
+      cantDocument: 'Can’t document yet',
+    },
+    edit: 'Edit',
+    write: 'Write',
+    editLabel: (section: string) => `Edit ${section}`,
+    writeLabel: (section: string) => `Write ${section}`,
+    counter: (length: number, max: number) => `${length} / ${max}`,
+    cantDocument: 'Can’t document yet',
+    publish: 'Publish',
+    publishing: 'Publishing…',
+    saveDraft: 'Save draft',
+    saving: 'Saving…',
+    publishBlocked:
+      'Accessibility is required to publish. Write it, or mark it Can’t document yet.',
+    menu: 'More for this guide',
+    unpublish: 'Unpublish',
+    unpublishHint: 'Takes the guide off the venue page. Nothing here is lost.',
+    failed: {
+      saved: 'Your text is still in the box.',
+      unpublish: 'Couldn’t unpublish the guide',
+      unpublishSaved: 'It is still on the venue page.',
+    },
+  },
+
   venueDetailsClient: {
     // #764 first-timer guide authoring block. Strings are lifted verbatim from
     // design/design_handoff_venue_first_timer_guide/guide-data.jsx; the
@@ -3959,6 +4006,7 @@ export const ADMIN_COPY = {
     flag: 'FLAG',
     priceCheck: 'PRICE CHECK',
     inviteCode: 'INVITE CODE',
+    guide: 'GUIDE',
   },
   // The venue page's Hide, Take down and Delete confirms (`A3/03/hide-other-d`,
   // `A3/03/take-down-d`, `04/delete-venue`) and the delete-refused line
