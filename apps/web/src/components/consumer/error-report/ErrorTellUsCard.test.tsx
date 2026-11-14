@@ -122,31 +122,114 @@ describe('ErrorTellUsCard', () => {
     expect(loadPendingReport()).toBeNull();
   });
 
-  it('keeps the failed state honest for a refused report (429): saved, as its copy says', async () => {
-    sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
-    render(<ErrorTellUsCard digest="2849204133" />);
-    pick('Searching');
-    fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+  describe('refused (addendum-2 18-error-page/error-report-refused-m)', () => {
+    it.each([429, 422, 400])(
+      '%i says Not sent. under the LIMIT rail, is not saved, and takes focus',
+      async (status) => {
+        sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(status));
+        render(<ErrorTellUsCard digest="2849204133" />);
+        pick('Searching');
+        fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
-    // PR 2 gives refused its own, unsaved state; until then the failed state
-    // says "saved", so it is (the flush tries it once, then drops it).
-    expect(
-      await screen.findByRole('heading', { name: copy.failedHeading }),
-    ).toBeTruthy();
-    expect(loadPendingReport()?.doing).toBe('Searching');
+        const heading = await screen.findByRole('heading', {
+          name: copy.refusedHeading,
+        });
+        expect(screen.getByText(copy.refusedBody)).toBeTruthy();
+        expect(screen.getByText(copy.failedEyebrow)).toBeTruthy();
+        expect(screen.getByText(copy.refusedTag)).toBeTruthy();
+        // One button only: Done. No Edit, no Send again.
+        expect(
+          screen.getAllByRole('button').map((button) => button.textContent),
+        ).toEqual([copy.done]);
+        expect(loadPendingReport()).toBeNull();
+        await waitFor(() => expect(document.activeElement).toBe(heading));
+      },
+    );
+
+    it('leaves a report another error page saved where it is', async () => {
+      localStorage.setItem(
+        'cc-pending-error-report',
+        JSON.stringify({
+          doing: 'My shows',
+          note: '',
+          page: '/me',
+          savedAt: Date.now(),
+        }),
+      );
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+      render(<ErrorTellUsCard digest="2849204133" />);
+      pick('Searching');
+      fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+
+      await screen.findByRole('heading', { name: copy.refusedHeading });
+      expect(loadPendingReport()?.doing).toBe('My shows');
+    });
+
+    it('Send again that is refused drops the copy this card saved', async () => {
+      sendErrorReport.mockRejectedValueOnce(new Error('503'));
+      render(<ErrorTellUsCard digest="2849204133" />);
+      pick('Searching');
+      fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+      await screen.findByRole('heading', { name: copy.failedHeading });
+      expect(loadPendingReport()?.doing).toBe('Searching');
+
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+      fireEvent.click(screen.getByRole('button', { name: copy.sendAgain }));
+
+      await screen.findByRole('heading', { name: copy.refusedHeading });
+      // The refused copy says "it isn't saved", so it is not.
+      expect(loadPendingReport()).toBeNull();
+    });
+
+    it('Done hands the close to the page', async () => {
+      const onDone = vi.fn();
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+      render(<ErrorTellUsCard digest="2849204133" onDone={onDone} />);
+      pick('Searching');
+      fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+      await screen.findByRole('heading', { name: copy.refusedHeading });
+
+      fireEvent.click(screen.getByRole('button', { name: copy.done }));
+      expect(onDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('Done with no page to close it goes back to the prompt', async () => {
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(429));
+      render(<ErrorTellUsCard digest="2849204133" />);
+      pick('Searching');
+      fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+      await screen.findByRole('heading', { name: copy.refusedHeading });
+
+      fireEvent.click(screen.getByRole('button', { name: copy.done }));
+      expect(screen.getByText(copy.sub)).toBeTruthy();
+    });
   });
 
-  it('saves a report that got a 401, for the next signed-in launch', async () => {
+  it('a 401 saves the report for the next signed-in launch and tells the page', async () => {
+    const onSignedOut = vi.fn();
     sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(401));
-    render(<ErrorTellUsCard digest="2849204133" />);
+    render(<ErrorTellUsCard digest="2849204133" onSignedOut={onSignedOut} />);
     pick('Searching');
     fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
 
-    expect(
-      await screen.findByRole('heading', { name: copy.failedHeading }),
-    ).toBeTruthy();
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalledTimes(1));
     expect(loadPendingReport()?.doing).toBe('Searching');
   });
+
+  it.each([new ReportRejectedError(503), new ReportRejectedError(408)])(
+    'a transient failure (%s) is the failed state, saved',
+    async (failure) => {
+      sendErrorReport.mockRejectedValueOnce(failure);
+      render(<ErrorTellUsCard digest="2849204133" />);
+      pick('Searching');
+      fireEvent.click(screen.getByRole('button', { name: `${copy.send} →` }));
+
+      expect(
+        await screen.findByRole('heading', { name: copy.failedHeading }),
+      ).toBeTruthy();
+      expect(loadPendingReport()?.doing).toBe('Searching');
+    },
+  );
 
   it('is a real radio group: one tab stop, arrow keys move the choice', () => {
     render(<ErrorTellUsCard />);

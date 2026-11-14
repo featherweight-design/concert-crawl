@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type Ref,
 } from 'react';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
@@ -148,7 +149,13 @@ const Heading = () => {
   );
 };
 
-const ErrorIdChip = ({ errorId }: { errorId: string }) => {
+const ErrorIdChip = ({
+  errorId,
+  buttonRef,
+}: {
+  errorId: string;
+  buttonRef?: Ref<HTMLButtonElement> | undefined;
+}) => {
   const [copied, setCopied] = useState(false);
 
   const onCopy = () => {
@@ -186,6 +193,7 @@ const ErrorIdChip = ({ errorId }: { errorId: string }) => {
       </span>
       <button
         type="button"
+        ref={buttonRef}
         onClick={onCopy}
         aria-label={`${copy.copyErrorId}: ${errorId}`}
         style={{
@@ -338,6 +346,11 @@ export interface StandaloneErrorProps {
    * and sits in the shell. Everything else is the standalone page.
    */
   inApp?: boolean | undefined;
+  /**
+   * The error ID chip's copy button, so the page can move focus to it when
+   * the Tell us card closes under it (Done on a refused report).
+   */
+  errorIdRef?: Ref<HTMLButtonElement> | undefined;
 }
 
 // The standalone page owns the whole viewport and paints its own ground. In
@@ -355,6 +368,7 @@ export const StandaloneError = ({
   onSignOut,
   children,
   inApp = false,
+  errorIdRef,
 }: StandaloneErrorProps) => (
   <div
     data-testid="standalone-error"
@@ -446,7 +460,7 @@ export const StandaloneError = ({
       {children ? <div className="cc-se-aside">{children}</div> : null}
       {errorId ? (
         <div className="cc-se-chip">
-          <ErrorIdChip errorId={errorId} />
+          <ErrorIdChip errorId={errorId} buttonRef={errorIdRef} />
         </div>
       ) : null}
     </main>

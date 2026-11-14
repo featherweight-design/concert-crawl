@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useClerk } from '@clerk/nextjs';
+import { useAuth, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
 import { ErrorReport } from '@/components/consumer/error-report';
-import { StandaloneError } from './StandaloneError';
 
 /**
  * A route error inside the (main) app layout (addendum-2 §18, board
@@ -30,6 +29,7 @@ export const InAppError = ({
   /** Prefixes the console line, so a boundary's failures can be told apart. */
   logLabel: string;
 }) => {
+  const { isSignedIn } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
 
@@ -37,14 +37,15 @@ export const InAppError = ({
     console.error(logLabel, error);
   }, [error, logLabel]);
 
+  // (main) routes go public at launch, so a signed-out visitor gets the
+  // signed-out layout here too (no card, Go home).
   return (
-    <StandaloneError
+    <ErrorReport
       inApp
-      errorId={error.digest}
+      error={error}
       onRetry={onRetry}
+      signedIn={isSignedIn === true}
       onSignOut={() => void signOut(() => router.push('/'))}
-    >
-      <ErrorReport error={error} variant="card" />
-    </StandaloneError>
+    />
   );
 };

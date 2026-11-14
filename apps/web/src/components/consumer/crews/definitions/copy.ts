@@ -356,12 +356,6 @@ export const CREWS_COPY = {
     errCrewTitle: "Couldn't open this crew.",
     errCrewBody: "The crew is fine. The connection isn't. Give it another go.",
     loadingInvite: 'CHECKING THE INVITE…',
-    // Ours, stated as ours. Distinct from an expired or retired link, which
-    // are normal outcomes rather than faults.
-    errInviteEyebrow: 'CONNECTION',
-    errInviteTitle: "Couldn't check this invite.",
-    errInviteBody:
-      'Something on our end went sideways. The link is probably fine. Try again in a second.',
     joinFailed: "That didn't go through. Try again.",
   },
 

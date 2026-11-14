@@ -47,3 +47,34 @@ export const deviceSummary = (userAgent: string): string => {
  */
 export const isReportableId = (value: string | undefined): value is string =>
   value !== undefined && /^[\w-]{1,64}$/.test(value);
+
+const ID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
+
+/**
+ * The error ID for a browser throw, which has no server `digest`: `c-` and ten
+ * random base-36 characters, so it passes `isReportableId` (and the route's
+ * `^[\w-]{1,64}$`) and reads apart from a server digest, which is all digits.
+ */
+export const mintClientErrorId = (): string => {
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  let id = 'c-';
+  for (const byte of bytes) id += ID_ALPHABET.charAt(byte % ID_ALPHABET.length);
+  return id;
+};
+
+/**
+ * Signed in, as far as a page outside ClerkProvider can tell (`global-error`):
+ * Clerk's `__client_uat` cookie holds the last sign-in time in seconds, and
+ * `0` when signed out. Only a positive integer counts; missing, `0` or anything
+ * unreadable is signed out, so the page never offers a card that would 401.
+ */
+export const hasClientSession = (cookie: string): boolean => {
+  for (const part of cookie.split(';')) {
+    const [name, ...rest] = part.trim().split('=');
+    if (name !== '__client_uat') continue;
+    const value = rest.join('=');
+    return /^\d+$/.test(value) && Number(value) > 0;
+  }
+  return false;
+};
