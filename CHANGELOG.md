@@ -1,3 +1,17 @@
+# [1.446.0](https://github.com/featherweight-design/concert-crawl/compare/v1.445.0...v1.446.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** page crawl batches without dropping edge outages ([8f6f262](https://github.com/featherweight-design/concert-crawl/commit/8f6f262ad0f5f2d347b8a36c11a319f5fdd758b3))
+* **web:** draw the generic patch's weave and arms from the board's own SVG ([92d4d29](https://github.com/featherweight-design/concert-crawl/commit/92d4d29b63c75a69fc21306d17be428de47b4764))
+
+
+### Features
+
+* **api:** add cost, handle, paging and link keys to crawl batches ([8c2a1be](https://github.com/featherweight-design/concert-crawl/commit/8c2a1beb37f36036121a3cdb9ec6e053dc343c5c))
+* **web:** the generic hex crew patch on the stale invite and the empty crew lens ([d69a55c](https://github.com/featherweight-design/concert-crawl/commit/d69a55c575009d42bf0c199223f0a3ec0bca1806))
+
 # [1.445.0](https://github.com/featherweight-design/concert-crawl/compare/v1.444.0...v1.445.0) (2026-11-14)
 
 
