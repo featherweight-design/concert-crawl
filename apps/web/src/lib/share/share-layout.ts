@@ -6,6 +6,10 @@ import {
 import type { ShareRatio } from '@/components/consumer/share/definitions/ratios';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { formatShowTime } from '@/components/consumer/definitions/lib';
+import {
+  INTER_900_ELLIPSIS,
+  inter900Advance,
+} from '@/lib/share/inter-900-advances';
 import { localDateString } from '@/lib/time';
 
 // The B+ share card's layout rules (more-r3-share_shapes), kept out of the
@@ -74,22 +78,61 @@ export interface ShareMetaSource {
   city: string;
 }
 
+/** The single-glyph ellipsis (U+2026), for a cut name and a cut venue. */
+export const NAME_ELLIPSIS = '…';
+
+/**
+ * JetBrains Mono's advance (600 of 1000 units) plus the meta's 0.08em
+ * tracking: every meta character is this wide, so a line's width is exact.
+ */
+export const META_ADVANCE_EM = 0.68;
+
+/** How many meta characters fit in `width` at `size`. */
+export const metaMaxChars = (width: number, size: number): number =>
+  Math.floor(width / (META_ADVANCE_EM * size));
+
+const META_SEPARATOR = ' · ';
+
+/**
+ * Venue then city, cut to `room` characters by shortening the venue: the
+ * boards always end the meta on the city (`THE ORIENTAL TH… · DENVER`).
+ */
+const fitWhere = (venue: string, city: string, room: number): string => {
+  const tail = `${META_SEPARATOR}${city}`;
+  const full = `${venue}${tail}`;
+  if (graphemes(full).length <= room) return full;
+  const venueRoom = room - graphemes(tail).length - 1;
+  // No room even for one letter: leave it whole for the renderer to clip.
+  if (venueRoom < 1) return full;
+  const cut = graphemes(venue).slice(0, venueRoom).join('').trimEnd();
+  return `${cut}${NAME_ELLIPSIS}${tail}`;
+};
+
 /**
  * The mono meta. Story and Wide draw two lines (date and time, then venue and
  * city); Square runs all four on one line. An unknown time drops out rather
- * than printing a placeholder.
+ * than printing a placeholder. A line longer than `maxChars` shortens the
+ * venue and keeps the city.
  */
 export const shareMetaLines = (
   source: ShareMetaSource,
   ratio: ShareRatio,
+  maxChars: number = Number.POSITIVE_INFINITY,
 ): string[] => {
   const { weekday, month, day } = source.date;
-  const when = [`${weekday} ${month} ${day}`, source.showTime].filter(
-    (part): part is string => part !== null,
-  );
-  const where = [source.venue, source.city];
-  const lines = ratio === 'square' ? [[...when, ...where]] : [when, where];
-  return lines.map((parts) => parts.join(' · ').toUpperCase());
+  const when = [`${weekday} ${month} ${day}`, source.showTime]
+    .filter((part): part is string => part !== null)
+    .join(META_SEPARATOR);
+  const upper = (text: string) => text.toUpperCase();
+  const venue = upper(source.venue);
+  const city = upper(source.city);
+  if (ratio === 'square') {
+    const head = `${upper(when)}${META_SEPARATOR}`;
+    return [
+      `${head}${fitWhere(venue, city, maxChars - graphemes(head).length)}`,
+    ];
+  }
+  return [upper(when), fitWhere(venue, city, maxChars)];
 };
 
 /**
@@ -218,10 +261,22 @@ export const storyNameText = (
     )
     .join(' ');
 
+/** The name's tracking, in em, applied after every glyph. */
+const NAME_TRACKING = -0.03;
+/** Kept clear at the right edge: rounding, and any glyph the table misjudges. */
+const FIT_SAFETY = 0.98;
+
+/** The name's set width in em: Inter 900 advances plus tracking, unkerned. */
+export const nameWidthEm = (text: string): number =>
+  graphemes(text).reduce(
+    (sum, grapheme) => sum + inter900Advance(grapheme) + NAME_TRACKING,
+    0,
+  );
+
 /**
  * Square and Wide set the name on one line, shrinking a long one to fit down
- * to `floor`; below that it ellipsises. Satori cannot measure text, so the
- * size is estimated from the character count.
+ * to `floor`; below that it is cut (`fitLine`). Satori cannot measure text, so
+ * the width is summed from Inter 900's own advance widths.
  */
 export const fitLineSize = (
   name: string,
@@ -229,9 +284,9 @@ export const fitLineSize = (
   width: number,
   floor: number,
 ): number => {
-  const length = graphemes(name.trim()).length;
-  if (length === 0) return base;
-  const fitting = width / (length * NAME_ADVANCE_RATIO);
+  const em = nameWidthEm(name.trim());
+  if (em === 0) return base;
+  const fitting = (width * FIT_SAFETY) / em;
   return Math.floor(Math.max(floor, Math.min(base, fitting)));
 };
 
@@ -247,25 +302,43 @@ export const graphemes = (text: string): string[] =>
       )
     : Array.from(text);
 
-/** The estimated set width of `text` at `size`, on the same ratio as fitting. */
-export const estimatedLineWidth = (text: string, size: number): number =>
-  graphemes(text).length * NAME_ADVANCE_RATIO * size;
+/**
+ * The drawn width of a fitted name at its size: the kept text, plus the
+ * untracked `…` when it was cut.
+ */
+export const fittedLineWidth = (line: FittedLine): number =>
+  (nameWidthEm(line.text) + (line.cut ? INTER_900_ELLIPSIS : 0)) * line.size;
+
+export interface FittedLine {
+  size: number;
+  /** The kept text, without the ellipsis. */
+  text: string;
+  /** True when the name was cut: the card draws `NAME_ELLIPSIS` after it. */
+  cut: boolean;
+}
 
 /**
- * The one-line name as drawn: its size, and its text cut to fit with a `…`
- * when even the floor size overflows. Cut here rather than by satori's
- * `textOverflow`, which clipped the ellipsis's last dot at the box edge.
+ * The one-line name as drawn: its size, and, when even the floor size
+ * overflows, the longest whole-grapheme prefix that fits beside a `…`. Cut
+ * here rather than by satori's `textOverflow`, which clipped the ellipsis.
  */
 export const fitLine = (
   name: string,
   base: number,
   width: number,
   floor: number,
-): { size: number; text: string } => {
+): FittedLine => {
   const text = name.trim();
-  const glyphs = graphemes(text);
   const size = fitLineSize(text, base, width, floor);
-  if (glyphs.length * NAME_ADVANCE_RATIO * size <= width) return { size, text };
-  const keep = Math.max(1, Math.floor(width / (NAME_ADVANCE_RATIO * size)) - 1);
-  return { size, text: `${glyphs.slice(0, keep).join('').trimEnd()}…` };
+  const room = width * FIT_SAFETY;
+  if (nameWidthEm(text) * size <= room) return { size, text, cut: false };
+  const budget = room - INTER_900_ELLIPSIS * size;
+  let used = 0;
+  const kept: string[] = [];
+  for (const grapheme of graphemes(text)) {
+    used += (inter900Advance(grapheme) + NAME_TRACKING) * size;
+    if (used > budget) break;
+    kept.push(grapheme);
+  }
+  return { size, text: kept.join('').trimEnd(), cut: true };
 };
