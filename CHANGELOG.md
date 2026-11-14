@@ -1,3 +1,26 @@
+# [1.436.0](https://github.com/featherweight-design/concert-crawl/compare/v1.435.0...v1.436.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** date picker mutes days before today, as drawn ([1c91ac5](https://github.com/featherweight-design/concert-crawl/commit/1c91ac593556909e4aded5a8a41c2dea8ea67342))
+* **admin:** picker review fixes ([cc5f829](https://github.com/featherweight-design/concert-crawl/commit/cc5f82917782615e0e69e60f287758b8a0e66ebc))
+* **web:** 16px guide field on the phone; inventory clicks match the phone row ([1b663cb](https://github.com/featherweight-design/concert-crawl/commit/1b663cb4c71163218f2a5c6564bbec2834886dd2))
+* **web:** cut the filler from the Guide unpublish confirm ([ce6703b](https://github.com/featherweight-design/concert-crawl/commit/ce6703b439db95011a0958f9c8d3f5da5c18e5c7))
+* **web:** guide panel review fixes and rulings ([e4e75ca](https://github.com/featherweight-design/concert-crawl/commit/e4e75cab365771208a443243b452e71b28a37922))
+* **web:** name the filter on a picked chip, and fold long venue names ([4a986f8](https://github.com/featherweight-design/concert-crawl/commit/4a986f8f241a4a13cae26a8347cca72196eba037))
+* **web:** name the guide's Write panel after its section, reword Unpublish ([e349f9d](https://github.com/featherweight-design/concert-crawl/commit/e349f9ddef8ab18994fef1f31605f7689f1ddcc3))
+
+
+### Features
+
+* **admin:** draw every admin avatar in the person's own two colours ([3233b5c](https://github.com/featherweight-design/concert-crawl/commit/3233b5c898c1f24aa0fa6e6e77b82f7974037c52))
+* **admin:** event edit date and time pickers (wip) ([f7e81bd](https://github.com/featherweight-design/concert-crawl/commit/f7e81bd1eff7fc66a4e63942b66af81befad92ee))
+* **admin:** listed again on a delisted show, picker tests ([87fc696](https://github.com/featherweight-design/concert-crawl/commit/87fc696483f94a6e611b9e7915ea4b4da7b8326e))
+* **admin:** postponed new date takes the date and time pickers ([41e1b44](https://github.com/featherweight-design/concert-crawl/commit/41e1b44996e657bd4697869bcff053f5139ff4df))
+* **web:** show the pick on admin Events filter chips ([9f66191](https://github.com/featherweight-design/concert-crawl/commit/9f661915e88ed5392654321c16c3d44125abeb0e))
+* **web:** venue Guide tab and edit panel (3b part 6) ([54a0387](https://github.com/featherweight-design/concert-crawl/commit/54a03873fe3dc08dca2bd6119b79afe470bbf278))
+
 # [1.435.0](https://github.com/featherweight-design/concert-crawl/compare/v1.434.0...v1.435.0) (2026-11-14)
 
 
