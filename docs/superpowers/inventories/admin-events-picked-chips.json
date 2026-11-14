@@ -1,0 +1,62 @@
+{
+  "feature": "Admin Events · filter chips after a pick",
+  "note": "Addendum-5 item 4, board 04-event-edit/filter-chips-picked. CONTACT_SHEET_ROLE=admin. One venue: glyph and name with a ×. Two venues: two stacked glyphs and \"<first> +1\". One status: the StatusChip itself. Two statuses: \"2 statuses\". No price and Hidden on: active edge, count, × (Hidden gains the eye). The venue popover's first label is its search field, so venue rows start at nth=1.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "nothing-picked",
+      "label": "/admin/events",
+      "steps": [
+        {
+          "goto": "/admin/events",
+          "wait": "[data-testid=\"venue-filter-chip\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "one-picked",
+      "label": "One venue, one status (Sold out)",
+      "steps": [
+        {
+          "goto": "/admin/events?statuses=soldout",
+          "wait": "[data-testid=\"status-filter-clear\"]"
+        },
+        { "click": "[data-testid=\"venue-filter-chip\"]" },
+        { "click": "[data-testid=\"venue-filter\"] label >> nth=1" },
+        { "clickRole": "button", "name": "^Show ", "settle": 400 },
+        { "wait": "[data-testid=\"venue-filter-clear\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "two-or-more",
+      "label": "Two venues, two statuses",
+      "steps": [
+        {
+          "goto": "/admin/events?statuses=available,soldout",
+          "wait": "[data-testid=\"status-filter-clear\"]"
+        },
+        { "click": "[data-testid=\"venue-filter-chip\"]" },
+        { "click": "[data-testid=\"venue-filter\"] label >> nth=1" },
+        { "click": "[data-testid=\"venue-filter\"] label >> nth=2" },
+        { "clickRole": "button", "name": "^Show ", "settle": 400 },
+        { "wait": "[data-testid=\"venue-filter-clear\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "count-on",
+      "label": "/admin/events?noPrice=1&hidden=1",
+      "steps": [
+        {
+          "goto": "/admin/events?noPrice=1&hidden=1",
+          "wait": "[data-testid=\"venue-filter-chip\"]",
+          "settle": 600
+        }
+      ]
+    }
+  ]
+}

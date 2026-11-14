@@ -312,6 +312,7 @@ const PickerBody = ({
 export const FilterPicker = ({
   label,
   picked,
+  pickedLabel,
   clearLabel,
   testId,
   options,
@@ -326,6 +327,8 @@ export const FilterPicker = ({
   label: string;
   /** What the chip shows while `selected` is not empty. */
   picked: ReactNode;
+  /** The chip's accessible name then, naming the filter as well as the pick. */
+  pickedLabel: string;
   /** The ×'s accessible name. */
   clearLabel: string;
   /** On the popover or sheet; the chip carries `<testId>-chip`. */
@@ -445,6 +448,7 @@ export const FilterPicker = ({
       aria-expanded={open}
       // On while a selection applies, as No price and Hidden say theirs.
       aria-pressed={isPicked}
+      aria-label={isPicked ? pickedLabel : undefined}
       data-testid={`${testId}-chip`}
       style={isPicked ? pickedTrigger : chipStyle(false)}
       onClick={() => {
