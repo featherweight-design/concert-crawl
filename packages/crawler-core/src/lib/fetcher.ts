@@ -1,5 +1,6 @@
 import type { FetchLog } from './fetch-log.js';
 import type { Browser } from 'playwright';
+import { createLogger } from '@concert-crawl/logger';
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
 
 import { jitter } from './fetchers/jitter.js';
@@ -11,6 +12,17 @@ import {
 } from './robots-fetch.js';
 
 export { RobotsDisallowedError };
+
+const logger = createLogger('fetcher');
+
+// The origin of a frame's URL, for the log; never throws on an odd URL.
+function originOf(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return 'unparseable';
+  }
+}
 
 // A server redirect Playwright already followed: all we can still do is
 // refuse to read a page whose chain passed through a disallowed URL.
@@ -98,13 +110,26 @@ export async function fetchPage(
     const startUrl = canonicalRequestUrl(url);
     let navigationSkip: CrawlSkipError | null = null;
     let initialRequestSeen = false;
+
     await page.route('**/*', async (route) => {
       const request = route.request();
-      if (
-        !request.isNavigationRequest() ||
-        request.frame() !== page.mainFrame()
-      ) {
+      if (!request.isNavigationRequest()) {
         await route.continue();
+        return;
+      }
+      // An iframe's document (YouTube, a map, a ticket widget, an ad, a
+      // reCAPTCHA) is never requested at all. Nothing in the crawl reads a
+      // frame: extraction works on the main frame's page.content() alone.
+      // So a frame would only be an unpaced request robots.txt never cleared,
+      // and aborting it needs no robots lookup, no wait against goto()'s
+      // 60 s timeout, and leaves no frame redirect for Chromium to follow.
+      // A reader of frame content added later must gate frames instead.
+      if (request.frame() !== page.mainFrame()) {
+        logger.debug(
+          { url, origin: originOf(request.url()) },
+          'fetch.frame_aborted',
+        );
+        await route.abort('blockedbyclient');
         return;
       }
       if (!initialRequestSeen && request.url() === startUrl) {
