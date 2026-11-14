@@ -2554,8 +2554,6 @@ export const ADMIN_COPY = {
     yesterday: 'Yesterday',
     noHandle: 'a fan',
     ticketPage: 'Ticket page',
-    // The phone's full-width row (`06/price-checks-mobile`).
-    openTicketPage: 'Open ticket page',
     watching: (count: number) => `${count} Watching`,
     takeAnswer: (price: string) => `Use ${price}`,
     keepAnswer: (price: string) => `Keep ${price}`,

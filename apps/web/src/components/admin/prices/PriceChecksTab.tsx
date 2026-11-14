@@ -26,6 +26,8 @@ import { decidedWhen, filedWhen, shortDay } from './checks-rules';
 import { dollars, priceRange } from './submitted-rules';
 
 const COPY = ADMIN_COPY.pricesChecks;
+// The phone's full-width row (`06/price-checks-mobile`): Add a price's words.
+const OPEN_TICKET_PAGE = ADMIN_COPY.pricesPage.add.openTicketPage;
 const PAGE = 50;
 /** Open checks are few; one call takes up to the API's most. */
 const OPEN_PAGE = 100;
@@ -115,27 +117,67 @@ const smallLabel: CSSProperties = {
 const fan = (side: CheckSide): string =>
   side.handle === null ? COPY.noHandle : `@${side.handle}`;
 
+/**
+ * A LISTED NOW or PRICE CHECK tile. Desktop (`06/prices-price-checks`): 12px
+ * radius, 12/14 padding, the Price check edged in the gradient. Phone
+ * (`06/price-checks-mobile`): 10px radius and padding, no edge, an 18px price.
+ */
 const Side = ({
   label,
   side,
   tone,
+  edged = false,
+  phone,
   words,
 }: {
   label: string;
   side: CheckSide;
   tone?: string;
+  edged?: boolean;
+  phone: boolean;
   words: { today: string; yesterday: string };
 }) => (
-  <div style={{ minWidth: 0 }}>
-    <div style={{ ...smallLabel, ...(tone ? { color: tone } : {}) }}>
+  <div
+    style={{
+      minWidth: 0,
+      borderRadius: phone ? 10 : 12,
+      padding: phone ? 10 : '12px 14px',
+      ...(phone
+        ? { background: 'var(--surface-2)' }
+        : edged
+          ? {
+              border: '1px solid transparent',
+              background:
+                'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+            }
+          : {
+              border: '1px solid var(--border)',
+              background: 'var(--surface-2)',
+            }),
+    }}
+  >
+    <div
+      style={{
+        ...smallLabel,
+        ...(phone ? { fontSize: 9.5, letterSpacing: '0.14em' } : {}),
+        ...(tone ? { color: tone } : {}),
+      }}
+    >
       {label}
     </div>
-    <div style={{ fontSize: 22, fontWeight: 800, marginTop: 2 }}>
+    <div
+      style={{
+        fontSize: phone ? 18 : 22,
+        fontWeight: 800,
+        fontVariantNumeric: 'tabular-nums',
+        marginTop: 4,
+      }}
+    >
       {priceRange(side.priceMin, side.priceMax)}
     </div>
     <div
       style={{
-        fontSize: 12,
+        fontSize: phone ? 11.5 : 12,
         color: 'var(--fg-muted)',
         marginTop: 2,
         overflow: 'hidden',
@@ -268,12 +310,12 @@ export const PriceChecksTab = () => {
             key,
             label: (
               <>
-                {COPY.views[key]}
+                {COPY.views[key]}{' '}
                 <span
                   style={{
                     fontSize: 11,
                     color: 'var(--fg-subtle)',
-                    marginLeft: 5,
+                    marginLeft: 2,
                   }}
                 >
                   {key === 'open' ? openTotal : resolvedTotal}
@@ -305,7 +347,7 @@ export const PriceChecksTab = () => {
               onClick={() => setView(key)}
               style={pillStyle(view === key)}
             >
-              {COPY.views[key]}
+              {COPY.views[key]}{' '}
               <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
                 {key === 'open' ? openTotal : resolvedTotal}
               </span>
@@ -433,18 +475,21 @@ export const PriceChecksTab = () => {
                         style={{
                           display: 'grid',
                           gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                          gap: 16,
+                          gap: 8,
                         }}
                       >
                         <Side
                           label={COPY.listedNow}
                           side={check.listed}
+                          phone={isPhone}
                           words={words}
                         />
                         <Side
                           label={COPY.priceCheck}
                           side={check.check}
                           tone="var(--accent)"
+                          edged
+                          phone={isPhone}
                           words={words}
                         />
                       </div>
@@ -474,7 +519,7 @@ export const PriceChecksTab = () => {
                               strokeWidth={1.8}
                               aria-hidden="true"
                             />
-                            {isPhone ? COPY.openTicketPage : COPY.ticketPage}
+                            {isPhone ? OPEN_TICKET_PAGE : COPY.ticketPage}
                           </SafeExternalLink>
                         )}
                         <div
@@ -490,7 +535,16 @@ export const PriceChecksTab = () => {
                             onClick={() => void decide(check, 'use')}
                             style={{
                               ...useButtonStyle,
-                              height: isPhone ? 38 : 32,
+                              // A long range wraps on a narrow phone rather
+                              // than spill past the card.
+                              ...(isPhone
+                                ? {
+                                    height: 'auto',
+                                    minHeight: 38,
+                                    minWidth: 0,
+                                    whiteSpace: 'normal',
+                                  }
+                                : { height: 32 }),
                               fontSize: isPhone ? 13 : 12.5,
                               ...(isPhone ? { flex: 1 } : {}),
                               ...(busy
@@ -507,7 +561,14 @@ export const PriceChecksTab = () => {
                             onClick={() => void decide(check, 'keep')}
                             style={
                               isPhone
-                                ? { flex: 1, height: 38, fontSize: 13 }
+                                ? {
+                                    flex: 1,
+                                    height: 'auto',
+                                    minHeight: 38,
+                                    minWidth: 0,
+                                    whiteSpace: 'normal',
+                                    fontSize: 13,
+                                  }
                                 : { height: 30 }
                             }
                           >

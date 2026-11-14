@@ -278,12 +278,13 @@ export const PricesClient = ({ initialTab }: { initialTab: PricesTab }) => {
     key,
     label: (
       <>
-        {isPhone ? COPY.phoneTabs[key] : COPY.tabs[key]}
+        {/* A real space, so the tab reads "Missing 644", not "Missing644". */}
+        {isPhone ? COPY.phoneTabs[key] : COPY.tabs[key]}{' '}
         <span
           style={{
             fontSize: 12,
             color: 'var(--fg-subtle)',
-            marginLeft: 6,
+            marginLeft: 2,
           }}
         >
           {counts ? tabCountOf(counts, key) : ''}
