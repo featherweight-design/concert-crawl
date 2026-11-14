@@ -1,0 +1,71 @@
+{
+  "feature": "Admin · Invite codes and Posters under People (P47-15 PR1)",
+  "note": "Boards: design_handoff_admin_redesign/boards/07-people-flags-operations/invite-codes, invite-codes-mobile, posters-mobile (header and crumb only; the phone Posters body is PR2), a-code-in-flow; addendum-3 12/code-taken-d. CONTACT_SHEET_ROLE=admin. Read-only: the code panel and New code panel open without saving. The old URLs are walked to prove the redirect lands on the new route.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "codes",
+      "label": "Invite codes at /admin/people/invite-codes",
+      "steps": [
+        {
+          "goto": "/admin/people/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "codes-old-url",
+      "label": "Old /admin/invite-codes redirects",
+      "steps": [
+        {
+          "goto": "/admin/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        }
+      ]
+    },
+    {
+      "id": "code-panel",
+      "label": "A code's panel (dividers); phone rows open it, desktop rows open it from the ⋯",
+      "widths": ["phone"],
+      "steps": [
+        {
+          "goto": "/admin/people/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        },
+        { "click": "[data-testid='invite-codes-list'] li > button >> nth=0" },
+        { "wait": "text=Last used", "settle": 600 }
+      ]
+    },
+    {
+      "id": "new-code",
+      "label": "New code panel (title)",
+      "steps": [
+        {
+          "goto": "/admin/people/invite-codes",
+          "wait": "[data-testid='invite-codes-list']",
+          "settle": 800
+        },
+        { "clickRole": "button", "name": "^New code$" },
+        { "wait": "[role='dialog']", "settle": 600 }
+      ]
+    },
+    {
+      "id": "posters",
+      "label": "Posters at /admin/people/invite-codes/posters",
+      "steps": [
+        {
+          "goto": "/admin/people/invite-codes/posters",
+          "wait": "[data-testid='posters-tab']",
+          "settle": 2000
+        }
+      ]
+    }
+  ]
+}
