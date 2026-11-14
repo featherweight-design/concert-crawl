@@ -575,7 +575,7 @@ export const JumpPicker = ({
                 justifyContent: 'center',
                 gap: 3,
                 background: sel
-                  ? 'linear-gradient(135deg, var(--signal), var(--accent))'
+                  ? 'linear-gradient(135deg, var(--signal), var(--cta-end))'
                   : 'transparent',
                 opacity,
                 boxShadow:

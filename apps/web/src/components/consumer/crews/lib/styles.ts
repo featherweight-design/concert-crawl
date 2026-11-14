@@ -6,6 +6,10 @@
 export const CREW_GRADIENT =
   'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--cta-end)), var(--cta-end))';
 
+/** The same sweep as clipped heading text, which keeps the raw accent. */
+export const CREW_TEXT_GRADIENT =
+  'linear-gradient(90deg, var(--signal), color-mix(in oklch, var(--signal), var(--accent)), var(--accent))';
+
 const pillBase: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',

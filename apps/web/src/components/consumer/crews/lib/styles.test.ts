@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MY_SHOWS_CTA_GRADIENT } from '@/components/consumer/history/definitions/constants';
 import { SIGNAL_TO_CTA_END } from '@/components/settings/definitions/styles';
-import { CREW_GRADIENT, pillPrimary } from './styles';
+import { CREW_GRADIENT, CREW_TEXT_GRADIENT, pillPrimary } from './styles';
 
 // addendum-4 03/cta-gradient-end: a gradient that FILLS a button under dark
 // label text ends on --cta-end, never the raw accent.
@@ -14,5 +14,11 @@ describe('filled CTA gradients', () => {
   ])('%s ends on --cta-end', (_name, value) => {
     expect(value).toContain('var(--cta-end)');
     expect(value).not.toContain('var(--accent)');
+  });
+
+  // Clipped heading text is not a fill, so it keeps the raw accent.
+  it('keeps heading text on --accent', () => {
+    expect(CREW_TEXT_GRADIENT).toContain('var(--accent)');
+    expect(CREW_TEXT_GRADIENT).not.toContain('--cta-end');
   });
 });

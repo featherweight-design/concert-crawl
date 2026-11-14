@@ -5,6 +5,7 @@ import { CCMark } from '@/components/brand/cc-mark';
 import { INSTALL_COPY } from './definitions/copy';
 import {
   EYEBROW_STYLE,
+  PWA_CTA_GRADIENT,
   PWA_GRADIENT,
   SHEET_PRIMARY_CLASS,
 } from './definitions/styles';
@@ -101,7 +102,7 @@ const StepTile = ({ icon, num }: { icon: string; num: string }) => (
     <span
       aria-hidden="true"
       className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-extrabold text-fg-on-accent"
-      style={{ background: PWA_GRADIENT }}
+      style={{ background: PWA_CTA_GRADIENT }}
     >
       {num}
     </span>

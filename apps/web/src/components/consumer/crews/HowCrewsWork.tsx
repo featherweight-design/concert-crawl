@@ -1,4 +1,4 @@
-import { CREW_GRADIENT } from './lib/styles';
+import { CREW_TEXT_GRADIENT } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY.howItWorks;
@@ -50,7 +50,7 @@ export const HowCrewsWork = ({ wide }: { wide: boolean }) => (
               fontWeight: 900,
               lineHeight: 1.1,
               width: 'fit-content',
-              background: CREW_GRADIENT,
+              background: CREW_TEXT_GRADIENT,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               color: 'transparent',

@@ -129,7 +129,7 @@ export const viewSegmentStyle = (active: boolean): CSSProperties => ({
   color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
   // B+ draws the active segment in the brand gradient.
   background: active
-    ? 'linear-gradient(135deg, var(--signal), var(--accent))'
+    ? 'linear-gradient(135deg, var(--signal), var(--cta-end))'
     : 'transparent',
 });
 export const VIEW_SEGMENTS = [

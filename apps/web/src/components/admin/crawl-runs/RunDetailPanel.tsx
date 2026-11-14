@@ -224,7 +224,7 @@ const actionLink = (primary: boolean, phone: boolean): CSSProperties => ({
   ...(phone && primary
     ? {
         // AdminButton's `gradient`, the sheet's main action.
-        background: 'linear-gradient(135deg, var(--signal), var(--accent))',
+        background: 'linear-gradient(135deg, var(--signal), var(--cta-end))',
         color: 'var(--bg)',
         border: '1px solid transparent',
       }

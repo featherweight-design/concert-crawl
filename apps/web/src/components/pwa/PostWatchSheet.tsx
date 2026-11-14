@@ -13,7 +13,7 @@ import { BottomSheet } from './BottomSheet';
 import { POST_WATCH_COPY } from './definitions/copy';
 import {
   EYEBROW_STYLE,
-  PWA_GRADIENT,
+  PWA_CTA_GRADIENT,
   SHEET_PRIMARY_CLASS,
 } from './definitions/styles';
 
@@ -83,7 +83,7 @@ export const PostWatchSheet = ({
             type="button"
             onClick={() => void onTurnOn()}
             className={SHEET_PRIMARY_CLASS}
-            style={{ background: PWA_GRADIENT }}
+            style={{ background: PWA_CTA_GRADIENT }}
           >
             {isIos
               ? POST_WATCH_COPY.ios.showMe
