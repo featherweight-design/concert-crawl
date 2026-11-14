@@ -91,6 +91,7 @@ export interface BugFacts {
   handle: string | null;
   screenshot: string | null;
   issueUrl: string | null;
+  device: string | null;
 }
 
 /** One crawl run a venue item lists (newest first). `status` is the run's own word. */
@@ -305,6 +306,7 @@ const bugFactsFrom = (value: Record<string, unknown>): BugFacts => ({
   handle: textOf(value['handle']),
   screenshot: textOf(value['screenshot']),
   issueUrl: textOf(value['issueUrl']),
+  device: textOf(value['device']),
 });
 
 const rowFrom = (value: unknown): QueueRow | null => {

@@ -2158,6 +2158,8 @@ export type NeedsYouItem =
       screenshot?: string | null;
       /** The GitHub issue the report was filed as, if any. */
       issueUrl?: string | null;
+      /** The reporter's device and browser, as the widget sent it ("iPhone · Safari 19"). */
+      device?: string | null;
       evidence: NeedsYouEvidenceLine[];
     });
 

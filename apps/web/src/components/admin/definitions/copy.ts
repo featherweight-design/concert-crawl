@@ -2636,6 +2636,7 @@ export const ADMIN_COPY = {
         context: 'CONTEXT',
         from: 'From',
         page: 'Page',
+        device: 'Device',
         ago: (minutes: number) =>
           minutes < 60
             ? `${Math.max(1, minutes)} min ago`

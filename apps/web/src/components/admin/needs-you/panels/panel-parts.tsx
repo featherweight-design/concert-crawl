@@ -127,6 +127,7 @@ export const Chip = ({
 
 const ANSWER_ICONS: Record<string, LucideIcon> = {
   still_on: Check,
+  resolve: Check,
   re_crawl_now: RefreshCw,
   re_crawl_once: RefreshCw,
   keep_paused: Pause,

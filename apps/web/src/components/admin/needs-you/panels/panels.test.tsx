@@ -492,6 +492,7 @@ const bugRow = (over: Partial<BugFacts> = {}) =>
       handle: 'fan1',
       screenshot: null,
       issueUrl: null,
+      device: null,
       ...over,
     },
   });
@@ -503,6 +504,15 @@ describe('BugPanel', () => {
     expect(screen.getAllByText('“Button broken”')).toHaveLength(2);
     expect(screen.getByText('@fan1')).toBeInTheDocument();
     expect(screen.getByText('/events/abc')).toBeInTheDocument();
+  });
+
+  it("draws the reporter's device only when the widget sent one", () => {
+    open(bugRow());
+    expect(screen.queryByText('Device')).toBeNull();
+    cleanup();
+    open(bugRow({ device: 'iPhone · Safari 19' }));
+    expect(screen.getByText('Device')).toBeInTheDocument();
+    expect(screen.getByText('iPhone · Safari 19')).toBeInTheDocument();
   });
 
   it('draws a screenshot only when there is one', () => {

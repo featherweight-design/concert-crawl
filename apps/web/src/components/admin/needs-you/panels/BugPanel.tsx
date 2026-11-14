@@ -26,6 +26,9 @@ export const BugPanel = ({ row, busy, onAnswer }: PanelProps) => {
       ? [{ label: PANEL.bug.from, value: `@${facts.handle}` }]
       : []),
     ...(page ? [{ label: PANEL.bug.page, value: pagePathOf(page) }] : []),
+    ...(facts?.device
+      ? [{ label: PANEL.bug.device, value: facts.device }]
+      : []),
   ];
   const message = facts?.message ?? row.title;
 
