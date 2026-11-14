@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
   KindLabel,
@@ -203,6 +204,28 @@ export const QueueItem = ({
             {answer.label}
           </button>
         ))}
+        {row.kind === 'price-check' && row.priceFacts?.ticketUrl && (
+          // The card's third action: the ticket page, a quiet link beside the
+          // two answers (`price-check-m`). A link, not an answer: no API call.
+          <a
+            href={row.priceFacts.ticketUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="card-open-ticket-page"
+            style={{
+              ...MONO,
+              gridColumn: isPhone ? '1 / -1' : undefined,
+              padding: '6px 8px',
+              textAlign: 'center',
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--fg-muted)',
+              textDecoration: 'none',
+            }}
+          >
+            {ADMIN_COPY.needsYou.panel.priceCheck.openTicket}
+          </a>
+        )}
       </div>
     </article>
   );

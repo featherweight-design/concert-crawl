@@ -42,31 +42,48 @@ const PriceCard = ({
     style={{
       flex: '1 1 140px',
       minWidth: 0,
-      padding: 14,
-      borderRadius: 14,
-      background: 'var(--surface-1)',
-      border: accent ? '1.5px solid var(--signal)' : '1px solid var(--border)',
+      padding: 12,
+      borderRadius: 12,
+      // The card under check wears the gradient ring (`price-check-m`).
+      ...(accent
+        ? {
+            border: '1.5px solid transparent',
+            background:
+              'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(135deg, var(--signal), var(--accent)) border-box',
+          }
+        : {
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+          }),
     }}
   >
     <div
       style={{
-        fontSize: 11,
-        letterSpacing: '0.08em',
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.12em',
         color: 'var(--fg-subtle)',
         fontFamily: 'var(--font-mono, monospace)',
       }}
     >
       {label}
     </div>
-    <div style={{ fontSize: 24, fontWeight: 800, margin: '6px 0' }}>
+    <div
+      style={{
+        fontSize: 22,
+        fontWeight: 800,
+        margin: '6px 0',
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
       {price ?? ''}
     </div>
-    {when && (
-      <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>{when}</div>
-    )}
-    {fans !== null && (
+    {/* One line: the day, then how many fans ("Sep 18 · 1 fan"). */}
+    {(when || fans !== null) && (
       <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-        {PANEL.priceCheck.fans(fans)}
+        {[when, fans !== null ? PANEL.priceCheck.fans(fans) : null]
+          .filter((part) => part)
+          .join(' · ')}
       </div>
     )}
   </div>
@@ -88,7 +105,7 @@ export const PriceCheckPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
     <>
       <ChipRow>
         {chipText && (
-          <Chip kind={chip?.soon ? 'danger' : 'neutral'} dot>
+          <Chip kind={chip?.soon ? 'accent' : 'neutral'} dot>
             {chipText}
           </Chip>
         )}
@@ -99,7 +116,7 @@ export const PriceCheckPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
         )}
       </ChipRow>
       <Section label={PANEL.priceCheck.twoPrices}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <PriceCard
             testId="price-listed"
             label={PANEL.priceCheck.listedNow}
@@ -166,7 +183,7 @@ export const PriceCheckPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
             </LinkButton>
           ) : null
         }
-        extraLast
+        extraFirst
         onAnswer={onAnswer}
       />
     </>

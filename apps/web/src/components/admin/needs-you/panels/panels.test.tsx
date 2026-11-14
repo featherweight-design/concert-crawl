@@ -443,6 +443,16 @@ describe('PriceCheckPanel', () => {
     expect(screen.queryByTestId('open-ticket-page')).toBeNull();
   });
 
+  it('puts the ticket page first, above both answers', () => {
+    open(priceRow());
+    const link = screen.getByTestId('open-ticket-page');
+    const answers = screen.getAllByTestId('needs-you-answer');
+    expect(
+      link.compareDocumentPosition(answers[0] as HTMLElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('draws CHECKED FOR YOU from the checker record and WHO SEES IT from the Watchers', () => {
     open(priceRow());
     expect(screen.getByText('CHECKED FOR YOU')).toBeInTheDocument();

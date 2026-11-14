@@ -2732,6 +2732,7 @@ export const ADMIN_COPY = {
     // `01-snooze/answered-d`: the return time, with Undo beside it.
     snoozedUntilLine: (name: string, when: string) =>
       `${name} snoozed until ${when}.`,
+    listedMeta: (range: string) => `listed ${range}`,
     undo: {
       action: 'Undo',
       failed: "Couldn't undo that.",
