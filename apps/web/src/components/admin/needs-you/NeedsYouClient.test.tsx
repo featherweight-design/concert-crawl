@@ -334,6 +334,38 @@ describe('NeedsYouClient', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps the skeleton up while the queue loads', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    render(<NeedsYouClient item={null} />);
+    expect(screen.getByTestId('needs-you-skeleton')).toBeInTheDocument();
+  });
+
+  it('opens the first item on desktop, once, and leaves it shut after a close', async () => {
+    render(<NeedsYouClient item={null} />);
+    const panel = await screen.findByTestId('side-panel');
+    expect(panel).toHaveTextContent('Olive Jones w/ Zoe Stroupe');
+    expect(replaceMock).toHaveBeenCalledWith(
+      '/admin/needs-you?item=show-dropped%3Ae1',
+      { scroll: false },
+    );
+    fireEvent.click(within(panel).getByRole('button', { name: /close/i }));
+    await waitFor(() => expect(screen.queryByTestId('side-panel')).toBeNull());
+  });
+
+  it('keeps the list on the phone until an item is picked', async () => {
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    render(<NeedsYouClient item={null} />);
+    await screen.findAllByTestId('needs-you-item');
+    expect(screen.queryByTestId('side-panel')).toBeNull();
+  });
+
   it('shows Couldn’t load with Try again when the list fails', async () => {
     vi.stubGlobal(
       'fetch',

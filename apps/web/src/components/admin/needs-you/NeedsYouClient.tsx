@@ -1,6 +1,13 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
@@ -15,6 +22,7 @@ import {
 } from '@/components/admin/primitives';
 import { AllClear } from './AllClear';
 import { AnsweredRow } from './AnsweredRow';
+import { NeedsYouSkeleton } from './NeedsYouSkeleton';
 import { EvidenceSlot } from './EvidenceSlot';
 import { PriceBatchSheet } from './PriceBatchSheet';
 import { QueueItem } from './QueueItem';
@@ -115,6 +123,21 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Rule 4: on desktop the first item opens as soon as the queue arrives, once.
+  // Closing it, or answering it, leaves the panel shut. The phone keeps the list.
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (rows === null || autoOpened.current) return;
+    autoOpened.current = true;
+    const first = rows[0];
+    if (!isPhone && !item && first) {
+      setSelected(first.key);
+      router.replace(`/admin/needs-you?item=${encodeURIComponent(first.key)}`, {
+        scroll: false,
+      });
+    }
+  }, [rows, isPhone, item, router]);
 
   const select = (key: string | null) => {
     setSelected(key);
@@ -265,7 +288,9 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
 
   if (failedLoad)
     return <CouldntLoad page={COPY.title} onRetry={() => void load()} />;
-  if (rows === null || count === null) return null;
+  // The queue loads in the browser, so the skeleton the route's `loading.tsx`
+  // drew stays up through the real wait (`07/loading-needs-you`).
+  if (rows === null || count === null) return <NeedsYouSkeleton />;
 
   const today = mountainToday(new Date());
   const visible = rows.filter((row) => inFilter(row, filter));
@@ -301,9 +326,12 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
               {COPY.title}
             </h1>
           )}
-          <p style={{ margin: 0, fontSize: 14.5, color: 'var(--fg-muted)' }}>
-            {COPY.summary(count.decisions, count.handledToday)}
-          </p>
+          {/* All clear draws the title alone: the card says the rest. */}
+          {!allClear && (
+            <p style={{ margin: 0, fontSize: 14.5, color: 'var(--fg-muted)' }}>
+              {COPY.summary(count.decisions, count.handledToday)}
+            </p>
+          )}
         </header>
 
         {allClear ? (
