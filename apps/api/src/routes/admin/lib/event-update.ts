@@ -71,6 +71,19 @@ export class PastLockedError extends Error {
   }
 }
 
+/** The 409 body every admin write returns when the past lock refuses it. */
+export const PAST_LOCKED_BODY = {
+  success: false,
+  error: 'past_locked',
+} as const;
+
+/**
+ * The past lock's one definition of "past": a show dated before `today`, the
+ * Denver date from `todayInDenver()`. A show dated today is not past.
+ */
+export const isPastShow = (date: string, today: string): boolean =>
+  date < today;
+
 type EventRow = typeof events.$inferSelect;
 type PatchKey = keyof EventPatch & keyof EventRow;
 
@@ -225,7 +238,7 @@ export const updateEventNotifying = async (
       if (
         pastLockBefore !== undefined &&
         preUpdate &&
-        preUpdate.date < pastLockBefore
+        isPastShow(preUpdate.date, pastLockBefore)
       ) {
         const postponed = preUpdate.status === 'postponed';
         const allowed = postponed ? POSTPONED_PAST_ALLOWED : PAST_ALLOWED;
