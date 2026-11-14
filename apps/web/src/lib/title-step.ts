@@ -19,7 +19,15 @@ const WIDE = new Set('mw');
 const PUNCT = new Set("'.,-");
 
 /** Approximate advance of one glyph, in em. */
+const FULL_WIDTH =
+  /[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+const COMBINING = /\p{M}/u;
+
 const glyphWidth = (ch: string): number => {
+  // A combining mark rides on its base letter and adds no advance.
+  if (COMBINING.test(ch)) return 0;
+  // CJK glyphs are about a full em wide.
+  if (FULL_WIDTH.test(ch)) return 1;
   if (NARROW.has(ch)) return 0.28;
   if (THIN.has(ch)) return 0.42;
   if (WIDE.has(ch)) return 0.92;
@@ -31,7 +39,7 @@ const glyphWidth = (ch: string): number => {
 };
 
 const wordWidth = (word: string): number =>
-  [...word].reduce((sum, ch) => sum + glyphWidth(ch), 0);
+  [...word.normalize('NFC')].reduce((sum, ch) => sum + glyphWidth(ch), 0);
 
 // "Corporation" is the widest word the boards hold at 38; 30 holds a word up to
 // 1.4 times that (the 26 step takes anything wider).
