@@ -100,16 +100,25 @@ const readSubmitted = (body: unknown): SubmittedUpdate | null => {
   const row: unknown = body.data;
   if (typeof row !== 'object' || row === null) return null;
   if (!('id' in row) || typeof row.id !== 'string') return null;
-  if (!('priceMin' in row) || typeof row.priceMin !== 'number') return null;
+  // Prices are `numeric` columns, so they come back as strings ("55.00").
+  if (!('priceMin' in row)) return null;
+  const floor = Number(row.priceMin);
+  if (!Number.isFinite(floor)) return null;
+  const ceilingValue = 'priceMax' in row ? row.priceMax : null;
   const ceiling =
-    'priceMax' in row && typeof row.priceMax === 'number'
-      ? row.priceMax
-      : undefined;
+    ceilingValue === null || ceilingValue === undefined
+      ? undefined
+      : Number(ceilingValue);
   const createdAt =
     'createdAt' in row && typeof row.createdAt === 'string'
       ? row.createdAt
       : new Date().toISOString();
-  return { id: row.id, floor: row.priceMin, ceiling, createdAt };
+  return {
+    id: row.id,
+    floor,
+    ceiling: Number.isFinite(ceiling) ? ceiling : undefined,
+    createdAt,
+  };
 };
 
 export function CounterSubmitSheet({
@@ -133,6 +142,7 @@ export function CounterSubmitSheet({
   const [howFound, setHowFound] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState<SubmittedUpdate | null>(null);
+  const [withdraw, setWithdraw] = useState<'idle' | 'busy' | 'failed'>('idle');
 
   const priceText =
     currentCeiling != null
@@ -197,11 +207,6 @@ export function CounterSubmitSheet({
     router,
   ]);
 
-  const handleSuccess = useCallback(() => {
-    onSuccess?.();
-    onClose();
-  }, [onSuccess, onClose]);
-
   const handleReset = useCallback(() => {
     setSheetState('form');
     setFieldErrors({});
@@ -214,32 +219,44 @@ export function CounterSubmitSheet({
     setHowFound(null);
     setFieldErrors({});
     setSubmitted(null);
+    setWithdraw('idle');
     onClose();
   }, [onClose]);
+
+  const handleSuccess = useCallback(() => {
+    onSuccess?.();
+    handleClose();
+  }, [onSuccess, handleClose]);
 
   // Withdrawing from the success screen deletes the update just filed and
   // closes the sheet (a6 ruling 33).
   const handleWithdraw = useCallback(() => {
-    if (!submitted) return;
+    if (!submitted || withdraw === 'busy') return;
+    setWithdraw('busy');
     void (async () => {
       try {
         const token = await getToken();
-        if (!token) return;
+        if (!token) {
+          setWithdraw('failed');
+          return;
+        }
         const res = await fetch(`${API_URL}/v1/submissions/${submitted.id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
           console.error('CounterSubmitSheet: withdraw failed', res.status);
+          setWithdraw('failed');
           return;
         }
         router.refresh();
         handleClose();
       } catch (err) {
         console.error('CounterSubmitSheet: withdraw failed', err);
+        setWithdraw('failed');
       }
     })();
-  }, [submitted, getToken, router, handleClose]);
+  }, [submitted, withdraw, getToken, router, handleClose]);
 
   const canSubmit = howFound !== null && sheetState === 'form';
 
@@ -311,6 +328,7 @@ export function CounterSubmitSheet({
       {sheetState === 'success' && (
         <SuccessState
           onClose={handleSuccess}
+          withdrawFailed={withdraw === 'failed'}
           preview={
             submitted && renderPreview
               ? renderPreview(submitted, handleWithdraw)
@@ -419,7 +437,9 @@ function SheetHeader({
 }) {
   const isError = state === 'error';
   const isSent = state === 'success';
-  const tone = isError ? 'var(--danger)' : 'var(--warning)';
+  const tone = isError
+    ? 'var(--price-text-danger)'
+    : 'var(--price-text-warning)';
   const word = isError
     ? copy.railError
     : isSent
@@ -467,6 +487,7 @@ function SheetHeader({
         />
         <span
           data-testid="counter-rail-code"
+          data-tone={isError ? 'danger' : 'warning'}
           style={{ ...MONO_RAIL, fontWeight: 700, color: tone }}
         >
           {code}
@@ -641,13 +662,28 @@ function GradientButton({
 function SuccessState({
   onClose,
   preview,
+  withdrawFailed,
 }: {
   onClose: () => void;
   preview: ReactNode;
+  withdrawFailed: boolean;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {preview}
+      {withdrawFailed && (
+        <p
+          role="alert"
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12,
+            color: 'var(--price-text-danger)',
+          }}
+        >
+          {copy.withdrawFailed}
+        </p>
+      )}
       <GradientButton onClick={onClose}>
         {copy.successBackButton}
       </GradientButton>

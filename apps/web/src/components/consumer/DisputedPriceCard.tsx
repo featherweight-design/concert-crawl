@@ -450,6 +450,7 @@ export const DisputedPriceCard = ({
               ? { disputeCeiling: update.ceiling }
               : {})}
             disputedAt={update.createdAt}
+            counterSubmissionId={update.id}
             eventId={eventId}
             disputedSubmissionId={disputedSubmissionId}
             viewerAction="withdraw"

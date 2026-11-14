@@ -1809,6 +1809,7 @@ export const CONSUMER_COPY = {
     successHeading: 'Update submitted.',
     successBody: 'Your update is pending. Confirms move it forward.',
     successBackButton: 'Back to show',
+    withdrawFailed: "Couldn't withdraw it. Try again.",
     errorHeading: "Didn't go through.",
     errorBody:
       "Couldn't reach the server. Your inputs are still here. Try again or come back later.",

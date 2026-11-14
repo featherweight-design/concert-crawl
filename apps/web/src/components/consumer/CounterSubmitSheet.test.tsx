@@ -205,7 +205,7 @@ describe('CounterSubmitSheet rail and states', () => {
               success: true,
               data: {
                 id: 'new-1',
-                priceMin: 55,
+                priceMin: '55.00',
                 priceMax: null,
                 createdAt: new Date().toISOString(),
               },
@@ -234,7 +234,9 @@ describe('CounterSubmitSheet rail and states', () => {
           JSON.stringify({
             success: true,
             data:
-              init?.method === 'DELETE' ? null : { id: 'new-1', priceMin: 55 },
+              init?.method === 'DELETE'
+                ? null
+                : { id: 'new-1', priceMin: '55.00' },
           }),
         ),
     );
@@ -276,8 +278,9 @@ describe('CounterSubmitSheet rail and states', () => {
     submit();
 
     expect(await screen.findByText("Didn't go through.")).toBeInTheDocument();
-    expect(screen.getByTestId('counter-rail-code')).toHaveStyle({
-      color: 'var(--danger)',
-    });
+    expect(screen.getByTestId('counter-rail-code')).toHaveAttribute(
+      'data-tone',
+      'danger',
+    );
   });
 });
