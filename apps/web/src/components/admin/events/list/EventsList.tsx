@@ -33,7 +33,8 @@ export const StatusChips = ({
   row,
   align = 'start',
 }: {
-  row: EventListRow;
+  /** A list row or Event edit's detail: both carry these three. */
+  row: Pick<EventListRow, 'status' | 'hidden' | 'hiddenReason'>;
   align?: 'start' | 'end';
 }) => (
   <span
