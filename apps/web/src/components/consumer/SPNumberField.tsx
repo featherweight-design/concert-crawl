@@ -73,6 +73,7 @@ export function SPNumberField({
         </span>
         <input
           id={id}
+          aria-required={required || undefined}
           type="text"
           inputMode="numeric"
           value={value}

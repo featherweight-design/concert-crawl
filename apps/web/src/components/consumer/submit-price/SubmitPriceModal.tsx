@@ -992,7 +992,8 @@ export function SubmitPriceModal({
                 border: '1px solid var(--border)',
                 background: 'var(--surface-1)',
                 // The sheet's own gutter is 20px against the board's 18, so the
-                // card gives the 2px back to keep the five tier chips on one row.
+                // card pads 12px (board ~14.5) to keep the five tier chips on
+                // one row at 390. Narrower phones wrap them, as chips do.
                 padding: 12,
               }}
             >
