@@ -69,7 +69,7 @@ describe('Venues page: the two loads are independent', () => {
     getVenues.mockRejectedValue(new Error('venues down'));
     getNeedsYou.mockResolvedValue([{ venueId: 'Ball Arena' }]);
     await renderPage();
-    expect(screen.getByText("Couldn't load Venues")).toBeInTheDocument();
+    expect(screen.getByText('Couldn’t load Venues')).toBeInTheDocument();
   });
 
   it('renders the list without dots or the chip when Needs you fails', async () => {

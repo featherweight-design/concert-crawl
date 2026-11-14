@@ -412,8 +412,8 @@ export const VenuesList = ({
   const someShown = pickedShown > 0 && !allShown;
 
   if (venues === null) {
-    // The chrome stays (README 02, `02/couldnt-load`): the page title as that
-    // board draws it, over the state. The phone's top bar carries the title.
+    // The chrome stays (README 02, `02/couldnt-load`): the loaded page's own
+    // title over the state. The phone's top bar carries the title.
     return (
       <CouldntLoadPage
         title={
@@ -423,6 +423,7 @@ export const VenuesList = ({
                 margin: 0,
                 fontSize: 28,
                 fontWeight: 800,
+                letterSpacing: '-0.02em',
                 color: 'var(--fg)',
               }}
             >

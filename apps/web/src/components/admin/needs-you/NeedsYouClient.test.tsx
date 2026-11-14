@@ -582,7 +582,7 @@ describe('NeedsYouClient', () => {
     expect(title.style.fontSize).toBe('28px');
     expect(title.style.letterSpacing).toBe('');
     expect(
-      screen.getByRole('heading', { name: "Couldn't load Needs you" }),
+      screen.getByRole('heading', { name: 'Couldn’t load Needs you' }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('couldnt-load-page')).toContainElement(title);
     expect(screen.getByTestId('couldnt-load')).toHaveClass(
@@ -608,6 +608,23 @@ describe('NeedsYouClient', () => {
     expect(document.documentElement).toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
     unmount();
     expect(document.documentElement).not.toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
+  });
+
+  it('leaves a flag it didn’t set in place on unmount', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 500 })),
+    );
+    const root = document.documentElement;
+    root.setAttribute(NEEDS_YOU_FAILED_ATTR, '');
+    try {
+      const { unmount } = render(<NeedsYouClient item={null} />);
+      await screen.findByTestId('couldnt-load');
+      unmount();
+      expect(root).toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
+    } finally {
+      root.removeAttribute(NEEDS_YOU_FAILED_ATTR);
+    }
   });
 
   it('leaves the badge alone when the queue loads', async () => {

@@ -158,11 +158,11 @@ describe('VenuesList', () => {
   it('keeps the page title above Couldn’t load (README 02: chrome stays)', () => {
     render(<VenuesList venues={null} />);
     const title = screen.getByRole('heading', { level: 1, name: COPY.title });
-    // `02/couldnt-load`'s title: 28/800, no letter-spacing.
+    // The loaded page's title, unchanged: 28/800 at -0.02em.
     expect(title.style.fontSize).toBe('28px');
-    expect(title.style.letterSpacing).toBe('');
+    expect(title.style.letterSpacing).toBe('-0.02em');
     expect(
-      screen.getByRole('heading', { name: `Couldn't load ${COPY.title}` }),
+      screen.getByRole('heading', { name: `Couldn’t load ${COPY.title}` }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('couldnt-load-page')).toContainElement(title);
     expect(screen.getByTestId('couldnt-load')).toHaveClass(

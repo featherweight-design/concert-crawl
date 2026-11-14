@@ -163,11 +163,21 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   // the phone tab bar's badge hides, since its count can't be trusted. The
   // tab bar lives in the shell, so the flag rides on the root element and
   // admin.css hides `.admin-tab-bar-badge` under it.
+  // Cleanup removes the flag only if this instance set it, so it never clears
+  // one another mounted instance still holds.
+  const setFailedFlag = useRef(false);
   useEffect(() => {
     if (!failedLoad) return;
     const root = document.documentElement;
-    root.setAttribute(NEEDS_YOU_FAILED_ATTR, '');
-    return () => root.removeAttribute(NEEDS_YOU_FAILED_ATTR);
+    if (!root.hasAttribute(NEEDS_YOU_FAILED_ATTR)) {
+      root.setAttribute(NEEDS_YOU_FAILED_ATTR, '');
+      setFailedFlag.current = true;
+    }
+    return () => {
+      if (!setFailedFlag.current) return;
+      root.removeAttribute(NEEDS_YOU_FAILED_ATTR);
+      setFailedFlag.current = false;
+    };
   }, [failedLoad]);
 
   // The All clear card's facts, read once the queue is empty. A failed read

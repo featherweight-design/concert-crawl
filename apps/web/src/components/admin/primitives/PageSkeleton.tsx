@@ -1,4 +1,5 @@
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface PageSkeletonProps {
   /** Tab or segment placeholders above the list. */
@@ -29,8 +30,9 @@ export interface PageSkeletonProps {
 /**
  * Values `07/loading-any-list-on-mobile` draws differently from the desktop
  * boards. Each is a var holding the desktop value as its fallback; admin.css
- * `.page-skeleton` sets the phone value at the breakpoint, so the server
- * fallback needs no viewport hook.
+ * `.page-skeleton-plain` sets the phone value at the breakpoint, so the
+ * server fallback needs no viewport hook. Plain rows only: card mode keeps
+ * the desktop values everywhere.
  */
 export const PHONE_VAR = {
   /** Search box radius: desktop 12, phone 10. */
@@ -66,10 +68,14 @@ export const PageSkeleton = ({
 }: PageSkeletonProps) => (
   <div
     data-testid="page-skeleton"
-    className="page-skeleton"
+    // The phone values cover plain rows only: the card table (Events) isn't
+    // what `07/loading-any-list-on-mobile` draws.
+    className={card ? undefined : 'page-skeleton-plain'}
+    role="status"
     aria-busy="true"
     style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
   >
+    <span className="sr-only">{ADMIN_COPY.states.loading}</span>
     {heading && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <SkeletonBlock width={200} height={28} radius={8} />

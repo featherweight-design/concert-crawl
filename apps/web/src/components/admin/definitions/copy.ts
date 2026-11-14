@@ -4304,12 +4304,15 @@ export const ADMIN_COPY = {
   confirm: { cancel: 'Cancel' },
   states: {
     couldntLoad: {
-      title: (page: string) => `Couldn't load ${page}`,
-      titleGeneric: "Couldn't load this page",
-      body: "This page didn't load. Nothing you decided is lost.",
+      // Curly apostrophes, as `02/couldnt-load` draws them.
+      title: (page: string) => `Couldn’t load ${page}`,
+      titleGeneric: 'Couldn’t load this page',
+      body: 'This page didn’t load. Nothing you decided is lost.',
       tryAgain: 'Try again',
       openHealth: 'Open Health',
     },
+    /** The screen-reader label on a loading skeleton. */
+    loading: 'Loading',
     saveFailed: {
       title: (what: string) => `Couldn't change ${what}`,
       body: (saved: string) => `${saved} Nothing changed.`,

@@ -29,7 +29,7 @@ describe('admin error boundary', () => {
         reset={reset}
       />,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load");
+    expect(screen.getByRole('alert')).toHaveTextContent('Couldn’t load');
     expect(screen.getByRole('link', { name: 'Open Health' })).toHaveAttribute(
       'href',
       '/admin',
@@ -69,7 +69,7 @@ describe('admin error boundary', () => {
     pathname.current = path;
     render(<AdminError error={new Error('boom')} reset={vi.fn()} />);
     expect(
-      screen.getByRole('heading', { name: `Couldn't load ${page}` }),
+      screen.getByRole('heading', { name: `Couldn’t load ${page}` }),
     ).toBeInTheDocument();
   });
 
@@ -78,7 +78,7 @@ describe('admin error boundary', () => {
     pathname.current = '/admin/review';
     render(<AdminError error={new Error('boom')} reset={vi.fn()} />);
     expect(
-      screen.getByRole('heading', { name: "Couldn't load this page" }),
+      screen.getByRole('heading', { name: 'Couldn’t load this page' }),
     ).toBeInTheDocument();
   });
 

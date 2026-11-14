@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { PageSkeleton, PHONE_VAR } from './PageSkeleton';
 
 /** admin.css with its whitespace collapsed, for rule-level assertions. */
@@ -66,11 +67,13 @@ describe('PageSkeleton row tail (07/loading-any-list-on-mobile)', () => {
       barGap: 'var(--page-skeleton-bar-gap, 8px)',
     });
     render(<PageSkeleton rows={1} columns={3} rowHeight={64} />);
-    expect(screen.getByTestId('page-skeleton')).toHaveClass('page-skeleton');
+    expect(screen.getByTestId('page-skeleton')).toHaveClass(
+      'page-skeleton-plain',
+    );
     // `07/loading-any-list-on-mobile`: search r10, pills 32, title bar 13,
     // second bar 40% at r6, the bars 7 apart.
     const phone =
-      /@media \(max-width: 720px\) \{[^@]*?\.page-skeleton \{([^}]*)\}/.exec(
+      /@media \(max-width: 720px\) \{[^@]*?\.page-skeleton-plain \{([^}]*)\}/.exec(
         ADMIN_CSS,
       )?.[1];
     expect(phone).toContain('--page-skeleton-search-radius: 10px');
@@ -90,5 +93,23 @@ describe('PageSkeleton row tail (07/loading-any-list-on-mobile)', () => {
   it('keeps the card rows’ own tail', () => {
     render(<PageSkeleton card rows={1} columns={5} rowHeight={65} />);
     expect(screen.queryByTestId('page-skeleton-tail-phone')).toBeNull();
+  });
+
+  it('keeps the phone values off card mode, which the board doesn’t draw', () => {
+    render(<PageSkeleton card rows={1} columns={5} rowHeight={65} />);
+    expect(screen.getByTestId('page-skeleton')).not.toHaveClass(
+      'page-skeleton-plain',
+    );
+  });
+});
+
+describe('PageSkeleton a11y', () => {
+  it('is a status announcing Loading, its blocks hidden', () => {
+    render(<PageSkeleton rows={2} columns={3} rowHeight={64} />);
+    const status = screen.getByRole('status');
+    expect(status).toBe(screen.getByTestId('page-skeleton'));
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveTextContent(ADMIN_COPY.states.loading);
+    expect(screen.getByText(ADMIN_COPY.states.loading)).toHaveClass('sr-only');
   });
 });

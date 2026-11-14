@@ -38,9 +38,20 @@ describe('CouldntLoad (02/couldnt-load)', () => {
   it('names the page in its heading', () => {
     render(<CouldntLoad page="Needs you" onRetry={vi.fn()} />);
     expect(
-      screen.getByRole('heading', { name: "Couldn't load Needs you" }),
+      screen.getByRole('heading', { name: 'Couldn’t load Needs you' }),
     ).toBeInTheDocument();
     expect(screen.getByText(copy.body)).toBeInTheDocument();
+  });
+
+  it('uses curly apostrophes, as the board draws them', () => {
+    expect(copy.title('Venues')).toBe('Couldn’t load Venues');
+    expect(copy.titleGeneric).toBe('Couldn’t load this page');
+    expect(copy.body).toBe(
+      'This page didn’t load. Nothing you decided is lost.',
+    );
+    expect(`${copy.title('x')}${copy.titleGeneric}${copy.body}`).not.toContain(
+      "'",
+    );
   });
 
   it('falls back to the generic heading without a page', () => {
@@ -152,6 +163,28 @@ describe('Couldn’t load placement', () => {
     expect(mediaRule('max-width: 720px', '.admin-couldnt-load')).toContain(
       '--state-message-padding: 36px 8px',
     );
+  });
+
+  it('runs the phone buttons the full width of the state (01/couldnt-load-m)', () => {
+    // The state centres its children, so without the stretch the button row
+    // shrinks to its buttons (~110px at 320) however wide they are told to be.
+    expect(mediaRule('max-width: 720px', '.admin-couldnt-load')).toContain(
+      '--state-message-actions-align: stretch',
+    );
+    const actions = mediaRule(
+      'max-width: 720px',
+      '.admin-couldnt-load-actions',
+    );
+    expect(actions).toContain('width: 100%');
+    expect(actions).toContain('--couldnt-load-button-width: 100%');
+    expect(COULDNT_LOAD_BUTTON_BOX.width).toBe(
+      'var(--couldnt-load-button-width, auto)',
+    );
+    render(<CouldntLoad onRetry={vi.fn()} />);
+    // The row admin.css stretches is the state's own actions row.
+    expect(
+      screen.getByTestId('couldnt-load-actions').parentElement?.parentElement,
+    ).toBe(screen.getByTestId('couldnt-load'));
   });
 
   it('draws the page title above the state when given one', () => {

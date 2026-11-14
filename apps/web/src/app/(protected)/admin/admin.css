@@ -313,8 +313,9 @@
   .page-skeleton-tail-phone {
     display: flex;
   }
-  /* The rest of the phone board's values (PageSkeleton's PHONE_VAR). */
-  .page-skeleton {
+  /* The rest of the phone board's values (PageSkeleton's PHONE_VAR), on
+     plain rows only: the board doesn't draw the card table. */
+  .page-skeleton-plain {
     --page-skeleton-search-radius: 10px;
     --page-skeleton-pill-height: 32px;
     --page-skeleton-title-height: 13px;
@@ -345,6 +346,9 @@
 @media (max-width: 720px) {
   .admin-couldnt-load {
     --state-message-padding: 36px 8px;
+    /* The state centres its children, so the button row would shrink to
+       its buttons; `01/couldnt-load-m` draws them across the full width. */
+    --state-message-actions-align: stretch;
   }
 }
 
