@@ -55,9 +55,10 @@ export const eventPatchSchema = z.object({
 export type EventPatch = z.input<typeof eventPatchSchema>;
 
 /**
- * Thrown inside the update transaction when a past show's PATCH sets anything
- * but `hiddenFromConsumer` (admin 4a-3b: "past rows accept only
- * `hiddenFromConsumer`, and anything else returns 409 `past_locked`"). The
+ * Thrown inside the update transaction when a past show's PATCH changes a
+ * locked field (admin 4a-3b: "past rows accept only `hiddenFromConsumer`, and
+ * anything else returns 409 `past_locked`"). A postponed past show may also
+ * move its date, times and status, or it could never be rescheduled. The
  * throw rolls the transaction back, so nothing is written.
  */
 export class PastLockedError extends Error {
@@ -67,17 +68,70 @@ export class PastLockedError extends Error {
   }
 }
 
-/** True when the patch sets any field a past show locks. */
+type EventRow = typeof events.$inferSelect;
+type PatchKey = keyof EventPatch & keyof EventRow;
+
+const isPatchKey = (key: string): key is PatchKey =>
+  key in eventPatchSchema.shape;
+
+/** Every past show may change this. */
+const PAST_ALLOWED: ReadonlySet<PatchKey> = new Set(['hiddenFromConsumer']);
+
+/** A postponed past show may also be rescheduled. */
+const POSTPONED_PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
+  'hiddenFromConsumer',
+  'date',
+  'doorsTime',
+  'showTime',
+  'status',
+]);
+
+/** True when the patch sets any field a past show may lock. */
 const setsPastLockedField = (body: EventPatch): boolean =>
   Object.entries(body).some(
-    ([key, value]) => key !== 'hiddenFromConsumer' && value !== undefined,
+    ([key, value]) =>
+      value !== undefined && !(isPatchKey(key) && PAST_ALLOWED.has(key)),
+  );
+
+// Postgres hands back `time` as HH:MM:SS and `numeric` as a scale-2 string,
+// while a PATCH may send HH:MM or 25, so both compare by value.
+const sameStoredValue = (
+  key: PatchKey,
+  next: unknown,
+  stored: unknown,
+): boolean => {
+  if (next === null || stored === null) return next === stored;
+  if (key === 'doorsTime' || key === 'showTime') {
+    return String(next).padEnd(8, ':00') === String(stored).padEnd(8, ':00');
+  }
+  if (key === 'ticketPriceMin' || key === 'ticketPriceMax') {
+    return Number(next) === Number(stored);
+  }
+  if (Array.isArray(next) && Array.isArray(stored)) {
+    return (
+      next.length === stored.length &&
+      next.every((item, index) => item === stored[index])
+    );
+  }
+  return next === stored;
+};
+
+/** The patch's keys whose value differs from the stored row. */
+const changedKeys = (body: EventPatch, stored: EventRow): PatchKey[] =>
+  Object.entries(body).flatMap(([key, value]) =>
+    isPatchKey(key) &&
+    value !== undefined &&
+    !sameStoredValue(key, value, stored[key])
+      ? [key]
+      : [],
   );
 
 export interface UpdateEventOptions {
   /**
    * Today's date in Denver (`YYYY-MM-DD`). When given, a show dated before it
-   * (the list's Past side) refuses every field but `hiddenFromConsumer` with
-   * PastLockedError. Read from the locked row, never from the request.
+   * (the list's Past side) refuses any change but `hiddenFromConsumer` with
+   * PastLockedError; a postponed one may also change its date, times and
+   * status. Read from the locked row, never from the request.
    */
   lockPastBefore?: string;
 }
@@ -91,16 +145,18 @@ export const updateEventNotifying = async (
   body: EventPatch,
   options: UpdateEventOptions = {},
 ) => {
-  const { lockPastBefore } = options;
-  const checksPastLock =
-    lockPastBefore !== undefined && setsPastLockedField(body);
-  // Only bother with the transactional pre-state lock when the PATCH
-  // actually touches status or date (or must check the past lock) — every
-  // other field is edit-only and doesn't need a serialize gate.
-  const touchesTransitionField =
+  // Set only when the patch reaches past `hiddenFromConsumer`, so the past
+  // lock has something to check.
+  const pastLockBefore = setsPastLockedField(body)
+    ? options.lockPastBefore
+    : undefined;
+  // Read the locked pre-state row only when something needs it: a status or
+  // date change (the transition fan-out) or the past lock. Every other edit
+  // skips the serialize gate.
+  const readsPreState =
     typeof body.status === 'string' ||
     typeof body.date === 'string' ||
-    checksPastLock;
+    pastLockBefore !== undefined;
 
   // #1107: read pre-state + write inside a transaction so two concurrent
   // PATCHes can't both observe the same pre-state and fan out twice.
@@ -108,29 +164,30 @@ export const updateEventNotifying = async (
   // transaction that actually observed the transition; a losing PATCH
   // sees the new state and computes category=null.
   const result = await db.transaction(async (tx) => {
-    let preUpdate:
-      { status: string; date: string; delistedAt: Date | null } | undefined;
-    if (touchesTransitionField) {
+    let preUpdate: EventRow | undefined;
+    if (readsPreState) {
       const rows = await tx
-        .select({
-          status: events.status,
-          date: events.date,
-          delistedAt: events.delistedAt,
-        })
+        .select()
         .from(events)
         .where(eq(events.id, id))
         .for('update')
         .limit(1);
       preUpdate = rows[0];
-      // The stored date decides, so a PATCH that also moves the date
-      // cannot unlock a past show.
+      // The stored row decides, so a PATCH that also moves the date cannot
+      // unlock a past show. A field re-sent at its stored value is not a
+      // write; a postponed show may still be rescheduled.
       if (
-        checksPastLock &&
+        pastLockBefore !== undefined &&
         preUpdate &&
-        lockPastBefore !== undefined &&
-        preUpdate.date < lockPastBefore
+        preUpdate.date < pastLockBefore
       ) {
-        throw new PastLockedError();
+        const allowed =
+          preUpdate.status === 'postponed'
+            ? POSTPONED_PAST_ALLOWED
+            : PAST_ALLOWED;
+        if (changedKeys(body, preUpdate).some((key) => !allowed.has(key))) {
+          throw new PastLockedError();
+        }
       }
     }
 

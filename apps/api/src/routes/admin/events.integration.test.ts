@@ -39,6 +39,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
+import { todayInDenver } from '../../lib/time.js';
 
 const app = createApp();
 
@@ -1492,7 +1493,7 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   it('does not fan out on a PATCH that explicitly re-sends the current status and date', async () => {
     // Explicitly PATCH with the same status + date so the handler's pre-
     // state read + category computation actually run (a PATCH that only
-    // touches title/artist skips those entirely via the touchesTransitionField
+    // touches title/artist skips those entirely via the readsPreState
     // gate, which wouldn't exercise the dedup guarantee).
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
@@ -2198,6 +2199,85 @@ describe('PATCH /v1/admin/events/:id — past_locked (4a-3b)', () => {
       title: 'Nobody',
     });
     expect(res.status).toBe(404);
+  });
+
+  it('reschedules a postponed show whose old date has passed and tells its watchers', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      verified: true,
+      status: 'postponed',
+    });
+    const WATCHER = 'user_past_postponed_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+    const newDate = futureDate(21);
+
+    const res = await patch(event.id, { date: newDate, showTime: '20:00' });
+
+    expect(res.status).toBe(200);
+    const [row] = await testDb
+      .select({ date: events.date })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.date).toBe(newDate);
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows.map((notice) => notice.userId)).toEqual([WATCHER]);
+  });
+
+  it('still refuses a title change on a postponed past show', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      status: 'postponed',
+      title: 'Postponed Show',
+    });
+
+    const res = await patch(event.id, { title: 'Rewritten' });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+    const [row] = await testDb
+      .select({ title: events.title, updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.id, event.id));
+    expect(row?.title).toBe('Postponed Show');
+    expect(row?.updatedAt).toEqual(event.updatedAt);
+  });
+
+  it('accepts a field re-sent at its stored value beside hiddenFromConsumer', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, {
+      date: futureDate(-7),
+      title: 'Played Show',
+    });
+
+    const res = await patch(event.id, {
+      hiddenFromConsumer: true,
+      title: 'Played Show',
+      date: event.date,
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      data: { hiddenFromConsumer: true, title: 'Played Show' },
+    });
+  });
+
+  it('does not lock a show dated today in Denver', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: todayInDenver() });
+
+    const res = await patch(event.id, { title: 'Tonight, Renamed' });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      success: true,
+      data: { title: 'Tonight, Renamed' },
+    });
   });
 });
 

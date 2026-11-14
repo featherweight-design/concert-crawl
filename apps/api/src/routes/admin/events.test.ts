@@ -310,9 +310,22 @@ describe('PATCH /v1/admin/events/:id', () => {
     expect(res.status).toBe(403);
   });
 
+  // The past-lock read is select().from().where().for('update').limit(1).
+  const lockReadReturns = async (row: Record<string, unknown>) => {
+    const { db } = await import('@concert-crawl/db');
+    vi.mocked(db.select().from().where().for().limit).mockResolvedValueOnce([
+      row,
+    ]);
+  };
+
   it('returns 200 and updates content fields', async () => {
     adminAuth();
     const { db } = await import('@concert-crawl/db');
+    await lockReadReturns({
+      ...mockEventRow,
+      date: '2099-06-01',
+      status: 'upcoming',
+    });
     vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
       { ...mockEventRow, title: 'Updated Title', artist: 'New Artist' },
     ]);
@@ -328,9 +341,30 @@ describe('PATCH /v1/admin/events/:id', () => {
     expect(body.data.artist).toBe('New Artist');
   });
 
+  it('returns 409 past_locked for a title change on a past show', async () => {
+    adminAuth();
+    await lockReadReturns({
+      ...mockEventRow,
+      date: '2020-06-01',
+      status: 'upcoming',
+    });
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated Title' }),
+    });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ success: false, error: 'past_locked' });
+  });
+
   it('returns 200 and accepts nullable price fields', async () => {
     adminAuth();
     const { db } = await import('@concert-crawl/db');
+    await lockReadReturns({
+      ...mockEventRow,
+      date: '2099-06-01',
+      status: 'upcoming',
+    });
     vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
       { ...mockEventRow, ticketPriceMin: '25.00', ticketPriceMax: null },
     ]);

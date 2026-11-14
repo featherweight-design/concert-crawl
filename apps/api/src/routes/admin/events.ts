@@ -737,9 +737,12 @@ eventsAdminRouter.patch(
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
 
-    // A past show (dated before today in Denver, the list's Past side)
-    // accepts only `hiddenFromConsumer` (admin 4a-3b). The stored date
-    // decides, read under the row lock; a refused write is not audited.
+    // Past lock (admin 4a-3b), on this PATCH only: a show whose stored date
+    // is before today in Denver (the list's Past side) may change only
+    // `hiddenFromConsumer`. A past show stored as postponed may also change
+    // `date`, `doorsTime`, `showTime` and `status`, so it can be rescheduled.
+    // A field re-sent at its stored value is not a change. Anything else is
+    // 409 `past_locked`, read under the row lock, and not audited.
     let updated: Awaited<ReturnType<typeof updateEvent>>;
     try {
       updated = await updateEvent(id, body, {
