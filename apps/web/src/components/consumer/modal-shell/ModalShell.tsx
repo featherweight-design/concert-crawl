@@ -74,12 +74,21 @@ function useScrollEdges(active: boolean, isMobile: boolean) {
 
   useEffect(() => {
     const body = bodyRef.current;
-    if (!active || body === null) return;
+    if (!active) {
+      // The shell stays mounted while closed: a reopened sheet starts unscrolled.
+      setEdges((prev) =>
+        prev.scrolled || prev.more ? { scrolled: false, more: false } : prev,
+      );
+      return;
+    }
+    if (body === null) return;
     measure();
     const observers: Array<{ disconnect: () => void }> = [];
     if (typeof ResizeObserver !== 'undefined') {
       const resize = new ResizeObserver(measure);
       resize.observe(body);
+      // At the cap the body's own box stops changing; its content does not.
+      for (const child of Array.from(body.children)) resize.observe(child);
       observers.push(resize);
     }
     if (typeof MutationObserver !== 'undefined') {
@@ -212,7 +221,8 @@ export function ModalShell({
   // The pinned footer: --surface-2 with a hairline on top (Crews keeps its own
   // drawn panel), and the fade above it while there is more to scroll.
   const footerBackground = crew ? panel : 'var(--surface-2)';
-  const fade = edges.more && (
+  const hasFooter = Boolean(isMobile ? (mobileFooter ?? footer) : footer);
+  const fade = hasFooter && edges.more && (
     <div
       aria-hidden="true"
       data-testid="modal-fade"

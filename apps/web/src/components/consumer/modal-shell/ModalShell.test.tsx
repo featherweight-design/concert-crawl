@@ -294,6 +294,42 @@ describe('ModalShell sheet rule (320 x 568)', () => {
     });
     expect(screen.queryByTestId('modal-fade')).toBeNull();
   });
+
+  it('draws no fade on a sheet with no footer, there is nothing for it to sit above', () => {
+    render(
+      <ModalShell open onClose={vi.fn()} ariaLabel="Test">
+        <div>Content</div>
+      </ModalShell>,
+    );
+    scrollTo(bodyOf(), { scrollTop: 0, scrollHeight: 900, clientHeight: 300 });
+    expect(screen.queryByTestId('modal-fade')).toBeNull();
+  });
+
+  it('reopens unscrolled: the rail hairline from the last scroll does not carry over', () => {
+    const { rerender } = render(
+      <ModalShell open onClose={vi.fn()} ariaLabel="Test" header={<Header />}>
+        <div>Content</div>
+      </ModalShell>,
+    );
+    scrollTo(bodyOf(), { scrollTop: 40, scrollHeight: 900, clientHeight: 300 });
+    expect(screen.getByTestId('modal-rail').dataset['scrolled']).toBe('true');
+    rerender(
+      <ModalShell
+        open={false}
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        header={<Header />}
+      >
+        <div>Content</div>
+      </ModalShell>,
+    );
+    rerender(
+      <ModalShell open onClose={vi.fn()} ariaLabel="Test" header={<Header />}>
+        <div>Content</div>
+      </ModalShell>,
+    );
+    expect(screen.getByTestId('modal-rail').dataset['scrolled']).toBe('false');
+  });
 });
 
 // `aria-modal` tells a screen reader the rest of the page is inert; it does
