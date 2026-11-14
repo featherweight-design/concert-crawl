@@ -1,12 +1,47 @@
 'use client';
 
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, X } from 'lucide-react';
+import { Eye, Printer, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { useModalDialog } from '@/lib/hooks/useModalDialog';
 
 const phoneCopy = ADMIN_COPY.inviteCodes.poster.phone;
+
+/**
+ * The Enlarge button on the preview and the viewer it opens. It owns the open
+ * state, so it resets whenever the preview stops showing it (a resize past the
+ * phone, a code switch, the mint form opening).
+ */
+export function PosterEnlarge({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="pt-enlarge"
+        onClick={() => setOpen(true)}
+      >
+        <Eye size={12} strokeWidth={1.7} aria-hidden />
+        {phoneCopy.enlarge}
+      </button>
+      <PosterEnlarged
+        open={open}
+        onClose={() => setOpen(false)}
+        title={title}
+        onPrint={() => window.print()}
+      >
+        {children}
+      </PosterEnlarged>
+    </>
+  );
+}
 
 interface PosterEnlargedProps {
   open: boolean;

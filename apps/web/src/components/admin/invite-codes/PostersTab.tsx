@@ -7,7 +7,6 @@ import {
   Check,
   ChevronDown,
   Download,
-  Eye,
   Info,
   Plus,
   Printer,
@@ -27,7 +26,7 @@ import {
 } from '@/lib/poster/posters-href';
 import { InviteCodesTabs } from './InviteCodesTabs';
 import { NewPosterCodeForm } from './NewPosterCodeForm';
-import { PosterEnlarged } from './PosterEnlarged';
+import { PosterEnlarge } from './PosterEnlarged';
 import { PosterFit } from './PosterFit';
 import { PosterSheet, type PosterLook } from './PosterSheet';
 import { PostersPhoneTabs } from './PostersPhoneTabs';
@@ -160,7 +159,6 @@ export function PostersTab({
   const [pendingMintId, setPendingMintId] = useState<string | null>(null);
   const [mintBusy, setMintBusy] = useState(false);
   const [listOpen, setListOpen] = useState(false);
-  const [enlarged, setEnlarged] = useState(false);
   // The phone's print checklist: ticks for the admin's own benefit, kept
   // nowhere.
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
@@ -270,27 +268,14 @@ export function PostersTab({
         <div className="pt-mat">
           {sheet}
           {isPhone && selected && !formOpen ? (
-            <>
-              <button
-                type="button"
-                className="pt-enlarge"
-                onClick={() => setEnlarged(true)}
-              >
-                <Eye size={12} strokeWidth={1.7} aria-hidden />
-                {phoneCopy.enlarge}
-              </button>
-              <PosterEnlarged
-                open={enlarged}
-                onClose={() => setEnlarged(false)}
-                title={phoneCopy.enlargedTitle(
-                  copy.look[look].name,
-                  selected.code,
-                )}
-                onPrint={() => window.print()}
-              >
-                {sheet}
-              </PosterEnlarged>
-            </>
+            <PosterEnlarge
+              title={phoneCopy.enlargedTitle(
+                copy.look[look].name,
+                selected.code,
+              )}
+            >
+              {sheet}
+            </PosterEnlarge>
           ) : null}
           {formOpen ? (
             <p className="pt-mat-note" data-testid="poster-mat-note">
