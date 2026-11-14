@@ -65,7 +65,8 @@ export const ArtistReportCard = ({
         onOpen={() => setOpen(true)}
       />
       {signedOut ? (
-        // The same hand-off the event page's report row gives a visitor.
+        // A signed-out tap goes to sign-in and back, as the event page's report
+        // row does.
         open ? (
           <SignInRedirect onDone={() => setOpen(false)} />
         ) : null
