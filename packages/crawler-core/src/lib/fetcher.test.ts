@@ -96,9 +96,12 @@ interface PausedEvent {
 type Verdict = 'continue' | 'fail';
 
 // The CDP session fetchPage gates main-frame documents through. `pause`
-// raises Fetch.requestPaused and resolves with how the handler answered it.
+// raises Fetch.requestPaused and resolves with how the handler answered it;
+// `emit` raises any other event.
 function makeMockCdp() {
-  let listener: ((event: unknown) => void) | undefined;
+  const listeners = new Map<string, (event: unknown) => void>();
+  const emit = (name: string, event: unknown = {}): void =>
+    listeners.get(name)?.(event);
   const answers = new Map<string, (verdict: Verdict) => void>();
   let nextId = 0;
   const send = vi.fn(
@@ -117,7 +120,7 @@ function makeMockCdp() {
   const session = {
     send,
     on: vi.fn((name: string, fn: (event: unknown) => void) => {
-      if (name === 'Fetch.requestPaused') listener = fn;
+      listeners.set(name, fn);
     }),
     detach: vi.fn().mockResolvedValue(undefined),
   } as unknown as CDPSession;
@@ -125,7 +128,7 @@ function makeMockCdp() {
     const requestId = `req-${++nextId}`;
     return new Promise<Verdict>((resolve) => {
       answers.set(requestId, resolve);
-      listener?.({
+      emit('Fetch.requestPaused', {
         requestId,
         request: { url: event.url },
         frameId: event.frameId ?? 'main-frame-id',
@@ -139,7 +142,7 @@ function makeMockCdp() {
     send.mock.calls
       .filter(([called]) => called === method)
       .map(([, params]) => params?.requestId ?? '');
-  return { session, send, pause, answered };
+  return { session, send, pause, emit, answered };
 }
 
 function makeMockBrowser(
@@ -631,15 +634,15 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
       // A script navigates after load, while the selector wait runs.
       waitForSelector: vi.fn(async () => {
         hop = cdp.pause({ url: 'https://example.com/next' });
+        // Chromium commits the navigation once it is continued, and the new
+        // page reaches DOMContentLoaded.
         void hop.then((verdict) => {
-          if (verdict === 'continue') landed = 'next';
+          if (verdict !== 'continue') return;
+          landed = 'next';
+          cdp.emit('Page.domContentEventFired');
         });
         return null;
       }) as unknown as Page['waitForSelector'],
-      // Chromium commits the navigation once it is continued.
-      waitForEvent: vi.fn(async () => {
-        await hop;
-      }) as unknown as Page['waitForEvent'],
       content: vi.fn(
         async () => `<html><body>${landed}</body></html>`,
       ) as unknown as Page['content'],
@@ -665,15 +668,158 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(result.finalUrl).toBe('https://example.com/next');
   });
 
-  it('retries content() once after a navigation caught it mid-commit', async () => {
+  it('blocks a disallowed navigation the page starts during goto() and still returns the page', async () => {
+    const cdp = makeMockCdp();
+    const verdicts: Verdict[] = [];
+    const page = makeMockPage({
+      // A meta refresh 0 fires before networkidle lets goto() settle.
+      goto: vi.fn(async () => {
+        verdicts.push(
+          await cdp.pause({ url: 'https://example.com/', networkId: 'nav' }),
+        );
+        verdicts.push(
+          await cdp.pause({
+            url: 'https://example.com/private/x.html',
+            networkId: 'refresh',
+          }),
+        );
+        return makeResponse(200, 'https://example.com/');
+      }) as unknown as Page['goto'],
+    });
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.includes('/private/'),
+    );
+
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page, cdp),
+      0,
+    );
+
+    expect(verdicts).toEqual(['continue', 'fail']);
+    expect(cdp.send).toHaveBeenCalledWith('Fetch.failRequest', {
+      requestId: 'req-2',
+      errorReason: 'Aborted',
+    });
+    expect(result.html).toBe('<html><body>loaded</body></html>');
+  });
+
+  it("still throws a disallowed server redirect of goto()'s request, linked by redirectedRequestId alone", async () => {
+    const cdp = makeMockCdp();
+    const page = makeMockPage({
+      goto: vi.fn(async () => {
+        await cdp.pause({ url: 'https://example.com/' });
+        const hop = await cdp.pause({
+          url: 'https://example.com/private',
+          networkId: 'unrelated',
+          redirectedRequestId: 'req-1',
+        });
+        if (hop === 'fail') throw new Error('net::ERR_BLOCKED_BY_CLIENT');
+        return makeResponse(200);
+      }) as unknown as Page['goto'],
+    });
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.endsWith('/private'),
+    );
+
+    await expect(
+      fetchPage('https://example.com', makeMockBrowser(page, cdp), 0),
+    ).rejects.toBeInstanceOf(RobotsDisallowedError);
+    expect(cdp.send).toHaveBeenCalledWith('Fetch.failRequest', {
+      requestId: 'req-2',
+      errorReason: 'BlockedByClient',
+    });
+  });
+
+  it('follows at most 3 navigations a page starts itself, then aborts the rest and reads the page', async () => {
+    const cdp = makeMockCdp();
+    const verdicts: Verdict[] = [];
+    const page = makeMockPage({
+      // A page that meta-refreshes to itself, over and over.
+      goto: vi.fn(async () => {
+        await cdp.pause({ url: 'https://example.com/', networkId: 'nav' });
+        for (let i = 0; i < 5; i++) {
+          verdicts.push(
+            await cdp.pause({
+              url: 'https://example.com/',
+              networkId: `refresh-${i}`,
+            }),
+          );
+        }
+        return makeResponse(200, 'https://example.com/');
+      }) as unknown as Page['goto'],
+    });
+    isAllowedSpy.mockClear();
+
+    const result = await fetchPage(
+      'https://example.com',
+      makeMockBrowser(page, cdp),
+      0,
+    );
+
+    expect(verdicts).toEqual([
+      'continue',
+      'continue',
+      'continue',
+      'fail',
+      'fail',
+    ]);
+    // A refused one past the cap costs no robots lookup.
+    expect(
+      isAllowedSpy.mock.calls.filter(
+        (call: unknown[]) => call[0] === 'https://example.com/',
+      ),
+    ).toHaveLength(3);
+    expect(result.html).toBe('<html><body>loaded</body></html>');
+  });
+
+  it('stops waiting for page-started navigations after 20 s of wall time, gate waits included', async () => {
+    vi.useFakeTimers();
+    try {
+      const cdp = makeMockCdp();
+      const page = makeMockPage({
+        // A script navigates after load; its gate then paces for 50 s.
+        waitForSelector: vi.fn(async () => {
+          void cdp.pause({ url: 'https://example.com/slow' });
+          return null;
+        }) as unknown as Page['waitForSelector'],
+      });
+      vi.mocked(jitter).mockReturnValueOnce(0).mockReturnValue(50_000);
+      let done = false;
+      const run = fetchPage(
+        'https://example.com',
+        makeMockBrowser(page, cdp),
+        0,
+        'networkidle',
+        '.event-card',
+      ).finally(() => {
+        done = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(19_000);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(done).toBe(true);
+      await expect(run).resolves.toMatchObject({ httpStatus: 200 });
+      expect(cdp.answered('Fetch.continueRequest')).toEqual([]);
+      await vi.advanceTimersByTimeAsync(40_000);
+      expect(cdp.answered('Fetch.continueRequest')).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  const navigatingError = (): Error =>
+    new Error(
+      'page.content: Unable to retrieve content because the page is navigating and changing the content.',
+    );
+
+  it('retries content() after a navigation caught it mid-commit', async () => {
     const page = makeMockPage({
       content: vi
         .fn()
-        .mockRejectedValueOnce(
-          new Error(
-            'page.content: Unable to retrieve content because the page is navigating and changing the content.',
-          ),
-        )
+        .mockRejectedValueOnce(navigatingError())
+        .mockRejectedValueOnce(navigatingError())
         .mockResolvedValue('<html><body>landed</body></html>'),
     });
 
@@ -688,6 +834,18 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
       expect.anything(),
     );
     expect(result.html).toBe('<html><body>landed</body></html>');
+  });
+
+  it('gives up on content() after the navigation cap allows no more retries', async () => {
+    const page = makeMockPage({
+      content: vi.fn().mockRejectedValue(navigatingError()),
+    });
+
+    await expect(
+      fetchPage('https://example.com', makeMockBrowser(page), 0),
+    ).rejects.toThrow('is navigating');
+    // The first read plus MAX_PAGE_NAVIGATIONS + 1 retries.
+    expect(page.content).toHaveBeenCalledTimes(5);
   });
 
   it('leaves an iframe document to page.route, with no lookup or wait', async () => {

@@ -40,6 +40,31 @@ async function assertVisitedAllowed(from: string, to: string): Promise<void> {
 // the gate's waits taken out checks the time.
 const NAVIGATION_TIMEOUT_MS = 60_000;
 const CLOCK_TICK_MS = 250;
+// How many navigations a page may start itself (script or meta refresh)
+// that one fetch follows, and the wall time, gate waits included, that
+// fetchPage spends waiting for them to land before it reads the page. A
+// page that keeps reloading itself is read where it stands after either.
+const MAX_PAGE_NAVIGATIONS = 3;
+const SETTLE_CAP_MS = 20_000;
+
+// A page-started navigation refused because the fetch already followed as
+// many as it will. Never thrown out of fetchPage: the page is read instead.
+class NavigationCapError extends Error {
+  constructor(to: string) {
+    super(`page-started navigation cap reached; not following ${to}`);
+    this.name = 'NavigationCapError';
+  }
+}
+
+// `url` without its fragment, which is never sent: how CDP reports a
+// request's URL. page.url() keeps the fragment. Never throws.
+function withoutFragment(url: string): string {
+  try {
+    return canonicalRequestUrl(url);
+  } catch {
+    return url;
+  }
+}
 
 // The fields of CDP's Fetch.requestPaused event the navigation gate reads.
 interface PausedRequest {
@@ -129,18 +154,28 @@ export async function fetchPage(
     //
     // A skip (robots.txt unreachable, Crawl-delay over the cap) is always
     // kept and rethrown, so the run records a skip rather than a failure. A
-    // disallow is rethrown only when it stopped goto()'s own navigation or a
-    // server redirect hop: then there is no page we may read. A navigation
-    // the page starts itself after goto() settled is refused and logged, and
-    // the page already loaded is read as before. Only the first request for `url` is
-    // goto()'s own, already paced above; a reload or refresh back to it later
-    // goes through the gate too. `url` as the browser reports it:
-    // `https://venue.example` comes back as `https://venue.example/`, and the
-    // fragment is never sent. Chromium only: newCDPSession throws elsewhere.
+    // disallow is rethrown only when it stopped goto()'s own chain (its first
+    // request and that request's server redirect hops): then there is no page
+    // we may read. Any other main-frame navigation, one the page starts
+    // itself with a script or meta refresh, during goto() or after, is
+    // refused with Aborted and logged, and the page already loaded is read.
+    // Only the first request for `url` is goto()'s own, already paced above;
+    // a reload or refresh back to it later goes through the gate too. `url`
+    // as the browser reports it: `https://venue.example` comes back as
+    // `https://venue.example/`, and the fragment is never sent. Chromium
+    // only: newCDPSession throws elsewhere.
     const startUrl = canonicalRequestUrl(url);
     let navigationError: Error | null = null;
     let initialRequestSeen = false;
-    let gotoSettled = false;
+    // goto()'s own chain: the Fetch request ids and network id of its first
+    // request and every redirect hop after it.
+    const gotoChain = new Set<string>();
+    // Page-started navigations the gate has taken on, against
+    // MAX_PAGE_NAVIGATIONS; and whether the settle step's wall-clock cap has
+    // passed. Either one refuses every further page-started navigation, so
+    // a page that keeps reloading itself is read where it stands.
+    let pageNavigations = 0;
+    let navigationCapped = false;
     // Every main-frame URL the gate decided. Each was either cleared by
     // robots.txt or refused before it was sent, so the after-the-fact check
     // below need not (and, for a refused one, must not) judge it again.
@@ -186,32 +221,68 @@ export async function fetchPage(
     const session = await context.newCDPSession(page);
     const { frameTree } = await session.send('Page.getFrameTree');
     const mainFrameId = frameTree.frame.id;
+    // Resolved at the main frame's next DOMContentLoaded. Heard on this same
+    // session, so it is ordered after the paused request that registered it
+    // and never mistaken for an earlier page's (Playwright's own events, on
+    // another session, can arrive late enough to be).
+    let domContentWaiters: (() => void)[] = [];
+    session.on('Page.domContentEventFired', () => {
+      const waiters = domContentWaiters;
+      domContentWaiters = [];
+      for (const resolve of waiters) resolve();
+    });
+    await session.send('Page.enable');
     // The URL each in-flight navigation last requested, so a redirect hop
     // knows where it came from.
     const lastHop = new Map<string, string>();
 
-    // Whether a paused main-frame document may be sent. Throws on a disallow,
-    // a skip, or anything unexpected; the caller fails the request. Resolves
-    // true when it cleared a navigation through the gate, false when it let
-    // one pass without gating.
-    const mayContinue = async (event: PausedRequest): Promise<boolean> => {
+    // Whether a paused main-frame document belongs to goto()'s own chain,
+    // recording it if so. Called synchronously as each request pauses, so
+    // a hop is classified before the next one can arrive.
+    const joinsGotoChain = (event: PausedRequest): boolean => {
       const { requestId, request } = event;
-      // An iframe document is left to page.route, which aborts it. Gating it
-      // here too would spend a robots lookup and a pacing wait on a request
-      // that is about to be refused anyway.
-      if (event.frameId !== mainFrameId) return false;
+      const isFirst =
+        !initialRequestSeen &&
+        event.redirectedRequestId === undefined &&
+        request.url === startUrl;
+      const isHop =
+        (event.networkId !== undefined && gotoChain.has(event.networkId)) ||
+        (event.redirectedRequestId !== undefined &&
+          gotoChain.has(event.redirectedRequestId));
+      if (!isFirst && !isHop) return false;
+      gotoChain.add(requestId);
+      if (event.networkId !== undefined) gotoChain.add(event.networkId);
+      return true;
+    };
+
+    // Whether a paused main-frame document may be sent. Throws on a disallow,
+    // a skip, a page-started navigation past the cap, or anything
+    // unexpected; the caller fails the request. Resolves true when it
+    // cleared a navigation through the gate, false when it let one pass
+    // without gating.
+    const mayContinue = async (
+      event: PausedRequest,
+      inGotoChain: boolean,
+    ): Promise<boolean> => {
+      const { requestId, request } = event;
       const hopKey = event.networkId ?? requestId;
       const from = lastHop.get(hopKey) ?? page.url();
       lastHop.set(hopKey, request.url);
       if (
+        inGotoChain &&
         !initialRequestSeen &&
-        event.redirectedRequestId === undefined &&
-        request.url === startUrl
+        event.redirectedRequestId === undefined
       ) {
         initialRequestSeen = true;
         return false;
       }
-      gated.add(request.url);
+      gated.add(withoutFragment(request.url));
+      if (!inGotoChain) {
+        if (navigationCapped || pageNavigations >= MAX_PAGE_NAVIGATIONS) {
+          throw new NavigationCapError(request.url);
+        }
+        pageNavigations += 1;
+      }
       gateStarted();
       try {
         await clearRedirect(from, request.url, crawlDelayMs);
@@ -237,6 +308,11 @@ export async function fetchPage(
     // teardown has started nothing is continued: a decision that lands then
     // is too late to pace or check against anything we will read.
     session.on('Fetch.requestPaused', (event) => {
+      // An iframe document is left to page.route, which aborts it. Gating it
+      // here too would spend a robots lookup and a pacing wait on a request
+      // that is about to be refused anyway.
+      const isMainFrame = event.frameId === mainFrameId;
+      const inGotoChain = isMainFrame && joinsGotoChain(event);
       const answer = async (): Promise<void> => {
         let allowed = false;
         let cleared = false;
@@ -246,44 +322,56 @@ export async function fetchPage(
         // keeps the page already loaded (checked in a local Chromium probe).
         let errorReason: 'BlockedByClient' | 'Aborted' = 'BlockedByClient';
         try {
-          cleared = await mayContinue(event);
+          if (isMainFrame) cleared = await mayContinue(event, inGotoChain);
           allowed = true;
         } catch (err) {
-          if (
-            err instanceof CrawlSkipError ||
-            event.redirectedRequestId !== undefined ||
-            !gotoSettled
-          ) {
+          if (err instanceof CrawlSkipError || inGotoChain) {
             navigationError ??=
               err instanceof Error ? err : new Error(String(err));
           } else {
             errorReason = 'Aborted';
+            const capped = err instanceof NavigationCapError;
             console.log(
               JSON.stringify({
-                event: 'fetch.navigation_blocked',
+                event: capped
+                  ? 'fetch.navigation_cap'
+                  : 'fetch.navigation_blocked',
                 url,
                 to: event.request.url,
-                error: err instanceof Error ? err.message : String(err),
+                ...(capped
+                  ? { followed: pageNavigations }
+                  : {
+                      error: err instanceof Error ? err.message : String(err),
+                    }),
               }),
             );
           }
         }
+        // The settle step's cap can pass while a page-started navigation
+        // waits its pacing: it is refused like any later one.
+        if (allowed && cleared && !inGotoChain && navigationCapped) {
+          allowed = false;
+          errorReason = 'Aborted';
+          console.log(
+            JSON.stringify({
+              event: 'fetch.navigation_cap',
+              url,
+              to: event.request.url,
+              followed: pageNavigations,
+            }),
+          );
+        }
         if (closing) allowed = false;
-        // A navigation the page started, let through after goto() settled:
-        // listen for it to commit before Chromium can send it, so the read
-        // below waits for the page it lands on.
-        if (allowed && cleared && gotoSettled) {
+        // A navigation the page started, let through (during goto() or
+        // after: goto() may settle on the page it replaces): listen for it
+        // to commit before Chromium can send it, so the read below waits for
+        // the page it lands on.
+        if (allowed && cleared && !inGotoChain) {
           track(
             pendingCommits,
-            page
-              .waitForEvent('framenavigated', {
-                predicate: (frame) => frame === page.mainFrame(),
-                timeout: NAVIGATION_TIMEOUT_MS,
-              })
-              .then(
-                () => undefined,
-                () => undefined,
-              ),
+            new Promise<void>((resolve) => {
+              domContentWaiters.push(resolve);
+            }),
           );
         }
         try {
@@ -301,7 +389,7 @@ export async function fetchPage(
         }
       };
       const task = answer();
-      if (event.frameId === mainFrameId) track(pendingGates, task);
+      if (isMainFrame) track(pendingGates, task);
     });
 
     // Resolves after `ms`, or when `task` does, whichever is first.
@@ -323,38 +411,62 @@ export async function fetchPage(
     // every navigation one let through commit and reach domcontentloaded, so
     // content() reads where the page landed. A refused navigation was
     // Aborted and leaves the page loaded as it was. Bounded by what is left
-    // of the site's 60 s; the gate's own waits do not spend it.
+    // of the site's 60 s, which the gate's own waits do not spend, and by
+    // SETTLE_CAP_MS of wall time, which they do. Past that cap every further
+    // page-started navigation is refused and the page is read as it stands;
+    // MAX_PAGE_NAVIGATIONS bounds the number followed the same way.
+    // One wall-clock budget for the whole fetch, however many times it settles.
+    let settleDeadline: number | null = null;
     const settleNavigations = async (): Promise<void> => {
-      while (siteMsLeft() > 0) {
+      settleDeadline ??= Date.now() + SETTLE_CAP_MS;
+      const deadline = settleDeadline;
+      const msLeft = (): number =>
+        Math.min(siteMsLeft(), deadline - Date.now());
+      while (msLeft() > 0) {
         if (pendingGates.size > 0) {
-          await within(Promise.allSettled([...pendingGates]), siteMsLeft());
+          await within(Promise.allSettled([...pendingGates]), msLeft());
         } else if (pendingCommits.size > 0) {
-          await within(Promise.allSettled([...pendingCommits]), siteMsLeft());
+          await within(Promise.allSettled([...pendingCommits]), msLeft());
           await page
             .waitForLoadState('domcontentloaded', {
-              timeout: Math.max(siteMsLeft(), 1),
+              timeout: Math.max(msLeft(), 1),
             })
             .catch(() => undefined);
         } else {
           return;
         }
       }
+      // Out of time: nothing the page starts from here on is followed, and
+      // one still waiting its pacing is refused when it finishes.
+      navigationCapped = true;
     };
 
-    // content() throws while a navigation is mid-commit. Backstop for one
-    // that slipped past settleNavigations: wait for it to load, retry once.
+    // content() waits out a navigation the gate is holding, then throws once
+    // it commits. That happens to a navigation that paused after
+    // settleNavigations returned: a meta refresh 0 fires the moment the page
+    // it waited for loads. So settle again, wait for the load, and retry.
+    // Every retry follows a navigation that counted against the cap, and
+    // past the cap they are refused, so this runs at most
+    // MAX_PAGE_NAVIGATIONS + 1 more times.
     const readContent = async (): Promise<string> => {
-      try {
-        return await page.content();
-      } catch (err) {
-        if (!(err instanceof Error) || !err.message.includes('is navigating'))
-          throw err;
-        await page
-          .waitForLoadState('domcontentloaded', {
-            timeout: Math.max(siteMsLeft(), 1),
-          })
-          .catch(() => undefined);
-        return page.content();
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await page.content();
+        } catch (err) {
+          if (
+            !(err instanceof Error) ||
+            !err.message.includes('is navigating') ||
+            attempt > MAX_PAGE_NAVIGATIONS
+          ) {
+            throw err;
+          }
+          await settleNavigations();
+          await page
+            .waitForLoadState('domcontentloaded', {
+              timeout: Math.max(siteMsLeft(), 1),
+            })
+            .catch(() => undefined);
+        }
       }
     };
     await session.send('Fetch.enable', {
@@ -402,7 +514,11 @@ export async function fetchPage(
     });
     const assertVisitsAllowed = async (extra: string[] = []): Promise<void> => {
       throwIfSkipped();
-      for (const hop of new Set([...visited, ...extra, page.url()])) {
+      // Compared without fragments: CDP reports none, page.url() keeps one.
+      const hops = new Set(
+        [...visited, ...extra, page.url()].map(withoutFragment),
+      );
+      for (const hop of hops) {
         if (hop !== startUrl && !gated.has(hop))
           await assertVisitedAllowed(url, hop);
       }
@@ -453,10 +569,7 @@ export async function fetchPage(
         throwIfSkipped();
         throw err;
       })
-      .finally(() => {
-        gotoSettled = true;
-        clearTimeout(clockTimer);
-      });
+      .finally(() => clearTimeout(clockTimer));
 
     const finalStatus = response?.status() ?? httpStatus;
 
