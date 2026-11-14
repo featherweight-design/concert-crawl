@@ -45,3 +45,16 @@ export const AVATAR_COLORS: AvatarColor[] = [
   'success',
   'warning',
 ];
+
+/**
+ * The Mix two row, in the board's order (more-s-e_mix). The six pairs are every
+ * two of the four colours, so the picker needs no tokens of its own.
+ */
+export const AVATAR_PAIRS: readonly (readonly [AvatarColor, AvatarColor])[] = [
+  ['signal', 'accent'],
+  ['accent', 'warning'],
+  ['success', 'signal'],
+  ['warning', 'success'],
+  ['accent', 'success'],
+  ['signal', 'warning'],
+];

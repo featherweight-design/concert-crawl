@@ -10,6 +10,11 @@ interface AvatarRingProps {
   size: number;
   /** Colour of the gap between the ring and whatever the avatar sits on. */
   cutout?: string;
+  /**
+   * Wash the disc with both colours, as the Edit profile preview draws it
+   * (more-s-e_mix), instead of the first colour alone.
+   */
+  washBoth?: boolean;
 }
 
 /**
@@ -23,6 +28,7 @@ export const AvatarRing = ({
   avatarSecondColor,
   size,
   cutout,
+  washBoth = false,
 }: AvatarRingProps) => {
   if (!handle) {
     return <Avatar handle={null} avatarColor={avatarColor} size={size} />;
@@ -47,7 +53,9 @@ export const AvatarRing = ({
       <span
         className="flex h-full w-full select-none items-center justify-center rounded-full"
         style={{
-          background: `color-mix(in oklch, var(--${first}) 10%, var(--bg))`,
+          background: washBoth
+            ? `linear-gradient(135deg, color-mix(in oklch, var(--${first}) 22%, var(--bg)), color-mix(in oklch, var(--${second}) 22%, var(--bg)))`
+            : `color-mix(in oklch, var(--${first}) 10%, var(--bg))`,
         }}
       >
         <span

@@ -78,6 +78,8 @@ export function ProfileHero({
     'absolute right-3.5 top-1/2 z-20 -translate-y-1/2 rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
   const editStyle = {
     background: 'color-mix(in oklch, var(--bg) 78%, transparent)',
+    // The board draws a hairline round the button (more-s-settings_m).
+    border: '1px solid color-mix(in oklch, var(--fg) 16%, transparent)',
     letterSpacing: '-0.005em',
   };
 
@@ -101,9 +103,12 @@ export function ProfileHero({
             gap: 5,
             padding: '3px 7px',
             borderRadius: 4,
+            // The board's ADMIN chip (more-s-settings_m): the dot's colour
+            // carries through the text and a hairline. Promoter and Beta take
+            // the same treatment in their own dot colours.
             background: 'var(--surface-2)',
-            border: '1px solid var(--border-strong)',
-            color: 'var(--fg-muted)',
+            border: `1px solid color-mix(in oklch, ${ROLE_BADGE_DOT[roleBadge]} 45%, transparent)`,
+            color: ROLE_BADGE_DOT[roleBadge],
             fontFamily: 'var(--font-mono)',
             fontSize: 9,
             fontWeight: 700,
@@ -231,12 +236,8 @@ export function ProfileHero({
                 {SETTINGS_COPY.anonymousLabel}
               </span>
             ) : (
-              <>
-                <span className="text-fg-muted" style={{ fontWeight: 700 }}>
-                  @
-                </span>
-                {handle}
-              </>
+              // The board draws the "@" as heavy and white as the handle.
+              <>@{handle}</>
             )}
           </span>
           {roleBadges}

@@ -8,13 +8,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { meQueryKey } from '@/lib/queries/use-me';
 import { patchMe, checkHandleAvailability } from '@/lib/users';
 import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider';
-import { Avatar } from './Avatar';
+import { AvatarPicker } from './AvatarPicker';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import {
-  HANDLE_REGEX,
-  RESERVED_HANDLES,
-  AVATAR_COLORS,
-} from './definitions/constants';
+import { HANDLE_REGEX, RESERVED_HANDLES } from './definitions/constants';
 import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
@@ -53,6 +49,10 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(
     profile.avatarColor,
   );
+  // The pair's second colour; null is a solid avatar, which a solid swatch
+  // sends explicitly so a previous pair is cleared.
+  const [avatarSecondColor, setAvatarSecondColor] =
+    useState<AvatarColor | null>(profile.avatarSecondColor);
   const [handleError, setHandleError] = useState<HandleError>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -117,6 +117,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
         handle: savedHandle,
         city: city === '' ? null : city,
         avatarColor,
+        avatarSecondColor,
       });
       // The analytics provider outlives router.refresh(), so hand it the new
       // handle directly: a changed or cleared name reaches PostHog now, not
@@ -213,49 +214,20 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
         }}
         className="flex flex-col gap-6 px-4 py-6"
       >
-        {/* Avatar + color picker: horizontal layout */}
-        <div className="flex items-start gap-5">
-          <div className="flex flex-col items-center gap-2 shrink-0">
-            <Avatar
-              handle={handle || null}
-              avatarColor={avatarColor}
-              size={72}
-              ringed
-            />
-            {handle && (
-              <span className="text-[13px] font-bold text-fg">@{handle}</span>
-            )}
-          </div>
-          <div className="flex flex-1 flex-col gap-2 pt-1">
-            <span className="text-[13px] font-semibold text-fg">
-              {SETTINGS_COPY.avatarColorLabel}
-            </span>
-            <div className="flex flex-wrap gap-3">
-              {AVATAR_COLORS.map((color) => {
-                const isSelected = avatarColor === color;
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setAvatarColor(color)}
-                    aria-label={SETTINGS_COPY.avatarColorSwatchAriaLabel(color)}
-                    aria-pressed={isSelected}
-                    className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      background: `color-mix(in oklch, var(--${color}) 36%, var(--surface-1))`,
-                      border: `1.5px solid var(--${color})`,
-                      boxShadow: isSelected
-                        ? `0 0 0 3px color-mix(in oklch, var(--${color}) 24%, transparent)`
-                        : 'none',
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
+        {/* The label sits above a framed card holding the preview and swatches. */}
+        <div className="flex flex-col gap-2.5">
+          <span className="text-[15px] font-bold text-fg">
+            {SETTINGS_COPY.avatarColorLabel}
+          </span>
+          <AvatarPicker
+            handle={handle || null}
+            avatarColor={avatarColor}
+            avatarSecondColor={avatarSecondColor}
+            onChange={(first, second) => {
+              setAvatarColor(first);
+              setAvatarSecondColor(second);
+            }}
+          />
         </div>
 
         {/* Handle field */}

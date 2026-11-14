@@ -1,0 +1,30 @@
+{
+  "feature": "U1 · Edit profile dialog (desktop)",
+  "note": "The desktop half of U1: the Edit profile dialog over Settings, with its blue-to-pink top edge and the Mix two picker. Board: design/design_handoff_bplus_redesign/screens/07-more-screens/more-s-edit_d. Desktop only, since below sm the Edit button is a link to /me/edit (the mobile row of bplus-u1-avatar-mix.json). The sheet runs one theme pass, Electric, and the audit account's saved theme must be Electric.",
+  "widths": [{ "label": "desktop", "width": 1300, "height": 900 }],
+  "themes": [
+    {
+      "label": "electric",
+      "dataTheme": "electric",
+      "storage": {
+        "cc-theme": "electric"
+      },
+      "colorScheme": "dark"
+    }
+  ],
+  "rows": [
+    {
+      "id": "edit-dialog",
+      "label": "/me: the Edit profile dialog",
+      "steps": [
+        {
+          "goto": "/me",
+          "wait": "[data-testid=\"profile-banner\"]"
+        },
+        { "clickRole": "button", "name": "^Edit$" },
+        { "waitDialog": "^Edit profile$" },
+        { "wait": "[data-testid=\"avatar-picker\"]", "settle": 3000 }
+      ]
+    }
+  ]
+}
