@@ -2479,6 +2479,9 @@ export const ADMIN_COPY = {
     reports: (count: number) =>
       `${count} ${count === 1 ? 'report' : 'reports'}`,
     batch: 'Batch',
+    // The batch card's impact slot (`02/a-batch-of-prices`): the days-ahead
+    // window its shows fall in.
+    batchWindow: (min: number, max: number) => `Shows in ${min}–${max} days`,
     hiddenUntilDecided: 'Hidden until you decide',
     noFanImpact: 'No fan impact yet',
     // Undrawn: the card's "what happened" line. The API sends evidence lines,

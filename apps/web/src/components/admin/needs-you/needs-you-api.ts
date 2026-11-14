@@ -160,6 +160,8 @@ export interface QueueRow {
   bugFacts: BugFacts | null;
   /** A price batch's submissions (empty on other kinds). */
   submissionIds: string[];
+  /** The days-ahead window a batch's shows fall in; null when none holds. */
+  fanWindow: { minDays: number; maxDays: number } | null;
 }
 
 // Every kind the API serves. A `Record` so a kind added to the type fails to
@@ -222,6 +224,18 @@ const runsFrom = (value: unknown): RunLine[] =>
           : [],
       )
     : [];
+
+const fanWindowFrom = (
+  value: unknown,
+): { minDays: number; maxDays: number } | null =>
+  // A range that reads backwards or empty is a malformed window, not one.
+  isRecord(value) &&
+  isCount(value['minDays']) &&
+  isCount(value['maxDays']) &&
+  value['minDays'] <= value['maxDays'] &&
+  value['maxDays'] > 0
+    ? { minDays: value['minDays'], maxDays: value['maxDays'] }
+    : null;
 
 const moveToFrom = (value: unknown): MoveTo | null =>
   isRecord(value) &&
@@ -358,6 +372,7 @@ const rowFrom = (value: unknown): QueueRow | null => {
     submissionIds: Array.isArray(value['submissionIds'])
       ? value['submissionIds'].filter(isText)
       : [],
+    fanWindow: fanWindowFrom(value['fanWindow']),
   };
 };
 

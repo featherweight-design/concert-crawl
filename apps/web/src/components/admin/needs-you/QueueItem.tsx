@@ -14,7 +14,7 @@ import {
   kindLabelOf,
   metaOf,
   whatOf,
-  whenOf,
+  whenOfRow,
 } from './needs-you-rules';
 import type { NeedsYouAnswer, QueueRow } from './needs-you-api';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -51,7 +51,7 @@ export const QueueItem = ({
   onNotUseful,
 }: QueueItemProps) => {
   const isPhone = useIsPhone();
-  const when = whenOf(row.fanDate, today);
+  const when = whenOfRow(row, today);
   const meta = metaOf(row);
   const answers = cardAnswers(row);
   // Two buttons, the rest as quiet links, at both widths (the boards draw it so).
@@ -96,14 +96,16 @@ export const QueueItem = ({
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <span
-          style={{
-            fontSize: 12.5,
-            color: isUrgent(row.kind) ? 'var(--danger)' : 'var(--fg-subtle)',
-          }}
-        >
-          {impactOf(row)}
-        </span>
+        {impactOf(row) !== '' && (
+          <span
+            style={{
+              fontSize: 12.5,
+              color: isUrgent(row.kind) ? 'var(--danger)' : 'var(--fg-subtle)',
+            }}
+          >
+            {impactOf(row)}
+          </span>
+        )}
         {/* On the phone the clock lives in the item page's ⋯ sheet
             (`01-snooze/answered-m` draws no clock on the cards). */}
         {!isPhone && (
