@@ -1,0 +1,33 @@
+{
+  "feature": "Admin P47-1 · Each person's own two-colour avatar",
+  "note": "P47-1. CONTACT_SHEET_ROLE=admin. Boards: 07/people, 07/person, 01/desktop-sidebar. The code panel's who-joined list (07/a-code-in-flow) needs a code with joiners: a by-hand staging walk.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "people",
+      "label": "/admin/people list and sidebar card",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "[data-testid=\"person-avatar\"]",
+          "settle": 600
+        }
+      ]
+    },
+    {
+      "id": "person",
+      "label": "A person page",
+      "steps": [
+        {
+          "goto": "/admin/people",
+          "wait": "a[href^=\"/admin/people/\"]"
+        },
+        { "click": "a[href^=\"/admin/people/\"]:visible >> nth=0" },
+        { "wait": "[data-testid=\"person-avatar\"]", "settle": 600 }
+      ]
+    }
+  ]
+}
