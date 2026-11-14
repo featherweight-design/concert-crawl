@@ -360,6 +360,14 @@ eventsAdminRouter.patch(
       if (promotion.outcome === 'already_resolved') return alreadyResolved();
       ({ report: updated, isRealTransition } = promotion);
       closedAsMoot = promotion.outcome === 'moot';
+    } else if (resolution === 'promoted') {
+      // A Tickets available: clearSoldOut above already resolved this report
+      // as promoted, with the note, in its own transaction. Answer with it.
+      [updated] = await db
+        .select()
+        .from(eventReports)
+        .where(eq(eventReports.id, reportId))
+        .limit(1);
     } else {
       // Matched on `resolved_at IS NULL`, so a reject or needs-more-info
       // never writes over a report a fan threshold promoted after the read
