@@ -211,6 +211,7 @@ export const PriceBatchList = ({
                 }}
               >
                 <label
+                  className="price-batch-row"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -248,6 +249,7 @@ export const PriceBatchList = ({
                     />
                     <span
                       aria-hidden="true"
+                      className="price-batch-tile"
                       style={{
                         display: 'flex',
                         alignItems: 'center',

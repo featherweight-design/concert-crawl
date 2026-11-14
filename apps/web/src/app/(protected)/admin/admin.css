@@ -353,3 +353,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The price batch's tick is a native checkbox hidden under a drawn tile; the
+   focus ring belongs on the tile so keyboard focus is visible. */
+.price-batch-row:has(input:focus-visible) .price-batch-tile {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
