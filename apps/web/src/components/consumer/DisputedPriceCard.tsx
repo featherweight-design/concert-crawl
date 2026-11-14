@@ -42,12 +42,17 @@ const GRADIENT_STROKE = {
     'linear-gradient(135deg, var(--signal), var(--accent)) border-box',
 } as const;
 
+// Keyboard focus for the footer's text-link buttons.
+const FOOTER_LINK_FOCUS =
+  'rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]';
+
 // A muted mono label on the footer's left, as the board draws "YOUR PRICE".
+// The Light-safe subtle text token: --fg-subtle misses AA at 9px on Light.
 const FOOTER_LABEL = {
   fontFamily: 'var(--font-mono)',
   fontSize: 9,
   fontWeight: 700,
-  color: 'var(--fg-subtle)',
+  color: 'var(--price-text-subtle)',
   letterSpacing: '0.12em',
   textTransform: 'uppercase',
   flexShrink: 0,
@@ -164,8 +169,12 @@ export const DisputedPriceCard = ({
   // wasn't passed — keeps the anchor non-broken for legacy callers.
   const anchorId = `counter-${counterSubmissionId ?? disputedSubmissionId}`;
 
+  // A text link that is a button. Not `all: unset`: that would also strip the
+  // focus ring; the class below restores it for keyboard users.
   const footerLink = {
-    all: 'unset',
+    background: 'none',
+    border: 'none',
+    padding: 0,
     cursor: 'pointer',
     fontFamily: 'var(--font-ui)',
     fontWeight: 800,
@@ -384,6 +393,7 @@ export const DisputedPriceCard = ({
               <button
                 type="button"
                 onClick={onWithdraw}
+                className={FOOTER_LINK_FOCUS}
                 style={{ ...footerLink, color: 'var(--price-text-warning)' }}
               >
                 {copy.footer.withdrawButton}
@@ -400,6 +410,7 @@ export const DisputedPriceCard = ({
                 {...(signedOut
                   ? { 'aria-label': copy.footer.ariaButtonLabelSignedOut }
                   : {})}
+                className={FOOTER_LINK_FOCUS}
                 style={{ ...footerLink, color: 'var(--price-text-signal)' }}
               >
                 {copy.footer.buttonLabel}
