@@ -690,7 +690,11 @@ eventsAdminRouter.get(
     // The admin's own live price on this show, which Edit price opens.
     const actor = getAuthUser(ctx);
     const [mine] = await db
-      .select({ id: priceSubmissions.id })
+      .select({
+        id: priceSubmissions.id,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+      })
       .from(priceSubmissions)
       .where(
         and(
@@ -704,7 +708,13 @@ eventsAdminRouter.get(
 
     return ctx.json({
       success: true,
-      data: { ...row, mySubmissionId: mine?.id ?? null },
+      // `mySubmission` carries the prices Edit price opens with; the id stays
+      // on its own for older web builds.
+      data: {
+        ...row,
+        mySubmissionId: mine?.id ?? null,
+        mySubmission: mine ?? null,
+      },
     } as const);
   },
 );
