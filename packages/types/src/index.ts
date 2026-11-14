@@ -36,6 +36,8 @@ export * from './latin-extended-map.js';
 // the fetchers that send it, the robots.txt checker that asks about it, and the
 // /bot page that publishes it all read one string.
 export * from './crawler-identity.js';
+// The daily crawl's schedule: the API's next nightly and the web's night time.
+export * from './crawl-schedule.js';
 
 // Concert Crews (#1226) — /v1/crews and invite-resolution response contracts,
 // shared by the API handlers and every web crew surface.

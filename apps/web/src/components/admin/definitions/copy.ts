@@ -1270,8 +1270,6 @@ export const ADMIN_COPY = {
     // Ruling 18: a night's retry folds into its one row.
     retriedAt: (time: string) => `retried at ${time}`,
     parts: (parts: readonly string[]) => parts.join(' · '),
-    // A night that didn't start has no run time: the schedule's.
-    scheduledTime: '3:00 AM',
     minutes: (count: number) => `${count.toLocaleString('en-US')} min`,
     noTime: '—',
     // A row's accessible name: "Nov 11, 3:00 AM: Nightly, Done, 21 venues · 14 OK".

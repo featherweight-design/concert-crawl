@@ -1,3 +1,4 @@
+import { scheduledCrawlAt } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   shortDate,
@@ -221,7 +222,8 @@ export const batchSummary = (batch: BatchRow): string => {
 
 /**
  * WHEN: the first run's date and time, Mountain Time. A night that didn't
- * start has none, so it reads its night and the schedule's 3:00 AM.
+ * start has none, so it reads the time the daily cron was due that night
+ * (`scheduledCrawlAt`, the schedule behind the API's nextDailyCrawlAt).
  */
 export const batchWhen = (
   batch: Pick<BatchRow, 'startedAt' | 'night'>,
@@ -232,10 +234,10 @@ export const batchWhen = (
       time: shortTime(batch.startedAt),
     };
   }
-  // Noon UTC is early morning in Denver: the night's own date.
-  const date =
-    batch.night === null ? COPY.noTime : shortDate(`${batch.night}T12:00:00Z`);
-  return { date, time: COPY.scheduledTime };
+  if (batch.night === null) return { date: COPY.noTime, time: COPY.noTime };
+  // The time the cron was due that night: 2:07 AM MST, 3:07 AM MDT.
+  const due = scheduledCrawlAt(batch.night);
+  return { date: shortDate(due), time: shortTime(due) };
 };
 
 /**
