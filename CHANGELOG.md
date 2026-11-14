@@ -1,3 +1,13 @@
+## [1.470.1](https://github.com/featherweight-design/concert-crawl/compare/v1.470.0...v1.470.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **ci:** keep the smoke api wait's comment with its step and word the web skip ([b1959fc](https://github.com/featherweight-design/concert-crawl/commit/b1959fcad70283ae3496060bf8ab14b0e6ea6fb4))
+* **ci:** staging smoke and e2e wait on the web build for every push and fail closed ([fb66117](https://github.com/featherweight-design/concert-crawl/commit/fb661170d28b91e1e9c73d92405e6b6a60ecab6c))
+* **web:** play the PWA launch over 3000ms, stretched evenly from the board ([e0c9673](https://github.com/featherweight-design/concert-crawl/commit/e0c967354d4d42580312733d625e0ab9a85723d8))
+* **web:** set the launch durations before marking, and tighten the CSS check ([cb0ee79](https://github.com/featherweight-design/concert-crawl/commit/cb0ee79fc8835f43695d5f3007d821de6b474be4))
+
 # [1.470.0](https://github.com/featherweight-design/concert-crawl/compare/v1.469.1...v1.470.0) (2026-11-14)
 
 
