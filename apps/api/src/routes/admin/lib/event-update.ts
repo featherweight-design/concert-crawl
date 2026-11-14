@@ -9,7 +9,9 @@ import {
   userEvents,
   venues,
 } from '@concert-crawl/db';
+import { canonicalizeTitle } from '@concert-crawl/crawler-core/canonical-title';
 import { fanoutWatchNotification } from '@concert-crawl/push';
+import { canonicalizeArtist } from '@concert-crawl/types';
 import { activePromotedReportWhere } from '../../../lib/sold-out.js';
 
 // The body of PATCH /v1/admin/events/:id: the transition rules and the
@@ -59,8 +61,8 @@ export type EventPatch = z.input<typeof eventPatchSchema>;
  * locked field. A past show takes `hiddenFromConsumer` and the corrections
  * (B+ addendum 5 §4, addendum 6 item 36: "Title, lineup, venue and times stay
  * editable as corrections and notify nobody"); status, price and the rest stay
- * locked. A postponed past show may instead move its date, times and status,
- * or it could never be rescheduled. The throw rolls the transaction back, so
+ * locked. A postponed past show takes the title and headliner corrections and
+ * may also move its date, times and status, or it could never be rescheduled. The throw rolls the transaction back, so
  * nothing is written.
  */
 export class PastLockedError extends Error {
@@ -77,23 +79,37 @@ const isPatchKey = (key: string): key is PatchKey =>
   key in eventPatchSchema.shape;
 
 /**
- * A past show may change these as corrections that notify nobody (addendum 5
- * §4). `artist` is the headliner text the PATCH carries for the lineup. The
- * date counts with the times, but only to another past date: moving a played
- * show into the future is not a correction.
+ * Fields any past show may change with no pre-state check: the past lock never
+ * refuses them and they fire nothing.
+ */
+const PAST_UNCHECKED: ReadonlySet<PatchKey> = new Set(['hiddenFromConsumer']);
+
+/**
+ * Corrections every past show may make, notifying nobody (addendum 5 §4).
+ * `artist` is the headliner text the PATCH carries for the lineup.
+ */
+const PAST_CORRECTIONS: readonly PatchKey[] = ['title', 'artist'];
+
+/**
+ * A played past show may change these. The date counts with the times, but
+ * only to another past date: moving a played show into the future is not a
+ * correction.
+ *
+ * Venue and lineup corrections (addendum 5 §4) land with the 4b venue/lineup
+ * PATCH work, which must add them here; this PATCH has no `venueId` yet.
  */
 const PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
-  'hiddenFromConsumer',
-  'title',
-  'artist',
+  ...PAST_UNCHECKED,
+  ...PAST_CORRECTIONS,
   'date',
   'doorsTime',
   'showTime',
 ]);
 
-/** A postponed past show may also be rescheduled. */
+/** A postponed past show may also be rescheduled, and its watchers hear. */
 const POSTPONED_PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
-  'hiddenFromConsumer',
+  ...PAST_UNCHECKED,
+  ...PAST_CORRECTIONS,
   'date',
   'doorsTime',
   'showTime',
@@ -101,12 +117,13 @@ const POSTPONED_PAST_ALLOWED: ReadonlySet<PatchKey> = new Set([
 ]);
 
 /**
- * True when the patch sets anything but `hiddenFromConsumer`: a field a past
+ * True when the patch sets anything outside PAST_UNCHECKED: a field a past
  * show locks, or a correction whose side effects a past show must skip.
  */
 const setsPastCheckedField = (body: EventPatch): boolean =>
   Object.entries(body).some(
-    ([key, value]) => value !== undefined && key !== 'hiddenFromConsumer',
+    ([key, value]) =>
+      value !== undefined && !(isPatchKey(key) && PAST_UNCHECKED.has(key)),
   );
 
 // Postgres hands back `time` as HH:MM:SS and `numeric` as a scale-2 string,
@@ -147,8 +164,10 @@ export interface UpdateEventOptions {
    * Today's date in Denver (`YYYY-MM-DD`). When given, a show dated before it
    * (the list's Past side) takes only `hiddenFromConsumer` and the
    * corrections (title, headliner, times, a date still in the past), which
-   * fire no watcher fan-out; anything else is PastLockedError. A postponed one
-   * instead may change its date, times and status, and its watchers hear.
+   * fire no date-move notice; anything else is PastLockedError. A postponed
+   * one may change its title and headliner, and its date, times and status,
+   * and its watchers hear of a new date. A corrected title or headliner
+   * refreshes `canonical_title` / `canonical_artist`.
    * Read from the locked row, never from the request.
    */
   lockPastBefore?: string;
@@ -183,9 +202,13 @@ export const updateEventNotifying = async (
   // sees the new state and computes category=null.
   const result = await db.transaction(async (tx) => {
     let preUpdate: EventRow | undefined;
-    // A played (non-postponed) past show taking a correction: it notifies
-    // nobody (addendum 5 §4), so the fan-out below stays off.
-    let pastCorrection = false;
+    // A played (non-postponed) past show's date or time change is a
+    // correction that notifies nobody (addendum 5 §4), so it skips the
+    // date-move notice below. Status transitions still compute their own.
+    let dateChangeIsCorrection = false;
+    // The derived match keys a past correction refreshes alongside the text
+    // it corrects, through the crawler's own canonicalizers.
+    let canonicals: { canonicalArtist?: string; canonicalTitle?: string } = {};
     if (readsPreState) {
       const rows = await tx
         .select()
@@ -196,7 +219,8 @@ export const updateEventNotifying = async (
       preUpdate = rows[0];
       // The stored row decides, so a PATCH that also moves the date cannot
       // unlock a past show. A field re-sent at its stored value is not a
-      // write; a postponed show may still be rescheduled.
+      // write; a postponed show may still be rescheduled. "Past" means dated
+      // before today in Denver: a show dated today is not past.
       if (
         pastLockBefore !== undefined &&
         preUpdate &&
@@ -218,7 +242,17 @@ export const updateEventNotifying = async (
         ) {
           throw new PastLockedError();
         }
-        pastCorrection = !postponed;
+        dateChangeIsCorrection = !postponed;
+        canonicals = {
+          ...(changed.includes('artist') &&
+            typeof body.artist === 'string' && {
+              canonicalArtist: canonicalizeArtist(body.artist),
+            }),
+          ...(changed.includes('title') &&
+            typeof body.title === 'string' && {
+              canonicalTitle: canonicalizeTitle(body.title),
+            }),
+        };
       }
     }
 
@@ -228,6 +262,7 @@ export const updateEventNotifying = async (
       // it ends No longer listed (B+ A5).
       .set({
         ...body,
+        ...canonicals,
         // Clears first_missing_at too on a delisted row: otherwise the show
         // hides again right after its watchers hear, and a restore would be
         // re-cancelled by the next sweep.
@@ -269,7 +304,7 @@ export const updateEventNotifying = async (
     // watch.postponed. If both a status flip AND a date change land in the
     // same PATCH, we still fan out only once — status transitions win.
     let category: 'watch.cancelled' | 'watch.postponed' | null = null;
-    if (preUpdate && updated && !pastCorrection) {
+    if (preUpdate && updated) {
       // Confirming a delisted show as cancelled is a real transition:
       // the sweep told nobody.
       const wasDelisted = preUpdate.delistedAt !== null;
@@ -283,6 +318,7 @@ export const updateEventNotifying = async (
       } else if (
         typeof body.date === 'string' &&
         body.date !== preUpdate.date &&
+        !dateChangeIsCorrection &&
         // Skip if this event is already cancelled — a stale ticker
         // somewhere may still emit dates for cancelled events; watchers
         // already got the cancel notification.

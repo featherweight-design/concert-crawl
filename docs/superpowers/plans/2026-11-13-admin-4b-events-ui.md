@@ -86,7 +86,7 @@
 
 - `POST /v1/admin/events` adds a show by hand (409 `duplicate` with `existingId`). `GET /v1/admin/events/duplicate?venueId&date&title` serves the warning as you type.
 - `PUT /v1/admin/events/:id/lineup` saves the lineup. It sets `lineup_edited_at` and is allowed on past rows.
-- `PATCH /v1/admin/events/:id` gains `venueId`. Status, hidden, title, date and times are already there; past rows accept only `hiddenFromConsumer`, and anything else returns 409 `past_locked`.
+- `PATCH /v1/admin/events/:id` gains `venueId`. Status, hidden, title, date and times are already there; past rows accept `hiddenFromConsumer`, and title, headliner, times and a past date as corrections that notify nobody (addendum 5 §4, 2026-11-14). Venue and lineup corrections follow with this 4b work. Anything else returns 409 `past_locked`.
 - `DELETE /v1/admin/events/:id` returns 409 `not_manual` on crawled rows.
 - `GET /v1/admin/events/:id/merge-candidates` lists the same venue and day, likely first. Search reuses the list's `q` across both `when` values.
 - `GET /v1/admin/events/:id/merge-preview?other=` returns per listing `{title, lineup, from, watching, price, reports}`, plus the deduplicated `watchingAfter` and the kept price.

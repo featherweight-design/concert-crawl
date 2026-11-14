@@ -31,6 +31,11 @@
       "import": "./dist/lib/canonical-artist.js",
       "default": "./dist/lib/canonical-artist.js"
     },
+    "./canonical-title": {
+      "types": "./dist/lib/canonical-title.d.ts",
+      "import": "./dist/lib/canonical-title.js",
+      "default": "./dist/lib/canonical-title.js"
+    },
     "./robots": {
       "types": "./dist/lib/robots.d.ts",
       "import": "./dist/lib/robots.js",
