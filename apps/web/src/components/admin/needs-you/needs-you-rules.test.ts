@@ -10,6 +10,8 @@ import {
   defaultParams,
   eightAmMountain,
   evidenceText,
+  impactOf,
+  whenOfRow,
   lastRunsOf,
   latestRunWhen,
   leadFirst,
@@ -339,6 +341,27 @@ describe('price and bug helpers', () => {
     expect(
       cardLabelOf({ ...base, kind: 'bug' }, { slug: 'x', label: 'Resolve' }),
     ).toBe('Resolve');
+  });
+
+  // `02/a-batch-of-prices`: "PRICES · Batch ... Shows in 2–30 days".
+  it('draws the batch top line as Batch and the window, or no window', () => {
+    const batch = (
+      fanWindow: { minDays: number; maxDays: number } | null,
+    ): QueueRow =>
+      ({
+        kind: 'price-batch',
+        fanDate: '2026-11-20',
+        fanWindow,
+      }) as unknown as QueueRow;
+    expect(whenOfRow(batch(null), '2026-11-14')).toEqual({
+      word: 'Batch',
+      soon: false,
+    });
+    expect(impactOf(batch({ minDays: 2, maxDays: 30 }))).toBe(
+      'Shows in 2–30 days',
+    );
+    // A held price is in the batch: no range is true, so none is drawn.
+    expect(impactOf(batch(null))).toBe('');
   });
 
   it('words a price batch card in the singular at one and the plural at many', () => {

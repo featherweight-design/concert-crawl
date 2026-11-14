@@ -903,7 +903,11 @@ const priceCheckItems: Adapter = async ({ now }) => {
 const priceBatchItems: Adapter = async ({ now }) => {
   const today = denverDate(now);
   const rows = await db
-    .select({ id: priceSubmissions.id, date: events.date })
+    .select({
+      id: priceSubmissions.id,
+      date: events.date,
+      heldForAdminAt: priceSubmissions.heldForAdminAt,
+    })
     .from(priceSubmissions)
     .innerJoin(events, eq(events.id, priceSubmissions.eventId))
     .where(
@@ -949,6 +953,11 @@ const priceBatchItems: Adapter = async ({ now }) => {
       fanDate: first.date,
       watchers: 0,
       submissionIds: rows.map((row) => row.id),
+      // A held price skips the window, so the range is only true of the batch
+      // when none is held: otherwise null, and the card names no range.
+      fanWindow: rows.some((row) => row.heldForAdminAt !== null)
+        ? null
+        : { minDays: PRICE_BATCH_MIN_DAYS, maxDays: PRICE_BATCH_MAX_DAYS },
       evidence: [
         ...line('Prices', rows.length),
         ...line('Soonest show', first.date),

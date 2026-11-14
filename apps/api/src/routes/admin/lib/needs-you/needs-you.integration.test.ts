@@ -25,6 +25,7 @@ import {
   listNeedsYou,
 } from './index.js';
 import { addDays, denverDate } from './keys.js';
+import { PRICE_BATCH_MAX_DAYS, PRICE_BATCH_MIN_DAYS } from './sources.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -448,6 +449,58 @@ describe('Needs you sources and ranking', () => {
       const count = await countNeedsYou(now());
       expect(count.byKind['price-batch']).toBe(1);
       expect(count.decisions).toBe(items.length);
+    });
+
+    // The card's top line says "Shows in 2 to 30 days": the window comes from
+    // the same constants that pick the batch, and is null when a held price
+    // (which skips the window) is in it.
+    it('carries the window it was picked by, and drops it when a held price is in it', async () => {
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const e1 = await seedEvent(venue.id, {
+        artist: 'W One',
+        date: inDays(10),
+      });
+      await seedPriceSubmission(e1.id, 'user-1', { corroborationCount: 2 });
+
+      const [plain] = (await listNeedsYou({ now: now() })).filter(
+        (row) => row.kind === 'price-batch',
+      );
+      expect(plain?.kind === 'price-batch' && plain.fanWindow).toEqual({
+        minDays: PRICE_BATCH_MIN_DAYS,
+        maxDays: PRICE_BATCH_MAX_DAYS,
+      });
+
+      const far = await seedEvent(venue.id, {
+        artist: 'W Far',
+        date: inDays(45),
+      });
+      await seedPriceSubmission(far.id, 'user-2', {
+        corroborationCount: 1,
+        heldForAdminAt: new Date(),
+      });
+      const [mixed] = (await listNeedsYou({ now: now() })).filter(
+        (row) => row.kind === 'price-batch',
+      );
+      expect(mixed?.kind === 'price-batch' && mixed.fanWindow).toBeNull();
+    });
+
+    // A held price skips the window even when it happens to fall inside it,
+    // and a batch of held prices alone has no window either: the range is only
+    // ever claimed for a batch the window itself picked.
+    it('has no window for a held price inside the range, or a batch of held prices only', async () => {
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const inside = await seedEvent(venue.id, {
+        artist: 'In',
+        date: inDays(10),
+      });
+      await seedPriceSubmission(inside.id, 'user-1', {
+        corroborationCount: 1,
+        heldForAdminAt: new Date(),
+      });
+      const [held] = (await listNeedsYou({ now: now() })).filter(
+        (row) => row.kind === 'price-batch',
+      );
+      expect(held?.kind === 'price-batch' && held.fanWindow).toBeNull();
     });
 
     it('is absent with fewer than 2 corroborations', async () => {
