@@ -45,6 +45,7 @@ import {
   type EventsAvailabilityResponse,
   type PlanState,
   type PriceCheckFields,
+  type PriceCheckOutcome,
   type SourceCategory,
   type Tier,
 } from '@concert-crawl/types';
@@ -69,6 +70,7 @@ import {
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js';
 import { narrowLastAdminAction } from '../lib/last-admin-action.js';
+import { pickPriceCheckOutcome } from '../lib/price-check-outcome.js';
 import {
   compareLeadingCounters,
   currentPriceCondition,
@@ -765,6 +767,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         lastAdminActionKind: 'defer' | null;
       } & PriceCheckFields)
     | null = null;
+  // How the last check on the primary live price ended, while it is recent.
+  let priceCheckOutcome: PriceCheckOutcome | null = null;
 
   // Per-tier price aggregation (PR 3) and the flat priceVendor/priceAlternates/
   // priceConfirmsCount/counterSubmission/pendingSubmissions fields share the
@@ -790,6 +794,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       createdAt: priceSubmissions.createdAt,
       updatedAt: priceSubmissions.updatedAt,
       lastSeenAt: priceSubmissions.lastSeenAt,
+      // Names the price this one replaced when an update won a check; read to
+      // show how the check ended (priceCheckOutcome).
+      disputedSubmissionId: priceSubmissions.disputedSubmissionId,
       contested: underCheckSql(),
     })
     .from(priceSubmissions)
@@ -1054,6 +1061,37 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           counters: primaryCounters,
         }),
       };
+    } else if (!legacyPrimary.contested) {
+      // No check is open, so show how the last one ended. The rows that can
+      // say are the archived ones tied to the live price: its predecessor, or
+      // updates that lost to it (lib/price-check-outcome.ts).
+      const archived = await db
+        .select({
+          id: priceSubmissions.id,
+          priceMin: priceSubmissions.priceMin,
+          priceMax: priceSubmissions.priceMax,
+          disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+          updatedAt: priceSubmissions.updatedAt,
+        })
+        .from(priceSubmissions)
+        .where(
+          and(
+            eq(priceSubmissions.eventId, id),
+            eq(priceSubmissions.status, 'archived'),
+            or(
+              eq(priceSubmissions.disputedSubmissionId, legacyPrimary.id),
+              legacyPrimary.disputedSubmissionId !== null
+                ? eq(priceSubmissions.id, legacyPrimary.disputedSubmissionId)
+                : undefined,
+            ),
+          ),
+        );
+      priceCheckOutcome = pickPriceCheckOutcome({
+        liveId: legacyPrimary.id,
+        liveDisputedSubmissionId: legacyPrimary.disputedSubmissionId,
+        archived,
+        now: new Date(),
+      });
     }
   }
 
@@ -1186,6 +1224,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceAlternates,
       priceConfirmsCount,
       counterSubmission,
+      priceCheckOutcome,
       pendingSubmissions,
       priceByTier,
       // A reporter's handle is for signed-in viewers: an anonymous answer (the

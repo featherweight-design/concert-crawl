@@ -984,6 +984,18 @@ export interface PriceCheckFields {
   viewerCounterId: string | null;
 }
 
+// How the last price check on the live price ended, for the "after review"
+// card (B+ more-st-disputes_board). Present only while the check is recent
+// (14 days) and no new check is open:
+//   - 'held'    an admin decided the price stands; `previous` is null
+//   - 'updated' an update replaced the price (an admin or fan confirms
+//               decided it); `previous` is the price it replaced
+export interface PriceCheckOutcome {
+  outcome: 'held' | 'updated';
+  resolvedAt: string;
+  previous: { floor: number; ceiling: number | null } | null;
+}
+
 export interface TierCounter extends PriceCheckFields {
   id: string;
   parentSubmissionId: string;
@@ -1111,6 +1123,10 @@ export interface EventDetailResponse extends EventWithVenue {
         lastAdminActionKind: 'defer' | null;
       } & PriceCheckFields)
     | null;
+  // How the last price check on the primary live price ended (see
+  // PriceCheckOutcome). Null when there is none to show, and always null while
+  // a check is open (counterSubmission is set).
+  priceCheckOutcome?: PriceCheckOutcome | null;
   // Promoted sold-out report — present when a community sold-out report was confirmed
   soldOutReport?: PromotedReportSummary | null;
   // The promoted fan report behind a cancelled or postponed status. Null when
