@@ -136,7 +136,7 @@ export function lowestHeadlineSourceCategory(
   return lowestHeadline(blocks)?.sourceCategory ?? null;
 }
 
-function lowestHeadline(blocks: TierPriceBlock[]): TierHeadline | null {
+export function lowestHeadline(blocks: TierPriceBlock[]): TierHeadline | null {
   for (const block of blocks) {
     if (
       block.headline != null &&

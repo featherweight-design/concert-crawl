@@ -102,9 +102,7 @@ describe('Needs you sources and ranking', () => {
     });
     const priceOf = (id: string) => {
       const item = items.find((one) => one.key === lowKey(id));
-      return item?.kind === 'event-low-confidence'
-        ? (item.priceMin ?? null)
-        : undefined;
+      return item?.kind === 'event-low-confidence' ? item.priceMin : undefined;
     };
     expect(priceOf(priced.id)).toMatch(/^25(\.00)?$/);
     expect(priceOf(unpriced.id)).toBeNull();
