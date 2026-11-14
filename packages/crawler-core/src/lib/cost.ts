@@ -32,9 +32,9 @@ const HAIKU_4_5_RATES: ModelRates = {
 };
 
 export const MODEL_RATES = {
-  // The alias (the admin generate-about route) and the dated snapshot it
-  // points to (the crawler's extractor, adjudicator and genre tagger).
-  'claude-haiku-4-5': HAIKU_4_5_RATES,
+  // Dated snapshots only: a floating alias can be repointed to a model with
+  // other rates, and the recorded cost would drift from the bill unseen.
+  // Every caller sends one of these (llm-models.ts).
   'claude-haiku-4-5-20251001': HAIKU_4_5_RATES,
 } as const satisfies Record<string, ModelRates>;
 
