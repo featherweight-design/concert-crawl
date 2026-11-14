@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import { db, events, priceSubmissions } from '@concert-crawl/db';
 import { REPLACED_BY_ADMIN_REASON } from '@concert-crawl/types';
 
@@ -25,10 +25,18 @@ const ADMIN_TIER = 'GA';
  * (resolveDisplayPrice), which prefers the cheaper of two prices on the same
  * trust, so a replacement has to retire every price it could lose to. In one
  * transaction:
- * - every corroborated price on the show, in every tier, is locked first,
- *   then an open Price check on the show refuses it ('contest_lockout'), as
- *   every price writer does. Locking first means a check that commits
- *   concurrently is seen rather than missed;
+ * - a transaction-scoped advisory lock on the show serializes replaces of the
+ *   same show. Without it two concurrent replaces each lock and archive the
+ *   same fan rows and both insert, leaving two corroborated admin rows. With
+ *   it the second waits for the first to commit, then reads committed state
+ *   and archives the first's admin row like any other corroborated price;
+ * - every corroborated price on the show, in every tier, is locked, then an
+ *   open Price check on the show refuses it ('contest_lockout'), as every
+ *   price writer does. Locking first means a check that commits
+ *   concurrently is seen rather than missed. An open check is a pending
+ *   counter on the show (status 'pending' with a disputedSubmissionId), as
+ *   price-check.ts and price-edit.ts define it. A `disputed` row with no
+ *   pending counter is an admin denial, not a check, and does not block;
  * - those corroborated prices are archived with REPLACED_BY_ADMIN_REASON.
  *   The rows are kept as history, and a fan's own list still reads them as
  *   corroborated (fanStoredStatus), so nobody is told;
@@ -47,6 +55,11 @@ export const replaceListedPrice = async (
   priceMax: string | null,
 ): Promise<ReplacePriceResult> =>
   db.transaction(async (tx) => {
+    // One replace per show at a time; see the JSDoc.
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`price-replace:${eventId}`}))`,
+    );
+
     // Lock first: a Price check opened on one of these rows waits on the
     // lock, so the lockout read below sees one that commits concurrently.
     const replaced = await tx
@@ -72,13 +85,8 @@ export const replaceListedPrice = async (
       .where(
         and(
           eq(priceSubmissions.eventId, eventId),
-          or(
-            eq(priceSubmissions.status, 'disputed'),
-            and(
-              eq(priceSubmissions.status, 'pending'),
-              isNotNull(priceSubmissions.disputedSubmissionId),
-            ),
-          ),
+          eq(priceSubmissions.status, 'pending'),
+          isNotNull(priceSubmissions.disputedSubmissionId),
         ),
       )
       .limit(1);

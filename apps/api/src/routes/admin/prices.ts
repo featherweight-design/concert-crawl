@@ -878,9 +878,9 @@ pricesAdminRouter.patch(
 );
 
 // POST /v1/admin/prices/events/:eventId/replace: the event editor's Edit
-// price on a show whose price an admin has no own row for. Replaces the
-// listed price with the admin's, archiving the prices it replaces without
-// telling their senders (replaceListedPrice).
+// price on every priced show, including one where the admin already has their
+// own row. Replaces the listed price with the admin's, archiving the prices
+// it replaces without telling their senders (replaceListedPrice).
 pricesAdminRouter.post(
   '/events/:eventId/replace',
   zValidator('param', z.object({ eventId: idSchema }), (result, ctx) => {
