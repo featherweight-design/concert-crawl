@@ -23,6 +23,7 @@ import {
   useIsPhoneResolved,
 } from '@/components/admin/primitives';
 import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import { formatMtTime } from '@/components/admin/health/health-model';
 import { apiClient } from '@/lib/api';
 
 const COPY = ADMIN_COPY.crawl.crawlAll;
@@ -42,6 +43,8 @@ const estimateSchema = z.object({
   eligible: z.number(),
   skipped: z.array(z.object({ name: z.string(), reason: z.string() })),
   usual: z.object({ durationMs: z.number(), costUsd: z.number() }).nullable(),
+  // The next daily crawl, ISO; shown in Mountain Time.
+  nextCrawlAt: z.string(),
 });
 export type CrawlAllEstimateView = z.infer<typeof estimateSchema>;
 
@@ -316,7 +319,7 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
     body = crawlAllBody(estimate);
     extra = (
       <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-        {COPY.nightlyStillRuns}
+        {COPY.nightlyStillRuns(formatMtTime(estimate.nextCrawlAt))}
       </div>
     );
   }

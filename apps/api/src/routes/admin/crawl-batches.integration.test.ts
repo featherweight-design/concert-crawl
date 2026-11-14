@@ -25,6 +25,7 @@ import { createApp } from '../../app.js';
 import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
+import { CRAWLER_DAILY_CRON_UTC } from './lib/needs-you/all-clear-facts.js';
 
 const app = createApp();
 
@@ -230,6 +231,22 @@ describe('admin crawl batches', () => {
     const res = await app.request('/v1/admin/crawl/estimate');
     const body: { data: CrawlAllEstimate } = await res.json();
     expect(body.data).toMatchObject({ total: 1, eligible: 1, usual: null });
+  });
+
+  it('says when the next daily crawl runs', async () => {
+    setAuth('admin');
+    const before = Date.now();
+    const res = await app.request('/v1/admin/crawl/estimate');
+    const body: { data: CrawlAllEstimate } = await res.json();
+    const next = new Date(body.data.nextCrawlAt);
+    // The daily cron's time, strictly ahead and within a day.
+    expect(next.toISOString()).toBe(body.data.nextCrawlAt);
+    expect([next.getUTCHours(), next.getUTCMinutes()]).toEqual([
+      CRAWLER_DAILY_CRON_UTC.hour,
+      CRAWLER_DAILY_CRON_UTC.minute,
+    ]);
+    expect(next.getTime()).toBeGreaterThan(before);
+    expect(next.getTime() - before).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
   });
 
   it('keeps the estimate admin only', async () => {

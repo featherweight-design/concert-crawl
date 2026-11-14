@@ -250,7 +250,8 @@ export const ADMIN_COPY = {
       },
       usual: (minutes: number, cost: string) =>
         `Recent crawls took about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} and cost about ${cost}.`,
-      nightlyStillRuns: 'Tonight’s 3:00 AM crawl still runs.',
+      // `time` is the next daily crawl in Mountain Time, e.g. "2:07 AM".
+      nightlyStillRuns: (time: string) => `Tonight’s ${time} crawl still runs.`,
       confirm: (eligible: number) => `Crawl all ${eligible}`,
       // Drawn but held while the count loads or after it failed.
       confirmLoading: 'Crawl all',

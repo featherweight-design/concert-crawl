@@ -64,6 +64,8 @@ const estimate = (
     { name: 'The Ogden', reason: 'blocked' },
   ],
   usual: { durationMs: 20 * 60000, costUsd: 0.8 },
+  // 09:07 UTC on Nov 15 is 2:07 AM Mountain (standard time).
+  nextCrawlAt: '2026-11-15T09:07:00.000Z',
   ...overrides,
 });
 
@@ -129,7 +131,9 @@ describe('CrawlAllDialog', () => {
     expect(await body()).toBe(
       '19 of 21 venues are queued now and crawled one at a time, 3 s between pages, with robots.txt checked first. Skipped: Levitt Pavilion (paused), The Ogden (blocked). Recent crawls took about 20 minutes and cost about $0.80.',
     );
-    expect(screen.getByText(COPY.nightlyStillRuns)).toBeTruthy();
+    expect(
+      screen.getByText('Tonight’s 2:07 AM crawl still runs.'),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Crawl all 19' })).toBeTruthy();
   });
 

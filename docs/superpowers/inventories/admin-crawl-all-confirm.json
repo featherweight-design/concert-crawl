@@ -34,7 +34,8 @@
                 { "name": "Levitt Pavilion", "reason": "paused" },
                 { "name": "The Ogden", "reason": "blocked" }
               ],
-              "usual": { "durationMs": 1200000, "costUsd": 0.8 }
+              "usual": { "durationMs": 1200000, "costUsd": 0.8 },
+              "nextCrawlAt": "2026-11-15T09:07:00.000Z"
             }
           }
         },
@@ -60,7 +61,8 @@
               "total": 21,
               "eligible": 21,
               "skipped": [],
-              "usual": null
+              "usual": null,
+              "nextCrawlAt": "2026-11-15T09:07:00.000Z"
             }
           }
         },
@@ -86,7 +88,8 @@
               "total": 21,
               "eligible": 0,
               "skipped": [{ "name": "Levitt Pavilion", "reason": "paused" }],
-              "usual": null
+              "usual": null,
+              "nextCrawlAt": "2026-11-15T09:07:00.000Z"
             }
           }
         },
@@ -115,7 +118,8 @@
                 { "name": "Levitt Pavilion", "reason": "paused" },
                 { "name": "The Ogden", "reason": "blocked" }
               ],
-              "usual": { "durationMs": 1200000, "costUsd": 0.8 }
+              "usual": { "durationMs": 1200000, "costUsd": 0.8 },
+              "nextCrawlAt": "2026-11-15T09:07:00.000Z"
             }
           }
         },
