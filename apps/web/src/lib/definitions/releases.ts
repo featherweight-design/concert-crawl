@@ -61,7 +61,7 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'added',
-        text: "When fans have found a show's price at more than one seller, the event page lists each one under Where it's sold, cheapest first.",
+        text: "When fans have found a show's price at more than one seller, the event page lists each one under Where it's sold.",
       },
     ],
   },

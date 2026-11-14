@@ -31,7 +31,12 @@ const EYEBROW_ID = 'where-its-sold-eyebrow';
 export const sellerName = (vendor: string): string =>
   vendor === 'Other' ? VENDOR_PICKER_COPY.vendors.Other : displayVendor(vendor);
 
-/** The line under the seller: box office is face value, the rest all-in. */
+/**
+ * The line under the seller: box office is face value, the rest all-in.
+ * Design item 40 (⏸): the board draws no resale line, so resale reuses
+ * "{tier} · all-in", and the box office line drops the tier, so two box
+ * office tiers read alike. Both wait on Design.
+ */
 export const sellerLine = (row: WhereItsSoldRow): string =>
   resolveAlternateKind(row.vendor, row.sourceCategory) === 'boxoffice'
     ? copy.faceValue
