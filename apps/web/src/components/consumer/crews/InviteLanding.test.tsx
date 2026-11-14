@@ -358,10 +358,13 @@ describe('DeadInviteLink (#1226)', () => {
     expect(
       container.querySelector('path[d="M28 21l6 3.5v7L28 35l-6-3.5v-7z"]'),
     ).not.toBeNull();
+    // jsdom drops `filter`, so the dimmed wrapper is found by its opacity.
     const dimmed = container.querySelector<HTMLElement>(
-      'span[aria-hidden="true"]',
+      'span[aria-hidden="true"][style*="opacity: 0.5"]',
     );
-    expect(dimmed?.contains(svg ?? null)).toBe(true);
+    expect(
+      dimmed?.querySelector('path[d="M28 21l6 3.5v7L28 35l-6-3.5v-7z"]'),
+    ).not.toBeNull();
     expect(dimmed?.style.opacity).toBe('0.5');
   });
 });
