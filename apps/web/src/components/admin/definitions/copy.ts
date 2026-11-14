@@ -3446,6 +3446,13 @@ export const ADMIN_COPY = {
           ] as const,
         'price.submission.reject': ['Rejected a price for ', ''],
         'price.submission.update': ['Updated a price for ', ''],
+        // The Prices page's one toggle, saved on its own (the API files it here).
+        'price.settings.update': (args: { approve: boolean | null }) =>
+          args.approve === true
+            ? (['Turned Approve every price myself on', ''] as const)
+            : args.approve === false
+              ? (['Turned Approve every price myself off', ''] as const)
+              : (['Changed the price settings', ''] as const),
         // Read off the fields the save changed (its before and after).
         'settings.update': (args: {
           settings: 'budget' | 'approveOn' | 'approveOff' | null;
