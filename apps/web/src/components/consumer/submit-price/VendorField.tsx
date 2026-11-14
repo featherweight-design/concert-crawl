@@ -425,7 +425,7 @@ export const VendorField = ({
           position: 'relative',
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 8,
+          gap: 7,
         }}
       >
         {/* The pinned three are a real radiogroup. `display: contents` keeps

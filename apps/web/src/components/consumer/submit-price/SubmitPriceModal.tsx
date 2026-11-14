@@ -991,7 +991,9 @@ export function SubmitPriceModal({
                 borderRadius: 14,
                 border: '1px solid var(--border)',
                 background: 'var(--surface-1)',
-                padding: 14,
+                // The sheet's own gutter is 20px against the board's 18, so the
+                // card gives the 2px back to keep the five tier chips on one row.
+                padding: 12,
               }}
             >
               {panels.length > 1 && !isEditMode && (
