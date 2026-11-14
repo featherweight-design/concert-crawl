@@ -358,10 +358,12 @@ export const ShareSheet = ({
                   onClick={() => setRatio(option)}
                   // Selected: a blue-to-pink border drawn as a border-box
                   // gradient under a padding-box fill, bold label, signal glyph.
+                  // Unselected (addendum 6 item 35): a 1px --border-strong
+                  // border, glyph and label in --fg-muted.
                   className={`${TILE} ${
                     selected
                       ? 'border-transparent font-bold text-fg'
-                      : 'border-border bg-transparent font-medium text-fg-muted'
+                      : 'border-border-strong bg-transparent font-medium text-fg-muted'
                   }`}
                   style={
                     selected
@@ -373,7 +375,7 @@ export const ShareSheet = ({
                 >
                   <ShapeGlyph
                     ratio={option}
-                    className={selected ? 'text-signal' : 'text-fg-subtle'}
+                    className={selected ? 'text-signal' : 'text-fg-muted'}
                   />
                   {COPY.ratios[option]}
                 </button>
