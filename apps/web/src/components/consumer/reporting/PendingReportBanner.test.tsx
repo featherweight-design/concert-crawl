@@ -91,3 +91,52 @@ describe('PendingReportBanner, Tickets available', () => {
     );
   });
 });
+
+// The same one-line layout for every kind (more-st-ev_pending_canc_m,
+// more-st-ev_pending_mine_m): the lead, then "Reported by @x · Venue site · VIEW".
+describe.each(['cancelled', 'postponed'] as const)(
+  'PendingReportBanner, %s',
+  (kind) => {
+    afterEach(cleanup);
+
+    it('draws one Inter attribution line with the method and VIEW, and no evidence box', () => {
+      render(
+        <PendingReportBanner
+          {...baseProps({
+            kind,
+            evidenceUrl: 'https://venue.example/post',
+            reporter: { handle: '@sami', url: '' },
+          })}
+        />,
+      );
+      const line = screen.getByTestId('pending-attribution');
+      expect(line).toHaveTextContent('@sami');
+      expect(line).toHaveTextContent('Venue site');
+      expect(line).toHaveTextContent(copy.viewEvidenceLink);
+      // No 9px mono "· 2h ago" tail and no separate evidence card.
+      expect(line).not.toHaveTextContent(/\d+[mhd] ago/);
+      expect(screen.getByTestId('pending-icon-tile')).toBeTruthy();
+    });
+
+    it('sets the status pill as text only, with the 36px radius-12 Confirm', () => {
+      const { container } = render(
+        <PendingReportBanner
+          {...baseProps({ kind, onSawDifferent: vi.fn() })}
+        />,
+      );
+      const pill = screen.getByText(
+        kind === 'cancelled' ? copy.cancelledBadge : copy.postponedBadge,
+      );
+      expect(pill.querySelector('svg')).toBeNull();
+      const confirm = screen.getByRole('button', { name: copy.confirmButton });
+      expect(confirm.style.height).toBe('36px');
+      expect(confirm.style.borderRadius).toBe('12px');
+      expect(
+        screen.getByText(copy.footerQuestion).style.textTransform,
+      ).not.toBe('uppercase');
+      expect(
+        container.querySelector('[data-testid="pending-icon-tile"]'),
+      ).not.toBeNull();
+    });
+  },
+);
