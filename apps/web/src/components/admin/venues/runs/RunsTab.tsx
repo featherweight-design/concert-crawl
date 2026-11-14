@@ -309,6 +309,10 @@ export const RunsTab = ({
               more={more}
               state={loadState}
               onLoadMore={() => void loadMore()}
+              // `A3/09/load-more` draws one 1px rule. The phone's last row
+              // draws it already (as the crawl batch list's last card does),
+              // so the footer adds its own only when no row sits above it.
+              rule={!phone || shown.length === 0}
             />
           </>
         )}
