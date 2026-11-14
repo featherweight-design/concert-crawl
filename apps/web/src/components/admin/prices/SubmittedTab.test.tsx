@@ -181,7 +181,7 @@ describe('SubmittedTab on a desktop', () => {
 
     await waitFor(() =>
       expect(screen.getByTestId('fan-filter')).toHaveTextContent(
-        COPY.fanFilter('dlo', 4),
+        `${COPY.fanHandle('dlo')}${COPY.fanCount(4)}`,
       ),
     );
     // The very first load is the fan's: never the unfiltered list first.
