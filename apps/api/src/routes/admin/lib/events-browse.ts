@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   gte,
@@ -12,6 +11,7 @@ import {
   or,
   sql,
   type SQL,
+  type SQLWrapper,
 } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, events, venues } from '@concert-crawl/db';
@@ -108,47 +108,82 @@ const scopeWhere = (query: EventListQuery, today: string) => {
 const FACETS = ['venue', 'status', 'noPrice', 'hidden'] as const;
 type Facet = (typeof FACETS)[number];
 
+/**
+ * What the filter clauses read: the events table for the page of rows, the
+ * base subquery's columns for the counts. `priceless` is a boolean condition.
+ */
+interface FacetColumns {
+  venueId: SQLWrapper;
+  status: SQLWrapper;
+  priceless: SQLWrapper;
+  hidden: SQLWrapper;
+}
+
 /** Each filter's clause, built once; `undefined` when that filter is off. */
 const facetClauses = (
   query: EventListQuery,
-  status: SQL<EventListStatus>,
+  cols: FacetColumns,
 ): Record<Facet, SQL | undefined> => ({
   venue:
     query.venueIds.length > 0
-      ? inArray(events.venueId, query.venueIds)
+      ? inArray(cols.venueId, query.venueIds)
       : undefined,
   status:
     query.statuses.length > 0
-      ? sql`${status} IN (${sql.join(
-          query.statuses.map((value) => sql`${value}`),
-          sql`, `,
-        )})`
+      ? inArray(cols.status, query.statuses)
       : undefined,
-  noPrice: query.noPrice ? isNull(events.ticketPriceMin) : undefined,
-  hidden: query.hidden ? eq(events.hiddenFromConsumer, true) : undefined,
+  noPrice: query.noPrice ? sql`${cols.priceless}` : undefined,
+  hidden: query.hidden ? eq(cols.hidden, true) : undefined,
 });
+
+/** Every clause of `clauses` except the facet named (all of them when none is). */
+const facetsExcept = (
+  clauses: Record<Facet, SQL | undefined>,
+  skip?: Facet,
+): (SQL | undefined)[] =>
+  FACETS.filter((facet) => facet !== skip).map((facet) => clauses[facet]);
+
+/** `count(*)` over the rows meeting every condition given (all rows when none is on). */
+const countWhere = (...conditions: (SQL | undefined)[]) => {
+  const condition = and(...conditions);
+  return (
+    condition ? sql`count(*) FILTER (WHERE ${condition})` : sql`count(*)`
+  ).mapWith(Number);
+};
 
 /**
  * The list, its total, and faceted counts. Every count shares the scope (the
  * side and the search), and each facet's count applies every other filter but
  * its own, so a picker's "Show N" is exactly the rows Apply will return:
  *
- * - `byVenue`: per venue, every filter except the venue filter. Venues are
- *   disjoint, so the sum over the ticked venues is the filtered total.
- * - `byStatus`: per status, every filter except the status filter.
+ * - `byVenue`: every venue with a show in the scope, counted under every
+ *   filter except the venue filter, so a ticked venue stays listed at 0.
+ *   Venues are disjoint, so the sum over the ticked venues is `total`.
+ * - `byStatus`: every status key, counted under every filter except the
+ *   status filter (0 when none match).
  * - `noPrice`: every filter except the No price toggle, plus no price.
  * - `hidden`: every filter except the Hidden toggle, plus hidden.
- * - `all`: the scope alone, for the "N upcoming" header line.
+ * - `all`: the scope alone (the side, Upcoming or Past, and the search), for
+ *   the header line.
  * - `total`: the rows matching every filter.
+ *
+ * The page and every count read one repeatable-read snapshot, so `total` and
+ * the facet sums always agree.
  */
 export const listAdminEvents = async (query: EventListQuery, today: string) => {
   const status = eventListStatusSql(today);
   const scope = scopeWhere(query, today);
-  const clauses = facetClauses(query, status);
-  /** Every filter clause except the one named (all of them when none is). */
-  const facetsExcept = (skip?: Facet) =>
-    FACETS.filter((facet) => facet !== skip).map((facet) => clauses[facet]);
-  const where = and(scope, ...facetsExcept());
+  const where = and(
+    scope,
+    ...facetsExcept(
+      facetClauses(query, {
+        venueId: events.venueId,
+        status,
+        priceless: isNull(events.ticketPriceMin),
+        hidden: events.hiddenFromConsumer,
+      }),
+    ),
+  );
   const order =
     query.when === 'past'
       ? // Untimed shows last on a date, as on the Upcoming side.
@@ -159,102 +194,118 @@ export const listAdminEvents = async (query: EventListQuery, today: string) => {
         ]
       : [asc(events.date), asc(events.showTime), asc(events.id)];
 
-  const rowsQuery = db
-    .select({
-      id: events.id,
-      title: events.title,
-      date: events.date,
-      doorsTime: events.doorsTime,
-      showTime: events.showTime,
-      venueId: events.venueId,
-      venueName: venues.name,
-      venueSlug: venues.slug,
-      status,
-      hidden: events.hiddenFromConsumer,
-      hiddenReason: hiddenReasonSql(),
-      priceMin: events.ticketPriceMin,
-      priceMax: events.ticketPriceMax,
-      watchingCount: watchingCountOf(),
-      wentCount: query.when === 'past' ? wentCountOf() : sql<null>`NULL`,
-    })
-    .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(where)
-    .orderBy(...order)
-    .limit(query.limit)
-    .offset(query.offset);
+  return db.transaction(
+    async (tx) => {
+      const rowsQuery = tx
+        .select({
+          id: events.id,
+          title: events.title,
+          date: events.date,
+          doorsTime: events.doorsTime,
+          showTime: events.showTime,
+          venueId: events.venueId,
+          venueName: venues.name,
+          venueSlug: venues.slug,
+          status,
+          hidden: events.hiddenFromConsumer,
+          hiddenReason: hiddenReasonSql(),
+          priceMin: events.ticketPriceMin,
+          priceMax: events.ticketPriceMax,
+          watchingCount: watchingCountOf(),
+          wentCount: query.when === 'past' ? wentCountOf() : sql<null>`NULL`,
+        })
+        .from(events)
+        .leftJoin(venues, eq(events.venueId, venues.id))
+        .where(where)
+        .orderBy(...order)
+        .limit(query.limit)
+        .offset(query.offset);
 
-  const totalQuery = db
-    .select({ total: count() })
-    .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(where);
+      // Every count reads one base of the scope, with the status computed once.
+      // The status carries a bound parameter (today), and Postgres would not
+      // match a second copy of it in GROUP BY, so the counts group on its
+      // column. Aliased columns render bare, hence names no join can share.
+      const base = tx
+        .select({
+          id: events.id,
+          venueId: events.venueId,
+          status: status.as('list_status'),
+          priceless: isNull(events.ticketPriceMin).as('is_priceless'),
+          hidden: events.hiddenFromConsumer,
+        })
+        .from(events)
+        .leftJoin(venues, eq(events.venueId, venues.id))
+        .where(scope)
+        .as('base');
+      const clauses = facetClauses(query, {
+        venueId: base.venueId,
+        status: base.status,
+        priceless: base.priceless,
+        hidden: base.hidden,
+      });
 
-  // The toggle counts read the scope, and each narrows by every filter but
-  // its own toggle. `and` always gets the toggle's own clause, so a FILTER
-  // never lands empty.
-  const chipsQuery = db
-    .select({
-      all: count(),
-      noPrice: sql<number>`count(*) FILTER (WHERE ${and(
-        ...facetsExcept('noPrice'),
-        isNull(events.ticketPriceMin),
-      )})`.mapWith(Number),
-      hidden: sql<number>`count(*) FILTER (WHERE ${and(
-        ...facetsExcept('hidden'),
-        eq(events.hiddenFromConsumer, true),
-      )})`.mapWith(Number),
-    })
-    .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(scope);
+      const chipsQuery = tx
+        .select({
+          all: countWhere(),
+          total: countWhere(...facetsExcept(clauses)),
+          noPrice: countWhere(
+            ...facetsExcept(clauses, 'noPrice'),
+            sql`${base.priceless}`,
+          ),
+          hidden: countWhere(
+            ...facetsExcept(clauses, 'hidden'),
+            eq(base.hidden, true),
+          ),
+        })
+        .from(base);
 
-  // The status expression carries a bound parameter (today), and Postgres
-  // would not match a second copy of it in GROUP BY, so it is computed once
-  // in a subquery and grouped by its column.
-  const statuses = db
-    .select({ status: status.as('status') })
-    .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(and(scope, ...facetsExcept('status')))
-    .as('statuses');
-  const byStatusQuery = db
-    .select({ status: statuses.status, total: count() })
-    .from(statuses)
-    .groupBy(statuses.status);
+      const byStatusQuery = tx
+        .select({
+          status: base.status,
+          total: countWhere(...facetsExcept(clauses, 'status')),
+        })
+        .from(base)
+        .groupBy(base.status);
 
-  const byVenueQuery = db
-    .select({
-      venueId: venues.id,
-      name: venues.name,
-      slug: venues.slug,
-      total: count(),
-    })
-    .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(and(scope, ...facetsExcept('venue')))
-    .groupBy(venues.id, venues.name, venues.slug)
-    .orderBy(desc(count()), asc(venues.name));
+      // A show whose venue is gone has no venue row, so it is in no venue's
+      // count and no venue filter reaches it. Rare (a deleted venue).
+      const venueTotal = countWhere(...facetsExcept(clauses, 'venue'));
+      const byVenueQuery = tx
+        .select({
+          venueId: venues.id,
+          name: venues.name,
+          slug: venues.slug,
+          total: venueTotal,
+        })
+        .from(base)
+        .innerJoin(venues, eq(base.venueId, venues.id))
+        .groupBy(venues.id, venues.name, venues.slug)
+        .orderBy(desc(venueTotal), asc(venues.name));
 
-  const [rows, [totalRow], [chips], byStatus, byVenue] = await Promise.all([
-    rowsQuery,
-    totalQuery,
-    chipsQuery,
-    byStatusQuery,
-    byVenueQuery,
-  ]);
-
-  return {
-    rows,
-    total: totalRow?.total ?? 0,
-    counts: {
-      all: chips?.all ?? 0,
-      noPrice: chips?.noPrice ?? 0,
-      hidden: chips?.hidden ?? 0,
-      byStatus: Object.fromEntries(
+      const [rows, [chips], byStatus, byVenue] = await Promise.all([
+        rowsQuery,
+        chipsQuery,
+        byStatusQuery,
+        byVenueQuery,
+      ]);
+      const statusTotals = new Map(
         byStatus.map((row) => [row.status, row.total]),
-      ),
-      byVenue,
+      );
+
+      return {
+        rows,
+        total: chips?.total ?? 0,
+        counts: {
+          all: chips?.all ?? 0,
+          noPrice: chips?.noPrice ?? 0,
+          hidden: chips?.hidden ?? 0,
+          byStatus: Object.fromEntries(
+            EVENT_LIST_STATUSES.map((key) => [key, statusTotals.get(key) ?? 0]),
+          ),
+          byVenue,
+        },
+      };
     },
-  };
+    { isolationLevel: 'repeatable read', accessMode: 'read only' },
+  );
 };
