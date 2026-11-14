@@ -128,7 +128,7 @@ const venueCountFrom = (value: unknown): VenueCount | null =>
       }
     : null;
 
-const countsFrom = (value: unknown): EventListCounts | null => {
+export const countsFrom = (value: unknown): EventListCounts | null => {
   if (
     !isRecord(value) ||
     !isCount(value['all']) ||

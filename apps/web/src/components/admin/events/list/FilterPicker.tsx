@@ -81,15 +81,18 @@ const PickerBody = ({
   chosen,
   setChosen,
   search,
+  max,
   sheet,
 }: {
   options: readonly PickerOption[];
   chosen: string[];
   setChosen: (next: string[]) => void;
   search: string | undefined;
+  max: number | undefined;
   sheet: boolean;
 }) => {
   const [text, setText] = useState('');
+  const [focused, setFocused] = useState<string | null>(null);
   const needle = text.trim().toLowerCase();
   const shown =
     needle === ''
@@ -153,6 +156,9 @@ const PickerBody = ({
       >
         {shown.map((option) => {
           const on = chosen.includes(option.key);
+          // At the cap only a ticked row can change, so the URL never
+          // carries more than the page reads back.
+          const locked = !on && max !== undefined && chosen.length >= max;
           return (
             <li key={option.key}>
               <label
@@ -164,16 +170,30 @@ const PickerBody = ({
                   minHeight: sheet ? 44 : undefined,
                   padding: '8px 10px',
                   borderRadius: 9,
-                  cursor: 'pointer',
+                  cursor: locked ? 'default' : 'pointer',
+                  opacity: locked ? 0.45 : 1,
                   fontSize: 13.5,
                   color: 'var(--fg)',
                   background: on ? 'var(--surface-2)' : 'transparent',
+                  // The real box is hidden, so the row shows keyboard focus.
+                  outline:
+                    focused === option.key ? '2px solid var(--focus)' : 'none',
+                  outlineOffset: -2,
                 }}
               >
                 <input
                   type="checkbox"
                   checked={on}
+                  disabled={locked}
                   onChange={() => toggle(option.key)}
+                  onFocus={(evt) =>
+                    setFocused(
+                      evt.currentTarget.matches(':focus-visible')
+                        ? option.key
+                        : null,
+                    )
+                  }
+                  onBlur={() => setFocused(null)}
                   style={{ position: 'absolute', opacity: 0, width: 1 }}
                 />
                 <span
@@ -230,6 +250,7 @@ export const FilterPicker = ({
   options,
   selected,
   search,
+  max,
   all,
   onApply,
 }: {
@@ -240,6 +261,8 @@ export const FilterPicker = ({
   selected: readonly string[];
   /** The search field's placeholder; the status list has none. */
   search?: string;
+  /** The most rows that can be ticked; the rest are disabled at it. */
+  max?: number;
   /** The rows on this side, for Show N with nothing ticked. */
   all: number;
   onApply: (keys: string[]) => void;
@@ -247,6 +270,15 @@ export const FilterPicker = ({
   const isPhone = useIsPhone();
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState<string[]>([]);
+
+  // The URL's selection moved (Back, a link, Clear filters) while the picker
+  // was open: its ticks follow, rather than re-applying a stale set.
+  const selectedKey = selected.join(',');
+  const [seenKey, setSeenKey] = useState(selectedKey);
+  if (seenKey !== selectedKey) {
+    setSeenKey(selectedKey);
+    setChosen([...selected]);
+  }
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -286,6 +318,7 @@ export const FilterPicker = ({
       chosen={chosen}
       setChosen={setChosen}
       search={search}
+      max={max}
       sheet={isPhone}
     />
   );
@@ -324,6 +357,8 @@ export const FilterPicker = ({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
+        // On while a selection applies, as No price and Hidden say theirs.
+        aria-pressed={selected.length > 0}
         data-testid={`${testId}-chip`}
         style={chipStyle(selected.length > 0)}
         onClick={() => {

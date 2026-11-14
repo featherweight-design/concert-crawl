@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_FILTERS,
+  MAX_VENUE_FILTER,
   STATUS_CHIP,
   apiParams,
   eventsListHref,
@@ -65,6 +66,16 @@ describe('page URL and filters', () => {
       noPrice: true,
       hidden: true,
     });
+  });
+
+  it('keeps at most 50 venues from the URL', () => {
+    const ids = Array.from(
+      { length: 60 },
+      (_, i) => `0b9c4f3e-1d2a-4c5b-8e7f-${String(i).padStart(12, '0')}`,
+    );
+    const filters = filtersFromParams(params(`venueIds=${ids.join(',')}`));
+    expect(filters.venueIds).toEqual(ids.slice(0, MAX_VENUE_FILTER));
+    expect(MAX_VENUE_FILTER).toBe(50);
   });
 
   it('drops the upcoming-only filters on Past, which draws none', () => {
