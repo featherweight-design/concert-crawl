@@ -688,13 +688,18 @@ const patchSubmissionSchema = z.object({
 // PATCH /v1/admin/prices/submissions/:id — approve (corroborated), dispute, or stale
 pricesAdminRouter.patch(
   '/submissions/:id',
+  zValidator('param', z.object({ id: idSchema }), (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid id' }, 400);
+    }
+  }),
   zValidator('json', patchSubmissionSchema, (result, ctx) => {
     if (!result.success) {
       return ctx.json({ success: false, error: 'Invalid status' }, 422);
     }
   }),
   async (ctx) => {
-    const { id } = ctx.req.param();
+    const { id } = ctx.req.valid('param');
     const { status } = ctx.req.valid('json');
 
     const result = await setSubmissionStatus(id, status);
@@ -725,12 +730,26 @@ pricesAdminRouter.patch(
       );
     }
 
+    // Approved, rejected or checked since this screen loaded (addendum 6
+    // #43's Approve, or a stale queue): say so rather than overturn it.
+    if (result.ok === 'not_waiting') {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Only a waiting price can be changed',
+          code: 'not_waiting',
+        },
+        409,
+      );
+    }
+
     if (!result.ok)
       return ctx.json({ success: false, error: 'Submission not found' }, 404);
 
     ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditAction', 'price.submission.update');
     ctx.set('auditTargetId', id);
+    ctx.set('auditMeta', { status });
 
     return ctx.json({ success: true, data: result.updated });
   },

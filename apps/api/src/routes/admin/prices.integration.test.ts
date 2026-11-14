@@ -259,7 +259,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     expect(cred?.priceCredScore).toBe(1);
   });
 
-  it('does not double-increment when status is already corroborated', async () => {
+  it('refuses a price that is no longer waiting, and awards nothing', async () => {
     const venue = await seedVenue();
     const event = await seedEvent(venue.id);
     const userId = 'user_no_double';
@@ -275,7 +275,8 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         body: JSON.stringify({ status: 'corroborated' }),
       },
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'not_waiting' });
 
     // No transition occurred, so no award ran and no user_cred row exists —
     // which the read path treats as 0.
@@ -285,6 +286,41 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       .where(eq(userCred.userId, userId))
       .limit(1);
     expect(cred?.priceCredScore ?? 0).toBe(0);
+  });
+
+  // Regression (addendum 6 #43): a price another admin had rejected could be
+  // approved and published from a stale screen.
+  it('never approves a rejected price', async () => {
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    // Reject archives the row (lib/price-rejection.ts).
+    const submission = await seedPriceSubmission(event.id, 'user_rejected', {
+      status: 'archived',
+    });
+
+    const res = await app.request(
+      `/v1/admin/prices/submissions/${submission.id}`,
+      {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ status: 'corroborated' }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const [row] = await testDb
+      .select({ status: priceSubmissions.status })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, submission.id));
+    expect(row?.status).toBe('archived');
+  });
+
+  it('refuses an id that is not a uuid', async () => {
+    const res = await app.request('/v1/admin/prices/submissions/nope', {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'corroborated' }),
+    });
+    expect(res.status).toBe(400);
   });
 
   it('does not increment for anonymous submissions (null userId)', async () => {
