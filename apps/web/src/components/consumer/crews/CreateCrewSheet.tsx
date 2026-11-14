@@ -229,8 +229,11 @@ export const CreateCrewSheet = ({
               minHeight: 44,
               padding: '0 12px',
               borderRadius: 10,
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border-strong)',
+              // `crew_start` / `crew_start_m`: the name field wears the
+              // gradient ring (signal, accent, border) on its surface fill.
+              background:
+                'linear-gradient(var(--surface-1), var(--surface-1)) padding-box, linear-gradient(135deg, var(--signal), var(--accent) 50%, var(--border)) border-box',
+              border: '1px solid transparent',
               color: 'var(--fg)',
               fontFamily: 'var(--font-ui)',
               fontSize: 15,

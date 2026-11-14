@@ -106,7 +106,9 @@ const CrewPickerRow = ({
       <CrewPatch
         crewId={crew.id}
         patchSalt={crew.patchSalt}
-        size={38}
+        // On the rim scale (`02/patch-rim-spec`: 120, 76, 56, 32, 18): a row's
+        // patch is 32, which also draws no glow.
+        size={32}
         scale="tile"
       />
     )}

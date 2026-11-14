@@ -129,9 +129,12 @@ describe('SpotlightModal', () => {
     expect(screen.getByText('Step one caption.')).toBeTruthy();
   });
 
-  it('advances to step 2 when Next is clicked', () => {
+  // `more-r3-feature_modal`: the dots are the only navigation; no Back or Next.
+  it('moves to step 2 from its dot, with no Back or Next buttons', () => {
     render(<SpotlightModal release={RELEASE} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByText('Next →'));
+    expect(screen.queryByText('Next →')).toBeNull();
+    expect(screen.queryByText('← Back')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Go to step 2' }));
     expect(screen.getByText('Step two caption.')).toBeTruthy();
   });
 

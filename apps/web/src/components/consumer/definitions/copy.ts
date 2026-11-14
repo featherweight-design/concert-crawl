@@ -515,8 +515,6 @@ export const CONSUMER_COPY = {
       ]),
       walkthroughLabel: 'How it works',
       stepSeparator: ' / ',
-      prevButton: '← Back',
-      nextButton: 'Next →',
       stepIndicatorAriaLabel: (stepNumber: number) =>
         `Go to step ${stepNumber}`,
       founderEyebrowFallback: 'Behind the build',
