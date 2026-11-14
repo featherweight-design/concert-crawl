@@ -45,7 +45,12 @@ export { PinnedSaveBar } from './PinnedSaveBar';
 export type { PinnedSaveBarLook, PinnedSaveBarProps } from './PinnedSaveBar';
 export { useSnapBack } from './useSnapBack';
 export type { SnapBack } from './useSnapBack';
-export { useIsPhone, ADMIN_PHONE_MAX_WIDTH } from './useIsPhone';
+export {
+  useIsPhone,
+  useIsPhoneResolved,
+  ADMIN_PHONE_MAX_WIDTH,
+} from './useIsPhone';
+export { Spinner } from './Spinner';
 export { useContentBox } from './useContentBox';
 export { RowMenu } from './RowMenu';
 export { AdminTabs } from './AdminTabs';
