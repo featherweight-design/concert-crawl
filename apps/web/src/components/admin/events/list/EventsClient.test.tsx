@@ -60,7 +60,7 @@ const list = vi.fn(async () => page);
 const hide = vi.fn(async (_id: string) => undefined);
 vi.mock('./events-api', () => ({ eventsListApi: () => ({ list, hide }) }));
 
-import { EventsClient } from './EventsClient';
+import { EVENTS_PAGE_SIZE, EventsClient } from './EventsClient';
 
 beforeEach(() => {
   mockSearch = '';
@@ -284,16 +284,110 @@ describe('EventsClient filters', () => {
     );
   });
 
-  it('draws no venue, status, No price or Hidden chips on Past', async () => {
+  it('draws Any venue and Any status on Past, but no No price or Hidden (36/past-d)', async () => {
     mockSearch = 'when=past';
     render(<EventsClient />);
     expect(
       await screen.findByRole('button', { name: COPY.when.past }),
     ).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByTestId('venue-filter-chip')).toBeNull();
-    expect(screen.queryByTestId('status-filter-chip')).toBeNull();
+    expect(screen.getByTestId('venue-filter-chip')).toHaveTextContent(
+      COPY.anyVenue,
+    );
+    expect(screen.getByTestId('status-filter-chip')).toHaveTextContent(
+      COPY.anyStatus,
+    );
     expect(screen.queryByRole('button', { name: /No price/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Hidden/ })).toBeNull();
+  });
+
+  it('lists only past statuses on Past, each picked at once (36/past-status-menu-d)', async () => {
+    mockSearch = 'when=past';
+    render(<EventsClient />);
+    fireEvent.click(await screen.findByTestId('status-filter-chip'));
+    const menu = within(screen.getByTestId('status-filter'));
+    expect(menu.getByRole('button', { name: COPY.anyStatus })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    for (const status of [
+      'played',
+      'cancelled',
+      'postponed',
+      'delisted',
+    ] as const)
+      expect(
+        menu.getByRole('button', { name: COPY.status[status] }),
+      ).toHaveAttribute('aria-pressed', 'false');
+    expect(menu.queryByText(COPY.status.available)).toBeNull();
+    expect(menu.queryByText(COPY.status.soldout)).toBeNull();
+    expect(menu.getByText(COPY.pastStatusHint)).toBeInTheDocument();
+    // No Show N: a pick applies.
+    expect(menu.queryByRole('button', { name: /^Show / })).toBeNull();
+    fireEvent.click(menu.getByRole('button', { name: COPY.status.played }));
+    expect(lastHref()).toBe('/admin/events?when=past&statuses=played');
+    cleanup();
+
+    mockSearch = 'when=past&statuses=played';
+    render(<EventsClient />);
+    fireEvent.click(await screen.findByTestId('status-filter-chip'));
+    const picked = within(screen.getByTestId('status-filter'));
+    expect(
+      picked.getByRole('button', { name: COPY.status.played }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(
+      picked.getByRole('button', { name: COPY.status.postponed }),
+    );
+    expect(lastHref()).toBe(
+      '/admin/events?when=past&statuses=played%2Cpostponed',
+    );
+    fireEvent.click(picked.getByRole('button', { name: COPY.anyStatus }));
+    expect(lastHref()).toBe('/admin/events?when=past');
+  });
+
+  it('labels two or more past statuses as a count, as Upcoming does', async () => {
+    mockSearch = 'when=past&statuses=played,cancelled';
+    render(<EventsClient />);
+    expect(await screen.findByTestId('status-filter-chip')).toHaveTextContent(
+      COPY.statusesPicked(2),
+    );
+  });
+
+  it('ends Past with the dates shown, newest first, and Load older (36/past-d)', async () => {
+    mockSearch = 'when=past';
+    const pastRow = (id: string, date: string) => ({
+      id,
+      title: id,
+      date,
+      venueName: 'Red Rocks',
+      venueSlug: 'red-rocks',
+      venueUrl: null,
+      status: 'played' as const,
+      hidden: false,
+      hiddenReason: null,
+      priceMin: null,
+      priceMax: null,
+      watchingCount: 0,
+      wentCount: 2,
+    });
+    list.mockResolvedValueOnce({
+      ...page,
+      rows: [pastRow('evt-a', '2026-11-08'), pastRow('evt-b', '2026-11-04')],
+      total: 40,
+    });
+    render(<EventsClient />);
+    const footer = await screen.findByTestId('events-load-more');
+    expect(footer).toHaveTextContent(
+      `${COPY.pastShowing('Nov 4–8')}${COPY.separator}${COPY.loadOlder}`,
+    );
+    const older = within(footer).getByRole('button', { name: COPY.loadOlder });
+    list.mockClear();
+    fireEvent.click(older);
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(1));
+    expect(list.mock.calls[0]).toEqual([
+      expect.objectContaining({ when: 'past' }),
+      2,
+      EVENTS_PAGE_SIZE,
+    ]);
   });
 });
 

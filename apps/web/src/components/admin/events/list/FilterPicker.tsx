@@ -321,6 +321,7 @@ export const FilterPicker = ({
   max,
   unticked,
   stale = false,
+  menu,
   onApply,
 }: {
   /** The placeholder words, and the popover's or sheet's name. */
@@ -349,6 +350,11 @@ export const FilterPicker = ({
    * Show N would be wrong, so it waits (disabled). Ticks stay editable.
    */
   stale?: boolean;
+  /**
+   * A menu that draws its own rows and applies each pick at once
+   * (`36/past-status-menu-d`), in place of the checkbox list and Show N.
+   */
+  menu?: ReactNode;
   onApply: (keys: string[]) => void;
 }) => {
   const isPhone = useIsPhone();
@@ -494,9 +500,9 @@ export const FilterPicker = ({
           <AdminSheet
             onClose={() => setOpen(false)}
             title={label}
-            footer={footer}
+            footer={menu === undefined ? footer : undefined}
           >
-            <div data-testid={testId}>{body}</div>
+            <div data-testid={testId}>{menu ?? body}</div>
           </AdminSheet>
         ) : (
           <div
@@ -509,7 +515,9 @@ export const FilterPicker = ({
               top: 'calc(100% + 8px)',
               left: 0,
               zIndex: 30,
-              width: search === undefined ? 280 : 300,
+              // 240 as `36/past-status-menu-d` draws its menu.
+              width:
+                menu !== undefined ? 240 : search === undefined ? 280 : 300,
               padding: 8,
               borderRadius: 14,
               border: '1px solid var(--border-strong)',
@@ -517,8 +525,12 @@ export const FilterPicker = ({
               boxShadow: '0 18px 40px rgba(0, 0, 0, 0.5)',
             }}
           >
-            {body}
-            {footer}
+            {menu ?? (
+              <>
+                {body}
+                {footer}
+              </>
+            )}
           </div>
         ))}
     </div>
