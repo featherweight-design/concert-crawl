@@ -1,0 +1,75 @@
+{
+  "feature": "Admin P47-12 PR A · Health polish: grid cells open Runs, footer Needs you line, Missed crawl tile, new failures in Needs you, Emails row",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 03-health/health-desktop (footer, Emails row), 03-health/tiles-in-each-state (Missed tile, failed tile's Needs you line), 03-health/health-mobile. Read-only. CANNOT BE MOCKED: /admin is a server component, so /v1/admin/crawl/batches, /v1/admin/needs-you?kind=venue-failing|venue-blocked and /v1/admin/notifications/delivery are all fetched on the server and a browser route mock never reaches them. The Missed, new-failures and Emails rows therefore shoot whatever the target database holds: Missed draws only when the newest nightly batch is last night's and didntStart (true on staging most nights, where no daily crawl starts); the Needs you lines draw only when last night has a Failed or Paused venue with an open venue-failing/venue-blocked item; Emails shows Sending, Quiet or N failed by real delivery. Each row's wait accepts any crawl-tile state, so the sheet never hangs on data; the reviewer reads the state off the testid. Unit tests (HealthTiles, VenueGrid, SiteCard, health-model) pin every state's copy. The Site card is desktop only (gap G12), so the Emails row has no phone shot.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1440, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "health-normal",
+      "label": "Health, as the data stands (tiles, grid, footer)",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"health-tiles\"]"
+        },
+        { "wait": "[data-testid=\"venue-grid\"]", "settle": 1000 }
+      ]
+    },
+    {
+      "id": "health-missed",
+      "label": "Crawl tile Missed: Didn't run, the night's real scheduled time, red pill (server-fetched /batches, not mockable; draws when last night didn't start)",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid^=\"health-tile-crawl-\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "health-new-failures",
+      "label": "Crawl tile 'The N new failures are in Needs you.' and footer 'Only X is in Needs you.' (server-fetched /needs-you, not mockable; draws on a failed night with open items)",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid^=\"health-tile-crawl-\"]"
+        },
+        { "wait": "[data-testid=\"venue-grid\"]", "settle": 1000 }
+      ]
+    },
+    {
+      "id": "health-emails",
+      "label": "The site card Emails row: 'Resend · last sent {t}' on the StatusBadge (desktop only, G12; server-fetched delivery)",
+      "widths": ["desktop"],
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"site-card-emails\"]",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "grid-cell-runs-tab",
+      "label": "Marker: a grid cell lands on the venue's Runs tab",
+      "steps": [
+        {
+          "goto": "/admin",
+          "wait": "[data-testid=\"venue-grid\"] a[href*=\"?tab=runs\"]"
+        },
+        {
+          "click": "[data-testid=\"venue-grid\"] a[href*=\"?tab=runs\"]:visible >> nth=0"
+        },
+        {
+          "wait": "[data-testid=\"run-row\"], [data-testid=\"venue-runs\"]",
+          "settle": 1000
+        }
+      ]
+    }
+  ]
+}
