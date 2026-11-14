@@ -37,6 +37,16 @@ export const ticketVendorEnum = pgEnum('ticket_vendor', [
 
 export const apiProviderEnum = pgEnum('api_provider', ['venuepilot']);
 
+// The setting a venue's hero art draws (admin redesign 3c).
+export const heroSettingEnum = pgEnum('hero_setting', [
+  'street',
+  'outdoor',
+  'arena',
+  'theater',
+  'club',
+  'gallery',
+]);
+
 export const venues = pgTable(
   'venues',
   {
@@ -87,6 +97,15 @@ export const venues = pgTable(
     hiddenBy: text('hidden_by'),
     hiddenReason: text('hidden_reason'),
     hiddenNote: text('hidden_note'),
+    // When the venue went live (3c). NULL means a draft. Migration 0116
+    // backfilled every venue that existed then to created_at, so only venues
+    // created afterwards can be drafts.
+    wentLiveAt: timestamp('went_live_at', { withTimezone: true }),
+    // When we last asked the venue for permission to crawl (Ask the venue,
+    // with its 14-day reminder).
+    permissionAskedAt: timestamp('permission_asked_at', { withTimezone: true }),
+    heroSetting: heroSettingEnum('hero_setting'),
+    glyphSvg: text('glyph_svg'),
     lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
       withTimezone: true,
     }),
