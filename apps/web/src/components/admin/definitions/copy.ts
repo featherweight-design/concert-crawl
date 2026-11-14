@@ -1343,7 +1343,7 @@ export const ADMIN_COPY = {
     // The old guide block's unpublish confirm, split into title and body.
     unpublishConfirm: {
       title: 'Take this guide off the venue page?',
-      body: 'The draft is kept, so you can publish it again whenever you want.',
+      body: 'The draft is kept, so you can publish it again.',
       confirm: 'Unpublish',
     },
     unpublish: 'Unpublish',
