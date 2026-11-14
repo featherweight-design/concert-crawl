@@ -95,7 +95,7 @@ export const MobileBottomBar = ({
                 <NeedsYouBadge count={count} />
               </span>
             )}
-            <Icon size={22} aria-hidden />
+            <Icon size={20} strokeWidth={1.6} aria-hidden />
             <span
               style={{
                 fontSize: 11,

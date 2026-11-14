@@ -109,10 +109,10 @@ const SidebarLink = ({
       <span
         style={{
           display: 'flex',
-          color: active ? 'var(--signal)' : 'var(--fg-muted)',
+          color: active ? 'var(--signal)' : 'var(--fg-subtle)',
         }}
       >
-        <Icon size={18} aria-hidden />
+        <Icon size={17} strokeWidth={1.6} aria-hidden />
       </span>
       <span style={{ flex: 1 }}>{item.label}</span>
       {count > 0 && <NeedsYouBadge count={count} />}

@@ -25,8 +25,9 @@ const VARIANT_STYLES: Record<
     color: 'var(--fg-on-accent)',
     border: '1px solid transparent',
   },
+  // The drawn secondary button: #171D3A fill, not a transparent outline.
   outline: {
-    background: 'transparent',
+    background: 'var(--surface-2)',
     color: 'var(--fg)',
     border: '1px solid var(--border-strong)',
   },
@@ -85,9 +86,9 @@ export const AdminButton = ({
         gap: 6,
         height,
         padding: `0 ${px}px`,
-        borderRadius: 6,
+        borderRadius: 9,
         fontSize,
-        fontWeight: 500,
+        fontWeight: 600,
         fontFamily: "'Inter', sans-serif",
         cursor: 'pointer',
         whiteSpace: 'nowrap',

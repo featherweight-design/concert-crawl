@@ -120,7 +120,7 @@ export const Chip = ({
   dot?: boolean;
   children: ReactNode;
 }) => (
-  <StatusBadge kind={kind} variant="outline" dot={dot}>
+  <StatusBadge kind={kind} variant="filled" dot={dot}>
     {children}
   </StatusBadge>
 );
