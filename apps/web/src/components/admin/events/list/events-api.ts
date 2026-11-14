@@ -81,7 +81,7 @@ const priceOf = (value: unknown): string | null | undefined =>
 const hiddenReasonOf = (value: unknown): HiddenReason | null | undefined =>
   value === null || value === 'unsure' || value === 'admin' ? value : undefined;
 
-const rowFrom = (value: unknown): EventListRow | null => {
+export const rowFrom = (value: unknown): EventListRow | null => {
   if (
     !isRecord(value) ||
     !isText(value['id']) ||
@@ -89,12 +89,14 @@ const rowFrom = (value: unknown): EventListRow | null => {
     !isText(value['date']) ||
     !isTextOrNull(value['venueName']) ||
     !isTextOrNull(value['venueSlug']) ||
-    !isTextOrNull(value['sourceUrl']) ||
     !isEventListStatus(value['status']) ||
     typeof value['hidden'] !== 'boolean'
   ) {
     return null;
   }
+  // Absent on an API older than this web build (they deploy apart): no link.
+  const sourceUrl = value['sourceUrl'] ?? null;
+  if (!isTextOrNull(sourceUrl)) return null;
   const hiddenReason = hiddenReasonOf(value['hiddenReason']);
   const priceMin = priceOf(value['priceMin']);
   const priceMax = priceOf(value['priceMax']);
@@ -111,7 +113,7 @@ const rowFrom = (value: unknown): EventListRow | null => {
     date: value['date'],
     venueName: value['venueName'],
     venueSlug: value['venueSlug'],
-    sourceUrl: value['sourceUrl'],
+    sourceUrl,
     status: value['status'],
     hidden: value['hidden'],
     hiddenReason,
