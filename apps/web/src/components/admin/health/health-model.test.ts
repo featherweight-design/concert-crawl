@@ -18,6 +18,7 @@ import {
   type GridVenue,
   type HealthStatusRow,
 } from './health-model';
+import { parseNeedsYouVenueIds } from './health-reads';
 
 describe('Missed (the nightly never started)', () => {
   // Nov 12 2026, 10:00 MT: last night is Nov 12.
@@ -78,11 +79,22 @@ describe('Needs you lines', () => {
     ok: [cellOf('bluebird')],
   };
 
-  it('counts only last night’s failures with an open venue-failing item', () => {
+  it('counts only last night’s failures with an open Needs you item', () => {
     expect(
       newFailuresInNeedsYou(groups.failed, new Set(['junkyard', 'levitt'])),
     ).toBe(1);
     expect(newFailuresInNeedsYou(groups.failed, new Set())).toBe(0);
+  });
+
+  it('counts a blocked-only venue in the tile and the footer alike', () => {
+    // Ogden failed with a 403: its item is venue-blocked, not venue-failing.
+    const venueIds = parseNeedsYouVenueIds([
+      { kind: 'venue-blocked', venueId: 'ogden' },
+    ]);
+    expect(venueIds).not.toBeNull();
+    const ids = venueIds ?? new Set<string>();
+    expect(newFailuresInNeedsYou(groups.failed, ids)).toBe(1);
+    expect(gridVenuesInNeedsYou(groups, ids)).toEqual(['Ogden']);
   });
 
   it('names the Failed and Paused venues in Needs you, worst first', () => {

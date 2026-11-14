@@ -121,9 +121,9 @@ describe('HealthTiles', () => {
     expect(crawl).not.toHaveTextContent('GitHub');
     const pill = within(crawl).getByText('Missed');
     expect(pill.style.color).toBe('var(--danger)');
-    // The tile size: 22px high at 11.5px, as the board draws it.
+    // The tile size: 22px high, as the board draws it (the 11.5px/11px text
+    // is pinned in StatusBadge.test, since jsdom may drop var() values).
     expect(pill.style.height).toBe('22px');
-    expect(pill.style.fontSize).toBe('11.5px');
   });
 
   it.each([

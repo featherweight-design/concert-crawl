@@ -453,6 +453,8 @@
   }
   .health-tiles {
     gap: 10px;
+    /* 03/health-mobile: the tile pills' text is 11px on the phone. */
+    --status-badge-tile-size: 11px;
   }
   .health-cells {
     grid-template-columns: minmax(0, 1fr);

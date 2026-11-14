@@ -79,8 +79,7 @@ export default async function AdminHealthPage() {
     needsYou,
     done,
     newestNightly,
-    failingIds,
-    blockedIds,
+    venuesInNeedsYou,
   ] = await Promise.all([
     load<HealthStatusRow[]>('/v1/admin/crawl/status'),
     load<Venue[]>('/v1/admin/venues'),
@@ -108,12 +107,14 @@ export default async function AdminHealthPage() {
       }),
     // The crawl tile's Missed, and the Needs you lines: each degrades alone.
     fetchNewestNightly(token),
-    fetchNeedsYouVenueIds(token, 'venue-failing'),
-    fetchNeedsYouVenueIds(token, 'venue-blocked'),
+    // One unfiltered read: the API loads the whole queue for any ?kind=.
+    fetchNeedsYouVenueIds(token),
   ]);
 
   const groups = groupVenues(status, venues, lastNight);
-  const failing = new Set(failingIds ?? []);
+  // Failing or blocked: the tile and the footer read the same set, so they
+  // can never disagree about who is in Needs you.
+  const inNeedsYou = venuesInNeedsYou ?? new Set<string>();
 
   const budgetUsd = settings.llmMonthlyBudgetUsd;
   // Summed from this month's own days, not `costs.totalUsd`: if the API's
@@ -138,17 +139,14 @@ export default async function AdminHealthPage() {
         lastMonthUsd={monthTotal(costs.days, lastMonth)}
         delivery={delivery}
         missedAt={missedCrawlAt(newestNightly, lastNight)}
-        newInNeedsYou={newFailuresInNeedsYou(groups.failed, failing)}
+        newInNeedsYou={newFailuresInNeedsYou(groups.failed, inNeedsYou)}
       />
       <div className="health-columns">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <VenueGrid
             groups={groups}
             crawlRunsHref={navItem('crawl-runs').href}
-            inNeedsYou={gridVenuesInNeedsYou(
-              groups,
-              new Set([...failing, ...(blockedIds ?? [])]),
-            )}
+            inNeedsYou={gridVenuesInNeedsYou(groups, inNeedsYou)}
           />
           <CostByDay
             series={series}

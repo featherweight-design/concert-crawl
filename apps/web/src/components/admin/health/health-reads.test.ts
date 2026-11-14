@@ -22,16 +22,19 @@ describe('parseNewestNightly', () => {
 });
 
 describe('parseNeedsYouVenueIds', () => {
-  it('keeps venue ids, dropping unreadable and venue-less items', () => {
+  it('keeps failing and blocked venues from the whole queue, dropping the rest', () => {
     expect(
       parseNeedsYouVenueIds([
         { kind: 'venue-failing', venueId: 'a' },
         { kind: 'venue-failing', venueId: null },
         { kind: 'venue-failing' },
         'junk',
-        { kind: 'venue-failing', venueId: 'b' },
+        { kind: 'venue-blocked', venueId: 'b' },
+        // Other kinds carry a venue too, but are not the venue's own failure.
+        { kind: 'show-dropped', venueId: 'c' },
+        { kind: 'venue-failing', venueId: 'a' },
       ]),
-    ).toEqual(['a', 'b']);
+    ).toEqual(new Set(['a', 'b']));
   });
 
   it('is null when the body is not a list', () => {
