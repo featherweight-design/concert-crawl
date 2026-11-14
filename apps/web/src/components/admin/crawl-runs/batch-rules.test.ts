@@ -281,8 +281,13 @@ describe('when, time and cost', () => {
     expect(batchWhen(nightly())).toEqual({ date: 'Nov 11', time: '3:00 AM' });
   });
 
-  it("gives a night that didn't start its date and the schedule's time", () => {
-    expect(batchWhen(didntStart)).toEqual({ date: 'Nov 8', time: '3:00 AM' });
+  it("gives a winter night that didn't start the cron's 2:07 AM MST", () => {
+    expect(batchWhen(didntStart)).toEqual({ date: 'Nov 8', time: '2:07 AM' });
+  });
+
+  it("gives a summer night that didn't start the cron's 3:07 AM MDT", () => {
+    const summer = { ...didntStart, night: '2026-07-04' };
+    expect(batchWhen(summer)).toEqual({ date: 'Jul 4', time: '3:07 AM' });
   });
 
   it('reads whole minutes, never under 1', () => {
