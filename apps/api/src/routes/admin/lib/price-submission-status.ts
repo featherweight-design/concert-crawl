@@ -29,10 +29,12 @@ export type SetSubmissionStatusResult =
   | { ok: 'not_waiting' };
 
 /**
- * Approve (corroborated), dispute or stale one price submission
- * (PATCH /v1/admin/prices/submissions/:id): cred award, event price
- * projection and the watch.pricedrop fan-out after commit. Contest rows are
- * locked out and reported as `contest_lockout`; the caller logs that.
+ * Approve (corroborated), dispute or stale one price submission: cred award,
+ * event price projection and the watch.pricedrop fan-out after commit.
+ * Callers: the PATCH (general moderation), POST .../approve and the Needs you
+ * batch, the last two with `onlyIfWaiting`, which reports a row that isn't
+ * pending as `not_waiting`. Contest rows are locked out and reported as
+ * `contest_lockout`; the caller logs that.
  */
 export const setSubmissionStatus = async (
   id: string,
