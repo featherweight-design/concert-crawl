@@ -5,11 +5,14 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const refreshMock = vi.fn();
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastError } }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: refreshMock }),
 }));
 
 import { PullToRefresh } from './PullToRefresh';
+import { PINK_WAVE_COPY } from './definitions/copy';
 
 // jsdom has no matchMedia; the wave reads reduced motion through it.
 beforeEach(() => {
@@ -23,6 +26,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   refreshMock.mockReset();
+  toastError.mockReset();
   vi.unstubAllGlobals();
 });
 
@@ -91,6 +95,61 @@ describe('PullToRefresh', () => {
       touch('touchend', 0);
     });
     expect(refreshMock).toHaveBeenCalledTimes(1);
-    expect(refetch).toHaveBeenCalledWith({ queryKey: ['events'] });
+    expect(refetch).toHaveBeenCalledWith(
+      { queryKey: ['events'] },
+      { throwOnError: true },
+    );
+  });
+
+  // addendum-3 #178 item 21: a failed pull says so instead of closing as if
+  // it had worked.
+  const pullPastThreshold = () => {
+    act(() => {
+      touch('touchstart', 100);
+      touch('touchmove', 100 + 100 * 2);
+      touch('touchend', 0);
+    });
+  };
+
+  it('raises an error toast when the reload fails', async () => {
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    const refetch = vi
+      .spyOn(client, 'refetchQueries')
+      .mockRejectedValueOnce(new Error('503'));
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    pullPastThreshold();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(refetch).toHaveBeenCalledWith(
+      { queryKey: ['events'] },
+      { throwOnError: true },
+    );
+    expect(toastError).toHaveBeenCalledWith(PINK_WAVE_COPY.refreshFailed, {
+      id: 'pull-refresh',
+    });
+    vi.useRealTimers();
+  });
+
+  it('says nothing when the reload works', async () => {
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    vi.spyOn(client, 'refetchQueries').mockResolvedValueOnce(undefined);
+    render(
+      <QueryClientProvider client={client}>
+        <PullToRefresh />
+      </QueryClientProvider>,
+    );
+    pullPastThreshold();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(toastError).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

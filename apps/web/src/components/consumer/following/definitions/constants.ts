@@ -21,6 +21,10 @@ export const SHELF_SUGGESTION_POOL = 24;
 /** Cards rendered from that pool. Matches the Spotify taste shelf's ten. */
 export const SHELF_VISIBLE_CARDS = 10;
 
+/** See all joins the shelf header only past this many follows (addendum 3,
+ * a6 ruling 3, a number the board fixes, not the card count). */
+export const SHELF_SEE_ALL_AFTER = 5;
+
 /**
  * Where the per-session shuffle seed lives. sessionStorage, not local: "per
  * session" is the spec's word, and a seed that outlived the tab would freeze

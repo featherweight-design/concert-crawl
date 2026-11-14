@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  fireEvent,
+  act,
+  within,
+} from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EntitlementResult } from '@/lib/queries/use-entitlement';
 import type { ShelfArtist } from './definitions/types';
@@ -184,6 +191,15 @@ describe('FollowShelf', () => {
     expect(url.searchParams.has('offset')).toBe(false);
   });
 
+  // addendum-3 a6 ruling 3: See all shows only past five.
+  it('shows See all only past five follows', () => {
+    renderShelf({ mode: 'some', followCount: 5, artists: many(5) });
+    expect(screen.queryByTestId('shelf-see-all')).toBeNull();
+    cleanup();
+    renderShelf({ mode: 'some', followCount: 6, artists: many(6) });
+    expect(screen.getByTestId('shelf-see-all')).toBeTruthy();
+  });
+
   // The starter picks aren't your artists, so there is no list to see all of.
   it('gives the starter shelf no See all', () => {
     renderShelf({ mode: 'zero', artists: many(7) });
@@ -228,11 +244,20 @@ describe('FollowShelf', () => {
 
   // The head carries the count and See all (addendum 2, #178 item 20), and
   // each card opens the show it is advertising, not the artist's page.
-  it('some: names the follow count, with See all and the card as its links', () => {
+  it('some: names the follow count, and the card is its only link at five or fewer', () => {
     renderShelf({ mode: 'some', followCount: 4, artists: [artist()] });
     expect(screen.getByText(FOLLOWING_COPY.yoursEyebrow(4))).toBeTruthy();
     expect(screen.getByText(FOLLOWING_COPY.yoursTitle)).toBeTruthy();
     expect(screen.queryByText(FOLLOWING_COPY.starterAction)).toBeNull();
+    const hrefs = screen
+      .getAllByRole('link')
+      .map((node) => node.getAttribute('href'));
+    // See all only appears past five (addendum 2, U19).
+    expect(hrefs).toEqual(['/events/evt-ratbag']);
+  });
+
+  it('some: offers See all past five follows', () => {
+    renderShelf({ mode: 'some', followCount: 6, artists: [artist()] });
     const hrefs = screen
       .getAllByRole('link')
       .map((node) => node.getAttribute('href'));
