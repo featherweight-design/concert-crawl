@@ -12,9 +12,11 @@ import {
   CouldntLoad,
   EmptyState,
   Pagination,
+  PersonAvatar,
   StatusBadge,
   useIsPhone,
 } from '@/components/admin/primitives';
+import type { AvatarColor } from '@concert-crawl/types';
 import { codesApi, type ListedInviteCode } from '../invite-codes/codes-api';
 import { countPosters } from '../invite-codes/code-rules';
 import { PeopleTabs } from './PeopleTabs';
@@ -108,37 +110,28 @@ const ChipCount = ({ value, on }: { value: number | null; on: boolean }) =>
     </span>
   );
 
-/** The initial in a signal ring, as the code panel draws a joiner. */
+/** A person's initial in their own two-colour ring (README rule 12). */
 export const Avatar = ({
-  handle,
+  person,
   size,
   initialSize,
 }: {
-  handle: string | null;
+  person: {
+    handle: string | null;
+    avatarColor: AvatarColor | null;
+    avatarSecondColor: AvatarColor | null;
+  };
   size: number;
   /** The initial's size; the person page's 56px head draws it at 22. */
   initialSize?: number;
 }) => (
-  <span
-    aria-hidden
-    style={{
-      width: size,
-      height: size,
-      flex: 'none',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 800,
-      fontSize: initialSize ?? (size > 32 ? 15 : 13),
-      color: 'var(--signal)',
-      background:
-        'linear-gradient(135deg, color-mix(in srgb, var(--signal) 30%, transparent), color-mix(in srgb, var(--accent) 30%, transparent))',
-      border: '1.5px solid color-mix(in srgb, var(--signal) 70%, transparent)',
-    }}
-  >
-    {(handle ?? '?').charAt(0).toUpperCase()}
-  </span>
+  <PersonAvatar
+    initialOf={person.handle}
+    avatarColor={person.avatarColor}
+    avatarSecondColor={person.avatarSecondColor}
+    size={size}
+    initialSize={initialSize ?? (size > 32 ? 15 : 13)}
+  />
 );
 
 /** The handle, and the TEST tag on a test account. */
@@ -398,7 +391,7 @@ export function PeopleClient({ code }: { code: string | null }) {
                 prefetch={false}
                 style={{ ...ROW_LINK, padding: '12px 0' }}
               >
-                <Avatar handle={person.handle} size={38} />
+                <Avatar person={person} size={38} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <Handle person={person} />
                   {active && (
@@ -464,7 +457,7 @@ export function PeopleClient({ code }: { code: string | null }) {
                     gap: 10,
                   }}
                 >
-                  <Avatar handle={person.handle} size={32} />
+                  <Avatar person={person} size={32} />
                   <Handle person={person} />
                 </span>
                 <span style={COLUMN.role}>

@@ -18,6 +18,8 @@ import {
 const person = (id: string, isTestAccount = false): AdminPerson => ({
   id,
   handle: id,
+  avatarColor: null,
+  avatarSecondColor: null,
   emailMasked: 'a***@example.com',
   role: 'user',
   createdAt: '2026-10-02T18:00:00Z',

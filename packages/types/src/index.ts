@@ -1313,6 +1313,9 @@ export interface InviteCodeRedemption {
   handle: string | null;
   role: Role | null;
   redeemedAt: string;
+  /** Their own avatar colours (null: not chosen), for the code panel's joiners. */
+  avatarColor: AvatarColor | null;
+  avatarSecondColor: AvatarColor | null;
 }
 
 export interface InviteCodeRedemptionsResponse {
@@ -2136,6 +2139,9 @@ export type PersonRecent =
 export interface PersonDetail {
   id: string;
   handle: string | null;
+  /** Their own avatar colours (null: not chosen). */
+  avatarColor: AvatarColor | null;
+  avatarSecondColor: AvatarColor | null;
   role: Role;
   createdAt: string | null;
   lastActiveAt: string | null;

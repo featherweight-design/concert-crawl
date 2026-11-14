@@ -226,7 +226,7 @@ export function PersonClient({ userId }: { userId: string }) {
       style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 14 }}
     >
       <Avatar
-        handle={person.handle}
+        person={person}
         size={isPhone ? 48 : 56}
         initialSize={isPhone ? 19 : 22}
       />
@@ -419,7 +419,7 @@ export function PersonClient({ userId }: { userId: string }) {
                   color: 'var(--fg)',
                 }}
               >
-                <Avatar handle={person.handle} size={32} />
+                <Avatar person={person} size={32} />
                 <span
                   style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}
                 >

@@ -1,7 +1,13 @@
+import type { AvatarColor } from '@concert-crawl/types';
+import { PersonAvatar } from '../primitives/PersonAvatar';
+
 export interface AdminShellUser {
   firstName: string | null;
   handle: string | null;
   email: string;
+  /** The admin's own avatar colours; unset reads as the house pair. */
+  avatarColor?: AvatarColor | null | undefined;
+  avatarSecondColor?: AvatarColor | null | undefined;
 }
 
 /** "hugh@…" to "hu•••": enough to tell two admins apart, never the address. */
@@ -16,7 +22,7 @@ export const displayNameFor = (user: AdminShellUser): string =>
   user.firstName?.trim() ||
   (user.handle ? `@${user.handle}` : maskedLocalPart(user.email));
 
-/** The initial in an accent ring, as drawn on every admin board. */
+/** The admin's initial in their own two-colour ring, as every admin board draws it. */
 export const AdminAvatar = ({
   user,
   size,
@@ -24,24 +30,10 @@ export const AdminAvatar = ({
   user: AdminShellUser;
   size: number;
 }) => (
-  <span
-    aria-hidden
-    style={{
-      width: size,
-      height: size,
-      flex: 'none',
-      borderRadius: '50%',
-      background: 'color-mix(in srgb, var(--accent) 25%, var(--bg))',
-      border: '1.5px solid var(--accent)',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontWeight: 800,
-      color: 'var(--accent)',
-      fontSize: Math.round(size * 0.42),
-      lineHeight: 1,
-    }}
-  >
-    {displayNameFor(user).replace(/^@/, '').charAt(0).toUpperCase()}
-  </span>
+  <PersonAvatar
+    initialOf={displayNameFor(user).replace(/^@/, '')}
+    avatarColor={user.avatarColor ?? null}
+    avatarSecondColor={user.avatarSecondColor ?? null}
+    size={size}
+  />
 );

@@ -34,6 +34,7 @@ import {
   type Role,
 } from '@concert-crawl/types';
 import { validationHook } from '../../lib/validator.js';
+import { avatarColumns, avatarOf } from '../../lib/avatar.js';
 import { z } from 'zod';
 import { getAuthUser } from '../../middleware/auth.js';
 import { generateInviteCode } from '../../lib/invite-code-generation.js';
@@ -474,20 +475,22 @@ inviteCodesAdminRouter.get(
             .select({
               userId: userProfiles.userId,
               handle: userProfiles.handle,
+              ...avatarColumns(),
             })
             .from(userProfiles)
             .where(inArray(userProfiles.userId, ids)),
       rolesFor(ids),
     ]);
-    const handles = new Map(
-      profiles.map((profile) => [profile.userId, profile.handle]),
+    const profileOf = new Map(
+      profiles.map((profile) => [profile.userId, profile]),
     );
 
     const data: InviteCodeRedemption[] = page.map((person) => ({
       userId: person.userId,
-      handle: handles.get(person.userId) ?? null,
+      handle: profileOf.get(person.userId)?.handle ?? null,
       role: roles.get(person.userId) ?? null,
       redeemedAt: person.redeemedAt.toISOString(),
+      ...avatarOf(profileOf.get(person.userId)),
     }));
     const body: InviteCodeRedemptionsResponse = { data, total };
     return ctx.json({ success: true, data: body });
