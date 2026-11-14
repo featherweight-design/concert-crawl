@@ -167,16 +167,17 @@ export const hasFilters = (filters: EventFilters): boolean =>
 
 /**
  * The "Show N" a popover offers: the ticked rows' counts added up, as the
- * board adds Postponed 6 and Cancelled 9 into Show 15. Nothing ticked shows
- * every row on this side.
+ * board adds Postponed 6 and Cancelled 9 into Show 15. The counts are faceted
+ * (each leaves out only its own filter), so the sum is exactly what Apply
+ * shows. Nothing ticked shows `unticked`, the rows the other filters allow.
  */
 export const showCount = (
   chosen: readonly string[],
   countOf: (key: string) => number,
-  all: number,
+  unticked: number,
 ): number =>
   chosen.length === 0
-    ? all
+    ? unticked
     : chosen.reduce((sum, key) => sum + countOf(key), 0);
 
 const dollars = (value: string | null): string | null => {
