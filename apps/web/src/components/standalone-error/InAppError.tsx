@@ -5,7 +5,6 @@ import { useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
 import { ErrorReport } from '@/components/consumer/error-report';
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 import { StandaloneError } from './StandaloneError';
 
 /**
@@ -19,17 +18,20 @@ import { StandaloneError } from './StandaloneError';
  */
 export const InAppError = ({
   error,
-  reset,
+  onRetry,
   logLabel,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  /**
+   * The boundary's `useErrorBoundaryRetry(reset)`: each error.tsx calls the
+   * hook itself, which the boundary sweep guard checks.
+   */
+  onRetry: () => void;
   /** Prefixes the console line, so a boundary's failures can be told apart. */
   logLabel: string;
 }) => {
   const { signOut } = useClerk();
   const router = useRouter();
-  const retry = useErrorBoundaryRetry(reset);
 
   useEffect(() => {
     console.error(logLabel, error);
@@ -39,7 +41,7 @@ export const InAppError = ({
     <StandaloneError
       inApp
       errorId={error.digest}
-      onRetry={retry}
+      onRetry={onRetry}
       onSignOut={() => void signOut(() => router.push('/'))}
     >
       <ErrorReport error={error} variant="card" />
