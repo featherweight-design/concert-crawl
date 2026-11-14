@@ -1,0 +1,30 @@
+{
+  "feature": "Admin · Operations shell with the Feedback tab (P47-19 PR 2a)",
+  "note": "Board: design_handoff_admin_redesign/boards/07-people-flags-operations/activity-log, activity-log-mobile (title, subtitle, tab bar). CONTACT_SHEET_ROLE=admin. Read-only. Only the Feedback tab exists in this PR; Activity log is PR 2b and Emails a later PR.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "operations",
+      "label": "Operations, Feedback tab",
+      "steps": [
+        {
+          "goto": "/admin/operations",
+          "wait": "[role='tablist']",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "feedback-old-route",
+      "label": "/admin/feedback still works",
+      "widths": ["desktop"],
+      "steps": [
+        { "goto": "/admin/feedback", "wait": "main h1", "settle": 1500 }
+      ]
+    }
+  ]
+}
