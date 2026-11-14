@@ -55,7 +55,7 @@
       "label": "Price update (CounterSubmitSheet, from a disputed price's Submit an update)",
       "steps": [
         {
-          "goto": "/events/${CC_POSTPONED_EVENT_ID}",
+          "goto": "/events/${CC_EVENT_ID}",
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         { "settle": 3000 },
@@ -116,7 +116,7 @@
       "label": "Report a status change",
       "steps": [
         {
-          "goto": "/events/${CC_CANCELLED_EVENT_ID}",
+          "goto": "/events/${CC_EVENT_ID}",
           "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
         },
         { "settle": 3000 },
@@ -204,7 +204,7 @@
         { "wait": "[role=\"dialog\"]" },
         { "clickRole": "button", "name": "^Leave crew" },
         { "settle": 1000 },
-        { "wait": "[role=\"dialog\"]" }
+        { "wait": "text=/^Leave .+\\?$/", "settle": 800 }
       ]
     }
   ]

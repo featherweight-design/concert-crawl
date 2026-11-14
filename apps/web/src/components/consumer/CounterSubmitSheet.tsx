@@ -364,7 +364,9 @@ export function CounterSubmitSheet({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              // minmax(0, ...) so a number input's own min width cannot push
+              // the Ceiling column past a 320 sheet.
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
               gap: 12,
             }}
           >
