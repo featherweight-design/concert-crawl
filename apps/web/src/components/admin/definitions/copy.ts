@@ -4137,6 +4137,17 @@ export const ADMIN_COPY = {
       firstSeen: 'First seen',
       lastSeen: 'Last seen',
     },
+    // addendum-5 `04/date-picker-d` and `04/time-picker-d`.
+    pickers: {
+      weekdays: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      today: 'Today',
+      pastAllowed: 'Past dates are allowed here',
+      futureOnly: 'Only dates from today on',
+      timeHint: 'Type any time, or pick one. Half hours listed.',
+      timeList: 'Half hours',
+    },
     // `06/event-edit` Status card; Moved waits for Hugh (4b#1).
     status: {
       title: 'Status',
@@ -4214,6 +4225,8 @@ export const ADMIN_COPY = {
     saveFailed: {
       what: 'the show',
       saved: (title: string) => `The title is still “${title}”.`,
+      savedWhen: (date: string) =>
+        `It’s still on ${date}, at the times it had.`,
     },
     none: '—',
   },
