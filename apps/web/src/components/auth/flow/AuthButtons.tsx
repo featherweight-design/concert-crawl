@@ -183,7 +183,7 @@ export function OrDivider() {
 /** The mono "APPLIED" chip beside an invite code. */
 export function AppliedChip(): ReactNode {
   return (
-    <span className="inline-flex h-[22px] items-center gap-[5px] rounded-md bg-[color-mix(in_srgb,var(--success)_12%,transparent)] px-2 font-mono text-[9.5px] leading-none font-bold tracking-[0.12em] text-success uppercase">
+    <span className="inline-flex h-[22px] items-center self-start gap-[5px] rounded-md bg-[color-mix(in_srgb,var(--success)_12%,transparent)] px-2 font-mono text-[9.5px] leading-none font-bold tracking-[0.12em] text-success uppercase">
       <Check size={10} strokeWidth={3} aria-hidden />
       {COPY.applied}
     </span>

@@ -48,7 +48,6 @@ export const AUTH_FLOW_COPY = {
   // Labels for the development-only parts page; never shown to a visitor.
   parts: {
     continue: 'Continue',
-    makingAccount: 'Making your account…',
     youreIn: 'You’re in',
     useCode: 'Use an invite code',
     forgot: 'Forgot password?',

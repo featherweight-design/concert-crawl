@@ -1,0 +1,37 @@
+{
+  "feature": "Custom sign-in and sign-up · PR 2 foundations (the parts page)",
+  "note": "Boards: design/design_handoff_custom_auth/boards/09-parts/parts-d and parts-light-d, plus the pieces on 01-sign-in, 05-sign-up and 07-loading-and-trouble. The parts page is development-only (/sign-in/parts answers 404 in a production build), so this sheet runs against a local dev server only. Signed out, no sign-in. The pieces are not routed to a real screen until PRs 3 to 8.",
+  "signedOut": true,
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 740, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "parts",
+      "label": "Every piece, every state",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/sign-in/parts",
+          "wait": "h1:has-text('Every piece, every state')",
+          "settle": 1500
+        }
+      ]
+    },
+    {
+      "id": "parts-legal",
+      "label": "The legal sheet over the form",
+      "steps": [
+        {
+          "goto": "/sign-in/parts",
+          "wait": "h1:has-text('Every piece, every state')",
+          "settle": 1500
+        },
+        { "clickRole": "button", "name": "^Terms$" },
+        { "wait": "[role='dialog']", "settle": 1000 }
+      ]
+    }
+  ]
+}
