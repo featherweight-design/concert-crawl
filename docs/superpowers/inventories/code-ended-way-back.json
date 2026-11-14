@@ -1,0 +1,44 @@
+{
+  "feature": "Invite code ended · the way back to the code form (addendum 6 item 42)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-6/screens/42-code-ended/code-ended-way-back (the ended page with 'Have another code? Enter it', and the code form it opens, empty and focused). Signed out: /auth/code is public. The ended row redeems a real revoked code (SHEETENDED42, inserted on the scratch branch for the sheet and deleted after); nothing is mocked.",
+  "signedOut": true,
+  "widths": [
+    { "label": "floor", "width": 320, "height": 700, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "code-ended-page",
+      "label": "An ended code: the page with its two buttons and the way back",
+      "steps": [
+        {
+          "goto": "/auth/code",
+          "wait": "input[aria-label=\"Invite code\"]",
+          "settle": 3000
+        },
+        { "fill": "input[aria-label=\"Invite code\"]", "text": "SHEETENDED42" },
+        { "wait": "button:has-text(\"Continue\"):not([disabled])" },
+        { "clickRole": "button", "name": "Continue" },
+        { "wait": "[data-testid=\"code-ended\"]", "settle": 800 }
+      ]
+    },
+    {
+      "id": "code-form-after-enter-it",
+      "label": "After Enter it: the code form, empty and focused",
+      "steps": [
+        {
+          "goto": "/auth/code",
+          "wait": "input[aria-label=\"Invite code\"]",
+          "settle": 3000
+        },
+        { "fill": "input[aria-label=\"Invite code\"]", "text": "SHEETENDED42" },
+        { "wait": "button:has-text(\"Continue\"):not([disabled])" },
+        { "clickRole": "button", "name": "Continue" },
+        { "wait": "[data-testid=\"code-ended\"]" },
+        { "clickRole": "button", "name": "Enter it" },
+        { "wait": "input[aria-label=\"Invite code\"]", "settle": 800 }
+      ]
+    }
+  ]
+}
