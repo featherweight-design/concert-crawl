@@ -4095,8 +4095,11 @@ export const ADMIN_COPY = {
       eyebrow: 'Reject price',
       thisShow: 'this show',
       title: (price: string, show: string) => `Reject ${price} for ${show}?`,
+      // What the fan's Submitted prices actually shows a rejected price as: a
+      // closed row reading "A newer price replaced it" (consumer
+      // submissionClosedReason.archived). No reason or note reaches them.
       body: (handle: string | null) =>
-        `The price comes off the show, and ${handle === null ? 'the fan' : `@${handle}`} sees it as Not used in Submitted prices, with your reason.`,
+        `The price comes off the show. ${handle === null ? 'The fan' : `@${handle}`} sees it as closed in Submitted prices, replaced by a newer price.`,
       reasonLabel: 'Reason',
       reasons: {
         'wrong-show': 'Wrong show',
@@ -4105,7 +4108,8 @@ export const ADMIN_COPY = {
         'fees-included': 'Fees included',
         other: 'Other',
       },
-      noteLabel: 'Note to the fan (optional)',
+      // The note is kept with the rejection for admins; the fan never sees it.
+      noteLabel: 'Note (optional, admins only)',
       cancel: 'Cancel',
       confirm: 'Reject price',
       failed: "Couldn't reject that price",
