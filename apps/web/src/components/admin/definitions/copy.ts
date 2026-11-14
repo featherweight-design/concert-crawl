@@ -1073,7 +1073,11 @@ export const ADMIN_COPY = {
       mapPin: {
         label: 'Map pin',
         // Ruling h: entered by hand, never "Set from the address" (no geocoder).
-        hint: 'Entered by hand, as latitude, longitude.',
+        // Addendum 5 `07/map-pin-states`: the line under the field, then the
+        // link that opens the address in Maps to copy the pin from.
+        set: 'Entered by hand.',
+        notSet: 'Not set: fans get no Directions link.',
+        openInMaps: 'Open the address in Maps',
         invalid: 'Enter it as latitude, longitude, like 39.7487, -105.0077.',
       },
       link: {

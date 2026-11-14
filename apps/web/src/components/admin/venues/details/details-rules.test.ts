@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
+  addressMapsUrl,
   applyColumns,
   changedColumns,
   detailsFieldOf,
@@ -8,6 +9,7 @@ import {
   draftOf,
   editedFields,
   formatPin,
+  mapPinState,
   nearestCapacityType,
   parsePin,
   rebaseDraft,
@@ -243,5 +245,55 @@ describe('websiteHost', () => {
       'ballarena.com',
     );
     expect(websiteHost('not a url')).toBe('not a url');
+  });
+});
+
+describe('addressMapsUrl', () => {
+  it('opens the trimmed address as a Google Maps search', () => {
+    expect(addressMapsUrl('  1000 Chopper Cir, Denver, CO 80204 ')).toBe(
+      'https://maps.google.com/?q=1000%20Chopper%20Cir%2C%20Denver%2C%20CO%2080204',
+    );
+  });
+
+  it('encodes what would break out of the query', () => {
+    const url = addressMapsUrl('1 Main St #2 & Co?x=1/');
+    expect(url).toBe(
+      'https://maps.google.com/?q=1%20Main%20St%20%232%20%26%20Co%3Fx%3D1%2F',
+    );
+    expect(new URL(url ?? '').searchParams.get('q')).toBe(
+      '1 Main St #2 & Co?x=1/',
+    );
+  });
+
+  it('keeps a script scheme inside the query, never as the URL', () => {
+    const url = addressMapsUrl('javascript:alert(1)');
+    expect(url?.startsWith('https://maps.google.com/?q=')).toBe(true);
+    expect(new URL(url ?? '').protocol).toBe('https:');
+  });
+
+  it('is null with no address', () => {
+    expect(addressMapsUrl('')).toBeNull();
+    expect(addressMapsUrl('   ')).toBeNull();
+  });
+});
+
+describe('mapPinState', () => {
+  it('reads set, not set and can’t read it, as drawn', () => {
+    expect(mapPinState('39.7487, −105.0077', undefined)).toBe('set');
+    expect(mapPinState('39.7487 -105.0077', undefined)).toBe('set');
+    expect(mapPinState('', undefined)).toBe('notSet');
+    expect(mapPinState('   ', undefined)).toBe('notSet');
+    expect(mapPinState('39.7487 -105 1', undefined)).toBe('invalid');
+    expect(mapPinState('91, 0', undefined)).toBe('invalid');
+    expect(mapPinState('39.7487,', undefined)).toBe('invalid');
+  });
+
+  it('is invalid while the field shows its error', () => {
+    expect(
+      mapPinState(
+        '39.7487, −105.0077',
+        ADMIN_COPY.venueDetails.fields.mapPin.invalid,
+      ),
+    ).toBe('invalid');
   });
 });

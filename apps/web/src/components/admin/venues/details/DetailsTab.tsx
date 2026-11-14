@@ -8,12 +8,13 @@ import { updateVenue } from '@/lib/actions/venues';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminCard as Card, useIsPhone } from '@/components/admin/primitives';
 import { inputStyle } from '../source/source-parts';
-import { Field, LookCard, Pair } from './details-parts';
+import { Field, LookCard, MapPinHint, Pair } from './details-parts';
 import { DetailsAbout, useAboutDraft } from './DetailsAbout';
 import { DetailsSaveBar } from './DetailsSaveBar';
 import {
   CAPACITY_TYPES,
   DRAFT_KEYS,
+  addressMapsUrl,
   TICKET_SELLERS,
   applyColumns,
   capacityTypeLabel,
@@ -23,6 +24,7 @@ import {
   detailsFormData,
   draftOf,
   editedFields,
+  mapPinState,
   rebaseDraft,
   slugify,
   validateDetails,
@@ -221,7 +223,12 @@ export const DetailsTab = ({ venue }: { venue: DetailsVenue }) => {
       <Field
         id={idOf('mapPin')}
         label={FIELDS.mapPin.label}
-        hint={FIELDS.mapPin.hint}
+        hint={
+          <MapPinHint
+            state={mapPinState(draft.mapPin, errors.mapPin)}
+            mapsUrl={addressMapsUrl(draft.address)}
+          />
+        }
         error={errors.mapPin}
       >
         {text('mapPin')}

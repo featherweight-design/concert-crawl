@@ -190,8 +190,59 @@ describe('DetailsTab', () => {
     expect(input(FIELDS.website).value).toBe('ballarena.com');
     expect(input(FIELDS.website).readOnly).toBe(true);
     // Ruling h: the pin is entered by hand, never "Set from the address".
-    expect(screen.getByText(FIELDS.mapPin.hint)).toBeTruthy();
+    expect(screen.getByText(FIELDS.mapPin.set)).toBeTruthy();
     expect(screen.queryByText('Set from the address.')).toBeNull();
+  });
+
+  describe('the map pin’s Maps link (addendum 5 `07/map-pin-states`)', () => {
+    const mapsLink = () =>
+      screen.queryByRole('link', { name: FIELDS.mapPin.openInMaps });
+
+    it('set: “Entered by hand.” then the address opened in Maps, in a new tab', () => {
+      render(<DetailsTab venue={venue} />);
+      expect(screen.getByText(FIELDS.mapPin.set)).toBeTruthy();
+      const link = mapsLink();
+      expect(link?.getAttribute('href')).toBe(
+        'https://maps.google.com/?q=1000%20Chopper%20Cir%2C%20Denver%2C%20CO%2080204',
+      );
+      expect(link?.getAttribute('target')).toBe('_blank');
+      expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+    });
+
+    it('not set: says fans get no Directions link, and still offers Maps', () => {
+      render(<DetailsTab venue={{ ...venue, lat: null, lng: null }} />);
+      expect(screen.getByText(FIELDS.mapPin.notSet)).toBeTruthy();
+      expect(screen.queryByText(FIELDS.mapPin.set)).toBeNull();
+      expect(mapsLink()).not.toBeNull();
+    });
+
+    it('follows the address as it is typed', () => {
+      render(<DetailsTab venue={venue} />);
+      fireEvent.change(input(FIELDS.address), {
+        target: { value: '18300 W Alameda Pkwy, Morrison' },
+      });
+      expect(mapsLink()?.getAttribute('href')).toBe(
+        'https://maps.google.com/?q=18300%20W%20Alameda%20Pkwy%2C%20Morrison',
+      );
+    });
+
+    it('offers no link with no address to open', () => {
+      render(<DetailsTab venue={{ ...venue, address: null }} />);
+      expect(screen.getByText(FIELDS.mapPin.set)).toBeTruthy();
+      expect(mapsLink()).toBeNull();
+    });
+
+    it('can’t read it: no link beside a pin that doesn’t parse, and the error takes the line', () => {
+      render(<DetailsTab venue={venue} />);
+      fireEvent.change(input(FIELDS.mapPin.label), {
+        target: { value: '39.7487 -105 1' },
+      });
+      expect(mapsLink()).toBeNull();
+      save();
+      expect(screen.getByText(FIELDS.mapPin.invalid)).toBeTruthy();
+      expect(screen.queryByText(FIELDS.mapPin.set)).toBeNull();
+      expect(mapsLink()).toBeNull();
+    });
   });
 
   it('offers the six capacity types, and keeps a stored one outside them', () => {
