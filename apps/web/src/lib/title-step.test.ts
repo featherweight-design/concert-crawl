@@ -21,6 +21,13 @@ describe('titleStepPx', () => {
     expect(titleStepPx('Wmwmwmwmwm')).toBe(26);
   });
 
+  it('measures full-width scripts as a full em and ignores combining marks', () => {
+    // Four kana fit the 38 step; ten do not.
+    expect(titleStepPx('ヨルシカ')).toBe(38);
+    expect(titleStepPx('あいうえおかきくけこ')).toBe(26);
+    expect(titleStepPx('Gutiérrez')).toBe(titleStepPx('Gutiérrez'));
+  });
+
   it('sizes by the longest word, not the whole name', () => {
     expect(titleStepPx('Red Rocks Park Amphitheatre')).toBe(30);
   });
