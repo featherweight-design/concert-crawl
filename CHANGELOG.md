@@ -1,3 +1,21 @@
+# [1.466.0](https://github.com/featherweight-design/concert-crawl/compare/v1.465.0...v1.466.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** section head draws 24 and 12.5 on the phone boards ([5e1d235](https://github.com/featherweight-design/concert-crawl/commit/5e1d23523622ad571aa750746060ef25512f2195))
+* **admin:** the phone summary sits 2 under the title as the boards draw it ([6923f16](https://github.com/featherweight-design/concert-crawl/commit/6923f16034b40b561aabd89ea5b36dee68961ec3))
+* **web:** set pending box office type in the AA-safe warning text token ([3d9829d](https://github.com/featherweight-design/concert-crawl/commit/3d9829d74684757ad609ed058544f4e0ed02f697))
+
+
+### Features
+
+* **admin:** drop the admin theme picker from Settings ([59dfa4b](https://github.com/featherweight-design/concert-crawl/commit/59dfa4b25222b8d7bedfb6a3ad4d6d174cd7390c))
+* **admin:** page header at 28/800 and a stepped skeleton fade as the boards draw ([377c654](https://github.com/featherweight-design/concert-crawl/commit/377c65409ce1dd1dd60a9c19c43c9a274b50dd68))
+* **admin:** send the robots audit to a Venues filter and drop the Kbd hints ([e693c60](https://github.com/featherweight-design/concert-crawl/commit/e693c60ffb8dfec13e9b85a753570121bc35f595))
+* **web:** move price trust colours to the B+ tokens and restyle the fees toggle ([d2cc6f5](https://github.com/featherweight-design/concert-crawl/commit/d2cc6f55eba12017050662ce8d164f156fe73c37))
+* **web:** move the remaining price components onto the B+ trust tokens ([548c58c](https://github.com/featherweight-design/concert-crawl/commit/548c58ca842d645aba8c42e49015d2f1e235c8ce))
+
 # [1.465.0](https://github.com/featherweight-design/concert-crawl/compare/v1.464.0...v1.465.0) (2026-11-14)
 
 
