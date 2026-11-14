@@ -1,3 +1,16 @@
+# [1.480.0](https://github.com/featherweight-design/concert-crawl/compare/v1.479.0...v1.480.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web,api:** parse the cron config in tests, widen the no-import guards, fix the runbook ([37e63bd](https://github.com/featherweight-design/concert-crawl/commit/37e63bd89d1a824989ba6fbda0b16c9b0c458d56))
+* **web:** unselected share shape tiles use border-strong and a muted glyph ([5cc0452](https://github.com/featherweight-design/concert-crawl/commit/5cc0452fa7e40eda64d4c458c8e80fbd408d271b))
+
+
+### Features
+
+* **web,api:** keep both Vercel functions warm with a 5-minute ping ([db93d78](https://github.com/featherweight-design/concert-crawl/commit/db93d7805ac4f25b3b8567a08647c2244e3722ff))
+
 # [1.479.0](https://github.com/featherweight-design/concert-crawl/compare/v1.478.0...v1.479.0) (2026-11-14)
 
 
