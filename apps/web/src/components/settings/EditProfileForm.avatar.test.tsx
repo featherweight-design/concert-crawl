@@ -86,11 +86,7 @@ describe('EditProfileForm avatar colours', () => {
   it('saves a picked pair as both colours', async () => {
     mockPatchMe.mockResolvedValue(undefined);
     renderForm();
-    fireEvent.click(
-      screen.getByLabelText(
-        COPY.avatarPairSwatchAriaLabel('accent', 'warning'),
-      ),
-    );
+    fireEvent.click(screen.getByLabelText('Avatar colors: pink and amber'));
     save();
     await waitFor(() => expect(mockPatchMe).toHaveBeenCalledTimes(1));
     expect(mockPatchMe.mock.calls[0]?.[1]).toMatchObject({
@@ -102,9 +98,7 @@ describe('EditProfileForm avatar colours', () => {
   it('sends a null second colour for a solid, so a saved pair is cleared', async () => {
     mockPatchMe.mockResolvedValue(undefined);
     renderForm({ avatarColor: 'signal', avatarSecondColor: 'accent' });
-    fireEvent.click(
-      screen.getByLabelText(COPY.avatarColorSwatchAriaLabel('success')),
-    );
+    fireEvent.click(screen.getByLabelText('Avatar color: green'));
     save();
     await waitFor(() => expect(mockPatchMe).toHaveBeenCalledTimes(1));
     expect(mockPatchMe.mock.calls[0]?.[1]).toMatchObject({

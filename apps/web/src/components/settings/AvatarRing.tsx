@@ -54,7 +54,7 @@ export const AvatarRing = ({
         className="flex h-full w-full select-none items-center justify-center rounded-full"
         style={{
           background: washBoth
-            ? `linear-gradient(135deg, color-mix(in oklch, var(--${first}) 22%, var(--bg)), color-mix(in oklch, var(--${second}) 22%, var(--bg)))`
+            ? `linear-gradient(135deg, color-mix(in oklch, var(--${first}) 34%, var(--bg)), color-mix(in oklch, var(--${second}) 34%, var(--bg)))`
             : `color-mix(in oklch, var(--${first}) 10%, var(--bg))`,
         }}
       >

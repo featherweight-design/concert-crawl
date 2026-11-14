@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import type { AvatarColor } from '@concert-crawl/types';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { AvatarRing } from './AvatarRing';
@@ -7,11 +8,14 @@ import { AVATAR_COLORS, AVATAR_PAIRS } from './definitions/constants';
 import { avatarPair } from './definitions/styles';
 
 const SETTINGS_COPY = CONSUMER_COPY.settings;
+const COLOR_NAME = SETTINGS_COPY.avatarColorNames;
 
 /** The preview's ring, and the faint hairline ring drawn around it. */
 const PREVIEW_PX = 100;
 const PREVIEW_HAIRLINE_PX = 114;
 const PAIR_SWATCH_PX = 42;
+/** Room for the selected swatch's ring: 3px gap plus 2px line, each side. */
+const PAIR_RING_ROOM_PX = 10;
 const SOLID_SWATCH_PX = 28;
 
 const EYEBROW: React.CSSProperties = {
@@ -42,10 +46,18 @@ export function AvatarPicker({
   avatarSecondColor,
   onChange,
 }: AvatarPickerProps) {
+  const mixId = useId();
+  const solidId = useId();
   // A profile with no colour yet draws the house pair, so that pair is the
   // selected swatch, as the board has it.
   const resolved = avatarPair(avatarColor, avatarSecondColor);
   const isPair = resolved.first !== resolved.second;
+  // The ring and initial are drawn the same either way round, so a stored
+  // (accent, signal) selects the (signal, accent) swatch.
+  const isSelectedPair = (first: AvatarColor, second: AvatarColor) =>
+    isPair &&
+    ((resolved.first === first && resolved.second === second) ||
+      (resolved.first === second && resolved.second === first));
 
   return (
     <div
@@ -73,35 +85,38 @@ export function AvatarPicker({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2.5 pt-3">
-        <span style={{ ...EYEBROW, paddingLeft: 5 }}>
+      <div
+        role="group"
+        aria-labelledby={mixId}
+        className="flex flex-col gap-2.5 pt-3"
+      >
+        <span id={mixId} style={{ ...EYEBROW, paddingLeft: 5 }}>
           {SETTINGS_COPY.avatarMixTwoEyebrow}
         </span>
         <div className="flex items-center justify-between">
           {AVATAR_PAIRS.map(([first, second]) => {
-            const isSelected =
-              isPair && resolved.first === first && resolved.second === second;
+            const isSelected = isSelectedPair(first, second);
             return (
+              // Each swatch's box caps at the board's size and shrinks with
+              // the card, so six still fit at 320px.
               <span
                 key={`${first}-${second}`}
-                className="flex items-center justify-center"
-                style={{
-                  width: PAIR_SWATCH_PX + 10,
-                  height: PAIR_SWATCH_PX + 10,
-                }}
+                className="flex min-w-0 flex-1 items-center justify-center"
+                style={{ maxWidth: PAIR_SWATCH_PX + PAIR_RING_ROOM_PX }}
               >
                 <button
                   type="button"
                   onClick={() => onChange(first, second)}
                   aria-label={SETTINGS_COPY.avatarPairSwatchAriaLabel(
-                    first,
-                    second,
+                    COLOR_NAME[first],
+                    COLOR_NAME[second],
                   )}
                   aria-pressed={isSelected}
                   className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                   style={{
                     width: PAIR_SWATCH_PX,
-                    height: PAIR_SWATCH_PX,
+                    maxWidth: `calc(100% - ${PAIR_RING_ROOM_PX}px)`,
+                    aspectRatio: '1 / 1',
                     background: `conic-gradient(var(--${first}), var(--${second}), var(--${first}))`,
                     outline: isSelected ? '2px solid var(--fg)' : 'none',
                     outlineOffset: 3,
@@ -114,10 +129,14 @@ export function AvatarPicker({
       </div>
 
       <div
-        className="flex items-center"
-        style={{ gap: 12, paddingLeft: 5, marginTop: -4 }}
+        role="group"
+        aria-labelledby={solidId}
+        className="flex flex-wrap items-center"
+        style={{ columnGap: 12, rowGap: 8, paddingLeft: 5, marginTop: -4 }}
       >
-        <span style={EYEBROW}>{SETTINGS_COPY.avatarSolidEyebrow}</span>
+        <span id={solidId} style={EYEBROW}>
+          {SETTINGS_COPY.avatarSolidEyebrow}
+        </span>
         <div className="flex items-center" style={{ gap: 8 }}>
           {AVATAR_COLORS.map((color) => {
             const isSelected = !isPair && resolved.first === color;
@@ -126,7 +145,9 @@ export function AvatarPicker({
                 key={color}
                 type="button"
                 onClick={() => onChange(color, null)}
-                aria-label={SETTINGS_COPY.avatarColorSwatchAriaLabel(color)}
+                aria-label={SETTINGS_COPY.avatarColorSwatchAriaLabel(
+                  COLOR_NAME[color],
+                )}
                 aria-pressed={isSelected}
                 className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                 style={{
