@@ -3,10 +3,12 @@
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -29,13 +31,14 @@ vi.mock('next/navigation', () => ({
 const getToken = vi.fn(async () => 'token');
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({ getToken }) }));
 
-// Faceted, as the API sends them: with no filter on, the venues and the
-// statuses each add up to the 1,204 rows.
+// Faceted, as the API sends them: the venues and the statuses each add up to
+// the 1,204 rows the filters allow. `all` (the side and the search) differs
+// on purpose, so a picker that offered it with nothing ticked would fail.
 const page: EventListPage = {
   rows: [],
   total: 1204,
   counts: {
-    all: 1204,
+    all: 1300,
     noPrice: 214,
     hidden: 4,
     byStatus: {
@@ -130,6 +133,29 @@ describe('EventsClient filters', () => {
     expect(
       within(popover).getByRole('button', { name: 'Show 9' }),
     ).toBeInTheDocument();
+  });
+
+  it('holds Show N while counts for other filters reload, with ticks still editable', async () => {
+    const { rerender } = render(<EventsClient />);
+    await screen.findByTestId('venue-filter-chip');
+    let resolve: (value: EventListPage) => void = () => undefined;
+    list.mockReturnValueOnce(
+      new Promise<EventListPage>((done) => {
+        resolve = done;
+      }),
+    );
+    mockSearch = 'statuses=postponed';
+    rerender(<EventsClient />);
+    fireEvent.click(screen.getByTestId('venue-filter-chip'));
+    const popover = screen.getByTestId('venue-filter');
+    const show = within(popover).getByRole('button', { name: /^Show / });
+    expect(show).toBeDisabled();
+    const box = within(popover).getByLabelText(/Red Rocks/);
+    fireEvent.click(box);
+    expect(box).toBeChecked();
+
+    await act(async () => resolve(page));
+    await waitFor(() => expect(show).toBeEnabled());
   });
 
   it('keeps a ticked venue listed at 0 when the search drops it', async () => {

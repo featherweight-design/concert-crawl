@@ -198,6 +198,9 @@ export const EventsClient = () => {
     loaded !== null && loaded.when === filters.when
       ? loaded.data.counts
       : undefined;
+  // Those last counts belong to other filters while this load is in flight,
+  // so a picker's Show N waits for the new ones.
+  const countsStale = pending && loaded !== null && loaded.key !== filtersKey;
 
   const header = (
     <header style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -329,6 +332,7 @@ export const EventsClient = () => {
         testId="venue-filter"
         search={COPY.findVenue}
         max={MAX_VENUE_FILTER}
+        stale={countsStale}
         unticked={shownCounts.byVenue.reduce(
           (sum, venue) => sum + venue.total,
           0,
@@ -353,6 +357,7 @@ export const EventsClient = () => {
         key="status"
         label={COPY.anyStatus}
         testId="status-filter"
+        stale={countsStale}
         // Every status, not only the pickable ones: with nothing ticked,
         // No longer listed and Played rows show too.
         unticked={EVENT_LIST_STATUSES.reduce(
