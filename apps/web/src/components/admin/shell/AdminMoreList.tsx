@@ -7,7 +7,6 @@ import {
   ChevronRight,
   ExternalLink,
   LogOut,
-  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -101,19 +100,6 @@ interface MoreRow {
   icon: LucideIcon;
 }
 
-/**
- * The robots.txt audit lost its button with the old Venues page, and nothing
- * else links it. It joins System as an interim row, drawn as
- * `08/more-interim-m` draws one: the same row, no badge.
- */
-const ROBOTS_AUDIT_ROW: MoreRow = {
-  key: 'robots-audit',
-  label: ADMIN_COPY.shell.more.robotsAudit.title,
-  detail: ADMIN_COPY.shell.more.robotsAudit.detail,
-  href: '/admin/venues/robots-audit',
-  icon: ShieldCheck,
-};
-
 const rowsFor = (
   group: Exclude<NavGroup, 'primary'>,
   data: AdminMoreDetails,
@@ -125,7 +111,7 @@ const rowsFor = (
     href: item.href,
     icon: item.icon,
   }));
-  return group === 'system' ? [...rows, ROBOTS_AUDIT_ROW] : rows;
+  return rows;
 };
 
 const actionStyle: React.CSSProperties = {

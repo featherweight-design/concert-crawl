@@ -355,14 +355,17 @@ const PhoneCard = ({ venue }: { venue: VenueListRow }) => (
 export const VenuesList = ({
   venues,
   needsYou = null,
+  initialFilter = 'all',
 }: {
   venues: VenueListRow[] | null;
+  /** The filter chip chosen on arrival (`?robots=disallowed` from the old audit). */
+  initialFilter?: VenueFilter;
   /** Open Needs you items; null when that list didn't load. */
   needsYou?: readonly Pick<NeedsYouItem, 'venueId'>[] | null;
 }) => {
   const router = useRouter();
   const isPhone = useIsPhone();
-  const [chosenFilter, setFilter] = useState<VenueFilter>('all');
+  const [chosenFilter, setFilter] = useState<VenueFilter>(initialFilter);
   // "Needs a look" without the Needs you list would hide every row with no
   // chip left to clear it, so it falls back to All.
   const filter: VenueFilter =

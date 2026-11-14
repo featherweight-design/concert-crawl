@@ -24,11 +24,7 @@ const PEOPLE_TABS = new Map<string, string>([
   [POSTERS_PATH, ADMIN_COPY.codesPage.tabs.posters],
 ]);
 
-const subLabelFor = (item: NavItem, pathname: string): string => {
-  if (pathname === '/admin/venues/robots-audit') {
-    // The tool's crumb reads from its page title so the two cannot drift.
-    return ADMIN_COPY.robotsAudit.page.title;
-  }
+const subLabelFor = (item: NavItem): string => {
   // A venue's own name replaces this once its page sets the title; until
   // then the slot holds the board's placeholder (`07/loading-venue-page`).
   if (item.key === 'venues') return ADMIN_COPY.shell.crumbs.venuePending;
@@ -75,8 +71,5 @@ export function buildBreadcrumbs(
       { label: peopleTab, subtitle: true },
     ];
   }
-  return [
-    { label: item.label, href: item.href },
-    { label: subLabelFor(item, pathname) },
-  ];
+  return [{ label: item.label, href: item.href }, { label: subLabelFor(item) }];
 }
