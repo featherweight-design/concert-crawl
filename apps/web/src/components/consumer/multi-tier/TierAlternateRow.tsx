@@ -2,24 +2,14 @@
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { displayVendor } from '@/components/consumer/vendor-display';
+import { TRUST_TOKENS, type TrustKind } from '@/components/consumer/glyphs';
 
 const copy = CONSUMER_COPY.multiTier;
 
-// ── Color constants ──────────────────────────────────────────────
-const GOLD = 'oklch(0.66 0.14 78)';
-const AZURE = 'oklch(0.62 0.12 240)';
-const AZURE_M = 'oklch(0.62 0.12 240)';
-const CORAL = 'oklch(0.65 0.20 25)';
-
 // ── Helpers ──────────────────────────────────────────────────────
-const dotColor = (
-  kind: 'community' | 'boxoffice' | 'resale' | null,
-): string => {
-  if (kind === 'boxoffice') return GOLD;
-  if (kind === 'resale') return CORAL;
-  if (kind === 'community') return AZURE;
-  return 'var(--fg-muted)';
-};
+// The kind dot reads the B+ trust tone (TRUST_TOKENS).
+const dotColor = (kind: TrustKind | null): string =>
+  kind ? TRUST_TOKENS[kind].tone : 'var(--fg-muted)';
 
 const formatPrice = (floor: number, ceiling?: number): string => {
   if (ceiling !== undefined) return `$${floor}–$${ceiling}`;
@@ -99,7 +89,7 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
             style={{
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '9.5px',
-              color: AZURE_M,
+              color: TRUST_TOKENS.community.text,
               textTransform: 'uppercase',
               fontWeight: 700,
               letterSpacing: '0.06em',

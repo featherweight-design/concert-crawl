@@ -1,6 +1,6 @@
 {
   "feature": "U15 PR A · Price trust tokens (B+ signal / danger / warning) and the fees toggle restyle",
-  "note": "Boards: addendum-4/05-price-cards/price-states-age-trust (Community #7AE6FF signal, Resale #FF7A8A danger, Box office #FFD27A warning; fees toggle `+$9.40 fees ›`, Inter 13px bold, signal), 06-states/bp-s-tiers_board. Read-only. The Neon scratch-contact-sheet branch has upcoming price submissions in the standard (Community) category only: one live (CF Fixture Open Mic Night, d101), one live plus two pending (CF Fixture Price Act, d102). It has no boxoffice or resale submission, live or pending, so the Box office and Resale levels cannot be shown, and the event page is server-fetched, so a route mock cannot stand in. The fees toggle cannot be shown either: the API never sets ticketFees, so it renders on no event (unit tests cover it with fixtures). TierMark has no production caller, so it has no row. Walk by hand once the data exists: a live and a pending Box office card, a live and a pending Resale card, all in Electric plus one light theme.",
+  "note": "Boards: addendum-4/05-price-cards/price-states-age-trust (Community #7AE6FF signal, Resale #FF7A8A danger, Box office #FFD27A warning; fees toggle `+$9.40 fees ›`, Inter 13px bold, signal), 06-states/bp-s-tiers_board. Read-only. The Neon scratch-contact-sheet branch has upcoming price submissions in the standard (Community) category only: one live (CF Fixture Open Mic Night, d101), one live plus two pending (CF Fixture Price Act, d102). It has no boxoffice or resale submission, live or pending, so the Box office and Resale levels cannot be shown, and /events/[id] fetches GET /v1/events/:id in the server component, so the kit's browser-side `route` step (page.route) never sees it and a mock cannot stand in. The fees toggle cannot be shown either: the API never sets ticketFees, so it renders on no event (unit tests cover it with fixtures). TierMark has no production caller, so it has no row. Walk by hand once the data exists: a live and a pending Box office card, a live and a pending Resale card, all in Electric plus one light theme.",
   "widths": [
     { "label": "phone", "width": 390, "height": 900, "touch": true },
     { "label": "desktop", "width": 1280, "height": 1000 }
@@ -11,7 +11,7 @@
       "label": "Event detail, live Community price: the trust pill in --signal (CF Fixture Open Mic Night)",
       "steps": [
         {
-          "goto": "/e/cf000000-0000-4000-8000-00000000d101",
+          "goto": "/events/cf000000-0000-4000-8000-00000000d101",
           "wait": "[data-testid=\"trust-pill-community\"]",
           "settle": 1000
         }
@@ -22,7 +22,7 @@
       "label": "Event detail, live Community price beside pending Community submissions (CF Fixture Price Act)",
       "steps": [
         {
-          "goto": "/e/cf000000-0000-4000-8000-00000000d102",
+          "goto": "/events/cf000000-0000-4000-8000-00000000d102",
           "wait": "[data-testid=\"trust-pill-community\"]",
           "settle": 1000
         }

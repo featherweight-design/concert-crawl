@@ -9,11 +9,13 @@ import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
 import { ReportGlyph } from './ReportTypeMark';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { TRUST_TOKENS } from '@/components/consumer/glyphs';
 import { denverTodayUtcMs } from '@/lib/time';
 
 const copy = REPORTING_COPY.evidenceForm;
 
-const AZURE = 'oklch(0.62 0.12 240)';
+// The selected method's edge and radio fill: the community trust tone.
+const AZURE = TRUST_TOKENS.community.tone;
 const NOTES_MAX_CHARS = 280;
 
 // ── Evidence method type ──────────────────────────────────────────

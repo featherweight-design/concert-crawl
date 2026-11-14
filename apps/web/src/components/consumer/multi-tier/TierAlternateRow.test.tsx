@@ -23,10 +23,10 @@ describe('TierAlternateRow', () => {
       'div[style*="border-radius: 2.5px"]',
     ) as HTMLElement | null;
     expect(dot).not.toBeNull();
-    expect(dot!.style.background).toContain('oklch(0.66 0.14 78)');
+    expect(dot!.style.background).toBe('var(--warning)');
   });
 
-  it('renders community kind with azure dot', () => {
+  it('renders community kind with a signal dot', () => {
     const { container } = render(
       <TierAlternateRow tier="GA" vendor="AXS" floor={30} kind="community" />,
     );
@@ -34,10 +34,10 @@ describe('TierAlternateRow', () => {
       'div[style*="border-radius: 2.5px"]',
     ) as HTMLElement | null;
     expect(dot).not.toBeNull();
-    expect(dot!.style.background).toContain('oklch(0.62 0.12 240)');
+    expect(dot!.style.background).toBe('var(--signal)');
   });
 
-  it('renders resale kind with coral dot (oklch(0.65 0.20 25))', () => {
+  it('renders resale kind with a danger dot', () => {
     const { container } = render(
       <TierAlternateRow
         tier="VIP"
@@ -50,8 +50,7 @@ describe('TierAlternateRow', () => {
       'div[style*="border-radius: 2.5px"]',
     ) as HTMLElement | null;
     expect(dot).not.toBeNull();
-    // JSDOM normalizes 0.20 → 0.2
-    expect(dot!.style.background).toContain('oklch(0.65 0.2 25)');
+    expect(dot!.style.background).toBe('var(--danger)');
     expect(screen.getByText('StubHub')).toBeDefined();
     expect(screen.getByText('$150')).toBeDefined();
   });
