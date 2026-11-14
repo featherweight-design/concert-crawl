@@ -707,8 +707,9 @@ export interface ActiveCrawlAlert {
 }
 
 // DailyCost — one zero-filled day bucket from GET /v1/admin/costs/daily.
-// `date` is a Mountain-Time calendar date (YYYY-MM-DD); `costUsd` is the
-// coalesced sum of crawl_runs.llm_cost_usd for runs on that MT day.
+// `date` is a Mountain-Time calendar date (YYYY-MM-DD); `costUsd` is that MT
+// day's LLM spend as the monthly budget counts it: crawl_runs.llm_cost_usd
+// plus the cost_tracking rows of crawler-core's LLM_SERVICES.
 export interface DailyCost {
   date: string;
   costUsd: number;
