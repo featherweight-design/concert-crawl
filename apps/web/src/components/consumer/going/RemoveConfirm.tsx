@@ -49,7 +49,7 @@ export const RemoveConfirm = ({
     // The eyebrow and Cancel share one row (`remove-busy-m`), and the desktop
     // dialog wears the gradient top edge (`event-past-remove-d`).
     eyebrow={GOING_COPY.eyebrow.past}
-    eyebrowMuted
+    eyebrowTone="muted"
     edgeFromSm
   >
     <div className="flex flex-col gap-3 pt-1">

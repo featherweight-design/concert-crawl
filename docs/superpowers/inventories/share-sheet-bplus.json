@@ -1,0 +1,60 @@
+{
+  "feature": "U12 PR B · B+ share sheet: SHARE THIS SHOW eyebrow, boxed ×, ring-framed preview, SHAPE tiles with outline glyphs, gradient Share… with icon, Save image and Copy link side by side",
+  "note": "Plan: b1-u12-plan.md §1 Sheet. Boards (design/design_handoff_bplus_redesign/screens/07-more-screens/): phone = more-r3-share_m (Wide selected), more-r3-share_m_square (Square selected); desktop = more-r3-share_d (Story selected, 440px centred dialog). Phone Story and desktop Square/Wide are undrawn; their rows check the drawn chrome only. The poster inside the ring is PR A's image route: until PR A lands it is the pre-B+ poster, which is expected. Share… only renders where navigator.share exists, so headless desktop Chromium may show Save image and Copy link alone. Walk by hand: Escape, Tab wrap inside the dialog, and a real Share… on an Android phone (twice in a row, to prove the click keeps its activation).",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1280, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "share-story",
+      "label": "/events/[id] → Share: sheet open, Story selected (desktop board more-r3-share_d)",
+      "steps": [
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 1000 },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "clickRole": "button", "name": "^Share this show$" },
+        { "waitDialog": "^Share this show$" },
+        {
+          "wait": "[data-testid=\"share-shape-story\"][aria-pressed=\"true\"]",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "share-square",
+      "label": "/events/[id] → Share: sheet open, Square selected (phone board more-r3-share_m_square)",
+      "steps": [
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 1000 },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "clickRole": "button", "name": "^Share this show$" },
+        { "waitDialog": "^Share this show$" },
+        { "click": "[data-testid=\"share-shape-square\"]" },
+        {
+          "wait": "[data-testid=\"share-shape-square\"][aria-pressed=\"true\"]",
+          "settle": 4000
+        }
+      ]
+    },
+    {
+      "id": "share-wide",
+      "label": "/events/[id] → Share: sheet open, Wide selected (phone board more-r3-share_m)",
+      "steps": [
+        { "goto": "/events/${CC_EVENT_ID}", "settle": 1000 },
+        {
+          "wait": "button[aria-label^=\"Account menu\"]:not([aria-label*=\"sign up\"]):visible"
+        },
+        { "clickRole": "button", "name": "^Share this show$" },
+        { "waitDialog": "^Share this show$" },
+        { "click": "[data-testid=\"share-shape-link\"]" },
+        {
+          "wait": "[data-testid=\"share-shape-link\"][aria-pressed=\"true\"]",
+          "settle": 4000
+        }
+      ]
+    }
+  ]
+}

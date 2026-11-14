@@ -3,6 +3,7 @@ import {
   canShareFiles,
   canSystemShare,
   copyLink,
+  fetchPosterFile,
   posterFileName,
   posterImageUrl,
   publicEventUrl,
@@ -127,12 +128,40 @@ describe('canShareFiles', () => {
   });
 });
 
+describe('fetchPosterFile', () => {
+  it('turns the PNG into a named file', async () => {
+    const fetchImpl = vi.fn(async () => pngResponse());
+    const file = await fetchPosterFile(
+      '/share/x/story',
+      'poster.png',
+      fetchImpl,
+    );
+    expect(file?.name).toBe('poster.png');
+    expect(file?.type).toBe('image/png');
+  });
+
+  it('resolves null on a failed render', async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 502 }));
+    expect(await fetchPosterFile('/x', 'p.png', fetchImpl)).toBeNull();
+  });
+
+  it('resolves null rather than throwing when offline', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchImpl = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    expect(await fetchPosterFile('/x', 'p.png', fetchImpl)).toBeNull();
+  });
+});
+
 describe('systemShare', () => {
+  const png = new File([new Uint8Array([0x89])], 'poster.png', {
+    type: 'image/png',
+  });
   const args = {
     title: 'Snakebite Revival at Bluebird Theater',
     url: `https://concertcrawl.app/e/${EVENT_ID}`,
-    imageUrl: `/share/${EVENT_ID}/story`,
-    fileName: 'poster.png',
+    file: png,
   };
 
   it('reports unsupported where there is no share API', async () => {
@@ -142,10 +171,17 @@ describe('systemShare', () => {
   it('shares the PNG when the platform accepts files', async () => {
     const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
     const caps: ShareCapabilities = { share, canShare: () => true };
-    const fetchImpl = vi.fn(async () => pngResponse());
-    expect(await systemShare(caps, { ...args, fetchImpl })).toBe('shared');
+    expect(await systemShare(caps, args)).toBe('shared');
     const payload = share.mock.calls[0]?.[0];
-    expect(payload?.files).toHaveLength(1);
+    expect(payload?.files).toEqual([png]);
+  });
+
+  // The whole point of the split from `fetchPosterFile`: any await before
+  // `share()` spends the click's transient activation.
+  it('calls share before its first await, so a click keeps its activation', () => {
+    const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
+    void systemShare({ share, canShare: () => true }, args);
+    expect(share).toHaveBeenCalledTimes(1);
   });
 
   // A poster with no way back to the show is a dead end, and the link is the
@@ -154,8 +190,7 @@ describe('systemShare', () => {
   it('keeps the link on the payload when the image is shared too', async () => {
     const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
     const caps: ShareCapabilities = { share, canShare: () => true };
-    const fetchImpl = vi.fn(async () => pngResponse());
-    await systemShare(caps, { ...args, fetchImpl });
+    await systemShare(caps, args);
     const payload = share.mock.calls[0]?.[0];
     expect(payload?.url).toBe(args.url);
     expect(payload?.text).toContain(args.url);
@@ -164,20 +199,16 @@ describe('systemShare', () => {
   it('falls back to a URL-only share when files are refused', async () => {
     const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
     const caps: ShareCapabilities = { share, canShare: () => false };
-    const fetchImpl = vi.fn(async () => pngResponse());
-    expect(await systemShare(caps, { ...args, fetchImpl })).toBe('shared');
+    expect(await systemShare(caps, args)).toBe('shared');
     const payload = share.mock.calls[0]?.[0];
     expect(payload?.files).toBeUndefined();
     expect(payload?.url).toBe(args.url);
   });
 
-  it('still shares the link when the poster fetch fails', async () => {
+  it('still shares the link while the poster is not in hand', async () => {
     const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
     const caps: ShareCapabilities = { share, canShare: () => true };
-    const fetchImpl = vi.fn(async () => {
-      throw new Error('offline');
-    });
-    expect(await systemShare(caps, { ...args, fetchImpl })).toBe('shared');
+    expect(await systemShare(caps, { ...args, file: null })).toBe('shared');
     expect(share.mock.calls[0]?.[0]?.files).toBeUndefined();
   });
 

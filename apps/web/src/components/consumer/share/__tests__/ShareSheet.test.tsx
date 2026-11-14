@@ -3,11 +3,13 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 vi.mock('@/theme/ThemeProvider', () => ({
   useTheme: () => ({ theme: 'jade' }),
@@ -180,6 +182,130 @@ describe('<ShareSheet />', () => {
     mount({ capabilities });
     fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
     await waitFor(() => expect(share).toHaveBeenCalled());
+  });
+
+  // #1446's lesson: an await before `navigator.share` spends the click's
+  // transient activation, so the first share works and the next is refused.
+  it('calls share inside the click itself, before any await', () => {
+    const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
+    mount({ capabilities: { share } });
+    fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
+    expect(share).toHaveBeenCalledTimes(1);
+  });
+
+  describe('the pre-fetched poster file', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    // Resolves only for the shapes listed; any other shape stays in flight.
+    const stubFetch = (ready: string[]) => {
+      const fetchMock = vi.fn((url: string) =>
+        ready.some((shape) => url.includes(`/${shape}`))
+          ? Promise.resolve({
+              ok: true,
+              blob: async () => new Blob([new Uint8Array([0x89])]),
+            })
+          : new Promise(() => {}),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    };
+    const flush = () =>
+      act(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+
+    it('hands the PNG fetched ahead of the click to the OS sheet', async () => {
+      const fetchMock = stubFetch(['story']);
+      const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
+      mount({ capabilities: { share, canShare: () => true } });
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+      await flush();
+      fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(share.mock.calls[0]?.[0]?.files).toHaveLength(1);
+    });
+
+    it("never hands over another shape's file", async () => {
+      stubFetch(['story']);
+      const share = vi.fn(async (_data: ShareData): Promise<void> => undefined);
+      mount({ capabilities: { share, canShare: () => true } });
+      await flush();
+      fireEvent.click(screen.getByRole('button', { name: 'Square' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Share…' }));
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(share.mock.calls[0]?.[0]?.files).toBeUndefined();
+    });
+
+    it('skips the fetch where the platform cannot take a file', () => {
+      const fetchMock = stubFetch(['story']);
+      mount({ capabilities: { share: async () => undefined } });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('as the B+ boards draw it', () => {
+    it('heads the sheet with the SHARE THIS SHOW eyebrow and a labelled ×', () => {
+      mount();
+      const dialog = screen.getByRole('dialog');
+      expect(
+        within(dialog).getAllByText('Share this show').length,
+      ).toBeGreaterThanOrEqual(1);
+      const close = screen.getByRole('button', { name: 'Close' });
+      expect(document.activeElement).toBe(close);
+    });
+
+    it('frames the preview in the signal ring', () => {
+      mount();
+      const ring = screen.getByTestId('share-preview-ring');
+      expect(ring.contains(screen.getByRole('img'))).toBe(true);
+    });
+
+    it('labels the shapes SHAPE and draws each tile with its outline glyph', () => {
+      mount();
+      const group = screen.getByRole('group', { name: 'Shape' });
+      for (const [shape, label] of [
+        ['story', 'Story'],
+        ['square', 'Square'],
+        ['link', 'Wide'],
+      ] as const) {
+        const tile = within(group).getByRole('button', { name: label });
+        expect(tile.querySelector(`svg[data-glyph="${shape}"]`)).not.toBeNull();
+      }
+      expect(
+        within(group)
+          .getByRole('button', { name: 'Story' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+    });
+
+    it('marks the picked shape and only that one', () => {
+      mount();
+      fireEvent.click(screen.getByRole('button', { name: 'Wide' }));
+      expect(
+        screen
+          .getByRole('button', { name: 'Wide' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+      expect(
+        screen
+          .getByRole('button', { name: 'Story' })
+          .getAttribute('aria-pressed'),
+      ).toBe('false');
+      expect(screen.getByRole('img').getAttribute('src')).toBe(
+        `/share/${EVENT_ID}/link?theme=jade`,
+      );
+    });
+
+    it('leads with Share… and its icon, then Save image and Copy link side by side', () => {
+      mount({ capabilities: { share: async () => undefined } });
+      const share = screen.getByRole('button', { name: 'Share…' });
+      expect(share.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+      const save = screen.getByRole('link', { name: 'Save image' });
+      const copy = screen.getByRole('button', { name: 'Copy link' });
+      expect(save.parentElement).toBe(copy.parentElement);
+      expect(save.parentElement?.className).toContain('flex');
+      expect(save.parentElement?.className).not.toContain('flex-col');
+    });
   });
 
   it('confirms a copied link politely', async () => {

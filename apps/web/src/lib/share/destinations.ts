@@ -103,43 +103,61 @@ export const canShareFiles = (caps: ShareCapabilities): boolean => {
 };
 
 /**
+ * Fetch the poster PNG as a `File`, ahead of any click.
+ *
+ * `navigator.share` needs the transient activation of the gesture that called
+ * it, and awaiting a multi-second render inside the click spends it: the first
+ * share squeaks through and the next raises NotAllowedError (the Passport hit
+ * exactly this, #1446). So the sheet calls this when a shape is picked and
+ * hands the result to `systemShare`, which never awaits before `share()`.
+ * Resolves null on any failure: the share degrades to the link.
+ */
+export const fetchPosterFile = async (
+  imageUrl: string,
+  fileName: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<File | null> => {
+  if (typeof File !== 'function') return null;
+  try {
+    const response = await fetchImpl(imageUrl);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new File([blob], fileName, { type: 'image/png' });
+  } catch (err) {
+    // A degradation, not a bug: the share still carries the link.
+    console.warn('[share] poster fetch failed, sharing link only', { err });
+    return null;
+  }
+};
+
+/**
  * Hand the poster to the OS share sheet.
  *
- * Tries the PNG first and falls back to a URL-only share, because
- * `canShare({ files })` is false on every desktop browser and on Android below
- * a certain version — and a link is still a share. The image fetch is inside
- * the try for the same reason: an offline user gets the link, not an error.
+ * Shares the pre-fetched PNG where the platform accepts files and falls back
+ * to a URL-only share, because `canShare({ files })` is false on every desktop
+ * browser and on Android below a certain version, and a link is still a share.
+ * ⚠ Reaches `share()` before its first await, so it can be called straight
+ * from a click without spending the user's transient activation.
  */
 export const systemShare = async (
   caps: ShareCapabilities,
   args: {
     title: string;
     url: string;
-    imageUrl: string;
-    fileName: string;
-    fetchImpl?: typeof fetch;
+    /** From `fetchPosterFile`, or null while it is pending or after it failed. */
+    file: File | null;
   },
 ): Promise<ShareOutcome> => {
   const { share, canShare } = caps;
   if (typeof share !== 'function') return 'unsupported';
 
   let files: File[] | undefined;
-  if (typeof canShare === 'function' && typeof File === 'function') {
+  if (args.file !== null && typeof canShare === 'function') {
     try {
-      const fetcher = args.fetchImpl ?? fetch;
-      const response = await fetcher(args.imageUrl);
-      if (response.ok) {
-        const blob = await response.blob();
-        const candidate = [
-          new File([blob], args.fileName, { type: 'image/png' }),
-        ];
-        if (canShare({ files: candidate })) {
-          files = candidate;
-        }
-      }
+      if (canShare({ files: [args.file] })) files = [args.file];
     } catch (err) {
-      // Fall through to the URL-only share — this is a degradation, not a bug.
-      console.warn('[share] poster fetch failed, sharing link only', { err });
+      // Feature detection must never be the thing that breaks the share.
+      console.warn('[share] canShare threw, sharing link only', { err });
     }
   }
 
