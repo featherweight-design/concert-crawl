@@ -324,67 +324,42 @@ const SIGIL_RENDERERS: Record<
 /**
  * The generic patch (B+ addendum 5 item 13, `13/hex-patch-and-theme-mark`):
  * where no crew exists yet, the patch's frame holding the hex glyph in the
- * default chord (signal and accent). Rings and spokes stand in for the weave;
- * the glyph is the board's SVG (56-unit kit) with a short spoke at each
- * vertex, scaled into the 100-unit box.
+ * default chord (signal and accent). The weave and the glyph are the board's
+ * own SVG, drawn in its 56-unit kit and scaled into the 100-unit box:
+ * `addendum-5/boards/13-held-bplus/hex-patch-and-theme-mark.html`.
  */
+const KIT_TO_BOX = 100 / 56;
+
 const GENERIC_WEAVE = ({ pri }: LayerColors) => (
-  <g>
-    {[15, 24, 33, 42].map((radius) => (
+  <g transform={`scale(${KIT_TO_BOX})`}>
+    {[10, 17, 24].map((radius) => (
       <circle
         key={radius}
-        cx="50"
-        cy="50"
+        cx="28"
+        cy="28"
         r={radius}
         fill="none"
         stroke={pri}
-        strokeOpacity="0.16"
-        strokeWidth="1"
+        strokeOpacity="0.18"
       />
     ))}
-    {radial(12, () => (
-      <line
-        x1="50"
-        y1="8"
-        x2="50"
-        y2="30"
-        stroke={pri}
-        strokeOpacity="0.12"
-        strokeWidth="1"
-      />
-    ))}
-  </g>
-);
-
-const GENERIC_HEX_VERTICES = [
-  [28, 15],
-  [39, 21.5],
-  [39, 34.5],
-  [28, 41],
-  [17, 34.5],
-  [17, 21.5],
-] as const;
-
-const GENERIC_SIGIL = ({ pri, sec }: LayerColors) => (
-  <g transform={`scale(${100 / 56})`}>
-    {GENERIC_HEX_VERTICES.map(([vx, vy]) => {
-      // A short spoke leaving each vertex along the line from the centre.
-      const dx = vx - 28;
-      const dy = vy - 28;
-      const len = Math.hypot(dx, dy);
+    {/* Twelve spokes from the centre out to r=30, a touch past the edge. */}
+    {Array.from({ length: 12 }, (_, i) => {
+      const angle = (i * 30 * Math.PI) / 180;
       return (
-        <line
-          key={`${vx}-${vy}`}
-          x1={vx}
-          y1={vy}
-          x2={(vx + (dx / len) * 4).toFixed(2)}
-          y2={(vy + (dy / len) * 4).toFixed(2)}
-          stroke={sec}
-          strokeWidth="2.4"
-          strokeLinecap="round"
+        <path
+          key={i}
+          d={`M28 28L${(28 + Math.cos(angle) * 30).toFixed(1)} ${(28 + Math.sin(angle) * 30).toFixed(1)}`}
+          stroke={pri}
+          strokeOpacity="0.1"
         />
       );
     })}
+  </g>
+);
+
+const GENERIC_SIGIL = ({ pri, sec }: LayerColors) => (
+  <g transform={`scale(${KIT_TO_BOX})`}>
     <path
       d="M28 15l11 6.5v13L28 41l-11-6.5v-13z"
       fill="none"
@@ -392,6 +367,12 @@ const GENERIC_SIGIL = ({ pri, sec }: LayerColors) => (
       strokeWidth="2.4"
     />
     <path d="M28 21l6 3.5v7L28 35l-6-3.5v-7z" fill={pri} />
+    {/* The six arms the hex holds out, one from each side. */}
+    <path
+      d="M28 9v6M28 41v6M12 19l5 2.5M39 34.5l5 2.5M12 37l5-2.5M39 21.5l5-2.5"
+      stroke={sec}
+      strokeWidth="1.6"
+    />
   </g>
 );
 
