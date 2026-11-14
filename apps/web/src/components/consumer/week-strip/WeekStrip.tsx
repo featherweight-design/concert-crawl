@@ -36,7 +36,7 @@ interface WeekStripProps {
 }
 
 const tileBase =
-  'flex h-[60px] min-w-0 flex-col items-center justify-center rounded-xl sm:h-[66px]';
+  'flex h-[60px] min-w-0 flex-col items-center justify-center rounded-xl lg:h-[66px]';
 
 const labelStyle: CSSProperties = {
   fontFamily: 'var(--font-mono)',
@@ -74,7 +74,7 @@ export function WeekStrip({
   buildHref,
 }: WeekStripProps) {
   return (
-    <div className="mb-5 grid min-w-0 grid-cols-7 gap-1 sm:gap-2">
+    <div className="mb-5 grid min-w-0 grid-cols-7 gap-1 lg:gap-2">
       {days.map((day) => {
         const selected = day.date === selectedDate;
         const isPast = day.date < today;

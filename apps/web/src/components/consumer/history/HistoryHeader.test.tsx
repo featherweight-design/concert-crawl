@@ -163,7 +163,7 @@ describe('HistoryHeader rule', () => {
     render(<HistoryHeader stats={STATS} />);
     const list = screen.getByTestId('history-header').querySelector('dl');
     expect(list?.classList).toContain('grid-cols-3');
-    expect(list?.classList).toContain('sm:flex');
+    expect(list?.classList).toContain('lg:flex');
   });
 
   // The rule must sit in a 1px transparent border row, as the old `border-b`

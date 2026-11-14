@@ -216,9 +216,9 @@ export const FollowShelf = ({
           clipped; from sm up a matching negative margin keeps the cards
           aligned with the page. Up to ten cards scroll sideways at every
           width, with no end card (addendum 2, item 20). */}
-      <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:-mx-3 sm:max-w-[calc(100%+1.5rem)]">
+      <div className="relative -mx-4 max-w-[100vw] overflow-hidden lg:-mx-3 lg:max-w-[calc(100%+1.5rem)]">
         <ul
-          className={`flex list-none px-4 py-3 sm:px-3 ${SHELF_RAIL_SCROLL_CLASS} ${SHELF_RAIL_GAP_CLASS}`}
+          className={`flex list-none px-4 py-3 lg:px-3 ${SHELF_RAIL_SCROLL_CLASS} ${SHELF_RAIL_GAP_CLASS}`}
         >
           {visible.map((artist) => (
             <ShelfCard

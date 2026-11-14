@@ -17,8 +17,8 @@ const copy = CONSUMER_COPY;
 
 /** The spotlight art per breakpoint (B+ boards): 97 below `sm`, 130 from it. */
 const HERO_ART_SIZES = [
-  { size: 97, className: 'block sm:hidden' },
-  { size: 130, className: 'hidden sm:block' },
+  { size: 97, className: 'block lg:hidden' },
+  { size: 130, className: 'hidden lg:block' },
 ] as const;
 
 export { spotlightGlow } from './lib/hero-frame';
@@ -146,7 +146,7 @@ export function HeroEventCard({
             status={event.status}
             surface="hero"
             maxInline={3}
-            supportClassName="hidden sm:block"
+            supportClassName="hidden lg:block"
           />
           <div
             className="mt-2 flex items-center gap-1.5 text-fg-muted"

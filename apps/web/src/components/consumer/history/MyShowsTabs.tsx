@@ -48,7 +48,7 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
     aria-label={COPY.ariaLabel}
     // B+ (`bp-watching`, `bp-m-*_m`): free-standing tabs on both densities,
     // no tray; the current one is lifted with the gradient hairline.
-    className="mb-4 flex gap-1 sm:mb-6 sm:gap-2"
+    className="mb-4 flex gap-1 lg:mb-6 lg:gap-2"
   >
     {TABS.map((tab) => {
       const current = tab.key === active;
@@ -68,7 +68,7 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
             count === null ? undefined : COPY.tabCountAria(tab.label, count)
           }
           data-current={current || undefined}
-          className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3.5 sm:flex-none sm:justify-start sm:gap-2 sm:px-4"
+          className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3.5 lg:flex-none lg:justify-start lg:gap-2 lg:px-4"
           style={{
             fontFamily: 'var(--font-ui)',
             fontSize: 14,

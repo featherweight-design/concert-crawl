@@ -35,14 +35,14 @@ function ExampleList() {
         {copy.exampleRows.map((row) => (
           <div
             key={row.artist}
-            className="grid grid-cols-[34px_1fr_auto] items-center gap-2.5 rounded-[10px] px-2.5 py-2 sm:grid-cols-[40px_1fr_auto]"
+            className="grid grid-cols-[34px_1fr_auto] items-center gap-2.5 rounded-[10px] px-2.5 py-2 lg:grid-cols-[40px_1fr_auto]"
             style={{
               background: 'var(--surface-1)',
               border: '1px solid var(--border)',
             }}
           >
             <span
-              className="size-[34px] rounded-[7px] sm:size-10"
+              className="size-[34px] rounded-[7px] lg:size-10"
               style={{
                 background:
                   'color-mix(in oklch, var(--signal) 12%, var(--surface-2))',
@@ -272,12 +272,12 @@ export function WatchingSignedOut() {
           columns are head+CTA and example+facts, so the CTA lands before the
           example in source and the visual order is a column reflow, not a
           reorder. */}
-      <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 sm:gap-10">
-        <div className="flex flex-col gap-5 sm:gap-[22px]">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2 lg:gap-10">
+        <div className="flex flex-col gap-5 lg:gap-[22px]">
           <Head />
           <Cta />
         </div>
-        <div className="flex flex-col gap-5 sm:gap-[22px]">
+        <div className="flex flex-col gap-5 lg:gap-[22px]">
           <ExampleList />
           <FactList />
         </div>

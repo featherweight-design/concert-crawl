@@ -20,7 +20,7 @@ export default function FollowingLoading() {
       <main className="w-full flex-1">
         <MyShowsHeadlineSkeleton />
         <MyShowsGroupSkeleton />
-        <div className="flex flex-col gap-2.5 sm:grid sm:grid-cols-2 sm:gap-3">
+        <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-2 lg:gap-3">
           {Array.from({ length: ROWS }).map((_, idx) => (
             <MyShowsRowSkeleton
               key={idx}

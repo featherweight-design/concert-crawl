@@ -1,7 +1,7 @@
 import { formatEventDate } from '@/components/consumer/definitions/lib';
 
 /** The month tile's size classes, shared with the artist skeleton's row. */
-export const MONTH_TILE_SIZE = 'h-[58px] w-12 md:h-[62px] md:w-14';
+export const MONTH_TILE_SIZE = 'h-[58px] w-12 lg:h-[62px] lg:w-14';
 
 interface DayTileProps {
   /** The group's `YYYY-MM-DD`, as Browse keys its date groups. */

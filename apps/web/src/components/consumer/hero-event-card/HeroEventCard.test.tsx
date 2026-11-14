@@ -144,8 +144,8 @@ describe('HeroEventCard — band layout (#1525 PR 4)', () => {
     const { container } = render(<HeroEventCard event={baseEvent} />);
     const phone = container.querySelector<HTMLElement>('[data-hero-art="97"]');
     const wide = container.querySelector<HTMLElement>('[data-hero-art="130"]');
-    expect(phone?.className).toBe('block sm:hidden');
-    expect(wide?.className).toBe('hidden sm:block');
+    expect(phone?.className).toBe('block lg:hidden');
+    expect(wide?.className).toBe('hidden lg:block');
     const panelOf = (host: HTMLElement | null) =>
       host?.querySelector<HTMLElement>('span[aria-hidden="true"]');
     expect(panelOf(phone)?.style.width).toBe('97px');
@@ -163,7 +163,7 @@ describe('HeroEventCard — band layout (#1525 PR 4)', () => {
     );
     const support = screen.getByTestId('title-support');
     expect(support.classList.contains('hidden')).toBe(true);
-    expect(support.classList.contains('sm:block')).toBe(true);
+    expect(support.classList.contains('lg:block')).toBe(true);
     expect(support.textContent).toContain('Opener One');
   });
 

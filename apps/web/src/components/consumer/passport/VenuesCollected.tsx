@@ -31,7 +31,7 @@ export function VenuesCollected({
           {COPY.collectedCount(collected, total)}
         </span>
       </div>
-      <ul className="grid grid-cols-5 gap-2 sm:gap-3">
+      <ul className="grid grid-cols-5 gap-2 lg:gap-3">
         {venues.map((venue) => (
           <li
             key={venue.slug}

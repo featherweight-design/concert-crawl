@@ -50,7 +50,7 @@ export const MyShowsEmptyCard = ({
 }: MyShowsEmptyCardProps) => (
   <div
     data-testid={testId}
-    className="flex flex-col items-center rounded-[18px] border border-dashed border-border-strong px-5 py-8 text-center sm:px-10 sm:py-10"
+    className="flex flex-col items-center rounded-[18px] border border-dashed border-border-strong px-5 py-8 text-center lg:px-10 lg:py-10"
     style={style}
   >
     <div aria-hidden className="mb-5 flex justify-center">

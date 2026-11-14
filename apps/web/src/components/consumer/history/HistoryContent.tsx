@@ -138,7 +138,7 @@ const AttendanceSection = ({
   restoredId: string | null;
   actionsFor?: ((show: HistoryShow) => RowActions) | undefined;
 }) => (
-  <section aria-label={heading} className="flex flex-col gap-2 sm:gap-3">
+  <section aria-label={heading} className="flex flex-col gap-2 lg:gap-3">
     <h2
       style={{
         fontFamily: 'var(--font-ui)',

@@ -305,7 +305,7 @@ export function FilterPopover({
       role="dialog"
       aria-label={`${title} filter`}
       data-testid="filter-popover"
-      className={`sheet-edge fixed z-50 hidden min-w-[240px] flex-col overscroll-contain [--sheet-bg:var(--surface-2)] sm:flex ${wideBody ? 'pb-4' : 'pb-2'}`}
+      className={`sheet-edge fixed z-50 hidden min-w-[240px] flex-col overscroll-contain [--sheet-bg:var(--surface-2)] lg:flex ${wideBody ? 'pb-4' : 'pb-2'}`}
       style={{
         ...placement,
         left,
