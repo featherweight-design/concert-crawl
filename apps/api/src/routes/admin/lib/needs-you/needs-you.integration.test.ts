@@ -242,6 +242,8 @@ describe('Needs you sources and ranking', () => {
 
   it('sends at most fourteen runs per venue, newest first', async () => {
     const venue = await seedVenue({ name: 'Junkyard', slug: 'junkyard' });
+    const hoursAgo = (hours: number): Date =>
+      new Date(now().getTime() - hours * 60 * 60 * 1000);
     for (let hours = 40; hours >= 1; hours -= 2) {
       await seedCrawlRun(venue.id, {
         status: 'failed',
