@@ -36,7 +36,8 @@ const batchSchema = z.object({
   crawlAll: z.boolean(),
   venueName: z.string().nullable(),
   actorHandle: z.string().nullable(),
-  retry: z.object({ at: z.string() }).nullable(),
+  // A retried night's later waves: when, and what they ran.
+  retry: z.object({ at: z.string(), counts: countsSchema }).nullable(),
 });
 export type BatchRow = z.infer<typeof batchSchema>;
 
@@ -86,6 +87,30 @@ export const batchesPath = (
   const query = new URLSearchParams({ kind: filter, limit: String(limit) });
   if (before !== null) query.set('before', before);
   return `/v1/admin/crawl/batches?${query.toString()}`;
+};
+
+/**
+ * `GET /v1/admin/crawl/estimate`'s `nextCrawlAt` (the API's nextDailyCrawlAt):
+ * the next nightly, ISO, or null where no nightly runs (not production).
+ */
+const nextCrawlSchema = z.object({
+  success: z.literal(true),
+  data: z.object({ nextCrawlAt: z.iso.datetime().nullable().optional() }),
+});
+
+export const fetchNextCrawlAt = async (
+  getToken: () => Promise<string | null>,
+): Promise<string | null> => {
+  const token = await getToken();
+  if (!token) throw new Error('No session token');
+  const res = await fetch(`${API_BASE}/v1/admin/crawl/estimate`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  const body: unknown = await res.json().catch(() => null);
+  const parsed = res.ok ? nextCrawlSchema.safeParse(body) : null;
+  if (!parsed?.success) throw new Error(`crawl estimate: status ${res.status}`);
+  return parsed.data.data.nextCrawlAt ?? null;
 };
 
 export const fetchBatchPage = async (

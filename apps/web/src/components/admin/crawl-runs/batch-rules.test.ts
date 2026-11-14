@@ -11,7 +11,9 @@ import {
   crawlRunsHref,
   filterFromParam,
   isClickableBatch,
+  finalCounts,
   isNotOkBatch,
+  keepForFilter,
   notOkCountOf,
 } from './batch-rules';
 
@@ -80,6 +82,24 @@ const didntStart = nightly({
   costUsd: 0,
   didntStart: true,
   linkKey: 'nightly:2026-11-08',
+});
+
+const blockedNight = nightly({
+  key: 'nightly:2026-11-10',
+  counts: {
+    ...COUNTS,
+    ok: 13,
+    unchanged: 6,
+    notOk: 2,
+    failed: 1,
+    blocked: 1,
+    total: 21,
+  },
+});
+
+const failedRecrawl = byHand({
+  key: 'by_hand:user_1:1762790000',
+  counts: { ...COUNTS, notOk: 1, failed: 1, total: 1 },
 });
 
 describe('batchLabel (WHAT)', () => {
@@ -184,14 +204,75 @@ describe('batchSummary (SUMMARY)', () => {
     expect(batchSummary(running)).toBe('8 of 19 so far · 7 OK · 1 unchanged');
   });
 
-  it('ends a retried night with its retry time (ruling 18)', () => {
+  it('ends a retried night with its retry time, counting each venue once (ruling 18)', () => {
+    // 3:00: 14 OK, 4 unchanged, 3 failed. 4:10: the 3 re-run, 2 OK, 1 failed.
     const retried = nightly({
-      counts: { ...COUNTS, ok: 16, unchanged: 5, total: 21 },
-      retry: { at: '2026-11-11T11:10:00.000Z' },
+      counts: {
+        ...COUNTS,
+        ok: 16,
+        unchanged: 4,
+        notOk: 4,
+        failed: 4,
+        total: 24,
+      },
+      retry: {
+        at: '2026-11-11T11:10:00.000Z',
+        counts: { ...COUNTS, ok: 2, notOk: 1, failed: 1, total: 3 },
+      },
     });
     expect(batchSummary(retried)).toBe(
-      '21 venues · 16 OK · 5 unchanged · retried at 4:10 AM',
+      '21 venues · 16 OK · 4 unchanged · 1 failed · retried at 4:10 AM',
     );
+  });
+});
+
+describe('finalCounts (a retried night, M1)', () => {
+  const ALL_FAILED = { ...COUNTS, notOk: 21, failed: 21, total: 21 };
+  const ALL_OK = { ...COUNTS, ok: 21, total: 21 };
+
+  it('takes the retry over a night where every venue failed, then read OK', () => {
+    const night = nightly({
+      counts: { ...COUNTS, ok: 21, notOk: 21, failed: 21, total: 42 },
+      retry: { at: '2026-11-11T11:10:00.000Z', counts: ALL_OK },
+    });
+    expect(finalCounts(night)).toMatchObject({ ok: 21, notOk: 0, failed: 0 });
+    expect(batchSummary(night)).toBe('21 venues · 21 OK · retried at 4:10 AM');
+    expect(batchStatus(night)).toMatchObject({
+      key: 'done',
+      tone: 'var(--success)',
+    });
+    expect(isNotOkBatch(night)).toBe(false);
+  });
+
+  it('stays Failed when the retry failed every venue again', () => {
+    const night = nightly({
+      counts: { ...COUNTS, notOk: 42, failed: 42, total: 42 },
+      retry: { at: '2026-11-11T11:10:00.000Z', counts: ALL_FAILED },
+    });
+    expect(finalCounts(night)).toMatchObject({ ok: 0, notOk: 21, failed: 21 });
+    expect(batchStatus(night).key).toBe('failed');
+  });
+
+  it('keeps the counts as sent without a retry', () => {
+    expect(finalCounts(nightly())).toEqual(nightly().counts);
+  });
+
+  it('counts a paused venue once though it skipped in both waves', () => {
+    const night = nightly({
+      counts: {
+        ...COUNTS,
+        ok: 20,
+        notOk: 20,
+        failed: 20,
+        skipped: 2,
+        total: 42,
+      },
+      retry: {
+        at: '2026-11-11T11:10:00.000Z',
+        counts: { ...COUNTS, ok: 20, skipped: 1, total: 21 },
+      },
+    });
+    expect(finalCounts(night)).toMatchObject({ ok: 20, skipped: 1, notOk: 0 });
   });
 });
 
@@ -244,13 +325,28 @@ describe('filters', () => {
   });
 
   it('calls a batch Not OK as the API does', () => {
-    expect(isNotOkBatch(nightly())).toBe(true);
+    // A green Done with a failed run is not Not OK (07/crawl-runs-desktop).
+    expect(isNotOkBatch(nightly())).toBe(false);
     expect(isNotOkBatch(didntStart)).toBe(true);
     expect(isNotOkBatch(byHand())).toBe(false);
+    expect(isNotOkBatch(blockedNight)).toBe(true);
+    expect(isNotOkBatch(failedRecrawl)).toBe(true);
+    expect(isNotOkBatch(byHand({ pending: 3 }))).toBe(false);
+  });
+
+  it('keeps only the chip’s Not OK under Not OK', () => {
+    const rows = [nightly(), blockedNight, didntStart, failedRecrawl];
+    expect(keepForFilter('not_ok', rows)).toEqual([
+      blockedNight,
+      didntStart,
+      failedRecrawl,
+    ]);
+    expect(keepForFilter('all', rows)).toEqual(rows);
   });
 
   it('counts Not OK under All and Not OK, and holds under the others', () => {
-    const rows = [nightly(), byHand(), didntStart];
+    // The board: green "1 failed" nights don't count; amber and Didn't start do.
+    const rows = [nightly(), byHand(), blockedNight, didntStart];
     expect(notOkCountOf('all', rows)).toBe(2);
     expect(notOkCountOf('not_ok', [nightly()])).toBe(1);
     expect(notOkCountOf('nightly', rows)).toBeNull();

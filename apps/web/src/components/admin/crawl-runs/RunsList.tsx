@@ -319,7 +319,8 @@ export const RunsFilterEmpty = ({
       padding: '16px 18px',
       borderRadius: 14,
       border: '1px solid var(--border)',
-      background: 'var(--bg-elevated)',
+      // #11162E as drawn: the board both run lists cite.
+      background: 'var(--surface-1)',
     }}
   >
     <Check
@@ -367,6 +368,7 @@ export const LoadMoreFooter = ({
   note,
   failedLabel = COPY.loadMoreFailed,
   testId = 'runs-load-more',
+  padding,
 }: {
   shown: number;
   step: number;
@@ -378,6 +380,12 @@ export const LoadMoreFooter = ({
   note?: string | undefined;
   failedLabel?: string;
   testId?: string;
+  /**
+   * The row's padding inside a table card, where the divider runs edge to
+   * edge and the padding insets the content (`A3/09/load-more`: 12px 18px).
+   * Left out, the footer pads only its top.
+   */
+  padding?: string;
 }) => (
   <div
     data-testid={testId}
@@ -386,7 +394,7 @@ export const LoadMoreFooter = ({
       alignItems: 'center',
       flexWrap: 'wrap',
       gap: 12,
-      paddingTop: 12,
+      ...(padding === undefined ? { paddingTop: 12 } : { padding }),
       borderTop: '1px solid var(--border)',
     }}
   >
