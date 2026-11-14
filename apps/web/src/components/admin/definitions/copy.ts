@@ -2666,6 +2666,12 @@ export const ADMIN_COPY = {
       title: (count: number) =>
         `${count} new ${count === 1 ? 'price' : 'prices'}`,
       sub: 'Each one matches a second fan’s submission. Untick any you want to look at first.',
+      // The desktop panel (`10-needs-you-panels/price-batch-d`) says the same in
+      // its own words, and adds what approving does.
+      panelSub:
+        'Shows in the next 30 days. Each matches a second fan’s price. Untick any you want to look at first; they come back as their own item.',
+      footnote:
+        'Approving publishes them and thanks the fans in Submitted prices. It counts as one decision.',
       fans: (count: number) => `${count} ${count === 1 ? 'fan' : 'fans'}`,
       approve: (count: number) => `Approve ${count}`,
       approving: 'Approving…',

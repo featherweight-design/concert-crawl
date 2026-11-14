@@ -27,6 +27,7 @@ import { EvidenceSlot } from './EvidenceSlot';
 import { PausePanel } from '../venues/PausePanel';
 import { refusedStatus } from '../invite-codes/codes-api';
 import { PostponedDialog } from './PostponedDialog';
+import { PriceBatchPanel } from './PriceBatchPanel';
 import { PriceBatchSheet } from './PriceBatchSheet';
 import { QueueItem } from './QueueItem';
 import {
@@ -502,7 +503,19 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
         )}
       </div>
 
-      {selectedRow && (
+      {selectedRow && selectedRow.kind === 'price-batch' && !isPhone && (
+        // Review on a batch opens its own panel on desktop
+        // (`10-needs-you-panels/price-batch-d`); the phone has the sheet.
+        <PriceBatchPanel
+          row={{
+            key: selectedRow.key,
+            submissionIds: selectedRow.submissionIds,
+          }}
+          onApprove={(ids) => approveBatch(selectedRow, ids)}
+          onClose={() => select(null)}
+        />
+      )}
+      {selectedRow && !(selectedRow.kind === 'price-batch' && !isPhone) && (
         <EvidenceSlot
           row={selectedRow}
           answerFailed={failureInPanel ? failureToast : undefined}
