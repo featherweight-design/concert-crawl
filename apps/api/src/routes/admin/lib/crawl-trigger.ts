@@ -65,10 +65,7 @@ export const queueVenueCrawl = async (
 
   // Only once the trigger has committed: nothing wakes for a refusal.
   if (outcome.ok === 'queued') {
-    dispatchCrawlerInBackground({
-      triggerIds: [outcome.triggerId],
-      venueIds: [venueId],
-    });
+    dispatchCrawlerInBackground({ triggerIds: [outcome.triggerId] });
   }
   return outcome;
 };

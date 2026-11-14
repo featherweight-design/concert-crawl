@@ -179,52 +179,114 @@ describe('dispatchCrawlerInBackground', () => {
   });
 });
 
-describe('a dispatch that does not wake the crawler names the queued triggers', () => {
-  const queued = {
-    triggerIds: ['trigger-1', 'trigger-2'],
-    venueIds: ['venue-1', 'venue-2'],
-  };
+describe('a failed dispatch names the queued triggers', () => {
+  const queued = { triggerIds: ['trigger-1', 'trigger-2'] };
 
   function lastContext(): {
     level: string;
+    tags: Record<string, string>;
     extra: Record<string, unknown>;
   } {
     const [, context] = mockCaptureException.mock.calls.at(-1) as [
       Error,
-      { level: string; extra: Record<string, unknown> },
+      {
+        level: string;
+        tags: Record<string, string>;
+        extra: Record<string, unknown>;
+      },
     ];
     return context;
   }
 
-  it('reports a refused dispatch with the trigger and venue ids, leaving them unchanged', async () => {
+  it('reports a refused dispatch with the trigger ids, leaving them unchanged', async () => {
     const before = structuredClone(queued);
     fetchMock.mockResolvedValue(new Response('oops', { status: 502 }));
     dispatchCrawlerInBackground(queued);
     await drainBackgroundTasks();
     expect(mockCaptureException).toHaveBeenCalledTimes(1);
-    expect(lastReported().message).toContain('Crawler dispatch failed (502)');
-    expect(lastReported().message).toContain(
-      '2 queued crawl trigger(s) stay pending and run on the next daily crawl',
+    expect(lastReported().message).toBe(
+      'Crawler dispatch failed (502); 2 queued crawl trigger(s) stay pending; the next daily crawl drains them if it runs',
     );
     expect(lastContext().level).toBe('error');
+    expect(lastContext().tags).toEqual({
+      crawler_dispatch: 'failed',
+      crawler_dispatch_outcome: 'refused',
+    });
     expect(lastContext().extra).toMatchObject({
       triggerIds: ['trigger-1', 'trigger-2'],
-      venueIds: ['venue-1', 'venue-2'],
-      outcome: 'failed',
+      triggerCount: 2,
       status: 502,
     });
+    expect(lastContext().extra).not.toHaveProperty('venueIds');
     // The only request is the dispatch itself; nothing rewrites the rows.
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(queued).toEqual(before);
   });
 
-  it('reports a network failure with the trigger ids', async () => {
+  it('on staging, says the triggers wait for the next triggers dispatch', async () => {
+    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
     fetchMock.mockRejectedValue(new Error('ECONNRESET'));
     expect(await dispatchCrawler(queued)).toBe('failed');
-    expect(lastReported().message).toContain('next daily crawl');
+    expect(lastReported().message).toBe(
+      'Crawler dispatch request failed; 2 queued crawl trigger(s) stay pending until the next triggers dispatch',
+    );
+    expect(lastReported().message).not.toContain('daily');
+    expect(lastContext().tags['crawler_dispatch_outcome']).toBe(
+      'request_failed',
+    );
     expect(lastContext().extra).toMatchObject({
       triggerIds: queued.triggerIds,
     });
+  });
+
+  it('on a timeout, does not claim the triggers are still waiting', async () => {
+    const timeout = new Error('The operation was aborted due to timeout');
+    timeout.name = 'TimeoutError';
+    fetchMock.mockRejectedValue(timeout);
+    expect(await dispatchCrawler(queued)).toBe('failed');
+    expect(lastReported().message).toContain(
+      'GitHub may still have started the run; if not, the 2 queued crawl trigger(s) stay pending',
+    );
+    expect(lastContext().level).toBe('warning');
+    expect(lastContext().tags['crawler_dispatch_outcome']).toBe('timeout');
+  });
+
+  it('reports a throw with the trigger ids, tagged apart from a failure', async () => {
+    fetchMock.mockResolvedValue({
+      get ok(): boolean {
+        throw new Error('response exploded');
+      },
+    });
+    dispatchCrawlerInBackground(queued);
+    await drainBackgroundTasks();
+    expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    expect(lastReported().message).toContain('Crawler dispatch threw');
+    expect(lastContext().tags['crawler_dispatch_outcome']).toBe('threw');
+    expect(lastContext().extra).toMatchObject({
+      triggerIds: queued.triggerIds,
+      triggerCount: 2,
+    });
+  });
+
+  it('logs the trigger ids when the report itself throws, and never rejects', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    mockCaptureException.mockImplementation(() => {
+      throw new Error('sentry down');
+    });
+    fetchMock.mockResolvedValue({
+      get ok(): boolean {
+        throw new Error('response exploded');
+      },
+    });
+    dispatchCrawlerInBackground(queued);
+    await drainBackgroundTasks();
+    expect(consoleError).toHaveBeenCalledWith(
+      'Crawler dispatch threw and could not be reported',
+      expect.objectContaining({ triggerIds: queued.triggerIds }),
+    );
+    consoleError.mockRestore();
   });
 
   it('reports nothing when the dispatch succeeds', async () => {
@@ -241,26 +303,11 @@ describe('a dispatch that does not wake the crawler names the queued triggers', 
     expect(mockCaptureException).not.toHaveBeenCalled();
   });
 
-  it('reports nothing for a missing token off production and staging', async () => {
+  it('reports nothing for a missing token, the dormant state', async () => {
     vi.stubEnv('CRAWLER_DISPATCH_TOKEN', '');
-    vi.stubEnv('VERCEL_TARGET_ENV', '');
-    expect(await dispatchCrawler(queued)).toBe('skipped_no_token');
-    expect(mockCaptureException).not.toHaveBeenCalled();
-  });
-
-  it('warns about a missing token on staging, naming the triggers', async () => {
-    vi.stubEnv('CRAWLER_DISPATCH_TOKEN', '');
-    vi.stubEnv('VERCEL_TARGET_ENV', 'staging');
     expect(await dispatchCrawler(queued)).toBe('skipped_no_token');
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(lastReported().message).toContain(
-      'CRAWLER_DISPATCH_TOKEN is unset on the staging API',
-    );
-    expect(lastContext().level).toBe('warning');
-    expect(lastContext().extra).toMatchObject({
-      triggerIds: queued.triggerIds,
-      outcome: 'skipped_no_token',
-    });
+    expect(mockCaptureException).not.toHaveBeenCalled();
   });
 });
 

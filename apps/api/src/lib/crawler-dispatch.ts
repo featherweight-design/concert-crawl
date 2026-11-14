@@ -37,27 +37,48 @@ export type CrawlerDispatchResult =
 
 /**
  * The crawl_triggers rows a trigger dispatch is waking the crawler for. A
- * report about a dispatch that did not wake it names them, so the admin can
- * see which crawls wait for the next daily run. The rows themselves are never
- * touched here: they stay pending, and that run drains them.
+ * report about a dispatch that failed names them, so it is clear which crawls
+ * are still waiting. The rows themselves are never touched here: they stay
+ * pending until a later run drains them.
  */
 export interface QueuedTriggers {
   triggerIds: string[];
-  venueIds: string[];
 }
 
+/**
+ * What a failed dispatch tag says happened, so a timeout, a refusal and a
+ * throw can be told apart in Sentry.
+ */
+type DispatchFailure = 'timeout' | 'request_failed' | 'refused' | 'threw';
+
+/**
+ * Where the queued rows go from here. Only production has a daily crawl
+ * (startDailyCrawl), and even that one can be paused by
+ * CRAWLER_GHA_DAILY_ENABLED, so nothing here promises a run.
+ */
+const pendingUntil = (environment: string | undefined | null): string =>
+  environment === 'production'
+    ? 'stay pending; the next daily crawl drains them if it runs'
+    : 'stay pending until the next triggers dispatch';
+
 /** The tail of a report's message: what happens to the queued rows now. */
-const queuedSuffix = (queued: QueuedTriggers | undefined): string =>
-  queued
-    ? `; ${queued.triggerIds.length} queued crawl trigger(s) stay pending and run on the next daily crawl`
-    : '';
+const queuedSuffix = (
+  queued: QueuedTriggers | undefined,
+  environment: string | undefined | null,
+  failure: DispatchFailure,
+): string => {
+  if (!queued) return '';
+  const count = `${queued.triggerIds.length} queued crawl trigger(s)`;
+  return failure === 'timeout'
+    ? `; if not, the ${count} ${pendingUntil(environment)}`
+    : `; ${count} ${pendingUntil(environment)}`;
+};
 
 const queuedExtra = (
   queued: QueuedTriggers | undefined,
-  outcome: CrawlerDispatchResult | 'threw',
 ): Record<string, unknown> =>
   queued
-    ? { triggerIds: queued.triggerIds, venueIds: queued.venueIds, outcome }
+    ? { triggerIds: queued.triggerIds, triggerCount: queued.triggerIds.length }
     : {};
 
 /**
@@ -107,12 +128,16 @@ async function report(
   message: string,
   extra: Record<string, unknown>,
   level: 'error' | 'warning' = 'error',
+  failure?: DispatchFailure,
 ): Promise<void> {
-  if (level === 'error') logger.error(extra, message);
-  else logger.warn(extra, message);
+  if (level === 'error') logger.error({ ...extra, failure }, message);
+  else logger.warn({ ...extra, failure }, message);
   Sentry.captureException(new Error(message), {
     level,
-    tags: { crawler_dispatch: 'failed' },
+    tags: {
+      crawler_dispatch: 'failed',
+      ...(failure ? { crawler_dispatch_outcome: failure } : {}),
+    },
     extra,
   });
   // The instance can be frozen once the background task settles, which would
@@ -169,18 +194,21 @@ async function dispatchWorkflow(
     });
   } catch (err: unknown) {
     const timedOut = err instanceof Error && err.name === 'TimeoutError';
+    const failure = timedOut ? 'timeout' : 'request_failed';
     await report(
       (timedOut
         ? `Crawler dispatch timed out after ${DISPATCH_TIMEOUT_MS} ms; GitHub may still have started the run`
-        : 'Crawler dispatch request failed') + queuedSuffix(queued),
+        : 'Crawler dispatch request failed') +
+        queuedSuffix(queued, environment, failure),
       {
         repo,
         workflow,
         environment,
         error: String(err),
-        ...queuedExtra(queued, 'failed'),
+        ...queuedExtra(queued),
       },
       timedOut ? 'warning' : 'error',
+      failure,
     );
     return 'failed';
   }
@@ -193,15 +221,17 @@ async function dispatchWorkflow(
   const body = (await response.text().catch(() => '')).slice(0, 300);
   await report(
     refusalMessage(response.status, body, repo, workflow) +
-      queuedSuffix(queued),
+      queuedSuffix(queued, environment, 'refused'),
     {
       repo,
       workflow,
       environment,
       status: response.status,
       body,
-      ...queuedExtra(queued, 'failed'),
+      ...queuedExtra(queued),
     },
+    'error',
+    'refused',
   );
   return 'failed';
 }
@@ -210,38 +240,27 @@ async function dispatchWorkflow(
  * Ask GitHub Actions to run the triggers workflow. Never throws; resolves to
  * what happened so callers and tests can tell the cases apart.
  *
- * What reaches Sentry, by outcome:
- * - 'dispatched': nothing.
+ * What reaches Sentry, by outcome, in the order the checks run:
+ * - 'skipped_no_token': nothing. The dispatch is dormant until the token is
+ *   set (see the header), so the rows only wait.
  * - 'skipped_environment' (preview, development, local): nothing; those APIs
  *   write to databases the crawler does not read, so not waking it is the
  *   design.
- * - 'skipped_no_token' off production and staging: nothing (local and dev
- *   run without a token by design).
- * - 'skipped_no_token' on production or staging: a warning. The runbook sets
- *   the token on both, so its absence there is a misconfiguration that leaves
- *   every admin crawl waiting for the daily run.
- * - 'failed' (refused, rate-limited, timed out, network): an error, or a
- *   warning for a timeout, since GitHub may still have started the run.
+ * - 'failed': a refusal (401, 403 incl. rate limit, 404, 422, 5xx) or a
+ *   network failure is an error; a timeout is a warning, since GitHub may
+ *   still have started the run. Tagged crawler_dispatch_outcome.
+ * - 'dispatched': nothing.
  *
- * `queued` names the trigger rows being woken for, so each report lists them
- * and says they wait for the next daily crawl.
+ * `queued` names the trigger rows being woken for, so a failure report lists
+ * them and says where they wait.
  */
 export async function dispatchCrawler(
   queued?: QueuedTriggers,
 ): Promise<CrawlerDispatchResult> {
   const token = process.env['CRAWLER_DISPATCH_TOKEN']?.trim();
-  const environment = crawlerDispatchEnvironment();
-  if (!token) {
-    if (environment !== null) {
-      await report(
-        `Crawler not woken: CRAWLER_DISPATCH_TOKEN is unset on the ${environment} API${queuedSuffix(queued)}`,
-        { environment, ...queuedExtra(queued, 'skipped_no_token') },
-        'warning',
-      );
-    }
-    return 'skipped_no_token';
-  }
+  if (!token) return 'skipped_no_token';
 
+  const environment = crawlerDispatchEnvironment();
   if (environment === null) {
     logger.info(
       'Not dispatching the crawler: this API is neither production nor staging',
@@ -513,8 +532,8 @@ export async function startDailyCrawl(
 /**
  * Dispatch after the response has been sent. Route handlers call this once
  * their trigger rows are written, passing those rows so a failed wake-up
- * reports which crawls now wait for the daily run; it cannot fail or delay
- * the request, and it never changes the rows.
+ * reports which crawls are still waiting; it cannot fail or delay the
+ * request, it never rejects, and it never changes the rows.
  */
 export function dispatchCrawlerInBackground(queued?: QueuedTriggers): void {
   runBackgroundTask(async () => {
@@ -522,11 +541,22 @@ export function dispatchCrawlerInBackground(queued?: QueuedTriggers): void {
       await dispatchCrawler(queued);
     } catch (err: unknown) {
       // dispatchCrawler should never throw; if it does, the rows still wait
-      // for the daily run and the admin still sees them queued.
-      await report(`Crawler dispatch threw${queuedSuffix(queued)}`, {
-        error: String(err),
-        ...queuedExtra(queued, 'threw'),
-      });
+      // and the admin still sees them queued.
+      try {
+        await report(
+          `Crawler dispatch threw${queuedSuffix(queued, crawlerDispatchEnvironment(), 'threw')}`,
+          { error: String(err), ...queuedExtra(queued) },
+          'error',
+          'threw',
+        );
+      } catch (reportErr: unknown) {
+        // Last resort, so the trigger ids are never lost with the report.
+        console.error('Crawler dispatch threw and could not be reported', {
+          error: String(err),
+          reportError: String(reportErr),
+          triggerIds: queued?.triggerIds,
+        });
+      }
     }
   });
 }

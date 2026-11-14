@@ -1181,7 +1181,6 @@ describe('Admin crawl routes wake the crawler (Render exit step 2)', () => {
     expect(mockDispatchCrawler).toHaveBeenCalledTimes(1);
     expect(mockDispatchCrawler).toHaveBeenCalledWith({
       triggerIds: ['t0', 't1', 't2'],
-      venueIds,
     });
   });
 
@@ -1208,7 +1207,6 @@ describe('Admin crawl routes wake the crawler (Render exit step 2)', () => {
     expect(mockDispatchCrawler).toHaveBeenCalledTimes(1);
     expect(mockDispatchCrawler).toHaveBeenCalledWith({
       triggerIds: [TRIGGER_ID],
-      venueIds: [VENUE_ID],
     });
   });
 
