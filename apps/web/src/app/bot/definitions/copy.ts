@@ -82,13 +82,18 @@ export const BOT_COPY = {
     rate: {
       label: 'Request rate',
       // Deliberately a claim about our own pacing, not a per-domain guarantee.
-      // The 3-second sleep lives in `fetchPage`, so it holds between requests
-      // within one venue's crawl. It is not keyed on hostname, so two venue
-      // rows sharing a host each get their own clock, and a hand-queued trigger
-      // run can overlap the daily pass. Saying "to the same domain" claimed a
-      // coordination we do not have.
+      // Every page, API call and redirect hop we request waits `jitter()`
+      // first (floored at 3 s, plus 0-999 ms): `fetchPage`/`fetchPageHttp`,
+      // `clearRedirect`, and each platform fetcher's `deadline.wait`. Two
+      // requests are not paced, which is why this does not say "between
+      // requests": the robots.txt read (`fetchRobotsTxt`, cached per origin)
+      // and the subresources a rendered page loads for itself. The wait is per
+      // venue crawl, not keyed on hostname, so two venue rows sharing a host
+      // each get their own clock, and a hand-queued trigger run can overlap the
+      // daily pass. Saying "to the same domain" claimed a coordination we do
+      // not have.
       value:
-        'We wait at least 3 seconds between requests, plus a random jitter so we never arrive on a fixed beat.',
+        'We wait at least 3 seconds before each page or API call we request, plus a random jitter so we never arrive on a fixed beat.',
     },
     perVenue: {
       label: 'Per venue',
