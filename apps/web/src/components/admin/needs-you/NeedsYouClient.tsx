@@ -131,7 +131,8 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     if (rows === null || autoOpened.current) return;
     autoOpened.current = true;
     const first = rows[0];
-    if (!isPhone && !item && first) {
+    // A `?item=` that is still in the queue wins; a dead key falls through.
+    if (!isPhone && first && !rows.some((row) => row.key === item)) {
       setSelected(first.key);
       router.replace(`/admin/needs-you?item=${encodeURIComponent(first.key)}`, {
         scroll: false,
