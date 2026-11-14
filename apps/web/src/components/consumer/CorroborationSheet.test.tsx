@@ -163,6 +163,18 @@ describe('CorroborationSheet rail and body', () => {
     expect(line.getAttribute('style')).not.toMatch(/border|padding/);
   });
 
+  // Both boards put the footnote between the options and the CTA, and the
+  // sheet's footer is ModalShell's pinned footer as on main, so the footnote
+  // is in the body and the CTA in the footer: the footnote comes first.
+  it('puts the honesty line above the confirm button', () => {
+    renderSheet();
+    const line = screen.getByText(/Only confirm if you actually checked/);
+    const cta = screen.getByRole('button', { name: /Confirm: same number/ });
+    expect(
+      line.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   // One Tab stop for the group, arrows move within it (radiogroup pattern).
   it('is one Tab stop, and the arrow keys move the choice', () => {
     renderSheet();
