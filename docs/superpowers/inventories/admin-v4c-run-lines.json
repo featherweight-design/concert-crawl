@@ -1,0 +1,47 @@
+{
+  "feature": "Admin v4c · Run lines (via reader, Unchanged since, failure streak, Started at)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 04-venues/venue-runs (\"106 shows · 2 new · via Haiku\"), 04-venues/venues-desktop and venues-mobile, 01-foundations/venues-list-status-columns (\"Failed Nov 9, 10, 11\"), A3/03/re-crawl-states (\"Started 3:41 PM\", desktop only). Read-only. The Runs tab's first page and the venues list are server-fetched, so these rows read the scratch branch's real runs: Bluebird's OK runs before Jun 18 were read by the LLM (via Haiku; the row scrolls to them, since its newer runs are an AEG platform feed, which names no reader), Marquis Theater's by structured data (via JSON-LD), and CF Fixture Failing Hall is auto-paused on three failed runs. Not on the sheet: the venues list's \"Unchanged since Nov 10\", since the only venue whose latest run is an unchanged skip (Sheet Paused Venue) is hand-paused and reads \"Paused · Nov 10\", and the list cannot be mocked; and the desktop header's \"Started 3:41 PM\", which only a pressed Re-crawl reaches (the hook polls the trigger it queued, never one it finds on load), so it is walked by hand on a scratch venue.",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1440, "height": 1000 }
+  ],
+  "rows": [
+    {
+      "id": "runs-via-haiku",
+      "label": "Runs tab, OK runs read \"N shows · via Haiku\" (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0?tab=runs",
+          "wait": "[data-testid=\"run-row\"]:has-text(\"via Haiku\")"
+        },
+        {
+          "scrollTo": "[data-testid=\"run-row\"]:has-text(\"via Haiku\") >> nth=0",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "runs-via-json-ld",
+      "label": "Runs tab, OK runs read \"N shows · via JSON-LD\" (Marquis Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/33ede218-4e2f-46f0-a738-493fbdcb991d?tab=runs",
+          "wait": "[data-testid=\"run-row\"]:has-text(\"via JSON-LD\")",
+          "settle": 1000
+        }
+      ]
+    },
+    {
+      "id": "list-failure-streak",
+      "label": "Venues list, auto-paused row reads \"Failed <dates>\" (CF Fixture Failing Hall)",
+      "fullPage": true,
+      "steps": [
+        {
+          "goto": "/admin/venues",
+          "wait": "[data-testid=\"venue-row\"]:visible:has-text(\"Failed Nov\")",
+          "settle": 1000
+        }
+      ]
+    }
+  ]
+}
