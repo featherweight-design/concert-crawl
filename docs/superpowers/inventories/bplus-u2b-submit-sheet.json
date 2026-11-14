@@ -25,6 +25,23 @@
         { "waitDialog": "^Submit price$" },
         { "wait": "[data-testid=\"submit-rail\"]", "settle": 1200 }
       ]
+    },
+    {
+      "id": "submit-two-tiers",
+      "label": "Submit price sheet, two tier cards (GA taken struck in the second)",
+      "steps": [
+        {
+          "goto": "/events/${CC_PENDING_EVENT_ID}",
+          "wait": "[data-testid=\"submit-another-cta\"]"
+        },
+        { "settle": 3000 },
+        { "click": "[data-testid=\"submit-another-cta\"]" },
+        { "waitDialog": "^Submit price$" },
+        { "wait": "[data-testid=\"submit-rail\"]", "settle": 1200 },
+        { "clickRole": "button", "name": "^GA$" },
+        { "clickRole": "button", "name": "^\\+ Add another tier$" },
+        { "wait": "[aria-label=\"Remove GA\"]", "settle": 800 }
+      ]
     }
   ]
 }

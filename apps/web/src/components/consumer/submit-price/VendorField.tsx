@@ -17,6 +17,10 @@ import {
   type Vendor,
 } from '@concert-crawl/types';
 
+import {
+  boardChipClass,
+  boardGroupLabelStyle,
+} from '@/components/consumer/boardFieldLook';
 import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy';
 
 const TYPEAHEAD_WINDOW_MS = 700;
@@ -34,47 +38,13 @@ const DROPDOWN_ORDER: readonly Vendor[] = [
   VENDOR_CATCHALL,
 ];
 
-// ChipGroup's classes, plus `inline-flex items-center gap-1.5` so a chip can
-// hold an icon beside its label. These chips sit one row below a ChipGroup in
-// the same form, so any divergence beyond that superset reads as a bug.
+// The chips sit one row below the source ChipGroup in the same sheet, so they
+// share its board look (more-p-submit_m). Drawn without a caret on "More...".
 const chipClass = (
   active: boolean,
   disabled: boolean,
   invalid: boolean,
-): string =>
-  [
-    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
-    disabled
-      ? 'border-border text-fg-muted cursor-not-allowed opacity-60'
-      : active
-        ? 'border-signal text-signal bg-signal/10'
-        : invalid
-          ? 'border-warning text-fg hover:border-fg-muted'
-          : 'border-border-strong text-fg hover:border-fg-muted',
-  ].join(' ');
-
-const Caret = ({ open }: { open: boolean }) => (
-  <svg
-    width="10"
-    height="10"
-    viewBox="0 0 12 12"
-    aria-hidden="true"
-    style={{
-      transform: open ? 'rotate(180deg)' : 'none',
-      transition: 'transform 0.18s ease',
-      flexShrink: 0,
-    }}
-  >
-    <path
-      d="M2.5 4.5L6 8l3.5-3.5"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
-  </svg>
-);
+): string => boardChipClass({ active, disabled, invalid });
 
 const Check = () => (
   <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
@@ -446,26 +416,8 @@ export const VendorField = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <span
-        id={labelId}
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          fontWeight: 700,
-          color: error ? 'var(--warning)' : 'var(--fg-subtle)',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-        }}
-      >
+      <span id={labelId} style={boardGroupLabelStyle(Boolean(error))}>
         {VENDOR_PICKER_COPY.label}
-        {/* aria-hidden keeps it out of name computation, so the radiogroup is
-            announced as the question rather than "Where it's listed star". */}
-        <span
-          aria-hidden="true"
-          style={{ color: 'var(--accent)', marginLeft: 4 }}
-        >
-          *
-        </span>
       </span>
 
       <div
@@ -552,7 +504,6 @@ export const VendorField = ({
             }
           >
             <span>{triggerLabel}</span>
-            {!fromDropdown && <Caret open={open} />}
           </button>
 
           {fromDropdown && (
