@@ -4092,6 +4092,8 @@ export const ADMIN_COPY = {
       editHint: 'Title, lineup, date, status, price',
       viewFan: 'View on Concert Crawl',
       viewFanHint: 'The fan page, in a new tab',
+      viewVenue: 'View on the venue’s site',
+      viewVenueHint: 'The listing we crawled',
     },
   },
   panel: { close: 'Close' },
