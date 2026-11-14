@@ -886,7 +886,9 @@
    plain class, so a sheet that becomes a centered modal from sm up can scope
    it with a variant (max-sm:sheet-edge). */
 @utility sheet-edge {
-  border: 1.5px solid transparent;
+  /* --sheet-edge-w / --sheet-edge-fade: the share boards draw a 2px rim that
+     is gone 44px down the sides (BottomSheet `raised`). */
+  border: var(--sheet-edge-w, 1.5px) solid transparent;
   border-bottom-width: 0;
   background:
     linear-gradient(
@@ -898,7 +900,7 @@
         to bottom,
         transparent 0,
         transparent 20px,
-        var(--sheet-bg, var(--surface-1)) 72px
+        var(--sheet-bg, var(--surface-1)) var(--sheet-edge-fade, 72px)
       )
       border-box,
     linear-gradient(90deg, var(--signal), var(--accent)) border-box;
