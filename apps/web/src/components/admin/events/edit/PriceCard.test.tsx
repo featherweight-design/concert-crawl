@@ -58,6 +58,7 @@ const DETAIL: EventDetail = {
   hidden: false,
   hiddenReason: null,
   watchingCount: 4,
+  wentCount: null,
   isSoldOut: false,
   priceMin: '12.00',
   priceMax: null,
@@ -176,7 +177,7 @@ describe('PriceCard', () => {
     await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
   });
 
-  it('draws no Edit price on a past show, and dashes for no price or page', () => {
+  it('reads a past show’s price as a record: no Edit price, no ticket page', () => {
     render(
       <PriceCard
         detail={{ ...DETAIL, priceMin: null, ticketUrl: null }}
@@ -186,6 +187,11 @@ describe('PriceCard', () => {
       />,
     );
     expect(screen.queryByTestId('event-edit-price-edit')).toBeNull();
-    expect(screen.getAllByText(ADMIN_COPY.eventEdit.none)).toHaveLength(2);
+    expect(screen.queryByText(ADMIN_COPY.eventEdit.price.submitted)).toBeNull();
+    // Only the listed price dashes: the ticket page row is gone.
+    expect(screen.getAllByText(ADMIN_COPY.eventEdit.none)).toHaveLength(1);
+    expect(
+      screen.getByText(ADMIN_COPY.eventEdit.past.priceRecord),
+    ).toBeInTheDocument();
   });
 });

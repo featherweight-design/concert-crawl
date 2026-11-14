@@ -28,6 +28,8 @@ export interface EventDetail {
   hidden: boolean;
   hiddenReason: HiddenReason | null;
   watchingCount: number;
+  /** Fans who marked "I went"; `null` when the API sends none. */
+  wentCount: number | null;
   /**
    * The sold-out flag, apart from `status`: a postponed show can be sold out
    * too, and Tickets available must clear it.
@@ -141,6 +143,7 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
     hidden: value['hiddenFromConsumer'],
     hiddenReason: value['hiddenReason'],
     watchingCount: value['watchingCount'],
+    wentCount: isCount(value['wentCount']) ? value['wentCount'] : null,
     isSoldOut: value['isSoldOut'],
     priceMin,
     priceMax,
@@ -157,12 +160,28 @@ export const eventDetailFrom = (value: unknown): EventDetail | null => {
 };
 
 /**
- * A past show locks every field but Hidden and the lineup (4b#22). Past means
- * dated before today in Mountain Time (`today` is `YYYY-MM-DD`), as the
- * list's Past side counts it.
+ * A past show takes corrections only (B+ addendum 6 item 36): title, times
+ * and a date still in the past, and Hide. Past means dated before today in
+ * Mountain Time (`today` is `YYYY-MM-DD`), as the list's Past side counts it.
  */
 export const isPast = (detail: EventDetail, today: string): boolean =>
   detail.date < today;
+
+/**
+ * A postponed show whose date passed (`36/postponed-passed-d`): never played,
+ * it keeps the upcoming editor so it can still get its new date.
+ */
+export const isPostponedPassed = (
+  detail: EventDetail,
+  today: string,
+): boolean => isPast(detail, today) && detail.status === 'postponed';
+
+/** The day before a `YYYY-MM-DD`: the latest date a played show may move to. */
+export const dayBefore = (date: string): string => {
+  const day = new Date(`${date}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return day.toISOString().slice(0, 10);
+};
 
 /** "6:00 PM" from a stored `HH:MM:SS` (venue-local, so no zone to convert). */
 export const fieldTime = (time: string | null): string | null => {

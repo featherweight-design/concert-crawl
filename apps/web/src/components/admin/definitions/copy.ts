@@ -4186,7 +4186,9 @@ export const ADMIN_COPY = {
       `${count.toLocaleString('en-US')} upcoming · one status each, the same words fans see`,
     phoneSubtitle: (count: number) =>
       `${count.toLocaleString('en-US')} upcoming`,
-    pastSubtitle: 'Past shows · read-only except Hidden and lineup',
+    // `36/past-d` and `36/past-m`.
+    pastSubtitle: 'Past shows · corrections only',
+    pastPhoneSubtitle: 'Past shows',
     pastCrumb: 'Past',
     search: 'Search shows or artists',
     when: { upcoming: 'Upcoming', past: 'Past' },
@@ -4363,6 +4365,34 @@ export const ADMIN_COPY = {
     unhideFailed: {
       what: 'Hide from site',
       saved: 'It’s still hidden.',
+    },
+    // B+ addendum 6 item 36 (`36/past-show-m`) and addendum 5 `04/past-show-d`:
+    // a past show takes corrections that notify nobody.
+    past: {
+      banner:
+        'This show has played. Fixes change the record on artist pages and in fans’ Concerts. Nobody is told.',
+      went: (count: number) =>
+        `${count.toLocaleString('en-US')} marked “I went”`,
+      noStatus: 'A played show has no status to set.',
+      hideHint: 'Takes it off artist pages and Concerts.',
+      priceRecord: 'A record. It can’t be edited.',
+    },
+    // `36/postponed-passed-d`: a postponed show whose date passed.
+    passed: {
+      meta: (date: string, venue: string | null) =>
+        venue ? `Was ${date} · ${venue}` : `Was ${date}`,
+      bannerLead: (date: string) => `${date} has passed with no new date.`,
+      bannerBody: (watching: number) =>
+        watching === 0
+          ? 'It stays Postponed until you set the new date or mark it cancelled.'
+          : `It stays Postponed until you set the new date or mark it cancelled. ${watching.toLocaleString('en-US')} Watching keep it.`,
+      originalDate: 'Original date',
+      newDate: 'New date',
+      pick: 'Pick the new date',
+      notSet: (watching: number) =>
+        watching === 0
+          ? 'Not set yet.'
+          : `Not set yet. Setting it tells the ${watching.toLocaleString('en-US')} Watching.`,
     },
     statusSaved: (status: string) => `The status is still ${status}.`,
     // `06/event-edit` Price card and `06/edit-price-desktop` (4b#19).

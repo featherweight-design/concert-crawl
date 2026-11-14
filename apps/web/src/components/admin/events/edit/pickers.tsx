@@ -106,7 +106,8 @@ const ARROW: CSSProperties = {
 /**
  * A date field (`04/date-picker-d`): a one-month popover on desktop, the OS
  * date picker on the phone behind the same field style. `min` (YYYY-MM-DD)
- * bars earlier days, as Postponed's New date does (future only).
+ * bars earlier days, as Postponed's New date does (future only); `max` bars
+ * later ones, as a played show's correction does (past only).
  */
 export const DateField = ({
   id,
@@ -115,23 +116,38 @@ export const DateField = ({
   today,
   phone,
   min,
+  max,
+  placeholder,
+  highlight = false,
   withYear,
 }: {
   id: string;
-  /** YYYY-MM-DD. */
+  /** YYYY-MM-DD, or '' for none yet (the `placeholder` shows). */
   value: string;
   onChange: (value: string) => void;
   /** YYYY-MM-DD in Mountain Time: ringed, and Today's target. */
   today: string;
   phone: boolean;
   min?: string;
+  max?: string;
+  placeholder?: string;
+  /** The amber border `36/postponed-passed-d` draws on New date. */
+  highlight?: boolean;
   withYear: boolean;
 }) => {
   const { open, setOpen, close, ref, trigger } = usePopover();
+  // With no date yet, the month opens on today's.
+  const anchor = value === '' ? today : value;
   const [view, setView] = useState(() => ({
-    year: Number(value.slice(0, 4)),
-    month: Number(value.slice(5, 7)) - 1,
+    year: Number(anchor.slice(0, 4)),
+    month: Number(anchor.slice(5, 7)) - 1,
   }));
+  const isBarred = (iso: string) =>
+    (min !== undefined && iso < min) || (max !== undefined && iso > max);
+  const field: CSSProperties = {
+    ...FIELD,
+    ...(highlight && { borderColor: 'var(--warning)' }),
+  };
   const chosenRef = useRef<HTMLButtonElement>(null);
   // Focus lands on the chosen day when the month opens.
   useEffect(() => {
@@ -145,19 +161,20 @@ export const DateField = ({
         type="date"
         value={value}
         min={min}
+        max={max}
         onChange={(evt) => {
           const next = evt.target.value;
-          // The OS picker honours `min`, but a typed date may not.
-          if (next === '' || (min !== undefined && next < min)) return;
+          // The OS picker honours `min` and `max`, but a typed date may not.
+          if (next === '' || isBarred(next)) return;
           onChange(next);
         }}
-        style={{ ...FIELD, fontSize: 16 }}
+        style={{ ...field, fontSize: 16 }}
       />
     );
   }
 
   const pick = (iso: string) => {
-    if (min !== undefined && iso < min) return;
+    if (isBarred(iso)) return;
     onChange(iso);
     close();
   };
@@ -176,9 +193,13 @@ export const DateField = ({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        style={FIELD}
+        style={field}
       >
-        {fieldDate(value, withYear)}
+        {value === '' ? (
+          <span style={{ color: 'var(--fg-subtle)' }}>{placeholder}</span>
+        ) : (
+          fieldDate(value, withYear)
+        )}
       </button>
       {open && (
         <div
@@ -230,7 +251,7 @@ export const DateField = ({
               if (day === null) return <span key={`blank${i}`} />;
               const iso = isoOf(view.year, view.month, day);
               const chosen = iso === value;
-              const barred = min !== undefined && iso < min;
+              const barred = isBarred(iso);
               return (
                 <button
                   key={iso}
@@ -248,7 +269,7 @@ export const DateField = ({
                     fontWeight: chosen ? 700 : 500,
                     cursor: barred ? 'default' : 'pointer',
                     // Days before today draw muted (`04/date-picker-d`),
-                    // still pickable unless barred by `min`.
+                    // still pickable unless barred by `min` or `max`.
                     color: chosen
                       ? 'var(--bg)'
                       : barred || iso < today
@@ -280,7 +301,7 @@ export const DateField = ({
           >
             <button
               type="button"
-              disabled={min !== undefined && today < min}
+              disabled={isBarred(today)}
               onClick={() => pick(today)}
               style={{
                 height: 30,

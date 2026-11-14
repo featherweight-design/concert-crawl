@@ -77,19 +77,23 @@ export const PriceCard = ({
         <AdminCardRow label={COPY.from}>
           {COPY.fromValue(detail.submittedPriceCount)}
         </AdminCardRow>
-        <AdminCardRow label={COPY.ticketPage}>
-          {host === null
-            ? NONE
-            : COPY.ticketValue(
-                host,
-                detail.priceRetrievedAt === null
-                  ? null
-                  : shortDate(detail.priceRetrievedAt),
-              )}
-        </AdminCardRow>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* A past show's price is a record (`04/past-show-d`, `36/past-show-m`):
+            no ticket page, no Edit price, no link out. */}
         {!past && (
+          <AdminCardRow label={COPY.ticketPage}>
+            {host === null
+              ? NONE
+              : COPY.ticketValue(
+                  host,
+                  detail.priceRetrievedAt === null
+                    ? null
+                    : shortDate(detail.priceRetrievedAt),
+                )}
+          </AdminCardRow>
+        )}
+      </div>
+      {!past && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <AdminButton
             data-testid="event-edit-price-edit"
             disabled={!canEdit}
@@ -103,25 +107,25 @@ export const PriceCard = ({
           >
             {COPY.edit}
           </AdminButton>
-        )}
-        <Link
-          href="/admin/prices?tab=submitted"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 13,
-            fontWeight: 600,
-            color: 'var(--fg-muted)',
-            textDecoration: 'none',
-          }}
-        >
-          <ChevronRight size={14} aria-hidden />
-          {COPY.submitted}
-        </Link>
-      </div>
+          <Link
+            href="/admin/prices?tab=submitted"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--fg-muted)',
+              textDecoration: 'none',
+            }}
+          >
+            <ChevronRight size={14} aria-hidden />
+            {COPY.submitted}
+          </Link>
+        </div>
+      )}
       <div style={{ fontSize: 12.5, color: 'var(--fg-muted)' }}>
-        {COPY.note}
+        {past ? ADMIN_COPY.eventEdit.past.priceRecord : COPY.note}
       </div>
       {open && mine !== null && (
         <EditPricePanel

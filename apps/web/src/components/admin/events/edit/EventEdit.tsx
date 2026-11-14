@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { ExternalLink, EyeOff, GitMerge } from 'lucide-react';
+import { Calendar, ExternalLink, EyeOff, GitMerge } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -34,9 +34,17 @@ import { PriceCard } from './PriceCard';
 import { DateField, TimeField } from './pickers';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
 import { StatusChips } from '../list/EventsList';
-import { fieldDate, fieldTime, isPast, type EventDetail } from './event-detail';
+import { duplicateShowMessage, pastLockedMessage } from '../past-locked';
+import {
+  dayBefore,
+  fieldDate,
+  isPast,
+  isPostponedPassed,
+  type EventDetail,
+} from './event-detail';
 
 const COPY = ADMIN_COPY.eventEdit;
+const PASSED = COPY.passed;
 const LIST = ADMIN_COPY.eventsList;
 
 /** The fields this editor saves. Status, Hidden and price save on their own. */
@@ -115,8 +123,8 @@ const Field = ({
 );
 
 /**
- * A value drawn as its field but not editable here yet: the venue, date and
- * time pickers are held for Design, and a past show locks them (4b#22).
+ * A value drawn as its field but not editable here: the venue (its picker
+ * lands with the 4b venue work) and a passed postponed show's Original date.
  */
 const ReadOnlyField = ({
   id,
@@ -137,13 +145,65 @@ const ReadOnlyField = ({
   </Field>
 );
 
+/**
+ * The page's banner: a played show's (`04/past-show-d`, `36/past-show-m`),
+ * or the amber one on a postponed show whose date passed
+ * (`36/postponed-passed-d`).
+ */
+const Banner = ({
+  warning,
+  phone,
+  children,
+}: {
+  warning: boolean;
+  phone: boolean;
+  children: ReactNode;
+}) => (
+  <div
+    role="note"
+    data-testid="event-edit-banner"
+    style={{
+      display: 'flex',
+      alignItems: phone ? 'flex-start' : 'center',
+      gap: phone ? 10 : 12,
+      padding: phone ? '12px 14px' : '12px 16px',
+      borderRadius: 12,
+      fontSize: phone ? 13 : 13.5,
+      lineHeight: 1.45,
+      ...(warning
+        ? {
+            background: 'color-mix(in srgb, var(--warning) 7%, transparent)',
+            border:
+              '1px solid color-mix(in srgb, var(--warning) 40%, transparent)',
+          }
+        : {
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+          }),
+    }}
+  >
+    <Calendar
+      size={16}
+      aria-hidden
+      style={{
+        flex: 'none',
+        color: warning ? 'var(--warning)' : 'var(--fg-muted)',
+      }}
+    />
+    <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+  </div>
+);
+
 const Header = ({
   detail,
+  meta,
   phone,
   onMerge,
   onHide,
 }: {
   detail: EventDetail;
+  /** Date · venue, or "Was …" on a postponed show whose date passed. */
+  meta: string;
   phone: boolean;
   onMerge: () => void;
   /** Opens the Hide dialog; `null` once the show is hidden. */
@@ -190,7 +250,7 @@ const Header = ({
               data-testid="event-edit-meta"
               style={{ fontSize: 12.5, color: 'var(--fg-muted)', marginTop: 4 }}
             >
-              {COPY.meta(metaDate(detail.date), detail.venueName)}
+              {meta}
             </div>
             <div style={{ marginTop: 10 }}>
               <StatusChips row={detail} />
@@ -211,7 +271,7 @@ const Header = ({
               data-testid="event-edit-meta"
               style={{ fontSize: 13, color: 'var(--fg-muted)' }}
             >
-              {COPY.meta(metaDate(detail.date), detail.venueName)}
+              {meta}
             </span>
           </div>
         )}
@@ -313,6 +373,7 @@ const SaveBar = ({
   valid,
   saving,
   phone,
+  inline,
   onDiscard,
   onSave,
 }: {
@@ -320,63 +381,86 @@ const SaveBar = ({
   valid: boolean;
   saving: boolean;
   phone: boolean;
+  /**
+   * `36/past-show-m`: a past show's phone bar is one row (count, Discard,
+   * Save), as on desktop, since it only shows once something changes.
+   */
+  inline: boolean;
   onDiscard: () => void;
   onSave: () => void;
-}) => (
-  <div
-    data-testid="event-edit-save-bar"
-    // Pinned to the bottom of the content area at its full width, as drawn:
-    // `marginTop: auto` drops it to the bottom of a short page, `sticky` holds
-    // it there on a long one, and the negative margins cancel the shell's
-    // padding (desktop 24px 28px; phone 0 16px) so it meets both edges.
-    style={{
-      position: 'sticky',
-      bottom: 0,
-      marginTop: 'auto',
-      marginInline: phone ? -16 : -28,
-      marginBottom: phone ? 0 : -24,
-      display: 'flex',
-      flexDirection: phone ? 'column' : 'row',
-      alignItems: phone ? 'stretch' : 'center',
-      gap: phone ? 8 : 12,
-      minHeight: 64,
-      padding: phone ? '10px 16px' : '0 28px',
-      background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
-      zIndex: 1,
-    }}
-  >
-    {!phone && (
-      <span
-        role="status"
-        style={{ flex: 1, fontSize: 13, color: 'var(--warning)' }}
-      >
-        {count > 0 ? COPY.saveBar.unsaved(count) : ''}
-      </span>
-    )}
-    {!phone && count > 0 && (
-      <AdminButton variant="ghost" onClick={onDiscard} disabled={saving}>
-        {COPY.saveBar.discard}
-      </AdminButton>
-    )}
-    <AdminButton
-      variant="gradient"
-      data-testid="event-edit-save"
-      onClick={onSave}
-      disabled={count === 0 || !valid || saving}
-      fullWidth={phone}
-      style={{ height: phone ? 46 : 40, padding: '0 22px', fontSize: 14 }}
+}) => {
+  // The stacked full-width Save is `06/event-edit-mobile`'s.
+  const stacked = phone && !inline;
+  return (
+    <div
+      data-testid="event-edit-save-bar"
+      // Pinned to the bottom of the content area at its full width, as drawn:
+      // `marginTop: auto` drops it to the bottom of a short page, `sticky`
+      // holds it there on a long one, and the negative margins cancel the
+      // shell's padding (desktop 24px 28px; phone 0 16px) so it meets both
+      // edges.
+      style={{
+        position: 'sticky',
+        bottom: 0,
+        marginTop: 'auto',
+        marginInline: phone ? -16 : -28,
+        marginBottom: phone ? 0 : -24,
+        display: 'flex',
+        flexDirection: stacked ? 'column' : 'row',
+        alignItems: stacked ? 'stretch' : 'center',
+        gap: phone ? 8 : 12,
+        minHeight: 64,
+        padding: phone ? '10px 16px' : '0 28px',
+        background: 'var(--bg)',
+        borderTop: '1px solid var(--border)',
+        zIndex: 1,
+      }}
     >
-      {saving ? COPY.saveBar.saving : COPY.saveBar.save}
-    </AdminButton>
-  </div>
-);
+      {!stacked && (
+        <span
+          role="status"
+          style={{
+            flex: 1,
+            fontSize: phone ? 12.5 : 13,
+            color: 'var(--warning)',
+          }}
+        >
+          {count > 0 ? COPY.saveBar.unsaved(count) : ''}
+        </span>
+      )}
+      {!stacked && count > 0 && (
+        <AdminButton variant="ghost" onClick={onDiscard} disabled={saving}>
+          {COPY.saveBar.discard}
+        </AdminButton>
+      )}
+      <AdminButton
+        variant="gradient"
+        data-testid="event-edit-save"
+        onClick={onSave}
+        disabled={count === 0 || !valid || saving}
+        fullWidth={stacked}
+        style={{
+          height: stacked ? 46 : phone ? 42 : 40,
+          padding: '0 22px',
+          fontSize: 14,
+        }}
+      >
+        {saving ? COPY.saveBar.saving : COPY.saveBar.save}
+      </AdminButton>
+    </div>
+  );
+};
 
 /**
  * Event edit (`06/event-edit`, phone `06/event-edit-mobile`). Every desktop
- * field, stacked on the phone (4b#4). Status, Hide and Price arrive in 4b-2
- * parts b and c; the lineup waits for its data (4a-2); the venue, date and
- * time pickers are held for Design, so those fields read only.
+ * field, stacked on the phone (4b#4). The lineup waits for its data (4a-2)
+ * and the venue picker for the 4b venue work, so the venue reads only.
+ *
+ * A played past show (B+ addendum 6 item 36, `04/past-show-d`,
+ * `36/past-show-m`) takes corrections that notify nobody: title, times and a
+ * date still in the past, under a banner; status and price read only. A
+ * postponed show whose date passed (`36/postponed-passed-d`) keeps this
+ * editor, headed "Was …", with its New date under the status pills.
  */
 export const EventEdit = ({
   detail,
@@ -390,8 +474,13 @@ export const EventEdit = ({
   const router = useRouter();
   const { getToken } = useAuth();
   const { setPageTitle, setPhoneBack } = usePageTitle();
-  const past = isPast(detail, today);
+  // A postponed show whose date passed is never played: it keeps the
+  // upcoming editor so it can get its new date.
+  const passed = isPostponedPassed(detail, today);
+  const past = isPast(detail, today) && !passed;
   const [merging, setMerging] = useState(false);
+  /** The PATCH's 409 refusal, said as such: a retry would be refused again. */
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   useEffect(() => {
     setPageTitle(detail.artist);
@@ -459,6 +548,7 @@ export const EventEdit = ({
           detail.status === 'delisted') && { status: 'upcoming' }),
     };
     let landed = false;
+    setRefusal(null);
     try {
       if (Object.keys(body).length > 0) {
         await apiClient.patch(path, token, body);
@@ -473,6 +563,12 @@ export const EventEdit = ({
         await apiClient.post(`${path}/available`, token, {});
         landed = true;
       }
+    } catch (err) {
+      console.error('[event edit] save failed', err);
+      // `past_locked` (a field a past show locks) or `duplicate_show` (another
+      // listing that night): the snap-back's toast says which.
+      setRefusal(pastLockedMessage(err) ?? duplicateShowMessage(err));
+      throw err;
     } finally {
       // A write that landed before a later one failed still shows: the page
       // re-reads what is saved, so the snap-back names the truth.
@@ -512,30 +608,23 @@ export const EventEdit = ({
   // The API refuses an empty title, so Save waits for one.
   const valid = draft.title.trim() !== '';
 
-  /** Doors or Show: the shared time picker, or read-only on a past show. */
+  /** Doors or Show: the shared time picker (a correction on a past show). */
   const timeField = (
     id: string,
     label: string,
     key: 'doorsTime' | 'showTime',
-  ) =>
-    past ? (
-      <ReadOnlyField
+  ) => (
+    <Field label={label} htmlFor={id}>
+      <TimeField
         id={id}
+        value={draft[key]}
+        onChange={(time) => setDraft({ ...draft, [key]: time })}
+        phone={phone}
+        placeholder={COPY.none}
         label={label}
-        value={fieldTime(draft[key]) ?? COPY.none}
       />
-    ) : (
-      <Field label={label} htmlFor={id}>
-        <TimeField
-          id={id}
-          value={draft[key]}
-          onChange={(time) => setDraft({ ...draft, [key]: time })}
-          phone={phone}
-          placeholder={COPY.none}
-          label={label}
-        />
-      </Field>
-    );
+    </Field>
+  );
 
   const venue = detail.venueName ?? COPY.none;
   const method = COPY.crawl.method(detail.extractionStrategy);
@@ -545,14 +634,12 @@ export const EventEdit = ({
         <input
           id="event-edit-title"
           value={draft.title}
-          readOnly={past}
           onChange={(evt) => setDraft({ ...draft, title: evt.target.value })}
           style={{
             ...inputStyle(false),
             height: 40,
             // 16px on the phone, so focusing the field never zooms the page.
             ...(phone && { fontSize: 16 }),
-            ...(past && { color: 'var(--fg-muted)' }),
           }}
         />
       </Field>
@@ -568,10 +655,11 @@ export const EventEdit = ({
           gap: 12,
         }}
       >
-        {past ? (
+        {passed ? (
+          // `36/postponed-passed-d`: the date that passed; New date moves it.
           <ReadOnlyField
             id="event-edit-date"
-            label={COPY.show.date}
+            label={PASSED.originalDate}
             value={fieldDate(detail.date, !phone)}
           />
         ) : (
@@ -582,6 +670,9 @@ export const EventEdit = ({
               onChange={(date) => setDraft({ ...draft, date })}
               today={today}
               phone={phone}
+              // A played show's correction stays in the past: the API refuses
+              // a date from today on (it would put the show back on sale).
+              {...(past && { max: dayBefore(today) })}
               withYear={!phone}
             />
           </Field>
@@ -643,8 +734,46 @@ export const EventEdit = ({
       setDialog={(next) => {
         if (next === null || !snap.saving) setDialog(next);
       }}
-    />
+    >
+      {passed && (
+        // `36/postponed-passed-d`: highlighted until it is set; it saves with
+        // the Save bar, and the date move tells the Watching.
+        <Field label={PASSED.newDate} htmlFor="event-edit-new-date">
+          <DateField
+            id="event-edit-new-date"
+            value={draft.date === snap.value.date ? '' : draft.date}
+            onChange={(date) => setDraft({ ...draft, date })}
+            today={today}
+            phone={phone}
+            min={today}
+            placeholder={PASSED.pick}
+            highlight={draft.date === snap.value.date}
+            withYear={!phone}
+          />
+          {draft.date === snap.value.date && (
+            <div
+              data-testid="event-edit-new-date-hint"
+              style={{ fontSize: 12, color: 'var(--warning)', marginTop: 5 }}
+            >
+              {PASSED.notSet(detail.watchingCount)}
+            </div>
+          )}
+        </Field>
+      )}
+    </StatusCard>
   );
+  const banner = past ? (
+    <Banner warning={false} phone={phone}>
+      {COPY.past.banner}
+    </Banner>
+  ) : passed ? (
+    <Banner warning phone={phone}>
+      <b>{PASSED.bannerLead(metaDate(detail.date))}</b>{' '}
+      <span style={{ color: 'var(--fg-muted)' }}>
+        {PASSED.bannerBody(detail.watchingCount)}
+      </span>
+    </Banner>
+  ) : null;
 
   return (
     <div
@@ -659,38 +788,55 @@ export const EventEdit = ({
     >
       <Header
         detail={detail}
+        meta={(passed ? PASSED.meta : COPY.meta)(
+          metaDate(detail.date),
+          detail.venueName,
+        )}
         phone={phone}
         onMerge={() => setMerging(true)}
         onHide={detail.hidden || snap.saving ? null : () => setDialog('hide')}
       />
       {phone ? (
-        // `06/event-edit-mobile`: the Show fields, Status, then Price, stacked.
+        // `06/event-edit-mobile`: the Show fields, Status, then Price, stacked;
+        // a past show's banner first (`36/past-show-m`).
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {banner}
           {fields}
           {status}
           {price}
           {crawl}
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: 16,
-            alignItems: 'start',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {fields}
-            {crawl}
+        <>
+          {banner}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 16,
+              alignItems: 'start',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {fields}
+              {crawl}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {status}
+              {price}
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {status}
-            {price}
-          </div>
-        </div>
+        </>
       )}
-      {snap.failed !== null && (
+      {snap.failed !== null && refusal !== null && (
+        // A refusal would only be refused again: no Try again.
+        <SaveFailedToast
+          what={COPY.saveFailed.what}
+          body={refusal}
+          onDismiss={snap.dismiss}
+        />
+      )}
+      {snap.failed !== null && refusal === null && (
         <SaveFailedToast
           what={COPY.saveFailed.what}
           saved={
@@ -707,12 +853,14 @@ export const EventEdit = ({
           onDismiss={snap.dismiss}
         />
       )}
-      {!past && (
+      {/* A past show's Save bar comes once something changes (item 36). */}
+      {(!past || count > 0 || snap.saving) && (
         <SaveBar
           count={count}
           valid={valid}
           saving={snap.saving}
           phone={phone}
+          inline={past}
           onDiscard={() => setDraft(snap.value)}
           onSave={() => void snap.save({ ...draft, title: draft.title.trim() })}
         />
