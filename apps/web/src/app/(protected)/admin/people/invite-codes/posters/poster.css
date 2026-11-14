@@ -972,8 +972,17 @@
   }
 }
 
+/* Before the page has read the breakpoint it draws desktop (so the server
+   render is never blank) marked `data-pending`; a phone hides that frame
+   rather than flash the desktop form. Matches ADMIN_PHONE_MAX_WIDTH. */
+@media (max-width: 720px) {
+  .pt-page[data-pending] {
+    visibility: hidden;
+  }
+}
+
 /* Phone, from 07/posters-mobile. These classes only render when the page has
-   read the breakpoint (`useIsPhone`), so desktop never meets them. */
+   read the breakpoint (`useIsPhoneResolved`), so desktop never meets them. */
 .pt-page[data-phone='true'] {
   gap: 10px;
 }

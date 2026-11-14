@@ -52,6 +52,7 @@ const renderTab = (cards = CARDS, code: string | null = null) =>
       typedUrl="concertcrawl.app/i"
       venues={{ venueCount: 21, venueNames: ['Hi-Dive'], moreVenues: true }}
       initial={{ code, look: 'night', tabs: false }}
+      codeCount={cards.length}
     />,
   );
 
@@ -60,7 +61,7 @@ const sheet = () => screen.getByTestId('poster-sheet');
 describe('PostersTab', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/admin/people/invite-codes/posters');
-    // `useIsPhone` reads the breakpoint and jsdom ships no matchMedia: desktop.
+    // `useIsPhoneResolved` reads the breakpoint and jsdom ships no matchMedia: desktop.
     window.matchMedia = vi.fn().mockImplementation(() => ({
       matches: false,
       addEventListener: vi.fn(),
@@ -253,6 +254,7 @@ describe('PostersTab', () => {
         typedUrl="concertcrawl.app/i"
         venues={{ venueCount: 21, venueNames: ['Hi-Dive'], moreVenues: true }}
         initial={{ code: null, look: 'night', tabs: false }}
+        codeCount={CARDS.length + 1}
       />,
     );
     expect(screen.queryByTestId('new-poster-code')).toBeNull();
@@ -313,6 +315,7 @@ describe('PostersTab', () => {
         typedUrl="concertcrawl.app/i"
         venues={{ venueCount: 21, venueNames: ['Hi-Dive'], moreVenues: true }}
         initial={{ code: null, look: 'night', tabs: false }}
+        codeCount={CARDS.length}
       />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent(

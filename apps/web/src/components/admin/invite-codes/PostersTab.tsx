@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -14,7 +14,7 @@ import {
   Scissors,
 } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { SectionHead, useIsPhone } from '@/components/admin/primitives';
+import { SectionHead, useIsPhoneResolved } from '@/components/admin/primitives';
 import { downloadBlob } from '@/lib/download-blob';
 import { qrSvg, type QrPath } from '@/lib/poster/poster-rule';
 import type { PosterVenueData } from '@/lib/poster/load-poster-venues';
@@ -51,7 +51,12 @@ interface PostersTabProps {
   typedUrl: string;
   venues: PosterVenueData;
   initial: PosterSelection;
+  /** Every invite code the page loaded, for the phone segment's Codes count. */
+  codeCount: number;
 }
+
+/** Where focus goes when the phone's Code step folds or unfolds. */
+type FoldFocus = 'change' | 'radio' | null;
 
 const copy = ADMIN_COPY.inviteCodes.poster;
 const phoneCopy = copy.phone;
@@ -127,8 +132,15 @@ export function PostersTab({
   typedUrl,
   venues,
   initial,
+  codeCount,
 }: PostersTabProps) {
-  const isPhone = useIsPhone();
+  // Null until the media query is read. The shell's pattern: the server and
+  // the first client frame still draw desktop, so desktop never goes blank,
+  // and the root carries `data-pending` until then, which `poster.css` hides
+  // at the phone breakpoint (CSS knows the width before JS does), so a phone
+  // never paints the desktop form for a frame.
+  const resolvedPhone = useIsPhoneResolved();
+  const isPhone = resolvedPhone === true;
   const printable = cards.filter(
     (card): card is PosterCodeCard & { qr: QrPath } => card.qr !== null,
   );
@@ -175,9 +187,41 @@ export function PostersTab({
     );
   }, [selected, look, tabs]);
 
+  // On the phone, folding unmounts the radio just used and opening the list
+  // unmounts Change, so focus is moved on purpose: to Change after a fold, to
+  // the selected (or first open) radio after Change. Set only by those two
+  // gestures, so nothing is focused on mount.
+  const foldFocus = useRef<FoldFocus>(null);
+  const changeRef = useRef<HTMLButtonElement>(null);
+  const codesRef = useRef<HTMLDivElement>(null);
+  const isOneLine = oneLine !== null;
+  useEffect(() => {
+    const target = foldFocus.current;
+    foldFocus.current = null;
+    if (target === 'change') changeRef.current?.focus();
+    if (target === 'radio') {
+      const group = codesRef.current;
+      (
+        group?.querySelector<HTMLInputElement>('input:checked') ??
+        group?.querySelector<HTMLInputElement>('input:not(:disabled)')
+      )?.focus();
+    }
+  }, [isOneLine]);
+
+  const fold = () => {
+    // With the new-code form open the step stays unfolded: nothing to move.
+    if (isPhone && !formOpen) foldFocus.current = 'change';
+    setListOpen(false);
+  };
+
   const pick = (id: string) => {
     setSelectedId(id);
-    setListOpen(false);
+    fold();
+  };
+
+  const openList = () => {
+    foldFocus.current = 'radio';
+    setListOpen(true);
   };
 
   useEffect(() => {
@@ -233,10 +277,22 @@ export function PostersTab({
     <div
       className="poster-page pt-page"
       data-testid="posters-tab"
-      data-phone={isPhone}
+      // `|| undefined` leaves the attribute off desktop entirely.
+      data-phone={isPhone || undefined}
+      data-pending={resolvedPhone === null || undefined}
     >
       {isPhone ? (
-        <PostersPhoneTabs posters={cards.length} />
+        <PostersPhoneTabs
+          posters={cards.length}
+          codes={codeCount}
+          // The current segment keeps the page's selection, so tapping it
+          // never drops ?code, ?look or ?tabs.
+          postersLink={postersHref({
+            code: selected?.id ?? initial.code,
+            look,
+            tabs,
+          })}
+        />
       ) : (
         <>
           <Link href={INVITE_CODES_HREF} prefetch={false} className="pt-back">
@@ -254,7 +310,7 @@ export function PostersTab({
           />
         </>
       )}
-      <div className="pt-grid" data-phone={isPhone}>
+      <div className="pt-grid" data-phone={isPhone || undefined}>
         <div className="pt-steps">
           <section className="pt-step" aria-labelledby="pt-step-code">
             {oneLine ? (
@@ -263,9 +319,10 @@ export function PostersTab({
                   {oneLine.code}
                 </code>
                 <button
+                  ref={changeRef}
                   type="button"
                   className="pt-pchange"
-                  onClick={() => setListOpen(true)}
+                  onClick={openList}
                 >
                   {phoneCopy.change}
                 </button>
@@ -303,6 +360,7 @@ export function PostersTab({
                   <p className="pt-note">{copy.noCodes}</p>
                 ) : (
                   <div
+                    ref={codesRef}
                     role="radiogroup"
                     aria-labelledby="pt-step-code"
                     className="pt-codes"
@@ -327,11 +385,7 @@ export function PostersTab({
                             onChange={() => pick(card.id)}
                             // The phone opened the list with Change; tapping the
                             // code already picked folds it back to one line.
-                            onClick={
-                              isPhone && on
-                                ? () => setListOpen(false)
-                                : undefined
-                            }
+                            onClick={isPhone && on ? fold : undefined}
                           />
                           <span className="pt-card-row">
                             <span className="pt-card-main">
