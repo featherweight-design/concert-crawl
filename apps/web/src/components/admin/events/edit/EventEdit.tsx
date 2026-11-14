@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -30,6 +31,7 @@ import { editEventHref } from '@/lib/admin/edit-event-link';
 import { eventCanonicalPath } from '@/lib/share/event-metadata';
 import { MergeEventDialog } from '../editor/MergeEventDialog';
 import { PriceCard } from './PriceCard';
+import { DateField, TimeField } from './pickers';
 import { StatusCard, type Sale, type StatusDialog } from './StatusCard';
 import { StatusChips } from '../list/EventsList';
 import { fieldDate, fieldTime, isPast, type EventDetail } from './event-detail';
@@ -42,7 +44,20 @@ interface Fields {
   title: string;
   /** Tickets available or Sold out; `null` while neither pill is chosen. */
   sale: Sale | null;
+  /** YYYY-MM-DD. */
+  date: string;
+  /** `HH:MM`, or null for none. */
+  doorsTime: string | null;
+  showTime: string | null;
 }
+
+/** A stored `HH:MM:SS` as the pickers' `HH:MM`. */
+const hhmm = (time: string | null): string | null =>
+  time === null ? null : time.slice(0, 5);
+
+/** The pickers' `HH:MM` as the API stores it. */
+const stored = (time: string | null): string | null =>
+  time === null ? null : `${time}:00`;
 
 /** The saved sale: the pill drawn chosen when nothing is drafted. */
 const saleOf = (status: EventDetail['status']): Sale | null =>
@@ -51,7 +66,10 @@ const saleOf = (status: EventDetail['status']): Sale | null =>
 /** How many fields differ from what is saved: the Save bar's count. */
 const changedCount = (draft: Fields, saved: Fields): number =>
   (draft.title.trim() !== saved.title.trim() ? 1 : 0) +
-  (draft.sale !== saved.sale ? 1 : 0);
+  (draft.sale !== saved.sale ? 1 : 0) +
+  (draft.date !== saved.date ? 1 : 0) +
+  (draft.doorsTime !== saved.doorsTime ? 1 : 0) +
+  (draft.showTime !== saved.showTime ? 1 : 0);
 
 /** The header's 36px buttons, as on the venue header (`06/event-edit`). */
 const BUTTON: CSSProperties = {
@@ -393,15 +411,37 @@ export const EventEdit = ({
   // (Hidden, a merge) never throws away a title being typed.
   const savedTitle = detail.title;
   const savedSale = saleOf(detail.status);
+  const savedDate = detail.date;
+  const savedDoors = hhmm(detail.doorsTime);
+  const savedShow = hhmm(detail.showTime);
   const saved = useMemo(
-    () => ({ title: savedTitle, sale: savedSale }),
-    [savedTitle, savedSale],
+    () => ({
+      title: savedTitle,
+      sale: savedSale,
+      date: savedDate,
+      doorsTime: savedDoors,
+      showTime: savedShow,
+    }),
+    [savedTitle, savedSale, savedDate, savedDoors, savedShow],
   );
   const snap = useSnapBack<Fields>(saved, async (next) => {
     const token = await tokenOrThrow();
     const saleChanged = next.sale !== null && next.sale !== savedSale;
-    const body: { title?: string; status?: 'upcoming' } = {
+    const body: {
+      title?: string;
+      status?: 'upcoming';
+      date?: string;
+      doorsTime?: string | null;
+      showTime?: string | null;
+    } = {
       ...(next.title !== savedTitle && { title: next.title }),
+      // A date change on a show that is on sends Watchers `watch.postponed`
+      // server side; a correction is the admin's call.
+      ...(next.date !== savedDate && { date: next.date }),
+      ...(next.doorsTime !== savedDoors && {
+        doorsTime: stored(next.doorsTime),
+      }),
+      ...(next.showTime !== savedShow && { showTime: stored(next.showTime) }),
       // The pills pick one status: leaving Postponed, Cancelled or No longer
       // listed for either sale pill puts the show back on (a status write also
       // ends a delisting, server side).
@@ -441,16 +481,20 @@ export const EventEdit = ({
   // What is saved (after a save, a refresh, or a snap-back) resets the form.
   // Per field, so a status save (Postponed moves the saved sale) never throws
   // away a title being typed.
-  const savedValueTitle = snap.value.title;
-  const savedValueSale = snap.value.sale;
-  useEffect(
-    () => setDraft((prev) => ({ ...prev, title: savedValueTitle })),
-    [savedValueTitle],
-  );
-  useEffect(
-    () => setDraft((prev) => ({ ...prev, sale: savedValueSale })),
-    [savedValueSale],
-  );
+  const lastSaved = useRef(snap.value);
+  useEffect(() => {
+    const was = lastSaved.current;
+    const now = snap.value;
+    lastSaved.current = now;
+    setDraft((prev) => ({
+      title: was.title !== now.title ? now.title : prev.title,
+      sale: was.sale !== now.sale ? now.sale : prev.sale,
+      date: was.date !== now.date ? now.date : prev.date,
+      doorsTime:
+        was.doorsTime !== now.doorsTime ? now.doorsTime : prev.doorsTime,
+      showTime: was.showTime !== now.showTime ? now.showTime : prev.showTime,
+    }));
+  }, [snap.value]);
   // A save that fails fast can batch its pending and failed states into one
   // render, so the values above never change: snap back on the failure.
   useEffect(() => {
@@ -459,6 +503,30 @@ export const EventEdit = ({
   const count = changedCount(draft, snap.value);
   // The API refuses an empty title, so Save waits for one.
   const valid = draft.title.trim() !== '';
+
+  /** Doors or Show: the shared time picker, or read-only on a past show. */
+  const timeField = (
+    id: string,
+    label: string,
+    key: 'doorsTime' | 'showTime',
+  ) =>
+    past ? (
+      <ReadOnlyField
+        id={id}
+        label={label}
+        value={fieldTime(draft[key]) ?? COPY.none}
+      />
+    ) : (
+      <Field label={label} htmlFor={id}>
+        <TimeField
+          id={id}
+          value={draft[key]}
+          onChange={(time) => setDraft({ ...draft, [key]: time })}
+          phone={phone}
+          placeholder={COPY.none}
+        />
+      </Field>
+    );
 
   const venue = detail.venueName ?? COPY.none;
   const method = COPY.crawl.method(detail.extractionStrategy);
@@ -491,30 +559,27 @@ export const EventEdit = ({
           gap: 12,
         }}
       >
-        <ReadOnlyField
-          id="event-edit-date"
-          label={COPY.show.date}
-          value={fieldDate(detail.date, !phone)}
-        />
-        {!phone && (
+        {past ? (
           <ReadOnlyField
-            id="event-edit-doors"
-            label={COPY.show.doors}
-            value={fieldTime(detail.doorsTime) ?? COPY.none}
+            id="event-edit-date"
+            label={COPY.show.date}
+            value={fieldDate(detail.date, !phone)}
           />
+        ) : (
+          <Field label={COPY.show.date} htmlFor="event-edit-date">
+            <DateField
+              id="event-edit-date"
+              value={draft.date}
+              onChange={(date) => setDraft({ ...draft, date })}
+              today={today}
+              phone={phone}
+              withYear={!phone}
+            />
+          </Field>
         )}
-        <ReadOnlyField
-          id="event-edit-show-time"
-          label={COPY.show.showTime}
-          value={fieldTime(detail.showTime) ?? COPY.none}
-        />
-        {phone && (
-          <ReadOnlyField
-            id="event-edit-doors"
-            label={COPY.show.doors}
-            value={fieldTime(detail.doorsTime) ?? COPY.none}
-          />
-        )}
+        {!phone && timeField('event-edit-doors', COPY.show.doors, 'doorsTime')}
+        {timeField('event-edit-show-time', COPY.show.showTime, 'showTime')}
+        {phone && timeField('event-edit-doors', COPY.show.doors, 'doorsTime')}
       </div>
     </AdminCard>
   );
@@ -611,7 +676,11 @@ export const EventEdit = ({
           saved={
             snap.failed.attempted.title !== snap.failed.saved.title
               ? COPY.saveFailed.saved(snap.failed.saved.title)
-              : COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
+              : snap.failed.attempted.sale !== snap.failed.saved.sale
+                ? COPY.statusSaved(ADMIN_COPY.eventsList.status[detail.status])
+                : COPY.saveFailed.savedWhen(
+                    fieldDate(snap.failed.saved.date, true),
+                  )
           }
           onRetry={() => void snap.retry()}
           retrying={snap.saving}
@@ -630,9 +699,7 @@ export const EventEdit = ({
           saving={snap.saving}
           phone={phone}
           onDiscard={() => setDraft(snap.value)}
-          onSave={() =>
-            void snap.save({ title: draft.title.trim(), sale: draft.sale })
-          }
+          onSave={() => void snap.save({ ...draft, title: draft.title.trim() })}
         />
       )}
       {merging && (
