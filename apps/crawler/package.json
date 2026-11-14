@@ -26,7 +26,7 @@
     "@concert-crawl/price-pipeline": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "@sentry/node": "^11.12.0",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.10",
     "drizzle-orm": "^0.45.4",
     "playwright": "^1.65.0"
   }
