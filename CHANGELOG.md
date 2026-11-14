@@ -1,3 +1,17 @@
+# [1.426.0](https://github.com/featherweight-design/concert-crawl/compare/v1.425.1...v1.426.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** average only whole past nights, to the cent, and pin the skip order ([0c71fcc](https://github.com/featherweight-design/concert-crawl/commit/0c71fcce3177109c7aa4d7c3cf7e77607f2642c9))
+* **web:** clear the launch attribute from the head script, pin the shell ([10d8b4d](https://github.com/featherweight-design/concert-crawl/commit/10d8b4d029bbaa0900c66789430fd85f50b7d8fa))
+* **web:** play the launch animation from the first frame, in CSS ([4d2d6dd](https://github.com/featherweight-design/concert-crawl/commit/4d2d6ddde07a7871b8b96e3e1a68389c832e3211))
+
+
+### Features
+
+* **api:** estimate Crawl all, counting by the rule it queues by ([9e6b97b](https://github.com/featherweight-design/concert-crawl/commit/9e6b97b411454591a8d09e93aeae28706e08de5c))
+
 ## [1.425.1](https://github.com/featherweight-design/concert-crawl/compare/v1.425.0...v1.425.1) (2026-11-14)
 
 
