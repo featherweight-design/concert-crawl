@@ -408,7 +408,9 @@ async function EventDetailPageInner({ params }: EventDetailPageProps) {
             {/* The venue row and its guide chip are siblings, not nested —
                 InfoRow wraps its whole row in a link when `href` is set, and an
                 anchor inside an anchor is invalid HTML. */}
-            <div className="relative">
+            {/* The right padding reserves the chip's room on desktop, so a long
+                venue name ends before it instead of under it. */}
+            <div className="relative lg:pr-[240px]">
               <InfoRow
                 icon={<IconPin />}
                 label={copy.venueLabel}
