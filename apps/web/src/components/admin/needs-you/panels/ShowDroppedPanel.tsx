@@ -51,9 +51,23 @@ export const ShowDroppedPanel = ({
             : ''}
         </Prose>
       </Section>
-      {seen && (
+      {(seen || row.classification !== 'duplicate') && (
         <Section label={PANEL.checkedForYou}>
-          <RowCard rows={[{ label: PANEL.lastSeen, value: seen }]} />
+          <RowCard
+            rows={[
+              ...(seen ? [{ label: PANEL.lastSeen, value: seen }] : []),
+              // A same-act listing elsewhere would have made this a show-moved
+              // item, so a dropped show has none: the board's row is honest.
+              ...(row.classification !== 'duplicate'
+                ? [
+                    {
+                      label: PANEL.showDropped.sameAct,
+                      value: PANEL.showDropped.noneFound,
+                    },
+                  ]
+                : []),
+            ]}
+          />
         </Section>
       )}
       <Section label={PANEL.whoSeesIt}>

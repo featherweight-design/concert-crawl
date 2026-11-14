@@ -2,7 +2,12 @@
 
 import { MapPin } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { lookalikeDate, whenChipOf } from '../needs-you-rules';
+import {
+  lookalikeDate,
+  metaTime,
+  mountainDay,
+  whenChipOf,
+} from '../needs-you-rules';
 import type { PanelProps } from './panel-props';
 import { AnswerButtons, Chip, ChipRow, Prose, Section } from './panel-parts';
 
@@ -14,9 +19,17 @@ export const ShowMovedPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
   const target = row.moveTo;
   const date = lookalikeDate(row);
   const venue = target?.venueName ?? null;
-  // The card's own meta: venue and date. The new listing's time and crawl day
-  // are not in the API's row.
-  const meta = [venue, date].filter((part) => part !== null).join(' · ');
+  // The card's meta: venue, date, time, and the day we last crawled it
+  // (`show-renamed-moved`: "Globe Hall · Sat Nov 14 · 7 PM · crawled Nov 10").
+  const crawled = target?.crawledAt ? mountainDay(target.crawledAt) : null;
+  const meta = [
+    venue,
+    date,
+    metaTime(target?.showTime),
+    crawled ? PANEL.showMoved.crawled(crawled) : null,
+  ]
+    .filter((part) => part !== null)
+    .join(' · ');
   return (
     <>
       <ChipRow>

@@ -110,6 +110,8 @@ export interface MoveTo {
   eventId: string;
   title: string;
   venueName: string | null;
+  showTime: string | null;
+  crawledAt: string | null;
 }
 
 /** One card: the fields the queue draws, whatever the item's kind. */
@@ -134,6 +136,8 @@ export interface QueueRow {
   lastSeenAt: string | null;
   /** A moved show's new listing. */
   moveTo: MoveTo | null;
+  /** Why a dropped show looks dropped (`crawl_gap`, `removed`, `duplicate`). */
+  classification: string | null;
   /** A venue item's recent runs, as the API sent them (empty on other kinds). */
   lastRuns: RunLine[];
   /** A venue item's published state; null when the API did not say. */
@@ -232,6 +236,8 @@ const moveToFrom = (value: unknown): MoveTo | null =>
         eventId: value['eventId'],
         title: value['title'],
         venueName: value['venueName'],
+        showTime: textOf(value['showTime']),
+        crawledAt: textOf(value['crawledAt']),
       }
     : null;
 
@@ -338,6 +344,7 @@ const rowFrom = (value: unknown): QueueRow | null => {
     reportCount: isCount(value['reportCount']) ? value['reportCount'] : null,
     lastSeenAt: isText(value['lastSeenAt']) ? value['lastSeenAt'] : null,
     moveTo: moveToFrom(value['moveTo']),
+    classification: textOf(value['classification']),
     lastRuns: runsFrom(value['lastRuns']),
     venueLive: isBoolean(value['venueLive']) ? value['venueLive'] : null,
     pausedAt: isText(value['pausedAt']) ? value['pausedAt'] : null,

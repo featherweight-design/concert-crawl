@@ -2053,7 +2053,15 @@ export type NeedsYouItem =
       kind: 'show-moved';
       eventId: string;
       showTime: string | null;
-      moveTo: { eventId: string; title: string; venueName: string | null };
+      moveTo: {
+        eventId: string;
+        title: string;
+        venueName: string | null;
+        /** The new listing's show time, when it has one. */
+        showTime: string | null;
+        /** When we last crawled the new listing (ISO), when known. */
+        crawledAt: string | null;
+      };
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {

@@ -2650,6 +2650,8 @@ export const ADMIN_COPY = {
         openGithub: 'Open in GitHub',
       },
       showDropped: {
+        sameAct: 'Same act, another venue',
+        noneFound: 'None found',
         otherFine: (count: number, venue: string | null) =>
           `The other ${count} ${venue ?? 'venue'} ${count === 1 ? 'show' : 'shows'} crawled fine, so this isn’t a page problem.`,
         title: (name: string, venue: string | null) =>
@@ -2670,6 +2672,7 @@ export const ADMIN_COPY = {
         title: (name: string, venue: string) => `${name} moved to ${venue}`,
         nowLists: (venue: string) =>
           `${venue} now lists the same act on the same night.`,
+        crawled: (day: string) => `crawled ${day}`,
         doesWhat: (
           venue: string | null,
           from: string | null,

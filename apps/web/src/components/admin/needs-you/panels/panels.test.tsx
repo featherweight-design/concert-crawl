@@ -39,6 +39,7 @@ const row = (over: Partial<QueueRow>): QueueRow => ({
   reportCount: null,
   lastSeenAt: '2026-11-09T10:00:00.000Z',
   moveTo: null,
+  classification: null,
   lastRuns: [],
   venueLive: null,
   pausedAt: null,
@@ -80,7 +81,39 @@ const open = (item: QueueRow, onAnswer = vi.fn(), ranksFirst = true) => {
   return onAnswer;
 };
 
+describe('ShowMovedPanel', () => {
+  it('draws the new listing with its time and the day it was crawled', () => {
+    open(
+      row({
+        key: 'show-moved:e1:e2',
+        kind: 'show-moved',
+        fanDate: '2026-11-14',
+        moveTo: {
+          eventId: 'e2',
+          title: 'Olive Jones',
+          venueName: 'Globe Hall',
+          showTime: '19:00:00',
+          crawledAt: '2026-11-10T15:00:00Z',
+        },
+        answers: [answer({ slug: 'move_to', label: 'Move to Globe Hall' })],
+      }),
+    );
+    expect(
+      screen.getByText('Globe Hall · 7 PM · crawled Nov 10'),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('ShowDroppedPanel', () => {
+  it('says no other venue lists the act, unless it is a duplicate', () => {
+    open(row({}));
+    expect(screen.getByText('Same act, another venue')).toBeInTheDocument();
+    expect(screen.getByText('None found')).toBeInTheDocument();
+    cleanup();
+    open(row({ classification: 'duplicate' }));
+    expect(screen.queryByText('Same act, another venue')).toBeNull();
+  });
+
   it('draws the labelled sections and the built sentences', () => {
     open(row({}));
     expect(
