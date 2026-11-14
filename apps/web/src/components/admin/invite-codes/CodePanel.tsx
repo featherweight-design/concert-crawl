@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Copy, Printer } from 'lucide-react';
 import type { InviteCodeRedemptionsResponse } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
-import { AdminButton } from '@/components/admin/primitives';
+import { AdminButton, PersonAvatar } from '@/components/admin/primitives';
 import {
   isPosterCode,
   seatsTaken,
@@ -211,26 +211,13 @@ export const CodePanel = ({
                   padding: '7px 0',
                 }}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    width: 30,
-                    height: 30,
-                    flex: 'none',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: 12,
-                    background:
-                      'linear-gradient(135deg, color-mix(in srgb, var(--signal) 30%, transparent), color-mix(in srgb, var(--accent) 30%, transparent))',
-                    border:
-                      '1.5px solid color-mix(in srgb, var(--signal) 70%, transparent)',
-                  }}
-                >
-                  {(person.handle ?? '?').charAt(0).toUpperCase()}
-                </span>
+                <PersonAvatar
+                  initialOf={person.handle}
+                  avatarColor={person.avatarColor}
+                  avatarSecondColor={person.avatarSecondColor}
+                  size={30}
+                  initialSize={12}
+                />
                 <div style={{ minWidth: 0 }}>
                   <div
                     style={{

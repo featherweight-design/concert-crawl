@@ -11,6 +11,7 @@ import {
   type Role,
 } from '@concert-crawl/types';
 import {
+  avatarColorOrNull,
   call,
   isCount,
   isRecord,
@@ -71,8 +72,13 @@ const isStats = (value: unknown): value is PersonDetail['stats'] =>
   isCount(value['feedback']);
 
 /** Everything but the join source and Recent, which are read leniently. */
-type DetailRow = Omit<PersonDetail, 'joinSource' | 'recent'> & {
+type DetailRow = Omit<
+  PersonDetail,
+  'joinSource' | 'recent' | 'avatarColor' | 'avatarSecondColor'
+> & {
   joinSource?: unknown;
+  avatarColor?: unknown;
+  avatarSecondColor?: unknown;
   recent: unknown[];
 };
 
@@ -102,6 +108,8 @@ export const personApi = (getToken: GetToken) => {
       if (!isDetailRow(data)) throw new Error('person');
       return {
         ...data,
+        avatarColor: avatarColorOrNull(data.avatarColor),
+        avatarSecondColor: avatarColorOrNull(data.avatarSecondColor),
         joinSource: joinSourceFrom(data.joinSource),
         // A Recent kind this build doesn't know is skipped, not fatal.
         recent: data.recent.filter(isRecent),

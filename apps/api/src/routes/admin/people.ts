@@ -28,6 +28,7 @@ import {
   resolveInviteCodeIds,
 } from './lib/people-detail.js';
 import { validationHook } from '../../lib/validator.js';
+import { avatarColumns, avatarOf } from '../../lib/avatar.js';
 import type { AdminVariables } from './index.js';
 
 const secretKey = process.env['CLERK_SECRET_KEY'] ?? '';
@@ -162,10 +163,14 @@ peopleAdminRouter.get(
         userId: userProfiles.userId,
         handle: userProfiles.handle,
         isTestAccount: userProfiles.isTestAccount,
+        ...avatarColumns(),
       })
       .from(userProfiles);
     const handleOf = new Map(
       profiles.map((profile) => [profile.userId, profile.handle]),
+    );
+    const profileOf = new Map(
+      profiles.map((profile) => [profile.userId, profile]),
     );
     const testAccounts = new Set(
       profiles
@@ -261,6 +266,7 @@ peopleAdminRouter.get(
         people: page.map((user) => ({
           id: user.id,
           handle: handleOf.get(user.id) ?? user.username,
+          ...avatarOf(profileOf.get(user.id)),
           emailMasked: maskEmail(user.email),
           role: user.role,
           createdAt: iso(user.createdAt),
@@ -314,6 +320,7 @@ peopleAdminRouter.get(
       .select({
         handle: userProfiles.handle,
         isTestAccount: userProfiles.isTestAccount,
+        ...avatarColumns(),
       })
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId));
@@ -324,6 +331,7 @@ peopleAdminRouter.get(
     const detail: PersonDetail = {
       id: user.id,
       handle: profile?.handle ?? user.username ?? null,
+      ...avatarOf(profile),
       role: isRole(rawRole) ? rawRole : 'user',
       createdAt: iso(user.createdAt ?? null),
       lastActiveAt: iso(user.lastActiveAt ?? null),

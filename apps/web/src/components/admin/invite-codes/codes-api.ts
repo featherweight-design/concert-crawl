@@ -5,8 +5,10 @@
  * Couldn't load or the save-failed toast rather than drawing bad rows.
  */
 import {
+  AVATAR_COLORS,
   isRole,
   type AdminInviteCode,
+  type AvatarColor,
   type InviteCode,
   type InviteCodeRedemption,
   type InviteCodeRedemptionsResponse,
@@ -114,7 +116,20 @@ export const isAdminCode = (
 ): code is ListedInviteCode & AdminInviteCode & { kind: 'admin' } =>
   code.kind === 'admin';
 
-const isRedemption = (value: unknown): value is InviteCodeRedemption =>
+/**
+ * A person's avatar colour as the API sends it. Read leniently: a payload
+ * from before the colours existed, or a token this build doesn't know, reads
+ * as "not chosen" (the house signal-to-accent pair) instead of failing the page.
+ */
+export const avatarColorOrNull = (value: unknown): AvatarColor | null =>
+  AVATAR_COLORS.find((color) => color === value) ?? null;
+
+type RedemptionRow = Omit<
+  InviteCodeRedemption,
+  'avatarColor' | 'avatarSecondColor'
+> & { avatarColor?: unknown; avatarSecondColor?: unknown };
+
+const isRedemption = (value: unknown): value is RedemptionRow =>
   isRecord(value) &&
   isText(value['userId']) &&
   isTextOrNull(value['handle']) &&
@@ -248,7 +263,14 @@ export const codesApi = (getToken: GetToken) => ({
       !data['data'].every(isRedemption)
     )
       throw new ShapeError('redemptions');
-    return { data: data['data'], total: data['total'] };
+    return {
+      data: data['data'].map((row) => ({
+        ...row,
+        avatarColor: avatarColorOrNull(row.avatarColor),
+        avatarSecondColor: avatarColorOrNull(row.avatarSecondColor),
+      })),
+      total: data['total'],
+    };
   },
 });
 

@@ -3,8 +3,14 @@
  * Clerk token, through the invite-codes admin's `call`. The payload is checked
  * with type guards, so a shape drift fails into Couldn't load.
  */
-import { isRole, type PersonJoinSource, type Role } from '@concert-crawl/types';
 import {
+  isRole,
+  type AvatarColor,
+  type PersonJoinSource,
+  type Role,
+} from '@concert-crawl/types';
+import {
+  avatarColorOrNull,
   call,
   isCount,
   isRecord,
@@ -16,6 +22,9 @@ import {
 export interface AdminPerson {
   id: string;
   handle: string | null;
+  /** Their own avatar colours (null: not chosen). */
+  avatarColor: AvatarColor | null;
+  avatarSecondColor: AvatarColor | null;
   emailMasked: string;
   role: Role;
   createdAt: string | null;
@@ -68,7 +77,14 @@ export const joinSourceFrom = (value: unknown): PersonJoinSource | null =>
     ? { kind: value['kind'], code: value['code'], label: value['label'] }
     : null;
 
-type PersonRow = Omit<AdminPerson, 'joinSource'> & { joinSource?: unknown };
+type PersonRow = Omit<
+  AdminPerson,
+  'joinSource' | 'avatarColor' | 'avatarSecondColor'
+> & {
+  joinSource?: unknown;
+  avatarColor?: unknown;
+  avatarSecondColor?: unknown;
+};
 
 const isPersonRow = (value: unknown): value is PersonRow =>
   isRecord(value) &&
@@ -107,6 +123,8 @@ export const peopleApi = (getToken: GetToken) => ({
     return {
       people: data['people'].map((row) => ({
         ...row,
+        avatarColor: avatarColorOrNull(row.avatarColor),
+        avatarSecondColor: avatarColorOrNull(row.avatarSecondColor),
         joinSource: joinSourceFrom(row.joinSource),
       })),
       total: data['total'],

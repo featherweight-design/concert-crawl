@@ -169,6 +169,27 @@ describe('admin people', () => {
     expect((await post('/user_a/show-email')).status).toBe(403);
   });
 
+  it('sends each person their own avatar colours, null when none were chosen', async () => {
+    setAuth('admin');
+    clerk.users = [person('user_mix'), person('user_plain')];
+    await seedUserProfile('user_mix', {
+      handle: 'mix',
+      avatarColor: 'success',
+      avatarSecondColor: 'accent',
+    });
+    const body: ListBody = await (await get('')).json();
+    const mix = body.data.people.find((row) => row.id === 'user_mix');
+    const plain = body.data.people.find((row) => row.id === 'user_plain');
+    expect(mix).toMatchObject({
+      avatarColor: 'success',
+      avatarSecondColor: 'accent',
+    });
+    expect(plain).toMatchObject({
+      avatarColor: null,
+      avatarSecondColor: null,
+    });
+  });
+
   it('lists people newest activity first with a masked email, a handle and Watching', async () => {
     setAuth('admin');
     clerk.users = [

@@ -7,6 +7,8 @@ const NOW = new Date('2026-11-12T17:00:00Z');
 const person = (joinSource: PersonJoinSource | null): PersonDetail => ({
   id: 'p1',
   handle: 'sam',
+  avatarColor: null,
+  avatarSecondColor: null,
   role: 'user',
   createdAt: '2026-10-02T18:00:00Z',
   lastActiveAt: null,

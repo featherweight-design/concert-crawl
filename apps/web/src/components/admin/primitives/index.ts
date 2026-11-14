@@ -30,6 +30,7 @@ export { VenueStatus } from './VenueStatus';
 export type { VenueStatusVenue } from './VenueStatus';
 export { KindLabel } from './KindLabel';
 export type { Kind } from './KindLabel';
+export { PersonAvatar } from './PersonAvatar';
 export { SidePanel } from './SidePanel';
 export type { SidePanelProps } from './SidePanel';
 export { AdminSheet } from './AdminSheet';
