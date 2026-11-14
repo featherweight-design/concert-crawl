@@ -30,24 +30,27 @@ vi.mock('@/components/consumer/identity-art/IdentityArt', () => ({
 }));
 
 // The review UI has its own suite; this stub accepts the draft on a click,
-// shows what it holds, and offers Cancel.
+// shows what it holds, offers Cancel, and holds Accept when disabled.
 vi.mock('@/components/admin/generate-field/GenerateField', () => ({
   GenerateField: ({
     state,
     result,
     onAccept,
     onCancel,
+    disabled,
   }: {
     state: string;
     result?: { content: string };
     onAccept: (content: string) => void;
     onCancel?: () => void;
+    disabled?: boolean;
   }) => (
     <>
       <button
         type="button"
         data-testid={`generate-${state}`}
         data-content={result?.content ?? ''}
+        disabled={disabled}
         onClick={() => onAccept(result?.content ?? '')}
       >
         accept
@@ -582,18 +585,147 @@ describe('DetailsTab', () => {
     ).toBe('The second.');
   });
 
-  it('refuses an About over 280 on save, never cutting it', async () => {
+  it('refuses an About over 280 on save, never cutting it', () => {
     const long = 'a'.repeat(281);
-    mockGenerate.mockResolvedValue(drafted(long));
     render(<DetailsTab venue={venue} />);
+    const about = screen.getByRole('textbox', { name: COPY.cards.about });
+    // A browser cuts a paste at maxLength (jsdom doesn't), so there is none.
+    expect(about.getAttribute('maxlength')).toBeNull();
+    fireEvent.change(about, { target: { value: long } });
+    expect(about).toHaveProperty('value', long);
+    save();
+    expect(mockUpdateVenue).not.toHaveBeenCalled();
+    expect(screen.getByText(COPY.errors.aboutTooLong)).toBeTruthy();
+    expect(about).toHaveProperty('value', long);
+  });
+
+  it('a second accepted draft replaces the first’s fills, never an edit', async () => {
+    mockGenerate
+      .mockResolvedValueOnce(drafted('The first.'))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          about: 'The second.',
+          capacity: 1100,
+          venueType: 'Club',
+          neighborhood: 'RiNo',
+        },
+      });
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(input(FIELDS.neighborhood).value).toBe('LoDo');
+    // Typed between the drafts: an edit, so the second never replaces it.
+    fireEvent.change(input(FIELDS.neighborhood), {
+      target: { value: 'Five Points' },
+    });
     fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
     fireEvent.click(await screen.findByTestId('generate-review'));
     expect(
       screen.getByRole('textbox', { name: COPY.cards.about }),
-    ).toHaveProperty('value', long);
+    ).toHaveProperty('value', 'The second.');
+    expect(input(FIELDS.capacity.label).value).toBe('1,100');
+    expect(screen.getByLabelText(FIELDS.capacityType.label)).toHaveProperty(
+      'value',
+      COPY.capacityTypes.club,
+    );
+    expect(input(FIELDS.neighborhood).value).toBe('Five Points');
+  });
+
+  it('a second draft fills a neighborhood the first filled and nobody touched', async () => {
+    mockGenerate
+      .mockResolvedValueOnce(drafted('The first.'))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          about: 'The second.',
+          capacity: 1100,
+          venueType: 'Club',
+          neighborhood: 'RiNo',
+        },
+      });
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(await screen.findByTestId('generate-review'));
+    expect(input(FIELDS.neighborhood).value).toBe('RiNo');
+  });
+
+  it('Discard closes an open About review, so nothing can be accepted after', async () => {
+    mockGenerate.mockResolvedValue(drafted('A drafted line.'));
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.city), { target: { value: 'Boulder' } });
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    await screen.findByTestId('generate-review');
+    fireEvent.click(screen.getByRole('button', { name: COPY.saveBar.discard }));
+    expect(screen.queryByTestId('generate-review')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'accept' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: FIELDS.about.draft }),
+    ).toBeTruthy();
+    expect(input(FIELDS.city).value).toBe('Denver');
+  });
+
+  it('holds the About review’s Accept while a save is in flight', async () => {
+    const request = deferred<{ success: boolean }>();
+    mockUpdateVenue.mockReturnValueOnce(request.promise);
+    mockGenerate.mockResolvedValue(drafted('A drafted line.'));
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.city), { target: { value: 'Boulder' } });
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    const accept = await screen.findByTestId('generate-review');
+    expect(accept).toHaveProperty('disabled', false);
     save();
-    expect(mockUpdateVenue).not.toHaveBeenCalled();
-    expect(screen.getByText(COPY.errors.aboutTooLong)).toBeTruthy();
+    await waitFor(() => expect(accept).toHaveProperty('disabled', true));
+    await act(async () => {
+      request.resolve({ success: true });
+      await request.promise;
+    });
+    expect(screen.getByTestId('generate-review')).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
+  it('holds Write a draft while a save is in flight', async () => {
+    const request = deferred<{ success: boolean }>();
+    mockUpdateVenue.mockReturnValueOnce(request.promise);
+    render(<DetailsTab venue={venue} />);
+    fireEvent.change(input(FIELDS.city), { target: { value: 'Boulder' } });
+    save();
+    expect(
+      screen.getByRole('button', { name: FIELDS.about.draft }),
+    ).toHaveProperty('disabled', true);
+    await act(async () => {
+      request.resolve({ success: true });
+      await request.promise;
+    });
+  });
+
+  it('logs a draft that fails after it was overtaken, but never shows it', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let fail: (err: Error) => void = () => undefined;
+    mockGenerate.mockReturnValueOnce(
+      new Promise((_res, rej) => {
+        fail = rej;
+      }),
+    );
+    render(<DetailsTab venue={venue} />);
+    fireEvent.click(screen.getByRole('button', { name: FIELDS.about.draft }));
+    fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
+    await act(async () => {
+      fail(new Error('network'));
+      await Promise.resolve();
+    });
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(
+        'DetailsAbout: draft failed',
+        expect.objectContaining({ venueId: venue.id }),
+      ),
+    );
+    expect(screen.queryByTestId('generate-error')).toBeNull();
+    spy.mockRestore();
   });
 
   it('a failed draft says so and changes nothing', async () => {

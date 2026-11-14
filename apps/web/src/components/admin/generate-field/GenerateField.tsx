@@ -23,6 +23,11 @@ interface GenerateFieldProps {
   onCancel?: () => void;
   onAccept: (content: string) => void;
   onDiscard: () => void;
+  /**
+   * Holds Accept, Regenerate and Generate (a save is in flight, say).
+   * Discard and Cancel stay live: they change nothing.
+   */
+  disabled?: boolean;
 }
 
 export function GenerateField({
@@ -35,11 +40,14 @@ export function GenerateField({
   onCancel,
   onAccept,
   onDiscard,
+  disabled = false,
 }: GenerateFieldProps) {
+  const cursor = disabled ? 'not-allowed' : 'pointer';
   if (state === 'idle') {
     return (
       <button
         type="button"
+        disabled={disabled}
         onClick={onGenerate}
         style={{
           display: 'inline-flex',
@@ -51,7 +59,7 @@ export function GenerateField({
             '1px solid color-mix(in oklab, var(--accent) 34%, transparent)',
           background:
             'color-mix(in oklab, var(--accent) 8%, var(--bg-elevated))',
-          cursor: 'pointer',
+          cursor,
           fontFamily: "'Inter', sans-serif",
           fontSize: 12,
           fontWeight: 700,
@@ -234,6 +242,7 @@ export function GenerateField({
         <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
           <button
             type="button"
+            disabled={disabled}
             onClick={() => onAccept(result.content)}
             style={{
               display: 'inline-flex',
@@ -247,7 +256,7 @@ export function GenerateField({
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor,
             }}
           >
             <Check size={11} />
@@ -256,6 +265,7 @@ export function GenerateField({
           {onRegenerate && (
             <button
               type="button"
+              disabled={disabled}
               onClick={onRegenerate}
               style={{
                 display: 'inline-flex',
@@ -269,7 +279,7 @@ export function GenerateField({
                 fontFamily: "'Inter', sans-serif",
                 fontSize: 12,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor,
               }}
             >
               {ADMIN_COPY.generateField.review.regenerate}
@@ -357,12 +367,13 @@ export function GenerateField({
         </span>
         <button
           type="button"
+          disabled={disabled}
           onClick={onGenerate}
           style={{
             background: 'none',
             border: 'none',
             padding: 0,
-            cursor: 'pointer',
+            cursor,
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: 10,
             fontWeight: 700,
