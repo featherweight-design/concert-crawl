@@ -1,3 +1,20 @@
+# [1.423.0](https://github.com/featherweight-design/concert-crawl/compare/v1.422.0...v1.423.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **admin:** match the 06/events chips and keep ticked venues listed ([2ace4b4](https://github.com/featherweight-design/concert-crawl/commit/2ace4b42e46a588ec98bd59e71470add6b47aef6))
+* **web:** a mode or seller switch raises the source bar; a locked feed stays put ([a964a67](https://github.com/featherweight-design/concert-crawl/commit/a964a67b078389d4debcf2d78b4ae0ce2eed7c44))
+* **web:** build the feed subtitle from the sellers the tab offers ([cce16d9](https://github.com/featherweight-design/concert-crawl/commit/cce16d99f7e2c65b1adaed38b9ba0cea951d4a86))
+* **web:** review fixes on the admin Events filters ([bb6fb02](https://github.com/featherweight-design/concert-crawl/commit/bb6fb027daf6da33874e4e5feb58ddf58d228b41))
+* **web:** source tab review fixes and board drifts (3b part 6b-ii) ([8950066](https://github.com/featherweight-design/concert-crawl/commit/8950066a63e8d7ba9fefb494ec192afcb77da79b))
+
+
+### Features
+
+* **admin:** 4b-1b Events filters ([326e2f8](https://github.com/featherweight-design/concert-crawl/commit/326e2f88e6f671152a12b58b5b37f53ef3221f49)), closes [4b#23](https://github.com/4b/issues/23) [4b#1](https://github.com/4b/issues/1)
+* **web:** venue source tab mounted, crawl config cut from the old form (3b part 6b-ii) ([6da8031](https://github.com/featherweight-design/concert-crawl/commit/6da803168f8713b6b56462bc35ce3e59b6f37064))
+
 # [1.422.0](https://github.com/featherweight-design/concert-crawl/compare/v1.421.0...v1.422.0) (2026-11-14)
 
 
