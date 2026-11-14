@@ -28,7 +28,7 @@ import {
 import { moderateNote } from '../lib/moderate-note.js';
 import { isImminentEvent } from '../lib/time.js';
 import { clearSoldOut } from '../lib/clear-sold-out.js';
-import { PastLockedError } from '../lib/past-lock.js';
+import { classifySaleRefusal } from '../lib/past-lock.js';
 import { promoteSoldOutReport } from '../lib/promote-sold-out.js';
 import { apiLogger } from '../lib/logger.js';
 import { activeSoldOutWhere } from '../lib/sold-out.js';
@@ -418,59 +418,66 @@ eventReportsRouter.post(
         data: { confirmed: true, confirmsCount, resolved },
       });
 
-    // On a past show a sale report's promotion is a silent no-op: the shared
-    // writes (clearSoldOut, promoteSoldOutReport) throw PastLockedError
-    // before writing, the report stays pending (resolved_at null, resolution
-    // null) with this confirm recorded, nobody hears, and the fan gets the
-    // ordinary not-yet-resolved answer rather than an error.
+    // A sale report crossing the threshold goes through the shared writes
+    // (clearSoldOut, promoteSoldOutReport), which decide under the event's
+    // and the report's row locks. With `onPast: 'close'`, a report on a past
+    // show (postponed-passed included) closes as moot: `rejected` with the
+    // note "show already played", so it leaves the admin queue and a later
+    // reschedule can never promote it. Nothing else changes and nobody hears,
+    // and the fan still gets an ordinary answer, never an error. A report
+    // resolved before the lock is left as it is (resolved: false here), and a
+    // missing event is a silent no-op too.
+    const saleRefused = (err: unknown) =>
+      classifySaleRefusal(err, {
+        msg: 'fan confirm threshold',
+        eventId,
+        reportId,
+      }) === 'missing';
     let resolved = false;
     if (confirmsCount >= threshold && report.status === 'available') {
       // Tickets available has no state of its own: it is the sold-out it
       // clears. clearSoldOut resolves this pending report as promoted along
-      // with the sold-out, and only a sold-out live when it was filed.
-      let cleared: string[];
+      // with the sold-out, and only a sold-out live when it was filed. When
+      // that sold-out is already gone, it closes the report as moot rather
+      // than record a promotion that changed nothing.
+      let outcome: Awaited<ReturnType<typeof clearSoldOut>>['outcome'];
       try {
-        cleared = await clearSoldOut(
+        ({ outcome } = await clearSoldOut(
           eventId,
           `cleared by tickets available report ${reportId}`,
-          { filedAt: report.createdAt },
-        );
+          {
+            report: {
+              id: reportId,
+              filedAt: report.createdAt,
+              onPast: 'close',
+            },
+          },
+        ));
       } catch (err) {
-        if (!(err instanceof PastLockedError)) throw err;
+        if (!saleRefused(err)) throw err;
         return confirmed(false);
       }
-      if (cleared.length === 0) {
-        // The sold-out it answered is already gone: close it as moot rather
-        // than record a promotion that changed nothing.
-        await db
-          .update(eventReports)
-          .set({
-            resolvedAt: new Date(),
-            resolution: 'rejected',
-            adminNote: 'no live sold-out to clear',
-          })
-          .where(
-            and(eq(eventReports.id, reportId), isNull(eventReports.resolvedAt)),
-          );
-      }
-      resolved = true;
+      resolved = outcome !== 'already_resolved';
     } else if (confirmsCount >= threshold && report.status !== 'available') {
       // Check pre-state to decide whether promotion actually transitions
       // user-visible state. Fan-out only fires on a real transition — a
       // second cancelled/postponed report promoted after the event was
       // already in that status shouldn't spam watchers a second time. A
-      // sold-out's check runs inside promoteSoldOutReport, under the row lock.
+      // sold-out's check runs inside promoteSoldOutReport, under the row
+      // lock, and a sold-out on a show already sold out closes as moot.
       let isRealTransition: boolean;
       if (report.status === 'sold-out') {
+        let promotion: Awaited<ReturnType<typeof promoteSoldOutReport>>;
         try {
-          ({ isRealTransition } = await promoteSoldOutReport(
-            eventId,
-            reportId,
-          ));
+          promotion = await promoteSoldOutReport(eventId, reportId, {
+            onPast: 'close',
+          });
         } catch (err) {
-          if (!(err instanceof PastLockedError)) throw err;
+          if (!saleRefused(err)) throw err;
           return confirmed(false);
         }
+        if (promotion.outcome === 'already_resolved') return confirmed(false);
+        ({ isRealTransition } = promotion);
       } else {
         isRealTransition = await hasEventStateChanged(eventId, report.status);
         await db

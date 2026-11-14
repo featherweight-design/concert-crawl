@@ -505,6 +505,59 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     );
     expect(res.status).toBe(403);
   });
+
+  // A writer that skips the row lock inserts the live sold-out between this
+  // request's read and its insert: the insert's unique violation (0032) is
+  // caught in its savepoint, and the winner is re-read under the lock and
+  // answered as the idempotent 200. A real database cannot stage this race:
+  // the competing insert's foreign-key lock serializes with the row lock.
+  it('answers a lost insert race with the winner, read under the lock', async () => {
+    adminAuth();
+    const { db } = await import('@concert-crawl/db');
+    const limit = vi.mocked(db.select().from().where().limit);
+    const winner = {
+      id: '44444444-4444-4444-4444-444444444444',
+      eventId: EVENT_ID,
+      status: 'sold-out',
+      resolution: 'promoted',
+    };
+    // The locked event read (upcoming), the existing read (none yet), then
+    // the recovery read after the savepoint rolls back.
+    limit
+      .mockResolvedValueOnce([{ date: '2099-06-01' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([winner]);
+    vi.mocked(db.insert().values().returning).mockRejectedValueOnce(
+      Object.assign(new Error('duplicate key value'), {
+        code: '23505',
+        constraint_name: 'event_reports_one_active_sold_out_per_event_idx',
+      }),
+    );
+    vi.mocked(db.insert().values).mockClear();
+
+    const res = await createApp().request(
+      `/v1/admin/events/${EVENT_ID}/sold-out`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toEqual(winner);
+    expect(db.transaction).toHaveBeenCalled();
+    expect(vi.mocked(db.insert().values)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'event.sold_out.mark',
+        metadata: {
+          reportId: winner.id,
+          idempotent: true,
+          raceLost: true,
+        },
+      }),
+    );
+  });
 });
 
 describe('POST /v1/admin/events/:id/available', () => {
