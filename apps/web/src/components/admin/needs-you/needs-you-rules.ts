@@ -2,10 +2,19 @@
  * The Needs you queue's pure rules: which pill a kind belongs to, the time word
  * on a card, and the card's lines. No React, so the rules are unit-tested.
  */
-import type { NeedsYouCount, NeedsYouKind } from '@concert-crawl/types';
+import type {
+  CrawlStatus,
+  NeedsYouCount,
+  NeedsYouKind,
+} from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type { Kind } from '@/components/admin/primitives/KindLabel';
-import type { AnswerParams, QueueRow } from './needs-you-api';
+import { RUN_STATUSES } from '@/components/admin/venues/overview/overview-data';
+import {
+  runOutcome,
+  runOutcomeKey,
+} from '@/components/admin/venues/overview/overview-rules';
+import type { AnswerParams, QueueRow, RunLine } from './needs-you-api';
 
 const COPY = ADMIN_COPY.needsYou;
 
@@ -595,20 +604,21 @@ export const causeText = (cause: string): string => {
   return known ? known[1] : cause;
 };
 
-/** The word a run's status wears. */
-export const runStatusWord = (status: string): string => {
-  switch (status) {
-    case 'failed':
-      return PANEL.runStatus.failed;
-    case 'success':
-      return PANEL.runStatus.ok;
-    case 'partial':
-      return PANEL.runStatus.partial;
-    case 'skipped':
-      return PANEL.runStatus.skipped;
-    default:
-      return status;
-  }
+const isRunStatus = (status: string): status is CrawlStatus =>
+  RUN_STATUSES.some((known) => known === status);
+
+/**
+ * The word a run wears, through the one reason-first mapping the run chips
+ * use (`runOutcomeKey`), so a 403 reads Blocked here as it does on the chip.
+ * A status this build doesn't know shows as sent.
+ */
+const runWord = (run: RunLine): { word: string; ok: boolean } => {
+  if (!isRunStatus(run.status)) return { word: run.status, ok: false };
+  const outcome = { status: run.status, reason: run.reason ?? null };
+  return {
+    word: runOutcome(outcome),
+    ok: runOutcomeKey(outcome) === 'success',
+  };
 };
 
 /** The last four runs, newest first, each with its Mountain Time day. */
@@ -620,12 +630,13 @@ export const lastRunsOf = (
     .slice(0, 4)
     .flatMap((run) => {
       const day = mountainDay(run.at);
+      const { word, ok } = runWord(run);
       return day
         ? [
             {
               day,
-              status: runStatusWord(run.status),
-              ok: run.status === 'success',
+              status: word,
+              ok,
               // A failed run says why; an OK one says how many shows it found.
               detail:
                 run.errorMessage ??

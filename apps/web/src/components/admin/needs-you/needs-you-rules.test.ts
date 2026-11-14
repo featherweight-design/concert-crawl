@@ -153,6 +153,29 @@ describe('panel helpers', () => {
     expect(listed[1]?.detail).toBeNull();
   });
 
+  it('reads a run’s word reason-first, as the run chip does', () => {
+    const listed = lastRunsOf({
+      lastRuns: [
+        {
+          at: '2026-11-09T10:02:00Z',
+          status: 'failed',
+          reason: 'blocked_http',
+          errorMessage: 'HTTP 403',
+          eventsFound: 0,
+        },
+        {
+          at: '2026-11-08T10:02:00Z',
+          status: 'skipped',
+          reason: 'llm_account',
+          errorMessage: null,
+          eventsFound: 0,
+        },
+      ],
+    });
+    expect(listed.map((run) => run.status)).toEqual(['Blocked', 'Not run']);
+    expect(listed.every((run) => !run.ok)).toBe(true);
+  });
+
   it('says when the newest run happened, in Mountain Time', () => {
     expect(
       latestRunWhen({

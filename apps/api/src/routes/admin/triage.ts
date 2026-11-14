@@ -19,6 +19,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import {
+  crawlRunReasonEnum,
   db,
   events,
   priceSubmissions,
@@ -193,6 +194,13 @@ const runRowSchema = z.object({
   id: idSchema,
   venue_id: idSchema,
   status: z.enum(['success', 'failed', 'partial', 'skipped']),
+  // Only the Needs you query selects it; a value this build doesn't know
+  // reads as none rather than dropping the row.
+  reason: z
+    .enum(crawlRunReasonEnum.enumValues)
+    .nullable()
+    .optional()
+    .catch(null),
   http_status_code: z.number().int().nullable(),
   error_message: z.string().nullable(),
   events_found: z.number().int(),
@@ -216,6 +224,7 @@ export const parseRunRows = (rows: Iterable<unknown>): TriageRunRow[] => {
       id: result.data.id,
       venueId: result.data.venue_id,
       status: result.data.status,
+      reason: result.data.reason ?? null,
       httpStatusCode: result.data.http_status_code,
       errorMessage: result.data.error_message,
       eventsFound: result.data.events_found,

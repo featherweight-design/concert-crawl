@@ -9,9 +9,11 @@
 import type {
   AllClearFacts,
   CrawlPauseRequest,
+  CrawlRunReason,
   NeedsYouCount,
   NeedsYouKind,
 } from '@concert-crawl/types';
+import { RUN_REASONS } from '../venues/overview/overview-data';
 import {
   call,
   isCount,
@@ -95,6 +97,8 @@ export interface BugFacts {
 export interface RunLine {
   at: string;
   status: string;
+  /** Why the run produced nothing; null when unrecorded or unknown to this build. */
+  reason?: CrawlRunReason | null;
   errorMessage: string | null;
   /** Events the run's extractor found, when it recorded a count. */
   eventsFound: number | null;
@@ -192,6 +196,9 @@ const isEvidenceLine = (value: unknown): value is EvidenceLine =>
 const evidenceFrom = (value: unknown): EvidenceLine[] =>
   Array.isArray(value) ? value.filter(isEvidenceLine) : [];
 
+const isRunReason = (value: unknown): value is CrawlRunReason =>
+  RUN_REASONS.some((reason) => reason === value);
+
 /** A venue item's runs: the ones this build can draw, or none. */
 const runsFrom = (value: unknown): RunLine[] =>
   Array.isArray(value)
@@ -204,6 +211,7 @@ const runsFrom = (value: unknown): RunLine[] =>
               {
                 at: run['at'],
                 status: run['status'],
+                reason: isRunReason(run['reason']) ? run['reason'] : null,
                 errorMessage: run['errorMessage'],
                 eventsFound: isCount(run['eventsFound'])
                   ? run['eventsFound']
