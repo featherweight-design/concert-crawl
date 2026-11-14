@@ -358,11 +358,11 @@ describe('DeadInviteLink (#1226)', () => {
     expect(
       container.querySelector('path[d="M28 21l6 3.5v7L28 35l-6-3.5v-7z"]'),
     ).not.toBeNull();
-    const dimmed = svg?.closest<HTMLElement>(
-      'span[aria-hidden="true"][style*="grayscale"]',
+    const dimmed = container.querySelector<HTMLElement>(
+      'span[aria-hidden="true"]',
     );
-    expect(dimmed).not.toBeNull();
-    expect(dimmed?.style.filter).toBe('grayscale(1)');
+    expect(dimmed?.contains(svg ?? null)).toBe(true);
+    expect(dimmed?.style.opacity).toBe('0.5');
   });
 });
 
