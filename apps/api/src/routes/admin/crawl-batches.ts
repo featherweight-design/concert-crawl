@@ -6,23 +6,26 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { asc, isNull } from 'drizzle-orm';
-import { db, venues } from '@concert-crawl/db';
+import { asc, inArray, isNull } from 'drizzle-orm';
+import { db, userProfiles, venues } from '@concert-crawl/db';
 import type {
   CrawlAllEstimate,
   CrawlBatch,
   CrawlBatchDetail,
+  CrawlBatchPage,
 } from '@concert-crawl/types';
 import { validationHook } from '../../lib/validator.js';
 import { nextDailyCrawlAt } from '../../lib/crawl-schedule.js';
 import type { AdminVariables } from './index.js';
 import {
   ESTIMATE_NIGHTS,
+  batchMatchesKey,
+  batchSortAt,
   groupCrawlBatches,
   parseBatchKey,
   usualNightly,
 } from './lib/crawl-batches.js';
-import { readWindow } from './lib/crawl-window.js';
+import { hasRowsBefore, readWindow } from './lib/crawl-window.js';
 import { crawlAllSkipReason } from './lib/crawl-all.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
 
@@ -31,46 +34,106 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const listQuerySchema = z.object({
   kind: z.enum(['all', 'nightly', 'by_hand', 'not_ok']).default('all'),
   limit: z.coerce.number().int().min(1).max(100).default(30),
+  // The previous page's nextBefore: only batches that sort strictly earlier.
+  before: z.iso.datetime().optional(),
 });
 
 const keyParamSchema = z.object({ key: z.string().min(1).max(300) });
+
+/** How many times a page widens its read window looking for enough batches. */
+const MAX_WIDENINGS = 3;
 
 const withoutRuns = (detail: CrawlBatchDetail): CrawlBatch => {
   const { runs: _runs, ...batch } = detail;
   return batch;
 };
 
+const matchesKind = (
+  kind: z.infer<typeof listQuerySchema>['kind'],
+  batch: CrawlBatch,
+): boolean => {
+  if (kind === 'nightly') return batch.kind === 'nightly';
+  if (kind === 'by_hand') return batch.kind === 'by_hand';
+  if (kind === 'not_ok') return batch.counts.notOk > 0 || batch.didntStart;
+  return true;
+};
+
+/**
+ * Fills each batch's actorHandle in one read for the whole page. Only the
+ * handle is selected: user_profiles holds no email, and nothing here asks
+ * Clerk for one.
+ */
+const withHandles = async <Batch extends CrawlBatch>(
+  batches: Batch[],
+): Promise<Batch[]> => {
+  const actors = [...new Set(batches.flatMap((batch) => batch.actor ?? []))];
+  if (actors.length === 0) return batches;
+  const rows = await db
+    .select({ userId: userProfiles.userId, handle: userProfiles.handle })
+    .from(userProfiles)
+    .where(inArray(userProfiles.userId, actors));
+  const handles = new Map(rows.map((row) => [row.userId, row.handle]));
+  return batches.map((batch) => ({
+    ...batch,
+    actorHandle:
+      batch.actor === null ? null : (handles.get(batch.actor) ?? null),
+  }));
+};
+
 export const crawlBatchesAdminRouter = new Hono<AdminVariables>();
 
 // The newest batches: nightly runs by Mountain Time night, by-hand bursts, and
 // any night that never started. `not_ok` keeps those with a failed or skipped
-// run, and the nights that did not start.
+// run, and the nights that did not start. Paged by `before`; there is no
+// total, since counting derived batches means grouping all of history.
 crawlBatchesAdminRouter.get(
   '/batches',
   zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
-    const { kind, limit } = ctx.req.valid('query');
+    const { kind, limit, before } = ctx.req.valid('query');
     const now = new Date();
+    const end =
+      before === undefined ? now.getTime() + DAY_MS : Date.parse(before);
     // About a night a day, plus a margin at the edges. By-hand bursts in the
-    // window share the limit with the nights.
-    const from = new Date(now.getTime() - (limit + 3) * DAY_MS);
-    const { runs, triggers } = await readWindow(
-      from,
-      new Date(now.getTime() + DAY_MS),
-    );
+    // window share the limit with the nights; a filter that finds too few
+    // widens the window (doubling) a few times before settling.
+    let span = (limit + 3) * DAY_MS;
+    for (let widening = 0; ; widening += 1) {
+      const from = new Date(end - span);
+      const [{ runs, triggers }, older] = await Promise.all([
+        readWindow(from, new Date(end + DAY_MS)),
+        hasRowsBefore(from),
+      ]);
+      // A batch in the window's oldest day may have begun before it and be
+      // cut short, so it waits for the next page, which reads it whole.
+      const floor = older ? from.getTime() + DAY_MS : Number.NEGATIVE_INFINITY;
+      const matched = groupCrawlBatches({ runs, triggers, now }).filter(
+        (batch) => {
+          const at = batchSortAt(batch);
+          return at < end && at >= floor && matchesKind(kind, batch);
+        },
+      );
+      if (matched.length <= limit && older && widening < MAX_WIDENINGS) {
+        span *= 2;
+        continue;
+      }
 
-    const batches = groupCrawlBatches({ runs, triggers, now })
-      .filter((batch) => {
-        if (kind === 'nightly') return batch.kind === 'nightly';
-        if (kind === 'by_hand') return batch.kind === 'by_hand';
-        if (kind === 'not_ok')
-          return batch.counts.notOk > 0 || batch.didntStart;
-        return true;
-      })
-      .slice(0, limit)
-      .map(withoutRuns);
-
-    return ctx.json({ success: true, data: batches });
+      const page = matched.slice(0, limit);
+      const last = page.at(-1);
+      const full = matched.length > limit;
+      // A full page continues after its last batch; a short one has every
+      // batch above the floor, so the next page starts there.
+      const nextAt = full && last !== undefined ? batchSortAt(last) : floor;
+      const body: CrawlBatchPage = {
+        data: await withHandles(page.map(withoutRuns)),
+        hasMore: full || older,
+        nextBefore:
+          (full || older) && Number.isFinite(nextAt)
+            ? new Date(nextAt).toISOString()
+            : null,
+      };
+      return ctx.json({ success: true, ...body });
+    }
   },
 );
 
@@ -121,7 +184,8 @@ crawlBatchesAdminRouter.get('/estimate', async (ctx) => {
   return ctx.json({ success: true, data: estimate });
 });
 
-// One batch with its runs.
+// One batch with its runs, by its key or its linkKey (`run:<epoch>` names a
+// by-hand batch without the Clerk id).
 crawlBatchesAdminRouter.get(
   '/batches/:key',
   zValidator('param', keyParamSchema, validationHook),
@@ -147,12 +211,13 @@ crawlBatchesAdminRouter.get(
       new Date(center.getTime() + 2 * DAY_MS),
     );
 
-    const batch = groupCrawlBatches({ runs, triggers, now }).find(
-      (candidate) => candidate.key === key,
+    const batch = groupCrawlBatches({ runs, triggers, now }).find((candidate) =>
+      batchMatchesKey(candidate, key, parsed),
     );
     if (batch === undefined) {
       return ctx.json({ success: false, error: 'Batch not found' }, 404);
     }
-    return ctx.json({ success: true, data: batch });
+    const [withHandle] = await withHandles([batch]);
+    return ctx.json({ success: true, data: withHandle ?? batch });
   },
 );

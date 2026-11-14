@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ESTIMATE_NIGHTS,
+  batchMatchesKey,
   groupCrawlBatches,
   parseBatchKey,
   usualNightly,
@@ -34,6 +35,7 @@ const trigger = (
 ): BatchTriggerInput => ({
   id,
   venueId: `venue-${id}`,
+  venueName: `Venue ${id}`,
   triggeredBy: 'user_a',
   status: 'done',
   crawlRunId: null,
@@ -117,9 +119,62 @@ describe('groupCrawlBatches: nightly', () => {
       skipped: 1,
       notOk: 1,
       total: 4,
+      failed: 1,
+      blocked: 0,
     });
     expect(batch?.eventsFound).toBe(20);
     expect(batch?.venueCount).toBe(4);
+  });
+
+  it('splits failed and blocked out of not OK the way the run chip does, and sums the cost', () => {
+    const [batch] = groupCrawlBatches({
+      runs: [
+        run('a', '2026-11-12T10:10:00Z', { llmCostUsd: 0.1 }),
+        run('b', '2026-11-12T10:11:00Z', {
+          status: 'failed',
+          reason: 'blocked_http',
+          llmCostUsd: 0.2,
+        }),
+        run('c', '2026-11-12T10:12:00Z', {
+          status: 'failed',
+          reason: 'robots_disallowed',
+        }),
+        run('d', '2026-11-12T10:13:00Z', {
+          status: 'failed',
+          reason: 'llm_account',
+        }),
+        run('e', '2026-11-12T10:14:00Z', { status: 'partial' }),
+      ],
+      triggers: [],
+      now: NOW,
+    });
+    expect(batch?.counts).toMatchObject({ notOk: 4, failed: 0, blocked: 1 });
+    expect(batch?.costUsd).toBe(0.3);
+    expect(batch?.linkKey).toBe('nightly:2026-11-12');
+  });
+
+  it('gives a retried night its retry waves apart, and none to a night in one wave', () => {
+    const [retried] = groupCrawlBatches({
+      runs: [
+        run('a', '2026-11-12T10:10:00Z', { status: 'failed', reason: 'error' }),
+        run('b', '2026-11-12T11:30:00Z'),
+        run('c', '2026-11-12T11:31:00Z'),
+      ],
+      triggers: [],
+      now: NOW,
+    });
+    expect(retried?.retried).toBe(true);
+    expect(retried?.retry).toMatchObject({
+      at: '2026-11-12T11:30:00.000Z',
+      counts: { ok: 2, total: 2, failed: 0 },
+    });
+    expect(retried?.counts.total).toBe(3);
+    const [single] = groupCrawlBatches({
+      runs: [run('a', '2026-11-12T10:10:00Z')],
+      triggers: [],
+      now: NOW,
+    });
+    expect(single?.retry).toBeNull();
   });
 
   it('calls a night retried only when its runs come in a second wave', () => {
@@ -308,6 +363,44 @@ describe('groupCrawlBatches: by hand', () => {
     );
   });
 
+  it('calls triggers written at one instant a Crawl all, and names a one-venue batch', () => {
+    const batches = groupCrawlBatches({
+      runs: [],
+      triggers: [
+        trigger('t1', '2026-11-12T16:00:00Z'),
+        trigger('t2', '2026-11-12T16:00:00Z'),
+        trigger('t3', '2026-11-12T17:00:00Z'),
+        trigger('t4', '2026-11-12T17:01:00Z'),
+        trigger('t5', '2026-11-12T18:00:00Z'),
+      ],
+      now: NOW,
+    });
+    const byHand = batches.filter((batch) => batch.kind === 'by_hand');
+    expect(
+      byHand.map(({ crawlAll, venueName, linkKey }) => ({
+        crawlAll,
+        venueName,
+        linkKey,
+      })),
+    ).toEqual([
+      {
+        crawlAll: false,
+        venueName: 'Venue t5',
+        linkKey: `run:${Date.parse('2026-11-12T18:00:00Z') / 1000}`,
+      },
+      {
+        crawlAll: false,
+        venueName: null,
+        linkKey: `run:${Date.parse('2026-11-12T17:00:00Z') / 1000}`,
+      },
+      {
+        crawlAll: true,
+        venueName: null,
+        linkKey: `run:${Date.parse('2026-11-12T16:00:00Z') / 1000}`,
+      },
+    ]);
+  });
+
   it('keeps two people apart even when their triggers interleave', () => {
     const batches = groupCrawlBatches({
       runs: [],
@@ -401,5 +494,21 @@ describe('parseBatchKey', () => {
     expect(parseBatchKey('nightly:tomorrow')).toBeNull();
     expect(parseBatchKey('by_hand:user_a')).toBeNull();
     expect(parseBatchKey('')).toBeNull();
+  });
+
+  it('reads a link key with no actor, which names a by-hand batch by its second', () => {
+    const parsed = parseBatchKey('run:1794000000');
+    expect(parsed).toEqual({ kind: 'by_hand', actor: null, epoch: 1794000000 });
+    if (parsed === null) throw new Error('expected a key');
+    const batch = {
+      key: 'by_hand:user_a:1794000000',
+      kind: 'by_hand' as const,
+      startedAt: new Date(1794000000 * 1000 + 400).toISOString(),
+    };
+    expect(batchMatchesKey(batch, 'run:1794000000', parsed)).toBe(true);
+    expect(
+      batchMatchesKey({ ...batch, startedAt: null }, 'run:1794000000', parsed),
+    ).toBe(false);
+    expect(parseBatchKey('run:soon')).toBeNull();
   });
 });

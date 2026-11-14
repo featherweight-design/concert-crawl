@@ -39,7 +39,7 @@ export interface BatchRunInput {
   eventsFound: number;
   eventsInserted: number;
   durationMs: number | null;
-  /** Haiku spend for the run; read by usualNightly, never sent in a batch. */
+  /** Haiku spend for the run; summed into a batch's costUsd, not sent per run. */
   llmCostUsd: number | null;
   errorMessage: string | null;
   createdAt: Date;
@@ -48,20 +48,56 @@ export interface BatchRunInput {
 export interface BatchTriggerInput {
   id: string;
   venueId: string;
+  /** The trigger's venue, so a one-venue batch is named before its run lands. */
+  venueName: string | null;
   triggeredBy: string | null;
   status: 'pending' | 'processing' | 'done' | 'failed';
   crawlRunId: string | null;
   createdAt: Date;
 }
 
+/**
+ * A by-hand key from a URL (`run:<epoch>`) carries no actor: it names the
+ * by-hand batch that started in that second, whoever queued it.
+ */
 export type ParsedBatchKey =
   | { kind: 'nightly'; night: string }
-  | { kind: 'by_hand'; actor: string; epoch: number };
+  | { kind: 'by_hand'; actor: string | null; epoch: number };
 
 const NIGHT_KEY = /^nightly:(\d{4}-\d{2}-\d{2})$/;
 const BY_HAND_KEY = /^by_hand:(.{1,255}):(\d{1,12})$/;
+const RUN_KEY = /^run:(\d{1,12})$/;
 
 export const nightlyKey = (night: string): string => `nightly:${night}`;
+
+const epochOf = (at: Date): number => Math.floor(at.getTime() / 1000);
+
+/** True when `batch` is the one the parsed key names. */
+export const batchMatchesKey = (
+  batch: Pick<CrawlBatchDetail, 'key' | 'kind' | 'startedAt'>,
+  key: string,
+  parsed: ParsedBatchKey,
+): boolean => {
+  if (batch.key === key) return true;
+  return (
+    parsed.kind === 'by_hand' &&
+    parsed.actor === null &&
+    batch.kind === 'by_hand' &&
+    batch.startedAt !== null &&
+    epochOf(new Date(batch.startedAt)) === parsed.epoch
+  );
+};
+
+/**
+ * Where a batch sorts, epoch ms: its start, or noon UTC of a night that did
+ * not start. The list orders and pages by it.
+ */
+export const batchSortAt = (
+  batch: Pick<CrawlBatchDetail, 'startedAt' | 'night'>,
+): number => {
+  if (batch.startedAt !== null) return Date.parse(batch.startedAt);
+  return batch.night === null ? 0 : Date.parse(`${batch.night}T12:00:00Z`);
+};
 
 export const parseBatchKey = (key: string): ParsedBatchKey | null => {
   const night = NIGHT_KEY.exec(key);
@@ -79,6 +115,10 @@ export const parseBatchKey = (key: string): ParsedBatchKey | null => {
   const byHand = BY_HAND_KEY.exec(key);
   if (byHand?.[1] !== undefined && byHand[2] !== undefined) {
     return { kind: 'by_hand', actor: byHand[1], epoch: Number(byHand[2]) };
+  }
+  const run = RUN_KEY.exec(key);
+  if (run?.[1] !== undefined) {
+    return { kind: 'by_hand', actor: null, epoch: Number(run[1]) };
   }
   return null;
 };
@@ -105,21 +145,43 @@ const toRun = (run: BatchRunInput): CrawlBatchRun => ({
   createdAt: run.createdAt.toISOString(),
 });
 
+const EMPTY_COUNTS: CrawlBatchCounts = {
+  ok: 0,
+  notOk: 0,
+  unchanged: 0,
+  skipped: 0,
+  total: 0,
+  failed: 0,
+  blocked: 0,
+};
+
+/** Failed runs the chip names otherwise: robots.txt, or Not run. */
+const NOT_FAILED_REASONS = new Set<string>([
+  'robots_disallowed',
+  'robots_unreachable',
+  'robots_crawl_delay',
+  'llm_account',
+]);
+
 const countRuns = (runs: readonly BatchRunInput[]): CrawlBatchCounts => {
-  const counts: CrawlBatchCounts = {
-    ok: 0,
-    notOk: 0,
-    unchanged: 0,
-    skipped: 0,
-    total: runs.length,
-  };
+  const counts: CrawlBatchCounts = { ...EMPTY_COUNTS, total: runs.length };
   for (const run of runs) {
     if (run.status === 'success') counts.ok += 1;
     else if (run.status === 'skipped' && run.reason === 'page_unchanged') {
       counts.unchanged += 1;
     } else if (run.status === 'skipped' && run.reason === 'crawl_paused') {
       counts.skipped += 1;
-    } else counts.notOk += 1;
+    } else {
+      counts.notOk += 1;
+      // The run chip's split (runOutcomeKey): the reason wins over the status.
+      if (run.reason === 'blocked_http') counts.blocked += 1;
+      else if (
+        run.status === 'failed' &&
+        !NOT_FAILED_REASONS.has(run.reason ?? '')
+      ) {
+        counts.failed += 1;
+      }
+    }
   }
   return counts;
 };
@@ -128,6 +190,10 @@ const sum = (
   runs: readonly BatchRunInput[],
   pick: (run: BatchRunInput) => number,
 ) => runs.reduce((total, run) => total + pick(run), 0);
+
+/** Spend to a hundredth of a cent, so float noise never reaches the wire. */
+const costOf = (runs: readonly BatchRunInput[]): number =>
+  Math.round(sum(runs, (run) => run.llmCostUsd ?? 0) * 10_000) / 10_000;
 
 const endOf = (runs: readonly BatchRunInput[]): Date | null => {
   let latest: number | null = null;
@@ -141,9 +207,11 @@ const endOf = (runs: readonly BatchRunInput[]): Date | null => {
 const byTime = (left: BatchRunInput, right: BatchRunInput): number =>
   left.createdAt.getTime() - right.createdAt.getTime();
 
-/** How many waves of runs a night had: a new one starts after a long gap. */
-const waveCount = (sorted: readonly BatchRunInput[]): number => {
-  let waves = sorted.length > 0 ? 1 : 0;
+/**
+ * Where a night's second wave starts (the first run after a long gap), or -1
+ * in one wave. Everything from there on is the retry.
+ */
+const retryStart = (sorted: readonly BatchRunInput[]): number => {
   for (let index = 1; index < sorted.length; index += 1) {
     const previous = sorted[index - 1];
     const current = sorted[index];
@@ -152,10 +220,38 @@ const waveCount = (sorted: readonly BatchRunInput[]): number => {
       current !== undefined &&
       current.createdAt.getTime() - previous.createdAt.getTime() > WAVE_GAP_MS
     ) {
-      waves += 1;
+      return index;
     }
   }
-  return waves;
+  return -1;
+};
+
+/** A night's retry waves on their own, or null in one wave. */
+const retryOf = (
+  sorted: readonly BatchRunInput[],
+): CrawlBatchDetail['retry'] => {
+  const start = retryStart(sorted);
+  const first = sorted[start];
+  if (start < 0 || first === undefined) return null;
+  return {
+    at: first.createdAt.toISOString(),
+    counts: countRuns(sorted.slice(start)),
+  };
+};
+
+/**
+ * POST /v1/admin/crawl writes every trigger in one statement, so they share a
+ * created_at to the microsecond; a re-crawl writes one per request. Two or
+ * more at one instant is a Crawl all.
+ */
+const isCrawlAll = (burst: readonly BatchTriggerInput[]): boolean => {
+  const seen = new Set<number>();
+  return burst.some((trigger) => {
+    const at = trigger.createdAt.getTime();
+    if (seen.has(at)) return true;
+    seen.add(at);
+    return false;
+  });
 };
 
 export interface GroupInput {
@@ -231,8 +327,14 @@ export const groupCrawlBatches = ({
         eventsFound: sum(sorted, (run) => run.eventsFound),
         eventsInserted: sum(sorted, (run) => run.eventsInserted),
         pending: 0,
-        retried: waveCount(sorted) > 1,
+        retried: retryStart(sorted) > 0,
         didntStart: false,
+        costUsd: costOf(sorted),
+        linkKey: nightlyKey(night),
+        crawlAll: false,
+        venueName: null,
+        actorHandle: null,
+        retry: retryOf(sorted),
         runs: sorted.map(toRun),
       },
     });
@@ -257,12 +359,18 @@ export const groupCrawlBatches = ({
           night,
           actor: null,
           venueCount: 0,
-          counts: { ok: 0, notOk: 0, unchanged: 0, skipped: 0, total: 0 },
+          counts: { ...EMPTY_COUNTS },
           eventsFound: 0,
           eventsInserted: 0,
           pending: 0,
           retried: false,
           didntStart: true,
+          costUsd: 0,
+          linkKey: nightlyKey(night),
+          crawlAll: false,
+          venueName: null,
+          actorHandle: null,
+          retry: null,
           runs: [],
         },
       });
@@ -301,16 +409,17 @@ export const groupCrawlBatches = ({
       .flatMap((run) => (run === undefined ? [] : [run]))
       .sort(byTime);
     const actor = first.triggeredBy;
+    const venueIds = new Set(burst.map((trigger) => trigger.venueId));
     batches.push({
       sortAt: first.createdAt.getTime(),
       batch: {
-        key: `by_hand:${actor ?? 'unknown'}:${Math.floor(first.createdAt.getTime() / 1000)}`,
+        key: `by_hand:${actor ?? 'unknown'}:${epochOf(first.createdAt)}`,
         kind: 'by_hand',
         startedAt: first.createdAt.toISOString(),
         endedAt: (endOf(burstRuns) ?? first.createdAt).toISOString(),
         night: null,
         actor,
-        venueCount: new Set(burst.map((trigger) => trigger.venueId)).size,
+        venueCount: venueIds.size,
         counts: countRuns(burstRuns),
         eventsFound: sum(burstRuns, (run) => run.eventsFound),
         eventsInserted: sum(burstRuns, (run) => run.eventsInserted),
@@ -322,6 +431,15 @@ export const groupCrawlBatches = ({
         ).length,
         retried: false,
         didntStart: false,
+        costUsd: costOf(burstRuns),
+        linkKey: `run:${epochOf(first.createdAt)}`,
+        crawlAll: isCrawlAll(burst),
+        venueName:
+          venueIds.size === 1
+            ? (first.venueName ?? burstRuns[0]?.venueName ?? null)
+            : null,
+        actorHandle: null,
+        retry: null,
         runs: burstRuns.map(toRun),
       },
     });
