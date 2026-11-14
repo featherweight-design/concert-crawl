@@ -25,7 +25,8 @@ describe('FEATURE_CARDS', () => {
       const { href } = card.cta;
       // Not protocol-relative (`//host`), which would leave the app.
       expect(href).toMatch(/^\/(?!\/)/);
-      const segment = href.split('/')[1] ?? '';
+      // The segment is the path's, not the query's (`/onboarding?entry=menu`).
+      const segment = (href.split(/[?#]/)[0] ?? '').split('/')[1] ?? '';
       if (segment !== '')
         expect(KNOWN_TOP_LEVEL_SEGMENTS.has(segment)).toBe(true);
     }
