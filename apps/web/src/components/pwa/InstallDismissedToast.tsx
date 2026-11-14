@@ -36,7 +36,7 @@ export const InstallDismissedToast = ({
   return (
     <div
       role="status"
-      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border-strong bg-surface-2 px-4 py-3 text-[15px] leading-snug text-fg shadow-lg empty:hidden sm:bottom-6"
+      className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+88px)] z-40 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-border-strong bg-surface-2 px-4 py-3 text-[15px] leading-snug text-fg shadow-lg empty:hidden lg:bottom-6"
     >
       {text !== '' && (
         <>

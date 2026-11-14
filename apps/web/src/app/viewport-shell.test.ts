@@ -70,7 +70,7 @@ describe('mobile viewport shell', () => {
   it('pads the phone shell for every live inset', () => {
     const shell = tokens(PHONE_SHELL_CLASS);
     expect(shell).toContain('pb-[env(safe-area-inset-bottom)]');
-    expect(shell).toContain('sm:pb-0');
+    expect(shell).toContain('lg:pb-0');
     expect(shell).toContain('pl-[env(safe-area-inset-left)]');
     expect(shell).toContain('pr-[env(safe-area-inset-right)]');
   });

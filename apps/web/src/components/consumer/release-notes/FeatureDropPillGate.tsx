@@ -54,7 +54,7 @@ export function FeatureDropPillGate() {
 
   return (
     <>
-      <div className="fixed bottom-[72px] right-5 sm:bottom-5 z-[80]">
+      <div className="fixed bottom-[72px] right-5 lg:bottom-5 z-[80]">
         <FeatureDropPill
           release={LATEST}
           variant="desktop"

@@ -21,7 +21,7 @@ export const NotFoundSurface = () => (
     // Bottom padding is a class so the phone can take more: 48px sat under the
     // 52px BottomNav. 80px on the phone is the clearance every page under
     // the nav keeps; the shell adds the safe-area inset beneath it.
-    className="pb-12 max-sm:pb-20"
+    className="pb-12 max-lg:pb-20"
     style={{
       minHeight: '60vh',
       display: 'flex',
