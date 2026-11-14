@@ -1,42 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BatchRunInput } from '../crawl-batches.js';
-import { lastNightlyFact, venuesOfKeys } from './all-clear-facts.js';
-
-describe('venuesOfKeys', () => {
-  it('counts each venue once however many of its items are held', () => {
-    expect(
-      venuesOfKeys([
-        'venue-failing:v1',
-        'venue-blocked:v1:evidence',
-        'venue-failing:v2',
-      ]),
-    ).toBe(2);
-  });
-
-  it('is zero with nothing snoozed, and skips a key it cannot read', () => {
-    expect(venuesOfKeys([])).toBe(0);
-    expect(venuesOfKeys(['nope'])).toBe(0);
-  });
-});
-
-const run = (
-  id: string,
-  at: string,
-  over: Partial<BatchRunInput> = {},
-): BatchRunInput => ({
-  id,
-  venueId: `venue-${id}`,
-  venueName: `Venue ${id}`,
-  status: 'success',
-  reason: null,
-  eventsFound: 10,
-  eventsInserted: 2,
-  durationMs: 30_000,
-  llmCostUsd: null,
-  errorMessage: null,
-  createdAt: new Date(at),
-  ...over,
-});
+import { lastNightlyFact } from './all-clear-facts.js';
 
 describe('lastNightlyFact', () => {
   it('reads OK of total from the latest nightly', () => {

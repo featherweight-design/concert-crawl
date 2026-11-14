@@ -46,6 +46,7 @@ import {
   inFilter,
   mountainDayAhead,
   mountainToday,
+  snoozeDayLabel,
   type FilterKey,
 } from './needs-you-rules';
 
@@ -74,6 +75,8 @@ interface Answered {
   line: string;
   /** The audit row an Undo points at. Null: nothing to take back. */
   auditId: string | null;
+  /** A timed snooze's item key: Undo clears the snooze instead. */
+  unsnoozeKey?: string;
   /** Where the card sat in the visible list, so the line takes its place. */
   at: number;
 }
@@ -283,21 +286,35 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
     );
   };
 
-  const runSnooze = async (row: QueueRow, action: () => Promise<void>) => {
+  const runSnooze = async (
+    row: QueueRow,
+    action: () => Promise<void>,
+    /** The day a timed snooze returns (`YYYY-MM-DD`); absent for Not useful. */
+    until?: string,
+  ) => {
     setBusyKey(row.key);
     setFailure(null);
     try {
       await action();
       settle(
         row,
-        { line: COPY.snoozedLine(answeredName(row.title)), auditId: null },
+        until
+          ? {
+              line: COPY.snoozedUntilLine(
+                answeredName(row.title),
+                `${snoozeDayLabel(until)} at 8 AM`,
+              ),
+              auditId: null,
+              unsnoozeKey: row.key,
+            }
+          : { line: COPY.snoozedLine(answeredName(row.title)), auditId: null },
         false,
       );
     } catch {
       setFailure({
         title: COPY.snooze.failed,
         saved: COPY.answerFailed.saved,
-        retry: () => void runSnooze(row, action),
+        retry: () => void runSnooze(row, action, until),
       });
     } finally {
       setBusyKey(null);
@@ -305,10 +322,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   };
 
   const onUndo = async () => {
-    if (!answered?.auditId) return;
+    if (!answered?.auditId && !answered?.unsnoozeKey) return;
     setUndoing(true);
     try {
-      await api.undo(answered.auditId);
+      if (answered.unsnoozeKey) await api.unsnooze(answered.unsnoozeKey);
+      else if (answered.auditId) await api.undo(answered.auditId);
       setAnswered(null);
       await load();
     } catch {
@@ -331,7 +349,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
       <AnsweredRow
         line={answered.line}
         undoing={undoing}
-        onUndo={answered.auditId ? () => void onUndo() : undefined}
+        onUndo={
+          answered.auditId || answered.unsnoozeKey
+            ? () => void onUndo()
+            : undefined
+        }
       />
     ) : null;
 
@@ -463,7 +485,11 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
                     onSelect={() => select(row.key)}
                     onAnswer={(answer) => onAnswer(row, answer)}
                     onSnooze={(until) =>
-                      void runSnooze(row, () => api.snooze(row.key, until))
+                      void runSnooze(
+                        row,
+                        () => api.snooze(row.key, until),
+                        until.slice(0, 10),
+                      )
                     }
                     onNotUseful={(reason) =>
                       void runSnooze(row, () => api.notUseful(row.key, reason))
@@ -512,8 +538,10 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
           onClose={() => select(null)}
           onAnswer={(answer, params) => onAnswer(selectedRow, answer, params)}
           onSnooze={(until) =>
-            void runSnooze(selectedRow, () =>
-              api.snooze(selectedRow.key, until),
+            void runSnooze(
+              selectedRow,
+              () => api.snooze(selectedRow.key, until),
+              until.slice(0, 10),
             )
           }
           onNotUseful={(reason) =>
