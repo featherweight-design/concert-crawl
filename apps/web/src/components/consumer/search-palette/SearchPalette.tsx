@@ -1,7 +1,7 @@
 'use client';
 
 // The ⌘K search palette (B+ B19: `07-more-screens/more-r3-palette*` on
-// desktop, `more-r3-search_m*` below 640px, where it is a full-screen search
+// desktop, `more-r3-search_m*` below 1024px, where it is a full-screen search
 // rather than a floating card a phone has no room for).
 //
 // A modal: Escape and the backdrop close it, Tab stays inside it, and focus
@@ -98,7 +98,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     }
   }, [selectedIdx]);
 
-  // The sheet and the dialog are two trees, so crossing the 640px line (a
+  // The sheet and the dialog are two trees, so crossing the 1024px line (a
   // rotation) remounts the input and drops focus and caret. Put both back.
   const sheetRef = useRef(sheet);
   useEffect(() => {

@@ -18,7 +18,7 @@ const MS_PER_ITEM = 4000;
 // is wider than the strip and the loop never shows a gap.
 const MIN_ITEMS_PER_HALF = 8;
 
-/** The strip only shows from `md` up; below it nothing animates. */
+/** The strip only shows from `lg` up (1024); below it nothing animates. */
 const TICKER_VIEWPORT_QUERY = DESKTOP_VIEWPORT_QUERY;
 
 function TickerItem({ show }: { show: InviteShow }) {
@@ -110,7 +110,7 @@ export function WeekTicker({ shows }: { shows: InviteShow[] }) {
 
   return (
     <div
-      className="hidden md:flex"
+      className="hidden lg:flex"
       style={{
         alignItems: 'center',
         gap: 28,

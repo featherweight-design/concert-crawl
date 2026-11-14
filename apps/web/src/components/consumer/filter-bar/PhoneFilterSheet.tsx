@@ -48,6 +48,7 @@ import { useDraftLensCount } from './useDraftLensCount';
 import { useDraftShowCount } from './useDraftShowCount';
 import { VenueOptionGrid } from './VenueOptionGrid';
 import { VibeOptionGrid } from './VibeOptionGrid';
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints';
 
 const copy = CONSUMER_COPY.filterBar;
 
@@ -297,8 +298,8 @@ export function PhoneFilterSheet({
   // Escape closes the sheet from the main view only; inside a full list it
   // steps back, as the back link does (below). The scrim always closes.
   useModalDialog(dialogRef, true, onClose, view === 'main');
-  // A bottom sheet to 1023 here, not just under 640 (addendum-3 rule 1).
-  const drag = useSheetDrag(onClose, true, '(max-width: 1023px)');
+  // A bottom sheet through the whole phone range (addendum-3 rule 1).
+  const drag = useSheetDrag(onClose, true, MOBILE_VIEWPORT_QUERY);
   const [tiles, setTiles] = useState(() =>
     orderTiles(venues, initial.values.where),
   );

@@ -55,7 +55,7 @@ beforeAll(() => {
   });
 });
 
-// The sheet reads min-width (640px and up) to pick its layout, and the drag
+// The sheet reads min-width (1024px and up) to pick its layout, and the drag
 // hook reads max-width (phone): they are opposites.
 const stubViewport = (desktop: boolean) => {
   vi.stubGlobal('matchMedia', (query: string): MediaQueryList => ({
