@@ -1,7 +1,12 @@
 'use client';
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs';
+import {
+  CheckGlyph,
+  Eyebrow,
+  PendingTrustPill,
+} from '@/components/consumer/glyphs';
+import type { PriceCheckOutcome } from '@concert-crawl/types';
 import {
   TierAlternateRow,
   type TierAlternateRowProps,
@@ -52,9 +57,25 @@ export interface MultiTierLiveCardProps {
   // submissionId, and the card had no notion of which event it sat on.
   eventId?: string;
   submissionId?: string | null;
+  // How the last price check on this price ended (more-st-disputes_board,
+  // "After review"), while it is recent. Drawn as a notice row at the foot of
+  // the card. The API only sends one for the price it names, so the caller
+  // passes it for a single-tier event.
+  checkOutcome?: PriceCheckOutcome | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
+
+// "$44" or "$44–$60": the price an update replaced.
+const formatWas = (previous: { floor: number; ceiling: number | null }) =>
+  previous.ceiling !== null
+    ? `$${previous.floor}–$${previous.ceiling}`
+    : `$${previous.floor}`;
+
+const checkOutcomeText = (outcome: PriceCheckOutcome): string =>
+  outcome.outcome === 'updated' && outcome.previous !== null
+    ? copy.checkUpdated(formatWas(outcome.previous))
+    : copy.checkHeld;
 const formatHeadlinePrice = (floor: number, ceiling?: number): string => {
   if (ceiling !== undefined) return `$${floor}–${ceiling}`;
   return `$${floor}`;
@@ -68,6 +89,7 @@ export const MultiTierLiveCard = ({
   observedAt,
   eventId,
   submissionId,
+  checkOutcome = null,
 }: MultiTierLiveCardProps) => {
   const hasAlternates = alternates.length > 0;
 
@@ -187,6 +209,37 @@ export const MultiTierLiveCard = ({
               <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />
             );
           })}
+        </div>
+      )}
+
+      {/* How the last price check ended: a success-tinted notice row */}
+      {checkOutcome !== null && (
+        <div
+          data-testid="price-check-outcome"
+          data-outcome={checkOutcome.outcome}
+          style={{
+            marginTop: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            border:
+              '1px solid color-mix(in oklab, var(--success) 45%, transparent)',
+            background: 'color-mix(in oklab, var(--success) 8%, transparent)',
+            fontFamily: 'var(--font-ui)',
+            fontSize: '13px',
+            color: 'var(--fg-muted)',
+            lineHeight: 1.4,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{ color: 'var(--success)', flexShrink: 0 }}
+          >
+            <CheckGlyph size={12} />
+          </span>
+          <span>{checkOutcomeText(checkOutcome)}</span>
         </div>
       )}
     </div>

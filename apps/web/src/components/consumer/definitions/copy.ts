@@ -1650,6 +1650,12 @@ export const CONSUMER_COPY = {
     fromLabel: 'from',
     // MultiTierLiveCard / MixedTierCard — alternate tiers section header
     otherTiersEyebrow: 'Other tiers',
+    // MultiTierLiveCard: how the last price check ended (more-st-disputes_board,
+    // "After review"). Shown for 14 days. "held" is always an admin decision;
+    // an update can win by an admin's call or by fan confirms, so its line
+    // names neither. {was} is the price it replaced, e.g. "$44" or "$44–$60".
+    checkHeld: 'Checked by an admin. This number held.',
+    checkUpdated: (was: string) => `Updated after a price check. Was ${was}.`,
   },
 
   // ── CorroborationSheet ──────────────────────────────────────────
