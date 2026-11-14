@@ -29,7 +29,7 @@ interface RowMenuProps {
 }
 
 const ITEM_CLASS =
-  'flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 text-left font-bold text-[var(--fg)] no-underline hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:shadow-[0_0_0_2px_var(--bg-elevated),0_0_0_4px_var(--signal)]';
+  'flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 text-left font-bold text-[var(--fg)] no-underline hover:bg-[var(--surface-2)] focus-visible:bg-[var(--surface-2)] focus-visible:outline-none forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 focus-visible:shadow-[0_0_0_2px_var(--bg-elevated),0_0_0_4px_var(--signal)]';
 
 export const RowMenu = ({
   tense,
@@ -123,7 +123,7 @@ export const RowMenu = ({
       role="menu"
       aria-label={HISTORY_COPY.menu.trigger(artist)}
       onKeyDown={onMenuKeyDown}
-      className="flex flex-col"
+      className={isMobile ? 'flex flex-col' : 'flex flex-col p-1'}
     >
       <Link
         role="menuitem"
@@ -221,7 +221,7 @@ export const RowMenu = ({
             placement="bottom"
             align="end"
             width={250}
-            padding={6}
+            padding={2}
             radius={14}
             arrow={false}
             onClose={close}

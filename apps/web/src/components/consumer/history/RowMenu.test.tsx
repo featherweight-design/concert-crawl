@@ -295,13 +295,14 @@ describe('RowMenu', () => {
     expect(panel?.getAttribute('data-arrow')).toBe('false');
   });
 
-  it('weights the items 700 and haloes keyboard focus with a 2px gap and a 4px ring', () => {
+  it('weights the items 700 and draws the keyboard halo as a 2px gap and a 4px signal ring', () => {
     setup();
     fireEvent.click(trigger());
     const item = screen.getAllByRole('menuitem')[0]!;
     expect(item.className).toContain('font-bold');
     expect(item.className).toContain('focus-visible:shadow-');
-    expect(item.className).toContain('var(--signal)');
+    expect(item.className).toContain('0_0_0_2px_var(--bg-elevated)');
+    expect(item.className).toContain('0_0_0_4px_var(--signal)');
   });
 
   it('seats each phone icon in a 34px tile with a hairline between items', () => {
@@ -314,6 +315,6 @@ describe('RowMenu', () => {
         item.querySelector('span[aria-hidden="true"]')?.className,
       ).toContain('h-[34px]');
     }
-    expect(items[1]!.className).toContain('border-t');
+    expect(items[1]!.classList.contains('border-t')).toBe(true);
   });
 });
