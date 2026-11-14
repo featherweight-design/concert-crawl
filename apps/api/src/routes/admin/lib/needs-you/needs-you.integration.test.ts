@@ -91,6 +91,7 @@ describe('Needs you sources and ranking', () => {
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
     const priced = await seedLowConfidence(venue.id, 'Priced Act', inDays(5));
     const unpriced = await seedLowConfidence(venue.id, 'Bare Act', inDays(6));
+    await seedUserProfile('price-user');
     await seedPriceSubmission(priced.id, 'price-user', {
       priceMin: '25',
       status: 'approved',
