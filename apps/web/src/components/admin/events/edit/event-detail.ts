@@ -99,6 +99,7 @@ export const fieldTime = (time: string | null): string | null => {
   const match = /^(\d{2}):(\d{2})/.exec(time ?? '');
   if (!match) return null;
   const hours = Number(match[1]);
+  if (hours > 23) return null;
   const suffix = hours >= 12 ? 'PM' : 'AM';
   return `${hours % 12 === 0 ? 12 : hours % 12}:${match[2]} ${suffix}`;
 };

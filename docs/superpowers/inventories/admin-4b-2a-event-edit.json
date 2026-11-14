@@ -1,0 +1,61 @@
+{
+  "feature": "Admin 4b-2 part a: Event edit (header, Show, From the crawl, Save bar, past lock)",
+  "note": "Plan row 4b-2, split a/b/c (docs/superpowers/plans/2026-11-13-admin-4b-events-ui.md). CONTACT_SHEET_ROLE=admin. Boards: 06-events-artists-prices/event-edit, event-edit-mobile, event-menu; 07-people-flags-operations/loading-event-edit. Scratch Neon fixtures: Violet Grohl (upcoming, Watched, has a show page) and Campground (past). Status, Hide and Price arrive in parts b and c; the lineup waits on 4a-2; the venue, date and time pickers are held for Design. By hand: loading (throttle the API), couldn't load (stop the API), a failed save (stop the API, then Save), and Merge from the ⋯ (the interim dialog).",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 760, "touch": true },
+    { "label": "phone", "width": 390, "height": 844, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "edit",
+      "label": "Upcoming show: header, Show card, From the crawl, Save bar",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 1200 }
+      ]
+    },
+    {
+      "id": "edit-dirty",
+      "label": "Title edited: the Save bar counts 1 unsaved change",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "fill": "#event-edit-title", "text": "Violet Grohl (late show)" },
+        { "settle": 400 }
+      ]
+    },
+    {
+      "id": "edit-menu",
+      "label": "The ⋯ open: View on Concert Crawl, View on the venue's site, Merge",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit-menu\"]"
+        },
+        { "click": "[data-testid=\"event-edit-menu\"]" },
+        { "wait": "[role=\"menu\"]", "settle": 400 }
+      ]
+    },
+    {
+      "id": "past-edit",
+      "label": "Past show: fields read only, no Save bar",
+      "steps": [
+        {
+          "goto": "/admin/events/d37fd885-5e1b-4965-97ff-5ce700e8710d/edit",
+          "expectStatus": 200,
+          "wait": "[data-testid=\"event-edit\"]"
+        },
+        { "settle": 1200 }
+      ]
+    }
+  ]
+}

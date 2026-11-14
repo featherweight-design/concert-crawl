@@ -33,7 +33,7 @@ export default async function EventEditorPage({ params }: PageProps) {
   //   - 404: valid UUID but the row doesn't exist
   //   - 400: the API's Zod param validator rejects non-UUID :id strings
   //          (apps/api/src/routes/admin/events.ts — eventIdSchema), so
-  //          /admin/events/<garbage>/edit is "not found" from the user's
+  //          /admin/events/<garbage>/edit-legacy is "not found" from the user's
   //          perspective, not a server error.
   // Anything else (auth, 5xx, network) propagates to Next's error boundary.
   let event: EditorEvent;

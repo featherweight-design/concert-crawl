@@ -14,6 +14,8 @@ const push = vi.fn();
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, refresh, replace: vi.fn() }),
+  usePathname: () => '/admin/events/evt-1/edit',
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: () => Promise.resolve('token') }),
@@ -147,5 +149,17 @@ describe('EventEdit', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText(COPY.show.date)).toHaveValue('Sat, Nov 14');
     expect(screen.getByTestId('event-edit-menu')).toBeInTheDocument();
+    // Date and Show side by side, as drawn, then Doors.
+    const show = screen.getByLabelText(COPY.show.showTime);
+    const doors = screen.getByLabelText(COPY.show.doors);
+    expect(
+      show.compareDocumentPosition(doors) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps Save off for an empty title', () => {
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.change(titleInput(), { target: { value: '   ' } });
+    expect(screen.getByTestId('event-edit-save')).toBeDisabled();
   });
 });

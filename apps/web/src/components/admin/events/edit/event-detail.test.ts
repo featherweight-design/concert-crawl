@@ -83,6 +83,7 @@ describe('field formats', () => {
     expect(fieldTime('00:30:00')).toBe('12:30 AM');
     expect(fieldTime('12:05:00')).toBe('12:05 PM');
     expect(fieldTime(null)).toBeNull();
+    expect(fieldTime('25:00:00')).toBeNull();
   });
 
   it('draws the date with the year on desktop only', () => {
