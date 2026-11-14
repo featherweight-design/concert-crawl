@@ -58,6 +58,7 @@ const row = (over: Partial<QueueRow>): QueueRow => ({
   priceFacts: null,
   bugFacts: null,
   submissionIds: [],
+  fanWindow: null,
   ...over,
 });
 

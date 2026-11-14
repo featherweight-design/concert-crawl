@@ -188,9 +188,28 @@ const evidenceValue = (row: QueueRow, label: string): string | null => {
   return value === undefined ? null : evidenceText(label, value);
 };
 
-/** The right-hand figure on a card's top line. */
+/**
+ * The word after the kind label: the fan date for most items, and "Batch" for
+ * a price batch, whose shows span a range (`02/a-batch-of-prices`).
+ */
+export const whenOfRow = (
+  row: QueueRow,
+  today: string,
+): { word: string; soon: boolean } | null =>
+  row.kind === 'price-batch'
+    ? { word: COPY.batch, soon: false }
+    : whenOf(row.fanDate, today);
+
+/**
+ * The right-hand figure on a card's top line. A price batch names the window
+ * its shows fall in ("Shows in 2–30 days"), or nothing when the API sends no
+ * single window (a held price is in the batch).
+ */
 export const impactOf = (row: QueueRow): string => {
-  if (row.kind === 'price-batch') return COPY.batch;
+  if (row.kind === 'price-batch')
+    return row.fanWindow
+      ? COPY.batchWindow(row.fanWindow.minDays, row.fanWindow.maxDays)
+      : '';
   if (row.kind === 'event-low-confidence') return COPY.hiddenUntilDecided;
   if (row.kind === 'artist' && row.reportCount !== null && row.reportCount > 0)
     return COPY.reports(row.reportCount);

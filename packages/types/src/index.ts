@@ -2199,6 +2199,12 @@ export type NeedsYouItem =
   | (NeedsYouItemBase & {
       kind: 'price-batch';
       submissionIds: string[];
+      /**
+       * The days-ahead window every price in the batch falls in ("Shows in 2
+       * to 30 days"), or null when a price held for the admin is in it: held
+       * prices skip the window, so no single range is true of the batch.
+       */
+      fanWindow: { minDays: number; maxDays: number } | null;
       evidence: NeedsYouEvidenceLine[];
     })
   | (NeedsYouItemBase & {
