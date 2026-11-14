@@ -1,0 +1,23 @@
+{
+  "feature": "Browse · the phone Filters sheet's Where tiles caption a venue with its short name (B+ addendum 4, item 4 A)",
+  "note": "Board: design/design_handoff_bplus_redesign/addendum-4/boards/04-venue-short-names/where-tiles-m. Phone only: the Where tiles are the phone sheet. Needs short names on the scratch venues (Red Rocks, Cervantes', Mission set for this sheet and cleared after); every other tile shows B, the full name in the 2-line clamp. Venues collected (Passport) draws no caption, so it is not in this sheet.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true }
+  ],
+  "rows": [
+    {
+      "id": "where-tiles",
+      "label": "Filters sheet, Where tiles (short names and the clamp fallback)",
+      "steps": [
+        { "goto": "/events", "wait": "text=Filters", "settle": 800 },
+        { "clickRole": "button", "name": "^Filters" },
+        { "wait": "[data-testid=\"venue-tile-option\"]" },
+        {
+          "scrollTo": "[data-testid=\"venue-tile-option\"] >> nth=0",
+          "settle": 1500
+        }
+      ]
+    }
+  ]
+}
