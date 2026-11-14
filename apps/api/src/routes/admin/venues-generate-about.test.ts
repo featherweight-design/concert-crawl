@@ -85,6 +85,7 @@ vi.mock('drizzle-orm', async (importOriginal) => ({
 
 // Dynamic import after mock registration — required for ESM packages
 const { createApp } = await import('../../app.js');
+const { VENUE_ABOUT_MODEL } = await import('@concert-crawl/crawler-core');
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
@@ -109,12 +110,10 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
     cache_read_input_tokens: null,
     cache_creation_input_tokens: 500,
   };
-  // calculateCost's Haiku rates: 1000 in, 200 out, 500 cache-write.
-  const expectedCost = (
-    1000 * (0.8 / 1_000_000) +
-    200 * (4.0 / 1_000_000) +
-    500 * (1.0 / 1_000_000)
-  ).toFixed(6);
+  // Haiku 4.5 at $1 in, $5 out, $1.25 cache-write per million:
+  // 1000 in + 200 out + 500 cache-write = $0.002625. Pinned, not derived
+  // from MODEL_RATES, so a rate change has to be made here on purpose.
+  const expectedCost = '0.002625';
   const post = () =>
     createApp().request('/v1/admin/venues/venue-1/generate-about', {
       method: 'POST',
@@ -141,6 +140,11 @@ describe('POST /v1/admin/venues/:id/generate-about', () => {
     });
     const res = await post();
     expect(res.status).toBe(200);
+    // The call sends the model the cost is priced at.
+    expect(mockAnthropicCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: VENUE_ABOUT_MODEL }),
+      expect.anything(),
+    );
     await vi.waitFor(() => expect(mockInsertValues).toHaveBeenCalledTimes(1));
     expect(mockDb.insert).toHaveBeenCalledWith(mockCostTracking);
     const row = mockInsertValues.mock.calls[0]?.[0];
