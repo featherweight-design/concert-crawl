@@ -37,7 +37,7 @@ const desktopPopover = () => {
     .queryAllByRole('dialog', {
       name: `${VENUE_FILTER_DEFS.capacity.label} filter`,
     })
-    .find((dialog) => dialog.classList.contains('sm:flex'));
+    .find((dialog) => dialog.classList.contains('lg:flex'));
   return popover ?? null;
 };
 
