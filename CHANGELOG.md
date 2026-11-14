@@ -1,3 +1,25 @@
+# [1.483.0](https://github.com/featherweight-design/concert-crawl/compare/v1.482.0...v1.483.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** let a cancelled report close a postponed-passed show; tighten the race test ([fe13df5](https://github.com/featherweight-design/concert-crawl/commit/fe13df5a0e4e786273829ed7bda63372089b2d79))
+* **api:** name the postponed-passed exception in the past-lock comments; parse test bodies ([59b1fdc](https://github.com/featherweight-design/concert-crawl/commit/59b1fdcb7b3f7d3ed5e4998adb74137dbc03c3ef))
+* **api:** promote cancelled and postponed reports under the past lock ([9b39806](https://github.com/featherweight-design/concert-crawl/commit/9b398069c0c117cb28c6a7f03248e00b2378c564))
+* **web:** address the sheet rule review ([b73decf](https://github.com/featherweight-design/concert-crawl/commit/b73decf850ef81f087f680a99aa16d9daa9fef24))
+* **web:** break a long handle in the phone log card, and add the days inventory ([aae5046](https://github.com/featherweight-design/concert-crawl/commit/aae5046bdc02811a48cdc22ec81631139c641e6e))
+* **web:** hand focus back to the day chip and guard Load more ([b795f8e](https://github.com/featherweight-design/concert-crawl/commit/b795f8e272fba9b8a1f1b91268796c96e4ee6531))
+* **web:** the confirm sheet's link scrolls in the body and its rail fits 320 ([1c61120](https://github.com/featherweight-design/concert-crawl/commit/1c61120eaa569a8a5450c1fc113feaaf921c2e77))
+* **web:** the price update sheet's floor and ceiling fit a 320 phone ([413abda](https://github.com/featherweight-design/concert-crawl/commit/413abdac56ec3f370235f022160bd010c21e22cc))
+* **web:** the Submit a price rail's eyebrow gives way at 320 ([f2d07a2](https://github.com/featherweight-design/concert-crawl/commit/f2d07a2dea467bd0fbd28a8ed5940f55f49c271c))
+
+
+### Features
+
+* **admin:** show Moved on the Events list from a confirmed-move redirect ([013e01c](https://github.com/featherweight-design/concert-crawl/commit/013e01c5c083aafe6014b033b5ccae8d385c9435))
+* **web:** step the activity log through days, a page at a time ([5c8a284](https://github.com/featherweight-design/concert-crawl/commit/5c8a284dc7590ae455e3f48793cbf388fa4e0136)), closes [#37](https://github.com/featherweight-design/concert-crawl/issues/37)
+* **web:** the sheet rule on ModalShell: 24px top stop, rail hairline, footer fade ([3c723db](https://github.com/featherweight-design/concert-crawl/commit/3c723db22185ebd4d40d2a93b6480795a8129b53))
+
 # [1.482.0](https://github.com/featherweight-design/concert-crawl/compare/v1.481.0...v1.482.0) (2026-11-14)
 
 
