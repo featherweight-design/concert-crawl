@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import { Check, Search } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminSheet, useIsPhone } from '@/components/admin/primitives';
 import { showCount } from './events-rules';
@@ -38,9 +38,42 @@ export const chipStyle = (on: boolean): CSSProperties => ({
     : 'color-mix(in srgb, var(--bg-elevated) 60%, transparent)',
 });
 
-/** The count after No price and Hidden (`06/events`). */
-export const ChipCount = ({ count }: { count: number }) => (
-  <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+/**
+ * A chip with a pick (`04/filter-chips-picked`): the active edge, with room on
+ * the right for its ×.
+ */
+export const pickedChipStyle: CSSProperties = {
+  ...chipStyle(true),
+  padding: '0 10px 0 12px',
+};
+
+/** The × on a picked chip (`04/filter-chips-picked`): 10px, muted. */
+export const ClearMark = () => (
+  <X
+    size={10}
+    strokeWidth={2}
+    aria-hidden="true"
+    style={{ flex: 'none', display: 'block', color: 'var(--fg-muted)' }}
+  />
+);
+
+/**
+ * The count after No price and Hidden (`06/events`); a picked chip draws it a
+ * step brighter (`04/filter-chips-picked`).
+ */
+export const ChipCount = ({
+  count,
+  on = false,
+}: {
+  count: number;
+  on?: boolean;
+}) => (
+  <span
+    style={{
+      fontSize: 11.5,
+      color: on ? 'var(--fg-muted)' : 'var(--fg-subtle)',
+    }}
+  >
     {count.toLocaleString('en-US')}
   </span>
 );
@@ -76,6 +109,36 @@ const footButton = (primary: boolean, disabled = false): CSSProperties => ({
         border: '1px solid transparent',
       }),
 });
+
+/** The picked chip's own button: the pill around it draws the edge. */
+const pickedTrigger: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 7,
+  height: 30,
+  // With the ×'s 3px, the board's 7px gap; with the 1px edge, its 12px.
+  padding: '0 4px 0 11px',
+  border: 'none',
+  borderRadius: 999,
+  background: 'transparent',
+  color: 'inherit',
+  font: 'inherit',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+};
+
+/** The × beside it, as tall as the chip so it is easy to hit. */
+const clearButton: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 30,
+  padding: '0 9px 0 3px',
+  border: 'none',
+  borderRadius: 999,
+  background: 'transparent',
+  cursor: 'pointer',
+};
 
 /** The popover's (or sheet's) search and checkbox rows. */
 const PickerBody = ({
@@ -243,11 +306,13 @@ const PickerBody = ({
  * Any venue and Any status (`06/venue-filter`, `06/status-filter`): a
  * multi-select popover on desktop and an `AdminSheet` with the same contents
  * on the phone (4b#23). Ticks wait for Show N; closing without it drops them.
- * The chip keeps its label once something is chosen and only takes the
- * selected edge: the chosen label is held for Design.
+ * With a pick the chip shows it in the active style with a ×
+ * (`04/filter-chips-picked`): the chip reopens the menu, the × clears.
  */
 export const FilterPicker = ({
   label,
+  picked,
+  clearLabel,
   testId,
   options,
   selected,
@@ -257,7 +322,12 @@ export const FilterPicker = ({
   stale = false,
   onApply,
 }: {
+  /** The placeholder words, and the popover's or sheet's name. */
   label: string;
+  /** What the chip shows while `selected` is not empty. */
+  picked: ReactNode;
+  /** The ×'s accessible name. */
+  clearLabel: string;
   /** On the popover or sheet; the chip carries `<testId>-chip`. */
   testId: string;
   options: readonly PickerOption[];
@@ -366,24 +436,55 @@ export const FilterPicker = ({
     </div>
   );
 
+  const isPicked = selected.length > 0;
+  const trigger = (
+    <button
+      ref={triggerRef}
+      type="button"
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      // On while a selection applies, as No price and Hidden say theirs.
+      aria-pressed={isPicked}
+      data-testid={`${testId}-chip`}
+      style={isPicked ? pickedTrigger : chipStyle(false)}
+      onClick={() => {
+        if (!open) setChosen([...selected]);
+        setOpen(!open);
+      }}
+    >
+      {isPicked ? picked : label}
+    </button>
+  );
+
   return (
     <div ref={wrapRef} style={{ position: 'relative', flex: 'none' }}>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        // On while a selection applies, as No price and Hidden say theirs.
-        aria-pressed={selected.length > 0}
-        data-testid={`${testId}-chip`}
-        style={chipStyle(selected.length > 0)}
-        onClick={() => {
-          if (!open) setChosen([...selected]);
-          setOpen(!open);
-        }}
+      {/* Two buttons in one pill, since a button can't hold another. The
+          wrapper is always there, so clearing keeps the chip mounted and
+          focus stays on it. */}
+      <span
+        style={
+          isPicked
+            ? { ...pickedChipStyle, gap: 0, padding: 0, cursor: 'default' }
+            : { display: 'inline-flex' }
+        }
       >
-        {label}
-      </button>
+        {trigger}
+        {isPicked && (
+          <button
+            type="button"
+            aria-label={clearLabel}
+            data-testid={`${testId}-clear`}
+            style={clearButton}
+            onClick={() => {
+              setOpen(false);
+              onApply([]);
+              triggerRef.current?.focus();
+            }}
+          >
+            <ClearMark />
+          </button>
+        )}
+      </span>
       {open &&
         (isPhone ? (
           <AdminSheet
