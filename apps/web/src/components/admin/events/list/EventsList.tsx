@@ -312,16 +312,35 @@ const DesktopTable = ({
                 <DateTile date={row.date} />
               </td>
               <td style={td}>
-                <div
-                  style={{
-                    ...ellipsis,
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    color: 'var(--fg)',
-                  }}
-                >
-                  {row.title}
-                </div>
+                {/* `06/past-shows` draws no ⋯, so a past show's title opens
+                    its edit view, locked there by `isPast` (4b#22). It looks
+                    exactly as drawn: the same weight and colour, no underline. */}
+                {past ? (
+                  <Link
+                    href={editEventHref(row.id)}
+                    style={{
+                      ...ellipsis,
+                      display: 'block',
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: 'var(--fg)',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {row.title}
+                  </Link>
+                ) : (
+                  <div
+                    style={{
+                      ...ellipsis,
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      color: 'var(--fg)',
+                    }}
+                  >
+                    {row.title}
+                  </div>
+                )}
                 {row.hidden && (
                   <div style={{ display: 'flex', marginTop: 2 }}>
                     <HiddenTag row={row} />
@@ -459,15 +478,11 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
   };
   return (
     <li style={{ borderBottom: '1px solid var(--border)' }}>
-      {/* A past card does not open the editor: how a past show reaches its
-          edit view is undrawn (held for Design). */}
-      {past ? (
-        <div style={cardStyle}>{body}</div>
-      ) : (
-        <Link href={editEventHref(row.id)} style={cardStyle}>
-          {body}
-        </Link>
-      )}
+      {/* Every card opens the editor; a past show's is locked there by
+          `isPast` (4b#22). */}
+      <Link href={editEventHref(row.id)} style={cardStyle}>
+        {body}
+      </Link>
     </li>
   );
 };
@@ -475,7 +490,7 @@ const PhoneCard = ({ row, when }: { row: EventListRow; when: When }) => {
 /**
  * The rows of `06/events` (desktop table) and `06/events-mobile` (cards, no
  * ⋯: a card opens the editor), and on Past `06/past-shows` (CONCERTS in place
- * of WATCHING, no ⋯).
+ * of WATCHING, no ⋯: the title opens the locked editor).
  */
 export const EventsList = ({
   rows,

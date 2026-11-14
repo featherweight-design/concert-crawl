@@ -139,6 +139,28 @@ describe('EventsList on desktop', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('opens a past show’s locked edit view from its title, by keyboard too, with no Merge or Delete (4b#22)', () => {
+    render(
+      <EventsList
+        when="past"
+        rows={[
+          row({ title: 'Japanese Breakfast', status: 'played', wentCount: 14 }),
+        ]}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Japanese Breakfast' });
+    expect(link).toHaveAttribute('href', '/admin/events/evt-1/edit');
+    // A real anchor: in the tab order, and focusable.
+    expect(link.tagName).toBe('A');
+    expect(link).not.toHaveAttribute('tabindex', '-1');
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText(COPY.menu.edit)).toBeNull();
+    expect(screen.queryByText(/merge/i)).toBeNull();
+    expect(screen.queryByText(/delete/i)).toBeNull();
+  });
+
   it('offers View on the venue’s site only when the row has a venue page', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     render(
@@ -270,5 +292,32 @@ describe('EventsList on the phone', () => {
       'href',
       '/admin/events/evt-4/edit',
     );
+  });
+
+  it('opens a past show’s locked edit view from its card, by keyboard too, with no Merge or Delete (4b#22)', () => {
+    setPhone(true);
+    render(
+      <EventsList
+        when="past"
+        rows={[
+          row({
+            id: 'evt-5',
+            title: 'Pink Fuzz',
+            status: 'played',
+            wentCount: 3,
+          }),
+        ]}
+      />,
+    );
+    const list = screen.getByRole('list', { name: COPY.title });
+    const [card] = within(list).getAllByRole('listitem');
+    const link = within(card as HTMLElement).getByRole('link');
+    expect(link).toHaveAttribute('href', '/admin/events/evt-5/edit');
+    expect(link).toHaveTextContent('Pink Fuzz');
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText(/merge/i)).toBeNull();
+    expect(screen.queryByText(/delete/i)).toBeNull();
   });
 });
