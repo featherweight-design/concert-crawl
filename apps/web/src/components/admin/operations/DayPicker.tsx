@@ -76,14 +76,20 @@ const useMonthDots = (
   const month = monthKey(view);
   useEffect(() => {
     const ctrl = new AbortController();
-    readDays(month, ctrl.signal)
-      .then((days) => {
+    // A new month or new filters drop the old dots, so none leads to a day
+    // the filters have emptied.
+    setDots(undefined);
+    void (async () => {
+      try {
+        const days = await readDays(month, ctrl.signal);
         if (!ctrl.signal.aborted) setDots({ month, days });
-      })
-      .catch(() => {
+      } catch (err) {
         // The dots are a hint: a failed read leaves the month without them,
         // and every day stays pickable.
-      });
+        if (!ctrl.signal.aborted)
+          console.warn('[admin] Activity log: the month dots failed', err);
+      }
+    })();
     return () => ctrl.abort();
   }, [month, readDays]);
   return dots?.month === month ? dots.days : null;

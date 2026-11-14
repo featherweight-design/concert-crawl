@@ -1,5 +1,5 @@
 /**
- * The Activity log's reads (`GET /v1/admin/audit-log` and its `/days`), from
+ * The Activity log's reads (`GET /v1/admin/audit-log`, `/days`, `/actors`), from
  * the browser with the Clerk token, through the invite-codes admin's
  * `callEnvelope`. Each row is checked with a guard, so a shape drift fails
  * into Couldn't load.

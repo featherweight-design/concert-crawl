@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useId, useState, type CSSProperties, type ReactNode } from 'react';
 import { Check, Search } from 'lucide-react';
 import {
   AUDIT_AREAS,
@@ -25,12 +25,15 @@ const SEARCH_PAST = 8;
 const Row = ({
   on,
   label,
+  describedBy,
   height,
   onPick,
   children,
 }: {
   on: boolean;
   label: string;
+  /** The id of the row's visible detail line, read after its name. */
+  describedBy?: string;
   height: number;
   onPick: () => void;
   children: ReactNode;
@@ -58,6 +61,7 @@ const Row = ({
       type="button"
       aria-pressed={on}
       aria-label={label}
+      aria-describedby={describedBy}
       style={style}
       onClick={onPick}
     >
@@ -153,6 +157,7 @@ const AnyoneList = ({
   onPick: (handle: string | null) => void;
 }) => {
   const isPhone = useIsPhone();
+  const listId = useId();
   const [query, setQuery] = useState('');
   // The phone sheet draws neither the search nor the counts (as drawn).
   const searchable = !isPhone && actors.length > SEARCH_PAST;
@@ -177,7 +182,9 @@ const AnyoneList = ({
         <Row
           key={person.handle}
           on={actor === person.handle}
-          label={`@${person.handle}`}
+          label={COPY.handle(person.handle)}
+          // The count and "You" read as the row's description, as they show.
+          {...(!isPhone && { describedBy: `${listId}-${person.handle}` })}
           height={42}
           onPick={() => onPick(person.handle)}
         >
@@ -197,10 +204,11 @@ const AnyoneList = ({
                 whiteSpace: 'nowrap',
               }}
             >
-              @{person.handle}
+              {COPY.handle(person.handle)}
             </span>
             {!isPhone && (
               <span
+                id={`${listId}-${person.handle}`}
                 style={{
                   display: 'block',
                   fontSize: 11.5,
@@ -208,8 +216,10 @@ const AnyoneList = ({
                   color: 'var(--fg-subtle)',
                 }}
               >
-                {person.you ? `${COPY.you} · ` : ''}
-                {COPY.changesOn(person.count, isToday)}
+                {COPY.personLine(
+                  COPY.changesOn(person.count, isToday),
+                  person.you,
+                )}
               </span>
             )}
           </span>
@@ -294,7 +304,7 @@ export const AnyoneFilter = ({
             size={18}
             initialSize={8}
           />
-          @{actor}
+          {COPY.handle(actor ?? '')}
         </>
       }
       pickedLabel={COPY.pickedActor(actor ?? '')}

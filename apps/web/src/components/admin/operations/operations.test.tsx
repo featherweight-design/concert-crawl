@@ -296,8 +296,8 @@ describe('Activity log', () => {
     expect(within(table).getAllByRole('cell')).toHaveLength(4);
   });
 
-  // `37/log-day-picker-d` draws Anyone and Any page idle; their menus are the
-  // next change, so for now they are text and read everyone, every page.
+  // `37/log-day-picker-d` draws Anyone and Any page idle: nothing picked, so
+  // the log reads everyone, every page.
   it('draws Anyone and Any page idle, then the day stepper', async () => {
     renderLog();
     await screen.findByTestId('activity-log-table');
@@ -370,7 +370,11 @@ describe('Activity log', () => {
       fireEvent.click(screen.getByTestId('activity-log-anyone-chip'));
       const menu = await screen.findByTestId('activity-log-anyone');
       const hugh = await within(menu).findByRole('button', { name: '@hugh' });
-      expect(hugh).toHaveTextContent(`${COPY.log.you} · 31 today`);
+      expect(hugh).toHaveTextContent(COPY.log.personLine('31 today', true));
+      // The visible count is also the row's description.
+      expect(hugh).toHaveAccessibleDescription(
+        COPY.log.personLine('31 today', true),
+      );
       expect(
         within(menu).getByRole('button', { name: '@jules' }),
       ).toHaveTextContent('8 today');
@@ -382,6 +386,8 @@ describe('Activity log', () => {
       expect(
         screen.queryByTestId('activity-log-anyone'),
       ).not.toBeInTheDocument();
+      // The pick hands focus back to its chip.
+      expect(screen.getByTestId('activity-log-anyone-chip')).toHaveFocus();
       await waitFor(() =>
         expect(logCalls().at(-1)?.searchParams.get('actorHandle')).toBe(
           'jules',
@@ -407,7 +413,9 @@ describe('Activity log', () => {
         name: COPY.log.findAdmin,
       });
       fireEvent.change(search, { target: { value: '@jul' } });
-      expect(within(menu).getByRole('button', { name: '@jules' }));
+      expect(
+        within(menu).getByRole('button', { name: '@jules' }),
+      ).toBeInTheDocument();
       expect(
         within(menu).queryByRole('button', { name: '@hugh' }),
       ).not.toBeInTheDocument();
@@ -445,6 +453,14 @@ describe('Activity log', () => {
       expect(
         screen.getByTestId('activity-log-any-page-chip'),
       ).toHaveTextContent('Prices');
+      // The month's dots follow the page too.
+      fireEvent.click(screen.getByTestId('activity-log-day-chip'));
+      await waitFor(() => {
+        const days = fetchMock.mock.calls
+          .map(([input]) => new URL(String(input)))
+          .filter((url) => url.pathname === '/v1/admin/audit-log/days');
+        expect(days.at(-1)?.searchParams.get('area')).toBe('prices');
+      });
     });
 
     it('opens Anyone as a sheet on the phone, drawn without counts', async () => {
