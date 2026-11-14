@@ -1,19 +1,9 @@
-import { PageSkeleton } from '@/components/admin/primitives';
+import { EventsSkeleton } from '@/components/admin/events/list/EventsSkeleton';
 
 /**
- * `07/loading-events`: the title and subtitle, the search with five filter
- * pills in one row, then the table's rows.
+ * `07/loading-events` on desktop, `07/loading-any-list-on-mobile` on the
+ * phone: EventsSkeleton draws both and the breakpoint shows one.
  */
 export default function AdminEventsLoading() {
-  return (
-    <PageSkeleton
-      heading
-      inlineSearch
-      card
-      filters={5}
-      rows={8}
-      columns={5}
-      rowHeight={65}
-    />
-  );
+  return <EventsSkeleton />;
 }
