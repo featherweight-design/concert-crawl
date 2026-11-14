@@ -3375,6 +3375,8 @@ export const ADMIN_COPY = {
     subtitle: 'Feedback, the emails we send, and a log of every admin change',
     tabsLabel: 'Operations sections',
     tabs: { feedback: 'Feedback' },
+    // The tab's count is a bare number on screen; this reads it out.
+    unreadCountLabel: (count: number) => `${count} unread`,
   },
 
   featureFlags: {
