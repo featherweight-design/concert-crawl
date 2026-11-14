@@ -3368,6 +3368,15 @@ export const ADMIN_COPY = {
     },
   },
 
+  // `07/activity-log`: Operations' shell. The Activity log and Emails tabs
+  // join `tabs` when they are built.
+  operations: {
+    title: 'Operations',
+    subtitle: 'Feedback, the emails we send, and a log of every admin change',
+    tabsLabel: 'Operations sections',
+    tabs: { feedback: 'Feedback' },
+  },
+
   featureFlags: {
     sectionEyebrow: 'RELEASE',
     sectionTitle: 'Feature flags',

@@ -110,6 +110,7 @@ describe('activeNavKey', () => {
     ['/admin/people/invite-codes/posters', 'code=abc', 'people'],
     ['/admin/crawl', '', 'crawl-runs'],
     ['/admin/feedback', '', 'operations'],
+    ['/admin/operations', '', 'operations'],
     ['/admin/feature-flags', '', 'feature-flags'],
     ['/admin/more', '', null],
     ['/admin/venuesx', '', null],
