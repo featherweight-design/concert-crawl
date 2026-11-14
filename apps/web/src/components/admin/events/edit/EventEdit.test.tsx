@@ -125,7 +125,8 @@ describe('EventEdit', () => {
     fireEvent.click(screen.getByTestId('event-edit-save'));
     // The toast wraps the saved line with its own words, so match a fragment.
     expect(await screen.findByText(/The title is still/)).toBeInTheDocument();
-    expect(titleInput()).toHaveValue(DETAIL.title);
+    // The snap-back lands in the render after the toast's.
+    await waitFor(() => expect(titleInput()).toHaveValue(DETAIL.title));
   });
 
   it('locks a past show: no Save bar, the title reads only', () => {
