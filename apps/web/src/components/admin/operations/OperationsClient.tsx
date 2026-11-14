@@ -1,6 +1,10 @@
 'use client';
 
-import { FeedbackView } from '@/components/admin/feedback/FeedbackView';
+import { useCallback, useState } from 'react';
+import {
+  FeedbackView,
+  type FeedbackCounts,
+} from '@/components/admin/feedback/FeedbackView';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminTabs, useIsPhoneResolved } from '@/components/admin/primitives';
 
@@ -33,14 +37,16 @@ const UnreadCount = ({ count, phone }: { count: number; phone: boolean }) => (
 
 /**
  * `07/activity-log`: Operations' title, subtitle and tabs over the Feedback
- * inbox, which drops its own heading here so the page has one h1.
+ * inbox, which has no heading of its own so the page has one h1. The Feedback
+ * tab's count is the inbox's own, reported once it has loaded; until then
+ * (or at 0) the tab draws none.
  */
-export const OperationsClient = ({
-  feedbackUnread,
-}: {
-  /** The Feedback tab's count; null (or 0) draws none. */
-  feedbackUnread: number | null;
-}) => {
+export const OperationsClient = () => {
+  const [feedbackUnread, setFeedbackUnread] = useState<number | null>(null);
+  const handleFeedbackCounts = useCallback(
+    ({ unread }: FeedbackCounts) => setFeedbackUnread(unread),
+    [],
+  );
   // Null until the media query is read: the chrome waits for it, so a phone
   // never paints the desktop title and underline tabs for a frame.
   const resolvedPhone = useIsPhoneResolved();
@@ -100,7 +106,7 @@ export const OperationsClient = ({
         role={resolvedPhone === null ? undefined : 'tabpanel'}
         aria-labelledby={resolvedPhone === null ? undefined : tabId(tab)}
       >
-        <FeedbackView embedded />
+        <FeedbackView onCounts={handleFeedbackCounts} />
       </div>
     </div>
   );

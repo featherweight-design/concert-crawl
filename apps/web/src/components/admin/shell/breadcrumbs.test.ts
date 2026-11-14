@@ -52,10 +52,6 @@ describe('buildBreadcrumbs', () => {
       operations,
       { label: 'Feedback', subtitle: true },
     ]);
-    expect(buildBreadcrumbs('/admin/feedback')).toEqual([
-      operations,
-      { label: 'Feedback', subtitle: true },
-    ]);
   });
 
   it('keeps a person under People / Details', () => {

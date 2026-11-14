@@ -1,8 +1,13 @@
-'use client';
+import { permanentRedirect } from 'next/navigation';
+import { withSearchParams } from '@/lib/poster/posters-href';
 
-import { FeedbackView } from '@/components/admin/feedback/FeedbackView';
-
-/** The feedback inbox on its own, with its heading. */
-export default function FeedbackPage() {
-  return <FeedbackView />;
+/** Feedback is Operations' first tab now; old links and bookmarks land there. */
+export default async function AdminFeedbackRedirect({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  permanentRedirect(
+    withSearchParams('/admin/operations', (await searchParams) ?? {}),
+  );
 }

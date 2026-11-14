@@ -15,7 +15,12 @@ export default function AdminOperationsLoading() {
       style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
       <span className="sr-only">{ADMIN_COPY.states.loading}</span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* The phone header carries the title, so admin.css hides these. */}
+      <div
+        data-testid="operations-skeleton-head"
+        className="operations-skeleton-head"
+        style={{ flexDirection: 'column', gap: 8 }}
+      >
         <div
           className="admin-skeleton"
           style={{ width: 200, height: 28, borderRadius: 8 }}
