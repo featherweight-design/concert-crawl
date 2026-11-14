@@ -420,6 +420,31 @@ describe('admin needs-you answers', () => {
       ).toBe(400);
       expect((await eventRow(eventId))?.status).not.toBe('postponed');
     });
+
+    // The answer's own row keeps no `before` for a fan-notifying answer (it
+    // is the undo snapshot), so the merge must write its own `event.merge`
+    // row with the deleted show whole, like every other merge path.
+    it('keeps the merged-away show whole in an event.merge audit row', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      const elsewhere = await seedVenue({ name: 'Ogden', slug: 'ogden' });
+      const target = await seedEvent(elsewhere.id, {
+        artist: 'Gone Act',
+        date: inDays(10),
+        showTime: '20:00:00',
+      });
+      const res = await answer(key, { answer: 'moved', toEventId: target.id });
+      expect(res.status).toBe(200);
+
+      expect(await eventRow(eventId)).toBeUndefined();
+      const [merge] = await auditRows('event.merge');
+      expect(merge?.targetId).toBe(target.id);
+      expect(merge?.metadata).toMatchObject({
+        sourceId: eventId,
+        source: { id: eventId, venueId: expect.any(String) },
+      });
+      expect(await auditRows('needs_you.answer')).toHaveLength(1);
+    });
   });
 
   it('refuses to undo a notifying answer', async () => {

@@ -21,19 +21,11 @@ export interface MergeEventRowsInput {
   suggestion: { reason: 'date' | 'venue' } | null | undefined;
   /** Whether the caller fans out a watch notification afterwards (audit only). */
   notifyWatchers: boolean;
-  /**
-   * Write the `event.merge` audit row inside the transaction (default true).
-   * A Needs you answer records the merge under its own audit action instead.
-   */
-  audit?: boolean;
 }
 
 export interface MergeEventRowsResult {
   counts: Record<string, number>;
-  /**
-   * The deleted source row as it was, for an audit written outside this
-   * function (a Needs you answer records it as its `before`).
-   */
+  /** The deleted source row as it was (also kept whole in the audit row). */
   source: Event;
   /** People who were watching the row that is gone, read before anything moved. */
   movedWatcherIds: string[];
@@ -56,7 +48,6 @@ export const mergeEventRows = async ({
   actorId,
   suggestion,
   notifyWatchers,
-  audit = true,
 }: MergeEventRowsInput): Promise<MergeEventRowsResult> => {
   // A row merged into itself would delete the survivor, and its redirect with it.
   if (sourceId === targetId) {
@@ -257,20 +248,21 @@ export const mergeEventRows = async ({
       alertsDropped: droppedAlerts.length,
     };
 
-    if (audit) {
-      await tx.insert(auditLog).values({
-        actorId,
-        action: 'event.merge',
-        targetId,
-        metadata: {
-          sourceId,
-          source: sourceRow,
-          referencesMoved: counts,
-          suggestion: suggestion ?? null,
-          notifyWatchers,
-        },
-      });
-    }
+    // Every merge path audits the same way, Needs you answers included: the
+    // answer's own row cannot hold the deleted row (its `before` is the undo
+    // snapshot, and a fan-notifying answer is never undoable).
+    await tx.insert(auditLog).values({
+      actorId,
+      action: 'event.merge',
+      targetId,
+      metadata: {
+        sourceId,
+        source: sourceRow,
+        referencesMoved: counts,
+        suggestion: suggestion ?? null,
+        notifyWatchers,
+      },
+    });
 
     return {
       counts,
