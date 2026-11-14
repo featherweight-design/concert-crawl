@@ -315,7 +315,7 @@ export const LlmBudgetControl = ({
           }}
         >
           <dt style={{ color: 'var(--fg-muted)' }}>{copy.soFar}</dt>
-          <dd style={{ margin: 0, fontWeight: 600 }}>
+          <dd style={{ margin: 0, textAlign: 'right' }}>
             {copy.soFarValue(formatUsd(spentUsd), formatUsd(paceUsd))}
           </dd>
         </div>
@@ -331,7 +331,7 @@ export const LlmBudgetControl = ({
             }}
           >
             <dt style={{ color: 'var(--fg-muted)' }}>{copy.lastMonth}</dt>
-            <dd style={{ margin: 0, fontWeight: 600 }}>
+            <dd style={{ margin: 0, textAlign: 'right' }}>
               {formatUsd(lastMonthUsd)}
             </dd>
           </div>

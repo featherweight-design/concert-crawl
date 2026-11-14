@@ -185,6 +185,9 @@ describe('<LlmBudgetControl />', () => {
       if (!(monthRow instanceof HTMLElement)) throw new Error('no month row');
       expect(monthRow.style.fontSize).toBe('13px');
       expect(monthRow.style.padding).toBe('8px 0px');
+      // The value is normal weight on the board, not bold.
+      const value = monthRow.querySelector('dd');
+      expect(value?.style.fontWeight).toBe('');
     }
   });
 
