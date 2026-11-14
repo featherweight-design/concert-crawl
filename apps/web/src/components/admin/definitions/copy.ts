@@ -3416,6 +3416,8 @@ export const ADMIN_COPY = {
       // The venue-name slot until the venue page sets its name
       // (`07/loading-venue-page` draws "Venues / …").
       venuePending: '…',
+      // `07/not-found` draws "{Section} / Not found".
+      notFound: 'Not found',
       details: 'Details',
     },
   },
