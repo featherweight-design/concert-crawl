@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { CrewPatch } from '@/components/consumer/crew-patch';
 import { gradientEdgeCard, pillGhost, pillPrimary } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
@@ -174,26 +175,20 @@ export const BrowseInstead = ({ wide = false }: { wide?: boolean }) => (
 );
 
 /**
- * The stand-in for a patch we are not allowed to draw: the patch's blank
- * squircle with the dimmed brand mark in it, so the card keeps its shape and
- * the dead link still carries no crew identity.
+ * The stand-in for a patch we are not allowed to draw: the generic hex patch
+ * (addendum 5 item 13, bp-s-invite_stale_m) dimmed and greyed, so the card
+ * keeps its shape and the dead link still carries no crew identity. The
+ * generic patch ignores the crew, so no id is passed.
  */
 export const DimmedMark = () => (
   <span
     aria-hidden="true"
     style={{
-      width: INVITE_MARK_SIZE,
-      height: INVITE_MARK_SIZE,
-      borderRadius: 27,
       display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--surface-2)',
-      border: '2px solid var(--border-strong)',
+      opacity: 0.5,
+      filter: 'grayscale(1)',
     }}
   >
-    <span style={{ opacity: 0.45, filter: 'grayscale(1)' }}>
-      <CCMark size={56} />
-    </span>
+    <CrewPatch crewId="" generic size={INVITE_MARK_SIZE} scale="hero" />
   </span>
 );

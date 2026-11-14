@@ -15,6 +15,12 @@ interface CrewPatchProps {
   patchSalt?: number;
   size?: number;
   scale?: CrewPatchScale;
+  /**
+   * The generic hex patch, for where no crew exists yet (an empty crew list,
+   * an empty crew lens, a stale invite). Ignores the crew's identity: the same
+   * glyph and the default chord every time.
+   */
+  generic?: boolean;
 }
 
 interface LayerColors {
@@ -315,6 +321,80 @@ const SIGIL_RENDERERS: Record<
   ),
 };
 
+/**
+ * The generic patch (B+ addendum 5 item 13, `13/hex-patch-and-theme-mark`):
+ * where no crew exists yet, the patch's frame holding the hex glyph in the
+ * default chord (signal and accent). Rings and spokes stand in for the weave;
+ * the glyph is the board's SVG (56-unit kit) with a short spoke at each
+ * vertex, scaled into the 100-unit box.
+ */
+const GENERIC_WEAVE = ({ pri }: LayerColors) => (
+  <g>
+    {[15, 24, 33, 42].map((radius) => (
+      <circle
+        key={radius}
+        cx="50"
+        cy="50"
+        r={radius}
+        fill="none"
+        stroke={pri}
+        strokeOpacity="0.16"
+        strokeWidth="1"
+      />
+    ))}
+    {radial(12, () => (
+      <line
+        x1="50"
+        y1="8"
+        x2="50"
+        y2="30"
+        stroke={pri}
+        strokeOpacity="0.12"
+        strokeWidth="1"
+      />
+    ))}
+  </g>
+);
+
+const GENERIC_HEX_VERTICES = [
+  [28, 15],
+  [39, 21.5],
+  [39, 34.5],
+  [28, 41],
+  [17, 34.5],
+  [17, 21.5],
+] as const;
+
+const GENERIC_SIGIL = ({ pri, sec }: LayerColors) => (
+  <g transform={`scale(${100 / 56})`}>
+    {GENERIC_HEX_VERTICES.map(([vx, vy]) => {
+      // A short spoke leaving each vertex along the line from the centre.
+      const dx = vx - 28;
+      const dy = vy - 28;
+      const len = Math.hypot(dx, dy);
+      return (
+        <line
+          key={`${vx}-${vy}`}
+          x1={vx}
+          y1={vy}
+          x2={(vx + (dx / len) * 4).toFixed(2)}
+          y2={(vy + (dy / len) * 4).toFixed(2)}
+          stroke={sec}
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+      );
+    })}
+    <path
+      d="M28 15l11 6.5v13L28 41l-11-6.5v-13z"
+      fill="none"
+      stroke={sec}
+      strokeWidth="2.4"
+    />
+    <path d="M28 21l6 3.5v7L28 35l-6-3.5v-7z" fill={pri} />
+  </g>
+);
+
 /** The patch is drawn in a 0-100 viewBox; one pixel is 100/size units. */
 const VIEWBOX = 100;
 /** The B+ kit draws the patch at 56px; every rim value scales from there. */
@@ -367,12 +447,14 @@ export function CrewPatch({
   patchSalt = 0,
   size = 96,
   scale = 'hero',
+  generic = false,
 }: CrewPatchProps) {
   const identity = crewIdentity(crewId, patchSalt);
   // useId, not a module-scope counter: server and client counters diverge under
   // SSR and hydrate the clipPath/pattern refs onto ids that do not exist.
   const uid = `cp${useId().replace(/:/g, '')}`;
-  const chord = CREW_CHORD_TOKENS[identity.chord];
+  // c0 is signal and accent: the default chord the generic patch is drawn in.
+  const chord = CREW_CHORD_TOKENS[generic ? 'c0' : identity.chord];
   const pri = `var(${chord.primary})`;
   const sec = `var(${chord.secondary})`;
   // micro drops the weave: at 24-28px it turns to mud, and the sigil plus
@@ -423,13 +505,22 @@ export function CrewPatch({
           ry={SQUIRCLE_RADIUS}
           fill="var(--surface-2)"
         />
-        {GROUND_RENDERERS[identity.ground]({ pri, sec })}
-        {showWeave && (
-          <g transform={`rotate(${identity.spin} 50 50)`}>
-            {WEAVE_RENDERERS[identity.weave]({ pri, sw, pid: `${uid}-w` })}
-          </g>
+        {generic ? (
+          <>
+            {GENERIC_WEAVE({ pri, sec })}
+            {GENERIC_SIGIL({ pri, sec })}
+          </>
+        ) : (
+          <>
+            {GROUND_RENDERERS[identity.ground]({ pri, sec })}
+            {showWeave && (
+              <g transform={`rotate(${identity.spin} 50 50)`}>
+                {WEAVE_RENDERERS[identity.weave]({ pri, sw, pid: `${uid}-w` })}
+              </g>
+            )}
+            {SIGIL_RENDERERS[identity.sigil]({ pri, sec })}
+          </>
         )}
-        {SIGIL_RENDERERS[identity.sigil]({ pri, sec })}
       </g>
       {rim.rimWidthUnits > 0 && (
         <rect

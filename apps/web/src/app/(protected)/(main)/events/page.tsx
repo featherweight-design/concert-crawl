@@ -638,7 +638,6 @@ async function BrowsePageInner({ searchParams }: BrowsePageProps) {
           <CrewLensList
             crewId={lensCrew.id}
             crewName={lensCrew.name}
-            patchSalt={lensCrew.patchSalt}
             shows={lensShows}
             failed={lensFailed}
             clearLensHref={clearLensHref}

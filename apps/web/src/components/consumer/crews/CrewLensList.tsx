@@ -13,7 +13,6 @@ const COPY = CREWS_COPY;
 interface CrewLensListProps {
   crewId: string;
   crewName: string;
-  patchSalt: number;
   shows: CrewShow[];
   /** A load failure, which is not the same state as a crew going to nothing. */
   failed?: boolean;
@@ -34,7 +33,6 @@ interface CrewLensListProps {
 export const CrewLensList = ({
   crewId,
   crewName,
-  patchSalt,
   shows,
   failed = false,
   clearLensHref,
@@ -52,9 +50,9 @@ export const CrewLensList = ({
     );
   }
 
-  // B+ (bp-s-empty_crewlens_m): the crew's own patch over the words, in a
-  // dashed card, and the way out as the primary action. The crew is the
-  // subject here, so its patch stands in for the empty state's rail.
+  // B+ (bp-s-empty_crewlens_m): the generic hex patch over the words, in a
+  // dashed card, and the way out as the primary action (addendum 5 item 13:
+  // the board draws the generic patch here, not the crew's own).
   if (shows.length === 0) {
     return (
       <section
@@ -66,12 +64,7 @@ export const CrewLensList = ({
         }}
       >
         <span aria-hidden="true" className="pb-2">
-          <CrewPatch
-            crewId={crewId}
-            patchSalt={patchSalt}
-            size={76}
-            scale="hero"
-          />
+          <CrewPatch crewId={crewId} generic size={76} scale="hero" />
         </span>
         <span
           style={{
