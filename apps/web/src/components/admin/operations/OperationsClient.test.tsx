@@ -121,8 +121,7 @@ describe('OperationsClient (07/activity-log)', () => {
   it('embeds Feedback without a heading of its own', async () => {
     render(<OperationsClient />);
     await settle();
-    expect(screen.queryByText(ADMIN_COPY.feedback.eyebrow)).toBeNull();
-    expect(screen.queryByText(ADMIN_COPY.feedback.subtitle)).toBeNull();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(
       screen.queryByRole('heading', { name: ADMIN_COPY.feedback.title }),
     ).toBeNull();
@@ -130,11 +129,13 @@ describe('OperationsClient (07/activity-log)', () => {
 });
 
 describe('FeedbackView', () => {
-  it('has no h1 or eyebrow of its own', async () => {
+  it('has no heading of its own', async () => {
     render(<FeedbackView />);
     await settle();
-    expect(screen.queryByText(ADMIN_COPY.feedback.eyebrow)).toBeNull();
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(
+      screen.queryByRole('heading', { name: ADMIN_COPY.feedback.title }),
+    ).toBeNull();
   });
 
   it('switches at the admin breakpoint, the same query as the shell', async () => {

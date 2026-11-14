@@ -2223,11 +2223,7 @@ export const ADMIN_COPY = {
   },
 
   feedback: {
-    eyebrow: 'operations · users',
     title: 'Feedback',
-    subtitle:
-      'Inbox for in-app feedback (and Sentry, soon email). Triage: mark read, flag for investigation, open a GH issue, or archive.',
-    unreadBadgeSuffix: 'unread',
     statusChips: {
       all: 'All',
       unread: 'Unread',

@@ -45,7 +45,7 @@ export default function AdminOperationsLoading() {
           style={{ width: 90, height: 14, borderRadius: 6 }}
         />
       </div>
-      <FeedbackSkeleton heading={false} />
+      <FeedbackSkeleton />
     </div>
   );
 }

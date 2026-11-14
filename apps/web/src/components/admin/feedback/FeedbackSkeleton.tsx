@@ -1,5 +1,8 @@
-/** The inbox's list rows, without any heading. */
-const FeedbackListSkeleton = () => (
+/**
+ * The feedback inbox's skeleton: the list rows alone. Operations draws its
+ * shell above it, so there is no heading and no wrapper.
+ */
+export const FeedbackSkeleton = () => (
   <div
     style={{
       background: 'var(--bg-elevated)',
@@ -41,21 +44,3 @@ const FeedbackListSkeleton = () => (
     ))}
   </div>
 );
-
-/**
- * The feedback inbox's skeleton. `heading` draws the old page's SectionHead
- * bars; Operations leaves it off and draws its shell above instead, so the
- * list stands alone with no wrapper.
- */
-export const FeedbackSkeleton = ({ heading = true }: { heading?: boolean }) =>
-  heading ? (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div className="admin-skeleton" style={{ width: 90, height: 22 }} />
-        <div className="admin-skeleton" style={{ width: 220, height: 13 }} />
-      </div>
-      <FeedbackListSkeleton />
-    </div>
-  ) : (
-    <FeedbackListSkeleton />
-  );
