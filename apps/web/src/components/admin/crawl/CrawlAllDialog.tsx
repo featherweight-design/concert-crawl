@@ -222,7 +222,8 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
       onClick={() => void start()}
       style={{
         ...size,
-        gap: 8,
+        // Drawn 6 beside the refresh icon, 8 beside the starting spinner.
+        gap: posting ? 8 : 6,
         ...(phone && { flex: 1 }),
         ...(posting && { opacity: 0.75, cursor: 'default' }),
         ...(held && { opacity: 0.45, cursor: 'default' }),
@@ -260,24 +261,24 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
     </Link>
   );
 
-  // `09/crawl-all-failed-m`'s block, for a post that failed and for a count
-  // that didn't load: one toast, placed the same way in both.
+  // One toast for a post that failed and for a count that didn't load. The
+  // phone takes `09/crawl-all-failed-m`'s 12px and .45 shadow; desktop keeps
+  // the primitive's `07/save-failed` defaults (12px 14px, .4).
+  const toastLook = phone ? { padding: '12px', shadow: FAILED_SHADOW } : {};
   const failedToast =
     post === 'failed' ? (
       <SaveFailedToast
         title={COPY.failedTitle}
         body={COPY.failedBody}
         onRetry={() => void start()}
-        padding="12px"
-        shadow={FAILED_SHADOW}
+        {...toastLook}
       />
     ) : estimateState?.kind === 'failed' ? (
       <SaveFailedToast
         title={COPY.estimateFailedTitle}
         body={COPY.estimateFailedBody}
         onRetry={retry}
-        padding="12px"
-        shadow={FAILED_SHADOW}
+        {...toastLook}
       />
     ) : null;
 
@@ -392,7 +393,7 @@ export const CrawlAllDialog = ({ onClose, onStarted }: CrawlAllDialogProps) => {
       }
     >
       {body && (
-        <div data-testid="crawl-all-body" style={{ ...muted, marginTop: 8 }}>
+        <div data-testid="crawl-all-body" style={{ ...muted, marginTop: 14 }}>
           {body}
         </div>
       )}

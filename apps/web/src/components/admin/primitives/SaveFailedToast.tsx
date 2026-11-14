@@ -1,7 +1,6 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { X } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { AdminButton } from './AdminButton';
 
@@ -86,7 +85,7 @@ export const SaveFailedToast = ({
     style={{
       display: 'flex',
       alignItems: 'center',
-      gap: 12,
+      gap: 10,
       padding,
       borderRadius: 12,
       background: 'var(--bg-elevated)',
@@ -94,7 +93,21 @@ export const SaveFailedToast = ({
       boxShadow: shadow,
     }}
   >
-    <X size={16} color="var(--danger)" aria-hidden style={{ flex: 'none' }} />
+    {/* `07/save-failed`'s drawn cross: an 8px X in a 16px box, stroke 2. */}
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="var(--danger)"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      style={{ flex: 'none', display: 'block' }}
+    >
+      <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
     <div style={{ flex: 1, minWidth: 0 }}>
       {/* Long unbroken text wraps instead of overflowing a phone (as #260). */}
       <div
@@ -112,6 +125,7 @@ export const SaveFailedToast = ({
           fontSize: 12.5,
           color: 'var(--fg-muted)',
           marginTop: 2,
+          lineHeight: 1.4,
           overflowWrap: 'anywhere',
         }}
       >
