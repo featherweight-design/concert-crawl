@@ -230,7 +230,7 @@ export const AddPricePanel = ({
               color: 'var(--fg-muted)',
             }}
           >
-            {COPY.note}
+            {single ? COPY.noteSingle : COPY.note}
           </div>
         </>
       )}
