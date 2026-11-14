@@ -42,6 +42,7 @@ vi.mock('@concert-crawl/db', () => ({
   },
   venues: {},
   crawlRuns: {},
+  costTracking: {},
   crawlTriggers: {},
   notifications: {},
   auditLog: {},
@@ -55,14 +56,18 @@ function adminAuth() {
   });
 }
 
-// The /daily query chain terminates in `.groupBy()`; /top-venues terminates
+// The /daily query chains terminate in `.groupBy()`; /top-venues terminates
 // in `.orderBy()`. Both default to `mockReturnThis()` (they're mid-chain in
 // the other endpoint), so each test queues its terminal rows explicitly.
 // Drizzle builders are PromiseLike, so mockResolvedValueOnce matches the
 // awaited row-array type (same pattern as crawl.test.ts).
-async function queueDailyRows(rows: unknown[]) {
+// /daily runs two queries, in this order: extraction (crawl_runs) rows, then
+// the cost_tracking rows of LLM_SERVICES.
+async function queueDailyRows(rows: unknown[], otherLlmRows: unknown[] = []) {
   const { db } = await import('@concert-crawl/db');
-  vi.mocked(db.select().from().where().groupBy).mockResolvedValueOnce(rows);
+  vi.mocked(db.select().from().where().groupBy)
+    .mockResolvedValueOnce(rows)
+    .mockResolvedValueOnce(otherLlmRows);
 }
 
 async function queueTopVenueRows(rows: unknown[]) {
@@ -225,6 +230,37 @@ describe('GET /v1/admin/costs/daily', () => {
       { date: '2026-07-10', costUsd: 0.004 },
     ]);
     expect(body.data.totalUsd).toBe(0.008);
+  });
+
+  it('adds the LLM services from cost_tracking to the same day as extraction', async () => {
+    adminAuth();
+    await queueDailyRows(
+      [{ date: '2026-07-09', costUsd: 0.5 }],
+      [
+        { date: '2026-07-09', costUsd: 0.25 },
+        { date: '2026-07-10', costUsd: 0.125 },
+      ],
+    );
+    const res = await createApp().request('/v1/admin/costs/daily?days=2');
+    const body = (await res.json()) as {
+      data: { days: { date: string; costUsd: number }[]; totalUsd: number };
+    };
+    expect(body.data.days).toEqual([
+      { date: '2026-07-09', costUsd: 0.75 },
+      { date: '2026-07-10', costUsd: 0.125 },
+    ]);
+    expect(body.data.totalUsd).toBe(0.875);
+  });
+
+  it('sums only the LLM_SERVICES allow-list from cost_tracking', async () => {
+    adminAuth();
+    const { inArray } = await import('drizzle-orm');
+    const { LLM_SERVICES } = await import('@concert-crawl/crawler-core');
+    await queueDailyRows([]);
+    await createApp().request('/v1/admin/costs/daily?days=2');
+    expect(vi.mocked(inArray)).toHaveBeenCalledWith(undefined, [
+      ...LLM_SERVICES,
+    ]);
   });
 });
 

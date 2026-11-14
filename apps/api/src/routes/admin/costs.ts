@@ -2,8 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import { desc, eq, sql } from 'drizzle-orm';
-import { db, crawlRuns, venues } from '@concert-crawl/db';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { db, costTracking, crawlRuns, venues } from '@concert-crawl/db';
+import { LLM_SERVICES } from '@concert-crawl/crawler-core';
 import type {
   AdminDailyCosts,
   AdminTopSpend,
@@ -75,8 +77,8 @@ const roundUsd = (value: number): number => Math.round(value * 10000) / 10000;
 // MT_TIME_ZONE is inlined as a literal (not a bind parameter) because the
 // fragment appears in both SELECT and GROUP BY — separate bind params would
 // break Postgres's structural GROUP BY expression matching.
-const mtDayBucket = () =>
-  sql`(${crawlRuns.createdAt} AT TIME ZONE ${sql.raw(`'${MT_TIME_ZONE}'`)})::date`;
+const mtDayBucket = (column: AnyPgColumn = crawlRuns.createdAt) =>
+  sql`(${column} AT TIME ZONE ${sql.raw(`'${MT_TIME_ZONE}'`)})::date`;
 
 export const costsAdminRouter = new Hono<AdminVariables>();
 
@@ -84,6 +86,14 @@ export const costsAdminRouter = new Hono<AdminVariables>();
 // window, zero-filled so the chart never has gaps. llm_cost_usd is nullable
 // (structured-data runs never touch the LLM), so the aggregate is
 // coalesce(sum(...), 0) — the endpoint always returns numbers.
+//
+// A day's spend is what the crawler's monthly LLM budget counts
+// (crawler-core lib/llm-budget.ts): extraction (crawl_runs.llm_cost_usd) plus
+// the cost_tracking rows of the services in LLM_SERVICES (artist
+// adjudication, genre tagging, venue About drafts). The same allow-list, so
+// the month the Health tile and chart show is the figure that trips "If it
+// runs out". The 'claude' row is extraction already in crawl_runs, and
+// non-LLM rows ('render', Spotify) are never LLM spend, so neither is summed.
 costsAdminRouter.get(
   '/daily',
   zValidator('query', daysQuerySchema, validationHook),
@@ -94,23 +104,44 @@ costsAdminRouter.get(
     const windowDates = listWindowDates(days, today);
     const windowStart = windowDates[0] ?? today;
 
-    const rows = await db
-      .select({
-        date: sql<string>`(${mtDayBucket()})::text`,
-        costUsd: sql<number>`coalesce(sum(${crawlRuns.llmCostUsd}), 0)`,
-      })
-      .from(crawlRuns)
-      .where(
-        sql`${mtDayBucket()} between ${windowStart}::date and ${today}::date`,
-      )
-      .groupBy(mtDayBucket());
+    const otherLlmDay = mtDayBucket(costTracking.recordedAt);
+    const [extractionRows, otherLlmRows] = await Promise.all([
+      db
+        .select({
+          date: sql<string>`(${mtDayBucket()})::text`,
+          costUsd: sql<number>`coalesce(sum(${crawlRuns.llmCostUsd}), 0)`,
+        })
+        .from(crawlRuns)
+        .where(
+          sql`${mtDayBucket()} between ${windowStart}::date and ${today}::date`,
+        )
+        .groupBy(mtDayBucket()),
+      db
+        .select({
+          date: sql<string>`(${otherLlmDay})::text`,
+          costUsd: sql<number>`coalesce(sum(${costTracking.costUsd}), 0)`,
+        })
+        .from(costTracking)
+        .where(
+          and(
+            inArray(costTracking.service, [...LLM_SERVICES]),
+            sql`${otherLlmDay} between ${windowStart}::date and ${today}::date`,
+          ),
+        )
+        .groupBy(otherLlmDay),
+    ]);
+    const rows = [...extractionRows, ...otherLlmRows];
 
     // Per-run costs are fractions of a cent, so the window total sums the
     // unrounded aggregates and rounds once — summing rounded day buckets
     // would undercount (or zero out) real spend.
-    const costsByDate = new Map(
-      rows.map((row) => [row.date, Number(row.costUsd)]),
-    );
+    const costsByDate = new Map<string, number>();
+    for (const row of rows) {
+      costsByDate.set(
+        row.date,
+        (costsByDate.get(row.date) ?? 0) + Number(row.costUsd),
+      );
+    }
     const dayBuckets = windowDates.map((date) => ({
       date,
       costUsd: roundUsd(costsByDate.get(date) ?? 0),
