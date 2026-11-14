@@ -33,18 +33,19 @@ const DISPLAY_ROLE_LABEL: Record<DisplayRole, string> = {
   staff: 'staff',
 };
 
-// Per monetization design handoff — neutral surface, colored dot, fg-muted text
+// Role chip colours (addendum 5 item 9): the dot, the hairline and the text
+// all take the role's colour on a neutral surface.
 const ROLE_BADGE_DOT: Record<RoleBadge, string> = {
   admin: 'var(--warning)',
   promoter: 'var(--accent)',
   beta: 'var(--signal)',
 };
 
-// The chip's text: the Light-safe text variants where the theme has them
-// (warning, signal), the accent itself otherwise.
+// The chip's text: the Light-safe text variants (globals.css), which are the
+// raw colours on every dark theme.
 const ROLE_BADGE_TEXT: Record<RoleBadge, string> = {
   admin: 'var(--price-text-warning)',
-  promoter: 'var(--accent)',
+  promoter: 'var(--price-text-accent)',
   beta: 'var(--price-text-signal)',
 };
 
