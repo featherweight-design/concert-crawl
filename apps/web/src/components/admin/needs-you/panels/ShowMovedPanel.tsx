@@ -43,8 +43,8 @@ export const ShowMovedPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
-              padding: 14,
-              borderRadius: 14,
+              padding: '12px 14px',
+              borderRadius: 12,
               border: '1px solid var(--border)',
               background: 'var(--surface-1)',
             }}
@@ -88,7 +88,7 @@ export const ShowMovedPanel = ({ row, today, busy, onAnswer }: PanelProps) => {
         </Section>
       )}
       <Section label={PANEL.whatMovingDoes}>
-        <Prose muted>
+        <Prose muted small>
           {PANEL.showMoved.doesWhat(venue, row.venueName, row.watchers)}
         </Prose>
       </Section>
