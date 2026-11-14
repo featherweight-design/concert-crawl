@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 import {
   adjudicateEventWithUsage,
   calculateCost,
+  createAdjudicationCost,
   LLM_EXTRACTION_MODEL,
   makeJoinedEvidence,
   makeMusicBrainzLookup,
@@ -101,11 +102,16 @@ async function main(): Promise<void> {
     }`,
   );
 
+  // The pass's spend also goes to the ledger, as one 'artist-adjudication'
+  // row for the whole pass (a dry run spends too), so the monthly LLM budget
+  // sees it. spentUsd above stays for the printout and the cost cap.
+  const adjudicationCost = createAdjudicationCost();
   const musicBrainz = makeMusicBrainzLookup();
   const result = await rederiveEventArtists({
     dryRun,
     adjudicate: async (input) => {
       const { verdict, usage } = await adjudicateEventWithUsage(input);
+      adjudicationCost.add(usage);
       // The adjudicator calls the extractor's model.
       spentUsd += calculateCost(usage, LLM_EXTRACTION_MODEL);
       calls += 1;
@@ -126,7 +132,15 @@ async function main(): Promise<void> {
     shouldStop: () => spentUsd >= maxCostUsd,
     // Every change, not a sample: the summary is the list an apply is judged by.
     sampleSize: Number.MAX_SAFE_INTEGER,
-  });
+  }).finally(() =>
+    // Written even when the pass throws partway: those calls were spent.
+    // record() logs and swallows its own failure.
+    adjudicationCost.record({
+      script: 'rederive-event-artists',
+      dryRun,
+      ...(limit === undefined ? {} : { limit }),
+    }),
+  );
   if (result.stopped) {
     console.warn(
       `[rederive-event-artists] COST CAP HIT at $${spentUsd.toFixed(4)}: the pass stopped early and the remaining rows were not read.`,

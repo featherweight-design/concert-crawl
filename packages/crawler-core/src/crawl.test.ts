@@ -195,19 +195,41 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
 }));
-vi.mock('./lib/extractors/llm.js', () => ({
-  extractWithLlm: vi.fn(),
+vi.mock('./lib/extractors/llm.js', () => {
   // Rejecting keeps every existing case on the ladder's step-3 path: no
   // headliners, isConcert left true. A test that wants a real verdict
   // overrides this per-case. The point is that no test in this file ever
   // reaches the network, and a case that escalates fails loudly rather than
   // silently spending a call.
-  adjudicateEvent: vi
+  const adjudicateEvent = vi
     .fn()
     .mockRejectedValue(
       new Error('adjudicateEvent is not stubbed for this test'),
-    ),
-}));
+    );
+  return {
+    extractWithLlm: vi.fn(),
+    adjudicateEvent,
+    // What crawl.ts calls: adjudicateEvent's verdict with zero usage, so a
+    // case stubs the verdict on adjudicateEvent. A cost test stubs this one
+    // directly to report real usage.
+    adjudicateEventWithUsage: vi.fn(async (input: unknown) => ({
+      verdict: await adjudicateEvent(input),
+      usage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })),
+  };
+});
+// The real helper (it writes to the in-memory store), wrapped so a case can
+// assert its input or make the write fail.
+vi.mock('./lib/record-llm-cost.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('./lib/record-llm-cost.js')>();
+  return { ...actual, recordLlmCost: vi.fn(actual.recordLlmCost) };
+});
 
 import {
   fetchPage,
@@ -215,7 +237,14 @@ import {
   CrawlFetchError,
   CrawlSelectorTimeoutError,
 } from './lib/fetcher.js';
-import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
+import {
+  adjudicateEvent,
+  adjudicateEventWithUsage,
+  extractWithLlm,
+} from './lib/extractors/llm.js';
+import { LLM_SERVICES, recordLlmCost } from './lib/record-llm-cost.js';
+import { calculateCost } from './lib/cost.js';
+import { LLM_EXTRACTION_MODEL } from './lib/llm-models.js';
 import {
   CrawlSkipError,
   checkRobots,
@@ -1922,6 +1951,162 @@ describe('crawlVenue — LLM cost tracking', () => {
       }
     });
     expect(costRow).toBeUndefined();
+  });
+
+  describe('artist adjudication cost', () => {
+    const EXTRACTION_USAGE = {
+      inputTokens: 2000,
+      outputTokens: 400,
+      cacheReadTokens: 1000,
+      cacheWriteTokens: 0,
+    };
+    const ADJUDICATION_USAGE = {
+      inputTokens: 300,
+      outputTokens: 60,
+      cacheReadTokens: 900,
+      cacheWriteTokens: 100,
+    };
+    // No observedPerformers, so the ladder can only reach the adjudicator.
+    const unbilled = (title: string, date: string) => ({
+      ...METALLICA_EVENT,
+      title,
+      rawTitle: title,
+      artist: title,
+      observedPerformers: [],
+      date,
+    });
+
+    function mockExtractionWithTwoAdjudications() {
+      const venue = seedVenue();
+      mockFetchPage.mockResolvedValue({
+        html: HTML_V1,
+        httpStatus: 200,
+        finalUrl: venue.websiteUrl,
+      });
+      mockExtractWithLlm.mockResolvedValue({
+        events: [
+          unbilled('Metallica Live', '2026-08-15'),
+          unbilled('Slayer Live', '2026-08-16'),
+        ],
+        usage: EXTRACTION_USAGE,
+      });
+      const adjudicate = vi.mocked(adjudicateEventWithUsage);
+      adjudicate.mockClear();
+      for (const name of ['Metallica', 'Slayer']) {
+        adjudicate.mockResolvedValueOnce({
+          verdict: {
+            isConcert: true,
+            headliners: [name],
+            supportingArtists: [],
+            coversOtherArtists: false,
+          },
+          usage: ADJUDICATION_USAGE,
+        });
+      }
+      vi.mocked(recordLlmCost).mockClear();
+      return venue;
+    }
+
+    const rowsFor = (service: string) =>
+      stores.costTracking.filter((row: any) => row.service === service);
+
+    it('records every adjudication in one artist-adjudication row at the extractor model', async () => {
+      const venue = mockExtractionWithTwoAdjudications();
+
+      const run = await crawlVenue(venue.id, mockBrowser);
+
+      expect(adjudicateEventWithUsage).toHaveBeenCalledTimes(2);
+      const adjudicationCalls = vi
+        .mocked(recordLlmCost)
+        .mock.calls.filter(
+          ([input]) => input.service === 'artist-adjudication',
+        );
+      expect(adjudicationCalls).toHaveLength(1);
+      const [input] = adjudicationCalls[0] ?? [];
+      expect(input?.model).toBe(LLM_EXTRACTION_MODEL);
+      expect(input?.usage).toEqual({
+        inputTokens: 600,
+        outputTokens: 120,
+        cacheReadTokens: 1800,
+        cacheWriteTokens: 200,
+      });
+      expect(input?.metadata).toMatchObject({
+        venueId: venue.id,
+        crawlRunId: run.id,
+        calls: 2,
+      });
+      expect(rowsFor('artist-adjudication')).toHaveLength(1);
+    });
+
+    it('counts each dollar once in the budget: extraction in crawl_runs, adjudication in its own row', async () => {
+      const venue = mockExtractionWithTwoAdjudications();
+
+      const run = await crawlVenue(venue.id, mockBrowser);
+
+      const extractionUsd = calculateCost(
+        EXTRACTION_USAGE,
+        LLM_EXTRACTION_MODEL,
+      );
+      const adjudicationUsd =
+        2 * calculateCost(ADJUDICATION_USAGE, LLM_EXTRACTION_MODEL);
+      // crawl_runs and its mirroring 'claude' row hold extraction only.
+      expect(run.llmCostUsd).toBeCloseTo(extractionUsd, 9);
+      const [claudeRow] = rowsFor('claude');
+      expect(Number(claudeRow?.costUsd)).toBeCloseTo(extractionUsd, 6);
+      const [adjudicationRow] = rowsFor('artist-adjudication');
+      expect(Number(adjudicationRow?.costUsd)).toBeCloseTo(adjudicationUsd, 6);
+
+      // The budget's sum (llm-budget.ts): crawl_runs.llm_cost_usd plus the
+      // cost_tracking rows of LLM_SERVICES.
+      const services: readonly string[] = LLM_SERVICES;
+      const budgetUsd =
+        stores.crawlRuns.reduce(
+          (sum: number, row: any) => sum + (row.llmCostUsd ?? 0),
+          0,
+        ) +
+        stores.costTracking
+          .filter((row: any) => services.includes(row.service))
+          .reduce((sum: number, row: any) => sum + Number(row.costUsd), 0);
+      expect(budgetUsd).toBeCloseTo(extractionUsd + adjudicationUsd, 6);
+    });
+
+    it('still succeeds when the adjudication cost cannot be written', async () => {
+      const venue = mockExtractionWithTwoAdjudications();
+      vi.mocked(recordLlmCost).mockRejectedValueOnce(new Error('db down'));
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      try {
+        const run = await crawlVenue(venue.id, mockBrowser);
+
+        expect(run.status).toBe('success');
+        expect(recordLlmCost).toHaveBeenCalledOnce();
+        expect(rowsFor('artist-adjudication')).toHaveLength(0);
+        expect(
+          warnSpy.mock.calls.some(([line]) =>
+            String(line).includes('crawler.adjudication_cost_record_failed'),
+          ),
+        ).toBe(true);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('writes no adjudication row when no adjudication was answered', async () => {
+      const venue = seedVenue();
+      mockFetchPage.mockResolvedValue({
+        html: HTML_V1,
+        httpStatus: 200,
+        finalUrl: venue.websiteUrl,
+      });
+      mockExtractWithLlm.mockResolvedValue({
+        events: [METALLICA_EVENT],
+        usage: EXTRACTION_USAGE,
+      });
+
+      await crawlVenue(venue.id, mockBrowser);
+
+      expect(rowsFor('artist-adjudication')).toHaveLength(0);
+    });
   });
 });
 

@@ -32,18 +32,32 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
 }));
-vi.mock('./lib/extractors/llm.js', () => ({
-  extractWithLlm: vi.fn(),
+vi.mock('./lib/extractors/llm.js', () => {
   // Every fixture below reports its performers, so the derivation ladder
   // settles on step 1 and never reaches here. A case that wants an
   // adjudication overrides this; anything else escalating is a bug, and
   // rejecting makes that loud instead of quietly spending a call.
-  adjudicateEvent: vi
+  const adjudicateEvent = vi
     .fn()
     .mockRejectedValue(
       new Error('adjudicateEvent is not stubbed for this test'),
-    ),
-}));
+    );
+  return {
+    extractWithLlm: vi.fn(),
+    adjudicateEvent,
+    // What crawl.ts calls: adjudicateEvent's verdict with zero usage, so a
+    // case stubs the verdict on adjudicateEvent.
+    adjudicateEventWithUsage: vi.fn(async (input: unknown) => ({
+      verdict: await adjudicateEvent(input),
+      usage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    })),
+  };
+});
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),
   sendEventCountDropEmail: vi.fn().mockResolvedValue(undefined),
