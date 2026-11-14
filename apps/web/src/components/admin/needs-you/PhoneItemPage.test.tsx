@@ -85,6 +85,11 @@ describe('the phone item page', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('settles focus on the page, not on the back link, so no ring shows on load', () => {
+    open();
+    expect(screen.getByTestId('phone-item-page')).toHaveFocus();
+  });
+
   it('pins the answers to the footer and still answers through the card', () => {
     const { onAnswer } = open();
     const footer = screen.getByTestId('phone-item-footer');

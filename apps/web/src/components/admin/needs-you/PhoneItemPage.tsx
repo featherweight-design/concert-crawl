@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, MapPin, MoreHorizontal } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
@@ -57,6 +64,12 @@ export const PhoneItemPage = ({
   // The sheet sits inside the page, so the page's trap already holds it. Escape
   // is the sheet's while it is open, and nobody's mid-request.
   useDialogKeyboard(pageRef, onClose, { dismissible: !menuOpen && !busy });
+  // The trap opens on the first control, the back link, and a script focus
+  // draws its ring on load. Settle focus on the page itself (no ring, still
+  // inside the dialog); the first Tab then lands on the back link.
+  useEffect(() => {
+    pageRef.current?.focus();
+  }, []);
 
   return (
     <div
@@ -65,7 +78,9 @@ export const PhoneItemPage = ({
       aria-modal="true"
       aria-labelledby={titleId}
       data-testid="phone-item-page"
+      tabIndex={-1}
       style={{
+        outline: 'none',
         position: 'fixed',
         inset: 0,
         zIndex: 90,
