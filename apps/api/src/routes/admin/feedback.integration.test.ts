@@ -446,7 +446,9 @@ describe('admin feedback (integration)', () => {
       'category=rumour',
       'status=done',
       'kind=praise',
+      'kind=bugs&category=idea',
       `search=${'x'.repeat(201)}`,
+      `search=${encodeURIComponent(`${' '.repeat(300)}x`)}`,
     ])('rejects %s with 400', async (query) => {
       setAuth('admin');
       expect((await list(`?${query}`)).status).toBe(400);

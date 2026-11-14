@@ -1818,19 +1818,20 @@ export const ADMIN_FEEDBACK_VIEW_STATUSES = {
 
 // The admin feedback board's kind chips (P47-19 PR 4): Bugs takes in error
 // reports too; praise and other only list under To read.
-export type AdminFeedbackKind = 'bugs' | 'ideas' | 'venues';
+export const ADMIN_FEEDBACK_KINDS = ['bugs', 'ideas', 'venues'] as const;
+export type AdminFeedbackKind = (typeof ADMIN_FEEDBACK_KINDS)[number];
 export const ADMIN_FEEDBACK_KIND_CATEGORIES = {
   bugs: ['bug', 'error_report'],
   ideas: ['idea'],
   venues: ['venue_suggestion'],
 } as const satisfies Record<AdminFeedbackKind, readonly FeedbackCategory[]>;
-export const ADMIN_FEEDBACK_KINDS = ['bugs', 'ideas', 'venues'] as const;
 
 /** GET /v1/admin/feedback item. */
 export interface AdminFeedbackItem {
   id: string;
+  /** The submitter's Clerk id, for the server-side Reply check; never shown (rule 7). */
   userId: string | null;
-  /** The submitter's handle; null when the reporter has left or has no profile. */
+  /** The submitter's handle, the one the UI shows; null when the reporter has left or has no profile. */
   submittedBy: string | null;
   pageUrl: string;
   category: FeedbackCategory;
