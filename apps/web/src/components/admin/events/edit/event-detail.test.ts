@@ -26,7 +26,12 @@ const PAYLOAD = {
   submittedPriceCount: 2,
   priceRetrievedAt: null,
   ticketUrl: null,
-  mySubmission: { id: 'sub-1', priceMin: '12.00', priceMax: '15.00' },
+  mySubmission: {
+    id: 'sub-1',
+    priceMin: '12.00',
+    priceMax: '15.00',
+    status: 'pending',
+  },
   extractionStrategy: 'structured_data',
   createdAt: '2026-09-30T18:00:00.000Z',
   lastSeenAt: '2026-11-10T09:00:00.000Z',
@@ -55,7 +60,12 @@ describe('eventDetailFrom', () => {
       submittedPriceCount: 2,
       priceRetrievedAt: null,
       ticketUrl: null,
-      mySubmission: { id: 'sub-1', priceMin: '12.00', priceMax: '15.00' },
+      mySubmission: {
+        id: 'sub-1',
+        priceMin: '12.00',
+        priceMax: '15.00',
+        status: 'pending',
+      },
       extractionStrategy: 'structured_data',
       firstSeenAt: '2026-09-30T18:00:00.000Z',
       lastSeenAt: '2026-11-10T09:00:00.000Z',
@@ -82,6 +92,24 @@ describe('eventDetailFrom', () => {
     expect(eventDetailFrom(older)?.venueUrl).toBe(
       'https://larimer.example/calendar',
     );
+  });
+
+  it('reads the Price card extras leniently', () => {
+    const lean: Record<string, unknown> = {
+      ...PAYLOAD,
+      ticketPriceMin: 12,
+      mySubmission: { id: 'sub-1', priceMin: 'x' },
+    };
+    delete lean['submittedPriceCount'];
+    delete lean['priceRetrievedAt'];
+    delete lean['ticketUrl'];
+    expect(eventDetailFrom(lean)).toMatchObject({
+      priceMin: '12',
+      submittedPriceCount: 0,
+      priceRetrievedAt: null,
+      ticketUrl: null,
+      mySubmission: null,
+    });
   });
 
   it('refuses a payload that drifted', () => {
