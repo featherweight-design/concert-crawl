@@ -169,7 +169,7 @@ export function VenueBackdrop({
   uid,
   wide = false,
 }: VenueBackdropProps) {
-  const phoneOnly = wide ? 'block sm:hidden' : 'block';
+  const phoneOnly = wide ? 'block lg:hidden' : 'block';
   if (setting === 'outdoor') {
     const horizonId = `vn${uid}h`;
     return (
@@ -181,7 +181,7 @@ export function VenueBackdrop({
             aria-hidden="true"
             focusable="false"
             data-venue-backdrop-wide="outdoor"
-            className="hidden sm:block"
+            className="hidden lg:block"
             style={SVG_STYLE}
           >
             {WIDE_STARS.map((star, i) => (
@@ -257,7 +257,7 @@ export function VenueBackdrop({
             aria-hidden="true"
             focusable="false"
             data-venue-backdrop-wide="arena"
-            className="hidden sm:block"
+            className="hidden lg:block"
             style={SVG_STYLE}
           >
             {WIDE_BUILDINGS.map(([bx, width, roof]) => (

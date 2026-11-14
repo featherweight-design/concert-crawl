@@ -64,7 +64,7 @@ describe('ArtistStage', () => {
     expect(STARBURST_OPACITY).toBe(0.08);
     expect(burst.style.opacity).toBe('0.08');
     expect(burst.className).toContain('hidden');
-    expect(burst.className).toContain('md:block');
+    expect(burst.className).toContain('lg:block');
     expect(burst.getAttribute('aria-hidden')).toBe('true');
   });
 
@@ -81,7 +81,7 @@ describe('ArtistStage', () => {
     );
     const wrapper = screen.getByTestId('aside').parentElement;
     expect(wrapper?.className).toContain('hidden');
-    expect(wrapper?.className).toContain('md:block');
+    expect(wrapper?.className).toContain('lg:block');
   });
 
   it('blurs the portrait into the backdrop, decoratively', () => {

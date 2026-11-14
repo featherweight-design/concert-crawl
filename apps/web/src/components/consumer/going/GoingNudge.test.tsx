@@ -33,12 +33,12 @@ describe('GoingNudge panel', () => {
     renderNudge();
     const panel = screen.getByTestId('going-nudge');
     expect(panel.className).toContain('border-l-[3px]');
-    expect(panel.className).toContain('sm:border-l-0');
+    expect(panel.className).toContain('lg:border-l-0');
     expect(panel.style.borderTopWidth).toBe('0px');
     expect(panel.style.borderRightWidth).toBe('0px');
     expect(panel.style.borderBottomWidth).toBe('0px');
     expect(screen.getByTestId('going-nudge-support').className).toContain(
-      'max-sm:[font-family:var(--font-ui)]',
+      'max-lg:[font-family:var(--font-ui)]',
     );
   });
 });

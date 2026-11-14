@@ -76,7 +76,7 @@ describe('<EventStage />', () => {
       </EventStage>,
     );
     const below = screen.getByTestId('stage-below');
-    expect(below.className).toContain('sm:hidden');
+    expect(below.className).toContain('lg:hidden');
     expect(below.textContent).toBe('Thu Dec 17');
     expect(screen.getByTestId('hero-band').className).toContain('pb-1.5');
     expect(screen.getByTestId('hero-band').contains(below)).toBe(false);
@@ -147,7 +147,7 @@ describe('<EventStage />', () => {
     const card = screen.getByTestId('stage-card');
     expect(card.style.filter).toBe('');
     expect(card.style.boxShadow).toContain('2px var(--genre-electronic)');
-    expect(card.innerHTML).not.toContain('max-sm:grayscale');
+    expect(card.innerHTML).not.toContain('max-lg:grayscale');
   });
 
   // event_unmarked_m / event_stamped_m: a past night's phone hero wears the
@@ -169,7 +169,7 @@ describe('<EventStage />', () => {
     );
     const card = screen.getByTestId('stage-card');
     expect(card.className).toContain(
-      'max-sm:[--stage-shadow:var(--past-shadow)]',
+      'max-lg:[--stage-shadow:var(--past-shadow)]',
     );
     expect(card.style.getPropertyValue('--past-shadow')).toContain('0 0 0 2px');
     expect(card.innerHTML).not.toContain('grayscale');
@@ -185,7 +185,7 @@ describe('<EventStage />', () => {
     renderStage();
     const card = screen.getByTestId('stage-card');
     expect(card.className).toBe('');
-    expect(card.innerHTML).not.toContain('max-sm:grayscale');
+    expect(card.innerHTML).not.toContain('max-lg:grayscale');
   });
 
   it('falls back to the neutral ring for an ungenred show', () => {
@@ -263,7 +263,7 @@ describe('<EventStage /> title step-down (addendum 3 rule 2)', () => {
   it('steps a long single word down to 30 (hero-320-long-word)', () => {
     renderStage({ name: 'Superorganism' });
     expect(head()).toContain('[--stage-head:clamp(30px,9.375vw,44px)]');
-    expect(head()).toContain('sm:[--stage-head:64px]');
+    expect(head()).toContain('lg:[--stage-head:64px]');
   });
 });
 

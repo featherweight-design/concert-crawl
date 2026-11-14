@@ -42,9 +42,9 @@ export default function VenuesLoading() {
       aria-busy="true"
       className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-4 lg:px-8 lg:pt-[48px]"
     >
-      <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] sm:gap-[14px]">
+      <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] lg:gap-[14px]">
         <h1
-          className="m-0 bg-clip-text text-[28px] font-extrabold text-transparent sm:text-[40px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]"
+          className="m-0 bg-clip-text text-[28px] font-extrabold text-transparent lg:text-[40px] [letter-spacing:-0.03em] lg:[letter-spacing:-0.035em]"
           style={{
             backgroundImage:
               'linear-gradient(90deg, var(--signal), var(--accent))',

@@ -3,7 +3,8 @@
 import { useEffect, useState, type RefObject } from 'react';
 
 /** The one breakpoint this page has, mirrored from the `.ap-*` media queries. */
-export const AP_DESKTOP_QUERY = '(min-width: 768px)';
+// 1024: the phone layout holds to 1023 (tablet option A), like every other page.
+export const AP_DESKTOP_QUERY = '(min-width: 1024px)';
 
 /**
  * Layout is CSS everywhere on this page EXCEPT the follow control, which must

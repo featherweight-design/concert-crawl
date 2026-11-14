@@ -139,26 +139,26 @@ export const ArtistStageShell = ({
 }: ArtistStageShellProps) => (
   <div
     data-testid="hero-band"
-    className="relative isolate overflow-hidden px-4 pb-6 pt-4 md:px-8 md:pb-11 md:pt-[84px]"
+    className="relative isolate overflow-hidden px-4 pb-6 pt-4 lg:px-8 lg:pb-11 lg:pt-[84px]"
   >
     {backdrop}
     {back && (
-      <div className="absolute left-4 top-3 z-[3] md:left-8 md:top-6">
+      <div className="absolute left-4 top-3 z-[3] lg:left-8 lg:top-6">
         {back}
       </div>
     )}
     {actions && (
-      <div className="absolute right-4 top-3 z-[3] md:right-8 md:top-6">
+      <div className="absolute right-4 top-3 z-[3] lg:right-8 lg:top-6">
         {actions}
       </div>
     )}
-    <div className="relative mx-auto flex max-w-[1040px] flex-col items-center md:flex-row md:items-center md:gap-9">
-      <div className="relative mt-8 w-[200px] shrink-0 md:mt-0 md:w-[244px]">
+    <div className="relative mx-auto flex max-w-[1040px] flex-col items-center lg:flex-row lg:items-center lg:gap-9">
+      <div className="relative mt-8 w-[200px] shrink-0 lg:mt-0 lg:w-[244px]">
         {burst && (
           <div
             aria-hidden
             data-testid="stage-starburst"
-            className="pointer-events-none absolute left-1/2 top-1/2 -z-[1] hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 md:block"
+            className="pointer-events-none absolute left-1/2 top-1/2 -z-[1] hidden h-[900px] w-[900px] -translate-x-1/2 -translate-y-1/2 lg:block"
             style={{
               background: starburst(burst),
               opacity: STARBURST_OPACITY,
@@ -171,12 +171,12 @@ export const ArtistStageShell = ({
       </div>
       <div
         data-testid="stage-column"
-        className="mt-6 flex w-full min-w-0 flex-col items-center text-center md:mt-0 md:w-auto md:flex-1 md:items-start md:text-left"
+        className="mt-6 flex w-full min-w-0 flex-col items-center text-center lg:mt-0 lg:w-auto lg:flex-1 lg:items-start lg:text-left"
       >
         {children}
       </div>
       {aside && (
-        <div className="hidden w-[220px] shrink-0 text-center md:block">
+        <div className="hidden w-[220px] shrink-0 text-center lg:block">
           {aside}
         </div>
       )}

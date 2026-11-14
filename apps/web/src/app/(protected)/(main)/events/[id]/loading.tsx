@@ -43,7 +43,7 @@ export default function EventDetailLoading() {
             1.12 line height. */}
         <span
           data-testid="stage-skeleton-title"
-          className="block w-[min(230px,70%)] sm:w-full sm:max-w-[460px]"
+          className="block w-[min(230px,70%)] lg:w-full lg:max-w-[460px]"
         >
           <SkeletonBlock height="calc(var(--stage-head) * 1.12)" radius={10} />
         </span>
@@ -52,7 +52,7 @@ export default function EventDetailLoading() {
         </span>
         <span
           data-testid="stage-skeleton-meta"
-          className="mt-3 block w-[140px] sm:w-[180px]"
+          className="mt-3 block w-[140px] lg:w-[180px]"
         >
           <SkeletonBlock height={16} />
         </span>

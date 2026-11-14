@@ -54,7 +54,7 @@ export default async function DisputePage({ params }: DisputePageProps) {
         <div className="w-16" />
       </header>
 
-      <div className="px-5 pb-6 flex flex-col gap-5 sm:mx-auto sm:max-w-[520px]">
+      <div className="px-5 pb-6 flex flex-col gap-5 lg:mx-auto lg:max-w-[520px]">
         {/* Context */}
         <div>
           <p className="text-xs font-mono text-fg-muted uppercase tracking-wider">

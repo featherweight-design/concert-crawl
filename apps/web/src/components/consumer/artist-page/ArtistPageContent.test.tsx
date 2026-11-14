@@ -711,7 +711,7 @@ describe('ArtistPageContent', () => {
         '[data-testid="stage-starburst"]',
       );
       expect(burst?.className).toContain('hidden');
-      expect(burst?.className).toContain('md:block');
+      expect(burst?.className).toContain('lg:block');
       expect(burst?.style.opacity).toBe('0.08');
     });
   });

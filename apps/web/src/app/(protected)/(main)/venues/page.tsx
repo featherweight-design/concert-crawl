@@ -34,7 +34,7 @@ export default async function VenuesPage() {
             style={{ gap: '14px' }}
           >
             <h1
-              className="m-0 bg-clip-text text-[28px] font-extrabold text-transparent sm:text-[40px]"
+              className="m-0 bg-clip-text text-[28px] font-extrabold text-transparent lg:text-[40px]"
               style={{
                 letterSpacing: '-0.035em',
                 backgroundImage:

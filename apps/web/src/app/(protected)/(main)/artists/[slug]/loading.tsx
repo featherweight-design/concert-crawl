@@ -105,9 +105,9 @@ const ArtistLoading = () => (
     >
       {/* Eyebrow, name, chips. Mobile centres them under the card; the
           column's own alignment does the rest. */}
-      <div className="flex w-full flex-col items-center gap-3 md:items-start">
+      <div className="flex w-full flex-col items-center gap-3 lg:items-start">
         <SkeletonBlock width={60} height={11} />
-        <span className="block w-[min(230px,70%)] md:w-full md:max-w-[420px]">
+        <span className="block w-[min(230px,70%)] lg:w-full lg:max-w-[420px]">
           <SkeletonBlock height={36} radius={10} />
         </span>
         {/* Two genre-chip pills, as the board draws them (92 and 76 × 24). */}
@@ -119,11 +119,11 @@ const ArtistLoading = () => (
     </ArtistStageShell>
 
     <div className="ap-shell">
-      <div className="ap-block-follow md:hidden">
+      <div className="ap-block-follow lg:hidden">
         <FollowSkeleton />
       </div>
       {/* The board draws the history card as one filled block, 40 tall. */}
-      <div className="mt-[18px] md:hidden">
+      <div className="mt-[18px] lg:hidden">
         <SkeletonBlock height={40} radius={14} />
       </div>
 
@@ -139,7 +139,7 @@ const ArtistLoading = () => (
         </div>
         {/* The framed player card. Desktop only: on mobile it sits below the
             fold, and the board stops at the rows. */}
-        <div className="ap-block-player hidden md:block">
+        <div className="ap-block-player hidden lg:block">
           <SkeletonBlock height={176} radius={16} />
         </div>
       </div>

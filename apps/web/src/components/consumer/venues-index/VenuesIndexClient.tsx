@@ -63,9 +63,9 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
   return (
     <>
       {/* Page heading — reactive to filtered count */}
-      <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] sm:gap-[14px]">
+      <div className="mb-[18px] flex flex-wrap items-baseline gap-[10px] lg:gap-[14px]">
         <h1
-          className="m-0 bg-clip-text text-[36px] font-extrabold text-transparent sm:text-[44px] [letter-spacing:-0.03em] sm:[letter-spacing:-0.035em]"
+          className="m-0 bg-clip-text text-[36px] font-extrabold text-transparent lg:text-[44px] [letter-spacing:-0.03em] lg:[letter-spacing:-0.035em]"
           style={{
             backgroundImage:
               'linear-gradient(90deg, var(--signal), var(--accent))',
@@ -106,11 +106,11 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
           ))}
         </div>
       ) : !featured ? (
-        <div className="py-[60px] sm:py-20 text-center px-6 sm:px-0">
-          <div className="text-[16px] sm:text-[18px] font-bold text-fg sm:[letter-spacing:-0.01em]">
+        <div className="py-[60px] lg:py-20 text-center px-6 lg:px-0">
+          <div className="text-[16px] lg:text-[18px] font-bold text-fg lg:[letter-spacing:-0.01em]">
             {VENUES_INDEX_COPY.emptyState.heading}
           </div>
-          <div className="mt-[5px] sm:mt-1.5 text-[13px] sm:text-[14px] text-fg-muted">
+          <div className="mt-[5px] lg:mt-1.5 text-[13px] lg:text-[14px] text-fg-muted">
             {VENUES_INDEX_COPY.emptyState.body}
           </div>
           <button
@@ -122,7 +122,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
                 distance: null,
               }))
             }
-            className="mt-[14px] sm:mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-[13px] sm:px-3.5 py-[7px] sm:py-2 text-[12px] sm:text-[12.5px] font-semibold text-fg-muted hover:text-fg transition-colors"
+            className="mt-[14px] lg:mt-4 inline-flex items-center gap-1.5 rounded-full border border-border-strong px-[13px] lg:px-3.5 py-[7px] lg:py-2 text-[12px] lg:text-[12.5px] font-semibold text-fg-muted hover:text-fg transition-colors"
           >
             {VENUES_INDEX_COPY.emptyState.clearButton}
           </button>

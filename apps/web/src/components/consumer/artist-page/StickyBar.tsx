@@ -22,7 +22,7 @@ export const StickyBar = ({ name, visible }: StickyBarProps) => {
   return (
     <div
       data-sticky-bar=""
-      className="md:hidden"
+      className="lg:hidden"
       style={{
         position: 'fixed',
         top: 0,

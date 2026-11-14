@@ -42,7 +42,7 @@ export default function VenueLoading() {
       />
 
       {/* Hero: 380px on a phone, as the page */}
-      <div className="relative flex h-[380px] w-full shrink-0 items-center justify-center sm:h-[400px] sm:justify-end sm:pr-[14%]">
+      <div className="relative flex h-[380px] w-full shrink-0 items-center justify-center lg:h-[400px] lg:justify-end lg:pr-[14%]">
         <div data-testid="venue-hero-skeleton">
           <SkeletonBlock width={140} height={140} radius={36} />
         </div>
@@ -50,7 +50,7 @@ export default function VenueLoading() {
       </div>
 
       <div className="relative -mt-10 flex-1 pb-24 lg:pb-10">
-        <div className="mx-auto flex w-full max-w-[880px] flex-col px-[18px] sm:px-8">
+        <div className="mx-auto flex w-full max-w-[880px] flex-col px-[18px] lg:px-8">
           <SkeletonBlock width={80} height={20} />
           <div className="mt-3">
             <SkeletonBlock width="66%" height={34} radius={8} />

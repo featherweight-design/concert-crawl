@@ -53,13 +53,13 @@ describe('VenueNeonArt', () => {
       'svg[data-venue-backdrop-wide="outdoor"]',
     );
     expect(ridge?.getAttribute('viewBox')).toBe('0 0 1200 420');
-    expect(ridge?.getAttribute('class')).toContain('sm:block');
+    expect(ridge?.getAttribute('class')).toContain('lg:block');
     // The phone layer steps aside from sm.
     expect(
       hero.container
         .querySelector('[data-venue-backdrop="outdoor"]')
         ?.getAttribute('class'),
-    ).toContain('sm:hidden');
+    ).toContain('lg:hidden');
     expect(ridge?.querySelectorAll('circle')).toHaveLength(100);
     hero.unmount();
 
@@ -132,11 +132,11 @@ describe('VenueNeonArt', () => {
     const { container, rerender } = render(
       <VenueNeonArt glyphKey="redrocks" glyphSize={150} />,
     );
-    expect(container.innerHTML).not.toContain('sm:justify-end');
+    expect(container.innerHTML).not.toContain('lg:justify-end');
     rerender(
       <VenueNeonArt glyphKey="redrocks" glyphSize={150} align="endFromSm" />,
     );
-    expect(container.innerHTML).toContain('sm:justify-end');
+    expect(container.innerHTML).toContain('lg:justify-end');
   });
 
   it('sits toward the right at every width for align="end"', () => {
@@ -144,6 +144,6 @@ describe('VenueNeonArt', () => {
       <VenueNeonArt glyphKey="redrocks" glyphSize={120} align="end" />,
     );
     expect(container.innerHTML).toContain('justify-end pr-[13%]');
-    expect(container.innerHTML).not.toContain('sm:justify-end');
+    expect(container.innerHTML).not.toContain('lg:justify-end');
   });
 });

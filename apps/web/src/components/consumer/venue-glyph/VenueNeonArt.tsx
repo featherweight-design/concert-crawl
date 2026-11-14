@@ -122,7 +122,7 @@ export function VenueNeonArt({
       <div
         className={cn(
           'absolute inset-0 flex items-center justify-center',
-          align === 'endFromSm' && 'sm:justify-end sm:pr-[14%]',
+          align === 'endFromSm' && 'lg:justify-end lg:pr-[14%]',
           align === 'end' && 'justify-end pr-[13%]',
         )}
       >
@@ -133,7 +133,7 @@ export function VenueNeonArt({
           focusable="false"
           data-venue-glyph={glyphKey}
           className={
-            responsive ? 'w-(--vn-size) sm:w-(--vn-size-sm)' : undefined
+            responsive ? 'w-(--vn-size) lg:w-(--vn-size-sm)' : undefined
           }
           style={{
             overflow: 'visible',
