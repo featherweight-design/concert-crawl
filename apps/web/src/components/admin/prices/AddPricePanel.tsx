@@ -11,6 +11,7 @@ import {
   useIsPhone,
 } from '@/components/admin/primitives';
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
+import { metaDate } from '../needs-you/needs-you-rules';
 import type { MissingRow, NewPrice } from './prices-api';
 import {
   asHttpUrl,
@@ -20,6 +21,7 @@ import {
 } from './prices-rules';
 
 const COPY = ADMIN_COPY.pricesPage.add;
+const EDIT_COPY = ADMIN_COPY.eventEdit.price;
 
 const inputStyle: CSSProperties = {
   width: '100%',
@@ -189,6 +191,8 @@ export const AddPricePanel = ({
             checked={free}
             disabled={busy}
             onChange={(event) => setFree(event.target.checked)}
+            // The edit sheet draws a cyan check (`06/edit-price-desktop`).
+            style={single ? { accentColor: 'var(--signal)' } : undefined}
           />
           {COPY.free}
         </label>
@@ -262,19 +266,40 @@ export const AddPricePanel = ({
         onClick={() => void submit(false)}
         style={{ height: isPhone ? 44 : 40, ...(single && { flex: 1 }) }}
       >
-        {COPY.publish}
+        {single ? ADMIN_COPY.pricesSubmitted.edit.save : COPY.publish}
       </AdminButton>
+      {single && (
+        <AdminButton
+          variant="outline"
+          size="md"
+          disabled={busy}
+          onClick={onClose}
+          style={{ height: isPhone ? 44 : 40 }}
+        >
+          {ADMIN_COPY.confirm.cancel}
+        </AdminButton>
+      )}
     </>
   );
+
+  // `06/edit-price-desktop`: from Event edit the sheet is "Edit price", with
+  // the show, venue and day under it.
+  const singleMeta = [row.title, row.venueName, metaDate(row.date)]
+    .filter(Boolean)
+    .join(' · ');
 
   if (isPhone) {
     return (
       <AdminSheet
         onClose={onClose}
-        title={COPY.sheetTitle}
-        subtitle={[row.title, row.venueName, shortDate(row.date)]
-          .filter(Boolean)
-          .join(' · ')}
+        title={single ? EDIT_COPY.edit : COPY.sheetTitle}
+        subtitle={
+          single
+            ? singleMeta
+            : [row.title, row.venueName, shortDate(row.date)]
+                .filter(Boolean)
+                .join(' · ')
+        }
         footer={footer}
         dismissible={!busy}
       >
@@ -294,19 +319,30 @@ export const AddPricePanel = ({
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: 'var(--success)',
+            // The edit sheet's tag is boxed (`06/edit-price-desktop`).
+            ...(single && {
+              padding: '2px 6px',
+              borderRadius: 5,
+              border:
+                '1px solid color-mix(in srgb, var(--success) 45%, transparent)',
+            }),
           }}
         >
           {COPY.eyebrow}
         </span>
       }
-      title={row.title}
-      subtitle={[
-        row.venueName,
-        shortDate(row.date),
-        ADMIN_COPY.pricesPage.missing.watching(row.watching),
-      ]
-        .filter(Boolean)
-        .join(' · ')}
+      title={single ? EDIT_COPY.edit : row.title}
+      subtitle={
+        single
+          ? singleMeta
+          : [
+              row.venueName,
+              shortDate(row.date),
+              ADMIN_COPY.pricesPage.missing.watching(row.watching),
+            ]
+              .filter(Boolean)
+              .join(' · ')
+      }
       footer={footer}
       width={460}
       dismissible={!busy}

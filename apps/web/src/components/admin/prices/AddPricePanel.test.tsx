@@ -44,8 +44,17 @@ describe('AddPricePanel', () => {
       screen.queryByRole('button', { name: COPY.publishAndNext }),
     ).toBeNull();
     expect(screen.queryByLabelText(COPY.soldOut)).toBeNull();
+    // Drawn as `06/edit-price-desktop`: Edit price, Save price and Cancel.
     expect(
-      screen.getByRole('button', { name: COPY.publish }),
+      screen.getByText(ADMIN_COPY.eventEdit.price.edit),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: ADMIN_COPY.pricesSubmitted.edit.save,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: ADMIN_COPY.confirm.cancel }),
     ).toBeInTheDocument();
     expect(screen.getByText(COPY.noteSingle)).toBeInTheDocument();
     expect(screen.queryByText(COPY.note)).toBeNull();
