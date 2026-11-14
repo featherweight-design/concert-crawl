@@ -163,6 +163,10 @@ export const NeedsYouClient = ({ item }: { item: string | null }) => {
   }, [rows, isPhone, item, router]);
 
   const select = (key: string | null) => {
+    // A failed answer's block belongs to its item: leaving it, the block goes,
+    // so its Try again can never act on an item that is no longer in view.
+    if (failure?.rowKey !== undefined && failure.rowKey !== key)
+      setFailure(null);
     setSelected(key);
     router.replace(
       key
