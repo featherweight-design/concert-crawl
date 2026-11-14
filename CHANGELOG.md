@@ -1,3 +1,16 @@
+# [1.468.0](https://github.com/featherweight-design/concert-crawl/compare/v1.467.0...v1.468.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** one breakpoint, inbox-owned tab count and a redirect for feedback ([78346fc](https://github.com/featherweight-design/concert-crawl/commit/78346fc51dcf1bce9feaaa45d45c06ce685cc58d))
+* **web:** one heading, a shell skeleton and a read-out count on operations ([682e868](https://github.com/featherweight-design/concert-crawl/commit/682e868dabf4a5cabd943f85b48bbfac812b7733))
+
+
+### Features
+
+* **web:** add the operations page with its feedback tab ([f1995d6](https://github.com/featherweight-design/concert-crawl/commit/f1995d693fb9c6a119fa0c3cec074281bcfaafec))
+
 # [1.467.0](https://github.com/featherweight-design/concert-crawl/compare/v1.466.0...v1.467.0) (2026-11-14)
 
 
