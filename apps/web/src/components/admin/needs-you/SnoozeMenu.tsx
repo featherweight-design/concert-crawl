@@ -368,8 +368,13 @@ export const SnoozeMenu = ({
   const isPhone = useIsPhone();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const close = () => setOpen(false);
+  // Closing hands focus back to the clock that opened the menu.
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -377,7 +382,7 @@ export const SnoozeMenu = ({
       if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') close();
     };
     document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onKey);
@@ -393,6 +398,7 @@ export const SnoozeMenu = ({
       style={{ position: 'relative', display: 'inline-flex' }}
     >
       <button
+        ref={triggerRef}
         type="button"
         data-testid="snooze-trigger"
         aria-label={COPY.menuLabel}
@@ -435,6 +441,9 @@ export const SnoozeMenu = ({
                   right: 16,
                   bottom: 84,
                   zIndex: 60,
+                  // A 320 x 568 screen: the date and reason steps scroll.
+                  maxHeight: 'calc(100dvh - 108px)',
+                  overflowY: 'auto',
                 }
               : {
                   position: 'absolute',

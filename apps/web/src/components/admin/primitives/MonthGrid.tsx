@@ -96,7 +96,8 @@ export const MonthGrid = ({
         </button>
       </div>
       <div
-        role="grid"
+        role="group"
+        aria-label={monthTitle(view.year, view.month)}
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
@@ -130,7 +131,7 @@ export const MonthGrid = ({
               key={day}
               type="button"
               disabled={off}
-              aria-pressed={chosen}
+              aria-current={chosen ? 'date' : undefined}
               aria-label={new Intl.DateTimeFormat('en-US', {
                 timeZone: 'UTC',
                 weekday: 'long',
