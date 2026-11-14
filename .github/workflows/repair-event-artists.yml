@@ -3,8 +3,10 @@ name: Repair event artists
 # One-off repair of the artist bills stored on events: runs the re-derivation
 # pass (apps/crawler/scripts/rederive-event-artists.ts) against PRODUCTION data.
 #
-# Safe by default. Dispatching it does a DRY RUN: nothing is written, and the
-# run's summary page lists every row the pass would change, before and after.
+# Safe by default. Dispatching it does a DRY RUN: no event or artist is written,
+# and the run's summary page lists every row the pass would change, before and
+# after. The only write is one 'artist-adjudication' cost_tracking row for the
+# Haiku calls the pass made, since those were billed either way.
 # Writing needs the `apply` input set to true, a second deliberate dispatch
 # after the dry run's list has been read.
 #
