@@ -644,7 +644,10 @@ describe('NeedsYouClient', () => {
     );
     const { unmount } = render(<NeedsYouClient item={null} />);
     await screen.findByTestId('couldnt-load');
-    expect(document.documentElement).toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
+    // The flag is set in an effect, which can run after the state renders.
+    await waitFor(() =>
+      expect(document.documentElement).toHaveAttribute(NEEDS_YOU_FAILED_ATTR),
+    );
     unmount();
     expect(document.documentElement).not.toHaveAttribute(NEEDS_YOU_FAILED_ATTR);
   });
