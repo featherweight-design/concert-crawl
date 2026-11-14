@@ -13,7 +13,8 @@
         {
           "goto": "/events/cf000000-0000-4000-8000-00000000d101",
           "wait": "[data-testid=\"trust-pill-community\"]",
-          "settle": 1000
+          "settle": 1000,
+          "scrollTo": "[data-testid=\"trust-pill-community\"]"
         }
       ]
     },
@@ -24,7 +25,20 @@
         {
           "goto": "/events/cf000000-0000-4000-8000-00000000d102",
           "wait": "[data-testid=\"trust-pill-community\"]",
-          "settle": 1000
+          "settle": 1000,
+          "scrollTo": "[data-testid=\"trust-pill-community\"]"
+        }
+      ]
+    },
+    {
+      "id": "pending-community-strip",
+      "label": "Event detail, the pending Community strip and dots in --signal (CF Fixture Price Act)",
+      "steps": [
+        {
+          "goto": "/events/cf000000-0000-4000-8000-00000000d102",
+          "wait": "[data-testid=\"pending-strip-dots\"]",
+          "settle": 1000,
+          "scrollTo": "[data-testid=\"pending-strip-dots\"]"
         }
       ]
     }
