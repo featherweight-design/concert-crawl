@@ -169,6 +169,9 @@ export const VenuePanel = ({ row, busy, onAnswer }: PanelProps) => {
         note={blocked ? PANEL.venue.blockedNote : PANEL.venue.failingNote}
         // A blocked venue leads with Ask the venue, drawn disabled until Add a
         // venue ships it (`10/venue-blocked-before-3c`).
+        // A blocked venue leads with Ask the venue, drawn disabled until Add a
+        // venue ships it (`10/venue-blocked-before-3c`).
+        extraFirst={blocked}
         extra={
           blocked ? (
             <>
