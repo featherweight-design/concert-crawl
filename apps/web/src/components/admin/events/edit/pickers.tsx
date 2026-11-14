@@ -11,6 +11,14 @@ import {
 } from 'react';
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import {
+  isoOf,
+  monthCells,
+  monthLabel,
+  monthOf,
+  pad,
+  shiftMonth,
+} from '@/components/admin/primitives/calendar';
 import { inputStyle } from '@/components/admin/venues/source/source-parts';
 import { fieldDate, fieldTime } from './event-detail';
 
@@ -70,27 +78,6 @@ const usePopover = () => {
   return { open, setOpen, close, ref, trigger };
 };
 
-const pad = (value: number) => String(value).padStart(2, '0');
-const isoOf = (year: number, month: number, day: number) =>
-  `${year}-${pad(month + 1)}-${pad(day)}`;
-
-/** The month grid's cells: blanks before the 1st, then each day. */
-const monthCells = (year: number, month: number): (number | null)[] => {
-  const first = new Date(Date.UTC(year, month, 1)).getUTCDay();
-  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  return [
-    ...Array.from({ length: first }, () => null),
-    ...Array.from({ length: days }, (_, i) => i + 1),
-  ];
-};
-
-const monthLabel = (year: number, month: number) =>
-  new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(Date.UTC(year, month, 1)));
-
 const ARROW: CSSProperties = {
   display: 'grid',
   placeItems: 'center',
@@ -138,10 +125,7 @@ export const DateField = ({
   const { open, setOpen, close, ref, trigger } = usePopover();
   // With no date yet, the month opens on today's.
   const anchor = value === '' ? today : value;
-  const [view, setView] = useState(() => ({
-    year: Number(anchor.slice(0, 4)),
-    month: Number(anchor.slice(5, 7)) - 1,
-  }));
+  const [view, setView] = useState(() => monthOf(anchor));
   const isBarred = (iso: string) =>
     (min !== undefined && iso < min) || (max !== undefined && iso > max);
   const field: CSSProperties = {
@@ -178,11 +162,7 @@ export const DateField = ({
     onChange(iso);
     close();
   };
-  const shift = (step: number) =>
-    setView(({ year, month }) => {
-      const next = month + step;
-      return { year: year + Math.floor(next / 12), month: (next + 12) % 12 };
-    });
+  const shift = (step: number) => setView((was) => shiftMonth(was, step));
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>

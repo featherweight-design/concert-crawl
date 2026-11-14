@@ -1,13 +1,16 @@
 /**
- * The Activity log's read (`GET /v1/admin/audit-log`), from the browser with
- * the Clerk token, through the invite-codes admin's `callEnvelope`. Each row
- * is checked with a guard, so a shape drift fails into Couldn't load.
+ * The Activity log's reads (`GET /v1/admin/audit-log` and its `/days`), from
+ * the browser with the Clerk token, through the invite-codes admin's
+ * `callEnvelope`. Each row is checked with a guard, so a shape drift fails
+ * into Couldn't load.
  */
 import {
   AUDIT_AREAS,
+  AVATAR_COLORS,
   type AuditArea,
   type AuditLogItem,
   type AuditTarget,
+  type AvatarColor,
 } from '@concert-crawl/types';
 import {
   callEnvelope,
@@ -17,10 +20,8 @@ import {
   type GetToken,
 } from '../invite-codes/codes-api';
 
-/** The API's largest page. */
-export const LOG_PAGE_SIZE = 100;
-/** The most rows one day's read walks to (Design item 37: no Load more). */
-export const LOG_ROW_CAP = 1000;
+/** One page of a day: past it, Load more (README §37: past 50 changes). */
+export const LOG_PAGE_SIZE = 50;
 
 export interface LogQuery {
   /** The day, as UTC instants: `since` inclusive, `until` exclusive. */
@@ -39,11 +40,21 @@ const isTarget = (value: unknown): value is AuditTarget =>
   isTextOrNull(value['name']) &&
   isTextOrNull(value['href']);
 
+const isColorOrNull = (value: unknown): value is AvatarColor | null =>
+  value === null || AVATAR_COLORS.some((color) => color === value);
+
+const isActorAvatar = (value: unknown): value is AuditLogItem['actorAvatar'] =>
+  value === null ||
+  (isRecord(value) &&
+    isColorOrNull(value['avatarColor']) &&
+    isColorOrNull(value['avatarSecondColor']));
+
 const isItem = (value: unknown): value is AuditLogItem =>
   isRecord(value) &&
   isText(value['id']) &&
   isText(value['actor']) &&
   (value['actorKind'] === 'system' || value['actorKind'] === 'admin') &&
+  isActorAvatar(value['actorAvatar']) &&
   isText(value['action']) &&
   (value['area'] === null || isArea(value['area'])) &&
   isTextOrNull(value['targetId']) &&
@@ -52,65 +63,71 @@ const isItem = (value: unknown): value is AuditLogItem =>
   isText(value['createdAt']) &&
   !Number.isNaN(Date.parse(value['createdAt']));
 
-/** The most pages one walk asks for: the cap, at the largest page. */
-const LOG_PAGE_CAP = LOG_ROW_CAP / LOG_PAGE_SIZE;
-
-export interface LogDay {
-  /** Newest first, at most `LOG_ROW_CAP`. */
+export interface LogPage {
+  /** Newest first, at most `LOG_PAGE_SIZE`. */
   rows: AuditLogItem[];
-  /** The day had more rows than the walk read. */
-  truncated: boolean;
+  /** Where Load more reads from; null at the end of the day. */
+  nextCursor: string | null;
 }
 
 /**
- * Every row of the day, newest first: the cursor walked at the largest page
- * until it runs out, a page comes back empty, or it reaches the cap (in rows
- * or pages). At the cap the first rows are kept, the cut is logged and
- * `truncated` is set so the page can say so. A failed page throws, so the
- * rows read before it are dropped: the log is all or nothing for a day, on
- * purpose, rather than a partial day that looks whole. `signal` stops the
- * walk mid-page (an unmount); that throws an `AbortError`.
+ * One page of the day, newest first, from `cursor` (null for the first).
+ * `signal` stops the read (an unmount, or a newer day); that throws an
+ * `AbortError`.
  */
-export const readLogDay = async (
+export const readLogPage = async (
   getToken: GetToken,
   query: LogQuery,
+  cursor: string | null,
   signal?: AbortSignal,
-): Promise<LogDay> => {
-  const rows: AuditLogItem[] = [];
-  let cursor: string | null = null;
-  let pages = 0;
-  do {
-    const params = new URLSearchParams({
-      since: new Date(query.since).toISOString(),
-      until: new Date(query.until).toISOString(),
-      limit: String(LOG_PAGE_SIZE),
-    });
-    if (query.actorHandle) params.set('actorHandle', query.actorHandle);
-    if (query.area) params.set('area', query.area);
-    if (cursor) params.set('cursor', cursor);
-    const body = await callEnvelope(
-      getToken,
-      `/v1/admin/audit-log?${params}`,
-      signal ? { signal } : {},
-    );
-    pages += 1;
-    const data = body['data'];
-    const next = body['nextCursor'];
-    if (!Array.isArray(data) || !data.every(isItem) || !isTextOrNull(next))
-      throw new Error('audit-log');
-    rows.push(...data);
-    // An empty page ends the walk even with a cursor: it would loop forever.
-    cursor = data.length === 0 ? null : next;
-  } while (
-    cursor !== null &&
-    rows.length < LOG_ROW_CAP &&
-    pages < LOG_PAGE_CAP
+): Promise<LogPage> => {
+  const params = new URLSearchParams({
+    since: new Date(query.since).toISOString(),
+    until: new Date(query.until).toISOString(),
+    limit: String(LOG_PAGE_SIZE),
+  });
+  if (query.actorHandle) params.set('actorHandle', query.actorHandle);
+  if (query.area) params.set('area', query.area);
+  if (cursor) params.set('cursor', cursor);
+  const body = await callEnvelope(
+    getToken,
+    `/v1/admin/audit-log?${params}`,
+    signal ? { signal } : {},
   );
-  const truncated = cursor !== null || rows.length > LOG_ROW_CAP;
-  if (truncated) {
-    console.warn(
-      `[admin] Activity log: the day passed ${LOG_ROW_CAP} rows; showing the first ${LOG_ROW_CAP}.`,
-    );
-  }
-  return { rows: rows.slice(0, LOG_ROW_CAP), truncated };
+  const data = body['data'];
+  const next = body['nextCursor'];
+  if (!Array.isArray(data) || !data.every(isItem) || !isTextOrNull(next))
+    throw new Error('audit-log');
+  // An empty page ends the day even with a cursor: it would loop forever.
+  return { rows: data, nextCursor: data.length === 0 ? null : next };
+};
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The Mountain Time days in `month` (`YYYY-MM`) with any change, for the
+ * picker's dots. Takes the log's own filters, so a dot never leads to an
+ * empty day.
+ */
+export const readLogDays = async (
+  getToken: GetToken,
+  month: string,
+  filters: Pick<LogQuery, 'actorHandle' | 'area'>,
+  signal?: AbortSignal,
+): Promise<Set<string>> => {
+  const params = new URLSearchParams({ month });
+  if (filters.actorHandle) params.set('actorHandle', filters.actorHandle);
+  if (filters.area) params.set('area', filters.area);
+  const body = await callEnvelope(
+    getToken,
+    `/v1/admin/audit-log/days?${params}`,
+    signal ? { signal } : {},
+  );
+  const data = body['data'];
+  if (
+    !Array.isArray(data) ||
+    !data.every((day) => typeof day === 'string' && DAY.test(day))
+  )
+    throw new Error('audit-log-days');
+  return new Set(data);
 };

@@ -90,6 +90,15 @@ export const mtTodayWindow = (now: Date): Window => {
   };
 };
 
+/** A Mountain Time calendar day (`YYYY-MM-DD`): its midnight to the next. */
+export const mtDayWindow = (iso: string): Window => {
+  const [year = 0, month = 0, day = 0] = iso.split('-').map(Number);
+  return {
+    start: mtMidnight(year, month, day),
+    end: mtMidnight(year, month, day + 1),
+  };
+};
+
 /**
  * "Last night": the MT calendar day of the newest daily crawl that has
  * started. Before the cron hour (2 AM MST, 3 AM MDT) that is yesterday. MT day

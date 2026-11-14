@@ -8,9 +8,27 @@ import { List } from 'lucide-react';
 import type { AuditLogItem } from '@concert-crawl/types';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import { CouldntLoad, PersonAvatar } from '@/components/admin/primitives';
-import { pill } from '@/components/admin/crawl-runs/RunsList';
-import { mtTodayWindow } from '@/components/admin/health/health-model';
-import { readLogDay, type LogDay } from './activity-api';
+import {
+  LoadMoreFooter,
+  pill,
+  type LoadMoreState,
+} from '@/components/admin/crawl-runs/RunsList';
+import { fieldDate } from '@/components/admin/events/edit/event-detail';
+import { mtDayWindow } from '@/components/admin/health/health-model';
+import { shiftDay } from '@/components/admin/primitives/calendar';
+import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
+import {
+  LOG_PAGE_SIZE,
+  readLogDays,
+  readLogPage,
+  type LogQuery,
+} from './activity-api';
+import {
+  DayStepper,
+  PhoneDayStepper,
+  dayChipLabel,
+  shortDay,
+} from './DayPicker';
 import {
   AREA_LABELS,
   actorLabel,
@@ -51,13 +69,14 @@ const What = ({ item }: { item: AuditLogItem }) => {
   );
 };
 
+/** #24: each admin in their own colours; System in the house pair. */
 const Avatar = ({ item, size }: { item: AuditLogItem; size: number }) => (
   <PersonAvatar
     initialOf={actorLabel(item).replace(/^@/, '')}
-    avatarColor={null}
-    avatarSecondColor={null}
+    avatarColor={item.actorAvatar?.avatarColor ?? null}
+    avatarSecondColor={item.actorAvatar?.avatarSecondColor ?? null}
     size={size}
-    initialSize={size === 24 ? 10 : 11}
+    initialSize={size === 24 ? 10 : 12}
   />
 );
 
@@ -67,8 +86,110 @@ const Where = ({ item }: { item: AuditLogItem }) => (
   </span>
 );
 
+const DAY_LINK: CSSProperties = {
+  padding: 0,
+  border: 'none',
+  background: 'transparent',
+  fontFamily: 'inherit',
+  fontSize: 'inherit',
+  fontWeight: 600,
+  color: 'var(--signal)',
+  cursor: 'pointer',
+};
+
+interface DayNav {
+  day: string;
+  today: string;
+  onDay: (day: string) => void;
+}
+
+/**
+ * `37/log-older-day-d`: the line that ends an earlier day, with the days
+ * either side. Today keeps the board's standing footer instead.
+ */
+const DayEnd = ({ day, today, onDay }: DayNav) => {
+  const before = shiftDay(day, -1);
+  const after = shiftDay(day, 1);
+  return (
+    <div
+      data-testid="activity-log-day-end"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '12px 18px',
+        borderTop: BORDER,
+        fontSize: 12.5,
+        color: 'var(--fg-subtle)',
+      }}
+    >
+      <span>{COPY.dayEnd(fieldDate(day, false))}</span>
+      <span style={{ flex: 1 }} />
+      <button type="button" onClick={() => onDay(before)} style={DAY_LINK}>
+        ‹ {fieldDate(before, false)}
+      </button>
+      <span aria-hidden>·</span>
+      <button type="button" onClick={() => onDay(after)} style={DAY_LINK}>
+        {dayChipLabel(after, today)} ›
+      </button>
+    </div>
+  );
+};
+
+/** `37/log-m`: the phone's end line, the day before only. */
+const PhoneDayEnd = ({ day, onDay }: Omit<DayNav, 'today'>) => {
+  const before = shiftDay(day, -1);
+  return (
+    <div
+      data-testid="activity-log-day-end"
+      style={{
+        padding: '14px 0',
+        textAlign: 'center',
+        fontSize: 13,
+        color: 'var(--fg-muted)',
+      }}
+    >
+      {COPY.dayEnd(shortDay(day))}{' '}
+      <button type="button" onClick={() => onDay(before)} style={DAY_LINK}>
+        ‹ {shortDay(before)}
+      </button>
+    </div>
+  );
+};
+
+interface MoreProps {
+  more: boolean;
+  moreState: LoadMoreState;
+  onLoadMore: () => void;
+}
+
+/** README §37: a day past one page gets Load more before its end line. */
+const More = ({
+  rows,
+  more,
+  moreState,
+  onLoadMore,
+  phone,
+}: MoreProps & { rows: AuditLogItem[]; phone: boolean }) =>
+  more || rows.length > LOG_PAGE_SIZE ? (
+    <LoadMoreFooter
+      shown={rows.length}
+      step={LOG_PAGE_SIZE}
+      more={more}
+      state={moreState}
+      onLoadMore={onLoadMore}
+      testId="activity-log-load-more"
+      failedLabel={COPY.loadMoreFailed}
+      {...(phone ? { rule: false } : { padding: '12px 18px' })}
+    />
+  ) : null;
+
 /** `07/activity-log`: the desktop table. */
-const LogTable = ({ rows }: { rows: AuditLogItem[] }) => (
+const LogTable = ({
+  rows,
+  nav,
+  ...more
+}: { rows: AuditLogItem[]; nav: DayNav } & MoreProps) => (
   <div
     data-testid="activity-log-table"
     style={{
@@ -154,21 +275,30 @@ const LogTable = ({ rows }: { rows: AuditLogItem[] }) => (
         </div>
       ))}
     </div>
-    <div
-      style={{
-        padding: '12px 18px',
-        borderTop: BORDER,
-        fontSize: 12.5,
-        color: 'var(--fg-subtle)',
-      }}
-    >
-      {COPY.footer}
-    </div>
+    <More rows={rows} phone={false} {...more} />
+    {more.more ? null : nav.day === nav.today ? (
+      <div
+        style={{
+          padding: '12px 18px',
+          borderTop: BORDER,
+          fontSize: 12.5,
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        {COPY.footer}
+      </div>
+    ) : (
+      <DayEnd {...nav} />
+    )}
   </div>
 );
 
-/** `07/activity-log-mobile`: one card per change. */
-const LogCards = ({ rows }: { rows: AuditLogItem[] }) => (
+/** `07/activity-log-mobile`, `37/log-m`: one card per change. */
+const LogCards = ({
+  rows,
+  nav,
+  ...more
+}: { rows: AuditLogItem[]; nav: DayNav } & MoreProps) => (
   <div data-testid="activity-log-cards">
     {rows.map((item) => (
       <div
@@ -195,11 +325,15 @@ const LogCards = ({ rows }: { rows: AuditLogItem[] }) => (
         </div>
       </div>
     ))}
+    <More rows={rows} phone {...more} />
+    {!more.more && nav.day !== nav.today && (
+      <PhoneDayEnd day={nav.day} onDay={nav.onDay} />
+    )}
   </div>
 );
 
-/** `07/activity-log-empty-day`. */
-const EmptyDay = () => (
+/** `07/activity-log-empty-day`; an earlier day names itself (🔸). */
+const EmptyDay = ({ day, today }: { day: string; today: string }) => (
   <div
     data-testid="activity-log-empty"
     role="status"
@@ -229,92 +363,141 @@ const EmptyDay = () => (
     >
       <List size={24} strokeWidth={1.7} aria-hidden />
     </div>
-    {/* The board's body names a day picker that isn't built, so it waits. */}
-    <div style={{ fontSize: 17, fontWeight: 800 }}>{COPY.emptyTitle}</div>
+    <div style={{ fontSize: 17, fontWeight: 800 }}>
+      {day === today
+        ? COPY.emptyTitle
+        : COPY.emptyDayTitle(fieldDate(day, false))}
+    </div>
+    <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--fg-muted)' }}>
+      {COPY.emptyBody}
+    </div>
   </div>
 );
 
 /**
- * A filter pill drawn as text (`07/activity-log`): the board draws Anyone and
- * Today highlighted and Any page not. No menu is drawn for any of them, and
- * the drawn filter popover (`06/venue-filter`, `FilterPicker`) is a
- * multi-select with per-option counts this log has no source for, so they
- * stay static until a menu is drawn.
+ * A filter pill drawn as text: `37/log-day-picker-d` draws Anyone and Any page
+ * idle. Their menus come with the next change (addendum 6 #37, PR B2).
  */
-const staticPill = (on: boolean): CSSProperties => ({
-  ...pill(on),
-  cursor: 'default',
-});
+const staticPill: CSSProperties = { ...pill(false), cursor: 'default' };
+
+const mtToday = () => localDateString(DENVER_TIME_ZONE);
+
+interface Shown {
+  rows: AuditLogItem[];
+  nextCursor: string | null;
+}
 
 /**
- * The Activity log tab: today's admin changes (Mountain Time), newest first.
- * The day is read whole, up to the cap, so there is no Load more and no day
- * picker (Design item 37).
+ * The Activity log tab: one Mountain Time day of admin changes, newest first,
+ * a page at a time (`37/*`). It opens on today; the stepper and the month
+ * reach earlier days.
  */
 export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
   const { getToken } = useAuth();
-  const [day, setDay] = useState<LogDay | null>(null);
+  const [today, setToday] = useState(mtToday);
+  const [day, setDay] = useState(today);
+  const [shown, setShown] = useState<Shown | null>(null);
   const [failed, setFailed] = useState(false);
+  const [moreState, setMoreState] = useState<LoadMoreState>('idle');
 
   // Only the newest read may write, and starting one stops the one before:
   // its controller is the current one until the next read or the unmount.
   const current = useRef<AbortController | null>(null);
-  // The start of the Mountain Time day on screen, to tell when it has passed.
-  const shownDayStart = useRef<number | null>(null);
+  const query = useCallback((of: string): LogQuery => {
+    const { start, end } = mtDayWindow(of);
+    return { since: start, until: end };
+  }, []);
+
   const load = useCallback(async () => {
     current.current?.abort();
     const mine = new AbortController();
     current.current = mine;
     setFailed(false);
-    setDay(null);
+    setShown(null);
+    setMoreState('idle');
     try {
-      const today = mtTodayWindow(new Date());
-      shownDayStart.current = today.start;
-      const next = await readLogDay(
-        getToken,
-        { since: today.start, until: today.end },
-        mine.signal,
-      );
+      const page = await readLogPage(getToken, query(day), null, mine.signal);
       if (mine !== current.current) return;
-      setDay(next);
+      setShown(page);
     } catch {
-      // An aborted walk (an unmount, or a newer read) is not a failure.
+      // An aborted read (an unmount, or a newer day) is not a failure.
       if (mine !== current.current || mine.signal.aborted) return;
-      // A failed page drops the rows read before it, on purpose: the log is
-      // all or nothing for a day, never a partial day that looks whole.
       setFailed(true);
     }
-  }, [getToken]);
+  }, [getToken, query, day]);
 
   useEffect(() => {
     void load();
     return () => current.current?.abort();
   }, [load]);
 
-  // A tab left open overnight shows yesterday: read the new day on return.
+  const loadMore = async () => {
+    const from = shown?.nextCursor;
+    const mine = current.current;
+    if (!from || !mine || moreState === 'loading') return;
+    setMoreState('loading');
+    try {
+      const page = await readLogPage(getToken, query(day), from, mine.signal);
+      if (mine !== current.current) return;
+      // A failed page keeps the rows already shown; Load more says so.
+      setShown((was) =>
+        was
+          ? { rows: [...was.rows, ...page.rows], nextCursor: page.nextCursor }
+          : was,
+      );
+      setMoreState('idle');
+    } catch {
+      if (mine !== current.current || mine.signal.aborted) return;
+      setMoreState('failed');
+    }
+  };
+
+  // A tab left open overnight: on return, a view of today moves to the new
+  // today; an earlier day stays put, with › reaching one more day.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
-      if (shownDayStart.current === null) return;
-      if (mtTodayWindow(new Date()).start === shownDayStart.current) return;
-      void load();
+      const now = mtToday();
+      if (now === today) return;
+      setToday(now);
+      if (day === today) setDay(now);
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [load]);
+  }, [day, today]);
 
-  const rows = day?.rows ?? null;
+  const readDays = useCallback(
+    (month: string, signal: AbortSignal) =>
+      readLogDays(getToken, month, {}, signal),
+    [getToken],
+  );
+  const pickDay = (next: string) => {
+    if (next <= today) setDay(next);
+  };
+  const nav: DayNav = { day, today, onDay: pickDay };
+  const more: MoreProps = {
+    more: shown?.nextCursor != null,
+    moreState,
+    onLoadMore: () => void loadMore(),
+  };
+  const rows = shown?.rows ?? null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* `07/activity-log-mobile` draws no filter pills. They are text, not
-          controls, so they carry no group role or label. */}
-      {!isPhone && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <span style={staticPill(true)}>{COPY.anyone}</span>
-          <span style={staticPill(false)}>{COPY.anyPage}</span>
-          {/* The day is always today until a day picker is drawn. */}
-          <span style={staticPill(true)}>{COPY.today}</span>
+      {isPhone ? (
+        <PhoneDayStepper day={day} today={today} onDay={pickDay} />
+      ) : (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Text, not controls, so they carry no group role or label. */}
+          <span style={staticPill}>{COPY.anyone}</span>
+          <span style={staticPill}>{COPY.anyPage}</span>
+          <span style={{ flex: 1 }} />
+          <DayStepper
+            day={day}
+            today={today}
+            onDay={pickDay}
+            readDays={readDays}
+          />
         </div>
       )}
       {failed ? (
@@ -325,19 +508,11 @@ export const ActivityLog = ({ isPhone }: { isPhone: boolean }) => {
       ) : rows === null ? (
         <ActivityLogRowsSkeleton />
       ) : rows.length === 0 ? (
-        <EmptyDay />
+        <EmptyDay day={day} today={today} />
+      ) : isPhone ? (
+        <LogCards rows={rows} nav={nav} {...more} />
       ) : (
-        <>
-          {day?.truncated && (
-            <p
-              data-testid="activity-log-capped"
-              style={{ margin: 0, fontSize: 12.5, color: 'var(--fg-subtle)' }}
-            >
-              {COPY.capped}
-            </p>
-          )}
-          {isPhone ? <LogCards rows={rows} /> : <LogTable rows={rows} />}
-        </>
+        <LogTable rows={rows} nav={nav} {...more} />
       )}
     </div>
   );
