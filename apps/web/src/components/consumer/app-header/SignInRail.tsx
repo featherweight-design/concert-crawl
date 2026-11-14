@@ -15,7 +15,7 @@ export function SignInRail() {
   if (isSignedIn) return null;
 
   return (
-    <div className="flex justify-end bg-bg px-4 pb-2 sm:hidden">
+    <div className="flex justify-end bg-bg px-4 pb-2 lg:hidden">
       <Link
         href={copy.signInHref}
         className="inline-flex min-h-[44px] items-center text-[11px] font-semibold tracking-[0.04em] text-fg-muted"

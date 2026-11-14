@@ -10,7 +10,7 @@ interface BottomSheetProps {
   onClose: () => void;
   /** Rendered as an sr-only heading and used as aria-labelledby target. */
   title: string;
-  /** Modal width in px from `sm` up. Omit for the default `max-w-md`. */
+  /** Modal width in px from `lg` up. Omit for the default `max-w-md`. */
   maxWidth?: number;
   /** Draws the close as this word (a drawn "Cancel") instead of the X icon. */
   closeText?: string;
@@ -60,11 +60,11 @@ interface BottomSheetProps {
 }
 
 // Whole class names, so Tailwind sees each one literally.
-const PHONE_EDGE = 'max-sm:sheet-edge';
-const DIALOG_PLAIN = 'sm:border sm:border-border sm:bg-surface-1';
-const DIALOG_EDGE = 'sheet-edge sm:[--sheet-bg:var(--surface-1)]';
+const PHONE_EDGE = 'max-lg:sheet-edge';
+const DIALOG_PLAIN = 'lg:border lg:border-border lg:bg-surface-1';
+const DIALOG_EDGE = 'sheet-edge lg:[--sheet-bg:var(--surface-1)]';
 const RAISED_EDGE =
-  'sheet-edge [--sheet-bg:var(--surface-2)] sm:[--sheet-bg:var(--bg-elevated)]';
+  'sheet-edge [--sheet-bg:var(--surface-2)] lg:[--sheet-bg:var(--bg-elevated)]';
 
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
@@ -173,33 +173,33 @@ export const BottomSheet = ({
               } as React.CSSProperties)
         }
         onTransitionEnd={drag.onSheetTransitionEnd}
-        // A bottom sheet on mobile, a centered modal from sm up: anchored to the
+        // A bottom sheet on mobile, a centered modal from lg up: anchored to the
         // bottom edge of a wide viewport it read as a stray drawer. One media
         // query rather than a second tree, so the focus trap above is shared.
         // The width is a variable, not an interpolated class, so Tailwind
         // still sees both literal class names.
         className={`fixed inset-x-0 bottom-0 ${
           pinned
-            ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden sm:max-h-[85vh]'
+            ? 'flex h-[92dvh] max-h-[92dvh] flex-col overflow-hidden lg:max-h-[85vh]'
             : `${
                 tall
-                  ? 'max-h-[calc(100dvh-40px)] sm:max-h-[85vh]'
+                  ? 'max-h-[calc(100dvh-40px)] lg:max-h-[85vh]'
                   : 'max-h-[85vh]'
               } overflow-y-auto`
         } rounded-t-2xl ${
           pinned
-            ? 'px-[18px] pb-0 pt-0 sm:px-6'
+            ? 'px-[18px] pb-0 pt-0 lg:px-6'
             : inset === 'tight'
               ? 'px-4 pb-6 pt-5 min-[360px]:px-5'
               : 'p-6'
-        } shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:rounded-2xl ${
+        } shadow-2xl focus:outline-none lg:inset-0 lg:m-auto lg:h-fit lg:w-full lg:rounded-2xl ${
           edgeFromSm
             ? raised
               ? RAISED_EDGE
               : DIALOG_EDGE
             : `${PHONE_EDGE} ${DIALOG_PLAIN}`
         } ${
-          maxWidth === undefined ? 'sm:max-w-md' : 'sm:max-w-[var(--sheet-max)]'
+          maxWidth === undefined ? 'lg:max-w-md' : 'lg:max-w-[var(--sheet-max)]'
         }`}
       >
         <h2 id={titleId} className="sr-only">
@@ -214,7 +214,7 @@ export const BottomSheet = ({
             nothing new is visible. */}
         {handle && (
           <div
-            className="flex shrink-0 justify-center pt-[11px] sm:hidden"
+            className="flex shrink-0 justify-center pt-[11px] lg:hidden"
             {...drag.zoneProps}
           >
             <span
@@ -230,7 +230,7 @@ export const BottomSheet = ({
               : 'items-center justify-between'
           } ${
             pinned
-              ? '-mr-3 sm:mt-6'
+              ? '-mr-3 lg:mt-6'
               : inset === 'tight'
                 ? '-mr-2.5'
                 : '-mr-3 -mt-3'

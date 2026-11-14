@@ -851,8 +851,8 @@
     both;
 }
 
-/* Matches HeroBand's own `sm:` breakpoint. */
-@media (min-width: 640px) {
+/* Matches HeroBand's own `lg:` breakpoint. */
+@media (min-width: 1024px) {
   .hero-band-art {
     --band-art-reach: 63%;
   }

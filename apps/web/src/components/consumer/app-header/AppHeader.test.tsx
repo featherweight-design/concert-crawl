@@ -114,13 +114,13 @@ describe('AppHeader — signed-out auth affordances (#794)', () => {
   });
 
   it('exposes both affordances at both breakpoints — only the position moves', () => {
-    // The in-row Sign in is `hidden sm:inline-flex` and the rail that carries
-    // it at 320 is `sm:hidden`, so exactly one of the two is visible at any
+    // The in-row Sign in is `hidden lg:inline-flex` and the rail that carries
+    // it on the phone bar is `lg:hidden`, so exactly one of the two is visible at any
     // width. Both must exist in the tree.
     render(<AppHeader />);
     const signIn = screen.getAllByRole('link', { name: /^sign in$/i });
     const inRow = signIn.filter((el) =>
-      el.className.includes('sm:inline-flex'),
+      el.className.includes('lg:inline-flex'),
     );
     const railed = signIn.filter((el) => el.className.includes('min-h-[44px]'));
     expect(inRow.length).toBeGreaterThan(0);
@@ -209,11 +209,11 @@ describe('AppHeader crews tab (#1226)', () => {
   });
 
   // Chrome B17 fidelity.
-  it('carries hidden and md:inline classes on the wordmark and a 32px bordered mark tile', () => {
+  it('shows the wordmark and a 32px bordered mark tile on the desktop bar', () => {
     render(<AppHeader />);
     const wordmark = screen.getByTestId('header-wordmark');
-    expect(wordmark.className).toContain('hidden');
-    expect(wordmark.className).toContain('md:inline');
+    // The desktop bar only exists from 1024, so the wordmark is never hidden.
+    expect(wordmark.className).not.toContain('hidden');
     // The mark is always there, in a 32px tile on the desktop bar.
     const tiles = screen.getAllByTestId('header-mark-tile');
     expect(tiles).toHaveLength(2);
@@ -284,35 +284,27 @@ describe('AppHeader crews tab (#1226)', () => {
     ).toBeTruthy();
   });
 
-  // jsdom applies no media queries, so this pins the classes each board
-  // draws its values on: header-640 below 900, header-900 and header-1100 from 900.
-  it('draws the 640 header, switching to the 900 board at min-[900px]', () => {
+  // jsdom applies no media queries, so this pins the classes the desktop bar
+  // draws its values on. The phone bar holds to 1023 (tablet option A), so the
+  // header-900 and header-1100 values are the desktop bar's only ones.
+  it('draws the desktop bar on the 900 and 1100 boards values', () => {
     render(<AppHeader />);
     const search = screen.getByTestId('header-search-desktop');
     expect(search.className).toContain('h-[38px]');
-    expect(search.className).toContain('w-[38px]');
+    expect(search.className).toContain('w-[280px]');
     expect(search.className).toContain('rounded-[10px]');
-    expect(search.className).toContain('lg:w-[280px]');
     const tab = screen.getByRole('link', { name: 'Venues' });
-    // 640 board: 14px 600 tabs, 10px sides; 900 board: 14px sides.
     expect(tab.className).toContain('text-[14px]');
     expect(tab.className).toContain('font-semibold');
-    expect(tab.className).toContain('px-[10px]');
-    expect(tab.className).toContain('min-[900px]:px-[14px]');
-    expect(tab.className).not.toContain('md:px-[14px]');
-    // 640 board: 2px tab gap, 12px header gap; 900 board: 6px and 20px.
+    expect(tab.className).toContain('px-[14px]');
+    // 6px tab gap, 20px header gap.
     const nav = tab.parentElement;
-    expect(nav?.className).toContain('gap-0.5');
-    expect(nav?.className).toContain('min-[900px]:gap-1.5');
+    expect(nav?.className).toContain('gap-1.5');
     const bar = screen.getByTestId('header-desktop').className;
-    expect(bar).toContain('gap-3');
-    expect(bar).toContain('min-[900px]:gap-5');
-    // The 1100 board draws the same 20px and 6px gaps: no lg override.
-    expect(bar).not.toContain('lg:gap-');
-    expect(nav?.className).not.toContain('lg:gap-');
-    // header-640 draws the bare mark; the frame arrives with the 900 board.
+    expect(bar).toContain('gap-5');
+    expect(bar).toContain('lg:flex');
+    // The mark carries the 1px frame.
     const mark = screen.getAllByTestId('header-mark-tile').at(-1);
-    expect(mark?.className).toContain('border-transparent');
-    expect(mark?.className).toContain('min-[900px]:border-border');
+    expect(mark?.className).toContain('border-border');
   });
 });
