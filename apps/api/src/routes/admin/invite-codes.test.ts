@@ -135,32 +135,44 @@ describe('Admin invite code routes', () => {
     expect(typeof body.data.code).toBe('string');
   });
 
-  it('POST /v1/admin/invite-codes calls sendInviteCodeEmail when recipientEmail is provided', async () => {
+  it('POST /v1/admin/invite-codes emails the code and says it was sent', async () => {
     adminAuth();
-    mockSendInviteCodeEmail.mockResolvedValue(undefined);
-    await createApp().request('/v1/admin/invite-codes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipientEmail: 'test@example.com' }),
-    });
-    // Fire-and-forget: yield to allow the async IIFE to run
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mockSendInviteCodeEmail).toHaveBeenCalledWith(
-      'test@example.com',
-      'BETA-ABCD-EF12',
-    );
-  });
-
-  it('POST /v1/admin/invite-codes returns 201 even when sendInviteCodeEmail throws', async () => {
-    adminAuth();
-    mockSendInviteCodeEmail.mockRejectedValue(new Error('Resend unavailable'));
+    mockSendInviteCodeEmail.mockResolvedValue('sent');
     const res = await createApp().request('/v1/admin/invite-codes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recipientEmail: 'test@example.com' }),
     });
     expect(res.status).toBe(201);
+    expect(mockSendInviteCodeEmail).toHaveBeenCalledWith(
+      'test@example.com',
+      'BETA-ABCD-EF12',
+      expect.any(String),
+    );
+    const body = (await res.json()) as { email?: string };
+    expect(body.email).toBe('sent');
   });
+
+  // Honest responses: a refused or failed send never reads as sent.
+  it.each(['refused', 'failed'] as const)(
+    'POST /v1/admin/invite-codes still creates the code but says the email was %s',
+    async (outcome) => {
+      adminAuth();
+      mockSendInviteCodeEmail.mockResolvedValue(outcome);
+      const res = await createApp().request('/v1/admin/invite-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientEmail: 'test@example.com' }),
+      });
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as {
+        data: { code: string };
+        email?: string;
+      };
+      expect(body.data.code).toBe('BETA-ABCD-EF12');
+      expect(body.email).toBe(outcome);
+    },
+  );
 
   it('POST /v1/admin/invite-codes does not call sendInviteCodeEmail when recipientEmail is absent', async () => {
     adminAuth();

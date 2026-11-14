@@ -16,6 +16,11 @@ import {
 } from '../emails/test-fixtures.js';
 import type { AdminTestEmailFailureReason } from '@concert-crawl/types';
 import { apiLogger } from './logger.js';
+import {
+  checkRecipientLimits,
+  claimDailySend,
+  countAlertSend,
+} from './email-limits.js';
 
 const ADMIN_EMAIL_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>';
 const TRANSACTIONAL_EMAIL_FROM = 'Concert Crawl <hello@concertcrawl.app>';
@@ -92,6 +97,7 @@ export async function sendAdminAlertEmail(
       return { sent: false, reason: 'send_failed', error: response.error };
     }
 
+    await countAlertSend();
     return { sent: true, resendId: response.data?.id ?? null };
   } catch (err) {
     apiLogger.error({ err }, 'Admin alert email send threw');
@@ -104,7 +110,13 @@ export async function sendAdminAlertEmail(
 // spotify-weekly summary) must check for it rather than assuming a resolved
 // promise implies a send.
 export type TransactionalSendOutcome =
-  'sent' | 'not-registered' | 'suppressed' | 'deduped' | 'failed';
+  | 'sent'
+  | 'not-registered'
+  | 'suppressed'
+  | 'deduped'
+  | 'failed'
+  // The account-wide daily cap was reached (email-limits.ts).
+  | 'capped';
 
 // Staging runs every cron on the same schedule as production against its own
 // database, so a user who exists in both environments receives each
@@ -239,17 +251,30 @@ export async function sendTransactionalEmail<
       return 'failed';
     }
 
+    // Last, so a send stopped by anything above never spends the day's cap.
+    // A capped send leaves its claim 'failed', as a crash would: the dedupe
+    // key is spent and nothing replays it.
+    const slot = await claimDailySend();
+    if (!slot.allowed) return 'capped';
+
     const rendered = renderer(vars);
     const resend = new Resend(apiKey);
-    const response = await resend.emails.send({
-      from: TRANSACTIONAL_EMAIL_FROM,
-      replyTo: TRANSACTIONAL_REPLY_TO,
-      to: recipient,
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-    });
+    let response: Awaited<ReturnType<typeof resend.emails.send>>;
+    try {
+      response = await resend.emails.send({
+        from: TRANSACTIONAL_EMAIL_FROM,
+        replyTo: TRANSACTIONAL_REPLY_TO,
+        to: recipient,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      });
+    } catch (err) {
+      await slot.release();
+      throw err;
+    }
     if (response.error) {
+      await slot.release();
       apiLogger.error(
         { ...logContext, resendError: response.error },
         'sendTransactionalEmail: Resend rejected send — send-log row left failed',
@@ -329,6 +354,9 @@ export async function sendTestEmail(
       return { sent: false, reason: 'send_failed', error: response.error };
     }
 
+    // Counted like an alert, never refused: it only reaches ADMIN_EMAIL, and
+    // the route is admin-only and audited.
+    await countAlertSend();
     return { sent: true, resendId: response.data?.id ?? null };
   } catch (err) {
     apiLogger.error({ err, key }, 'Test email send threw');
@@ -340,29 +368,72 @@ export async function sendTestEmail(
   }
 }
 
+/**
+ * What became of an invite email, said honestly to the caller: only `sent`
+ * means Resend accepted it. `refused` is a limit (the recipient's, the
+ * network's or the day's), `failed` is a missing key or a rejected send.
+ */
+export type InviteEmailOutcome = 'sent' | 'refused' | 'failed';
+
+/**
+ * Email an invite code to an address an admin typed. Never throws. The
+ * per-recipient and per-network limits come first, then the account-wide
+ * daily cap (email-limits.ts).
+ */
 export async function sendInviteCodeEmail(
   recipientEmail: string,
   code: string,
-): Promise<void> {
+  ip: string,
+): Promise<InviteEmailOutcome> {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
     apiLogger.warn('RESEND_API_KEY not set — skipping invite code email');
-    return;
+    return 'failed';
   }
 
-  const resend = new Resend(apiKey);
+  try {
+    const limits = await checkRecipientLimits(recipientEmail, ip);
+    if (!limits.allowed) {
+      apiLogger.warn(
+        { reason: limits.reason },
+        'Invite code email refused by a send limit',
+      );
+      return 'refused';
+    }
+    const slot = await claimDailySend();
+    if (!slot.allowed) return 'refused';
 
-  await resend.emails.send({
-    from: 'Concert Crawl <noreply@concertcrawl.app>',
-    to: recipientEmail,
-    subject: "You're invited to Concert Crawl",
-    text: [
-      "You've been invited to join Concert Crawl — Denver's live music calendar.",
-      '',
-      `Your invite code: ${code}`,
-      '',
-      'Use it at: https://concertcrawl.app/auth/code',
-    ].join('\n'),
-  });
+    const resend = new Resend(apiKey);
+    let response: Awaited<ReturnType<typeof resend.emails.send>>;
+    try {
+      response = await resend.emails.send({
+        from: INVITE_EMAIL_FROM,
+        to: recipientEmail,
+        subject: "You're invited to Concert Crawl",
+        text: [
+          "You've been invited to join Concert Crawl — Denver's live music calendar.",
+          '',
+          `Your invite code: ${code}`,
+          '',
+          'Use it at: https://concertcrawl.app/auth/code',
+        ].join('\n'),
+      });
+    } catch (err) {
+      await slot.release();
+      throw err;
+    }
+    if (response.error) {
+      await slot.release();
+      apiLogger.error(
+        { resendError: response.error },
+        'Resend rejected invite code email',
+      );
+      return 'failed';
+    }
+    return 'sent';
+  } catch (err) {
+    apiLogger.error({ err }, 'Invite code email send threw');
+    return 'failed';
+  }
 }
