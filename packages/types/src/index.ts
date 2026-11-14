@@ -2046,12 +2046,30 @@ export interface AuditLogItem {
   id: string;
   actor: string;
   actorKind: 'system' | 'admin';
+  /** The admin actor's own colours for their PersonAvatar; null for system. */
+  actorAvatar: {
+    avatarColor: AvatarColor | null;
+    avatarSecondColor: AvatarColor | null;
+  } | null;
   action: string;
   area: AuditArea | null;
   targetId: string | null;
   target: AuditTarget | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
+}
+
+/**
+ * One row of the Activity log's Anyone menu (addendum 6 #37): an admin or
+ * sub-admin, or anyone else who changed something that day, with that MT
+ * day's count. `you` is the caller.
+ */
+export interface AuditLogActor {
+  handle: string;
+  avatarColor: AvatarColor | null;
+  avatarSecondColor: AvatarColor | null;
+  count: number;
+  you: boolean;
 }
 
 // ---------------------------------------------------------------------------

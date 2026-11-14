@@ -62,6 +62,7 @@ const item = (over: Partial<AuditLogItem> = {}): AuditLogItem => ({
   id: 'a1',
   actor: 'hugh',
   actorKind: 'admin',
+  actorAvatar: { avatarColor: null, avatarSecondColor: null },
   action: 'invite_code.revoke',
   area: 'people',
   targetId: 'c1',
