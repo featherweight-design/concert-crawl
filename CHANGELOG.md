@@ -1,3 +1,11 @@
+## [1.469.1](https://github.com/featherweight-design/concert-crawl/compare/v1.469.0...v1.469.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **web:** cap build workers only on Vercel ([3572be4](https://github.com/featherweight-design/concert-crawl/commit/3572be480d3754d8bd77ea5b6e50eb60c624b747))
+* **web:** fewer build workers and webpack memory mode so the staging build fits 8 GB ([cc5f49b](https://github.com/featherweight-design/concert-crawl/commit/cc5f49bf94e632c11b6f9c3beed2d6ad55f26ddc))
+
 # [1.469.0](https://github.com/featherweight-design/concert-crawl/compare/v1.468.0...v1.469.0) (2026-11-14)
 
 
