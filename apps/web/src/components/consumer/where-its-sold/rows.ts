@@ -58,7 +58,7 @@ function findPrimary(event: WhereItsSoldEvent): WhereItsSoldRow | null {
 }
 
 /**
- * The card's rows, cheapest first. Empty when the card should not show:
+ * The card's rows, in the API's trust order. Empty when the card should not show:
  * a sold-out or cancelled show, or fewer than two sellers (the price card
  * already names a lone seller).
  */
@@ -99,14 +99,12 @@ export function buildWhereItsSoldRows(
     });
   }
 
-  // One row per seller and tier, the cheapest. Array.sort is stable, so equal
-  // prices keep the API's trust order.
+  // The API's trust order, exactly as sent: the primary leads, then the
+  // alternates (orchestrator ruling, U15 PR C). One row per seller and tier,
+  // the first, so the most trusted of a seller's prices in a tier stands.
   const seen = new Set<string>();
   const rows = candidates
     .filter((row) => !checked.has(row.id))
-    .sort(
-      (left, right) => parseFloat(left.priceMin) - parseFloat(right.priceMin),
-    )
     .filter((row) => {
       const key = `${row.vendor}|${row.tier}`;
       if (seen.has(key) || seen.has(`id|${row.id}`)) return false;

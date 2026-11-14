@@ -9,7 +9,7 @@
   "rows": [
     {
       "id": "vendor-card",
-      "label": "Event page: Where it's sold with two or more sellers, cheapest first",
+      "label": "Event page: Where it's sold with two or more sellers, in the API's trust order",
       "fullPage": true,
       "steps": [
         {

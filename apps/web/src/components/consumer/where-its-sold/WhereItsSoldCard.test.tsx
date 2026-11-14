@@ -77,24 +77,26 @@ const renderCard = (event: WhereItsSoldEvent) =>
   render(<WhereItsSoldCard rows={buildWhereItsSoldRows(event)} />);
 
 describe('buildWhereItsSoldRows', () => {
-  it('orders the rows cheapest first, the primary included', () => {
+  it('keeps the API trust order, primary first, never re-sorted by price', () => {
+    // The $38 box office stays last: the API sent it after AXS.
     expect(buildWhereItsSoldRows(boardEvent()).map((row) => row.id)).toEqual([
-      'vbo',
       'tm',
       'axs',
+      'vbo',
     ]);
   });
 
-  it('keeps one row per seller and tier, the cheapest', () => {
+  it('keeps one row per seller and tier, the first the API sent', () => {
     const rows = buildWhereItsSoldRows(
       boardEvent({
         priceAlternates: [
           ...(boardEvent().priceAlternates ?? []),
           {
-            id: 'axs-dear',
+            // Cheaper, but sent after AXS's first GA price, so it is dropped.
+            id: 'axs-later',
             tier: 'GA',
             vendor: 'AXS',
-            priceMin: '52.00',
+            priceMin: '40.00',
             priceMax: null,
             sourceCategory: 'standard',
           },
@@ -109,7 +111,7 @@ describe('buildWhereItsSoldRows', () => {
         ],
       }),
     );
-    expect(rows.map((row) => row.id)).toEqual(['vbo', 'tm', 'axs', 'axs-vip']);
+    expect(rows.map((row) => row.id)).toEqual(['tm', 'axs', 'vbo', 'axs-vip']);
   });
 
   it('leaves out a price under a Price check', () => {
@@ -129,7 +131,7 @@ describe('buildWhereItsSoldRows', () => {
         },
       }),
     );
-    expect(checked.map((row) => row.id)).toEqual(['vbo', 'axs']);
+    expect(checked.map((row) => row.id)).toEqual(['axs', 'vbo']);
   });
 
   it('is empty with one seller, so the card does not show', () => {
@@ -177,9 +179,9 @@ describe('WhereItsSoldCard', () => {
     expect(within(card).getByText("Where it's sold")).toBeDefined();
     const rows = within(card).getAllByTestId('where-its-sold-row');
     expect(rows.map((row) => row.textContent)).toEqual([
-      'VVenue box officeface value · no fees$38',
       'TTicketmasterGA · all-in$45',
       'AAXSGA · all-in$47',
+      'VVenue box officeface value · no fees$38',
     ]);
   });
 
@@ -204,9 +206,9 @@ describe('WhereItsSoldCard', () => {
     );
     const links = screen.getAllByRole('link');
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
-      '#price-vbo',
       '#price-tm',
       '#price-axs',
+      '#price-vbo',
     ]);
     for (const link of links) {
       const target = document.getElementById(
