@@ -18,6 +18,23 @@ export const isEventListStatus = (value: unknown): value is EventListStatus =>
   typeof value === 'string' &&
   (EVENT_LIST_STATUSES as readonly string[]).includes(value);
 
+/**
+ * The Any status popover's rows, in `06/status-filter`'s order. Moved waits
+ * for Hugh (4b#1), and Played is a Past status, where the board draws no
+ * status filter.
+ */
+export const STATUS_FILTER_OPTIONS = [
+  'available',
+  'soldout',
+  'postponed',
+  'cancelled',
+  'delisted',
+] as const;
+export type FilterStatus = (typeof STATUS_FILTER_OPTIONS)[number];
+
+export const isFilterStatus = (value: string): value is FilterStatus =>
+  (STATUS_FILTER_OPTIONS as readonly string[]).includes(value);
+
 /** Each status's chip on the fan `StatusChip` (admin rule 3). */
 export const STATUS_CHIP: Record<EventListStatus, ShowStatusChip> = {
   available: 'available',
@@ -33,23 +50,71 @@ export type When = 'upcoming' | 'past';
 export interface EventFilters {
   query: string;
   when: When;
+  venueIds: string[];
+  statuses: FilterStatus[];
+  noPrice: boolean;
+  hidden: boolean;
 }
 
-export const EMPTY_FILTERS: EventFilters = { query: '', when: 'upcoming' };
+export const EMPTY_FILTERS: EventFilters = {
+  query: '',
+  when: 'upcoming',
+  venueIds: [],
+  statuses: [],
+  noPrice: false,
+  hidden: false,
+};
 
-/** The page's URL (`/admin/events?q=&when=past`) as filters. */
+const csv = (raw: string | null): string[] => [
+  ...new Set(
+    (raw ?? '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => part !== ''),
+  ),
+];
+
+const flag = (raw: string | null): boolean => raw === '1' || raw === 'true';
+
+// The API turns a malformed venue id into a 400, so a hand-edited URL drops
+// it here rather than failing the whole list into Couldn't load.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The page's URL (`/admin/events?q=&when=past&venueIds=&statuses=&noPrice=1&hidden=1`)
+ * as filters. Past draws no venue, status, No price or Hidden chips
+ * (`06/past-shows`), so on Past those are dropped rather than applied unseen.
+ */
 export const filtersFromParams = (
   params: Pick<URLSearchParams, 'get'>,
-): EventFilters => ({
-  query: (params.get('q') ?? '').trim(),
-  when: params.get('when') === 'past' ? 'past' : 'upcoming',
-});
+): EventFilters => {
+  const when: When = params.get('when') === 'past' ? 'past' : 'upcoming';
+  const query = (params.get('q') ?? '').trim();
+  if (when === 'past') return { ...EMPTY_FILTERS, when, query };
+  return {
+    query,
+    when,
+    venueIds: csv(params.get('venueIds')).filter((id) => UUID.test(id)),
+    statuses: csv(params.get('statuses')).filter(isFilterStatus),
+    noPrice: flag(params.get('noPrice')),
+    hidden: flag(params.get('hidden')),
+  };
+};
 
 /** The filters as the page's URL params, leaving out every default. */
 export const filtersToParams = (filters: EventFilters): URLSearchParams => {
   const params = new URLSearchParams();
   if (filters.query.trim() !== '') params.set('q', filters.query.trim());
-  if (filters.when === 'past') params.set('when', 'past');
+  if (filters.when === 'past') {
+    params.set('when', 'past');
+    return params;
+  }
+  if (filters.venueIds.length > 0)
+    params.set('venueIds', filters.venueIds.join(','));
+  if (filters.statuses.length > 0)
+    params.set('statuses', filters.statuses.join(','));
+  if (filters.noPrice) params.set('noPrice', '1');
+  if (filters.hidden) params.set('hidden', '1');
   return params;
 };
 
@@ -71,6 +136,14 @@ export const apiParams = (
   const params = new URLSearchParams();
   if (filters.query.trim() !== '') params.set('query', filters.query.trim());
   params.set('when', filters.when);
+  if (filters.when === 'upcoming') {
+    if (filters.venueIds.length > 0)
+      params.set('venueIds', filters.venueIds.join(','));
+    if (filters.statuses.length > 0)
+      params.set('statuses', filters.statuses.join(','));
+    if (filters.noPrice) params.set('noPrice', 'true');
+    if (filters.hidden) params.set('hidden', 'true');
+  }
   params.set('limit', String(limit));
   params.set('offset', String(offset));
   return params;
@@ -78,7 +151,25 @@ export const apiParams = (
 
 /** True when anything narrows the list beyond its side (Upcoming or Past). */
 export const hasFilters = (filters: EventFilters): boolean =>
-  filters.query.trim() !== '';
+  filters.query.trim() !== '' ||
+  filters.venueIds.length > 0 ||
+  filters.statuses.length > 0 ||
+  filters.noPrice ||
+  filters.hidden;
+
+/**
+ * The "Show N" a popover offers: the ticked rows' counts added up, as the
+ * board adds Postponed 6 and Cancelled 9 into Show 15. Nothing ticked shows
+ * every row on this side.
+ */
+export const showCount = (
+  chosen: readonly string[],
+  countOf: (key: string) => number,
+  all: number,
+): number =>
+  chosen.length === 0
+    ? all
+    : chosen.reduce((sum, key) => sum + countOf(key), 0);
 
 const dollars = (value: string | null): string | null => {
   if (value === null || value.trim() === '') return null;

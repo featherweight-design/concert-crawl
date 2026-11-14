@@ -39,9 +39,23 @@ export interface EventListRow {
   wentCount: number | null;
 }
 
-/** The shows on this side (Upcoming or Past) that match the search. */
+export interface VenueCount {
+  venueId: string;
+  name: string;
+  slug: string;
+  total: number;
+}
+
+/**
+ * The shows on this side (Upcoming or Past) that match the search, whole and
+ * by filter. No other filter narrows them.
+ */
 export interface EventListCounts {
   all: number;
+  noPrice: number;
+  hidden: number;
+  byStatus: Partial<Record<EventListStatus, number>>;
+  byVenue: VenueCount[];
 }
 
 export interface EventListPage {
@@ -100,8 +114,45 @@ const rowFrom = (value: unknown): EventListRow | null => {
   };
 };
 
-const countsFrom = (value: unknown): EventListCounts | null =>
-  isRecord(value) && isCount(value['all']) ? { all: value['all'] } : null;
+const venueCountFrom = (value: unknown): VenueCount | null =>
+  isRecord(value) &&
+  isText(value['venueId']) &&
+  isText(value['name']) &&
+  isText(value['slug']) &&
+  isCount(value['total'])
+    ? {
+        venueId: value['venueId'],
+        name: value['name'],
+        slug: value['slug'],
+        total: value['total'],
+      }
+    : null;
+
+const countsFrom = (value: unknown): EventListCounts | null => {
+  if (
+    !isRecord(value) ||
+    !isCount(value['all']) ||
+    !isCount(value['noPrice']) ||
+    !isCount(value['hidden']) ||
+    !isRecord(value['byStatus']) ||
+    !Array.isArray(value['byVenue'])
+  ) {
+    return null;
+  }
+  const byStatus: Partial<Record<EventListStatus, number>> = {};
+  for (const [key, total] of Object.entries(value['byStatus'])) {
+    if (isEventListStatus(key) && isCount(total)) byStatus[key] = total;
+  }
+  const byVenue = value['byVenue'].map(venueCountFrom);
+  if (byVenue.some((row) => row === null)) return null;
+  return {
+    all: value['all'],
+    noPrice: value['noPrice'],
+    hidden: value['hidden'],
+    byStatus,
+    byVenue: byVenue.flatMap((row) => (row === null ? [] : [row])),
+  };
+};
 
 export const eventsListApi = (getToken: GetToken) => ({
   list: async (

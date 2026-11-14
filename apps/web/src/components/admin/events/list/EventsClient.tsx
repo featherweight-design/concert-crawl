@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { Search } from 'lucide-react';
@@ -19,17 +12,25 @@ import {
   PageSkeleton,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { VenueTile } from '@/components/consumer/venue-glyph';
 import { LoadMoreFooter, type LoadMoreState } from '../../crawl-runs/RunsList';
-import { eventsListApi, type EventListPage } from './events-api';
+import {
+  eventsListApi,
+  type EventListCounts,
+  type EventListPage,
+} from './events-api';
 import { EventsList } from './EventsList';
 import {
   EMPTY_FILTERS,
+  STATUS_FILTER_OPTIONS,
   eventsListHref,
   filtersFromParams,
   hasFilters,
+  isFilterStatus,
   type EventFilters,
   type When,
 } from './events-rules';
+import { ChipCount, FilterPicker, chipStyle } from './FilterPicker';
 
 const COPY = ADMIN_COPY.eventsList;
 
@@ -44,36 +45,11 @@ interface Loaded {
   data: EventListPage;
 }
 
-/** A pill on `06/events`; `on` draws the board's selected Upcoming edge. */
-const chipStyle = (on: boolean): CSSProperties => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  flex: 'none',
-  height: 36,
-  padding: '0 14px',
-  borderRadius: 999,
-  fontSize: 13.5,
-  fontWeight: on ? 700 : 600,
-  whiteSpace: 'nowrap',
-  cursor: 'pointer',
-  color: on ? 'var(--fg)' : 'var(--fg-muted)',
-  ...(on
-    ? {
-        border: '1px solid transparent',
-        background:
-          'linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(90deg, var(--signal), var(--accent)) border-box',
-      }
-    : {
-        border: '1px solid var(--border)',
-        background: 'var(--surface-1)',
-      }),
-});
-
 /**
- * 4b-1 Events (`06/events`, `06/events-mobile`, `06/past-shows`). The search
- * and the side live in the URL, so a list can be linked and reloaded; the
- * rows load in the browser with the admin's token. The venue, status, No
- * price and Hidden filters land in 4b-1b, and Add a show in 4b-3.
+ * 4b-1 Events (`06/events`, `06/events-mobile`, `06/past-shows`, with the
+ * filters of `06/venue-filter` and `06/status-filter`). Every filter lives in
+ * the URL, so a filtered list can be linked and reloaded; the rows load in
+ * the browser with the admin's token. Add a show lands in 4b-3.
  */
 export const EventsClient = () => {
   const { getToken } = useAuth();
@@ -299,13 +275,82 @@ export const EventsClient = () => {
     </button>
   ));
 
-  // Desktop draws one row: search, then the side. The phone stacks search
-  // over the chip row (`06/events-mobile`, with Past added by 4b#23).
+  const toggleChip = (key: 'noPrice' | 'hidden', count: number) => (
+    <button
+      key={key}
+      type="button"
+      aria-pressed={filters[key]}
+      style={chipStyle(filters[key])}
+      onClick={() => navigate({ ...filters, [key]: !filters[key] })}
+    >
+      {COPY[key]}
+      <ChipCount count={count} />
+    </button>
+  );
+
+  const filterChipsFor = (shownCounts: EventListCounts) => ({
+    venue: (
+      <FilterPicker
+        key="venue"
+        label={COPY.anyVenue}
+        testId="venue-filter"
+        search={COPY.findVenue}
+        all={shownCounts.all}
+        selected={filters.venueIds}
+        options={[...shownCounts.byVenue]
+          .sort(
+            (one, two) =>
+              two.total - one.total || one.name.localeCompare(two.name),
+          )
+          .map((venue) => ({
+            key: venue.venueId,
+            label: venue.name,
+            count: venue.total,
+            icon: <VenueTile slug={venue.slug} name={venue.name} size={20} />,
+          }))}
+        onApply={(venueIds) => navigate({ ...filters, venueIds })}
+      />
+    ),
+    status: (
+      <FilterPicker
+        key="status"
+        label={COPY.anyStatus}
+        testId="status-filter"
+        all={shownCounts.all}
+        selected={filters.statuses}
+        options={STATUS_FILTER_OPTIONS.map((status) => ({
+          key: status,
+          label: COPY.status[status],
+          count: shownCounts.byStatus[status] ?? 0,
+        }))}
+        onApply={(keys) =>
+          navigate({ ...filters, statuses: keys.filter(isFilterStatus) })
+        }
+      />
+    ),
+    noPrice: toggleChip('noPrice', shownCounts.noPrice),
+    hidden: toggleChip('hidden', shownCounts.hidden),
+  });
+
+  // Past draws none of these (`06/past-shows`). On Upcoming they wait for
+  // this side's counts, which the skeleton below covers.
+  const filterChips =
+    past || counts === undefined ? null : filterChipsFor(counts);
+
+  // Desktop draws one row: search, the side, a rule, then the filters. The
+  // phone stacks search over a scrolling chip row in the board's order
+  // (`06/events-mobile`, with Past added by 4b#23).
   const filterRow = isPhone ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {searchBox}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
         {whenChips}
+        {filterChips && [
+          filterChips.noPrice,
+          filterChips.hidden,
+          filterChips.venue,
+          filterChips.status,
+        ]}
       </div>
     </div>
   ) : (
@@ -319,6 +364,18 @@ export const EventsClient = () => {
     >
       {searchBox}
       {whenChips}
+      {filterChips && (
+        <>
+          <span
+            aria-hidden="true"
+            style={{ width: 1, height: 24, background: 'var(--border)' }}
+          />
+          {filterChips.venue}
+          {filterChips.status}
+          {filterChips.noPrice}
+          {filterChips.hidden}
+        </>
+      )}
     </div>
   );
 

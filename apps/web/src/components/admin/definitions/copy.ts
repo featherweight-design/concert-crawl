@@ -4138,9 +4138,9 @@ export const ADMIN_COPY = {
     },
   },
 
-  // 4b-1 Events list (`06/events`, `events-mobile`, `event-menu`,
-  // `past-shows`, `events-no-results`). Board strings are verbatim; the
-  // Hidden reason words are Copy's (4b#8).
+  // 4b-1 Events list (`06/events`, `events-mobile`, `venue-filter`,
+  // `status-filter`, `event-menu`, `past-shows`, `events-no-results`).
+  // Board strings are verbatim; the Hidden reason words are Copy's (4b#8).
   eventsList: {
     title: 'Events',
     subtitle: (count: number) =>
@@ -4151,6 +4151,15 @@ export const ADMIN_COPY = {
     pastCrumb: 'Past',
     search: 'Search shows or artists',
     when: { upcoming: 'Upcoming', past: 'Past' },
+    // 4b-1b (`06/venue-filter`, `06/status-filter`). The chip keeps its
+    // label once something is chosen: that label is held for Design.
+    anyVenue: 'Any venue',
+    anyStatus: 'Any status',
+    noPrice: 'No price',
+    hidden: 'Hidden',
+    findVenue: 'Find a venue',
+    clear: 'Clear',
+    show: (count: number) => `Show ${count.toLocaleString('en-US')}`,
     status: {
       available: 'Tickets available',
       soldout: 'Sold out',
