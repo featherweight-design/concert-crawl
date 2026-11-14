@@ -1327,6 +1327,8 @@ export const RELEASES: Release[] = [
         body: 'Saw a price at the box office? Drop it in. Two fans confirm it and it goes live.',
         art: 'prices',
         rank: 5,
+        // The prices step of the How Concert Crawl works tour (Hugh, 2026-11-14).
+        cta: { label: 'How prices work', href: '/onboarding?entry=menu' },
       },
     ],
     items: [
