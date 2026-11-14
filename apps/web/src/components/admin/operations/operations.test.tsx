@@ -126,7 +126,7 @@ const rowsPage = (page: number, count: number, nextCursor: string | null) =>
 
 // The Feedback tab's count and inbox are OperationsClient.test.tsx's.
 describe('Operations shell', () => {
-  it('draws Feedback and Activity log, and no Emails', () => {
+  it('draws Feedback, Emails and Activity log', () => {
     render(<OperationsClient />);
     expect(
       screen.getByRole('heading', { level: 1, name: COPY.title }),
@@ -137,9 +137,9 @@ describe('Operations shell', () => {
     );
     expect(tabs.map((tab) => tab.textContent)).toEqual([
       'Feedback',
+      'Emails',
       'Activity log',
     ]);
-    expect(screen.queryByText('Emails')).not.toBeInTheDocument();
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
 
