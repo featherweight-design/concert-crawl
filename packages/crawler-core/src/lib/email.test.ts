@@ -10,6 +10,66 @@ vi.mock('resend', () => ({
   ),
 }));
 
+// The account-wide daily email count (packages/db): alerts are counted, never
+// refused.
+const mockCountEmailSend = vi.fn().mockResolvedValue(1);
+vi.mock('@concert-crawl/db', () => ({
+  db: {},
+  countEmailSend: (...args: unknown[]) => mockCountEmailSend(...args),
+}));
+
+describe('alert sends and the daily email count', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    process.env = {
+      ...originalEnv,
+      RESEND_API_KEY: 're_test_key',
+      ADMIN_EMAIL: 'admin@example.com',
+      SENTRY_ENVIRONMENT: 'production',
+    };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  const input = {
+    venueName: 'Ogden Theatre',
+    venueId: 'venue-ogden',
+    consecutiveFailures: 3,
+  };
+
+  it('counts a sent alert toward the day', async () => {
+    mockSend.mockResolvedValueOnce({ data: { id: 'e1' }, error: null });
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await sendCrawlFailureEmail(input);
+    expect(mockCountEmailSend).toHaveBeenCalledOnce();
+  });
+
+  it('still sends when the count is unavailable', async () => {
+    mockSend.mockResolvedValueOnce({ data: { id: 'e1' }, error: null });
+    mockCountEmailSend.mockRejectedValueOnce(new Error('db down'));
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await expect(sendCrawlFailureEmail(input)).resolves.toBeUndefined();
+    expect(mockSend).toHaveBeenCalledOnce();
+  });
+
+  it('raises a Resend rejection for the caller to log, uncounted', async () => {
+    mockSend.mockResolvedValueOnce({
+      data: null,
+      error: { name: 'validation_error', message: 'bad from' },
+    });
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await expect(sendCrawlFailureEmail(input)).rejects.toThrow(
+      /Resend rejected .*validation_error/,
+    );
+    expect(mockCountEmailSend).not.toHaveBeenCalled();
+  });
+});
+
 describe('sendCrawlFailureEmail', () => {
   const originalEnv = process.env;
 

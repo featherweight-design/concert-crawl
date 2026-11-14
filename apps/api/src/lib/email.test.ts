@@ -20,6 +20,26 @@ vi.mock('../emails/registry.js', () => ({
   getTemplateRenderer: mockGetTemplateRenderer,
 }));
 
+// The send limits (email-limits.ts, tested on their own): open by default,
+// steered per test.
+const mockRelease = vi.fn().mockResolvedValue(undefined);
+const mockClaimDailySend = vi.fn();
+const mockCheckRecipientLimits = vi.fn();
+const mockCountAlertSend = vi.fn().mockResolvedValue(undefined);
+vi.mock('./email-limits.js', () => ({
+  claimDailySend: () => mockClaimDailySend(),
+  checkRecipientLimits: (...args: unknown[]) =>
+    mockCheckRecipientLimits(...args),
+  countAlertSend: () => mockCountAlertSend(),
+}));
+beforeEach(() => {
+  mockClaimDailySend.mockResolvedValue({
+    allowed: true,
+    release: mockRelease,
+  });
+  mockCheckRecipientLimits.mockResolvedValue({ allowed: true });
+});
+
 // Chainable Drizzle mocks — each terminal step is a named mock so tests can
 // steer results per scenario. Tables/types come from the real module.
 const mockSelectLimit = vi.fn();
@@ -55,8 +75,72 @@ vi.mock('@concert-crawl/db', async (importOriginal) => {
 // whole graph (Sentry, Clerk, resend, the built db package) 19 times — ~2.6s on
 // the first test alone, which crossed the 5s limit under full-suite load and
 // timed the file out.
-const { sendAdminAlertEmail, sendTransactionalEmail } =
+const { sendAdminAlertEmail, sendInviteCodeEmail, sendTransactionalEmail } =
   await import('./email.js');
+
+describe('sendInviteCodeEmail', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env = { ...originalEnv, RESEND_API_KEY: 're_test_key' };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('sends within the limits and says so', async () => {
+    mockSend.mockResolvedValueOnce({ data: { id: 'e1' }, error: null });
+    await expect(
+      sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
+    ).resolves.toBe('sent');
+    expect(mockCheckRecipientLimits).toHaveBeenCalledWith(
+      'fan@example.com',
+      '203.0.113.9',
+    );
+    expect(mockRelease).not.toHaveBeenCalled();
+  });
+
+  it('refuses past a recipient or network limit, without spending the day', async () => {
+    mockCheckRecipientLimits.mockResolvedValueOnce({
+      allowed: false,
+      reason: 'recipient',
+    });
+    await expect(
+      sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
+    ).resolves.toBe('refused');
+    expect(mockClaimDailySend).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('refuses at the daily cap', async () => {
+    mockClaimDailySend.mockResolvedValueOnce({ allowed: false });
+    await expect(
+      sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
+    ).resolves.toBe('refused');
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('says failed, and hands the day back, when Resend rejects it', async () => {
+    mockSend.mockResolvedValueOnce({
+      data: null,
+      error: { name: 'validation_error', message: 'nope' },
+    });
+    await expect(
+      sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
+    ).resolves.toBe('failed');
+    expect(mockRelease).toHaveBeenCalledOnce();
+  });
+
+  it('says failed, and hands the day back, when the send throws', async () => {
+    mockSend.mockRejectedValueOnce(new Error('network'));
+    await expect(
+      sendInviteCodeEmail('fan@example.com', 'CODE', '203.0.113.9'),
+    ).resolves.toBe('failed');
+    expect(mockRelease).toHaveBeenCalledOnce();
+  });
+});
 
 describe('sendAdminAlertEmail', () => {
   const originalEnv = process.env;
@@ -89,6 +173,9 @@ describe('sendAdminAlertEmail', () => {
     expect(call.subject).toBe('Test alert');
     expect(call.html).toBe('<p>Hello</p>');
     expect(call.from).toContain('alerts@concertcrawl.app');
+    // Counted toward the day, never refused by it.
+    expect(mockCountAlertSend).toHaveBeenCalledOnce();
+    expect(mockClaimDailySend).not.toHaveBeenCalled();
   });
 
   it('passes through optional text body when provided', async () => {
@@ -323,6 +410,23 @@ describe('sendTransactionalEmail', () => {
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed');
 
     expect(mockUpdateSet).not.toHaveBeenCalled();
+    // Only mail Resend accepted spends the day's cap.
+    expect(mockRelease).toHaveBeenCalledOnce();
+  });
+
+  it('stops at the daily cap: no send, the row left failed', async () => {
+    mockClaimDailySend.mockResolvedValueOnce({ allowed: false });
+
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('capped');
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(mockUpdateSet).not.toHaveBeenCalled();
+  });
+
+  it('hands the day back when Resend throws', async () => {
+    mockSend.mockRejectedValueOnce(new Error('network down'));
+
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed');
+    expect(mockRelease).toHaveBeenCalledOnce();
   });
 
   it('leaves the row failed and does not throw when the Clerk user has no email', async () => {

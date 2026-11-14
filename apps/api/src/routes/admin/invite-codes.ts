@@ -41,7 +41,7 @@ import { generateInviteCode } from '../../lib/invite-code-generation.js';
 import type { AdminVariables } from './index.js';
 import { sendInviteCodeEmail } from '../../lib/email.js';
 import { apiLogger } from '../../lib/logger.js';
-import { runBackgroundTask } from '../../lib/background-tasks.js';
+import { clientIp } from '../../lib/client-ip.js';
 import { isUniqueViolationOn } from '../../lib/pg-errors.js';
 
 const clerkClient = createClerkClient({
@@ -555,14 +555,15 @@ inviteCodesAdminRouter.post(
       custom: customCode !== undefined,
     });
 
+    // Awaited, not backgrounded, so the response says what happened: the code
+    // exists either way, and `email` is only `sent` when Resend accepted it.
     if (recipientEmail) {
-      runBackgroundTask(async () => {
-        try {
-          await sendInviteCodeEmail(recipientEmail, code.code);
-        } catch (err) {
-          apiLogger.error({ err }, 'Failed to send invite code email');
-        }
-      });
+      const email = await sendInviteCodeEmail(
+        recipientEmail,
+        code.code,
+        clientIp(ctx),
+      );
+      return ctx.json({ success: true, data: code, email }, 201);
     }
 
     return ctx.json({ success: true, data: code }, 201);

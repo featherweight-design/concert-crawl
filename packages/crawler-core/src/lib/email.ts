@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { reportFailure } from '@concert-crawl/logger';
+import { countEmailSend, db } from '@concert-crawl/db';
 
 function escapeHtml(str: string): string {
   return str
@@ -164,12 +165,33 @@ async function sendAdminAlert(
     ' ',
   );
 
-  await resend.emails.send({
+  const response = await resend.emails.send({
     from: ALERT_FROM,
     to: adminEmail,
     subject: safeSubject,
     html: `${envBanner()}${input.html}`,
   });
+  // A rejection comes back as `error`, not a throw: raise it so the callers'
+  // catch logs it, as it does a transport error.
+  if (response.error) {
+    throw new Error(
+      `Resend rejected ${context} alert: ${response.error.name}: ${response.error.message}`,
+    );
+  }
+
+  // Counted toward the account-wide daily email cap the API enforces (the
+  // Resend account is shared), but never refused: an alert always goes out,
+  // and a lost count never stops one.
+  try {
+    await countEmailSend(db);
+  } catch {
+    reportFailure({
+      event: 'email.uncounted',
+      severity: 'warn',
+      reason: 'daily email count unavailable',
+      context,
+    });
+  }
 }
 
 export interface CrawlFailureInput {

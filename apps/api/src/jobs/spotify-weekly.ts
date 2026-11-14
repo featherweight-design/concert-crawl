@@ -379,9 +379,11 @@ const digestForUser = async (
   // Only a real Resend delivery counts toward digestSent — the pipeline can
   // no-op (dedupe on cron retry, kill switch, missing env) without throwing.
   // A 'failed' outcome is a real delivery failure and must show up in the
-  // summary; deduped/suppressed no-ops are neither sent nor failed.
+  // summary; deduped/suppressed no-ops are neither sent nor failed. A digest
+  // stopped by the daily email cap went undelivered, so it counts as failed.
   if (sendOutcome === 'sent') summary.digestSent += 1;
-  if (sendOutcome === 'failed') summary.digestFailures += 1;
+  if (sendOutcome === 'failed' || sendOutcome === 'capped')
+    summary.digestFailures += 1;
   return 'sent';
 };
 
