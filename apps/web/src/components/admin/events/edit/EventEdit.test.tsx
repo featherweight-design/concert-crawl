@@ -404,6 +404,24 @@ describe('EventEdit Status card', () => {
     expect(screen.queryByText(/^Hidden: unsure$/)).toBeNull();
   });
 
+  it('puts the meta under the title and the chips below it on the phone, in reading order', () => {
+    setPhone(true);
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, hidden: true, hiddenReason: 'admin' }}
+        today="2026-11-13"
+      />,
+    );
+    const meta = screen.getByTestId('event-edit-meta');
+    const tag = screen.getByTestId('hidden-tag');
+    expect(meta).toHaveTextContent(COPY.meta('Sat Nov 14', 'Larimer Lounge'));
+    expect(meta.style.fontSize).toBe('12.5px');
+    expect(
+      meta.compareDocumentPosition(tag) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText(/Watching/)).toBeNull();
+  });
+
   it('names a show with no venue by its date alone', () => {
     render(
       <EventEdit detail={{ ...DETAIL, venueName: null }} today="2026-11-13" />,

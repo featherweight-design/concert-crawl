@@ -44,7 +44,8 @@ export const EventStatusChip = ({
  * Hidden is not a status (addendum 5, §2): a hidden show keeps its status
  * chip and gets this muted tag under its title, "HIDDEN · UNSURE" or
  * "HIDDEN · BY ADMIN" (`02/events-statuschip-d`, `-m`). Addendum 6 item 21
- * lifts it to 10px `--fg-muted`, eye included, for contrast (7.5:1).
+ * lifts it to 10px `--fg-muted`, eye included, for contrast (7.5:1 on the
+ * Electric row ground; Light's darker `--fg-muted` passes too).
  */
 export const HiddenTag = ({
   row,

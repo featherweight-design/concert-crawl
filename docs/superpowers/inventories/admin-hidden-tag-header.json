@@ -1,0 +1,44 @@
+{
+  "feature": "Admin · the Hidden tag on Event edit's header and its contrast (B+ addendum 6, items 19 and 21)",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: design/design_handoff_bplus_redesign/addendum-6/boards/19-hidden-header/event-edit-hidden-header and 21-hidden-tag-contrast/hidden-tag-contrast. Read-only: a hidden scratch event (Disney On Ice, hidden by the crawler) and the Events list tag. Violet Grohl is the not-hidden header.",
+  "widths": [
+    { "label": "phone-320", "width": 320, "height": 900, "touch": true },
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "edit-hidden",
+      "label": "Event edit header, a hidden show",
+      "steps": [
+        {
+          "goto": "/admin/events/0188715c-17ec-4144-86b7-9c3607626387",
+          "wait": "[data-testid=\"hidden-tag\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "edit-visible",
+      "label": "Event edit header, a visible show (no tag)",
+      "steps": [
+        {
+          "goto": "/admin/events/6cacabc9-f48c-4828-905a-fe99df63282f",
+          "wait": "[data-testid=\"event-edit-header\"]",
+          "settle": 2500
+        }
+      ]
+    },
+    {
+      "id": "list-tag",
+      "label": "Events list, the Hidden tag under a title",
+      "steps": [
+        {
+          "goto": "/admin/events?q=Disney",
+          "wait": "[data-testid=\"hidden-tag\"]",
+          "settle": 2500
+        }
+      ]
+    }
+  ]
+}
