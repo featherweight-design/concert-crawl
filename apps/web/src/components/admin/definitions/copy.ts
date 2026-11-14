@@ -2730,6 +2730,7 @@ export const ADMIN_COPY = {
         robotsResult: {
           yes: 'Blocks the crawler',
           no: 'Allows the crawler',
+          allowsPath: (path: string) => `Still allows ${path}`,
           unchecked: 'Not checked',
         },
         ourPace: 'Our pace',
