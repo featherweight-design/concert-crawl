@@ -110,20 +110,31 @@ export const canShareFiles = (caps: ShareCapabilities): boolean => {
  * share squeaks through and the next raises NotAllowedError (the Passport hit
  * exactly this, #1446). So the sheet calls this when a shape is picked and
  * hands the result to `systemShare`, which never awaits before `share()`.
- * Resolves null on any failure: the share degrades to the link.
+ * Resolves null on any failure or abort: the share degrades to the link.
  */
 export const fetchPosterFile = async (
   imageUrl: string,
   fileName: string,
-  fetchImpl: typeof fetch = fetch,
+  {
+    signal,
+    fetchImpl = fetch,
+  }: { signal?: AbortSignal; fetchImpl?: typeof fetch } = {},
 ): Promise<File | null> => {
   if (typeof File !== 'function') return null;
+  // A function, not a value: the signal flips while the awaits are pending.
+  const aborted = () => signal?.aborted === true;
   try {
-    const response = await fetchImpl(imageUrl);
-    if (!response.ok) return null;
+    const response = await fetchImpl(
+      imageUrl,
+      signal === undefined ? undefined : { signal },
+    );
+    if (!response.ok || aborted()) return null;
     const blob = await response.blob();
+    if (aborted()) return null;
     return new File([blob], fileName, { type: 'image/png' });
   } catch (err) {
+    // An abort is the sheet moving on, not a failure worth a warning.
+    if (aborted()) return null;
     // A degradation, not a bug: the share still carries the link.
     console.warn('[share] poster fetch failed, sharing link only', { err });
     return null;
