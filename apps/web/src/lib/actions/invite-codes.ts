@@ -21,11 +21,12 @@ export async function generateInviteCode(formData: FormData): Promise<void> {
     expiresAt: expiresAt || undefined,
   });
 
-  revalidatePath(INVITE_CODES_HREF);
+  // 'layout' so Posters under it refreshes too, as the codes actions do.
+  revalidatePath(INVITE_CODES_HREF, 'layout');
 }
 
 export async function revokeInviteCode(id: string): Promise<void> {
   const token = await getToken();
   await apiClient.post(`/v1/admin/invite-codes/${id}/revoke`, token, {});
-  revalidatePath(INVITE_CODES_HREF);
+  revalidatePath(INVITE_CODES_HREF, 'layout');
 }

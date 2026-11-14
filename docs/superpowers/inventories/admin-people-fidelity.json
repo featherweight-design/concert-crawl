@@ -79,7 +79,7 @@
       "label": "Invite codes",
       "steps": [
         {
-          "goto": "/admin/invite-codes",
+          "goto": "/admin/people/invite-codes",
           "wait": "[data-testid='invite-codes-list']",
           "settle": 800
         }
@@ -98,7 +98,7 @@
           }
         },
         {
-          "goto": "/admin/invite-codes",
+          "goto": "/admin/people/invite-codes",
           "wait": "text=No invite codes yet",
           "settle": 800
         }
