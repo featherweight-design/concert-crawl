@@ -28,6 +28,8 @@ const setPhone = (matches: boolean) => {
 const picker = (props: Partial<Parameters<typeof FilterPicker>[0]> = {}) => (
   <FilterPicker
     label="Any status"
+    picked="Picked"
+    clearLabel="Clear the status filter"
     testId="status-filter"
     options={STATUSES}
     selected={[]}
@@ -86,6 +88,35 @@ describe('FilterPicker', () => {
     rerender(picker({ selected: [] }));
     expect(chip).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByLabelText(/Postponed/)).not.toBeChecked();
+  });
+
+  it('shows its pick with a × that clears it, keeping focus on the chip', () => {
+    const onApply = vi.fn();
+    const { rerender } = render(picker({ selected: ['postponed'], onApply }));
+    const chip = screen.getByTestId('status-filter-chip');
+    expect(chip).toHaveTextContent('Picked');
+    expect(chip).not.toHaveTextContent('Any status');
+    fireEvent.click(chip);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Clear the status filter' }),
+    );
+    expect(onApply).toHaveBeenCalledWith([]);
+    expect(screen.queryByTestId('status-filter')).toBeNull();
+    expect(chip).toHaveFocus();
+    rerender(picker({ selected: [], onApply }));
+    expect(screen.getByTestId('status-filter-chip')).toBe(chip);
+    expect(chip).toHaveTextContent('Any status');
+    expect(chip).toHaveFocus();
+    expect(
+      screen.queryByRole('button', { name: 'Clear the status filter' }),
+    ).toBeNull();
+  });
+
+  it('draws no × with nothing picked', () => {
+    render(picker());
+    expect(
+      screen.queryByRole('button', { name: 'Clear the status filter' }),
+    ).toBeNull();
   });
 
   it('disables the unticked rows at the cap', () => {

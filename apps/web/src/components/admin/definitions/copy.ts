@@ -4049,10 +4049,17 @@ export const ADMIN_COPY = {
     pastCrumb: 'Past',
     search: 'Search shows or artists',
     when: { upcoming: 'Upcoming', past: 'Past' },
-    // 4b-1b (`06/venue-filter`, `06/status-filter`). The chip keeps its
-    // label once something is chosen: that label is held for Design.
+    // 4b-1b (`06/venue-filter`, `06/status-filter`); with a pick, the chip
+    // shows it (`04/filter-chips-picked`).
     anyVenue: 'Any venue',
     anyStatus: 'Any status',
+    venuesPicked: (first: string, more: number) => `${first} +${more}`,
+    // Venues picked by a linked URL, before a load has named them.
+    venueCount: (count: number) =>
+      count === 1 ? '1 venue' : `${count} venues`,
+    statusesPicked: (count: number) => `${count} statuses`,
+    clearVenues: 'Clear the venue filter',
+    clearStatuses: 'Clear the status filter',
     noPrice: 'No price',
     hidden: 'Hidden',
     findVenue: 'Find a venue',

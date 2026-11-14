@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { Search } from 'lucide-react';
+import { Eye, Search } from 'lucide-react';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminButton,
@@ -12,6 +12,7 @@ import {
   PageSkeleton,
   useIsPhone,
 } from '@/components/admin/primitives';
+import { StatusChip } from '@/components/consumer/StatusChip';
 import { VenueTile } from '@/components/consumer/venue-glyph';
 import { LoadMoreFooter, type LoadMoreState } from '../../crawl-runs/RunsList';
 import {
@@ -25,6 +26,7 @@ import {
   EMPTY_FILTERS,
   EVENT_LIST_STATUSES,
   MAX_VENUE_FILTER,
+  STATUS_CHIP,
   STATUS_FILTER_OPTIONS,
   eventsListHref,
   filtersFromParams,
@@ -33,7 +35,13 @@ import {
   type EventFilters,
   type When,
 } from './events-rules';
-import { ChipCount, FilterPicker, chipStyle } from './FilterPicker';
+import {
+  ChipCount,
+  ClearMark,
+  FilterPicker,
+  chipStyle,
+  pickedChipStyle,
+} from './FilterPicker';
 
 const COPY = ADMIN_COPY.eventsList;
 
@@ -300,18 +308,77 @@ export const EventsClient = () => {
     </button>
   ));
 
-  const toggleChip = (key: 'noPrice' | 'hidden', count: number) => (
-    <button
-      key={key}
-      type="button"
-      aria-pressed={filters[key]}
-      style={chipStyle(filters[key])}
-      onClick={() => navigate({ ...filters, [key]: !filters[key] })}
-    >
-      {COPY[key]}
-      <ChipCount count={count} />
-    </button>
-  );
+  // On, a count chip keeps its count and gains a × (`04/filter-chips-picked`);
+  // the whole chip still toggles, so the × is drawn, not a second button.
+  const toggleChip = (key: 'noPrice' | 'hidden', count: number) => {
+    const on = filters[key];
+    return (
+      <button
+        key={key}
+        type="button"
+        aria-pressed={on}
+        style={on ? pickedChipStyle : chipStyle(false)}
+        onClick={() => navigate({ ...filters, [key]: !on })}
+      >
+        {on && key === 'hidden' && (
+          <Eye
+            size={13}
+            strokeWidth={1.6}
+            aria-hidden="true"
+            style={{ flex: 'none', display: 'block', color: 'var(--fg-muted)' }}
+          />
+        )}
+        {COPY[key]}
+        <ChipCount count={count} on={on} />
+        {on && <ClearMark />}
+      </button>
+    );
+  };
+
+  // The venue chip's pick: the glyph and name, or the first two glyphs
+  // stacked and "Red Rocks +1". A linked venue with no show in any load so
+  // far has no name to show, so the chip counts them instead.
+  const pickedVenues = (() => {
+    const known = filters.venueIds.flatMap((id) => {
+      const venue = knownVenues.current.get(id);
+      return venue === undefined ? [] : [venue];
+    });
+    const first = known[0];
+    const more = filters.venueIds.length - 1;
+    if (first === undefined) return COPY.venueCount(filters.venueIds.length);
+    return (
+      <>
+        <span style={{ display: 'inline-flex', flex: 'none' }}>
+          {known.slice(0, 2).map((venue, index) => (
+            <span
+              key={venue.venueId}
+              style={{
+                display: 'inline-flex',
+                marginLeft: index === 0 ? 0 : -6,
+                borderRadius: 5,
+                boxShadow: index === 0 ? 'none' : '0 0 0 2px var(--surface-2)',
+              }}
+            >
+              <VenueTile slug={venue.slug} name={venue.name} size={18} />
+            </span>
+          ))}
+        </span>
+        {more === 0 ? first.name : COPY.venuesPicked(first.name, more)}
+      </>
+    );
+  })();
+
+  // The status chip's pick: the StatusChip itself, or "2 statuses".
+  const [onlyStatus] = filters.statuses;
+  const pickedStatuses =
+    filters.statuses.length === 1 && onlyStatus !== undefined ? (
+      <StatusChip
+        status={STATUS_CHIP[onlyStatus]}
+        label={COPY.status[onlyStatus]}
+      />
+    ) : (
+      COPY.statusesPicked(filters.statuses.length)
+    );
 
   const withTicked = (byVenue: readonly VenueCount[]): VenueCount[] => {
     const listed = new Set(byVenue.map((venue) => venue.venueId));
@@ -329,6 +396,8 @@ export const EventsClient = () => {
       <FilterPicker
         key="venue"
         label={COPY.anyVenue}
+        picked={pickedVenues}
+        clearLabel={COPY.clearVenues}
         testId="venue-filter"
         search={COPY.findVenue}
         max={MAX_VENUE_FILTER}
@@ -356,6 +425,8 @@ export const EventsClient = () => {
       <FilterPicker
         key="status"
         label={COPY.anyStatus}
+        picked={pickedStatuses}
+        clearLabel={COPY.clearStatuses}
         testId="status-filter"
         stale={countsStale}
         // Every status, not only the pickable ones: with nothing ticked,

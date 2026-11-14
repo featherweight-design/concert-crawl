@@ -181,8 +181,9 @@ describe('EventsClient filters', () => {
     mockSearch = `venueIds=${RED_ROCKS}`;
     render(<EventsClient />);
     const chip = await screen.findByTestId('venue-filter-chip');
-    // The chosen label is held for Design: the chip keeps "Any venue".
-    expect(chip).toHaveTextContent(COPY.anyVenue);
+    // The pick replaces the words (`04/filter-chips-picked`).
+    await waitFor(() => expect(chip).toHaveTextContent('Red Rocks'));
+    expect(chip).not.toHaveTextContent(COPY.anyVenue);
     fireEvent.click(chip);
     const popover = screen.getByTestId('venue-filter');
     // Sorted by count, most first, whatever order the API sent.
@@ -206,6 +207,51 @@ describe('EventsClient filters', () => {
       within(popover).getByRole('button', { name: 'Show 1,204' }),
     );
     expect(lastHref()).toBe('/admin/events');
+  });
+
+  it('shows the first venue picked and how many more, and × clears them', async () => {
+    mockSearch = `venueIds=${RED_ROCKS},${BLUEBIRD}`;
+    render(<EventsClient />);
+    const chip = await screen.findByTestId('venue-filter-chip');
+    await waitFor(() =>
+      expect(chip).toHaveTextContent(COPY.venuesPicked('Red Rocks', 1)),
+    );
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: COPY.clearVenues }));
+    expect(lastHref()).toBe('/admin/events');
+    expect(screen.queryByTestId('venue-filter')).toBeNull();
+  });
+
+  it('shows a single status as its chip, and two or more as a count', async () => {
+    mockSearch = 'statuses=soldout';
+    render(<EventsClient />);
+    const chip = await screen.findByTestId('status-filter-chip');
+    expect(chip).toHaveTextContent(COPY.status.soldout);
+    expect(chip).not.toHaveTextContent(COPY.anyStatus);
+    // The chip itself still opens the menu.
+    fireEvent.click(chip);
+    expect(screen.getByTestId('status-filter')).toBeInTheDocument();
+    cleanup();
+
+    mockSearch = 'statuses=postponed,cancelled';
+    render(<EventsClient />);
+    expect(await screen.findByTestId('status-filter-chip')).toHaveTextContent(
+      COPY.statusesPicked(2),
+    );
+    fireEvent.click(screen.getByRole('button', { name: COPY.clearStatuses }));
+    expect(lastHref()).toBe('/admin/events');
+  });
+
+  it('counts linked venues no load has named', async () => {
+    list.mockResolvedValueOnce({
+      ...page,
+      counts: { ...page.counts, byVenue: [page.counts.byVenue[1]!] },
+    });
+    mockSearch = `venueIds=${RED_ROCKS}`;
+    render(<EventsClient />);
+    expect(await screen.findByTestId('venue-filter-chip')).toHaveTextContent(
+      COPY.venueCount(1),
+    );
   });
 
   it('draws no venue, status, No price or Hidden chips on Past', async () => {
