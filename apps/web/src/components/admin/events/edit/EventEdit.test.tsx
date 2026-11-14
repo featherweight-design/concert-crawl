@@ -22,8 +22,12 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: () => Promise.resolve('token') }),
 }));
 const patch = vi.fn();
+const post = vi.fn();
 vi.mock('@/lib/api', () => ({
-  apiClient: { patch: (...args: unknown[]) => patch(...args) },
+  apiClient: {
+    patch: (...args: unknown[]) => patch(...args),
+    post: (...args: unknown[]) => post(...args),
+  },
 }));
 vi.mock('../editor/MergeEventDialog', () => ({
   MergeEventDialog: () => <div data-testid="merge-dialog" />,
@@ -46,6 +50,7 @@ const DETAIL: EventDetail = {
   hidden: false,
   hiddenReason: null,
   watchingCount: 4,
+  isSoldOut: false,
   extractionStrategy: 'structured_data',
   firstSeenAt: '2026-09-30T18:00:00.000Z',
   lastSeenAt: '2026-11-10T18:00:00.000Z',
@@ -64,6 +69,7 @@ const setPhone = (matches: boolean) => {
 beforeEach(() => {
   setPhone(false);
   patch.mockReset();
+  post.mockReset();
   push.mockReset();
   refresh.mockReset();
 });
@@ -164,5 +170,134 @@ describe('EventEdit', () => {
     render(<EventEdit detail={DETAIL} today="2026-11-13" />);
     fireEvent.change(titleInput(), { target: { value: '   ' } });
     expect(screen.getByTestId('event-edit-save')).toBeDisabled();
+  });
+});
+
+describe('EventEdit Status card', () => {
+  const pill = (key: string) => screen.getByTestId(`status-pill-${key}`);
+
+  it('drafts Sold out into the Save bar, then marks it sold out', async () => {
+    patch.mockResolvedValue({});
+    post.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    expect(pill('available')).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(pill('soldout'));
+    expect(pill('soldout')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        '/v1/admin/events/evt-1/sold-out',
+        'token',
+        {},
+      ),
+    );
+    expect(patch).not.toHaveBeenCalled();
+  });
+
+  it('puts a postponed, sold-out show back on sale', async () => {
+    patch.mockResolvedValue({});
+    post.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'postponed', isSoldOut: true }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.click(pill('available'));
+    fireEvent.click(screen.getByTestId('event-edit-save'));
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        '/v1/admin/events/evt-1/available',
+        'token',
+        {},
+      ),
+    );
+    expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+      status: 'upcoming',
+    });
+  });
+
+  it('confirms Postponed in a dialog, with New date held', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('postponed'));
+    expect(
+      screen.getByRole('radio', { name: COPY.postponed.newDate }),
+    ).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.postponed.confirm }),
+    );
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        status: 'postponed',
+      }),
+    );
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+
+  it('keeps the Postponed dialog open and says so when it fails', async () => {
+    patch.mockRejectedValue(new Error('500'));
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(pill('postponed'));
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.postponed.confirm }),
+    );
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: COPY.postponed.confirm }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides from the toggle through the dialog, and from the ⋯', async () => {
+    patch.mockResolvedValue({});
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(screen.getByRole('switch', { name: COPY.status.hide }));
+    expect(
+      screen.getByText(COPY.hide.body(DETAIL.artist, 4)),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: COPY.hide.confirm }));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        hiddenFromConsumer: true,
+      }),
+    );
+    cleanup();
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    fireEvent.click(screen.getByTestId('event-edit-menu'));
+    fireEvent.click(screen.getByTestId('event-edit-menu-hide'));
+    expect(screen.getByText(COPY.hide.foot)).toBeInTheDocument();
+  });
+
+  it('shows a hidden show again at once, with no dialog', async () => {
+    patch.mockResolvedValue({});
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, hidden: true, hiddenReason: 'admin' }}
+        today="2026-11-13"
+      />,
+    );
+    fireEvent.click(screen.getByRole('switch', { name: COPY.status.hide }));
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
+        hiddenFromConsumer: false,
+      }),
+    );
+  });
+
+  it('holds Cancelled, names a delisted show, and locks a past one', () => {
+    render(
+      <EventEdit
+        detail={{ ...DETAIL, status: 'delisted' }}
+        today="2026-11-13"
+      />,
+    );
+    expect(pill('cancelled')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByTestId('status-delisted')).toHaveTextContent(
+      COPY.status.delisted,
+    );
+    cleanup();
+    render(<EventEdit detail={DETAIL} today="2026-11-20" />);
+    expect(pill('soldout')).toHaveAttribute('aria-disabled', 'true');
   });
 });
