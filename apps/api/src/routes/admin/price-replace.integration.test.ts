@@ -18,6 +18,20 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }));
 
+// GET /v1/users/me reads the Clerk user; the replace path never does.
+vi.mock('@clerk/backend', () => ({
+  createClerkClient: () => ({
+    users: {
+      getUser: () =>
+        Promise.resolve({
+          emailAddresses: [{ emailAddress: 'fan@example.com' }],
+          publicMetadata: {},
+          createdAt: Date.now(),
+        }),
+    },
+  }),
+}));
+
 import {
   auditLog,
   events,
@@ -42,6 +56,7 @@ const ADMIN = 'user_admin_replacer';
 const FAN_A = 'user_fan_a';
 const FAN_B = 'user_fan_b';
 const WATCHER = 'user_price_watcher';
+const CHECKER = 'user_price_checker';
 
 const asAdmin = () => {
   authState.current = {
@@ -73,6 +88,18 @@ const detailBody = z.object({
         }),
       )
       .nullable(),
+  }),
+});
+
+const meBody = z.object({
+  data: z.object({
+    submissionCounts: z.object({
+      total: z.number(),
+      live: z.number(),
+      pending: z.number(),
+      priceChecks: z.number(),
+      closed: z.number(),
+    }),
   }),
 });
 
@@ -245,10 +272,16 @@ describe('POST /v1/admin/prices/events/:eventId/replace', () => {
   it('refuses while a Price check is open on the show, writing nothing', async () => {
     const [disputed] = fanRows;
     if (!disputed) throw new Error('no fan row');
+    // An open check: the parent disputed, with a pending counter on it.
     await testDb
       .update(priceSubmissions)
       .set({ status: 'disputed' })
       .where(eq(priceSubmissions.id, disputed));
+    await seedPriceSubmission(eventId, CHECKER, {
+      priceMin: '10',
+      status: 'pending',
+      disputedSubmissionId: disputed,
+    });
 
     asAdmin();
     const res = await replace(eventId, '14', null);
@@ -259,6 +292,76 @@ describe('POST /v1/admin/prices/events/:eventId/replace', () => {
       .where(eq(priceSubmissions.eventId, eventId));
     expect(rows.some((row) => row.userId === ADMIN)).toBe(false);
     expect(await testDb.select().from(auditLog)).toEqual([]);
+  });
+
+  it('does not count a disputed row with no pending counter as a Price check', async () => {
+    const [denied] = fanRows;
+    if (!denied) throw new Error('no fan row');
+    // An admin denial: disputed, but no counter is open on it.
+    await testDb
+      .update(priceSubmissions)
+      .set({ status: 'disputed' })
+      .where(eq(priceSubmissions.id, denied));
+
+    asAdmin();
+    expect((await replace(eventId, '14', null)).status).toBe(201);
+  });
+
+  it('serializes two replaces fired together, leaving one listed admin price', async () => {
+    asAdmin();
+    const results = await Promise.all([
+      replace(eventId, '14', null),
+      replace(eventId, '16', null),
+    ]);
+    expect(results.map((res) => res.status)).toEqual([201, 201]);
+
+    const rows = await testDb
+      .select({
+        userId: priceSubmissions.userId,
+        status: priceSubmissions.status,
+        archivedReason: priceSubmissions.archivedReason,
+        priceMin: priceSubmissions.priceMin,
+      })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.eventId, eventId));
+    const corroborated = rows.filter((row) => row.status === 'corroborated');
+    expect(corroborated).toHaveLength(1);
+    const admins = rows.filter((row) => row.userId === ADMIN);
+    expect(admins).toHaveLength(2);
+    const [listed] = corroborated;
+    expect(listed?.userId).toBe(ADMIN);
+    const archived = admins.find((row) => row.status === 'archived');
+    expect(archived?.archivedReason).toBe(REPLACED_BY_ADMIN_REASON);
+    // Whichever ran second archived the first's row and holds the listing,
+    // so the two admin rows carry the two prices, one each.
+    expect(
+      [Number(listed?.priceMin), Number(archived?.priceMin)].sort(
+        (left, right) => left - right,
+      ),
+    ).toEqual([14, 16]);
+
+    const [event] = await testDb
+      .select({ min: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, eventId));
+    expect(Number(event?.min)).toBe(Number(listed?.priceMin));
+  });
+
+  it('leaves a fan’s submission counts unchanged', async () => {
+    asFan(FAN_A);
+    const before = meBody.parse(
+      await (await app.request('/v1/users/me')).json(),
+    );
+    asAdmin();
+    expect((await replace(eventId, '14', null)).status).toBe(201);
+    asFan(FAN_A);
+    const after = meBody.parse(
+      await (await app.request('/v1/users/me')).json(),
+    );
+
+    expect(after.data.submissionCounts).toEqual(before.data.submissionCounts);
+    expect(after.data.submissionCounts.live).toBe(1);
+    expect(after.data.submissionCounts.closed).toBe(0);
   });
 
   it('rejects a bad price and an unknown show', async () => {
