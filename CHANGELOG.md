@@ -1,3 +1,23 @@
+# [1.470.0](https://github.com/featherweight-design/concert-crawl/compare/v1.469.1...v1.470.0) (2026-11-14)
+
+
+### Bug Fixes
+
+* **api:** a price settings save names no target ([fe15832](https://github.com/featherweight-design/concert-crawl/commit/fe158321d9938c990e728083fab937bfc764f31e))
+* **api:** file a settings save under the page it came from ([ca19e7a](https://github.com/featherweight-design/concert-crawl/commit/ca19e7ae84877a243c619e62684226af0b60fb83))
+* **api:** file a single-venue crawl under Venues ([283cfb3](https://github.com/featherweight-design/concert-crawl/commit/283cfb3d442bd33fe394f724d6cfe37959e272fd))
+* **api:** the activity log's area filter agrees with its column ([4adb97b](https://github.com/featherweight-design/concert-crawl/commit/4adb97b3cf93219edb279c27e33da32ec01005cc))
+* **web:** abort and bound the activity log walk, show a capped day ([a7677ae](https://github.com/featherweight-design/concert-crawl/commit/a7677ae856d5f8b0b4371dd43af255c4e4887377))
+* **web:** activity log sentences say what was queued and what changed ([5918589](https://github.com/featherweight-design/concert-crawl/commit/5918589cb441c93d9518520e0cd9b2cd11132a11))
+* **web:** settle the activity log onto the operations shell ([18f3a4f](https://github.com/featherweight-design/concert-crawl/commit/18f3a4fa00212cb38365b4244c469abd240a8234))
+* **web:** static activity log filters and an honest empty day ([d05ebfb](https://github.com/featherweight-design/concert-crawl/commit/d05ebfb5814b0ae338d1f47b8d0176ee8ef645a9))
+
+
+### Features
+
+* **web:** a sentence for a save of only the Prices toggle ([3692726](https://github.com/featherweight-design/concert-crawl/commit/36927263b56ec8a11165bd8e14d2484aa53e4e81))
+* **web:** add the operations page with feedback and activity log tabs ([d699e40](https://github.com/featherweight-design/concert-crawl/commit/d699e409d142527497cf0826949af71d1f03f235))
+
 ## [1.469.1](https://github.com/featherweight-design/concert-crawl/compare/v1.469.0...v1.469.1) (2026-11-14)
 
 
