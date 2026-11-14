@@ -453,7 +453,9 @@ export const SubmittedTab = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '0 8px',
+                  // As the Prices segment above it: 4px, so four counted
+                  // filters fit at 320 without scrolling.
+                  padding: '0 4px',
                   whiteSpace: 'nowrap',
                   fontFamily: 'inherit',
                   fontSize: 12.5,
@@ -466,7 +468,8 @@ export const SubmittedTab = () => {
                     filter === key ? 'var(--bg-elevated)' : 'transparent',
                 }}
               >
-                {COPY.filters[key]}{' '}
+                {/* The short words, as the Prices segment's phoneTabs. */}
+                {COPY.phoneFilters[key]}{' '}
                 <span
                   style={{
                     marginLeft: 2,
