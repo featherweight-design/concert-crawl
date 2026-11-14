@@ -30,6 +30,7 @@ import {
 } from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { addDays, denverDate } from './lib/needs-you/keys.js';
+import { actorTag } from './lib/crawl-batches.js';
 import { CRAWLER_DAILY_CRON_UTC } from '../../lib/crawl-schedule.js';
 
 const app = createApp();
@@ -343,7 +344,7 @@ describe('admin crawl batches', () => {
         crawlAll: true,
         venueName: null,
         costUsd: 0.75,
-        linkKey: `run:${Math.floor(hughAt.getTime() / 1000)}`,
+        linkKey: `run:${Math.floor(hughAt.getTime() / 1000)}:${actorTag('user_hugh')}`,
         counts: { ok: 1, notOk: 1, blocked: 1, failed: 0 },
         retry: null,
       });
@@ -353,26 +354,34 @@ describe('admin crawl batches', () => {
         crawlAll: false,
         venueName: 'Ball Arena',
         costUsd: 0,
-        linkKey: `run:${Math.floor(otherAt.getTime() / 1000)}`,
+        linkKey: `run:${Math.floor(otherAt.getTime() / 1000)}:${actorTag('user_nohandle')}`,
       });
       expect(text).not.toMatch(/email/i);
       expect(text).not.toContain('@');
+      expect(text).not.toContain('errorMessage');
     });
 
     it('looks a by-hand batch up by its link key, with the handle, and 404s an unknown second', async () => {
       setAuth('admin');
       const { hughAt } = await seedByHand();
       const epoch = Math.floor(hughAt.getTime() / 1000);
+      const tagged = `run:${epoch}:${actorTag('user_hugh')}`;
 
-      const res = await get(`/run:${epoch}`);
+      const res = await get(`/${tagged}`);
       expect(res.status).toBe(200);
       const body: { data: CrawlBatchDetail } = await res.json();
       expect(body.data).toMatchObject({
         key: `by_hand:user_hugh:${epoch}`,
+        linkKey: tagged,
         actorHandle: 'hugh',
         crawlAll: true,
       });
       expect(body.data.runs).toHaveLength(2);
+      // The bare second still opens it; another actor's tag does not.
+      expect((await get(`/run:${epoch}`)).status).toBe(200);
+      expect(
+        (await get(`/run:${epoch}:${actorTag('user_nohandle')}`)).status,
+      ).toBe(404);
       expect((await get(`/run:${epoch - 1}`)).status).toBe(404);
     });
 
@@ -396,35 +405,125 @@ describe('admin crawl batches', () => {
         },
       });
     });
+  });
 
-    it('pages with before, every batch once, until hasMore is false', async () => {
-      setAuth('admin');
-      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
-      for (const daysAgo of [1, 2, 3, 4, 5, 6]) {
-        await seedRun(venue.id, nightAt(daysAgo));
-      }
+  describe('paging', () => {
+    // One scheduled run on each of these nights, in one insert.
+    const seedNights = async (
+      venueId: string,
+      daysAgo: number[],
+      over: Partial<typeof crawlRuns.$inferInsert> = {},
+    ) => {
+      await testDb.insert(crawlRuns).values(
+        daysAgo.map((days) => ({
+          venueId,
+          status: 'success' as const,
+          createdAt: nightAt(days),
+          ...over,
+        })),
+      );
+    };
+    const range = (from: number, to: number): number[] =>
+      Array.from({ length: to - from + 1 }, (_, index) => from + index);
+    const nightKey = (daysAgo: number) =>
+      `nightly:${denverDate(nightAt(daysAgo))}`;
 
-      const seen: string[] = [];
+    // Every page of a query, following nextBefore until hasMore is false.
+    const pageAll = async (query: string, limit: number) => {
+      const pages: CrawlBatchPage[] = [];
       let before: string | null = null;
-      for (let page = 0; page < 10; page += 1) {
-        const query: string =
-          before === null ? '?limit=2' : `?limit=2&before=${before}`;
-        const body: CrawlBatchPage = await (await get(query)).json();
-        expect(body.data.length).toBeLessThanOrEqual(2);
-        seen.push(...body.data.map((batch) => batch.key));
+      for (let page = 0; page < 40; page += 1) {
+        const suffix: string = before === null ? '' : `&before=${before}`;
+        const res = await get(`?limit=${limit}&${query}${suffix}`);
+        expect(res.status).toBe(200);
+        const body: CrawlBatchPage = await res.json();
+        expect(body.data.length).toBeLessThanOrEqual(limit);
+        pages.push(body);
         if (!body.hasMore) {
           expect(body.nextBefore).toBeNull();
-          break;
+          const keys = pages.flatMap((each) =>
+            each.data.map((batch) => batch.key),
+          );
+          // No batch twice.
+          expect(new Set(keys).size).toBe(keys.length);
+          return { pages, keys, batches: pages.flatMap((each) => each.data) };
         }
         before = body.nextBefore;
         expect(before).not.toBeNull();
       }
-      expect(new Set(seen).size).toBe(seen.length);
-      for (const daysAgo of [1, 2, 3, 4, 5, 6]) {
-        expect(seen).toContain(`nightly:${denverDate(nightAt(daysAgo))}`);
+      throw new Error('paging never ended');
+    };
+
+    it('widens for a sparse not_ok filter, and a short page with history continues from its floor', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      await seedNights(
+        venue.id,
+        range(0, 100).filter((days) => days !== 60),
+      );
+      await seedNights(venue.id, [60], { status: 'failed', reason: 'error' });
+
+      const { pages, keys } = await pageAll('kind=not_ok', 2);
+      expect(keys).toEqual([nightKey(60)]);
+      // The newest 40-odd days hold nothing Not OK even after widening, so
+      // the first page is short with history behind it.
+      expect(pages[0]).toMatchObject({ data: [], hasMore: true });
+      expect(pages.length).toBeGreaterThan(1);
+    });
+
+    it('shows an outage once, as Didn’t start, wherever the page edges fall', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      const outage = range(10, 14);
+      await seedNights(
+        venue.id,
+        range(0, 40).filter((days) => !outage.includes(days)),
+      );
+
+      for (const limit of [2, 3, 7]) {
+        const { batches } = await pageAll('kind=all', limit);
+        for (const days of range(1, 40)) {
+          expect(
+            batches.filter((batch) => batch.key === nightKey(days)),
+          ).toHaveLength(1);
+        }
+        for (const days of outage) {
+          expect(
+            batches.find((batch) => batch.key === nightKey(days))?.didntStart,
+          ).toBe(true);
+        }
+        const notOk = await pageAll('kind=not_ok', limit);
+        expect([...notOk.keys].sort()).toEqual(outage.map(nightKey).sort());
       }
-      const first: CrawlBatchPage = await (await get('?limit=2')).json();
-      expect(first.hasMore).toBe(true);
+    });
+
+    it('keeps a by-hand burst between two nights on exactly one page', async () => {
+      setAuth('admin');
+      const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' });
+      await seedNights(venue.id, range(0, 10));
+      const at = nightAt(5, 120);
+      const run = await seedRun(venue.id, new Date(at.getTime() + 20_000));
+      await testDb.insert(crawlTriggers).values({
+        venueId: venue.id,
+        triggeredBy: 'user_admin',
+        status: 'done',
+        crawlRunId: run,
+        createdAt: at,
+      });
+
+      for (const limit of [1, 2]) {
+        const { batches } = await pageAll('kind=all', limit);
+        const byHand = batches.filter((batch) => batch.kind === 'by_hand');
+        expect(byHand).toHaveLength(1);
+        expect(byHand[0]?.counts.total).toBe(1);
+        // Its run is not filed under the night as well.
+        expect(
+          batches.find((batch) => batch.key === nightKey(5))?.counts.total,
+        ).toBe(1);
+        for (const days of range(1, 10)) {
+          expect(batches.map((batch) => batch.key)).toContain(nightKey(days));
+        }
+      }
     });
   });
 });

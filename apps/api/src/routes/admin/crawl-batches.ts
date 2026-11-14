@@ -97,24 +97,40 @@ crawlBatchesAdminRouter.get(
     // About a night a day, plus a margin at the edges. By-hand bursts in the
     // window share the limit with the nights; a filter that finds too few
     // widens the window (doubling) a few times before settling.
-    let span = (limit + 3) * DAY_MS;
+    let from = new Date(end - (limit + 3) * DAY_MS);
+    const [first, firstOlder] = await Promise.all([
+      readWindow(from, new Date(end + DAY_MS), { withErrors: false }),
+      hasRowsBefore(from),
+    ]);
+    const { runs, triggers } = first;
+    let older = firstOlder;
     for (let widening = 0; ; widening += 1) {
-      const from = new Date(end - span);
-      const [{ runs, triggers }, older] = await Promise.all([
-        readWindow(from, new Date(end + DAY_MS)),
-        hasRowsBefore(from),
-      ]);
       // A batch in the window's oldest day may have begun before it and be
       // cut short, so it waits for the next page, which reads it whole.
       const floor = older ? from.getTime() + DAY_MS : Number.NEGATIVE_INFINITY;
-      const matched = groupCrawlBatches({ runs, triggers, now }).filter(
-        (batch) => {
-          const at = batchSortAt(batch);
-          return at < end && at >= floor && matchesKind(kind, batch);
-        },
-      );
+      const matched = groupCrawlBatches({
+        runs,
+        triggers,
+        now,
+        // With history behind the window, its oldest nights can have had no
+        // runs at all: derive Didn't start from the first whole night, which
+        // covers every night sorting at or after the floor.
+        didntStartFrom: older ? addDays(denverDate(from), 1) : undefined,
+      }).filter((batch) => {
+        const at = batchSortAt(batch);
+        return at < end && at >= floor && matchesKind(kind, batch);
+      });
       if (matched.length <= limit && older && widening < MAX_WIDENINGS) {
-        span *= 2;
+        // Twice as far back, reading only the slice not read yet.
+        const wider = new Date(end - 2 * (end - from.getTime()));
+        const [slice, sliceOlder] = await Promise.all([
+          readWindow(wider, from, { withErrors: false }),
+          hasRowsBefore(wider),
+        ]);
+        runs.push(...slice.runs);
+        triggers.push(...slice.triggers);
+        from = wider;
+        older = sliceOlder;
         continue;
       }
 
@@ -184,8 +200,9 @@ crawlBatchesAdminRouter.get('/estimate', async (ctx) => {
   return ctx.json({ success: true, data: estimate });
 });
 
-// One batch with its runs, by its key or its linkKey (`run:<epoch>` names a
-// by-hand batch without the Clerk id).
+// One batch with its runs, by its key or its linkKey (`run:<epoch>:<tag>`
+// names a by-hand batch without the Clerk id; a bare `run:<epoch>` still
+// works and takes the first batch of that second).
 crawlBatchesAdminRouter.get(
   '/batches/:key',
   zValidator('param', keyParamSchema, validationHook),
@@ -198,22 +215,25 @@ crawlBatchesAdminRouter.get(
 
     const now = new Date();
     // A night is a Mountain Time date, so read a margin either side of it; a
-    // by-hand burst is read around its first trigger. A night also reads back
-    // 40 days, because "Didn't start" is only derived once an earlier night
-    // with runs is in view.
+    // by-hand burst is read around its first trigger. A night with no runs
+    // did not start when there is history before it, as the list derives it.
     const center =
       parsed.kind === 'nightly'
         ? new Date(`${parsed.night}T12:00:00Z`)
         : new Date(parsed.epoch * 1000);
-    const lookBackDays = parsed.kind === 'nightly' ? 40 : 2;
-    const { runs, triggers } = await readWindow(
-      new Date(center.getTime() - lookBackDays * DAY_MS),
-      new Date(center.getTime() + 2 * DAY_MS),
-    );
+    const from = new Date(center.getTime() - 2 * DAY_MS);
+    const [{ runs, triggers }, older] = await Promise.all([
+      readWindow(from, new Date(center.getTime() + 2 * DAY_MS)),
+      parsed.kind === 'nightly' ? hasRowsBefore(from) : false,
+    ]);
 
-    const batch = groupCrawlBatches({ runs, triggers, now }).find((candidate) =>
-      batchMatchesKey(candidate, key, parsed),
-    );
+    const batch = groupCrawlBatches({
+      runs,
+      triggers,
+      now,
+      didntStartFrom:
+        parsed.kind === 'nightly' && older ? parsed.night : undefined,
+    }).find((candidate) => batchMatchesKey(candidate, key, parsed));
     if (batch === undefined) {
       return ctx.json({ success: false, error: 'Batch not found' }, 404);
     }

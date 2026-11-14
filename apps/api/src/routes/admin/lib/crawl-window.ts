@@ -9,10 +9,20 @@ import type { BatchRunInput, BatchTriggerInput } from './crawl-batches.js';
 // needs the start of it, cut in SQL so the rest never leaves the database.
 const MAX_ERROR_CHARS = 500;
 
+export interface CrawlWindow {
+  runs: BatchRunInput[];
+  triggers: BatchTriggerInput[];
+}
+
+/**
+ * `withErrors: false` leaves every run's error text out (null): a reader that
+ * sends no runs, like the batches list, has no use for it.
+ */
 export const readWindow = async (
   from: Date,
   to: Date,
-): Promise<{ runs: BatchRunInput[]; triggers: BatchTriggerInput[] }> => {
+  { withErrors = true }: { withErrors?: boolean } = {},
+): Promise<CrawlWindow> => {
   const [runRows, triggerRows] = await Promise.all([
     db
       .select({
@@ -26,9 +36,11 @@ export const readWindow = async (
         durationMs: crawlRuns.durationMs,
         llmCostUsd: crawlRuns.llmCostUsd,
         // The first of the message only: a run stores everything the crawl threw.
-        errorMessage: sql<
-          string | null
-        >`left(${crawlRuns.errorMessage}, ${MAX_ERROR_CHARS})`,
+        errorMessage: withErrors
+          ? sql<
+              string | null
+            >`left(${crawlRuns.errorMessage}, ${MAX_ERROR_CHARS})`
+          : sql<string | null>`null`,
         createdAt: crawlRuns.createdAt,
       })
       .from(crawlRuns)
@@ -60,7 +72,12 @@ export const readWindow = async (
   };
 };
 
-/** Any run or trigger older than `before`: the list has history left to page. */
+/**
+ * Any run or trigger older than `before`: the list has history left to page.
+ * Neither table has a created_at index (crawl_runs' leads with venue_id), so
+ * each read is an unordered LIMIT 1: Postgres stops at the first old row,
+ * and rows are stored oldest first, so with history that is near the start.
+ */
 export const hasRowsBefore = async (before: Date): Promise<boolean> => {
   const [run, trigger] = await Promise.all([
     db
