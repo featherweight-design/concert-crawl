@@ -656,7 +656,14 @@ describe('NeedsYouClient', () => {
       removeEventListener: vi.fn(),
     }));
     render(<NeedsYouClient item={null} />);
-    const card = (await screen.findAllByTestId('needs-you-item'))[0]!;
+    await screen.findAllByTestId('needs-you-item');
+    // The phone flag settles in an effect, so wait for the card to take it.
+    await waitFor(() =>
+      expect(
+        screen.getAllByTestId('needs-you-item')[0]!.style.borderRadius,
+      ).toBe('14px'),
+    );
+    const card = screen.getAllByTestId('needs-you-item')[0]!;
     expect(card.style.borderRadius).toBe('14px');
     expect(card.style.padding).toBe('14px');
     expect(card.style.border).not.toContain('transparent');
