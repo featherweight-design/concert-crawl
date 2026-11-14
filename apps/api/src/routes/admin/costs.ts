@@ -122,10 +122,13 @@ costsAdminRouter.get(
           costUsd: sql<number>`coalesce(sum(${costTracking.costUsd}), 0)`,
         })
         .from(costTracking)
+        // A plain range on recorded_at (the window's first MT midnight as an
+        // instant) rather than a filter on the day expression, so the scan
+        // can use the column. Nothing is recorded after today.
         .where(
           and(
             inArray(costTracking.service, [...LLM_SERVICES]),
-            sql`${otherLlmDay} between ${windowStart}::date and ${today}::date`,
+            sql`${costTracking.recordedAt} >= (${windowStart}::date::timestamp AT TIME ZONE ${sql.raw(`'${MT_TIME_ZONE}'`)})`,
           ),
         )
         .groupBy(otherLlmDay),
