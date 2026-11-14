@@ -1995,6 +1995,17 @@ export const CONSUMER_COPY = {
     otherVendor: 'another seller',
   },
 
+  // ── Where it's sold (B+ TS3, bp-s-tiers_board VENDORS) ──────────
+  // Verbatim from the board. The row's seller name comes from vendor-display
+  // ("Somewhere else" for `Other`, the picker's own label, since a row title
+  // needs the choice form rather than the "another seller" noun).
+  whereItsSold: {
+    eyebrow: "Where it's sold",
+    // `{tier}` is the stored tier: GA, Reserved, VIP, Pit, Lawn.
+    allIn: '{tier} · all-in',
+    faceValue: 'face value · no fees',
+  },
+
   // ── Shareable cards (#72) ───────────────────────────────────────
   share: {
     // Poster taglines. ⚠️ VERBATIM — these are the signed-off output of the
