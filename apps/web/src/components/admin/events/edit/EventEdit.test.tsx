@@ -60,6 +60,7 @@ const DETAIL: EventDetail = {
   extractionStrategy: 'structured_data',
   firstSeenAt: '2026-09-30T18:00:00.000Z',
   lastSeenAt: '2026-11-10T18:00:00.000Z',
+  delistedAt: null,
   venueUrl: 'https://larimer.example/shows/1',
 };
 
@@ -249,13 +250,26 @@ describe('EventEdit Status card', () => {
     patch.mockClear();
     render(
       <EventEdit
-        detail={{ ...DETAIL, status: 'delisted' }}
+        detail={{
+          ...DETAIL,
+          status: 'delisted',
+          delistedAt: '2026-11-10T09:00:00.000Z',
+        }}
         today="2026-11-13"
       />,
     );
-    fireEvent.click(pill('available'));
-    // Said before the save: a single pill never re-lists silently.
-    expect(screen.getByRole('status')).toHaveTextContent(COPY.saveBar.relists);
+    // `04/listed-again`: read-only, then Listed again brings the pills back
+    // with the earlier status picked, as an unsaved change.
+    expect(screen.getByTestId('status-delisted')).toHaveTextContent(
+      COPY.status.delistedSince('Nov 10'),
+    );
+    expect(screen.queryByTestId('status-pill-available')).toBeNull();
+    fireEvent.click(screen.getByTestId('listed-again'));
+    expect(pill('available')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('status-listed-back')).toHaveTextContent(
+      COPY.status.listedBack(COPY.status.available),
+    );
+    expect(screen.getByText(COPY.saveBar.unsaved(1))).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('event-edit-save'));
     await waitFor(() =>
       expect(patch).toHaveBeenCalledWith('/v1/admin/events/evt-1', 'token', {
@@ -347,13 +361,15 @@ describe('EventEdit Status card', () => {
   });
 
   it('holds Cancelled, names a delisted show, and locks a past one', () => {
+    render(<EventEdit detail={DETAIL} today="2026-11-13" />);
+    expect(pill('cancelled')).toHaveAttribute('aria-disabled', 'true');
+    cleanup();
     render(
       <EventEdit
         detail={{ ...DETAIL, status: 'delisted' }}
         today="2026-11-13"
       />,
     );
-    expect(pill('cancelled')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByTestId('status-delisted')).toHaveTextContent(
       COPY.status.delisted,
     );

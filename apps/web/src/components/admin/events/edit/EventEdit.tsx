@@ -295,7 +295,6 @@ const SaveBar = ({
   phone,
   onDiscard,
   onSave,
-  note,
 }: {
   count: number;
   valid: boolean;
@@ -303,11 +302,6 @@ const SaveBar = ({
   phone: boolean;
   onDiscard: () => void;
   onSave: () => void;
-  /**
-   * What the save will do beyond the fields, said in the bar's drawn amber
-   * line before it happens (re-listing a delisted show); `null` for none.
-   */
-  note: string | null;
 }) => (
   <div
     data-testid="event-edit-save-bar"
@@ -338,12 +332,6 @@ const SaveBar = ({
         style={{ flex: 1, fontSize: 13, color: 'var(--warning)' }}
       >
         {count > 0 ? COPY.saveBar.unsaved(count) : ''}
-        {count > 0 && note !== null ? ` · ${note}` : ''}
-      </span>
-    )}
-    {phone && note !== null && (
-      <span role="status" style={{ fontSize: 12.5, color: 'var(--warning)' }}>
-        {note}
       </span>
     )}
     {!phone && count > 0 && (
@@ -703,11 +691,6 @@ export const EventEdit = ({
         <SaveBar
           count={count}
           valid={valid}
-          note={
-            detail.status === 'delisted' && draft.sale !== snap.value.sale
-              ? COPY.saveBar.relists
-              : null
-          }
           saving={snap.saving}
           phone={phone}
           onDiscard={() => setDraft(snap.value)}

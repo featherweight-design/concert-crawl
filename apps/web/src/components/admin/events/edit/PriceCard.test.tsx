@@ -68,6 +68,7 @@ const DETAIL: EventDetail = {
   extractionStrategy: null,
   firstSeenAt: '2026-09-30T18:00:00.000Z',
   lastSeenAt: null,
+  delistedAt: null,
   venueUrl: null,
 };
 

@@ -69,6 +69,7 @@ describe('eventDetailFrom', () => {
       extractionStrategy: 'structured_data',
       firstSeenAt: '2026-09-30T18:00:00.000Z',
       lastSeenAt: '2026-11-10T09:00:00.000Z',
+      delistedAt: null,
       venueUrl: 'https://larimer.example/shows/six-foot-blonde',
     });
   });
