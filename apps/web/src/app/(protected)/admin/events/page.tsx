@@ -1,5 +1,11 @@
-import { redirect } from 'next/navigation';
+import { requireAdminUser } from '@/lib/auth';
+import { EventsClient } from '@/components/admin/events/list/EventsClient';
 
-export default function EventsRedirectPage() {
-  redirect('/admin/review?tab=all-events');
+/**
+ * 4b-1 Events. The list loads in the browser with the admin's token; its
+ * search and side live in the URL (`?q=&when=past`).
+ */
+export default async function AdminEventsPage() {
+  await requireAdminUser();
+  return <EventsClient />;
 }

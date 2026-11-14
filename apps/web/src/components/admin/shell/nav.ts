@@ -80,7 +80,7 @@ export const NAV: NavItem[] = [
   {
     key: 'events',
     label: navCopy.events,
-    href: '/admin/review?tab=all-events',
+    href: '/admin/events',
     icon: Calendar,
     group: 'manage',
   },

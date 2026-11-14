@@ -12,12 +12,6 @@ describe('buildBreadcrumbs', () => {
     ]);
   });
 
-  it('names the interim Review tab by its new home', () => {
-    expect(buildBreadcrumbs('/admin/review', params('tab=all-events'))).toEqual(
-      [{ label: 'Events' }],
-    );
-  });
-
   it('links the section above a venue detail page', () => {
     expect(buildBreadcrumbs('/admin/venues/abc123')).toEqual([
       { label: 'Venues', href: '/admin/venues' },
@@ -47,8 +41,16 @@ describe('buildBreadcrumbs', () => {
       { label: 'Details' },
     ]);
     expect(buildBreadcrumbs('/admin/events/e1/edit')).toEqual([
-      { label: 'Events', href: '/admin/review?tab=all-events' },
+      { label: 'Events', href: '/admin/events' },
       { label: 'Details' },
+    ]);
+  });
+
+  it('titles the Events list, and its Past side Events / Past', () => {
+    expect(buildBreadcrumbs('/admin/events')).toEqual([{ label: 'Events' }]);
+    expect(buildBreadcrumbs('/admin/events', params('when=past'))).toEqual([
+      { label: 'Events', href: '/admin/events' },
+      { label: 'Past', view: true },
     ]);
   });
 

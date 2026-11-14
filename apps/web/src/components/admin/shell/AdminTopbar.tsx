@@ -98,7 +98,8 @@ export const AdminTopbar = () => {
 /** Phone: the page title and your avatar, which opens the user menu. */
 export const AdminPhoneHeader = ({ user }: { user: AdminShellUser }) => {
   const crumbs = useCrumbs();
-  const title = crumbs[crumbs.length - 1]?.label ?? '';
+  // A view crumb (Events / Past) keeps the page's own title on the phone.
+  const title = [...crumbs].reverse().find((crumb) => !crumb.view)?.label ?? '';
   return (
     <header
       style={{

@@ -1017,6 +1017,9 @@ export const ADMIN_COPY = {
     showAll: 'Show all',
     // `A3/09/load-more`. The API sends no total, so the count is what's shown.
     showing: (count: number) => `Showing ${count.toLocaleString('en-US')}`,
+    // A list whose API sends a total says it (`A3/09/load-more`).
+    showingOf: (count: number, total: number) =>
+      `Showing ${count.toLocaleString('en-US')} of ${total.toLocaleString('en-US')}`,
     showingAll: (count: number) =>
       `Showing all ${count.toLocaleString('en-US')}`,
     loadMore: (count: number) => `Load ${count.toLocaleString('en-US')} more`,
@@ -4132,6 +4135,61 @@ export const ADMIN_COPY = {
       field: 'Type the venue’s name to confirm',
       note: 'A venue with shows or Watchers can’t be deleted; hide it instead.',
       confirm: 'Delete venue',
+    },
+  },
+
+  // 4b-1 Events list (`06/events`, `events-mobile`, `event-menu`,
+  // `past-shows`, `events-no-results`). Board strings are verbatim; the
+  // Hidden reason words are Copy's (4b#8).
+  eventsList: {
+    title: 'Events',
+    subtitle: (count: number) =>
+      `${count.toLocaleString('en-US')} upcoming · one status each, the same words fans see`,
+    phoneSubtitle: (count: number) =>
+      `${count.toLocaleString('en-US')} upcoming`,
+    pastSubtitle: 'Past shows · read-only except Hidden and lineup',
+    pastCrumb: 'Past',
+    search: 'Search shows or artists',
+    when: { upcoming: 'Upcoming', past: 'Past' },
+    status: {
+      available: 'Tickets available',
+      soldout: 'Sold out',
+      postponed: 'Postponed',
+      cancelled: 'Cancelled',
+      delisted: 'No longer listed',
+      played: 'Played',
+    },
+    hiddenReason: {
+      unsure: 'Hidden: unsure',
+      admin: 'Hidden: by an admin',
+    },
+    columns: {
+      date: 'Date',
+      show: 'Show',
+      venue: 'Venue',
+      status: 'Status',
+      price: 'Price',
+      watching: 'Watching',
+      concerts: 'Concerts',
+    },
+    none: '—',
+    // The phone card spells a missing price out (`06/events-mobile`).
+    phoneNoPrice: 'No price',
+    watching: (count: number) => `${count.toLocaleString('en-US')} Watching`,
+    went: (count: number) => `${count.toLocaleString('en-US')} went`,
+    pastNote: 'Past shows stay for Concerts and stamps.',
+    loadMoreFailed: 'Couldn’t load more shows.',
+    empty: {
+      title: 'No shows match',
+      body: 'Try another venue or status, or include past shows.',
+      clear: 'Clear filters',
+    },
+    menu: {
+      label: (title: string) => `Actions for ${title}`,
+      edit: 'Edit',
+      editHint: 'Title, lineup, date, status, price',
+      viewFan: 'View on Concert Crawl',
+      viewFanHint: 'The fan page, in a new tab',
     },
   },
   panel: { close: 'Close' },

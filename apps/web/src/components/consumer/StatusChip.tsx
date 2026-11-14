@@ -1,8 +1,19 @@
 import { RowMetaChip, toneColor, type ChipTone } from './event-row/RowMetaChip';
 
-/** Every show status B+ draws a chip for (`04-genre-and-vibe/bp-chips-all`). */
+/**
+ * Every show status B+ draws a chip for (`04-genre-and-vibe/bp-chips-all`),
+ * plus the two admin's Events list adds (admin rule 3, 4b#8 and 4b#21):
+ * Played, for a past show that went ahead, and the Hidden chip that sits
+ * beside a hidden show's status. Both are muted.
+ */
 export type ShowStatusChip =
-  'soldout' | 'postponed' | 'cancelled' | 'available' | 'removed';
+  | 'soldout'
+  | 'postponed'
+  | 'cancelled'
+  | 'available'
+  | 'removed'
+  | 'played'
+  | 'hidden';
 
 // B+ rule 3: one fixed color per status, so a status chip never borrows a
 // genre's color and never reads as one.
@@ -12,6 +23,8 @@ const STATUS_TONE: Record<ShowStatusChip, ChipTone> = {
   cancelled: 'danger',
   available: 'success',
   removed: 'neutral',
+  played: 'neutral',
+  hidden: 'neutral',
 };
 
 /**

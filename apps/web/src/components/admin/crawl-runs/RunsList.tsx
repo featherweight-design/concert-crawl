@@ -293,8 +293,9 @@ export type LoadMoreState = 'idle' | 'loading' | 'failed';
 
 /**
  * `A3/09/load-more`: "Showing 20" and Load 20 more; a spinner while it
- * loads; "Showing all 34" once there is no more. The API sends no total, so
- * the count is the rows shown.
+ * loads; "Showing all 34" once there is no more. The runs API sends no total,
+ * so the count is the rows shown; a list that has one passes `total` and
+ * reads "Showing 25 of 140".
  */
 export const LoadMoreFooter = ({
   shown,
@@ -302,15 +303,24 @@ export const LoadMoreFooter = ({
   more,
   state,
   onLoadMore,
+  total,
+  note,
+  failedLabel = COPY.loadMoreFailed,
+  testId = 'runs-load-more',
 }: {
   shown: number;
   step: number;
   more: boolean;
   state: LoadMoreState;
   onLoadMore: () => void;
+  total?: number | undefined;
+  /** A line the list's board draws before the count (Past shows). */
+  note?: string | undefined;
+  failedLabel?: string;
+  testId?: string;
 }) => (
   <div
-    data-testid="runs-load-more"
+    data-testid={testId}
     style={{
       display: 'flex',
       alignItems: 'center',
@@ -321,12 +331,17 @@ export const LoadMoreFooter = ({
     }}
   >
     <span style={{ fontSize: 12.5, color: 'var(--fg-subtle)' }}>
-      {more ? COPY.showing(shown) : COPY.showingAll(shown)}
+      {note ? `${note} ` : ''}
+      {!more
+        ? COPY.showingAll(shown)
+        : total === undefined
+          ? COPY.showing(shown)
+          : COPY.showingOf(shown, total)}
     </span>
     <span style={{ flex: 1 }} />
     {state === 'failed' && (
       <span role="alert" style={{ fontSize: 12.5, color: 'var(--danger)' }}>
-        {COPY.loadMoreFailed}
+        {failedLabel}
       </span>
     )}
     {more && (
