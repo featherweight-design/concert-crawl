@@ -122,6 +122,17 @@
     /* `venue-light-m`: on Light the back chip is a 55% disc, not the 82% one
        the dark themes use over their artwork. */
     --back-chip-bg: color-mix(in oklab, var(--bg) 55%, transparent);
+    /* `inv-light`: on Light the invite fan's genre chip and eye button are
+       pale and the TONIGHT pill is the deeper pink; the dark themes keep the
+       dark values the components fall back to. */
+    --invite-chip-bg: color-mix(in oklab, var(--bg) 88%, transparent);
+    --invite-chip-border: var(--border);
+    --invite-chip-fg: var(--fg-muted);
+    --invite-eye-bg: color-mix(in oklab, var(--bg) 72%, transparent);
+    --invite-eye-border: var(--border-strong);
+    --invite-eye-fg: var(--fg);
+    --invite-tonight-bg: var(--accent);
+    --invite-tonight-fg: var(--bg);
   }
 
   * {
