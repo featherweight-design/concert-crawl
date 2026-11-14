@@ -414,6 +414,7 @@ const ShowsCard = ({
     <Link
       href={`/admin/events?venueIds=${encodeURIComponent(venue.id)}`}
       style={{ ...linkButton('ghost', false), height: 28 }}
+      aria-label={phone ? COPY.shows.eventsAriaLabel : undefined}
     >
       <ChevronRight size={14} aria-hidden />
       {phone ? COPY.shows.events : COPY.shows.openInEvents}

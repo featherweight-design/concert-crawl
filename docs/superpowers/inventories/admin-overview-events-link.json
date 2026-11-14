@@ -1,0 +1,33 @@
+{
+  "feature": "Admin venue Overview · Shows card link to Events",
+  "note": "CONTACT_SHEET_ROLE=admin. Boards: 04-venues/venue-overview (desktop 'Open in Events'), addendum-3/03-venues/venue-overview-m (phone 'Events'). The link opens the Events list filtered to the venue; the second row is its target.",
+  "out": "/Users/huey/Downloads/fwd-handoff/plans/events-link-contact-sheet",
+  "widths": [
+    { "label": "phone", "width": 390, "height": 900, "touch": true },
+    { "label": "desktop", "width": 1300, "height": 900 }
+  ],
+  "rows": [
+    {
+      "id": "venue-overview",
+      "label": "Venue page, Overview, Shows card (Bluebird Theater)",
+      "steps": [
+        {
+          "goto": "/admin/venues/685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "wait": "[data-testid=\"overview-shows\"]"
+        },
+        { "settle": 2500 }
+      ]
+    },
+    {
+      "id": "events-filtered",
+      "label": "Link target: Events filtered to Bluebird Theater",
+      "steps": [
+        {
+          "goto": "/admin/events?venueIds=685205dc-0605-4d9c-b7e8-e71a15f5cea0",
+          "wait": "[data-testid=\"events-list\"]"
+        },
+        { "settle": 2500 }
+      ]
+    }
+  ]
+}
