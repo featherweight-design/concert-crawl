@@ -60,22 +60,57 @@ export interface FilterOption<Key extends string> {
   countLabel?: string;
 }
 
-/** A run list's filter pills (`04/venue-runs`, `07/crawl-runs-desktop`). */
+/** A segment of the phone's filter (`A3/09/runs-filters-m`). */
+const segment = (on: boolean): CSSProperties => ({
+  flex: 1,
+  minWidth: 0,
+  height: 32,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 5,
+  borderRadius: 7,
+  border: 'none',
+  fontFamily: 'inherit',
+  fontSize: 12.5,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  color: on ? 'var(--fg)' : 'var(--fg-muted)',
+  background: on ? 'var(--bg-elevated)' : 'transparent',
+});
+
+/**
+ * A run list's filter: pills (`04/venue-runs`, `07/crawl-runs-desktop`), or
+ * the phone's segmented control (`A3/09/runs-filters-m`).
+ */
 export const FilterPills = <Key extends string>({
   label,
   options,
   value,
   onChange,
+  segmented = false,
 }: {
   label: string;
   options: readonly FilterOption<Key>[];
   value: Key;
   onChange: (next: Key) => void;
+  segmented?: boolean;
 }) => (
   <div
     role="group"
     aria-label={label}
-    style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+    style={
+      segmented
+        ? {
+            display: 'flex',
+            padding: 3,
+            borderRadius: 10,
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+          }
+        : { display: 'flex', gap: 8, flexWrap: 'wrap' }
+    }
   >
     {options.map((option) => (
       <button
@@ -83,13 +118,18 @@ export const FilterPills = <Key extends string>({
         type="button"
         aria-pressed={value === option.key}
         onClick={() => onChange(option.key)}
-        style={pill(value === option.key)}
+        style={
+          segmented ? segment(value === option.key) : pill(value === option.key)
+        }
       >
         {option.label}
         {option.count !== undefined && option.count > 0 && (
           <span
             aria-label={option.countLabel}
-            style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}
+            style={{
+              fontSize: segmented ? 11 : 11.5,
+              color: 'var(--fg-subtle)',
+            }}
           >
             {option.count.toLocaleString('en-US')}
           </span>

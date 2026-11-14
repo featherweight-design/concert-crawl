@@ -19,7 +19,8 @@ import {
 
 const COPY = ADMIN_COPY.crawlRuns;
 
-/** Desktop-only parts, by the admin breakpoint in CSS. */
+/** Phone-only and desktop-only parts, by the admin breakpoint in CSS. */
+export const PHONE_ONLY = 'min-[721px]:hidden';
 export const DESKTOP_ONLY = 'max-[720px]:hidden';
 
 /** `07/crawl-runs-desktop`'s columns: WHEN, WHAT, RESULT, SUMMARY, TIME, COST. */
@@ -251,9 +252,81 @@ const DesktopRow = ({
   );
 };
 
+/** `A3/09/runs-filters-m`: the label over the summary; date, time, chip at the right. */
+const PhoneRow = ({
+  batch,
+  filter,
+}: {
+  batch: BatchRow;
+  filter: BatchFilter;
+}) => {
+  const { when, what, status, summary, label } = rowParts(batch);
+  // The whole card opens `?run=` through the title's stretched link, as the
+  // desktop row does; a night that didn't start has none.
+  return (
+    <div
+      role="listitem"
+      data-testid="crawl-batch-row"
+      aria-label={label}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        gap: 10,
+        padding: '12px 0',
+        borderBottom: '1px solid var(--border)',
+        color: 'var(--fg)',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{ fontSize: 14.5, fontWeight: 700, overflowWrap: 'anywhere' }}
+        >
+          {isClickableBatch(batch) ? (
+            <Link
+              href={crawlRunsHref(filter, batch.linkKey)}
+              scroll={false}
+              aria-label={label}
+              className={STRETCHED_LINK}
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              {what}
+            </Link>
+          ) : (
+            what
+          )}
+        </div>
+        {summary !== '' && (
+          <div style={{ ...muted(12.5), marginTop: 3, lineHeight: 1.4 }}>
+            {summary}
+          </div>
+        )}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 5,
+          flex: 'none',
+        }}
+      >
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{when.date}</span>
+        <span style={{ fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+          {when.time}
+        </span>
+        <VenueChip
+          tone={status.tone}
+          label={status.label}
+          testId="batch-chip"
+        />
+      </div>
+    </div>
+  );
+};
+
 /**
- * The table's narrowest width: below it (the phone, until its cards land)
- * the table scrolls sideways rather than crushing the summary.
+ * The table's narrowest width: below it (a narrow desktop pane) the table
+ * scrolls sideways rather than crushing the summary.
  */
 const TABLE_MIN_WIDTH = 640;
 
@@ -261,41 +334,95 @@ const Scroll = ({ children }: { children: ReactNode }) => (
   <div style={{ overflowX: 'auto' }}>{children}</div>
 );
 
-/** The table card; `footer` is the Load more row. */
+/** The list in its viewport's shape; `footer` is the Load more row. */
 export const BatchesTable = ({
   batches,
   filter,
+  phone,
   footer,
 }: {
   batches: readonly BatchRow[];
   filter: BatchFilter;
+  phone: boolean;
   footer: ReactNode;
-}) => (
-  <Scroll>
-    <div
-      role="table"
-      aria-label={COPY.title}
-      data-testid="crawl-runs-table"
-      style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}
-    >
-      <ColumnLabels />
-      {batches.map((batch) => (
-        <DesktopRow key={batch.key} batch={batch} filter={filter} />
-      ))}
-      {footer && (
-        <div role="row" style={{ gridColumn: '1 / -1' }}>
-          <div role="cell">{footer}</div>
-        </div>
-      )}
+}) =>
+  phone ? (
+    <div>
+      <div role="list" aria-label={COPY.title} data-testid="crawl-runs-table">
+        {batches.map((batch) => (
+          <PhoneRow key={batch.key} batch={batch} filter={filter} />
+        ))}
+      </div>
+      {footer}
     </div>
-  </Scroll>
-);
+  ) : (
+    <Scroll>
+      <div
+        role="table"
+        aria-label={COPY.title}
+        data-testid="crawl-runs-table"
+        style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}
+      >
+        <ColumnLabels />
+        {batches.map((batch) => (
+          <DesktopRow key={batch.key} batch={batch} filter={filter} />
+        ))}
+        {footer && (
+          <div role="row" style={{ gridColumn: '1 / -1' }}>
+            <div role="cell">{footer}</div>
+          </div>
+        )}
+      </div>
+    </Scroll>
+  );
 
 const SKELETON_ROWS = 6;
 
+/** The phone skeleton's rows (`07/loading-any-list-on-mobile`), no tile. */
+const PhoneSkeletonRows = () => (
+  <div className={PHONE_ONLY}>
+    {Array.from({ length: SKELETON_ROWS }, (_, row) => (
+      <div
+        key={row}
+        style={{
+          display: 'flex',
+          gap: 12,
+          padding: '12px 0',
+          borderBottom: '1px solid var(--border)',
+          opacity: 1 - row * 0.13,
+        }}
+      >
+        <div
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}
+        >
+          <SkeletonBlock
+            width={`${55 + ((row * 13) % 30)}%`}
+            height={13}
+            radius={6}
+          />
+          <SkeletonBlock width="40%" height={10} radius={6} />
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 6,
+          }}
+        >
+          <SkeletonBlock width={48} height={11} radius={6} />
+          <SkeletonBlock width={70} height={20} radius={999} />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 /**
  * Loading (`A3/09/loading-runs-d`): the four filter pills, then the real
- * column labels over bar rows. No hooks, so a route's `loading.tsx` can use it.
+ * column labels over bar rows; the phone follows
+ * `07/loading-any-list-on-mobile` in the card's shape. Both are drawn and CSS
+ * picks one, so a route's `loading.tsx` can use it.
  */
 export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
   <div
@@ -304,14 +431,20 @@ export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
     style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
   >
     {filters && (
-      <div style={{ display: 'flex', gap: 8 }}>
-        {[50, 74, 80, 76].map((width) => (
-          <SkeletonBlock key={width} width={width} height={32} radius={999} />
-        ))}
-      </div>
+      <>
+        <div className={DESKTOP_ONLY} style={{ display: 'flex', gap: 8 }}>
+          {[50, 74, 80, 76].map((width) => (
+            <SkeletonBlock key={width} width={width} height={32} radius={999} />
+          ))}
+        </div>
+        <div className={PHONE_ONLY}>
+          <SkeletonBlock height={40} radius={10} />
+        </div>
+      </>
     )}
-    <Scroll>
-      <div aria-hidden style={{ ...CARD, minWidth: TABLE_MIN_WIDTH }}>
+    <PhoneSkeletonRows />
+    <div className={DESKTOP_ONLY}>
+      <div aria-hidden style={CARD}>
         <ColumnLabels />
         {Array.from({ length: SKELETON_ROWS }, (_, row) => (
           <div key={row} style={{ ...ROW, padding: '14px 0' }}>
@@ -344,6 +477,6 @@ export const BatchesSkeleton = ({ filters = true }: { filters?: boolean }) => (
           </div>
         ))}
       </div>
-    </Scroll>
+    </div>
   </div>
 );
