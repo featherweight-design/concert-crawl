@@ -1,5 +1,5 @@
 import {
-  ReportRejectedError,
+  classifyReportFailure,
   sendErrorReport,
   type ErrorReportDraft,
 } from './send-report';
@@ -66,29 +66,25 @@ export const loadPendingReport = (now = Date.now()): PendingReport | null => {
 };
 
 /**
- * Sends a report saved by an earlier failure. Runs once per app open, for a
- * signed-in visitor only (`getToken` yields null otherwise, and the report
- * waits). A send that fails again leaves it saved for the next launch.
+ * Sends a report saved by an earlier failure. Runs once per app open, and the
+ * caller only runs it for a signed-in visitor. A transient failure leaves it
+ * saved for the next launch; any other answer is final.
  */
 export const flushPendingReport = async (
-  getToken: () => Promise<string | null>,
   userAgent: string,
 ): Promise<boolean> => {
   const pending = loadPendingReport();
   if (pending === null) return false;
   try {
-    const token = await getToken();
-    if (!token) return false;
-    await sendErrorReport(token, pending, userAgent);
+    await sendErrorReport(pending, userAgent);
     clearPendingReport();
     return true;
   } catch (err) {
-    // A report the API refuses on its merits (a 4xx that is not "sign in
-    // again", "slow down" or "timed out") will be refused every time: drop it
-    // rather than retrying it on every app open for a week.
-    if (err instanceof ReportRejectedError && err.permanent) {
-      clearPendingReport();
-    }
+    // Only a transient failure (408, 425, 5xx, timeout, no network) is worth
+    // another try. A refused report (429 or any other 4xx) gets the same answer
+    // every time, and a 401 means the session it was saved under is gone:
+    // retrying either on every app open for a week only repeats the failure.
+    if (classifyReportFailure(err) !== 'transient') clearPendingReport();
     return false;
   }
 };

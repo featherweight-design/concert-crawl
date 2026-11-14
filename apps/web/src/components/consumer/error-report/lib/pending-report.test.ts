@@ -53,46 +53,53 @@ describe('flushPendingReport', () => {
     savePendingReport(draft);
     sendErrorReport.mockResolvedValue(undefined);
 
-    const sent = await flushPendingReport(async () => 'token', 'UA');
+    const sent = await flushPendingReport('UA');
 
     expect(sent).toBe(true);
     expect(sendErrorReport).toHaveBeenCalledWith(
-      'token',
       expect.objectContaining({ doing: 'Opening a show' }),
       'UA',
     );
     expect(loadPendingReport()).toBeNull();
   });
 
-  it('keeps the report when signed out or when the send fails again', async () => {
-    savePendingReport(draft);
-
-    expect(await flushPendingReport(async () => null, 'UA')).toBe(false);
-    expect(sendErrorReport).not.toHaveBeenCalled();
-
-    sendErrorReport.mockRejectedValue(new Error('503'));
-    expect(await flushPendingReport(async () => 'token', 'UA')).toBe(false);
-    expect(loadPendingReport()).not.toBeNull();
-  });
-
-  it('drops a report the API refuses on its merits, but keeps one it may take later', async () => {
-    savePendingReport(draft);
-    sendErrorReport.mockRejectedValue(new ReportRejectedError(400));
-    expect(await flushPendingReport(async () => 'token', 'UA')).toBe(false);
-    expect(loadPendingReport()).toBeNull();
-
-    // Sign in again, slow down and timed out can all succeed on a later open.
-    for (const status of [401, 408, 429, 503]) {
+  it('keeps the report when the send fails on the network or times out', async () => {
+    for (const err of [
+      new TypeError('Failed to fetch'),
+      new DOMException('signal timed out', 'TimeoutError'),
+    ]) {
       savePendingReport(draft);
-      sendErrorReport.mockRejectedValue(new ReportRejectedError(status));
-      await flushPendingReport(async () => 'token', 'UA');
+      sendErrorReport.mockRejectedValueOnce(err);
+      expect(await flushPendingReport('UA')).toBe(false);
       expect(loadPendingReport()).not.toBeNull();
     }
   });
 
+  // 429 is refused (README §18, Decided 6): retrying it on every app open for
+  // a week was the bug. 401 drops too: the session it was saved under is gone.
+  it.each([400, 401, 403, 413, 422, 429])(
+    'drops a report answered %i',
+    async (status) => {
+      savePendingReport(draft);
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(status));
+      expect(await flushPendingReport('UA')).toBe(false);
+      expect(loadPendingReport()).toBeNull();
+    },
+  );
+
+  it.each([408, 425, 500, 502, 503, 504])(
+    'keeps a report answered %i for the next launch',
+    async (status) => {
+      savePendingReport(draft);
+      sendErrorReport.mockRejectedValueOnce(new ReportRejectedError(status));
+      expect(await flushPendingReport('UA')).toBe(false);
+      expect(loadPendingReport()).not.toBeNull();
+    },
+  );
+
   it('does nothing when nothing is saved', async () => {
     clearPendingReport();
-    expect(await flushPendingReport(async () => 'token', 'UA')).toBe(false);
+    expect(await flushPendingReport('UA')).toBe(false);
     expect(sendErrorReport).not.toHaveBeenCalled();
   });
 });
