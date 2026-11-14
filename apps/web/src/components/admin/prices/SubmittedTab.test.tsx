@@ -189,6 +189,38 @@ describe('SubmittedTab on a desktop', () => {
     expect(counts.mock.calls[0]).toEqual(['', 'dlo']);
   });
 
+  it('follows ?handle= while mounted: another fan swaps the chip, none clears it', async () => {
+    counts.mockResolvedValue({
+      all: 4,
+      waiting: 1,
+      published: 3,
+      priceCheck: 0,
+    });
+    list.mockResolvedValue({ rows: [ROWS[0]!], total: 4 });
+    const { rerender } = render(<SubmittedTab initialFan={null} />);
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null),
+    );
+    expect(screen.queryByTestId('fan-filter')).toBeNull();
+
+    rerender(<SubmittedTab initialFan="dlo" />);
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'dlo'),
+    );
+    expect(await screen.findByTestId('fan-filter')).toHaveTextContent(/^@dlo/);
+
+    rerender(<SubmittedTab initialFan="sam" />);
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, 'sam'),
+    );
+
+    rerender(<SubmittedTab initialFan={null} />);
+    await waitFor(() => expect(screen.queryByTestId('fan-filter')).toBeNull());
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith('all', '', 0, 50, null),
+    );
+  });
+
   it("filters to the fan's exact handle, counts the fan only once counted, and × clears it (4d#12)", async () => {
     render(<SubmittedTab />);
     await openMenu(0);

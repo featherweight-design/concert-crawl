@@ -130,10 +130,13 @@ describe('Person ⋯: See their Submitted prices (A3/12/person-menu-d)', () => {
     expect(itemNames()).toHaveLength(1);
     cleanup();
 
-    personBody = detail({ handle: null });
-    render(<PersonClient userId="user_1" />);
-    await openMenu();
-    expect(itemNames()).toHaveLength(1);
+    for (const handle of [null, '', '  ']) {
+      personBody = detail({ handle });
+      render(<PersonClient userId="user_1" />);
+      await openMenu();
+      expect(itemNames()).toHaveLength(1);
+      cleanup();
+    }
   });
 
   it('your own page shows only this item, and no ⋯ without it', async () => {
