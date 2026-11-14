@@ -2606,6 +2606,7 @@ export const ADMIN_COPY = {
           `Haiku gave it ${score}, at or over the ${bar} bar, and it still waits for you.`,
         fromPage: 'FROM THE VENUE’S PAGE',
         wouldList: 'WHAT WE’D LIST',
+        price: 'Price',
         artist: 'Artist',
         when: 'When',
         where: 'Where',
