@@ -12,7 +12,8 @@
       "steps": [
         {
           "goto": "/admin",
-          "wait": "[data-testid=\"llm-budget-trigger\"]"
+          "wait": "[data-testid=\"llm-budget-trigger\"]",
+          "settle": 2000
         },
         { "click": "[data-testid=\"llm-budget-trigger\"]" },
         { "wait": "[role=\"switch\"]", "settle": 800 }
