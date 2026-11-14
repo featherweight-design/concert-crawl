@@ -25,7 +25,12 @@ export interface MergeEventsInput {
 }
 
 export type MergeEventsResult =
-  | { ok: 'merged'; referencesMoved: Record<string, number> }
+  | {
+      ok: 'merged';
+      referencesMoved: Record<string, number>;
+      /** In-app notices written to the movers; 0 when no one was told. */
+      watchersNotified: number;
+    }
   | { ok: 'source_not_found' }
   | { ok: 'target_not_found' };
 
@@ -85,6 +90,7 @@ export const mergeEvents = async ({
   // caller's `suggestion.reason` — the copy a watcher reads is not a client
   // decision. Same venue means the night changed, which is what the plain
   // postponed template already says.
+  let watchersNotified = 0;
   if (notifyWatchers) {
     // Only the venue ids decide this. `venueName` may be null because
     // `events.venue_id` is ON DELETE SET NULL, and falling back to the date
@@ -94,7 +100,7 @@ export const mergeEvents = async ({
       source.venueId !== target.venueId
         ? { fromVenueName: source.venueName }
         : null;
-    await fanoutWatchNotification(
+    const sent = await fanoutWatchNotification(
       { db, notifications, userEvents, events, venues },
       {
         eventId: targetId,
@@ -108,7 +114,8 @@ export const mergeEvents = async ({
         ...(relocated ? { relocated } : {}),
       },
     );
+    watchersNotified = sent.watchersNotified;
   }
 
-  return { ok: 'merged', referencesMoved: merged.counts };
+  return { ok: 'merged', referencesMoved: merged.counts, watchersNotified };
 };

@@ -6,7 +6,7 @@ import { db, events } from '@concert-crawl/db';
 import { idSchema } from '../../../../lib/id-schema.js';
 import { setHiddenFromConsumer, verifyEvent } from '../event-actions.js';
 import { mergeEvents } from '../event-merge.js';
-import { updateEvent } from '../event-update.js';
+import { updateEvent, updateEventNotifying } from '../event-update.js';
 import {
   type AnswerResult,
   define,
@@ -83,9 +83,14 @@ export const cancelled = define({
     if (eventId === null) return fail(400, 'Not a show item');
     // The existing event update: it ends any silent delisting and fans out
     // the watch notification when the status really changes.
-    const updated = await updateEvent(eventId, { status: 'cancelled' });
-    if (!updated) return fail(404, 'Event not found');
-    return { ok: true, params: {}, before: null };
+    const sent = await updateEventNotifying(eventId, { status: 'cancelled' });
+    if (!sent) return fail(404, 'Event not found');
+    return {
+      ok: true,
+      params: {},
+      before: null,
+      result: { watchersNotified: sent.watchersNotified },
+    };
   },
 });
 
@@ -121,14 +126,15 @@ export const postponed = define({
     if (params.date !== undefined && params.date <= denverDate(new Date()))
       return fail(422, 'Pick a date after today');
     // The existing event update: status and date together fan out once.
-    const updated = await updateEvent(eventId, {
+    const sent = await updateEventNotifying(eventId, {
       status: 'postponed',
       ...(params.date !== undefined && { date: params.date }),
       ...(params.showTime !== undefined && { showTime: params.showTime }),
     });
-    if (!updated) return fail(404, 'Event not found');
+    if (!sent) return fail(404, 'Event not found');
     return {
       ok: true,
+      result: { watchersNotified: sent.watchersNotified },
       params: {
         ...(params.date !== undefined && { date: params.date }),
         ...(params.showTime !== undefined && { showTime: params.showTime }),
@@ -150,7 +156,11 @@ const mergeResult = (
     ok: true,
     params: { toEventId: targetId },
     before: null,
-    result: { mergedInto: targetId, referencesMoved: result.referencesMoved },
+    result: {
+      mergedInto: targetId,
+      referencesMoved: result.referencesMoved,
+      watchersNotified: result.watchersNotified,
+    },
   };
 };
 

@@ -2868,7 +2868,10 @@ export const ADMIN_COPY = {
           ? 'More than one artist fits'
           : status,
     // `02/answered-with-undo`: the dashed line that takes the answered card's place.
-    answered: (name: string, label: string) => `${name} marked ${label}.`,
+    // `01-snooze/answered-d`: a notifying answer says how many Watchers were
+    // told, only when the API reports a number above zero.
+    answered: (name: string, label: string, told: number | null = null) =>
+      `${name} marked ${label}.${told ? ` ${told} ${told === 1 ? 'Watcher was' : 'Watchers were'} told.` : ''}`,
     snoozedLine: (name: string) => `${name} snoozed.`,
     undo: {
       action: 'Undo',

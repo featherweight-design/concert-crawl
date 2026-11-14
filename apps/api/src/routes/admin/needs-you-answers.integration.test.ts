@@ -37,7 +37,12 @@ vi.mock('./lib/crawl-trigger.js', async (importOriginal) => {
 
 import { eq } from 'drizzle-orm';
 import { createApp } from '../../app.js';
-import { clearTables, seedEvent, seedVenue } from '../../test/helpers/seed.js';
+import {
+  clearTables,
+  seedEvent,
+  seedUserEvent,
+  seedVenue,
+} from '../../test/helpers/seed.js';
 import { testDb } from '../../test/helpers/db.js';
 import { auditLog, events } from '@concert-crawl/db';
 import type { NeedsYouItem } from '@concert-crawl/types';
@@ -72,7 +77,11 @@ const undo = (auditId: string): Promise<Response> =>
 
 interface AnswerBody {
   success: boolean;
-  data: { auditId: string; undoable: boolean };
+  data: {
+    auditId: string;
+    undoable: boolean;
+    result?: { watchersNotified?: number };
+  };
 }
 
 const auditRows = (action: string) =>
@@ -357,6 +366,24 @@ describe('admin needs-you answers', () => {
       const row = await eventRow(eventId);
       expect(row?.date).toBe(inDays(1));
       expect(row?.showTime?.slice(0, 5)).toBe('20:00');
+    });
+
+    it('reports how many Watchers were actually told', async () => {
+      setAuth('admin');
+      const { key, eventId } = await droppedItem();
+      await seedUserEvent('told-1', eventId);
+      await seedUserEvent('told-2', eventId);
+      const res = await answer(key, { answer: 'postponed' });
+      const body: AnswerBody = await res.json();
+      expect(body.data.result?.watchersNotified).toBe(2);
+    });
+
+    it('reports zero when no one was Watching', async () => {
+      setAuth('admin');
+      const { key } = await droppedItem();
+      const res = await answer(key, { answer: 'postponed' });
+      const body: AnswerBody = await res.json();
+      expect(body.data.result?.watchersNotified).toBe(0);
     });
 
     it('refuses a date that is not after today, and a time with no date', async () => {

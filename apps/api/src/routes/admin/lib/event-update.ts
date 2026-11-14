@@ -58,7 +58,7 @@ export type EventPatch = z.input<typeof eventPatchSchema>;
  * Partial event update with the watch-update fan-out (#1107, #1311). Returns
  * the updated row, or null when the event does not exist.
  */
-export const updateEvent = async (id: string, body: EventPatch) => {
+export const updateEventNotifying = async (id: string, body: EventPatch) => {
   // Only bother with the transactional pre-state lock when the PATCH
   // actually touches status or date — every other field is edit-only
   // and doesn't need a serialize gate.
@@ -162,8 +162,9 @@ export const updateEvent = async (id: string, body: EventPatch) => {
 
   if (!result.updated) return null;
 
+  let watchersNotified = 0;
   if (result.category) {
-    await fanoutWatchNotification(
+    const sent = await fanoutWatchNotification(
       {
         db,
         notifications,
@@ -180,7 +181,14 @@ export const updateEvent = async (id: string, body: EventPatch) => {
         transition: `patch:${result.updated.updatedAt.toISOString()}`,
       },
     );
+    watchersNotified = sent.watchersNotified;
   }
 
-  return result.updated;
+  // `watchersNotified` is the in-app notices actually written: 0 when nothing
+  // fired (no real transition) or the fan-out found no one to tell.
+  return { updated: result.updated, watchersNotified };
 };
+
+/** The event update without the fan-out count, for the callers that ignore it. */
+export const updateEvent = async (id: string, body: EventPatch) =>
+  (await updateEventNotifying(id, body))?.updated ?? null;

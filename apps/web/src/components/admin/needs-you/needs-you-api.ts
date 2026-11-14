@@ -454,7 +454,11 @@ export const needsYouApi = (getToken: GetToken) => ({
     );
     if (!isRecord(data)) throw new Error('needs-you answer');
     const auditId = isText(data['auditId']) ? data['auditId'] : null;
-    return { auditId, undoable: data['undoable'] === true && auditId !== null };
+    return {
+      auditId,
+      undoable: data['undoable'] === true && auditId !== null,
+      watchersNotified: toldFrom(data['result']),
+    };
   },
   /**
    * Keep paused / Pause crawling with the Pause panel's own body (reason, note,
@@ -472,7 +476,11 @@ export const needsYouApi = (getToken: GetToken) => ({
     );
     if (!isRecord(data)) throw new Error('needs-you pause');
     const auditId = isText(data['auditId']) ? data['auditId'] : null;
-    return { auditId, undoable: data['undoable'] === true && auditId !== null };
+    return {
+      auditId,
+      undoable: data['undoable'] === true && auditId !== null,
+      watchersNotified: null,
+    };
   },
   undo: async (auditId: string): Promise<void> => {
     await call(
@@ -508,6 +516,14 @@ export const needsYouApi = (getToken: GetToken) => ({
 export interface AnswerResult {
   auditId: string | null;
   undoable: boolean;
+  /** Watchers actually told by a notifying answer; null when none are reported. */
+  watchersNotified: number | null;
 }
+
+/** The notified count in an answer's `result`, when the API sent one. */
+const toldFrom = (result: unknown): number | null =>
+  isRecord(result) && isCount(result['watchersNotified'])
+    ? result['watchersNotified']
+    : null;
 
 export type NeedsYouApi = ReturnType<typeof needsYouApi>;
