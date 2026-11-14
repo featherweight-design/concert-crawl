@@ -239,7 +239,8 @@ export interface ConfirmReportSheetProps {
   onClose: () => void;
   reportType: ConfirmReportType;
   reporter: { handle: string; url: string } | null;
-  reportedAt: string;
+  /** Kept for callers; the recap's one attribution line draws no time. */
+  reportedAt?: string;
   /** How the reporter knew, and where: the recap's one mono line names both. */
   evidenceMethod?: string | undefined;
   evidenceUrl?: string | null | undefined;

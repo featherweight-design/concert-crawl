@@ -115,6 +115,11 @@ function ownReportId(reports: EventReport[]): string | null {
   return reports.find((rpt) => rpt.isReporter)?.id ?? null;
 }
 
+/** The status the viewer's own unresolved report is about, if any. */
+function ownReportStatus(reports: EventReport[]): EventReport['status'] | null {
+  return reports.find((rpt) => rpt.isReporter)?.status ?? null;
+}
+
 // Derive the pending report of a given status from the reports array
 function findPendingReport(
   reports: EventReport[],
@@ -351,6 +356,7 @@ export function EventDetailBanners({
         eventDate={event.date}
         eventTitle={event.title}
         ownReportId={ownReportId(reports)}
+        ownReportStatus={ownReportStatus(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
           router.refresh();
@@ -1629,6 +1635,7 @@ export function EventDetailPriceBlock({
           eventDate={event.date}
           eventTitle={event.title}
           ownReportId={ownReportId(reports)}
+          ownReportStatus={ownReportStatus(reports)}
           onSuccess={() => {
             setSoldOutEvidenceFormOpen(false);
             router.refresh();
@@ -2245,6 +2252,7 @@ export function EventDetailFooter({
         eventDate={event.date}
         eventTitle={event.title}
         ownReportId={ownReportId(reports)}
+        ownReportStatus={ownReportStatus(reports)}
         onSuccess={() => {
           setEvidenceFormOpen(false);
           router.refresh();
