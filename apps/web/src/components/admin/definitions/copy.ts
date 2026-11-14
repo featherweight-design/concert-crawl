@@ -3383,7 +3383,7 @@ export const ADMIN_COPY = {
         'artist.match.confirm_auto': ['Confirmed the match for ', ''],
         'artist.match.auto': ['Matched ', ' to a photo and genre'],
         'artist.name.update': ['Renamed ', ''],
-        'artist.name.unlock': ['Handed the name of ', ' back to auto-repair'],
+        'artist.name.unlock': ['Unlocked the name of ', ''],
         'artist.name.lock': ['Locked the name of ', ''],
         'artist.reports.dismiss': ['Dismissed the reports on ', ''],
         // `on` is the `hidden` flag; null when the row didn't keep it.
@@ -3396,8 +3396,8 @@ export const ADMIN_COPY = {
         'contest.resolve': ['Answered a price check on ', ''],
         'contest.defer': ['Put off a price check on ', ''],
         'crawl.daily_cron': ['Started the daily crawl', ''],
-        'crawl.trigger': ['Crawled ', ''],
-        'crawl.trigger_all': ['Crawled all venues', ''],
+        'crawl.trigger': ['Queued a crawl of ', ''],
+        'crawl.trigger_all': ['Queued a crawl of all venues', ''],
         'event.auto_cancel.stale': [
           'Marked ',
           ' cancelled after the venue stopped listing it',
@@ -3446,7 +3446,17 @@ export const ADMIN_COPY = {
           ] as const,
         'price.submission.reject': ['Rejected a price for ', ''],
         'price.submission.update': ['Updated a price for ', ''],
-        'settings.update': ['Changed the LLM budget', ''],
+        // Read off the fields the save changed (its before and after).
+        'settings.update': (args: {
+          settings: 'budget' | 'approveOn' | 'approveOff' | null;
+        }) =>
+          args.settings === 'budget'
+            ? (['Changed the LLM budget', ''] as const)
+            : args.settings === 'approveOn'
+              ? (['Turned Approve every price myself on', ''] as const)
+              : args.settings === 'approveOff'
+                ? (['Turned Approve every price myself off', ''] as const)
+                : (['Changed the admin settings', ''] as const),
         'user.email_shown': ['Showed the email for ', ''],
         'user.role.update': (args: { role: string | null }) =>
           [

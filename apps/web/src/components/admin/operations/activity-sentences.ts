@@ -64,6 +64,38 @@ const flagOf = (meta: Record<string, unknown> | null): boolean | null => {
   return null;
 };
 
+/** The settings the LLM budget panel on Health saves. */
+const BUDGET_SETTINGS = new Set([
+  'llmMonthlyBudgetUsd',
+  'llmBudgetWarnAtPercent',
+  'llmBudgetFallbackToStructured',
+]);
+
+/**
+ * What a `settings.update` changed, from the before and after it keeps: the
+ * budget panel's fields, or the Prices page's one toggle. Anything else (a
+ * mix, a save that changed nothing, a row without the two) is null.
+ */
+const settingsChange = (
+  meta: Record<string, unknown> | null,
+): 'budget' | 'approveOn' | 'approveOff' | null => {
+  const before = meta?.['before'];
+  const after = meta?.['after'];
+  if (typeof before !== 'object' || before === null) return null;
+  if (typeof after !== 'object' || after === null) return null;
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changed = [...keys].filter(
+    (key) => !Object.is(Reflect.get(before, key), Reflect.get(after, key)),
+  );
+  if (changed.length === 0) return null;
+  if (changed.every((key) => BUDGET_SETTINGS.has(key))) return 'budget';
+  if (changed.length === 1 && changed[0] === 'approvePricesMyself') {
+    const on: unknown = Reflect.get(after, 'approvePricesMyself');
+    if (typeof on === 'boolean') return on ? 'approveOn' : 'approveOff';
+  }
+  return null;
+};
+
 /**
  * A row in plain words, from its action key, its target's name and the
  * metadata the writer kept. An action this build has no sentence for reads as
@@ -81,6 +113,7 @@ export const sentenceFor = (item: AuditLogItem): Sentence => {
             until: shortDay(meta?.['resumeOn']),
             range: priceRange(meta),
             role: text(meta?.['role']),
+            settings: settingsChange(meta),
           })
         : entry;
   if (item.target === null) {
